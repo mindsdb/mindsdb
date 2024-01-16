@@ -43,6 +43,14 @@
   ],
   "tabs": [
     {
+      "name": "SDKs",
+      "url": "sdks"
+    },
+    {
+      "name": "REST API",
+      "url": "rest"
+    },
+    {
       "name": "Integrations",
       "url": "integrations"
     },
@@ -55,8 +63,8 @@
         "url": "faqs"
     }
   ],
-  "primaryTab": {
-    "name": "Documentation"
+    "primaryTab": {
+      "name": "Documentation"
   },
   "redirects": [
     {"source": "/app-integrations/github","destination": "/integrations/app-integrations/github"},
@@ -139,7 +147,9 @@
     {"source": "/ml-engines/automl/lightwood","destination": "/integrations/ai-engines/lightwood"},
     {"source": "/nixtla/statsforecast","destination": "/integrations/ai-engines/statsforecast"},
     {"source": "/nixtla/house-sales-statsforecast","destination": "/sql/tutorials/house-sales-statsforecast"},
-    {"source": "/mongo/stats","destination": "/mongo/models/describe"}
+    {"source": "/mongo/stats","destination": "/mongo/models/describe"},
+    {"source": "/connect/mongo-compass","destination": "/sdks/mongo/connect/mongo-compass"},
+    {"source": "/connect/mongo-shell","destination": "/sdks/mongo/connect/mongo-shell"}
   ],
   "navigation": [
     {
@@ -225,10 +235,6 @@
             "generative-ai-tables"
           ] 
         }
-            
-            
-          
-        
       ]
     },
     {
@@ -534,16 +540,15 @@
         {
           "group": "Getting Started",
           "pages": [
-            
             {
               "group": "Mongo-QL",
               "pages": [
-                "mindsdb-mongo-ql-overview",
+                "sdks/mongo/mindsdb-mongo-ql-overview",
                 {
                   "group": "Connect",
                   "pages": [
-                    "connect/mongo-compass",
-                    "connect/mongo-shell"
+                    "sdks/mongo/connect/mongo-compass",
+                    "sdks/mongo/connect/mongo-shell"
                   ]
                 }
               ]
@@ -551,17 +556,17 @@
             {
               "group": "Python",
               "pages": [
-                "sdk_python/overview",
-                "sdk_python/installation",
-                "sdk_python/connect"
+                "sdks/python/overview",
+                "sdks/python/installation",
+                "sdks/python/connect"
               ]
             },
             {
               "group": "JavaScript",
               "pages": [
-                "sdk_javascript/overview",
-                "sdk_javascript/installation",
-                "sdk_javascript/connect"
+                "sdks/javascript/overview",
+                "sdks/javascript/installation",
+                "sdks/javascript/connect"
               ]
             }
           ]
@@ -569,34 +574,33 @@
         {
           "group": "Integrate Data Sources",
           "pages": [
-            
             {
               "group": "Mongo-QL",
               "pages": [
-                "mongo/databases/list-data-handlers",
-                "mongo/databases/insertOne",
-                "mongo/databases/deleteOne",
-                "mongo/databases/find",
-                "mongo/databases/use"
+                "sdks/mongo/databases/list-data-handlers",
+                "sdks/mongo/databases/insertOne",
+                "sdks/mongo/databases/deleteOne",
+                "sdks/mongo/databases/find",
+                "sdks/mongo/databases/use"
               ]
             },
             {
               "group": "Python",
               "pages": [
-                "sdk_python/list_data_handlers",
-                "sdk_python/create_database",
-                "sdk_python/drop_database",
-                "sdk_python/list_databases"
+                "sdks/python/list_data_handlers",
+                "sdks/python/create_database",
+                "sdks/python/drop_database",
+                "sdks/python/list_databases"
               ]
             },
             {
               "group": "JavaScript",
               "pages": [
-                "sdk_javascript/list_data_handlers",
-                "sdk_javascript/create_database",
-                "sdk_javascript/get_database",
-                "sdk_javascript/drop_database",
-                "sdk_javascript/list_databases"
+                "sdks/javascript/list_data_handlers",
+                "sdks/javascript/create_database",
+                "sdks/javascript/get_database",
+                "sdks/javascript/drop_database",
+                "sdks/javascript/list_databases"
               ]
             }
             
@@ -605,64 +609,61 @@
         {
           "group": "Create AI Engines",
           "pages": [
-            
             {
               "group": "Mongo-QL",
               "pages": [
-                "mongo/ml_engines/list-ml-handlers",
-                "mongo/ml_engines/insertOne",
-                "mongo/ml_engines/deleteOne",
-                "mongo/ml_engines/find"
+                "sdks/mongo/ml_engines/list-ml-handlers",
+                "sdks/mongo/ml_engines/insertOne",
+                "sdks/mongo/ml_engines/deleteOne",
+                "sdks/mongo/ml_engines/find"
               ]
             },
             {
               "group": "Python",
               "pages": [
-                "sdk_python/list_ml_handlers",
-                "sdk_python/create_ml_engine",
-                "sdk_python/drop_ml_engine",
-                "sdk_python/list_ml_engines"
+                "sdks/python/list_ml_handlers",
+                "sdks/python/create_ml_engine",
+                "sdks/python/drop_ml_engine",
+                "sdks/python/list_ml_engines"
               ]
             },
             {
               "group": "JavaScript",
               "pages": [
-                "sdk_javascript/list_ml_handlers",
-                "sdk_javascript/create_ml_engine",
-                "sdk_javascript/drop_ml_engine",
-                "sdk_javascript/list_ml_engines"
+                "sdks/javascript/list_ml_handlers",
+                "sdks/javascript/create_ml_engine",
+                "sdks/javascript/drop_ml_engine",
+                "sdks/javascript/list_ml_engines"
               ]
             }
-            
           ]
         },
         {
           "group": "Create Projects",
           "pages": [
-            
             {
               "group": "Mongo-QL",
               "pages": [
-                "mongo/projects/insertOne",
-                "mongo/projects/deleteOne",
-                "mongo/projects/list-projects"
+                "sdks/mongo/projects/insertOne",
+                "sdks/mongo/projects/deleteOne",
+                "sdks/mongo/projects/list-projects"
               ]
             },
             {
               "group": "Python",
               "pages": [
-                "sdk_python/create_project",
-                "sdk_python/drop_project",
-                "sdk_python/list_projects",
-                "sdk_python/query_projects"
+                "sdks/python/create_project",
+                "sdks/python/drop_project",
+                "sdks/python/list_projects",
+                "sdks/python/query_projects"
               ]
             },
             {
               "group": "JavaScript",
               "pages": [
-                "sdk_javascript/create_project",
-                "sdk_javascript/drop_project",
-                "sdk_javascript/list_projects"
+                "sdks/javascript/create_project",
+                "sdks/javascript/drop_project",
+                "sdks/javascript/list_projects"
               ]
             }
           ]
@@ -670,44 +671,43 @@
         {
           "group": "Deploy and Use Models",
           "pages": [
-            
             {
               "group": "Mongo-QL",
               "pages": [
-                "mongo/models/insertOne",
-                "mongo/models/deleteOne",
-                "mongo/models/find",
-                "mongo/models/describe",
-                "mongo/models/retrain",
-                "mongo/models/finetune",
-                "mongo/models/manage-model-versions"
+                "sdks/mongo/models/insertOne",
+                "sdks/mongo/models/deleteOne",
+                "sdks/mongo/models/find",
+                "sdks/mongo/models/describe",
+                "sdks/mongo/models/retrain",
+                "sdks/mongo/models/finetune",
+                "sdks/mongo/models/manage-model-versions"
               ]
             },
             {
               "group": "Python",
               "pages": [
-                "sdk_python/create_model",
-                "sdk_python/drop_model",
-                "sdk_python/list_models",
-                "sdk_python/describe",
-                "sdk_python/get_status",
-                "sdk_python/refresh_model",
-                "sdk_python/retrain",
-                "sdk_python/finetune",
-                "sdk_python/manage-model-versions"
+                "sdks/python/create_model",
+                "sdks/python/drop_model",
+                "sdks/python/list_models",
+                "sdks/python/describe",
+                "sdks/python/get_status",
+                "sdks/python/refresh_model",
+                "sdks/python/retrain",
+                "sdks/python/finetune",
+                "sdks/python/manage-model-versions"
               ]
             },
             {
               "group": "JavaScript",
               "pages": [
-                "sdk_javascript/create_model",
-                "sdk_javascript/drop_model",
-                "sdk_javascript/list_models",
-                "sdk_javascript/describe",
-                "sdk_javascript/get_status",
-                "sdk_javascript/retrain",
-                "sdk_javascript/finetune",
-                "sdk_javascript/manage-model-versions"
+                "sdks/javascript/create_model",
+                "sdks/javascript/drop_model",
+                "sdks/javascript/list_models",
+                "sdks/javascript/describe",
+                "sdks/javascript/get_status",
+                "sdks/javascript/retrain",
+                "sdks/javascript/finetune",
+                "sdks/javascript/manage-model-versions"
               ]
             }
           ]
@@ -715,26 +715,25 @@
         {
           "group": "Get Predictions",
           "pages": [
-            
             {
               "group": "Mongo-QL",
               "pages": [
-                "mongo/models/get-single-prediction",
-                "mongo/models/get-batch-predictions"
+                "sdks/mongo/models/get-single-prediction",
+                "sdks/mongo/models/get-batch-predictions"
               ]
             },
             {
               "group": "Python",
               "pages": [
-                "sdk_python/get-single-prediction",
-                "sdk_python/get-batch-predictions"
+                "sdks/python/get-single-prediction",
+                "sdks/python/get-batch-predictions"
               ]
             },
             {
               "group": "JavaScript",
               "pages": [
-                "sdk_javascript/query",
-                "sdk_javascript/batchQuery"
+                "sdks/javascript/query",
+                "sdks/javascript/batchQuery"
               ]
             }
           ]
@@ -742,45 +741,44 @@
         {
           "group": "Tables, Views, and Files",
           "pages": [
-            
             {
               "group": "Python",
               "pages": [
-                "sdk_python/create_table",
-                "sdk_python/delete_table",
-                "sdk_python/query_table",
-                "sdk_python/native_queries",
-                "sdk_python/update_table",
-                "sdk_python/insert_into_table",
-                "sdk_python/join_on",
-                "sdk_python/delete_from",
-                "sdk_python/create_view",
-                "sdk_python/drop_view",
-                "sdk_python/query_view",
-                "sdk_python/list_views",
-                "sdk_python/upload_file",
-                "sdk_python/delete_file",
-                "sdk_python/query_files"
+                "sdks/python/create_table",
+                "sdks/python/delete_table",
+                "sdks/python/query_table",
+                "sdks/python/native_queries",
+                "sdks/python/update_table",
+                "sdks/python/insert_into_table",
+                "sdks/python/join_on",
+                "sdks/python/delete_from",
+                "sdks/python/create_view",
+                "sdks/python/drop_view",
+                "sdks/python/query_view",
+                "sdks/python/list_views",
+                "sdks/python/upload_file",
+                "sdks/python/delete_file",
+                "sdks/python/query_files"
               ]
             },
             {
               "group": "JavaScript",
               "pages": [
-                "sdk_javascript/create_table",
-                "sdk_javascript/delete_table",
-                "sdk_javascript/query_table",
-                "sdk_javascript/native_queries",
-                "sdk_javascript/update_table",
-                "sdk_javascript/insert_into_table",
-                "sdk_javascript/join_on",
-                "sdk_javascript/delete_from",
-                "sdk_javascript/create_view",
-                "sdk_javascript/drop_view",
-                "sdk_javascript/query_view",
-                "sdk_javascript/list_views",
-                "sdk_javascript/upload_file",
-                "sdk_javascript/delete_file",
-                "sdk_javascript/query_files"
+                "sdks/javascript/create_table",
+                "sdks/javascript/delete_table",
+                "sdks/javascript/query_table",
+                "sdks/javascript/native_queries",
+                "sdks/javascript/update_table",
+                "sdks/javascript/insert_into_table",
+                "sdks/javascript/join_on",
+                "sdks/javascript/delete_from",
+                "sdks/javascript/create_view",
+                "sdks/javascript/drop_view",
+                "sdks/javascript/query_view",
+                "sdks/javascript/list_views",
+                "sdks/javascript/upload_file",
+                "sdks/javascript/delete_file",
+                "sdks/javascript/query_files"
               ]
             }
           ]
@@ -788,36 +786,40 @@
         {
           "group": "Automate Workflows",
           "pages": [
-            
             {
               "group": "Mongo-QL",
               "pages": [
-                "mongo/jobs/insertOne",
-                "mongo/jobs/deleteOne",
-                "mongo/jobs/query-jobs"
+                "sdks/mongo/jobs/insertOne",
+                "sdks/mongo/jobs/deleteOne",
+                "sdks/mongo/jobs/query-jobs"
               ]
             },
             {
               "group": "Python",
               "pages": [
-                "sdk_python/create_job",
-                "sdk_python/drop_job",
-                "sdk_python/list_jobs",
-                "sdk_python/refresh_job",
-                "sdk_python/get_history"
+                "sdks/python/create_job",
+                "sdks/python/drop_job",
+                "sdks/python/list_jobs",
+                "sdks/python/refresh_job",
+                "sdks/python/get_history"
               ]
             },
             {
               "group": "JavaScript",
               "pages": [
-                "sdk_javascript/create_job",
-                "sdk_javascript/drop_job",
-                "sdk_javascript/query_jobs"
+                "sdks/javascript/create_job",
+                "sdks/javascript/drop_job",
+                "sdks/javascript/query_jobs"
               ]
             }
           ]
         }
-        
+      ]
+    },
+    {
+      "group": "Integrations",
+      "pages": [
+        "integrations/integrations"
       ]
     },
     {
@@ -1030,198 +1032,6 @@
         "faqs/persist-predictions",
         "faqs/mindsdb-with-php",
         "faqs/benefits"
-      ]
-    },
-    {
-      "group": "Integrations",
-      "pages": [
-        "integrations/integrations",
-        
-        {
-          "group": "Data Sources",
-          "pages": [
-            {
-              "group": "Applications",
-              "pages": [
-                "integrations/app-integrations/binance",
-                "integrations/app-integrations/confluence",
-                "integrations/app-integrations/dockerhub",
-                "integrations/app-integrations/email",
-                "integrations/app-integrations/github",
-                "integrations/app-integrations/gitlab",
-                "integrations/app-integrations/gmail",
-                "integrations/app-integrations/google-calendar",
-                "integrations/app-integrations/hackernews",
-                "integrations/app-integrations/instatus",
-                "integrations/app-integrations/intercom",
-                "integrations/app-integrations/mediawiki",
-                "integrations/app-integrations/microsoft-teams",
-                "integrations/app-integrations/newsapi",
-                "integrations/app-integrations/paypal",
-                "integrations/app-integrations/plaid",
-                "integrations/app-integrations/pypi",
-                "integrations/app-integrations/reddit",
-                "integrations/app-integrations/sendinblue",
-                "integrations/app-integrations/shopify",
-                "integrations/app-integrations/slack",
-                "integrations/app-integrations/strapi",
-                "integrations/app-integrations/stripe",
-                "integrations/app-integrations/twitter",
-                "integrations/app-integrations/web-crawler",
-                "integrations/app-integrations/youtube"
-              ]
-            },
-            {
-              "group": "Databases",
-              "pages": [
-                "integrations/data-integrations/all-data-integrations",
-                "integrations/data-integrations/airtable",
-                "integrations/data-integrations/amazon-aurora",
-                "integrations/data-integrations/amazon-dynamodb",
-                "integrations/data-integrations/amazon-redshift",
-                "integrations/data-integrations/amazon-s3",
-                "integrations/data-integrations/apache-cassandra",
-                "integrations/data-integrations/apache-druid",
-                "integrations/data-integrations/apache-hive",
-                "integrations/data-integrations/apache-ignite",
-                "integrations/data-integrations/apache-impala",
-                "integrations/data-integrations/apache-pinot",
-                "integrations/data-integrations/apache-solr",
-                "integrations/data-integrations/ckan",
-                "integrations/data-integrations/clickhouse",
-                "integrations/data-integrations/cloud-spanner",
-                "integrations/data-integrations/cockroachdb",
-                "integrations/data-integrations/couchbase",
-                "integrations/data-integrations/cratedb",
-                "integrations/data-integrations/d0lt",
-                "integrations/data-integrations/databend",
-                "integrations/data-integrations/databricks",
-                "integrations/data-integrations/datastax",
-                "integrations/data-integrations/duckdb",
-                "integrations/data-integrations/edgelessdb",
-                "integrations/data-integrations/elasticsearch",
-                "integrations/data-integrations/firebird",
-                "integrations/data-integrations/google-bigquery",
-                "integrations/data-integrations/google-cloud-sql",
-                "integrations/data-integrations/google-sheets",
-                "integrations/data-integrations/ibm-db2",
-                "integrations/data-integrations/ibm-informix",
-                "integrations/data-integrations/influxdb",
-                "integrations/data-integrations/mariadb",
-                "integrations/data-integrations/matrixone",
-                "integrations/data-integrations/microsoft-access",
-                "integrations/data-integrations/microsoft-sql-server",
-                "integrations/data-integrations/monetdb",
-                "integrations/data-integrations/mongodb",
-                "integrations/data-integrations/mysql",
-                "integrations/data-integrations/oceanbase",
-                "integrations/data-integrations/opengauss",
-                "integrations/data-integrations/oracle",
-                "integrations/data-integrations/orioledb",
-                "integrations/data-integrations/planetscale",
-                "integrations/data-integrations/postgresql",
-                "integrations/data-integrations/questdb",
-                "integrations/data-integrations/sap-hana",
-                "integrations/data-integrations/sap-sql-anywhere",
-                "integrations/data-integrations/scylladb",
-                "integrations/data-integrations/singlestore",
-                "integrations/data-integrations/snowflake",
-                "integrations/data-integrations/sqlite",
-                "integrations/data-integrations/starrocks",
-                "integrations/data-integrations/supabase",
-                "integrations/data-integrations/surrealdb",
-                "integrations/data-integrations/tdengine",
-                "integrations/data-integrations/teradata",
-                "integrations/data-integrations/tidb",
-                "integrations/data-integrations/timescaledb",
-                "integrations/data-integrations/trino",
-                "integrations/data-integrations/vertica",
-                "integrations/data-integrations/vitess",
-                "integrations/data-integrations/yugabytedb"
-              ]
-            },
-            {
-              "group": "Vector Databases",
-              "pages": [
-                "integrations/vector-db-integrations/chromadb",
-                "integrations/vector-db-integrations/pgvector",
-                "integrations/vector-db-integrations/pinecone",
-                "integrations/vector-db-integrations/weaviate"
-              ]
-            }
-          ]
-        },
-        {
-          "group": "AI Engines",
-          "pages": [
-            {
-              "group": "Large Language Models",
-              "pages": [
-                "integrations/ai-engines/ollama",
-                "integrations/ai-engines/replicate-llm",
-                "integrations/ai-engines/vertex",
-                "integrations/ai-engines/anthropic",
-                "integrations/ai-engines/cohere",
-                "integrations/ai-engines/openai",
-                "integrations/ai-engines/huggingface",
-                "integrations/ai-engines/langchain",
-                "integrations/ai-engines/llamaindex",
-                "integrations/ai-engines/monkeylearn"        
-              ]
-            },
-            {
-              "group": "Bring Your Own Models",
-              "pages": [
-                "integrations/ai-engines/byom",
-                "integrations/ai-engines/ray-serve",
-                "integrations/ai-engines/mlflow"
-              ]
-            },
-            {
-              "group": "AutoML",
-              "pages": [
-                "integrations/ai-engines/lightwood",
-                "integrations/ai-engines/pycaret"
-              ]
-            },
-            {
-              "group": "Time Series Models",
-              "pages": [
-                "integrations/ai-engines/statsforecast",
-                "integrations/ai-engines/neuralforecast",
-                "integrations/ai-engines/timegpt"
-              ]
-            },
-            {
-              "group": "Recommender Models",
-              "pages": [
-                "integrations/ai-engines/lightfm",
-                "integrations/ai-engines/popularity-recommender"
-              ]
-            },
-            {
-              "group": "Image Models",
-              "pages": [
-                "integrations/ai-engines/replicate-text2img",
-                "integrations/ai-engines/replicate-img2text"
-              ]
-            },
-            {
-              "group": "Large Video Models",
-              "pages": [
-                "integrations/ai-engines/twelvelabs",
-                "integrations/ai-engines/replicate-text2video"
-              ]
-            },
-            {
-              "group": "Audio Models",
-              "pages": [
-                "integrations/ai-engines/replicate-audio"
-              ]
-            }
-          ]
-        }
-       
       ]
     }
   ],

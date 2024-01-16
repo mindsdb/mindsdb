@@ -3,6 +3,12 @@
 This handler integrates with the [Google Analytics Admin API](https://developers.google.com/analytics/devguides/config/admin/v1)
 to make conversion events data available to use for model training and predictions.
 
+## Parameters
+* `property_id`: required, the property id of your Google Analytics website
+* `credentials_file`: optional, full path to the credentials file (Service Account Credentials)
+* `credentials_json`: optional, credentials file content as json (Service Account Credentials)
+> ⚠️ One of credentials_file or credentials_json has to be chosen.
+
 ## Example: Automate your GA4 Property
 
 To see how the Google Analytics handler is used, let's walk through a simple example to create a model to predict

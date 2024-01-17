@@ -12,6 +12,7 @@ from .adapters import BaseMerlionForecastAdapter, DefaultForecasterAdapter, Merl
     SarimaForecasterAdapter, ProphetForecasterAdapter, MSESForecasterAdapter, IsolationForestDetectorAdapter, \
     WindStatsDetectorAdapter, ProphetDetectorAdapter
 
+logger = log.getLogger(__name__)
 
 class DetectorModelType(Enum):
     default = DefaultDetectorAdapter
@@ -131,15 +132,15 @@ class MerlionHandler(BaseMLEngine):
         if task_enum == TaskType.forecast:
             model_args[MerlionArguments.max_forecast_steps.value] = horizon
         adapter: BaseMerlionForecastAdapter = adapter_class(**model_args)
-        log.logger.info("Training model, args: " + json.dumps(serialize_args))
+        logger.info("Training model, args: " + json.dumps(serialize_args))
         adapter.train(df=ts_df, target=target)
-        log.logger.info("Training model completed.")
+        logger.info("Training model completed.")
 
         # persist save model
         model_bytes = adapter.to_bytes()
         self.model_storage.file_set(self.PERSIST_MODEL_FILE_NAME, model_bytes)
         self.model_storage.json_set(self.PERSIST_ARGS_KEY_IN_JSON_STORAGE, serialize_args)
-        log.logger.info("Model and args saved.")
+        logger.info("Model and args saved.")
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         rt_df = df.copy(deep=True)

@@ -1,2 +1,2 @@
-pandas
-openai >= 0.28.0
+openai == 1.6.1
+-r mindsdb/integrations/handlers/openai_handler/requirements.txt

@@ -6,13 +6,15 @@ from mindsdb_sql.planner.utils import query_traversal
 
 from mindsdb.interfaces.storage import db
 
-from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
-from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
+from mindsdb.api.executor.controllers.session_controller import SessionController
+from mindsdb.api.executor.command_executor import ExecuteCommands
 
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.utilities import log
 from mindsdb.interfaces.tasks.task import BaseTask
 from mindsdb.utilities.context import context as ctx
+
+logger = log.getLogger(__name__)
 
 
 class TriggerTask(BaseTask):
@@ -38,7 +40,7 @@ class TriggerTask(BaseTask):
 
         session.database = project.name
 
-        self.command_executor = ExecuteCommands(session, executor=None)
+        self.command_executor = ExecuteCommands(session)
 
         # subscribe
         database = session.integration_controller.get_by_id(trigger.database_id)
@@ -54,7 +56,7 @@ class TriggerTask(BaseTask):
         data_handler.subscribe(stop_event, self._callback, trigger.table_name, columns)
 
     def _callback(self, row, key=None):
-        log.logger.debug(f'trigger call: {row}, {key}')
+        logger.debug(f'trigger call: {row}, {key}')
 
         # set up environment
         ctx.load(self._ctx_dump)

@@ -1,2 +1,2 @@
 tpot<=0.11.7
-dill
+type_infer==0.0.18

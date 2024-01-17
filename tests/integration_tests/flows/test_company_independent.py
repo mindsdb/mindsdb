@@ -5,7 +5,7 @@ import pytest
 
 from pymongo import MongoClient
 
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from .conftest import CONFIG_PATH
 from .http_test_helpers import HTTPHelperMixin
 

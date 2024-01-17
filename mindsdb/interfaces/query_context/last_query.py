@@ -2,7 +2,9 @@ from typing import Union, List
 import copy
 from collections import defaultdict
 
-from mindsdb_sql.parser.ast import Identifier, Select, BinaryOperation, Last, Constant, Star, ASTNode
+from mindsdb_sql.parser.ast import (
+    Identifier, Select, BinaryOperation, Last, Constant, Star, ASTNode, NullConstant, OrderBy
+)
 from mindsdb_sql.planner.utils import query_traversal
 
 
@@ -21,6 +23,7 @@ class LastQuery:
             # just skip it
             return
 
+        self.last_idx = defaultdict(list)
         last_tables = self.__find_last_columns(query)
         if last_tables is None:
             return
@@ -75,12 +78,11 @@ class LastQuery:
 
         self.query_orig = copy.deepcopy(query)
 
-        last_idx = defaultdict(list)
         for parent_query_id, node in conditions:
             # inject constant
             link = Constant(None)
             node.args[1] = link
-            last_idx[parent_query_id].append([node.args[0], link])
+            self.last_idx[parent_query_id].append(node)
 
         # index query targets
         query_id = id(query)
@@ -108,16 +110,19 @@ class LastQuery:
         # make info about query
 
         last_columns = {}
-        for parent_query_id, lasts in last_idx.items():
-            for col, last in lasts:
+        for parent_query_id, nodes in self.last_idx.items():
+            for node in nodes:
+                col, last = node.args
                 tables = tables_idx[parent_query_id]
+
+                uniq_tables = len(set([id(v) for v in tables.values()]))
                 if len(col.parts) > 1:
 
                     table = tables.get(col.parts[-2])
                     if table is None:
                         raise Exception('cant find table')
-                elif len(tables) == 1:
-                    table = tables[0]
+                elif uniq_tables == 1:
+                    table = list(tables.values())[0]
                 else:
                     # or just skip it?
                     raise Exception('cant find table')
@@ -181,3 +186,31 @@ class LastQuery:
                 last.value = value
 
         return self.query
+
+    def get_init_queries(self):
+
+        back_up_values = []
+        # replace values
+        for nodes in self.last_idx.values():
+            for node in nodes:
+                back_up_values.append([node.op, node.args[1]])
+                node.op = 'is not'
+                node.args[1] = NullConstant()
+
+        query2 = copy.deepcopy(self.query)
+
+        # return values
+        for nodes in self.last_idx.values():
+            for node in nodes:
+                op, arg1 = back_up_values.pop(0)
+                node.op = op
+                node.args[1] = arg1
+
+        for info in self.get_last_columns():
+            col = Identifier(info['column_name'])
+            query2.targets = [col]
+            query2.order_by = [
+                OrderBy(col, direction='DESC')
+            ]
+            query2.limit = Constant(1)
+            yield query2, info

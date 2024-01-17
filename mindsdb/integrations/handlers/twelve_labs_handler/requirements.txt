@@ -1,0 +1,2 @@
+requests_toolbelt
+pydantic

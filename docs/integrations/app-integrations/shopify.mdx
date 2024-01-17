@@ -20,6 +20,18 @@ The required arguments to establish a connection are as follows:
 Here is how you can [create a Shopify access token](https://www.youtube.com/watch?v=4f_aiC5oTNc&t=302s).
 </Tip>
 
+Optionally, if you want to access customer reviews, provide the following parameters:
+
+- `yotpo_app_key`: a token needed to access customer reviews via the Yotpo Product Reviews app.
+- `yotpo_access_token`: a token needed to access customer reviews via the Yotpo Product Reviews app.
+
+<Tip>
+If you want to query customer reviews, use the [Yotpo Product Reviews](https://apps.shopify.com/yotpo-social-reviews) app available in Shopify. Here are the steps to follow:
+1. Install the [Yotpo Product Reviews](https://apps.shopify.com/yotpo-social-reviews) app for your Shopify store.
+2. Generate `yotpo_app_key` following [this instruction](https://support.yotpo.com/docs/finding-your-yotpo-app-key-and-secret-key) for retrieving your app key. Learn more about [Yotpo authentication here](https://apidocs.yotpo.com/reference/yotpo-authentication).
+3. Generate `yotpo_access_token` following [this instruction](https://develop.yotpo.com/reference/generate-a-token).
+</Tip>
+
 To connect your Shopify account to MindsDB, you must first create a new handler instance. You can do it by the following query:
 
 ```sql
@@ -33,29 +45,130 @@ PARAMETERS = {
 
 ## Usage
 
-Once you have created the database, you can query it like any other database. For example:
+Once you have created the database, you can query the following tables:
+
+- Products table
+- Customers table
+- Orders table
+- CustomerReviews table (requires the [Yotpo Product Reviews](https://apps.shopify.com/yotpo-social-reviews) app to be installed in your Shopify account)
+- InventoryLevel table
+- Location table
+- CarrierService table
+- ShippingZone table
+- SalesChannel table
+
+### Products table
+
+You can query this table as below:
 
 ```sql
 SELECT *
-FROM shopify_datasource.products
-LIMIT 10;
+FROM shopify_datasource.products;
 ```
 
-Also, you can run more advanced queries and query the products or orders by status etc. For example:
+Also, you can run more advanced queries and filter products by status, like this:
 
 ```sql
-SELECT  id, title
+SELECT id, title
 FROM shopify_datasource.products
 WHERE status = 'active'
 ORDER BY id
-LIMIT 5
+LIMIT 5;
 ```
-If you want to insert data into the store, run `INSERT INTO` statement:
+
+To insert new data, run the `INSERT INTO` statement, providing the following values: `title`, `body_html`, `vendor`, `product_type`, `tags`, `status`.
+
+To update existing data, run the `UPDATE` statement.
+
+To delete data, run the `DELETE` statement.
+
+### Customers table
+
+You can query this table as below:
 
 ```sql
-INSERT INTO shopify_datasource.customers(first_name, last_name, email)
-VALUES 
-('John', 'Doe', 'john.doe@example.com')
+SELECT *
+FROM shopify_datasource.customers;
+```
+
+To insert new data, run this statement:
+
+```sql
+INSERT INTO shopify_datasource.customers(first_name, last_name, email, phone)
+VALUES ('John', 'Doe', 'john.doe@example.com', '+10001112222');
+```
+
+To update existing data, run the `UPDATE` statement.
+
+To delete data, run the `DELETE` statement.
+
+### Orders table
+
+You can query this table as below:
+
+```sql
+SELECT *
+FROM shopify_datasource.orders;
+```
+
+### CustomerReviews table
+
+You can query this table as below:
+
+```sql
+SELECT *
+FROM shopify_datasource.customer_reviews;
+```
+
+### InventoryLevel table
+
+You can query this table as below:
+
+```sql
+SELECT *
+FROM shopify_datasource.inventory_level;
+```
+
+### Location table
+
+You can query this table as below:
+
+```sql
+SELECT *
+FROM shopify_datasource.locations;
+```
+
+### CarrierService table
+
+You can query this table as below:
+
+```sql
+SELECT *
+FROM shopify_datasource.carrier_service;
+```
+
+To insert new data, run the `INSERT INTO` statement, providing the following values: `name`, `callback_url`, `service_discovery`.
+
+To update existing data, run the `UPDATE` statement.
+
+To delete data, run the `DELETE` statement.
+
+### ShippingZone table
+
+You can query this table as below:
+
+```sql
+SELECT *
+FROM shopify_datasource.shipping_zone;
+```
+
+### SalesChannel table
+
+You can query this table as below:
+
+```sql
+SELECT *
+FROM shopify_datasource.sales_channel;
 ```
 
 <Info>

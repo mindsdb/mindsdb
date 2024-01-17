@@ -1,4 +1,4 @@
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.integrations.handlers.gmail_handler.gmail_handler import GmailHandler
 from mindsdb.integrations.handlers.gmail_handler.gmail_handler import EmailsTable
 from google.oauth2.credentials import Credentials
@@ -37,6 +37,7 @@ class GmailHandlerTest(unittest.TestCase):
         mock_response.status_code = 404
         mock_get.return_value = mock_response
 
+        # TODO this will be broken now that we don't use global loggers anymore
         with patch('mindsdb.utilities.log.logger') as mock_logger:
             result = self.handler._has_creds_file(self.credentials_file)
             # Assert that the requests.get method was called with the correct URL

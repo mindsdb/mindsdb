@@ -2,13 +2,11 @@ import json
 import pandas as pd
 from collections import OrderedDict
 
-from google_auth_oauthlib.flow import InstalledAppFlow
 from pandas import DataFrame
-from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from .google_search_tables import SearchAnalyticsTable, SiteMapsTable
 from mindsdb.integrations.libs.api_handler import APIHandler, FuncParser
 from mindsdb.integrations.libs.response import (
@@ -18,6 +16,7 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
 
 class GoogleSearchConsoleHandler(APIHandler):
     """
@@ -92,7 +91,7 @@ class GoogleSearchConsoleHandler(APIHandler):
             service = self.connect()
             response.success = True
         except Exception as e:
-            log.logger.error(f'Error connecting to Google Search Console API: {e}!')
+            logger.error(f'Error connecting to Google Search Console API: {e}!')
             response.error_message = e
 
         self.is_connected = response.success

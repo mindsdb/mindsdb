@@ -3,6 +3,9 @@ import pickle
 import socket
 import threading
 
+from walrus import Database
+from redis.exceptions import ConnectionError as RedisConnectionError
+
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.ml_task_queue.const import ML_TASK_STATUS
 
@@ -29,6 +32,28 @@ def from_bytes(b: bytes) -> object:
             object
     """
     return pickle.loads(b)
+
+
+def wait_redis_ping(db: Database, timeout: int = 30):
+    """ Wait when redis.ping return True
+
+        Args:
+            db (Database): redis db object
+            timeout (int): seconds to wait for success ping
+
+        Raises:
+            RedisConnectionError: if `ping` did not return `True` within `timeout` seconds
+    """
+    end_time = time.time() + timeout
+    while time.time() <= end_time:
+        try:
+            if db.ping() is True:
+                break
+        except RedisConnectionError:
+            pass
+        time.sleep(2)
+    else:
+        raise RedisConnectionError
 
 
 class RedisKey:
@@ -92,6 +117,7 @@ class StatusNotifier(threading.Thread):
         """ start update status with fixed frequency
         """
         while not self._stop_event.is_set():
+            wait_redis_ping(self.db)
             self.db.publish(self.redis_key.status, self.ml_task_status.value)
             self.cache.set(self.redis_key.status, self.ml_task_status.value, 180)
             time.sleep(5)

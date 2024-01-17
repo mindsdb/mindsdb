@@ -1,16 +1,17 @@
 import copy
 import datetime as dt
-import importlib
 import json
 import os
 import sys
 import tempfile
 from unittest import mock
+from pathlib import Path
 
 import duckdb
 import numpy as np
 import pandas as pd
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb_sql import parse_sql
 
 
 def unload_module(path):
@@ -33,7 +34,6 @@ class BaseUnitTest:
 
     @staticmethod
     def setup_class(cls):
-
         # remove imports of mindsdb in previous tests
         unload_module("mindsdb")
 
@@ -62,12 +62,16 @@ class BaseUnitTest:
 
         from multiprocessing import dummy
 
-        mp_patcher = mock.patch("torch.multiprocessing.get_context").__enter__()
-        mp_patcher.side_effect = lambda x: dummy
+        # We might not have torch installed. So ignore any errors
+        try:
+            mp_patcher = mock.patch("torch.multiprocessing.get_context").__enter__()
+            mp_patcher.side_effect = lambda x: dummy
+        except Exception:
+            mp_patcher = mock.patch("multiprocessing.get_context").__enter__()
+            mp_patcher.side_effect = lambda x: dummy
 
     @staticmethod
     def teardown_class(cls):
-
         # remove tmp db file
         cls.db.session.close()
         os.unlink(cls.db_file)
@@ -110,21 +114,43 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name="neuralforecast", data={}, engine="neuralforecast")
         db.session.add(r)
-        r = db.Integration(
-            name="popularity_recommender", data={}, engine="popularity_recommender"
-        )
+        r = db.Integration(name="popularity_recommender", data={}, engine="popularity_recommender")
         db.session.add(r)
         r = db.Integration(name="lightfm", data={}, engine="lightfm")
         db.session.add(r)
         r = db.Integration(name="openai", data={}, engine="openai")
         db.session.add(r)
-        r = db.Integration(name="anyscale_endpoints", data={}, engine="anyscale_endpoints")
+        r = db.Integration(name="anomaly_detection", data={}, engine="anomaly_detection")
+        db.session.add(r)
+        r = db.Integration(
+            name="anyscale_endpoints", data={}, engine="anyscale_endpoints"
+        )
         db.session.add(r)
         r = db.Integration(
             name="langchain_embedding", data={}, engine="langchain_embedding"
         )
         db.session.add(r)
+        r = db.Integration(name="writer", data={}, engine="writer")
+        db.session.add(r)
         r = db.Integration(name="rag", data={}, engine="rag")
+        db.session.add(r)
+        r = db.Integration(name="dummy_llm", data={}, engine="dummy_llm")
+        db.session.add(r)
+        r = db.Integration(name="litellm", data={}, engine="litellm")
+        db.session.add(r)
+        r = db.Integration(name="sentence_transformers", data={}, engine="sentence_transformers")
+        db.session.add(r)
+
+        r = db.Integration(name="pycaret", data={}, engine="pycaret")
+        db.session.add(r)
+
+        r = db.Integration(name="vertex", data={}, engine="vertex")
+        db.session.add(r)
+
+        r = db.Integration(name="google_gemini", data={}, engine="google_gemini")
+        db.session.add(r)
+
+        r = db.Integration(name="leonardo_ai", data={}, engine="leonardo_ai")
         db.session.add(r)
 
         # Lightwood should always be last (else tests break, why?)
@@ -145,9 +171,7 @@ class BaseUnitTest:
     @staticmethod
     def ret_to_df(ret):
         # converts executor response to dataframe
-        columns = [
-            col.alias if col.alias is not None else col.name for col in ret.columns
-        ]
+        columns = [col.alias if col.alias is not None else col.name for col in ret.columns]
         return pd.DataFrame(ret.data, columns=columns)
 
 
@@ -161,13 +185,17 @@ class BaseExecutorTest(BaseUnitTest):
         self.set_executor()
 
     def set_executor(
-        self, mock_lightwood=False, mock_model_controller=False, import_dummy_ml=False
+        self,
+        mock_lightwood=False,
+        mock_model_controller=False,
+        import_dummy_ml=False,
+        import_dummy_llm=False,
     ):
         # creates executor instance with mocked model_interface
-        from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import (
+        from mindsdb.api.executor.controllers.session_controller import (
             SessionController,
         )
-        from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import (
+        from mindsdb.api.executor.command_executor import (
             ExecuteCommands,
         )
         from mindsdb.interfaces.database.integrations import integration_controller
@@ -187,28 +215,33 @@ class BaseExecutorTest(BaseUnitTest):
         # self.mock_model_controller.get_models.side_effect = lambda: []
 
         if import_dummy_ml:
-            spec = importlib.util.spec_from_file_location(
-                "dummy_ml_handler", "./tests/unit/dummy_ml_handler/__init__.py"
-            )
-            foo = importlib.util.module_from_spec(spec)
-            sys.modules["dummy_ml_handler"] = foo
-            spec.loader.exec_module(foo)
+            test_handler_path = os.path.dirname(__file__)
+            sys.path.append(test_handler_path)
 
-            handler_module = sys.modules["dummy_ml_handler"]
-            handler_meta = integration_controller._get_handler_meta(handler_module)
-            integration_controller.handlers_import_status[
-                handler_meta["name"]
-            ] = handler_meta
+            handler_dir = Path(test_handler_path) / 'dummy_ml_handler'
+            integration_controller.import_handler('', handler_dir)
+
+            if not integration_controller.handlers_import_status['dummy_ml']['import']['success']:
+                error = integration_controller.handlers_import_status['dummy_ml']['import']['error_message']
+                raise Exception(f"Can not import: {str(handler_dir)}: {error}")
+
+        if import_dummy_llm:
+
+            test_handler_path = os.path.dirname(__file__)
+            sys.path.append(test_handler_path)
+
+            handler_dir = Path(test_handler_path) / 'dummy_llm_handler'
+            integration_controller.import_handler('', handler_dir)
+
+            if not integration_controller.handlers_import_status['dummy_llm']['import']['success']:
+                error = integration_controller.handlers_import_status['dummy_llm']['import']['error_message']
+                raise Exception(f"Can not import: {str(handler_dir)}: {error}")
 
         if mock_lightwood:
-            predict_patcher = mock.patch(
-                "mindsdb.integrations.libs.ml_exec_base.BaseMLEngineExec.predict"
-            )
+            predict_patcher = mock.patch("mindsdb.integrations.libs.ml_exec_base.BaseMLEngineExec.predict")
             self.mock_predict = predict_patcher.__enter__()
 
-            create_patcher = mock.patch(
-                "mindsdb.integrations.handlers.lightwood_handler.Handler.create"
-            )
+            create_patcher = mock.patch("mindsdb.integrations.handlers.lightwood_handler.Handler.create")
             self.mock_create = create_patcher.__enter__()
 
         ctx.set_default()
@@ -216,12 +249,17 @@ class BaseExecutorTest(BaseUnitTest):
         sql_session.database = "mindsdb"
         sql_session.integration_controller = integration_controller
 
-        self.command_executor = ExecuteCommands(sql_session, executor=None)
+        self.command_executor = ExecuteCommands(sql_session)
 
         # disable cache. it is need to check predictor input
         config_patch = mock.patch("mindsdb.utilities.cache.FileCache.get")
         self.mock_config = config_patch.__enter__()
         self.mock_config.side_effect = lambda x: None
+
+    def save_file(self, name, df):
+        file_path = tempfile.mktemp(prefix="mindsdb_file_")
+        df.to_parquet(file_path)
+        self.file_controller.save_file(name, file_path, name)
 
     def set_handler(self, mock_handler, name, tables, engine="postgres"):
         # integration
@@ -291,7 +329,7 @@ class BaseExecutorTest(BaseUnitTest):
             try:
                 result_df = con.execute(query).fetchdf()
                 result_df = result_df.replace({np.nan: None})
-            except:
+            except Exception:
                 # it can be not supported command like update or insert
                 result_df = pd.DataFrame()
             for table in tables.keys():
@@ -332,6 +370,16 @@ class BaseExecutorDummyML(BaseExecutorTest):
         self.set_executor(import_dummy_ml=True)
 
 
+class BaseExecutorDummyLLM(BaseExecutorTest):
+    """
+    Set up executor: mock LLM handler
+    """
+
+    def setup_method(self):
+        super().setup_method()
+        self.set_executor(import_dummy_llm=True)
+
+
 class BaseExecutorMockPredictor(BaseExecutorTest):
     """
     Set up executor: mock data handler and LW handler
@@ -355,9 +403,7 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
             self.db.session.delete(r)
 
         if "problem_definition" not in predictor:
-            predictor["problem_definition"] = {
-                "timeseries_settings": {"is_timeseries": False}
-            }
+            predictor["problem_definition"] = {"timeseries_settings": {"is_timeseries": False}}
 
         # add predictor to table
         r = self.db.Predictor(
@@ -373,7 +419,6 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
         self.db.session.commit()
 
         def predict_f(_model_name, data, pred_format="dict", *args, **kargs):
-            dict_arr = []
             explain_arr = []
             if isinstance(data, dict):
                 data = [data]
@@ -437,3 +482,13 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
         self.mock_predict.side_effect = predict_f
         self.mock_model_controller.get_models.side_effect = lambda: [predictor_record]
         self.mock_model_controller.get_model_data.side_effect = get_model_data_f
+
+    def execute(self, sql):
+        ret = self.command_executor.execute_command(
+            parse_sql(sql, dialect='mindsdb')
+        )
+        if ret.error_code is not None:
+            raise Exception()
+        if isinstance(ret.data, list):
+            ret.records = self.ret_to_df(ret).to_dict('records')
+        return ret

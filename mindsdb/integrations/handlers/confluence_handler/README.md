@@ -34,7 +34,7 @@ WITH
     PARAMETERS = {
     "url": "https://marios.atlassian.net/",
     "username": "your_username",
-    "password":"access_token" 
+    "password":"access_token"
     };
 ~~~~
 
@@ -42,14 +42,58 @@ Use the established connection to query your database:
 
 ~~~~sql
 SELECT * FROM mindsdb_confluence.pages
+WHERE space='space';
 ~~~~
 
 Advanced queries for the confluence handler
 
 ~~~~sql
-SELECT id,key,name,type
+SELECT id,title,body
 FROM mindsdb_confluence.pages
-WHERE type="personal"
-ORDER BY id ASC, name DESC
+WHERE space='space'
+ORDER BY id ASC, title DESC
 LIMIT 10
 ~~~~
+
+## CRUD Operations
+
+The engine supports CRUD operations using SQL queries on the `pages` Content Type.
+Here is the format for the queries:
+
+~~~~sql
+SELECT * FROM mindsdb_confluence.pages
+WHERE space='space';
+~~~~
+
+You need to specify the name of the space to view all the pages in that space.
+
+To select a single page, you can use the `id` column:
+~~~~sql
+SELECT * FROM mindsdb_confluence.pages
+WHERE space='space' AND id=123456;
+~~~~
+
+~~~~sql
+INSERT INTO confluence_data.pages ('space', 'title', 'body')
+VALUES
+('DEMO', 'test title # 1', 'test body # 1'),
+('DEMO', 'test title # 2', 'test body # 2'),
+('DEMO', 'test title # 3', 'test body # 3')
+~~~~
+
+You need to specify the name of the space, title and body of the page to create a new page in that space.
+
+~~~~sql
+UPDATE confluence_data.pages
+SET title='New Title', body='This is the new body'
+WHERE id=123456;
+~~~~
+
+You need to specify the id of the page to update the title and body of the page.
+
+~~~~sql
+DELETE FROM confluence_data.pages
+WHERE id=123456;
+~~~~
+
+You need to specify the id of the page to delete the page.

@@ -14,8 +14,8 @@ from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.handlers import ns_conf
 from mindsdb.integrations.utilities.install import install_dependencies
 
-from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
-from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
+from mindsdb.api.executor.controllers.session_controller import SessionController
+from mindsdb.api.executor.command_executor import ExecuteCommands
 
 
 @ns_conf.route('/')
@@ -83,6 +83,61 @@ class InstallDependencies(Resource):
 @ns_conf.route('/byom/<name>')
 @ns_conf.param('name', "Name of the model")
 class BYOMUpload(Resource):
+    @ns_conf.doc('post_file')
+    def post(self, name):
+        params = {}
+
+        def on_field(field):
+            name = field.field_name.decode()
+            value = field.value.decode()
+            params[name] = value
+
+        def on_file(file):
+            params[file.field_name.decode()] = file.file_object
+
+        temp_dir_path = tempfile.mkdtemp(prefix='mindsdb_file_')
+
+        parser = multipart.create_form_parser(
+            headers=request.headers,
+            on_field=on_field,
+            on_file=on_file,
+            config={
+                'UPLOAD_DIR': temp_dir_path.encode(),  # bytes required
+                'UPLOAD_KEEP_FILENAME': True,
+                'UPLOAD_KEEP_EXTENSIONS': True,
+                'MAX_MEMORY_FILE_SIZE': 0
+            }
+        )
+
+        while True:
+            chunk = request.stream.read(8192)
+            if not chunk:
+                break
+            parser.write(chunk)
+        parser.finalize()
+        parser.close()
+
+        connection_args = {
+            'code': params['code'].name.decode(),
+            'modules': params['modules'].name.decode(),
+            'type': params.get('type')
+        }
+
+        session = SessionController()
+
+        base_ml_handler = session.integration_controller.get_handler(name)
+        byom_handler = base_ml_handler.get_ml_handler()
+        byom_handler.update_engine(connection_args)
+
+        engine_versions = [
+            int(x) for x in byom_handler.engine_storage.get_connection_args()['versions'].keys()
+        ]
+
+        return {
+            'last_engine_version': max(engine_versions),
+            'engine_versions': engine_versions
+        }
+
     @ns_conf.doc('put_file')
     def put(self, name):
         ''' upload new model
@@ -128,11 +183,12 @@ class BYOMUpload(Resource):
 
         sql_session = SessionController()
 
-        command_executor = ExecuteCommands(sql_session, executor=None)
+        command_executor = ExecuteCommands(sql_session)
 
         connection_args = {
             'code': params['code'].name.decode(),
             'modules': params['modules'].name.decode(),
+            'type': params.get('type')
         }
 
         ast_query = CreateMLEngine(

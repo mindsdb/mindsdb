@@ -146,7 +146,7 @@ Visit https://replicate.com/{model_name}/versions/{version} to check parameters.
         replicate.default_client.api_token = self._get_replicate_api_key(args)
         model = replicate.models.get(args['model_name'])
         version = model.versions.get(args['version'])
-        schema = version.get_transformed_schema()['components']['schemas']['Input']['properties']
+        schema = version.openapi_schema['components']['schemas']['Input']['properties']
 
         # returns only list of paramater
         if only_keys:

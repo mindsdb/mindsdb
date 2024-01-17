@@ -1,0 +1,149 @@
+---
+title: Mistral7B Model Fine-Tuning
+---
+
+<Tip>
+Follow [this blog post](https://mindsdb.com/blog/fine-tuning-an-ai-model-in-mindsdb-using-anyscale-endpoints) for a comprehensive tutorial on how to fine-tune a Mistral 7B model.
+</Tip>
+
+<p align="center">
+  <img src="https://docs.google.com/drawings/d/e/2PACX-1vTtA4vBzgbVQS9laQf6i5cYQpvP0-trZ5nYt6WJZHw-Iv_TssIWJxlLQnmgiT0SNQadyybSSsA3FH1J/pub?w=955&h=460" />
+</p>
+
+All Anyscale models belong to the group of Large Language Models (LLMs). 
+
+<Tip>
+These are some of the supported models:
+* Mistral7B
+* Llama-2-7b
+* Llama-2-13b
+* Llama-2-70b
+* Code Llama
+</Tip>
+
+Let's create a model to answer questions about MindsDB's custom SQL syntax.
+
+First, create an AnyScale engine, passing your Anyscale API key:
+
+```sql
+CREATE ML_ENGINE anyscale_engine
+FROM anyscale_endpoints
+USING
+    api_key = 'your-anyscale-api-key';
+```
+
+Then, create a model using this engine:
+
+```sql
+CREATE MODEL mymistral7b
+PREDICT completion
+USING
+    engine = 'anyscale_engine',
+    model_name = 'mistralai/Mistral-7B-Instruct-v0.1',
+    prompt_template = 'Return a valid SQL string for the following question about MindsDB in-database machine learning: {{prompt}}';
+```
+
+You can check model status with this command:
+
+```sql
+DESCRIBE mymistral7b;
+```
+
+Once the status is complete, we can query for predictions:
+
+```sql
+SELECT prompt, completion
+FROM mymistral7b as m
+WHERE prompt = 'What is the SQL syntax to join input data with predictions from a MindsDB machine learning model?'
+USING max_tokens=400;
+```
+
+On execution, we get:
+
+```sql
++---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
+| prompt                                                                                            | completion                                                                                           |
++---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
+| What is the SQL syntax to join input data with predictions from a MindsDB machine learning model? | The SQL syntax is: SELECT * FROM input_data INNER JOIN predictions ON input_data.id = predictions.id |
++---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
+```
+
+If you followed one of the MindsDB tutorials before, you'll see that the syntax provided by the model is not exactly as expected.
+
+Now, we'll fine-tune our model using a table that stores details about MindsDB's custom SQL syntax.
+
+<Info>
+Let's connect to a DB that hosts a table we'll use to fine-tune our model:
+
+```sql
+CREATE DATABASE example_db
+WITH ENGINE = "postgres",
+PARAMETERS = {
+    "user": "demo_user",
+    "password": "demo_password",
+    "host": "3.220.66.106",
+    "port": "5432",
+    "database": "demo"
+    };
+```
+
+Now we can take a look at the fine-tuning data:
+
+```sql
+SELECT prompt, completion
+FROM example_db.demo_data.chat_llm_mindsdb_docs
+LIMIT 5;
+```
+
+And here are the first few rows:
+
+| message_id | role       | content                                                                                                                                                  |
+|------------|------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 0          | system     | You are a helpful assistant. Your task is to answer a user's question regarding the SQL syntax supported by MindsDB, a machine learning product for training models and seamlessly deploying them where your data lives.    |
+| 1          | user       | In the context of MindsDB: 1. Testing CREATE DATABASE                                                                                                    |
+| 2          | assistant  | ``` CREATE DATABASE example_db WITH ENGINE = "postgres", PARAMETERS = { "user": "demo_user", "password": "demo_password", "host": "3.220.66.106", ... }; ``` |
+|            |            | Output:                                                                                                                                                  |
+|            |            | | status |                                                                                                                                                     |
+|            |            | | ------ |                                                                                                                                                     |
+|            |            | | Query successfully completed |                                                                                                                         |
+| 3          | system     | You are a helpful assistant. Your task is to answer a user's question regarding the SQL syntax supported by MindsDB, a machine learning product for...    |
+| 4          | user       | In the context of MindsDB: 2. Testing Preview the Available Data Using SELECT                                                                            |
+
+
+Notice it is formatted as a series of chats that conform to the standard OpenAI chat format. Every message has a "role" and some "content". By chaining together a series of messages, we can create a conversation.
+</Info>
+
+Now, you can fine-tune a Mistral model with this data like so:
+
+```sql
+FINETUNE mymistral7b
+FROM example_db
+    (SELECT * FROM demo_data.chat_llm_mindsdb_docs);
+```
+
+The [`FINETUNE`](/sql/api/finetune) command creates a new version of the `mistralai/Mistral-7B-Instruct-v0.1` model. You can query all available versions as below:
+
+```sql
+SELECT *
+FROM models_versions
+WHERE name = 'mymistral7b';
+```
+
+Once the new version status is complete and active, we can query the model again, expecting a more accurate output.
+
+```sql
+SELECT prompt, completion
+FROM mymistral7b as m
+WHERE prompt = 'What is the SQL syntax to join input data with predictions from a MindsDB machine learning model?'
+USING max_tokens=400;
+```
+
+On execution, we get:
+
+```sql
++---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
+| prompt                                                                                            | completion                                                                                           |
++---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
+| What is the SQL syntax to join input data with predictions from a MindsDB machine learning model? | SELECT * FROM mindsdb.models.my_model JOIN mindsdb.input_data_name;                                  |
++---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
+```

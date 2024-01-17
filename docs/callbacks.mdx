@@ -11,6 +11,7 @@ Callbacks enable the retrieval of a model's status when it transitions to either
     "version": 1,
     "active": true,
     "predictor_id": 123,
+    "project_name": "mindsdb",
     "predictor_created_at": "Fri, 09 Sep 2023 11:50:27 GMT",
     "old_status": "training",
     "new_status": "complete",
@@ -23,6 +24,7 @@ Let's break down each key:
  - `version`: version of the trained model
  - `active`: indicates whether the newly trained model is active
  - `predictor_id`: unique identifier for the trained model
+ - `project_name`: the name of the project in which the model was created
  - `predictor_created_at`: time at which the model was created
  - `old_status`: status the model had prior to receiving the `new_status`
  - `new_status`: current status of the model
@@ -45,7 +47,16 @@ POST /cloud/callback/model_status
 Content-Type: application/json
 {
   // url will be called on model status change
-  "url": "https://my.endpoint.com/"
+  "url": "https://my.endpoint.com/",
+  "filter": {
+    "model_name": ".*",
+    "project_name": ".*"
+  },
+  "attempt": {
+    "count": 5,
+    "http_timeout": 10,
+    "interval": 10
+  }
 }
 ```
 
@@ -59,6 +70,16 @@ Content-Type: application/json
   "id": 123456
 }
 ```
+
+Only the `url` key is required in the Request. All others are optional.
+ - `url` - this represents the address that will be utilized to send a POST request, containing detailed information about the model's status
+ - `filter` - this is used to restrict the triggering of callbacks:
+   - `model_name` - python-style regular expression used to filter the names of models that trigger a callback
+   - `project_name` - python-style regular expression used to filter the names of projects
+ - `attempt` - this outlines the configuration of the number and frequency of attempts to send callbacks
+   - `count` - maximum number of attempts
+   - `interval` - represents the interval between failed attempts
+   - `http_timeout` - time allotted to wait for a successful response.
 
 ### Get a Callback
 

@@ -53,3 +53,18 @@ WHERE youtube_video_id = "raWFGQ20OfA"
 ORDER BY display_name ASC
 LIMIT 5;
 ```
+
+
+Get information about any youtube video using video_id:
+```sql
+SELECT * FROM mindsdb_youtube.videos
+WHERE video_id="id";
+```
+
+
+Given a channel_id, get information about the channel:
+
+```sql
+SELECT * FROM mindsdb_youtube.channels
+WHERE channel_id="UC-...";
+```

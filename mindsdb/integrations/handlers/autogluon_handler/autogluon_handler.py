@@ -4,14 +4,14 @@ import dill
 import pandas as pd
 
 from autogluon.tabular import TabularPredictor
-from type_infer.infer import infer_types
+from type_infer.api import infer_types
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities import log
 from .config import ClassificationConfig, RegressionConfig
 
 
-logger = log.get_log(__name__)
+logger = log.getLogger(__name__)
 
 
 class AutoGluonHandler(BaseMLEngine):

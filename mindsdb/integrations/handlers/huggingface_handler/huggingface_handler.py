@@ -8,6 +8,8 @@ from mindsdb.integrations.handlers.huggingface_handler.settings import FINETUNE_
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
+
 
 class HuggingFaceHandler(BaseMLEngine):
     name = "huggingface"
@@ -107,29 +109,24 @@ class HuggingFaceHandler(BaseMLEngine):
         else:
             args["task_proper"] = args["task"]
 
-        log.logger.debug(f"Checking file system for {model_name}...")
+        logger.debug(f"Checking file system for {model_name}...")
 
         ####
         # Check if pipeline has already been downloaded
         try:
-            pipeline = transformers.pipeline(
-                task=args["task_proper"],
-                model=hf_model_storage_path,
-                tokenizer=hf_model_storage_path,
-            )
-            log.logger.debug(f"Model already downloaded!")
+            pipeline = transformers.pipeline(task=args['task_proper'], model=hf_model_storage_path,
+                                             tokenizer=hf_model_storage_path)
+            logger.debug(f'Model already downloaded!')
         ####
         # Otherwise download it
         except OSError:
             try:
-                log.logger.debug(f"Downloading {model_name}...")
-                pipeline = transformers.pipeline(
-                    task=args["task_proper"], model=model_name
-                )
+                logger.debug(f"Downloading {model_name}...")
+                pipeline = transformers.pipeline(task=args['task_proper'], model=model_name)
 
                 pipeline.save_pretrained(hf_model_storage_path)
 
-                log.logger.debug(f"Saved to {hf_model_storage_path}")
+                logger.debug(f"Saved to {hf_model_storage_path}")
             except Exception:
                 raise Exception(
                     "Error while downloading and setting up the model. Please try a different model. We're working on expanding the list of supported models, so we would appreciate it if you let us know about this in our community slack (https://mindsdb.com/joincommunity)."
@@ -143,7 +140,7 @@ class HuggingFaceHandler(BaseMLEngine):
         elif "max_length" in pipeline.model.config.to_dict().keys():
             args["max_length"] = pipeline.model.config.max_length
         else:
-            log.logger.debug("No max_length found!")
+            logger.debug('No max_length found!')
 
         labels_default = pipeline.model.config.id2label
         labels_map = {}
@@ -372,5 +369,5 @@ class HuggingFaceHandler(BaseMLEngine):
 
         except Exception as e:
             err_str = f"Finetune failed with error: {str(e)}"
-            log.logger.debug(err_str)
+            logger.debug(err_str)
             raise Exception(err_str)

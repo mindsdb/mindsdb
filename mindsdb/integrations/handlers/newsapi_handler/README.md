@@ -24,7 +24,7 @@ To see if the connection was successful, try searching for the most recent artic
 ```
 SELECT *
 FROM newsAPI.article
-WHERE query = 'mindsdb';
+WHERE query = 'Python';
 ```
 
 The result come with all these columns
@@ -48,12 +48,10 @@ You can select with multiple clauses
 ```
 SELECT *
 FROM newsAPI.article
-WHERE query = 'mindsdb'
-AND sources="abc-news"
-AND publishedAt >= "2023-03-23" AND  publishedAt <= "2023-04-23"
-AND language = 'en'
-ORDER BY publishedAt
-LIMIT 40;
+WHERE query = 'Python'
+AND sources="bbc-news"
+AND publishedAt >= "2021-03-23" AND  publishedAt <= "2023-04-23"
+LIMIT 4;
 ```
 
 #### **WHERE CLAUSE PARAMETERS:**

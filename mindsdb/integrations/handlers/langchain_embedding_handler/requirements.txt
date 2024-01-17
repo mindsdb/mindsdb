@@ -1,0 +1,2 @@
+openai == 1.6.1
+tiktoken~=0.4.0

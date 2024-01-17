@@ -62,7 +62,7 @@ class MLEngineException(Exception):
 
 class BaseMLEngineExec:
 
-    def __init__(self, name, integration_id, integration_engine, integration_meta, handler_module):  #, handler_class):
+    def __init__(self, name, integration_id, integration_engine, integration_meta, handler_module):   # , handler_class):
         """ ML handler interface converter
 
             Args:

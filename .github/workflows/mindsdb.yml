@@ -21,7 +21,7 @@ jobs:
           python tests/scripts/check_code.py
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v37
+        uses: tj-actions/changed-files@v41
       - name: Run pre-commit
         uses: pre-commit/action@v3.0.0
         with:

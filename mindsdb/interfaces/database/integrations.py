@@ -507,15 +507,11 @@ class IntegrationController:
         if integration_data is None:
             raise Exception(f"Can't find integration_record for handler '{name}'")
         connection_data = integration_data.get('connection_data', {})
-        integration_name = integration_data['name']
         logger.debug(
             "%s.get_handler: connection_data=%s, engine=%s",
             self.__class__.__name__,
             connection_data, integration_engine
         )
-
-        if integration_engine not in self.handler_modules:
-            raise Exception(f"Can't find handler for '{integration_name}' ({integration_engine})")
 
         if integration_meta["import"]["success"] is False:
             msg = dedent(f'''\

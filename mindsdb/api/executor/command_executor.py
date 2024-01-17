@@ -944,7 +944,7 @@ class ExecuteCommands:
                         model_record.data_integration_ref["id"]
                     )
                     if integration is None:
-                        raise Exception(
+                        raise EntityNotExistsError(
                             "The database from which the model was trained no longer exists"
                         )
 
@@ -963,7 +963,7 @@ class ExecuteCommands:
         if ml_handler is None:
             integration_record = get_predictor_integration(model_record)
             if integration_record is None:
-                raise Exception("ML engine model was trained with does not esxists")
+                raise EntityNotExistsError("ML engine model was trained with does not esxists")
             ml_handler = self.session.integration_controller.get_ml_handler(
                 integration_record.name
             )

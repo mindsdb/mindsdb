@@ -468,11 +468,11 @@ class TestProjectStructure(BaseExecutorDummyML):
             columns=['id', 'region_id', 'format'],
             data=[
                 [1, 1, 'c'],
-                  [2, 2, 'a'],
-                  [3, 2, 'a'],
-                  [4, 2, 'b'],
+                [2, 2, 'a'],
+                [3, 2, 'a'],
+                [4, 2, 'b'],
                 [5, 1, 'b'],
-                  [6, 2, 'b'],
+                [6, 2, 'b'],
             ]
         )
         regions = pd.DataFrame(
@@ -516,9 +516,9 @@ class TestProjectStructure(BaseExecutorDummyML):
         # -- joins / conditions / unions --
 
         sql = '''
-            select 
+            select
                m1.predicted / 2 a,  -- 42/2=21
-               s.id + (select id from files.regions where id=1) b -- =3              
+               s.id + (select id from files.regions where id=1) b -- =3
              from files.stores s
              join files.regions r on r.id = s.region_id
              join model1 m1
@@ -527,12 +527,11 @@ class TestProjectStructure(BaseExecutorDummyML):
                    m1.model_param = (select 100 + id from files.stores where id=1)
                    and s.region_id=(select id from files.regions where id=2) -- only region_id=2
                    and s.format='a'
-                   and s.id = r.id -- cross table condition 
-            union 
+                   and s.id = r.id -- cross table condition
+            union
               select id, id from files.regions where id = 1  -- 2nd row with [1,1]
-            union 
+            union
               select id, id from files.stores where id = 2   -- 2nd row with [2,2]
-                
         '''
 
         ret = self.run_sql(sql)
@@ -544,26 +543,26 @@ class TestProjectStructure(BaseExecutorDummyML):
 
         # -- aggregating / grouping / cases --
         case = '''
-            case when s.id=1 then 10 
+            case when s.id=1 then 10
                  when s.id=2 then 20
                  when s.id=3 then 30
                  else 100
             end
         '''
 
-        sql = f'''                
-             SELECT 
+        sql = f'''
+             SELECT
                -- values for region_id=2: [20, 30, 100, 100]
                MAX({case}) c_max,   -- =100
-               MIN({case}) c_min,   -- =20               
-               SUM({case}) c_sum,   -- =250               
+               MIN({case}) c_min,   -- =20
+               SUM({case}) c_sum,   -- =250
                COUNT({case}) c_count, -- =4
                AVG({case}) c_avg   -- 250/4=62.5
-            from stores_view s  -- view is used 
+            from stores_view s  -- view is used
              join files.regions r on r.id = s.region_id
              join model1 m1
             group by r.id -- 2 records
-            having max(r.id) = 2 -- 1 record       
+            having max(r.id) = 2 -- 1 record
         '''
 
         ret = self.run_sql(sql)
@@ -578,7 +577,7 @@ class TestProjectStructure(BaseExecutorDummyML):
 
         # -- window functions --
         sql = '''
-           SELECT 
+           SELECT
              s.*,
             ROW_NUMBER() OVER(PARTITION BY r.id ORDER BY s.id) ROW_NUMBER,
             RANK() OVER(PARTITION BY r.id ORDER BY s.format) RANK,

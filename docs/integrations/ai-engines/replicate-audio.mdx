@@ -7,6 +7,37 @@ The required arguments to establish a connection are,
 * version: version hash/id which you want to use in MindsDB.
 * api_key: API key from Replicate Platform you can found [here](https://replicate.com/account/api-tokens).
 
+<Note> 
+
+Before you can use Replicate, it's essential to authenticate by setting your API token in an environment variable named REPLICATE_API_TOKEN.
+ This token acts as a key to enable access to Replicate's features.
+
+1. Using pip:
+
+If you're working in a standard Python environment (using pip for package management), set your token as an environment variable by running the following command 
+in your terminal:
+
+On Linux, Mac:
+```
+export REPLICATE_API_TOKEN='YOUR_TOKEN'
+```
+On Windows:
+
+```
+set REPLICATE_API_TOKEN=YOUR_TOKEN
+```
+
+
+2. Using Docker:
+
+For Docker users, the process slightly differs. You need to pass the environment variable directly to the Docker container when running it. Use this command:
+
+```
+docker run -e REPLICATE_API_TOKEN='YOUR_TOKEN' -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+```
+
+Again, replace 'YOUR_TOKEN' with your actual Replicate API token.
+</Note>
 
 ## Usage
 To use this handler and connect to a Replicate cluster in MindsDB, you need an account on Replicate. Make sure to create an account by following this [link](https://replicate.com/signin?next=/account/api-tokens).

@@ -1,1 +1,2 @@
-from .google_oauth_utilities import GoogleOAuth2Manager
+from .google import GoogleOAuth2Manager
+from .microsoft import MSGraphAPIAuthManager

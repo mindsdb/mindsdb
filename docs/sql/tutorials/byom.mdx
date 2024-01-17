@@ -11,7 +11,7 @@ The former supports importing already trained models and predicting with them fr
 In order to use custom models there are three mandatory arguments one must past inside the `USING` statement:
 - `url.predict`, this is the url to call for getting predictions from your model
 - `format`, this can be either `mlflow` or `ray_serve`
-- `dtype_dict`, this is a JSON specifying all columns expected by their models, and their respective data types. For now, the mapping supports data types used by [lightwood](https://lightwood.io/api/dtype.html), our AutoML library.
+- `dtype_dict`, this is a JSON specifying all columns expected by their models, and their respective data types. For now, the mapping supports data types used by [lightwood](https://mindsdb.github.io/lightwood/api/dtype.html), our AutoML library.
 
 There's an additional optional argument if you want to train the model via MindsDB (only for Ray Serve):
 - `url.train`, which is the endpoint that will be called to train your model

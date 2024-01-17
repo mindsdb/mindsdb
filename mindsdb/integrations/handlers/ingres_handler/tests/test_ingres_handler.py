@@ -1,6 +1,6 @@
 import unittest
 from mindsdb.integrations.handlers.ingres_handler.ingres_handler import IngresHandler
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 
 class IngresHandlerTest(unittest.TestCase):

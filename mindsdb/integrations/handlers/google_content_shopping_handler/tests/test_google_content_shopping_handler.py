@@ -1,7 +1,7 @@
 import unittest
 from mindsdb.integrations.handlers.google_content_shopping_handler.google_content_shopping_handler import \
     GoogleContentShoppingHandler
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 
 class GoogleSearchConsoleHandlerTest(unittest.TestCase):

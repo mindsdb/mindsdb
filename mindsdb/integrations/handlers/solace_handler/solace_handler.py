@@ -9,7 +9,7 @@ from solace.messaging.receiver.inbound_message import InboundMessage
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser import ast
 
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,

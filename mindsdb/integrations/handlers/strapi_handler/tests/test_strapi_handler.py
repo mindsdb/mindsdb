@@ -1,6 +1,6 @@
 import unittest
 from mindsdb.integrations.handlers.strapi_handler.strapi_handler import StrapiHandler
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 
 class StrapiHandlerTest(unittest.TestCase):

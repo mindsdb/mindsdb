@@ -1,6 +1,6 @@
 import unittest
 from mindsdb.integrations.handlers.aurora_handler.aurora_handler import AuroraHandler
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 
 class AuroraPostgresHandlerTest(unittest.TestCase):

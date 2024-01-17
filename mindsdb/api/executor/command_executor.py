@@ -173,13 +173,13 @@ class ExecuteCommands:
             sql = statement.to_string()
         sql_lower = sql.lower()
 
-        if type(statement) == CreateDatabase:
+        if type(statement) is CreateDatabase:
             return self.answer_create_database(statement)
-        elif type(statement) == CreateMLEngine:
+        elif type(statement) is CreateMLEngine:
             return self.answer_create_ml_engine(statement)
-        elif type(statement) == DropMLEngine:
+        elif type(statement) is DropMLEngine:
             return self.answer_drop_ml_engine(statement)
-        elif type(statement) == DropPredictor:
+        elif type(statement) is DropPredictor:
             database_name = self.session.database
             if len(statement.name.parts) > 1:
                 database_name = statement.name.parts[0].lower()
@@ -192,18 +192,18 @@ class ExecuteCommands:
                 if not statement.if_exists:
                     raise e
             return ExecuteAnswer(ANSWER_TYPE.OK)
-        elif type(statement) == DropTables:
+        elif type(statement) is DropTables:
             return self.answer_drop_tables(statement)
-        elif type(statement) == DropDatasource or type(statement) == DropDatabase:
+        elif type(statement) is DropDatasource or type(statement) is DropDatabase:
             return self.answer_drop_database(statement)
-        elif type(statement) == Describe:
+        elif type(statement) is Describe:
             # NOTE in sql 'describe table' is same as 'show columns'
             return self.answer_describe_predictor(statement)
-        elif type(statement) == RetrainPredictor:
+        elif type(statement) is RetrainPredictor:
             return self.answer_retrain_predictor(statement)
-        elif type(statement) == FinetunePredictor:
+        elif type(statement) is FinetunePredictor:
             return self.answer_finetune_predictor(statement)
-        elif type(statement) == Show:
+        elif type(statement) is Show:
             sql_category = statement.category.lower()
             if hasattr(statement, "modes"):
                 if isinstance(statement.modes, list) is False:
@@ -524,9 +524,9 @@ class ExecuteCommands:
             RollbackTransaction,
         ):
             return ExecuteAnswer(ANSWER_TYPE.OK)
-        elif type(statement) == Set:
+        elif type(statement) is Set:
             category = (statement.category or "").lower()
-            if category == "" and type(statement.arg) == BinaryOperation:
+            if category == "" and type(statement.arg) is BinaryOperation:
                 if isinstance(statement.arg.args[0], Variable):
                     return ExecuteAnswer(ANSWER_TYPE.OK)
                 if statement.arg.args[0].parts[0].lower() == "profiling":
@@ -570,7 +570,7 @@ class ExecuteCommands:
                     f"SQL statement is not processable, return OK package: {sql}"
                 )
                 return ExecuteAnswer(ANSWER_TYPE.OK)
-        elif type(statement) == Use:
+        elif type(statement) is Use:
             db_name = statement.value.parts[-1]
             self.change_default_db(db_name)
             return ExecuteAnswer(ANSWER_TYPE.OK)
@@ -579,11 +579,11 @@ class ExecuteCommands:
             CreateAnomalyDetectionModel,  # we may want to specialize these in the future
         ):
             return self.answer_create_predictor(statement)
-        elif type(statement) == CreateView:
+        elif type(statement) is CreateView:
             return self.answer_create_view(statement)
-        elif type(statement) == DropView:
+        elif type(statement) is DropView:
             return self.answer_drop_view(statement)
-        elif type(statement) == Delete:
+        elif type(statement) is Delete:
             if statement.table.parts[-1].lower() == "models_versions":
                 return self.answer_delete_model_version(statement)
             if (
@@ -597,10 +597,10 @@ class ExecuteCommands:
             SQLQuery(statement, session=self.session, execute=True)
             return ExecuteAnswer(ANSWER_TYPE.OK)
 
-        elif type(statement) == Insert:
+        elif type(statement) is Insert:
             SQLQuery(statement, session=self.session, execute=True)
             return ExecuteAnswer(ANSWER_TYPE.OK)
-        elif type(statement) == Update:
+        elif type(statement) is Update:
             if statement.from_select is None:
                 if statement.table.parts[-1].lower() == "models_versions":
                     return self.answer_update_model_version(statement)
@@ -608,58 +608,58 @@ class ExecuteCommands:
             SQLQuery(statement, session=self.session, execute=True)
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif (
-            type(statement) == Alter
+            type(statement) is Alter
             and ("disable keys" in sql_lower)
             or ("enable keys" in sql_lower)
         ):
             return ExecuteAnswer(ANSWER_TYPE.OK)
-        elif type(statement) == Select:
+        elif type(statement) is Select:
             if statement.from_table is None:
                 return self.answer_single_row_select(statement)
             query = SQLQuery(statement, session=self.session)
             return self.answer_select(query)
-        elif type(statement) == Union:
+        elif type(statement) is Union:
             query = SQLQuery(statement, session=self.session)
             return self.answer_select(query)
-        elif type(statement) == Explain:
+        elif type(statement) is Explain:
             return self.answer_show_columns(statement.target)
-        elif type(statement) == CreateTable:
+        elif type(statement) is CreateTable:
             # TODO
             return self.answer_apply_predictor(statement)
         # -- jobs --
-        elif type(statement) == CreateJob:
+        elif type(statement) is CreateJob:
             return self.answer_create_job(statement)
-        elif type(statement) == DropJob:
+        elif type(statement) is DropJob:
             return self.answer_drop_job(statement)
         # -- triggers --
-        elif type(statement) == CreateTrigger:
+        elif type(statement) is CreateTrigger:
             return self.answer_create_trigger(statement)
-        elif type(statement) == DropTrigger:
+        elif type(statement) is DropTrigger:
             return self.answer_drop_trigger(statement)
         # -- chatbots
-        elif type(statement) == CreateChatBot:
+        elif type(statement) is CreateChatBot:
             return self.answer_create_chatbot(statement)
-        elif type(statement) == UpdateChatBot:
+        elif type(statement) is UpdateChatBot:
             return self.answer_update_chatbot(statement)
-        elif type(statement) == DropChatBot:
+        elif type(statement) is DropChatBot:
             return self.answer_drop_chatbot(statement)
-        elif type(statement) == CreateKnowledgeBase:
+        elif type(statement) is CreateKnowledgeBase:
             return self.answer_create_kb(statement)
-        elif type(statement) == DropKnowledgeBase:
+        elif type(statement) is DropKnowledgeBase:
             return self.anwser_drop_kb(statement)
-        elif type(statement) == CreateSkill:
+        elif type(statement) is CreateSkill:
             return self.answer_create_skill(statement)
-        elif type(statement) == DropSkill:
+        elif type(statement) is DropSkill:
             return self.answer_drop_skill(statement)
-        elif type(statement) == UpdateSkill:
+        elif type(statement) is UpdateSkill:
             return self.answer_update_skill(statement)
-        elif type(statement) == CreateAgent:
+        elif type(statement) is CreateAgent:
             return self.answer_create_agent(statement)
-        elif type(statement) == DropAgent:
+        elif type(statement) is DropAgent:
             return self.answer_drop_agent(statement)
-        elif type(statement) == UpdateAgent:
+        elif type(statement) is UpdateAgent:
             return self.answer_update_agent(statement)
-        elif type(statement) == Evaluate:
+        elif type(statement) is Evaluate:
             statement.data = parse_sql(statement.query_str, dialect="mindsdb")
             return self.answer_evaluate_metric(statement)
         else:
@@ -1612,7 +1612,7 @@ class ExecuteCommands:
                 column_name = str(result)
                 column_alias = (
                     ".".join(target.alias.parts)
-                    if type(target.alias) == Identifier
+                    if type(target.alias) is Identifier
                     else column_name
                 )
             elif target_type == NullConstant:

@@ -16,6 +16,7 @@ from mindsdb.interfaces.query_context.context_controller import query_context_co
 from mindsdb.api.executor.exceptions import KeyColumnDoesNotExist
 
 from .base import BaseStepCall
+from .fetch_dataframe import get_fill_param_fnc
 
 
 class SubSelectStepCall(BaseStepCall):
@@ -114,6 +115,10 @@ class QueryStepCall(BaseStepCall):
 
                 new_name = col_idx[key]
                 return Identifier(parts=[new_name], alias=node.alias)
+
+        # fill params
+        fill_params = get_fill_param_fnc(self.steps_data)
+        query_traversal(query, fill_params)
 
         query_traversal(query, check_fields)
         query_context_controller.remove_lasts(query.where)

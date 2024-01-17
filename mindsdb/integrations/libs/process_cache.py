@@ -9,7 +9,7 @@ from pandas import DataFrame
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.ml_task_queue.const import ML_TASK_TYPE
-from mindsdb.integrations.libs.learn_process import (
+from mindsdb.integrations.libs.ml_handler_process import (
     learn_process,
     predict_process,
     describe_process,

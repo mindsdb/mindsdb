@@ -224,7 +224,6 @@ def describe_process(payload, model_id):
     handler_meta = payload.get('handler_meta')
     # handler_meta = {'module_path': 'mindsdb.integrations...od_handler', 'class_name': 'Handler', 'engine': 'lightwood', 'integration_id': 1}
     attribute = payload.get('attribute')
-    context = payload.get('context')
 
     module = importlib.import_module(handler_meta['module_path'])
 
@@ -240,19 +239,14 @@ def describe_process(payload, model_id):
 
 
 def create_validation_process(payload, dataframe):
-    # from mindsdb.interfaces.database.integrations import integration_controller
-    x = 1
     target = payload.get('target')
     args = payload.get('args')
     integration_id = payload.get('integration_id')
-    engine = payload['handler_meta'].get('engine')
-    # handler_module = integration_controller.handler_modules[engine]
 
     module = importlib.import_module(payload['handler_meta']['module_path'])
-    HandlerClass = module.Handler
 
-    if hasattr(HandlerClass, 'create_validation'):
-        HandlerClass.create_validation(
+    if hasattr(module.Handler, 'create_validation'):
+        module.Handler.create_validation(
             target,
             args=args,
             handler_storage=HandlerStorage(integration_id)

@@ -513,7 +513,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         )
         self.wait_predictor('mindsdb', 'model2')
 
-        # -- joins/conditions --
+        # -- joins / conditions / unions --
 
         sql = '''
             select 
@@ -528,14 +528,21 @@ class TestProjectStructure(BaseExecutorDummyML):
                    and s.region_id=(select id from files.regions where id=2) -- only region_id=2
                    and s.format='a'
                    and s.id = r.id -- cross table condition 
+            union 
+              select id, id from files.regions where id = 1  -- 2nd row with [1,1]
+            union 
+              select id, id from files.stores where id = 2   -- 2nd row with [2,2]
+                
         '''
 
         ret = self.run_sql(sql)
-        assert len(ret) == 1
-        assert ret.a[0] == 21
-        assert ret.b[0] == 3
+        assert len(ret) == 3
 
-        # -- aggregating/grouping/cases --
+        assert list(ret.iloc[0]) == [21, 3]
+        assert list(ret.iloc[1]) == [1, 1]
+        assert list(ret.iloc[2]) == [2, 2]
+
+        # -- aggregating / grouping / cases --
         case = '''
             case when s.id=1 then 10 
                  when s.id=2 then 20
@@ -597,6 +604,8 @@ class TestProjectStructure(BaseExecutorDummyML):
 
         assert list(ret.FIRST_VALUE) == ['c', 'c', 'a', 'a', 'a', 'a']
         assert list(ret.LAST_VALUE) == ['c', 'b', 'a', 'a', 'b', 'b']
+
+        # -- unions functions --
 
         # TODO Correlated subqueries (not implemented)
 

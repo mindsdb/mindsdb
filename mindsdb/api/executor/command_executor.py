@@ -1268,8 +1268,7 @@ class ExecuteCommands:
                     integration=statement.from_table, query=statement.query_str
                 ),
             )
-            renderer = SqlalchemyRender("mysql")
-            query_str = renderer.get_string(query, with_failback=True)
+            query_str = str(query)
 
         if isinstance(query, Select):
             # check create view sql

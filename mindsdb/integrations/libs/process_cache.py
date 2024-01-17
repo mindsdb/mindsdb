@@ -20,7 +20,7 @@ from mindsdb.integrations.libs.ml_handler_process import (
 def init_ml_handler(module_path):
     import importlib  # noqa
 
-    from mindsdb.integrations.libs.learn_process import learn_process, predict_process  # noqa
+    import mindsdb.integrations.libs.ml_handler_process  # noqa
 
     importlib.import_module(module_path)
 
@@ -236,38 +236,56 @@ class ProcessCache:
             Returns:
                 Future
         """
+        handler_module_path = payload['handler_meta']['module_path']
+        integration_id = payload['handler_meta']['integration_id']
         if task_type in (ML_TASK_TYPE.LEARN, ML_TASK_TYPE.FINETUNE):
             func = learn_process
             kwargs = {
-                'payload': payload
+                'data_integration_ref': payload['data_integration_ref'],
+                'problem_definition': payload['problem_definition'],
+                'fetch_data_query': payload['fetch_data_query'],
+                'project_name': payload['project_name'],
+                'model_id': payload['model_id'],
+                'base_model_id': payload.get('base_model_id'),
+                'set_active': payload['set_active'],
+                'integration_id': integration_id,
+                'module_path': handler_module_path
             }
         elif task_type == ML_TASK_TYPE.PREDICT:
             func = predict_process
             kwargs = {
-                'payload': payload,
-                'dataframe': dataframe
+                'predictor_record': payload['predictor_record'],
+                'ml_engine_name': payload['handler_meta']['engine'],
+                'args': payload['args'],
+                'dataframe': dataframe,
+                'integration_id': integration_id,
+                'module_path': handler_module_path
             }
         elif task_type == ML_TASK_TYPE.DESCRIBE:
             func = describe_process
             kwargs = {
-                'payload': payload,
-                'model_id': model_id
+                'attribute': payload.get('attribute'),
+                'model_id': model_id,
+                'integration_id': integration_id,
+                'module_path': handler_module_path
             }
         elif task_type == ML_TASK_TYPE.CREATE_VALIDATION:
             func = create_validation_process
             kwargs = {
-                'payload': payload
+                'target': payload.get('target'),
+                'args': payload.get('args'),
+                'integration_id': integration_id,
+                'module_path': handler_module_path
             }
         else:
             raise Exception(f'Unknown ML task type: {task_type}')
 
-        handler_module_path = payload['handler_meta']['module_path']
-        handler_name = payload['handler_meta']['engine']
+        ml_engine_name = payload['handler_meta']['engine']
         model_marker = (model_id, payload['context']['company_id'])
         with self._lock:
-            if handler_name not in self.cache:
+            if ml_engine_name not in self.cache:
                 warm_process = WarmProcess(init_ml_handler, (handler_module_path,))
-                self.cache[handler_name] = {
+                self.cache[ml_engine_name] = {
                     'last_usage_at': None,
                     'handler_module': handler_module_path,
                     'processes': [warm_process]
@@ -277,7 +295,7 @@ class ProcessCache:
                 if model_marker is not None:
                     try:
                         warm_process = next(
-                            p for p in self.cache[handler_name]['processes']
+                            p for p in self.cache[ml_engine_name]['processes']
                             if p.ready() and p.has_marker(model_marker)
                         )
                     except StopIteration:
@@ -285,17 +303,17 @@ class ProcessCache:
                 if warm_process is None:
                     try:
                         warm_process = next(
-                            p for p in self.cache[handler_name]['processes']
+                            p for p in self.cache[ml_engine_name]['processes']
                             if p.ready()
                         )
                     except StopIteration:
                         pass
                 if warm_process is None:
                     warm_process = WarmProcess(init_ml_handler, (handler_module_path,))
-                    self.cache[handler_name]['processes'].append(warm_process)
+                    self.cache[ml_engine_name]['processes'].append(warm_process)
 
             task = warm_process.apply_async(warm_function, func, payload['context'], **kwargs)
-            self.cache[handler_name]['last_usage_at'] = time.time()
+            self.cache[ml_engine_name]['last_usage_at'] = time.time()
             warm_process.add_marker(model_marker)
         return task
 

@@ -209,8 +209,7 @@ class BaseMLEngineExec:
             model_id=predictor_record.id,
             payload={
                 'handler_meta': {
-                    'module_path': self.handler_class.__module__,
-                    'class_name': self.handler_class.__name__,
+                    'module_path': self.handler_module.__package__,
                     'engine': self.engine,
                     'integration_id': self.integration_id
                 },
@@ -236,15 +235,12 @@ class BaseMLEngineExec:
 
     def describe(self, model_id: int, attribute: Optional[str] = None) -> pd.DataFrame:
         try:
-            module_path = self.handler_module.__package__    # mindsdb.integrations.handlers.lightwood_handler.lightwood_handler -> mindsdb.integrations.handlers.lightwood_handler
-            class_name = 'Handler'    # LightwoodHandler -> handler
             task = self.base_ml_executor.apply_async(
                 task_type=ML_TASK_TYPE.DESCRIBE,
                 model_id=model_id,
                 payload={
                     'handler_meta': {
-                        'module_path': module_path,
-                        'class_name': class_name,
+                        'module_path': self.handler_module.__package__,
                         'engine': self.engine,
                         'integration_id': self.integration_id
                     },
@@ -298,8 +294,7 @@ class BaseMLEngineExec:
                 model_id=predictor_record.id,
                 payload={
                     'handler_meta': {
-                        'module_path': self.handler_class.__module__,
-                        'class_name': self.handler_class.__name__,
+                        'module_path': self.handler_module.__package__,
                         'engine': self.engine,
                         'integration_id': self.integration_id
                     },
@@ -339,14 +334,10 @@ class BaseMLEngineExec:
                     'context': ctx.dump(),
                     'target': target,
                     'args': args,
-                    'integration_id': integration_id,
                     'handler_meta': {
                         'module_path': self.handler_module.__package__,
-                        'engine': self.handler_module.name
-                        # 'module_path': self.handler_class.__module__,
-                        # 'class_name': self.handler_class.__name__,
-                        # 'engine': self.engine,
-                        # 'integration_id': self.integration_id
+                        'engine': self.handler_module.name,
+                        'integration_id': integration_id
                     },
                 }
             )
@@ -436,8 +427,7 @@ class BaseMLEngineExec:
             model_id=predictor_record.id,
             payload={
                 'handler_meta': {
-                    'module_path': self.handler_class.__module__,
-                    'class_name': self.handler_class.__name__,
+                    'module_path': self.handler_module.__package__,
                     'engine': self.engine,
                     'integration_id': self.integration_id
                 },

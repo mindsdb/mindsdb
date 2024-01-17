@@ -1,16 +1,16 @@
 import importlib
+from typing import Optional, Union
+
+from pandas import DataFrame
 
 from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
 
 
-def describe_process(payload, model_id):
-    handler_meta = payload.get('handler_meta')
-    # handler_meta = {'module_path': 'mindsdb.integrations...od_handler', 'class_name': 'Handler', 'engine': 'lightwood', 'integration_id': 1}
-    attribute = payload.get('attribute')
+def describe_process(integration_id: int, attribute: Optional[Union[str, list]],
+                     model_id: int, module_path: str) -> DataFrame:
+    module = importlib.import_module(module_path)
 
-    module = importlib.import_module(handler_meta['module_path'])
-
-    handlerStorage = HandlerStorage(handler_meta['integration_id'])
+    handlerStorage = HandlerStorage(integration_id)
     modelStorage = ModelStorage(model_id)
 
     ml_handler = module.Handler(

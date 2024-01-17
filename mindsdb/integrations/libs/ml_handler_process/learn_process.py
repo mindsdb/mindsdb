@@ -23,7 +23,9 @@ logger = log.getLogger(__name__)
 
 
 @mark_process(name='learn')
-def learn_process(payload, dataframe):
+def learn_process(data_integration_ref: dict, problem_definition: dict, fetch_data_query: str,
+                  project_name: str, model_id: int, integration_id: int, base_model_id: int,
+                  set_active: bool, module_path: str):
     ctx.profiling = {
         'level': 0,
         'enabled': True,
@@ -34,17 +36,6 @@ def learn_process(payload, dataframe):
     with profiler.Context('learn_process'):
         from mindsdb.interfaces.database.database import DatabaseController
         db.init()
-
-        data_integration_ref = payload['data_integration_ref']
-        problem_definition = payload['problem_definition']
-        fetch_data_query = payload['fetch_data_query']
-        project_name = payload['project_name']
-        predictor_id = payload['model_id']
-        # engine = payload['handler_meta']['engine']
-        integration_id = payload['handler_meta']['integration_id']
-        base_predictor_id = payload.get('base_model_id')
-        set_active = payload['set_active']
-        class_path = (payload['handler_meta']['module_path'], payload['handler_meta']['class_name'])
 
         try:
             target = problem_definition.get('target', None)
@@ -76,25 +67,23 @@ def learn_process(payload, dataframe):
                 training_data_columns_count = len(training_data_df.columns)
                 training_data_rows_count = len(training_data_df)
 
-            predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
+            predictor_record = db.Predictor.query.with_for_update().get(model_id)
             predictor_record.training_data_columns_count = training_data_columns_count
             predictor_record.training_data_rows_count = training_data_rows_count
             db.session.commit()
 
-            module_name, class_name = class_path
-            module = importlib.import_module(module_name)
-            HandlerClass = getattr(module, class_name)
+            module = importlib.import_module(module_path)
 
             handlerStorage = HandlerStorage(integration_id)
-            modelStorage = ModelStorage(predictor_id)
+            modelStorage = ModelStorage(model_id)
             modelStorage.fileStorage.push()     # FIXME
 
             kwargs = {}
-            if base_predictor_id is not None:
-                kwargs['base_model_storage'] = ModelStorage(base_predictor_id)
+            if base_model_id is not None:
+                kwargs['base_model_storage'] = ModelStorage(base_model_id)
                 kwargs['base_model_storage'].fileStorage.pull()
 
-            ml_handler = HandlerClass(
+            ml_handler = module.Handler(
                 engine_storage=handlerStorage,
                 model_storage=modelStorage,
                 **kwargs
@@ -107,7 +96,7 @@ def learn_process(payload, dataframe):
                         f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
 
             # create new model
-            if base_predictor_id is None:
+            if base_model_id is None:
                 with profiler.Context('create'):
                     ml_handler.create(target, df=training_data_df, args=problem_definition)
 
@@ -115,7 +104,7 @@ def learn_process(payload, dataframe):
             else:
                 # load model from previous version, use it as starting point
                 with profiler.Context('finetune'):
-                    problem_definition['base_model_id'] = base_predictor_id
+                    problem_definition['base_model_id'] = base_model_id
                     ml_handler.finetune(df=training_data_df, args=problem_definition)
 
             predictor_record.status = PREDICTOR_STATUS.COMPLETE
@@ -137,7 +126,7 @@ def learn_process(payload, dataframe):
             logger.error(traceback.format_exc())
             error_message = format_exception_error(e)
 
-            predictor_record = db.Predictor.query.with_for_update().get(predictor_id)
+            predictor_record = db.Predictor.query.with_for_update().get(model_id)
             predictor_record.data = {"error": error_message}
             predictor_record.status = PREDICTOR_STATUS.ERROR
             db.session.commit()

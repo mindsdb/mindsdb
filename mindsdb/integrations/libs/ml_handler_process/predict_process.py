@@ -1,5 +1,7 @@
 import importlib
 
+from pandas import DataFrame
+
 import mindsdb.interfaces.storage.db as db
 from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
 from mindsdb.integrations.libs.ml_handler_process.handlers_cacher import handlers_cacher
@@ -7,23 +9,15 @@ from mindsdb.utilities.functions import mark_process
 
 
 @mark_process(name='learn')
-def predict_process(payload, dataframe):
+def predict_process(integration_id: int, predictor_record: db.Predictor, args: dict,
+                    module_path: str, ml_engine_name: str, dataframe: DataFrame) -> DataFrame:
     db.init()
-    integration_id = payload['handler_meta']['integration_id']
-    predictor_record = payload['predictor_record']
-    args = payload['args']
-    module_path = payload['handler_meta']['module_path']
-    class_name = payload['handler_meta']['class_name']
-    ml_engine_name = payload['handler_meta']['engine']
-
     module = importlib.import_module(module_path)
-    HandlerClass = getattr(module, class_name)
-    handler_class = HandlerClass
 
     if predictor_record.id not in handlers_cacher:
         handlerStorage = HandlerStorage(integration_id)
         modelStorage = ModelStorage(predictor_record.id)
-        ml_handler = handler_class(
+        ml_handler = module.Handler(
             engine_storage=handlerStorage,
             model_storage=modelStorage,
         )

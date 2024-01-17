@@ -64,12 +64,13 @@ class MSGraphAPIAuthManager:
 
             return response
         else:
-            # TODO: Pass the redirect_uri as a parameter when getting the auth url
             redirect_uri = request.headers['ORIGIN'] + '/verify-auth'
+            if '127.0.0.1' in redirect_uri:
+                redirect_uri = redirect_uri.replace('127.0.0.1', 'localhost')
 
             auth_url = msal_app.get_authorization_request_url(
                 scopes=self.scopes,
-                # redirect_uri=request.headers['ORIGIN'] + '/verify-auth',
+                redirect_uri=redirect_uri,
             )
 
             raise AuthException(f'Authorisation required. Please follow the url: {auth_url}', auth_url=auth_url)

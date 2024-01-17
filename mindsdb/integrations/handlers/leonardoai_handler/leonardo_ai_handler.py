@@ -58,7 +58,7 @@ class LeonardoAIHandler(BaseMLEngine):
 
         # if valid, check if the model is valid
         try:
-            if(self.connection.status_code == 200):
+            if (self.connection.status_code == 200):
                 # get all the available models
                 available_models = self._get_platform_model(args)
                 if not args['using']['model']:

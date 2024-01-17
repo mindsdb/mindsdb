@@ -1079,7 +1079,7 @@ class ExecuteCommands:
 
         self.session.integration_controller.add(name, engine, connection_args)
         if storage:
-            handler = self.session.integration_controller.get_handler(name)
+            handler = self.session.integration_controller.get_data_handler(name)
             handler.handler_storage.import_files(storage)
 
     def answer_create_ml_engine(self, statement: ASTNode):

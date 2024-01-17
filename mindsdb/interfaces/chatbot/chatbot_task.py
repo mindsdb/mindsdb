@@ -41,7 +41,7 @@ class ChatBotTask(BaseTask):
 
         database_name = db.Integration.query.get(bot_record.database_id).name
 
-        self.chat_handler = self.session.integration_controller.get_handler(database_name)
+        self.chat_handler = self.session.integration_controller.get_data_handler(database_name)
         if not isinstance(self.chat_handler, APIChatHandler):
             raise Exception(f"Can't use chat database: {database_name}")
 

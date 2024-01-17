@@ -17,7 +17,7 @@ class BotExecutor:
 
         back_db_name = self.chat_task.bot_params.get('backoffice_db')
         if back_db_name is not None:
-            back_db = self.chat_task.session.integration_controller.get_handler(back_db_name)
+            back_db = self.chat_task.session.integration_controller.get_data_handler(back_db_name)
             if hasattr(back_db, 'back_office_config'):
                 back_db_config = back_db.back_office_config()
 

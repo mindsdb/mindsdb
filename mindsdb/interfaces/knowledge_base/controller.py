@@ -145,7 +145,7 @@ class KnowledgeBaseTable:
         """
         if self._vector_db is None:
             database_name = db.Integration.query.get(self._kb.vector_database_id).name
-            self._vector_db = self.session.integration_controller.get_handler(database_name)
+            self._vector_db = self.session.integration_controller.get_data_handler(database_name)
         return self._vector_db
 
     def _df_to_embeddings(self, df: pd.DataFrame) -> pd.DataFrame:

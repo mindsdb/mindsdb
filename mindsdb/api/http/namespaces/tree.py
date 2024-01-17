@@ -47,7 +47,7 @@ class GetLeaf(Resource):
                 'deletable': val.get('deletable')
             } for key, val in tables.items()]
         elif db['type'] == 'data':
-            handler = ca.integration_controller.get_handler(db_name)
+            handler = ca.integration_controller.get_data_handler(db_name)
             response = handler.get_tables()
             if response.type != 'table':
                 return []

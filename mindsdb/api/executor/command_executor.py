@@ -67,7 +67,6 @@ from mindsdb_sql.parser.dialects.mindsdb import (
     UpdateChatBot,
     UpdateSkill
 )
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
 import mindsdb.utilities.profiler as profiler
 from mindsdb.api.executor import Column, SQLQuery

@@ -1017,6 +1017,7 @@
         "contribute/data-handlers",
         "contribute/ml-handlers",
         "contribute/app-handlers",
+        "contribute/integrations-readme",
         "contribute/tests",
         "contribute/tutorials",
         "contribute/docs",

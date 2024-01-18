@@ -11,7 +11,6 @@ from mindsdb.integrations.libs.llm_utils import get_completed_prompts
 class OllamaHandler(BaseMLEngine):
     name = "ollama"
     SERVE_URL = 'http://localhost:11434'
-    MODEL_LIST_URL = 'https://registry.ollama.ai/v2/_catalog'
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
@@ -20,18 +19,8 @@ class OllamaHandler(BaseMLEngine):
         else:
             args = args['using']
 
-        # check model version is valid
-        try:
-            all_models = requests.get(OllamaHandler.MODEL_LIST_URL).json()['repositories']
-        except Exception as e:
-            raise Exception(f"Could not retrieve model list from Ollama registry: {e}")
-        base_models = list(filter(lambda x: 'library/' in x, all_models))
-        valid_models = [m.split('/')[-1] for m in base_models]
-
         if 'model_name' not in args:
             raise Exception('`model_name` must be provided in the USING clause.')
-        elif args['model_name'] not in valid_models:
-            raise Exception(f"The model `{args['model_name']}` is not yet supported by Ollama! Please choose one of the following: {valid_models}")  # noqa
 
         # check ollama service health
         status = requests.get(OllamaHandler.SERVE_URL + '/api/tags').status_code
@@ -45,11 +34,29 @@ class OllamaHandler(BaseMLEngine):
         args['target'] = target
         self.model_storage.json_set('args', args)
 
-        # download model
-        # TODO v2: point Ollama to the engine storage folder instead of their default location
-        model_name = args['model_name']
-        # blocking operation, finishes once model has been fully pulled and served
-        requests.post(OllamaHandler.SERVE_URL + '/api/pull', json={'name': model_name})
+        def _model_check():
+            """ Checks model has been pulled and that it works correctly. """
+            try:
+                return requests.post(
+                    OllamaHandler.SERVE_URL + '/api/generate',
+                    json={
+                        'model': args['model_name'],
+                        'prompt': 'Hello.',
+                    }
+                ).status_code
+            except Exception:
+                return 500
+
+        # check model
+        response = _model_check()
+        if response != 200:
+            # pull model (blocking operation) and serve
+            # TODO: point to the engine storage folder instead of default location
+            requests.post(OllamaHandler.SERVE_URL + '/api/pull', json={'name': args['model_name']})
+            # try one last time
+            response = _model_check()
+            if response != 200:
+                raise Exception(f"Ollama model `{args['model_name']}` is not working correctly (`pull` status code: {response}). Please try pulling this model manually, check it works correctly and try again.")  # noqa
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         """
@@ -116,10 +123,10 @@ class OllamaHandler(BaseMLEngine):
             model_info = requests.post(OllamaHandler.SERVE_URL + '/api/show', json={'name': model_name}).json()
             return pd.DataFrame([[
                 model_name,
-                model_info['license'],
-                model_info['modelfile'],
-                model_info['parameters'],
-                model_info['template'],
+                model_info.get('license', 'N/A'),
+                model_info.get('modelfile', 'N/A'),
+                model_info.get('parameters', 'N/A'),
+                model_info.get('template', 'N/A'),
             ]],
                 columns=[
                     'model_type',

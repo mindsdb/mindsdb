@@ -1013,6 +1013,7 @@
         "contribute/issues",
         "contribute/issue-labels",
         "contribute/install",
+        "contribute/python-coding-standards",
         "contribute/data-handlers",
         "contribute/ml-handlers",
         "contribute/app-handlers",

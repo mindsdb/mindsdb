@@ -399,7 +399,7 @@ class ChromaDBHandler(VectorStoreHandler):
             self._client.delete_collection(table_name)
         except ValueError:
             if if_exists:
-                return Response(resp_type=RESPONSE_TYPE.OK)
+                return
             else:
                 raise Exception(f"Collection {table_name} does not exist!")
 

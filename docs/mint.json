@@ -43,7 +43,7 @@
   ],
   "tabs": [
     {
-      "name": "MindsDB SQL",
+      "name": "SQL API",
       "url": "mindsdb_sql"
     },
     {
@@ -391,7 +391,7 @@
       ]
     },
     {
-      "group": "MindsDB SQL",
+      "group": "SQL API",
       "pages": [
         "mindsdb_sql/overview",
         {

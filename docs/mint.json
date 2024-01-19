@@ -43,6 +43,18 @@
   ],
   "tabs": [
     {
+      "name": "SQL API",
+      "url": "mindsdb_sql"
+    },
+    {
+      "name": "SDKs",
+      "url": "sdks"
+    },
+    {
+      "name": "REST API",
+      "url": "rest"
+    },
+    {
       "name": "Integrations",
       "url": "integrations"
     },
@@ -55,8 +67,8 @@
         "url": "faqs"
     }
   ],
-  "primaryTab": {
-    "name": "Documentation"
+    "primaryTab": {
+      "name": "Documentation"
   },
   "redirects": [
     {"source": "/app-integrations/github","destination": "/integrations/app-integrations/github"},
@@ -139,7 +151,64 @@
     {"source": "/ml-engines/automl/lightwood","destination": "/integrations/ai-engines/lightwood"},
     {"source": "/nixtla/statsforecast","destination": "/integrations/ai-engines/statsforecast"},
     {"source": "/nixtla/house-sales-statsforecast","destination": "/sql/tutorials/house-sales-statsforecast"},
-    {"source": "/mongo/stats","destination": "/mongo/models/describe"}
+    {"source": "/mongo/stats","destination": "/mongo/models/describe"},
+    {"source": "/connect/mongo-compass","destination": "/sdks/mongo/connect/mongo-compass"},
+    {"source": "/connect/mongo-shell","destination": "/sdks/mongo/connect/mongo-shell"},
+    {"source": "/connect/mindsdb_editor","destination": "/mindsdb_sql/connect/mindsdb_editor"},
+    {"source": "/connect/postgres-client","destination": "/mindsdb_sql/connect/postgres-client"},
+    {"source": "/connect/mysql-client","destination": "/mindsdb_sql/connect/mysql-client"},
+    {"source": "/connect/dbeaver","destination": "/mindsdb_sql/connect/dbeaver"},
+    {"source": "/connect/connect-mariadb-skysql","destination": "/mindsdb_sql/connect/connect-mariadb-skysql"},
+    {"source": "/connect/sql-alchemy","destination": "/mindsdb_sql/connect/sql-alchemy"},
+    {"source": "/connect/deepnote","destination": "/mindsdb_sql/connect/deepnote"},
+    {"source": "/connect/metabase","destination": "/mindsdb_sql/connect/metabase"},
+    {"source": "/connect/tableau","destination": "/mindsdb_sql/connect/tableau"},
+    {"source": "/connect/jupysql","destination": "/mindsdb_sql/connect/jupysql"},
+    {"source": "/connect/grafana","destination": "/mindsdb_sql/connect/grafana"},
+    {"source": "/sql/list-data-handlers","destination": "/mindsdb_sql/sql/list-data-handlers"},
+    {"source": "/sql/create/database","destination": "/mindsdb_sql/sql/create/database"},
+    {"source": "/sql/drop/database","destination": "/mindsdb_sql/sql/drop/database"},
+    {"source": "/sql/show-databases","destination": "/mindsdb_sql/sql/show-databases"},
+    {"source": "/sql/api/use","destination": "/mindsdb_sql/sql/api/use"},
+    {"source": "/sql/list-ml-handlers","destination": "/mindsdb_sql/sql/list-ml-handlers"},
+    {"source": "/sql/create/ml-engine","destination": "/mindsdb_sql/sql/create/ml-engine"},
+    {"source": "/sql/drop/ml-engine","destination": "/mindsdb_sql/sql/drop/ml-engine"},
+    {"source": "/sql/show-ml-engines","destination": "/mindsdb_sql/sql/show-ml-engines"},
+    {"source": "/sql/create/project","destination": "/mindsdb_sql/sql/create/project"},
+    {"source": "/sql/drop/project","destination": "/mindsdb_sql/sql/drop/project"},
+    {"source": "/sql/list-projects","destination": "/mindsdb_sql/sql/list-projects"},
+    {"source": "/sql/create/model","destination": "/mindsdb_sql/sql/create/model"},
+    {"source": "/sql/drop/model","destination": "/mindsdb_sql/sql/drop/model"},
+    {"source": "/sql/show-models","destination": "/mindsdb_sql/sql/show-models"},
+    {"source": "/sql/api/describe","destination": "/mindsdb_sql/sql/api/describe"},
+    {"source": "/sql/api/retrain","destination": "/mindsdb_sql/sql/api/retrain"},
+    {"source": "/sql/api/finetune","destination": "/mindsdb_sql/sql/api/finetune"},
+    {"source": "/sql/api/manage-models-versions","destination": "/mindsdb_sql/sql/api/manage-models-versions"},
+    {"source": "/sql/get-single-prediction","destination": "/mindsdb_sql/sql/get-single-prediction"},
+    {"source": "/sql/get-batch-predictions","destination": "/mindsdb_sql/sql/get-batch-predictions"},
+    {"source": "/sql/api/join","destination": "/mindsdb_sql/sql/api/join"},
+    {"source": "/sql/create/table","destination": "/mindsdb_sql/sql/create/table"},
+    {"source": "/sql/drop/table","destination": "/mindsdb_sql/sql/drop/table"},
+    {"source": "/sql/api/select","destination": "/mindsdb_sql/sql/api/select"},
+    {"source": "/sql/native-queries","destination": "/mindsdb_sql/sql/native-queries"},
+    {"source": "/sql/api/update","destination": "/mindsdb_sql/sql/api/update"},
+    {"source": "/sql/api/insert","destination": "/mindsdb_sql/sql/api/insert"},
+    {"source": "/sql/api/join-on","destination": "/mindsdb_sql/sql/api/join-on"},
+    {"source": "/sql/api/delete","destination": "/mindsdb_sql/sql/api/delete"},
+    {"source": "/sql/create/view","destination": "/mindsdb_sql/sql/create/view"},
+    {"source": "/sql/drop/view","destination": "/mindsdb_sql/sql/drop/view"},
+    {"source": "/sql/api/select-view","destination": "/mindsdb_sql/sql/api/select-view"},
+    {"source": "/sql/drop/file","destination": "/mindsdb_sql/sql/drop/file"},
+    {"source": "/sql/api/select-files","destination": "/mindsdb_sql/sql/api/select-files"},
+    {"source": "/sql/create/jobs","destination": "/mindsdb_sql/sql/create/jobs"},
+    {"source": "/sql/drop/jobs","destination": "/mindsdb_sql/sql/drop/jobs"},
+    {"source": "/sql/query-jobs","destination": "/mindsdb_sql/sql/query-jobs"},
+    {"source": "/sql/create/trigger","destination": "/mindsdb_sql/sql/create/trigger"},
+    {"source": "/sql/drop/trigger","destination": "/mindsdb_sql/sql/drop/trigger"},
+    {"source": "/sql/query-triggers","destination": "/mindsdb_sql/sql/query-triggers"},
+    {"source": "/agents/agent","destination": "/mindsdb_sql/agents/agent"},
+    {"source": "/agents/chatbot","destination": "/mindsdb_sql/agents/chatbot"},
+    {"source": "/agents/knowledge-bases","destination": "/mindsdb_sql/agents/knowledge-bases"}
   ],
   "navigation": [
     {
@@ -225,10 +294,6 @@
             "generative-ai-tables"
           ] 
         }
-            
-            
-          
-        
       ]
     },
     {
@@ -243,13 +308,17 @@
             "finetune/regression"
           ]
         },
-        "agents/agent",
-        "agents/knowledge-bases", 
         {
-          "group": "Chatbots",
+          "group": "Chatbots with Agents",
           "pages": [
+            "sql/tutorials/chatbots_agents",
             "sql/tutorials/llm-chatbot-ui",
-            "sql/tutorials/create-chatbot",
+            "sql/tutorials/create-chatbot"
+          ]
+        },
+        {
+          "group": "Chatbots with Jobs",
+          "pages": [
             "sql/tutorials/slack-chatbot",
             "sql/tutorials/twitterbot-mariadb-enterprise-server-skysql",
             "sql/tutorials/twilio-chatbot"
@@ -324,114 +393,120 @@
     {
       "group": "SQL API",
       "pages": [
+        "mindsdb_sql/overview",
         {
-          "group": "CONNECT",
+          "group": "Connect",
           "pages": [
-            "connect/mindsdb_editor",
-            "connect/postgres-client",
-            "connect/mysql-client",
-            "connect/dbeaver",
-            "connect/connect-mariadb-skysql",
-            "connect/sql-alchemy",
-            "connect/deepnote",
-            "connect/metabase",
-            "connect/tableau",
-            "connect/jupysql",
-            "connect/grafana"
+            "mindsdb_sql/connect/mindsdb_editor",
+            "mindsdb_sql/connect/postgres-client",
+            "mindsdb_sql/connect/mysql-client",
+            "mindsdb_sql/connect/dbeaver",
+            "mindsdb_sql/connect/connect-mariadb-skysql",
+            "mindsdb_sql/connect/sql-alchemy",
+            "mindsdb_sql/connect/deepnote",
+            "mindsdb_sql/connect/metabase",
+            "mindsdb_sql/connect/tableau",
+            "mindsdb_sql/connect/jupysql",
+            "mindsdb_sql/connect/grafana"
           ]
         },
         {
-          "group": "DATABASE",
+          "group": "Databases",
           "pages": [
-            "sql/list-data-handlers",
-            "sql/create/database",
-            "sql/drop/database",
-            "sql/show-databases",
-            "sql/api/use"
+            "mindsdb_sql/sql/list-data-handlers",
+            "mindsdb_sql/sql/create/database",
+            "mindsdb_sql/sql/drop/database",
+            "mindsdb_sql/sql/show-databases",
+            "mindsdb_sql/sql/api/use"
           ]
         },
         {
-          "group": "ML_ENGINE",
+          "group": "ML Engines",
           "pages": [
-            "sql/list-ml-handlers",
-            "sql/create/ml-engine",
-            "sql/drop/ml-engine",
-            "sql/show-ml-engines"
+            "mindsdb_sql/sql/list-ml-handlers",
+            "mindsdb_sql/sql/create/ml-engine",
+            "mindsdb_sql/sql/drop/ml-engine",
+            "mindsdb_sql/sql/show-ml-engines"
           ]
         },
         {
-          "group": "PROJECT",
+          "group": "Projects",
           "pages": [
-            "sql/create/project",
-            "sql/drop/project",
-            "sql/list-projects"
+            "mindsdb_sql/sql/create/project",
+            "mindsdb_sql/sql/drop/project",
+            "mindsdb_sql/sql/list-projects"
           ]
         },
         {
-          "group": "MODEL",
+          "group": "Models",
           "pages": [
-            "sql/create/model",
-            "sql/drop/model",
-            "sql/show-models",
-            "sql/api/describe",
-            "sql/api/retrain",
-            "sql/api/finetune",
-            "sql/api/manage-models-versions"
+            "mindsdb_sql/sql/create/model",
+            "mindsdb_sql/sql/drop/model",
+            "mindsdb_sql/sql/show-models",
+            "mindsdb_sql/sql/api/describe",
+            "mindsdb_sql/sql/api/retrain",
+            "mindsdb_sql/sql/api/finetune",
+            "mindsdb_sql/sql/api/manage-models-versions"
           ]
         },
         {
-          "group": "SELECT",
+          "group": "Predictions",
           "pages": [
-            "sql/get-single-prediction",
-            "sql/get-batch-predictions",
-            "sql/api/join"
+            "mindsdb_sql/sql/get-single-prediction",
+            "mindsdb_sql/sql/get-batch-predictions",
+            "mindsdb_sql/sql/api/join"
           ]
         },
         {
-          "group": "TABLE",
+          "group": "Tables",
           "pages": [
-            "sql/create/table",
-            "sql/drop/table",
-            "sql/api/select",
-            "sql/native-queries",
-            "sql/api/update",
-            "sql/api/insert",
-            "sql/api/join-on",
-            "sql/api/delete"
+            "mindsdb_sql/sql/create/table",
+            "mindsdb_sql/sql/drop/table",
+            "mindsdb_sql/sql/api/select",
+            "mindsdb_sql/sql/native-queries",
+            "mindsdb_sql/sql/api/update",
+            "mindsdb_sql/sql/api/insert",
+            "mindsdb_sql/sql/api/join-on",
+            "mindsdb_sql/sql/api/delete"
           ]
         },
         {
-          "group": "VIEW",
+          "group": "Views",
           "pages": [
-            "sql/create/view",
-            "sql/drop/view",
-            "sql/api/select-view",
-            
-            "sql/drop/file",
-            "sql/api/select-files"
+            "mindsdb_sql/sql/create/view",
+            "mindsdb_sql/sql/drop/view",
+            "mindsdb_sql/sql/api/select-view"
           ]
         },
         {
-          "group": "JOB",
+          "group": "Files",
           "pages": [
-            "sql/create/jobs",
-            "sql/drop/jobs",
-            "sql/query-jobs"
+            "mindsdb_sql/sql/create/file",
+            "mindsdb_sql/sql/drop/file",
+            "mindsdb_sql/sql/api/select-files"
           ]
         },
         {
-          "group": "TRIGGER",
+          "group": "Jobs",
           "pages": [
-            "sql/create/trigger",
-            "sql/drop/trigger",
-            "sql/query-triggers"
+            "mindsdb_sql/sql/create/jobs",
+            "mindsdb_sql/sql/drop/jobs",
+            "mindsdb_sql/sql/query-jobs"
           ]
         },
         {
-          "group": "AGENT",
+          "group": "Triggers",
           "pages": [
-            "agents/agent",
-            "agents/chatbot"
+            "mindsdb_sql/sql/create/trigger",
+            "mindsdb_sql/sql/drop/trigger",
+            "mindsdb_sql/sql/query-triggers"
+          ]
+        },
+        {
+          "group": "Agents",
+          "pages": [
+            "mindsdb_sql/agents/agent",
+            "mindsdb_sql/agents/chatbot"
           ]
         }
       ]
@@ -439,15 +514,15 @@
     {
       "group": "REST API",
       "pages": [
+        "rest/overview",
         {
           "group": "Connect",
           "pages": [
-            "rest/overview",
             "rest/usage"
           ]
         },
         {
-          "group": "databases",
+          "group": "Databases",
           "pages": [
             "rest/databases/create-databases",
             "rest/databases/update-databases",
@@ -457,7 +532,7 @@
           ]
         },
         {
-          "group": "ml_engines",
+          "group": "ML Engines",
           "pages": [
             "rest/ml_engines/create",
             "rest/ml_engines/delete",
@@ -465,7 +540,7 @@
           ]
         },
         {
-          "group": "projects",
+          "group": "Projects",
           "pages": [
             "rest/projects/create",
             "rest/projects/drop",
@@ -474,7 +549,7 @@
           ]
         },
         {
-          "group": "models",
+          "group": "Models",
           "pages": [
             "rest/models/train-model",
             "rest/models/delete-model",
@@ -489,7 +564,7 @@
           ]
         },
         {
-          "group": "tables",
+          "group": "Tables",
           "pages": [
             "rest/tables/create-table",
             "rest/tables/delete-table",
@@ -502,7 +577,7 @@
           ]
         },
         {
-          "group": "views",
+          "group": "Views",
           "pages": [
             "rest/views/create-view",
             "rest/views/delete-views",
@@ -512,14 +587,14 @@
           ]
         },
         {
-          "group": "files",
+          "group": "Files",
           "pages": [
             "rest/files/upload",
             "rest/files/delete"
           ]
         },
         {
-          "group": "jobs",
+          "group": "Jobs",
           "pages": [
             "rest/jobs/create",
             "rest/jobs/delete",
@@ -531,293 +606,259 @@
     {
       "group": "SDKs",
       "pages": [
+        "sdks/overview",
         {
-          "group": "Getting Started",
+          "group": "Mongo-QL",
           "pages": [
-            
-            {
-              "group": "Mongo-QL",
-              "pages": [
-                "mindsdb-mongo-ql-overview",
-                {
+              {
                   "group": "Connect",
                   "pages": [
-                    "connect/mongo-compass",
-                    "connect/mongo-shell"
+                      "sdks/mongo/mindsdb-mongo-ql-overview",
+                      "sdks/mongo/connect/mongo-compass",
+                      "sdks/mongo/connect/mongo-shell"
                   ]
-                }
-              ]
-            },
-            {
-              "group": "Python",
-              "pages": [
-                "sdk_python/overview",
-                "sdk_python/installation",
-                "sdk_python/connect"
-              ]
-            },
-            {
-              "group": "JavaScript",
-              "pages": [
-                "sdk_javascript/overview",
-                "sdk_javascript/installation",
-                "sdk_javascript/connect"
-              ]
-            }
+              },
+              {
+                  "group": "Databases",
+                  "pages": [
+                      "sdks/mongo/databases/list-data-handlers",
+                      "sdks/mongo/databases/insertOne",
+                      "sdks/mongo/databases/deleteOne",
+                      "sdks/mongo/databases/find",
+                      "sdks/mongo/databases/use"
+                  ]
+              },
+              {
+                  "group": "ML Engines",
+                  "pages": [
+                      "sdks/mongo/ml_engines/list-ml-handlers",
+                      "sdks/mongo/ml_engines/insertOne",
+                      "sdks/mongo/ml_engines/deleteOne",
+                      "sdks/mongo/ml_engines/find"
+                  ]
+              },
+              {
+                  "group": "Projects",
+                  "pages": [
+                      "sdks/mongo/projects/insertOne",
+                      "sdks/mongo/projects/deleteOne",
+                      "sdks/mongo/projects/list-projects"
+                  ]
+              },
+              {
+                  "group": "Models",
+                  "pages": [
+                      "sdks/mongo/models/insertOne",
+                      "sdks/mongo/models/deleteOne",
+                      "sdks/mongo/models/find",
+                      "sdks/mongo/models/describe",
+                      "sdks/mongo/models/retrain",
+                      "sdks/mongo/models/finetune",
+                      "sdks/mongo/models/manage-model-versions"
+                  ]
+              },
+              {
+                  "group": "Predictions",
+                  "pages": [
+                      "sdks/mongo/models/get-single-prediction",
+                      "sdks/mongo/models/get-batch-predictions"
+                  ]
+              },
+              {
+                  "group": "Jobs",
+                  "pages": [
+                      "sdks/mongo/jobs/insertOne",
+                      "sdks/mongo/jobs/deleteOne",
+                      "sdks/mongo/jobs/query-jobs"
+                  ]
+              }
           ]
         },
         {
-          "group": "Integrate Data Sources",
+          "group": "Python SDK",
           "pages": [
-            
-            {
-              "group": "Mongo-QL",
-              "pages": [
-                "mongo/databases/list-data-handlers",
-                "mongo/databases/insertOne",
-                "mongo/databases/deleteOne",
-                "mongo/databases/find",
-                "mongo/databases/use"
-              ]
-            },
-            {
-              "group": "Python",
-              "pages": [
-                "sdk_python/list_data_handlers",
-                "sdk_python/create_database",
-                "sdk_python/drop_database",
-                "sdk_python/list_databases"
-              ]
-            },
-            {
-              "group": "JavaScript",
-              "pages": [
-                "sdk_javascript/list_data_handlers",
-                "sdk_javascript/create_database",
-                "sdk_javascript/get_database",
-                "sdk_javascript/drop_database",
-                "sdk_javascript/list_databases"
-              ]
-            }
-            
+              {
+                  "group": "Connect",
+                  "pages": [
+                      "sdks/python/overview",
+                      "sdks/python/installation",
+                      "sdks/python/connect"
+                  ]
+              },
+              {
+                  "group": "Databases",
+                  "pages": [
+                      "sdks/python/list_data_handlers",
+                      "sdks/python/create_database",
+                      "sdks/python/drop_database",
+                      "sdks/python/list_databases"
+                  ]
+              },
+              {
+                  "group": "ML Engines",
+                  "pages": [
+                      "sdks/python/list_ml_handlers",
+                      "sdks/python/create_ml_engine",
+                      "sdks/python/drop_ml_engine",
+                      "sdks/python/list_ml_engines"
+                  ]
+              },
+              {
+                  "group": "Projects",
+                  "pages": [
+                      "sdks/python/create_project",
+                      "sdks/python/drop_project",
+                      "sdks/python/list_projects",
+                      "sdks/python/query_projects"
+                  ]
+              },
+              {
+                  "group": "Models",
+                  "pages": [
+                      "sdks/python/create_model",
+                      "sdks/python/drop_model",
+                      "sdks/python/list_models",
+                      "sdks/python/describe",
+                      "sdks/python/get_status",
+                      "sdks/python/refresh_model",
+                      "sdks/python/retrain",
+                      "sdks/python/finetune",
+                      "sdks/python/manage-model-versions"
+                  ]
+              },
+              {
+                  "group": "Predictions",
+                  "pages": [
+                      "sdks/python/get-single-prediction",
+                      "sdks/python/get-batch-predictions"
+                  ]
+              },
+              {
+                  "group": "Tables, Views, Files",
+                  "pages": [
+                      "sdks/python/create_table",
+                      "sdks/python/delete_table",
+                      "sdks/python/query_table",
+                      "sdks/python/native_queries",
+                      "sdks/python/update_table",
+                      "sdks/python/insert_into_table",
+                      "sdks/python/join_on",
+                      "sdks/python/delete_from",
+                      "sdks/python/create_view",
+                      "sdks/python/drop_view",
+                      "sdks/python/query_view",
+                      "sdks/python/list_views",
+                      "sdks/python/upload_file",
+                      "sdks/python/delete_file",
+                      "sdks/python/query_files"
+                  ]
+              },
+              {
+                  "group": "Jobs",
+                  "pages": [
+                      "sdks/python/create_job",
+                      "sdks/python/drop_job",
+                      "sdks/python/list_jobs",
+                      "sdks/python/refresh_job",
+                      "sdks/python/get_history"
+                  ]
+              }
           ]
         },
         {
-          "group": "Create AI Engines",
+          "group": "JavaScript SDK",
           "pages": [
-            
-            {
-              "group": "Mongo-QL",
-              "pages": [
-                "mongo/ml_engines/list-ml-handlers",
-                "mongo/ml_engines/insertOne",
-                "mongo/ml_engines/deleteOne",
-                "mongo/ml_engines/find"
-              ]
-            },
-            {
-              "group": "Python",
-              "pages": [
-                "sdk_python/list_ml_handlers",
-                "sdk_python/create_ml_engine",
-                "sdk_python/drop_ml_engine",
-                "sdk_python/list_ml_engines"
-              ]
-            },
-            {
-              "group": "JavaScript",
-              "pages": [
-                "sdk_javascript/list_ml_handlers",
-                "sdk_javascript/create_ml_engine",
-                "sdk_javascript/drop_ml_engine",
-                "sdk_javascript/list_ml_engines"
-              ]
-            }
-            
-          ]
-        },
-        {
-          "group": "Create Projects",
-          "pages": [
-            
-            {
-              "group": "Mongo-QL",
-              "pages": [
-                "mongo/projects/insertOne",
-                "mongo/projects/deleteOne",
-                "mongo/projects/list-projects"
-              ]
-            },
-            {
-              "group": "Python",
-              "pages": [
-                "sdk_python/create_project",
-                "sdk_python/drop_project",
-                "sdk_python/list_projects",
-                "sdk_python/query_projects"
-              ]
-            },
-            {
-              "group": "JavaScript",
-              "pages": [
-                "sdk_javascript/create_project",
-                "sdk_javascript/drop_project",
-                "sdk_javascript/list_projects"
-              ]
-            }
-          ]
-        },
-        {
-          "group": "Deploy and Use Models",
-          "pages": [
-            
-            {
-              "group": "Mongo-QL",
-              "pages": [
-                "mongo/models/insertOne",
-                "mongo/models/deleteOne",
-                "mongo/models/find",
-                "mongo/models/describe",
-                "mongo/models/retrain",
-                "mongo/models/finetune",
-                "mongo/models/manage-model-versions"
-              ]
-            },
-            {
-              "group": "Python",
-              "pages": [
-                "sdk_python/create_model",
-                "sdk_python/drop_model",
-                "sdk_python/list_models",
-                "sdk_python/describe",
-                "sdk_python/get_status",
-                "sdk_python/refresh_model",
-                "sdk_python/retrain",
-                "sdk_python/finetune",
-                "sdk_python/manage-model-versions"
-              ]
-            },
-            {
-              "group": "JavaScript",
-              "pages": [
-                "sdk_javascript/create_model",
-                "sdk_javascript/drop_model",
-                "sdk_javascript/list_models",
-                "sdk_javascript/describe",
-                "sdk_javascript/get_status",
-                "sdk_javascript/retrain",
-                "sdk_javascript/finetune",
-                "sdk_javascript/manage-model-versions"
-              ]
-            }
-          ]
-        },
-        {
-          "group": "Get Predictions",
-          "pages": [
-            
-            {
-              "group": "Mongo-QL",
-              "pages": [
-                "mongo/models/get-single-prediction",
-                "mongo/models/get-batch-predictions"
-              ]
-            },
-            {
-              "group": "Python",
-              "pages": [
-                "sdk_python/get-single-prediction",
-                "sdk_python/get-batch-predictions"
-              ]
-            },
-            {
-              "group": "JavaScript",
-              "pages": [
-                "sdk_javascript/query",
-                "sdk_javascript/batchQuery"
-              ]
-            }
-          ]
-        },
-        {
-          "group": "Tables, Views, and Files",
-          "pages": [
-            
-            {
-              "group": "Python",
-              "pages": [
-                "sdk_python/create_table",
-                "sdk_python/delete_table",
-                "sdk_python/query_table",
-                "sdk_python/native_queries",
-                "sdk_python/update_table",
-                "sdk_python/insert_into_table",
-                "sdk_python/join_on",
-                "sdk_python/delete_from",
-                "sdk_python/create_view",
-                "sdk_python/drop_view",
-                "sdk_python/query_view",
-                "sdk_python/list_views",
-                "sdk_python/upload_file",
-                "sdk_python/delete_file",
-                "sdk_python/query_files"
-              ]
-            },
-            {
-              "group": "JavaScript",
-              "pages": [
-                "sdk_javascript/create_table",
-                "sdk_javascript/delete_table",
-                "sdk_javascript/query_table",
-                "sdk_javascript/native_queries",
-                "sdk_javascript/update_table",
-                "sdk_javascript/insert_into_table",
-                "sdk_javascript/join_on",
-                "sdk_javascript/delete_from",
-                "sdk_javascript/create_view",
-                "sdk_javascript/drop_view",
-                "sdk_javascript/query_view",
-                "sdk_javascript/list_views",
-                "sdk_javascript/upload_file",
-                "sdk_javascript/delete_file",
-                "sdk_javascript/query_files"
-              ]
-            }
-          ]
-        },
-        {
-          "group": "Automate Workflows",
-          "pages": [
-            
-            {
-              "group": "Mongo-QL",
-              "pages": [
-                "mongo/jobs/insertOne",
-                "mongo/jobs/deleteOne",
-                "mongo/jobs/query-jobs"
-              ]
-            },
-            {
-              "group": "Python",
-              "pages": [
-                "sdk_python/create_job",
-                "sdk_python/drop_job",
-                "sdk_python/list_jobs",
-                "sdk_python/refresh_job",
-                "sdk_python/get_history"
-              ]
-            },
-            {
-              "group": "JavaScript",
-              "pages": [
-                "sdk_javascript/create_job",
-                "sdk_javascript/drop_job",
-                "sdk_javascript/query_jobs"
-              ]
-            }
+              {
+                  "group": "Connect",
+                  "pages": [
+                      "sdks/javascript/overview",
+                      "sdks/javascript/installation",
+                      "sdks/javascript/connect"
+                  ]
+              },
+              {
+                  "group": "Databases",
+                  "pages": [
+                      "sdks/javascript/list_data_handlers",
+                      "sdks/javascript/create_database",
+                      "sdks/javascript/get_database",
+                      "sdks/javascript/drop_database",
+                      "sdks/javascript/list_databases"
+                  ]
+              },
+              {
+                  "group": "ML Engines",
+                  "pages": [
+                      "sdks/javascript/list_ml_handlers",
+                      "sdks/javascript/create_ml_engine",
+                      "sdks/javascript/drop_ml_engine",
+                      "sdks/javascript/list_ml_engines"
+                  ]
+              },
+              {
+                  "group": "Projects",
+                  "pages": [
+                      "sdks/javascript/create_project",
+                      "sdks/javascript/drop_project",
+                      "sdks/javascript/list_projects"
+                  ]
+              },
+              {
+                  "group": "Models",
+                  "pages": [
+                      "sdks/javascript/create_model",
+                      "sdks/javascript/drop_model",
+                      "sdks/javascript/list_models",
+                      "sdks/javascript/describe",
+                      "sdks/javascript/get_status",
+                      "sdks/javascript/retrain",
+                      "sdks/javascript/finetune",
+                      "sdks/javascript/manage-model-versions"
+                  ]
+              },
+              {
+                  "group": "Predictions",
+                  "pages": [
+                      "sdks/javascript/query",
+                      "sdks/javascript/batchQuery"
+                  ]
+              },
+              {
+                  "group": "Tables, Views, Files",
+                  "pages": [
+                      "sdks/javascript/create_table",
+                      "sdks/javascript/delete_table",
+                      "sdks/javascript/query_table",
+                      "sdks/javascript/native_queries",
+                      "sdks/javascript/update_table",
+                      "sdks/javascript/insert_into_table",
+                      "sdks/javascript/join_on",
+                      "sdks/javascript/delete_from",
+                      "sdks/javascript/create_view",
+                      "sdks/javascript/drop_view",
+                      "sdks/javascript/query_view",
+                      "sdks/javascript/list_views",
+                      "sdks/javascript/upload_file",
+                      "sdks/javascript/delete_file",
+                      "sdks/javascript/query_files"
+                  ]
+              },
+              {
+                  "group": "Jobs",
+                  "pages": [
+                      "sdks/javascript/create_job",
+                      "sdks/javascript/drop_job",
+                      "sdks/javascript/query_jobs"
+                  ]
+              }
           ]
         }
-        
+      ]
+    },
+    {
+      "group": "Integrations",
+      "pages": [
+        "integrations/integrations"
       ]
     },
     {
@@ -1013,9 +1054,11 @@
         "contribute/issues",
         "contribute/issue-labels",
         "contribute/install",
+        "contribute/python-coding-standards",
         "contribute/data-handlers",
         "contribute/ml-handlers",
         "contribute/app-handlers",
+        "contribute/integrations-readme",
         "contribute/tests",
         "contribute/tutorials",
         "contribute/docs",
@@ -1030,198 +1073,6 @@
         "faqs/persist-predictions",
         "faqs/mindsdb-with-php",
         "faqs/benefits"
-      ]
-    },
-    {
-      "group": "Integrations",
-      "pages": [
-        "integrations/integrations",
-        
-        {
-          "group": "Data Sources",
-          "pages": [
-            {
-              "group": "Applications",
-              "pages": [
-                "integrations/app-integrations/binance",
-                "integrations/app-integrations/confluence",
-                "integrations/app-integrations/dockerhub",
-                "integrations/app-integrations/email",
-                "integrations/app-integrations/github",
-                "integrations/app-integrations/gitlab",
-                "integrations/app-integrations/gmail",
-                "integrations/app-integrations/google-calendar",
-                "integrations/app-integrations/hackernews",
-                "integrations/app-integrations/instatus",
-                "integrations/app-integrations/intercom",
-                "integrations/app-integrations/mediawiki",
-                "integrations/app-integrations/microsoft-teams",
-                "integrations/app-integrations/newsapi",
-                "integrations/app-integrations/paypal",
-                "integrations/app-integrations/plaid",
-                "integrations/app-integrations/pypi",
-                "integrations/app-integrations/reddit",
-                "integrations/app-integrations/sendinblue",
-                "integrations/app-integrations/shopify",
-                "integrations/app-integrations/slack",
-                "integrations/app-integrations/strapi",
-                "integrations/app-integrations/stripe",
-                "integrations/app-integrations/twitter",
-                "integrations/app-integrations/web-crawler",
-                "integrations/app-integrations/youtube"
-              ]
-            },
-            {
-              "group": "Databases",
-              "pages": [
-                "integrations/data-integrations/all-data-integrations",
-                "integrations/data-integrations/airtable",
-                "integrations/data-integrations/amazon-aurora",
-                "integrations/data-integrations/amazon-dynamodb",
-                "integrations/data-integrations/amazon-redshift",
-                "integrations/data-integrations/amazon-s3",
-                "integrations/data-integrations/apache-cassandra",
-                "integrations/data-integrations/apache-druid",
-                "integrations/data-integrations/apache-hive",
-                "integrations/data-integrations/apache-ignite",
-                "integrations/data-integrations/apache-impala",
-                "integrations/data-integrations/apache-pinot",
-                "integrations/data-integrations/apache-solr",
-                "integrations/data-integrations/ckan",
-                "integrations/data-integrations/clickhouse",
-                "integrations/data-integrations/cloud-spanner",
-                "integrations/data-integrations/cockroachdb",
-                "integrations/data-integrations/couchbase",
-                "integrations/data-integrations/cratedb",
-                "integrations/data-integrations/d0lt",
-                "integrations/data-integrations/databend",
-                "integrations/data-integrations/databricks",
-                "integrations/data-integrations/datastax",
-                "integrations/data-integrations/duckdb",
-                "integrations/data-integrations/edgelessdb",
-                "integrations/data-integrations/elasticsearch",
-                "integrations/data-integrations/firebird",
-                "integrations/data-integrations/google-bigquery",
-                "integrations/data-integrations/google-cloud-sql",
-                "integrations/data-integrations/google-sheets",
-                "integrations/data-integrations/ibm-db2",
-                "integrations/data-integrations/ibm-informix",
-                "integrations/data-integrations/influxdb",
-                "integrations/data-integrations/mariadb",
-                "integrations/data-integrations/matrixone",
-                "integrations/data-integrations/microsoft-access",
-                "integrations/data-integrations/microsoft-sql-server",
-                "integrations/data-integrations/monetdb",
-                "integrations/data-integrations/mongodb",
-                "integrations/data-integrations/mysql",
-                "integrations/data-integrations/oceanbase",
-                "integrations/data-integrations/opengauss",
-                "integrations/data-integrations/oracle",
-                "integrations/data-integrations/orioledb",
-                "integrations/data-integrations/planetscale",
-                "integrations/data-integrations/postgresql",
-                "integrations/data-integrations/questdb",
-                "integrations/data-integrations/sap-hana",
-                "integrations/data-integrations/sap-sql-anywhere",
-                "integrations/data-integrations/scylladb",
-                "integrations/data-integrations/singlestore",
-                "integrations/data-integrations/snowflake",
-                "integrations/data-integrations/sqlite",
-                "integrations/data-integrations/starrocks",
-                "integrations/data-integrations/supabase",
-                "integrations/data-integrations/surrealdb",
-                "integrations/data-integrations/tdengine",
-                "integrations/data-integrations/teradata",
-                "integrations/data-integrations/tidb",
-                "integrations/data-integrations/timescaledb",
-                "integrations/data-integrations/trino",
-                "integrations/data-integrations/vertica",
-                "integrations/data-integrations/vitess",
-                "integrations/data-integrations/yugabytedb"
-              ]
-            },
-            {
-              "group": "Vector Databases",
-              "pages": [
-                "integrations/vector-db-integrations/chromadb",
-                "integrations/vector-db-integrations/pgvector",
-                "integrations/vector-db-integrations/pinecone",
-                "integrations/vector-db-integrations/weaviate"
-              ]
-            }
-          ]
-        },
-        {
-          "group": "AI Engines",
-          "pages": [
-            {
-              "group": "Large Language Models",
-              "pages": [
-                "integrations/ai-engines/ollama",
-                "integrations/ai-engines/replicate-llm",
-                "integrations/ai-engines/vertex",
-                "integrations/ai-engines/anthropic",
-                "integrations/ai-engines/cohere",
-                "integrations/ai-engines/openai",
-                "integrations/ai-engines/huggingface",
-                "integrations/ai-engines/langchain",
-                "integrations/ai-engines/llamaindex",
-                "integrations/ai-engines/monkeylearn"        
-              ]
-            },
-            {
-              "group": "Bring Your Own Models",
-              "pages": [
-                "integrations/ai-engines/byom",
-                "integrations/ai-engines/ray-serve",
-                "integrations/ai-engines/mlflow"
-              ]
-            },
-            {
-              "group": "AutoML",
-              "pages": [
-                "integrations/ai-engines/lightwood",
-                "integrations/ai-engines/pycaret"
-              ]
-            },
-            {
-              "group": "Time Series Models",
-              "pages": [
-                "integrations/ai-engines/statsforecast",
-                "integrations/ai-engines/neuralforecast",
-                "integrations/ai-engines/timegpt"
-              ]
-            },
-            {
-              "group": "Recommender Models",
-              "pages": [
-                "integrations/ai-engines/lightfm",
-                "integrations/ai-engines/popularity-recommender"
-              ]
-            },
-            {
-              "group": "Image Models",
-              "pages": [
-                "integrations/ai-engines/replicate-text2img",
-                "integrations/ai-engines/replicate-img2text"
-              ]
-            },
-            {
-              "group": "Large Video Models",
-              "pages": [
-                "integrations/ai-engines/twelvelabs",
-                "integrations/ai-engines/replicate-text2video"
-              ]
-            },
-            {
-              "group": "Audio Models",
-              "pages": [
-                "integrations/ai-engines/replicate-audio"
-              ]
-            }
-          ]
-        }
-       
       ]
     }
   ],

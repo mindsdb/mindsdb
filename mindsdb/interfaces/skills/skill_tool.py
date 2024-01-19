@@ -14,6 +14,7 @@ def _make_text_to_sql_tools(skill: db.Skills, llm, executor) -> List:
     # To prevent dependency on Langchain unless an actual tool uses it.
     try:
         from langchain.agents.agent_toolkits import SQLDatabaseToolkit
+        from langchain.tools.sql_database.tool import QuerySQLDataBaseTool
     except ImportError:
         raise ImportError('To use the text-to-SQL skill, please install langchain with `pip install langchain`')
     database = skill.params['database']
@@ -24,7 +25,20 @@ def _make_text_to_sql_tools(skill: db.Skills, llm, executor) -> List:
         metadata=executor.session.integration_controller,
         include_tables=tables_to_include
     )
-    return SQLDatabaseToolkit(db=db, llm=llm).get_tools()
+    sql_database_tools = SQLDatabaseToolkit(db=db, llm=llm).get_tools()
+    description = skill.params.get('description', '')
+    tables_list = ','.join([f'{database}.{table}' for table in tables])
+    for i, tool in enumerate(sql_database_tools):
+        if isinstance(tool, QuerySQLDataBaseTool):
+            # Add our own custom description so our agent knows when to query this table.
+            tool.description = (
+                f'Use this tool if you need data about {description}. '
+                'Use the conversation context to decide which table to query. '
+                f'These are the available tables: {tables_list}.\n'
+                f'{tool.description}'
+            )
+            sql_database_tools[i] = tool
+    return sql_database_tools
 
 
 def _get_rag_query_function(

@@ -108,9 +108,9 @@ def get_available_openai_model_ids(args: dict) -> list:
 
     openai.api_key = args["openai_api_key"]
 
-    res = openai.Engine.list()
+    models = openai.OpenAI().models.list().data
 
-    return [models["id"] for models in res.data]
+    return [models.id for models in models]
 
 
 @dataclass
@@ -216,7 +216,7 @@ class OpenAIParameters(LLMParameters):
     """Model parameters for the LLM API interface"""
 
     openai_api_key: str
-    model_id: str = Field(default="text-davinci-003", title="model name")
+    model_id: str = Field(default="gpt-3.5-turbo-instruct", title="model name")
     n: int = Field(default=1, title="number of responses to return")
 
     @validator("model_id", allow_reuse=True)
@@ -266,12 +266,12 @@ class LLMLoader(BaseModel):
 
     def load_openai_llm(self) -> partial:
         """Load OpenAI LLM API interface"""
-        openai.api_key = self.config_dict["openai_api_key"]
+        client = openai.OpenAI(api_key=self.config_dict["openai_api_key"])
         config = self.config_dict.copy()
         config.pop("openai_api_key")
         config["model"] = config.pop("model_id")
 
-        return partial(openai.Completion.create, **config)
+        return partial(client.completions.create, **config)
 
 
 class RAGBaseParameters(BaseModel):

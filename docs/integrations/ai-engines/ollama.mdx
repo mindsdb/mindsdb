@@ -1,0 +1,84 @@
+---
+title: Ollama
+sidebarTitle: Ollama
+---
+
+
+[Ollama](https://ollama.ai/) is a project that enables easy local deployment of Large Language Models (LLMs). 
+
+All models supported by Ollama are available in MindsDB through this integration.
+
+<Warning>
+For now, this integration will only work in MacOS, with Linux and Windows to come later.
+</Warning>
+
+
+Locally deployed LLMs can be desirable for a wide variety of reasons. In this case, data privacy, developer feedback-loop speed and inference cost reduction can be powerful reasons to opt for a local LLM.
+
+Ideal predictive use cases, as in other LLM-focused integrations (e.g. OpenAI, Anthropic, Cohere), will be anything involving language understanding and generation, including but not limited to:
+- zero-shot text classification
+- sentiment analysis
+- question answering
+- summarization
+- translation
+
+
+## Setup
+
+* A macOS machine, M1 chip or greater. 
+* A working Ollama installation. For instructions refer to their [webpage](https://ollama.ai). This step should be really simple.
+* For 7B models, at least 8GB RAM is recommended. 
+* For 13B models, at least 16GB RAM is recommended. 
+* For 70B models, at least 64GB RAM is recommended.
+
+More information [here](https://ollama.ai/library/llama2). Minimum specs can vary depending on the model.
+
+### AI Engine
+
+Before creating a model, it is required to create an AI engine based on the provided handler.
+
+
+You can create an Ollama engine using this command:
+
+```sql
+CREATE ML_ENGINE ollama FROM ollama;
+```
+
+The name of the engine (here, `ollama`) should be used as a value for the `engine` parameter in the `USING` clause of the `CREATE MODEL` statement.
+
+### AI Model
+
+The [`CREATE MODEL`](/sql/create/model) statement is used to create, train, and deploy models within MindsDB.
+
+```sql
+CREATE MODEL mindsdb.my_llama2
+PREDICT completion
+USING 
+    engine = 'ollama',
+    model_name = 'llama2'
+```
+
+Where:
+
+| Name              | Description                                                               |
+|-------------------|---------------------------------------------------------------------------|
+| `engine`          | It defines the Ollama engine.                                          |
+| `model_name`      | It is used to provide the name of the model to be used |
+
+Supported commands for describing Ollama models are:
+
+1. `DESCRIBE ollama_model;`
+2. `DESCRIBE ollama_model.model;`
+3. `DESCRIBE ollama_model.features;`
+
+
+
+## Usage
+
+Once you have connected to an Ollama model, you can use it to make predictions.
+
+```sql
+SELECT text, completion
+FROM my_llama2
+WHERE text = 'hi there!';
+```

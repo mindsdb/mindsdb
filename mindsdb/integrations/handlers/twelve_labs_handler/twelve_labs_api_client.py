@@ -1,35 +1,64 @@
 import time
 import requests
-from typing import Dict, List
+from typing import Dict, List, Optional
 from requests_toolbelt.multipart.encoder import MultipartEncoder
 
 from mindsdb.utilities import log
+from mindsdb.integrations.handlers.twelve_labs_handler.settings import twelve_labs_handler_config
 
 
 logger = log.getLogger(__name__)
 
-# TODO: move to config
-BASE_URL = "https://api.twelvelabs.io/v1.1"
-DEFAULT_ENGINE = "marengo2.5"
-DEFAULT_WAIT_DURATION = 5
-
 
 class TwelveLabsAPIClient:
-    def __init__(self, api_key):
+    """
+    The Twelve Labs API client for the Twelve Labs handler.
+    This client is used for accessing the Twelve Labs API endpoints.
+    """
+
+    def __init__(self, api_key: str):
+        """
+        The initializer for the TwelveLabsAPIClient.
+
+        Parameters
+        ----------
+        api_key : str
+            The Twelve Labs API key.
+        """
+
         self.api_key = api_key
         self.headers = {
             'Content-Type': 'application/json',
             'x-api-key': self.api_key
         }
 
-    def create_index(self, index_name: str, index_options: List[str], engine_id: str = None, addons: List[str] = None) -> str:
+    def create_index(self, index_name: str, index_options: List[str], engine_id: Optional[str] = None, addons: Optional[List[str]] = None) -> str:
         """
         Create an index.
 
+        Parameters
+        ----------
+        index_name : str
+            Name of the index to be created.
+
+        index_options : List[str]
+            List of that specifies how the platform will process the videos uploaded to this index.
+
+        engine_id : str, Optional
+            ID of the engine. If not provided, the default engine is used.
+
+        addons : List[str], Optional
+            List of addons that should be enabled for the index.
+
+        Returns
+        -------
+        str
+            ID of the created index.
         """
+
         body = {
             "index_name": index_name,
-            "engine_id": engine_id if engine_id else DEFAULT_ENGINE,
+            "engine_id": engine_id if engine_id else twelve_labs_handler_config.DEFAULT_ENGINE,
             "index_options": index_options,
             "addons": addons,
         }
@@ -47,7 +76,17 @@ class TwelveLabsAPIClient:
         """
         Get an index by name.
 
+        Parameters
+        ----------
+        index_name : str
+            Name of the index to be retrieved.
+
+        Returns
+        -------
+        str
+            ID of the index.
         """
+
         params = {
             "index_name": index_name,
         }
@@ -65,7 +104,23 @@ class TwelveLabsAPIClient:
         """
         Create video indexing tasks.
 
+        Parameters
+        ----------
+        index_id : str
+            ID of the index.
+
+        video_urls : List[str], Optional
+            List of video urls to be indexed. Either video_urls or video_files should be provided. This validation is handled by TwelveLabsHandlerModel.
+
+        video_files : List[str], Optional
+            List of video files to be indexed. Either video_urls or video_files should be provided. This validation is handled by TwelveLabsHandlerModel.
+
+        Returns
+        -------
+        List[str]
+            List of task IDs created.
         """
+
         task_ids = []
 
         if video_urls:
@@ -98,7 +153,23 @@ class TwelveLabsAPIClient:
         """
         Create a video indexing task.
 
+        Parameters
+        ----------
+        index_id : str
+            ID of the index.
+
+        video_url : str, Optional
+            URL of the video to be indexed. Either video_url or video_file should be provided. This validation is handled by TwelveLabsHandlerModel.
+
+        video_file : str, Optional
+            Path to the video file to be indexed. Either video_url or video_file should be provided. This validation is handled by TwelveLabsHandlerModel.
+
+        Returns
+        -------
+        str
+            ID of the created task.
         """
+
         body = {
             "index_id": index_id,
         }
@@ -122,7 +193,16 @@ class TwelveLabsAPIClient:
         """
         Poll for video indexing tasks to complete.
 
+        Parameters
+        ----------
+        task_ids : List[str]
+            List of task IDs to be polled.
+
+        Returns
+        -------
+        None
         """
+
         for task_id in task_ids:
             logger.info(f"Polling status of video indexing task {task_id}.")
             is_task_running = True
@@ -132,7 +212,7 @@ class TwelveLabsAPIClient:
                 status = task['status']
                 logger.info(f"Task {task_id} is in the {status} state.")
 
-                wait_durtion = task['process']['remain_seconds'] if 'process' in task else DEFAULT_WAIT_DURATION
+                wait_durtion = task['process']['remain_seconds'] if 'process' in task else twelve_labs_handler_config.DEFAULT_WAIT_DURATION
 
                 if status in ('pending', 'indexing', 'validating'):
                     logger.info(f"Task {task_id} will be polled again in {wait_durtion} seconds.")
@@ -153,7 +233,17 @@ class TwelveLabsAPIClient:
         """
         Get a video indexing task.
 
+        Parameters
+        ----------
+        task_id : str
+            ID of the task.
+
+        Returns
+        -------
+        Dict
+            Video indexing task.
         """
+
         result = self._submit_request(
             method="GET",
             endpoint=f"tasks/{task_id}",
@@ -166,7 +256,23 @@ class TwelveLabsAPIClient:
         """
         Search an index.
 
+        Parameters
+        ----------
+        index_id : str
+            ID of the index.
+
+        query : str
+            Query to be searched.
+
+        search_options : List[str]
+            List of search options to be used.
+
+        Returns
+        -------
+        Dict
+            Search results.
         """
+
         body = {
             "index_id": index_id,
             "query": query,
@@ -181,7 +287,7 @@ class TwelveLabsAPIClient:
         )
         data.extend(result['data'])
 
-        while('next_page_token' in result['page_info']):
+        while 'next_page_token' in result['page_info']:
             result = self._submit_request(
                 method="GET",
                 endpoint=f"search/{result['page_info']['next_page_token']}"
@@ -195,8 +301,27 @@ class TwelveLabsAPIClient:
         """
         Submit a request to the Twelve Labs API.
 
+        Parameters
+        ----------
+        endpoint : str
+            API endpoint.
+
+        headers : Dict, Optional
+            Headers to be used in the request.
+
+        data : Dict, Optional
+            Data to be used in the request.
+
+        method : str, Optional
+            HTTP method to be used in the request. Defaults to GET.
+
+        Returns
+        -------
+        Dict
+            Response from the API.
         """
-        url = f"{BASE_URL}/{endpoint}"
+
+        url = f"{twelve_labs_handler_config.BASE_URL}/{endpoint}"
 
         headers = headers if headers else self.headers
 
@@ -230,8 +355,27 @@ class TwelveLabsAPIClient:
         """
         Submit a multi-part request to the Twelve Labs API.
 
+        Parameters
+        ----------
+        endpoint : str
+            API endpoint.
+
+        headers : Dict, Optional
+            Headers to be used in the request.
+
+        data : Dict, Optional
+            Data to be used in the request.
+
+        method : str, Optional
+            HTTP method to be used in the request. Defaults to GET.
+
+        Returns
+        -------
+        Dict
+            Response from the API.
         """
-        url = f"{BASE_URL}/{endpoint}"
+
+        url = f"{twelve_labs_handler_config.BASE_URL}/{endpoint}"
 
         headers = headers = headers if headers else self.headers
 

@@ -9,10 +9,10 @@ CHAT_MODELS = (
     'gpt-4-1106-preview',
 )
 COMPLETION_MODELS = ('babbage-002', 'davinci-002')
-FINETUNING_MODELS = ('gpt-3.5-turbo', 'babbage-002', 'davinci-002')
+FINETUNING_MODELS = ('gpt-3.5-turbo', 'babbage-002', 'davinci-002','gpt-4')
 COMPLETION_LEGACY_BASE_MODELS = ('davinci', 'curie', 'babbage', 'ada')
 
-FINETUNING_LEGACY_MODELS = COMPLETION_LEGACY_BASE_MODELS
+FINETUNING_LEGACY_MODELS = FINETUNING_MODELS
 COMPLETION_LEGACY_MODELS = (
     COMPLETION_LEGACY_BASE_MODELS
     + tuple(f'text-{model}-001' for model in COMPLETION_LEGACY_BASE_MODELS)

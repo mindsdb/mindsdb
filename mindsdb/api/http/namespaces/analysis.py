@@ -12,7 +12,7 @@ from pandas.core.frame import DataFrame
 from mindsdb.api.http.namespaces.configs.analysis import ns_conf
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import (
+from mindsdb.api.executor.data_types.response_type import (
     RESPONSE_TYPE as SQL_RESPONSE_TYPE,
 )
 from mindsdb.utilities import log
@@ -104,6 +104,15 @@ class DataAnalysis(Resource):
         column_names = payload.get("column_names")
         data = payload.get("data")
 
-        analysis = analyze_df(DataFrame(data, columns=column_names))
-
-        return {"analysis": analysis, "timestamp": time.time()}
+        timestamp = time.time()
+        try:
+            analysis = analyze_df(DataFrame(data, columns=column_names))
+            return {"analysis": analysis, "timestamp": time.time()}
+        except Exception as e:
+            # Don't want analysis exceptions to show up on UI.
+            # TODO: Fix analysis so it doesn't throw exceptions at all.
+            return {
+                'analysis': {},
+                'timestamp': timestamp,
+                'error': str(e)
+            }

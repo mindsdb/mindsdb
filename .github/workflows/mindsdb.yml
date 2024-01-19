@@ -21,7 +21,7 @@ jobs:
           python tests/scripts/check_code.py
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v37
+        uses: tj-actions/changed-files@v41
       - name: Run pre-commit
         uses: pre-commit/action@v3.0.0
         with:
@@ -55,6 +55,7 @@ jobs:
         pip install --no-cache-dir .
         pip install -r requirements/requirements-test.txt
         pip install .[lightwood]  # TODO: for now some tests rely on lightwood
+        pip freeze
       shell: bash
     - name: Run integration api and flow tests
       run: |
@@ -129,24 +130,3 @@ jobs:
         CHECK_FOR_UPDATES: False
         OPENAI_API_KEY: ${{secrets.OPENAI_API_KEY}}
         ANYSCALE_ENDPOINTS_API_KEY: ${{secrets.ANYSCALE_ENDPOINTS_API_KEY}}
-
-  deploy_to_pypi:
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.ref == 'refs/heads/stable' && github.actor != 'mindsdbadmin'
-    steps:
-    - uses: actions/checkout@v3.5.3
-    - name: Set up Python
-      uses: actions/setup-python@v4.7.0
-      with:
-        python-version: '3.8'
-    - name: Install dependencies
-      run: |
-        pip install -r requirements/requirements-dev.txt
-    - name: Build and publish
-      env:
-        TWINE_USERNAME:  __token__
-        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-      run: |
-        python setup.py sdist
-        twine upload dist/*

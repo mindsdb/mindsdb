@@ -1,5 +1,4 @@
 charset-normalizer
 python-magic >= 0.4.27
-langchain==0.0.303
-pypdf  # Optional dep of langchain for PDF files
 openpyxl  # Optional dep of langchain for txt files
+pymupdf   # Optional dep for PDF files

@@ -7,9 +7,9 @@ from flask_restx import Resource, abort
 
 from mindsdb.api.http.namespaces.configs.databases import ns_conf
 from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
-from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
-from mindsdb.api.mysql.mysql_proxy.datahub.classes.tables_row import TablesRow
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.executor.controllers.session_controller import SessionController
+from mindsdb.api.executor.datahub.classes.tables_row import TablesRow
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb_sql import parse_sql, ParsingException
 from mindsdb_sql.parser.ast import CreateTable, DropTables
 

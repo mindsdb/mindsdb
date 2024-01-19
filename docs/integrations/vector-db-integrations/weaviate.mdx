@@ -1,0 +1,120 @@
+---
+title: Weaviate
+sidebarTitle: Weaviate
+---
+
+
+
+This is the implementation of the Weaviate for MindsDB.
+
+## Weaviate
+
+Weaviate is an open-source vector database. It allows you to store data objects and vector embeddings from your favorite ML-models, and scale seamlessly into billions of data objects.
+_
+## Implementation
+
+This handler uses `weaviate-client` python library connect to a weaviate instance.
+
+The required arguments to establish a connection are:
+
+* `weaviate_url`: url of the weaviate database
+* `weaviate_api_key`: API key to authenticate with weaviate (in case of cloud instance).
+* `persistence_directory`: directory to be used in case of local storage
+
+
+### Creating connection
+
+In order to make use of this handler and connect to a Weaviate server in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE weaviate_datasource
+            WITH ENGINE = "weaviate",
+            PARAMETERS = {
+                "weaviate_url" : "https://sample.weaviate.network",
+                "weaviate_api_key": "api-key"
+};
+```
+
+```sql
+CREATE DATABASE weaviate_datasource
+            WITH ENGINE = "weaviate",
+            PARAMETERS = {
+                "weaviate_url" : "https://localhost:8080",
+};
+```
+
+```sql
+CREATE DATABASE weaviate_datasource
+            WITH ENGINE = "weaviate",
+            PARAMETERS = {
+                "persistence_directory" : "db_path",
+};
+```
+
+### Dropping connection
+
+To drop the connection, use this command
+
+```sql
+DROP DATABASE weaviate_datasource;
+```
+
+### Creating tables
+
+To insert data from a pre-existing table, use `CREATE`
+
+```sql
+CREATE TABLE weaviate_datascource.test
+(SELECT * FROM sqlitedb.test);
+```
+As weaviate currently doesn't support json field. 
+So, this creates another table for the "metadata" field and a reference is created in the original table which points to
+its metadata entry.
+
+Weaviate follows GraphQL conventions where classes (which are table schemas) start with a capital letter and 
+properties start with a lowercase letter.
+
+So whenever we create a table, the table's name gets capitalized.
+
+### Dropping collections
+
+To drop a Weaviate table use this command
+
+```sql
+DROP TABLE weaviate_datasource.tablename;
+```
+
+### Querying and selecting
+
+To query database using a search vector, you can use `search_vector` or `embeddings` in `WHERE` clause
+
+```sql
+SELECT * from weaviate_datasource.test
+WHERE search_vector = '[3.0, 1.0, 2.0, 4.5]'
+LIMIT 10;
+```
+
+Basic query 
+
+```sql
+SELECT * from weaviate_datasource.test
+```
+
+You can use `WHERE` clause on dynamic fields like normal SQL
+
+```sql
+SELECT * FROM weaviate_datasource.createtest
+WHERE category = "science";
+```
+
+### Deleting records
+
+You can delete entries using `DELETE` just like in SQL.
+
+
+```sql
+DELETE FROM weaviate_datasource.test
+WHERE id IN (1, 2, 3);
+```
+
+Update is not supported by mindsdb vector database

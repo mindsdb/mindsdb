@@ -10,10 +10,10 @@ from functools import partial
 import socket
 from typing import Callable, Dict, Type, Any, Iterable, Sequence
 
-from mindsdb.api.mysql.mysql_proxy.controllers import SessionController
+from mindsdb.api.executor.controllers import SessionController
 from mindsdb.api.postgres.postgres_proxy.executor import Executor
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import CHARSET_NUMBERS
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.api.common.check_auth import check_auth
 from mindsdb.api.mysql.mysql_proxy.mysql_proxy import SQLAnswer
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.errors import POSTGRES_SYNTAX_ERROR_CODE

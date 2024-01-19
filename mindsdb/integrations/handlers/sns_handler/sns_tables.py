@@ -6,8 +6,10 @@ from mindsdb.integrations.handlers.utilities.query_utilities.insert_query_utilit
 from mindsdb.integrations.libs.api_handler import APITable, APIHandler
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 
+
 class SubscriptionTable(APITable):
-    
+    """The SNS subscriptions Table implementation for create and read subscription"""
+    name: str = "subscriptions"
     def get_columns(self) -> List[str]:
         """Gets all columns to be returned in pandas DataFrame responses
 
@@ -26,23 +28,43 @@ class SubscriptionTable(APITable):
         self.handler.connect()
     
     def insert(self, query: ast.Insert) -> pd.DataFrame:
-        mandatory_columns = {'TopicArn','Protocol'}
-        supported_columns = {'Endpoint'}
+        mandatory_columns = ('TopicArn','Endpoint','Protocol')
+        supported_columns = tuple()
+        supported_columns += mandatory_columns
         insert_statement_parser = INSERTQueryParser(
             query,
             mandatory_columns=list(mandatory_columns),
             supported_columns=list(supported_columns),
             all_mandatory=True
         )
-        subscription_values= insert_statement_parser.parse_values()
-        for subscription_value in subscription_values:
-            topic_arn=subscription_value['TopicArn']
-            protocol=subscription_value['Protocol']
-            endpoint=subscription_value['Endpoint']
+        subscription_rows= insert_statement_parser.parse_query()
+        for subscription_row in subscription_rows:
+            topic_arn=subscription_row['TopicArn']
+            protocol=subscription_row['Protocol']
+            endpoint=subscription_row['Endpoint']
             response=self.handler.connection.subscribe(TopicArn=topic_arn,Protocol=protocol,Endpoint=endpoint)
             return pd.DataFrame(response)
-            
-            
+        
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        conditions = extract_comparison_conditions(query.where)
+        params = {}
+        accepted_params = ['TopicArn', 'SubscriptionArn','Protocol','Endpoint']
+        for op, arg1, arg2 in conditions:
+            if arg1 in accepted_params:
+                if op != '=':
+                    raise NotImplementedError
+                params[arg1] = arg2
+        response = self.handler.connection.list_subscriptions()        
+        if bool(params) is False:           
+            return pd.DataFrame(response['Subscriptions'])    
+        else:
+            for subscription in response['Subscriptions']:
+                for key,value in params.items():
+                    if value==subscription[key]:
+                        return pd.DataFrame.from_dict([subscription])
+            return pd.DataFrame(columns=accepted_params)
+                
+                
             
 
 class MessageTable(APITable):
@@ -64,12 +86,19 @@ class MessageTable(APITable):
     def __init__(self, handler: APIHandler):
         super().__init__(handler)
         self.handler.connect()
+    
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        self.handler.sqs_client
+            
 
     def insert(self, query: ast.Insert) -> pd.DataFrame:
         """  Args: query (ast.Insert): SQL query to parse.
         """
-        supported_columns = {'id', 'subject', 'message_deduplication_id', 'message_group_id', 'message', 'topic_arn',
-                         'message_attributes'}
+        mandatory_columns = tuple()
+        mandatory_columns=('message', 'topic_arn')
+        supported_columns = ('id', 'subject', 'message_deduplication_id', 'message_group_id',
+                         'message_attributes')
+        supported_columns+=mandatory_columns
         columns: List[str] = list(supported_columns)
         insert_statement_parser = INSERTQueryParser(
             query,
@@ -153,7 +182,7 @@ class TopicTable(APITable):
                 params[arg1] = arg2
             else:
                 raise NotImplementedError  
-        if bool(params) == False:
+        if bool(params) is False:
             return self.topic_list()
         else:              
             return self.topic_list(topic_arn=params["TopicArn"])

@@ -7,7 +7,6 @@ from pandas import DataFrame
 from collections import OrderedDict
 from typing import Optional
 import boto3
-import boto.sqs
 from typing import Dict
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 import json as JSON
@@ -84,13 +83,13 @@ class SnsHandler(APIHandler):
             # using  for testing locally with localstack
             endpoint_url=self.connection_data['endpoint_url'],
             region_name=self.connection_data['region_name'])
-        if self.connection_data['queue-url'] is not None:
-            self.sqs_client = boto.sqs.connect_to_region(
-                self.connection_data['region_name'],
-                aws_access_key_id=self.connection_data['aws_access_key_id'],
-                aws_secret_access_key=self.connection_data['aws_secret_access_key']
-                )
-            
+        
+        self.sqs_client = boto3.client('sqs',
+                                       aws_access_key_id=self.connection_data['aws_access_key_id'],
+                                       aws_secret_access_key=self.connection_data['aws_secret_access_key'],
+                                       endpoint_url=self.connection_data['endpoint_url'],
+                                       region_name=self.connection_data['region_name']
+                                       )            
         self.is_connected = True     
         return self.connection
 

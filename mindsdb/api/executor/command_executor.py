@@ -101,7 +101,6 @@ from mindsdb.interfaces.model.functions import (
     get_predictor_integration,
 )
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
-from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.interfaces.triggers.triggers_controller import TriggersController
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.functions import mark_process, resolve_model_identifier
@@ -1101,51 +1100,36 @@ class ExecuteCommands:
         )
         if handler_module_meta is None:
             raise ExecutorException(f"There is no engine '{statement.handler}'")
-        if handler_module_meta.get("import", {}).get("success") is not True:
-            msg = dedent(
-                f"""\
-                Handler '{handler_module_meta['name']}' cannot be used. Reason is:
-                    {handler_module_meta['import']['error_message']}
-            """
-            )
-            is_cloud = self.session.config.get("cloud", False)
-            if is_cloud is False:
-                msg += dedent(
-                    f"""
 
-                If the error is related to missing dependencies, then try to run one of the following commands in a shell and restart mindsdb:
-                    If you have cloned the github repo, run "pip install '.[{handler_module_meta['name']}]'"
-                    If you have installed via pip, run "pip install 'mindsdb[{handler_module_meta['name']}]'"
-                    If you are using docker, run "docker exec <container_name> pip install 'mindsdb[{handler_module_meta['name']}]'"
+        try:
+            self.session.integration_controller.add(
+                name=name, engine=statement.handler, connection_args=statement.params
+            )
+        except Exception as e:
+            msg = str(e)
+            if type(e) in (ImportError, ModuleNotFoundError):
+                msg = dedent(
+                    f"""\
+                    Handler '{handler_module_meta['name']}' cannot be used. Reason is:
+                        {handler_module_meta['import']['error_message']}
                 """
                 )
+                is_cloud = self.session.config.get("cloud", False)
+                if is_cloud is False:
+                    msg += dedent(
+                        f"""
+
+                    If the error is related to missing dependencies, then try to run one of the following commands in a shell and restart mindsdb:
+                        If you have cloned the github repo, run "pip install '.[{handler_module_meta['name']}]'"
+                        If you have installed via pip, run "pip install 'mindsdb[{handler_module_meta['name']}]'"
+                        If you are using docker, run "docker exec <container_name> pip install 'mindsdb[{handler_module_meta['name']}]'"
+                    """
+                    )
+                logger.info(msg)
+            ast_drop = DropMLEngine(name=statement.name)
+            self.answer_drop_ml_engine(ast_drop)
             logger.info(msg)
             raise ExecutorException(msg)
-
-        integration_id = self.session.integration_controller.add(
-            name=name, engine=statement.handler, connection_args=statement.params
-        )
-
-        HandlerClass = self.session.integration_controller.handler_modules[
-            handler_module_meta["name"]
-        ].Handler
-
-        if hasattr(HandlerClass, "create_engine"):
-            handlerStorage = HandlerStorage(integration_id)
-            ml_handler = HandlerClass(
-                engine_storage=handlerStorage,
-                model_storage=None,
-            )
-
-            try:
-                ml_handler.create_engine(statement.params)
-            except NotImplementedError:
-                pass
-            except Exception as e:
-                # something wrong, drop ml engine
-                ast_drop = DropMLEngine(name=statement.name)
-                self.answer_drop_ml_engine(ast_drop)
-                raise e
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 

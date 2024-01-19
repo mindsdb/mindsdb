@@ -160,7 +160,7 @@ class ModelResource(Resource):
 
         model_name, version = Predictor.get_name_and_version(model_name)
 
-        session.model_controller.update_model(
+        session.model_controller.update_model(   # FIXME
             session,
             project_name,
             model_name,

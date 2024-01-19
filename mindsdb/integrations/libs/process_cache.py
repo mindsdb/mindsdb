@@ -13,6 +13,7 @@ from mindsdb.integrations.libs.ml_handler_process import (
     learn_process,
     predict_process,
     describe_process,
+    create_engine_process,
     create_validation_process
 )
 
@@ -147,8 +148,8 @@ def warm_function(func, context: str, *args, **kwargs):
     ctx.load(context)
     try:
         return func(*args, **kwargs)
-    except Exception as e:
-        raise RuntimeError(str(e)) from e
+    except Exception:
+        raise
 
 
 class ProcessCache:
@@ -274,6 +275,13 @@ class ProcessCache:
             kwargs = {
                 'target': payload.get('target'),
                 'args': payload.get('args'),
+                'integration_id': integration_id,
+                'module_path': handler_module_path
+            }
+        elif task_type == ML_TASK_TYPE.CREATE_ENGINE:
+            func = create_engine_process
+            kwargs = {
+                'connection_args': payload['connection_args'],
                 'integration_id': integration_id,
                 'module_path': handler_module_path
             }

@@ -203,6 +203,10 @@ class IntegrationController:
             store.add(files_dir, '')
             store.push()
 
+        if handler_meta.get('type') == HANDLER_TYPE.ML:
+            ml_handler = self.get_ml_handler(name)
+            ml_handler.create_engine(connection_args, integration_id)
+
         return integration_id
 
     def modify(self, name, data):

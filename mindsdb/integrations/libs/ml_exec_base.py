@@ -93,7 +93,7 @@ class BaseMLEngineExec:
         if self.config['ml_task_queue']['type'] == 'redis':
             self.base_ml_executor = MLTaskProducer()
 
-    def get_ml_handler(self, predictor_id=None):
+    def get_ml_handler(self, predictor_id=None):    # DEL
         # returns instance or wrapper over it
 
         integration_id = self.integration_id
@@ -336,6 +336,32 @@ class BaseMLEngineExec:
                 }
             )
             result = task.result()
+        except Exception as e:
+            msg = str(e).strip()
+            if msg == '':
+                msg = e.__class__.__name__
+            msg = f'[{self.name}]: {msg}'
+            raise MLEngineException(msg) from e
+        return result
+
+    def create_engine(self, connection_args: dict, integration_id: int) -> None:
+        try:
+            task = self.base_ml_executor.apply_async(
+                task_type=ML_TASK_TYPE.CREATE_ENGINE,
+                model_id=0,     # can not be None
+                payload={
+                    'context': ctx.dump(),
+                    'connection_args': connection_args,
+                    'handler_meta': {
+                        'module_path': self.handler_module.__package__,
+                        'engine': self.handler_module.name,
+                        'integration_id': integration_id
+                    },
+                }
+            )
+            result = task.result()
+        except (ImportError, ModuleNotFoundError):
+            raise
         except Exception as e:
             msg = str(e).strip()
             if msg == '':

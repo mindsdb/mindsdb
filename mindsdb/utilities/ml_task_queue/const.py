@@ -12,6 +12,7 @@ class ML_TASK_TYPE(Enum):
     FINETUNE = b'finetune'
     DESCRIBE = b'describe'
     CREATE_VALIDATION = b'create_validation'
+    CREATE_ENGINE = b'create_engine'
 
 
 class ML_TASK_STATUS(Enum):

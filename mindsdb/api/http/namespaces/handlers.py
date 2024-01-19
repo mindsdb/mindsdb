@@ -126,7 +126,7 @@ class BYOMUpload(Resource):
         session = SessionController()
 
         base_ml_handler = session.integration_controller.get_ml_handler(name)
-        byom_handler = base_ml_handler.get_ml_handler()
+        byom_handler = base_ml_handler.get_ml_handler()   # !!!!
         byom_handler.update_engine(connection_args)
 
         engine_versions = [

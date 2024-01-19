@@ -120,8 +120,6 @@ class ModelController():
 
         ml_handler_base = session.integration_controller.get_ml_handler(integration_record.name)
 
-        # ml_handler = ml_handler_base.get_ml_handler(model_record.id)
-
         if attribute is None:
             model_info = self.get_model_info(model_record)
 
@@ -415,7 +413,7 @@ class ModelController():
 
         ml_handler_base = session.integration_controller.get_ml_handler(integration_record.name)
 
-        ml_handler = ml_handler_base.get_ml_handler(model_record.id)
+        ml_handler = ml_handler_base.get_ml_handler(model_record.id)   # !!!!!
         if not hasattr(ml_handler, 'update'):
             raise Exception("ML handler doesn't updating")
 

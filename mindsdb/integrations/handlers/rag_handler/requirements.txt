@@ -4,3 +4,4 @@ html2text
 writerai~=1.1.0
 pydantic
 sentence-transformers
+faiss-cpu

@@ -312,7 +312,6 @@
           "group": "Chatbots with Agents",
           "pages": [
             "sql/tutorials/chatbots_agents",
-            "sql/tutorials/llm-chatbot-ui",
             "sql/tutorials/create-chatbot"
           ]
         },

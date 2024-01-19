@@ -24,8 +24,8 @@ Start by setting up the skills. Here is how you can create and manage skills usi
     ```sql
     CREATE KNOWLEDGE BASE my_knowledge_base
     USING
-        model = model_name, -- this must be an embedding model created with CREATE MODEL (see examples below)
-        storage = vector_database.storage_table; -- this parameter is optional; if not provided, the default ChromaDB is used for storage
+        model = embedding_model_name,              -- this parameter is optional; if not provided, a suitable embedding model is chosen for the task
+        storage = vector_database.storage_table;   -- this parameter is optional; if not provided, the default ChromaDB is used for storage
 
     -- inserts new data rows and generates id for each row if id is not provided
     INSERT INTO my_knowledge_base
@@ -185,7 +185,7 @@ Learn about [chatbots here](/agents/chatbot).
 
 ### Agents with Knowledge Bases as Skills
 
-To create a knowledge base, it is required to provide an embedding model. You can choose one from OpenAI, Hugging Face, or LangChain.
+In this example, let's create an embedding model (you can choose one from OpenAI, Hugging Face, or LangChain) for the knowledge base.
 
 ```sql
 CREATE ML_ENGINE openai_engine

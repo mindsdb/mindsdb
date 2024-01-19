@@ -18,6 +18,15 @@ SELECT * FROM world_news_kb WHERE content = "Best AI Startups in SF?" LIMIT 10;
 
 Internally, it uses a vector store and an embedding model, by default it uses chroma and it will pick a suitable embedding model for the task, however, you can specify each of these if you want.
 
+Here is a general syntax for creating a knowledge base:
+
+```sql
+CREATE KNOWLEDGE_BASE my_kb
+[USING
+   [model = embedding_model,]
+   [storage = vector_database.storage_table;]]
+```
+
 ## Step by step guide
 
 

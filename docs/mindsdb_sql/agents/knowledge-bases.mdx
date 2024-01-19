@@ -8,10 +8,10 @@ A knowledge base is a batteries included RAG system that you can create and inse
 
 ```sql
 -- Create a knowledge base using the Cohere embedding model & Chroma world news index
-CREATE KNOWLEDGE_BASE news_kb;
+CREATE KNOWLEDGE_BASE world_news_kb;
 
 -- Add data into the knowledge base
-INSERT INTO news_kb (SELECT id, text as content FROM web_news);
+INSERT INTO world_news_kb (SELECT id, text as content FROM web_news);
 
 -- You can query the knowledge base as virtual table
 SELECT * FROM world_news_kb WHERE content = "Best AI Startups in SF?" LIMIT 10;

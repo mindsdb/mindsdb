@@ -15,7 +15,6 @@ DEFAULT_PIP_EXTRAS = [
     'langchain',            # required for mindsdb/interfaces/skills/skill_tool used by some handlers
     'langchain_embedding',  # required for mindsdb/interfaces/skills/skill_tool used by some handlers
     'postgres',
-    'mssql',
     'mysql',
     'mariadb',
     'scylla',

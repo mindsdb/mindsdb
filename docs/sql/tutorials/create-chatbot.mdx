@@ -3,7 +3,7 @@ title: Build a Chatbot with MindsDB
 sidebarTitle: Customize Chatbot
 ---
 
-MindsDB provides the `CREATE CHATBOT` statement that is used under the hood by the [Chatbot Interface](/sql/tutorials/llm-chatbot-ui). But, if you want to customize your chatbot to learn from the underlying database or use a different model, check out this tutorial.
+MindsDB provides the `CREATE CHATBOT` statement that let you customize your chatbot to learn from the underlying database or use a different model. Follow this tutorial to learn more.
 
 The `CREATE CHATBOT` statement requires the following componenets:
 
@@ -32,7 +32,7 @@ WITH
 ```
 
 <Tip>
-Follow [this link](/sql/tutorials/llm-chatbot-ui#slack-app-setup) to learn how to setup Slack app and generate tokens.
+Follow [this link](/integrations/app-integrations/slack#method-1-chatbot-responds-in-direct-messages-to-a-slack-app) to setup Slack app and generate required tokens.
 </Tip>
 
 ### AI Agent
@@ -65,7 +65,8 @@ CREATE SKILL text_to_sql_skill
 USING
     type = 'text_to_sql',
     database = 'example_db',   -- this must be created with CREATE DATABASE
-    tables = ['sales_data'];   -- this table comes from example_db
+    tables = ['sales_data'],   -- this table comes from example_db
+    description = "briefly describe the skill";
 ```
 
 This skill enables a model to answer questions about data from the `sales_data` table.
@@ -75,8 +76,8 @@ Now let's create an AI agent:
 ```sql
 CREATE AGENT support_agent
 USING
-model = customer_support_model,  -- this must be created with CREATE MODEL
-skills = ['text_to_sql_skill'];  -- this must be created with CREATE SKILL
+model = conversational_langchain_model,  -- this must be created with CREATE MODEL
+skills = ['text_to_sql_skill'];          -- this must be created with CREATE SKILL
 ```
 
 ## Create Chatbot
@@ -86,7 +87,7 @@ Once all the components are ready, let's proceed to creating the chatbot.
 ```sql
 CREATE CHATBOT my_chatbot
 USING
-   database = 'chatbot_slack',
+   database = 'slack_db.chatbot_slack',
    agent = 'support_agent',
    enable_dms = true,
    running = true;

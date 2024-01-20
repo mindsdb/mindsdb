@@ -4,6 +4,7 @@ from mindsdb_sql.parser.ast import (
     Select,
     Join,
     Parameter,
+    BinaryOperation,
     Tuple,
 )
 from mindsdb_sql.planner.steps import FetchDataframeStep
@@ -44,6 +45,26 @@ def get_table_alias(table_obj, default_db_name):
     return name
 
 
+def get_fill_param_fnc(steps_data):
+    def fill_params(node, parent_query=None, **kwargs):
+        if isinstance(node, BinaryOperation):
+            if isinstance(node.args[1], Parameter):
+                rs = steps_data[node.args[1].value.step_num]
+                items = [Constant(i[0]) for i in rs.get_records_raw()]
+                if node.op == '=' and len(items) == 1:
+                    # extract one value for option 'col=(subselect)'
+                    node.args[1] = items[0]
+                else:
+                    node.args[1] = Tuple(items)
+                return node
+
+        if isinstance(node, Parameter):
+            rs = steps_data[node.value.step_num]
+            items = [Constant(i[0]) for i in rs.get_records_raw()]
+            return Tuple(items)
+    return fill_params
+
+
 class FetchDataframeStepCall(BaseStepCall):
 
     bind = FetchDataframeStep
@@ -70,12 +91,7 @@ class FetchDataframeStepCall(BaseStepCall):
             # TODO for information_schema we have 'database' = 'mindsdb'
 
             # fill params
-            def fill_params(node, **kwargs):
-                if isinstance(node, Parameter):
-                    rs = self.steps_data[node.value.step_num]
-                    items = [Constant(i[0]) for i in rs.get_records_raw()]
-                    return Tuple(items)
-
+            fill_params = get_fill_param_fnc(self.steps_data)
             query_traversal(query, fill_params)
 
             query, context_callback = query_context_controller.handle_db_context_vars(query, dn, self.session)

@@ -213,12 +213,10 @@ class VectorStoreHandler(BaseHandler):
         """
         Dispatch drop table query to the appropriate method.
         """
-        # parse key arguments
-        table_names = [table.parts[-1] for table in query.tables]
+        table_name = query.tables[0].parts[-1]
         if_exists = getattr(query, "if_exists", False)
-        for table_name in table_names:
-            self.drop_table(table_name, if_exists=if_exists)
-        return HandlerResponse(resp_type=RESPONSE_TYPE.OK)
+
+        return self.drop_table(table_name, if_exists=if_exists)
 
     def _dispatch_insert(self, query: Insert):
         """

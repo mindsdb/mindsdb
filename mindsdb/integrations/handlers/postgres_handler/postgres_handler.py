@@ -125,11 +125,12 @@ class PostgresHandler(DatabaseHandler):
             'float4': 'float32',
             'float8': 'float64'
         }
-        for column_index, column_name in enumerate(df.columns):
-            if str(df[column_name].dtype) == 'object':
+        for column_index, _ in enumerate(df.columns):
+            col = df.iloc[:, column_index]  # column names could be duplicated
+            if str(col.dtype) == 'object':
                 pg_type = types.get(description[column_index].type_code)
                 if pg_type is not None and pg_type.name in types_map:
-                    df[column_name] = df[column_name].astype(types_map[pg_type.name])
+                    df.iloc[:, column_index] = col.astype(types_map[pg_type.name])
 
     @profiler.profile()
     def native_query(self, query: str) -> Response:

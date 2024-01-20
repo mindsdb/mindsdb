@@ -16,6 +16,7 @@ from mindsdb_sql import parse_sql
 
 logger = log.getLogger(__name__)
 
+
 def unload_module(path):
     # remove all modules started with path
     import sys
@@ -81,7 +82,6 @@ class BaseUnitTest:
         except PermissionError as e:
             logger.warning('Unable to clean up temporary database file: %s', str(e))
 
-
         # remove environ for next tests
         del os.environ["MINDSDB_DB_CON"]
 
@@ -97,7 +97,6 @@ class BaseUnitTest:
             os.unlink(self._dummy_db_path)
         except (PermissionError, FileNotFoundError) as e:
             logger.warning('Unable to clean up temporary database file: %s', str(e))
-
 
     def clear_db(self, db):
         # drop
@@ -183,12 +182,11 @@ class BaseUnitTest:
 
         db.session.commit()
         return db
-    
+
     def set_data(self, table, data):
         con = duckdb.connect(self._dummy_db_path)
-        my_df = data
         con.execute('DROP TABLE IF EXISTS {}'.format(table))
-        con.execute('CREATE TABLE {} AS SELECT * FROM my_df'.format(table))
+        con.execute('CREATE TABLE {} AS SELECT * FROM data'.format(table))
 
     @staticmethod
     def ret_to_df(ret):

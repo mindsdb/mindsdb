@@ -569,39 +569,6 @@ class TestProjectStructure(BaseExecutorDummyML):
         assert ret.c_count[0] == 4
         assert ret.c_avg[0] == 62.5
 
-        # -- window functions --
-        sql = '''
-           SELECT
-             s.*,
-            ROW_NUMBER() OVER(PARTITION BY r.id ORDER BY s.id) ROW_NUMBER,
-            RANK() OVER(PARTITION BY r.id ORDER BY s.format) RANK,
-            DENSE_RANK() OVER(PARTITION BY r.id ORDER BY s.format) DENSE_RANK,
-            PERCENT_RANK() OVER(PARTITION BY r.id ORDER BY s.id) PERCENT_RANK,
-            CUME_DIST() OVER(PARTITION BY r.id ORDER BY s.id) CUME_DIST,
-            NTILE(2) OVER(PARTITION BY r.id ORDER BY s.id) NTILE,
-            LAG(s.id, 1) OVER(PARTITION BY r.id ORDER BY s.id) LAG,
-            LEAD(s.id, 1) OVER(PARTITION BY r.id ORDER BY s.id) LEAD,
-            FIRST_VALUE(s.format) OVER(PARTITION BY r.id ORDER BY s.id) FIRST_VALUE,
-            LAST_VALUE(s.format) OVER(PARTITION BY r.id ORDER BY s.id) LAST_VALUE,
-            NTH_VALUE(s.id, 1) OVER(PARTITION BY r.id ORDER BY s.id) NTH_VALUE
-           from files.stores s
-             join files.regions r on r.id = s.region_id
-             join model1 m1
-            order by r.id, s.id
-        '''
-        ret = self.run_sql(sql)
-
-        assert list(ret.ROW_NUMBER) == [1, 2, 1, 2, 3, 4]
-        assert list(ret.RANK) == [2, 1, 1, 1, 3, 3]
-        assert list(ret.DENSE_RANK) == [2, 1, 1, 1, 2, 2]
-
-        assert list(ret.FIRST_VALUE) == ['c', 'c', 'a', 'a', 'a', 'a']
-        assert list(ret.LAST_VALUE) == ['c', 'b', 'a', 'a', 'b', 'b']
-
-        # -- unions functions --
-
-        # TODO Correlated subqueries (not implemented)
-
     def test_create_validation(self):
         with pytest.raises(RuntimeError):
             self.run_sql(

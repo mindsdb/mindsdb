@@ -89,7 +89,15 @@ class BaseUnitTest:
         unload_module("mindsdb")
 
     def setup_method(self):
+        self._dummy_db_path = os.path.join(tempfile.mkdtemp(), '_mindsdb_duck_db')
         self.clear_db(self.db)
+
+    def teardown_method(self):
+        try:
+            os.unlink(self._dummy_db_path)
+        except (PermissionError, FileNotFoundError) as e:
+            logger.warning('Unable to clean up temporary database file: %s', str(e))
+
 
     def clear_db(self, db):
         # drop
@@ -142,6 +150,8 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name="dummy_llm", data={}, engine="dummy_llm")
         db.session.add(r)
+        r = db.Integration(name="dummy_data", data={'db_path': self._dummy_db_path}, engine="dummy_data")
+        db.session.add(r)
         r = db.Integration(name="litellm", data={}, engine="litellm")
         db.session.add(r)
         r = db.Integration(name="sentence_transformers", data={}, engine="sentence_transformers")
@@ -173,6 +183,12 @@ class BaseUnitTest:
 
         db.session.commit()
         return db
+    
+    def set_data(self, table, data):
+        con = duckdb.connect(self._dummy_db_path)
+        my_df = data
+        con.execute('DROP TABLE IF EXISTS {}'.format(table))
+        con.execute('CREATE TABLE {} AS SELECT * FROM my_df'.format(table))
 
     @staticmethod
     def ret_to_df(ret):
@@ -261,6 +277,10 @@ class BaseExecutorTest(BaseUnitTest):
         config_patch = mock.patch("mindsdb.utilities.cache.FileCache.get")
         self.mock_config = config_patch.__enter__()
         self.mock_config.side_effect = lambda x: None
+
+    def teardown_method(self):
+        # Don't want cache to pick up a stale version with the wrong duckdb_path.
+        self.command_executor.session.integration_controller.delete('dummy_data')
 
     def save_file(self, name, df):
         file_path = tempfile.mktemp(prefix="mindsdb_file_")

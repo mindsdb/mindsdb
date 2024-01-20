@@ -1,11 +1,9 @@
-from unittest.mock import patch
 import datetime as dt
 import time
 import pytest
 
 import pandas as pd
 
-from mindsdb.integrations.handlers.dummy_data_handler.dummy_data_handler import DummyHandler
 from mindsdb_sql import parse_sql
 
 from .executor_test_base import BaseExecutorDummyML
@@ -62,7 +60,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         for p in self.db.Predictor.query.all():
             models[p.id] = p
         return models
-    
+
     def test_version_managing(self):
         from mindsdb.utilities.exception import EntityNotExistsError
         # set up
@@ -557,8 +555,6 @@ class TestJobs(BaseExecutorDummyML):
         self.run_sql('drop job proj1.j1')
 
         # ------------ executing
-
-
         scheduler.check_timetable()
 
         # check query to integration
@@ -617,4 +613,3 @@ class TestJobs(BaseExecutorDummyML):
         ret = self.run_sql('select * from jobs_history')
         # no history
         assert len(ret) == 0
-

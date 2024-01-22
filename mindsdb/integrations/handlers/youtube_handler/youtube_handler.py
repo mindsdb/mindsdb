@@ -51,6 +51,7 @@ class YoutubeHandler(APIHandler):
 
         self.credentials_url = self.connection_data.get('credentials_url', None)
         self.credentials_file = self.connection_data.get('credentials_file', None)
+        self.credentials_json = self.connection_data.get('credentials_json', None)
         if self.connection_data.get('credentials'):
             self.credentials_file = self.connection_data.pop('credentials')
         if not self.credentials_file and not self.credentials_url:
@@ -86,7 +87,7 @@ class YoutubeHandler(APIHandler):
         if self.is_connected is True:
             return self.connection
         
-        google_oauth2_manager = GoogleOAuth2Manager(self.handler_storage, self.scopes, self.credentials_file, self.credentials_url, self.connection_data.get('code'))
+        google_oauth2_manager = GoogleOAuth2Manager(self.handler_storage, self.scopes, self.credentials_file, self.credentials_url, self.credentials_json, self.connection_data.get('code'))
         creds = google_oauth2_manager.get_oauth2_credentials()
 
         youtube = build(

@@ -18,17 +18,18 @@ logger = log.getLogger(__name__)
 
 
 class GoogleOAuth2Manager:
-    def __init__(self, handler_stroage: str, scopes: list, credentials_file: str = None, credentials_url: str = None, code: str = None):
+    def __init__(self, handler_stroage: str, scopes: list, credentials_file: str = None, credentials_url: str = None, credentials_json: str = None, code: str = None):
         self.handler_storage = handler_stroage
         self.scopes = scopes
         self.credentials_file = credentials_file
         self.credentials_url = credentials_url
+        self.credentials_json = credentials_json
         self.code = code
 
     def get_oauth2_credentials(self):
         creds = None
 
-        if self.credentials_file or self.credentials_url:
+        if self.credentials_file or self.credentials_url or self.credentials_json:
             # get the current directory and checks tokens & creds
             curr_dir = self.handler_storage.folder_get('config')
 
@@ -76,6 +77,13 @@ class GoogleOAuth2Manager:
         if self.credentials_file and os.path.isfile(self.credentials_file):
             copyfile(self.credentials_file, secret_file)
             return True
+        
+        # if credentials_json is set, attempt to write the file
+        if self.credentials_json:
+            with open(secret_file, 'w') as creds:
+                json.dump(self.credentials_json, creds)
+            return True
+
         return False
     
     def _execute_google_auth_flow(self, secret_file, scopes, code=None):

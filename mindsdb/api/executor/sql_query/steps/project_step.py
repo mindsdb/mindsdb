@@ -39,7 +39,7 @@ class ProjectStepCall(BaseStepCall):
         # analyze condition and change name of columns
         def check_fields(node, is_table=None, **kwargs):
             if is_table:
-                raise NotSupportedYet('Subqueries is not supported in WHERE')
+                raise NotSupportedYet('Subqueries is not supported in target')
             if isinstance(node, Identifier):
                 # only column name
                 col_name = node.parts[-1]

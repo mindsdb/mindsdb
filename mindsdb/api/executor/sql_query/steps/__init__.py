@@ -7,7 +7,7 @@ from .map_reduce_step import MapReduceStepCall
 from .multiple_step import MultipleStepsCall
 from .prepare_steps import GetPredictorColumnsCall, GetTableColumnsCall
 from .project_step import ProjectStepCall
-from .sql_steps import GroupByStepCall, LimitOffsetStepCall, FilterStepCall, DataStepCall
-from .subselect_step import SubSelectStepCall
+from .sql_steps import LimitOffsetStepCall, DataStepCall
+from .subselect_step import SubSelectStepCall, QueryStepCall
 from .union_step import UnionStepCall
 from .update_step import UpdateToTableCall

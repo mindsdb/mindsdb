@@ -399,12 +399,9 @@ class ChromaDBHandler(VectorStoreHandler):
             self._client.delete_collection(table_name)
         except ValueError:
             if if_exists:
-                return Response(resp_type=RESPONSE_TYPE.OK)
+                return
             else:
-                return Response(
-                    resp_type=RESPONSE_TYPE.ERROR,
-                    error_message=f"Table {table_name} does not exist!",
-                )
+                raise Exception(f"Collection {table_name} does not exist!")
 
     def get_tables(self) -> HandlerResponse:
         """

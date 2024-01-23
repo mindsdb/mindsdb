@@ -35,7 +35,7 @@ class TestNebulaGraphHandler(unittest.TestCase):
 
     def test_connect(self):
         self.handler.connect()
-        self.assertIsNotNone(self.handler.session_pool)
+        self.assertIsNotNone(self.handler.connection)
         self.assertTrue(self.handler.is_connected)
 
     def test_check_connection(self):

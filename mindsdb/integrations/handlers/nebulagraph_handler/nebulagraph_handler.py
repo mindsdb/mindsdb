@@ -16,7 +16,7 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.utilities import log
 
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional
 
 logger = log.getLogger(__name__)
 
@@ -66,44 +66,43 @@ class NebulaGraphHandler(DatabaseHandler):
 
     name = "nebulagraph"
 
-    def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
+    def __init__(self, name: str, **kwargs):
         """constructor
         Args:
             name (str): The name of the handler
-            connection_data (dict): The connection data for the handler
         """
         super().__init__(name)
-        self.connection_data: Dict[str, Any] = connection_data
-        self.session_pool: Optional[SessionPool] = None
+        self.connection_data: dict = kwargs.get('connection_data', {})
+
+        assert self.connection_data, "connection_data is required"
+
+        self.connection: Optional[SessionPool] = None
         self.is_connected: bool = False
 
-        self.host = self.connection_data.get("host") or "127.0.0.1"
-        self.port = int(self.connection_data.get("port") or DEFAULT_PORT)
-        self.graph_space = self.connection_data.get("graph_space")
+        self.host: str = self.connection_data.get("host") or "127.0.0.1"
+        self.port: int = int(self.connection_data.get("port") or DEFAULT_PORT)
+        self.graph_space: str = self.connection_data.get("graph_space")
 
         assert self.graph_space, "graph_space is required"
 
-        self.user = self.connection_data.get("user") or DEFAULT_USER
-        self.password = self.connection_data.get("password") or DEFAULT_PASSWORD
-        self.session_pool_size = int(
+        self.user: str = self.connection_data.get("user") or DEFAULT_USER
+        self.password: str = self.connection_data.get("password") or DEFAULT_PASSWORD
+        self.session_pool_size: int = int(
             self.connection_data.get("session_pool_size")
             or DEFAULT_SESSION_POOL_SIZE
         )
 
-    def connect(self) -> StatusResponse:
+    def connect(self) -> SessionPool:
         """
         Connect to the NebulaGraph database
         Returns:
             StatusResponse
         """
         try:
-            if self.session_pool is not None:
-                if self.session_pool.ping((self.host, self.port)):
-                    return StatusResponse(True)
-                else:
-                    self.session_pool.close()
-                    self.session_pool = None
-                    self.is_connected = False
+            if self.connection is not None:
+                if self.connection.ping((self.host, self.port)):
+                    self.is_connected = True
+                    return self.connection
 
             config = SessionPoolConfig()
             config.min_size = 0
@@ -112,30 +111,27 @@ class NebulaGraphHandler(DatabaseHandler):
             config.wait_timeout = 1000
             config.max_retry_times = 3
 
-            self.session_pool = SessionPool(
+            connection = SessionPool(
                 self.user, self.password, self.graph_space, [(self.host, self.port)]
             )
-            self.session_pool.init(config)
-            self.session_pool.ping((self.host, self.port))
+            connection.init(config)
+            connection.ping((self.host, self.port))
             self.is_connected = True
+            self.connection = connection
+            return self.connection
         except Exception as e:
             logger.error(
                 f"Failed to connect to NebulaGraph {self.host}:{self.port}@{self.graph_space}: {e}"
             )
-            return StatusResponse(False, str(e))
-
-        if not self.session_pool.init(config):
-            raise Exception("Failed to initialize session pool")
-
-        return StatusResponse(self.session_pool.ping((self.host, self.port)))
+            raise e
 
     def disconnect(self):
         """
         Disconnect from the NebulaGraph database
         """
-        if self.session_pool is not None:
-            self.session_pool.close()
-            self.session_pool = None
+        if self.connection is not None:
+            self.connection.close()
+            self.connection = None
         self.is_connected = False
 
     def check_connection(self) -> StatusResponse:
@@ -146,7 +142,7 @@ class NebulaGraphHandler(DatabaseHandler):
         try:
             if not self.is_connected:
                 return StatusResponse(False, "Not connected")
-            return StatusResponse(self.session_pool.ping((self.host, self.port)))
+            return StatusResponse(self.connection.ping((self.host, self.port)))
         except Exception as e:
             logger.error(
                 f"Error connecting to NebulaGraph {self.host}:{self.port}@{self.graph_space}: {e}"
@@ -162,7 +158,7 @@ class NebulaGraphHandler(DatabaseHandler):
         try:
             if not self.is_connected:
                 self.connect()
-            raw_result: ResultSet = self.session_pool.execute(query)
+            raw_result: ResultSet = self.connection.execute(query)
             columns = raw_result.keys()
             d: Dict[str, List] = {}
             for col_num in range(raw_result.col_size()):
@@ -259,7 +255,6 @@ connection_args = OrderedDict(
         "type": ARG_TYPE.INT,
         "description": "The TCP/IP port of the NebulaGraph server. Must be an integer. Default is 9669.",
         "required": False,
-        "default": DEFAULT_PORT,
         "label": "Port",
     },
     graph_space={
@@ -272,7 +267,6 @@ connection_args = OrderedDict(
         "type": ARG_TYPE.INT,
         "description": "The size of the session pool for the NebulaGraph connection.",
         "required": False,
-        "default": DEFAULT_SESSION_POOL_SIZE,
         "label": "Session Pool Size",
     },
 )

@@ -7,11 +7,11 @@ PARAMETERS = {
     "user": "root",
     "password": "nebula",
     "host": "127.0.0.1",
-    "port": "9669",
+    "port": 9669,
     "graph_space": "basketballplayer"
 };
 
-nebula.query('SELECT * FROM nebula ("MATCH (n:player) RETURN n LIMIT 10");');
+nebula.query('SELECT * FROM nebula ("MATCH (n:player) RETURN n LIMIT 10")');
 ```
 
 ## Test NebulaGraph Handler

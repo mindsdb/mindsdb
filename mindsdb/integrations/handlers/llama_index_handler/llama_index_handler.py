@@ -271,12 +271,10 @@ class LlamaIndexHandler(BaseMLEngine):
         args = self.model_storage.json_get("args")
         engine_storage = self.engine_storage
 
-        key = "OPENAI_API_KEY"
         openai_api_key = get_api_key(
             'openai', args["using"], engine_storage, strict=True
         )
-        openai.api_key = openai_api_key  # TODO: shouldn't have to do this! bug?
-        llm_kwargs = {"openai_api_key": openai_api_key}
+        llm_kwargs = {"api_key": openai_api_key}
         if "temperature" in args["using"]:
             llm_kwargs["temperature"] = args["using"]["temperature"]
         if "model_name" in args["using"]:
@@ -285,7 +283,7 @@ class LlamaIndexHandler(BaseMLEngine):
             llm_kwargs["max_tokens"] = args["using"]["max_tokens"]
 
         llm = OpenAI(**llm_kwargs)  # TODO: all usual params should go here
-        embed_model = OpenAIEmbedding(openai_api_key=openai_api_key)
+        embed_model = OpenAIEmbedding(api_key=openai_api_key)
         service_context = ServiceContext.from_defaults(
             llm=llm,
             embed_model=embed_model

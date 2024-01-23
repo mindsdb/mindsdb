@@ -505,7 +505,8 @@
           "group": "Agents",
           "pages": [
             "mindsdb_sql/agents/agent",
-            "mindsdb_sql/agents/chatbot"
+            "mindsdb_sql/agents/chatbot",
+            "mindsdb_sql/agents/knowledge-bases"
           ]
         }
       ]
@@ -598,6 +599,13 @@
             "rest/jobs/create",
             "rest/jobs/delete",
             "rest/jobs/query"
+          ]
+        },
+        {
+          "group": "Agents",
+          "pages": [
+            "rest/agents/agent",
+            "rest/agents/chatbot"
           ]
         }
       ]

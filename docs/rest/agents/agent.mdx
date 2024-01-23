@@ -1,0 +1,26 @@
+---
+title: Agents and Skills
+sidebarTitle: Agents and Skills
+---
+
+Here you'll find REST API endpoints to create, update, delete, and interact with skills and agents.
+
+### REST API for Skills
+
+Here is how to interact with skills using REST API endpoints:
+
+* `GET /projects/<project_name>/skills` - gets all skills created by the user (allow params to filter by agent)
+* `GET /projects/<project_name>/skills/<skill_name>` - gets a skill by name or ID
+* `PUT /projects/<project_name>/skills/<skill_name>` - updates skill with new params
+* `POST /projects/<project_name>/skills` - creates a new skill
+* `DELETE /projects/<project_name>/skills/<skills>` - deletes a skill by name or ID
+
+### REST API for Agents
+
+Here is how to interact with agents using REST API endpoints:
+
+* `GET /projects/<project_name>/agents` - gets all agents created by the user
+* `GET /projects/<project_name>/agents/<agent>` - gets an agent by name or ID
+* `PUT /projects/<project_name>/agents/<agent_name>` updates agent with new settings
+* `POST /projects/<project_name>/agents` - creates a new agent
+* `DELETE /projects/<project_name>/agent/<agent_name>` - deletes an agent by name or ID

@@ -1,9 +1,9 @@
 ---
-title: Build a Chatbot with a Text2SQL Skill
-sidebarTitle: Chatbot with a Text2SQL Skill
+title: Build a Chatbot with a Knowledge Base
+sidebarTitle: Chatbot with a Knowledge Base
 ---
 
-MindsDB provides the `CREATE CHATBOT` statement that lets you customize your chatbot with an AI model and a data source of your choice. Follow this tutorial to learn build a chatbot with a Text2SQL skill.
+MindsDB provides the `CREATE CHATBOT` statement that lets you customize your chatbot with an AI model and a data source of your choice. Follow this tutorial to learn build a chatbot with a knowledge base.
 
 The `CREATE CHATBOT` statement requires the following componenets:
 
@@ -62,26 +62,61 @@ DESCRIBE my_model;
 
 The status should read `complete` before proceeding.
 
-Next step is to create one or more skills for an AI agent. Here we create a Text2SQL skill.
+Next step is to create one or more skills for an AI agent. Here we create a knowledge base and assign it as a skill.
+
+In this example, let's create an embedding model (you can choose one from OpenAI, Hugging Face, or LangChain) for the knowledge base.
 
 ```sql
-CREATE SKILL text_to_sql_skill
+CREATE ML_ENGINE openai_engine
+FROM openai
 USING
-    type = 'text_to_sql',
-    database = 'example_db',   -- this is a data source that must be connected to MindsDB with CREATE DATABASE statement
-    tables = ['sales_data'],   -- this table comes from the connected example_db data source
-    description = "Sales data that includes stores, sold products, and other sale details";
+   api_key = 'your-openai-api-key';
+
+CREATE MODEL embedding_model
+PREDICT embeddings
+USING
+   engine = 'openai_engine',
+   mode='embedding',
+   model_name='text-embedding-ada-002',
+   question_column = 'content';
 ```
 
-This skill enables a model to answer questions about data from the `sales_data` table.
+Now let's create a knowledge base that uses this embedding model and the default storage vector database (that is, ChromaDB).
+
+```sql
+CREATE KNOWLEDGE BASE my_knowledge_base
+USING
+   model = embedding_model;
+```
+
+This is how you can insert data into the knowledge base and select it.
+
+```sql
+INSERT INTO my_knowledge_base (content)
+VALUES ('I drink tea.');
+
+SELECT * FROM my_knowledge_base;
+```
+
+Use this knowledge base to create a skill for an agent:
+
+```sql
+CREATE SKILL kb_skill
+USING
+    type = 'knowledge_base',
+    source = 'my_knowledge_base', -- this must be created with CREATE KNOWLEDGE BASE
+    description = 'My data';      -- data description to help the agent know when to use the knowledge base
+```
+
+This skill enables a model to answer questions about data from the knowledge base.
 
 Now let's create an AI agent using the above model and skill.
 
 ```sql
 CREATE AGENT support_agent
 USING
-model = my_model,                  -- this was created with CREATE MODEL
-skills = ['text_to_sql_skill'];    -- this was created with CREATE SKILL
+model = my_model,         -- this was created with CREATE MODEL
+skills = ['kb_skill'];    -- this was created with CREATE SKILL
 ```
 
 ## Create Chatbot

@@ -35,6 +35,7 @@ from mindsdb.api.http.namespaces.tab import ns_conf as tab_ns
 from mindsdb.api.http.namespaces.tree import ns_conf as tree_ns
 from mindsdb.api.http.namespaces.views import ns_conf as views_ns
 from mindsdb.api.http.namespaces.util import ns_conf as utils_ns
+from mindsdb.api.http.namespaces.fine_tuning import ns_conf as fine_tuning_ns
 from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.interfaces.file.file_controller import FileController
@@ -228,7 +229,8 @@ def initialize_app(config, no_studio):
         models_ns,
         chatbots_ns,
         skills_ns,
-        agents_ns
+        agents_ns,
+        fine_tuning_ns
     ]
 
     for ns in protected_namespaces:

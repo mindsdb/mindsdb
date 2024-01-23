@@ -5,7 +5,7 @@ import openai
 import pandas as pd
 import llama_index
 
-from langchain.llms import OpenAI
+from llama_index.llms.openai import OpenAI
 from llama_index.readers.schema.base import Document
 from llama_index.readers import SimpleWebPageReader
 from llama_index.prompts import PromptTemplate
@@ -287,7 +287,8 @@ class LlamaIndexHandler(BaseMLEngine):
         llm = OpenAI(**llm_kwargs)  # TODO: all usual params should go here
         embed_model = OpenAIEmbedding(openai_api_key=openai_api_key)
         service_context = ServiceContext.from_defaults(
-            llm_predictor=LLMPredictor(llm=llm), embed_model=embed_model
+            llm=llm,
+            embed_model=embed_model
         )
         return service_context
 

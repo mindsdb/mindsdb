@@ -1,7 +1,10 @@
 from collections import OrderedDict
 
 from nebula3.Config import SessionPoolConfig
-from nebula3.gclient.net import SessionPool
+from nebula3.gclient.net.SessionPool import SessionPool
+from nebula3.data.DataObject import Value, ValueWrapper
+from nebula3.data.ResultSet import ResultSet
+
 import pandas as pd
 
 from mindsdb.integrations.libs.base import DatabaseHandler
@@ -17,6 +20,44 @@ from typing import Dict, List, Optional, Any
 
 logger = log.getLogger(__name__)
 
+DEFAULT_PORT = 9669
+DEFAULT_SESSION_POOL_SIZE = 10
+DEFAULT_USER = "root"
+DEFAULT_PASSWORD = "nebula"
+
+cast_as = {
+    Value.NVAL: "as_null",
+    Value.BVAL: "as_bool",
+    Value.IVAL: "as_int",
+    Value.FVAL: "as_double",
+    Value.SVAL: "as_string",
+    Value.LVAL: "as_list",
+    Value.UVAL: "as_set",
+    Value.MVAL: "as_map",
+    Value.TVAL: "as_time",
+    Value.DVAL: "as_date",
+    Value.DTVAL: "as_datetime",
+    Value.VVAL: "as_node",
+    Value.EVAL: "as_relationship",
+    Value.PVAL: "as_path",
+    Value.GGVAL: "as_geography",
+    Value.DUVAL: "as_duration",
+}
+
+
+def cast(val: ValueWrapper):
+    _type = val._value.getType()
+    if _type == Value.__EMPTY__:
+        return None
+    if _type in cast_as:
+        return getattr(val, cast_as[_type])()
+    if _type == Value.LVAL:
+        return [x.cast() for x in val.as_list()]
+    if _type == Value.UVAL:
+        return {x.cast() for x in val.as_set()}
+    if _type == Value.MVAL:
+        return {k: v.cast() for k, v in val.as_map().items()}
+
 
 class NebulaGraphHandler(DatabaseHandler):
     """
@@ -25,7 +66,7 @@ class NebulaGraphHandler(DatabaseHandler):
 
     name = "nebulagraph"
 
-    def __init__(self, name: str, connection_data: Optional[dict]):
+    def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         """constructor
         Args:
             name (str): The name of the handler
@@ -33,14 +74,21 @@ class NebulaGraphHandler(DatabaseHandler):
         """
         super().__init__(name)
         self.connection_data: Dict[str, Any] = connection_data
-        self.session_pool = None
+        self.session_pool: Optional[SessionPool] = None
+        self.is_connected: bool = False
 
-        self.host = self.connection_data.get("host")
-        self.port = self.connection_data.get("port")
+        self.host = self.connection_data.get("host") or "127.0.0.1"
+        self.port = int(self.connection_data.get("port") or DEFAULT_PORT)
         self.graph_space = self.connection_data.get("graph_space")
-        self.user = self.connection_data.get("user")
-        self.password = self.connection_data.get("password")
-        self.session_pool_size = self.connection_data.get("session_pool_size")
+
+        assert self.graph_space, "graph_space is required"
+
+        self.user = self.connection_data.get("user") or DEFAULT_USER
+        self.password = self.connection_data.get("password") or DEFAULT_PASSWORD
+        self.session_pool_size = int(
+            self.connection_data.get("session_pool_size")
+            or DEFAULT_SESSION_POOL_SIZE
+        )
 
     def connect(self) -> StatusResponse:
         """
@@ -48,21 +96,33 @@ class NebulaGraphHandler(DatabaseHandler):
         Returns:
             StatusResponse
         """
-        if self.session_pool is not None and self.session_pool.ping(
-            (self.host, self.port)
-        ):
-            return StatusResponse(True)
+        try:
+            if self.session_pool is not None:
+                if self.session_pool.ping((self.host, self.port)):
+                    return StatusResponse(True)
+                else:
+                    self.session_pool.close()
+                    self.session_pool = None
+                    self.is_connected = False
 
-        config = SessionPoolConfig()
-        config.min_size = 0
-        config.max_size = self.session_pool_size
-        config.idle_time = 0
-        config.wait_timeout = 1000
-        config.max_retry_times = 3
+            config = SessionPoolConfig()
+            config.min_size = 0
+            config.max_size = self.session_pool_size
+            config.idle_time = 0
+            config.wait_timeout = 1000
+            config.max_retry_times = 3
 
-        self.session_pool = SessionPool(
-            self.user, self.password, self.graph_space, [(self.host, self.port)]
-        )
+            self.session_pool = SessionPool(
+                self.user, self.password, self.graph_space, [(self.host, self.port)]
+            )
+            self.session_pool.init(config)
+            self.session_pool.ping((self.host, self.port))
+            self.is_connected = True
+        except Exception as e:
+            logger.error(
+                f"Failed to connect to NebulaGraph {self.host}:{self.port}@{self.graph_space}: {e}"
+            )
+            return StatusResponse(False, str(e))
 
         if not self.session_pool.init(config):
             raise Exception("Failed to initialize session pool")
@@ -76,6 +136,7 @@ class NebulaGraphHandler(DatabaseHandler):
         if self.session_pool is not None:
             self.session_pool.close()
             self.session_pool = None
+        self.is_connected = False
 
     def check_connection(self) -> StatusResponse:
         """
@@ -83,7 +144,7 @@ class NebulaGraphHandler(DatabaseHandler):
         :return: success status and error message if error occurs
         """
         try:
-            if self.session_pool is None:
+            if not self.is_connected:
                 return StatusResponse(False, "Not connected")
             return StatusResponse(self.session_pool.ping((self.host, self.port)))
         except Exception as e:
@@ -92,21 +153,22 @@ class NebulaGraphHandler(DatabaseHandler):
             )
             return StatusResponse(False, str(e))
 
-    def native_query(self, query) -> Response:
+    def native_query(self, query: str) -> Response:
         """
         Receive NebulaGraph query and runs it
         :param query: The nGQL query to run in NebulaGraph
         :return: returns the records from the current recordset
         """
         try:
-            self.connect()
-            raw_result = self.session_pool.execute(query)
+            if not self.is_connected:
+                self.connect()
+            raw_result: ResultSet = self.session_pool.execute(query)
             columns = raw_result.keys()
             d: Dict[str, List] = {}
             for col_num in range(raw_result.col_size()):
                 col_name = columns[col_num]
                 col_list = raw_result.column_values(col_name)
-                d[col_name] = [x.cast() for x in col_list]
+                d[col_name] = [cast(x) for x in col_list]
             pd_result = pd.DataFrame(d)
             return Response(RESPONSE_TYPE.TABLE, pd_result)
         except Exception as e:
@@ -119,7 +181,8 @@ class NebulaGraphHandler(DatabaseHandler):
         :return: returns the list of tables
         """
         try:
-            self.connect()
+            if not self.is_connected:
+                self.connect()
             query_tags = "SHOW TAGS;"
             query_edges = "SHOW EDGES;"
             tags: Response = self.native_query(query_tags)
@@ -148,7 +211,8 @@ class NebulaGraphHandler(DatabaseHandler):
         :return: returns the list of columns
         """
         try:
-            self.connect()
+            if not self.is_connected:
+                self.connect()
             tables = self.get_tables()
             if tables.type == RESPONSE_TYPE.TABLE:
                 if table_name not in tables.data_frame["Name"].values:
@@ -163,7 +227,7 @@ class NebulaGraphHandler(DatabaseHandler):
                     RESPONSE_TYPE.ERROR,
                     f"Error getting columns for table {table_name}: {tables.error_message}",
                 )
-            query = f"SHOW {table_type} {table_name};"
+            query = f"DESC {table_type} {table_name};"
 
             return self.native_query(query)
 
@@ -195,7 +259,7 @@ connection_args = OrderedDict(
         "type": ARG_TYPE.INT,
         "description": "The TCP/IP port of the NebulaGraph server. Must be an integer. Default is 9669.",
         "required": False,
-        "default": 9669,
+        "default": DEFAULT_PORT,
         "label": "Port",
     },
     graph_space={
@@ -208,7 +272,15 @@ connection_args = OrderedDict(
         "type": ARG_TYPE.INT,
         "description": "The size of the session pool for the NebulaGraph connection.",
         "required": False,
-        "default": 10,
+        "default": DEFAULT_SESSION_POOL_SIZE,
         "label": "Session Pool Size",
     },
+)
+
+connection_args_example = OrderedDict(
+    host="127.0.0.1",
+    port=DEFAULT_PORT,
+    user=DEFAULT_USER,
+    password=DEFAULT_PASSWORD,
+    graph_space="basketballplayer",
 )

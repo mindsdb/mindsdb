@@ -9,7 +9,9 @@ $nebulagraph start
 
 import unittest
 import pandas as pd
-from mindsdb.integrations.handlers.nebulagraph_handler import NebulaGraphHandler
+from mindsdb.integrations.handlers.nebulagraph_handler import (
+    Handler as NebulaGraphHandler,
+)
 from mindsdb.integrations.libs.base import DatabaseHandler
 
 from typing import Dict, Any
@@ -18,7 +20,7 @@ from typing import Dict, Any
 class TestNebulaGraphHandler(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        connection_args: Dict[str, Any] = {
+        connection_data: Dict[str, Any] = {
             "host": "127.0.0.1",
             "port": 9669,
             "session_pool_size": 10,
@@ -28,21 +30,23 @@ class TestNebulaGraphHandler(unittest.TestCase):
         }
 
         cls.handler: DatabaseHandler = NebulaGraphHandler(
-            "test_nebulagraph_handler", connection_data=connection_args
+            "test_nebulagraph_handler", connection_data=connection_data
         )
 
     def test_connect(self):
         self.handler.connect()
         self.assertIsNotNone(self.handler.session_pool)
+        self.assertTrue(self.handler.is_connected)
 
     def test_check_connection(self):
+        self.handler.connect()
         response = self.handler.check_connection()
-        self.assertEqual(response.status, "success")
+        self.assertTrue(response.success)
 
     def test_native_query(self):
         query = "SHOW HOSTS;"
         response = self.handler.native_query(query)
-        self.assertEqual(response.status, "success")
+        self.assertEqual(response.error_code, 0)
 
         query = (
             "MATCH ()-[e:serve]->() "
@@ -53,55 +57,55 @@ class TestNebulaGraphHandler(unittest.TestCase):
             "LIMIT 3;"
         )
         response = self.handler.native_query(query)
-        self.assertEqual(response.status, "success")
-        self.assertEqual(response.response_type, "dataframe")
-        self.assertIsInstance(response.data, pd.DataFrame)
-        self.assertEqual(len(response.data), 3)
+        self.assertEqual(response.error_code, 0)
+        self.assertEqual(response.type, "table")
+        self.assertIsInstance(response.data_frame, pd.DataFrame)
+        self.assertEqual(len(response.data_frame), 3)
 
         query = (
             "FIND SHORTEST PATH WITH PROP FROM 'team204' TO 'player100' "
             "OVER * REVERSELY YIELD path AS p;"
         )
         response = self.handler.native_query(query)
-        self.assertEqual(response.status, "success")
-        self.assertEqual(response.response_type, "dataframe")
-        self.assertIsInstance(response.data, pd.DataFrame)
-        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.error_code, 0)
+        self.assertEqual(response.type, "table")
+        self.assertIsInstance(response.data_frame, pd.DataFrame)
+        self.assertEqual(len(response.data_frame), 1)
 
     def test_get_tables(self):
         response = self.handler.get_tables()
-        self.assertEqual(response.status, "success")
-        self.assertEqual(response.response_type, "dataframe")
-        self.assertIsInstance(response.data, pd.DataFrame)
-        self.assertEqual(len(response.data), 4)
+        self.assertEqual(response.error_code, 0)
+        self.assertEqual(response.type, "table")
+        self.assertIsInstance(response.data_frame, pd.DataFrame)
+        self.assertEqual(len(response.data_frame), 4)
 
         response = self.handler.get_tables()
-        self.assertEqual(response.status, "success")
-        self.assertEqual(response.response_type, "dataframe")
-        self.assertIsInstance(response.data, pd.DataFrame)
+        self.assertEqual(response.error_code, 0)
+        self.assertEqual(response.type, "table")
+        self.assertIsInstance(response.data_frame, pd.DataFrame)
         expected_tables = ["player", "team", "serve", "follow"]
         expected_types = ["TAG", "TAG", "EDGE", "EDGE"]
         for table, t_type in zip(expected_tables, expected_types):
-            self.assertIn(table, response.data["Name"].values)
-            self.assertIn(t_type, response.data["table_type"].values)
+            self.assertIn(table, response.data_frame["Name"].values)
+            self.assertIn(t_type, response.data_frame["table_type"].values)
 
     def test_get_columns(self):
         response = self.handler.get_columns("player")
-        self.assertEqual(response.status, "success")
-        self.assertEqual(response.response_type, "dataframe")
-        self.assertIsInstance(response.data, pd.DataFrame)
-        self.assertEqual(len(response.data), 2)
-        self.assertEqual(response.data["Field"].values[0], "name")
-        self.assertEqual(response.data["Type"].values[0], "string")
-        self.assertEqual(response.data["Null"].values[0], "YES")
-        self.assertEqual(response.data["Default"].values[0], "")
+        self.assertEqual(response.error_code, 0)
+        self.assertEqual(response.type, "table")
+        self.assertIsInstance(response.data_frame, pd.DataFrame)
+        self.assertEqual(len(response.data_frame), 2)
+        self.assertEqual(response.data_frame["Field"].values[0], "name")
+        self.assertEqual(response.data_frame["Type"].values[0], "string")
+        self.assertEqual(response.data_frame["Null"].values[0], "YES")
+        self.assertEqual(response.data_frame["Default"].values[0], None)
 
         response = self.handler.get_columns("serve")
-        self.assertEqual(response.status, "success")
-        self.assertEqual(response.response_type, "dataframe")
-        self.assertIsInstance(response.data, pd.DataFrame)
-        self.assertEqual(len(response.data), 2)
-        self.assertEqual(response.data["Field"].values[0], "start_year")
-        self.assertEqual(response.data["Type"].values[0], "int64")
-        self.assertEqual(response.data["Null"].values[0], "YES")
-        self.assertEqual(response.data["Default"].values[0], "")
+        self.assertEqual(response.error_code, 0)
+        self.assertEqual(response.type, "table")
+        self.assertIsInstance(response.data_frame, pd.DataFrame)
+        self.assertEqual(len(response.data_frame), 2)
+        self.assertEqual(response.data_frame["Field"].values[0], "start_year")
+        self.assertEqual(response.data_frame["Type"].values[0], "int64")
+        self.assertEqual(response.data_frame["Null"].values[0], "YES")
+        self.assertEqual(response.data_frame["Default"].values[0], None)

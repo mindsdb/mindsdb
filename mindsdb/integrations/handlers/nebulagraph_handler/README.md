@@ -11,5 +11,12 @@ PARAMETERS = {
     "graph_space": "basketballplayer"
 };
 
-nebula.query("MATCH (n:player) RETURN n LIMIT 10")
+nebula.query('SELECT * FROM nebula ("MATCH (n:player) RETURN n LIMIT 10");');
+```
+
+## Test NebulaGraph Handler
+
+```bash
+cd mindsdb/integrations/handlers/nebulagraph_handler
+pytest -s tests/test_nebulagraph_handler.py
 ```

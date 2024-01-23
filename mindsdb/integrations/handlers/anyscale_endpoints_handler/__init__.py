@@ -11,7 +11,7 @@ except Exception as e:
 title = 'Anyscale Endpoints'
 name = 'anyscale_endpoints'
 type = HANDLER_TYPE.ML
-permanent = False
+permanent = True
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'description', 'import_error'

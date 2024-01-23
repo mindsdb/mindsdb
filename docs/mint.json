@@ -393,6 +393,7 @@
       "group": "SQL API",
       "pages": [
         "mindsdb_sql/overview",
+        "mindsdb_sql/syntax",
         {
           "group": "Connect",
           "pages": [

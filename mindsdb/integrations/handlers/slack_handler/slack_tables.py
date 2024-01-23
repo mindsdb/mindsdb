@@ -1,6 +1,6 @@
 from mindsdb.utilities import log
 from datetime import datetime as datetime, timezone
-import ast
+from mindsdb_sql.parser import ast
 import pandas as pd
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError

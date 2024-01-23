@@ -6,8 +6,9 @@ try:
     from .nebulagraph_handler import (
         NebulaGraphHandler as Handler,
         connection_args_example,
-        connection_args
+        connection_args,
     )
+
     import_error = None
 except Exception as e:
     Handler = None
@@ -19,6 +20,14 @@ type = HANDLER_TYPE.DATA
 icon_path = "icon.svg"
 
 __all__ = [
-    'Handler', 'version', 'name', 'type', 'title', 'description',
-    'connection_args', 'connection_args_example', 'import_error', 'icon_path'
+    "Handler",
+    "version",
+    "name",
+    "type",
+    "title",
+    "description",
+    "connection_args",
+    "connection_args_example",
+    "import_error",
+    "icon_path",
 ]

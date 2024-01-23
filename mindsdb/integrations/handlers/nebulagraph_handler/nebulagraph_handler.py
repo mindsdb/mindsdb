@@ -52,11 +52,11 @@ def cast(val: ValueWrapper):
     if _type in cast_as:
         return getattr(val, cast_as[_type])()
     if _type == Value.LVAL:
-        return [x.cast() for x in val.as_list()]
+        return [cast(x) for x in val.as_list()]
     if _type == Value.UVAL:
-        return {x.cast() for x in val.as_set()}
+        return {cast(x) for x in val.as_set()}
     if _type == Value.MVAL:
-        return {k: v.cast() for k, v in val.as_map().items()}
+        return {k: cast(v) for k, v in val.as_map().items()}
 
 
 class NebulaGraphHandler(DatabaseHandler):
@@ -72,24 +72,24 @@ class NebulaGraphHandler(DatabaseHandler):
             name (str): The name of the handler
         """
         super().__init__(name)
-        self.connection_data: dict = kwargs.get('connection_data', {})
 
-        assert self.connection_data, "connection_data is required"
+        connection_data: dict = kwargs.get("connection_data", {})
+
+        assert connection_data, "connection_data is required"
 
         self.connection: Optional[SessionPool] = None
         self.is_connected: bool = False
 
-        self.host: str = self.connection_data.get("host") or "127.0.0.1"
-        self.port: int = int(self.connection_data.get("port") or DEFAULT_PORT)
-        self.graph_space: str = self.connection_data.get("graph_space")
+        self.host: str = connection_data.get("host") or "127.0.0.1"
+        self.port: int = int(connection_data.get("port") or DEFAULT_PORT)
+        self.graph_space: str = connection_data.get("graph_space")
 
         assert self.graph_space, "graph_space is required"
 
-        self.user: str = self.connection_data.get("user") or DEFAULT_USER
-        self.password: str = self.connection_data.get("password") or DEFAULT_PASSWORD
+        self.user: str = connection_data.get("user") or DEFAULT_USER
+        self.password: str = connection_data.get("password") or DEFAULT_PASSWORD
         self.session_pool_size: int = int(
-            self.connection_data.get("session_pool_size")
-            or DEFAULT_SESSION_POOL_SIZE
+            connection_data.get("session_pool_size") or DEFAULT_SESSION_POOL_SIZE
         )
 
     def connect(self) -> SessionPool:
@@ -114,6 +114,7 @@ class NebulaGraphHandler(DatabaseHandler):
             connection = SessionPool(
                 self.user, self.password, self.graph_space, [(self.host, self.port)]
             )
+
             connection.init(config)
             connection.ping((self.host, self.port))
             self.is_connected = True

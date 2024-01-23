@@ -55,7 +55,8 @@ class LlamaIndexHandler(BaseMLEngine):
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
-        reader = args["using"].get("reader", None)
+        reader = args["using"].get("reader", "DFReader")
+
         if reader not in config.data_loaders:
             raise Exception(
                 f"Invalid reader argument. Please use one of {config.data_loaders.keys()}"

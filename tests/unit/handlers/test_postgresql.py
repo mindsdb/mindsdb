@@ -39,6 +39,10 @@ class TestPostgresHandler(unittest.TestCase):
         self.patcher.stop()
 
     def test_connect_success(self):
+        """
+        Test if `connect` method successfully establishes a connection and sets `is_connected` flag to True.
+        Also, verifies that psycopg.connect is called exactly once.
+        """
         self.mock_connect.return_value = MagicMock()
         connection = self.handler.connect()
         self.assertIsNotNone(connection)
@@ -46,6 +50,10 @@ class TestPostgresHandler(unittest.TestCase):
         self.mock_connect.assert_called_once()
 
     def test_connect_failure(self):
+        """
+        Ensures that the connect method correctly handles a connection failure
+        by raising a psycopg.Error and sets is_connected to False.
+        """
         self.mock_connect.side_effect = psycopg.Error("Connection Failed")
 
         with self.assertRaises(psycopg.Error):
@@ -53,6 +61,9 @@ class TestPostgresHandler(unittest.TestCase):
         self.assertFalse(self.handler.is_connected)
 
     def test_check_connection(self):
+        """
+        Verifies that the `check_connection` method returns a StatusResponse object and accurately reflects the connection status.
+        """
         self.mock_connect.return_value = MagicMock()
         connected = self.handler.check_connection()
         self.assertTrue(connected)
@@ -60,6 +71,10 @@ class TestPostgresHandler(unittest.TestCase):
         self.assertFalse(connected.error_message)
 
     def test_native_query(self):
+        """
+        Tests the `native_query` method to ensure it executes a SQL query using a mock cursor,
+        returns a Response object, and correctly handles the ExecStatus scenario
+        """
         mock_conn = MagicMock()
         mock_cursor = CursorContextManager()
 
@@ -79,6 +94,9 @@ class TestPostgresHandler(unittest.TestCase):
         self.assertFalse(data.error_code)
 
     def test_get_columns(self):
+        """
+        Checks if the `get_columns` method correctly constructs the SQL query and if it calls `native_query` with the correct query.
+        """
         self.handler.native_query = MagicMock()
 
         table_name = 'mock_table'
@@ -96,6 +114,9 @@ class TestPostgresHandler(unittest.TestCase):
         self.handler.native_query.assert_called_once_with(expected_query)
 
     def test_get_tables(self):
+        """
+        Tests the `get_tables` method to confirm it correctly calls `native_query` with the appropriate SQL command.
+        """
         self.handler.native_query = MagicMock()
         self.handler.get_tables()
 

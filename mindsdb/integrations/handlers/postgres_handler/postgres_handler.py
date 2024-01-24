@@ -57,7 +57,7 @@ class PostgresHandler(DatabaseHandler):
         """
         if self.is_connected:
             return self.connection
-        
+
         config = {
             'host': self.connection_args.get('host'),
             'port': self.connection_args.get('port'),
@@ -72,7 +72,7 @@ class PostgresHandler(DatabaseHandler):
         # If schema is not provided set public as default one
         if self.connection_args.get('schema'):
             config['options'] = f'-c search_path={self.connection_args.get("schema")},public'
-        
+
         try:
             self.connection = psycopg.connect(**config, connect_timeout=10)
             self.is_connected = True
@@ -119,7 +119,7 @@ class PostgresHandler(DatabaseHandler):
         return response
 
     def _cast_dtypes(self, df: DataFrame, description: list) -> None:
-        """ 
+        """
         Cast df dtypes basing on postgres types
             Note:
                 Date types casting is not provided because of there is no issues (so far).
@@ -152,7 +152,6 @@ class PostgresHandler(DatabaseHandler):
                         df.iloc[:, column_index] = col.astype(types_map[pg_type.name])
                     except ValueError as e:
                         logger.error(f'Error casting column {col.name} to {types_map[pg_type.name]}: {e}')
-                        
 
     @profiler.profile()
     def native_query(self, query: str) -> Response:
@@ -243,14 +242,13 @@ class PostgresHandler(DatabaseHandler):
 
         Returns:
             Response: A response object containing the column details, formatted as per the `Response` class.
-    
         Raises:
             ValueError: If the 'table_name' is not a valid string.
         """
 
         if not table_name or not isinstance(table_name, str):
             raise ValueError("Invalid table name provided.")
-        
+
         query = f"""
             SELECT
                 column_name as "Field",

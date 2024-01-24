@@ -73,13 +73,11 @@ class TestPostgresHandler(unittest.TestCase):
         mock_cursor.pgresult = mock_pgresult
 
         query_str = "SELECT * FROM table"
-
         data = self.handler.native_query(query_str)
-        
         mock_cursor.execute.assert_called_once_with(query_str)
         assert isinstance(data, Response)
         self.assertFalse(data.error_code)
-    
+
     def test_get_columns(self):
         self.handler.native_query = MagicMock()
 
@@ -115,8 +113,7 @@ class TestPostgresHandler(unittest.TestCase):
         """
 
         self.handler.native_query.assert_called_once_with(expected_query)
-    
+
+
 if __name__ == '__main__':
     unittest.main()
-
-

@@ -751,7 +751,9 @@ class OpenAIHandler(BaseMLEngine):
                     f"To fine-tune this OpenAI model, please format your select data query to have a `{prompt_col}` column and a `{completion_col}` column first."
                 )  # noqa
 
-    def _prepare_ft_jsonl(self, df, _, temp_filename, temp_model_path):
+    @staticmethod
+    def _prepare_ft_jsonl(df, _, temp_filename, temp_model_path):
+        # TODO change so that it supports all discussed formats and automatically changes data to conform
         df.to_json(temp_model_path, orient='records', lines=True)
 
         # TODO avoid subprocess usage once OpenAI enables non-CLI access

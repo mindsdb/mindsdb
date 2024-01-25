@@ -39,9 +39,11 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         """ Temporarily updates the API base env var to point towards the Anyscale URL. """
         old_base = os.environ.get(key, OPENAI_API_BASE)
         os.environ[key] = ANYSCALE_API_BASE
-        oai_key = args['using'].get('openai_api_key', None)  # remove this arg override once #7496 is fixed
+        oai_key = args.get('using', {}).get('openai_api_key', None)  # remove this arg override once #7496 is fixed
 
         try:
+            if 'using' not in args:
+                args['using'] = {}
             if 'api_key' in args['using']:
                 args['using']['openai_api_key'] = args['using']['api_key']
             yield  # enter

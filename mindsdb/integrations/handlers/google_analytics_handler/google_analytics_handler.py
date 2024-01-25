@@ -7,6 +7,7 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
 )
 
+import json
 import os
 
 from google.analytics.admin_v1beta import AnalyticsAdminServiceClient
@@ -38,8 +39,6 @@ class GoogleAnalyticsHandler(APIHandler):
         super().__init__(name)
         self.page_size = 500
         self.connection_args = kwargs.get('connection_data', {})
-
-        self.credentials_file = self.connection_args['credentials_file']
         self.property_id = self.connection_args['property_id']
         if self.connection_args.get('credentials'):
             self.credentials_file = self.connection_args.pop('credentials')
@@ -51,22 +50,35 @@ class GoogleAnalyticsHandler(APIHandler):
         self.conversion_events = conversion_events
         self._register_table('conversion_events', conversion_events)
 
-    def create_connection(self):
-        creds = None
+    def _get_creds_json(self):
+        if 'credentials_file' in self.connection_args:
+            if os.path.isfile(self.connection_args['credentials_file']) is False:
+                raise Exception("credentials_file must be a file path")
+            with open(self.connection_args['credentials_file']) as source:
+                info = json.load(source)
+            return info
+        elif 'credentials_json' in self.connection_args:
+            info = self.connection_args['credentials_json']
+            if not isinstance(info, dict):
+                raise Exception("credentials_json has to be dict")
+            info['private_key'] = info['private_key'].replace('\\n', '\n')
+            return info
+        else:
+            raise Exception('Connection args have to content ether credentials_file or credentials_json')
 
-        if os.path.isfile(self.credentials_file):
-            creds = service_account.Credentials.from_service_account_file(self.credentials_file, scopes=self.scopes)
+    def create_connection(self):
+        info = self._get_creds_json()
+        creds = service_account.Credentials.from_service_account_info(info=info, scopes=self.scopes)
 
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
-            elif not os.path.isfile(self.credentials_file):
-                raise Exception('Credentials must be a file path')
 
         return AnalyticsAdminServiceClient(credentials=creds)
 
     def connect(self):
-        """Authenticate with the Google Analytics Admin API using the credential file.
+        """
+        Authenticate with the Google Analytics Admin API using the credential file.
 
         Returns
         -------

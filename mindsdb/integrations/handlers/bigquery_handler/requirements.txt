@@ -1,2 +1,3 @@
 google-cloud-bigquery
 sqlalchemy-bigquery
+db-dtypes

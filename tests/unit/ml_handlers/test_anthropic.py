@@ -78,14 +78,13 @@ class TestAnthropic(BaseMLAPITest):
         )
         assert "stockholm" in result_df["answer"].iloc[0].lower()
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_bulk_qa(self, mock_handler):
+    def test_bulk_qa(self):
         """Test for bulk question/answer pairs"""
         df = pd.DataFrame.from_dict({"question": [
             "What is the capital of Sweden?",
             "What is the second planet of the solar system?"
         ]})
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.set_data('df', df)
 
         self.run_sql(
             f"""
@@ -102,7 +101,7 @@ class TestAnthropic(BaseMLAPITest):
         result_df = self.run_sql(
             """
             SELECT p.answer
-            FROM pg.df as t
+            FROM dummy_data.df as t
             JOIN proj.test_anthropic_bulk_qa as p;
         """
         )

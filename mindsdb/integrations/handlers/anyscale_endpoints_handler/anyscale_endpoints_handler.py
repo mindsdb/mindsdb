@@ -35,17 +35,23 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
 
     @staticmethod
     @contextlib.contextmanager
-    def _anyscale_base_api(key='OPENAI_API_BASE'):
+    def _anyscale_base_api(args: dict, key='OPENAI_API_BASE'):
         """ Temporarily updates the API base env var to point towards the Anyscale URL. """
         old_base = os.environ.get(key, OPENAI_API_BASE)
         os.environ[key] = ANYSCALE_API_BASE
+        oai_key = args['using'].get('openai_api_key', None)  # remove this arg override once #7496 is fixed
+
         try:
+            if 'api_key' in args['using']:
+                args['using']['openai_api_key'] = args['using']['api_key']
             yield  # enter
         finally:
-            os.environ[key] = old_base  # exit
+            # exit
+            os.environ[key] = old_base
+            args['using']['openai_api_key'] = oai_key
 
     def create(self, target, args=None, **kwargs):
-        with self._anyscale_base_api():
+        with self._anyscale_base_api(args):
             # load base and fine-tuned models, then hand over
             self._set_models(args.get('using', {}))
             _args = self.model_storage.json_get('args')
@@ -54,7 +60,7 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
             super().create(target, args, **kwargs)
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
-        with self._anyscale_base_api():
+        with self._anyscale_base_api(args):
             # load base and fine-tuned models, then hand over
             self._set_models(args.get('using', {}))
             _args = self.model_storage.json_get('args')
@@ -63,7 +69,7 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
             return super().predict(df, args)
 
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
-        with self._anyscale_base_api():
+        with self._anyscale_base_api(args):
             self._set_models(args.get('using', {}))
             super().finetune(df, args)
             # rewrite chat_completion_models to include the newly fine-tuned model
@@ -88,8 +94,6 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
             return pd.DataFrame(tables, columns=['tables'])
 
     def _set_models(self, args):
-        if 'api_key' in args:
-            args['openai_api_key'] = args['api_key']  # remove this once #7496 is fixed
         api_key = get_api_key('anyscale_endpoints', args, self.engine_storage, strict=False)
         if api_key is None:
             api_key = get_api_key('openai', args, self.engine_storage)

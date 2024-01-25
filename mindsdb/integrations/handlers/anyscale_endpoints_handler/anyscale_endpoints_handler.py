@@ -91,7 +91,10 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
     def _set_models(self, args):
         if 'api_key' in args:
             args['openai_api_key'] = args['api_key']  # remove this once #7496 is fixed
-        client = self._get_client(get_api_key('openai', args, self.engine_storage))
+        api_key = get_api_key('anyscale_endpoints', args, self.engine_storage, strict=False)
+        if api_key is None:
+            api_key = get_api_key('openai', args, self.engine_storage)
+        client = self._get_client(api_key)
         self.all_models = [m.id for m in client.models.list()]
         self.chat_completion_models = [m.id for m in client.models.list() if m.rayllm_metadata['engine_config']['model_type'] == 'text-generation']  # noqa
         self.supported_ft_models = self.chat_completion_models  # base models compatible with fine-tuning

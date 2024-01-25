@@ -80,7 +80,7 @@ Now let's create an AI agent using the above model and skill.
 ```sql
 CREATE AGENT support_agent
 USING
-model = my_model,                  -- this was created with CREATE MODEL
+model = 'my_model',                  -- this was created with CREATE MODEL
 skills = ['text_to_sql_skill'];    -- this was created with CREATE SKILL
 ```
 

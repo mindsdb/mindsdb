@@ -104,13 +104,12 @@ class TestAnyscaleEndpoints(BaseExecutorTest):
                     """
                 )
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_4_qa_no_context(self, mock_handler):
+    def test_4_qa_no_context(self):
         df = pd.DataFrame.from_dict({"question": [
             "What is the capital of Sweden?",
             "What is the second planet of the solar system?"
         ]})
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.set_data('df', df)
 
         with self._use_anyscale_api_key() as api_key:
             self.run_sql(
@@ -136,18 +135,17 @@ class TestAnyscaleEndpoints(BaseExecutorTest):
         self.run_sql(
             """
             SELECT p.answer
-            FROM pg.df as t
+            FROM dummy_data.df as t
             JOIN proj.test_anyscale_qa_no_context as p;
         """
         )
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_5_qa_context(self, mock_handler):
+    def test_5_qa_context(self):
         df = pd.DataFrame.from_dict({"question": [
             "What is the capital of Sweden?",
             "What is the second planet of the solar system?"
         ], "context": ['Add "Boom!" to the end of the answer.', 'Add "Boom!" to the end of the answer.']})
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.set_data('df', df)
 
         with self._use_anyscale_api_key() as api_key:
             self.run_sql(
@@ -176,18 +174,17 @@ class TestAnyscaleEndpoints(BaseExecutorTest):
         self.run_sql(
             """
             SELECT p.answer
-            FROM pg.df as t
+            FROM dummy_data.df as t
             JOIN proj.test_anyscale_qa_context as p;
         """
         )
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_6_prompt_template(self, mock_handler):
+    def test_6_prompt_template(self):
         df = pd.DataFrame.from_dict({"question": [
             "What is the capital of Sweden?",
             "What is the second planet of the solar system?"
         ]})
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.set_data('df', df)
         with self._use_anyscale_api_key() as api_key:
             self.run_sql(
                 f"""
@@ -213,13 +210,12 @@ class TestAnyscaleEndpoints(BaseExecutorTest):
         self.run_sql(
             """
             SELECT p.completion
-            FROM pg.df as t
+            FROM dummy_data.df as t
             JOIN proj.test_anyscale_prompt_template as p;
         """
         )
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_7_bulk_normal_completion(self, mock_handler):
+    def test_7_bulk_normal_completion(self):
         """Tests normal completions (e.g. text-davinci-003) with bulk joins that are larger than the max batch_size"""
         class MockHandlerStorage:
             def json_get(self, key):
@@ -232,7 +228,7 @@ class TestAnyscaleEndpoints(BaseExecutorTest):
         )
         N = 1 + handler.max_batch_size  # get N larger than default batch size
         df = pd.DataFrame.from_dict({"input": ["I feel happy!"] * N})
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.set_data('df', df)
         with self._use_anyscale_api_key() as api_key:
             self.run_sql(
                 f"""
@@ -249,7 +245,7 @@ class TestAnyscaleEndpoints(BaseExecutorTest):
         self.run_sql(
             """
             SELECT p.completion
-            FROM pg.df as t
+            FROM dummy_data.df as t
             JOIN proj.test_anyscale_bulk_normal_completion as p;
         """
         )

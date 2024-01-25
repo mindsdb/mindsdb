@@ -9,7 +9,7 @@ import pandas as pd
 from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler
 from mindsdb.integrations.handlers.openai_handler.constants import OPENAI_API_BASE
 from mindsdb.integrations.utilities.handler_utils import get_api_key
-from mindsdb.integrations.libs.llm_utils import ft_jsonl_validation
+from mindsdb.integrations.libs.llm_utils import ft_jsonl_validation, ft_chat_formatter
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -105,46 +105,13 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
             if col not in set(df.columns):
                 raise Exception(f"To fine-tune this model, format your select data query to have a `role` column and a `content` column.")  # noqa
 
+    # TODO: add unit tests
     @staticmethod
     def _prepare_ft_jsonl(df, temp_storage_path, temp_filename, _, test_size=0.2):
-        """
-            df: has exactly two columns, `role` and `content`. Rows contain >= 1 chats in long (stacked) format.
-            For more details, check `FineTuning -> Data Format` in the Anyscale API reference.
-        """
-        def _is_valid(chat):
-            """ Check if chat is valid according to Anyscale criteria."""
-            roles = [m['role'] for m in chat]
-            transitions = {None: ['system', 'user'], 'system': ['user'], 'user': ['assistant'], 'assistant': ['user']}
+        # 1. format data
+        chats = ft_chat_formatter(df)
 
-            # check base condition
-            if not ('user' in roles and 'assistant' in roles):
-                return False
-
-            # check order is valid
-            state = None
-            for role in roles:
-                if role not in transitions[state]:
-                    return False
-                else:
-                    state = role
-
-            # chat is valid, return
-            return True
-
-        # 1. aggregate each chat sequence into one row
-        chats = []
-        chat = []
-        for i, row in df.iterrows():
-            if row['role'] == 'system' and len(chat) > 0:
-                if _is_valid(chat):
-                    chats.append({'messages': chat})
-                chat = []
-            event = {'role': row['role'], 'content': row['content']}
-            chat.append(event)
-
-        if _is_valid(chat):
-            chats.append({'messages': chat})
-
+        # 2. split chats in training and validation subsets
         series = pd.Series(chats)
         if len(series) < 20 * 2:
             raise Exception("Dataset is too small to finetune. Please include at least 40 samples (complete chats).")
@@ -152,7 +119,7 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         train = series.iloc[:-val_size]
         val = series.iloc[-val_size:]
 
-        # 2. write as jsonl
+        # 3. write as jsonl files
         file_names = {
             'train': f'{temp_filename}_prepared_train.jsonl',
             'val': f'{temp_filename}_prepared_valid.jsonl',
@@ -160,7 +127,7 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         train.to_json(os.path.join(temp_storage_path, file_names['train']), orient='records', lines=True)
         val.to_json(os.path.join(temp_storage_path, file_names['val']), orient='records', lines=True)
 
-        # 3. validate
+        # 5. validate and return
         with open(os.path.join(temp_storage_path, file_names['train']), 'r', encoding='utf-8') as f:
             ft_jsonl_validation([json.loads(line) for line in f])
 

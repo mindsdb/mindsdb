@@ -1,7 +1,12 @@
 import re
+import json
 import numpy as np
+from typing import Optional, Dict, List
+
+import pandas as pd
 
 
+# TODO: unit test for this method
 def get_completed_prompts(base_template, df):
     """
         Helper method that produces formatted prompts given a template and data in a Pandas DataFrame.
@@ -41,7 +46,8 @@ def get_completed_prompts(base_template, df):
     return prompts, empty_prompt_ids
 
 
-# TODO: perhaps this should not be common. Move smaller clearly composable methods for LLM FT here.
+# TODO: unit test for this method
+# TODO: add all checks mentioned in https://cookbook.openai.com/examples/chat_finetuning_data_prep
 def ft_jsonl_validation(
         items: list,  # read from a JSONL file
         messages_col: str = "messages",
@@ -108,3 +114,104 @@ def ft_jsonl_validation(
 
     except Exception as e:
         raise Exception(f"Fine-tuning data format is not valid. Got: {e}")
+
+
+# TODO: unit test for this method
+def ft_chat_format_validation(
+        chat: list,
+        transitions: Optional[Dict] = None,
+        system_key = "system",
+        user_key = "user",
+        assistant_key = "assistant",
+        role_key = "role",
+):
+    """
+    Finite state machine to check a chat has valid format to finetune an LLM with it.
+    Follows OpenAI ChatCompletion format (also used by other providers such as AnyscaleEndpoints).
+    """
+    roles = [m[role_key] for m in chat]
+    if transitions is None:
+        transitions = {
+            None: [system_key, user_key],
+            system_key: [user_key],
+            user_key: [assistant_key],
+            assistant_key: [user_key]
+    }
+
+    # check base condition
+    if not (user_key in roles and assistant_key in roles):
+        return False
+
+    # check order is valid
+    state = None
+    for role in roles:
+        if role not in transitions[state]:
+            return False
+        else:
+            state = role
+
+    # chat is valid
+    return True
+
+
+# TODO: unit test for this method
+def ft_chat_formatter(df: pd.DataFrame) -> List[Dict]:
+    """
+        For more details, check `FineTuning -> Data Format` in the Anyscale API reference, or the OpenAI equivalent.
+
+        :param df: input dataframe has chats in one of the following formats:
+            1) long tabular: at least two columns, `role` and `content`. Rows contain >= 1 chats in long (stacked) format.
+
+            2) JSON: at least one column, `chat_json`. Each row contains exactly 1 chat in JSON format.
+                Example for `chat_json` content: 
+                    > `{"messages": [{"role": "user", "content": "Hello!"}, {"role": "assistant", "content": "Hi!"}]}`
+
+        Optional df columns are:
+            - chat_id: unique identifier for each chat
+            - message_id: unique identifier for each message within each chat
+
+            Data will be sorted by both if they are provided. 
+
+            If only `chat_id` is provided, data will be sorted by it with a stable sort, so messages for each chat 
+            will be in the same order as in the original data.
+
+            If only `message_id` is provided, it must not contain duplicate IDs. Entire dataset will be treated 
+            as a single chat. Otherwise an exception will be raised.
+
+    """  # noqa
+    # 1. pre-sort df on optional columns
+    if 'chat_id' in df.columns:
+        if 'message_id' in df.columns:
+            df = df.sort_values(['chat_id', 'message_id'])
+        else:
+            df = df.sort_values(['chat_id'], kind='stable')
+    elif 'message_id' in df.columns:
+        if df['message_id'].duplicated().any():
+            raise Exception("If `message_id` is provided, it must not contain duplicate IDs.")
+        df = df.sort_values(['message_id'])
+
+    # 2. build chats
+    chats = []
+
+    # 2a. chats are in JSON format
+    if 'chat_json' in df.columns:
+        for _, row in df.iterrows():
+            chat = json.loads(row['chat_json'])
+            if ft_chat_format_validation(chat):
+                chats.append(chat)
+
+    # 2b. chats are in tabular format - aggregate each chat sequence into one row
+    else:
+        chat = []
+        for i, row in df.iterrows():
+            if row['role'] == 'system' and len(chat) > 0:
+                if ft_chat_format_validation(chat):
+                    chats.append({'messages': chat})
+                chat = []
+            event = {'role': row['role'], 'content': row['content']}
+            chat.append(event)
+
+        if ft_chat_format_validation(chat):
+            chats.append({'messages': chat})
+
+    return chats

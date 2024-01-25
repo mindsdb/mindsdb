@@ -216,7 +216,7 @@ class OpenAIParameters(LLMParameters):
     """Model parameters for the LLM API interface"""
 
     openai_api_key: str
-    model_id: str = Field(default="text-davinci-003", title="model name")
+    model_id: str = Field(default="gpt-3.5-turbo-instruct", title="model name")
     n: int = Field(default=1, title="number of responses to return")
 
     @validator("model_id", allow_reuse=True)

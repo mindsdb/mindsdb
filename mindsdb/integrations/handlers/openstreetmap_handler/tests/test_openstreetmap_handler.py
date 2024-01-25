@@ -1,6 +1,6 @@
 import unittest
 from mindsdb.integrations.handlers.openstreetmap_handler.openstreetmap_handler import OpenStreetMapHandler
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 
 class OpenStreetMapHandlerTest(unittest.TestCase):

@@ -18,9 +18,21 @@ The required arguments to establish a connection are as follows:
 * `user` is the database user.
 * `password` is the database password.
 
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/mssql_handler) and run this command:   `pip install -r requirements.txt`.
 
 ## Installation
+
+To install this handler, run `pip install mindsdb[mssql]`. Or if you are dealing with the git repository, `pip install .[mssql]`.
+
+### Install on Apple Silicon
+
+Installation on Apple Silicon is more complicated and requires libraries for building the `pymssql` library. For Apple Silicon we'd recommend using one of our [docker containers](https://hub.docker.com/r/mindsdb/mindsdb). If you want to install via pip anyway, the following instructions may help:
+```
+brew install freetds openssl
+echo 'export LDFLAGS="-L/opt/homebrew/opt/freetds/lib -L/opt/homebrew/opt/openssl@3/lib"' >> ~/.zshrc
+echo 'export CFLAGS="-I/opt/homebrew/opt/freetds/include"' >> ~/.zshrc
+echo 'export CPPFLAGS="-I/opt/homebrew/opt/openssl@3/include"' >> ~/.zshrc
+source ~/.zshrc
+``` 
 
 We are going to first install Microsoft SQL Server locally using docker, please follow along:
 ```

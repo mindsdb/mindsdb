@@ -6,7 +6,7 @@ from mindsdb.interfaces.storage import db
 
 from mindsdb.utilities.context import context as ctx
 
-from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
+from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.utilities.config import Config
 
 

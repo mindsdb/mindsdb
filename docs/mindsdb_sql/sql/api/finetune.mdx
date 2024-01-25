@@ -1,0 +1,57 @@
+---
+title: Finetune a Model
+sidebarTitle: Finetune a Model
+---
+
+## Description
+
+The `FINETUNE` statement lets you retrain a model with additional training data.
+
+<p align="center">
+  <img src="https://docs.google.com/drawings/d/e/2PACX-1vTwrR36VeRCMQYZ7AMQXS1gzMtgv6URfIlKFTUqZiTSZwsuXjiZCi8tIr4yU7NBs3_IuGzKgelvQ8l9/pub?w=955&h=460" />
+</p>
+
+Imagine you have a model that was trained with a certain dataset. Now there is more training data available and you wish to retrain this model with a new dataset. The `FINETUNE` statement lets you partially retrain the model, so it takes less time and resources than the [`RETRAIN`](/sql/api/retrain) statement. In the machine learning literature, this is also referred to as *fine-tuning* a model.
+
+## Syntax
+
+Here is the syntax:
+
+```sql
+FINETUNE [MODEL] project_name.model_name
+FROM integration_name
+    (SELECT column_name, ... FROM table_name)
+[USING
+    key = value,
+    ...];
+```
+
+Where:
+
+| Expressions                                 | Description                                                                                                        |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `project_name`                              | Name of the project where the model resides.                                                                       |
+| `model_name`                                | Name of the model to be retrained.                                                                                 |
+| `integration_name`                          | Name of the integration created using the [`CREATE DATABASE`](/sql/create/databases) statement or file upload.    |
+| `(SELECT column_name, ... FROM table_name)` | Selecting additional data to be used for retraining.                                                               |
+| `USING key = value`                         | Optional. The `USING` clause lets you pass multiple parameters to the `FINETUNE` statement.                          |
+
+<Info>
+**Model Versions**
+
+Every time the model is retrained/adjusted, its new version is created with an incremented version number. Unless overridden, the most recent version becomes active when training completes.
+
+You can query for all model versions like this:
+
+```sql
+SELECT *
+FROM project_name.models_versions;
+```
+
+For more information on managing model versions, check out our docs [here](/sql/api/manage-models-versions).
+</Info>
+## Examples 
+### Example 1: [OpenAI Model Fine-Tuning](/finetune/openai)
+### Example 2: [Llama2 Model Fine-Tuning](/finetune/anyscale)
+### Example 3: [Regression Model Fine-Tuning](/finetune/regression)
+### Example 4: [Classification Model Fine-Tuning](/finetune/classification)

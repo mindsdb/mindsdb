@@ -4,7 +4,7 @@ from flask import request
 from flask_restx import Resource
 
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
-from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
+from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.api.http.utils import http_error
 from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.interfaces.chatbot.chatbot_controller import ChatBotController

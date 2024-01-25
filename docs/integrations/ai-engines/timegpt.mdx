@@ -9,11 +9,13 @@ You can learn more about its features [here](https://nixtla.github.io/nixtla/).
 
 ## How to bring TimeGPT Models to MindsDB
 
-Before creating a model, you will need to create an ML engine for TimeGPT using the `CREATE ML_ENGINE` statement:
+Before creating a model, you will need to create an ML engine for TimeGPT using the `CREATE ML_ENGINE` statement and providing the TimeGPT API key:
 
 ```sql
 CREATE ML_ENGINE timegpt
-FROM timegpt;
+FROM timegpt
+USING
+    api_key = 'timegpt_api_key';
 ```
 
 Once the ML engine is created, we use the `CREATE MODEL` statement to create the TimeGPT model in MindsDB.
@@ -25,12 +27,13 @@ FROM data_source
 PREDICT column_to_be_predicted
 ORDER BY date_column
 GROUP BY column_name, column_name, ...
-WINDOW 12 -- model looks back at sets of 12 rows each
 HORIZON 3 -- model forecasts the next 3 rows
 USING ENGINE = 'timegpt';
 ```
 
-To ensure that the model is created based on the TimeGPT engine, include the `USING` clause at the end.
+To ensure that the model is created based on the TimeGPT engine, include the `USING` clause at the end, which defines the `engine` and lists all parameters used with time-series models, including `OREDER BY`, `GROUP BY`, `HORIZON`.
+
+What's different about the TimeGPT engine is that it does not expose the `WINDOW` parameter in its API, so as a user you need to send a payload with at least N rows, where N depends on the model and the frequency of the series. This is automatically handled by MindsDB in the [TimeGPT handler code](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/timegpt_handler).
 
 ## Example
 
@@ -51,7 +54,9 @@ Please note that before using the TimeGPT engine, you should create it from the 
 
 ```sql
 CREATE ML_ENGINE timegpt
-FROM timegpt;
+FROM timegpt
+USING
+    api_key = 'timegpt_api_key';
 ```
 
 You can check the available engines with this command:
@@ -74,14 +79,13 @@ FROM my_binance
   )
 PREDICT open_price
 ORDER BY open_time
-WINDOW 100
 HORIZON 10
 USING ENGINE = 'timegpt';
 ```
 
 Use the `CREATE MODEL` statement to create, train, and deploy a model. The `FROM` clause defines the training data used to train the model - here, the latest Binance data is used. The `PREDICT` clause specifies the column to be predicted - here, the open price of the BTC/USDT trading pair is to be forecasted.
 
-As it is a time-series model, you should order the data by a date column - here, it is the open time when the open price takes effect. Finally, the `WINDOW` clause defines the window the model looks back at while making forecasts - here, the model looks back at sets of 100 rows (intervals of 100 minutes, as the interval between Binance data rows is one minute). The `HORIZON` clause defines how many rows into the future the model will forecast - here, it forecasts the next 10 rows (the next 10 minutes, as the interval between Binance data rows is one minute).
+As it is a time-series model, you should order the data by a date column - here, it is the open time when the open price takes effect. Finally, the `HORIZON` clause defines how many rows into the future the model will forecast - here, it forecasts the next 10 rows (the next 10 minutes, as the interval between Binance data rows is one minute).
 
 <Warning>
 Please note that the TimeGPT engine is sensitive to inconsistent intervals between data rows. Please check your data for missing, duplicated or irregular timestamps to mitigate errors that may arise if the intervals between data rows are inconsistent.

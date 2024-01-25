@@ -152,6 +152,16 @@ class ModelController():
             ml_handler_name=ml_handler_name,
             project_name=project_name)
         return self.get_reduced_model_data(predictor_record=model_record)
+    
+    def get_model_record(self, name, version=None, ml_handler_name=None, project_name=None):
+        show_active = True if version is None else None
+        model_record = get_model_record(
+            active=show_active,
+            version=version,
+            name=name,
+            ml_handler_name=ml_handler_name,
+            project_name=project_name)
+        return model_record
 
     def get_models(self, with_versions=False, ml_handler_name=None, integration_id=None,
                    project_name=None):

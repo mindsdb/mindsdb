@@ -15,34 +15,36 @@ detect sentiment of comments, or use AI models to create replies.
 
 First, we have to install the required python packages.
 ```bash
-pip install mindsdb[YouTube]
+pip install mindsdb[youtube]
 ```
 
 ## Connecting
 
-This handler is implemented using the `google-api-python-client` library, a Python library that from where we can use YouTube v3 API.
+This handler is implemented using the ```google-api-python-client``` library, a Python library that from where we can use YouTube v3 API.
 
 The only required argument to establish a connection are as follows:
 
-* `YouTube_api_token` which is a Google API key used for authentication.
+* ```youtube_api_token``` which is a Google API key used for authentication.
 
 <Tip>
-Check out [this guide](https://blog.hubspot.com/website/how-to-get-YouTube-api-key) on how to create the API key in order to access YouTube data.
+Check out [this guide](https://blog.hubspot.com/website/how-to-get-youtube-api-key) on how to create the API key in
+    order to access YouTube data.
 </Tip>
 
-The first step is to create a database with the new `Youtube` engine using the following command:
+The first step is to create a database with the new ```youtube``` engine using the following command:
 
 ```sql
 CREATE DATABASE mindsdb_youtube
-WITH ENGINE = 'YouTube',
+WITH ENGINE = 'youtube',
 PARAMETERS = {
-  "YouTube_api_token": "<your-YouTube-api-key-token>"  
+  "youtube_api_token": "<your-youtube-api-key-token>"
 };
 ```
 
 <Tip>
 If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the
-    handler's folder `mindsdb/integrations/handlers/YouTube_handler` and run this command: `pip install -r requirements.txt`.
+    handler's folder `mindsdb/integrations/handlers/youtube_handler` and run this command: `pip install -r requirements.
+    txt`.
 </Tip>
 
 ## Usage
@@ -70,7 +72,7 @@ SELECT * FROM mindsdb_youtube.channels
 WHERE channel_id="UC-...";
 ~~~~
 
-Here, `channel_id` column is mandatory in the where clause.
+Here, ```channel_id``` column is mandatory in the where clause.
 
 Get information about any YouTube video using video_id:
 
@@ -79,5 +81,5 @@ SELECT * FROM mindsdb_youtube.videos
 WHERE video_id="id";
 ~~~~
 
-`video_id` is a mandatory column in the where clause.
+```video_id``` is a mandatory column in the where clause.
 

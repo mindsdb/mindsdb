@@ -125,7 +125,7 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
                 options,
                 model_name,
             )
-            labels_map = args.get('labels_map')
+            labels_map = args.get('labels_map', {})
 
             result_df['predictions'] = result_df['predictions'].apply(lambda x: labels_map.get(x, x))
 

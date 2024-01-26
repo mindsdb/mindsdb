@@ -117,6 +117,8 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name="huggingface", data={}, engine="huggingface")
         db.session.add(r)
+        r = db.Integration(name="hf_api_engine", data={}, engine="huggingface_api")
+        db.session.add(r)
         r = db.Integration(name="merlion", data={}, engine="merlion")
         db.session.add(r)
         r = db.Integration(name="monkeylearn", data={}, engine="monkeylearn")

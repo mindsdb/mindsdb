@@ -7,7 +7,7 @@ This documentation describes the integration of MindsDB with PostgreSQL, a power
 ### Prerequisites
 
    1. Ensure that MindsDB and PostgreSQL are installed on your system or you have access to cloud options.
-   2. If running locally install the dependencies as `pip install [postgres]`.
+   2. If running locally install the dependencies as `pip install mindsdb[postgres]`.
         
 
 ### Connection
@@ -45,14 +45,19 @@ Optional Parameters:
 Querying a Table:
 
  ```sql
-    SELECT * FROM psql_datasource.demo_table LIMIT 10;
+    SELECT * FROM psql_datasource.demo_data.used_car_price LIMIT 10;
 ```
 
 Running native queries by wrapping them inside the postgresql integration SELECT:
 
 ```sql
 SELECT * FROM psql_datasource (
-    Native Query goes here
+    --Native Query Goes Here
+     SELECT 
+        model, 
+        COUNT(*) OVER (PARTITION BY model, year) AS units_to_sell, 
+        ROUND((CAST(tax AS decimal) / price), 3) AS tax_div_price
+    FROM demo_data.used_car_price
 );
 ```
 > Note: In the above examples we are using `psql_datasource` name, which was created with CREATE DATABASE query.

@@ -18,20 +18,24 @@ First, we have to install the required python packages.
 pip install mindsdb[youtube]
 ```
 
-## Usage
+<Tip>
+If you installed MindsDB from a locally cloned repo via pip, you need to install all handler dependencies manually.
+    To do so, go to the handler's folder `mindsdb/integrations/handlers/youtube_handler` and run this command: `pip
+    install -r requirements.txt`.
+</Tip>
 
-This handler is implemented using the ```google-api-python-client``` library, a Python library that from where we can use YouTube v3 API.
+This handler is implemented using the `google-api-python-client` library, the python library supporting YouTube v3 API.
 
 The only required argument to establish a connection are as follows:
 
-* ```youtube_api_token``` which is a Google API key used for authentication.
+* `youtube_api_token` which is a Google API key used for authentication.
 
 <Tip>
 Check out [this guide](https://blog.hubspot.com/website/how-to-get-youtube-api-key) on how to create the API key in
     order to access YouTube data.
 </Tip>
 
-The first step is to create a database with the new ```youtube``` engine using the following command:
+The first step is to create a database with the new `youtube` engine using the following command:
 
 ```sql
 CREATE DATABASE mindsdb_youtube
@@ -41,45 +45,39 @@ PARAMETERS = {
 };
 ```
 
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the
-    handler's folder `mindsdb/integrations/handlers/youtube_handler` and run this command: `pip install -r requirements.
-    txt`.
-</Tip>
-
 ## Usage
 
 Use the established connection to query the comments table
 
-~~~~sql
+```sql
 SELECT * FROM mindsdb_youtube.comments
 WHERE video_id = "raWFGQ20OfA";
-~~~~
+```
 
 Advanced queries for the YouTube handler
 
-~~~~sql
+```sql
 SELECT * FROM mindsdb_youtube.comments
 WHERE video_id = "raWFGQ20OfA"
 ORDER BY display_name ASC
 LIMIT 5;
-~~~~
+```
 
 Given a channel_id, get information about the channel
 
-~~~~sql
+```sql
 SELECT * FROM mindsdb_youtube.channels
 WHERE channel_id="UC-...";
-~~~~
+```
 
-Here, ```channel_id``` column is mandatory in the where clause.
+Here, `channel_id` column is mandatory in the where clause.
 
 Get information about any YouTube video using video_id:
 
-~~~~sql
+```sql
 SELECT * FROM mindsdb_youtube.videos
 WHERE video_id="id";
-~~~~
+```
 
-```video_id``` is a mandatory column in the where clause.
+`video_id` is a mandatory column in the where clause.
 

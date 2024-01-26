@@ -39,7 +39,7 @@ jobs:
           pytest -svx tests/handler_tests/test_mariadb_handler.py
 
           echo -e "\n===============File Handler===============\n"
-          pytest mindsdb/integrations/handlers/file_handler/
+          pytest -svx mindsdb/integrations/handlers/file_handler/
 
           echo -e "\n===============Home Rental Home Prices===============\n"
           pytest -vx tests/integration_tests/flows/test_home_rental_prices_tutorial.py

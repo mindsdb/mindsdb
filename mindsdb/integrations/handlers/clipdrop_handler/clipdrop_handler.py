@@ -24,10 +24,10 @@ class ClipdropHandler(BaseMLEngine):
             raise Exception('api_key has to be specified')
 
         if 'task' not in args:
-            raise Exception('task has to be specified. Available tasks are - ' + available_tasks)
+            raise Exception('Task has to be specified. Available tasks are - {}'.format(available_tasks))
 
         if args['task'] not in available_tasks:
-            raise Exception('Unknown task specified. Available tasks are - ' + available_tasks)
+            raise Exception('Unknown task {} specified. Available tasks are - {}'.format(args['task'], available_tasks))
 
         if 'local_directory_path' not in args:
             raise Exception('local_directory_path has to be specified')
@@ -171,6 +171,8 @@ class ClipdropHandler(BaseMLEngine):
     def predict(self, df, args=None):
 
         args = self.model_storage.json_get('args')
+        if '__mindsdb_row_id' in df.columns:
+            df = df.drop('__mindsdb_row_id', axis=1)
 
         if args["task"] == "remove_text":
             preds = self._process_remove_text(df, args)

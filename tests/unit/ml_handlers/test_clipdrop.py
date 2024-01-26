@@ -6,7 +6,7 @@ from unittest.mock import patch
 from .base_ml_test import BaseMLAPITest
 
 
-@pytest.mark.skipif(os.environ.get('CLIPDROP_API_KEY') is None, reason='Missing API key!')
+@pytest.mark.skipif(os.environ.get('CLIPDROP_API_KEY') is None, reason='Missing Clipdrop API key!')
 class TestClipdrop(BaseMLAPITest):
     """Test Class for Clipdrop Integration Testing"""
 
@@ -25,33 +25,33 @@ class TestClipdrop(BaseMLAPITest):
 
     def test_missing_task_argument(self):
         """Test for unknown argument when creating a clidrop model"""
-        self.run_sql(
-            f"""
-            CREATE MODEL proj.test_clipdrop_invalid_model
-            PREDICT answer
-            USING
-                engine='clipdrop_engine',
-                local_directory_path = "tests/unit/ml_handlers/data",
-                api_key='{self.get_api_key('CLIPDROP_API_KEY')}';
-            """
-        )
         with pytest.raises(Exception):
+            self.run_sql(
+                f"""
+                CREATE MODEL proj.test_clipdrop_invalid_model
+                PREDICT answer
+                USING
+                    engine='clipdrop_engine',
+                    local_directory_path = "tests/unit/ml_handlers/data",
+                    api_key='{self.get_api_key('CLIPDROP_API_KEY')}';
+                """
+            )
             self.wait_predictor("proj", "test_missing_task_argument")
 
     def test_unknown_task_argument(self):
         """Test for unknown argument when creating a clipdrop model"""
-        self.run_sql(
-            f"""
-            CREATE MODEL proj.test_clipdrop_invalid_model
-            PREDICT answer
-            USING
-                engine='clipdrop_engine',
-                task = "unknown-task",
-                local_directory_path = "tests/unit/ml_handlers/data",
-                api_key='{self.get_api_key('CLIPDROP_API_KEY')}';
-            """
-        )
         with pytest.raises(Exception):
+            self.run_sql(
+                f"""
+                CREATE MODEL proj.test_clipdrop_invalid_model
+                PREDICT answer
+                USING
+                    engine='clipdrop_engine',
+                    task = "unknown-task",
+                    local_directory_path = "tests/unit/ml_handlers/data",
+                    api_key='{self.get_api_key('CLIPDROP_API_KEY')}';
+                """
+            )
             self.wait_predictor("proj", "test_unknown_task_argument")
 
     def test_text_image_single(self):
@@ -78,14 +78,13 @@ class TestClipdrop(BaseMLAPITest):
         )
         assert result_df["answer"].size == 1
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_bulk_text(self, mock_handler):
+    def test_bulk_text(self):
         """Test for bulk question/answer pairs"""
         df = pd.DataFrame.from_dict({"text": [
             "A black swan",
             "A pink unicorn"
         ]})
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.set_data('df', df)
 
         self.run_sql(
             f"""
@@ -103,7 +102,7 @@ class TestClipdrop(BaseMLAPITest):
         result_df = self.run_sql(
             """
             SELECT p.answer
-            FROM pg.df as t
+            FROM dummy_data.df as t
             JOIN proj.test_clipdrop_bulk_text as p;
         """
         )

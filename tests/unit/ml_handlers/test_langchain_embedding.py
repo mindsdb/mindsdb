@@ -34,8 +34,7 @@ class TestLangchainEmbedding(BaseExecutorTest):
             ]
             return pd.DataFrame(ret.data, columns=columns)
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_dummy_embedding(self, mock_handler):
+    def test_dummy_embedding(self):
         self.run_sql("create database proj")
         # create  the model
         self.run_sql(
@@ -76,13 +75,13 @@ class TestLangchainEmbedding(BaseExecutorTest):
             ],
             columns=["content"],
         )
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.set_data('df', df)
 
         # query
         ret = self.run_sql(
             """
             SELECT * FROM proj.test_dummy_embedding
-            JOIN pg.df
+            JOIN dummy_data.df
             """
         )
 
@@ -90,8 +89,7 @@ class TestLangchainEmbedding(BaseExecutorTest):
         assert "embeddings_output_column" in ret.columns
         assert ret.shape[0] == 4
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_embed_multiple_columns(self, mock_handler):
+    def test_embed_multiple_columns(self):
         self.run_sql("create database proj")
         # create  the model
         # with multiple input columns
@@ -130,13 +128,13 @@ class TestLangchainEmbedding(BaseExecutorTest):
                 "content2": ["world", "hello", "bar", "foo"],
             }
         )
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.set_data('df', df)
 
         # query
         ret = self.run_sql(
             """
             SELECT * FROM proj.test_dummy_embedding_multiple_columns
-            JOIN pg.df
+            JOIN dummy_data.df
             """
         )
 
@@ -161,16 +159,15 @@ class TestLangchainEmbedding(BaseExecutorTest):
                     "content1": ["hello", "world", "foo", "bar"],
                 }
             )
-            self.set_handler(mock_handler, name="pg", tables={"df": df2})
+            self.set_data('df', df2)
             self.run_sql(
                 """
                 SELECT * FROM proj.test_dummy_embedding_multiple_columns
-                JOIN pg.df2
+                JOIN dummy_data.df2
                 """
             )
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_no_input_columns(self, mock_handler):
+    def test_no_input_columns(self):
         self.run_sql("create database proj")
 
         df = pd.DataFrame(
@@ -271,8 +268,7 @@ class TestLangchainEmbedding(BaseExecutorTest):
         "OPENAI_API_KEY" not in os.environ,
         reason="OPENAI_API_KEY env variable is not defined",
     )
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_openai_embedding(self, mock_handler):
+    def test_openai_embedding(self):
         self.run_sql("create database proj")
         # create the model
         self.run_sql(
@@ -309,22 +305,19 @@ class TestLangchainEmbedding(BaseExecutorTest):
             ],
             columns=["content"],
         )
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.set_data('df', df)
 
         # query
         ret = self.run_sql(
             """
             SELECT * FROM proj.test_openai_embedding
-            JOIN pg.df
+            JOIN dummy_data.df
             """
         )
 
         assert "content" in ret.columns
         assert "embeddings" in ret.columns
         assert ret.shape[0] == 4
-
-    def test_huggingface_embedding(self):
-        ...
 
     def test_missing_class_name(self):
         self.run_sql("create database proj")

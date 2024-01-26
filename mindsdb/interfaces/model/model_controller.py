@@ -124,7 +124,7 @@ class ModelController():
             model_info = self.get_model_info(model_record)
 
             try:
-                df = ml_handler_base.describe(model_record.id, attribute)   # ml_handler.describe(attribute)
+                df = ml_handler_base.describe(model_record.id, attribute)
             except NotImplementedError:
                 df = pd.DataFrame()
 

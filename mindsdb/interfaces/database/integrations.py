@@ -211,9 +211,7 @@ class IntegrationController:
 
     def modify(self, name, data):
         self.handlers_cache.delete(name)
-        integration_record = db.session.query(db.Integration).filter_by(
-            company_id=ctx.company_id, name=name
-        ).first()
+        integration_record = self._get_integration_record(name)
         old_data = deepcopy(integration_record.data)
         for k in old_data:
             if k not in data:
@@ -235,7 +233,7 @@ class IntegrationController:
             if getattr(handler, 'permanent', False) is True:
                 raise Exception('Unable to drop: is permanent integration')
 
-        integration_record = db.session.query(db.Integration).filter_by(company_id=ctx.company_id, name=name).first()
+        integration_record = self._get_integration_record(name)
 
         # if this is ml engine
         engine_models = get_model_records(ml_handler_name=name, deleted_at=None)
@@ -330,20 +328,47 @@ class IntegrationController:
         }
 
     def get_by_id(self, integration_id, sensitive_info=True):
-        integration_record = db.session.query(db.Integration).filter_by(company_id=ctx.company_id, id=integration_id).first()
+        integration_record = (
+            db.session.query(db.Integration)
+            .filter_by(company_id=ctx.company_id, id=integration_id)
+            .first()
+        )
         return self._get_integration_record_data(integration_record, sensitive_info)
 
     def get(self, name, sensitive_info=True, case_sensitive=False):
+        integration_record = self._get_integration_record(name, case_sensitive)
+        return self._get_integration_record_data(integration_record, sensitive_info)
+
+    @staticmethod
+    def _get_integration_record(name: str, case_sensitive: bool = False) -> db.Integration:
+        """Get integration record by name
+
+        Args:
+            name (str): name of the integration
+            case_sensitive (bool): should search be case sensitive or not
+
+        Retruns:
+            db.Integration
+        """
         if case_sensitive:
-            integration_record = db.session.query(db.Integration).filter_by(
-                company_id=ctx.company_id, name=name
-            ).first()
+            integration_records = db.session.query(db.Integration).filter_by(
+                company_id=ctx.company_id,
+                name=name
+            ).all()
+            if len(integration_records) > 1:
+                raise Exception(f"There is {len(integration_records)} integrations with name '{name}'")
+            if len(integration_records) == 0:
+                raise Exception(f"There is no integration with name '{name}'")
+            integration_record = integration_records[0]
         else:
             integration_record = db.session.query(db.Integration).filter(
                 (db.Integration.company_id == ctx.company_id)
                 & (func.lower(db.Integration.name) == func.lower(name))
             ).first()
-        return self._get_integration_record_data(integration_record, sensitive_info)
+            if integration_record is None:
+                raise Exception(f"There is no integration with name '{name}'")
+
+        return integration_record
 
     def get_all(self, sensitive_info=True):
         integration_records = db.session.query(db.Integration).filter_by(company_id=ctx.company_id).all()
@@ -431,29 +456,6 @@ class IntegrationController:
 
         shutil.copytree(folder_from, folder_to, dirs_exist_ok=True)
         storage_to.folder_sync(root_path)
-
-    def _get_integration_record(self, name, case_sensitive: bool):
-        # TODO static
-        # TODO same as self.get
-        if case_sensitive:
-            integration_records = db.session.query(db.Integration).filter_by(
-                company_id=ctx.company_id,
-                name=name
-            ).all()
-            if len(integration_records) > 1:
-                raise Exception(f"There is {len(integration_records)} integrations with name '{name}'")
-            if len(integration_records) == 0:
-                raise Exception(f"There is no integration with name '{name}'")
-            integration_record = integration_records[0]
-        else:
-            integration_record = db.session.query(db.Integration).filter(
-                (db.Integration.company_id == ctx.company_id)
-                & (func.lower(db.Integration.name) == func.lower(name))
-            ).first()
-            if integration_record is None:
-                raise Exception(f"There is no integration with name '{name}'")
-
-        return integration_record
 
     def get_ml_handler(self, name: str, case_sensitive: bool = False) -> BaseMLEngine:
         """Get ML handler by name

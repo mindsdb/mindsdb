@@ -28,13 +28,8 @@ from sqlalchemy.sql.functions import coalesce
 
 from mindsdb.utilities.config import Config
 import mindsdb.interfaces.storage.db as db
-from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response,
-    RESPONSE_TYPE
-)
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.utilities.hooks import after_predict as after_predict_hook
-from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.model.functions import (
     get_model_record
 )
@@ -75,47 +70,11 @@ class BaseMLEngineExec:
         self.engine = handler_module.name
         self.handler_module = handler_module
 
-        self.model_controller = ModelController()
         self.database_controller = DatabaseController()
 
         self.base_ml_executor = process_cache
         if self.config['ml_task_queue']['type'] == 'redis':
             self.base_ml_executor = MLTaskProducer()
-
-    def get_tables(self) -> Response:  ## ???
-        """ Returns all models currently registered that belong to the ML engine."""
-        all_models = self.model_controller.get_models(integration_id=self.integration_id)
-        all_models_names = [[x['name']] for x in all_models]
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            pd.DataFrame(
-                all_models_names,
-                columns=['table_name']
-            )
-        )
-        return response
-
-    def get_columns(self, table_name: str) -> Response:   # ???
-        """ Retrieves standard info about a model, e.g. data types. """  # noqa
-        predictor_record = get_model_record(name=table_name, ml_handler_name=self.name)
-        if predictor_record is None:
-            return Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=f"Error: model '{table_name}' does not exist!"
-            )
-
-        data = []
-        if predictor_record.dtype_dict is not None:
-            for key, value in predictor_record.dtype_dict.items():
-                data.append((key, value))
-        result = Response(
-            RESPONSE_TYPE.TABLE,
-            pd.DataFrame(
-                data,
-                columns=['COLUMN_NAME', 'DATA_TYPE']
-            )
-        )
-        return result
 
     @profiler.profile()
     def learn(

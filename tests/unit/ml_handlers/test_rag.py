@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 from mindsdb_sql import parse_sql
 
-from tests.unit.executor_test_base import BaseExecutorTest
+from .base_ml_test import BaseMLAPITest
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
@@ -16,8 +16,10 @@ os.environ["WRITER_API_KEY"] = WRITER_API_KEY
 WRITER_ORG_ID = os.environ.get("WRITER_ORG_ID")
 os.environ["WRITER_ORG_ID"] = WRITER_ORG_ID
 
-
-class TestRAG(BaseExecutorTest):
+@pytest.mark.skipif(OPENAI_API_KEY is None, reason='Missing OpenAI API key!')
+@pytest.mark.skipif(WRITER_API_KEY is None, reason='Missing Writer API key!')
+@pytest.mark.skipif(WRITER_ORG_ID is None, reason='Missing WRITER_ORG_ID!')
+class TestRAG(BaseMLAPITest):
     def wait_predictor(self, project, name):
         # wait
         done = False

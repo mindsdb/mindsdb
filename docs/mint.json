@@ -312,7 +312,6 @@
           "group": "Chatbots with Agents",
           "pages": [
             "sql/tutorials/chatbots_agents",
-            "sql/tutorials/llm-chatbot-ui",
             "sql/tutorials/create-chatbot"
           ]
         },
@@ -394,6 +393,7 @@
       "group": "SQL API",
       "pages": [
         "mindsdb_sql/overview",
+        "mindsdb_sql/syntax",
         {
           "group": "Connect",
           "pages": [
@@ -506,7 +506,8 @@
           "group": "Agents",
           "pages": [
             "mindsdb_sql/agents/agent",
-            "mindsdb_sql/agents/chatbot"
+            "mindsdb_sql/agents/chatbot",
+            "mindsdb_sql/agents/knowledge-bases"
           ]
         }
       ]
@@ -599,6 +600,13 @@
             "rest/jobs/create",
             "rest/jobs/delete",
             "rest/jobs/query"
+          ]
+        },
+        {
+          "group": "Agents",
+          "pages": [
+            "rest/agents/agent",
+            "rest/agents/chatbot"
           ]
         }
       ]

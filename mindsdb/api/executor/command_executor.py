@@ -267,9 +267,20 @@ class ExecuteCommands:
                 return self.answer_select(query)
             elif sql_category in ("tables", "full tables"):
                 schema = self.session.database or "mindsdb"
+                if (
+                    statement.from_table is not None
+                    and statement.in_table is not None
+                ):
+                    raise ExecutorException(
+                        "You have an error in your SQL syntax: 'from' and 'in' cannot be used together"
+                    )
+
                 if statement.from_table is not None:
                     schema = statement.from_table.parts[-1]
                     statement.from_table = None
+                if statement.in_table is not None:
+                    schema = statement.in_table.parts[-1]
+                    statement.in_table = None
                 where = BinaryOperation(
                     "and",
                     args=[

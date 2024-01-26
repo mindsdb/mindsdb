@@ -257,9 +257,11 @@ class BaseMLEngineExec:
         if predictor_record.status != PREDICTOR_STATUS.COMPLETE:
             raise Exception("Error: model creation not completed")
 
+        using = {} if params is None else params
         args = {
             'pred_format': pred_format,
-            'predict_params': {} if params is None else params
+            'predict_params': using,
+            'using': using
         }
 
         with self._catch_exception(model_name):

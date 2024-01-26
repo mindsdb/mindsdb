@@ -1,0 +1,35 @@
+---
+title: MindsDB SQL Syntax
+sidebarTitle: MindsDB SQL Syntax
+---
+
+Generally speaking, MindsDB SQL attempts to follow the syntax conventions of MySQL and PostgreSQL. The following
+sections describe some common conventions of MindsDB SQL.
+
+
+## Single/Double Quotes & Backticks
+
+Identifiers (databases, tables, and column names) with special characters or reserved words must use the backtick
+"`":
+
+```sql
+SELECT * FROM `select` WHERE `select`.id > 100;
+
+SELECT * FROM `select-DATABASE` WHERE `select-DATABASE`.id > 100;
+```
+
+String values are represented by single and double quotes:
+
+```sql
+SELECT * FROM table_name WHERE table_name.column_name = 'string';
+SELECT * FROM table_name WHERE table_name.column_name = "string";
+```
+
+## Parentheses
+
+SQL statements can be nested with parentheses:
+
+```sql
+SELECT * FROM (SELECT * FROM table_name WHERE table_name.column_name = 'string') ;
+
+```

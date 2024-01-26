@@ -13,6 +13,8 @@ class ML_TASK_TYPE(Enum):
     DESCRIBE = b'describe'
     CREATE_VALIDATION = b'create_validation'
     CREATE_ENGINE = b'create_engine'
+    UPDATE_ENGINE = b'update_engine'
+    UPDATE = b'update'
 
 
 class ML_TASK_STATUS(Enum):

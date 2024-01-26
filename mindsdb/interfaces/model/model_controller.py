@@ -412,12 +412,7 @@ class ModelController():
         integration_record = db.Integration.query.get(model_record.integration_id)
 
         ml_handler_base = session.integration_controller.get_ml_handler(integration_record.name)
-
-        ml_handler = ml_handler_base.get_ml_handler(model_record.id)   # !!!!!
-        if not hasattr(ml_handler, 'update'):
-            raise Exception("ML handler doesn't updating")
-
-        ml_handler.update(args=problem_definition)
+        ml_handler_base.update(args=problem_definition, model_id=model_record.id)
 
         # update model record
         if 'using' in problem_definition:

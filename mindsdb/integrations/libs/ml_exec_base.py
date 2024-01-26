@@ -18,7 +18,8 @@ In particular, three big components are included:
 
 import socket
 import datetime as dt
-from typing import Optional
+from typing import Optional, Union
+import contextlib
 
 import pandas as pd
 from sqlalchemy import func, null
@@ -40,7 +41,6 @@ from mindsdb.interfaces.model.functions import (
 )
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.interfaces.database.database import DatabaseController
-from mindsdb.interfaces.storage.model_fs import ModelStorage, HandlerStorage
 from mindsdb.utilities.context import context as ctx
 from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.utilities.functions import mark_process
@@ -92,20 +92,6 @@ class BaseMLEngineExec:
         self.base_ml_executor = process_cache
         if self.config['ml_task_queue']['type'] == 'redis':
             self.base_ml_executor = MLTaskProducer()
-
-    def get_ml_handler(self, predictor_id=None):    # DEL
-        # returns instance or wrapper over it
-
-        integration_id = self.integration_id
-
-        handlerStorage = HandlerStorage(integration_id)
-        modelStorage = ModelStorage(predictor_id)
-
-        ml_handler = self.handler_class(
-            engine_storage=handlerStorage,
-            model_storage=modelStorage,
-        )
-        return ml_handler
 
     def get_tables(self) -> Response:
         """ Returns all models currently registered that belong to the ML engine."""
@@ -198,37 +184,37 @@ class BaseMLEngineExec:
 
         db.serializable_insert(predictor_record)
 
-        task = self.base_ml_executor.apply_async(
-            task_type=ML_TASK_TYPE.LEARN,
-            model_id=predictor_record.id,
-            payload={
-                'handler_meta': {
-                    'module_path': self.handler_module.__package__,
-                    'engine': self.engine,
-                    'integration_id': self.integration_id
-                },
-                'context': ctx.dump(),
-                'model_id': predictor_record.id,
-                'problem_definition': problem_definition,
-                'set_active': set_active,
-                'data_integration_ref': data_integration_ref,
-                'fetch_data_query': fetch_data_query,
-                'project_name': project_name
-            }
-        )
+        with self._catch_exception(model_name):
+            task = self.base_ml_executor.apply_async(
+                task_type=ML_TASK_TYPE.LEARN,
+                model_id=predictor_record.id,
+                payload={
+                    'handler_meta': {
+                        'module_path': self.handler_module.__package__,
+                        'engine': self.engine,
+                        'integration_id': self.integration_id
+                    },
+                    'context': ctx.dump(),
+                    'problem_definition': problem_definition,
+                    'set_active': set_active,
+                    'data_integration_ref': data_integration_ref,
+                    'fetch_data_query': fetch_data_query,
+                    'project_name': project_name
+                }
+            )
 
-        if join_learn_process is True:
-            task.result()
-            predictor_record = db.Predictor.query.get(predictor_record.id)
-            db.session.refresh(predictor_record)
-        else:
-            # to prevent memory leak need to add any callback
-            task.add_done_callback(empty_callback)
+            if join_learn_process is True:
+                task.result()
+                predictor_record = db.Predictor.query.get(predictor_record.id)
+                db.session.refresh(predictor_record)
+            else:
+                # to prevent memory leak need to add any callback
+                task.add_done_callback(empty_callback)
 
         return predictor_record
 
     def describe(self, model_id: int, attribute: Optional[str] = None) -> pd.DataFrame:
-        try:
+        with self._catch_exception(model_id):
             task = self.base_ml_executor.apply_async(
                 task_type=ML_TASK_TYPE.DESCRIBE,
                 model_id=model_id,
@@ -243,12 +229,6 @@ class BaseMLEngineExec:
                 }
             )
             result = task.result()
-        except Exception as e:
-            msg = str(e).strip()
-            if msg == '':
-                msg = e.__class__.__name__
-            msg = f'[{self.name}/{model_id}]: {msg}'
-            raise MLEngineException(msg) from e
         return result
 
     @profiler.profile()
@@ -282,7 +262,7 @@ class BaseMLEngineExec:
             'predict_params': {} if params is None else params
         }
 
-        try:
+        with self._catch_exception(model_name):
             task = self.base_ml_executor.apply_async(
                 task_type=ML_TASK_TYPE.PREDICT,
                 model_id=predictor_record.id,
@@ -299,12 +279,6 @@ class BaseMLEngineExec:
                 dataframe=df
             )
             predictions = task.result()
-        except Exception as e:
-            msg = str(e).strip()
-            if msg == '':
-                msg = e.__class__.__name__
-            msg = f'[{self.name}/{model_name}]: {msg}'
-            raise MLEngineException(msg) from e
 
         # mdb indexes
         if '__mindsdb_row_id' not in predictions.columns and '__mindsdb_row_id' in df.columns:
@@ -320,7 +294,7 @@ class BaseMLEngineExec:
         return predictions
 
     def create_validation(self, target, args, integration_id):
-        try:
+        with self._catch_exception():
             task = self.base_ml_executor.apply_async(
                 task_type=ML_TASK_TYPE.CREATE_VALIDATION,
                 model_id=0,     # can not be None
@@ -336,16 +310,47 @@ class BaseMLEngineExec:
                 }
             )
             result = task.result()
-        except Exception as e:
-            msg = str(e).strip()
-            if msg == '':
-                msg = e.__class__.__name__
-            msg = f'[{self.name}]: {msg}'
-            raise MLEngineException(msg) from e
+        return result
+
+    def update(self, args: dict, model_id: int):
+        with self._catch_exception(model_id):
+            task = self.base_ml_executor.apply_async(
+                task_type=ML_TASK_TYPE.UPDATE,
+                model_id=model_id,
+                payload={
+                    'context': ctx.dump(),
+                    # 'connection_args': connection_args,
+                    'args': args,
+                    'handler_meta': {
+                        'module_path': self.handler_module.__package__,
+                        'engine': self.handler_module.name,
+                        'integration_id': self.integration_id
+                    },
+                }
+            )
+            result = task.result()
+        return result
+
+    def update_engine(self, connection_args):
+        with self._catch_exception():
+            task = self.base_ml_executor.apply_async(
+                task_type=ML_TASK_TYPE.UPDATE_ENGINE,
+                model_id=0,     # can not be None
+                payload={
+                    'context': ctx.dump(),
+                    'connection_args': connection_args,
+                    'handler_meta': {
+                        'module_path': self.handler_module.__package__,
+                        'engine': self.handler_module.name,
+                        'integration_id': self.integration_id
+                    },
+                }
+            )
+            result = task.result()
         return result
 
     def create_engine(self, connection_args: dict, integration_id: int) -> None:
-        try:
+        with self._catch_exception():
             task = self.base_ml_executor.apply_async(
                 task_type=ML_TASK_TYPE.CREATE_ENGINE,
                 model_id=0,     # can not be None
@@ -360,14 +365,6 @@ class BaseMLEngineExec:
                 }
             )
             result = task.result()
-        except (ImportError, ModuleNotFoundError):
-            raise
-        except Exception as e:
-            msg = str(e).strip()
-            if msg == '':
-                msg = e.__class__.__name__
-            msg = f'[{self.name}]: {msg}'
-            raise MLEngineException(msg) from e
         return result
 
     @profiler.profile()
@@ -441,32 +438,47 @@ class BaseMLEngineExec:
         )
         db.serializable_insert(predictor_record)
 
-        task = self.base_ml_executor.apply_async(
-            task_type=ML_TASK_TYPE.FINETUNE,
-            model_id=predictor_record.id,
-            payload={
-                'handler_meta': {
-                    'module_path': self.handler_module.__package__,
-                    'engine': self.engine,
-                    'integration_id': self.integration_id
-                },
-                'context': ctx.dump(),
-                'model_id': predictor_record.id,
-                'problem_definition': predictor_record.learn_args,
-                'set_active': set_active,
-                'base_model_id': base_predictor_record.id,
-                'data_integration_ref': data_integration_ref,
-                'fetch_data_query': fetch_data_query,
-                'project_name': project_name
-            }
-        )
+        with self._catch_exception(model_name):
+            task = self.base_ml_executor.apply_async(
+                task_type=ML_TASK_TYPE.FINETUNE,
+                model_id=predictor_record.id,
+                payload={
+                    'handler_meta': {
+                        'module_path': self.handler_module.__package__,
+                        'engine': self.engine,
+                        'integration_id': self.integration_id
+                    },
+                    'context': ctx.dump(),
+                    'model_id': predictor_record.id,
+                    'problem_definition': predictor_record.learn_args,
+                    'set_active': set_active,
+                    'base_model_id': base_predictor_record.id,
+                    'data_integration_ref': data_integration_ref,
+                    'fetch_data_query': fetch_data_query,
+                    'project_name': project_name
+                }
+            )
 
-        if join_learn_process is True:
-            task.result()
-            predictor_record = db.Predictor.query.get(predictor_record.id)
-            db.session.refresh(predictor_record)
-        else:
-            # to prevent memory leak need to add any callback
-            task.add_done_callback(empty_callback)
+            if join_learn_process is True:
+                task.result()
+                predictor_record = db.Predictor.query.get(predictor_record.id)
+                db.session.refresh(predictor_record)
+            else:
+                # to prevent memory leak need to add any callback
+                task.add_done_callback(empty_callback)
 
         return predictor_record
+
+    @contextlib.contextmanager
+    def _catch_exception(self, model_identifier: Optional[Union[int, str]] = None):
+        try:
+            yield
+        except (ImportError, ModuleNotFoundError):
+            raise
+        except Exception as e:
+            msg = str(e).strip()
+            if msg == '':
+                msg = e.__class__.__name__
+            model_identifier = '' if model_identifier is None else f'/{model_identifier}'
+            msg = f'[{self.name}{model_identifier}]: {msg}'
+            raise MLEngineException(msg) from e

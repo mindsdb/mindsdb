@@ -10,10 +10,10 @@ from flask_restx import Resource
 from mindsdb_sql.parser.ast import Identifier
 from mindsdb_sql.parser.dialects.mindsdb import CreateMLEngine
 
+from mindsdb.integrations.utilities.install import install_dependencies
+from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.handlers import ns_conf
-from mindsdb.integrations.utilities.install import install_dependencies
-
 from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.api.executor.command_executor import ExecuteCommands
 
@@ -126,11 +126,12 @@ class BYOMUpload(Resource):
         session = SessionController()
 
         base_ml_handler = session.integration_controller.get_ml_handler(name)
-        byom_handler = base_ml_handler.get_ml_handler()   # !!!!
-        byom_handler.update_engine(connection_args)
+        base_ml_handler.update_engine(connection_args)
+
+        engine_storage = HandlerStorage(base_ml_handler.integration_id)
 
         engine_versions = [
-            int(x) for x in byom_handler.engine_storage.get_connection_args()['versions'].keys()
+            int(x) for x in engine_storage.get_connection_args()['versions'].keys()
         ]
 
         return {

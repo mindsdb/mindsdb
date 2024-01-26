@@ -324,16 +324,21 @@ class BaseMLEngine(ArgProbeMixin):
         raise NotImplementedError
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
-        """
-        Optional.
+        """Optional.
 
         When called, this method provides global model insights, e.g. framework-level parameters used in training.
         """
         raise NotImplementedError
 
-    def create_engine(self, connection_args: dict):
+    def update(self, args: dict) -> None:
+        """Optional.
+
+        Update model.
         """
-        Optional.
+        raise NotImplementedError
+
+    def create_engine(self, connection_args: dict):
+        """Optional.
 
         Used to connect with external sources (e.g. a REST API) that the engine will require to use any other methods.
         """

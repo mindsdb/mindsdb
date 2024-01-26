@@ -11,9 +11,11 @@ from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.ml_task_queue.const import ML_TASK_TYPE
 from mindsdb.integrations.libs.ml_handler_process import (
     learn_process,
+    update_process,
     predict_process,
     describe_process,
     create_engine_process,
+    update_engine_process,
     create_validation_process
 )
 
@@ -224,15 +226,15 @@ class ProcessCache:
                         ]
                     }
 
-    def apply_async(self, task_type: ML_TASK_TYPE, model_id: int, payload: dict, dataframe: DataFrame = None) -> Future:
+    def apply_async(self, task_type: ML_TASK_TYPE, model_id: Optional[int],
+                    payload: dict, dataframe: Optional[DataFrame] = None) -> Future:
         """ run new task. If possible - do it in existing process, if not - start new one.
 
-            Args: TODO rewrite!
-                handler (object): handler class
-                func (Callable): function to run
-                model_marker (tuple): if any of processes processed task with same marker - new task will be sent to it
-                args (tuple): args to be passed to function
-                kwargs (dict): kwargs to be passed to function
+            Args:
+                task_type (ML_TASK_TYPE): type of the task (learn, predict, etc)
+                model_id (int): id of the model
+                payload (dict): any 'lightweight' data that needs to be send in the process
+                dataframe (DataFrame): DataFrame to be send in the process
 
             Returns:
                 Future
@@ -246,7 +248,7 @@ class ProcessCache:
                 'problem_definition': payload['problem_definition'],
                 'fetch_data_query': payload['fetch_data_query'],
                 'project_name': payload['project_name'],
-                'model_id': payload['model_id'],
+                'model_id': model_id,
                 'base_model_id': payload.get('base_model_id'),
                 'set_active': payload['set_active'],
                 'integration_id': integration_id,
@@ -283,6 +285,21 @@ class ProcessCache:
             kwargs = {
                 'connection_args': payload['connection_args'],
                 'integration_id': integration_id,
+                'module_path': handler_module_path
+            }
+        elif task_type == ML_TASK_TYPE.UPDATE_ENGINE:
+            func = update_engine_process
+            kwargs = {
+                'connection_args': payload['connection_args'],
+                'integration_id': integration_id,
+                'module_path': handler_module_path
+            }
+        elif task_type == ML_TASK_TYPE.UPDATE:
+            func = update_process
+            kwargs = {
+                'args': payload['args'],
+                'integration_id': integration_id,
+                'model_id': model_id,
                 'module_path': handler_module_path
             }
         else:

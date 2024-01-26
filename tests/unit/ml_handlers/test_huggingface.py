@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import pandas as pd
 from mindsdb_sql import parse_sql
-from tests.unit.executor_test_base import BaseExecutorTest
+from ..executor_test_base import BaseExecutorTest
 
 # How to run:
 #  env PYTHONPATH=./ pytest -vx tests/unit/test_ml_handlers.py
@@ -14,7 +14,7 @@ class TestHuggingface(BaseExecutorTest):
     def run_sql(self, sql):
         return self.command_executor.execute_command(parse_sql(sql, dialect="mindsdb"))
 
-    def hf_test_run(self, mock_handler, model_name, create_sql, predict_sql):
+    def hf_test_run(self, model_name, create_sql, predict_sql):
         # prepare table
         text_spammy = [
             "It is the best time to launch the Robot to get more money. https:\\/\\/Gof.bode-roesch.de\\/Gof",
@@ -31,7 +31,7 @@ class TestHuggingface(BaseExecutorTest):
         df = pd.DataFrame(data=[text_spammy, text_short, text_long]).T
         df.columns = ["text_spammy", "text_short", "text_long"]
 
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.set_data('df', df)
 
         # create predictor
         ret = self.run_sql(create_sql)
@@ -59,8 +59,7 @@ class TestHuggingface(BaseExecutorTest):
         )
         assert ret.error_code is None
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_hf_classification_bin(self, mock_handler):
+    def test_hf_classification_bin(self):
         # create predictor
         create_sql = """
             CREATE PREDICTOR mindsdb.spam_classifier
@@ -78,10 +77,10 @@ class TestHuggingface(BaseExecutorTest):
 
         predict_sql = """
             SELECT h.*
-            FROM pg.df as t
+            FROM dummy_data.df as t
             JOIN mindsdb.spam_classifier as h
         """
-        self.hf_test_run(mock_handler, model_name, create_sql, predict_sql)
+        self.hf_test_run(model_name, create_sql, predict_sql)
 
         # one line prediction
         predict_sql = """
@@ -94,8 +93,7 @@ class TestHuggingface(BaseExecutorTest):
         )
         assert ret.error_code is None
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_hf_classification_multy(self, mock_handler):
+    def test_hf_classification_multy(self):
         # create predictor
         create_sql = """
            CREATE PREDICTOR mindsdb.sentiment_classifier
@@ -113,13 +111,12 @@ class TestHuggingface(BaseExecutorTest):
 
         predict_sql = """
             SELECT h.*
-            FROM pg.df as t
+            FROM dummy_data.df as t
             JOIN mindsdb.sentiment_classifier as h
         """
-        self.hf_test_run(mock_handler, model_name, create_sql, predict_sql)
+        self.hf_test_run(model_name, create_sql, predict_sql)
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_hf_zero_shot(self, mock_handler):
+    def test_hf_zero_shot(self):
         # create predictor
         create_sql = """
          CREATE PREDICTOR mindsdb.zero_shot_tcd
@@ -137,13 +134,12 @@ class TestHuggingface(BaseExecutorTest):
 
         predict_sql = """
             SELECT h.*
-            FROM pg.df as t
+            FROM dummy_data.df as t
             JOIN mindsdb.zero_shot_tcd as h
         """
-        self.hf_test_run(mock_handler, model_name, create_sql, predict_sql)
+        self.hf_test_run(model_name, create_sql, predict_sql)
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_summarization(self, mock_handler):
+    def test_summarization(self):
         # create predictor
         create_sql = """
         CREATE MODEL mindsdb.hf_summarization
@@ -161,14 +157,13 @@ class TestHuggingface(BaseExecutorTest):
 
         predict_sql = """
                     SELECT h.*
-                    FROM pg.df as t
+                    FROM dummy_data.df as t
                     JOIN mindsdb.hf_summarization as h
                 """
 
-        self.hf_test_run(mock_handler, model_name, create_sql, predict_sql)
+        self.hf_test_run(model_name, create_sql, predict_sql)
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_hf_translation(self, mock_handler):
+    def test_hf_translation(self):
         # create predictor
         create_sql = """
          CREATE PREDICTOR mindsdb.translator_en_fr
@@ -187,13 +182,12 @@ class TestHuggingface(BaseExecutorTest):
 
         predict_sql = """
             SELECT h.*
-            FROM pg.df as t
+            FROM dummy_data.df as t
             JOIN mindsdb.translator_en_fr as h
         """
-        self.hf_test_run(mock_handler, model_name, create_sql, predict_sql)
+        self.hf_test_run(model_name, create_sql, predict_sql)
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_hf_text2text(self, mock_handler):
+    def test_hf_text2text(self):
         # create predictor
         create_sql = """
         CREATE MODEL mindsdb.text_generator
@@ -212,10 +206,9 @@ class TestHuggingface(BaseExecutorTest):
             SELECT * FROM text_generator
             WHERE comment='Question: Why did the chicken cross the road?'
         """
-        self.hf_test_run(mock_handler, model_name, create_sql, predict_sql)
+        self.hf_test_run(model_name, create_sql, predict_sql)
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_hf_text_classification_finetune(self, mock_handler):
+    def test_hf_text_classification_finetune(self):
         create_sql = """
                    CREATE PREDICTOR mindsdb.spam_classifier
                    predict PRED
@@ -232,10 +225,10 @@ class TestHuggingface(BaseExecutorTest):
 
         predict_sql = """
                    SELECT h.*
-                   FROM pg.df as t
+                   FROM dummy_data.df as t
                    JOIN mindsdb.spam_classifier as h
                """
-        self.hf_test_run(mock_handler, model_name, create_sql, predict_sql)
+        self.hf_test_run(model_name, create_sql, predict_sql)
 
         # one line prediction
         predict_sql = """
@@ -252,7 +245,7 @@ class TestHuggingface(BaseExecutorTest):
 
         fine_tune_sql = """
         FINETUNE mindsdb.spam_classifier
-        FROM pg (
+        FROM dummy_data (
             SELECT label as PRED, text as text_spammy FROM df WHERE PRED <= 1
         )
         USING
@@ -265,8 +258,7 @@ class TestHuggingface(BaseExecutorTest):
 
         assert ret.error_code is None
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_hf_zero_shot_classification_finetune(self, mock_handler):
+    def test_hf_zero_shot_classification_finetune(self):
         # create predictor
         create_sql = """
          CREATE PREDICTOR mindsdb.zero_shot_tcd
@@ -284,16 +276,16 @@ class TestHuggingface(BaseExecutorTest):
 
         predict_sql = """
             SELECT h.*
-            FROM pg.df as t
+            FROM dummy_data.df as t
             JOIN mindsdb.zero_shot_tcd as h
         """
-        self.hf_test_run(mock_handler, model_name, create_sql, predict_sql)
+        self.hf_test_run(model_name, create_sql, predict_sql)
 
         # fine tune
 
         fine_tune_sql = """
         FINETUNE mindsdb.zero_shot_tcd
-        FROM pg (SELECT label, hypothesis FROM df);
+        FROM dummy_data (SELECT label, hypothesis FROM df);
         """
 
         ret = self.command_executor.execute_command(
@@ -302,8 +294,7 @@ class TestHuggingface(BaseExecutorTest):
 
         assert ret.error_code is None
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_hf_translation_finetune(self, mock_handler):
+    def test_hf_translation_finetune(self):
         # create predictor
         create_sql = """
                  CREATE PREDICTOR mindsdb.translator_en_fr
@@ -322,16 +313,16 @@ class TestHuggingface(BaseExecutorTest):
 
         predict_sql = """
                     SELECT h.*
-                    FROM pg.df as t
+                    FROM dummy_data.df as t
                     JOIN mindsdb.translator_en_fr as h
                 """
-        self.hf_test_run(mock_handler, model_name, create_sql, predict_sql)
+        self.hf_test_run(model_name, create_sql, predict_sql)
 
         # fine tune
 
         fine_tune_sql = """
         FINETUNE mindsdb.translator_en_fr
-        FROM  pg (SELECT text_long, transl FROM df);
+        FROM  dummy_data (SELECT text_long, transl FROM df);
         """
 
         ret = self.command_executor.execute_command(
@@ -340,8 +331,7 @@ class TestHuggingface(BaseExecutorTest):
 
         assert ret.error_code is None
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_hf_summarization_finetune(self, mock_handler):
+    def test_hf_summarization_finetune(self):
         # create predictor
         create_sql = """
         CREATE MODEL mindsdb.hf_summarization
@@ -359,16 +349,16 @@ class TestHuggingface(BaseExecutorTest):
 
         predict_sql = """
                     SELECT h.*
-                    FROM pg.df as t
+                    FROM dummy_data.df as t
                     JOIN mindsdb.hf_summarization as h
                 """
 
-        self.hf_test_run(mock_handler, model_name, create_sql, predict_sql)
+        self.hf_test_run(model_name, create_sql, predict_sql)
 
         # fine tune
         fine_tune_sql = """
         FINETUNE mindsdb.hf_summarization
-        FROM pg (
+        FROM dummy_data (
         SELECT text, summary FROM df
         );
         """

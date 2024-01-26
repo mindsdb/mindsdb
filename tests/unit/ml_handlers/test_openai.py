@@ -5,19 +5,14 @@ import pandas as pd
 from unittest.mock import patch
 from mindsdb_sql import parse_sql
 from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler
-from ..executor_test_base import BaseExecutorTest
+from .base_ml_test import BaseMLAPITest
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 
-@pytest.mark.skipif(OPENAI_API_KEY is None, reason='Missing API key!')
-class TestOpenAI(BaseExecutorTest):
+@pytest.mark.skipif(OPENAI_API_KEY is None, reason='Missing OpenAI API key!')
+class TestOpenAI(BaseMLAPITest):
     """Test Class for OpenAI Integration Testing"""
-
-    @staticmethod
-    def get_api_key():
-        """Retrieve OpenAI API key from environment variables"""
-        return os.environ.get("OPENAI_API_KEY")
 
     def setup_method(self, method):
         """Setup test environment, creating a project"""
@@ -57,7 +52,7 @@ class TestOpenAI(BaseExecutorTest):
                 predict answer
                 using
                   engine='openai',
-                  api_key='{self.get_api_key()}';
+                  api_key='{self.get_api_key('OPENAI_API_KEY')}';
                 """
             )
 
@@ -71,7 +66,7 @@ class TestOpenAI(BaseExecutorTest):
               engine='openai',
               question_column='question',
               model_name='this-gpt-does-not-exist',
-              api_key='{self.get_api_key()}';
+              api_key='{self.get_api_key('OPENAI_API_KEY')}';
             """
         )
         with pytest.raises(Exception):
@@ -87,18 +82,17 @@ class TestOpenAI(BaseExecutorTest):
                 using
                   engine='openai',
                   question_column='question',
-                  api_key='{self.get_api_key()}',
+                  api_key='{self.get_api_key('OPENAI_API_KEY')}',
                   evidently_wrong_argument='wrong value';
                 """
             )
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_qa_no_context(self, mock_handler):
+    def test_qa_no_context(self):
         df = pd.DataFrame.from_dict({"question": [
             "What is the capital of Sweden?",
             "What is the second planet of the solar system?"
         ]})
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.set_data('df', df)
 
         self.run_sql(
             f"""
@@ -107,7 +101,7 @@ class TestOpenAI(BaseExecutorTest):
            using
              engine='openai',
              question_column='question',
-             api_key='{self.get_api_key()}';
+             api_key='{self.get_api_key('OPENAI_API_KEY')}';
         """
         )
         self.wait_predictor("proj", "test_openai_qa_no_context")
@@ -124,20 +118,19 @@ class TestOpenAI(BaseExecutorTest):
         result_df = self.run_sql(
             """
             SELECT p.answer
-            FROM pg.df as t
+            FROM dummy_data.df as t
             JOIN proj.test_openai_qa_no_context as p;
         """
         )
         assert "stockholm" in result_df["answer"].iloc[0].lower()
         assert "venus" in result_df["answer"].iloc[1].lower()
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_qa_context(self, mock_handler):
+    def test_qa_context(self):
         df = pd.DataFrame.from_dict({"question": [
             "What is the capital of Sweden?",
             "What is the second planet of the solar system?"
         ], "context": ['Add "Boom!" to the end of the answer.', 'Add "Boom!" to the end of the answer.']})
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.set_data('df', df)
 
         self.run_sql(
             f"""
@@ -147,7 +140,7 @@ class TestOpenAI(BaseExecutorTest):
              engine='openai',
              question_column='question',
              context_column='context',
-             api_key='{self.get_api_key()}';
+             api_key='{self.get_api_key('OPENAI_API_KEY')}';
         """
         )
         self.wait_predictor("proj", "test_openai_qa_context")
@@ -167,7 +160,7 @@ class TestOpenAI(BaseExecutorTest):
         result_df = self.run_sql(
             """
             SELECT p.answer
-            FROM pg.df as t
+            FROM dummy_data.df as t
             JOIN proj.test_openai_qa_context as p;
         """
         )
@@ -177,13 +170,12 @@ class TestOpenAI(BaseExecutorTest):
         for i in range(2):
             assert "boom!" in result_df["answer"].iloc[i].lower()
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_prompt_template(self, mock_handler):
+    def test_prompt_template(self):
         df = pd.DataFrame.from_dict({"question": [
             "What is the capital of Sweden?",
             "What is the second planet of the solar system?"
         ]})
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.set_data('df', df)
         self.run_sql(
             f"""
            create model proj.test_openai_prompt_template
@@ -191,7 +183,7 @@ class TestOpenAI(BaseExecutorTest):
            using
              engine='openai',
              prompt_template='Answer this question and add "Boom!" to the end of the answer: {{{{question}}}}',
-             api_key='{self.get_api_key()}';
+             api_key='{self.get_api_key('OPENAI_API_KEY')}';
         """
         )
         self.wait_predictor("proj", "test_openai_prompt_template")
@@ -210,7 +202,7 @@ class TestOpenAI(BaseExecutorTest):
         result_df = self.run_sql(
             """
             SELECT p.completion
-            FROM pg.df as t
+            FROM dummy_data.df as t
             JOIN proj.test_openai_prompt_template as p;
         """
         )
@@ -220,8 +212,7 @@ class TestOpenAI(BaseExecutorTest):
         for i in range(2):
             assert "boom!" in result_df["completion"].iloc[i].lower()
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_bulk_normal_completion(self, mock_handler):
+    def test_bulk_normal_completion(self):
         """Tests normal completions (e.g. text-davinci-003) with bulk joins that are larger than the max batch_size"""
         class MockHandlerStorage:
             def json_get(self, key):
@@ -237,7 +228,7 @@ class TestOpenAI(BaseExecutorTest):
         )
         N = 1 + handler.max_batch_size  # get N larger than default batch size
         df = pd.DataFrame.from_dict({"input": ["I feel happy!"] * N})
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.set_data('df', df)
         self.run_sql(
             f"""
            create model proj.test_openai_bulk_normal_completion
@@ -245,7 +236,7 @@ class TestOpenAI(BaseExecutorTest):
            using
              engine='openai',
              prompt_template='What is the sentiment of the following phrase? Answer either "positive" or "negative": {{{{input}}}}',
-             api_key='{self.get_api_key()}';
+             api_key='{self.get_api_key('OPENAI_API_KEY')}';
         """  # noqa
         )
         self.wait_predictor("proj", "test_openai_bulk_normal_completion")
@@ -253,7 +244,7 @@ class TestOpenAI(BaseExecutorTest):
         result_df = self.run_sql(
             """
             SELECT p.completion
-            FROM pg.df as t
+            FROM dummy_data.df as t
             JOIN proj.test_openai_bulk_normal_completion as p;
         """
         )

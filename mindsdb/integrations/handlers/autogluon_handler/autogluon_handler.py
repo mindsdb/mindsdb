@@ -20,7 +20,7 @@ class AutoGluonHandler(BaseMLEngine):
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[dict] = None) -> None:
         config_args = args['using']
 
-        target_dtype = infer_types(df, 0).to_dict()["dtypes"][target]
+        target_dtype = infer_types(df).to_dict()["dtypes"][target]
 
         if target_dtype in ['binary', 'categorical', 'tags']:
             config = ClassificationConfig(**config_args)

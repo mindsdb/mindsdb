@@ -40,15 +40,14 @@ class TestAutoGluon(BaseExecutorTest):
             ]
             return pd.DataFrame(ret.data, columns=columns)
 
-    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
-    def test_simple(self, mock_handler):
+    def test_simple(self):
 
         # dataset, string values
         df = pd.DataFrame(range(1, 50), columns=['a'])
         df['b'] = 50 - df.a
         df['c'] = round((df['a'] * 3 + df['b']) / 50)
 
-        self.set_handler(mock_handler, name='pg', tables={'df': df})
+        self.set_data('df', df)
 
         # create project
         self.run_sql('create database proj;')
@@ -56,7 +55,7 @@ class TestAutoGluon(BaseExecutorTest):
         # create predictor
         self.run_sql('''
             create model proj.modelx
-            from pg (select * from df)
+            from dummy_data (select * from df)
             predict c
             using
                 engine='autogluon';
@@ -67,15 +66,10 @@ class TestAutoGluon(BaseExecutorTest):
         # run predict
         ret = self.run_sql('''
            SELECT p.*
-           FROM pg.df as t
+           FROM dummy_data.df as t
            JOIN proj.modelx as p
            where t.c=1
         ''')
         avg_c = pd.to_numeric(ret.c).mean()
         # value is around 1
         assert (avg_c > 0.9) and (avg_c < 1.1)
-
-
-# df = pd.DataFrame(range(1, 50), columns=['a'])
-# df['b'] = 50 - df.a
-# df['c'] = round((df['a']*3 + df['b']) / 50)

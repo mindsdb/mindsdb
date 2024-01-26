@@ -120,10 +120,10 @@ def ft_jsonl_validation(
 def ft_chat_format_validation(
         chat: list,
         transitions: Optional[Dict] = None,
-        system_key = "system",
-        user_key = "user",
-        assistant_key = "assistant",
-        role_key = "role",
+        system_key="system",
+        user_key="user",
+        assistant_key="assistant",
+        role_key="role",
 ):
     """
     Finite state machine to check a chat has valid format to finetune an LLM with it.
@@ -136,7 +136,7 @@ def ft_chat_format_validation(
             system_key: [user_key],
             user_key: [assistant_key],
             assistant_key: [user_key]
-    }
+        }
 
     # check base condition
     if not (user_key in roles and assistant_key in roles):

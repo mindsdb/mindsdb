@@ -62,6 +62,8 @@ class TestSpacy(BaseExecutorTest):
             """
         )
 
+        self.wait_for_predictor('proj', 'spacy__lemmatization__model')
+
         result_df = self.run_sql(
             """
             SELECT recognition
@@ -91,6 +93,8 @@ class TestSpacy(BaseExecutorTest):
               target_column = 'text';
             """
         )
+
+        self.wait_for_predictor('proj', 'spacy__dependency_parsing__model')
 
         result_df = self.run_sql(
             """
@@ -122,6 +126,8 @@ class TestSpacy(BaseExecutorTest):
             """
         )
 
+        self.wait_for_predictor('proj', 'spacy__pos_tag__model')
+
         result_df = self.run_sql(
             """
             SELECT recognition
@@ -151,6 +157,8 @@ class TestSpacy(BaseExecutorTest):
               target_column = 'text';
             """
         )
+
+        self.wait_for_predictor('proj', 'spacy__morphology__model')
 
         result_df = self.run_sql(
             """

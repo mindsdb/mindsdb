@@ -9,7 +9,7 @@ from mindsdb_sql import parse_sql
 from mindsdb.integrations.handlers.merlion_handler.adapters import DefaultForecasterAdapter, SarimaForecasterAdapter, \
     ProphetForecasterAdapter, MSESForecasterAdapter, IsolationForestDetectorAdapter, \
     WindStatsDetectorAdapter, ProphetDetectorAdapter
-from ..executor_test_base import BaseExecutorTest
+from unit.executor_test_base import BaseExecutorTest
 
 
 class TestMerlion(BaseExecutorTest):
@@ -92,21 +92,20 @@ class TestMerlion(BaseExecutorTest):
         assert len(rt_df) == len(df_test)
         assert "H1__upper" in set(rt_df.columns.values) and "H1__lower" in set(rt_df.columns.values)
 
-    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
-    def test_merlion_forecaster_sql(self, mock_handler):
+    def test_merlion_forecaster_sql(self):
         self.set_project()
         # prepare data
         df = self.get_m4_df()
         df["t"] = df.index
-        self.set_handler(mock_handler, name='pg', tables={'m4': df})
+        self.set_data('m4', df)
         # test default
-        self.exec_train_and_forecast(mock_handler=mock_handler, model_name="default", using="")
+        self.exec_train_and_forecast(model_name="default", using="")
 
-    def exec_train_and_forecast(self, mock_handler, model_name, using):
+    def exec_train_and_forecast(self, model_name, using):
         # create predictor
         create_sql = f'''
                     CREATE PREDICTOR mindsdb.{model_name}_forecaster
-                    FROM pg
+                    FROM dummy_data
                     (select t, H1 from m4 where train = 1)
                     PREDICT H1
                     USING engine='merlion'{using}
@@ -119,7 +118,7 @@ class TestMerlion(BaseExecutorTest):
         predict_sql = f'''
                     select p.t, p.H1 real, t.H1, t.H1__upper, t.H1__lower
                     from mindsdb.{model_name}_forecaster t
-                    inner join pg.m4 p on t.t = p.t
+                    inner join dummy_data.m4 p on t.t = p.t
                     where p.train = 0
                 '''
         ret = self.run_mindsdb_sql(sql=predict_sql)
@@ -150,22 +149,21 @@ class TestMerlion(BaseExecutorTest):
         assert rt_df is not None
         assert len(rt_df[rt_df["val__anomaly_score"] > 0]) > 0
 
-    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
-    def test_merlion_detector_sql(self, mock_handler):
+    def test_merlion_detector_sql(self):
         self.set_project()
         # prepare data
         df = self.get_nab_df()
         df["t"] = pd.to_datetime(df["t"])
-        self.set_handler(mock_handler, name='pg', tables={'nba': df})
+        self.set_data('nba', df)
 
         # test isolation forest
-        self.exec_train_and_detect(mock_handler=mock_handler, model_name="isolation", using_model=", model_type='isolation'")
+        self.exec_train_and_detect(model_name="isolation", using_model=", model_type='isolation'")
 
-    def exec_train_and_detect(self, mock_handler, model_name, using_model):
+    def exec_train_and_detect(self, model_name, using_model):
         # create predictor
         create_sql = f'''
                     CREATE PREDICTOR mindsdb.{model_name}_detector
-                    FROM pg
+                    FROM dummy_data
                     (select t, val from nba where train = 1)
                     PREDICT val
                     USING engine='merlion', task='detector'{using_model}
@@ -178,7 +176,7 @@ class TestMerlion(BaseExecutorTest):
         predict_sql = f'''
                     select p.t, p.val real, d.val__anomaly_score
                     from mindsdb.{model_name}_detector d
-                    inner join pg.nba p on d.t = p.t and d.val = p.val
+                    inner join dummy_data.nba p on d.t = p.t and d.val = p.val
                     where p.train = 0
                     '''
         ret = self.run_mindsdb_sql(sql=predict_sql)

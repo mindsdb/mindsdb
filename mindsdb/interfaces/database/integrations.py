@@ -153,7 +153,8 @@ class IntegrationController:
     def _is_not_empty_str(s):
         return isinstance(s, str) and len(s) > 0
 
-    def __init__(self):
+    def __init__(self, enable_cache=True):
+        self.is_cache_enabled = enable_cache
         self._load_handler_modules()
         self.handlers_cache = HandlersCache()
 
@@ -205,7 +206,8 @@ class IntegrationController:
         return integration_id
 
     def modify(self, name, data):
-        self.handlers_cache.delete(name)
+        if self.is_cache_enabled:
+            self.handlers_cache.delete(name)
         integration_record = db.session.query(db.Integration).filter_by(
             company_id=ctx.company_id, name=name
         ).first()
@@ -221,7 +223,8 @@ class IntegrationController:
         if name in ('files', 'lightwood'):
             raise Exception('Unable to drop: is system database')
 
-        self.handlers_cache.delete(name)
+        if self.is_cache_enabled:
+            self.handlers_cache.delete(name)
 
         # check permanent integration
         if name in self.handler_modules:
@@ -429,9 +432,10 @@ class IntegrationController:
 
     @profiler.profile()
     def get_handler(self, name, case_sensitive=False):
-        handler = self.handlers_cache.get(name)
-        if handler is not None:
-            return handler
+        if self.is_cache_enabled:
+            handler = self.handlers_cache.get(name)
+            if handler is not None:
+                return handler
 
         if case_sensitive:
             integration_record = db.session.query(db.Integration).filter_by(company_id=ctx.company_id, name=name).first()
@@ -512,7 +516,8 @@ class IntegrationController:
             logger.info("%s.get_handler: create a client to db service of %s type, args - %s", self.__class__.__name__, integration_engine, handler_ars)
             handler = HandlerClass(**handler_ars)
             # handler = DBClient(integration_engine, HandlerClass, **handler_ars)
-            self.handlers_cache.set(handler)
+            if self.is_cache_enabled:
+                self.handlers_cache.set(handler)
 
         return handler
 
@@ -653,4 +658,8 @@ class IntegrationController:
         return self.handlers_import_status
 
 
-integration_controller = IntegrationController()
+enable_integration_cache_env = os.getenv('MINDSDB_ENABLE_INTEGRATION_CACHE', 'True')
+enable_integration_cache = True
+if enable_integration_cache_env.lower() != 'true':
+    enable_integration_cache = False
+integration_controller = IntegrationController(enable_cache=enable_integration_cache)

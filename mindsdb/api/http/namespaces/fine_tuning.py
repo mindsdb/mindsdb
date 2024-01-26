@@ -1,9 +1,7 @@
+import uuid
 from flask import request
 from http import HTTPStatus
 from flask_restx import Resource
-
-from mindsdb_sql.parser.ast import Identifier
-from mindsdb_sql.parser.dialects.mindsdb import FinetunePredictor
 
 from mindsdb.interfaces.storage.db import Predictor
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
@@ -33,10 +31,12 @@ class FineTuning(Resource):
         # initialize session controller
         session = SessionController()
 
+        project_name, model_name = model.split('.', 1)
+
         try:
-            name_no_version, version = Predictor.get_name_and_version(model.split('.')[1])
+            name_no_version, version = Predictor.get_name_and_version(model_name)
             try:
-                model_record = session.model_controller.get_model_record(name_no_version, version=version, project_name=model.split('.')[0])
+                model_record = session.model_controller.get_model_record(name_no_version, version=version, project_name=project_name)
             except PredictorRecordNotFound:
                 return http_error(
                     HTTPStatus.NOT_FOUND,
@@ -46,20 +46,20 @@ class FineTuning(Resource):
             # get the integration handler
             integration_name = get_predictor_integration(model_record).name
 
-            ml_handler = session.integration_controller.get_handler(
-                integration_name
+            base_ml_engine = session.integration_controller.get_handler(integration_name)
+
+            job_id = uuid.uuid4().hex
+
+            base_ml_engine.finetune(
+                model_name=model_record.name,
+                base_model_version=model_record.version,
+                project_name=project_name,
+                data_integration_ref=model_record.data_integration_ref,
+                fetch_data_query=f"SELECT * FROM {training_file}",
             )
 
-            # create a fine tuning query
-            ast_query = FinetunePredictor(
-                name=Identifier(model),
-                integration_name=Identifier('files'),
-                query_str=f"SELECT * FROM {training_file}",
-            )
-
-            # run the query using the model controller
-            session.model_controller.finetune_model(ast_query, ml_handler)
-
-            return 'Fine tuning job created', HTTPStatus.OK
+            return {
+                'job_id': job_id
+            }, HTTPStatus.OK
         except Exception as e:
             return str(e), HTTPStatus.INTERNAL_SERVER_ERROR

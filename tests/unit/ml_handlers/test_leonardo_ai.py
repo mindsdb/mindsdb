@@ -6,14 +6,9 @@ from unittest.mock import patch
 from .base_ml_test import BaseMLAPITest
 
 
-@pytest.mark.skipif(os.environ.get('LEONARDO_API_KEY') is None, reason='Missing API key!')
+@pytest.mark.skipif(os.environ.get('LEONARDO_API_KEY') is None, reason='Missing Leonardo API key!')
 class TestLeonardoAI(BaseMLAPITest):
     """Test Class for LeonardoAI Integration Testing."""
-
-    @staticmethod
-    def get_api_key():
-        """Retrieve Leonardo API key from environment variables."""
-        return os.environ.get('LEONARDO_API_KEY')
 
     def setup_method(self):
         """Setup test environment, creating a project"""
@@ -77,20 +72,19 @@ class TestLeonardoAI(BaseMLAPITest):
         result_df = self.run_sql(
             """
             SELECT *
-            FROM mindsdb.leo
+            FROM proj.test_leonardo_single_qa
             WHERE text = 'Generate a random ANIME picture';
             """
         )
-        assert "stockholm" in result_df["answer"].iloc[0].lower()
+        assert "https" in result_df["url"].iloc[0].lower()
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_bulk_qa(self, mock_handler):
+    def test_bulk_qa(self):
         """Test for bulk image processing"""
-        df = pd.DataFrame.from_dict({"prompt": [
+        df = pd.DataFrame.from_dict({"text": [
             "Abstract artwork with vibrant colors and dynamic shapes. Imagine a world where sound is visible, and each element in the image represents a different genre of music.",
             "surreal landscape where mountains are made of candy, and rivers flow with liquid gold."
         ]})
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.set_data('df', df)
 
         self.run_sql(
             f"""
@@ -107,10 +101,10 @@ class TestLeonardoAI(BaseMLAPITest):
 
         result_df = self.run_sql(
             """
-            SELECT p.answer
-            FROM pg.df as t
+            SELECT *
+            FROM dummy_data.df as t
             JOIN proj.test_leonardo_bulk_qa as p;
             """
         )
-        assert "stockholm" in result_df["answer"].iloc[0].lower()
-        assert "venus" in result_df["answer"].iloc[1].lower()
+        assert "https" in result_df["url"].iloc[0].lower()
+        assert "https" in result_df["url"].iloc[1].lower()

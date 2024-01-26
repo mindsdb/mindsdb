@@ -7,7 +7,7 @@ import requests
 
 class StabilityAPIClient:
 
-    def _init_(self, api_key, dir_to_save, engine="stable-diffusion-xl-1024-v1-0", upscale_engine="esrgan-v1-x2plus"):
+    def __init__(self, api_key, dir_to_save, engine="stable-diffusion-xl-1024-v1-0", upscale_engine="esrgan-v1-x2plus"):
         """Initialize the stability wrapper api client.
 
         Args:

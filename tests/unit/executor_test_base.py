@@ -182,6 +182,9 @@ class BaseUnitTest:
         r = db.Integration(name="spacy", data={}, engine="spacy")
         db.session.add(r)
 
+        r = db.Integration(name="stabilityai", data={}, engine="stabilityai")
+        db.session.add(r)
+
         # Lightwood should always be last (else tests break, why?)
         r = db.Integration(name="lightwood", data={}, engine="lightwood")
         db.session.add(r)

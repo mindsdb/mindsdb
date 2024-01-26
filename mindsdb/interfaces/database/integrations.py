@@ -474,15 +474,15 @@ class IntegrationController:
         if integration_meta.get('type') != HANDLER_TYPE.ML:
             raise Exception(f"Handler '{name}' must be ML type")
 
-        ml_handler_args = {
-            'name': integration_record.name,
-            'integration_id': integration_record.id,
-            'integration_engine': integration_engine,
-            'integration_meta': integration_meta,
-            'handler_module': self.handler_modules[integration_engine]
-        }
-        logger.info("%s.get_handler: create a ML client, params - %s", self.__class__.__name__, ml_handler_args)
-        handler = BaseMLEngineExec(**ml_handler_args)
+        logger.info(
+            f"{self.__class__.__name__}.get_handler: create a ML client "
+            + f"{integration_record.name}/{integration_record.id}"
+        )
+        handler = BaseMLEngineExec(
+            name=integration_record.name,
+            integration_id=integration_record.id,
+            handler_module=self.handler_modules[integration_engine]
+        )
 
         return handler
 

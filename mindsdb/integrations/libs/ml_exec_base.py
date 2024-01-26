@@ -17,15 +17,14 @@ In particular, three big components are included:
 """
 
 import socket
-import datetime as dt
-from typing import Optional, Union
 import contextlib
+import datetime as dt
+from types import ModuleType
+from typing import Optional, Union
 
 import pandas as pd
 from sqlalchemy import func, null
 from sqlalchemy.sql.functions import coalesce
-
-from mindsdb_sql import parse_sql
 
 from mindsdb.utilities.config import Config
 import mindsdb.interfaces.storage.db as db
@@ -62,38 +61,28 @@ class MLEngineException(Exception):
 
 class BaseMLEngineExec:
 
-    def __init__(self, name, integration_id, integration_engine, integration_meta, handler_module):   # , handler_class):
-        """ ML handler interface converter
+    def __init__(self, name: str, integration_id: int, handler_module: ModuleType):
+        """ML handler interface
 
-            Args:
-                name
-                integration_id
-                integration_engine
-                handler_class
-        """  # noqa
-        # TODO move this class to model controller
-
+        Args:
+            name (str): name of the ml_engine
+            integration_id (int): id of the ml_engine
+            handler_module (ModuleType): module of the ml_engine
+        """
         self.name = name
         self.config = Config()
         self.integration_id = integration_id
-        self.engine = integration_engine
-        # self.handler_class = handler_class
-        self.integration_meta = integration_meta
+        self.engine = handler_module.name
         self.handler_module = handler_module
 
         self.model_controller = ModelController()
         self.database_controller = DatabaseController()
 
-        self.parser = parse_sql
-        self.dialect = 'mindsdb'
-
-        self.is_connected = True
-
         self.base_ml_executor = process_cache
         if self.config['ml_task_queue']['type'] == 'redis':
             self.base_ml_executor = MLTaskProducer()
 
-    def get_tables(self) -> Response:
+    def get_tables(self) -> Response:  ## ???
         """ Returns all models currently registered that belong to the ML engine."""
         all_models = self.model_controller.get_models(integration_id=self.integration_id)
         all_models_names = [[x['name']] for x in all_models]
@@ -106,7 +95,7 @@ class BaseMLEngineExec:
         )
         return response
 
-    def get_columns(self, table_name: str) -> Response:
+    def get_columns(self, table_name: str) -> Response:   # ???
         """ Retrieves standard info about a model, e.g. data types. """  # noqa
         predictor_record = get_model_record(name=table_name, ml_handler_name=self.name)
         if predictor_record is None:
@@ -127,11 +116,6 @@ class BaseMLEngineExec:
             )
         )
         return result
-
-    def native_query(self, query: str) -> Response:
-        """ Intakes a raw SQL query and returns the answer given by the ML engine. """
-        query_ast = self.parser(query, dialect=self.dialect)
-        return self.query(query_ast)
 
     @profiler.profile()
     def learn(
@@ -306,7 +290,7 @@ class BaseMLEngineExec:
                     'args': args,
                     'handler_meta': {
                         'module_path': self.handler_module.__package__,
-                        'engine': self.handler_module.name,
+                        'engine': self.engine,
                         'integration_id': integration_id
                     },
                 }
@@ -321,11 +305,10 @@ class BaseMLEngineExec:
                 model_id=model_id,
                 payload={
                     'context': ctx.dump(),
-                    # 'connection_args': connection_args,
                     'args': args,
                     'handler_meta': {
                         'module_path': self.handler_module.__package__,
-                        'engine': self.handler_module.name,
+                        'engine': self.engine,
                         'integration_id': self.integration_id
                     },
                 }
@@ -343,7 +326,7 @@ class BaseMLEngineExec:
                     'connection_args': connection_args,
                     'handler_meta': {
                         'module_path': self.handler_module.__package__,
-                        'engine': self.handler_module.name,
+                        'engine': self.engine,
                         'integration_id': self.integration_id
                     },
                 }
@@ -361,7 +344,7 @@ class BaseMLEngineExec:
                     'connection_args': connection_args,
                     'handler_meta': {
                         'module_path': self.handler_module.__package__,
-                        'engine': self.handler_module.name,
+                        'engine': self.engine,
                         'integration_id': integration_id
                     },
                 }

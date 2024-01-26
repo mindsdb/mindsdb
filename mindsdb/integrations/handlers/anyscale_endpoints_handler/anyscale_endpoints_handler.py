@@ -34,8 +34,14 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         self.default_max_tokens = 100
 
     @staticmethod
+    def _get_api_key(args, engine_storage):
+        api_key = get_api_key('anyscale_endpoints', args, engine_storage, strict=False)
+        if api_key is None:
+            api_key = get_api_key('openai', args, engine_storage)
+        return api_key
+
     @contextlib.contextmanager
-    def _anyscale_base_api(args: dict, key='OPENAI_API_BASE'):
+    def _anyscale_base_api(self, args: dict, key='OPENAI_API_BASE'):
         """ Temporarily updates the API base env var to point towards the Anyscale URL. """
         old_base = os.environ.get(key, OPENAI_API_BASE)
         os.environ[key] = ANYSCALE_API_BASE
@@ -44,13 +50,16 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         try:
             if 'using' not in args:
                 args['using'] = {}
-            if 'api_key' in args['using']:
-                args['using']['openai_api_key'] = args['using']['api_key']
+            api_key = AnyscaleEndpointsHandler._get_api_key(args.get('using', {}), self.engine_storage)
+            args['using']['api_key'] = api_key
             yield  # enter
         finally:
             # exit
             os.environ[key] = old_base
-            args['using']['openai_api_key'] = oai_key
+            if oai_key is None:
+                del args['using']['api_key']
+            else:
+                args['using']['api_key'] = oai_key
 
     def create(self, target, args=None, **kwargs):
         with self._anyscale_base_api(args):
@@ -95,10 +104,8 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
             tables = ['args', 'metadata']
             return pd.DataFrame(tables, columns=['tables'])
 
-    def _set_models(self, args):
-        api_key = get_api_key('anyscale_endpoints', args, self.engine_storage, strict=False)
-        if api_key is None:
-            api_key = get_api_key('openai', args, self.engine_storage)
+    def _set_models(self, using_args):
+        api_key = self._get_api_key(using_args, self.engine_storage)
         client = self._get_client(api_key)
         self.all_models = [m.id for m in client.models.list()]
         self.chat_completion_models = [m.id for m in client.models.list() if m.rayllm_metadata['engine_config']['model_type'] == 'text-generation']  # noqa

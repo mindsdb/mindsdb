@@ -210,9 +210,7 @@ class GoogleGeminiHandler(BaseMLEngine):
         genai.configure(api_key=api_key)
 
         model = genai.GenerativeModel(
-            args.get('model_name',
-            self.default_model
-            )
+            args.get('model_name', self.default_model)
         )
         results = []
         for m in prompts:

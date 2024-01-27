@@ -29,7 +29,7 @@ class GoogleGeminiHandler(BaseMLEngine):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.default_chat_model = "gemini-pro"
+        self.default_model = "gemini-pro"
         self.default_embedding_model = 'models/embedding-001'
         self.generative = True
         self.mode = 'default'
@@ -123,11 +123,11 @@ class GoogleGeminiHandler(BaseMLEngine):
 
         # Embedding Mode
         if args.get('mode') == 'embedding':
-            return self.embedding_worker(argds)
-            
+            args['type']=pred_args.get('type', 'query')
+            return self.embedding_worker(args, df)  
 
         elif args.get('mode') == 'vision':
-            return self.vision_worker(args)
+            return self.vision_worker(args, df)
 
         elif args.get('mode') == 'conversational':
             # Enable chat mode using
@@ -245,7 +245,7 @@ class GoogleGeminiHandler(BaseMLEngine):
                  or re-create this model and pass the API key with `USING` syntax.'
             )
 
-    def embedding_worker(self, args):
+    def embedding_worker(self, args: Dict, df: pd.DataFrame):
         if args.get('question_column'):
             prompts = list(df[args['question_column']].apply(lambda x: str(x)))
             if args.get('title_column',None):
@@ -253,14 +253,11 @@ class GoogleGeminiHandler(BaseMLEngine):
             else:
                 titles = None
 
-            empty_prompt_ids = np.where(
-                df[[args['question_column']]].isna().all(axis=1).values
-            )[0]
 
             api_key = self._get_google_gemini_api_key(args)
             genai.configure(api_key=api_key)
             model_name = args.get('model_name', self.default_embedding_model)
-            task_type = pred_args.get('type', 'query')
+            task_type = args.get('type')
             task_type = f'retrieval_{task_type}'
 
             if task_type == 'retrieval_query':
@@ -275,7 +272,7 @@ class GoogleGeminiHandler(BaseMLEngine):
         else:
                 raise Exception('Embedding mode needs a question_column')
 
-    def vision_worker(self, args):
+    def vision_worker(self, args: Dict, df: pd.DataFrame):
         if args.get('img_url'):
             urls = list(df[args['img_url']].apply(lambda x: str(x)))
 
@@ -306,7 +303,7 @@ class GoogleGeminiHandler(BaseMLEngine):
         if attribute == 'args':
             return pd.DataFrame(args.items(), columns=['key', 'value'])
         elif attribute == 'metadata':
-            api_key = get_api_key('gemini', args, self.engine_storage)
+            api_key = self._get_google_gemini_api_key(args)
             genai.configure(api_key=api_key)
             model_name = args.get('model_name', self.default_model)
 

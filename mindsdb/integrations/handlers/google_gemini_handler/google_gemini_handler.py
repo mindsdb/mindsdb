@@ -7,14 +7,12 @@ import numpy as np
 from io import BytesIO
 import json
 import textwrap
-from typing import Optional, Dict
 import google.generativeai as genai
 import pandas as pd
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.integrations.libs.llm_utils import get_completed_prompts
-
 
 
 logger = log.getLogger(__name__)
@@ -138,7 +136,10 @@ class GoogleGeminiHandler(BaseMLEngine):
 
         else:
             if args.get('prompt_template', False):
-                prompts, empty_prompt_ids = get_completed_prompts(base_template, df)
+                prompts, empty_prompt_ids = get_completed_prompts(
+                                                base_template,
+                                                df
+                                    )
 
             elif args.get('context_column', False):
                 empty_prompt_ids = np.where(
@@ -201,12 +202,18 @@ class GoogleGeminiHandler(BaseMLEngine):
                 prompts = list(df[args['question_column']].apply(lambda x: str(x)))
 
         # remove prompts without signal from completion queue
-        prompts = [j for i, j in enumerate(prompts) if i not in empty_prompt_ids]
+        prompts = [
+            j for i, j in enumerate(prompts) if i not in empty_prompt_ids
+            ]
 
         api_key = self._get_google_gemini_api_key(args)
         genai.configure(api_key=api_key)
 
-        model = genai.GenerativeModel(args.get('model_name', self.default_model))
+        model = genai.GenerativeModel(
+            args.get('model_name',
+            self.default_model
+            )
+        )
         results = []
         for m in prompts:
             results.append(model.generate_content(m).text)
@@ -253,7 +260,6 @@ class GoogleGeminiHandler(BaseMLEngine):
             else:
                 titles = None
 
-
             api_key = self._get_google_gemini_api_key(args)
             genai.configure(api_key=api_key)
             model_name = args.get('model_name', self.default_embedding_model)
@@ -270,7 +276,7 @@ class GoogleGeminiHandler(BaseMLEngine):
             pred_df = pd.DataFrame(results, columns=[args['target']])
             return pred_df
         else:
-                raise Exception('Embedding mode needs a question_column')
+            raise Exception('Embedding mode needs a question_column')
 
     def vision_worker(self, args: Dict, df: pd.DataFrame):
         if args.get('img_url'):
@@ -279,7 +285,7 @@ class GoogleGeminiHandler(BaseMLEngine):
         else:
             raise Exception('Vision mode needs a img_url')
 
-        prompts=None
+        prompts = None
         if args.get('ctx_column'):
             prompts = list(df[args['ctx_column']].apply(lambda x: str(x)))
 

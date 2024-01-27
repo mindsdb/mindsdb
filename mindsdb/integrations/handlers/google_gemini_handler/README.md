@@ -7,6 +7,7 @@ Google Generative AI is a library that provides access to powerful language mode
 *Note:* Ensure you have the necessary API key for accessing the Google gen AI library. You can get your API key at https://makersuite.google.com/. 
 
 >> This Handler requires python>=3.9 to work
+>> (Default model_name is **gemini-pro** )
 
 # Example Usage
 
@@ -25,8 +26,21 @@ CREATE MODEL gem_p
 PREDICT answer
 USING
     engine = 'g',
-    prompt_template = 'Context: {{context}}. Question: {{question}}. Answer:',
+    prompt_template = 'Product Description: {{description}}. Question: {{question}}. Answer:',
     model_name = 'gemini-pro';
+```
+
+```sql
+SELECT answer
+FROM gem_p
+WHERE description = "
+What is Rabbit R1?
+The Rabbit R1 is a pocket-sized AI device that promises a simpler and more intuitive way to interact with technology. Instead of being app-driven, the device relies on an AI model called LAMB (large action model) to understand your instructions and complete tasks autonomously.
+The device has a bright orange body, and is small and lightweight with a touchscreen, scroll wheel, and a talk button. There is also a rotating camera that functions as eyes of the device.
+
+The Rabbit R1 runs on its own operating system, called the Rabbit OS, that eliminates the need for app stores and downloads, requiring only natural language voice input to navigate. The initial version supports integration with the likes of Uber, Spotify, and Amazon, with the AI able to train and learn using other apps in the future.
+"
+AND question = 'Given me bullet pointed features of product ?';
 ```
 
 
@@ -41,7 +55,12 @@ USING
     context_column = 'context',
     model_name="gemini-pro";
 ```
->>(Default model_name is **gemini-pro** )
+```sql
+SELECT answer
+FROM gem_qc
+WHERE context = "Ashoka the Great was an Indian emperor of the Maurya Dynasty who ruled from 268 to 232 BCE. He is regarded as one of India's greatest emperors, known for his extensive empire, his efforts to spread Buddhism, and his commitment to non-violence and peaceful coexistence."
+AND question = 'Ashoka was from which dynasty?';
+```
 
 
 #### Vision Mode Query
@@ -69,7 +88,7 @@ PREDICT answer
 USING
   engine = 'g',
   mode = 'embedding',
-  model_name = 'models/embedding-001',    --- default
+  model_name = 'models/embedding-001',    --- default for embedding mode
   question_column = 'question',
   context_column = 'context',
   title_column = 'title';     --OPTIONAL

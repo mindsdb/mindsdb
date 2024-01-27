@@ -17,19 +17,15 @@ A [chatbot](/agents/chatbot) can be thought of as an agent connected to some mes
 
 ### Create skills
 
-Start by setting up the skills. You can create and manage skills using MindsDB SQL or via REST API endpoints.
-
-#### MindsDB SQL
-
-Here is how to create, update, and delete skills and knowledge bases using MindsDB SQL:
+Start by setting up the skills. Here is how you can create and manage skills using SQL API.
 
 * Creating, inserting into, updating, and deleting a knowledge base:
 
     ```sql
     CREATE KNOWLEDGE BASE my_knowledge_base
     USING
-        model = model_name, -- this must be an embedding model created with CREATE MODEL (see examples below)
-        storage = vector_database.storage_table; -- this parameter is optional; if not provided, the default ChromaDB is used for storage
+        model = embedding_model_name,              -- this parameter is optional; if not provided, a suitable embedding model is chosen for the task
+        storage = vector_database.storage_table;   -- this parameter is optional; if not provided, the default ChromaDB is used for storage
 
     -- inserts new data rows and generates id for each row if id is not provided
     INSERT INTO my_knowledge_base
@@ -84,23 +80,9 @@ You can query all skills using this command:
 SELECT * FROM skills;
 ```
 
-#### REST API
-
-Here is how to interact with skills using REST API endpoints:
-
-* `GET /projects/<project_name>/skills` - gets all skills created by the user (allow params to filter by agent)
-* `GET /projects/<project_name>/skills/<skill_name>` - gets a skill by name or ID
-* `PUT /projects/<project_name>/skills/<skill_name>` - updates skill with new params
-* `POST /projects/<project_name>/skills` - creates a new skill
-* `DELETE /projects/<project_name>/skills/<skills>` - deletes a skill by name or ID
-
 ### Create an agent
 
-An agent can be created, deleted, queried, and updated using MindsDB SQL or via REST API endpoints.
-
-#### MindsDB SQL
-
-Here is how to interact with agents using MindsDB SQL:
+An agent can be created, deleted, queried, and updated. Here is how you can do that using SQL API.
 
 * Creating an AI agent:
 
@@ -132,16 +114,6 @@ You can query all agents using this command:
 ```sql
 SELECT * FROM agents;
 ```
-
-#### REST API
-
-Here is how to interact with agents using REST API endpoints:
-
-* `GET /projects/<project_name>/agents` - gets all agents created by the user
-* `GET /projects/<project_name>/agents/<agent>` - gets an agent by name or ID
-* `PUT /projects/<project_name>/agents/<agent_name>` updates agent with new settings
-* `POST /projects/<project_name>/agents` - creates a new agent
-* `DELETE /projects/<project_name>/agent/<agent_name>` - deletes an agent by name or ID
 
 ## Example
 
@@ -213,7 +185,7 @@ Learn about [chatbots here](/agents/chatbot).
 
 ### Agents with Knowledge Bases as Skills
 
-To create a knowledge base, it is required to provide an embedding model. You can choose one from OpenAI, Hugging Face, or LangChain.
+In this example, let's create an embedding model (you can choose one from OpenAI, Hugging Face, or LangChain) for the knowledge base.
 
 ```sql
 CREATE ML_ENGINE openai_engine

@@ -1,0 +1,76 @@
+---
+title: Python Coding Standards
+sidebarTitle:  Python Coding Standards
+---
+
+# PEP8 
+    <Tip>
+    Strict adherence to [PEP8](https://peps.python.org/pep-0008/) standards is mandatory for all code contributions to MindsDB.
+    </Tip>
+
+**Why PEP8?** 
+[PEP8](https://peps.python.org/pep-0008/) provides an extensive set of guidelines for Python code styling, promoting readability and a uniform coding standard. By aligning with PEP8, we ensure our codebase remains clean, maintainable, and easily understandable for Python developers at any level.
+
+#### Automated Checks
+
+    * Upon submission of a Pull Request (PR), an automated process checks the code for PEP8 compliance.
+    * Non-compliance with PEP8 can result in the failure of the build process. Adherence to PEP8 is not just a best practice but a necessity to ensure smooth integration of new code into the codebase.
+    * If a PR fails due to PEP8 violations, the contributor is required to review the automated feedback provided.
+    * Pay special attention to common PEP8 compliance issues such as proper indentation, appropriate line length, correct use of whitespace, and following the recommended naming conventions.
+    * Contributors are encouraged to iteratively improve their code based on the feedback until full compliance is achieved.
+
+
+# Logging
+
+Always instantiate a logger using the MindsDB utilities module. This practice ensures a uniform approach to logging across different parts of the application.
+Example of Logger Creation:
+
+
+```python
+from mindsdb.utilities import log
+logger = log.getLogger(__name__)
+```
+### Setting Logging 
+
+    * Environment Variable: Use `MINDSDB_LOG_LEVEL` to set the desired logging level. This approach allows for dynamic adjustment of log verbosity without needing code modifications.
+    * Log Levels: Available levels include:
+        * `DEBUG`: Detailed information, typically of interest only when diagnosing problems.
+        * `INFO:` Confirmation that things are working as expected.
+        * `WARNING`: An indication that something unexpected happened, or indicative of some problem in the near future.
+        * `ERROR`: Due to a more serious problem, the software has not been able to perform some function.
+        * `CRITICAL`: A serious error, indicating that the program itself may be unable to continue running.
+    *  Avoid print() statements. They lack the flexibility and control offered by logging mechanisms, particularly in terms of output redirection and level-based filtering.
+    *  The logger name should be `__name__ ` to automatically reflect the module's name. This convention is crucial for pinpointing the origin of log messages.
+
+# Docstrings
+
+ Docstrings are essential for documenting Python code. They provide a clear explanation of the functionality of classes, functions, modules, etc., making the codebase easier to understand and maintain. 
+
+ A well-written docstring should include:
+    * Function's Purpose: Describe what the function/class/module does.
+    * Parameters: List and explain the parameters it takes.
+    * Return Value: Describe what the function returns.
+    * Exceptions: Mention any exceptions that the function might raise.
+
+```python
+def example_function(param1, param2):
+    """This is an example docstring.
+    Args:
+        param1 (type): Description of param1.
+        param2 (type): Description of param2.
+    
+    Returns:
+        type: Description of the return value.
+
+    Raises:
+        ExceptionType: Description of the exception.
+    """
+    # function body...
+```
+
+# Exception Handling 
+
+Implementing robust error handling strategies is essential to maintain the stability and reliability of MindsDB. Proper exception management ensures that the application behaves predictably under error conditions, providing clear feedback and preventing unexpected crashes or behavior.
+
+* Utilizing MindsDB Exceptions: To ensure uniformity and clarity in error reporting, always use predefined exceptions from the MindsDB exceptions library.
+* Adding New Exceptions: If during development you encounter a scenario where none of the existing exceptions adequately represent the error, consider defining a new, specific exception.

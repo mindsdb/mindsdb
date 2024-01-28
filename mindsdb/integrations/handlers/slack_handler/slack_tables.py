@@ -155,7 +155,7 @@ class SlackChannelsTable(APITable):
                 threads = self.client.conversations_replies(
                     channel=channel_ids['general'],
                     ts=ts
-                )['messages']
+                )['messages'][1:]
 
                 return [t['text'] for t in threads]
 

@@ -27,6 +27,7 @@ from mindsdb.integrations.handlers.openai_handler.constants import (
     IMAGE_MODELS,
     FINETUNING_MODELS,
     OPENAI_API_BASE,
+    EMBEDDING_MODELS
 )
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.integrations.libs.llm_utils import get_completed_prompts
@@ -42,6 +43,7 @@ class OpenAIHandler(BaseMLEngine):
         self.generative = True
         self.default_model = 'gpt-3.5-turbo'
         self.default_image_model = 'dall-e-2'
+        self.default_embedding_model = 'text-embedding-ada-002'
         self.default_mode = (
             'default'  # can also be 'conversational' or 'conversational-full'
         )
@@ -149,6 +151,8 @@ class OpenAIHandler(BaseMLEngine):
         if not args.get('model_name'):
             if args['mode'] == 'image':
                 args['model_name'] = self.default_image_model
+            if args['mode'] == 'embedding':
+                args['model_name'] = self.default_embedding_model
             else:
                 args['model_name'] = self.default_model
         elif args['model_name'] not in available_models:
@@ -192,11 +196,8 @@ class OpenAIHandler(BaseMLEngine):
 
         # Embedding Mode
         if args.get('mode', self.default_mode) == 'embedding':
-            api_args = {
-                'question_column': pred_args.get('question_column', None),
-                'model': pred_args.get('model_name', 'text-embedding-ada-002'),
-            }
-            model_name = 'embedding'
+            api_args = {}
+            model_name = args.get('model_name')
             if args.get('question_column'):
                 prompts = list(df[args['question_column']].apply(lambda x: str(x)))
                 empty_prompt_ids = np.where(
@@ -397,7 +398,7 @@ class OpenAIHandler(BaseMLEngine):
             }
             if model_name in IMAGE_MODELS:
                 return _submit_image_completion(kwargs, prompts, api_args)
-            elif model_name == 'embedding':
+            elif model_name in EMBEDDING_MODELS:
                 return _submit_embedding_completion(kwargs, prompts, api_args)
             elif model_name in self.chat_completion_models:
                 return _submit_chat_completion(

@@ -18,6 +18,7 @@ from sqlalchemy import func
 
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.config import Config
+from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.interfaces.storage.fs import FsStore, FileStorage, RESOURCE_GROUP
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.interfaces.file.file_controller import FileController
@@ -336,7 +337,10 @@ class IntegrationController:
         return self._get_integration_record_data(integration_record, sensitive_info)
 
     def get(self, name, sensitive_info=True, case_sensitive=False):
-        integration_record = self._get_integration_record(name, case_sensitive)
+        try:
+            integration_record = self._get_integration_record(name, case_sensitive)
+        except EntityNotExistsError:
+            return None
         return self._get_integration_record_data(integration_record, sensitive_info)
 
     @staticmethod
@@ -358,7 +362,7 @@ class IntegrationController:
             if len(integration_records) > 1:
                 raise Exception(f"There is {len(integration_records)} integrations with name '{name}'")
             if len(integration_records) == 0:
-                raise Exception(f"There is no integration with name '{name}'")
+                raise EntityNotExistsError(f"There is no integration with name '{name}'")
             integration_record = integration_records[0]
         else:
             integration_record = db.session.query(db.Integration).filter(
@@ -366,7 +370,7 @@ class IntegrationController:
                 & (func.lower(db.Integration.name) == func.lower(name))
             ).first()
             if integration_record is None:
-                raise Exception(f"There is no integration with name '{name}'")
+                raise EntityNotExistsError(f"There is no integration with name '{name}'")
 
         return integration_record
 

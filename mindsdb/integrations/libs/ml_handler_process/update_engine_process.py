@@ -13,13 +13,13 @@ def update_engine_process(connection_args: dict, integration_id: int, module_pat
 
     result = None
 
-    if hasattr(module.Handler, 'upgate_engine'):
+    if hasattr(module.Handler, 'update_engine'):
         engine_storage = HandlerStorage(integration_id)
         try:
             result = module.Handler(
                 engine_storage=engine_storage,
                 model_storage=None
-            ).upgate_engine(connection_args=connection_args)
+            ).update_engine(connection_args=connection_args)
         except NotImplementedError:
             return None
         except Exception as e:

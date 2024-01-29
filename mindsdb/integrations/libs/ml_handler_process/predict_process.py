@@ -11,7 +11,6 @@ from mindsdb.utilities.functions import mark_process
 @mark_process(name='learn')
 def predict_process(integration_id: int, predictor_record: db.Predictor, args: dict,
                     module_path: str, ml_engine_name: str, dataframe: DataFrame) -> DataFrame:
-    db.init()
     module = importlib.import_module(module_path)
 
     if predictor_record.id not in handlers_cacher:

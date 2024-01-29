@@ -35,7 +35,6 @@ def learn_process(data_integration_ref: dict, problem_definition: dict, fetch_da
     profiler.set_meta(query='learn_process', api='http', environment=Config().get('environment'))
     with profiler.Context('learn_process'):
         from mindsdb.interfaces.database.database import DatabaseController
-        db.init()
 
         try:
             target = problem_definition.get('target', None)

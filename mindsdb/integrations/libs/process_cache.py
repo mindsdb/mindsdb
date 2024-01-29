@@ -6,6 +6,7 @@ from concurrent.futures import ProcessPoolExecutor, Future
 
 from pandas import DataFrame
 
+import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.ml_task_queue.const import ML_TASK_TYPE
@@ -25,6 +26,7 @@ def init_ml_handler(module_path):
 
     import mindsdb.integrations.libs.ml_handler_process  # noqa
 
+    db.init()
     importlib.import_module(module_path)
 
 

@@ -3,45 +3,75 @@ title: PostgreSQL
 sidebarTitle: PostgreSQL
 ---
 
-This is the implementation of the PostgreSQL data handler for MindsDB.
+This documentation describes the integration of MindsDB with PostgreSQL, a powerful, open-source, object-relational database system. 
+The integration allows for advanced SQL functionalities, extending PostgreSQL's capabilities with MindsDB's features.
 
-[PostgreSQL](https://www.postgresql.org) is a powerful, open-source, object-relational database system that uses and extends the SQL language combined with many features that safely store and scale the most complicated data workloads.
+## Getting Started
 
-## Implementation
-
-The required arguments to establish a connection are as follows:
-
-* `user` is the database user.
-* `password` is the database password.
-* `host` is the host name, IP address, or URL.
-* `port` is the port used to make TCP/IP connection.
-* `database` is the database name.
+Before proceeding, ensure the following prerequisites are met:
 
 <Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/postgres_handler) and run this command: `pip install -r requirements.txt`.
+ 1. Ensure that MindsDB and PostgreSQL are installed on your system or you have access to cloud options.
+ 2. If running locally install the dependencies by running `pip install mindsdb[postgres]`
+
 </Tip>
 
-## Usage
+### Connection
 
-In order to make use of this handler and connect to the PostgreSQL database in MindsDB, the following syntax can be used:
+Establish a connection to your PostgreSQL database using MindsDB by executing the following SQL command:
 
 ```sql
-CREATE DATABASE psql_datasource
-WITH
-    ENGINE = 'postgres',
-    PARAMETERS = {
+CREATE DATABASE psql_datasource 
+WITH ENGINE = 'postgres', 
+PARAMETERS = {
     "host": "127.0.0.1",
     "port": 5432,
     "database": "postgres",
     "user": "postgres",
+    "schema": "data",
     "password": "password"
-    };
+};
 ```
 
-You can use this established connection to query your table as follows:
+Required Connection Parameters:
+
+*    `user`: The username for the PostgreSQL database.
+*    `password`: The password for the PostgreSQL database.
+*    `host`: The hostname, IP address, or URL of the PostgreSQL server.
+*    `port`: The port number for connecting to the PostgreSQL server.
+*    `database`: The name of the PostgreSQL database to connect to.
+
+Optional Connection Parameters:
+
+*    `schema`: The database schema to use. Default is public.
+*    `sslmode`: The SSL mode for the connection.
+
+
+
+### Example Usage
+
+Retrieve data from a specified table by providing the integration name, schema and table names:
 
 ```sql
-SELECT *
-FROM psql_datasource.demo_table
-LIMIT 10;
+   SELECT * FROM psql_datasource.demo_data.used_car_price LIMIT 10;
 ```
+
+Running native queries by wrapping them inside the postgresql integration `SELECT`:
+
+```sql
+SELECT * FROM psql_datasource (
+    --Native Query Goes Here
+     SELECT 
+        model, 
+        COUNT(*) OVER (PARTITION BY model, year) AS units_to_sell, 
+        ROUND((CAST(tax AS decimal) / price), 3) AS tax_div_price
+    FROM demo_data.used_car_price
+);
+```
+<Note>
+    Note: The above examples utilize psql_datasource as the datasource name, which is defined in the CREATE DATABASE command.
+</Note>
+
+### Next Steps
+
+* We recommend the "House Sales Forecasting" tutorial available on MindsDB's documentation.  You can access the tutorial directly at [House Sales Forecasting Tutorial](https://docs.mindsdb.com/sql/tutorials/house-sales-forecasting). 

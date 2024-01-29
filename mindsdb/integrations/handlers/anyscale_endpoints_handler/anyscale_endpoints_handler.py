@@ -56,10 +56,8 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         finally:
             # exit
             os.environ[key] = old_base
-            if oai_key is None:
+            if 'using' in args and 'api_key' in args['using']:
                 del args['using']['api_key']
-            else:
-                args['using']['api_key'] = oai_key
 
     def create(self, target, args=None, **kwargs):
         with self._anyscale_base_api(args):

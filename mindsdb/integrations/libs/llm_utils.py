@@ -64,10 +64,13 @@ def ft_jsonl_validation(
     This helper checks a list of dictionaries for compliance with the format usually expected by LLM providers
     (such as OpenAI or AnyscaleEndpoints) for fine-tuning LLMs that generate chat completions.
     
-    Defaults for column names are set according to the expected defaults, but can be changed if needed by any given provider.
+    Defaults are set according to the expected format, but these can be changed if needed by any given provider.
     
     :param items: list of JSON lines, each dictionary containing a chat sequence. Should be read from a JSONL file.
     :param messages_col: key in each dictionary to access a sequence of chat messages
+    
+    
+    For chat-level checks, this method defers to `ft_chat_format_validation()` below. Relevant parameters for it are:
     
     For each chat:
     :param role_key: key that defines the role of each message (e.g. system, user, or LLM)
@@ -81,48 +84,49 @@ def ft_jsonl_validation(
     
     :return: None, raises an Exception if validation fails.
     """  # noqa
-    valid_keys = (role_key, content_key, name_key)
-    valid_roles = (system_key, user_key, assistant_key)
     try:
+        if not all([isinstance(m, dict) for m in items]):
+            raise Exception("Each line in the provided data should be a dictionary")
+
         for line_num, batch in enumerate(items):
-            prefix = f"Error in line #{line_num + 1}: "
-            if not isinstance(batch, dict):
-                raise Exception(f"{prefix}Each line in the provided data should be a dictionary")
+            prefix = f"error in chat #{line_num + 1}, "
+
+            if not isinstance(batch[messages_col], list):
+                raise Exception(
+                    f"{prefix}Each line in the provided data should have a '{messages_col}' key with a list of messages")  # noqa
 
             if messages_col not in batch:
                 raise Exception(f"{prefix}Each line in the provided data should have a '{messages_col}' key")
 
-            if not isinstance(batch[messages_col], list):
-                raise Exception(f"{prefix}Each line in the provided data should have a '{messages_col}' key with a list of messages")  # noqa
-
             messages = batch[messages_col]
-            if not any(message.get(role_key, None) == assistant_key for message in messages):
-                raise Exception(f"{prefix}Each message list should have at least one message with role '{assistant_key}'")  # noqa
+            try:
+                ft_chat_format_validation(
+                    messages,
+                    role_key=role_key,
+                    content_key=content_key,
+                    name_key=name_key,
+                    system_key=system_key,
+                    user_key=user_key,
+                    assistant_key=assistant_key,
+                )
+            except Exception as e:
+                raise Exception(f"{prefix}{e}")
 
-            for message_num, message in enumerate(messages):
-                prefix = f"Error in line #{line_num + 1}, message #{message_num + 1}: "
-                if role_key not in message or content_key not in message:
-                    raise Exception(f"{prefix}Each message should have a '{role_key}' and '{content_key}' key")
 
-                if any(k not in valid_keys for k in message):
-                    raise Exception(f"{prefix}Each message should only have these keys: {valid_keys}")
-
-                if message.get("role", None) not in valid_roles:
-                    raise Exception(f"{prefix}Each message should have a valid role (one out of {valid_roles})")
 
     except Exception as e:
-        raise Exception(f"Fine-tuning data format is not valid. Got: {e}")
+        raise Exception(f"Fine-tuning data format is not valid. Got {e}")
 
 
-# TODO: merge with jsonl validation
 def ft_chat_format_validation(
         chat: list,
         transitions: Optional[Dict] = None,
-        system_key="system",
-        user_key="user",
-        assistant_key="assistant",
-        role_key="role",
-        content_key="content",
+        system_key: str = "system",
+        user_key: str = "user",
+        assistant_key: str = "assistant",
+        role_key: str = "role",
+        content_key: str = "content",
+        name_key: str = "name",
 ):
     """
     Finite state machine to check a chat has valid format to finetune an LLM with it.
@@ -130,14 +134,46 @@ def ft_chat_format_validation(
     Reference: https://cookbook.openai.com/examples/chat_finetuning_data_prep
 
     The unit test in `test_llm_utils.py` for examples of valid and invalid chats.
-    """
+    
+    :param chat: list of dictionaries, each containing a chat message
+    :param transitions: optional dictionary defining valid transitions between chat messages (e.g. from system to user to assistant)
+    
+    For each chat:
+    :param role_key: key that defines the role of each message (e.g. system, user, or LLM)
+    :param content_key: key that defines the content of each message
+    :param name_key: key that defines the name of each message
+    
+    For each message:
+    :param system_key: valid role for each chat message
+    :param user_key: valid role for each chat message
+    :param assistant_key: valid role for each chat message
+    
+    :return: None if chat is valid, otherwise raise an informative Exception.
+    """  # noqa
+
+    valid_keys = (role_key, content_key, name_key)
+    valid_roles = (system_key, user_key, assistant_key)
+
+    for c in chat:
+        if any(k not in valid_keys for k in c.keys()):
+            raise Exception(f"Each message should only have these keys: `{valid_keys}`. Found: `{c.keys()}`")
+
     roles = [m[role_key] for m in chat]
     contents = [m[content_key] for m in chat]
 
-    # should have at least one assistant message, otherwise it's useless for FT
-    if 'assistant' not in roles:
-        return False
+    if len(roles) != len(contents):
+        raise Exception(f"Each message should contain both `{role_key}` and `{content_key}` fields")
 
+    if len(roles) == 0:
+        raise Exception('Chat should have at least one message')
+
+    if assistant_key not in roles:
+        raise Exception('Chat should have at least one assistant message')  # otherwise it is useless for FT
+
+    if user_key not in roles:
+        raise Exception('Chat should have at least one user message')  # perhaps remove in the future
+
+    # set default transitions for finite state machine if undefined
     if transitions is None:
         transitions = {
             None: [system_key, user_key],
@@ -146,24 +182,26 @@ def ft_chat_format_validation(
             assistant_key: [user_key]
         }
 
-    # check base condition
-    if not (user_key in roles and assistant_key in roles):
-        return False
 
-    # check order is valid
+    # check order is valid via finite state machine
     state = None
-    for role, content in zip(roles, contents):
+    for i, (role, content) in enumerate(zip(roles, contents)):
+
+        prefix = f"message #{i + 1}: "
+
+        # check invalid roles
+        if role not in valid_roles:
+            raise Exception(f"{prefix}Invalid role (found `{role}`, expected one of `{valid_roles}`)")
+
+        # check content
+        if not isinstance(content, str):
+            raise Exception(f"{prefix}Content should be a string, got type `{type(content)}`")
+
+        # check transition
         if role not in transitions[state]:
-            return False
+            raise Exception(f"{prefix}Invalid transition from `{state}` to `{role}`")
         else:
             state = role
-
-        # content check - should be a string
-        if not isinstance(content, str):
-            return False
-
-    # chat is valid
-    return True
 
 
 def ft_chat_formatter(df: pd.DataFrame) -> List[Dict]:
@@ -214,21 +252,21 @@ def ft_chat_formatter(df: pd.DataFrame) -> List[Dict]:
         for _, row in df.iterrows():
             chat = json.loads(row['chat_json'])
             assert list(chat.keys()) == ['messages'], "Each chat should have a 'messages' key, and nothing else."
-            if ft_chat_format_validation(chat['messages']):
-                chats.append(chat)
+            ft_chat_format_validation(chat['messages'])  # will raise Exception if chat is invalid
+            chats.append(chat)
 
     # 2b. chats are in tabular format - aggregate each chat sequence into one row
     else:
         chat = []
         for i, row in df.iterrows():
             if row['role'] == 'system' and len(chat) > 0:
-                if ft_chat_format_validation(chat):
-                    chats.append({'messages': chat})
+                ft_chat_format_validation(chat) # will raise Exception if chat is invalid
+                chats.append({'messages': chat})
                 chat = []
             event = {'role': row['role'], 'content': row['content']}
             chat.append(event)
 
-        if ft_chat_format_validation(chat):
-            chats.append({'messages': chat})
+        ft_chat_format_validation(chat) # will raise Exception if chat is invalid
+        chats.append({'messages': chat})
 
     return chats

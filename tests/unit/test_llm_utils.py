@@ -83,12 +83,11 @@ class TestLLM(unittest.TestCase):
         ]
 
         for chat in valid_chats:
-            # should return True, chat is valid
-            assert ft_chat_format_validation(chat)
+            ft_chat_format_validation(chat)  # if chat is valid, returns `None`
 
         for chat in invalid_chats:
-            # all of these should return False
-            assert not ft_chat_format_validation(chat)
+            with self.assertRaises(Exception):
+                ft_chat_format_validation(chat)  # all of these should raise an Exception
 
     def test_ft_chat_formatter(self):
         # 1a. long DF with required columns (`role` and `content`)
@@ -98,7 +97,7 @@ class TestLLM(unittest.TestCase):
         })
         chats = ft_chat_formatter(df)
         assert list(chats[0].keys()) == ['messages']
-        assert ft_chat_format_validation(chats[0]['messages'])
+        ft_chat_format_validation(chats[0]['messages'])  # valid, returns None
 
         # 1b. add `chat_id` to df
         df = pd.DataFrame({
@@ -111,7 +110,7 @@ class TestLLM(unittest.TestCase):
         chats = ft_chat_formatter(df)
         for chat in chats:
             assert list(chat.keys()) == ['messages']
-            assert ft_chat_format_validation(chat['messages'])
+            ft_chat_format_validation(chat['messages'])  # valid, returns None
 
         # 1c. add `message_id` to df (scrambled to check sorting)
         df = pd.DataFrame({
@@ -123,7 +122,7 @@ class TestLLM(unittest.TestCase):
         chats = ft_chat_formatter(df)
         for chat in chats:
             assert list(chat.keys()) == ['messages']
-            assert ft_chat_format_validation(chat['messages'])
+            ft_chat_format_validation(chat['messages'])  # valid, returns None
 
         # 2a. json format - df contains single column `chat_json`
         df = pd.DataFrame({
@@ -132,7 +131,7 @@ class TestLLM(unittest.TestCase):
             ]})
         chats = ft_chat_formatter(df)
         assert list(chats[0].keys()) == ['messages']
-        assert ft_chat_format_validation(chats[0]['messages'])
+        ft_chat_format_validation(chats[0]['messages'])  # valid, returns None
 
 
     def test_ft_jsonl_validation(self):
@@ -149,4 +148,4 @@ class TestLLM(unittest.TestCase):
         chats = ft_chat_formatter(df)
         chats[0]['messages'][1]['role'] = 'invalid'
         with self.assertRaises(Exception):
-            self.assertRaises(ft_jsonl_validation([line for line in chats]))
+            ft_jsonl_validation([line for line in chats])

@@ -15,6 +15,18 @@ from mindsdb.api.http.namespaces.configs.fine_tuning import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
 
 
+def add_fine_tuning_job(job_id, model_id, training_file, created_at):
+    fine_tuning_job_record = db.FineTuningJobs(
+        id=job_id,
+        model_id=model_id,
+        training_file=training_file,
+        created_at=created_at,
+    )
+
+    db.session.add(fine_tuning_job_record)
+    db.session.commit()
+
+
 @ns_conf.route('/jobs')
 class FineTuning(Resource):
     # TODO: table should not be created here
@@ -75,15 +87,7 @@ class FineTuning(Resource):
             )
 
             # store job details in DB
-            fine_tuning_job_record = db.FineTuningJobs(
-                id=job_id,
-                model_id=fine_tuned_model_record.id,
-                training_file=training_file,
-                created_at=created_at,
-            )
-
-            db.session.add(fine_tuning_job_record)
-            db.session.commit()
+            add_fine_tuning_job(job_id, fine_tuned_model_record.id, training_file, created_at)
             
             return {
                 'object': 'fine_tuning.job',

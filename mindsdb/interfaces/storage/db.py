@@ -546,3 +546,11 @@ class FineTuningJobs(Base):
     model_id: int = Column(Integer, nullable=False)
     training_file = Column(String, nullable=False)
     created_at: datetime.datetime = Column(DateTime, default=datetime.datetime.now)
+
+    def as_dict(self) -> Dict:
+        return {
+            "id": self.id,
+            "model_id": self.model_id,
+            "training_file": self.training_file,
+            "created_at": self.created_at,
+        }

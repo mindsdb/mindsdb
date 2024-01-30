@@ -538,3 +538,11 @@ class QueryContext(Base):
         DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
     )
     created_at: datetime.datetime = Column(DateTime, default=datetime.datetime.now)
+
+
+class FineTuningJobs(Base):
+    __tablename__ = "fine_tuning_jobs"
+    id: int = Column(String, primary_key=True)
+    model_id: int = Column(Integer, nullable=False)
+    training_file = Column(String, nullable=False)
+    created_at: datetime.datetime = Column(DateTime, default=datetime.datetime.now)

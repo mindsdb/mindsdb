@@ -121,8 +121,8 @@ class GoogleGeminiHandler(BaseMLEngine):
 
         # Embedding Mode
         if args.get('mode') == 'embedding':
-            args['type']=pred_args.get('type', 'query')
-            return self.embedding_worker(args, df)  
+            args['type'] = pred_args.get('type', 'query')
+            return self.embedding_worker(args, df)
 
         elif args.get('mode') == 'vision':
             return self.vision_worker(args, df)
@@ -137,9 +137,8 @@ class GoogleGeminiHandler(BaseMLEngine):
         else:
             if args.get('prompt_template', False):
                 prompts, empty_prompt_ids = get_completed_prompts(
-                                                base_template,
-                                                df
-                                    )
+                                                    base_template,
+                                                    df)
 
             elif args.get('context_column', False):
                 empty_prompt_ids = np.where(
@@ -204,7 +203,7 @@ class GoogleGeminiHandler(BaseMLEngine):
         # remove prompts without signal from completion queue
         prompts = [
             j for i, j in enumerate(prompts) if i not in empty_prompt_ids
-            ]
+        ]
 
         api_key = self._get_google_gemini_api_key(args)
         genai.configure(api_key=api_key)
@@ -216,7 +215,7 @@ class GoogleGeminiHandler(BaseMLEngine):
         for m in prompts:
             results.append(model.generate_content(m).text)
 
-        pred_df = pd.DataFrame(results, columns=[args['target']])        
+        pred_df = pd.DataFrame(results, columns=[args['target']])
         return pred_df
 
     def _get_google_gemini_api_key(self, args, strict=True):
@@ -253,7 +252,7 @@ class GoogleGeminiHandler(BaseMLEngine):
     def embedding_worker(self, args: Dict, df: pd.DataFrame):
         if args.get('question_column'):
             prompts = list(df[args['question_column']].apply(lambda x: str(x)))
-            if args.get('title_column',None):
+            if args.get('title_column', None):
                 titles = list(df[args['title_column']].apply(lambda x: str(x)))
             else:
                 titles = None
@@ -290,14 +289,14 @@ class GoogleGeminiHandler(BaseMLEngine):
         api_key = self._get_google_gemini_api_key(args)
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-pro-vision')
-        imgs=[Image.open(BytesIO(requests.get(url).content)) for url in urls]
+        imgs = [Image.open(BytesIO(requests.get(url).content)) for url in urls]
         if prompts:
             results = [model.generate_content([img, text]).text for img, text in zip(imgs, prompts)]
         else:
             results = [model.generate_content(img).text for img in imgs]
 
         pred_df = pd.DataFrame(results, columns=[args['target']])
-    
+
         return pred_df
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:

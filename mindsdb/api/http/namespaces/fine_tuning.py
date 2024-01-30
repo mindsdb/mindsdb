@@ -1,9 +1,12 @@
 import uuid
+import datetime
 from flask import request
 from http import HTTPStatus
 from flask_restx import Resource
 
+import mindsdb.interfaces.storage.db as db
 from mindsdb.interfaces.storage.db import Predictor
+from mindsdb.interfaces.storage.db import FineTuningJobs
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.interfaces.model.functions import get_predictor_integration
 
@@ -14,8 +17,16 @@ from mindsdb.api.executor.controllers.session_controller import SessionControlle
 
 @ns_conf.route('/jobs')
 class FineTuning(Resource):
+    # TODO: table should not be created here
+    def create_table_if_not_exists(self):
+        FineTuningJobs.metadata.create_all(db.session.get_bind(), checkfirst=True)
+        
+
     @ns_conf.doc('create_fine_tuning_job')
     def post(self):
+        # TODO: table should not be created here
+        self.create_table_if_not_exists()
+
         # extract parameters from request
         try:
             model = request.json['model']
@@ -52,9 +63,10 @@ class FineTuning(Resource):
 
             # generate job ID
             job_id = uuid.uuid4().hex
+            created_at = datetime.datetime.now()
 
             # execute fine-tuning job
-            base_ml_engine.finetune(
+            fine_tuned_model_record = base_ml_engine.finetune(
                 model_name=model_record.name,
                 base_model_version=model_record.version,
                 project_name=project_name,
@@ -63,6 +75,15 @@ class FineTuning(Resource):
             )
 
             # store job details in DB
+            fine_tuning_job_record = db.FineTuningJobs(
+                id=job_id,
+                model_id=fine_tuned_model_record.id,
+                training_file=training_file,
+                created_at=created_at,
+            )
+
+            db.session.add(fine_tuning_job_record)
+            db.session.commit()
             
 
             return {

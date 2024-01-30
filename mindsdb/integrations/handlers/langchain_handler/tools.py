@@ -12,7 +12,7 @@ from langchain.text_splitter import CharacterTextSplitter
 from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 from langchain.chains import ReduceDocumentsChain, MapReduceDocumentsChain
 
-from mindsdb.interfaces.skills.skill_tool import make_tools_from_skill
+from mindsdb.integrations.handlers.langchain_handler.skill_tool import make_tools_from_skill
 
 
 # Individual tools

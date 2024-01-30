@@ -12,7 +12,7 @@ from mindsdb.api.http.namespaces.configs.fine_tuning import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
 
 
-@ns_conf.route('/')
+@ns_conf.route('/jobs')
 class FineTuning(Resource):
     @ns_conf.doc('create_fine_tuning_job')
     def post(self):

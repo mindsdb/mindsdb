@@ -85,9 +85,12 @@ class FineTuning(Resource):
             db.session.add(fine_tuning_job_record)
             db.session.commit()
             
-
             return {
-                'job_id': job_id
+                'object': 'fine_tuning.job',
+                'id': job_id,
+                'model': model_name,
+                'training_file': training_file,
+                'created_at': int(created_at.timestamp())
             }, HTTPStatus.OK
         except Exception as e:
             return str(e), HTTPStatus.INTERNAL_SERVER_ERROR

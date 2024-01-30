@@ -71,10 +71,34 @@ SELECT * FROM psql_datasource (
 <Note>
     Note: The above examples utilize psql_datasource as the datasource name, which is defined in the CREATE DATABASE command.
 </Note>
-
 <Tip>
-
 **Next Steps**
+
  Check out the [House Sales Forecasting tutorial](https://docs.mindsdb.com/sql/tutorials/house-sales-forecasting), 
  which uses the data from PostgreSQL connection to MindsDB.
 </Tip>
+
+## Troubleshooting Guide
+
+<Warning>
+`Database Connection Error`
+
+* Symptoms: Failure to connect MindsDB with the PostgreSQL database.
+* `Checklist`:
+    1. Make sure the PostgreSQL server is active.
+    2. Confirm if host, port, user, schema, and password are correct. Try a direct PostgreSQL connection.
+    3. Ensure a stable network between MindsDB and PostgreSQL.
+</Warning>
+
+<Warning>
+`SQL statement cannot be parsed by mindsdb_sql`
+
+* Symptoms: SQL queries failing or not recognizing table names containing spaces or sepcial charachters.
+* `Checklist`:
+    1. Ensure table names with spaces or special characters are enclosed in backticks.
+    2. Examples:
+        * Incorrect: SELECT * FROM integration.travel data
+        * Incorrect: SELECT * FROM integration.'travel data'
+        * Correct: SELECT * FROM integration.`` `travel data` ``
+</Warning>
+

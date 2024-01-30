@@ -220,16 +220,7 @@
           "group": "Setup/Install",
           "pages": [
             "setup/self-hosted/docker",
-            
-            {
-              "group": "pip",
-              "pages": [
-                "setup/self-hosted/pip/linux",
-                "setup/self-hosted/pip/windows",
-                "setup/self-hosted/pip/macos",
-                "setup/self-hosted/pip/source"
-              ]
-            },
+            "setup/self-hosted/docker-desktop",
             {
               "group": "Cloud",
               "pages": [
@@ -238,7 +229,6 @@
                 "setup/community-deploys-mindsdb"
               ]
             },
-            "setup/self-hosted/docker-desktop",
             {
               "group": "Configuration",
               "pages": [
@@ -393,8 +383,9 @@
       "group": "SQL API",
       "pages": [
         "mindsdb_sql/overview",
+        "mindsdb_sql/syntax",
         {
-          "group": "Connect",
+          "group": "Get Started",
           "pages": [
             "mindsdb_sql/connect/mindsdb_editor",
             "mindsdb_sql/connect/postgres-client",
@@ -410,7 +401,7 @@
           ]
         },
         {
-          "group": "Databases",
+          "group": "Integrate Data Sources",
           "pages": [
             "mindsdb_sql/sql/list-data-handlers",
             "mindsdb_sql/sql/create/database",
@@ -420,7 +411,7 @@
           ]
         },
         {
-          "group": "ML Engines",
+          "group": "Integrate AI Engines",
           "pages": [
             "mindsdb_sql/sql/list-ml-handlers",
             "mindsdb_sql/sql/create/ml-engine",
@@ -429,7 +420,7 @@
           ]
         },
         {
-          "group": "Projects",
+          "group": "Create Projects",
           "pages": [
             "mindsdb_sql/sql/create/project",
             "mindsdb_sql/sql/drop/project",
@@ -437,7 +428,7 @@
           ]
         },
         {
-          "group": "Models",
+          "group": "Deploy Models",
           "pages": [
             "mindsdb_sql/sql/create/model",
             "mindsdb_sql/sql/drop/model",
@@ -449,7 +440,7 @@
           ]
         },
         {
-          "group": "Predictions",
+          "group": "Get Predictions",
           "pages": [
             "mindsdb_sql/sql/get-single-prediction",
             "mindsdb_sql/sql/get-batch-predictions",
@@ -457,7 +448,7 @@
           ]
         },
         {
-          "group": "Tables",
+          "group": "Manipulate Data in Tables, Views, and Files",
           "pages": [
             "mindsdb_sql/sql/create/table",
             "mindsdb_sql/sql/drop/table",
@@ -466,27 +457,17 @@
             "mindsdb_sql/sql/api/update",
             "mindsdb_sql/sql/api/insert",
             "mindsdb_sql/sql/api/join-on",
-            "mindsdb_sql/sql/api/delete"
-          ]
-        },
-        {
-          "group": "Views",
-          "pages": [
+            "mindsdb_sql/sql/api/delete",
             "mindsdb_sql/sql/create/view",
             "mindsdb_sql/sql/drop/view",
-            "mindsdb_sql/sql/api/select-view"
-          ]
-        },
-        {
-          "group": "Files",
-          "pages": [
+            "mindsdb_sql/sql/api/select-view",
             "mindsdb_sql/sql/create/file",
             "mindsdb_sql/sql/drop/file",
             "mindsdb_sql/sql/api/select-files"
           ]
         },
         {
-          "group": "Jobs",
+          "group": "Automate Workflows with Jobs",
           "pages": [
             "mindsdb_sql/sql/create/jobs",
             "mindsdb_sql/sql/drop/jobs",
@@ -494,7 +475,7 @@
           ]
         },
         {
-          "group": "Triggers",
+          "group": "Automate Workflows with Triggers",
           "pages": [
             "mindsdb_sql/sql/create/trigger",
             "mindsdb_sql/sql/drop/trigger",
@@ -502,7 +483,7 @@
           ]
         },
         {
-          "group": "Agents",
+          "group": "Customize Chatbots with Agents",
           "pages": [
             "mindsdb_sql/agents/agent",
             "mindsdb_sql/agents/chatbot",

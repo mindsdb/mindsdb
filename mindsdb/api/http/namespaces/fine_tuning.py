@@ -34,6 +34,7 @@ class FineTuning(Resource):
         project_name, model_name = model.split('.', 1)
 
         try:
+            # extract model name, version and record
             name_no_version, version = Predictor.get_name_and_version(model_name)
             try:
                 model_record = session.model_controller.get_model_record(name_no_version, version=version, project_name=project_name)
@@ -46,10 +47,13 @@ class FineTuning(Resource):
             # get the integration handler
             integration_name = get_predictor_integration(model_record).name
 
+            # get handler instance
             base_ml_engine = session.integration_controller.get_handler(integration_name)
 
+            # generate job ID
             job_id = uuid.uuid4().hex
 
+            # execute fine-tuning job
             base_ml_engine.finetune(
                 model_name=model_record.name,
                 base_model_version=model_record.version,
@@ -57,6 +61,9 @@ class FineTuning(Resource):
                 data_integration_ref=model_record.data_integration_ref,
                 fetch_data_query=f"SELECT * FROM {training_file}",
             )
+
+            # store job details in DB
+            
 
             return {
                 'job_id': job_id

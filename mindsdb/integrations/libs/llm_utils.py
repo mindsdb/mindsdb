@@ -46,8 +46,6 @@ def get_completed_prompts(base_template, df):
     return prompts, empty_prompt_ids
 
 
-# TODO: unit test for this method
-# TODO: add all checks mentioned in https://cookbook.openai.com/examples/chat_finetuning_data_prep
 def ft_jsonl_validation(
         items: list,  # read from a JSONL file
         messages_col: str = "messages",
@@ -116,7 +114,7 @@ def ft_jsonl_validation(
         raise Exception(f"Fine-tuning data format is not valid. Got: {e}")
 
 
-# TODO: unit test for this method
+# TODO: merge with jsonl validation
 def ft_chat_format_validation(
         chat: list,
         transitions: Optional[Dict] = None,
@@ -124,12 +122,22 @@ def ft_chat_format_validation(
         user_key="user",
         assistant_key="assistant",
         role_key="role",
+        content_key="content",
 ):
     """
     Finite state machine to check a chat has valid format to finetune an LLM with it.
     Follows OpenAI ChatCompletion format (also used by other providers such as AnyscaleEndpoints).
+    Reference: https://cookbook.openai.com/examples/chat_finetuning_data_prep
+
+    The unit test in `test_llm_utils.py` for examples of valid and invalid chats.
     """
     roles = [m[role_key] for m in chat]
+    contents = [m[content_key] for m in chat]
+
+    # should have at least one assistant message, otherwise it's useless for FT
+    if 'assistant' not in roles:
+        return False
+
     if transitions is None:
         transitions = {
             None: [system_key, user_key],
@@ -144,20 +152,24 @@ def ft_chat_format_validation(
 
     # check order is valid
     state = None
-    for role in roles:
+    for role, content in zip(roles, contents):
         if role not in transitions[state]:
             return False
         else:
             state = role
 
+        # content check - should be a string
+        if not isinstance(content, str):
+            return False
+
     # chat is valid
     return True
 
 
-# TODO: unit test for this method
 def ft_chat_formatter(df: pd.DataFrame) -> List[Dict]:
     """
         For more details, check `FineTuning -> Data Format` in the Anyscale API reference, or the OpenAI equivalent.
+        Additionally, the unit test in `test_llm_utils.py` provides example usage.
 
         :param df: input dataframe has chats in one of the following formats:
             1) long tabular: at least two columns, `role` and `content`. Rows contain >= 1 chats in long (stacked) format.
@@ -177,6 +189,10 @@ def ft_chat_formatter(df: pd.DataFrame) -> List[Dict]:
 
             If only `message_id` is provided, it must not contain duplicate IDs. Entire dataset will be treated 
             as a single chat. Otherwise an exception will be raised.
+            
+        :return: list of chats. Each chat is a dictionary with a top level key 'messages' containing a list of messages 
+        that comply with the OpenAI's ChatEndpoint expected format (i.e., each is a dictionary with a `role` and 
+        `content` key.
 
     """  # noqa
     # 1. pre-sort df on optional columns
@@ -197,7 +213,8 @@ def ft_chat_formatter(df: pd.DataFrame) -> List[Dict]:
     if 'chat_json' in df.columns:
         for _, row in df.iterrows():
             chat = json.loads(row['chat_json'])
-            if ft_chat_format_validation(chat):
+            assert list(chat.keys()) == ['messages'], "Each chat should have a 'messages' key, and nothing else."
+            if ft_chat_format_validation(chat['messages']):
                 chats.append(chat)
 
     # 2b. chats are in tabular format - aggregate each chat sequence into one row

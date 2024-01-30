@@ -27,10 +27,10 @@ def add_fine_tuning_job(job_id, model_id, training_file, created_at):
     db.session.commit()
 
 def list_fine_tuning_jobs():
-    return db.session.query(FineTuningJobs).all()
+    return [job.as_dict() for job in db.session.query(FineTuningJobs).all()]
 
 def get_fine_tuning_job(job_id):
-    return db.session.query(FineTuningJobs).filter_by(id=job_id).first()
+    return db.session.query(FineTuningJobs).filter_by(id=job_id).first().as_dict()
 
 
 @ns_conf.route('/jobs')
@@ -109,8 +109,10 @@ class FineTuning(Resource):
     def get(self):
         try:
             fine_tuning_jobs = list_fine_tuning_jobs()
+            for job in fine_tuning_jobs:
+                job['object'] = 'fine_tuning.job'
 
-            return [job.update({'object': 'fine_tuning.job'}) for job in fine_tuning_jobs], HTTPStatus.OK
+            return fine_tuning_jobs, HTTPStatus.OK
         except Exception as e:
             return str(e), HTTPStatus.INTERNAL_SERVER_ERROR
         
@@ -122,6 +124,6 @@ class FineTuningJob(Resource):
         try:
             fine_tuning_job = get_fine_tuning_job(job_id)
 
-            return fine_tuning_job.as_dict(), HTTPStatus.OK
+            return fine_tuning_job, HTTPStatus.OK
         except Exception as e:
             return str(e), HTTPStatus.INTERNAL_SERVER_ERROR

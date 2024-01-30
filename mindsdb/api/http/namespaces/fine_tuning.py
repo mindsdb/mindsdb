@@ -27,10 +27,47 @@ def add_fine_tuning_job(job_id, model_id, training_file, created_at):
     db.session.commit()
 
 def list_fine_tuning_jobs():
-    return [job.as_dict() for job in db.session.query(FineTuningJobs).all()]
+    fine_tuning_job_records = db.session.query(FineTuningJobs).all()
+
+    fine_tuning_jobs = []
+    for record in fine_tuning_job_records:
+        fine_tuning_job = update_fine_tuning_job_data(record)
+
+        fine_tuning_jobs.append(fine_tuning_job)
+
+    return fine_tuning_jobs
 
 def get_fine_tuning_job(job_id):
-    return db.session.query(FineTuningJobs).filter_by(id=job_id).first().as_dict()
+    fine_tuning_job = db.session.query(FineTuningJobs).filter_by(id=job_id).first()
+
+    # update status of fine-tuning job based on model status
+    fine_tuning_job = update_fine_tuning_job_data(fine_tuning_job)
+
+    return fine_tuning_job
+
+def update_fine_tuning_job_data(fine_tuning_job_record):
+    fine_tuning_job = fine_tuning_job_record.as_dict()
+
+    # get model record for fine-tuning job
+    model_record = db.session.query(Predictor).filter_by(id=fine_tuning_job['model_id']).first()
+
+    # remove model_id and add model
+    fine_tuning_job.pop('model_id')
+    fine_tuning_job['model'] = model_record.name
+
+    # update status of fine-tuning job based on model status
+    if model_record.status == 'generating':
+        fine_tuning_job['status'] = 'running'
+
+    elif model_record.status == 'complete':
+        fine_tuning_job['status'] = 'succeeded'
+
+    elif model_record.status == 'error':
+        fine_tuning_job['status'] = 'failed'
+
+    # TODO: add support for other statuses
+
+    return fine_tuning_job
 
 
 @ns_conf.route('/jobs')

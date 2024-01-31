@@ -71,10 +71,10 @@ def list_fine_tuning_jobs(after: int, limit: int) -> Dict:
     # get fine-tuning job records
     fine_tuning_job_records = (
         db.session.query(FineTuningJobs, Predictor)
-                   .join(Predictor, Predictor.id == FineTuningJobs.model_id)
-                   .filter(FineTuningJobs.id > after)
-                   .limit(limit + 1)
-                   .all()
+        .join(Predictor, Predictor.id == FineTuningJobs.model_id)
+        .filter(FineTuningJobs.id > after)
+        .limit(limit + 1)
+        .all()
     )
 
     # check if there are more records
@@ -115,9 +115,9 @@ def get_fine_tuning_job(job_id: int) -> Dict:
 
     fine_tuning_job_record, predictor_record = (
         db.session.query(FineTuningJobs, Predictor)
-                   .join(Predictor, Predictor.id == FineTuningJobs.model_id)
-                   .filter(FineTuningJobs.id == job_id)
-                   .first()
+        .join(Predictor, Predictor.id == FineTuningJobs.model_id)
+        .filter(FineTuningJobs.id == job_id)
+        .first()
     )
 
     # parse the fine-tuning job record

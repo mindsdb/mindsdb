@@ -16,6 +16,8 @@ logger = log.getLogger(__name__)
 
 
 ANYSCALE_API_BASE = 'https://api.endpoints.anyscale.com/v1'
+MIN_FT_VAL_LEN = 20  # anyscale checks for at least 20 validation chats
+MIN_FT_DATASET_LEN = MIN_FT_VAL_LEN * 2  # we ask for 20 training chats as well
 
 
 class AnyscaleEndpointsHandler(OpenAIHandler):
@@ -128,9 +130,9 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
 
         # 2. split chats in training and validation subsets
         series = pd.Series(chats)
-        if len(series) < 20 * 2:
-            raise Exception("Dataset is too small to finetune. Please include at least 40 samples (complete chats).")
-        val_size = max(20, int(len(series) * test_size))  # at least 20 samples required by Anyscale
+        if len(series) < MIN_FT_DATASET_LEN:
+            raise Exception(f"Dataset is too small to finetune. Please include at least {MIN_FT_DATASET_LEN} samples (complete chats).")
+        val_size = max(MIN_FT_VAL_LEN, int(len(series) * test_size))  # at least as many samples as required by Anyscale
         train = series.iloc[:-val_size]
         val = series.iloc[-val_size:]
 

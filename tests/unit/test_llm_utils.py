@@ -7,35 +7,11 @@ from mindsdb.integrations.libs.llm_utils import ft_jsonl_validation, ft_chat_for
 
 
 class TestLLM(unittest.TestCase):
-    def test_get_completed_prompts(self):
-        placeholder = "{{text}}"
-        prefix = "You are a helpful assistant. Here is the user's input:"
-        user_inputs = ["Hi! I would love some help.", "Hello! Are you sentient?", None]
+    @classmethod
+    def setUpClass(cls):
 
-        # send all rows at once
-        base_template = prefix + placeholder
-        df = pd.DataFrame({'text': user_inputs})
-        prompts, empties = get_completed_prompts(base_template, df)
-
-        # should detect a single missing value in the relevant column (last row)
-        assert empties.shape == (1, )
-        assert empties.dtype == int
-        assert empties[0] == 2
-
-        # check results
-        for i in range(len(empties)):
-            # in-fill
-            assert prompts[0] == prefix + user_inputs[i]
-
-        # edge case - invalid template
-        placeholder = ""
-        base_template = prefix + placeholder
-        df = pd.DataFrame({'text': user_inputs})
-        with self.assertRaises(Exception):
-            get_completed_prompts(base_template, df)
-
-    def test_ft_chat_format_validation(self):
-        valid_chats = [
+        # used in `test_ft_chat_format_validation`
+        cls.valid_chats = [
             # u/a pattern
             [
                 {"role": "user", "content": "hi"},
@@ -67,7 +43,8 @@ class TestLLM(unittest.TestCase):
             ],
         ]
 
-        invalid_chats = [
+        # used in `test_ft_chat_format_validation`
+        cls.invalid_chats = [
             # invalid - repeated user
             [
                 {"role": "user", "content": "hi"},
@@ -110,10 +87,38 @@ class TestLLM(unittest.TestCase):
             ],
         ]
 
-        for chat in valid_chats:
+    def test_get_completed_prompts(self):
+        placeholder = "{{text}}"
+        prefix = "You are a helpful assistant. Here is the user's input:"
+        user_inputs = ["Hi! I would love some help.", "Hello! Are you sentient?", None]
+
+        # send all rows at once
+        base_template = prefix + placeholder
+        df = pd.DataFrame({'text': user_inputs})
+        prompts, empties = get_completed_prompts(base_template, df)
+
+        # should detect a single missing value in the relevant column (last row)
+        assert empties.shape == (1, )
+        assert empties.dtype == int
+        assert empties[0] == 2
+
+        # check results
+        for i in range(len(empties)):
+            # in-fill
+            assert prompts[0] == prefix + user_inputs[i]
+
+        # edge case - invalid template
+        placeholder = ""
+        base_template = prefix + placeholder
+        df = pd.DataFrame({'text': user_inputs})
+        with self.assertRaises(Exception):
+            get_completed_prompts(base_template, df)
+
+    def test_ft_chat_format_validation(self):
+        for chat in self.valid_chats:
             ft_chat_format_validation(chat)  # if chat is valid, returns `None`
 
-        for chat in invalid_chats:
+        for chat in self.invalid_chats:
             with self.assertRaises(Exception):
                 ft_chat_format_validation(chat)  # all of these should raise an Exception
 

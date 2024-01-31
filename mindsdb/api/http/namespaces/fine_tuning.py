@@ -73,6 +73,9 @@ def parse_fine_tuning_job_data(fine_tuning_job_record, predictor_record):
     fine_tuning_job.pop('model_id')
     fine_tuning_job['model'] = f"{predictor_record.name}.{predictor_record.version}"
 
+    # add organization ID
+    fine_tuning_job['organization_id'] = predictor_record.company_id    
+
     # convert created_at to timestamp
     fine_tuning_job['created_at'] = int(fine_tuning_job['created_at'].timestamp())
 
@@ -157,13 +160,16 @@ class FineTuning(Resource):
             # store job details in DB
             job_id = add_fine_tuning_job(fine_tuned_predictor_record.id, training_file, validation_file, created_at)
             
+            # TODO: add status and result_files (?) to response
             return {
                 'object': 'fine_tuning.job',
                 'id': job_id,
                 'model': model_name,
-                'training_file': training_file,
                 'created_at': int(created_at.timestamp()),
-                'fine_tuned_model': None
+                'fine_tuned_model': None,
+                'organization_id': predictor_record.company_id,
+                'validation_file': validation_file,
+                'training_file': training_file,
             }, HTTPStatus.OK
         except Exception as e:
             return str(e), HTTPStatus.INTERNAL_SERVER_ERROR

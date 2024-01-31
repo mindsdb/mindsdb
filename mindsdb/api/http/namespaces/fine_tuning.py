@@ -28,7 +28,7 @@ def add_fine_tuning_job(job_id, model_id, training_file, created_at):
 
 def list_fine_tuning_jobs():
     fine_tuning_job_records = (
-        db.session.query(FineTuningJobs)
+        db.session.query(FineTuningJobs, Predictor)
             .join(Predictor, Predictor.id == FineTuningJobs.model_id)
             .all()
     )
@@ -44,7 +44,7 @@ def list_fine_tuning_jobs():
 
 def get_fine_tuning_job(job_id):
     fine_tuning_job_record, predictor_record = (
-        db.session.query(FineTuningJobs)
+        db.session.query(FineTuningJobs, Predictor)
             .join(Predictor, Predictor.id == FineTuningJobs.model_id)
             .filter(FineTuningJobs.id == job_id)
             .first()

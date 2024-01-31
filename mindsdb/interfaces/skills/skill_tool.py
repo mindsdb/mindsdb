@@ -61,7 +61,7 @@ def _get_rag_query_function(
         vector_store_handler_data = session_controller.integration_controller.get(knowledge_base.vector_database.name)
         vector_store_args = vector_store_handler_data['connection_data']
         vector_store_folder_name = vector_store_args.get('persist_directory', os.getcwd())
-        vector_store_handler = session_controller.integration_controller.get_handler(knowledge_base.vector_database.name)
+        vector_store_handler = session_controller.integration_controller.get_data_handler(knowledge_base.vector_database.name)
         vector_store_storage_path = vector_store_handler.handler_storage.folder_get(vector_store_folder_name)
 
         # Use OpenAI for interpreting the vector store search response.

@@ -45,14 +45,13 @@ class TestAutokeras(BaseExecutorTest):
             columns = [col.alias if col.alias is not None else col.name for col in ret.columns]
             return pd.DataFrame(ret.data, columns=columns)
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_regression_with_numerical_training(self, mock_handler):
+    def test_regression_with_numerical_training(self):
         # dataset, string values
         df = pd.DataFrame(range(1, 50), columns=["a"])
         df["b"] = 50 - df.a
         df["c"] = round((df["a"] * 3 + df["b"]) / 50)
 
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.set_data('df', df)
 
         # create project
         self.run_sql("create database proj")
@@ -61,7 +60,7 @@ class TestAutokeras(BaseExecutorTest):
         self.run_sql(
             """
            create model proj.modelx
-           from pg (select * from df)
+           from dummy_data (select * from df)
            predict c
            using
              engine='autokeras',
@@ -84,15 +83,14 @@ class TestAutokeras(BaseExecutorTest):
         assert len(ret) == 1
         assert (avg_c > -5) and (avg_c < 5)
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_regression_with_categorical_training(self, mock_handler):
+    def test_regression_with_categorical_training(self):
         # dataset, string values
         df = pd.DataFrame(range(1, 50), columns=["a"])
         df["b"] = 50 - df.a
         df["c"] = round((df["a"] * 3 + df["b"]) / 50)
         df["d"] = np.where(df.index % 2, "even", "odd")
 
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.set_data('df', df)
 
         # create project
         self.run_sql("create database proj")
@@ -101,7 +99,7 @@ class TestAutokeras(BaseExecutorTest):
         self.run_sql(
             """
            create model proj.modelx
-           from pg (select * from df)
+           from dummy_data (select * from df)
            predict c
            using
              engine='autokeras',
@@ -121,8 +119,7 @@ class TestAutokeras(BaseExecutorTest):
         avg_c = pd.to_numeric(ret.c).mean()
         assert (avg_c > -5) and (avg_c < 5)
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_regression_with_nulls_in_training_data(self, mock_handler):
+    def test_regression_with_nulls_in_training_data(self):
         # dataset, string values
         df = pd.DataFrame(range(1, 50), columns=["a"])
         df["b"] = 50 - df.a
@@ -133,7 +130,7 @@ class TestAutokeras(BaseExecutorTest):
         df["b"][25] = np.nan
         df["d"][31] = ""
 
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.set_data('df', df)
 
         # create project
         self.run_sql("create database proj")
@@ -142,7 +139,7 @@ class TestAutokeras(BaseExecutorTest):
         self.run_sql(
             """
            create model proj.modelx
-           from pg (select * from df)
+           from dummy_data (select * from df)
            predict c
            using
              engine='autokeras',
@@ -162,15 +159,14 @@ class TestAutokeras(BaseExecutorTest):
         avg_c = pd.to_numeric(ret.c).mean()
         assert (avg_c > -5) and (avg_c < 5)
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_regression_with_bulk_predict_query(self, mock_handler):
+    def test_regression_with_bulk_predict_query(self):
         # dataset, string values
         df = pd.DataFrame(range(1, 50), columns=["a"])
         df["b"] = 50 - df.a
         df["c"] = round((df["a"] * 3 + df["b"]) / 50)
         df["d"] = np.where(df.index % 2, "even", "odd")
 
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.set_data('df', df)
 
         # create project
         self.run_sql("create database proj")
@@ -179,7 +175,7 @@ class TestAutokeras(BaseExecutorTest):
         self.run_sql(
             """
            create model proj.modelx
-           from pg (select * from df)
+           from dummy_data (select * from df)
            predict c
            using
              engine='autokeras',
@@ -192,7 +188,7 @@ class TestAutokeras(BaseExecutorTest):
         ret = self.run_sql(
             """
             SELECT m.*
-            FROM pg.df as t
+            FROM dummy_data.df as t
             JOIN proj.modelx as m
             where t.b>25
         """
@@ -200,15 +196,14 @@ class TestAutokeras(BaseExecutorTest):
         avg_c = pd.to_numeric(ret.c).mean()
         assert (avg_c > -5) and (avg_c < 5)
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_regression_error_on_predict_query_missing_cols(self, mock_handler):
+    def test_regression_error_on_predict_query_missing_cols(self):
         # dataset, string values
         df = pd.DataFrame(range(1, 50), columns=["a"])
         df["b"] = 50 - df.a
         df["c"] = round((df["a"] * 3 + df["b"]) / 50)
         df["d"] = np.where(df.index % 2, "even", "odd")
 
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.set_data('df', df)
 
         # create project
         self.run_sql("create database proj")
@@ -217,7 +212,7 @@ class TestAutokeras(BaseExecutorTest):
         self.run_sql(
             """
            create model proj.modelx
-           from pg (select * from df)
+           from dummy_data (select * from df)
            predict c
            using
              engine='autokeras',
@@ -240,15 +235,14 @@ class TestAutokeras(BaseExecutorTest):
         except Exception:
             assert True
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_classification_with_numerical_training(self, mock_handler):
+    def test_classification_with_numerical_training(self):
         # dataset, string values
         df = pd.DataFrame(range(1, 50), columns=["a"])
         df["b"] = 50 - df.a
         df["c"] = round((df["a"] * 3 + df["b"]) / 50)
         df["d"] = np.where(df.index % 2, "even", "odd")
 
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.set_data('df', df)
 
         # create project
         self.run_sql("create database proj")
@@ -257,7 +251,7 @@ class TestAutokeras(BaseExecutorTest):
         self.run_sql(
             """
            create model proj.modelx
-           from pg (select * from df)
+           from dummy_data (select * from df)
            predict d
            using
              engine='autokeras',

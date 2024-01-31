@@ -266,7 +266,9 @@ class LLMLoader(BaseModel):
         """Load OpenAI LLM API interface"""
         client = openai.OpenAI(api_key=self.config_dict["openai_api_key"], base_url=self.config_dict["base_url"])
         config = self.config_dict.copy()
-        config.pop("openai_api_key")
+        keys_to_remove = ["openai_api_key", "base_url"]
+        for key in keys_to_remove:
+            config.pop(key)
         config["model"] = config.pop("model_id")
 
         return partial(client.completions.create, **config)

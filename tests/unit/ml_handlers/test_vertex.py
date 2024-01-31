@@ -4,10 +4,10 @@ import json
 import pandas as pd
 
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, mock_open, patch
 from mindsdb_sql import parse_sql
 
-from tests.unit.executor_test_base import BaseExecutorTest
+from unit.executor_test_base import BaseExecutorTest
 from mindsdb.integrations.handlers.vertex_handler.vertex_client import VertexClient
 
 path = "mindsdb.integrations.handlers.vertex_handler.vertex_client"
@@ -15,8 +15,15 @@ path = "mindsdb.integrations.handlers.vertex_handler.vertex_client"
 
 @pytest.fixture
 def vertex_client():
-    with patch(f"{path}.service_account.Credentials.from_service_account_file"), patch(f"{path}.aiplatform.init"):
-        client = VertexClient("fake_path", "fake_project_id")
+    with patch(f"{path}.service_account.Credentials.from_service_account_info"), patch(f"{path}.aiplatform.init"):
+        mock_args_json = {
+            "project_id": 0,
+            "location": "",
+            "staging_bucket": "",
+            "experiment": "",
+            "experiment_description": ""
+        }
+        client = VertexClient("fake_path", mock_args_json)
     return client
 
 
@@ -93,43 +100,42 @@ def test_deploy_model(vertex_client):
         assert endpoint.name == "EndpointID1"
 
 
-def test_predict_from_csv(vertex_client, mocker):
-    mock_endpoint = mocker.MagicMock()
+def test_predict_from_csv(vertex_client):
+    mock_endpoint = MagicMock()
     mock_endpoint.predict.return_value = "CSV Predictions"
 
-    mocker.patch(f"{path}.pd.read_csv", return_value=pd.DataFrame({"col1": ["data1", "data2"]}))
-    mocker.patch(f"{path}.VertexClient.get_endpoint_by_display_name", return_value=mock_endpoint)
+    model_list_patch = patch(f"{path}.pd.read_csv", return_value=pd.DataFrame({"col1": ["data1", "data2"]}))
+    vertex_client_patch = patch(f"{path}.VertexClient.get_endpoint_by_display_name", return_value=mock_endpoint)
 
-    predictions = vertex_client.predict_from_csv("Endpoint1", "path_to_csv")
-    assert predictions == "CSV Predictions"
+    with model_list_patch, vertex_client_patch:
+        predictions = vertex_client.predict_from_csv("Endpoint1", "path_to_csv")
+        assert predictions == "CSV Predictions"
 
 
-def test_predict_from_json(vertex_client, mocker):
-    mock_endpoint = mocker.MagicMock()
+def test_predict_from_json(vertex_client):
+    mock_endpoint = MagicMock()
     mock_endpoint.predict.return_value = "JSON Predictions"
 
-    mock_open = mocker.mock_open(read_data='{"col1": ["data1", "data2"]}')
-    mocker.patch("builtins.open", mock_open)
-
-    mocker.patch(f"{path}.json.load", return_value={"col1": ["data1", "data2"]})
-    mocker.patch(f"{path}.VertexClient.get_endpoint_by_display_name", return_value=mock_endpoint)
+    open_patch = patch('builtins.open', new_callable=mock_open, read_data='1')
+    json_load_patch = patch(f"json.load", return_value={"col1": ["data1", "data2"]})
+    vertex_client_patch = patch(f"{path}.VertexClient.get_endpoint_by_display_name", return_value=mock_endpoint)
 
     """Make a prediction from a JSON file"""
-    with open("path_to_json", "r") as f:
-        data = json.load(f)
+    with open_patch, json_load_patch:
+        with open("path_to_json", "r") as f:
+            data = json.load(f)
 
-    predictions = vertex_client.predict_from_dict("Endpoint1", data)
-    assert predictions == "JSON Predictions"
+    with vertex_client_patch:
+        predictions = vertex_client.predict_from_dict("Endpoint1", data)
+        assert predictions == "JSON Predictions"
 
 
 # Test of Vertex handler
-
-
 class TestVertex(BaseExecutorTest):
     def wait_predictor(self, project, name):
         # wait
         done = False
-        for attempt in range(200):
+        for attempt in range(400):
             ret = self.run_sql(f"select * from {project}.models where name='{name}'")
             if not ret.empty:
                 if ret["STATUS"][0] == "complete":
@@ -148,18 +154,17 @@ class TestVertex(BaseExecutorTest):
             columns = [col.alias if col.alias is not None else col.name for col in ret.columns]
             return pd.DataFrame(ret.data, columns=columns)
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_anomaly_detection_model(self, mock_handler):
+    def test_anomaly_detection_model(self):
         # create project
         self.run_sql("create database proj")
         df = pd.read_csv("tests/unit/ml_handlers/data/vertex_anomaly_detection.csv")
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.set_data('df', df)
 
         # create predictor
         self.run_sql(
             """
            create model proj.modelx
-           from pg (select * from df)
+           from dummy_data (select * from df)
            predict cut
            using
             engine='vertex',
@@ -175,24 +180,23 @@ class TestVertex(BaseExecutorTest):
         ret = self.run_sql(
             """
            SELECT p.*
-           FROM pg.df as t
+           FROM dummy_data.df as t
            JOIN proj.modelx as p
         """
         )
         assert len(ret) == len(df)
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_regression_model(self, mock_handler):
+    def test_regression_model(self):
         # create database
         self.run_sql("create database proj")
         df = pd.read_csv("tests/unit/ml_handlers/data/vertex_regression.csv")
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.set_data('df', df)
 
         # create predictor
         self.run_sql(
             """
            create model proj.modelx
-           from pg (select * from df)
+           from dummy_data (select * from df)
            predict actual_productivity
            using
             engine='vertex',
@@ -207,17 +211,16 @@ class TestVertex(BaseExecutorTest):
         ret = self.run_sql(
             """
            SELECT p.*
-           FROM pg.df as t
+           FROM dummy_data.df as t
            JOIN proj.modelx as p
         """
         )
         assert len(ret) == len(df)
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_classification_model(self, mock_handler):
+    def test_classification_model(self):
         # dataset, string values
         df = pd.read_csv("tests/unit/ml_handlers/data/vertex_classification.csv")
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.set_data('df', df)
 
         # create project
         self.run_sql("create database proj")
@@ -226,7 +229,7 @@ class TestVertex(BaseExecutorTest):
         self.run_sql(
             """
            create model proj.modelx
-           from pg (select * from df)
+           from dummy_data (select * from df)
            predict Class
            using
             engine='vertex',
@@ -241,7 +244,7 @@ class TestVertex(BaseExecutorTest):
         ret = self.run_sql(
             """
            SELECT p.*
-           FROM pg.df as t
+           FROM dummy_data.df as t
            JOIN proj.modelx as p
         """
         )

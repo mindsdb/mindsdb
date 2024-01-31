@@ -1,17 +1,22 @@
 import re
 import json
-import numpy as np
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Tuple
 
+import numpy as np
 import pandas as pd
 
 
-# TODO: unit test for this method
-def get_completed_prompts(base_template, df):
+def get_completed_prompts(base_template: str, df: pd.DataFrame) -> Tuple[List[str], np.ndarray]:
     """
         Helper method that produces formatted prompts given a template and data in a Pandas DataFrame.
         It also returns the ID of any empty templates that failed to be filled due to missing data.
-    """
+        
+        :param base_template: string with placeholders for each column in the DataFrame. Placeholders should follow double curly braces format, e.g. `{{column_name}}`. All placeholders should have matching columns in `df`.
+        :param df: pd.DataFrame to generate full prompts. Each placeholder in `base_template` must exist as a column in the DataFrame. If a column is not in the template, it is ignored entirely.
+        
+        :return prompts: list of in-filled prompts using `base_template` and relevant columns from `df`
+        :return empty_prompt_ids: np.int numpy array (shape (n_missing_rows,)) with the row indexes where in-fill failed due to missing data.
+    """  # noqa
     columns = []
     spans = []
     matches = list(re.finditer("{{(.*?)}}", base_template))

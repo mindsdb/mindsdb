@@ -21,6 +21,7 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 
+logger = log.getLogger(__name__)
 
 class WhatsAppMessagesTable(APITable):
     def select(self, query: ast.Select) -> Response:
@@ -236,8 +237,9 @@ class WhatsAppHandler(APIHandler):
             response.success = True
 
         except Exception as e:
+            print(str(e))
             response.error_message = f'Error connecting to Twilio API: {str(e)}. Check credentials.'
-            log.logger.error(response.error_message)
+            logger.error(response.error_message)
 
         if response.success is False and self.is_connected is True:
             self.is_connected = False
@@ -367,8 +369,8 @@ class WhatsAppHandler(APIHandler):
 
         except Exception as e:
             # Log the exception for debugging purposes
-            log.logger.error(f"Error sending message: {str(e)}")
-            raise Exception(f"Error posting message to the user '{params['to_number']}': {e.response['error']}")
+            logger.exception(f"Error sending message: {str(e)}")
+            raise Exception("Error sending message")
 
     def call_whatsapp_api(self, method_name: str = None, params: dict = None):
         """
@@ -387,8 +389,8 @@ class WhatsAppHandler(APIHandler):
         try:
             result = method(**params)
         except Exception as e:
-            error = f"Error calling method '{method_name}' with params '{params}': {e.response['error']}"
-            log.logger.error(error)
+            error = f"Error calling method '{method_name}' with params '{params}': {e}"
+            logger.error(error)
             raise e
 
         if 'messages' in result:

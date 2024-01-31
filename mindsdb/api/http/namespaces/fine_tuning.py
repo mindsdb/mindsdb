@@ -50,6 +50,7 @@ def add_fine_tuning_job(model_id: int, training_file: Text, validation_file: Tex
 
     return fine_tuning_job_record.id
 
+
 def list_fine_tuning_jobs(after: int, limit: int) -> Dict:
     """
     List fine-tuning jobs.
@@ -96,6 +97,7 @@ def list_fine_tuning_jobs(after: int, limit: int) -> Dict:
         'has_more': has_more,
     }
 
+
 def get_fine_tuning_job(job_id: int) -> Dict:
     """
     Get a fine-tuning job.
@@ -123,8 +125,10 @@ def get_fine_tuning_job(job_id: int) -> Dict:
 
     return fine_tuning_job
 
+
 def cancel_fine_tuning_job(job_id):
     pass
+
 
 def parse_fine_tuning_job_data(fine_tuning_job_record, predictor_record):
     """
@@ -153,7 +157,7 @@ def parse_fine_tuning_job_data(fine_tuning_job_record, predictor_record):
     fine_tuning_job['model'] = f"{predictor_record.name}.{predictor_record.version}"
 
     # add organization ID
-    fine_tuning_job['organization_id'] = predictor_record.company_id    
+    fine_tuning_job['organization_id'] = predictor_record.company_id
 
     # convert created_at to timestamp
     fine_tuning_job['created_at'] = int(fine_tuning_job['created_at'].timestamp())
@@ -184,7 +188,6 @@ class FineTuningJobsCreateAndList(Resource):
     # TODO: table should not be created here
     def create_table_if_not_exists(self):
         FineTuningJobs.metadata.create_all(db.session.get_bind(), checkfirst=True)
-        
 
     @ns_conf.doc('create_fine_tuning_job')
     def post(self):
@@ -218,7 +221,7 @@ class FineTuningJobsCreateAndList(Resource):
                     HTTPStatus.NOT_FOUND,
                     'Model not found',
                     f'Model with name {model} not found')
-            
+
             # get the integration handler
             integration_name = get_predictor_integration(predictor_record).name
 
@@ -238,7 +241,7 @@ class FineTuningJobsCreateAndList(Resource):
 
             # store job details in DB
             job_id = add_fine_tuning_job(fine_tuned_predictor_record.id, training_file, validation_file, created_at)
-            
+
             # TODO: add status and result_files (?) to response
             return {
                 'object': 'fine_tuning.job',
@@ -252,7 +255,7 @@ class FineTuningJobsCreateAndList(Resource):
             }, HTTPStatus.OK
         except Exception as e:
             return str(e), HTTPStatus.INTERNAL_SERVER_ERROR
-        
+
     @ns_conf.doc('list_fine_tuning_jobs')
     def get(self):
         # extract parameters from request
@@ -265,7 +268,7 @@ class FineTuningJobsCreateAndList(Resource):
             return fine_tuning_jobs, HTTPStatus.OK
         except Exception as e:
             return str(e), HTTPStatus.INTERNAL_SERVER_ERROR
-        
+
 
 @ns_conf.route('/jobs/<job_id>')
 class FineTuningJobGet(Resource):
@@ -277,7 +280,7 @@ class FineTuningJobGet(Resource):
             return fine_tuning_job, HTTPStatus.OK
         except Exception as e:
             return str(e), HTTPStatus.INTERNAL_SERVER_ERROR
-        
+
 
 @ns_conf.route('/jobs/<job_id>/cancel')
 class FineTuningJobCancel(Resource):

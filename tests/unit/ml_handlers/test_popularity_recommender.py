@@ -32,20 +32,17 @@ class TestPopularityRecommender(BaseExecutorTest):
             ]
             return pd.DataFrame(ret.data, columns=columns)
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_popularity_handler(self, mock_handler, lightfm_interaction_data):
+    def test_popularity_handler(self, lightfm_interaction_data):
 
         # create project
         self.run_sql("create database proj")
-        self.set_handler(
-            mock_handler, name="pg", tables={"df": lightfm_interaction_data}
-        )
+        self.set_data('df', lightfm_interaction_data)
 
         # create predictor
         self.run_sql(
             """
             create model proj.modelx
-            from pg (select * from df)
+            from dummy_data (select * from df)
             predict movieId
             using
                 engine='popularity_recommender',
@@ -59,7 +56,7 @@ class TestPopularityRecommender(BaseExecutorTest):
         result_df = self.run_sql(
             """
             SELECT p.*
-            FROM pg.df as t
+            FROM dummy_data.df as t
             JOIN proj.modelx as p
             """
         )

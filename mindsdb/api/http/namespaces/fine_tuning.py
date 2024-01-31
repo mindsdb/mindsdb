@@ -1,4 +1,3 @@
-import uuid
 import datetime
 from flask import request
 from http import HTTPStatus
@@ -63,6 +62,9 @@ def get_fine_tuning_job(job_id):
 
     return fine_tuning_job
 
+def cancel_fine_tuning_job(job_id):
+    pass
+
 def parse_fine_tuning_job_data(fine_tuning_job_record, predictor_record):
     fine_tuning_job = fine_tuning_job_record.as_dict()
 
@@ -101,7 +103,7 @@ def parse_fine_tuning_job_data(fine_tuning_job_record, predictor_record):
 
 
 @ns_conf.route('/jobs')
-class FineTuning(Resource):
+class FineTuningJobsCreateAndList(Resource):
     # TODO: table should not be created here
     def create_table_if_not_exists(self):
         FineTuningJobs.metadata.create_all(db.session.get_bind(), checkfirst=True)
@@ -189,7 +191,7 @@ class FineTuning(Resource):
         
 
 @ns_conf.route('/jobs/<job_id>')
-class FineTuningJob(Resource):
+class FineTuningJobGet(Resource):
     @ns_conf.doc('get_fine_tuning_job')
     def get(self, job_id):
         try:
@@ -198,3 +200,10 @@ class FineTuningJob(Resource):
             return fine_tuning_job, HTTPStatus.OK
         except Exception as e:
             return str(e), HTTPStatus.INTERNAL_SERVER_ERROR
+        
+
+@ns_conf.route('/jobs/<job_id>/cancel')
+class FineTuningJobCancel(Resource):
+    @ns_conf.doc('cancel_fine_tuning_job')
+    def post(self, job_id):
+        pass

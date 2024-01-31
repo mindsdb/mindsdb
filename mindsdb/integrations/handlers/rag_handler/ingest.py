@@ -131,26 +131,6 @@ class RAGIngestor:
         for i in range(0, len(documents), embeddings_batch_size):
             yield documents[i: i + embeddings_batch_size]
 
-    def create_db_from_batch_documents(self, documents, embeddings_model):
-        """
-        Create DB from documents in batches, this is used for chromadb to get around the add limit
-        in sqlite implementation of later versions of chromadb
-        """
-        batches_documents = self._create_batch_embeddings(
-            documents, self.args.embeddings_batch_size
-        )
-        n_batches = len(documents) // self.args.embeddings_batch_size \
-            if len(documents) >= self.args.embeddings_batch_size else 1
-        try:
-            for batch_id, batch_document in enumerate(batches_documents):
-                _ = self.create_db_from_documents(batch_document, embeddings_model)
-                logger.info(f"Added batch {batch_id + 1} of {n_batches} batches to vector db")
-
-        except Exception as e:
-            raise Exception(
-                f"Error loading embeddings batches to {self.args.vector_store_name}: {e}"
-            )
-
     def embeddings_to_vectordb(self) -> None:
         """Create vectorstore from documents and store locally."""
 
@@ -171,18 +151,12 @@ class RAGIngestor:
         if not validate_documents(documents):
             raise ValueError("Invalid documents")
 
-        if self.args.vector_store_name == "chromadb":
-
-            # chromadb does autosave in latest version, just for the saver PersistedVectorStoreSaver
-            db = self.create_db_from_batch_documents(documents, embeddings_model)
-
-        else:
-            try:
-                db = self.create_db_from_documents(documents, embeddings_model)
-            except Exception as e:
-                raise Exception(
-                    f"Error loading embeddings to {self.args.vector_store_name}: {e}"
-                )
+        try:
+            db = self.create_db_from_documents(documents, embeddings_model)
+        except Exception as e:
+            raise Exception(
+                f"Error loading embeddings to {self.args.vector_store_name}: {e}"
+            )
 
         config = PersistedVectorStoreSaverConfig(
             vector_store_name=self.args.vector_store_name,

@@ -237,7 +237,6 @@ class WhatsAppHandler(APIHandler):
             response.success = True
 
         except Exception as e:
-            print(str(e))
             response.error_message = f'Error connecting to Twilio API: {str(e)}. Check credentials.'
             logger.error(response.error_message)
 

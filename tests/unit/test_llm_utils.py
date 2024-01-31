@@ -34,7 +34,6 @@ class TestLLM(unittest.TestCase):
         with self.assertRaises(Exception):
             get_completed_prompts(base_template, df)
 
-
     def test_ft_chat_format_validation(self):
         valid_chats = [
             # u/a pattern
@@ -161,7 +160,6 @@ class TestLLM(unittest.TestCase):
         chats = ft_chat_formatter(df)
         assert list(chats[0].keys()) == ['messages']
         ft_chat_format_validation(chats[0]['messages'])  # valid, returns None
-
 
     def test_ft_jsonl_validation(self):
         df = pd.DataFrame({

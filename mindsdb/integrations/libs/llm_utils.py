@@ -117,8 +117,6 @@ def ft_jsonl_validation(
             except Exception as e:
                 raise Exception(f"{prefix}{e}")
 
-
-
     except Exception as e:
         raise Exception(f"Fine-tuning data format is not valid. Got {e}")
 
@@ -186,7 +184,6 @@ def ft_chat_format_validation(
             user_key: [assistant_key],
             assistant_key: [user_key]
         }
-
 
     # check order is valid via finite state machine
     state = None
@@ -265,13 +262,13 @@ def ft_chat_formatter(df: pd.DataFrame) -> List[Dict]:
         chat = []
         for i, row in df.iterrows():
             if row['role'] == 'system' and len(chat) > 0:
-                ft_chat_format_validation(chat) # will raise Exception if chat is invalid
+                ft_chat_format_validation(chat)  # will raise Exception if chat is invalid
                 chats.append({'messages': chat})
                 chat = []
             event = {'role': row['role'], 'content': row['content']}
             chat.append(event)
 
-        ft_chat_format_validation(chat) # will raise Exception if chat is invalid
+        ft_chat_format_validation(chat)  # will raise Exception if chat is invalid
         chats.append({'messages': chat})
 
     return chats

@@ -15,22 +15,24 @@ from mindsdb.api.http.namespaces.configs.fine_tuning import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
 
 
-def add_fine_tuning_job(job_id, model_id, training_file, created_at):
+def add_fine_tuning_job(model_id, training_file, validation_file, created_at):
     fine_tuning_job_record = db.FineTuningJobs(
-        id=job_id,
         model_id=model_id,
         training_file=training_file,
+        validation_file=validation_file,
         created_at=created_at,
     )
 
     db.session.add(fine_tuning_job_record)
     db.session.commit()
 
+    return fine_tuning_job_record.id
+
 def list_fine_tuning_jobs(after, limit):
-    # TODO: add support for after parameter
     fine_tuning_job_records = (
         db.session.query(FineTuningJobs, Predictor)
             .join(Predictor, Predictor.id == FineTuningJobs.model_id)
+            .filter(FineTuningJobs.id > after)
             .limit(limit)
             .all()
     )
@@ -69,17 +71,26 @@ def parse_fine_tuning_job_data(fine_tuning_job_record, predictor_record):
 
     # remove model_id and add model
     fine_tuning_job.pop('model_id')
-    fine_tuning_job['model'] = predictor_record.name
+    fine_tuning_job['model'] = f"{predictor_record.name}.{predictor_record.version}"
+
+    # convert created_at to timestamp
+    fine_tuning_job['created_at'] = int(fine_tuning_job['created_at'].timestamp())
 
     # update status of fine-tuning job based on model status
     if predictor_record.status == 'generating':
         fine_tuning_job['status'] = 'running'
+        fine_tuning_job['finished_at'] = None
+        fine_tuning_job['fine_tuned_model'] = None
 
     elif predictor_record.status == 'complete':
         fine_tuning_job['status'] = 'succeeded'
+        fine_tuning_job['finished_at'] = int(predictor_record.updated_at.timestamp())
+        fine_tuning_job['fine_tuned_model'] = f"{predictor_record.name}.{predictor_record.version + 1}"
 
     elif predictor_record.status == 'error':
         fine_tuning_job['status'] = 'failed'
+        fine_tuning_job['finished_at'] = int(predictor_record.updated_at.timestamp())
+        fine_tuning_job['fine_tuned_model'] = None
 
     # TODO: add support for other statuses
 
@@ -132,8 +143,6 @@ class FineTuning(Resource):
             # get handler instance
             base_ml_engine = session.integration_controller.get_handler(integration_name)
 
-            # generate job ID
-            job_id = uuid.uuid4().hex
             created_at = datetime.datetime.now()
 
             # execute fine-tuning job
@@ -146,14 +155,15 @@ class FineTuning(Resource):
             )
 
             # store job details in DB
-            add_fine_tuning_job(job_id, fine_tuned_predictor_record.id, training_file, created_at)
+            job_id = add_fine_tuning_job(fine_tuned_predictor_record.id, training_file, validation_file, created_at)
             
             return {
                 'object': 'fine_tuning.job',
                 'id': job_id,
                 'model': model_name,
                 'training_file': training_file,
-                'created_at': int(created_at.timestamp())
+                'created_at': int(created_at.timestamp()),
+                'fine_tuned_model': None
             }, HTTPStatus.OK
         except Exception as e:
             return str(e), HTTPStatus.INTERNAL_SERVER_ERROR
@@ -161,8 +171,8 @@ class FineTuning(Resource):
     @ns_conf.doc('list_fine_tuning_jobs')
     def get(self):
         # extract parameters from request
-        after = request.args.get('after', None)
-        limit = request.args.get('limit', 20)
+        after = request.args.get('after', 0)
+        limit = int(request.args.get('limit', 20))
 
         try:
             fine_tuning_jobs = list_fine_tuning_jobs(after, limit)

@@ -23,6 +23,7 @@ from mindsdb.integrations.libs.response import (
 
 logger = log.getLogger(__name__)
 
+
 class WhatsAppMessagesTable(APITable):
     def select(self, query: ast.Select) -> Response:
         """

@@ -33,6 +33,10 @@ structured_data_classifier
 structured_data_regressor
 mindsdb/integrations/handlers/autokeras_handler/structured_data_classifier
 
+# Handler generated files
+AutogluonModels
+catboost_info
+
 # VisualStudioCode
 .vscode
 .vscode/*

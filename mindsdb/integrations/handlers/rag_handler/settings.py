@@ -8,7 +8,7 @@ import openai
 import pandas as pd
 import requests
 import writer
-from langchain import Writer
+from langchain.llms import Writer
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.docstore.document import Document
 from langchain.document_loaders import DataFrameLoader

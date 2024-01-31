@@ -5,7 +5,7 @@ import pandas as pd
 from mindsdb_sql import parse_sql
 
 
-from tests.unit.executor_test_base import BaseExecutorTest
+from unit.executor_test_base import BaseExecutorTest
 
 
 class TestLudwig(BaseExecutorTest):
@@ -39,15 +39,14 @@ class TestLudwig(BaseExecutorTest):
             ]
             return pd.DataFrame(ret.data, columns=columns)
 
-    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
-    def test_simple(self, mock_handler):
+    def test_simple(self):
 
         # dataset, string values
         df = pd.DataFrame(range(1, 50), columns=['a'])
         df['b'] = 50 - df.a
         df['c'] = round((df['a']*3 + df['b']) / 50)
 
-        self.set_handler(mock_handler, name='pg', tables={'df': df})
+        self.set_data('df', df)
 
         # create project
         self.run_sql('create database proj')
@@ -55,7 +54,7 @@ class TestLudwig(BaseExecutorTest):
         # create predictor
         self.run_sql('''
            create model proj.modelx
-           from pg (select * from df)
+           from dummy_data (select * from df)
            predict c
            using 
              engine='ludwig';
@@ -65,7 +64,7 @@ class TestLudwig(BaseExecutorTest):
         # run predict
         ret = self.run_sql('''
            SELECT p.*
-           FROM pg.df as t 
+           FROM dummy_data.df as t 
            JOIN proj.modelx as p
            where t.c=1
         ''')

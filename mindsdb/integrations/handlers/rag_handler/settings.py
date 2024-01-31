@@ -106,7 +106,7 @@ def get_available_writer_model_ids(args: dict) -> list:
 def get_available_openai_model_ids(args: dict) -> list:
     """Get available openai LLM model ids"""
 
-    models = openai.OpenAI(api_key=args["openai_api_key"]).models.list().data
+    models = openai.OpenAI(api_key=args["openai_api_key"], base_url=args["base_url"]).models.list().data
 
     return [models.id for models in models]
 
@@ -200,6 +200,7 @@ class LLMParameters(BaseModel):
     llm_name: str = Field(default_factory=str, title="LLM API name")
     max_tokens: int = Field(default=100, title="max tokens in response")
     temperature: float = Field(default=0.0, title="temperature")
+    base_url: str = None
     top_p: float = 1
     best_of: int = 5
     stop: List[str] = None
@@ -232,7 +233,6 @@ class WriterLLMParameters(LLMParameters):
 
     writer_api_key: str
     writer_org_id: str = None
-    base_url: str = None
     model_id: str = "palmyra-x"
     callbacks: List[StreamingStdOutCallbackHandler] = [StreamingStdOutCallbackHandler()]
     verbose: bool = False
@@ -264,7 +264,7 @@ class LLMLoader(BaseModel):
 
     def load_openai_llm(self) -> partial:
         """Load OpenAI LLM API interface"""
-        client = openai.OpenAI(api_key=self.config_dict["openai_api_key"])
+        client = openai.OpenAI(api_key=self.config_dict["openai_api_key"], base_url=self.config_dict["base_url"])
         config = self.config_dict.copy()
         config.pop("openai_api_key")
         config["model"] = config.pop("model_id")

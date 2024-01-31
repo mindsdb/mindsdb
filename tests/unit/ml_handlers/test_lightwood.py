@@ -5,7 +5,7 @@ import pandas as pd
 from mindsdb_sql import parse_sql
 
 
-from tests.unit.executor_test_base import BaseExecutorTest
+from unit.executor_test_base import BaseExecutorTest
 
 
 class TestLW(BaseExecutorTest):
@@ -39,15 +39,14 @@ class TestLW(BaseExecutorTest):
             ]
             return pd.DataFrame(ret.data, columns=columns)
 
-    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
-    def test_simple(self, mock_handler):
+    def test_simple(self):
 
         # dataset, string values
         df = pd.DataFrame(range(1, 50), columns=['a'])
         df['b'] = 50 - df.a
         df['c'] = round((df['a']*3 + df['b']) / 50)
 
-        self.set_handler(mock_handler, name='pg', tables={'df': df})
+        self.set_data('df', df)
 
         # create project
         self.run_sql('create database proj')
@@ -55,7 +54,7 @@ class TestLW(BaseExecutorTest):
         # create predictor
         self.run_sql('''
            create model proj.modelx
-           from pg (select * from df)
+           from dummy_data (select * from df)
            predict c
            using 
              submodels = [{
@@ -68,7 +67,7 @@ class TestLW(BaseExecutorTest):
         # run predict
         ret = self.run_sql('''
            SELECT p.*
-           FROM pg.df as t 
+           FROM dummy_data.df as t 
            JOIN proj.modelx as p
            where t.c=1
         ''')
@@ -93,8 +92,7 @@ class TestLW(BaseExecutorTest):
         ret = self.run_sql('describe proj.modelx.ensemble')
         assert 'ensemble' in ret.columns
 
-    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
-    def test_ts(self, mock_handler):
+    def test_ts(self):
         # TS
         df2 = pd.DataFrame(pd.date_range(start='1/1/2018', end='1/31/2018'), columns=['t'])
         df3 = df2.copy()
@@ -106,7 +104,7 @@ class TestLW(BaseExecutorTest):
         df3['x'] = range(11, 42)
 
         df = pd.concat([df2, df3])
-        self.set_handler(mock_handler, name='pg', tables={'df': df})
+        self.set_data('df', df)
 
         # create project
         self.run_sql('create database proj')
@@ -115,7 +113,7 @@ class TestLW(BaseExecutorTest):
         # create predictor
         self.run_sql('''
            create model proj.modelx
-           from pg (select * from df)
+           from dummy_data (select * from df)
            predict x
            order by t
            group by a
@@ -127,7 +125,7 @@ class TestLW(BaseExecutorTest):
         # run predict
         ret = self.run_sql('''
            SELECT p.*
-           FROM pg.df as t 
+           FROM dummy_data.df as t 
            JOIN proj.modelx as p
            where t.a='b' and t.t > latest
         ''')

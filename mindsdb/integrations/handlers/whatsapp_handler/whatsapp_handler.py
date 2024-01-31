@@ -369,6 +369,7 @@ class WhatsAppHandler(APIHandler):
 
         except Exception as e:
             # Log the exception for debugging purposes
+            logger.error(f"Error sending message: {str(e)}")
             logger.exception(f"Error sending message: {str(e)}")
             raise Exception("Error sending message")
 

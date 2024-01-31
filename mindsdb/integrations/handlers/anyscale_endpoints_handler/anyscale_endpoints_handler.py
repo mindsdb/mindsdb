@@ -122,7 +122,6 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
             if col not in set(df.columns):
                 raise Exception(f"To fine-tune this model, format your select data query to have a `role` column and a `content` column.")  # noqa
 
-    # TODO: add unit tests
     @staticmethod
     def _prepare_ft_jsonl(df, temp_storage_path, temp_filename, _, test_size=0.2):
         # 1. format data

@@ -27,42 +27,49 @@ def add_fine_tuning_job(job_id, model_id, training_file, created_at):
     db.session.commit()
 
 def list_fine_tuning_jobs():
-    fine_tuning_job_records = db.session.query(FineTuningJobs).all()
+    fine_tuning_job_records = (
+        db.session.query(FineTuningJobs)
+            .join(Predictor, Predictor.id == FineTuningJobs.model_id)
+            .all()
+    )
 
+    # iterate over fine-tuning job records and parse them
     fine_tuning_jobs = []
-    for record in fine_tuning_job_records:
-        fine_tuning_job = update_fine_tuning_job_data(record)
+    for fine_tuning_job_record, predictor_record in fine_tuning_job_records:
+        fine_tuning_job = parse_fine_tuning_job_data(fine_tuning_job_record, predictor_record)
 
         fine_tuning_jobs.append(fine_tuning_job)
 
     return fine_tuning_jobs
 
 def get_fine_tuning_job(job_id):
-    fine_tuning_job = db.session.query(FineTuningJobs).filter_by(id=job_id).first()
+    fine_tuning_job_record, predictor_record = (
+        db.session.query(FineTuningJobs)
+            .join(Predictor, Predictor.id == FineTuningJobs.model_id)
+            .filter(FineTuningJobs.id == job_id)
+            .first()
+    )
 
-    # update status of fine-tuning job based on model status
-    fine_tuning_job = update_fine_tuning_job_data(fine_tuning_job)
+    # parse the fine-tuning job record
+    fine_tuning_job = parse_fine_tuning_job_data(fine_tuning_job_record, predictor_record)
 
     return fine_tuning_job
 
-def update_fine_tuning_job_data(fine_tuning_job_record):
+def parse_fine_tuning_job_data(fine_tuning_job_record, predictor_record):
     fine_tuning_job = fine_tuning_job_record.as_dict()
-
-    # get model record for fine-tuning job
-    model_record = db.session.query(Predictor).filter_by(id=fine_tuning_job['model_id']).first()
 
     # remove model_id and add model
     fine_tuning_job.pop('model_id')
-    fine_tuning_job['model'] = model_record.name
+    fine_tuning_job['model'] = predictor_record.name
 
     # update status of fine-tuning job based on model status
-    if model_record.status == 'generating':
+    if predictor_record.status == 'generating':
         fine_tuning_job['status'] = 'running'
 
-    elif model_record.status == 'complete':
+    elif predictor_record.status == 'complete':
         fine_tuning_job['status'] = 'succeeded'
 
-    elif model_record.status == 'error':
+    elif predictor_record.status == 'error':
         fine_tuning_job['status'] = 'failed'
 
     # TODO: add support for other statuses
@@ -103,7 +110,7 @@ class FineTuning(Resource):
             # extract model name, version and record
             name_no_version, version = Predictor.get_name_and_version(model_name)
             try:
-                model_record = session.model_controller.get_model_record(name_no_version, version=version, project_name=project_name)
+                predictor_record = session.model_controller.get_model_record(name_no_version, version=version, project_name=project_name)
             except PredictorRecordNotFound:
                 return http_error(
                     HTTPStatus.NOT_FOUND,
@@ -111,7 +118,7 @@ class FineTuning(Resource):
                     f'Model with name {model} not found')
             
             # get the integration handler
-            integration_name = get_predictor_integration(model_record).name
+            integration_name = get_predictor_integration(predictor_record).name
 
             # get handler instance
             base_ml_engine = session.integration_controller.get_handler(integration_name)
@@ -121,7 +128,7 @@ class FineTuning(Resource):
             created_at = datetime.datetime.now()
 
             # execute fine-tuning job
-            fine_tuned_model_record = base_ml_engine.finetune(
+            fine_tuned_predictor_record = base_ml_engine.finetune(
                 model_name=model_record.name,
                 base_model_version=model_record.version,
                 project_name=project_name,
@@ -130,7 +137,7 @@ class FineTuning(Resource):
             )
 
             # store job details in DB
-            add_fine_tuning_job(job_id, fine_tuned_model_record.id, training_file, created_at)
+            add_fine_tuning_job(job_id, fine_tuned_predictor_record.id, training_file, created_at)
             
             return {
                 'object': 'fine_tuning.job',

@@ -1,4 +1,12 @@
-To run test, execute from project root:
+To run a unit test:
+
+`python -m pytest ./tests/unit/test_{name}.py`
+
+To run a ML handler test:
+1. Set the environment variable `MINDSDB_ENABLE_INTEGRATION_CACHE` to `False` to disable caching handlers. This is needed to properly reset the test environment.
+2. `python -m pytest ./tests/unit/ml_handlers/test_{name}.py`
+
+To run an integration flow test, execute from project root:
 
 ```
 python3 /tests/integration_tests/flows/test_{name}.py

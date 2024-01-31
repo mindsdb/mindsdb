@@ -56,10 +56,11 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         finally:
             # exit
             os.environ[key] = old_base
-            if oai_key is None:
-                del args['using']['api_key']
-            else:
-                args['using']['api_key'] = oai_key
+            if 'using' in args and 'api_key' in args['using']:
+                if oai_key is not None:
+                    args['using']['api_key'] = oai_key
+                else:
+                    del args['using']['api_key']
 
     def create(self, target, args=None, **kwargs):
         with self._anyscale_base_api(args):
@@ -81,8 +82,9 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
 
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         with self._anyscale_base_api(args):
-            self._set_models(args.get('using', {}))
-            super().finetune(df, args)
+            using_args = args.get('using', {})
+            self._set_models(using_args)
+            super().finetune(df, using_args)
             # rewrite chat_completion_models to include the newly fine-tuned model
             args = self.model_storage.json_get('args')
             args['chat_completion_models'] = list(self.chat_completion_models) + [args['model_name']]

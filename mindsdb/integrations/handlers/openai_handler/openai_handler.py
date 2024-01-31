@@ -828,8 +828,10 @@ class OpenAIHandler(BaseMLEngine):
         ft_stats = _check_ft_status(ft_result.id)
 
         if ft_stats.status != 'succeeded':
+            err_message = ft_stats.events[-1].message if hasattr(ft_stats, 'events') else 'could not retrieve!'
+            ft_status = ft_stats.status if hasattr(ft_stats, 'status') else 'N/A'
             raise Exception(
-                f"Fine-tuning did not complete successfully (status: {ft_stats.status}). Error message: {ft_stats.events[-1].message}"
+                f"Fine-tuning did not complete successfully (status: {ft_status}). Error message: {err_message}"
             )  # noqa
 
         result_file_id = client.fine_tuning.jobs.retrieve(fine_tuning_job_id=ft_result.id).result_files[0]

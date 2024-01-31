@@ -5,8 +5,8 @@ import pandas as pd
 
 from mindsdb_sql import parse_sql
 
-from tests.unit.ml_handlers.test_time_series_utils import create_mock_df
-from tests.unit.executor_test_base import BaseExecutorTest
+from unit.ml_handlers.test_time_series_utils import create_mock_df
+from unit.executor_test_base import BaseExecutorTest
 
 
 class TestNeuralForecast(BaseExecutorTest):
@@ -32,18 +32,17 @@ class TestNeuralForecast(BaseExecutorTest):
             columns = [col.alias if col.alias is not None else col.name for col in ret.columns]
             return pd.DataFrame(ret.data, columns=columns)
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_grouped(self, mock_handler):
+    def test_grouped(self):
         # create project
         self.run_sql("create database proj")
         df = create_mock_df()
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.set_data('df', df)
 
         # now add more groups
         self.run_sql(
             """
            create model proj.model_multi_group
-           from pg (select * from df)
+           from dummy_data (select * from df)
            predict target_col
            order by time_col
            group by group_col, group_col_2, group_col_3
@@ -60,7 +59,7 @@ class TestNeuralForecast(BaseExecutorTest):
         result_df = self.run_sql(
             """
            SELECT p.*
-           FROM pg.df as t
+           FROM dummy_data.df as t
            JOIN proj.model_multi_group as p
            where t.group_col_2='a2' AND t.time_col > LATEST
         """
@@ -70,7 +69,7 @@ class TestNeuralForecast(BaseExecutorTest):
         result_df = self.run_sql(
             """
            SELECT p.*
-           FROM pg.df as t
+           FROM dummy_data.df as t
            JOIN proj.model_multi_group as p
            where t.group_col='b' AND t.time_col > LATEST
         """
@@ -98,19 +97,18 @@ class TestNeuralForecast(BaseExecutorTest):
             self.run_sql("describe proj.modelx.ensemble")
             assert "ensemble is not supported" in str(e)
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_with_exog_vars(self, mock_handler):
+    def test_with_exog_vars(self):
         # create project
         self.run_sql("create database proj")
         df = create_mock_df()
         df["exog_var_1"] = 5 * df.index
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.set_data('df', df)
 
         # now add more groups
         self.run_sql(
             """
            create model proj.model_exog_var
-           from pg (select * from df)
+           from dummy_data (select * from df)
            predict target_col
            order by time_col
            group by group_col, group_col_2, group_col_3
@@ -128,7 +126,7 @@ class TestNeuralForecast(BaseExecutorTest):
         result_df = self.run_sql(
             """
            SELECT p.*
-           FROM pg.df as t
+           FROM dummy_data.df as t
            JOIN proj.model_exog_var as p
            where t.group_col='b' AND t.time_col > LATEST
         """
@@ -141,17 +139,16 @@ class TestNeuralForecast(BaseExecutorTest):
         describe_features = self.run_sql("describe proj.model_exog_var.features")
         assert describe_features["exog_vars"][0] == ["exog_var_1"]
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_hierarchical(self, mock_handler):
+    def test_hierarchical(self):
         # create project
         self.run_sql("create database proj")
         df = pd.read_csv("tests/unit/ml_handlers/data/house_sales.csv")  # comes mindsdb docs forecast example
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.set_data('df', df)
 
         self.run_sql(
             """
            create model proj.model_1_group
-           from pg (select * from df)
+           from dummy_data (select * from df)
            predict ma
            order by saledate
            group by type, bedrooms
@@ -169,7 +166,7 @@ class TestNeuralForecast(BaseExecutorTest):
         mindsdb_result_hier = self.run_sql(
             """
            SELECT p.*
-           FROM pg.df as t
+           FROM dummy_data.df as t
            JOIN proj.model_1_group as p
            where t.type='house'
         """

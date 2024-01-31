@@ -18,7 +18,7 @@ class TestLightFM(BaseExecutorTest):
                     break
                 elif ret["STATUS"][0] == "error":
                     break
-            time.sleep(0.5)
+            time.sleep(1)
         if not done:
             raise RuntimeError("predictor wasn't created")
 
@@ -31,14 +31,10 @@ class TestLightFM(BaseExecutorTest):
             ]
             return pd.DataFrame(ret.data, columns=columns)
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_collaborative_filter_user_item_recommendation_light_fm_handler(
-        self, mock_handler, lightfm_interaction_data
+        self, lightfm_interaction_data
     ):
-
-        self.set_handler(
-            mock_handler, name="pg", tables={"df": lightfm_interaction_data}
-        )
+        self.set_data('df', lightfm_interaction_data)
 
         # create project
         self.run_sql("create database proj")
@@ -47,7 +43,7 @@ class TestLightFM(BaseExecutorTest):
         self.run_sql(
             """
             create model proj.useritemtest
-            from pg (select * from df)
+            from dummy_data (select * from df)
             predict movieId
             using
                 engine='lightfm',
@@ -63,7 +59,7 @@ class TestLightFM(BaseExecutorTest):
         result_df = self.run_sql(
             """
             SELECT p.*
-            FROM pg.df as t
+            FROM dummy_data.df as t
             JOIN proj.useritemtest as p
             on p.movieId = t.movieId
             where p.recommender_type='user_item'
@@ -73,14 +69,10 @@ class TestLightFM(BaseExecutorTest):
         # check that the result is the expected shape e.g. 10 recommendations per user  * 503 users
         assert result_df.shape == (5030, 3)
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_collaborative_filter_item_item_recommendation_light_fm_handler(
-        self, mock_handler, lightfm_interaction_data
+        self, lightfm_interaction_data
     ):
-
-        self.set_handler(
-            mock_handler, name="pg", tables={"df": lightfm_interaction_data}
-        )
+        self.set_data('df', lightfm_interaction_data.head(10))
 
         # create project
         self.run_sql("create database proj")
@@ -89,7 +81,7 @@ class TestLightFM(BaseExecutorTest):
         self.run_sql(
             """
             create model proj.itemitemtest
-            from pg (select * from df)
+            from dummy_data (select * from df)
             predict movieId
             using
                 engine='lightfm',
@@ -97,7 +89,8 @@ class TestLightFM(BaseExecutorTest):
                 user_id='userId',
                 threshold=4,
                 recommendation_type='{recommender_type}',
-                n_recommendations=10
+                n_recommendations=10,
+                epochs=1
                 """
         )
         self.wait_predictor("proj", "itemitemtest")
@@ -105,7 +98,7 @@ class TestLightFM(BaseExecutorTest):
         result_df = self.run_sql(
             """
             SELECT p.*
-            FROM pg.df as t
+            FROM dummy_data.df as t
             JOIN proj.itemitemtest as p
             on t.movieId = p.movieId
             where p.recommender_type='item_item'
@@ -114,27 +107,3 @@ class TestLightFM(BaseExecutorTest):
 
         # check that the result is the expected shape e.g. 10 recommendations per user  * 89 users
         assert result_df.shape == (890, 3)
-
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_collaborative_filter_user_user_recommendation_light_fm_handler_with_item_data(
-        self, mock_handler, lightfm_interaction_data
-    ):
-        ...
-
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_hybrid_user_item_recommendation_light_fm_handler(
-        self, mock_handler, lightfm_interaction_data
-    ):
-        ...
-
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_hybrid_item_item_recommendation_light_fm_handler(
-        self, mock_handler, lightfm_interaction_data
-    ):
-        ...
-
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_hybrid_user_user_recommendation_light_fm_handler(
-        self, mock_handler, lightfm_interaction_data
-    ):
-        ...

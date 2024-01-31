@@ -1,3 +1,4 @@
+from unittest.mock import patch
 import datetime as dt
 import time
 import pytest
@@ -633,6 +634,154 @@ class TestProjectStructure(BaseExecutorDummyML):
 
         ret = self.run_sql('describe pred.info')
         assert ret['type'][0] == 'dummy'
+
+    def test_last(self):
+        df = pd.DataFrame([
+            {'a': 1, 'b': 'a'},
+            {'a': 2, 'b': 'b'},
+            {'a': 3, 'b': 'c'},
+        ])
+        self.set_data('tasks', df)
+
+        # -- create model --
+        self.run_sql(
+            '''
+                CREATE model task_model
+                from dummy_data (select * from tasks)
+                PREDICT a
+                using engine='dummy_ml'
+            '''
+        )
+
+        # --- check web editor  ---
+        ret = self.run_sql('''
+            select * from dummy_data.tasks where a>last
+         ''')
+        # first call is empty
+        assert len(ret) == 0
+
+        # add rows to dataframe
+        df.loc[len(df.index)] = [4, 'd']  # should be tracked
+        df.loc[len(df.index)] = [0, 'z']  # not tracked
+        self.set_data('tasks', df)
+
+        ret = self.run_sql('''
+            select * from dummy_data.tasks where a>last
+        ''')
+
+        # second call content one new line
+        assert len(ret) == 1
+        assert ret.a[0] == 4
+
+        # --- TEST view ---
+
+        # view without target
+        with pytest.raises(Exception) as exc_info:
+            self.run_sql('''
+                create view v1 (
+                    select b from dummy_data.tasks where a>last
+                )
+            ''')
+        assert 'should be in query target' in str(exc_info.value)
+
+        # view with target
+        self.run_sql('''
+            create view v1 (
+                select * from dummy_data.tasks where a>last
+            )
+        ''')
+
+        ret = self.run_sql('''
+          select * from v1
+        ''')
+        # first call is empty
+        assert len(ret) == 0
+
+        # add row to dataframe
+        df.loc[len(df.index)] = [5, 'a']
+        self.set_data('tasks', df)
+
+        ret = self.run_sql('''
+            select * from v1
+        ''')
+
+        # second call content one new line
+        assert len(ret) == 1
+        assert ret.a[0] == 5
+
+        # add row to dataframe
+        df.loc[len(df.index)] = [6, 'a']
+        self.set_data('tasks', df)
+
+        # use model
+        ret = self.run_sql('''
+             SELECT m.*
+               FROM v1 as t
+               JOIN task_model as m
+        ''')
+
+        # second call content one new line
+        assert len(ret) == 1
+
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_last_in_job(self, data_handler, scheduler):
+        df = pd.DataFrame([
+            {'a': 1, 'b': 'a'},
+            {'a': 2, 'b': 'b'},
+        ])
+        self.set_handler(data_handler, name='pg', tables={'tasks': df})
+
+        # -- create model --
+        self.run_sql(
+            '''
+                CREATE model task_model
+                from pg (select * from tasks)
+                PREDICT a
+                using engine='dummy_ml'
+            '''
+        )
+
+        # create job to update table
+        self.run_sql('''
+          create job j1  (
+            create table files.t1  (
+                SELECT m.*
+                   FROM pg.tasks as t
+                   JOIN task_model as m
+                   where t.a > last and t.b='b'
+            )
+          )
+          start now
+          every hour
+        ''')
+
+        scheduler.check_timetable()
+
+        # table size didn't change
+        calls = data_handler().query.call_args_list
+        sql = calls[0][0][0].to_string()
+        # getting current last value
+        assert 'ORDER BY a DESC LIMIT 1' in sql
+
+        # insert new record to source db
+
+        df.loc[len(df.index)] = [6, 'a']
+
+        data_handler.reset_mock()
+        # shift 'next run' and run once again
+        job = self.db.Jobs.query.filter(self.db.Jobs.name == 'j1').first()
+        job.next_run_at = job.start_at - dt.timedelta(seconds=1)  # different time because there is unique key
+        self.db.session.commit()
+
+        scheduler.check_timetable()
+
+        calls = data_handler().query.call_args_list
+
+        assert len(calls) == 1
+        sql = calls[0][0][0].to_string()
+        # getting next value, greater than max previous
+        assert 'a > 2' in sql
+        assert "b = 'b'" in sql
 
 
 class TestJobs(BaseExecutorDummyML):

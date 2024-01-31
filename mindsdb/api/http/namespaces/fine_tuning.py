@@ -1,6 +1,7 @@
 import datetime
 from flask import request
 from http import HTTPStatus
+from typing import Text, Dict
 from flask_restx import Resource
 
 import mindsdb.interfaces.storage.db as db
@@ -14,7 +15,28 @@ from mindsdb.api.http.namespaces.configs.fine_tuning import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
 
 
-def add_fine_tuning_job(model_id, training_file, validation_file, created_at):
+def add_fine_tuning_job(model_id: int, training_file: Text, validation_file: Text, created_at: datetime.datetime) -> int:
+    """
+    Add a new fine-tuning job to the database.
+
+    Parameters
+    ----------
+    model_id: int
+        ID of the model (Predictor) to be fine-tuned.
+    training_file: str
+        Name of the training file.
+    validation_file: str
+        Name of the validation file.
+    created_at: datetime.datetime
+        Datetime when the fine-tuning job was created.
+
+    Returns
+    -------
+    int
+        ID of the fine-tuning job record created in the database.
+    """
+
+    # create fine-tuning job record
     fine_tuning_job_record = db.FineTuningJobs(
         model_id=model_id,
         training_file=training_file,
@@ -22,12 +44,30 @@ def add_fine_tuning_job(model_id, training_file, validation_file, created_at):
         created_at=created_at,
     )
 
+    # add fine-tuning job record to DB
     db.session.add(fine_tuning_job_record)
     db.session.commit()
 
     return fine_tuning_job_record.id
 
-def list_fine_tuning_jobs(after, limit):
+def list_fine_tuning_jobs(after: int, limit: int) -> Dict:
+    """
+    List fine-tuning jobs.
+
+    Parameters
+    ----------
+    after: int
+        ID of the last fine-tuning job returned in the previous request.
+    limit: int
+        Maximum number of fine-tuning jobs to return.
+
+    Returns
+    -------
+    Dict
+        Dictionary with the list of fine-tuning jobs and a flag indicating if there are more jobs to return.
+    """
+
+    # get fine-tuning job records
     fine_tuning_job_records = (
         db.session.query(FineTuningJobs, Predictor)
             .join(Predictor, Predictor.id == FineTuningJobs.model_id)
@@ -56,7 +96,21 @@ def list_fine_tuning_jobs(after, limit):
         'has_more': has_more,
     }
 
-def get_fine_tuning_job(job_id):
+def get_fine_tuning_job(job_id: int) -> Dict:
+    """
+    Get a fine-tuning job.
+
+    Parameters
+    ----------
+    job_id: int
+        ID of the fine-tuning job.
+
+    Returns
+    -------
+    Dict
+        Dictionary with the fine-tuning job.
+    """
+
     fine_tuning_job_record, predictor_record = (
         db.session.query(FineTuningJobs, Predictor)
             .join(Predictor, Predictor.id == FineTuningJobs.model_id)
@@ -73,6 +127,22 @@ def cancel_fine_tuning_job(job_id):
     pass
 
 def parse_fine_tuning_job_data(fine_tuning_job_record, predictor_record):
+    """
+    Parse fine-tuning job data and add more information for the response.
+
+    Parameters
+    ----------
+    fine_tuning_job_record: mindsdb.interfaces.storage.db.FineTuningJobs
+        Fine-tuning job record.
+    predictor_record: mindsdb.interfaces.storage.db.Predictor
+
+    Returns
+    -------
+    Dict
+        Dictionary with the fine-tuning job.
+    """
+
+    # convert fine-tuning job record to dictionary
     fine_tuning_job = fine_tuning_job_record.as_dict()
 
     # add object type
@@ -213,4 +283,5 @@ class FineTuningJobGet(Resource):
 class FineTuningJobCancel(Resource):
     @ns_conf.doc('cancel_fine_tuning_job')
     def post(self, job_id):
+        # TODO: cancelling query execution is not supported yet, it is tracked here: https://github.com/mindsdb/mindsdb/issues/5728
         pass

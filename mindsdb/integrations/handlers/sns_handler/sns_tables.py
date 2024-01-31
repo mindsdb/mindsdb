@@ -55,12 +55,14 @@ class SubscriptionTable(APITable):
                     raise NotImplementedError
                 params[arg1] = arg2
         response = self.handler.connection.list_subscriptions()        
-        if bool(params) is False:           
+        if bool(params) is False:
+            print(response['Subscriptions'])           
             return pd.DataFrame(response['Subscriptions'])    
         else:
             for subscription in response['Subscriptions']:
                 for key,value in params.items():
                     if value==subscription[key]:
+                        print(subscription) 
                         return pd.DataFrame.from_dict([subscription])
             return pd.DataFrame(columns=accepted_params)
                 
@@ -88,7 +90,35 @@ class MessageTable(APITable):
         self.handler.connect()
     
     def select(self, query: ast.Select) -> pd.DataFrame:
-        self.handler.sqs_client
+        params = {}
+        conditions=extract_comparison_conditions(query.where)
+        accepted_params = ['QueueUrl']
+        for op, arg1, arg2 in conditions:
+            if arg1 in accepted_params:
+                if op != '=':
+                    raise NotImplementedError
+                params[arg1] = arg2
+        if bool(params) is False:
+            return pd.DataFrame(columns = ['text'])
+        response=""
+        #try:
+        #response = self.handler.sqs_client.receive_message(QueueUrl='http://localstack:4566/000000000000/test')
+        print(params)
+        response = self.handler.sqs_client.receive_message(QueueUrl=params['QueueUrl'])
+        #except:
+        #raise ConnectionError
+        if response !="" and 'Messages' in response:    
+            text_list = list()
+            for message in response['Messages']:
+                body=message['Body']
+                json_obj=JSON.loads(body)
+                text = json_obj['Message']
+                text_list.append(text)
+            df = pd.DataFrame({'text': text_list})
+            return df
+        else:
+            df = pd.DataFrame(columns = ['text'])
+            return df
             
 
     def insert(self, query: ast.Insert) -> pd.DataFrame:

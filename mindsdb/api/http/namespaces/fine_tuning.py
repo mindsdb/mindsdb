@@ -26,10 +26,12 @@ def add_fine_tuning_job(job_id, model_id, training_file, created_at):
     db.session.add(fine_tuning_job_record)
     db.session.commit()
 
-def list_fine_tuning_jobs():
+def list_fine_tuning_jobs(after, limit):
+    # TODO: add support for after parameter
     fine_tuning_job_records = (
         db.session.query(FineTuningJobs, Predictor)
             .join(Predictor, Predictor.id == FineTuningJobs.model_id)
+            .limit(limit)
             .all()
     )
 
@@ -40,7 +42,11 @@ def list_fine_tuning_jobs():
 
         fine_tuning_jobs.append(fine_tuning_job)
 
-    return fine_tuning_jobs
+    # TODO: add support for pagination and include has_more flag
+    return {
+        'object': 'list',
+        'data': fine_tuning_jobs
+    }
 
 def get_fine_tuning_job(job_id):
     fine_tuning_job_record, predictor_record = (
@@ -57,6 +63,9 @@ def get_fine_tuning_job(job_id):
 
 def parse_fine_tuning_job_data(fine_tuning_job_record, predictor_record):
     fine_tuning_job = fine_tuning_job_record.as_dict()
+
+    # add object type
+    fine_tuning_job['object'] = 'fine_tuning.job'
 
     # remove model_id and add model
     fine_tuning_job.pop('model_id')
@@ -129,10 +138,10 @@ class FineTuning(Resource):
 
             # execute fine-tuning job
             fine_tuned_predictor_record = base_ml_engine.finetune(
-                model_name=model_record.name,
-                base_model_version=model_record.version,
+                model_name=predictor_record.name,
+                base_model_version=predictor_record.version,
                 project_name=project_name,
-                data_integration_ref=model_record.data_integration_ref,
+                data_integration_ref=predictor_record.data_integration_ref,
                 fetch_data_query=f"SELECT * FROM {training_file}",
             )
 
@@ -151,10 +160,12 @@ class FineTuning(Resource):
         
     @ns_conf.doc('list_fine_tuning_jobs')
     def get(self):
+        # extract parameters from request
+        after = request.args.get('after', None)
+        limit = request.args.get('limit', 20)
+
         try:
-            fine_tuning_jobs = list_fine_tuning_jobs()
-            for job in fine_tuning_jobs:
-                job['object'] = 'fine_tuning.job'
+            fine_tuning_jobs = list_fine_tuning_jobs(after, limit)
 
             return fine_tuning_jobs, HTTPStatus.OK
         except Exception as e:

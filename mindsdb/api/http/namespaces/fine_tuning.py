@@ -32,9 +32,16 @@ def list_fine_tuning_jobs(after, limit):
         db.session.query(FineTuningJobs, Predictor)
             .join(Predictor, Predictor.id == FineTuningJobs.model_id)
             .filter(FineTuningJobs.id > after)
-            .limit(limit)
+            .limit(limit + 1)
             .all()
     )
+
+    # check if there are more records
+    has_more = len(fine_tuning_job_records) > limit
+
+    # if there are more records, remove the last one
+    if has_more:
+        fine_tuning_job_records.pop()
 
     # iterate over fine-tuning job records and parse them
     fine_tuning_jobs = []
@@ -43,10 +50,10 @@ def list_fine_tuning_jobs(after, limit):
 
         fine_tuning_jobs.append(fine_tuning_job)
 
-    # TODO: add support for pagination and include has_more flag
     return {
         'object': 'list',
-        'data': fine_tuning_jobs
+        'data': fine_tuning_jobs,
+        'has_more': has_more,
     }
 
 def get_fine_tuning_job(job_id):

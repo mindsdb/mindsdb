@@ -14,8 +14,8 @@ from mindsdb.integrations.handlers.statsforecast_handler.statsforecast_handler i
     get_insample_cv_results,
 )
 from mindsdb_sql import parse_sql
-from tests.unit.ml_handlers.test_time_series_utils import create_mock_df
-from tests.unit.executor_test_base import BaseExecutorTest
+from unit.ml_handlers.test_time_series_utils import create_mock_df
+from unit.executor_test_base import BaseExecutorTest
 
 
 def test_choose_model():
@@ -50,17 +50,16 @@ class TestStatsForecast(BaseExecutorTest):
             columns = [col.alias if col.alias is not None else col.name for col in ret.columns]
             return pd.DataFrame(ret.data, columns=columns)
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_grouped(self, mock_handler):
+    def test_grouped(self):
         # create project
         self.run_sql("create database proj")
         df = create_mock_df()
-        self.set_handler(mock_handler, name="t", tables={"df": df}, engine='mysql')
+        self.set_data('df', df)
 
         self.run_sql(
             """
            create model proj.model_1_group
-           from t (select * from df)
+           from dummy_data (select * from df)
            predict target_col
            order by time_col
            group by group_col
@@ -75,7 +74,7 @@ class TestStatsForecast(BaseExecutorTest):
         result_df = self.run_sql(
             """
            SELECT p.*
-           FROM t.df as t
+           FROM dummy_data.df as t
            JOIN proj.model_1_group as p
            where t.group_col='b'
         """
@@ -89,7 +88,7 @@ class TestStatsForecast(BaseExecutorTest):
         self.run_sql(
             """
            create model proj.model_multi_group
-           from t (select * from df)
+           from dummy_data (select * from df)
            predict target_col
            order by time_col
            group by group_col, group_col_2, group_col_3
@@ -103,7 +102,7 @@ class TestStatsForecast(BaseExecutorTest):
         result_df = self.run_sql(
             """
            SELECT p.*
-           FROM t.df as t
+           FROM dummy_data.df as t
            JOIN proj.model_multi_group as p
            where t.group_col_2='a2'
         """
@@ -113,8 +112,7 @@ class TestStatsForecast(BaseExecutorTest):
         describe_result = self.run_sql("describe proj.model_multi_group.features")
         assert describe_result["unique_id"][0] == ["group_col", "group_col_2", "group_col_3"]
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_model_choice(self, mock_handler):
+    def test_model_choice(self):
         """This tests whether changing the model_name and frequency USING args
         will switch the actual model used.
         """
@@ -124,7 +122,7 @@ class TestStatsForecast(BaseExecutorTest):
         df = pd.read_parquet("https://datasets-nixtla.s3.amazonaws.com/m4-hourly.parquet")
         df = df[df.unique_id.isin(["H1", "H2", "H3"])]  # subset for speed
         n_groups = df["unique_id"].nunique()
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.set_data('df', df)
 
         # generate ground truth predictions from the package
         prediction_horizon = 4
@@ -137,7 +135,7 @@ class TestStatsForecast(BaseExecutorTest):
         self.run_sql(
             f"""
            create model proj.modelx
-           from pg (select * from df)
+           from dummy_data (select * from df)
            predict y
            order by ds
            group by unique_id
@@ -154,7 +152,7 @@ class TestStatsForecast(BaseExecutorTest):
         result_df = self.run_sql(
             """
            SELECT p.*
-           FROM pg.df as t
+           FROM dummy_data.df as t
            JOIN proj.modelx as p
         """
         )
@@ -188,14 +186,13 @@ class TestStatsForecast(BaseExecutorTest):
             self.run_sql("describe proj.modelx.ensemble")
             assert "ensemble is not supported" in str(e)
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_auto_model_selection(self, mock_handler):
+    def test_auto_model_selection(self):
         """Tests the argument for auto model selection will pick the
         model with the lowest error.
         """
         # create project
         self.run_sql("create database proj")
-        self.set_handler(mock_handler, name="pg", tables={"df": AirPassengersDF})
+        self.set_data('df', AirPassengersDF)
 
         # generate ground truth predictions from the package - AutoTheta should win here
         prediction_horizon = 1
@@ -209,7 +206,7 @@ class TestStatsForecast(BaseExecutorTest):
         self.run_sql(
             f"""
            create model proj.modelx
-           from pg (select * from df)
+           from dummy_data (select * from df)
            predict y
            order by ds
            group by unique_id
@@ -226,7 +223,7 @@ class TestStatsForecast(BaseExecutorTest):
         result_df = self.run_sql(
             """
            SELECT p.*
-           FROM pg.df as t
+           FROM dummy_data.df as t
            JOIN proj.modelx as p
         """
         )
@@ -240,17 +237,16 @@ class TestStatsForecast(BaseExecutorTest):
         assert type(describe_result["accuracies"][0][0][0]) == str
         assert describe_result["accuracies"][0][0][1] < 1
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_hierarchical(self, mock_handler):
+    def test_hierarchical(self):
         # create project
         self.run_sql("create database proj")
         df = pd.read_csv("tests/unit/ml_handlers/data/house_sales.csv")  # comes mindsdb docs forecast example
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.set_data('df', df)
 
         self.run_sql(
             """
            create model proj.model_1_group
-           from pg (select * from df)
+           from dummy_data (select * from df)
            predict ma
            order by saledate
            group by type, bedrooms
@@ -266,7 +262,7 @@ class TestStatsForecast(BaseExecutorTest):
         mindsdb_result_hier = self.run_sql(
             """
            SELECT p.*
-           FROM pg.df as t
+           FROM dummy_data.df as t
            JOIN proj.model_1_group as p
            where t.type='house'
         """
@@ -280,7 +276,7 @@ class TestStatsForecast(BaseExecutorTest):
         self.run_sql(
             """
            create model proj.model_1
-           from pg (select * from df)
+           from dummy_data (select * from df)
            predict ma
            order by saledate
            group by type, bedrooms
@@ -294,7 +290,7 @@ class TestStatsForecast(BaseExecutorTest):
         mindsdb_result_default = self.run_sql(
             """
            SELECT p.*
-           FROM pg.df as t
+           FROM dummy_data.df as t
            JOIN proj.model_1 as p
            where t.type='house'
         """

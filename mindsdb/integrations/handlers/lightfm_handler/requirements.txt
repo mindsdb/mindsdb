@@ -1,2 +1,0 @@
-lightfm==1.17
-pydantic>=1.10.7

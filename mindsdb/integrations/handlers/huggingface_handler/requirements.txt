@@ -1,6 +1,0 @@
-transformers==4.33.2
-datasets
-evaluate
-torch
-nltk
-huggingface-hub

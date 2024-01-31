@@ -1,2 +1,0 @@
-bs4
-pymupdf

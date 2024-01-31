@@ -1,2 +1,0 @@
-stability-sdk
-pillow

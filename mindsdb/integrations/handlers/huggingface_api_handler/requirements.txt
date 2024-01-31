@@ -1,2 +1,0 @@
-hugging_py_face
-huggingface-hub

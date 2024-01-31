@@ -1,2 +1,0 @@
-elasticsearch
-elasticsearch-dbapi

@@ -43,10 +43,9 @@ class OpenAIHandler(BaseMLEngine):
         self.default_model = 'gpt-3.5-turbo'
         self.default_image_model = 'dall-e-2'
         self.default_mode = (
-            'default'  # can also be 'conversational' or 'conversational-full'
+            'conversational'  # can also be 'conversational-full'
         )
         self.supported_modes = [
-            'default',
             'conversational',
             'conversational-full',
             'image',
@@ -56,7 +55,7 @@ class OpenAIHandler(BaseMLEngine):
         self.max_batch_size = 20
         self.default_max_tokens = 100
         self.chat_completion_models = CHAT_MODELS
-        self.supported_ft_models = FINETUNING_MODELS # base models compatible with finetuning
+        self.supported_ft_models = FINETUNING_MODELS  # base models compatible with finetuning
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
@@ -271,7 +270,7 @@ class OpenAIHandler(BaseMLEngine):
             }
 
             if (
-                args.get('mode', self.default_mode) != 'default'
+                args.get('mode', self.default_mode) in ('conversational', 'conversational-full')
                 and model_name not in self.chat_completion_models
             ):
                 raise Exception(
@@ -494,15 +493,6 @@ class OpenAIHandler(BaseMLEngine):
                     kwargs['messages'] = truncate_msgs_for_token_limit(
                         kwargs['messages'], kwargs['model'], api_args['max_tokens']
                     )
-                    pkwargs = {**kwargs, **api_args}
-
-                    before_openai_query(kwargs)
-                    resp = _tidy(client.chat.completions.create(**pkwargs))
-                    _log_api_call(pkwargs, resp)
-
-                    completions.extend(resp)
-                elif mode == 'default':
-                    kwargs['messages'] = [initial_prompt] + [kwargs['messages'][-1]]
                     pkwargs = {**kwargs, **api_args}
 
                     before_openai_query(kwargs)

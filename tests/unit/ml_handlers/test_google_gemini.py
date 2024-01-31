@@ -33,23 +33,6 @@ class TestGeminiHandler(BaseMLAPITest):
         with pytest.raises(Exception):
             self.wait_predictor("proj", "test_google_invalid_model")
 
-    @pytest.mark.skip(reason="This test is failing as no error is being thrown")
-    def test_unknown_model_argument(self):
-        """Test for unknown argument when creating Gemini model"""
-        self.run_sql(
-            f"""
-            CREATE MODEL proj.test_google_unknown_arg
-            PREDICT answer
-            USING
-                engine='google',
-                column='question',
-                api_key='{GEMINI_API_KEY}',
-                evidently_wrong_argument='wrong value';
-            """
-        )
-        with pytest.raises(Exception):
-            self.wait_predictor("proj", "test_google_unknown_arg")
-
     def test_single_qa(self):
         """Test for single question/answer pair"""
         self.run_sql(
@@ -73,14 +56,13 @@ class TestGeminiHandler(BaseMLAPITest):
         )
         assert "stockholm" in result_df["answer"].iloc[0].lower()
 
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_bulk_qa(self, mock_handler):
+    def test_bulk_qa(self):
         """Test for bulk question/answer pairs"""
         df = pd.DataFrame.from_dict({"question": [
             "What is the capital of Sweden?",
             "What is the second planet of the solar system?"
         ]})
-        self.set_handler(mock_handler, name="pg", tables={"df": df})
+        self.set_data('df', df)
 
         self.run_sql(
             f"""
@@ -97,7 +79,7 @@ class TestGeminiHandler(BaseMLAPITest):
         result_df = self.run_sql(
             """
             SELECT p.answer
-            FROM pg.df as t
+            FROM dummy_data.df as t
             JOIN proj.test_google_bulk_qa as p;
         """
         )

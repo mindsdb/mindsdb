@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 from mindsdb_sql import parse_sql
 
-from tests.unit.executor_test_base import BaseExecutorTest
+from .base_ml_test import BaseMLAPITest
 
 WRITER_API_KEY = os.environ.get("WRITER_API_KEY")
 os.environ["WRITER_API_KEY"] = WRITER_API_KEY
@@ -14,8 +14,9 @@ os.environ["WRITER_API_KEY"] = WRITER_API_KEY
 WRITER_ORG_ID = os.environ.get("WRITER_ORG_ID")
 os.environ["WRITER_ORG_ID"] = WRITER_ORG_ID
 
-
-class TestWriter(BaseExecutorTest):
+@pytest.mark.skipif(os.environ.get('WRITER_API_KEY') is None, reason='Missing Writer API key!')
+@pytest.mark.skipif(os.environ.get('WRITER_ORG_ID') is None, reason='Missing Writer_ORG_ID!')
+class TestWriter(BaseMLAPITest):
     def wait_predictor(self, project, name):
         # wait
         done = False
@@ -27,7 +28,7 @@ class TestWriter(BaseExecutorTest):
                     break
                 elif ret["STATUS"][0] == "error":
                     break
-            time.sleep(0.5)
+            time.sleep(1.0)
         if not done:
             raise RuntimeError("predictor wasn't created")
 
@@ -44,55 +45,50 @@ class TestWriter(BaseExecutorTest):
         # create project
         self.run_sql("create database proj")
 
-        self.run_sql(
-            """
-                CREATE MODEL proj.test_writer_handler_missing_required_args
-                PREDICT answer
-                USING
-                   engine="writer"
-                   """
-        )
         with pytest.raises(Exception):
+            self.run_sql(
+                """
+                    CREATE MODEL proj.test_writer_handler_missing_required_args
+                    PREDICT answer
+                    USING
+                    engine="writer"
+                    """
+            )
             self.wait_predictor("proj", "test_writer_handler_missing_required_args")
 
     def test_unsupported_vector_store(self):
         self.run_sql("create database proj")
-        self.run_sql(
-            f"""
-            create model proj.test_unsupported_vector_store
-            predict answer
-            using
-                engine='writer',
-                writer_api_key='{WRITER_API_KEY}',
-                writer_org_id='{WRITER_ORG_ID}',
-                vector_store_name='unsupported_vector_store'
-        """
-        )
-
         with pytest.raises(Exception):
+            self.run_sql(
+                f"""
+                create model proj.test_unsupported_vector_store
+                predict answer
+                using
+                    engine='writer',
+                    writer_api_key='{self.get_api_key('WRITER_API_KEY')}',
+                    writer_org_id='{WRITER_ORG_ID}',
+                    vector_store_name='unsupported_vector_store'
+            """
+            )
             self.wait_predictor("proj", "test_unsupported_vector_store")
 
     def test_unknown_arguments(self):
         self.run_sql("create database proj")
-        self.run_sql(
-            f"""
-            create model proj.test_writer_unknown_arguments
-            predict answer
-            using
-                engine='writer',
-                writer_api_key='{WRITER_API_KEY}',
-                writer_org_id='{WRITER_ORG_ID}',
-                evidently_wrong_argument='wrong value'  --- this is a wrong argument name
-        """
-        )
         with pytest.raises(Exception):
+            self.run_sql(
+                f"""
+                create model proj.test_writer_unknown_arguments
+                predict answer
+                using
+                    engine='writer',
+                    writer_api_key='{self.get_api_key('WRITER_API_KEY')}',
+                    writer_org_id='{WRITER_ORG_ID}',
+                    evidently_wrong_argument='wrong value'  --- this is a wrong argument name
+            """
+            )
             self.wait_predictor("proj", "test_writer_unknown_arguments")
 
-    @pytest.mark.xfail(
-        reason="there seems to be an issue with running inner queries, it appears to be a potential bug in the mock handler"
-    )
-    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_qa(self, postgres_mock_handler):
+    def test_qa(self):
         # create project
         self.run_sql("create database proj")
         df = pd.DataFrame.from_dict(
@@ -104,16 +100,16 @@ class TestWriter(BaseExecutorTest):
                 ]
             }
         )
-        self.set_handler(postgres_mock_handler, name="pg", tables={"df": df})
+        self.set_data('df', df)
 
         self.run_sql(
             f"""
            create model proj.test_writer_writer_qa
-           from pg (select * from df)
+           from dummy_data (select * from df)
            predict answer
            using
                 engine='writer',
-                writer_api_key='{WRITER_API_KEY}',
+                writer_api_key='{self.get_api_key('WRITER_API_KEY')}',
                 writer_org_id='{WRITER_ORG_ID}';
         """
         )
@@ -131,16 +127,16 @@ class TestWriter(BaseExecutorTest):
     def test_invalid_prompt_template(self):
         # create project
         self.run_sql("create database proj")
-        self.run_sql(
-            f"""
-           create model proj.test_invalid_prompt_template_format
-           predict completion
-           using
-                engine='writer',
-                prompt_template="not valid format",
-                writer_api_key='{WRITER_API_KEY}',
-                writer_org_id='{WRITER_ORG_ID}';
-        """
-        )
         with pytest.raises(Exception):
+            self.run_sql(
+                f"""
+            create model proj.test_invalid_prompt_template_format
+            predict completion
+            using
+                    engine='writer',
+                    prompt_template="not valid format",
+                    writer_api_key='{self.get_api_key('WRITER_API_KEY')}',
+                    writer_org_id='{WRITER_ORG_ID}';
+            """
+            )
             self.wait_predictor("proj", "test_invalid_prompt_template_format")

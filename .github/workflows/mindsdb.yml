@@ -75,6 +75,8 @@ jobs:
           env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
 
           env PYTHONPATH=./ pytest tests/unit/test_cache.py
+        
+          env PYTHONPATH=./ pytest tests/unit/test_llm_utils.py
 
           pytest -vx tests/integration_tests/flows/test_ml_task_queue.py
 

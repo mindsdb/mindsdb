@@ -56,7 +56,7 @@ class OpenAIHandler(BaseMLEngine):
         self.max_batch_size = 20
         self.default_max_tokens = 100
         self.chat_completion_models = CHAT_MODELS
-        self.supported_ft_models = FINETUNING_MODELS # base models compatible with finetuning  # TODO #7387: transition to new endpoint before 4/1/24. Useful reference: Anyscale handler. # noqa
+        self.supported_ft_models = FINETUNING_MODELS # base models compatible with finetuning
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
@@ -751,10 +751,11 @@ class OpenAIHandler(BaseMLEngine):
                     f"To fine-tune this OpenAI model, please format your select data query to have a `{prompt_col}` column and a `{completion_col}` column first."
                 )  # noqa
 
-    def _prepare_ft_jsonl(self, df, _, temp_filename, temp_model_path):
+    @staticmethod
+    def _prepare_ft_jsonl(df, _, temp_filename, temp_model_path):
         df.to_json(temp_model_path, orient='records', lines=True)
 
-        # TODO avoid subprocess usage once OpenAI enables non-CLI access
+        # TODO avoid subprocess usage once OpenAI enables non-CLI access, or refactor to use our own LLM utils instead
         subprocess.run(
             [
                 "openai",

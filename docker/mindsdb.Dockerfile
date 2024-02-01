@@ -33,7 +33,8 @@ RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements/requi
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
 ENV FLASK_DEBUG "1"
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONUNBUFFERED 1
+ENV MINDSDB_DOCKER_ENV 1
 
 EXPOSE 47334/tcp
 EXPOSE 47335/tcp
@@ -57,6 +58,7 @@ COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
 ENV FLASK_DEBUG "1"
 ENV PYTHONUNBUFFERED=1
+ENV MINDSDB_DOCKER_ENV 1
 
 EXPOSE 47334/tcp
 EXPOSE 47335/tcp

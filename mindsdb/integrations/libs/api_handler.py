@@ -2,7 +2,7 @@ from typing import Any, List
 import ast as py_ast
 
 import pandas as pd
-from mindsdb_sql.parser.ast import ASTNode, Select, Insert, Update, Delete
+from mindsdb_sql.parser.ast import ASTNode, Select, Insert, Update, Delete, Star
 from mindsdb_sql.parser.ast.select.identifier import Identifier
 
 from mindsdb.integrations.utilities.sql_utils import (
@@ -143,9 +143,6 @@ class APITable():
         if limit is not None and len(result) > limit:
             result = result[:int(limit)]
 
-        # project targets
-        result = project_dataframe(result, query.targets, self.get_columns())
-
         return result
 
     def list(self,
@@ -243,6 +240,11 @@ class APIHandler(BaseHandler):
     def query(self, query: ASTNode):
 
         if isinstance(query, Select):
+            table = self._get_table(query.from_table)
+            if not hasattr(table, 'list'):
+                # for back compatibility, targets wasn't passed in previous version
+                query.targets = [Star()]
+
             result = self._get_table(query.from_table).select(query)
         elif isinstance(query, Update):
             result = self._get_table(query.table).update(query)

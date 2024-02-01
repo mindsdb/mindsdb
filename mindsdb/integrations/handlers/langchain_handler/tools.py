@@ -47,7 +47,7 @@ def get_exec_metadata_tool(llm, executor, model_kwargs) -> Callable:
 
             integration = parts[0]
             integrations = executor.session.integration_controller
-            handler = integrations.get_handler(integration)
+            handler = integrations.get_data_handler(integration)
 
             if len(parts) == 1:
                 df = handler.get_tables().data_frame

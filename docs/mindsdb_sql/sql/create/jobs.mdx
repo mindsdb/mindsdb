@@ -59,6 +59,15 @@ And the supported `<period>` values:
 - `month` / `months`
 </Info>
 
+If you do not provide the `project_name` value, then the job is created in the default `mindsdb` project.
+
+Further, you can query all jobs and their execution history like this:
+
+```sql
+SELECT * FROM [project_name.]jobs WHERE name = 'job_name';
+SELECT * FROM [project_name.]jobs_history WHERE name = 'job_name';
+```
+
 ### `LAST`
 
 MindsDB provides a custom `LAST` keyword that enables you to fetch data inserted/updated after the last time you queried for it. It is a convenient way to select only the newly added data rows when running a job.

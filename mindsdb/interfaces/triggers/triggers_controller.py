@@ -36,7 +36,7 @@ class TriggersController:
         db_name = table.parts[0]
 
         db_integration = session.integration_controller.get(db_name)
-        db_handler = session.integration_controller.get_handler(db_name)
+        db_handler = session.integration_controller.get_data_handler(db_name)
 
         if not hasattr(db_handler, 'subscribe'):
             raise Exception(f'Handler {db_integration["engine"]} does''t support subscription')

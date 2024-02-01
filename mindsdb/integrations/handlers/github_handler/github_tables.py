@@ -1205,7 +1205,6 @@ class GithubFilesTable(APITable):
                     pattern = pattern.replace('%', '.*')
                     file_matches.append(pattern)
                 elif condition.op == FilterOperator.NOT_LIKE:
-                    # https://stackoverflow.com/a/26148730
                     pattern = pattern.replace('%', '.*')
                     file_not_matches.append(pattern)
                 condition.applied = True

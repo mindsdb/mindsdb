@@ -419,9 +419,9 @@ class OrdersTable(APITable):
         """
         insert_statement_parser = INSERTQueryParser(
             query,
-            supported_columns=['currency', 'email', 'fulfillment_status', 'gift_card',
-                               'grams', 'note', 'phone', 'price', 'processed_at', 'quantity',
-                               'tags', 'test', 'title', 'vendor'],
+            supported_columns=['buyer_accepts_marketing', 'currency', 'email', 'fulfillment_status',
+                               'gift_card', 'grams', 'note', 'phone', 'price', 'processed_at',
+                               'quantity', 'tags', 'test', 'title', 'total_weight', 'vendor'],
             mandatory_columns=['price', 'title'],
             all_mandatory=False
         )
@@ -505,7 +505,7 @@ class OrdersTable(APITable):
         api_session = self.handler.connect()
         shopify.ShopifyResource.activate_session(api_session)
         # build line_items object
-        line_item_columns = ['gift_card', 'grams', 'price', 'quantity', 'title', 'vendor']
+        line_item_columns = {'gift_card', 'grams', 'price', 'quantity', 'title', 'vendor'}
         modified_order_data = []
 
         for order in order_data:

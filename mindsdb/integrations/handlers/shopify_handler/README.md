@@ -180,7 +180,7 @@ The `products` table supports the following columns: 'title', 'body_html', 'vend
 
 The `customers` table supports the following columns: 'first_name', 'last_name', 'email', 'phone', 'tags' and 'currency'. Of these, either 'first_name', 'last_name', 'email' or 'phone' must be provided. 
 
-The `orders` table supports the following columns: 'currency', 'email', 'fulfillment_status', 'gift_card', 'grams', 'note', 'phone', 'price', 'processed_at', 'quantity', 'tags', 'test', 'title', and 'vendor'. Of these, 'price' and 'title' must be provided.
+The `orders` table supports the following columns: 'buyer_accepts_marketing', 'currency', 'email', 'fulfillment_status', 'note', 'phone', 'processed_at', 'tags', 'test', and 'total_weight'. Additionally, the `orders` table supports the following value fields which are sub-components of the 'line_items' column: 'gift_card', 'grams', 'price', 'quantity', 'title', 'vendor'. Of these, 'price' and 'title' must be provided.
 
 It is also possible to DELETE data from your Shopify store. At the moment, only the `customers`, `products`, and `orders` tables support DELETE:
 
@@ -218,7 +218,7 @@ ORDER BY id
 LIMIT 5
 ~~~~
 
-For `customer_reviews` table, only SELECT is supported.
+For the `customer_reviews` table, only SELECT is supported.
 
 ~~~~sql
 SELECT  *
@@ -228,14 +228,14 @@ ORDER BY id
 LIMIT 5
 ~~~~
 
-For `customers` table, DELETE is supported too. You can delete the customers as follows:
+For the `customers` table, DELETE is supported too. You can delete the customers as follows:
 
 ~~~~sql
 DELETE FROM shopify_datasource.customers
 WHERE verified_email = false;
 ~~~~
 
-For `Orders` table, UPDATE is supported. You can update the orders as follows:
+For the `orders` table, UPDATE is supported. You can update the orders as follows:
 ~~~~sql
 UPDATE shopify_datasource.orders
 SET email="abc@your_domain.com"

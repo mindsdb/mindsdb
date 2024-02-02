@@ -77,8 +77,7 @@ class TestMssqlHandlerGet:
         ), "expected to have some tables in the db, but got None"
         assert (
             "table_name" in tables
-        ), f"expected to get 'table_name' column in the response:\n{tables}"
-        return list(tables["table_name"])
+        ), f"expected to get 'table_name' in the response but got: {tables}"
 
     def test_get_columns(self, sql_server_handler):
         response = sql_server_handler.get_columns("test")
@@ -87,7 +86,7 @@ class TestMssqlHandlerGet:
         expected_df = pd.DataFrame(expected_columns)
         assert response.data_frame.equals(
             expected_df
-        ), "response does not match 'expected_columns'"
+        ), "response does not contain the expected columns"
 
 
 @pytest.mark.usefixtures("sql_server_handler", "database_connection_and_cursor")
@@ -100,7 +99,7 @@ class TestMssqlHandlerQuery:
         expected_df = pd.DataFrame(expected_data)
         assert response.data_frame.equals(
             expected_df
-        ), "response does not match 'expected_data'"
+        ), "response does not contain the expected data"
 
     def test_select_query(self, sql_server_handler):
         limit = 3

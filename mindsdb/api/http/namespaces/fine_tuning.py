@@ -185,15 +185,8 @@ def parse_fine_tuning_job_data(fine_tuning_job_record, predictor_record):
 
 @ns_conf.route('/jobs')
 class FineTuningJobsCreateAndList(Resource):
-    # TODO: table should not be created here
-    def create_table_if_not_exists(self):
-        FineTuningJobs.metadata.create_all(db.session.get_bind(), checkfirst=True)
-
     @ns_conf.doc('create_fine_tuning_job')
     def post(self):
-        # TODO: table should not be created here
-        self.create_table_if_not_exists()
-
         # extract parameters from request
         try:
             model = request.json['model']

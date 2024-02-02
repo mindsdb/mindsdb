@@ -119,11 +119,11 @@ class TestMySQLHandlerTables:
 
     def test_insert_table(self, handler):
         res = handler.native_query(f"INSERT INTO test VALUES (4, -4, 0.4, 'D')")
-        self.check_valid_response(res)
+        check_valid_response(res)
         handler.disconnect()
         handler.connect()
         res = handler.query(f"SELECT count(*) as x FROM test")
-        self.check_valid_response(res)
+        check_valid_response(res)
         got_rows = res.data_frame['x'][0]
         assert got_rows == 4
 

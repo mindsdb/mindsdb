@@ -9,7 +9,7 @@ from sqlalchemy.exc import NoResultFound
 
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.http.utils import http_error
-from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
+from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.interfaces.storage.db import Predictor
 from mindsdb_sql import parse_sql
@@ -60,7 +60,7 @@ class ModelsList(Resource):
                 'Invalid query string',
                 f'SQL CREATE statement is invalid: {query}')
 
-        if type(create_statement) != CreatePredictor:
+        if type(create_statement) is not CreatePredictor:
             return http_error(
                 HTTPStatus.BAD_REQUEST,
                 'Invalid CREATE SQL statement',
@@ -83,7 +83,7 @@ class ModelsList(Resource):
             ml_integration = create_statement.using.pop("engine", ml_integration)
 
         try:
-            ml_handler = session.integration_controller.get_handler(ml_integration)
+            ml_handler = session.integration_controller.get_ml_handler(ml_integration)
         except Exception:
             return http_error(
                 HTTPStatus.NOT_FOUND,

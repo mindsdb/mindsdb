@@ -1,6 +1,6 @@
 import unittest
 from mindsdb.integrations.handlers.dremio_handler.dremio_handler import DremioHandler
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 
 class DremioHandlerTest(unittest.TestCase):

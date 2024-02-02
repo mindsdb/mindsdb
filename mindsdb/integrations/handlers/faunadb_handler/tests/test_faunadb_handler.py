@@ -1,7 +1,7 @@
 import unittest
 from mindsdb_sql import parse_sql
 
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import (
+from mindsdb.api.executor.data_types.response_type import (
     RESPONSE_TYPE,
 )
 from mindsdb.integrations.handlers.faunadb_handler.faunadb_handler import (

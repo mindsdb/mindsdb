@@ -3,13 +3,9 @@ import dill
 import pandas as pd
 from mindsdb.integrations.libs.base import BaseMLEngine
 from typing import Dict, Optional
-from type_infer.infer import infer_types
+from type_infer.api import infer_types
 from tpot import TPOTClassifier, TPOTRegressor
 from sklearn.preprocessing import LabelEncoder
-
-
-
-
 
 
 class TPOTHandler(BaseMLEngine):

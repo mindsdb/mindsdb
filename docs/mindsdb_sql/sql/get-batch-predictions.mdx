@@ -1,0 +1,67 @@
+---
+title: Get Batch Predictions
+sidebarTitle: Get Batch Predictions
+---
+
+## Description
+
+The `SELECT` statement fetches predictions from the model table. The data is returned on the fly and the result set is not persisted.
+
+But there are ways to save predictions data! You can save your predictions as a view using the [`CREATE VIEW`](/sql/create/view/) statement. Please note that a view is a saved query and does not store data like a table. Another way is to create a table using the [`CREATE TABLE`](/sql/create/table/) statement or insert your predictions into an existing table using the [`INSERT INTO`](/sql/api/insert/) statement.
+
+## Syntax
+
+Here is the syntax for making batch predictions by joining one or more data source tables with one or more model tables:
+
+```sql
+SELECT t1.column, t2.column, m1.target, m2.target
+FROM integration_name.table_name1 AS t1
+JOIN integration_name.table_name2 AS t2 ON t1.column = t2.column
+JOIN ...
+JOIN mindsdb.model_name1 AS m1
+JOIN mindsdb.model_name2 AS m2
+JOIN ...
+WHERE m1.parameter = 'value'
+AND m2.parameter = 'value';
+```
+
+Where:
+
+* There are the data tables that provide input to the models: `integration_name.table_name1`, `integration_name.table_name2`.
+* These are the AI tables: `mindsdb.model_name1`, `mindsdb.model_name2`.
+
+Note that you can provide input to the models from the data tables and also in the `WHERE` clause.
+
+<Tip>
+Follow [this doc page](/generative-ai-tables) to learn more about AI Tables.
+</Tip>
+
+## Example
+
+Let's make bulk predictions to predict the `rental_price` value using the `home_rentals_model` model joined with the data source table.
+
+```sql
+SELECT t.sqft, t.location, t.neighborhood, t.days_on_market, t.rental_price AS real_price,
+       m.rental_price AS predicted_rental_price
+FROM example_db.demo_data.home_rentals AS t
+JOIN mindsdb.home_rentals_model AS m
+LIMIT 5;
+```
+
+On execution, we get:
+
+```sql
++-------+----------+-----------------+----------------+--------------+-----------------------------+
+| sqft  | location | neighborhood    | days_on_market | real_price   | predicted_rental_price      |
++-------+----------+-----------------+----------------+--------------+-----------------------------+
+| 917   | great    | berkeley_hills  | 13             | 3901         | 3886                        |
+| 194   | great    | berkeley_hills  | 10             | 2042         | 2007                        |
+| 543   | poor     | westbrae        | 18             | 1871         | 1865                        |
+| 503   | good     | downtown        | 10             | 3026         | 3020                        |
+| 1066  | good     | thowsand_oaks   | 13             | 4774         | 4748                        |
++-------+----------+-----------------+----------------+--------------+-----------------------------+
+```
+
+<Tip>
+Follow [this doc page](/generative-ai-tables#working-with-generative-ai-tables) to see examples of joining multiple data table with multiple models.
+</Tip>

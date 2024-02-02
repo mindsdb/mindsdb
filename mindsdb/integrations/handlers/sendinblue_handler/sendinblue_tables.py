@@ -2,7 +2,7 @@ import sib_api_v3_sdk
 import pandas as pd
 
 
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Text
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.api_handler import APITable
 

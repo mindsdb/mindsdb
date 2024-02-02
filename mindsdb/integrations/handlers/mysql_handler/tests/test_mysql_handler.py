@@ -4,7 +4,7 @@ import os
 import time
 
 from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 HANDLER_KWARGS = {
     "connection_data": {
@@ -116,6 +116,16 @@ class TestMySQLHandlerTables:
         check_valid_response(res)
         tables = get_table_names(handler)
         assert drop_table not in tables
+
+    def test_insert_table(self, handler):
+        res = handler.native_query(f"INSERT INTO test VALUES (4, -4, 0.4, 'D')")
+        self.check_valid_response(res)
+        handler.disconnect()
+        handler.connect()
+        res = handler.query(f"SELECT count(*) as x FROM test")
+        self.check_valid_response(res)
+        got_rows = res.data_frame['x'][0]
+        assert got_rows == 4
 
 
 class TestMySQLHandlerColumns:

@@ -1482,13 +1482,14 @@ class ExecuteCommands:
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
     @mark_process("learn")
-    def answer_create_predictor(self, statement):
+    def answer_create_predictor(self, statement: CreatePredictor):
         integration_name = self.session.database
 
         # allow creation in non-active projects, e.g. 'create mode proj.model' works whether `proj` is active or not
         if len(statement.name.parts) > 1:
             integration_name = statement.name.parts[0]
-        statement.name.parts = [integration_name.lower(), statement.name.parts[-1]]
+        model_name = statement.name.parts[-1]
+        statement.name.parts = [integration_name.lower(), model_name]
 
         ml_integration_name = "lightwood"  # default
         if statement.using is not None:
@@ -1500,6 +1501,16 @@ class ExecuteCommands:
         ml_handler = self.session.integration_controller.get_ml_handler(
             ml_integration_name
         )
+
+        if getattr(statement, "is_replace", False) is True:
+            # try to delete
+            try:
+                self.session.model_controller.delete_model(
+                    model_name,
+                    project_name=integration_name
+                )
+            except Exception:
+                pass
 
         try:
             df = self.session.model_controller.create_model(statement, ml_handler)

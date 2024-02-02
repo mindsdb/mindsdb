@@ -354,6 +354,29 @@ class TestProjectStructure(BaseExecutorDummyML):
         )
         self.wait_predictor('mindsdb', 'task_model')
 
+    def test_replace_model(self):
+        # create model
+        self.run_sql(
+            '''
+                CREATE or REPLACE model task_model
+                PREDICT a
+                using engine='dummy_ml',
+                join_learn_process=true
+            '''
+        )
+        self.wait_predictor('mindsdb', 'task_model')
+
+        # recreate
+        self.run_sql(
+            '''
+                CREATE or REPLACE model task_model
+                PREDICT a
+                using engine='dummy_ml',
+                join_learn_process=true
+            '''
+        )
+        self.wait_predictor('mindsdb', 'task_model')
+
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_complex_joins(self, data_handler):
         df1 = pd.DataFrame([

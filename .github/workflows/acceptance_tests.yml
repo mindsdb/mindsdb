@@ -20,9 +20,9 @@ jobs:
     - name: Install dependencies
       run: |
         pip install .
-        pip install .[huggingface]
-        pip install -r requirements/requirements-test.txt
+        pip install .[huggingface] # Right now the learning hub tests rely on huggingface and lightwood. We should mock them
         pip install .[lightwood]
+        pip install -r requirements/requirements-test.txt
       shell: bash
       env:
         ACCESS_KEY:  ${{ secrets.GH_ACCESS_KEY }}
@@ -30,7 +30,7 @@ jobs:
     - name: Run Learning Hub Tests
       run: |
           echo -e "\n===============MySQL Handler===============\n"
-          pytest -svx tests/handler_tests/test_mysql_handler.py
+          pytest -svx mindsdb/integrations/handlers/mysql_handler/
 
           echo -e "\n===============PostgreSQL Handler===============\n"
           pytest -svx tests/handler_tests/test_postgres_handler.py

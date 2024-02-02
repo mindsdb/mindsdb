@@ -235,7 +235,7 @@ class FineTuningJobsCreateAndList(Resource):
             # store job details in DB
             job_id = add_fine_tuning_job(fine_tuned_predictor_record.id, training_file, validation_file, created_at)
 
-            # TODO: add status and result_files (?) to response
+            # TODO: result_files (?) to response
             return {
                 'object': 'fine_tuning.job',
                 'id': job_id,
@@ -243,6 +243,7 @@ class FineTuningJobsCreateAndList(Resource):
                 'created_at': int(created_at.timestamp()),
                 'fine_tuned_model': None,
                 'organization_id': predictor_record.company_id,
+                'status': 'running', # TODO: it is always running for local execution, but not so on cloud; getting the status from the queue can be tricky.
                 'validation_file': validation_file,
                 'training_file': training_file,
             }, HTTPStatus.OK

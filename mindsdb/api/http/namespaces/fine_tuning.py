@@ -127,6 +127,20 @@ def get_fine_tuning_job(job_id: int) -> Dict:
 
 
 def cancel_fine_tuning_job(job_id):
+    """
+    Cancel a fine-tuning job.
+
+    Parameters
+    ----------
+    job_id: int
+        ID of the fine-tuning job.
+
+    Returns
+    -------
+    Dict
+        Dictionary with cancelled the fine-tuning job.
+    """
+
     pass
 
 
@@ -185,8 +199,34 @@ def parse_fine_tuning_job_data(fine_tuning_job_record, predictor_record):
 
 @ns_conf.route('/jobs')
 class FineTuningJobsCreateAndList(Resource):
+    """
+    Resource for creating and listing fine-tuning jobs.
+    """
+
     @ns_conf.doc('create_fine_tuning_job')
     def post(self):
+        """
+        Create a new fine-tuning job.
+
+        URL: POST /fine_tuning/jobs
+        Request parameters:
+            - model: str
+                Name of the model to be fine-tuned.
+            - training_file: str
+                Name of the training file, table or view to be used for fine-tuning.
+            - hyperparameters: dict -> Not supported yet
+                Hyperparameters to be used for fine-tuning.
+            - suffix: str -> Not supported yet
+                Suffix to be added to the fine-tuned model name.
+            - validation_file: str -> Not supported yet
+                Name of the validation file.
+        
+        Returns
+        -------
+        Dict
+            Dictionary with the fine-tuning job.
+        """
+
         # extract parameters from request
         try:
             model = request.json['model']
@@ -252,6 +292,27 @@ class FineTuningJobsCreateAndList(Resource):
 
     @ns_conf.doc('list_fine_tuning_jobs')
     def get(self):
+        """
+        List fine-tuning jobs.
+
+        URL
+        ---
+        GET /fine_tuning/jobs
+
+        Query Parameters
+        ----------------
+        after: int
+            ID of the last fine-tuning job returned in the previous request.
+        limit: int
+                Maximum number of fine-tuning jobs to return.
+
+        Returns
+        -------
+        Dict
+            Dictionary with the list of fine-tuning jobs and a flag indicating if there are more jobs to return.
+
+        """
+
         # extract parameters from request
         after = request.args.get('after', 0)
         limit = int(request.args.get('limit', 20))
@@ -266,8 +327,31 @@ class FineTuningJobsCreateAndList(Resource):
 
 @ns_conf.route('/jobs/<job_id>')
 class FineTuningJobGet(Resource):
+    """
+    Resource for getting a fine-tuning job.
+    """
+
     @ns_conf.doc('get_fine_tuning_job')
     def get(self, job_id):
+        """
+        Get a fine-tuning job.
+
+        URL
+        ---        
+        GET /fine_tuning/jobs/<job_id>
+
+        Parameters
+        ----------
+        job_id: int
+            ID of the fine-tuning job.
+
+        Returns
+        -------
+        Dict
+            Dictionary with the fine-tuning job.
+
+        """
+
         try:
             fine_tuning_job = get_fine_tuning_job(job_id)
 
@@ -278,7 +362,15 @@ class FineTuningJobGet(Resource):
 
 @ns_conf.route('/jobs/<job_id>/cancel')
 class FineTuningJobCancel(Resource):
+    """
+    Resource for cancelling a fine-tuning job.
+    """
+
     @ns_conf.doc('cancel_fine_tuning_job')
     def post(self, job_id):
+        """
+        Cancel a fine-tuning job.
+        """
+
         # TODO: cancelling query execution is not supported yet, it is tracked here: https://github.com/mindsdb/mindsdb/issues/5728
         pass

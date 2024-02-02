@@ -1,39 +1,47 @@
 ---
-title: Google's Vertex AI 
-sidebarTitle: Vertex AI
+title: Vertex
+sidebarTitle: Vertex
 ---
 
-This allows you to bring any Vertex AI model as a virtual AI-Table that you can query via SQL and JOIN with data from any datasource.
+[Vertex AI](https://cloud.google.com/vertex-ai) offers everything you need to build and use generative AI—from AI solutions, to Search and Conversation, to 130+ foundation models, to a unified AI platform.
 
 ## Setup
 
-You will need to get the service_account.json and copy the content in the corresponding <strong> service account </strong> attribute: 
+MindsDB provides the Vertex handler that enables you to connect Vertex AI models within MindsDB.
+
+
+### AI Engine
+
+Before creating a model, it is required to create an AI engine based on the provided handler.
+
+<Tip>
+If you installed MindsDB locally, make sure to install all Vertex dependencies by running `pip install [vertex]` or from the [requirements.txt](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/vertex_handler/requirements.txt) file.
+</Tip>
+
+You can create an Vertex engine using this command:
 
 ```sql
-create ml_engine vertex from vertex
-using 
-project_id="mindsdb-401709",
-location="us-central1",
-staging_bucket="gs://my_staging_bucket",
-experiment="my-experiment",
-experiment_description="my experiment description",
-service_account = {
-  ...
-};
+CREATE ML_ENGINE vertex FROM vertex
+USING 
+    project_id="mindsdb-401709",
+    location="us-central1",
+    staging_bucket="gs://my_staging_bucket",
+    experiment="my-experiment",
+    experiment_description="my experiment description",
+    service_account = {
+      ...paste service account keys here
+    };
 ```
 
 <Tip>
-To create a service_account.json follow the following steps: 
-
- - Go to https://console.cloud.google.com/apis/credentials
- - On the top left there is a blue "create credentials" button click it and select "service account key." (see below if its not there)
- - Choose the service account you want, and select "JSON" as the key type.
- - It should allow give you a json to download
+Please note that you need to provide your service_account key's here. 
 </Tip>
 
-## Bring your model as an AI-Table
+The name of the engine (here, `vertex`) should be used as a value for the `engine` parameter in the `USING` clause of the `CREATE MODEL` statement.
 
-Create model, in this example, assuming that you have a model called 'diamonds_anomaly_detection' in Vertex:
+### AI Model
+
+The [`CREATE MODEL`](/sql/create/model) statement is used to create, train, and deploy models within MindsDB.
 
 ```sql
 CREATE MODEL mindsdb.vertex_anomaly_detection_model
@@ -44,12 +52,22 @@ USING
     custom_model = True;
 ```
 
-## Use your model
+Where:
 
-Call prediction (for example in bulk predictions using JOIN)
+| Name              | Description                                                               |
+|-------------------|---------------------------------------------------------------------------|
+| `engine`          | It defines the Vertex engine.                                          |
+| `model_name`      | It is used to provide the name of the model. |
+| `custom_model`      | Is it custom model or not      |
+
+## Usage
+
+Once you have created an Vertex model, you can use it to make predictions.
 
 ```sql
 SELECT t.cut, m.cut as anomaly
 FROM files.vertex_anomaly_detection as t
 JOIN mindsdb.vertex_anomaly_detection_model as m;
 ```
+
+

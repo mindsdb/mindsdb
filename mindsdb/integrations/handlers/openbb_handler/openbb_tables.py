@@ -1,4 +1,4 @@
-from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
+from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.utilities.date_utils import parse_local_date

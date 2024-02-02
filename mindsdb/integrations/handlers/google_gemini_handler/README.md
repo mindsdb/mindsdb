@@ -18,7 +18,7 @@ USING
 ```
 
 ```sql
-CREATE MODEL mindsdb.Google Gemini_test
+CREATE MODEL mindsdb.Google_Gemini_test
 PREDICT answer
 USING
   column = 'question',
@@ -29,12 +29,12 @@ USING
 
 ```sql
 SELECT question, answer
-FROM mindsdb.Google Gemini_test
+FROM mindsdb.Google_Gemini_test
 WHERE question = 'What is the meaning of life?';
 ```
 
 ```sql
 SELECT t.question, m.answer
-FROM mindsdb.Google Gemini_test as m
+FROM mindsdb.Google_Gemini_test as m
 JOIN files.question_table as t;
 ```

@@ -6,7 +6,7 @@ from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.utilities.context import context as ctx
 
-from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
+from mindsdb.api.executor.controllers.session_controller import SessionController
 
 
 class TriggersController:
@@ -20,7 +20,7 @@ class TriggersController:
         project_controller = ProjectController()
         project = project_controller.get(name=project_name)
 
-        from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
+        from mindsdb.api.executor.controllers.session_controller import SessionController
         session = SessionController()
 
         # check exists
@@ -36,7 +36,7 @@ class TriggersController:
         db_name = table.parts[0]
 
         db_integration = session.integration_controller.get(db_name)
-        db_handler = session.integration_controller.get_handler(db_name)
+        db_handler = session.integration_controller.get_data_handler(db_name)
 
         if not hasattr(db_handler, 'subscribe'):
             raise Exception(f'Handler {db_integration["engine"]} does''t support subscription')

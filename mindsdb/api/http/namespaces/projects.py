@@ -5,7 +5,7 @@ from sqlalchemy.exc import NoResultFound
 
 
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
-from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
+from mindsdb.api.executor.controllers.session_controller import SessionController
 
 
 @ns_conf.route('/')

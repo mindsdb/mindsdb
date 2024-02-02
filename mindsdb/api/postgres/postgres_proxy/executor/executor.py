@@ -6,9 +6,9 @@ from mindsdb_sql.planner import utils as planner_utils
 from numpy import dtype as np_dtype
 from pandas.api import types as pd_types
 
-from mindsdb.api.mysql.mysql_proxy.classes.sql_query import SQLQuery, Column
+from mindsdb.api.executor import SQLQuery, Column
 from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
-from mindsdb.api.mysql.mysql_proxy.executor import ExecuteCommands
+from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.api.mysql.mysql_proxy.utilities import SqlApiException
 from mindsdb.api.postgres.postgres_proxy.postgres_packets.postgres_fields import POSTGRES_TYPES
 from mindsdb.utilities import log
@@ -32,7 +32,7 @@ class Executor:
         self.sql = ""
         self.sql_lower = ""
 
-        self.command_executor = ExecuteCommands(self.session, self)
+        self.command_executor = ExecuteCommands(self.session)
 
     def parse(self, sql: Union[str, bytes]):
         self.logger.info("%s.parse: sql - %s", self.__class__.__name__, sql)

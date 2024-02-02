@@ -1,4 +1,4 @@
-from mindsdb.api.mysql.mysql_proxy.controllers import SessionController
+from mindsdb.api.executor.controllers import SessionController
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import CHARSET_NUMBERS
 from mindsdb.api.mysql.mysql_proxy.mysql_proxy import MysqlProxy
 
@@ -26,6 +26,7 @@ class FakeMysqlProxy(MysqlProxy):
         self.request = request
         self.client_address = client_address
         self.server = server
+        self.connection_id = None
 
         self.session = SessionController()
         self.session.database = 'mindsdb'

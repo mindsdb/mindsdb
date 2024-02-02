@@ -16,9 +16,9 @@ from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import DropTables, Select
 from mindsdb_sql.parser.ast.base import ASTNode
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.document_loaders import TextLoader, PyPDFLoader
+from langchain.document_loaders import TextLoader
 
-from mindsdb.api.mysql.mysql_proxy.utilities.sql import query_df
+from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse as Response
@@ -162,13 +162,16 @@ class FileHandler(DatabaseHandler):
                 )
 
             elif fmt == "pdf":
-                loader = PyPDFLoader(file_path)
-                docs = text_splitter.split_documents(loader.load_and_split())
+
+                import fitz  # pymupdf
+
+                with fitz.open(file_path) as pdf:  # open pdf
+                    text = chr(12).join([page.get_text() for page in pdf])
+
+                split_text = text_splitter.split_text(text)
+
                 df = pd.DataFrame(
-                    [
-                        {"content": doc.page_content, "metadata": doc.metadata}
-                        for doc in docs
-                    ]
+                    {"content": split_text, "metadata": [{}] * len(split_text)}
                 )
 
         else:

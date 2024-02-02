@@ -1,17 +1,19 @@
 ---
-title: Build a Chatbot with MindsDB
-sidebarTitle: Customize Chatbot
+title: Build a Chatbot with a Text2SQL Skill
+sidebarTitle: Chatbot with a Text2SQL Skill
 ---
 
-MindsDB provides the `CREATE CHATBOT` statement that is used under the hood by the [Chatbot Interface](/sql/tutorials/llm-chatbot-ui). But, if you want to customize your chatbot to learn from the underlying database or use a different model, check out this tutorial.
+MindsDB provides the `CREATE CHATBOT` statement that lets you customize your chatbot with an AI model and a data source of your choice. Follow this tutorial to learn build a chatbot with a Text2SQL skill.
 
 The `CREATE CHATBOT` statement requires the following componenets:
 
-1. **Chat app**: A connection to a chat app, such as [Slack](/integrations/app-integrations/slack) or [MS Teams](/integrations/app-integrations/microsoft-teams).
+1. **Chat app**: A connection to a chat app, such as [Slack](/integrations/app-integrations/slack#method-1-chatbot-responds-in-direct-messages-to-a-slack-app) or [MS Teams](/integrations/app-integrations/microsoft-teams).
 
 2. **AI agent**: An AI agent that comes with an AI model trained with the provided training data. Learn more about [AI agents here](/agents/agent).
 
+<Tip>
 Learn more about [chatbots here](/agents/chatbot).
+</Tip>
 
 Let's go over getting all the components ready.
 
@@ -19,64 +21,67 @@ Let's go over getting all the components ready.
 
 ### Chat App
 
-Here is the command to connect your Slack app to MindsDB:
-
-```sql
-CREATE DATABASE chatbot_slack
-WITH
-  ENGINE = 'slack',
-  PARAMETERS = {
-      "token": "xoxb-...",
-      "app_token": "xapp-..."
-    };
-```
+Use the `CREATE DATABASE` statement to connect the chat app to MindsDB.
 
 <Tip>
-Follow [this link](/sql/tutorials/llm-chatbot-ui#slack-app-setup) to learn how to setup Slack app and generate tokens.
+If you want to use Slack, follow [this link](/integrations/app-integrations/slack#method-1-chatbot-responds-in-direct-messages-to-a-slack-app) to setup a Slack app, generate required tokens, and connect it to MindsDB.
+
+If you want to use MS Teams, follow [this link](/integrations/app-integrations/microsoft-teams) to generate required tokens and connect it to MindsDB.
 </Tip>
 
 ### AI Agent
 
-Start by creating and deploying the model:
+Start by creating and deploying the model.
+
+<Note>
+If you haven't created a LangChain engine, use the `CREATE ML_ENGINE` statement, as explained [here](/integrations/ai-engines/langchain#ai-engine).
+</Note>
 
 ```sql
-CREATE MODEL conversational_langchain_model
+CREATE MODEL my_model
 PREDICT answer
 USING
-  engine = 'langchain',
-  mode = 'conversational',
-  prompt = 'answer users questions as a helpful assistant',
-  user_column = 'question',
-  assistant_column = 'answer';
+    engine = 'langchain',
+    input_column = 'question',
+    api_key = 'your-model-api-key', -- choose one of OpenAI or Anthropic
+    model_name='gpt-4', -- optional model name from OpenAI or Anthropic
+    mode = 'conversational',
+    user_column = 'question' ,
+    assistant_column = 'answer',
+    max_tokens=100,
+    temperature=0,
+    verbose=True,
+    prompt_template='Answer the user input in a helpful way';
 ```
 
 Here is the command to check its status:
 
 ```sql
-DESCRIBE conversational_langchain_model;
+DESCRIBE my_model;
 ```
 
 The status should read `complete` before proceeding.
 
-Create one or more skills for an AI agent:
+Next step is to create one or more skills for an AI agent. Here we create a Text2SQL skill.
 
 ```sql
 CREATE SKILL text_to_sql_skill
 USING
     type = 'text_to_sql',
-    database = 'example_db',   -- this must be created with CREATE DATABASE
-    tables = ['sales_data'];   -- this table comes from example_db
+    database = 'example_db',   -- this is a data source that must be connected to MindsDB with CREATE DATABASE statement
+    tables = ['sales_data'],   -- this table comes from the connected example_db data source
+    description = "Sales data that includes stores, sold products, and other sale details";
 ```
 
 This skill enables a model to answer questions about data from the `sales_data` table.
 
-Now let's create an AI agent:
+Now let's create an AI agent using the above model and skill.
 
 ```sql
 CREATE AGENT support_agent
 USING
-model = customer_support_model,  -- this must be created with CREATE MODEL
-skills = ['text_to_sql_skill'];  -- this must be created with CREATE SKILL
+model = 'my_model',                  -- this was created with CREATE MODEL
+skills = ['text_to_sql_skill'];    -- this was created with CREATE SKILL
 ```
 
 ## Create Chatbot
@@ -86,10 +91,10 @@ Once all the components are ready, let's proceed to creating the chatbot.
 ```sql
 CREATE CHATBOT my_chatbot
 USING
-   database = 'chatbot_slack',
-   agent = 'support_agent',
-   enable_dms = true,
-   running = true;
+   database = 'chat_app',     -- this parameters stores a connection to a chat app, like Slack or MS Teams
+   agent = 'support_agent',   -- this parameter stores an agent name, which was create with CREATE AGENT
+   enable_dms = true,         -- this parameter is optional and enable direct messages with the chatbot
+   running = true;            -- this parameter is optional and set to true by default, meaning that the chatbot is running
 ```
 
 The `database` parameter stores connection to a chat app. And the `agent` parameter stores an AI agent created by passing a model and training data.
@@ -100,4 +105,4 @@ You can query all chatbot using this query:
 SELECT * FROM chatbots;
 ```
 
-Now you can go to Slack and chat with the app directly.
+Now you can go to Slack or MS Teams and chat with the chatbot created with MindsDB.

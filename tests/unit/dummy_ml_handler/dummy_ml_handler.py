@@ -18,7 +18,8 @@ class DummyHandler(BaseMLEngine):
     def predict(self, df, args=None):
         df['predicted'] = 42
         df['predictor_id'] = self.model_storage.predictor_id
-        return df[['predicted', 'predictor_id']]
+        df['row_id'] = self.model_storage.predictor_id * 100 + df.reset_index().index
+        return df[['predicted', 'predictor_id', 'row_id']]
 
     def _get_model_verison(self):
         return self.model_storage._get_model_record(

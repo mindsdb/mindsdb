@@ -7,8 +7,7 @@ Create Date: 2024-02-02 12:41:34.598315
 """
 from alembic import op
 import sqlalchemy as sa
-import mindsdb.interfaces.storage.db
-
+import mindsdb.interfaces.storage.db # noqa
 
 
 # revision identifiers, used by Alembic.
@@ -29,10 +28,7 @@ def upgrade():
         sa.PrimaryKeyConstraint('id')
     )
 
-    # ### end Alembic commands ###
-
 
 def downgrade():
     op.drop_table('fine_tuning_jobs')
-    
-    # ### end Alembic commands ###
+

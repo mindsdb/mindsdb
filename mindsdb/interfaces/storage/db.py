@@ -16,7 +16,7 @@ from sqlalchemy import (
     UniqueConstraint,
     create_engine,
     text,
-    types,
+    types
 )
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import (
@@ -207,6 +207,17 @@ class Predictor(Base):
         return name_no_version, version
 
 
+Index(
+    "predictor_index",
+    Predictor.company_id,
+    Predictor.name,
+    Predictor.version,
+    Predictor.active,
+    Predictor.deleted_at,  # would be good to have here nullsfirst(Predictor.deleted_at)
+    unique=True
+)
+
+
 class Project(Base):
     __tablename__ = "project"
 
@@ -371,7 +382,7 @@ class ChatBots(Base):
 class ChatBotsHistory(Base):
     __tablename__ = "chat_bots_history"
     id = Column(Integer, primary_key=True)
-    chat_bot_id = Column(Integer)
+    chat_bot_id = Column(Integer, nullable=False)
     type = Column(String)  # TODO replace to enum
     text = Column(String)
     user = Column(String)

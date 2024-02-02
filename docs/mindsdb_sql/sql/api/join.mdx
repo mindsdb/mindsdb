@@ -5,11 +5,11 @@ sidebarTitle: Join Models with Tables
 
 ## Description
 
-The `JOIN` clause combines rows from the database table and the model table on a column defined in its implementation. It is used to make bulk predictions, as shown in the examples.
+The `JOIN` clause combines rows from the database table and the model table on a column defined in its implementation. It is used to make batch predictions, as shown in the examples.
 
 ## Syntax
 
-Here is the syntax:
+Here is the syntax that lets you join multiple data tables with multiple models to get all predictions at once.
 
 ```sql
 SELECT d1.column_name,
@@ -18,7 +18,7 @@ SELECT d1.column_name,
        m2.column_name,
        ...
 FROM integration_name.table_name_1 [AS] d1
-[JOIN integration_name.table_name_2 [AS] d2]
+[JOIN integration_name.table_name_2 [AS] d2 ON ...]
 [JOIN ...]
 JOIN project_name.model_name_1 [AS] m1
 [JOIN project_name.model_name_2 [AS] m2]
@@ -103,3 +103,7 @@ On execution, we get:
 |2019-12-31|767252.4205039773 |
 +----------+------------------+
 ```
+
+<Tip>
+Follow [this doc page](/generative-ai-tables#working-with-generative-ai-tables) to see examples of joining multiple data table with multiple models.
+</Tip>

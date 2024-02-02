@@ -58,6 +58,20 @@ JOIN files.question_table as t;
 
 ![](https://i.ibb.co/WPgXJDs/Screenshot-2023-05-30-at-7-54-32-PM.png)
 
+## LLM conversational mode
+```sql
+  CREATE MODEL chatbot_agent_2
+    PREDICT answer
+    USING
+    engine = 'llama_index',
+    input_column = 'question',
+    openai_api_key = '<key>',
+    mode = 'conversational',
+    user_column = 'question' ,
+    assistant_column = 'answer'
+```
+
+
 ## Example usage for GithubLoader
 ```sql
 CREATE MODEL github_loader

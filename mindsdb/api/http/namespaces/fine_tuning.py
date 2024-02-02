@@ -259,7 +259,7 @@ class FineTuningJobsCreateAndList(Resource):
             integration_name = get_predictor_integration(predictor_record).name
 
             # get handler instance
-            base_ml_engine = session.integration_controller.get_handler(integration_name)
+            base_ml_engine = session.integration_controller.get_ml_handler(integration_name)
 
             created_at = datetime.datetime.now()
 

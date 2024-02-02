@@ -958,7 +958,7 @@ class TestJobs(BaseExecutorDummyML):
 
         # check jobs table, still one job - previous was one time job
         ret = self.run_sql('select * from jobs')
-        assert len(ret) == 1,  "should be 1 job"
+        assert len(ret) == 1, "should be 1 job"
 
         # run scheduler
         scheduler.check_timetable()

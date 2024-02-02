@@ -1,6 +1,6 @@
 import os
-import openai
 import json
+import openai
 import contextlib
 from typing import Optional, Dict
 
@@ -9,12 +9,15 @@ import pandas as pd
 from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler
 from mindsdb.integrations.handlers.openai_handler.constants import OPENAI_API_BASE
 from mindsdb.integrations.utilities.handler_utils import get_api_key
+from mindsdb.integrations.libs.llm_utils import ft_jsonl_validation, ft_chat_formatter
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
 
 ANYSCALE_API_BASE = 'https://api.endpoints.anyscale.com/v1'
+MIN_FT_VAL_LEN = 20  # anyscale checks for at least 20 validation chats
+MIN_FT_DATASET_LEN = MIN_FT_VAL_LEN * 2  # we ask for 20 training chats as well
 
 
 class AnyscaleEndpointsHandler(OpenAIHandler):
@@ -56,10 +59,11 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         finally:
             # exit
             os.environ[key] = old_base
-            if oai_key is None:
-                del args['using']['api_key']
-            else:
-                args['using']['api_key'] = oai_key
+            if 'using' in args and 'api_key' in args['using']:
+                if oai_key is not None:
+                    args['using']['api_key'] = oai_key
+                else:
+                    del args['using']['api_key']
 
     def create(self, target, args=None, **kwargs):
         with self._anyscale_base_api(args):
@@ -81,8 +85,9 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
 
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         with self._anyscale_base_api(args):
-            self._set_models(args.get('using', {}))
-            super().finetune(df, args)
+            using_args = args.get('using', {})
+            self._set_models(using_args)
+            super().finetune(df, using_args)
             # rewrite chat_completion_models to include the newly fine-tuned model
             args = self.model_storage.json_get('args')
             args['chat_completion_models'] = list(self.chat_completion_models) + [args['model_name']]
@@ -117,53 +122,20 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
             if col not in set(df.columns):
                 raise Exception(f"To fine-tune this model, format your select data query to have a `role` column and a `content` column.")  # noqa
 
-    def _prepare_ft_jsonl(self, df, temp_storage_path, temp_filename, _, test_size=0.2):
-        """
-            df: has exactly two columns, `role` and `content`. Rows contain >= 1 chats in long (stacked) format.
-            For more details, check `FineTuning -> Data Format` in the Anyscale API reference.
-        """
-        def _is_valid(chat):
-            """ Check if chat is valid according to Anyscale criteria."""
-            roles = [m['role'] for m in chat]
-            transitions = {None: ['system', 'user'], 'system': ['user'], 'user': ['assistant'], 'assistant': ['user']}
+    @staticmethod
+    def _prepare_ft_jsonl(df, temp_storage_path, temp_filename, _, test_size=0.2):
+        # 1. format data
+        chats = ft_chat_formatter(df)
 
-            # check base condition
-            if not ('user' in roles and 'assistant' in roles):
-                return False
-
-            # check order is valid
-            state = None
-            for role in roles:
-                if role not in transitions[state]:
-                    return False
-                else:
-                    state = role
-
-            # chat is valid, return
-            return True
-
-        # 1. aggregate each chat sequence into one row
-        chats = []
-        chat = []
-        for i, row in df.iterrows():
-            if row['role'] == 'system' and len(chat) > 0:
-                if _is_valid(chat):
-                    chats.append({'messages': chat})
-                chat = []
-            event = {'role': row['role'], 'content': row['content']}
-            chat.append(event)
-
-        if _is_valid(chat):
-            chats.append({'messages': chat})
-
+        # 2. split chats in training and validation subsets
         series = pd.Series(chats)
-        if len(series) < 20 * 2:
-            raise Exception("Dataset is too small to finetune. Please include at least 40 samples (complete chats).")
-        val_size = max(20, int(len(series) * test_size))  # at least 20 samples required by Anyscale
+        if len(series) < MIN_FT_DATASET_LEN:
+            raise Exception(f"Dataset is too small to finetune. Please include at least {MIN_FT_DATASET_LEN} samples (complete chats).")
+        val_size = max(MIN_FT_VAL_LEN, int(len(series) * test_size))  # at least as many samples as required by Anyscale
         train = series.iloc[:-val_size]
         val = series.iloc[-val_size:]
 
-        # 2. write as jsonl
+        # 3. write as jsonl files
         file_names = {
             'train': f'{temp_filename}_prepared_train.jsonl',
             'val': f'{temp_filename}_prepared_valid.jsonl',
@@ -171,9 +143,13 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         train.to_json(os.path.join(temp_storage_path, file_names['train']), orient='records', lines=True)
         val.to_json(os.path.join(temp_storage_path, file_names['val']), orient='records', lines=True)
 
-        # 3. validate
-        self._validate_jsonl(os.path.join(temp_storage_path, file_names['train']))
-        self._validate_jsonl(os.path.join(temp_storage_path, file_names['val']))
+        # 5. validate and return
+        with open(os.path.join(temp_storage_path, file_names['train']), 'r', encoding='utf-8') as f:
+            ft_jsonl_validation([json.loads(line) for line in f])
+
+        with open(os.path.join(temp_storage_path, file_names['val']), 'r', encoding='utf-8') as f:
+            ft_jsonl_validation([json.loads(line) for line in f])
+
         return file_names
 
     def _get_ft_model_type(self, model_name: str):
@@ -194,44 +170,6 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
             return {**ft_params, **{'hyperparameters': hyperparameters}}
         else:
             return ft_params
-
-    @staticmethod
-    def _validate_jsonl(jsonl_path):
-        """ Borrowed from Anyscale docs. We may want something customized in the future though. """
-        with open(jsonl_path, 'r', encoding='utf-8') as f:
-            items = [json.loads(line) for line in f]
-
-        def check_data_for_format_errors(items: list):
-            for line_num, batch in enumerate(items):
-                prefix = f"Error in line #{line_num + 1}: "
-                if not isinstance(batch, dict):
-                    raise Exception(f"{prefix}Each line in the provided data should be a dictionary")
-
-                if "messages" not in batch:
-                    raise Exception(f"{prefix}Each line in the provided data should have a 'messages' key")
-
-                if not isinstance(batch["messages"], list):
-                    raise Exception(f"{prefix}Each line in the provided data should have a 'messages' key with a list of messages")  # noqa
-
-                messages = batch["messages"]
-                if not any(message.get("role", None) == "assistant" for message in messages):
-                    raise Exception(f"{prefix}Each message list should have at least one message with role 'assistant'")  # noqa
-
-                for message_num, message in enumerate(messages):
-                    prefix = f"Error in line #{line_num + 1}, message #{message_num + 1}: "
-                    if "role" not in message or "content" not in message:
-                        raise Exception(f"{prefix}Each message should have a 'role' and 'content' key")
-
-                    if any(k not in ("role", "content", "name") for k in message):
-                        raise Exception(f"{prefix}Each message should only have 'role', 'content', and 'name' keys, any other key is not allowed")  # noqa
-
-                    if message.get("role", None) not in ("system", "user", "assistant"):
-                        raise Exception(f"{prefix}Each message should have a valid role (system, user, or assistant)")  # noqa
-
-        try:
-            check_data_for_format_errors(items)
-        except Exception as e:
-            raise Exception(f"Fine-tuning data format is not valid. Got: {e}")
 
     @staticmethod
     def _get_client(api_key, base_url=ANYSCALE_API_BASE, org=None):

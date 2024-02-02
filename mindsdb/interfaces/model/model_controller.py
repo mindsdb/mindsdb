@@ -118,15 +118,13 @@ class ModelController():
 
         integration_record = db.Integration.query.get(model_record.integration_id)
 
-        ml_handler_base = session.integration_controller.get_handler(integration_record.name)
-
-        ml_handler = ml_handler_base.get_ml_handler(model_record.id)
+        ml_handler_base = session.integration_controller.get_ml_handler(integration_record.name)
 
         if attribute is None:
             model_info = self.get_model_info(model_record)
 
             try:
-                df = ml_handler.describe(attribute)
+                df = ml_handler_base.describe(model_record.id, attribute)
             except NotImplementedError:
                 df = pd.DataFrame()
 
@@ -141,7 +139,7 @@ class ModelController():
             model_info.insert(0, 'TABLES', [attributes])
             return model_info
         else:
-            return ml_handler.describe(attribute)
+            return ml_handler_base.describe(model_record.id, attribute)
 
     def get_model(self, name, version=None, ml_handler_name=None, project_name=None):
         show_active = True if version is None else None
@@ -413,13 +411,8 @@ class ModelController():
         )
         integration_record = db.Integration.query.get(model_record.integration_id)
 
-        ml_handler_base = session.integration_controller.get_handler(integration_record.name)
-
-        ml_handler = ml_handler_base.get_ml_handler(model_record.id)
-        if not hasattr(ml_handler, 'update'):
-            raise Exception("ML handler doesn't updating")
-
-        ml_handler.update(args=problem_definition)
+        ml_handler_base = session.integration_controller.get_ml_handler(integration_record.name)
+        ml_handler_base.update(args=problem_definition, model_id=model_record.id)
 
         # update model record
         if 'using' in problem_definition:

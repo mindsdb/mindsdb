@@ -609,7 +609,8 @@ class TestProjectStructure(BaseExecutorDummyML):
         # TODO Correlated subqueries (not implemented)
 
     def test_create_validation(self):
-        with pytest.raises(RuntimeError):
+        from mindsdb.integrations.libs.ml_exec_base import MLEngineException
+        with pytest.raises(MLEngineException):
             self.run_sql(
                 '''
                     CREATE model task_model_x

@@ -317,6 +317,7 @@ class InformationSchemaDataNode(DataNode):
             "NEXT_RUN_AT",
             "SCHEDULE_STR",
             "QUERY",
+            "IF_QUERY",
             "VARIABLES",
         ],
         "MDB_TRIGGERS": ["NAME", "PROJECT", "DATABASE", "TABLE", "QUERY", "LAST_ERROR"],

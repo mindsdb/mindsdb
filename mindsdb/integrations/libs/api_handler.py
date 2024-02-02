@@ -6,7 +6,7 @@ from mindsdb_sql.parser.ast import ASTNode, Select, Insert, Update, Delete, Star
 from mindsdb_sql.parser.ast.select.identifier import Identifier
 
 from mindsdb.integrations.utilities.sql_utils import (
-    extract_comparison_conditions, filter_dataframe, project_dataframe,
+    extract_comparison_conditions, filter_dataframe,
     FilterCondition, FilterOperator, SortColumn
 )
 from mindsdb.integrations.libs.base import BaseHandler

@@ -920,6 +920,53 @@ class TestJobs(BaseExecutorDummyML):
         # no history
         assert len(ret) == 0
 
+    def test_conditional_job(self, scheduler):
+        df = pd.DataFrame([
+            {'a': 1, 'b': '2'},
+        ])
+        self.save_file('tasks', df)
+
+        # create job
+        job_str = '''
+           create job j1 (
+              CREATE model pred
+                PREDICT p
+                using engine='dummy_ml',
+                join_learn_process=true
+           )
+           if (
+               select * from files.tasks where a={var}
+           )
+        '''
+
+        self.run_sql(job_str.format(var=2))
+
+        # check jobs table
+        ret = self.run_sql('select * from jobs')
+        assert len(ret) == 1, "should be 1 job"
+
+        # run scheduler
+        scheduler.check_timetable()
+
+        # check no models created
+        ret = self.run_sql('select * from models where name="pred"')
+        assert len(ret) == 0
+
+        # --- attempt2 ---
+
+        self.run_sql(job_str.format(var=1))
+
+        # check jobs table, still one job - previous was one time job
+        ret = self.run_sql('select * from jobs')
+        assert len(ret) == 1,  "should be 1 job"
+
+        # run scheduler
+        scheduler.check_timetable()
+
+        # check 1 model
+        ret = self.run_sql('select * from models where name="pred"')
+        assert len(ret) == 1
+
 
 class TestTriggers(BaseExecutorDummyML):
     def test_triggers(self):

@@ -166,7 +166,7 @@ class ExecuteCommands:
         self.datahub = session.datahub
 
     @profiler.profile()
-    def execute_command(self, statement):
+    def execute_command(self, statement) -> ExecuteAnswer:
         sql = None
         if isinstance(statement, ASTNode):
             sql = statement.to_string()
@@ -707,7 +707,7 @@ class ExecuteCommands:
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
-    def answer_create_job(self, statement):
+    def answer_create_job(self, statement: CreateJob):
         jobs_controller = JobsController()
 
         name = statement.name
@@ -715,8 +715,7 @@ class ExecuteCommands:
         project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
 
         try:
-            jobs_controller.add(job_name, project_name, statement.query_str,
-                                statement.start_str, statement.end_str, statement.repeat_str)
+            jobs_controller.add(job_name, project_name, statement)
         except EntityExistsError:
             if getattr(statement, "if_not_exists", False) is False:
                 raise

@@ -105,7 +105,7 @@ class MindsDBSQL(SQLDatabase):
     def _get_single_table_info(self, table_str: str) -> str:
         controller = self._metadata
         integration, table_name = table_str.split('.')
-        cols_df = controller.get_handler(integration).get_columns(table_name).data_frame
+        cols_df = controller.get_data_handler(integration).get_columns(table_name).data_frame
         fields = cols_df['Field'].to_list()
         dtypes = cols_df['Type'].to_list()
 

@@ -402,7 +402,7 @@ Check out examples here:
 
 MindsDB uses the Lightwood ML engine by default. This section takes a closer look at how this package automatically chooses what type of model to use.
 
-Models in Lightwood follow an encoder-mixer-decoder pattern, where refined, or encoded, representations of all features are mixed to produce target predictions. Here are [the mixers used by Lightwood](https://lightwood.io/mixer.html).
+Models in Lightwood follow an encoder-mixer-decoder pattern, where refined, or encoded, representations of all features are mixed to produce target predictions. Here are [the mixers used by Lightwood](https://mindsdb.github.io/lightwood/mixer.html).
 
 Please note that there is an ensembling step after training all mixers in case multiple mixers are used. Read on to learn more.
 
@@ -420,16 +420,16 @@ Let's dive into the details of how MindsDB picks the mixers.
 
 Here is the [piece of code](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L239,L277) being analyzed.
 
-[If we deal with a simple encoder/decoder pair performing the task](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L239,L250), we use the [Unit](https://lightwood.io/mixer.html#mixer.Unit) mixer that can be thought of as a bypass mixer.
+[If we deal with a simple encoder/decoder pair performing the task](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L239,L250), we use the [Unit](https://mindsdb.github.io/lightwood/mixer.html#mixer.Unit) mixer that can be thought of as a bypass mixer.
 
 A good example is the [Spam Classifier model of Hugging Face](/custom-model/huggingface#model-1-spam-classifier/) because it uses a single column as input.
 
 [Otherwise](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L251,L277), we choose from a range of other mixers depending on the following conditions:
 
-- [If it is not a time series case](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L252,L264), we use the [Neural](https://lightwood.io/mixer.html#mixer.Neural) mixer.
+- [If it is not a time series case](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L252,L264), we use the [Neural](https://mindsdb.github.io/lightwood/mixer.html#mixer.Neural) mixer.
 A good example is the [Customer Churn model](/sql/tutorials/customer-churn#training-a-predictor/).
 
-- [If it is a time series case](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L265,L277), we use the [NeuralTs](https://lightwood.io/mixer.html#mixer.NeuralTs) mixer.
+- [If it is a time series case](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L265,L277), we use the [NeuralTs](https://mindsdb.github.io/lightwood/mixer.html#mixer.NeuralTs) mixer.
 A good example is the [House Sales model](/sql/tutorials/house-sales-forecasting#training-a-predictor/).
 
 </Tab>
@@ -438,11 +438,11 @@ A good example is the [House Sales model](/sql/tutorials/house-sales-forecasting
 
 Here is the [piece of code](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L279,L324) being analyzed.
 
-[If it is not a time series case, or it is a time series case with the HORIZON value being one, and the target variable type is not an array of values](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L279,L310), we use the [LightGBM](https://lightwood.io/mixer.html#mixer.LightGBM), [XGBoostMixer](https://lightwood.io/mixer.html#mixer.XGBoostMixer), [Regression](https://lightwood.io/mixer.html#mixer.Regression), and [RandomForest](https://lightwood.io/mixer.html#mixer.RandomForest) mixers.
+[If it is not a time series case, or it is a time series case with the HORIZON value being one, and the target variable type is not an array of values](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L279,L310), we use the [LightGBM](https://mindsdb.github.io/lightwood/mixer.html#mixer.LightGBM), [XGBoostMixer](https://mindsdb.github.io/lightwood/mixer.html#mixer.XGBoostMixer), [Regression](https://mindsdb.github.io/lightwood/mixer.html#mixer.Regression), and [RandomForest](https://mindsdb.github.io/lightwood/mixer.html#mixer.RandomForest) mixers.
 
 A good example is the [Home Rentals model](/sql/tutorials/home-rentals#training-a-predictor/).
 
-[Otherwise, if it is a time series case and the HORIZON value is greater than one](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L311,L324), we use the [LightGBMArray](https://lightwood.io/mixer.html#mixer.LightGBMArray) mixer.
+[Otherwise, if it is a time series case and the HORIZON value is greater than one](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L311,L324), we use the [LightGBMArray](https://mindsdb.github.io/lightwood/mixer.html#mixer.LightGBMArray) mixer.
 
 A good example is the [House Sales model](/sql/tutorials/house-sales-forecasting#training-a-predictor/).
 
@@ -452,7 +452,7 @@ A good example is the [House Sales model](/sql/tutorials/house-sales-forecasting
 
 Here is the [piece of code](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L326,L351) being analyzed.
 
-[If it is an autoregressive case and the target type is an integer, float, or quantity](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L326,L351), we use the [SkTime](https://lightwood.io/mixer.html#mixer.SkTime), [ETSMixer](https://lightwood.io/mixer.html#mixer.ETSMixer), and [ARIMAMixer](https://lightwood.io/mixer.html#mixer.ARIMAMixer) mixers.
+[If it is an autoregressive case and the target type is an integer, float, or quantity](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L326,L351), we use the [SkTime](https://mindsdb.github.io/lightwood/mixer.html#mixer.SkTime), [ETSMixer](https://mindsdb.github.io/lightwood/mixer.html#mixer.ETSMixer), and [ARIMAMixer](https://mindsdb.github.io/lightwood/mixer.html#mixer.ARIMAMixer) mixers.
 
 The autoregressive case means that we use the target values (as encoded features) from as many previous rows as defined in the `WINDOW` clause.
 
@@ -470,9 +470,9 @@ MindsDB may use one or multiple mixers while preparing a model. Depending on the
 
 The three cases above describe how MindsDB chooses the mixer candidates and stores them in the `submodels` array.
 
-By default, after training all relevant mixers in the `submodels` array, MindsDB uses the [BestOf](https://lightwood.io/ensemble.html#ensemble.BestOf) ensemble to [single out the best mixer as the final model](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L353,L358).
+By default, after training all relevant mixers in the `submodels` array, MindsDB uses the [BestOf](https://mindsdb.github.io/lightwood/ensemble.html#ensemble.BestOf) ensemble to [single out the best mixer as the final model](https://github.com/mindsdb/lightwood/blob/9a48d5523d78111c77024e1983d281f37a9782ea/lightwood/api/json_ai.py#L353,L358).
 
-But you can always use a different ensemble that may aggregate multiple mixers per model, such as the [MeanEnsemble](https://lightwood.io/ensemble.html#ensemble.MeanEnsemble), [ModeEnsemble](https://lightwood.io/ensemble.html#ensemble.ModeEnsemble), [StackedEnsemble](https://lightwood.io/ensemble.html#ensemble.StackedEnsemble), [TsStackedEnsemble](https://lightwood.io/ensemble.html#ensemble.TsStackedEnsemble), or [WeightedMeanEnsemble](https://lightwood.io/ensemble.html#ensemble.WeightedMeanEnsemble) ensemble type.
+But you can always use a different ensemble that may aggregate multiple mixers per model, such as the [MeanEnsemble](https://mindsdb.github.io/lightwood/ensemble.html#ensemble.MeanEnsemble), [ModeEnsemble](https://mindsdb.github.io/lightwood/ensemble.html#ensemble.ModeEnsemble), [StackedEnsemble](https://mindsdb.github.io/lightwood/ensemble.html#ensemble.StackedEnsemble), [TsStackedEnsemble](https://mindsdb.github.io/lightwood/ensemble.html#ensemble.TsStackedEnsemble), or [WeightedMeanEnsemble](https://mindsdb.github.io/lightwood/ensemble.html#ensemble.WeightedMeanEnsemble) ensemble type.
 [Here](https://github.com/mindsdb/lightwood/tree/staging/lightwood/ensemble), you'll find implementations of all ensemble types.
 
 <Info>

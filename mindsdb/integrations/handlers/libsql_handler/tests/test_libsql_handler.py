@@ -1,6 +1,6 @@
 import unittest
 from mindsdb.integrations.handlers.libsql_handler.libsql_handler import LibSQLHandler
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 
 class LibSQLHandlerTest(unittest.TestCase):

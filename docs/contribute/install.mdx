@@ -3,37 +3,30 @@ title: MindsDB Installation for Development
 sidebarTitle: MindsDB Installation for Development
 ---
 
-If you want to contribute to the development of MindsDB, you need to install
-it first.
+If you want to contribute to the development of MindsDB, you need to install from source.
 
-There are a few installation options that you can choose as follows:
+<Info>
+If you do not want to contribute to the development of MindsDB but simply install and use it, then [install MindsDB via Docker](/setup/self-hosted/docker).
+</Info>
 
-- from [source](/setup/self-hosted/pip/source/),
-- using PyPi for [Windows](/setup/self-hosted/pip/windows/),
-  [Linux](/setup/self-hosted/pip/linux/), or
-  [MacOS](/setup/self-hosted/pip/macos/),
-- using [Docker image](/setup/self-hosted/docker/).
+## Install MindsDB for Development
 
-Our preferred MindsDB installation method for development is the installation
-from source.
-
-## Installing MindsDB
-
-Here, we recall the steps of MindsDB installation from source. You can either
+Here are the steps to install MindsDB from source. You can either
 follow the steps below or visit the provided link.
 
-Before proceeding, make sure you have `Git` and `Python 3.8.x` or `Python 3.9.x`
-installed.
+<Info>
+Before installing MindsDB from source, ensure that you use one of the following Python versions: `3.8.x`, `3.9.x`, 3.10.x`, `3.11.x`.
+</Info>
 
-1. Fork the MindsDB repository from [GitHub](https://github.com/mindsdb/mindsdb/fork).
+1. Fork the [MindsDB repository from GitHub](https://github.com/mindsdb/mindsdb).
 
 2. Clone the fork locally:
 
    ```bash
-   git clone https://github.com/mindsdb/mindsdb.git
+   git clone https://github.com/<username>/mindsdb.git
    ```
 
-3. Create a new virtual environment:
+3. Create a virtual environment:
 
    ```bash
    python -m venv mindsdb-venv
@@ -45,7 +38,7 @@ installed.
    source mindsdb-venv/bin/activate
    ```
 
-5. Install MindsDB with its local development dependencies and start it:
+5. Install MindsDB with its local development dependencies:
 
    Install dependencies:
 
@@ -55,28 +48,30 @@ installed.
    pip install -r requirements/requirements-dev.txt
    ```
    
-   And start MindsDB:
+6. Start MindsDB:
    
    ```bash
    python -m mindsdb
    ```
-   
-   <Tip>
-   Alternatively, you can use a makefile to install dependencies and start MindsDB:
-  
-    ```bash
-    make install_mindsdb
-    make run_mindsdb
-    ```
-   </Tip>
 
-By default, MindsDB will always start the `http` and `mysql` APIs. If you want to use Mongo API, you will need to provide that as a parameter to `--api`. You can do it as follows:
+   <Tip>
+   By default, MindsDB starts the `http` and `mysql` APIs. If you want to use Mongo API, you will need to provide that as a parameter to `--api`. You can do it as follows:
 
    ```bash
    python -m mindsdb --api=http,mongodb,mysql
    ```
+   </Tip>
 
-If everything works as expected, you should see the following message in the console:
+<Info>
+Alternatively, you can use a makefile to install dependencies and start MindsDB:
+  
+   ```bash
+    make install_mindsdb
+    make run_mindsdb
+    ```
+</Info>
+
+Now you should see the following message in the console:
 
 ```
 ...
@@ -90,11 +85,11 @@ mindsdb: http API: started on 47334
 
 You can access the MindsDB Editor at `localhost:47334`.
 
-## Dependencies
+## Install dependencies
 
 The dependencies for many of the data or ML integrations are not installed by default.
 
-If you want to use a data or ML integration whose dependencies are not available by default, install it by running this command:
+If you want to use a data or AI/ML integration whose dependencies are not available by default, install it by running this command:
 
 ```
 pip install .[handler_name]
@@ -106,13 +101,6 @@ You can find all available [handlers here](https://github.com/mindsdb/mindsdb/tr
 
 ## What's Next?
 
-Now that you are all set, we recommend you check out our **Tutorials** and
-**Community Tutorials** sections, where you'll find various examples of
-regression, classification, and time series predictions with MindsDB.
+Now that you installed and started MindsDB locally, go ahead and find out how to create and train a model using the [`CREATE MODEL`](/sql/create/model) statement.
 
-To learn more about MindsDB itself, follow the guide on
-[MindsDB database structure](/sql/table-structure/). Also, don't miss out on the
-remaining pages from the **SQL API** section, as they explain a common SQL
-syntax with examples.
-
-Have fun!
+Check out the **Use Cases** section to follow tutorials that cover Large Language Models, Chatbots, Time Series, Classification, and Regression models, Semantic Search, and more.

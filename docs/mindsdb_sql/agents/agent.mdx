@@ -1,0 +1,230 @@
+---
+title: Agent
+sidebarTitle: Agents
+---
+
+With MindsDB, you can create and deploy AI agents that comprise AI models and customizable skills such as knowledge bases and text-to-SQL.
+
+<p align="center">
+  <img src="/assets/agent_diagram.png" />
+</p>
+
+AI agents use a conversational model (like OpenAI or Anthropic) from LangChain utilizing [tools as skills](https://python.langchain.com/docs/modules/agents/tools/) to respond to user input. Users can customize AI agents with their own prompts to fit their use cases.
+
+A [chatbot](/agents/chatbot) can be thought of as an agent connected to some messaging interface.
+
+## How to work with AI agents
+
+### Create skills
+
+Start by setting up the skills. Here is how you can create and manage skills using SQL API.
+
+* Creating, inserting into, updating, and deleting a knowledge base:
+
+    ```sql
+    CREATE KNOWLEDGE BASE my_knowledge_base
+    USING
+        model = embedding_model_name,              -- this parameter is optional; if not provided, a suitable embedding model is chosen for the task
+        storage = vector_database.storage_table;   -- this parameter is optional; if not provided, the default ChromaDB is used for storage
+
+    -- inserts new data rows and generates id for each row if id is not provided
+    INSERT INTO my_knowledge_base
+        SELECT text AS content FROM datasource.data_table;
+
+    -- inserts new data rows and updates existing ones if id value matches
+    INSERT INTO my_knowledge_base
+        SELECT id, text AS content FROM datasource.data_table;
+
+    -- view content of a knowledge base (for example, to look up the generated id values)
+    SELECT * FROM my_knowledge_base;
+
+    DROP KNOWLEDGE BASE my_knowledge_base;
+    ```
+
+* Creating, updating, and deleting a skill that utilizes a knowledge base:
+
+    ```sql
+    CREATE SKILL kb_skill
+    USING
+        type = 'knowledge_base',
+        source = 'my_knowledge_base', -- this must be created with CREATE KNOWLEDGE BASE
+        description = 'My data'; -- data description to help the agent know when to use the knowledge base
+
+    UPDATE SKILL kb_skill
+    SET
+       source = 'new_knowledge_base'; -- this must be created with CREATE KNOWLEDGE BASE
+
+    DROP SKILL kb_skill;
+    ```
+
+* Creating, updating, and deleting a text-to-SQL skill:
+
+    ```sql
+    CREATE SKILL text_to_sql_skill
+    USING
+        type = 'text_to_sql',
+        database = 'example_db', -- this must be created with CREATE DATABASE
+        tables = ['sales_data'];
+
+    UPDATE SKILL text_to_sql_skill
+    SET
+        database = 'new_example_db', -- this must be created with CREATE DATABASE
+        tables = ['sales_data'];
+
+    DROP SKILL text_to_sql_skill;
+    ```
+
+You can query all skills using this command:
+
+```sql
+SELECT * FROM skills;
+```
+
+### Create an agent
+
+An agent can be created, deleted, queried, and updated. Here is how you can do that using SQL API.
+
+* Creating an AI agent:
+
+    ```sql
+    CREATE AGENT my_agent
+    USING
+       model = 'chatbot_agent', -- this must be created with CREATE MODEL
+       skills = ['test_skill']; -- this must be created with CREATE SKILL
+    ```
+
+* Updating an AI agent:
+
+    ```sql
+    UPDATE AGENT my_agent
+    SET
+       model = 'new_chatbot_agent', -- this must be created with CREATE MODEL
+       skills_to_remove = ['test_skill'],
+       skills_to_add = ['production_skill']; -- this must be created with CREATE SKILL
+    ```
+
+* Deleting an AI agent:
+
+    ```sql
+    DROP AGENT my_agent;
+    ```
+
+You can query all agents using this command:
+
+```sql
+SELECT * FROM agents;
+```
+
+## Example
+
+### Agents with Text-to-SQL Skills
+
+Start by creating a conversational large language model to be used by an agent.
+
+```sql
+CREATE MODEL my_model
+PREDICT answer
+USING
+    engine = 'langchain',
+    input_column = 'question',
+    api_key = 'your-model-api-key', -- choose one of OpenAI or Anthropic
+    model_name='gpt-4', -- optional model name from OpenAI or Anthropic
+    mode = 'conversational',
+    user_column = 'question' ,
+    assistant_column = 'answer',
+    max_tokens=100,
+    temperature=0,
+    verbose=True,
+    prompt_template='Answer the user input in a helpful way';
+```
+
+<Tip>
+Follow the integration doc pages for [LangChain](/integrations/ai-engines/langchain) and [OpenAI](/integrations/ai-engines/openai).
+</Tip>
+
+Then, connect a data source to be used for creating a skill.
+
+```sql
+CREATE DATABASE example_db
+WITH ENGINE = "postgres",
+PARAMETERS = {
+    "user": "demo_user",
+    "password": "demo_password",
+    "host": "3.220.66.106",
+    "port": "5432",
+    "database": "demo"
+    };
+ 
+SELECT * FROM example_db.sales_data;
+```
+
+Create a skill using one or more tables from a connected data source.
+
+```sql
+CREATE SKILL text_to_sql_skill
+USING
+    type = 'text_to_sql',
+    database = 'example_db',
+    tables = ['sales_data'];
+```
+
+Now that we have a model and a skill, let's create an agent.
+
+```sql
+CREATE AGENT text_to_sql_agent
+USING
+    model = 'my_model',
+    skills = ['text_to_sql_skill'];
+```
+
+The next step would be to connect a chat app, like Slack, to MindsDB and create a chatbot utilizing this agent.
+
+<Tip>
+Learn about [chatbots here](/agents/chatbot).
+</Tip>
+
+### Agents with Knowledge Bases as Skills
+
+In this example, let's create an embedding model (you can choose one from OpenAI, Hugging Face, or LangChain) for the knowledge base.
+
+```sql
+CREATE ML_ENGINE openai_engine
+FROM openai
+USING
+   api_key = 'your-openai-api-key';
+
+CREATE MODEL embedding_model
+PREDICT embeddings
+USING
+   engine = 'openai_engine',
+   mode='embedding',
+   model_name='text-embedding-ada-002',
+   question_column = 'content';
+```
+
+Now let's create a knowledge base that uses this embedding model and the default storage vector database (that is, ChromaDB).
+
+```sql
+CREATE KNOWLEDGE BASE my_knowledge_base
+USING
+   model = embedding_model;
+```
+
+This is how you can insert data into the knowledge base and select it.
+
+```sql
+INSERT INTO my_knowledge_base (content)
+VALUES ('I drink tea.');
+
+SELECT * FROM my_knowledge_base;
+```
+
+Use this knowledge base to create a skill for an agent:
+
+```sql
+CREATE SKILL kb_skill
+USING
+    type = 'knowledge_base',
+    source = 'my_knowledge_base', -- this must be created with CREATE KNOWLEDGE BASE
+    description = 'My data'; -- data description to help the agent know when to use the knowledge base
+```

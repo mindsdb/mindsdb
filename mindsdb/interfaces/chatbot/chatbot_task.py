@@ -3,7 +3,7 @@ import datetime as dt
 
 from mindsdb.integrations.libs.api_handler import APIChatHandler
 
-from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
+from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.tasks.task import BaseTask
 
@@ -41,7 +41,7 @@ class ChatBotTask(BaseTask):
 
         database_name = db.Integration.query.get(bot_record.database_id).name
 
-        self.chat_handler = self.session.integration_controller.get_handler(database_name)
+        self.chat_handler = self.session.integration_controller.get_data_handler(database_name)
         if not isinstance(self.chat_handler, APIChatHandler):
             raise Exception(f"Can't use chat database: {database_name}")
 

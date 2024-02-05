@@ -1141,12 +1141,12 @@ class GithubMilestonesTable(APITable):
 
 class GithubFilesTable(APITable):
 
-    def get_path(self, repo, path, file_matches=None, file_not_matches=None, limit=None, load_content=False):
+    def get_path(self, repo, path, file_matches=None, file_not_matches=None, limit=None):
 
         res = []
         for item in list(repo.get_contents(path)):
             if item.type == "dir":
-                subres = self.get_path(repo, item.path, file_matches, file_not_matches, limit, load_content=load_content)
+                subres = self.get_path(repo, item.path, file_matches, file_not_matches, limit)
                 res.extend(subres)
                 limit -= len(subres)
             else:
@@ -1167,9 +1167,8 @@ class GithubFilesTable(APITable):
                     file = {
                         'path': item.path,
                         'name': item.name,
+                        'content': item.decoded_content,
                     }
-                    if load_content:
-                        file['content'] = item.decoded_content
                     res.append(file)
                     limit -= 1
             if limit <= 0:
@@ -1186,8 +1185,6 @@ class GithubFilesTable(APITable):
         repo = self.handler.connection.get_repo(self.handler.repository)
 
         # TODO sort
-
-        load_content = 'content' in targets
 
         path = ''
         file_matches = []
@@ -1210,13 +1207,13 @@ class GithubFilesTable(APITable):
                 condition.applied = True
 
         if limit is None:
-            limit = 100
+            limit = 10
 
         if len(file_matches) == 0:
             file_matches = None
         if len(file_not_matches) == 0:
             file_not_matches = None
-        res = self.get_path(repo, path, file_matches, file_not_matches, limit, load_content=load_content)
+        res = self.get_path(repo, path, file_matches, file_not_matches, limit)
         return pd.DataFrame(res, columns=self.get_columns())
 
     def get_columns(self) -> list:

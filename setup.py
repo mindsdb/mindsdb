@@ -11,9 +11,6 @@ MINDSDB_PIP_INSTALL_DEFAULT_EXTRAS = (
 )
 DEFAULT_PIP_EXTRAS = [
     'file',                 # Required by the core codebase
-    'rag',                  # required for mindsdb/interfaces/skills/skill_tool used by some handlers
-    'langchain',            # required for mindsdb/interfaces/skills/skill_tool used by some handlers
-    'langchain_embedding',  # required for mindsdb/interfaces/skills/skill_tool used by some handlers
     'postgres',
     'mysql',
     'mariadb',

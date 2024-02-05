@@ -175,7 +175,7 @@ class Integration(Resource):
 
             # copy storage
             if storage is not None:
-                handler = ca.integration_controller.get_handler(name)
+                handler = ca.integration_controller.get_data_handler(name)
 
                 export = decrypt(storage.encode(), secret_key)
                 handler.handler_storage.import_files(export)

@@ -252,10 +252,13 @@ def ft_chat_formatter(df: pd.DataFrame) -> List[Dict]:
     # 2a. chats are in JSON format
     if 'chat_json' in df.columns:
         for _, row in df.iterrows():
-            chat = json.loads(row['chat_json'])
-            assert list(chat.keys()) == ['messages'], "Each chat should have a 'messages' key, and nothing else."
-            ft_chat_format_validation(chat['messages'])  # will raise Exception if chat is invalid
-            chats.append(chat)
+            try:
+                chat = json.loads(row['chat_json'])
+                assert list(chat.keys()) == ['messages'], "Each chat should have a 'messages' key, and nothing else."
+                ft_chat_format_validation(chat['messages'])  # will raise Exception if chat is invalid
+                chats.append(chat)
+            except json.JSONDecodeError:
+                pass  # TODO: add logger info here, prompt user to clean dataset carefully
 
     # 2b. chats are in tabular format - aggregate each chat sequence into one row
     else:

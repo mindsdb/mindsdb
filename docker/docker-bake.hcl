@@ -65,7 +65,7 @@ target "cloud" {
   inherits = ["_common"]
   tags = get_tags("cloud")
   args = {
-    EXTRAS = ".[lightwood,huggingface,statsforecast-extra,neuralforecast-extra,timegpt,surrealdb,mssql,youtube,ignite,gmail,pgvector,llama_index,writer,rag] darts datasetsforecast"
+    EXTRAS = ".[lightwood,huggingface,statsforecast-extra,neuralforecast-extra,timegpt,surrealdb,mssql,youtube,ignite,gmail,pgvector,llama_index,writer,rag,github] darts datasetsforecast"
   }
 }
 

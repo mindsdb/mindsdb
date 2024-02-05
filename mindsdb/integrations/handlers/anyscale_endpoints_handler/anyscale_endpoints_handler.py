@@ -87,7 +87,7 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         with self._anyscale_base_api(args):
             using_args = args.get('using', {})
             self._set_models(using_args)
-            super().finetune(df, using_args)
+            super().finetune(df, args)
             # rewrite chat_completion_models to include the newly fine-tuned model
             args = self.model_storage.json_get('args')
             args['chat_completion_models'] = list(self.chat_completion_models) + [args['model_name']]
@@ -118,9 +118,11 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
 
     @staticmethod
     def _check_ft_cols(df, cols):
-        for col in ['role', 'content']:
-            if col not in set(df.columns):
-                raise Exception(f"To fine-tune this model, format your select data query to have a `role` column and a `content` column.")  # noqa
+        # TODO: refactor into common util
+        if 'chat_json' not in df.columns:
+            for col in ['role', 'content']:
+                if col not in set(df.columns):
+                    raise Exception(f"To fine-tune this model, format your select data query to have a `role` column and a `content` column, or to have a `chat_json` column containing an entire chat on each row.")  # noqa
 
     @staticmethod
     def _prepare_ft_jsonl(df, temp_storage_path, temp_filename, _, test_size=0.2):

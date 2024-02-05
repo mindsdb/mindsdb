@@ -42,7 +42,7 @@ def empty_callback(_task):
 class MLProcessException(Exception):
     """Wrapper for exception to safely send it back to the main process.
 
-    If exception is can not be pickled (pickle.loads(pickle.dumps(e))) then it may lead to termination of the ML process.
+    If exception can not be pickled (pickle.loads(pickle.dumps(e))) then it may lead to termination of the ML process.
     Also in this case, the error sent to the user will not be relevant. This wrapper should prevent it.
     """
     base_exception_bytes: bytes = None

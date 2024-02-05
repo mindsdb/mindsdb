@@ -5,12 +5,12 @@ import openai
 import pandas as pd
 import llama_index
 
-from llama_index.llms.openai import OpenAI
+from langchain.llms import OpenAI
 from llama_index.readers.schema.base import Document
 from llama_index.readers import SimpleWebPageReader
 from llama_index.prompts import PromptTemplate
 from llama_index import ServiceContext, StorageContext, load_index_from_storage
-from llama_index import LLMPredictor, OpenAIEmbedding
+from llama_index import OpenAIEmbedding
 from llama_index.indices.vector_store.base import VectorStore
 
 from llama_hub.github_repo import GithubClient, GithubRepositoryReader
@@ -25,7 +25,6 @@ from mindsdb.integrations.handlers.llama_index_handler.github_loader_helper impo
     _get_filter_file_extensions,
     _get_filter_directories,
 )
-from mindsdb.integrations.utilities.handler_utils import get_api_key
 
 
 def _validate_prompt_template(prompt_template: str):
@@ -55,8 +54,7 @@ class LlamaIndexHandler(BaseMLEngine):
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
-        reader = args["using"].get("reader", "DFReader")
-
+        reader = args["using"].get("reader", None)
         if reader not in config.data_loaders:
             raise Exception(
                 f"Invalid reader argument. Please use one of {config.data_loaders.keys()}"
@@ -123,20 +121,8 @@ class LlamaIndexHandler(BaseMLEngine):
             reader = SimpleWebPageReader(html_to_text=True).load_data([url])
 
         elif args["using"]["reader"] == "GithubRepositoryReader":
-            engine_storage = self.engine_storage
-
-            key = "GITHUB_TOKEN"
-            github_token = get_api_key(
-                key, args["using"], engine_storage, strict=False
-            )
-            if github_token is None:
-                github_token = get_api_key(
-                    key.lower(),
-                    args["using"],
-                    engine_storage,
-                    strict=True,
-                )
-
+            engine_storage = self.engine_storage.get_connection_args()
+            github_token = _get_github_token(args["using"], engine_storage)
             github_client = GithubClient(github_token)
             owner = args["using"]["owner"]
             repo = args["using"]["repo"]
@@ -269,12 +255,13 @@ class LlamaIndexHandler(BaseMLEngine):
 
     def _get_service_context(self):
         args = self.model_storage.json_get("args")
-        engine_storage = self.engine_storage
-
-        openai_api_key = get_api_key(
-            'openai', args["using"], engine_storage, strict=True
-        )
-        llm_kwargs = {"api_key": openai_api_key}
+        openai_api_key = self._get_llama_index_api_key(args["using"])
+        openai.api_key = openai_api_key  # TODO: shouldn't have to do this! bug?
+        # TODO: remove this when we have a proper way to pass kwargs(once langchain is updated)
+        llm_kwargs = {
+            "openai_api_key": openai_api_key,
+            "model_name": "gpt-3.5-turbo-instruct",
+        }
         if "temperature" in args["using"]:
             llm_kwargs["temperature"] = args["using"]["temperature"]
         if "model_name" in args["using"]:
@@ -283,11 +270,8 @@ class LlamaIndexHandler(BaseMLEngine):
             llm_kwargs["max_tokens"] = args["using"]["max_tokens"]
 
         llm = OpenAI(**llm_kwargs)  # TODO: all usual params should go here
-        embed_model = OpenAIEmbedding(api_key=openai_api_key)
-        service_context = ServiceContext.from_defaults(
-            llm=llm,
-            embed_model=embed_model
-        )
+        embed_model = OpenAIEmbedding(openai_api_key=openai_api_key)
+        service_context = ServiceContext.from_defaults(llm=llm, embed_model=embed_model)
         return service_context
 
     def _setup_index(self, documents):
@@ -298,3 +282,38 @@ class LlamaIndexHandler(BaseMLEngine):
         )
 
         return index
+
+    # TODO: refactor this method with utility
+    def _get_llama_index_api_key(self, args, strict=True):
+        """
+        API_KEY preference order:
+            1. provided at model creation
+            2. provided at engine creation
+            3. OPENAI_API_KEY env variable
+            4. llama_index.OPENAI_API_KEY setting in config.json
+
+        Note: method is not case-sensitive.
+        """
+        key = "OPENAI_API_KEY"
+        for k in key, key.lower():
+            # 1
+            if args.get(k):
+                return args[k]
+            # 2
+            connection_args = self.engine_storage.get_connection_args()
+            if k in connection_args:
+                return connection_args[k]
+            # 3
+            api_key = os.getenv(k)
+            if api_key is not None:
+                return api_key
+            # 4
+            config = Config()
+            openai_cfg = config.get("llama_index", {})
+            if k in openai_cfg:
+                return openai_cfg[k]
+
+        if strict:
+            raise Exception(
+                f'Missing API key "{k}". Either re-create this ML_ENGINE specifying the `{k}` parameter, or re-create this model and pass the API key with `USING` syntax.'
+            )  # noqa

@@ -251,25 +251,25 @@ connection_args = OrderedDict(
     user={
         'type': ARG_TYPE.STR,
         'description': 'The user name used to authenticate with the MySQL server.',
-        'required': True,
+        'required': False,
         'label': 'User'
-    },
+        },
     password={
         'type': ARG_TYPE.PWD,
         'description': 'The password to authenticate the user with the MySQL server.',
-        'required': True,
+        'required': False,
         'label': 'Password'
     },
     database={
         'type': ARG_TYPE.STR,
         'description': 'The database name to use when connecting with the MySQL server.',
-        'required': True,
+        'required': False,
         'label': 'Database'
     },
     host={
         'type': ARG_TYPE.STR,
         'description': 'The host name or IP address of the MySQL server. NOTE: use \'127.0.0.1\' instead of \'localhost\' to connect to local server.',
-        'required': True,
+        'required': False,
         'label': 'Host'
     },
     port={
@@ -302,6 +302,12 @@ connection_args = OrderedDict(
         'required': False,
         'label': 'ssl_key',
     }
+    url={
+        'type': ARG_TYPE.PATH,
+        'description': 'The URL for connecting to the server.  The username and password can be provided here OR in the other appropriate fields. Either the server, port, and database MUST be provided OR this field must be provided.',
+        'required': False,
+        'label': 'url',
+        }
 )
 
 connection_args_example = OrderedDict(

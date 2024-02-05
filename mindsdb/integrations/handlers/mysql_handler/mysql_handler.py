@@ -210,11 +210,26 @@ class MySQLHandler(DatabaseHandler):
 
         return response
 
+    def get_max_exec_time_hint():
+        """
+        Returns the string for the MAX_EXECUTION_TIME optimizer hint.
+
+        This function should only be called when we actually have
+        a max_execution_time connection query parameter.
+        """
+        max_exec_time = self.connection_data.get('max_execution_time')
+        if None == max_exec_time:
+            # returning an empty string should be safe if somehow we are called
+            # without this being set.
+            return ""
+        return "/*+ MAX_EXECUTION_TIME({max_exec_time}) */".format(max_exec_time=max_exec_time)
     def query(self, query: ASTNode) -> Response:
         """
         Retrieve the data from the SQL statement.
         """
         renderer = SqlalchemyRender('mysql')
+        if self.connection_data.get('max_execution_time'):
+            query = query.prefix_with(self.get_max_exec_time_hint())
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 
@@ -271,6 +286,12 @@ connection_args = OrderedDict(
         'description': 'The host name or IP address of the MySQL server. NOTE: use \'127.0.0.1\' instead of \'localhost\' to connect to local server.',
         'required': True,
         'label': 'Host'
+    },
+    max_execution_time={
+        'type': ARG_TYPE.STR,
+        'description': 'Optional maximum exeuction time of queries on this connection.',
+        'required': False,
+        'label': 'max_execution_time'
     },
     port={
         'type': ARG_TYPE.INT,

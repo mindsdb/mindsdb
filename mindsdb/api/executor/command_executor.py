@@ -1509,7 +1509,7 @@ class ExecuteCommands:
                     model_name,
                     project_name=integration_name
                 )
-            except Exception:
+            except EntityNotExistsError:
                 pass
 
         try:

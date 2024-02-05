@@ -165,7 +165,7 @@ class ExecuteCommands:
         self.datahub = session.datahub
 
     @profiler.profile()
-    def execute_command(self, statement):
+    def execute_command(self, statement) -> ExecuteAnswer:
         sql = None
         if isinstance(statement, ASTNode):
             sql = statement.to_string()
@@ -706,7 +706,7 @@ class ExecuteCommands:
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
-    def answer_create_job(self, statement):
+    def answer_create_job(self, statement: CreateJob):
         jobs_controller = JobsController()
 
         name = statement.name
@@ -714,8 +714,7 @@ class ExecuteCommands:
         project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
 
         try:
-            jobs_controller.add(job_name, project_name, statement.query_str,
-                                statement.start_str, statement.end_str, statement.repeat_str)
+            jobs_controller.add(job_name, project_name, statement)
         except EntityExistsError:
             if getattr(statement, "if_not_exists", False) is False:
                 raise
@@ -1483,13 +1482,14 @@ class ExecuteCommands:
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
     @mark_process("learn")
-    def answer_create_predictor(self, statement):
+    def answer_create_predictor(self, statement: CreatePredictor):
         integration_name = self.session.database
 
         # allow creation in non-active projects, e.g. 'create mode proj.model' works whether `proj` is active or not
         if len(statement.name.parts) > 1:
             integration_name = statement.name.parts[0]
-        statement.name.parts = [integration_name.lower(), statement.name.parts[-1]]
+        model_name = statement.name.parts[-1]
+        statement.name.parts = [integration_name.lower(), model_name]
 
         ml_integration_name = "lightwood"  # default
         if statement.using is not None:
@@ -1501,6 +1501,16 @@ class ExecuteCommands:
         ml_handler = self.session.integration_controller.get_ml_handler(
             ml_integration_name
         )
+
+        if getattr(statement, "is_replace", False) is True:
+            # try to delete
+            try:
+                self.session.model_controller.delete_model(
+                    model_name,
+                    project_name=integration_name
+                )
+            except EntityNotExistsError:
+                pass
 
         try:
             df = self.session.model_controller.create_model(statement, ml_handler)

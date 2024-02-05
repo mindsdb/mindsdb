@@ -292,29 +292,6 @@ class APIHandler(BaseHandler):
         return Response(RESPONSE_TYPE.TABLE, df)
 
 
-class APIHandler2(APIHandler):
-
-    def query(self, query: ASTNode):
-        if isinstance(query, Select):
-
-            result = self._get_table(query.from_table).select(query)
-        elif isinstance(query, Update):
-            result = self._get_table(query.table).update(query)
-        elif isinstance(query, Insert):
-            result = self._get_table(query.table).insert(query)
-        elif isinstance(query, Delete):
-            result = self._get_table(query.table).delete(query)
-        else:
-            raise NotImplementedError
-
-        if result is None:
-            return Response(RESPONSE_TYPE.OK)
-        elif isinstance(result, pd.DataFrame):
-            return Response(RESPONSE_TYPE.TABLE, result)
-        else:
-            raise NotImplementedError
-
-
 class APIChatHandler(APIHandler):
 
     def get_chat_config(self):

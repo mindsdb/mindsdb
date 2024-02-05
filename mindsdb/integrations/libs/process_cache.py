@@ -1,5 +1,6 @@
 import sys
 import time
+import pickle
 import threading
 from typing import Optional, Callable
 from concurrent.futures import ProcessPoolExecutor, Future
@@ -36,6 +37,23 @@ def dummy_task():
 
 def empty_callback(_task):
     return None
+
+
+class MLProcessException(Exception):
+    """Wrapper for exception to safely send it back to the main process.
+
+    If exception is can not be pickled (pickle.loads(pickle.dumps(e))) then it may lead to termination of the ML process.
+    Also in this case, the error sent to the user will not be relevant. This wrapper should prevent it.
+    """
+    base_exception_bytes: bytes = None
+
+    def __init__(self, base_exception: Exception, message: str = None) -> None:
+        super().__init__(message)
+        self.base_exception_bytes = pickle.dumps(base_exception)
+
+    @property
+    def base_exception(self) -> Exception:
+        return pickle.loads(self.base_exception_bytes)
 
 
 class WarmProcess:
@@ -152,8 +170,10 @@ def warm_function(func, context: str, *args, **kwargs):
     ctx.load(context)
     try:
         return func(*args, **kwargs)
-    except Exception:
-        raise
+    except Exception as e:
+        if type(e) in (ImportError, ModuleNotFoundError):
+            raise
+        raise MLProcessException(base_exception=e)
 
 
 class ProcessCache:

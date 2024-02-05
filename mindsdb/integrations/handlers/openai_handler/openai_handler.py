@@ -664,9 +664,14 @@ class OpenAIHandler(BaseMLEngine):
         prev_model_name = self.base_model_storage.json_get('args').get('model_name', '')
 
         if prev_model_name not in self.supported_ft_models:
-            raise Exception(
-                f"This model cannot be finetuned. Supported base models are {self.supported_ft_models}"
-            )
+            # base model may be already FTed, check prefixes
+            for model in self.supported_ft_models:
+                if model in prev_model_name:
+                    break
+            else:
+                raise Exception(
+                    f"This model cannot be finetuned. Supported base models are {self.supported_ft_models}."
+                )
 
         finetune_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 

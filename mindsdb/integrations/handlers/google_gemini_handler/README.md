@@ -104,6 +104,34 @@ USING
 ```
 >>(Use ** type='document'** for storing vectors for later searching and **type='query'** for searching in already created vectors.)
 
+####json-struct Mode
+```sql
+CREATE MODEL product_extract_json
+PREDICT json
+USING
+    engine = 'g',
+    json_struct = {
+        'product_name': 'name',
+        'product_category': 'category',
+        'product_price': 'price'
+    },
+    input_text = 'description';
+```
+```sql
+SELECT json
+FROM product_extract_json
+WHERE description = 
+"
+What is Rabbit R1?
+The Rabbit R1 is a pocket-sized AI device that promises a simpler and more intuitive way to interact with technology. Instead of being app-driven, the device relies on an AI model called LAMB (large action model) to understand your instructions and complete tasks autonomously.
+The device has a bright orange body, and is small and lightweight with a touchscreen, scroll wheel, and a talk button. There is also a rotating camera that functions as eyes of the device.IT provide all of this just for 300 dollar.
+
+The Rabbit R1 runs on its own operating system, called the Rabbit OS, that eliminates the need for app stores and downloads, requiring only natural language voice input to navigate. The initial version supports integration with the likes of Uber, Spotify, and Amazon, with the AI able to train and learn using other apps in the future.
+";
+```
+**Output**
+![image](https://github.com/mindsdb/mindsdb/assets/75653580/aad51d3f-4458-4bcc-b4a3-07983496d2fe)
+
 #### Describe Gemini Pro Model Metadata
 ```sql
 DESCRIBE MODEL `MODEL_NAME`.metadata;

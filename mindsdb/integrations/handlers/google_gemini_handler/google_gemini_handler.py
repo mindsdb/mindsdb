@@ -136,9 +136,7 @@ class GoogleGeminiHandler(BaseMLEngine):
 
         else:
             if args.get('prompt_template', False):
-                prompts, empty_prompt_ids = get_completed_prompts(
-                                                    base_template,
-                                                    df)
+                prompts, empty_prompt_ids = get_completed_prompts(base_template, df)
 
             elif args.get('context_column', False):
                 empty_prompt_ids = np.where(

@@ -83,12 +83,12 @@ Here is how to install the dependencies in the Docker container:
 
 1. Run the MindsDB Docker container:
     ```bash
-    docker run -d -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+    docker run -d -p 47334:47334 -p 47335:47335 --name my_container mindsdb/mindsdb
     ```
 
 2. Start an interactive shell in the container:
     ```bash
-    docker exec -it container-name sh
+    docker exec -it my_container sh
     ```
 
 3. Install the dependencies:
@@ -107,7 +107,7 @@ Here is how to install the dependencies in the Docker container:
 
 5. Restart the container:
     ```bash
-    docker restart container-name
+    docker restart my_container
     ```
 
 ## Configuration Options

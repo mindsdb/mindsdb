@@ -30,15 +30,19 @@ You can  create a model by providing a name for table of the question and answer
 
 ```sql
 -- you might already have a database
-CREATE DATABASE palm_dev;
+CREATE PROJECT palm_dev;
+
+CREATE ML_ENGINE palm_engine
+FROM palm
+USING
+    palm_api_key = 'palm_api_key';
 
 CREATE MODEL palm_dev.model_name
 PREDICT answer
 USING
-    engine="palm",
+    engine="palm_engine",
     mode = "default",
-    question_column = "question",
-    api_key = "YOUR_API_KEY";
+    question_column = "question";
 ```
 
 Now, this model could be used to query as a prompt to the PaLM as follows:
@@ -61,10 +65,9 @@ You can create a model with a placeholder/template prompt to query later with th
 CREATE MODEL palm_dev.model_name
 PREDICT answer
 USING
-    engine="palm",
+    engine="palm_engine",
     mode = "default",
-    prompt_template = "list some facts about {{ thing }}",
-    api_key = "YOUR_API_KEY";
+    prompt_template = "list some facts about {{ thing }}";
 ```
 
 Now, this model can be used by providing the values of the keys in the `prompt_template` as follows:
@@ -86,10 +89,9 @@ You can create a model that generates the emebeddings of the given text.
 CREATE MODEL palm_dev.model_name
 PREDICT answer
 USING
-    engine="palm",
+    engine="palm_engine",
     mode = "embedding",
-    question_column = "question",
-    api_key = "YOUR_API_KEY";
+    question_column = "question";
 ```
 
 Then, this model can be queried to get the embeddings for the given text as follows:
@@ -111,10 +113,9 @@ You can create a model for a specific prompt and specifically ask the user for i
 CREATE MODEL palm_dev.model_name
 PREDICT answer
 USING
-    engine = 'palm',
+    engine = 'palm_engine',
     prompt = 'tell some joke about programming',
     user_column = 'user_input';
-    api_key = 'YOUR_API_KEY';
 ```
 
 Then, this model can be queried to get the answer as follows:

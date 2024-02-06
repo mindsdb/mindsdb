@@ -12,7 +12,7 @@ Anthropic is an AI safety and research company. Claude is their assistant model.
 Create a ML Engine with the new `anthropic` engine.
 
 ~~~~sql
-CREATE ML_ENGINE Anthropic_ML_Engine
+CREATE ML_ENGINE anthropic_engine
 FROM anthropic
 USING
   anthropic_api_key = 'your_api_key';
@@ -23,9 +23,9 @@ CREATE MODEL mindsdb.anthropic_test
 PREDICT answer
 USING
   column = 'question',
-  engine = 'anthropic',
+  engine = 'anthropic_engine',
   max_tokens = 300,
-  model = 'claude-2'
+  model = 'claude-2';
 ~~~
 
 ~~~ sql

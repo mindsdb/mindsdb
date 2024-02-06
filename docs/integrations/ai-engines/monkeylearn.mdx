@@ -10,8 +10,10 @@ MonkeyLearn is a No-code text analysis tool. MindsDB allows you to use pre-built
 Before creating a model, you will need to create the ML_ENGINE for MonkeyLearn using the `CREATE ML_ENGINE` syntax
 
 ```sql
-Create ML_ENGINE monkeylearn
+CREATE ML_ENGINE monkeylearn_engine
 FROM monkeylearn
+USING
+  monkeylearn_api_key = 'monkeylearn_api_key';
 ```
 
 <p align="center">
@@ -27,7 +29,7 @@ For this example, you will make use of MonkeyLearn's pre-made model `E-commerce 
 CREATE MODEL mindsdb.ecommerce_ticket_classifier
 PREDICT tag
 USING
-engine = 'monkeylearn',
+engine = 'monkeylearn_engine',
 monkeylearn_api_key = 'api_key',
 model_id = 'model_id',
 input_column = 'text';
@@ -87,7 +89,7 @@ CREATE MODEL mindsdb.ecommerce_ticket_classifier2
 FROM files (select * from queries2)
 PREDICT tag
 USING
-engine = 'monkeylearn',
+engine = 'monkeylearn_engine',
 monkeylearn_api_key = 'api_key',
 model_id = 'model_id',
 input_column = 'text';

@@ -159,7 +159,7 @@ class APITable():
                                                 should be an instance of the FilterCondition class.
             limit (int): Optional. An integer to limit the number of items to be listed.
             sort (List[SortColumn]): Optional. A list of sorting criteria
-            targets (List[str]): Optional. A list of strings representing specific fields 
+            targets (List[str]): Optional. A list of strings representing specific fields
 
         Raises:
             NotImplementedError: This is an abstract method and should be implemented in a subclass.

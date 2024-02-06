@@ -27,9 +27,9 @@ class BaseDBConnectionBehavior(SequentialTaskSet):
         """This method creates a new data source."""
         db_config = get_value_from_json_env_var("INTEGRATIONS_CONFIG", self.db_type)
         query = self.query_generator.create_database_query(
-                self.random_db_name,
-                self.db_type,
-                db_config
+            self.random_db_name,
+            self.db_type,
+            db_config
         )
         self.__post_query(query)
 

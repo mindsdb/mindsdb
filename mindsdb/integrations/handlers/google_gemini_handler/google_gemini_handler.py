@@ -41,7 +41,7 @@ class GoogleGeminiHandler(BaseMLEngine):
         else:
             args = args['using']
 
-        if (len(set(args.keys()) & {'img_url', 'question_column', 'prompt_template', 'json_struct', 'prompt'}) == 0):
+        if (len(set(args.keys()) & {'img_url', 'input_text', 'question_column', 'prompt_template', 'json_struct', 'prompt'}) == 0):
             raise Exception(
                 'One of `question_column`, `prompt_template` or `json_struct` is required for this engine.'
             )
@@ -50,7 +50,7 @@ class GoogleGeminiHandler(BaseMLEngine):
             ['prompt_template'],
             ['question_column', 'context_column'],
             ['prompt', 'user_column', 'assistant_column'],
-            ['json_struct'],
+            ['json_struct', 'input_text'],
             ['img_url', 'ctx_column']
         ]
         for keys in keys_collection:

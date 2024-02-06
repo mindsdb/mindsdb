@@ -34,7 +34,7 @@ class QueryGenerator:
         parameters = parameters or {}
         parameter_str = ",\n  ".join([f"{key} = '{value}'" for key, value in parameters.items()])
         using_clause = f"\nUSING\n\t{parameter_str};" if parameters else ""
-            
+
         return f"""CREATE ML_ENGINE {ml_engine_name}
                         FROM {engine}{using_clause};
                     """
@@ -50,11 +50,11 @@ class QueryGenerator:
         :return: The generated SQL query as a string.
         """
         parameter_str = ",\n  ".join([f'"{key}": "{value}"' for key, value in parameters.items()])
-        query = f"""CREATE MODEL {model_name} 
-                    PREDICT {target_var}
-                    USING                        
-                        {parameter_str}
-                    ;"""
+        query = f"""CREATE MODEL {model_name}
+                PREDICT {target_var}
+                USING
+                    {parameter_str}
+                ;"""
         return query
 
     @staticmethod

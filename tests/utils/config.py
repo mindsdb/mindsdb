@@ -2,10 +2,11 @@ import os
 import random
 import json
 
+
 def generate_random_db_name(base_name: str, min_value: int = 1000, max_value: int = 9999) -> str:
     """
     Generates a random database name by appending a random number to the base name.
-    
+
     Args:
         base_name (str): The base name for the database.
         min_value (int, optional): The minimum value for the random number (inclusive). Defaults to 1000.

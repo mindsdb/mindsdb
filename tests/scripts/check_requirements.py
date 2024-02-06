@@ -217,7 +217,7 @@ def check_relative_reqs():
         # regex for finding imports of other handlers like "from mindsdb.integrations.handlers.file_handler import FileHandler"
         # excludes the current handler importing parts of itself
         import_pattern = re.compile(
-            f"(?:\s|^)(?:from|import) mindsdb\.integrations\.handlers\.(?!{handler_name})\w+_handler")  # noqa: W605
+            f"(?:\s|^)(?:from|import) mindsdb\.integrations\.handlers\.(?!{handler_name}_handler)\w+_handler")  # noqa: W605
 
         # requirements entries for this handler that point to another handler's requirements file
         required_handlers = get_relative_requirements(
@@ -254,7 +254,7 @@ def check_relative_reqs():
             print_errors(file, errors)
 
         # Report on requirements.txt entries that point to a handler that isn't used
-        requirements_errors = [required_handler_name for required_handler_name in required_handlers if
+        requirements_errors = [required_handler_name + " in requirements.txt but not used in code" for required_handler_name in required_handlers if
                                required_handler_name not in all_imported_handlers]
         print_errors(handler_dir, requirements_errors)
 

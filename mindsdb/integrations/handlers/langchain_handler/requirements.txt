@@ -2,4 +2,7 @@ openai == 1.6.1
 wikipedia==1.4.0
 tiktoken >= 0.3.0
 anthropic==0.3.5
+langchain==0.0.347
 -r mindsdb/integrations/handlers/openai_handler/requirements.txt
+-r mindsdb/integrations/handlers/langchain_embedding_handler/requirements.txt
+-r mindsdb/integrations/handlers/rag_handler/requirements.txt

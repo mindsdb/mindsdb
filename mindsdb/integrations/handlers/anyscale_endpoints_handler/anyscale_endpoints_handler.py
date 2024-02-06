@@ -51,6 +51,10 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
             _args = self.model_storage.json_get('args')
             base_models = self.chat_completion_models
             self.chat_completion_models = _args.get('chat_completion_models', base_models) if _args else base_models
+
+            # add key expected by OpenAIHandler
+            args = self._add_api_key_as_openai(args)
+
             super().create(target, args, **kwargs)
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
@@ -60,11 +64,19 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
             _args = self.model_storage.json_get('args')
             base_models = self.chat_completion_models
             self.chat_completion_models = _args.get('chat_completion_models', base_models) if _args else base_models
+
+            # add key expected by OpenAIHandler
+            args = self._add_api_key_as_openai(args)
+
             return super().predict(df, args)
 
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         with self._anyscale_base_api():
             self._set_models(args.get('using', {}))
+
+            # add key expected by OpenAIHandler
+            args = self._add_api_key_as_openai(args)
+
             super().finetune(df, args)
             # rewrite chat_completion_models to include the newly fine-tuned model
             args = self.model_storage.json_get('args')
@@ -88,12 +100,17 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
             return pd.DataFrame(tables, columns=['tables'])
 
     def _set_models(self, args):
-        if 'api_key' in args:
-            args['openai_api_key'] = args['api_key']  # remove this once #7496 is fixed
-        client = self._get_client(get_api_key('openai', args, self.engine_storage))
+        client = self._get_client(get_api_key('anyscale', args, self.engine_storage))
         self.all_models = [m.id for m in client.models.list()]
         self.chat_completion_models = [m.id for m in client.models.list() if m.rayllm_metadata['engine_config']['model_type'] == 'text-generation']  # noqa
         self.supported_ft_models = self.chat_completion_models  # base models compatible with fine-tuning
+
+    def _add_api_key_as_openai(self, args):
+        """ Add `openai_api_key` to the `using` dict as OpenAI handler expects it. """
+        if not args.get('using', {}):
+            args['using'] = {}
+        args['using']['openai_api_key'] = get_api_key('anyscale', args.get('using', {}), self.engine_storage)
+        return args
 
     @staticmethod
     def _check_ft_cols(df, cols):

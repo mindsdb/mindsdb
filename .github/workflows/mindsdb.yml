@@ -132,11 +132,10 @@ jobs:
         CHECK_FOR_UPDATES: False
         OPENAI_API_KEY: ${{secrets.OPENAI_API_KEY}}
         ANYSCALE_ENDPOINTS_API_KEY: ${{secrets.ANYSCALE_ENDPOINTS_API_KEY}}
-    - name: Run Integrations tests with coveralls
+    - name: Run Handlers tests and submit Coverage to coveralls
       run: |
         pytest --cov=tests/unit/handler tests/unit/handlers/test_postgresql.py && coveralls
-    - name: Submit coverage report to Coveralls
-      run: coveralls
+        coveralls
       env:
         COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
 

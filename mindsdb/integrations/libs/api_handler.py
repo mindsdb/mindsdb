@@ -107,7 +107,7 @@ class APITable():
             query (ASTNode): sql query represented as AST. Usually it should be ast.Select
 
         Returns:
-            HandlerResponse
+            pd.DataFrame
         """
 
         conditions = [
@@ -151,7 +151,19 @@ class APITable():
              sort: List[SortColumn] = None,
              targets: List[str] = None
              ):
+        """
+        List items based on specified conditions, limits, sorting, and targets.
 
+        Args:
+            conditions (List[FilterCondition]): Optional. A list of conditions to filter the items. Each condition
+                                                should be an instance of the FilterCondition class.
+            limit (int): Optional. An integer to limit the number of items to be listed.
+            sort (List[SortColumn]): Optional. A list of sorting criteria
+            targets (List[str]): Optional. A list of strings representing specific fields 
+
+        Raises:
+            NotImplementedError: This is an abstract method and should be implemented in a subclass.
+        """
         raise NotImplementedError()
 
     def insert(self, query: Insert) -> None:
@@ -172,6 +184,15 @@ class APITable():
             self.add(row)
 
     def add(self, row: dict):
+        """
+        Add a single item to the dataa collection
+
+        Args:
+        r   ow (dict): A dictionary representing the item to be added.
+
+        Raises:
+            NotImplementedError: This is an abstract method and should be implemented in a subclass.
+        """
         raise NotImplementedError()
 
     def update(self, query: ASTNode) -> None:

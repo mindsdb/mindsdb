@@ -1,4 +1,6 @@
 import pytest
+import json
+from pymongo import MongoClient
 
 from mindsdb_sql.parser.ast import CreateTable, DropTables, Identifier, Select, Star
 from mindsdb.integrations.handlers.mongodb_handler.mongodb_handler import MongoDBHandler
@@ -9,7 +11,7 @@ HANDLER_KWARGS = {
     "connection_data": {
         "host": "127.0.0.1",
         "port": "27017",
-        "user": "test_user",
+        "username": "test_user",
         "password": "supersecret",
         "database": "mongo_test_db",
     }
@@ -18,10 +20,22 @@ HANDLER_KWARGS = {
 expected_columns = ["_id", "col_one", "col_two", "col_three", "col_four"]
 
 
-@pytest.fixture(scope="module", params=[{"ssl": False}], ids=["NoSSL"])
+def seed_db():
+    """Seed the test DB with some data"""
+    creds = HANDLER_KWARGS["connection_data"]
+    uri = f"mongodb://{creds['username']}:{creds['password']}@{creds['host']}"
+    conn = MongoClient(uri)
+    db = conn[HANDLER_KWARGS["connection_data"]["database"]]
+
+    with open("mindsdb/integrations/handlers/mongodb_handler/tests/seed.json", "r") as f:
+        seed = json.load(f)
+    conn.close()
+
+@pytest.fixture(scope="module")
 def handler(request):
+    seed_db()
     handler = MongoDBHandler("mongo_handler", **HANDLER_KWARGS)
-    yield handler
+    return handler
 
 
 def check_valid_response(res):
@@ -35,18 +49,9 @@ def check_valid_response(res):
     ), f"expected to have None in error message, but got {res.error_message}"
 
 
-def get_table_names(handler):
-    res = handler.get_tables()
-    tables = res.data_frame
-    assert tables is not None, "expected to have some tables in the db, but got None"
-    assert (
-        "table_name" in tables
-    ), f"expected to get 'table_name' column in the response:\n{tables}"
-    return list(tables["table_name"])
-
-
 """ TESTS """
 
+# TODO - Subscribe
 
 class TestMongoDBConnection:
     def test_connect(self, handler):
@@ -88,7 +93,7 @@ class TestMongoDBTables:
     def test_get_tables(self, handler):
         res = handler.get_tables()
         tables = res.data_frame
-        test_table = get_table_names(handler)
+        test_table = list(tables["table_name"])
         assert (
             tables is not None
         ), "expected to have some table_name in the db, but got None"

@@ -316,6 +316,7 @@ class Jobs(Base):
     name = Column(String, nullable=False)
     project_id = Column(Integer, nullable=False)
     query_str = Column(String, nullable=False)
+    if_query_str = Column(String, nullable=True)
     start_at = Column(DateTime, default=datetime.datetime.now)
     end_at = Column(DateTime)
     next_run_at = Column(DateTime)

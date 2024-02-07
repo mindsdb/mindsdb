@@ -181,7 +181,7 @@ class TwelveLabsAPIClient:
             file_to_close = open(video_file, 'rb')
             mime_type, _ = mimetypes.guess_type(video_file)
             body['video_file'] = (file_to_close.name, file_to_close, mime_type)
-        
+
         result = self._submit_multi_part_request(
             method="POST",
             endpoint="tasks",

@@ -811,6 +811,27 @@ class TestProjectStructure(BaseExecutorDummyML):
         assert 'a > 2' in sql
         assert "b = 'b'" in sql
 
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_duplicated_cols(self, data_handler):
+        df1 = pd.DataFrame([
+            {'id': 1, 'a': 1},
+            {'id': 2, 'a': 2},
+            {'id': 3, 'a': 3},
+        ])
+        df2 = pd.DataFrame([
+            {'id': 1, 'a': 10},
+            {'id': 2, 'a': 20},
+        ])
+        self.set_handler(data_handler, name='pg', tables={'tbl1': df1, 'tbl2': df2})
+
+        ret = self.run_sql('''
+            select * from pg.tbl1 as a
+            join pg.tbl2 as b on a.id=b.id
+        ''')
+
+        first_row = ret.to_dict('split')['data'][0]
+        assert first_row == [1, 1, 1, 10]
+
 
 class TestJobs(BaseExecutorDummyML):
 

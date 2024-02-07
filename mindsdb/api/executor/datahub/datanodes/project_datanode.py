@@ -1,7 +1,5 @@
 from copy import deepcopy
 
-import pandas as pd
-
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import (
     BinaryOperation,

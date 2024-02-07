@@ -3,24 +3,27 @@ title: TwelveLabs Large Video Model
 sidebarTitle: TweleveLabs
 ---
 
+In this section, we present how to connect Twelve Labs API to MindsDB.
 
+[Twelve Labs](https://twelvelabs.io/product
+) provides a powerful and seamless video search infrastructure for your application. 
 
-The Twelve Labs handler for MindsDB provides an interface to interact with the Twelve Labs API.
+## Prerequisites
 
-## About Twelve Labs
-Powerful and seamless video search infrastructure for your application. 
+Before proceeding, ensure the following prerequisites are met:
 
-
-
-https://twelvelabs.io/product
-
-## Twelve Labs Handler Implementation
-
-This handler was implemented using the standard [Requests](https://github.com/psf/requests) Python package.
+ 1. Install MindsDB on your system or obtain access to cloud options.
+ 2. To use Twelve Labs with MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+ 3. Copy your Twelve Labs API Key by navigating to the [Dashboard page](https://api.twelvelabs.io/dashboard).
 
 ## Creating an ML Engine
 
-The first step to make use of this handler is to create an ML Engine. This can be done using the following syntax,
+The first step to use this handler is to create an ML Engine. The required argument to create the engine is:
+
+* `api_key` - The TweleveLabs api key. 
+
+Once you copy the api_key you can establish a connection by executing the following SQL command:
+
 ```sql
 CREATE ML_ENGINE twelve_labs_engine
 FROM twelve_labs
@@ -47,6 +50,7 @@ When executing the `CREATE MODEL` statement, the following parameters are suppor
 Given below are examples of creating Models for each of the supported tasks.
 
 ### Search
+
 ```sql
 CREATE MODEL mindsdb.twelve_labs_search
 PREDICT search_results
@@ -57,7 +61,8 @@ USING
   index_name = 'index_1',
   index_options = ['visual', 'conversation', 'text_in_video', 'logo'],
   video_urls = ['https://.../video_1.mp4', 'https://.../video_2.mp4'],
-  search_options = ['visual', 'conversation', 'text_in_video', 'logo'];
+  search_options = ['visual', 'conversation', 'text_in_video', 'logo'],
+  query_column = 'query'
 ```
 
 As mentioned above, the `search_options` parameter is specific to the `search` task and should be a subset of `index_options`.
@@ -68,7 +73,10 @@ Once you have created a Model, you can use it to make predictions.
 
 Given below are examples of making predictions using Models created for each of the supported tasks.
 
-### Search
+### Usage
+
+Use the `twelve_labs_search` model to query the video as:
+
 ```sql
 SELECT *
 FROM mindsdb.twelve_labs_search

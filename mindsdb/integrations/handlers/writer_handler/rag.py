@@ -1,6 +1,6 @@
 from langchain.llms import Writer
 
-from mindsdb.integrations.handlers.rag_handler.rag import RAGQuestionAnswerer
+from mindsdb.utilities.rag import RAGQuestionAnswerer
 from mindsdb.integrations.handlers.writer_handler.settings import (
     WriterHandlerParameters,
 )

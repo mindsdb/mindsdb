@@ -1,7 +1,7 @@
 from mindsdb.interfaces.storage import db
 from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
 from mindsdb.integrations.handlers.langchain_handler.mindsdb_database_agent import MindsDBSQL
-from mindsdb.integrations.handlers.rag_handler.rag import RAGQuestionAnswerer
+from mindsdb.utilities.rag import RAGQuestionAnswerer
 from mindsdb.integrations.handlers.rag_handler.settings import OpenAIParameters, RAGHandlerParameters
 
 import os

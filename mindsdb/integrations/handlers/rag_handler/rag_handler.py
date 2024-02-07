@@ -3,7 +3,7 @@ from typing import Dict, Optional
 import pandas as pd
 
 from mindsdb.integrations.handlers.rag_handler.ingest import RAGIngestor
-from mindsdb.integrations.handlers.rag_handler.rag import RAGQuestionAnswerer
+from mindsdb.utilities.rag import RAGQuestionAnswerer
 from mindsdb.integrations.handlers.rag_handler.settings import (
     DEFAULT_EMBEDDINGS_MODEL,
     RAGHandlerParameters,

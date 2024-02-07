@@ -1043,4 +1043,4 @@ class InformationSchemaDataNode(DataNode):
 
         columns_info = [{"name": k, "type": v} for k, v in data.dtypes.items()]
 
-        return data.to_dict(orient="records"), columns_info
+        return data.to_dict(orient="split")['data'], columns_info

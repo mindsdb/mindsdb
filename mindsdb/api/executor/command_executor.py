@@ -2024,7 +2024,9 @@ class ExecuteCommands:
             where=statement.where,
         )
 
-        models, _ = project_datanode.query(query=query, session=self.session)
+        data, columns_info = project_datanode.query(query=query, session=self.session)
+        col_names = [col['name'] for col in columns_info]
+        models = [dict(zip(col_names, item)) for item in data]
 
         # get columns for update
         kwargs = {}
@@ -2053,7 +2055,9 @@ class ExecuteCommands:
             where=statement.where,
         )
 
-        models, _ = project_datanode.query(query=query, session=self.session)
+        data, columns_info = project_datanode.query(query=query, session=self.session)
+        col_names = [col['name'] for col in columns_info]
+        models = [dict(zip(col_names, item)) for item in data]
 
         self.session.model_controller.delete_model_version(models)
         return ExecuteAnswer(ANSWER_TYPE.OK)

@@ -90,7 +90,6 @@ class TestChromaDBHandler(BaseExecutorTest):
         # this should work
         self.run_sql(sql)
 
-    @pytest.mark.xfail(reason="drop table for vectordatabase is not working")
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_drop_table(self, postgres_handler_mock):
         df = pd.DataFrame(
@@ -334,7 +333,6 @@ class TestChromaDBHandler(BaseExecutorTest):
         ret = self.run_sql(sql)
         assert ret.shape[0] == 2
 
-    # @pytest.mark.xfail(reason="upsert for vectordatabase is not implemented")
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_update(self, postgres_handler_mock):
 

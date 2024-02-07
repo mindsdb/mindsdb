@@ -2,6 +2,8 @@ import json
 from collections import defaultdict
 from typing import List
 
+from openai.types import Completion
+
 from mindsdb.integrations.handlers.rag_handler.settings import (
     LLMLoader,
     PersistedVectorStoreLoader,
@@ -100,6 +102,8 @@ class RAGQuestionAnswerer:
         try:
             if "choices" in data:
                 return data["choices"][0]["text"]
+            elif isinstance(data, Completion):
+                return data.choices[0].text
             else:
                 logger.info(
                     f"Error extracting generated text: failed to parse response {response}"

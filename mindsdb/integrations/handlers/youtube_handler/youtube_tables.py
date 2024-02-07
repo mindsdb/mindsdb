@@ -225,7 +225,12 @@ class YoutubeCommentsTable(APITable):
 
         youtube_comments_df = pd.json_normalize(data, 'replies', ['comment_id', 'channel_id', 'video_id', 'user_id', 'display_name', 'comment', "published_at", "updated_at"], record_prefix='replies.')
         youtube_comments_df = youtube_comments_df.rename(columns={'replies.user_id': 'reply_user_id', 'replies.reply_author': 'reply_author', 'replies.reply': 'reply'})
-        return youtube_comments_df[['comment_id', 'channel_id', 'video_id', 'user_id', 'display_name', 'comment', "published_at", "updated_at", 'reply_user_id', 'reply_author', 'reply']]
+        
+        # check if DataFrame is empty
+        if youtube_comments_df.empty:
+            return youtube_comments_df
+        else:
+            return youtube_comments_df[['comment_id', 'channel_id', 'video_id', 'user_id', 'display_name', 'comment', "published_at", "updated_at", 'reply_user_id', 'reply_author', 'reply']]
 
 
 class YoutubeChannelsTable(APITable):
@@ -375,25 +380,32 @@ class YoutubeVideosTable(APITable):
         return self.get_videos_by_video_ids(video_ids)
 
     def get_videos_by_video_ids(self, video_ids):
-        resource = self.handler.connect().videos().list(part="statistics,snippet,contentDetails", id=",".join(video_ids)).execute()
-
         data = []
-        for item in resource["items"]:
-            data.append(
-                {
-                    "channel_id": item["snippet"]["channelId"],
-                    "channel_title": item["snippet"]["channelTitle"],
-                    "comment_count": item["statistics"]["commentCount"],
-                    "description": item["snippet"]["description"],
-                    "like_count": item["statistics"]["likeCount"],
-                    "publish_time": item["snippet"]["publishedAt"],
-                    "title": item["snippet"]["title"],
-                    "transcript": self.get_captions_by_video_id(item["id"]),
-                    "video_id": item["id"],
-                    "view_count": item["statistics"]["viewCount"],
-                    "duration_str": self.parse_duration(item["id"], item["contentDetails"]["duration"]),
-                }
-            )
+
+        if not isinstance(video_ids, list):
+            logger.error(f"video_ids must be a list. Received {type(video_ids)} instead.")
+            return pd.DataFrame()
+
+        # loop over 50 video ids at a time
+        # an invalid request error is caused otherwise
+        for i in range(0, len(video_ids), 50):
+            resource = self.handler.connect().videos().list(part="statistics,snippet,contentDetails", id=",".join(video_ids[i:i+50])).execute()
+            for item in resource["items"]:
+                data.append(
+                    {
+                        "channel_id": item["snippet"]["channelId"],
+                        "channel_title": item["snippet"]["channelTitle"],
+                        "comment_count": item["statistics"]["commentCount"],
+                        "description": item["snippet"]["description"],
+                        "like_count": item["statistics"]["likeCount"],
+                        "publish_time": item["snippet"]["publishedAt"],
+                        "title": item["snippet"]["title"],
+                        "transcript": self.get_captions_by_video_id(item["id"]),
+                        "video_id": item["id"],
+                        "view_count": item["statistics"]["viewCount"],
+                        "duration_str": self.parse_duration(item["id"], item["contentDetails"]["duration"]),
+                    }
+                )
 
         return pd.json_normalize(data)
 

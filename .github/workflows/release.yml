@@ -45,8 +45,9 @@ jobs:
         python setup.py sdist
         twine upload dist/*
 
-  deploy_to_dockerhub:
+  docker_build:
       # Build our docker images based on our bake file
+      # This will tag with the release version tag and push to both dockerhub and ECR
       runs-on: [self-hosted, dev]
       needs: check-version
       if: github.actor != 'mindsdbadmin'
@@ -61,8 +62,28 @@ jobs:
           with:
             username: ${{ secrets.DOCKER_USERNAME }}
             password: ${{ secrets.DOCKER_PASSWORD }}
+        - name: Login to Amazon ECR
+          uses: aws-actions/amazon-ecr-login@v1
         - name: Build and push
           shell: bash
           run: |
             docker buildx create --name=remote-buildkit-agent --driver=remote --use tcp://remote-buildkit-agent.infrastructure.svc.cluster.local:80 || true # Create the builder (might already exist)
-            VERSION=${{ env.CI_REF_NAME }} REGISTRY=mindsdb docker buildx bake --push --progress plain -f docker/docker-bake.hcl
+            VERSION=${{ env.CI_REF_NAME }} PUSH_TO_DOCKERHUB=true docker buildx bake --push --progress plain -f docker/docker-bake.hcl
+
+  trigger_deploy:
+    # Trigger private repo to deploy to prod env
+    runs-on: [self-hosted, dev]
+    needs: docker_build
+    if: github.actor != 'mindsdbadmin'
+    environment:
+      name: prod
+    steps:
+      - uses: FranzDiebold/github-env-vars-action@v2
+      - uses: convictional/trigger-workflow-and-wait@v1.6.5
+        with:
+          owner: mindsdb
+          repo: INTERNAL-mindsdb-build-deploy-to-kubernetes
+          github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}
+          workflow_file_name: deploy-prod.yml
+          ref: master
+          client_payload: '{"image-tag-prefix": "${{ env.CI_REF_NAME }}", "deploy-env": "prod"}'

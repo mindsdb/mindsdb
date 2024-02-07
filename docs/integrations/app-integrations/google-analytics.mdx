@@ -1,0 +1,140 @@
+---
+title: Google Analytics
+sidebarTitle: Google Analytics
+---
+
+In this section, we present how to connect Google Analytics to MindsDB.
+
+[Google Analytics](https://analytics.google.com/) is a web analytics service offered by Google that tracks and reports website traffic and also the mobile app traffic & events.
+
+Data from Google Analytics can be utilized within MindsDB to train AI models, make predictions, and automate user engagement and events with AI.
+
+## Connection
+
+The required arguments to establish a connection are as follows:
+
+* `credentials_file` optional, is a path to the JSON file that stores credentials to the Google account.
+* `credentials_json`: optional, is the content of the JSON file that stores credentials to the Google account.
+* `property_id` required, is the property id of your Google Analytics website. [Here](https://developers.google.com/analytics/devguides/reporting/data/v1/property-id) is some information on how to get the property id.
+> ⚠️ One of credentials_file or credentials_json has to be chosen.
+
+<Tip>
+Please note that a Google account with enabled Google Analytics Admin API is required. You can find more information [here](https://developers.google.com/analytics/devguides/config/admin/v1/quickstart-client-libraries).<br></br>
+Also an active website connected with Google Analytics is required. You can find more information [here](https://support.google.com/analytics/answer/9304153?hl=en).
+</Tip>
+
+<Tip>
+If you installed MindsDB locally via pip or cloned it, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/google_analytics_handler) and run this command: `pip install -r requirements.txt`.
+</Tip>
+
+To make use of this handler and connect the Google Analytics app to MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE my_ga
+WITH
+    ENGINE = 'google_analytics',
+    PARAMETERS = {
+        'credentials_file': '\path-to-your-file\credentials.json',
+        'property_id': '<YOUR_PROPERTY_ID>'
+    };
+```
+<Tip>
+
+You need a Google account in order to use this integration. Here is how to get the credentials file:
+
+1. Create a Google Cloud Platform (GCP) Project:
+
+    1.1 Go to the GCP Console (https://console.cloud.google.com/).
+
+    1.2 If you haven't created a project before, you'll be prompted to do so now.
+
+    1.3 Give your new project a name.
+
+    1.4 Click `Create` to create the new project.
+
+2. Enable the Google Analytics Admin API:
+
+    2.1 In the GCP Console, select your project.
+
+    2.2 Navigate to `APIs & Services` > `Library`.
+
+    2.3 In the search bar, search for `Google Analytics Admin API`.
+
+    2.4 Click on ` Google Analytics Admin API `, then click `Enable`.
+
+3. Create credentials for the  Google Analytics Admin API :
+
+    3.1 Navigate to `APIs & Services` > `Credentials`.
+
+    3.2 Click on the `Create Credentials` button and choose `Service account`.
+
+    3.3 Enter a unique `Service account ID` .
+
+    3.4 Click `Done`.
+
+    3.5 Copy the service account you created. Find it under `Service Accounts`.
+
+    3.6 Now click on the service account you created, and navigate `KEYS`
+
+    3.7 Click `ADD KEY` > `Create new key`.
+
+    3.8 Choose `JSON` then click `CREATE`
+
+    3.9 After this the credentials file will be downloaded directly. Locate the file and use the location to it in the `credentials_file` param.
+
+4. Add Service account to Google Analytics Property:
+
+    4.1 In the Google Analytics Admin Console, select the Account or Property to which you want to grant access.
+
+    4.2 Navigate to the `Admin` panel.
+
+    4.3 Navigate `Account` > `Account Access Management`.
+
+    4.4 Click on the "+" icon to add a new user.
+
+    4.5 Enter the service account you copied in step 3.5 as the email address.
+
+    4.6 Assign the appropriate permissions to the service account. At a minimum, you'll need to grant it `Edit` permissions.
+
+    4.7 Click on the `Add` button to add the service account as a user with the specified permissions.
+</Tip>
+
+## Usage
+
+This creates a database that comes with the `conversion_events` table.
+
+Now you can use your Google Analytics data like this:
+
+* searching for conversion events:
+
+    ```sql
+    SELECT event_name, custom, countingMethod
+    FROM my_ga.conversion_events;
+    ```
+
+* creating conversion event:
+
+    ```sql
+    INSERT INTO my_ga.conversion_events (event_name, countingMethod)
+    VALUES ('mindsdb_event', 2);
+    ```
+
+* updating one conversion event:
+
+    ```sql
+    UPDATE my_ga.conversion_events
+    SET countingMethod = 1,
+    WHERE name = '<mindsdb_event_name>';
+    ```
+
+* deleting one conversion event:
+
+    ```sql
+    DELETE
+    FROM my_ga.conversion_events
+    WHERE name = '<mindsdb_event_name>';
+    ```
+
+<Info>
+For more information about available actions and development plans, visit [this page](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/google_analytics_handler).
+</Info>

@@ -1,7 +1,6 @@
 import unittest
 from unittest.mock import patch
 from mindsdb.integrations.handlers.discord_handler.discord_handler import DiscordHandler
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
 
 from mindsdb_sql.parser import ast
 from mindsdb_sql.parser.ast import BinaryOperation, Identifier, Constant

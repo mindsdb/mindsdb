@@ -1,0 +1,124 @@
+---
+title: Knowledge Base
+sidebarTitle: Knowledge Base
+---
+
+A knowledge base is a batteries included RAG system that you can create and insert data into, as well as query as if it was a table.
+
+```sql
+-- Create a knowledge base using the Cohere embedding model & Chroma world news index
+CREATE KNOWLEDGE_BASE world_news_kb;
+
+-- Add data into the knowledge base
+INSERT INTO world_news_kb (SELECT id, text as content FROM web_news);
+
+-- You can query the knowledge base as virtual table
+SELECT * FROM world_news_kb WHERE content = "Best AI Startups in SF?" LIMIT 10;
+```
+
+Internally, it uses a vector store and an embedding model, by default it uses chroma and it will pick a suitable embedding model for the task, however, you can specify each of these if you want.
+
+Here is a general syntax for creating a knowledge base:
+
+```sql
+CREATE KNOWLEDGE_BASE my_kb
+[USING
+   [model = embedding_model,]
+   [storage = vector_database.storage_table;]]
+```
+
+## Step by step guide
+
+
+<p align="center">
+  <img src="https://docs.google.com/drawings/d/e/2PACX-1vTVmUqhoFXLF3ncL0NWwgdPjI7Hj19f-5xU8ED31ntYvlsTM3poM9zZKwcrEwzvxJrOhl2raIFKWlsp/pub?w=1342&h=681" />
+</p>
+
+
+Here is how you build a KNOWLEDGE BASE and specifying the embedding model and the vector store you want:
+
+### Create the embedding model
+
+```sql
+-- Set up embedding model that uses Cohere
+CREATE ML_ENGINE embedding FROM langchain_embedding;
+```
+
+```sql
+CREATE MODEL cohere_embedding_model
+PREDICT embeddings
+USING
+	engine = "embedding",
+	class = "cohere",
+	api_key = "your_api_key_here",
+	input_columns = ["content"];
+```
+
+### Connect the vector store
+
+```sql
+-- Connect to Chroma
+CREATE DATABASE chroma_dev_local
+WITH ENGINE = "chromadb",
+PARAMETERS = {
+	"persist_directory": "persist path here"
+};
+```
+
+In this example, there is a table called world_news_with_ids that contains columns (id, content)
+
+```sql
+SELECT * FROM world_news_with_ids;
+```
+
+Now, we can create an index in the vector store, and insert one example point:
+
+```sql
+CREATE TABLE chroma_dev_local.world_news_index (
+	SELECT content, embeddings FROM cohere_embedding_model
+	WHERE content = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Tristique sollicitudin nibh sit amet commodo nulla. Risus sed vulputate odio ut enim blandit volutpat. Suspendisse ultrices gravida dictum fusce ut placerat orci. Eget nulla facilisi etiam dignissim diam. Aenean euismod elementum nisi quis eleifend quam. Ac placerat vestibulum lectus mauris ultrices eros in. Sed turpis tincidunt id aliquet risus feugiat in ante metus. Pellentesque habitant morbi tristique senectus et netus. Imperdiet massa tincidunt nunc pulvinar sapien et ligula. Leo in vitae turpis massa sed elementum tempus egestas. Aliquam malesuada bibendum arcu vitae elementum curabitur. Sit amet tellus cras adipiscing. Enim ut tellus elementum sagittis vitae et leo. Donec pretium vulputate sapien nec."
+);
+```
+
+Let's see what we have in the vector store:
+
+```sql
+SELECT * FROM chroma_dev_local.world_news_index;
+```
+
+### Glue it all together 
+
+Now, we can connect the embedding model and the vector index into one knowledge base:
+
+```sql
+-- Create a knowledge base using the Cohere embedding model & Chroma world news index
+CREATE KNOWLEDGE_BASE world_news_kb
+USING
+	model = cohere_embedding_model,
+	storage = chroma_dev_local.world_news_index;
+```
+
+This is how we add content into the vector store every few seconds if there is new data:
+
+```sql
+-- Insert world news data into Knowledge Base every second, if there is new data
+CREATE JOB keep_knowledge_base_up_to_date AS (
+
+    INSERT INTO world_news_kb (
+        SELECT id, text as content FROM world_news_with_ids WHERE id > LAST
+    );
+
+) every second;
+```
+
+<strong> Note: </strong> the query has a id > LAST. This allows the job, to only select new data every time it runs.
+
+### Query the knowledge base
+
+
+```sql
+-- Do a similarity search over the knowledge base
+SELECT * FROM world_news_kb;
+SELECT * FROM world_news_kb WHERE content = "YouTube" LIMIT 1;
+SELECT * FROM world_news_kb WHERE content = "Canada and Google" LIMIT 1;
+```

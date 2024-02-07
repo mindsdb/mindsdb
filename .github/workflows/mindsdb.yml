@@ -21,7 +21,7 @@ jobs:
           python tests/scripts/check_code.py
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v37
+        uses: tj-actions/changed-files@v41
       - name: Run pre-commit
         uses: pre-commit/action@v3.0.0
         with:
@@ -75,6 +75,8 @@ jobs:
           env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
 
           env PYTHONPATH=./ pytest tests/unit/test_cache.py
+        
+          env PYTHONPATH=./ pytest tests/unit/test_llm_utils.py
 
           pytest -vx tests/integration_tests/flows/test_ml_task_queue.py
 
@@ -130,3 +132,6 @@ jobs:
         CHECK_FOR_UPDATES: False
         OPENAI_API_KEY: ${{secrets.OPENAI_API_KEY}}
         ANYSCALE_ENDPOINTS_API_KEY: ${{secrets.ANYSCALE_ENDPOINTS_API_KEY}}
+    - name: Run Integrations unittest
+      run: |
+        python -m unittest discover -s tests/unit/handlers 

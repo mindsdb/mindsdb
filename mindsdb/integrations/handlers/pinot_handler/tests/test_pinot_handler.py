@@ -1,6 +1,6 @@
 import unittest
 from mindsdb.integrations.handlers.pinot_handler.pinot_handler import PinotHandler
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 
 class PinotHandlerTest(unittest.TestCase):

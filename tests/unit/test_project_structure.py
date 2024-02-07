@@ -354,6 +354,29 @@ class TestProjectStructure(BaseExecutorDummyML):
         )
         self.wait_predictor('mindsdb', 'task_model')
 
+    def test_replace_model(self):
+        # create model
+        self.run_sql(
+            '''
+                CREATE or REPLACE model task_model
+                PREDICT a
+                using engine='dummy_ml',
+                join_learn_process=true
+            '''
+        )
+        self.wait_predictor('mindsdb', 'task_model')
+
+        # recreate
+        self.run_sql(
+            '''
+                CREATE or REPLACE model task_model
+                PREDICT a
+                using engine='dummy_ml',
+                join_learn_process=true
+            '''
+        )
+        self.wait_predictor('mindsdb', 'task_model')
+
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_complex_joins(self, data_handler):
         df1 = pd.DataFrame([
@@ -460,8 +483,157 @@ class TestProjectStructure(BaseExecutorDummyML):
 
         assert row['t3a'] == 6
 
+    def test_complex_queries(self):
+
+        # -- set up data --
+
+        stores = pd.DataFrame(
+            columns=['id', 'region_id', 'format'],
+            data=[
+                [1, 1, 'c'],
+                [2, 2, 'a'],
+                [3, 2, 'a'],
+                [4, 2, 'b'],
+                [5, 1, 'b'],
+                [6, 2, 'b'],
+            ]
+        )
+        regions = pd.DataFrame(
+            columns=['id', 'name'],
+            data=[
+                [1, 'asia'],
+                [2, 'europe'],
+            ]
+        )
+        self.save_file('stores', stores)
+        self.save_file('regions', regions)
+
+        # -- create view --
+        self.run_sql('''
+            create view mindsdb.stores_view (
+                select * from files.stores
+            )
+        ''')
+
+        # -- create model --
+        self.run_sql(
+            '''
+                CREATE model model1
+                from files (select * from stores)
+                PREDICT format
+                using engine='dummy_ml'
+            '''
+        )
+        self.wait_predictor('mindsdb', 'model1')
+
+        self.run_sql(
+            '''
+                CREATE model model2
+                from files (select * from stores)
+                PREDICT format
+                using engine='dummy_ml'
+            '''
+        )
+        self.wait_predictor('mindsdb', 'model2')
+
+        # -- joins / conditions / unions --
+
+        sql = '''
+            select
+               m1.predicted / 2 a,  -- 42/2=21
+               s.id + (select id from files.regions where id=1) b -- =3
+             from files.stores s
+             join files.regions r on r.id = s.region_id
+             join model1 m1
+             join model2 m2
+               where
+                   m1.model_param = (select 100 + id from files.stores where id=1)
+                   and s.region_id=(select id from files.regions where id=2) -- only region_id=2
+                   and s.format='a'
+                   and s.id = r.id -- cross table condition
+            union
+              select id, id from files.regions where id = 1  -- 2nd row with [1,1]
+            union
+              select id, id from files.stores where id = 2   -- 2nd row with [2,2]
+        '''
+
+        ret = self.run_sql(sql)
+        assert len(ret) == 3
+
+        assert list(ret.iloc[0]) == [21, 3]
+        assert list(ret.iloc[1]) == [1, 1]
+        assert list(ret.iloc[2]) == [2, 2]
+
+        # -- aggregating / grouping / cases --
+        case = '''
+            case when s.id=1 then 10
+                 when s.id=2 then 20
+                 when s.id=3 then 30
+                 else 100
+            end
+        '''
+
+        sql = f'''
+             SELECT
+               -- values for region_id=2: [20, 30, 100, 100]
+               MAX({case}) c_max,   -- =100
+               MIN({case}) c_min,   -- =20
+               SUM({case}) c_sum,   -- =250
+               COUNT({case}) c_count, -- =4
+               AVG({case}) c_avg   -- 250/4=62.5
+            from stores_view s  -- view is used
+             join files.regions r on r.id = s.region_id
+             join model1 m1
+            group by r.id -- 2 records
+            having max(r.id) = 2 -- 1 record
+        '''
+
+        ret = self.run_sql(sql)
+
+        assert len(ret) == 1
+
+        assert ret.c_max[0] == 100
+        assert ret.c_min[0] == 20
+        assert ret.c_sum[0] == 250
+        assert ret.c_count[0] == 4
+        assert ret.c_avg[0] == 62.5
+
+        # -- window functions --
+        sql = '''
+           SELECT
+             s.*,
+            ROW_NUMBER() OVER(PARTITION BY r.id ORDER BY s.id) ROW_NUMBER,
+            RANK() OVER(PARTITION BY r.id ORDER BY s.format) RANK,
+            DENSE_RANK() OVER(PARTITION BY r.id ORDER BY s.format) DENSE_RANK,
+            PERCENT_RANK() OVER(PARTITION BY r.id ORDER BY s.id) PERCENT_RANK,
+            CUME_DIST() OVER(PARTITION BY r.id ORDER BY s.id) CUME_DIST,
+            NTILE(2) OVER(PARTITION BY r.id ORDER BY s.id) NTILE,
+            LAG(s.id, 1) OVER(PARTITION BY r.id ORDER BY s.id) LAG,
+            LEAD(s.id, 1) OVER(PARTITION BY r.id ORDER BY s.id) LEAD,
+            FIRST_VALUE(s.format) OVER(PARTITION BY r.id ORDER BY s.id) FIRST_VALUE,
+            LAST_VALUE(s.format) OVER(PARTITION BY r.id ORDER BY s.id) LAST_VALUE,
+            NTH_VALUE(s.id, 1) OVER(PARTITION BY r.id ORDER BY s.id) NTH_VALUE
+           from files.stores s
+             join files.regions r on r.id = s.region_id
+             join model1 m1
+            order by r.id, s.id
+        '''
+        ret = self.run_sql(sql)
+
+        assert list(ret.ROW_NUMBER) == [1, 2, 1, 2, 3, 4]
+        assert list(ret.RANK) == [2, 1, 1, 1, 3, 3]
+        assert list(ret.DENSE_RANK) == [2, 1, 1, 1, 2, 2]
+
+        assert list(ret.FIRST_VALUE) == ['c', 'c', 'a', 'a', 'a', 'a']
+        assert list(ret.LAST_VALUE) == ['c', 'b', 'a', 'a', 'b', 'b']
+
+        # -- unions functions --
+
+        # TODO Correlated subqueries (not implemented)
+
     def test_create_validation(self):
-        with pytest.raises(RuntimeError):
+        from mindsdb.integrations.libs.ml_exec_base import MLEngineException
+        with pytest.raises(MLEngineException):
             self.run_sql(
                 '''
                     CREATE model task_model_x
@@ -636,8 +808,8 @@ class TestProjectStructure(BaseExecutorDummyML):
         assert len(calls) == 1
         sql = calls[0][0][0].to_string()
         # getting next value, greater than max previous
-        assert 't.a > 2' in sql
-        assert "t.b = 'b'" in sql
+        assert 'a > 2' in sql
+        assert "b = 'b'" in sql
 
 
 class TestJobs(BaseExecutorDummyML):
@@ -771,6 +943,53 @@ class TestJobs(BaseExecutorDummyML):
         ret = self.run_sql('select * from jobs_history')
         # no history
         assert len(ret) == 0
+
+    def test_conditional_job(self, scheduler):
+        df = pd.DataFrame([
+            {'a': 1, 'b': '2'},
+        ])
+        self.save_file('tasks', df)
+
+        # create job
+        job_str = '''
+           create job j1 (
+              CREATE model pred
+                PREDICT p
+                using engine='dummy_ml',
+                join_learn_process=true
+           )
+           if (
+               select * from files.tasks where a={var}
+           )
+        '''
+
+        self.run_sql(job_str.format(var=2))
+
+        # check jobs table
+        ret = self.run_sql('select * from jobs')
+        assert len(ret) == 1, "should be 1 job"
+
+        # run scheduler
+        scheduler.check_timetable()
+
+        # check no models created
+        ret = self.run_sql('select * from models where name="pred"')
+        assert len(ret) == 0
+
+        # --- attempt2 ---
+
+        self.run_sql(job_str.format(var=1))
+
+        # check jobs table, still one job - previous was one time job
+        ret = self.run_sql('select * from jobs')
+        assert len(ret) == 1, "should be 1 job"
+
+        # run scheduler
+        scheduler.check_timetable()
+
+        # check 1 model
+        ret = self.run_sql('select * from models where name="pred"')
+        assert len(ret) == 1
 
 
 class TestTriggers(BaseExecutorDummyML):

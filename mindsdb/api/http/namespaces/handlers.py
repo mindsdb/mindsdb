@@ -10,12 +10,12 @@ from flask_restx import Resource
 from mindsdb_sql.parser.ast import Identifier
 from mindsdb_sql.parser.dialects.mindsdb import CreateMLEngine
 
+from mindsdb.integrations.utilities.install import install_dependencies
+from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.handlers import ns_conf
-from mindsdb.integrations.utilities.install import install_dependencies
-
-from mindsdb.api.mysql.mysql_proxy.controllers.session_controller import SessionController
-from mindsdb.api.mysql.mysql_proxy.executor.executor_commands import ExecuteCommands
+from mindsdb.api.executor.controllers.session_controller import SessionController
+from mindsdb.api.executor.command_executor import ExecuteCommands
 
 
 @ns_conf.route('/')
@@ -80,57 +80,77 @@ class InstallDependencies(Resource):
         )
 
 
+def prepare_formdata():
+    params = {}
+    file_names = []
+
+    def on_field(field):
+        name = field.field_name.decode()
+        value = field.value.decode()
+        params[name] = value
+
+    def on_file(file):
+        params[file.field_name.decode()] = file.file_object
+        file_names.append(file.field_name.decode())
+
+    temp_dir_path = tempfile.mkdtemp(prefix='mindsdb_file_')
+
+    parser = multipart.create_form_parser(
+        headers=request.headers,
+        on_field=on_field,
+        on_file=on_file,
+        config={
+            'UPLOAD_DIR': temp_dir_path.encode(),  # bytes required
+            'UPLOAD_KEEP_FILENAME': True,
+            'UPLOAD_KEEP_EXTENSIONS': True,
+            'MAX_MEMORY_FILE_SIZE': 0
+        }
+    )
+
+    while True:
+        chunk = request.stream.read(8192)
+        if not chunk:
+            break
+        parser.write(chunk)
+    parser.finalize()
+    parser.close()
+
+    for file_name in file_names:
+        params[file_name].close()
+
+    return params
+
+
 @ns_conf.route('/byom/<name>')
 @ns_conf.param('name', "Name of the model")
 class BYOMUpload(Resource):
     @ns_conf.doc('post_file')
     def post(self, name):
-        params = {}
+        params = prepare_formdata()
 
-        def on_field(field):
-            name = field.field_name.decode()
-            value = field.value.decode()
-            params[name] = value
-
-        def on_file(file):
-            params[file.field_name.decode()] = file.file_object
-
-        temp_dir_path = tempfile.mkdtemp(prefix='mindsdb_file_')
-
-        parser = multipart.create_form_parser(
-            headers=request.headers,
-            on_field=on_field,
-            on_file=on_file,
-            config={
-                'UPLOAD_DIR': temp_dir_path.encode(),  # bytes required
-                'UPLOAD_KEEP_FILENAME': True,
-                'UPLOAD_KEEP_EXTENSIONS': True,
-                'MAX_MEMORY_FILE_SIZE': 0
-            }
-        )
-
-        while True:
-            chunk = request.stream.read(8192)
-            if not chunk:
-                break
-            parser.write(chunk)
-        parser.finalize()
-        parser.close()
+        code_file_path = params['code'].name.decode()
+        try:
+            module_file_path = params['modules'].name.decode()
+        except AttributeError:
+            module_file_path = Path(code_file_path).parent / 'requirements.txt'
+            module_file_path.touch()
+            module_file_path = str(module_file_path)
 
         connection_args = {
-            'code': params['code'].name.decode(),
-            'modules': params['modules'].name.decode(),
+            'code': code_file_path,
+            'modules': module_file_path,
             'type': params.get('type')
         }
 
         session = SessionController()
 
-        base_ml_handler = session.integration_controller.get_handler(name)
-        byom_handler = base_ml_handler.get_ml_handler()
-        byom_handler.update_engine(connection_args)
+        base_ml_handler = session.integration_controller.get_ml_handler(name)
+        base_ml_handler.update_engine(connection_args)
+
+        engine_storage = HandlerStorage(base_ml_handler.integration_id)
 
         engine_versions = [
-            int(x) for x in byom_handler.engine_storage.get_connection_args()['versions'].keys()
+            int(x) for x in engine_storage.get_connection_args()['versions'].keys()
         ]
 
         return {
@@ -146,48 +166,19 @@ class BYOMUpload(Resource):
                 - modules
         '''
 
-        params = {}
+        params = prepare_formdata()
 
-        def on_field(field):
-            name = field.field_name.decode()
-            value = field.value.decode()
-            params[name] = value
-
-        def on_file(file):
-            params[file.field_name.decode()] = file.file_object
-
-        temp_dir_path = tempfile.mkdtemp(prefix='mindsdb_file_')
-
-        parser = multipart.create_form_parser(
-            headers=request.headers,
-            on_field=on_field,
-            on_file=on_file,
-            config={
-                'UPLOAD_DIR': temp_dir_path.encode(),  # bytes required
-                'UPLOAD_KEEP_FILENAME': True,
-                'UPLOAD_KEEP_EXTENSIONS': True,
-                'MAX_MEMORY_FILE_SIZE': 0
-            }
-        )
-
-        while True:
-            chunk = request.stream.read(8192)
-            if not chunk:
-                break
-            parser.write(chunk)
-        parser.finalize()
-        parser.close()
-
-        params['code'].close()
-        params['modules'].close()
-
-        sql_session = SessionController()
-
-        command_executor = ExecuteCommands(sql_session, executor=None)
+        code_file_path = params['code'].name.decode()
+        try:
+            module_file_path = params['modules'].name.decode()
+        except AttributeError:
+            module_file_path = Path(code_file_path).parent / 'requirements.txt'
+            module_file_path.touch()
+            module_file_path = str(module_file_path)
 
         connection_args = {
-            'code': params['code'].name.decode(),
-            'modules': params['modules'].name.decode(),
+            'code': code_file_path,
+            'modules': module_file_path,
             'type': params.get('type')
         }
 
@@ -196,6 +187,8 @@ class BYOMUpload(Resource):
             handler='byom',
             params=connection_args
         )
+        sql_session = SessionController()
+        command_executor = ExecuteCommands(sql_session)
         command_executor.execute_command(ast_query)
 
         return '', 200

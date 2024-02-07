@@ -2,7 +2,7 @@ import unittest
 
 from newsapi.newsapi_exception import NewsAPIException
 
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.integrations.handlers.newsapi_handler.newsapi_handler import NewsAPIHandler
 
 

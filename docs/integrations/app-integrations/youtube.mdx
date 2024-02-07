@@ -24,7 +24,7 @@ There are two ways you can connect YouTube to MindsDB:
 
 ### Option 1: Limited permissions
 
-Establish a connection to YouTube from MindsDB by executing the following SQL command:
+Establish a connection to YouTube from MindsDB by executing the below SQL command and following the Google authorization link provided as output:
 
 ```sql
 CREATE DATABASE mindsdb_youtube
@@ -37,7 +37,7 @@ PARAMETERS = {
 <Tip>
 Alternatively, you can connect YouTube to MindsDB via the form.
 
-To do that, click on the `Add` button, choose `New Datasource`, search for `YouTube`, and follow the instructions in the form.
+To do that, click on the `Add` button, choose `New Datasource`, search for `YouTube`, and follow the instructions in the form. After providing the connection name and the YouTube API token, click on the `Test Connection` button. Once the connection is established, click on the `Save and Continue` button.
 </Tip>
 
 Required connection parameters include the following:
@@ -46,7 +46,7 @@ Required connection parameters include the following:
 
 ### Option 2: Elevated permissions
 
-Establish a connection to YouTube from MindsDB by executing the following SQL command:
+Establish a connection to YouTube from MindsDB by executing the below SQL command and following the Google authorization link provided as output:
 
 ```sql
 CREATE DATABASE mindsdb_youtube_oauth
@@ -60,7 +60,7 @@ PARAMETERS = {
 <Tip>
 Alternatively, you can connect YouTube to MindsDB via the form.
 
-To do that, click on the `Add` button, choose `New Datasource`, search for `YouTube`, and follow the instructions in the form.
+To do that, click on the `Add` button, choose `New Datasource`, search for `YouTube`, and follow the instructions in the form. After providing the connection name and the credentials file or URL, click on the `Test Connection` button and complete the authorization process in the pop-up window. Once the connection is established, click on the `Save and Continue` button.
 </Tip>
 
 Required connection parameters include one of the following:

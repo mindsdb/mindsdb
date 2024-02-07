@@ -45,6 +45,7 @@ jobs:
       shell: bash
       run: |
         docker buildx create --name=remote-buildkit-agent --driver=remote --use tcp://remote-buildkit-agent.infrastructure.svc.cluster.local:80 || true # Create the builder (might already exist)
+        VERSION=${{ env.CI_SHA }} docker buildx bake --progress plain -f docker/docker-bake.hcl builder
         VERSION=${{ env.CI_SHA }} docker buildx bake --push --progress plain -f docker/docker-bake.hcl
 
   trigger_deploy:

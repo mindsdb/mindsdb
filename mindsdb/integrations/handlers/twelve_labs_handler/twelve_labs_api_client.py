@@ -138,7 +138,6 @@ class TwelveLabsAPIClient:
         elif video_files:
             logger.info("video_urls has not been set, therefore, video_files will be used.")
             logger.info("Creating video indexing tasks for video files.")
-
             for video_file in video_files:
                 task_ids.append(
                     self._create_video_indexing_task(
@@ -173,17 +172,24 @@ class TwelveLabsAPIClient:
         body = {
             "index_id": index_id,
         }
-
+        file_to_close = None
         if video_url:
             body['video_url'] = video_url
         elif video_file:
-            body['video_file'] = video_file
-
+            import mimetypes
+            # WE need the file open for the duration of the request. Maybe simplify it with context manager later, but needs _create_video_indexing_task re-written
+            file_to_close = open(video_file, 'rb')
+            mime_type, _ = mimetypes.guess_type(video_file)
+            body['video_file'] = (file_to_close.name, file_to_close, mime_type)
+        
         result = self._submit_multi_part_request(
             method="POST",
             endpoint="tasks",
             data=body,
         )
+
+        if file_to_close:
+            file_to_close.close()
 
         task_id = result['_id']
         logger.info(f"Created video indexing task {task_id} for {video_url if video_url else video_file} successfully.")
@@ -386,7 +392,7 @@ class TwelveLabsAPIClient:
             response = requests.post(
                 url=url,
                 headers=headers,
-                data=multipart_data if multipart_data else {},
+                data=multipart_data if multipart_data else {}
             )
 
         else:

@@ -211,6 +211,19 @@ def ft_chat_format_validation(
             state = role
 
 
+def ft_formatter(df: pd.DataFrame) -> List[Dict]:
+    """
+    Data preparation entry point for chat LLM finetuning. This method will dispatch to the appropriate formatters.
+
+    Supported formats:
+        - code: long tabular format with a `code` column
+        - chat: long tabular format with `role` and `content` columns, or a JSON format with a `chat_json` column.
+    """
+    if 'code' in df.columns:
+        df = ft_code_formatter(df)
+    return ft_chat_formatter(df)
+
+
 def ft_chat_formatter(df: pd.DataFrame) -> List[Dict]:
     """
         For more details, check `FineTuning -> Data Format` in the Anyscale API reference, or the OpenAI equivalent.

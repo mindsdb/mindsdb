@@ -9,7 +9,7 @@ import pandas as pd
 from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler
 from mindsdb.integrations.handlers.openai_handler.constants import OPENAI_API_BASE
 from mindsdb.integrations.utilities.handler_utils import get_api_key
-from mindsdb.integrations.libs.llm_utils import ft_jsonl_validation, ft_chat_formatter
+from mindsdb.integrations.libs.llm_utils import ft_jsonl_validation, ft_formatter
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -127,7 +127,7 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
     @staticmethod
     def _prepare_ft_jsonl(df, temp_storage_path, temp_filename, _, test_size=0.2):
         # 1. format data
-        chats = ft_chat_formatter(df)
+        chats = ft_formatter(df)
 
         # 2. split chats in training and validation subsets
         series = pd.Series(chats)

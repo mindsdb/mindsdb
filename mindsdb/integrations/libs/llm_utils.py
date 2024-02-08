@@ -1,9 +1,14 @@
 import re
 import json
+import itertools
 from typing import Optional, Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
+from langchain.text_splitter import (
+    Language,
+    RecursiveCharacterTextSplitter,
+)
 
 
 def get_completed_prompts(base_template: str, df: pd.DataFrame) -> Tuple[List[str], np.ndarray]:
@@ -275,3 +280,82 @@ def ft_chat_formatter(df: pd.DataFrame) -> List[Dict]:
         chats.append({'messages': chat})
 
     return chats
+
+
+def ft_code_formatter(
+        df: pd.DataFrame,
+        format='chat',
+        language='python',
+        chunk_size=100,
+        chunk_overlap=0,
+        chat_sections=('Code prefix', 'Code suffix', 'Completion'),
+        fim_tokens=('<PRE>', '<SUF>', '<MID>'),
+) -> pd.DataFrame:
+    """
+    This utility processes a raw codebase stored as a dataframe with a `code` column, where
+    every row may be an entire file or some portion of it.
+    It chunks code into triples made of a prefix, middle, and suffix.
+
+    Depending on the target LLM, these triples are then formatted into a chat-like prompt, or a
+    fill-in-the-middle (FIM) prompt. The latter is used for fine-tuning models like codellama,
+    while the former is more generic and should work with any LLM that supports the ChatCompletion
+    format, as the rest of our tools do.
+    """
+
+    # input and setup validation
+    assert len(df) > 0, "Input dataframe should not be empty"
+    assert 'code' in df.columns, "Input dataframe should have a 'code' column"
+    assert chunk_size > 0 and isinstance(chunk_size, int), "`chunk_size` should be a positive integer"
+
+    supported_formats = ['chat', 'fim']
+    supported_langs = [e.value for e in Language]
+    assert language.lower() in supported_langs, f"Invalid language. Valid choices are: {supported_langs}"
+
+    # set prompt templates
+    if format == 'chat':
+        templates = [
+            f"You are a powerful text to code model. Your job is to provide great code completions. As context, you are given code that is found immediately before and after the code you must generate.\n\nYou must output the code that should go in between the prefix and suffix.\n\n### {chat_sections[0]}:"  # noqa
+            ,f"\n### {chat_sections[1]}:\n"
+            ,f"\n### {chat_sections[2]}:\n"
+        ]
+    elif format == 'fim':
+        templates = [
+            f"{fim_tokens[0]}"
+            ,f"{fim_tokens[1]}"
+            ,f"{fim_tokens[2]}"
+        ]
+    else:
+        raise Exception(f"Invalid format. Please choose one of {supported_formats}")
+
+    # split code into chunks
+    code_splitter = RecursiveCharacterTextSplitter.from_language(
+        language=getattr(Language, language.upper()),
+        chunk_size=3*chunk_size,  # each triplet element has `chunk_size`
+        chunk_overlap=chunk_overlap,  # some overlap here is fine
+    )
+    chunk_docs = code_splitter.create_documents(list(df['code']))
+    chunks = [c.page_content for c in chunk_docs]
+
+    # split each chunk into a triplet, with no overlap
+    triplet_splitter = RecursiveCharacterTextSplitter.from_language(
+        language=getattr(Language, language.upper()),
+        chunk_size=chunk_size,
+        chunk_overlap=0,  # no overlap admitted, otherwise context may leak into answer
+    )
+    triplet_chunk_docs = triplet_splitter.create_documents(chunks)
+    chunks = [c.page_content for c in triplet_chunk_docs]
+
+    # format chunks into prompts
+    roles = []
+    contents = []
+    for idx in range(0, len(chunks), 3):
+        pre, mid, suf = chunks[idx:idx+3]
+        interleaved = list(itertools.chain(*zip(templates, (pre, suf, mid))))
+        user = "".join(interleaved[:-2])
+        assistant = "".join(interleaved[-2:])
+        roles.extend(['user', 'assistant'])
+        contents.extend([user, assistant])
+
+    # return formatted prompts in a dataframe to be processed by `ft_chat_formatter()`
+    df = pd.DataFrame({'role': roles, 'content': contents})
+    return df

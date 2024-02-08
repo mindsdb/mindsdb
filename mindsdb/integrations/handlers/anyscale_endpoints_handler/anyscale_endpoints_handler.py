@@ -6,6 +6,8 @@ from typing import Optional, Dict
 
 import pandas as pd
 
+from mindsdb.integrations.handlers.anyscale_endpoints_handler.constants import (CHAT_COMPLETION_MODELS_SIMPLIFIED,
+                                                                                CHAT_COMPLETION_MODELS_SIMPLIFIED_MAP)
 from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler
 from mindsdb.integrations.handlers.openai_handler.constants import OPENAI_API_BASE
 from mindsdb.integrations.utilities.handler_utils import get_api_key
@@ -13,7 +15,6 @@ from mindsdb.integrations.libs.llm_utils import ft_jsonl_validation, ft_chat_for
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
-
 
 ANYSCALE_API_BASE = 'https://api.endpoints.anyscale.com/v1'
 MIN_FT_VAL_LEN = 20  # anyscale checks for at least 20 validation chats
@@ -65,10 +66,22 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
                 else:
                     del args['using']['api_key']
 
+    @staticmethod
+    def _override_simplified_model_name(using_args: Dict):
+        model_name = using_args.get('model_name', None)
+
+        if model_name in CHAT_COMPLETION_MODELS_SIMPLIFIED_MAP:
+            original_model_name = CHAT_COMPLETION_MODELS_SIMPLIFIED_MAP[model_name]
+            logger.debug(f"Overriding simplified model name '{model_name}' with original name '{original_model_name}'")
+            using_args['model_name'] = original_model_name
+
     def create(self, target, args=None, **kwargs):
         with self._anyscale_base_api(args):
             # load base and fine-tuned models, then hand over
-            self._set_models(args.get('using', {}))
+            using_args = args.get('using', {})
+            self._override_simplified_model_name(using_args)
+            self._set_models(using_args)
+
             _args = self.model_storage.json_get('args')
             base_models = self.chat_completion_models
             self.chat_completion_models = _args.get('chat_completion_models', base_models) if _args else base_models
@@ -77,7 +90,10 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         with self._anyscale_base_api(args):
             # load base and fine-tuned models, then hand over
-            self._set_models(args.get('using', {}))
+            using_args = args.get('using', {})
+            self._override_simplified_model_name(using_args)
+            self._set_models(using_args)
+
             _args = self.model_storage.json_get('args')
             base_models = self.chat_completion_models
             self.chat_completion_models = _args.get('chat_completion_models', base_models) if _args else base_models
@@ -86,7 +102,9 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         with self._anyscale_base_api(args):
             using_args = args.get('using', {})
+            self._override_simplified_model_name(using_args)
             self._set_models(using_args)
+
             super().finetune(df, args)
             # rewrite chat_completion_models to include the newly fine-tuned model
             args = self.model_storage.json_get('args')
@@ -112,8 +130,8 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
     def _set_models(self, using_args):
         api_key = self._get_api_key(using_args, self.engine_storage)
         client = self._get_client(api_key)
-        self.all_models = [m.id for m in client.models.list()]
-        self.chat_completion_models = [m.id for m in client.models.list() if m.rayllm_metadata['engine_config']['model_type'] == 'text-generation']  # noqa
+        self.all_models = [m.id for m in client.models.list()] + CHAT_COMPLETION_MODELS_SIMPLIFIED
+        self.chat_completion_models = [m.id for m in client.models.list() if m.rayllm_metadata['engine_config']['model_type'] == 'text-generation'] + CHAT_COMPLETION_MODELS_SIMPLIFIED  # noqa
         self.supported_ft_models = self.chat_completion_models  # base models compatible with fine-tuning
 
     @staticmethod

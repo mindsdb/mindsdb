@@ -119,7 +119,7 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
     @staticmethod
     def _check_ft_cols(df, cols):
         # TODO: refactor into common util
-        if 'chat_json' not in df.columns:
+        if 'chat_json' not in df.columns and 'code' not in df.columns:
             for col in ['role', 'content']:
                 if col not in set(df.columns):
                     raise Exception(f"To fine-tune this model, format your select data query to have a `role` column and a `content` column, or to have a `chat_json` column containing an entire chat on each row.")  # noqa

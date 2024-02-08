@@ -324,22 +324,15 @@ def ft_code_formatter(
     supported_langs = [e.value for e in Language]
     assert language.lower() in supported_langs, f"Invalid language. Valid choices are: {supported_langs}"
 
-    # remove some escape characters
-    # df['code'] = df['code'].str.replace(r'[\x0D\x22\x27\x5C]', '', regex=True)
+    # ensure correct encoding
+    df['code'] = df['code'].map(lambda x: x.encode('utf8').decode('unicode_escape'))
 
     # set prompt templates
+    system_prompt = "You are a powerful text to code model. Your job is to provide great code completions. As context, you are given code that is found immediately before and after the code you must generate.\n\nYou must output the code that should go in between the prefix and suffix.\n\n"
     if format == 'chat':
-        templates = [
-            f"You are a powerful text to code model. Your job is to provide great code completions. As context, you are given code that is found immediately before and after the code you must generate.\n\nYou must output the code that should go in between the prefix and suffix.\n\n### {chat_sections[0]}:"  # noqa
-            ,f"\n### {chat_sections[1]}:\n"
-            ,f"\n### {chat_sections[2]}:\n"
-        ]
+        templates = [f"### {c}:" for c in chat_sections]
     elif format == 'fim':
-        templates = [
-            f"{fim_tokens[0]}"
-            ,f"{fim_tokens[1]}"
-            ,f"{fim_tokens[2]}"
-        ]
+        templates = fim_tokens
     else:
         raise Exception(f"Invalid format. Please choose one of {supported_formats}")
 
@@ -360,6 +353,7 @@ def ft_code_formatter(
     )
     triplet_chunk_docs = triplet_splitter.create_documents(chunks)
     chunks = [c.page_content for c in triplet_chunk_docs]
+    chunks = chunks[:len(chunks) - len(chunks) % 3]  # should be a multiple of 3
 
     # format chunks into prompts
     roles = []
@@ -367,10 +361,10 @@ def ft_code_formatter(
     for idx in range(0, len(chunks), 3):
         pre, mid, suf = chunks[idx:idx+3]
         interleaved = list(itertools.chain(*zip(templates, (pre, suf, mid))))
-        user = "".join(interleaved[:-1])
-        assistant = "".join(interleaved[-1:])
-        roles.extend(['user', 'assistant'])
-        contents.extend([user, assistant])
+        user = "\n".join(interleaved[:-1])
+        assistant = "\n".join(interleaved[-1:])
+        roles.extend(['system', 'user', 'assistant'])
+        contents.extend([system_prompt, user, assistant])
 
     # return formatted prompts in a dataframe to be processed by `ft_chat_formatter()`
     df = pd.DataFrame({'role': roles, 'content': contents})

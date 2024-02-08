@@ -21,22 +21,24 @@ Here is the syntax:
 
 ```sql
 CREATE JOB [IF NOT EXISTS] [project_name.]job_name [AS] (
-   <mindsdb_sql_query_1>[; <mindsdb_sql_query_2>]
+   <statement_1>[; <statement_2>][; ...]
 )
 [START <date>]
 [END <date>]
-[EVERY [number] <period>];
+[EVERY [number] <period>]
+[IF (<statement_1>[; <statement_2>][; ...])];
 ```
 
 Where:
 
 | Expression                                          | Description                                                                                                                                                         |
 | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `[project_name.]job_name`                           | Name of the job preceded by an optional project name where the job is to be created.                                                                                |
-| `<mindsdb_sql_query_1>[; <mindsdb_sql_query_2>]`    | One or more queries separated by `;` to be executed by the job.                                                                                                     |
+| `[project_name.]job_name`                           | Name of the job preceded by an optional project name where the job is to be created. If you do not provide the `project_name` value, then the job is created in the default `mindsdb` project. |
+| `<statement_1>[; <statement_2>][; ...]`             | One or more statements separated by `;` to be executed by the job.                                                                                                     |
 | `[START <date>]`                                    | Optional. The date when the job starts its periodical or one-time execution. If not set, it is the current system date.                                             |
 | `[END <date>]`                                      | Optional. The date when the job ends its periodical or one-time execution. If it is not set (and the repetition rules are set), then the job repeats forever.       |
-| `[EVERY [number] <period>]`                         | Optional. The repetition rules for the job. If not set, the job runs once, not considering the end date value. If the `number` value is not set, it defaults to 1. |
+| `[EVERY [number] <period>]`                         | Optional. The repetition rules for the job. If not set, the job runs once, not considering the end date value. If the `number` value is not set, it defaults to 1.  |
+| `[IF (<statement_1>[; <statement_2>][; ...])]`      | Optional. If the last statement returns one or more rows, only then the job will execute.                                                                                    |
 
 <Info>
 **Available `<date>` formats**
@@ -58,8 +60,6 @@ And the supported `<period>` values:
 - `week` / `weeks`
 - `month` / `months`
 </Info>
-
-If you do not provide the `project_name` value, then the job is created in the default `mindsdb` project.
 
 Further, you can query all jobs and their execution history like this:
 

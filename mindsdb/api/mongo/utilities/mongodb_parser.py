@@ -82,6 +82,8 @@ class MongodbParser:
                     value = node2.value
                 elif isinstance(node2, py_ast.Str):  # py37
                     value = node2.s
+                elif isinstance(node2, py_ast.Name):
+                    value = node2.id
                 else:
                     raise NotImplementedError(f'Unknown dict key {node2}')
 

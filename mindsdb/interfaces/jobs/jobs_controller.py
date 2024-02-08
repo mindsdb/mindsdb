@@ -5,6 +5,7 @@ from dateutil.relativedelta import relativedelta
 import sqlalchemy as sa
 
 from mindsdb_sql import parse_sql, ParsingException
+from mindsdb_sql.parser.dialects.mindsdb import CreateJob
 
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.exception import EntityNotExistsError, EntityExistsError
@@ -71,7 +72,7 @@ def calc_next_date(schedule_str, base_date: dt.datetime):
 
 
 class JobsController:
-    def add(self, name, project_name, query_str, start_at, end_at, repeat_str):
+    def add(self, name: str, project_name: str, query: CreateJob):
 
         if project_name is None:
             project_name = 'mindsdb'
@@ -88,21 +89,22 @@ class JobsController:
         if record is not None:
             raise EntityExistsError(f'Job already exists: {name}')
 
-        if start_at is not None:
-            start_at = self._parse_date(start_at)
+        if query.start_str is not None:
+            start_at = self._parse_date(query.start_str)
             if start_at < dt.datetime.now():
                 start_at = dt.datetime.now()
         else:
             start_at = dt.datetime.now()
 
-        if end_at is not None:
-            end_at = self._parse_date(end_at)
+        end_at = None
+        if query.end_str is not None:
+            end_at = self._parse_date(query.end_str)
 
             if end_at < start_at:
                 raise Exception(f'Wrong end date {start_at} > {end_at}')
 
         # check sql = try to parse it
-        for sql in split_sql(query_str):
+        for sql in split_sql(query.query_str):
             try:
                 # replace template variables with null
                 sql = re.sub(r'\{\{[\w\d]+}}', "", sql)
@@ -111,12 +113,22 @@ class JobsController:
             except ParsingException as e:
                 raise ParsingException(f'Unable to parse: {sql}: {e}')
 
+        if query.if_query_str is not None:
+            for sql in split_sql(query.if_query_str):
+                try:
+                    # replace template variables with null
+                    sql = re.sub(r'\{\{[\w\d]+}}', "", sql)
+
+                    parse_sql(sql, dialect='mindsdb')
+                except ParsingException as e:
+                    raise ParsingException(f'Unable to parse: {sql}: {e}')
+
         # plan next run
         next_run_at = start_at
 
         schedule_str = None
-        if repeat_str is not None:
-            schedule_str = 'every ' + repeat_str
+        if query.repeat_str is not None:
+            schedule_str = 'every ' + query.repeat_str
 
             # try to calculate schedule string
             calc_next_date(schedule_str, start_at)
@@ -130,7 +142,8 @@ class JobsController:
             user_class=ctx.user_class,
             name=name,
             project_id=project.id,
-            query_str=query_str,
+            query_str=query.query_str,
+            if_query_str=query.if_query_str,
             start_at=start_at,
             end_at=end_at,
             next_run_at=next_run_at,
@@ -206,6 +219,7 @@ class JobsController:
                 'next_run_at': record.next_run_at,
                 'schedule_str': record.schedule_str,
                 'query': record.query_str,
+                'if_query': record.if_query_str,
                 'variables': query_context_controller.get_context_vars('job', record.id)
             })
         return data
@@ -312,6 +326,31 @@ class JobsExecutor:
 
         return None
 
+    def __fill_variables(self, sql, record, history_record):
+        if '{{PREVIOUS_START_DATETIME}}' in sql:
+            # get previous run date
+            history_prev = db.session.query(db.JobsHistory.start_at) \
+                .filter(db.JobsHistory.job_id == record.id,
+                        db.JobsHistory.id != history_record.id) \
+                .order_by(db.JobsHistory.id.desc()) \
+                .first()
+            if history_prev is None:
+                # start date of the job
+                value = record.created_at
+            else:
+                # fix for twitter: created_at filter must be minimum of 10 seconds prior to the current time
+                value = history_prev.start_at - dt.timedelta(seconds=60)
+            value = value.strftime("%Y-%m-%d %H:%M:%S")
+            sql = sql.replace('{{PREVIOUS_START_DATETIME}}', value)
+
+        if '{{START_DATE}}' in sql:
+            value = history_record.start_at.strftime("%Y-%m-%d")
+            sql = sql.replace('{{START_DATE}}', value)
+        if '{{START_DATETIME}}' in sql:
+            value = history_record.start_at.strftime("%Y-%m-%d %H:%M:%S")
+            sql = sql.replace('{{START_DATETIME}}', value)
+        return sql
+
     def execute_task_local(self, record_id, history_id=None):
 
         record = db.Jobs.query.get(record_id)
@@ -338,56 +377,62 @@ class JobsExecutor:
         else:
             history_record = db.JobsHistory.query.get(history_id)
 
-        error = ''
-
         project_controller = ProjectController()
         project = project_controller.get(record.project_id)
         executed_sql = ''
-        for sql in split_sql(record.query_str):
-            try:
-                #  fill template variables
-                if '{{PREVIOUS_START_DATETIME}}' in sql:
-                    # get previous run date
-                    history_prev = db.session.query(db.JobsHistory.start_at)\
-                        .filter(db.JobsHistory.job_id == record.id,
-                                db.JobsHistory.id != history_id)\
-                        .order_by(db.JobsHistory.id.desc())\
-                        .first()
-                    if history_prev is None:
-                        # start date of the job
-                        value = record.created_at
-                    else:
-                        # fix for twitter: created_at filter must be minimum of 10 seconds prior to the current time
-                        value = history_prev.start_at - dt.timedelta(seconds=60)
-                    value = value.strftime("%Y-%m-%d %H:%M:%S")
-                    sql = sql.replace('{{PREVIOUS_START_DATETIME}}', value)
 
-                if '{{START_DATE}}' in sql:
-                    value = history_record.start_at.strftime("%Y-%m-%d")
-                    sql = sql.replace('{{START_DATE}}', value)
-                if '{{START_DATETIME}}' in sql:
-                    value = history_record.start_at.strftime("%Y-%m-%d %H:%M:%S")
-                    sql = sql.replace('{{START_DATETIME}}', value)
-                query = parse_sql(sql, dialect='mindsdb')
+        from mindsdb.api.executor.controllers.session_controller import SessionController
+        from mindsdb.api.executor.command_executor import ExecuteCommands
 
-                from mindsdb.api.executor.controllers.session_controller import SessionController
-                from mindsdb.api.executor.command_executor import ExecuteCommands
+        sql_session = SessionController()
+        sql_session.database = project.name
+        command_executor = ExecuteCommands(sql_session)
 
-                sql_session = SessionController()
-                sql_session.database = project.name
+        # job with condition?
+        error = ''
+        to_execute_query = True
+        if record.if_query_str is not None:
+            data = None
+            for sql in split_sql(record.if_query_str):
+                try:
+                    #  fill template variables
+                    sql = self.__fill_variables(sql, record, history_record)
 
-                command_executor = ExecuteCommands(sql_session)
+                    query = parse_sql(sql, dialect='mindsdb')
+                    executed_sql += sql + '; '
 
-                executed_sql += sql + '; '
+                    ret = command_executor.execute_command(query)
+                    if ret.error_code is not None:
+                        error = ret.error_message
+                        break
 
-                ret = command_executor.execute_command(query)
-                if ret.error_code is not None:
-                    error = ret.error_message
+                    data = ret.data
+                except Exception as e:
+                    logger.error(e)
+                    error = str(e)
                     break
-            except Exception as e:
-                logger.error(e)
-                error = str(e)
-                break
+
+            # check error or last result
+            if error or data is None or len(data) == 0:
+                to_execute_query = False
+
+        if to_execute_query:
+            for sql in split_sql(record.query_str):
+                try:
+                    #  fill template variables
+                    sql = self.__fill_variables(sql, record, history_record)
+
+                    query = parse_sql(sql, dialect='mindsdb')
+                    executed_sql += sql + '; '
+
+                    ret = command_executor.execute_command(query)
+                    if ret.error_code is not None:
+                        error = ret.error_message
+                        break
+                except Exception as e:
+                    logger.error(e)
+                    error = str(e)
+                    break
 
         try:
             self.update_task_schedule(record)

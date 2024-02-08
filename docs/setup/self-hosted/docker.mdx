@@ -16,48 +16,40 @@ sidebarTitle: Docker
 
 ## Install Docker
 
-If you haven't done that already, install Docker on your machine following [the instructions](https://docs.docker.com/install). To make sure Docker is successfully installed on your machine, run a test container as follows:
+Install Docker on your machine following [the instructions](https://docs.docker.com/install).
+
+To make sure Docker is successfully installed on your machine, run a test container as follows:
 
 ```bash
 docker run hello-world
 ```
 
-You should see the `Hello from Docker!` message. Otherwise, check the
-[Docker's Get Started](https://www.docker.com/get-started) documentation.
+You should see the `Hello from Docker!` message. Otherwise, check the [Docker's Get Started](https://www.docker.com/get-started) documentation.
 
 <Warning>
 **Docker for Mac users - RAM allocation issues**
 
-By default, Docker for Mac allocates 2 GB of RAM, which is insufficient for
-deploying MindsDB with Docker. We recommend increasing the default RAM limit to
-8 GB. Please refer to the
-[Docker Desktop for Mac users manual](https://docs.docker.com/desktop/mac/#resources)
-for more information on how to increase the allocated memory.
+By default, Docker for Mac allocates 2 GB of RAM, which is insufficient for deploying MindsDB with Docker. We recommend increasing the default RAM limit to 8 GB. Please refer to the [Docker Desktop for Mac users manual](https://docs.docker.com/desktop/mac/#resources) for more information on how to increase the allocated memory.
 </Warning>
 
-## Install & Start MindsDB
+## Install MindsDB
 
 <Tip>
 Please note that this method of MindsDB installation requires a minimum of 8 GB RAM and 20 GB free storage.
 </Tip>
 
-Run the command below to start MindsDB in Docker.
+Run the command below to start MindsDB in Docker and follow the logs:
 
 ```bash
 docker run -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
 ```
 
-If you wish to simply spin up the container without the logs, run the following command:
+<Info>
+Alternatively, if you run this command with the `detach` flag, it will return the container ID and not follow the logs:
 
 ```bash
 docker run -d -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
 ```
-
-<Info>
-What's the difference?
-
--   On running the previous command, docker will print out all the mindsdb logs in your shell.
--   Using Docker's `detach` flag, the CLI will simply return the container ID, such that you can use the same shell again for different things.
 </Info>
 
 <Tip>
@@ -82,6 +74,41 @@ Now you can access the MindsDB editor by going to `127.0.0.1:47334` in your brow
 <p align="center">
   <img src="/assets/mindsdb-local-editor.png" />
 </p>
+
+## Install dependencies
+
+MindsDB integrates with numerous data sources and AI frameworks. To use any of the integrations, you should enure that the required dependencies are installed in the Docker container.
+
+Here is how to install the dependencies in the Docker container:
+
+1. Run the MindsDB Docker container:
+    ```bash
+    docker run -d -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+    ```
+
+2. Start an interactive shell in the container:
+    ```bash
+    docker exec -it container-name sh
+    ```
+
+3. Install the dependencies:
+    ```bash
+    pip install mindsdb[handler_name]
+    ```
+    For example, run this command to install dependencies for OpenAI:
+    ```bash
+    pip install mindsdb[openai]
+    ```
+
+4. Exit the interactive shell:
+    ```bash
+    exit
+    ```
+
+5. Restart the container:
+    ```bash
+    docker restart container-name
+    ```
 
 ## Configuration Options
 
@@ -146,8 +173,6 @@ docker run -e MKL_SERVICE_FORCE_INTEL=1 -p 47334:47334 -p 47335:47335 mindsdb/mi
 
 ## What's Next
 
-Now that you installed and started MindsDB locally in your Docker container, go ahead and find out how to create and train a model using the [`CREATE MODEL`](/sql/create/model) statement. In the **MindsDB SQL** section, you'll find a comprehensive overview of the SQL syntax offered by MindsDB. We also provide Mongo-QL syntax documented in the **MindsDB Mongo-QL** section.
+Now that you installed and started MindsDB locally in your Docker container, go ahead and find out how to create and train a model using the [`CREATE MODEL`](/sql/create/model) statement.
 
-You can connect MindsDB to different clients, including [PostgreSQL CLI](/connect/postgres-client) and [MySQL CLI](/connect/mysql-client).
-
-Check out the **Use Cases** section to follow tutorials that cover Large Language Models, Natural Language Processing, Time Series, Classification, and Regression models.
+Check out the **Use Cases** section to follow tutorials that cover Large Language Models, Chatbots, Time Series, Classification, and Regression models, Semantic Search, and more.

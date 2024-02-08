@@ -145,6 +145,7 @@ class AnomalyDetectionHandler(BaseMLEngine):
             model_class_names.append(model.__class__.__name__)
         model_args = {"model_path": model_save_paths, "target": model_targets, "model_name": model_class_names}
         self.model_storage.json_set("model_args", model_args)
+        self.model_storage.folder_sync("context")
 
     def predict(self, df, args=None):
         """Load a model from the model storage and use it to make predictions"""

@@ -3,45 +3,101 @@ title: PostgreSQL
 sidebarTitle: PostgreSQL
 ---
 
-This is the implementation of the PostgreSQL data handler for MindsDB.
+This documentation describes the integration of MindsDB with PostgreSQL, a powerful, open-source, object-relational database system. 
+The integration allows MindsDB to access data stored in the PostgreSQL database and enhance PostgreSQL with AI capabilities.
 
-[PostgreSQL](https://www.postgresql.org) is a powerful, open-source, object-relational database system that uses and extends the SQL language combined with many features that safely store and scale the most complicated data workloads.
+### Prerequisites
 
-## Implementation
+Before proceeding, ensure the following prerequisites are met:
 
-The required arguments to establish a connection are as follows:
+ 1. Install MindsDB and PostgreSQL on your system or obtain access to cloud options.
+ 2. To use PostgreSQL with MindsDB, install the required dependencies by running `pip install mindsdb[postgres]`.
 
-* `user` is the database user.
-* `password` is the database password.
-* `host` is the host name, IP address, or URL.
-* `port` is the port used to make TCP/IP connection.
-* `database` is the database name.
+## Connection
 
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/postgres_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
-
-## Usage
-
-In order to make use of this handler and connect to the PostgreSQL database in MindsDB, the following syntax can be used:
+Establish a connection to your PostgreSQL database from MindsDB by executing the following SQL command:
 
 ```sql
-CREATE DATABASE psql_datasource
-WITH
-    ENGINE = 'postgres',
-    PARAMETERS = {
+CREATE DATABASE psql_datasource 
+WITH ENGINE = 'postgres', 
+PARAMETERS = {
     "host": "127.0.0.1",
     "port": 5432,
     "database": "postgres",
     "user": "postgres",
+    "schema": "data",
     "password": "password"
-    };
+};
 ```
 
-You can use this established connection to query your table as follows:
+Required connection parameters include the following:
+
+*    `user`: The username for the PostgreSQL database.
+*    `password`: The password for the PostgreSQL database.
+*    `host`: The hostname, IP address, or URL of the PostgreSQL server.
+*    `port`: The port number for connecting to the PostgreSQL server.
+*    `database`: The name of the PostgreSQL database to connect to.
+
+Optional connection parameters include the following:
+
+*    `schema`: The database schema to use. Default is public.
+*    `sslmode`: The SSL mode for the connection.
+
+## Usage
+
+Retrieve data from a specified table by providing the integration name, schema, and table name:
 
 ```sql
 SELECT *
-FROM psql_datasource.demo_table
+FROM psql_datasource.schema_name.table_name
 LIMIT 10;
 ```
+
+Run PostgreSQL-native queries directly on the connected PostgreSQL database:
+
+```sql
+SELECT * FROM psql_datasource (
+
+    --Native Query Goes Here
+     SELECT 
+        model, 
+        COUNT(*) OVER (PARTITION BY model, year) AS units_to_sell, 
+        ROUND((CAST(tax AS decimal) / price), 3) AS tax_div_price
+    FROM demo_data.used_car_price
+
+);
+```
+
+<Note>
+The above examples utilize `psql_datasource` as the datasource name, which is defined in the `CREATE DATABASE` command.
+</Note>
+
+<Tip>
+**Next Steps**
+
+ Check out the [House Sales Forecasting tutorial](https://docs.mindsdb.com/sql/tutorials/house-sales-forecasting), which uses the data from PostgreSQL connection to MindsDB.
+</Tip>
+
+## Troubleshooting Guide
+
+<Warning>
+`Database Connection Error`
+
+* **Symptoms**: Failure to connect MindsDB with the PostgreSQL database.
+* **Checklist**:
+    1. Make sure the PostgreSQL server is active.
+    2. Confirm that host, port, user, schema, and password are correct. Try a direct PostgreSQL connection.
+    3. Ensure a stable network between MindsDB and PostgreSQL.
+</Warning>
+
+<Warning>
+`SQL statement cannot be parsed by mindsdb_sql`
+
+* **Symptoms**: SQL queries failing or not recognizing table names containing spaces or special characters.
+* **Checklist**:
+    1. Ensure table names with spaces or special characters are enclosed in backticks.
+    2. Examples:
+        * Incorrect: SELECT * FROM integration.travel data
+        * Incorrect: SELECT * FROM integration.'travel data'
+        * Correct: SELECT * FROM integration.\`travel data\`
+</Warning>

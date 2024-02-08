@@ -75,6 +75,17 @@ class TestMongoDBConverters(unittest.TestCase):
 
         # TODO use in queries:  multiline, objectid, isodate
 
+    def test_mongo_parser(self):
+        mql = """
+           db.TransactionFact.find(
+              {'_id': '0', "a": "1", b: 1}
+           )
+        """
+
+        expected_mql = 'db.TransactionFact.find({"_id": "0", "a": "1", "b": 1})'
+
+        assert MongodbParser().from_string(mql).to_string() == expected_mql
+
 
 class TestMongoDBHandler(unittest.TestCase):
 

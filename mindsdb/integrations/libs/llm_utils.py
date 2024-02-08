@@ -324,6 +324,9 @@ def ft_code_formatter(
     supported_langs = [e.value for e in Language]
     assert language.lower() in supported_langs, f"Invalid language. Valid choices are: {supported_langs}"
 
+    # remove some escape characters
+    # df['code'] = df['code'].str.replace(r'[\x0D\x22\x27\x5C]', '', regex=True)
+
     # set prompt templates
     if format == 'chat':
         templates = [
@@ -364,8 +367,8 @@ def ft_code_formatter(
     for idx in range(0, len(chunks), 3):
         pre, mid, suf = chunks[idx:idx+3]
         interleaved = list(itertools.chain(*zip(templates, (pre, suf, mid))))
-        user = "".join(interleaved[:-2])
-        assistant = "".join(interleaved[-2:])
+        user = "".join(interleaved[:-1])
+        assistant = "".join(interleaved[-1:])
         roles.extend(['user', 'assistant'])
         contents.extend([user, assistant])
 

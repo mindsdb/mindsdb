@@ -204,10 +204,10 @@ class TestLLM(unittest.TestCase):
         df2 = ft_code_formatter(df)
 
         assert list(df2['role']) == ['user', 'assistant']
-        assert df2['content'].iloc[0] == 'You are a powerful text to code model. Your job is to provide great code completions. As context, you are given code that is found immediately before and after the code you must generate.\n\nYou must output the code that should go in between the prefix and suffix.\n\n### Code prefix:# format chunks into prompts\n        roles = []\n        contents = []\n### Code suffix:\ninterleaved = list(itertools.chain(*zip(templates, (pre, mid, suf))))'  # noqa
-        assert df2['content'].iloc[1] == '\n### Completion:\nfor idx in range(0, len(chunks), 3):\n            pre, mid, suf = chunks[idx:idx+3]'  # noqa
+        assert df2['content'].iloc[0] == 'You are a powerful text to code model. Your job is to provide great code completions. As context, you are given code that is found immediately before and after the code you must generate.\n\nYou must output the code that should go in between the prefix and suffix.\n\n### Code prefix:# format chunks into prompts\n        roles = []\n        contents = []\n### Code suffix:\ninterleaved = list(itertools.chain(*zip(templates, (pre, mid, suf))))\n### Completion:\n'  # noqa
+        assert df2['content'].iloc[1] == 'for idx in range(0, len(chunks), 3):\n            pre, mid, suf = chunks[idx:idx+3]'  # noqa
 
         df2 = ft_code_formatter(df, format='fim')
         assert list(df2['role']) == ['user', 'assistant']
-        assert df2['content'].iloc[0] == '<PRE># format chunks into prompts\n        roles = []\n        contents = []<SUF>interleaved = list(itertools.chain(*zip(templates, (pre, mid, suf))))'  # noqa
-        assert df2['content'].iloc[1] == '<MID>for idx in range(0, len(chunks), 3):\n            pre, mid, suf = chunks[idx:idx+3]'  # noqa
+        assert df2['content'].iloc[0] == '<PRE># format chunks into prompts\n        roles = []\n        contents = []<SUF>interleaved = list(itertools.chain(*zip(templates, (pre, mid, suf))))<MID>'  # noqa
+        assert df2['content'].iloc[1] == 'for idx in range(0, len(chunks), 3):\n            pre, mid, suf = chunks[idx:idx+3]'  # noqa

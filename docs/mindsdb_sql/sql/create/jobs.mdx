@@ -38,7 +38,7 @@ Where:
 | `[START <date>]`                                    | Optional. The date when the job starts its periodical or one-time execution. If not set, it is the current system date.                                             |
 | `[END <date>]`                                      | Optional. The date when the job ends its periodical or one-time execution. If it is not set (and the repetition rules are set), then the job repeats forever.       |
 | `[EVERY [number] <period>]`                         | Optional. The repetition rules for the job. If not set, the job runs once, not considering the end date value. If the `number` value is not set, it defaults to 1.  |
-| `[IF (<statement_1>[; <statement_2>][; ...])]`      | Optional. If the last statement (query) returns one or more rows, only then the job will execute.                                                                                    |
+| `[IF (<statement_1>[; <statement_2>][; ...])]`      | Optional. If the last statement returns one or more rows, only then the job will execute.                                                                                    |
 
 <Info>
 **Available `<date>` formats**

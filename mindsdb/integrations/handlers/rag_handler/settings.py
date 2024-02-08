@@ -8,13 +8,14 @@ import openai
 import pandas as pd
 import requests
 import writer
-from langchain.llms import Writer
+from langchain.llms import Writer, OpenAI
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.docstore.document import Document
 from langchain.document_loaders import DataFrameLoader
 from langchain.embeddings.base import Embeddings
 from langchain.embeddings.huggingface import HuggingFaceEmbeddings
 from langchain.vectorstores import FAISS, Chroma, VectorStore
+from langchain_community.chat_models import ChatLiteLLM
 from pydantic import BaseModel, Extra, Field, validator
 
 from mindsdb.integrations.handlers.chromadb_handler.chromadb_handler import get_chromadb
@@ -251,7 +252,7 @@ class LLMLoader(BaseModel):
     llm_config: dict
     config_dict: dict = None
 
-    def load_llm(self) -> Union[Writer, partial]:
+    def load_llm(self) -> Union[Writer, OpenAI]:
         """Load LLM"""
         method_name = f"load_{self.llm_config['llm_name']}_llm"
         self.config_dict = self.llm_config.copy()
@@ -262,16 +263,12 @@ class LLMLoader(BaseModel):
         """Load Writer LLM API interface"""
         return Writer(**self.config_dict)
 
-    def load_openai_llm(self) -> partial:
+    def load_openai_llm(self) -> OpenAI:
         """Load OpenAI LLM API interface"""
-        client = openai.OpenAI(api_key=self.config_dict["openai_api_key"], base_url=self.config_dict["base_url"])
-        config = self.config_dict.copy()
-        keys_to_remove = ["openai_api_key", "base_url"]
-        for key in keys_to_remove:
-            config.pop(key)
-        config["model"] = config.pop("model_id")
-
-        return partial(client.completions.create, **config)
+        return OpenAI(
+            api_key=self.config_dict["openai_api_key"],
+            openai_api_base=self.config_dict["base_url"]
+        )
 
 
 class RAGBaseParameters(BaseModel):

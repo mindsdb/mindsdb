@@ -2,7 +2,8 @@ import json
 from collections import defaultdict
 from typing import List
 
-from openai.types import Completion
+from langchain.chains import LLMChain
+# from langchain.prompts import PromptTemplate
 
 from mindsdb.integrations.handlers.rag_handler.settings import (
     LLMLoader,
@@ -102,8 +103,6 @@ class RAGQuestionAnswerer:
         try:
             if "choices" in data:
                 return data["choices"][0]["text"]
-            elif isinstance(data, Completion):
-                return data.choices[0].text
             else:
                 logger.info(
                     f"Error extracting generated text: failed to parse response {response}"
@@ -142,6 +141,6 @@ class RAGQuestionAnswerer:
 
         formatted_prompt = self._prepare_prompt(vector_store_response, question)
 
-        llm_response = self.llm(prompt=formatted_prompt)
+        llm_response = LLMChain(prompt=formatted_prompt, llm=self.llm)
 
         return llm_response, vector_store_response

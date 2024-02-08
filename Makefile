@@ -1,6 +1,7 @@
 install_mindsdb:
 	pip install -e .
 	pip install -r requirements/requirements-dev.txt
+	pip install -r requirements/requirements-test.txt
 	pre-commit install
 
 install_handler:

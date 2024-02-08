@@ -6,5 +6,4 @@ sentence-transformers
 writerai~=1.1.0
 pydantic
 sentence-transformers
-faiss-cpu
 langchain==0.0.347

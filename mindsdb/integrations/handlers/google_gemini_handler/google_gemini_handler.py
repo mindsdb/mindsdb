@@ -32,6 +32,7 @@ class GoogleGeminiHandler(BaseMLEngine):
         self.generative = True
         self.mode = 'default'
 
+    # Similiar to openai handler
     @staticmethod
     def create_validation(target, args=None, **kwargs):
         if 'using' not in args:
@@ -110,6 +111,7 @@ class GoogleGeminiHandler(BaseMLEngine):
         args = self.model_storage.json_get('args')
         df = df.reset_index(drop=True)
 
+        # same as opeani handler for getting prompt template and mode
         if pred_args.get('prompt_template', False):
             base_template = pred_args[
                 'prompt_template'
@@ -206,6 +208,7 @@ class GoogleGeminiHandler(BaseMLEngine):
         api_key = self._get_google_gemini_api_key(args)
         genai.configure(api_key=api_key)
 
+        # called gemini model withinputs
         model = genai.GenerativeModel(
             args.get('model_name', self.default_model)
         )

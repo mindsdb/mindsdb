@@ -40,7 +40,7 @@ The device has a bright orange body, and is small and lightweight with a touchsc
 
 The Rabbit R1 runs on its own operating system, called the Rabbit OS, that eliminates the need for app stores and downloads, requiring only natural language voice input to navigate. The initial version supports integration with the likes of Uber, Spotify, and Amazon, with the AI able to train and learn using other apps in the future.
 "
-AND question = 'Given me bullet pointed features of product ?';
+AND question = 'What are some key feature bullet points of this product?';
 ```
 
 
@@ -78,7 +78,7 @@ USING
 SELECT *
 FROM gem_v
 WHERE  url = 'https://images.unsplash.com/photo-1589762738975-a6773160c7d7?q=80&w=1374&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
-AND context='Does this man is superhuman?';
+AND context='Is this man a superhuman?';
 ```
 
 #### Embedding Mode 
@@ -98,7 +98,7 @@ USING
 ```sql
 SELECT  question, answer
 FROM gem_e
-WHERE  question = 'How many moon exist in the solar system?'
+WHERE  question = 'How many moons are there in the solar system?'
 USING 
   type='document';
 ```

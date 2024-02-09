@@ -7,6 +7,14 @@ This is the implementation of the ClickHouse data handler for MindsDB.
 
 [ClickHouse](https://clickhouse.com/docs/en/intro/) is a column-oriented database management system (DBMS) for online analytical processing of queries (OLAP).
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect ClickHouse to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to ClickHouse.
+
 ## Implementation
 
 This handler was implemented using the standard `clickhouse-sqlalchemy` library.
@@ -19,10 +27,6 @@ The required arguments to establish a connection are as follows:
 * `password` is the password to authenticate the user with the ClickHouse server.
 * `database` defaults to `default`. It is the database name to use when connecting with the ClickHouse server.
 * `protocol` defaults to `native`. It is an optional parameter. Its supported values are `http` and `https`.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/clickhouse_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

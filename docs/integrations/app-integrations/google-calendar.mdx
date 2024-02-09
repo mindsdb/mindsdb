@@ -9,6 +9,14 @@ In this section, we present how to connect Google Calendar to MindsDB.
 
 Data from Google Calendar can be utilized within MindsDB to train AI models, make predictions, and automate time management with AI.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect Google Calendar to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to Google Calendar.
+
 ## Connection
 
 The required arguments to establish a connection are as follows:
@@ -17,10 +25,6 @@ The required arguments to establish a connection are as follows:
 
 <Tip>
 Please note that a Google account with enabled Google Calendar is required. You can find more information [here](https://developers.google.com/calendar/api/quickstart/python).
-</Tip>
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/google_calendar_handler) and run this command: `pip install -r requirements.txt`.
 </Tip>
 
 In order to make use of this handler and connect the Google Calendar app to MindsDB, the following syntax can be used:

@@ -7,6 +7,14 @@ This is the implementation of the Cassandra data handler for MindsDB.
 
 [Cassandra](https://cassandra.apache.org/_/index.html) is a free and open-source, distributed, wide-column store, NoSQL database management system designed to handle large amounts of data across many commodity servers, providing high availability with no single point of failure.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect Apache Cassandra to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to Apache Cassandra.
+
 ## Implementation
 
 As ScyllaDB is API-compatible with Apache Cassandra, the Cassandra data handler extends the ScyllaDB handler and uses the `scylla-driver` Python library.
@@ -19,10 +27,6 @@ The required arguments to establish a connection are as follows:
 * `password` is the password to authenticate the user.
 * `keyspace` is the keyspace to connect, the top level container for tables.
 * `protocol_version` is not required and defaults to 4.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/cassandra_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

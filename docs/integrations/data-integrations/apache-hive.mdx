@@ -7,6 +7,14 @@ This is the implementation of the Hive data handler for MindsDB.
 
 [Apache Hive](https://hive.apache.org/) is a data warehouse software project built on top of Apache Hadoop for providing data query and analysis. Hive gives an SQL-like interface to query data stored in various databases and file systems that integrate with Hadoop.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect Apache Hive to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to Apache Hive.
+
 ## Implementation
 
 This handler is implemented using the `pyHive`, a Python library that allows you to use Python code to run SQL commands on Hive.
@@ -19,10 +27,6 @@ The required arguments to establish a connection are as follows:
 * `port` is the port through which TCP/IP connection is to be made.
 * `database` is the database name to be connected.
 * `auth` defaults to `CUSTOM` if not provided. Check for other options in [here](https://pypi.org/project/PyHive/).
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/hive_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

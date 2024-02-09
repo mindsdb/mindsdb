@@ -33,6 +33,8 @@ def get_api_key(
     # 1
     if "api_key" in create_args:
         return create_args["api_key"]
+    if "using" in create_args and "api_key" in create_args["using"]:
+        return create_args["using"]["api_key"]
     # 2
     connection_args = engine_storage.get_connection_args()
     if "api_key" in connection_args:

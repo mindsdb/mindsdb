@@ -649,11 +649,13 @@ class OpenAIHandler(BaseMLEngine):
         """  # noqa
 
         args = args if args else {}
+
+        api_key = get_api_key('openai', args, self.engine_storage)
+
         using_args = args.pop('using') if 'using' in args else {}
         prompt_col = using_args.get('prompt_column', 'prompt')
         completion_col = using_args.get('completion_column', 'completion')
         
-        api_key = get_api_key('openai', args, self.engine_storage)
         api_base = using_args.get('api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE))
         org = using_args.get('api_organization')
         client = self._get_client(api_key=api_key, base_url=api_base, org=org)

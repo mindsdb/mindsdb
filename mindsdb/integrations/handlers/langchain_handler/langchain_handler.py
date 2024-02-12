@@ -30,7 +30,7 @@ _DEFAULT_MAX_TOKENS = 2048  # requires more than vanilla OpenAI due to ongoing s
 # 2 minutes should be more than enough time to complete chains.
 _DEFAULT_AGENT_TIMEOUT_SECONDS = 120
 _DEFAULT_AGENT_MODEL = 'zero-shot-react-description'
-_DEFAULT_AGENT_TOOLS = ['python_repl', 'wikipedia']  # these require no additional arguments
+_DEFAULT_AGENT_TOOLS = ['wikipedia']  # these require no additional arguments
 _ANTHROPIC_CHAT_MODELS = {'claude-2', 'claude-instant-1'}
 _PARSING_ERROR_PREFIX = 'An output parsing error occurred'
 

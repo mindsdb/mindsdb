@@ -242,6 +242,9 @@ class KnowledgeBaseController:
             # create default embedding model
             model_name = self._create_default_embedding_model(project.name, name)
 
+            # memorize to remove it later
+            params['embedding_model'] = model_name
+
         else:
             # get embedding model from input
             model_name = embedding_model.parts[-1]
@@ -266,6 +269,9 @@ class KnowledgeBaseController:
             vector_db_name = self._create_persistent_chroma(
                 name
             )
+
+            # memorize to remove it later
+            params['vector_storage'] = vector_db_name
         elif len(storage.parts) != 2:
             raise ValueError('Storage param has to be vector db with table')
         else:
@@ -351,6 +357,12 @@ class KnowledgeBaseController:
             self.session.datahub.get(database_name).integration_handler.drop_table(
                 kb.vector_database_table
             )
+
+        # drop objects if they were created automatically
+        if 'vector_storage' in kb.params:
+            self.session.integration_controller.delete(kb.params['vector_storage'])
+        if 'embedding_model' in kb.params:
+            self.session.model_controller.delete_model(kb.params['embedding_model'], project_name)
 
         # kb exists
         db.session.delete(kb)

@@ -7,6 +7,14 @@ This is the implementation of the OrioleDB data handler for MindsDB.
 
 [OrioleDB](https://www.orioledata.com/) is a new storage engine for PostgreSQL, bringing a modern approach to database capacity, capabilities, and performance to the world's most-loved database platform. It consists of an extension, building on the innovative table access method framework and other standard Postgres extension interfaces. By extending and enhancing the current table access methods, OrioleDB opens the door to a future of more powerful storage models that are optimized for cloud and modern hardware architectures.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect OrioleDB to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to OrioleDB.
+
 ## Implementation
 
 This handler is implemented by extending the PostgreSQL data handler.
@@ -19,10 +27,6 @@ The required arguments to establish a connection are as follows:
 * `port` is the port used to make TCP/IP connection.
 * `server` is the OrioleDB server.
 * `database` is the database name.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/orioledb_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

@@ -384,7 +384,7 @@ On execution, we get:
 All OpenAI models belong to the group of Large Language Models (LLMs). By definition, these are pre-trained on large amounts of data. However, it is possible to fine-tune these models with a task-specific dataset for a defined use case.
 
 <Tip>
-OpenAI supports fine-tuning of some of its models, including `davinci`, `curie`, `babbage`, and `ada` ([more details here](https://platform.openai.com/docs/guides/fine-tuning)). And with MindsDB, you can easily fine-tune an OpenAI model making it more applicable to your specific use case.
+OpenAI supports fine-tuning of some of its models [listed here](https://platform.openai.com/docs/guides/fine-tuning). And with MindsDB, you can easily fine-tune an OpenAI model making it more applicable to your specific use case.
 </Tip>
 
 Let's create a model to answer questions about MindsDB's custom SQL syntax.
@@ -394,7 +394,7 @@ CREATE MODEL openai_davinci
 PREDICT completion
 USING
     engine = 'openai',
-    model_name = 'davinci',
+    model_name = 'davinci-002',
     prompt_template = 'Return a valid SQL string for the following question about MindsDB in-database machine learning: {{prompt}}';
 ```
 

@@ -7,6 +7,14 @@ This is the implementation of the MySQL data handler for MindsDB.
 
 [MySQL](https://www.mysql.com/) is a fast, reliable, and scalable open-source database. It has been in development for more than 25 years and has been used in many production environments since.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect MySQL to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to MySQL.
+
 ## Implementation
 
 This handler is implemented using the `mysql-connector-python` library. It's a Python client for MySQL that doesn't depend on any MySQL C libraries.
@@ -39,12 +47,6 @@ There are several optional parameters that can be used as well.
 </Tab>
 
 </Tabs>
-
-<br></br>
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/mysql_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

@@ -55,3 +55,11 @@ You can use this established connection to query your table as follows:
 SELECT *
 FROM mysql_datasource.example_table;
 ```
+
+### Testing
+
+To run tests:
+
+```
+env PYTHONPATH=./ pytest -v mindsdb/integrations/handlers/mysql_handler/tests/test_mysql_handler.py
+```

@@ -140,7 +140,8 @@ class SQLQuery:
                 'name': table_name,
                 'integration_name': project_name,   # integration_name,
                 'timeseries': False,
-                'id': model_record.id
+                'id': model_record.id,
+                'to_predict': model_record.to_predict,
             }
             if ts_settings.get('is_timeseries') is True:
                 window = ts_settings.get('window')

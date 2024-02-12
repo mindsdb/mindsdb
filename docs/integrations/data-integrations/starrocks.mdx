@@ -7,6 +7,14 @@ This is the implementation of the StarRocks data handler for MindsDB.
 
 [StarRocks](https://www.starrocks.io/) is the next-generation data platform designed to make data-intensive real-time analytics fast and easy. It delivers query speeds 5 to 10 times faster than other popular solutions. StarRocks can perform real-time analytics well while updating historical records. It can also enhance real-time analytics with historical data from data lakes easily. With StarRocks, you can get rid of the de-normalized tables and get the best performance and flexibility.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect StarRocks to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to StarRocks.
+
 ## Implementation
 
 This handler is implemented by extending the MySQL data handler.
@@ -18,10 +26,6 @@ The required arguments to establish a connection are as follows:
 * `host` is the host name, IP address, or URL.
 * `port` is the port used to make TCP/IP connection.
 * `database` is the database name.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/starrocks_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

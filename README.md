@@ -54,7 +54,7 @@
 
 ## ⚡️ Quick Example
 
-Enrich datastores by passing new data thorugh an AI-model and writing results back in the database, this can be solved in a few lines of AI-SQL.  Here is a reference architecture:
+Enrich datastores by passing new data through an AI-model and writing results back in the database, this can be solved in a few lines of AI-SQL.  Here is a reference architecture:
 <img src='https://docs.google.com/drawings/d/e/2PACX-1vTlROMTlXiYUecoAogwjBVI0eQDYWWI-aY5npcxVjfLzGL6Fs2-YN-aOcUeWFCDzZDxveYe5Dxwilia/pub?w=1438&h=703'></img>
 
 

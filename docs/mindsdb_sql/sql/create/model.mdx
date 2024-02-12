@@ -19,7 +19,7 @@ The `CREATE MODEL` statement creates and trains a machine learning (ML) model.
 Here is the full syntax:
 
 ```sql
-CREATE MODEL [IF NOT EXISTS] project_name.predictor_name
+CREATE [OR REPLACE] MODEL [IF NOT EXISTS] project_name.predictor_name
 
 [FROM integration_name
     (SELECT [sequential_column,] [partition_column,] column_name, ...
@@ -33,7 +33,8 @@ PREDICT target_column
 [HORIZON int]
 
 [USING engine = 'engine_name',
-       tag = 'tag_name'];
+       tag = 'tag_name',
+       ...];
 ```
 
 Where:

@@ -15,16 +15,20 @@ Please note that currently you can connect your Gmail account to local MindsDB i
 If you want to connect your Gmail account to MindsDB Cloud, you can upload the credentials file, for instance, to your S3 bucket and provide a link to it as a parameter.
 </Warning>
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect Gmail to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to Gmail.
+
 ## Connection
 
 The required arguments to establish a connection are as follows:
 
 * `credentials_file` local path to the credentials.json or `credentials_url` in case your file is uploaded to s3. Follow the instructions below to generate the credentials file.
 * `scopes` define the level of access granted. It is optional and by default it uses 'https://.../gmail.compose' and 'https://.../gmail.readonly' scopes.
-* 
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/gmail_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 In order to make use of this handler and connect the Google Calendar app to MindsDB, the following syntax can be used:
 
@@ -90,10 +94,6 @@ You need a Google account in order to use this integration. Here is how to get t
 4. Download the JSON file:
 
     4.1 After creating your credentials, click the download button (an icon of an arrow pointing down) on the right side of your client ID. This will download a JSON file, so you will use the location to it in the `credentials_file` param. 
-</Tip>
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/gmail_handler) and run this command: `pip install -r requirements.txt`.
 </Tip>
 
 ## Usage

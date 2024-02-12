@@ -7,6 +7,14 @@ This is the implementation of the Snowflake data handler for MindsDB.
 
 [Snowflake](https://www.snowflake.com/en/) is a cloud data warehouse that stores and analyzes data. It can automatically scale up/down its compute resources to load, integrate, and analyze data.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect Snowflake to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to Snowflake.
+
 ## Implementation
 
 This handler is implemented using the Snowflake connector.
@@ -22,10 +30,6 @@ The required arguments to establish a connection are as follows:
 * `schema` is the default schema name used to query the database.
 * `protocol` is the protocol that defaults to `https` if left blank.
 * `warehouse` is the warehouse account. You can find it in the Snowflake dashboard under the Warehouses tab.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/snowflake_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

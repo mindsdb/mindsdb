@@ -37,7 +37,7 @@ This method can provide different capabilities to query from mongo:
 
 **MongoDBHandler**
 
-native_query method cat take string and MongoQuery on input. 
+native_query method can take string and MongoQuery on input. 
 If input is string (for example in case of creating predictor)
 it will be parsed to MongoQuery using MongodbParser.
 

@@ -126,7 +126,7 @@ def _setup_standard_tools(tools, llm, executor, model_kwargs):
 
 # Collector
 def setup_tools(llm, model_kwargs, pred_args, executor, default_agent_tools, openai_api_key):
-    toolkit = pred_args['tools'] if pred_args['tools'] is not None else default_agent_tools
+    toolkit = pred_args['tools'] if pred_args.get('tools') is not None else default_agent_tools
 
     standard_tools = []
     function_tools = []

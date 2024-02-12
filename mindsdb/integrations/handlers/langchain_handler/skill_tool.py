@@ -1,8 +1,8 @@
+from mindsdb_sql.parser.ast import Select, BinaryOperation, Identifier, Constant, Star
+
+from mindsdb.integrations.libs.vectordatabase_handler import TableField
 from mindsdb.interfaces.storage import db
-from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
 from mindsdb.integrations.handlers.langchain_handler.mindsdb_database_agent import MindsDBSQL
-from mindsdb.integrations.handlers.rag_handler.rag import RAGQuestionAnswerer
-from mindsdb.integrations.handlers.rag_handler.settings import OpenAIParameters, RAGHandlerParameters
 
 import os
 from typing import List
@@ -47,44 +47,20 @@ def _get_rag_query_function(
         session_controller):
 
     def _answer_question(question: str) -> str:
-        # Get the knowledge base associated with the skill.
         knowledge_base_name = skill.params['source']
-        knowledge_base = session_controller.kb_controller.get(knowledge_base_name, skill.project_id)
 
-        # Get embedding model to use when querying the vector store.
-        embedding_model_data = session_controller.model_controller.get_model(knowledge_base.embedding_model.name)
-        embedding_model_args = embedding_model_data['problem_definition']['using']
-        embedding_model_args['target'] = embedding_model_data['problem_definition']['target']
-        embedding_model = construct_model_from_args(embedding_model_args)
+        # make select in KB table
+        query = Select(
+            targets=[Star()],
+            where=BinaryOperation(op='=', args=[
+                Identifier(TableField.CONTENT.value), Constant(question)
+            ]),
+            limit=Constant(10),
+        )
+        kb_table = session_controller.kb_controller.get_table(knowledge_base_name, skill.project_id)
 
-        # Get vector store handler.
-        vector_store_handler_data = session_controller.integration_controller.get(knowledge_base.vector_database.name)
-        vector_store_args = vector_store_handler_data['connection_data']
-        vector_store_folder_name = vector_store_args.get('persist_directory', os.getcwd())
-        vector_store_handler = session_controller.integration_controller.get_data_handler(knowledge_base.vector_database.name)
-        vector_store_storage_path = vector_store_handler.handler_storage.folder_get(vector_store_folder_name)
-
-        # Use OpenAI for interpreting the vector store search response.
-        llm_params_dict = {
-            'llm_name': 'openai',
-            'openai_api_key': openai_api_key
-        }
-        qa_params = {
-            'llm_type': 'openai',
-            'llm_params': OpenAIParameters(**llm_params_dict),
-            'embeddings_model': embedding_model,
-            'top_k': skill.params.get('top_k', _DEFAULT_TOP_K_SIMILARITY_SEARCH),
-            'collection_name': knowledge_base.vector_database_table,
-            'vector_store_folder_name': vector_store_folder_name,
-            'vector_store_storage_path': vector_store_storage_path,
-            'vector_store_name': vector_store_handler_data['engine']
-        }
-
-        args = RAGHandlerParameters(**qa_params)
-        question_answerer = RAGQuestionAnswerer(args=args)
-        # Actually answer the query.
-        qa_query_response = question_answerer.query(question)
-        return qa_query_response['answer']
+        res = kb_table.select_query(query)
+        return '\n'.join(res.content)
 
     return _answer_question
 

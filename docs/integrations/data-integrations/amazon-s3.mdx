@@ -7,6 +7,14 @@ This is the implementation of the S3 data handler for MindsDB.
 
 [Amazon Simple Storage Service, or Amazon S3](https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html), is an object storage service that offers industry-leading scalability, data availability, security, and performance. Customers of all sizes and industries can use Amazon S3 to store and protect any amount of data for a range of use cases, such as data lakes, websites, mobile applications, backup and restore, archive, enterprise applications, IoT devices, and big data analytics. Amazon S3 provides management features so that you can optimize, organize, and configure access to your data to meet your specific business, organizational, and compliance requirements.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect Amazon S3 to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to Amazon S3.
+
 ## Implementation
 
 This handler is implemented using `boto3`, the AWS SDK for Python.
@@ -19,13 +27,6 @@ The required arguments to establish a connection are as follows:
 * `bucket` is the name of the S3 bucket.
 * `key` is the key of the object to be queried.
 * `input_serialization` is the format of the data in the object that is to be queried.
-
-<Tip>
- 
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder
-   (mindsdb/integrations/handlers/s3_handler) and run this command: `pip install -r requirements.txt` .
-
-</Tip>
 
 ## Usage
    

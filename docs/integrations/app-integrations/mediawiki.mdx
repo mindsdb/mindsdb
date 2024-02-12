@@ -9,6 +9,14 @@ In this section, we present how to connect MediaWiki to MindsDB.
 
 Data from MediaWiki can be utilized within MindsDB to train AI models and chatbots using the wide range of available information.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect MediaWiki to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to MediaWiki.
+
 ## Connection
 
 This handler was implemented using [MediaWikiAPI](https://github.com/lehinevych/MediaWikiAPI), the Python wrapper for the MediaWiki API.
@@ -21,10 +29,6 @@ To connect the MediaWiki API to MindsDB, the following CREATE DATABASE statement
 CREATE DATABASE mediawiki_datasource
 WITH ENGINE = 'mediawiki'
 ```
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/mediawiki_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

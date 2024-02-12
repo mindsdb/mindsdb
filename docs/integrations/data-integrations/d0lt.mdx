@@ -9,6 +9,14 @@ This is the implementation of the D0lt data handler for MindsDB.
 
 Branch and merge semantics are supported allowing for the tables to evolve at a different pace for multiple users. This allows for loose collaboration on data as well as multiple views on the same core data. Merge conflicts are detected for schema and data conflicts. Data conflicts are cell-based, not line-based. Remote repositories allow for cooperation among repository instances. Clone, push, and pull semantics are all available.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect D0lt to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to D0lt.
+
 ## Implementation
 
 This handler is implemented using `mysql-connector`, a Python library that allows you to use Python code to run SQL commands on the D0lt database.
@@ -20,10 +28,6 @@ The required arguments to establish a connection are as follows:
 * `host` is the hostname or IP address of the server.
 * `port` is the port through which a TCP/IP connection is to be made.
 * `database` is the database name to be connected.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/d0lt_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

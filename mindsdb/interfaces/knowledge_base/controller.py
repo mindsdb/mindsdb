@@ -319,7 +319,7 @@ class KnowledgeBaseController:
             name=Identifier(parts=[project_name, model_name]),
             using={},
             targets=[
-                Identifier(parts=[TableField.CONTENT.value])
+                Identifier(parts=[TableField.EMBEDDINGS.value])
             ]
         )
         ml_handler = self.session.integration_controller.get_ml_handler(engine)

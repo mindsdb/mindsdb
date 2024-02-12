@@ -479,9 +479,13 @@ class ModelWrapperSafe:
             else:
                 self.env_path = self.env_storage_path
 
-            pip_cmd = self.env_path / 'bin' / 'pip'
+            if sys.platform in ('win32', 'cygwin'):
+                exectable_folder_name = 'Scripts'
+            else:
+                exectable_folder_name = 'bin'
 
-            self.python_path = self.env_path / 'bin' / 'python'
+            pip_cmd = self.env_path / exectable_folder_name / 'pip'
+            self.python_path = self.env_path / exectable_folder_name / 'python'
 
             if self.env_path.exists():
                 # already exists. it means requirements are already installed

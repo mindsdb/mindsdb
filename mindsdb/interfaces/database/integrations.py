@@ -18,6 +18,7 @@ from sqlalchemy import func
 
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.config import Config
+from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.interfaces.storage.fs import FsStore, FileStorage, RESOURCE_GROUP
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.interfaces.file.file_controller import FileController
@@ -30,6 +31,7 @@ from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
+from mindsdb.integrations.libs.base import BaseHandler
 import mindsdb.utilities.profiler as profiler
 
 logger = log.getLogger(__name__)
@@ -202,13 +204,15 @@ class IntegrationController:
             store.add(files_dir, '')
             store.push()
 
+        if handler_meta.get('type') == HANDLER_TYPE.ML:
+            ml_handler = self.get_ml_handler(name)
+            ml_handler.create_engine(connection_args, integration_id)
+
         return integration_id
 
     def modify(self, name, data):
         self.handlers_cache.delete(name)
-        integration_record = db.session.query(db.Integration).filter_by(
-            company_id=ctx.company_id, name=name
-        ).first()
+        integration_record = self._get_integration_record(name)
         old_data = deepcopy(integration_record.data)
         for k in old_data:
             if k not in data:
@@ -230,7 +234,7 @@ class IntegrationController:
             if getattr(handler, 'permanent', False) is True:
                 raise Exception('Unable to drop: is permanent integration')
 
-        integration_record = db.session.query(db.Integration).filter_by(company_id=ctx.company_id, name=name).first()
+        integration_record = self._get_integration_record(name)
 
         # if this is ml engine
         engine_models = get_model_records(ml_handler_name=name, deleted_at=None)
@@ -325,20 +329,50 @@ class IntegrationController:
         }
 
     def get_by_id(self, integration_id, sensitive_info=True):
-        integration_record = db.session.query(db.Integration).filter_by(company_id=ctx.company_id, id=integration_id).first()
+        integration_record = (
+            db.session.query(db.Integration)
+            .filter_by(company_id=ctx.company_id, id=integration_id)
+            .first()
+        )
         return self._get_integration_record_data(integration_record, sensitive_info)
 
     def get(self, name, sensitive_info=True, case_sensitive=False):
+        try:
+            integration_record = self._get_integration_record(name, case_sensitive)
+        except EntityNotExistsError:
+            return None
+        return self._get_integration_record_data(integration_record, sensitive_info)
+
+    @staticmethod
+    def _get_integration_record(name: str, case_sensitive: bool = False) -> db.Integration:
+        """Get integration record by name
+
+        Args:
+            name (str): name of the integration
+            case_sensitive (bool): should search be case sensitive or not
+
+        Retruns:
+            db.Integration
+        """
         if case_sensitive:
-            integration_record = db.session.query(db.Integration).filter_by(
-                company_id=ctx.company_id, name=name
-            ).first()
+            integration_records = db.session.query(db.Integration).filter_by(
+                company_id=ctx.company_id,
+                name=name
+            ).all()
+            if len(integration_records) > 1:
+                raise Exception(f"There is {len(integration_records)} integrations with name '{name}'")
+            if len(integration_records) == 0:
+                raise EntityNotExistsError(f"There is no integration with name '{name}'")
+            integration_record = integration_records[0]
         else:
             integration_record = db.session.query(db.Integration).filter(
                 (db.Integration.company_id == ctx.company_id)
                 & (func.lower(db.Integration.name) == func.lower(name))
             ).first()
-        return self._get_integration_record_data(integration_record, sensitive_info)
+            if integration_record is None:
+                raise EntityNotExistsError(f"There is no integration with name '{name}'")
+
+        return integration_record
 
     def get_all(self, sensitive_info=True):
         integration_records = db.session.query(db.Integration).filter_by(company_id=ctx.company_id).all()
@@ -427,32 +461,68 @@ class IntegrationController:
         shutil.copytree(folder_from, folder_to, dirs_exist_ok=True)
         storage_to.folder_sync(root_path)
 
+    def get_ml_handler(self, name: str, case_sensitive: bool = False) -> BaseMLEngine:
+        """Get ML handler by name
+        Args:
+            name (str): name of the handler
+            case_sensitive (bool): should case be taken into account when searching by name
+
+        Returns:
+            BaseMLEngine
+        """
+        integration_record = self._get_integration_record(name, case_sensitive)
+        integration_engine = integration_record.engine
+
+        if integration_engine not in self.handlers_import_status:
+            raise Exception(f"Handler '{name}' does not exists")
+
+        integration_meta = self.handlers_import_status[integration_engine]
+        if integration_meta.get('type') != HANDLER_TYPE.ML:
+            raise Exception(f"Handler '{name}' must be ML type")
+
+        logger.info(
+            f"{self.__class__.__name__}.get_handler: create a ML client "
+            + f"{integration_record.name}/{integration_record.id}"
+        )
+        handler = BaseMLEngineExec(
+            name=integration_record.name,
+            integration_id=integration_record.id,
+            handler_module=self.handler_modules[integration_engine]
+        )
+
+        return handler
+
     @profiler.profile()
-    def get_handler(self, name, case_sensitive=False):
+    def get_data_handler(self, name: str, case_sensitive: bool = False) -> BaseHandler:
+        """Get DATA handler (DB or API) by name
+        Args:
+            name (str): name of the handler
+            case_sensitive (bool): should case be taken into account when searching by name
+
+        Returns:
+            BaseHandler: data handler
+        """
         handler = self.handlers_cache.get(name)
         if handler is not None:
             return handler
 
-        if case_sensitive:
-            integration_record = db.session.query(db.Integration).filter_by(company_id=ctx.company_id, name=name).first()
-        else:
-            integration_record = db.session.query(db.Integration).filter(
-                (db.Integration.company_id == ctx.company_id)
-                & (func.lower(db.Integration.name) == func.lower(name))
-            ).first()
+        integration_record = self._get_integration_record(name, case_sensitive)
+        integration_engine = integration_record.engine
+
+        integration_meta = self.handlers_import_status[integration_engine]
+        if integration_meta.get('type') != HANDLER_TYPE.DATA:
+            raise Exception(f"Handler '{name}' must be DATA type")
 
         integration_data = self._get_integration_record_data(integration_record, True)
         if integration_data is None:
             raise Exception(f"Can't find integration_record for handler '{name}'")
         connection_data = integration_data.get('connection_data', {})
-        integration_engine = integration_data['engine']
-        integration_name = integration_data['name']
-        logger.debug("%s.get_handler: connection_data=%s, engine=%s", self.__class__.__name__, connection_data, integration_engine)
+        logger.debug(
+            "%s.get_handler: connection_data=%s, engine=%s",
+            self.__class__.__name__,
+            connection_data, integration_engine
+        )
 
-        if integration_engine not in self.handler_modules:
-            raise Exception(f"Can't find handler for '{integration_name}' ({integration_engine})")
-
-        integration_meta = self.handlers_import_status[integration_engine]
         if integration_meta["import"]["success"] is False:
             msg = dedent(f'''\
                 Handler '{integration_engine}' cannot be used. Reason is:
@@ -497,22 +567,14 @@ class IntegrationController:
             handler_storage=handler_storage
         )
 
+        logger.info(
+            "%s.get_handler: create a client to db service of %s type, args - %s",
+            self.__class__.__name__,
+            integration_engine, handler_ars
+        )
         HandlerClass = self.handler_modules[integration_engine].Handler
-
-        if integration_meta.get('type') == HANDLER_TYPE.ML:
-            ml_handler_args = {
-                'name': handler_ars['name'],
-                'integration_id': handler_ars['integration_id'],
-                'integration_engine': integration_engine,
-                'handler_class': HandlerClass
-            }
-            logger.info("%s.get_handler: create a ML client, params - %s", self.__class__.__name__, ml_handler_args)
-            handler = BaseMLEngineExec(**ml_handler_args)
-        else:
-            logger.info("%s.get_handler: create a client to db service of %s type, args - %s", self.__class__.__name__, integration_engine, handler_ars)
-            handler = HandlerClass(**handler_ars)
-            # handler = DBClient(integration_engine, HandlerClass, **handler_ars)
-            self.handlers_cache.set(handler)
+        handler = HandlerClass(**handler_ars)
+        self.handlers_cache.set(handler)
 
         return handler
 

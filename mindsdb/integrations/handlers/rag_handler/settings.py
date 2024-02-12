@@ -8,7 +8,7 @@ import openai
 import pandas as pd
 import requests
 import writer
-from langchain import Writer
+from langchain.llms import Writer
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.docstore.document import Document
 from langchain.document_loaders import DataFrameLoader
@@ -51,8 +51,8 @@ When summarizing, please keep the following in mind the following question:
 {question}
 """
 
-DEFAULT_CHUNK_SIZE = 500
-DEFAULT_CHUNK_OVERLAP = 50
+DEFAULT_CHUNK_SIZE = 750
+DEFAULT_CHUNK_OVERLAP = 250
 DEFAULT_VECTOR_STORE_NAME = "chromadb"
 DEFAULT_VECTOR_STORE_COLLECTION_NAME = "collection"
 MAX_EMBEDDINGS_BATCH_SIZE = 2000
@@ -106,9 +106,7 @@ def get_available_writer_model_ids(args: dict) -> list:
 def get_available_openai_model_ids(args: dict) -> list:
     """Get available openai LLM model ids"""
 
-    openai.api_key = args["openai_api_key"]
-
-    models = openai.OpenAI().models.list().data
+    models = openai.OpenAI(api_key=args["openai_api_key"], base_url=args["base_url"]).models.list().data
 
     return [models.id for models in models]
 
@@ -202,6 +200,7 @@ class LLMParameters(BaseModel):
     llm_name: str = Field(default_factory=str, title="LLM API name")
     max_tokens: int = Field(default=100, title="max tokens in response")
     temperature: float = Field(default=0.0, title="temperature")
+    base_url: str = None
     top_p: float = 1
     best_of: int = 5
     stop: List[str] = None
@@ -234,7 +233,6 @@ class WriterLLMParameters(LLMParameters):
 
     writer_api_key: str
     writer_org_id: str = None
-    base_url: str = None
     model_id: str = "palmyra-x"
     callbacks: List[StreamingStdOutCallbackHandler] = [StreamingStdOutCallbackHandler()]
     verbose: bool = False
@@ -266,9 +264,11 @@ class LLMLoader(BaseModel):
 
     def load_openai_llm(self) -> partial:
         """Load OpenAI LLM API interface"""
-        client = openai.OpenAI(api_key=self.config_dict["openai_api_key"])
+        client = openai.OpenAI(api_key=self.config_dict["openai_api_key"], base_url=self.config_dict["base_url"])
         config = self.config_dict.copy()
-        config.pop("openai_api_key")
+        keys_to_remove = ["openai_api_key", "base_url"]
+        for key in keys_to_remove:
+            config.pop(key)
         config["model"] = config.pop("model_id")
 
         return partial(client.completions.create, **config)
@@ -280,7 +280,7 @@ class RAGBaseParameters(BaseModel):
     llm_params: Any
     vector_store_folder_name: str
     use_gpu: bool = False
-    embeddings_batch_size: int = MAX_EMBEDDINGS_BATCH_SIZE
+    embeddings_batch_size: int = MAX_EMBEDDINGS_BATCH_SIZE  # not used, leaving in place to prevent breaking changes
     prompt_template: str = DEFAULT_QA_PROMPT_TEMPLATE
     chunk_size: int = DEFAULT_CHUNK_SIZE
     chunk_overlap: int = DEFAULT_CHUNK_OVERLAP

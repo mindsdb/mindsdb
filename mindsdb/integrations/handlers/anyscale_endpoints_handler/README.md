@@ -24,7 +24,9 @@ The base URL for this API is `https://api.endpoints.anyscale.com/v1`.
 Here is an example to produce sentiment analysis predictions on some text:
 
 ```sql
-CREATE ML_ENGINE anyscale_endpoints FROM anyscale_endpoints USING api_key = 'your-api-key';
+CREATE ML_ENGINE anyscale_endpoints 
+FROM anyscale_endpoints 
+USING anyscale_endpoints_api_key = 'your-api-key';
     
 CREATE MODEL anyscale_endpoints_sentiment_model
 PREDICT sentiment

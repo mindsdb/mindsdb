@@ -3,7 +3,7 @@ from textwrap import dedent, indent
 
 import pandas as pd
 
-from mindsdb.integrations.libs.llm_utils import ft_chat_formatter, ft_code_formatter
+from mindsdb.integrations.libs.llm_utils import ft_chat_formatter, ft_code_formatter, ft_cqa_formatter
 from mindsdb.integrations.libs.llm_utils import ft_jsonl_validation, ft_chat_format_validation
 from mindsdb.integrations.libs.llm_utils import get_completed_prompts
 
@@ -215,3 +215,18 @@ class TestLLM(unittest.TestCase):
         assert df2['content'].iloc[0] == 'You are a powerful text to code model. Your job is to provide great code completions. As context, you are given code that is found immediately before and after the code you must generate.\n\nYou must output the code that should go in between the prefix and suffix.\n\n'  # noqa
         assert df2['content'].iloc[1] == '<PRE>\n# format chunks into prompts\n        roles = []\n        contents = []\n<SUF>\ninterleaved = list(itertools.chain(*zip(templates, (pre, mid, suf))))\n<MID>'  # noqa
         assert df2['content'].iloc[2] == 'for idx in range(0, len(chunks), 3):\n            pre, mid, suf = chunks[idx:idx+3]'  # noqa
+
+    def test_ft_cqa_formatter(self):
+        df = pd.DataFrame({
+            'instruction': ['Answer accurately.'],
+            'context': ['You are a helpful assistant.'],
+            'question': ['What is the capital of France?'],
+            'answer': ['Paris'],
+        })
+
+        df2 = ft_cqa_formatter(df)
+
+        assert list(df2['role']) == ['system', 'user', 'assistant']
+        assert df2['content'].iloc[0] == 'Answer accurately.\nYou are a helpful assistant.'
+        assert df2['content'].iloc[1] == 'What is the capital of France?'
+        assert df2['content'].iloc[2] == 'Paris'

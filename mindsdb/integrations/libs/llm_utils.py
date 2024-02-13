@@ -221,6 +221,11 @@ def ft_formatter(df: pd.DataFrame) -> List[Dict]:
     """
     if 'code' in df.columns:
         df = ft_code_formatter(df)
+
+    elif {'question', 'context', 'answer'}.issubset(set(df.columns)):
+        # TODO: handler user-specified names for these columns
+        df = ft_cqa_formatter(df)
+
     return ft_chat_formatter(df)
 
 
@@ -369,3 +374,38 @@ def ft_code_formatter(
     # return formatted prompts in a dataframe to be processed by `ft_chat_formatter()`
     df = pd.DataFrame({'role': roles, 'content': contents})
     return df
+
+
+def ft_cqa_formatter(
+        df: pd.DataFrame,
+
+        question_col = 'question',
+        answer_col = 'answer',
+        instruction_col = 'instruction',
+        context_col = 'context',
+
+        default_instruction = 'You are a helpful assistant.',
+        default_context = '',
+) -> pd.DataFrame:
+
+    # input and setup validation
+    assert len(df) > 0, "Input dataframe should not be empty"
+    assert {question_col, answer_col}.issubset(set(df.columns)), f"Input dataframe must have columns `{question_col}`, and `{answer_col}`"  # noqa
+
+    if instruction_col not in df.columns:
+        df[instruction_col] = default_instruction
+
+    if context_col not in df.columns:
+        df[context_col] = default_context
+
+    # format data into chat-like prompts
+    roles = []
+    contents = []
+    for i, row in df.iterrows():
+        system = "\n".join([row[instruction_col], row[context_col]])
+        user = row[question_col]
+        assistant = row[answer_col]
+        roles.extend(['system', 'user', 'assistant'])
+        contents.extend([system, user, assistant])
+
+    return pd.DataFrame({'role': roles, 'content': contents})

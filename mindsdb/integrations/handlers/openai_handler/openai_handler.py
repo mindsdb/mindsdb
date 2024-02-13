@@ -119,7 +119,6 @@ class OpenAIHandler(BaseMLEngine):
                 "runtime",
                 "max_tokens",
                 "temperature",
-                "api_key",
                 "openai_api_key",
                 "api_organization",
                 "api_base"

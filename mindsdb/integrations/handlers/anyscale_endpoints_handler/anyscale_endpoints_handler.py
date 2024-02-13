@@ -55,6 +55,16 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         finally:  # exit
             os.environ[key] = old_base
 
+    @staticmethod
+    def create_validation(target, args=None, **kwargs):
+        # remove original key for the validation check in `OpenAIHandler`
+        api_key_name = 'anyscale_endpoints_api_key'
+        if api_key_name in args['using']:
+            del args['using'][api_key_name]
+        if api_key_name in args:
+            del args[api_key_name]
+        OpenAIHandler.create_validation(target, args, **kwargs)
+
     def create(self, target, args=None, **kwargs):
         with self._anyscale_base_api(args):
             # load base and fine-tuned models, then hand over

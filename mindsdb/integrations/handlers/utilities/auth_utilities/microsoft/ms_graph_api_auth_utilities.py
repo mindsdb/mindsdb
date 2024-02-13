@@ -20,9 +20,14 @@ class MSGraphAPIAuthManager:
         self.tenant_id = tenant_id
         self.code = code
 
-        self.redirect_uri = request.headers['ORIGIN'] + '/verify-auth'
-        if '127.0.0.1' in self.redirect_uri:
-            self.redirect_uri = self.redirect_uri.replace('127.0.0.1', 'localhost')
+        if self.handler_storage.json_get('args'):
+            self.redirect_uri = self.handler_storage.json_get('args').get('redirect_uri')
+        else:
+            self.redirect_uri = request.headers['ORIGIN'] + '/verify-auth'
+            if '127.0.0.1' in self.redirect_uri:
+                self.redirect_uri = self.redirect_uri.replace('127.0.0.1', 'localhost')
+
+            self.handler_storage.json_set('args', {'redirect_uri': self.redirect_uri})
 
     def get_access_token(self):
         try:
@@ -69,10 +74,6 @@ class MSGraphAPIAuthManager:
 
             return response
         else:
-            redirect_uri = request.headers['ORIGIN'] + '/verify-auth'
-            if '127.0.0.1' in redirect_uri:
-                self.redirect_uri = redirect_uri.replace('127.0.0.1', 'localhost')
-
             auth_url = msal_app.get_authorization_request_url(
                 scopes=self.scopes,
                 redirect_uri=self.redirect_uri,

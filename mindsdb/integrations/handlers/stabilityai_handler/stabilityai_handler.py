@@ -22,9 +22,6 @@ class StabilityAIHandler(BaseMLEngine):
 
         available_tasks = ["text-to-image", "image-to-image", "image-upscaling", "image-masking"]
 
-        #if 'stabilityai_api_key' not in args:
-        #    raise Exception('stabilityai_api_key has to be specified')
-
         if 'task' not in args:
             raise Exception('task has to be specified. Available tasks are - ' + available_tasks)
 

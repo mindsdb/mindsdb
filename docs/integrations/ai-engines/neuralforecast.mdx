@@ -27,10 +27,16 @@ ORDER BY date_column
 GROUP BY column_name, column_name, ...
 WINDOW 12 -- model looks back at sets of 12 rows each
 HORIZON 3 -- model forecasts the next 3 rows
-USING ENGINE = 'neuralforecast';
+USING
+    engine = 'neuralforecast'
+    frequency = 'Q',
+    train_time = 0.01,
+    exogenous_vars = ['var_1', 'var_2'];
 ```
 
 To ensure that the model is created based on the NeuralForecast engine, include the `USING` clause at the end.
+
+The `frequency` parameter informs the model about the expected time difference between each measurement ([supported values here](https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases)). And the `train_time` parameter defines the training time - it defaults to 1, and lower values will reduce trainig time linearly by reducing the number of searches allowed for the best configuration by AutoNHITS. You can also define `exogenous_vars` as a parameter in the `USING` clause - these are complementary variables in the table that may improve forecast accuracy.
 
 ## Example
 

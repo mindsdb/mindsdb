@@ -9,6 +9,14 @@ In this section, we present how to connect Sendinblue to MindsDB.
 
 Data from Sendinblue can be used to understand the impact of email marketing.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect Sendinblue to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to Sendinblue.
+
 ## Connection
 
 This handler is implemented using the [sib-api-v3-sdk](https://github.com/sendinblue/APIv3-python-library) library, a Python library that wraps Sendinblue APIs.
@@ -32,10 +40,6 @@ PARAMETERS = {
   "api_key": "xkeysib-..."
 };
 ```
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/sendinblue_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

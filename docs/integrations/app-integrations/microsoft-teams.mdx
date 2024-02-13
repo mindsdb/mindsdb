@@ -9,6 +9,14 @@ In this section, we present how to connect Microsoft Teams to MindsDB.
 
 The Microsoft Teams handler allows you to read and send messages to a Microsoft Teams channel or chat. It also allows you to create a chatbot that will respond to messages.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect Microsoft Teams to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to Microsoft Teams.
+
 ## Connection
 
 This handler was implemented using [msal](https://github.com/AzureAD/microsoft-authentication-library-for-python) for authentication and [Requests](https://github.com/psf/requests) to submit requests to the Microsoft Graph API.
@@ -57,10 +65,6 @@ PARAMETERS = {
 When the above is statement is executed with the given parameters, the handler will open a browser window and prompt you to sign in with your Microsoft account. 
 
 The handler will then act (via the app registration) as the signed in user and will submit requests to the Microsoft Graph API. This is done using the concept of [delegated permissions](https://docs.microsoft.com/en-us/graph/auth/auth-concepts#delegated-permissions).
-
-<Tip>
-If you installed MindsDB locally, make sure to install all Microsoft Teams dependencies by running `pip install mindsdb[teams]` or from the [requirements.txt](indsdb/integrations/handlers/ms_teams_handler/requirements.txt) file.
-</Tip>
 
 ## Usage
 

@@ -7,6 +7,14 @@ This is the implementation of the Databend data handler for MindsDB.
 
 [Databend](https://databend.rs/) is a modern cloud data warehouse that empowers your object storage for real-time analytics.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect Databend to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to Databend.
+
 ## Implementation
 
 This handler is implemented by extending the ClickHouse handler.
@@ -19,10 +27,6 @@ The required arguments to establish a connection are as follows:
 * `user` is the username used to authenticate with the Databend warehouse.
 * `password` is the password to authenticate the user with the Databend warehouse.
 * `database` is the database name to use when connecting with the Databend warehouse.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/databend_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

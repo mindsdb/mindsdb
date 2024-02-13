@@ -16,6 +16,6 @@ except Exception as e:
 title = "Autokeras"
 name = "autokeras"
 type = HANDLER_TYPE.ML
-permanent = True
+permanent = False
 
 __all__ = ["Handler", "version", "name", "type", "title", "description", "import_error"]

@@ -44,7 +44,7 @@ class TriggerTask(BaseTask):
 
         # subscribe
         database = session.integration_controller.get_by_id(trigger.database_id)
-        data_handler = session.integration_controller.get_handler(database['name'])
+        data_handler = session.integration_controller.get_data_handler(database['name'])
 
         columns = trigger.columns
         if columns is not None:

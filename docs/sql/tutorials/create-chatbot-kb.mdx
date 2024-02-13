@@ -1,0 +1,143 @@
+---
+title: Build a Chatbot with a Knowledge Base
+sidebarTitle: Chatbot with a Knowledge Base
+---
+
+MindsDB provides the `CREATE CHATBOT` statement that lets you customize your chatbot with an AI model and a data source of your choice. Follow this tutorial to learn build a chatbot with a knowledge base.
+
+The `CREATE CHATBOT` statement requires the following componenets:
+
+1. **Chat app**: A connection to a chat app, such as [Slack](/integrations/app-integrations/slack#method-1-chatbot-responds-in-direct-messages-to-a-slack-app) or [MS Teams](/integrations/app-integrations/microsoft-teams).
+
+2. **AI agent**: An AI agent that comes with an AI model trained with the provided training data. Learn more about [AI agents here](/agents/agent).
+
+<Tip>
+Learn more about [chatbots here](/agents/chatbot).
+</Tip>
+
+Let's go over getting all the components ready.
+
+## Chatbot Components
+
+### Chat App
+
+Use the `CREATE DATABASE` statement to connect the chat app to MindsDB.
+
+<Tip>
+If you want to use Slack, follow [this link](/integrations/app-integrations/slack#method-1-chatbot-responds-in-direct-messages-to-a-slack-app) to setup a Slack app, generate required tokens, and connect it to MindsDB.
+
+If you want to use MS Teams, follow [this link](/integrations/app-integrations/microsoft-teams) to generate required tokens and connect it to MindsDB.
+</Tip>
+
+### AI Agent
+
+Start by creating and deploying the model.
+
+<Note>
+If you haven't created a LangChain engine, use the `CREATE ML_ENGINE` statement, as explained [here](/integrations/ai-engines/langchain#ai-engine).
+</Note>
+
+```sql
+CREATE MODEL my_model
+PREDICT answer
+USING
+    engine = 'langchain',
+    input_column = 'question',
+    api_key = 'your-model-api-key', -- choose one of OpenAI or Anthropic
+    model_name='gpt-4', -- optional model name from OpenAI or Anthropic
+    mode = 'conversational',
+    user_column = 'question' ,
+    assistant_column = 'answer',
+    max_tokens=100,
+    temperature=0,
+    verbose=True,
+    prompt_template='Answer the user input in a helpful way';
+```
+
+Here is the command to check its status:
+
+```sql
+DESCRIBE my_model;
+```
+
+The status should read `complete` before proceeding.
+
+Next step is to create one or more skills for an AI agent. Here we create a knowledge base and assign it as a skill.
+
+In this example, let's create an embedding model (you can choose one from OpenAI, Hugging Face, or LangChain) for the knowledge base.
+
+```sql
+CREATE ML_ENGINE openai_engine
+FROM openai
+USING
+   api_key = 'your-openai-api-key';
+
+CREATE MODEL embedding_model
+PREDICT embeddings
+USING
+   engine = 'openai_engine',
+   mode='embedding',
+   model_name='text-embedding-ada-002',
+   question_column = 'content';
+```
+
+Now let's create a knowledge base that uses this embedding model and the default storage vector database (that is, ChromaDB).
+
+```sql
+CREATE KNOWLEDGE BASE my_knowledge_base
+USING
+   model = embedding_model;
+```
+
+This is how you can insert data into the knowledge base and select it.
+
+```sql
+INSERT INTO my_knowledge_base (content)
+VALUES ('I drink tea.');
+
+SELECT * FROM my_knowledge_base;
+```
+
+Use this knowledge base to create a skill for an agent:
+
+```sql
+CREATE SKILL kb_skill
+USING
+    type = 'knowledge_base',
+    source = 'my_knowledge_base', -- this must be created with CREATE KNOWLEDGE BASE
+    description = 'My data';      -- data description to help the agent know when to use the knowledge base
+```
+
+This skill enables a model to answer questions about data from the knowledge base.
+
+Now let's create an AI agent using the above model and skill.
+
+```sql
+CREATE AGENT support_agent
+USING
+model = my_model,         -- this was created with CREATE MODEL
+skills = ['kb_skill'];    -- this was created with CREATE SKILL
+```
+
+## Create Chatbot
+
+Once all the components are ready, let's proceed to creating the chatbot.
+
+```sql
+CREATE CHATBOT my_chatbot
+USING
+   database = 'chat_app',     -- this parameters stores a connection to a chat app, like Slack or MS Teams
+   agent = 'support_agent',   -- this parameter stores an agent name, which was create with CREATE AGENT
+   enable_dms = true,         -- this parameter is optional and enable direct messages with the chatbot
+   running = true;            -- this parameter is optional and set to true by default, meaning that the chatbot is running
+```
+
+The `database` parameter stores connection to a chat app. And the `agent` parameter stores an AI agent created by passing a model and training data.
+
+You can query all chatbot using this query:
+
+```sql
+SELECT * FROM chatbots;
+```
+
+Now you can go to Slack or MS Teams and chat with the chatbot created with MindsDB.

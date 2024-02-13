@@ -7,6 +7,14 @@ This is the implementation of the SAP SQL Anywhere data handler for MindsDB.
 
 [SAP SQL Anywhere](https://www.sap.com/products/technology-platform/sql-anywhere.html) is an embedded database for application software that enables secure and reliable data management for servers where no DBA is available and synchronization for tens of thousands of mobile devices, Internet of Things (IoT) systems, and remote environments.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect SAP SQL Anywhere to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to SAP SQL Anywhere.
+
 ## Implementation
 
 This handler is implemented using `sqlanydb`, the Python driver for SAP SQL Anywhere.
@@ -19,10 +27,6 @@ The required arguments to establish a connection are as follows:
 * `password` specifies the password for the user.
 * `database` sets the current database.
 * `server` sets the current server.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/sqlany_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

@@ -9,20 +9,26 @@ In this section, we present how to connect Google Analytics to MindsDB.
 
 Data from Google Analytics can be utilized within MindsDB to train AI models, make predictions, and automate user engagement and events with AI.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect Google Analytics to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to Google Analytics.
+
 ## Connection
 
 The required arguments to establish a connection are as follows:
 
-* `credentials_file` is a path to the JSON file that stores credentials to the Google account.
-* `property_id` is the property id of your Google Analytics website. [Here](https://developers.google.com/analytics/devguides/reporting/data/v1/property-id) is some information on how to get the property id.
+* `credentials_file` optional, is a path to the JSON file that stores credentials to the Google account.
+* `credentials_json`: optional, is the content of the JSON file that stores credentials to the Google account.
+* `property_id` required, is the property id of your Google Analytics website. [Here](https://developers.google.com/analytics/devguides/reporting/data/v1/property-id) is some information on how to get the property id.
+> ⚠️ One of credentials_file or credentials_json has to be chosen.
 
 <Tip>
 Please note that a Google account with enabled Google Analytics Admin API is required. You can find more information [here](https://developers.google.com/analytics/devguides/config/admin/v1/quickstart-client-libraries).<br></br>
 Also an active website connected with Google Analytics is required. You can find more information [here](https://support.google.com/analytics/answer/9304153?hl=en).
-</Tip>
-
-<Tip>
-If you installed MindsDB locally via pip or cloned it, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/google_analytics_handler) and run this command: `pip install -r requirements.txt`.
 </Tip>
 
 To make use of this handler and connect the Google Analytics app to MindsDB, the following syntax can be used:
@@ -101,7 +107,7 @@ You need a Google account in order to use this integration. Here is how to get t
 
 This creates a database that comes with the `conversion_events` table.
 
-Now you can use your Google Analytics data, like this:
+Now you can use your Google Analytics data like this:
 
 * searching for conversion events:
 

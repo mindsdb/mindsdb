@@ -124,7 +124,6 @@ class LlamaIndexHandler(BaseMLEngine):
 
         elif args["using"]["reader"] == "GithubRepositoryReader":
             engine_storage = self.engine_storage
-
             key = "GITHUB_TOKEN"
             github_token = get_api_key(
                 key, args["using"], engine_storage, strict=False
@@ -271,10 +270,9 @@ class LlamaIndexHandler(BaseMLEngine):
         args = self.model_storage.json_get("args")
         engine_storage = self.engine_storage
 
-        openai_api_key = get_api_key(
-            'openai', args["using"], engine_storage, strict=True
-        )
-        llm_kwargs = {"api_key": openai_api_key}
+        openai_api_key = get_api_key('openai', args["using"], engine_storage, strict=True)
+        llm_kwargs = {"openai_api_key": openai_api_key}
+
         if "temperature" in args["using"]:
             llm_kwargs["temperature"] = args["using"]["temperature"]
         if "model_name" in args["using"]:

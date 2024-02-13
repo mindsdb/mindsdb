@@ -93,7 +93,7 @@ class TwelveLabsHandler(BaseMLEngine):
         twelve_labs_api_client = TwelveLabsAPIClient(api_key=api_key)
 
         # update args with api key
-        args['api_key'] = api_key
+        args['twelve_labs_api_key'] = api_key
 
         # get index if it exists
         index_id = twelve_labs_api_client.get_index_by_name(index_name=args['index_name'])

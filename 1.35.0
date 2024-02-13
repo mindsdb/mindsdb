@@ -1,0 +1,67 @@
+Collecting google-cloud-aiplatform
+  Downloading google_cloud_aiplatform-1.39.0-py2.py3-none-any.whl.metadata (28 kB)
+Requirement already satisfied: google-api-core!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0 in c:\users\martyna\mindsdb_setup\mindsdb-venv\lib\site-packages (from google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-cloud-aiplatform) (2.15.0)
+Collecting proto-plus<2.0.0dev,>=1.22.0 (from google-cloud-aiplatform)
+  Downloading proto_plus-1.23.0-py3-none-any.whl.metadata (2.2 kB)
+Requirement already satisfied: protobuf!=3.20.0,!=3.20.1,!=4.21.0,!=4.21.1,!=4.21.2,!=4.21.3,!=4.21.4,!=4.21.5,<5.0.0dev,>=3.19.5 in c:\users\martyna\mindsdb_setup\mindsdb-venv\lib\site-packages (from google-cloud-aiplatform) (3.20.3)
+Requirement already satisfied: packaging>=14.3 in c:\users\martyna\mindsdb_setup\mindsdb-venv\lib\site-packages (from google-cloud-aiplatform) (23.2)
+Collecting google-cloud-storage<3.0.0dev,>=1.32.0 (from google-cloud-aiplatform)
+  Downloading google_cloud_storage-2.14.0-py2.py3-none-any.whl.metadata (6.1 kB)
+Collecting google-cloud-bigquery<4.0.0dev,>=1.15.0 (from google-cloud-aiplatform)
+  Downloading google_cloud_bigquery-3.15.0-py2.py3-none-any.whl.metadata (8.8 kB)
+Collecting google-cloud-resource-manager<3.0.0dev,>=1.3.3 (from google-cloud-aiplatform)
+  Downloading google_cloud_resource_manager-1.11.0-py2.py3-none-any.whl.metadata (5.2 kB)
+Collecting shapely<3.0.0dev (from google-cloud-aiplatform)
+  Downloading shapely-2.0.2-cp310-cp310-win_amd64.whl.metadata (7.2 kB)
+Requirement already satisfied: googleapis-common-protos<2.0.dev0,>=1.56.2 in c:\users\martyna\mindsdb_setup\mindsdb-venv\lib\site-packages (from google-api-core!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-cloud-aiplatform) (1.62.0)
+Requirement already satisfied: google-auth<3.0.dev0,>=2.14.1 in c:\users\martyna\mindsdb_setup\mindsdb-venv\lib\site-packages (from google-api-core!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-cloud-aiplatform) (2.25.2)
+Requirement already satisfied: requests<3.0.0.dev0,>=2.18.0 in c:\users\martyna\mindsdb_setup\mindsdb-venv\lib\site-packages (from google-api-core!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-cloud-aiplatform) (2.31.0)
+Requirement already satisfied: grpcio<2.0dev,>=1.33.2 in c:\users\martyna\mindsdb_setup\mindsdb-venv\lib\site-packages (from google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-cloud-aiplatform) (1.60.0)
+Collecting grpcio-status<2.0.dev0,>=1.33.2 (from google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-cloud-aiplatform)
+  Downloading grpcio_status-1.60.0-py3-none-any.whl.metadata (1.3 kB)
+Collecting google-cloud-core<3.0.0dev,>=1.6.0 (from google-cloud-bigquery<4.0.0dev,>=1.15.0->google-cloud-aiplatform)
+  Downloading google_cloud_core-2.4.1-py2.py3-none-any.whl.metadata (2.7 kB)
+Collecting google-resumable-media<3.0dev,>=0.6.0 (from google-cloud-bigquery<4.0.0dev,>=1.15.0->google-cloud-aiplatform)
+  Downloading google_resumable_media-2.7.0-py2.py3-none-any.whl.metadata (2.2 kB)
+Requirement already satisfied: python-dateutil<3.0dev,>=2.7.2 in c:\users\martyna\mindsdb_setup\mindsdb-venv\lib\site-packages (from google-cloud-bigquery<4.0.0dev,>=1.15.0->google-cloud-aiplatform) (2.8.2)
+Collecting grpc-google-iam-v1<1.0.0dev,>=0.12.4 (from google-cloud-resource-manager<3.0.0dev,>=1.3.3->google-cloud-aiplatform)
+  Downloading grpc_google_iam_v1-0.13.0-py2.py3-none-any.whl.metadata (3.3 kB)
+Collecting google-crc32c<2.0dev,>=1.0 (from google-cloud-storage<3.0.0dev,>=1.32.0->google-cloud-aiplatform)
+  Downloading google_crc32c-1.5.0-cp310-cp310-win_amd64.whl (27 kB)
+Requirement already satisfied: numpy>=1.14 in c:\users\martyna\mindsdb_setup\mindsdb-venv\lib\site-packages (from shapely<3.0.0dev->google-cloud-aiplatform) (1.23.5)
+Requirement already satisfied: cachetools<6.0,>=2.0.0 in c:\users\martyna\mindsdb_setup\mindsdb-venv\lib\site-packages (from google-auth<3.0.dev0,>=2.14.1->google-api-core!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-cloud-aiplatform) (5.3.2)
+Requirement already satisfied: pyasn1-modules>=0.2.1 in c:\users\martyna\mindsdb_setup\mindsdb-venv\lib\site-packages (from google-auth<3.0.dev0,>=2.14.1->google-api-core!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-cloud-aiplatform) (0.3.0)
+Requirement already satisfied: rsa<5,>=3.1.4 in c:\users\martyna\mindsdb_setup\mindsdb-venv\lib\site-packages (from google-auth<3.0.dev0,>=2.14.1->google-api-core!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-cloud-aiplatform) (4.9)
+Collecting protobuf!=3.20.0,!=3.20.1,!=4.21.0,!=4.21.1,!=4.21.2,!=4.21.3,!=4.21.4,!=4.21.5,<5.0.0dev,>=3.19.5 (from google-cloud-aiplatform)
+  Downloading protobuf-4.25.2-cp310-abi3-win_amd64.whl.metadata (541 bytes)
+Requirement already satisfied: six>=1.5 in c:\users\martyna\mindsdb_setup\mindsdb-venv\lib\site-packages (from python-dateutil<3.0dev,>=2.7.2->google-cloud-bigquery<4.0.0dev,>=1.15.0->google-cloud-aiplatform) (1.16.0)
+Requirement already satisfied: charset-normalizer<4,>=2 in c:\users\martyna\mindsdb_setup\mindsdb-venv\lib\site-packages (from requests<3.0.0.dev0,>=2.18.0->google-api-core!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-cloud-aiplatform) (3.3.2)
+Requirement already satisfied: idna<4,>=2.5 in c:\users\martyna\mindsdb_setup\mindsdb-venv\lib\site-packages (from requests<3.0.0.dev0,>=2.18.0->google-api-core!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-cloud-aiplatform) (3.6)
+Requirement already satisfied: urllib3<3,>=1.21.1 in c:\users\martyna\mindsdb_setup\mindsdb-venv\lib\site-packages (from requests<3.0.0.dev0,>=2.18.0->google-api-core!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-cloud-aiplatform) (1.26.18)
+Requirement already satisfied: certifi>=2017.4.17 in c:\users\martyna\mindsdb_setup\mindsdb-venv\lib\site-packages (from requests<3.0.0.dev0,>=2.18.0->google-api-core!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-cloud-aiplatform) (2023.11.17)
+Requirement already satisfied: pyasn1<0.6.0,>=0.4.6 in c:\users\martyna\mindsdb_setup\mindsdb-venv\lib\site-packages (from pyasn1-modules>=0.2.1->google-auth<3.0.dev0,>=2.14.1->google-api-core!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-cloud-aiplatform) (0.5.1)
+Downloading google_cloud_aiplatform-1.39.0-py2.py3-none-any.whl (3.4 MB)
+   ---------------------------------------- 3.4/3.4 MB 8.6 MB/s eta 0:00:00
+Downloading google_cloud_bigquery-3.15.0-py2.py3-none-any.whl (228 kB)
+   ---------------------------------------- 228.7/228.7 kB 7.0 MB/s eta 0:00:00
+Downloading google_cloud_resource_manager-1.11.0-py2.py3-none-any.whl (320 kB)
+   --------------------------------------- 320.2/320.2 kB 10.0 MB/s eta 0:00:00
+Downloading google_cloud_storage-2.14.0-py2.py3-none-any.whl (121 kB)
+   ---------------------------------------- 121.6/121.6 kB 7.4 MB/s eta 0:00:00
+Downloading proto_plus-1.23.0-py3-none-any.whl (48 kB)
+   ---------------------------------------- 48.8/48.8 kB ? eta 0:00:00
+Downloading shapely-2.0.2-cp310-cp310-win_amd64.whl (1.4 MB)
+   ---------------------------------------- 1.4/1.4 MB 15.3 MB/s eta 0:00:00
+Downloading google_cloud_core-2.4.1-py2.py3-none-any.whl (29 kB)
+Downloading google_resumable_media-2.7.0-py2.py3-none-any.whl (80 kB)
+   ---------------------------------------- 80.6/80.6 kB ? eta 0:00:00
+Downloading grpc_google_iam_v1-0.13.0-py2.py3-none-any.whl (25 kB)
+Downloading grpcio_status-1.60.0-py3-none-any.whl (14 kB)
+Downloading protobuf-4.25.2-cp310-abi3-win_amd64.whl (413 kB)
+   --------------------------------------- 413.4/413.4 kB 13.0 MB/s eta 0:00:00
+Installing collected packages: shapely, protobuf, google-crc32c, proto-plus, google-resumable-media, grpcio-status, grpc-google-iam-v1, google-cloud-core, google-cloud-storage, google-cloud-resource-manager, google-cloud-bigquery, google-cloud-aiplatform
+  Attempting uninstall: protobuf
+    Found existing installation: protobuf 3.20.3
+    Uninstalling protobuf-3.20.3:
+      Successfully uninstalled protobuf-3.20.3
+Successfully installed google-cloud-aiplatform-1.39.0 google-cloud-bigquery-3.15.0 google-cloud-core-2.4.1 google-cloud-resource-manager-1.11.0 google-cloud-storage-2.14.0 google-crc32c-1.5.0 google-resumable-media-2.7.0 grpc-google-iam-v1-0.13.0 grpcio-status-1.60.0 proto-plus-1.23.0 protobuf-4.25.2 shapely-2.0.2

@@ -38,32 +38,22 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
 
     @staticmethod
     def _get_api_key(args, engine_storage):
-        api_key = get_api_key('anyscale_endpoints', args, engine_storage, strict=False)
-        if api_key is None:
-            api_key = get_api_key('openai', args, engine_storage)
-        return api_key
+        return get_api_key('anyscale_endpoints', args, engine_storage, strict=True)
 
     @contextlib.contextmanager
     def _anyscale_base_api(self, args: dict, key='OPENAI_API_BASE'):
         """ Temporarily updates the API base env var to point towards the Anyscale URL. """
         old_base = os.environ.get(key, OPENAI_API_BASE)
         os.environ[key] = ANYSCALE_API_BASE
-        oai_key = args.get('using', {}).get('openai_api_key', None)  # remove this arg override once #7496 is fixed
-
         try:
             if 'using' not in args:
                 args['using'] = {}
-            api_key = AnyscaleEndpointsHandler._get_api_key(args.get('using', {}), self.engine_storage)
+            api_key = AnyscaleEndpointsHandler._get_api_key(args, self.engine_storage)
+            args['using']['openai_api_key'] = api_key  # add key as expected by OpenAIHandler
             args['using']['api_key'] = api_key
             yield  # enter
-        finally:
-            # exit
+        finally:  # exit
             os.environ[key] = old_base
-            if 'using' in args and 'api_key' in args['using']:
-                if oai_key is not None:
-                    args['using']['api_key'] = oai_key
-                else:
-                    del args['using']['api_key']
 
     def create(self, target, args=None, **kwargs):
         with self._anyscale_base_api(args):
@@ -72,10 +62,6 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
             _args = self.model_storage.json_get('args')
             base_models = self.chat_completion_models
             self.chat_completion_models = _args.get('chat_completion_models', base_models) if _args else base_models
-
-            # add key expected by OpenAIHandler
-            args = self._add_api_key_as_openai(args)
-
             super().create(target, args, **kwargs)
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
@@ -85,20 +71,12 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
             _args = self.model_storage.json_get('args')
             base_models = self.chat_completion_models
             self.chat_completion_models = _args.get('chat_completion_models', base_models) if _args else base_models
-
-            # add key expected by OpenAIHandler
-            args = self._add_api_key_as_openai(args)
-
             return super().predict(df, args)
 
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         with self._anyscale_base_api(args):
             using_args = args.get('using', {})
             self._set_models(using_args)
-
-            # add key expected by OpenAIHandler
-            args = self._add_api_key_as_openai(args)
-
             super().finetune(df, args)
             # rewrite chat_completion_models to include the newly fine-tuned model
             args = self.model_storage.json_get('args')
@@ -107,8 +85,11 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
         args = self.model_storage.json_get('args')
-        if 'api_key' in args:
-            del args['api_key']
+
+        # keys are not shown
+        for arg in ('api_key', 'openai_api_key'):
+            if arg in args:
+                del args[arg]
 
         if attribute == 'args':
             return pd.DataFrame(args.items(), columns=['key', 'value'])
@@ -122,18 +103,11 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
             return pd.DataFrame(tables, columns=['tables'])
 
     def _set_models(self, args):
-        api_key = get_api_key('anyscale', args, self.engine_storage)
+        api_key = get_api_key('anyscale_endpoints', args, self.engine_storage)
         client = self._get_client(api_key)
         self.all_models = [m.id for m in client.models.list()]
         self.chat_completion_models = [m.id for m in client.models.list() if m.rayllm_metadata['engine_config']['model_type'] == 'text-generation']  # noqa
         self.supported_ft_models = self.chat_completion_models  # base models compatible with fine-tuning
-
-    def _add_api_key_as_openai(self, args):
-        """ Add `openai_api_key` to the `using` dict as OpenAI handler expects it. """
-        if not args.get('using', {}):
-            args['using'] = {}
-        args['using']['openai_api_key'] = get_api_key('anyscale', args, self.engine_storage)
-        return args
 
     @staticmethod
     def _check_ft_cols(df, cols):

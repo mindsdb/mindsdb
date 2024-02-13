@@ -339,7 +339,7 @@ def ft_code_formatter(
     # split code into chunks
     code_splitter = RecursiveCharacterTextSplitter.from_language(
         language=getattr(Language, language.upper()),
-        chunk_size=3*chunk_size,  # each triplet element has `chunk_size`
+        chunk_size=3 * chunk_size,  # each triplet element has `chunk_size`
         chunk_overlap=chunk_overlap,  # some overlap here is fine
     )
     chunk_docs = code_splitter.create_documents(list(df['code']))
@@ -359,7 +359,7 @@ def ft_code_formatter(
     roles = []
     contents = []
     for idx in range(0, len(chunks), 3):
-        pre, mid, suf = chunks[idx:idx+3]
+        pre, mid, suf = chunks[idx:idx + 3]
         interleaved = list(itertools.chain(*zip(templates, (pre, suf, mid))))
         user = "\n".join(interleaved[:-1])
         assistant = "\n".join(interleaved[-1:])

@@ -1,10 +1,11 @@
 import unittest
+from textwrap import dedent, indent
 
 import pandas as pd
 
-from mindsdb.integrations.libs.llm_utils import get_completed_prompts
-from mindsdb.integrations.libs.llm_utils import ft_jsonl_validation, ft_chat_format_validation
 from mindsdb.integrations.libs.llm_utils import ft_chat_formatter, ft_code_formatter
+from mindsdb.integrations.libs.llm_utils import ft_jsonl_validation, ft_chat_format_validation
+from mindsdb.integrations.libs.llm_utils import get_completed_prompts
 
 
 class TestLLM(unittest.TestCase):
@@ -99,7 +100,7 @@ class TestLLM(unittest.TestCase):
         prompts, empties = get_completed_prompts(base_template, df)
 
         # should detect a single missing value in the relevant column (last row)
-        assert empties.shape == (1, )
+        assert empties.shape == (1,)
         assert empties.dtype == int
         assert empties[0] == 2
 
@@ -185,21 +186,22 @@ class TestLLM(unittest.TestCase):
 
     def test_ft_code_formatter(self):
         df = pd.DataFrame({'code': [
-            # mind the base indent level!
-        """
-        # format chunks into prompts
-        roles = []
-        contents = []
-        """
-        +
-        """
-        for idx in range(0, len(chunks), 3):
-            pre, mid, suf = chunks[idx:idx+3]
-        """
-        +
-        """
-            interleaved = list(itertools.chain(*zip(templates, (pre, mid, suf))))
-        """
+            indent(dedent(
+                """
+                # format chunks into prompts
+                roles = []
+                contents = []
+            
+                for idx in range(0, len(chunks), 3):
+                """),
+                " " * 4 * 2)  # mind the base indent level
+            +
+            indent(dedent(
+                """pre, mid, suf = chunks[idx:idx+3]
+        
+                interleaved = list(itertools.chain(*zip(templates, (pre, mid, suf))))
+                """),
+                " " * 4 * 3)  # mind the base indent level
         ]})
         df2 = ft_code_formatter(df)
 

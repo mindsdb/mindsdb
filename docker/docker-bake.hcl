@@ -13,8 +13,8 @@ variable "IMAGE" {
 variable "VERSION" {
   default = "unknown"
 }
-variable "PLATFORM" {
-  default="linux/amd64"
+variable "PLATFORMS" {
+  default = ["linux/amd64", "linux/arm64"]
 }
 
 # Generate the list of tags for a given image.
@@ -39,7 +39,7 @@ function "get_tags" {
 target "images" {
   name = item.name
   dockerfile = "docker/mindsdb.Dockerfile" # If you change this, also change it in target:builder
-  platforms = ["${PLATFORM}"]
+  platforms = PLATFORMS
   matrix = {
     item = [
       {

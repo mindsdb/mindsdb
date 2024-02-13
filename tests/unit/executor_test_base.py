@@ -327,7 +327,10 @@ class BaseExecutorTest(BaseUnitTest):
             for table, df in tables.items():
                 con.register(table, df)
             try:
-                result_df = con.execute(query).fetchdf()
+                con.execute(query)
+                columns = [c[0] for c in con.description]
+                result_df = pd.DataFrame(con.fetchall(), columns=columns)
+
                 result_df = result_df.replace({np.nan: None})
             except Exception:
                 # it can be not supported command like update or insert

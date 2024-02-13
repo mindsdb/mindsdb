@@ -79,6 +79,13 @@ class GetLeaf(Resource):
                     'children': val
                 } for key, val in schemas.items()]
         elif db['type'] == 'system':
-            # TODO
-            tables = []
+            system_db = ca.database_controller.get_system_db(db_name)
+            tables = system_db.get_list()
+            tables = [{
+                'name': table.name,
+                'class': 'table',
+                'type': None,
+                'engine': None,
+                'deletable': False,
+            } for table in tables]
         return tables

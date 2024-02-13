@@ -22,7 +22,7 @@ Create an AI engine from the [Cohere handler](https://github.com/mindsdb/mindsdb
 CREATE ML_ENGINE cohere_engine
 FROM cohere
 USING
-      api_key = 'api-key-value';
+    cohere_api_key = 'your-cohere-api-key';
 ```
 
 Create a model using `cohere_engine` as an engine.
@@ -51,7 +51,17 @@ USING
       column = 'text';
 ```
 
-Query the model to get predictions.
+Where:
+
+| Name              | Description                                                            |
+|-------------------|------------------------------------------------------------------------|
+| `task`            | It defines the task to be accomplished.                                |
+| `column`          | It defines the column with the text to be acted upon.                  |
+| `engine`          | It defines the Cohere engine.                                          |
+
+## Usage
+
+Once you have created an Cohere model, you can use it to make predictions.
 
 ```sql
 SELECT text, language

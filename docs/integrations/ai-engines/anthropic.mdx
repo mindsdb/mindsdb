@@ -22,7 +22,7 @@ Create an AI engine from the [Anthropic handler](https://github.com/mindsdb/mind
 CREATE ML_ENGINE anthropic_engine
 FROM anthropic
 USING
-      api_key = 'api-key-value';
+    anthropic_api_key = 'your-anthropic-api-key';
 ```
 
 Create a model using `anthropic_engine` as an engine.
@@ -47,11 +47,35 @@ Create and deploy the Anthropic model within MindsDB to ask any question.
 CREATE MODEL anthropic_model
 PREDICT answer
 USING
-      engine = 'anthropic_engine',
-      column = 'question';
+    column = 'question',
+    engine = 'anthropic_engine',
+    max_tokens = 300,
+    model = 'claude-1'; -- choose one of claude-1 or claude-2
 ```
 
-Query the model to get predictions.
+Where:
+
+| Name              | Description                                                               |
+|-------------------|---------------------------------------------------------------------------|
+| `column`          | It defines the prompt to the model.                                       |
+| `engine`          | It defines the Anthropic engine.                                          |
+| `max_tokens`      | It defines the maximum number of tokens to generate before stopping.      |
+| `model`           | It defines model that will complete your prompt.                          |
+
+<Info>
+**Default Model**
+When you create an Anthropic model in MindsDB, it uses the `claude-2` model by default. But you can use the `claude-1` model as well by passing it to the `model` parameter in the `USING` clause of the `CREATE MODEL` statement.
+</Info>
+
+<Info>
+**Default Max Tokens**
+When you create an Anthropic model in MindsDB, it uses 100 tokens as the maximum by default. But you can adjust this value by passing it to the `max_tokens` parameter in the `USING` clause of the `CREATE MODEL` statement.
+</Info>
+
+## Usage
+
+Once you have created an Anthropic model, you can use it to make predictions.
+
 
 ```sql
 SELECT question, answer

@@ -28,13 +28,13 @@ OpenAI supports fine-tuning of some of its models [listed here](https://platform
 
 We use the [`CREATE ML_ENGINE`](/sql/create/ml-engine) and [`CREATE MODEL`](/sql/create/model) statement to bring the OpenAI models to MindsDB.
 
-We first create the openai engine by providing the api_key:
+We first create the openai engine by providing the openai_api_key:
 
 ```sql
 CREATE ML_ENGINE openai_engine
 FROM openai
 USING
-  api_key= 'YOUR_OPENAI_API_KEY';
+  openai_api_key= 'YOUR_OPENAI_API_KEY';
 ```
 
 Next, use this engine to create the model as:

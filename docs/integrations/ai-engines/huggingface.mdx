@@ -19,7 +19,8 @@ Create an AI engine from the [Hugging Face handler](https://github.com/mindsdb/m
 
 ```sql
 CREATE ML_ENGINE huggingface_engine
-FROM huggingface;
+FROM huggingface
+USING huggingface_api_api_key = 'hf_xxx';
 ```
 
 Create a model using `huggingface_engine` as an engine.

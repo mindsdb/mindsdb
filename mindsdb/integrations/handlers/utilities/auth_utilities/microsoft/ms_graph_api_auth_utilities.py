@@ -20,8 +20,11 @@ class MSGraphAPIAuthManager:
         self.tenant_id = tenant_id
         self.code = code
 
+        # get the redirect uri from handler storage if it exists
         if self.handler_storage.json_get('args'):
             self.redirect_uri = self.handler_storage.json_get('args').get('redirect_uri')
+        # otherwise, get it from the request headers
+        # this is done because when the chatbot task runs, it doesn't have access to the request headers because it does not come through a request
         else:
             self.redirect_uri = request.headers['ORIGIN'] + '/verify-auth'
             if '127.0.0.1' in self.redirect_uri:

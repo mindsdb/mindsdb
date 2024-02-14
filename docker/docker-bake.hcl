@@ -16,6 +16,22 @@ variable "VERSION" {
 variable "PLATFORMS" {
   default = ["linux/amd64", "linux/arm64"]
 }
+variable "BRANCH" {
+  default = "stable"
+}
+
+function "get_cache_to" {
+    result = [
+      "type=registry,oci-mediatypes=true,mode=max,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:${BRANCH}"
+    ]
+}
+function "get_cache_from" {
+    result = [
+      "type=registry,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:${BRANCH}",
+      "type=registry,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:staging"
+      "type=registry,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:stable"
+    ]
+}
 
 # Generate the list of tags for a given image.
 # e.g. for the 'cloud' images this generates:
@@ -75,5 +91,7 @@ target "images" {
   args = {
     EXTRAS = item.extras
   }
+  cache-to = get_cache_to()
+  cache-from = get_cache_from()
 }
 

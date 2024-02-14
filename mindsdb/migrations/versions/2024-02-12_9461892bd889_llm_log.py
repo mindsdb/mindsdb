@@ -22,7 +22,7 @@ def upgrade():
     op.create_table(
         'llm_log',
         sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('company_id', sa.Integer(), nullable=False),
+        sa.Column('company_id', sa.Integer(), nullable=True),
         sa.Column('api_key', sa.String(), nullable=True),
         sa.Column('model_id', sa.Integer(), nullable=False),
         sa.Column('input', sa.String(), nullable=True),

@@ -33,3 +33,20 @@ CREATE MODEL airline_model
 	verbose=True,
 	prompt_template="Answer the user input in a helpful way";
 ```
+
+Using mindsdb litellm server
+```sql
+CREATE MODEL airline_model5
+	PREDICT answer 
+    USING
+	engine = "langchain_engine",
+    provider='litellm',
+	model_name = "assistant",
+    api_key = '<mindsdb api key>',
+    base_url="https://ai.dev.mindsdb.com",
+	mode = "conversational",
+	user_column = "question",
+	assistant_column = "answer",    
+	verbose=True,
+	prompt_template="Answer the user input in a helpful way";
+```

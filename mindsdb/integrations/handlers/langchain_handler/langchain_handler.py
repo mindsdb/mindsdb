@@ -9,7 +9,7 @@ import pandas as pd
 from langchain.schema import SystemMessage
 from langchain.agents import AgentType
 from langchain.llms import OpenAI
-from langchain.chat_models import ChatAnthropic, ChatOpenAI, ChatAnyscale  # GPT-4 fails to follow the output langchain requires, avoid using for now
+from langchain.chat_models import ChatAnthropic, ChatOpenAI, ChatAnyscale, ChatLiteLLM  # GPT-4 fails to follow the output langchain requires, avoid using for now
 from langchain.agents import initialize_agent, create_sql_agent
 from langchain.prompts import PromptTemplate
 from langchain.agents.agent_toolkits import SQLDatabaseToolkit
@@ -61,7 +61,8 @@ class LangChainHandler(BaseMLEngine):
         self.engine_to_supported_modes = {
             'openai': ['default', 'conversational', 'conversational-full', 'image'],
             'anthropic': ['default', 'conversational', 'conversational-full'],
-            'anyscale': ['default', 'conversational']
+            'anyscale': ['default', 'conversational'],
+            'litellm': ['default', 'conversational'],
         }
         self.default_model = _DEFAULT_MODEL
         self.default_max_tokens = _DEFAULT_MAX_TOKENS
@@ -177,6 +178,23 @@ class LangChainHandler(BaseMLEngine):
             model_kwargs['stop_sequences'] = pred_args.get('stop_sequences', None)
             model_kwargs['serper_api_key'] = serper_api_key
             model_kwargs['anthropic_api_key'] = get_api_key('anthropic', args, self.engine_storage)
+        elif provider == 'litellm':
+            model_kwargs['model_name'] = model_name
+            model_kwargs['temperature'] = temperature
+            model_kwargs['max_tokens'] = max_tokens
+            model_kwargs['serper_api_key'] = serper_api_key
+            model_kwargs['n'] = pred_args.get('n', None)
+            model_kwargs['api_base'] = args.get('base_url', None)
+            model_kwargs['best_of'] = pred_args.get('best_of', None)
+            model_kwargs['custom_llm_provider'] = 'openai'
+            model_kwargs['model_kwargs'] = {
+                'api_key': get_api_key(provider, args, self.engine_storage),
+                'top_p': top_p,
+                'request_timeout': timeout,
+                'frequency_penalty': pred_args.get('frequency_penalty', None),
+                'presence_penalty': pred_args.get('presence_penalty', None),
+                'logit_bias': pred_args.get('logit_bias', None),
+            }
         elif provider in ('openai', 'anyscale'):
             # OpenAI compatible
             model_kwargs['model_name'] = model_name
@@ -190,7 +208,7 @@ class LangChainHandler(BaseMLEngine):
             model_kwargs['n'] = pred_args.get('n', None)
             model_kwargs['best_of'] = pred_args.get('best_of', None)
             model_kwargs['logit_bias'] = pred_args.get('logit_bias', None)
-            model_kwargs['base_url'] = args.get('base_url', None)
+            model_kwargs[f'{provider}_api_base'] = args.get('base_url', None)
             model_kwargs[f'{provider}_api_key'] = get_api_key(provider, args, self.engine_storage)
             model_kwargs[f'{provider}_organization'] = args.get('api_organization', None)
 
@@ -199,7 +217,6 @@ class LangChainHandler(BaseMLEngine):
 
     def _create_chat_model(self, args, pred_args):
         model_kwargs = self._get_chat_model_params(args, pred_args)
-        model_name = args.get('model_name', self.default_model)
 
         if args['provider'] == 'anthropic':
             return ChatAnthropic(**model_kwargs)
@@ -207,6 +224,8 @@ class LangChainHandler(BaseMLEngine):
             return ChatOpenAI(**model_kwargs)
         if args['provider'] == 'anyscale':
             return ChatAnyscale(**model_kwargs)
+        if args['provider'] == 'litellm':
+            return ChatLiteLLM(**model_kwargs)
 
     def conversational_completion(self, df, args=None, pred_args=None):
         pred_args = pred_args if pred_args else {}

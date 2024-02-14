@@ -379,13 +379,13 @@ def ft_code_formatter(
 def ft_cqa_formatter(
         df: pd.DataFrame,
 
-        question_col = 'question',
-        answer_col = 'answer',
-        instruction_col = 'instruction',
-        context_col = 'context',
+        question_col='question',
+        answer_col='answer',
+        instruction_col='instruction',
+        context_col='context',
 
-        default_instruction = 'You are a helpful assistant.',
-        default_context = '',
+        default_instruction='You are a helpful assistant.',
+        default_context='',
 ) -> pd.DataFrame:
 
     # input and setup validation

@@ -185,22 +185,23 @@ class TestLLM(unittest.TestCase):
             ft_jsonl_validation([line for line in chats])
 
     def test_ft_code_formatter(self):
-        df = pd.DataFrame({'code': ["".join([
-            indent(dedent(
-                """
-                # format chunks into prompts
-                roles = []
-                contents = []
+        df = pd.DataFrame({'code': ["".join(
+            [
+                indent(dedent(
+                    """
+                    # format chunks into prompts
+                    roles = []
+                    contents = []
 
-                for idx in range(0, len(chunks), 3):
-                """),
-                " " * 4 * 2),  # mind the base indent level
-            indent(dedent(
-                """pre, mid, suf = chunks[idx:idx+3]
+                    for idx in range(0, len(chunks), 3):
+                    """),
+                    " " * 4 * 2),  # mind the base indent level
+                indent(dedent(
+                    """pre, mid, suf = chunks[idx:idx+3]
 
-                interleaved = list(itertools.chain(*zip(templates, (pre, mid, suf))))
-                """),
-                " " * 4 * 3)  # mind the base indent level
+                    interleaved = list(itertools.chain(*zip(templates, (pre, mid, suf))))
+                    """),
+                    " " * 4 * 3)  # mind the base indent level
             ])
         ]})
         df2 = ft_code_formatter(df)

@@ -21,17 +21,17 @@ variable "BRANCH" {
 }
 
 function "get_cache_to" {
-  params = []
+  params = [target]
   result = [
-    "type=registry,image-manifest=true,oci-mediatypes=true,mode=max,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:${BRANCH}"
+    "type=registry,image-manifest=true,oci-mediatypes=true,mode=max,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:${BRANCH}-${target}"
   ]
 }
 function "get_cache_from" {
-  params = []
+  params = [target]
   result = [
-    "type=registry,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:${BRANCH}",
-    "type=registry,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:staging",
-    "type=registry,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:stable"
+    "type=registry,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:${BRANCH}-${target}",
+    "type=registry,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:staging-${target}",
+    "type=registry,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:stable-${target}"
   ]
 }
 
@@ -92,7 +92,7 @@ target "images" {
   args = {
     EXTRAS = item.extras
   }
-  cache-to = get_cache_to()
-  cache-from = get_cache_from()
+  cache-to = get_cache_to(item.name)
+  cache-from = get_cache_from(item.name)
 }
 

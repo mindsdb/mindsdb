@@ -50,7 +50,7 @@ jobs:
   trigger_deploy:
     # Trigger private repo to deploy to dev envs
     runs-on: [self-hosted, dev]
-    needs: [build]
+    needs: [build, get-deploy-labels]
     strategy:
       matrix:
         deploy-env: ${{fromJson(needs.get-deploy-labels.outputs.deploy-envs)}}

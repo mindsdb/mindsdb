@@ -15,10 +15,10 @@ Our tests are organized into several subdirectories, each focusing on different 
 To run the tests, you need to install the necessary dependencies. You can do this by running the following command:
 
 ```
-pip install -r requirements/requirements-test.txt
+pip install -r requirements/requirements-test.txt && pip install -r  requirements/requirements.txt
 ```
 
-This command will install all the required packages as listed in requirements-test.txt.
+This command will install all the required packages as listed in requirements-test.txt and the requirements.txt files.
 
 ## Runing tests
 

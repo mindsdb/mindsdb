@@ -309,16 +309,16 @@ class TwelveLabsAPIClient:
 
         Parameters
         ----------
-        index_id: str
+        index_id PR: str
             ID of the index.
 
-        classification_options: List[str]
+        classification_options PR: List[str]
             List of the sources of information to be used for classification.
 
-        conversation_option: str
+        conversation_option PR: str
             The type of match to be performed.
 
-        classes: List[Dict]
+        classes PR: List[Dict]
             List of classes to be used for classification.
             Each class should be a dictionary with the following keys:
             - name: str

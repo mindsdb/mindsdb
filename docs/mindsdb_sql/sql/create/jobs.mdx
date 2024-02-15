@@ -83,7 +83,7 @@ Imagine you have the `fruit_data` table that contains the following:
 +-------+-----------+
 ```
 
-When you run the `SELECT` query with the `LAST` keyword for the first time, it'll fetch all records as below.
+When you run the `SELECT` query with the `LAST` keyword for the first time, it'll give an empty output.
 
 ```sql
 SELECT id, name
@@ -92,6 +92,16 @@ WHERE id > LAST;
 ```
 
 This query returns:
+
+```sql
++-------+-----------+
+| id    | name      |
++-------+-----------+
+| null  | null      |
++-------+-----------+
+```
+
+Now imagine you inserted a new record into the `fruit_data` table:
 
 ```sql
 +-------+-----------+
@@ -99,10 +109,11 @@ This query returns:
 +-------+-----------+
 | 1     | apple     |
 | 2     | orange    |
+| 3     | pear      |
 +-------+-----------+
 ```
 
-When you run this query again, you'll get an empty output, assuming there were no new data rows inserted since the last time you queried this table.
+When you run the `SELECT` query with the `LAST` keyword again, you'll get only the newly added record as output.
 
 ```sql
 SELECT id, name
@@ -111,24 +122,6 @@ WHERE id > LAST;
 ```
 
 This query returns:
-
-```sql
-+-------+-----------+
-| id    | name      |
-+-------+-----------+
-|       |           |
-+-------+-----------+
-```
-
-Let's insert another row with values `(3, 'pear')` into the `fruit_data` table. And now this query returns just the newly added row.
-
-```sql
-SELECT id, name
-FROM fruit_data
-WHERE id > LAST;
-```
-
-This returns:
 
 ```sql
 +-------+-----------+
@@ -137,6 +130,8 @@ This returns:
 | 3     | pear      |
 +-------+-----------+
 ```
+
+From this point on, whenever you add new records into the `fruit_data` table, it'll be returned by the next run of the `SELECT` query with the `LAST` keyword. And, if you do not add any new rocords between the query runs, then the output will be null.
 
 ## Examples
 

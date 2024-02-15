@@ -8,11 +8,11 @@ import pandas as pd
 
 from langchain.schema import SystemMessage
 from langchain.agents import AgentType
-from langchain.llms import OpenAI
-from langchain.chat_models import ChatAnthropic, ChatOpenAI  # GPT-4 fails to follow the output langchain requires, avoid using for now
+from langchain_community.llms import OpenAI
+from langchain_community.chat_models import ChatAnthropic, ChatOpenAI  # GPT-4 fails to follow the output langchain requires, avoid using for now
 from langchain.agents import initialize_agent, create_sql_agent
 from langchain.prompts import PromptTemplate
-from langchain.agents.agent_toolkits import SQLDatabaseToolkit
+from langchain_community.agents.agent_toolkits import SQLDatabaseToolkit
 from langchain.chains.conversation.memory import ConversationSummaryBufferMemory
 
 from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS as OPEN_AI_CHAT_MODELS

@@ -3,7 +3,7 @@ import tiktoken
 from typing import Callable
 from mindsdb_sql import parse_sql, Insert
 
-from langchain.utilities import GoogleSerperAPIWrapper
+from langchain_community.utilities import GoogleSerperAPIWrapper
 from langchain.prompts import PromptTemplate
 from langchain.agents import load_tools, Tool
 

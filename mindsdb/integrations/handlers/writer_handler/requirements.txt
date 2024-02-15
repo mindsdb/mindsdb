@@ -3,4 +3,4 @@ pydantic>=1.10.8
 nltk>=3.8.1
 rouge-score>=0.1.2
 scipy
-langchain==0.0.347
+langchain-community  # for Writer LLM integration

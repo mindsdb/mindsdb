@@ -19,4 +19,4 @@ class DBConnectionUser(HttpUser):
             })
             response.raise_for_status()
         except Exception as e:
-            logging.error('Logging failed: ', e)
+            logging.error('Logging to MindsDB failed: ', e)

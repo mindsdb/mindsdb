@@ -1,15 +1,15 @@
 from typing import List
 from collections import OrderedDict
 
-from sqlalchemy import text, Boolean
+from sqlalchemy import Boolean
 import pandas as pd
 
-from mindsdb_sql.parser.ast import Select, BinaryOperation, Identifier, Constant, Star, Function
+from mindsdb_sql.parser.ast import Select, BinaryOperation, Identifier, Constant, Star
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.planner.utils import query_traversal
 
 from mindsdb.utilities.functions import resolve_table_identifier
-from mindsdb.api.executor.utilities.sql import query_df, get_query_tables
+from mindsdb.api.executor.utilities.sql import get_query_tables
 from mindsdb.utilities.exception import EntityNotExistsError
 import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.context import context as ctx
@@ -85,6 +85,7 @@ class LogDBController:
 
         # region check that only allowed identifiers are used in the query
         available_columns_names = [column.name.lower() for column in db.LLMLog.__table__.columns]
+        available_columns_names.remove('id')
 
         def check_columns(node, is_table, **kwargs):
             # region replace * to available columns

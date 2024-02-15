@@ -251,9 +251,16 @@
     },
     {
       "group": "Concepts",
-      "pages": [     
+      "pages": [   
         {
-          "group": "DataSources",
+          "group": "AI Tables",
+          "pages":[
+            "ai-engines/overview",
+            "generative-ai-tables"
+          ] 
+        },  
+        {
+          "group": "Data Sources",
           "pages": [
             "datasources/overview",
             "sql/create/database",
@@ -271,18 +278,11 @@
           ] 
         },
         {
-          "group": "JOBS & Automation",
+          "group": "Automation",
           "pages": [
             "sql/create/jobs",
             "sql/create/trigger"
           ]
-        },
-        {
-          "group": "AI-Tables",
-          "pages":[
-            "ai-engines/overview",
-            "generative-ai-tables"
-          ] 
         }
       ]
     },

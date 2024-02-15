@@ -20,10 +20,10 @@ In this handler,python client of cohere api is used and more information about t
 The first step is to create a ML Engine with the new `cohere` engine.
 
 ~~~~sql
-CREATE ML_ENGINE Cohere_ML_Engine
+CREATE ML_ENGINE cohere_engine
 FROM cohere
 USING
-  api_key = 'your_api_key';
+  cohere_api_key = 'your_api_key';
 ~~~~
 
 ### Detect_language 
@@ -34,8 +34,7 @@ PREDICT language
 USING
   task = 'language-detection',
   column = 'text',
-  engine = 'cohere',
-  api_key = 'your_api_key'
+  engine = 'cohere_engine'
 ~~~~
 Query the model:
 ~~~~sql
@@ -53,8 +52,7 @@ PREDICT summary
 USING
   task = 'text-summarization',
   column = 'text',
-  engine = 'cohere',
-  api_key = 'your_api_key'
+  engine = 'cohere_engine'
 
 SELECT text, summary
 FROM mindsdb.cohere_text_summarization
@@ -69,8 +67,7 @@ PREDICT next_text
 USING
   task = 'text-generation',
   column = 'text',
-  engine = 'cohere',
-  api_key = 'your_api_key'
+  engine = 'cohere_engine'
 
 SELECT text, next_text
 FROM mindsdb.cohere_text_generation

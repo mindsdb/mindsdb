@@ -19,7 +19,7 @@ class TestClipdrop(BaseMLAPITest):
             CREATE ML_ENGINE clipdrop_engine
             FROM clipdrop
             USING
-            api_key = '{self.get_api_key('CLIPDROP_API_KEY')}';
+            clipdrop_api_key = '{self.get_api_key('CLIPDROP_API_KEY')}';
             """
         )
 

@@ -7,6 +7,14 @@ This is the implementation of the Ckan data handler for MindsDB.
 
 [CKAN](https://ckan.org/) is a Data Catalogue for Open Data. It stores data in a [DataStore](http://docs.ckan.org/en/2.9/maintaining/datastore.html). To retrieve data from CKAN, you need to use the [CKAN API](https://ckan.org/docs/api/). 
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect Ckan to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to Ckan.
+
 ## Implementation
 
 You can connect CKAN by creating a CKAN API client. In this handler, you can create a CKAN API client with [ckanapi](https://github.com/ckan/ckanapi).
@@ -29,10 +37,6 @@ Here is an example:
 ```python
 ckan.action.datastore_search_sql(sql='SELECT * FROM "resource_id"')
 ```
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/ckan_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

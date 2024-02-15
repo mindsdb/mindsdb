@@ -9,7 +9,7 @@ try:
     from hierarchicalforecast.core import HierarchicalReconciliation
     from hierarchicalforecast.methods import BottomUp
     from hierarchicalforecast.utils import aggregate
-except ImportError:
+except (ImportError, SystemError):
     HierarchicalReconciliation = None
     BottomUp = None
     aggregate = None

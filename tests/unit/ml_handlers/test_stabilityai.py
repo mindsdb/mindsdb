@@ -19,7 +19,7 @@ class TestStabilityAI(BaseMLAPITest):
             CREATE ML_ENGINE stability_engine
             FROM stabilityai
             USING
-            api_key = '{self.get_api_key('STABILITY_API_KEY')}';
+            stabilityai_api_key = '{self.get_api_key('STABILITY_API_KEY')}';
             """
         )
 

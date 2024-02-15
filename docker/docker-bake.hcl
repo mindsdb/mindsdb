@@ -80,10 +80,9 @@ target "images" {
       },
       {
         name = "cloud"
-        extras = ".[lightwood,huggingface,statsforecast-extra,neuralforecast-extra,timegpt,surrealdb,mssql,youtube,ignite,gmail,pgvector,llama_index,writer,rag,github,snowflake,clickhouse] darts datasetsforecast"
+        extras = ".[lightwood,huggingface,statsforecast-extra,neuralforecast-extra,timegpt,surrealdb,mssql,youtube,ignite,gmail,pgvector,llama_index,writer,rag,github,snowflake,clickhouse,couchbase] darts datasetsforecast"
         target = ""
       },
-
     ]
   }
   target = item.target

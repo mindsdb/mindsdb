@@ -4,7 +4,9 @@
 """
 import warnings
 from typing import Iterable, List, Optional
-from mindsdb_sql import parse_sql
+from mindsdb_sql import parse_sql, Identifier
+from mindsdb_sql.planner.utils import query_traversal
+
 from langchain.sql_database import SQLDatabase
 
 from mindsdb.utilities import log
@@ -17,6 +19,7 @@ class MindsDBSQL(SQLDatabase):
     def __init__(
         self,
         engine,
+        database: Optional[str] = 'mindsdb',
         schema: Optional[str] = None,
         metadata: Optional = None,
         ignore_tables: Optional[List[str]] = None,
@@ -33,6 +36,7 @@ class MindsDBSQL(SQLDatabase):
         
         self._tables_to_include = include_tables
         self._tables_to_ignore = []
+        self._database = database
         if not self._tables_to_include:
             # ignore_tables and include_tables should not be used together.
             # include_tables takes priority if it's set.
@@ -43,11 +47,25 @@ class MindsDBSQL(SQLDatabase):
         return 'mindsdb'
 
     def _call_engine(self, queries: List[str]):
+        # switch database
+        self._engine.session.database = self._database
         for query in queries:
             self._engine.is_executed = False
             ast_query = parse_sql(query.strip('`'), dialect='mindsdb')
+            self._check_tables(ast_query)
+
             ret = self._engine.execute_command(ast_query)
         return ret
+
+    def _check_tables(self, ast_query):
+
+        def _check_f(node, is_table=None, **kwargs):
+            if is_table and isinstance(node, Identifier):
+                table = node.parts[-1]
+                if table not in self._tables_to_include:
+                    ValueError(f"Table {table} not found. Available tables: {', '.join(self._tables_to_include)}")
+
+        query_traversal(ast_query, _check_f)
 
     def get_usable_table_names(self) -> Iterable[str]:
         if self._tables_to_include:
@@ -102,6 +120,11 @@ class MindsDBSQL(SQLDatabase):
         final_str = "\n\n".join(tables)
         return final_str
 
+    def get_table_columns(self, table_name: str) -> List[str]:
+        controller = self._metadata
+        cols_df = controller.get_data_handler(self._database).get_columns(table_name).data_frame
+        return cols_df['Field'].to_list()
+
     def _get_single_table_info(self, table_str: str) -> str:
         controller = self._metadata
         integration, table_name = table_str.split('.')
@@ -135,9 +158,23 @@ class MindsDBSQL(SQLDatabase):
         """
         def _tidy(result: List) -> str:
             return '\n'.join(['\t'.join([str(value) for value in row]) for row in result])
+
+        def _repr_result(ret):
+            limit_rows = 30
+            columns_str = ', '.join([repr(col.name) for col in ret.columns])
+            res = f'Output columns: {columns_str}\n'
+
+            if len(ret.data) > limit_rows:
+                res += f'Result has {len(ret.data)} rows. First {limit_rows} rows:\n'
+            else:
+                res += 'Result:\n'
+
+            res += _tidy(ret.data[:limit_rows])
+            return res
+
         ret = self._call_engine([command])
         if fetch == "all":
-            result = _tidy(ret.data)
+            result = _repr_result(ret)
         elif fetch == "one":
             result = _tidy(ret.data[0])
         else:

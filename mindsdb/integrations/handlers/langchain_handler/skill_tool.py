@@ -4,13 +4,15 @@ from mindsdb.integrations.libs.vectordatabase_handler import TableField
 from mindsdb.interfaces.storage import db
 from mindsdb.integrations.handlers.langchain_handler.mindsdb_database_agent import MindsDBSQL
 
+from langchain.agents import Tool
+
 import os
 from typing import List
 
 _DEFAULT_TOP_K_SIMILARITY_SEARCH = 5
 
 
-def _make_text_to_sql_tools(skill: db.Skills, llm, executor) -> List:
+def _make_text_to_sql_langchain_tools(skill: db.Skills, llm, executor) -> List:
     # To prevent dependency on Langchain unless an actual tool uses it.
     try:
         from langchain.agents.agent_toolkits import SQLDatabaseToolkit
@@ -19,26 +21,66 @@ def _make_text_to_sql_tools(skill: db.Skills, llm, executor) -> List:
         raise ImportError('To use the text-to-SQL skill, please install langchain with `pip install langchain`')
     database = skill.params['database']
     tables = skill.params['tables']
-    tables_to_include = [f'{database}.{table}' for table in tables]
+    # tables_to_include = [f'{database}.{table}' for table in tables]
     db = MindsDBSQL(
+        database=database,
         engine=executor,
         metadata=executor.session.integration_controller,
-        include_tables=tables_to_include
+        include_tables=tables
     )
     sql_database_tools = SQLDatabaseToolkit(db=db, llm=llm).get_tools()
     description = skill.params.get('description', '')
-    tables_list = ','.join([f'{database}.{table}' for table in tables])
+
+    if description:
+        description = f'Use this tool if you need data about {description}. '
+
+    tables_list = ','.join(tables)
     for i, tool in enumerate(sql_database_tools):
         if isinstance(tool, QuerySQLDataBaseTool):
             # Add our own custom description so our agent knows when to query this table.
             tool.description = (
-                f'Use this tool if you need data about {description}. '
+                f'{description}'
                 'Use the conversation context to decide which table to query. '
                 f'These are the available tables: {tables_list}.\n'
                 f'{tool.description}'
             )
             sql_database_tools[i] = tool
     return sql_database_tools
+
+
+def _make_text_to_sql_tools(skill: db.Skills, llm, executor) -> List:
+    '''
+    alternative to _make_text_to_sql_langchain_tools
+    creates custom tool instead of using SQLDatabaseToolkit
+    '''
+
+    database = skill.params['database']
+    tables = skill.params['tables']
+
+    db = MindsDBSQL(
+        database=database,
+        engine=executor,
+        metadata=executor.session.integration_controller,
+        include_tables=tables
+    )
+
+    description = (
+        "Use the conversation context to decide which table to query. "
+        "Input to this tool is a detailed and correct SQL query, output is a result from the database. "
+        "If the query is not correct, an error message will be returned. "
+        "If an error is returned, rewrite the query, check the query, and try again. "
+        "These are the available tables:\n"
+    )
+    for table in tables:
+        description += f'Table name: "{table}", columns {db.get_table_columns(table)}\n'
+
+    all_tools = []
+    all_tools.append(Tool(
+        name='sql_db_query',
+        func=db.run_no_throw,
+        description=description
+    ))
+    return all_tools
 
 
 def _get_rag_query_function(

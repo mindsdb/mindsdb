@@ -41,8 +41,8 @@ CREATE MODEL airline_model5
     USING
 	engine = "langchain_engine",
     provider='litellm',
-	model_name = "assistant",
-    api_key = '<mindsdb api key>',
+	model_name = "assistant", -- model created in mindsdb
+    api_key = '<mindsdb api key>', -- api key created in mindsdb
     base_url="https://ai.dev.mindsdb.com",
 	mode = "conversational",
 	user_column = "question",

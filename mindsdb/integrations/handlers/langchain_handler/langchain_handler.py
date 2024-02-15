@@ -168,7 +168,7 @@ class LangChainHandler(BaseMLEngine):
         timeout = pred_args.get('request_timeout', None)
         serper_api_key = self._get_serper_api_key(args, strict=False)
         model_kwargs = {}
-        provider = args['provider']
+        provider = args.get('provider', 'openai')
         if provider == 'anthropic':
             model_kwargs['model'] = model_name
             model_kwargs['temperature'] = temperature

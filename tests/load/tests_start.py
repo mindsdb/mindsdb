@@ -1,12 +1,11 @@
 import logging
 from locust import between, HttpUser
-from load.test_mysql import MySQLConnectionBehavior
 from load.test_postgresql import PostgreSQLConnectionBehavior
 from utils.config import get_value_from_json_env_var
 
 
 class DBConnectionUser(HttpUser):
-    tasks = [PostgreSQLConnectionBehavior, MySQLConnectionBehavior]
+    tasks = [PostgreSQLConnectionBehavior]
     wait_time = between(5, 15)
     config = get_value_from_json_env_var("INTEGRATIONS_CONFIG", "mindsdb_cloud")
     host = config['host']

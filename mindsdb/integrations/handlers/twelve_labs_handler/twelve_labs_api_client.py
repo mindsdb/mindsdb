@@ -302,6 +302,112 @@ class TwelveLabsAPIClient:
 
         logger.info(f"Search for index {index_id} completed successfully.")
         return data
+    
+    def classify_index(self, index_id: str, classification_options: List[str], conversation_option: str, classes: List[Dict]) -> Dict:
+        """
+        Classify all videos in an index.
+
+        Parameters
+        ----------
+        index_id: str
+            ID of the index.
+
+        classification_options: List[str]
+            List of the sources of information to be used for classification.
+
+        conversation_option: str
+            The type of match to be performed.
+
+        classes: List[Dict]
+            List of classes to be used for classification.
+            Each class should be a dictionary with the following keys:
+            - name: str
+                A string that specifies the name of the class.
+            - prompts: List[str]
+                A list of strings that specify what the class contains.
+
+        Returns
+        -------
+        Dict
+            Classification results.
+        """
+
+        body = {
+            "index_id": index_id,
+            "classification_options": classification_options,
+            "conversation_option": conversation_option,
+            "classes": classes,
+        }
+
+        first_result = self._submit_request(
+            method="POST",
+            endpoint="classify/bulk",
+            data=body,
+        )
+
+        all_results = self._get_all_pages(
+            endpoint="classify",
+            first_result=first_result,
+        )
+
+        logger.info(f"Classification for index {index_id} completed successfully.")
+        return all_results
+    
+    def _get_all_pages(self, endpoint: str, first_result: Dict) -> List[Dict]:
+        """
+        Get all pages of results.
+
+        Parameters
+        ----------
+        endpoint : str
+            API endpoint.
+
+        first_result : Dict
+            First page of results.
+
+        Returns
+        -------
+        List[Dict]
+            All pages of results.
+        """
+
+        data = []
+        data.extend(first_result['data'])
+
+        result = first_result
+        while 'next_page_token' in result['page_info']:
+            result = self._get_next_page(
+                endpoint=endpoint,
+                next_page_token=result['page_info']['next_page_token']
+            )
+            data.extend(result['data'])
+
+        return data
+    
+    def _get_next_page(self, endpoint: str, next_page_token: str) -> Dict:
+        """
+        Get the next page of results.
+
+        Parameters
+        ----------
+        endpoint : str
+            API endpoint.
+        next_page_token : str
+            Token for the next page.
+
+        Returns
+        -------
+        Dict
+            Next page of results.
+        """
+
+        result = self._submit_request(
+            method="GET",
+            endpoint=f"{endpoint}/{next_page_token}",
+        )
+
+        logger.info(f"Retrieved next page of results successfully.")
+        return result
 
     def _submit_request(self, endpoint: str, headers: Dict = None, data: Dict = None, method: str = "GET") -> Dict:
         """

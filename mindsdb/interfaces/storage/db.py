@@ -11,7 +11,6 @@ from sqlalchemy import (
     DateTime,
     Index,
     Integer,
-    Numeric,
     String,
     Table,
     UniqueConstraint,
@@ -556,7 +555,7 @@ class QueryContext(Base):
 class LLMLog(Base):
     __tablename__ = "llm_log"
     id: int = Column(Integer, primary_key=True)
-    company_id: int = Column(Integer, nullable=False)
+    company_id: int = Column(Integer, nullable=True)
     api_key: str = Column(String, nullable=True)
     model_id: int = Column(Integer, nullable=False)
     input: str = Column(String, nullable=True)

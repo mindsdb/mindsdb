@@ -23,7 +23,7 @@ variable "BRANCH" {
 function "get_cache_to" {
   params = []
   result = [
-    "type=registry,oci-mediatypes=true,mode=max,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:${BRANCH}"
+    "type=registry,image-manifest=true,oci-mediatypes=true,mode=max,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:${BRANCH}"
   ]
 }
 function "get_cache_from" {

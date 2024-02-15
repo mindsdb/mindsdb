@@ -21,16 +21,18 @@ variable "BRANCH" {
 }
 
 function "get_cache_to" {
-    result = [
-      "type=registry,oci-mediatypes=true,mode=max,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:${BRANCH}"
-    ]
+  params = []
+  result = [
+    "type=registry,oci-mediatypes=true,mode=max,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:${BRANCH}"
+  ]
 }
 function "get_cache_from" {
-    result = [
-      "type=registry,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:${BRANCH}",
-      "type=registry,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:staging",
-      "type=registry,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:stable"
-    ]
+  params = []
+  result = [
+    "type=registry,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:${BRANCH}",
+    "type=registry,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:staging",
+    "type=registry,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:stable"
+  ]
 }
 
 # Generate the list of tags for a given image.

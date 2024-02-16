@@ -26,9 +26,8 @@ class LogTable:
 
 class LogDBController:
     def __init__(self):
-        self._tables = {
-            'llm_log': LogTable('llm_log')
-        }
+        self._tables = OrderedDict()
+        self._tables['llm'] = LogTable('llm')
 
     def get_list(self) -> List[LogTable]:
         return list(self._tables.values())
@@ -40,9 +39,7 @@ class LogDBController:
             raise EntityNotExistsError(f'Table log.{name} does not exists')
 
     def get_tables(self) -> OrderedDict:
-        data = OrderedDict()
-        data['llm_log'] = LogTable('llm_log')
-        return data
+        return self._tables
 
     def query(self, query: Select = None, native_query: str = None, session=None):
         if native_query is not None:
@@ -99,7 +96,7 @@ class LogDBController:
 
             if type(node) is Identifier and is_table is False:
                 parts = resolve_table_identifier(node)
-                if parts[0] is not None and parts[0].lower() != 'llm_log':
+                if parts[0] is not None and parts[0].lower() != 'llm':
                     raise Exception(f"Table '{parts[0]}' can not be used in query")
                 if parts[1].lower() not in available_columns_names:
                     raise Exception(f"Column '{parts[1]}' can not be used in query")

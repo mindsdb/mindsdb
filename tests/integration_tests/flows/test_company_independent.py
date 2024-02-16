@@ -82,7 +82,8 @@ class TestCompanyIndependent(HTTPHelperMixin):
             self.assert_list(
                 databases_names, {
                     'information_schema',
-                    'files'
+                    'files',
+                    'log'
                 }
             )
             self.sql_via_http(
@@ -95,7 +96,8 @@ class TestCompanyIndependent(HTTPHelperMixin):
                 databases_names, {
                     'information_schema',
                     'mindsdb',
-                    'files'
+                    'files',
+                    'log'
                 }
             )
 
@@ -121,6 +123,7 @@ class TestCompanyIndependent(HTTPHelperMixin):
                 'information_schema',
                 'mindsdb',
                 'files',
+                'log',
                 'test_integration_a'
             }
         )
@@ -130,7 +133,8 @@ class TestCompanyIndependent(HTTPHelperMixin):
             databases_names_b, {
                 'information_schema',
                 'mindsdb',
-                'files'
+                'files',
+                'log'
             }
         )
 
@@ -150,6 +154,7 @@ class TestCompanyIndependent(HTTPHelperMixin):
                 'information_schema',
                 'mindsdb',
                 'files',
+                'log',
                 'test_integration_a'
             }
         )
@@ -160,6 +165,7 @@ class TestCompanyIndependent(HTTPHelperMixin):
                 'information_schema',
                 'mindsdb',
                 'files',
+                'log',
                 'test_integration_b'
             }
         )
@@ -177,7 +183,8 @@ class TestCompanyIndependent(HTTPHelperMixin):
             databases_names_a, {
                 'information_schema',
                 'mindsdb',
-                'files'
+                'files',
+                'log'
             }
         )
 
@@ -187,6 +194,7 @@ class TestCompanyIndependent(HTTPHelperMixin):
                 'information_schema',
                 'mindsdb',
                 'files',
+                'log',
                 'test_integration_b'
             }
         )
@@ -207,6 +215,7 @@ class TestCompanyIndependent(HTTPHelperMixin):
                 'information_schema',
                 'mindsdb',
                 'files',
+                'log',
                 'test_integration_a'
             }
         )
@@ -217,6 +226,7 @@ class TestCompanyIndependent(HTTPHelperMixin):
                 'information_schema',
                 'mindsdb',
                 'files',
+                'log',
                 'test_integration_b'
             }
         )
@@ -368,12 +378,12 @@ class TestCompanyIndependent(HTTPHelperMixin):
 
         databases = client_a.list_databases()
         self.assert_list([x['name'] for x in databases], {
-            'admin', 'information_schema', 'mindsdb',
+            'admin', 'information_schema', 'mindsdb', 'log',
             'files', 'test_integration_a'
         })
         databases = client_b.list_databases()
         self.assert_list([x['name'] for x in databases], {
-            'admin', 'information_schema', 'mindsdb',
+            'admin', 'information_schema', 'mindsdb', 'log',
             'files', 'test_integration_b'
         })
 

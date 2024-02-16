@@ -197,6 +197,9 @@ class LangChainHandler(BaseMLEngine):
             }
         elif provider in ('openai', 'anyscale'):
             # OpenAI compatible
+            base_url = args.get('base_url', None)
+            if provider == 'anyscale' and base_url is None:
+                base_url = "https://api.endpoints.anyscale.com/v1"
             model_kwargs['model_name'] = model_name
             model_kwargs['temperature'] = temperature
             model_kwargs['max_tokens'] = max_tokens
@@ -208,7 +211,7 @@ class LangChainHandler(BaseMLEngine):
             model_kwargs['n'] = pred_args.get('n', None)
             model_kwargs['best_of'] = pred_args.get('best_of', None)
             model_kwargs['logit_bias'] = pred_args.get('logit_bias', None)
-            model_kwargs[f'{provider}_api_base'] = args.get('base_url', None)
+            model_kwargs[f'{provider}_api_base'] = base_url
             model_kwargs[f'{provider}_api_key'] = get_api_key(provider, args, self.engine_storage)
             model_kwargs[f'{provider}_organization'] = args.get('api_organization', None)
 

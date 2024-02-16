@@ -82,7 +82,7 @@ jobs:
     - name: Build and push
       shell: bash
       run: |
-        docker buildx bake -f docker/docker-bake.hcl --print | jq '.target[] | .tags[]' | xargs -S 1000 -I'{}' echo "docker manifest create '{}' '{}-amd64' '{}-arm64'"
+        docker buildx bake -f docker/docker-bake.hcl --print | jq '.target[] | .tags[]' | xargs -I'{}' echo "docker manifest create '{}' '{}-amd64' '{}-arm64'"
 
   trigger_deploy:
     # Trigger private repo to deploy to dev envs

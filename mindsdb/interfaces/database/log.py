@@ -16,15 +16,7 @@ import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.context import context as ctx
 
 
-class MindsdbDBTable:
-    pass
-
-
-class SystemTable(MindsdbDBTable):
-    pass
-
-
-class LogTable(SystemTable):
+class LogTable:
     def __init__(self, name: str) -> None:
         self.name = name
         self.deletable = False

@@ -106,7 +106,6 @@ class DatabaseController:
         if name == 'log':
             return self.logs_db_controller
         elif name == 'information_schema':
-            return self.information_schema_controller
+            raise Exception("Not implemented")
         else:
-            raise Exception('!!!')
-        # return self.system_db_controller.get(name=name)
+            raise Exception(f"Database '{name}' does not exists")

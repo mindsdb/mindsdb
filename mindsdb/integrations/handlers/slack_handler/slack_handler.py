@@ -81,7 +81,7 @@ class SlackChannelsTable(APITable):
                 else:
                     raise NotImplementedError(f'Unknown op: {op}')
 
-            elif arg1 == 'created_at':
+            elif arg1 == 'created_at' and arg2 is not None:
                 date = parse_utc_date(arg2)
                 if op == '>':
                     params['start_time'] = date

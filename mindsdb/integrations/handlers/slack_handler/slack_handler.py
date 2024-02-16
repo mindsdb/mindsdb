@@ -101,17 +101,14 @@ class SlackChannelsTable(APITable):
             order_by_conditions["ascending"] = []
 
             for an_order in query.order_by:
-                if an_order.field.parts[1] == "messages":
-                    order_by_conditions["columns"].append("messages")
+                col = an_order.field.parts[-1]
 
-                    if an_order.direction == "ASC":
-                        order_by_conditions["ascending"].append(True)
-                    else:
-                        order_by_conditions["ascending"].append(False)
+                order_by_conditions["columns"].append(col)
+
+                if an_order.direction == "ASC":
+                    order_by_conditions["ascending"].append(True)
                 else:
-                    raise ValueError(
-                        f"Order by unknown column {an_order.field.parts[1]}"
-                    )
+                    order_by_conditions["ascending"].append(False)
 
         # Retrieve the conversation history
         try:

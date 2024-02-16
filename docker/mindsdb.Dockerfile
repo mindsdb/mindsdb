@@ -8,8 +8,16 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     apt update && apt-get upgrade -y \
     && apt-get install -y freetds-dev  # freetds required to build pymssql for mssql_handler
 
-COPY . /mindsdb
 WORKDIR /mindsdb
+
+
+# Copy just requirements and install them to cache the layer
+# This won't include any of the default handlers, but it should still speed things up
+COPY requirements/requirements.txt /mindsdb/requirements/requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements/requirements.txt
+
+# Now copy the rest of the code and install it
+COPY . /mindsdb
 RUN --mount=type=cache,target=/root/.cache/pip pip install "."
 
 

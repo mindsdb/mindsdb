@@ -13,25 +13,30 @@ variable "IMAGE" {
 variable "VERSION" {
   default = "unknown"
 }
-variable "PLATFORMS" {
-  default = ["linux/amd64", "linux/arm64"]
+variable "PLATFORM" {
+  default = "linux/amd64"
 }
 variable "BRANCH" {
   default = "stable"
 }
 
+function "get_platform_tag" {
+  params = []
+  result = replace("${equal(PLATFORM, "") ? "" : "-"}${PLATFORM}", "linux/", "")
+}
+
 function "get_cache_to" {
   params = [target]
   result = [
-    "type=registry,image-manifest=true,oci-mediatypes=true,mode=max,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:${BRANCH}-${target}"
+    "type=registry,image-manifest=true,oci-mediatypes=true,mode=max,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:${BRANCH}-${target}${get_platform_tag()}"
   ]
 }
 function "get_cache_from" {
   params = [target]
   result = [
-    "type=registry,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:${BRANCH}-${target}",
-    "type=registry,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:staging-${target}",
-    "type=registry,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:stable-${target}"
+    "type=registry,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:${BRANCH}-${target}${get_platform_tag()}",
+    "type=registry,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:staging-${target}${get_platform_tag()}",
+    "type=registry,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:stable-${target}${get_platform_tag()}"
   ]
 }
 
@@ -43,10 +48,10 @@ function "get_cache_from" {
 function "get_tags" {
   params = [target]
   result = [
-    "454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}:${VERSION}${notequal(target, "bare") ? "-${target}" : ""}",
-    "454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}:${notequal(target, "bare") ? target : "latest"}",
-    PUSH_TO_DOCKERHUB ? "mindsdb/${IMAGE}:${VERSION}${notequal(target, "bare") ? "-${target}" : ""}" : "",
-    PUSH_TO_DOCKERHUB ? "mindsdb/${IMAGE}:${notequal(target, "bare") ? target : "latest"}" : ""
+    "454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}:${VERSION}${notequal(target, "bare") ? "-${target}" : ""}${get_platform_tag()}",
+    "454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}:${notequal(target, "bare") ? target : "latest"}${get_platform_tag()}",
+    PUSH_TO_DOCKERHUB ? "mindsdb/${IMAGE}:${VERSION}${notequal(target, "bare") ? "-${target}" : ""}${get_platform_tag()}" : "",
+    PUSH_TO_DOCKERHUB ? "mindsdb/${IMAGE}:${notequal(target, "bare") ? target : "latest"}${get_platform_tag()}" : ""
   ]
 } 
 
@@ -57,7 +62,7 @@ function "get_tags" {
 target "images" {
   name = item.name
   dockerfile = "docker/mindsdb.Dockerfile" # If you change this, also change it in target:builder
-  platforms = PLATFORMS
+  platforms = ["${PLATFORM}"]
   matrix = {
     item = [
       {

@@ -82,7 +82,7 @@ jobs:
     - name: Build and push
       shell: bash
       run: |
-        VERSION=${{ env.CI_SHA }} BRANCH=${{ env.CI_ACTION_REF_NAME }} PLATFORM="" docker buildx bake -f docker/docker-bake.hcl --print | jq '.target[] | .tags[]' | xargs -I'{}' docker manifest create '{}' --amend '{}-amd64' --amend '{}-arm64'; docker manifest push '{}'
+        VERSION=${{ env.CI_SHA }} BRANCH=${{ env.CI_ACTION_REF_NAME }} PLATFORM="" docker buildx bake -f docker/docker-bake.hcl --print | jq '.target[] | .tags[]' | xargs -I'{}' docker buildx imagetools create -t '{}' '{}-amd64' '{}-arm64'
 
   trigger_deploy:
     # Trigger private repo to deploy to dev envs

@@ -47,9 +47,9 @@ FROM datasource
 PREDICT answer
 USING
    engine = 'rag_engine',
-   llm_type = 'openai', -- choose one of OpenAI or Writer
-   url = 'link-to-webpage', -- this is optional
-   vector_store_folder_name = 'db_connection'; -- provide a folder name which stores vector db data
+   llm_type = 'openai',                          -- choose one of OpenAI or Writer
+   url = 'link-to-webpage',                      -- this is optional
+   vector_store_folder_name = 'db_connection';   -- provide a folder name which stores vector db data
 ```
 
 Where:

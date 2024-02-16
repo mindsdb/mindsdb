@@ -69,7 +69,7 @@ def _make_text_to_sql_tools(skill: db.Skills, llm, executor) -> List:
         "Input to this tool is a detailed and correct SQL query, output is a result from the database. "
         "If the query is not correct, an error message will be returned. "
         "If an error is returned, rewrite the query, check the query, and try again. "
-        "These are the available tables:\n"
+        f"These are the available tables: {','.join(tables)}\n"
     )
     for table in tables:
         description += f'Table name: "{table}", columns {db.get_table_columns(table)}\n'

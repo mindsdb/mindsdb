@@ -978,6 +978,7 @@
           "group": "Large Language Models",
           "pages": [
             "integrations/ai-engines/anthropic",
+            "integrations/ai-engines/anyscale",
             "integrations/ai-engines/cohere",
             "integrations/ai-engines/huggingface",
             "integrations/ai-engines/huggingface_inference_api",

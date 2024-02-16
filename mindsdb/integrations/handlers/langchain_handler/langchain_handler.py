@@ -134,6 +134,13 @@ class LangChainHandler(BaseMLEngine):
         args = self.model_storage.json_get('args')
         args['executor'] = executor
 
+        # back compatibility for old models
+        if args.get('provider') is None:
+            if args['model_name'] in _ANTHROPIC_CHAT_MODELS:
+                args['provider'] = 'anthropic'
+            else:
+                args['provider'] = 'openai'
+
         df = df.reset_index(drop=True)
 
         if args.get('mode') != 'conversational':

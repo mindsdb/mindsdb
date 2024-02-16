@@ -27,9 +27,9 @@ def get_api_key(
     API_KEY preference order:
         1. provided at inference
         2. provided at model creation
-        2. provided at engine creation
-        3. api key env variable
-        4. api_key setting in config.json
+        3. provided at engine creation
+        4. api key env variable
+        5. api_key setting in config.json
     """
     # 1
     if "using" in create_args and f"{api_name.lower()}_api_key" in create_args["using"]:
@@ -45,6 +45,9 @@ def get_api_key(
         return connection_args[f"{api_name.lower()}_api_key"]
     # 4
     api_key = os.getenv(f"{api_name.lower()}_api_key")
+    if api_key is not None:
+        return api_key
+    api_key = os.getenv(f"{api_name.upper()}_API_KEY")
     if api_key is not None:
         return api_key
 

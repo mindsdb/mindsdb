@@ -200,6 +200,18 @@ class TwelveLabsHandler(BaseMLEngine):
             # df_predictions = pd.merge(df_metadata, df_modules, on=metadata)
             # return df_predictions
             return pd.json_normalize(data).add_prefix(args['target'] + '_')
+        
+        # check if task is classification
+        elif args['task'] == 'classification':
+            # classify query in index
+            data = twelve_labs_api_client.classify_index(
+                index_id=args['index_id'],
+                classification_options=args['classification_options'],
+                conversation_option=args['conversation_option'],
+                classes=args['classes'],
+            )
+            
+            return pd.json_normalize(data).add_prefix(args['target'] + '_')
 
         else:
             raise NotImplementedError(f"Task {args['task']} is not supported.")

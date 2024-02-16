@@ -72,7 +72,7 @@ class TestCompanyIndependent(HTTPHelperMixin):
         # add permanent integrations
         for cid in [CID_A, CID_B]:
             databases_names = self.get_db_names(cid)
-            assert len(databases_names) == 1 and databases_names[0] == 'information_schema'
+            assert len(databases_names) == 2 and 'information_schema' in databases_names and 'log' in databases_names
             self.sql_via_http(
                 "CREATE DATABASE files ENGINE='files'",
                 company_id=cid,

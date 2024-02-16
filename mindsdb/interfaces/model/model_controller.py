@@ -245,6 +245,10 @@ class ModelController():
                 data_integration_ref = {
                     'type': 'view'
                 }
+            elif data_integration_meta['type'] == 'system':
+                data_integration_ref = {
+                    'type': 'system'
+                }
             else:
                 data_integration_ref = {
                     'type': 'integration',

@@ -4,6 +4,7 @@ from collections import OrderedDict
 from sqlalchemy import Boolean
 import pandas as pd
 
+from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import Select, BinaryOperation, Identifier, Constant, Star
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.planner.utils import query_traversal
@@ -51,7 +52,12 @@ class LogDBController:
         data['llm_log'] = LogTable('llm_log')
         return data
 
-    def query(self, query: Select, session):
+    def query(self, query: Select = None, native_query: str = None, session=None):
+        if native_query is not None:
+            if query is not None:
+                raise Exception("'query' and 'native_query' arguments can not be used together")
+            query = parse_sql(native_query)
+
         if type(query) is not Select:
             raise Exception("Only 'SELECT' is allowed for tables in log database")
         tables = get_query_tables(query)

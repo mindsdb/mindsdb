@@ -102,7 +102,7 @@ class SQLQuery:
 
         query_tables = get_query_models(self.query, default_database=self.session.database)
 
-        for table_name, table_version, project_name in query_tables:
+        for project_name, table_name, table_version in query_tables:
             args = {
                 'name': table_name,
                 'project_name': project_name

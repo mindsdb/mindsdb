@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Dict, Optional
 
 from pydantic import BaseModel, BaseSettings, Extra, root_validator
 
@@ -64,8 +64,13 @@ class TwelveLabsHandlerModel(BaseModel):
     video_files: Optional[List[str]] = None
     video_files_column: Optional[str] = None
     task: str = None
+    # search specific parameters
     search_options: Optional[List[str]] = None
     query_column: Optional[str] = None
+    # classification specific parameters
+    classification_options: Optional[List[str]] = None
+    conversation_option: Optional[str] = None
+    classes: Optional[List[Dict]] = None
 
     class Config:
         extra = Extra.forbid
@@ -136,6 +141,7 @@ class TwelveLabsHandlerModel(BaseModel):
         """
 
         task = values.get("task")
+        index_options = values.get("index_options")
 
         if task == "search":
             search_options = values.get("search_options")
@@ -145,7 +151,6 @@ class TwelveLabsHandlerModel(BaseModel):
                 )
 
             # search options should be a subset of index options
-            index_options = values.get("index_options")
             if not set(search_options).issubset(set(index_options)):
                 raise ValueError(
                     "search_options should be a subset of index_options."
@@ -155,6 +160,31 @@ class TwelveLabsHandlerModel(BaseModel):
             if not query_column:
                 raise ValueError(
                     "query_column has not been provided. Please provide query_column."
+                )
+            
+        elif task == "classification":
+            classification_options = values.get("classification_options")
+            if not classification_options:
+                raise ValueError(
+                    "classification_options have not been provided. Please provide classification_options."
+                )
+
+            # classification options should be a subset of index options
+            if not set(classification_options).issubset(set(index_options)):
+                raise ValueError(
+                    "classification_options should be a subset of index_options."
+                )
+
+            conversation_option = values.get("conversation_option")
+            if not conversation_option:
+                raise ValueError(
+                    "conversation_option has not been provided. Please provide conversation_option."
+                )
+
+            classes = values.get("classes")
+            if not classes:
+                raise ValueError(
+                    "classes have not been provided. Please provide classes."
                 )
 
         else:

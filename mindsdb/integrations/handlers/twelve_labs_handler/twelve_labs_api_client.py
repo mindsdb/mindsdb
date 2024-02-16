@@ -334,7 +334,7 @@ class TwelveLabsAPIClient:
 
         body = {
             "index_id": index_id,
-            "classification_options": classification_options,
+            "options": classification_options,
             "conversation_option": conversation_option,
             "classes": classes,
         }
@@ -375,7 +375,7 @@ class TwelveLabsAPIClient:
         data.extend(first_result['data'])
 
         result = first_result
-        while 'next_page_token' in result['page_info']:
+        while result.get('page_info', {}).get('next_page_token'):
             result = self._get_next_page(
                 endpoint=endpoint,
                 next_page_token=result['page_info']['next_page_token']

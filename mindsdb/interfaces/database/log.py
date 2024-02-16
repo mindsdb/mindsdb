@@ -27,7 +27,7 @@ class LogTable:
 class LogDBController:
     def __init__(self):
         self._tables = OrderedDict()
-        self._tables['llm'] = LogTable('llm')
+        self._tables['llm_log'] = LogTable('llm_log')
 
     def get_list(self) -> List[LogTable]:
         return list(self._tables.values())
@@ -96,7 +96,7 @@ class LogDBController:
 
             if type(node) is Identifier and is_table is False:
                 parts = resolve_table_identifier(node)
-                if parts[0] is not None and parts[0].lower() != 'llm':
+                if parts[0] is not None and parts[0].lower() != 'llm_log':
                     raise Exception(f"Table '{parts[0]}' can not be used in query")
                 if parts[1].lower() not in available_columns_names:
                     raise Exception(f"Column '{parts[1]}' can not be used in query")
@@ -127,4 +127,4 @@ class LogDBController:
             'type': v
         } for k, v in df.dtypes.items()]
 
-        return df.to_dict(orient='records'), columns_info
+        return df.to_dict(orient='split')['data'], columns_info

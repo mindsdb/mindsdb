@@ -390,8 +390,11 @@ class InformationSchemaDataNode(DataNode):
     def get(self, name):
         name_lower = name.lower()
 
-        if name.lower() == "information_schema":
+        if name_lower == "information_schema":
             return self
+
+        if name_lower == 'log':
+            return self.database_controller.get_system_db('log')
 
         if name_lower in self.persis_datanodes:
             return self.persis_datanodes[name_lower]
@@ -1043,4 +1046,4 @@ class InformationSchemaDataNode(DataNode):
 
         columns_info = [{"name": k, "type": v} for k, v in data.dtypes.items()]
 
-        return data.to_dict(orient="records"), columns_info
+        return data.to_dict(orient="split")['data'], columns_info

@@ -251,9 +251,16 @@
     },
     {
       "group": "Concepts",
-      "pages": [     
+      "pages": [   
         {
-          "group": "DataSources",
+          "group": "AI Tables",
+          "pages":[
+            "ai-engines/overview",
+            "generative-ai-tables"
+          ] 
+        },  
+        {
+          "group": "Data Sources",
           "pages": [
             "datasources/overview",
             "sql/create/database",
@@ -271,18 +278,11 @@
           ] 
         },
         {
-          "group": "JOBS & Automation",
+          "group": "Automation",
           "pages": [
             "sql/create/jobs",
             "sql/create/trigger"
           ]
-        },
-        {
-          "group": "AI-Tables",
-          "pages":[
-            "ai-engines/overview",
-            "generative-ai-tables"
-          ] 
         }
       ]
     },
@@ -374,6 +374,13 @@
           "pages": [
             "sql/tutorials/home-rentals",
             "sql/tutorials/regression-community"
+          ]
+        },
+        {
+          "group": "Natural Language Processing",
+          "pages": [
+            "sql/tutorials/hugging-face-examples",
+            "sql/tutorials/hugging-face-inference-api-examples"
           ]
         },
         "tutorials"
@@ -970,25 +977,27 @@
         {
           "group": "Large Language Models",
           "pages": [
-            "integrations/ai-engines/ollama",
-            "integrations/ai-engines/replicate-llm",
-            "integrations/ai-engines/vertex",
             "integrations/ai-engines/anthropic",
+            "integrations/ai-engines/anyscale",
             "integrations/ai-engines/cohere",
-            "integrations/ai-engines/openai",
             "integrations/ai-engines/huggingface",
+            "integrations/ai-engines/huggingface_inference_api",
             "integrations/ai-engines/langchain",
             "integrations/ai-engines/llamaindex",
             "integrations/ai-engines/monkeylearn",
-            "integrations/ai-engines/rag"           
+            "integrations/ai-engines/ollama",
+            "integrations/ai-engines/openai",
+            "integrations/ai-engines/replicate-llm",
+            "integrations/ai-engines/rag",
+            "integrations/ai-engines/vertex"       
           ]
         },
         {
           "group": "Bring Your Own Models",
           "pages": [
             "integrations/ai-engines/byom",
-            "integrations/ai-engines/ray-serve",
-            "integrations/ai-engines/mlflow"
+            "integrations/ai-engines/mlflow",
+            "integrations/ai-engines/ray-serve"
           ]
         },
         {
@@ -1001,8 +1010,8 @@
         {
           "group": "Time Series Models",
           "pages": [
-            "integrations/ai-engines/statsforecast",
             "integrations/ai-engines/neuralforecast",
+            "integrations/ai-engines/statsforecast",
             "integrations/ai-engines/timegpt"
           ]
         },

@@ -18,7 +18,7 @@ The first step to make use of this handler is to create an ML Engine. This can b
 CREATE ML_ENGINE twelve_labs_engine
 FROM twelve_labs
 USING
-  api_key = '<YOUR_API_KEY>';
+  twelve_labs_api_key = '<YOUR_API_KEY>';
 ```
 
 ## Creating Models
@@ -46,7 +46,6 @@ CREATE MODEL mindsdb.twelve_labs_search
 PREDICT search_results
 USING
   engine = 'twelve_labs_engine',
-  api_key = '<YOUR_API_KEY>',
   task = 'search',
   index_name = 'index_1',
   index_options = ['visual', 'conversation', 'text_in_video', 'logo'],

@@ -113,6 +113,7 @@ class FetchDataframeStepCall(BaseStepCall):
                 table_alias=table_alias[2],
                 database=table_alias[0]
             ))
-        result.add_records(data)
+        for record in data:
+            result.add_record_raw(record)
 
         return result

@@ -7,6 +7,14 @@ This is the implementation of the Pinot data handler for MindsDB.
 
 [Apache Pinot](https://pinot.apache.org/) is a real-time distributed OLAP database designed for low-latency query execution even at extremely high throughput. Apache Pinot can ingest directly from streaming sources like Apache Kafka and make events available for querying immediately.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect Apache Pinot to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to Apache Pinot.
+
 ## Implementation
 
 This handler was implemented using the `pinotdb` library, the Python DB-API and SQLAlchemy dialect for Pinot.
@@ -17,10 +25,6 @@ The required arguments to establish a connection are as follows:
 * `broker_port` is the port that the Broker of the Apache Pinot cluster is running on.
 * `controller_port` is the port that the Controller of the Apache Pinot cluster is running on.
 * `path` is the query path.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/pinot_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

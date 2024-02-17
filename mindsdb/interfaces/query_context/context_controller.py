@@ -96,7 +96,7 @@ class QueryContextController:
         if len(data) == 0:
             return
 
-        df = pd.DataFrame(data)
+        df = pd.DataFrame(data, columns=[col['name'] for col in columns_info])
         values = {}
         # get max values
         for info in l_query.get_last_columns():
@@ -161,7 +161,7 @@ class QueryContextController:
             if len(data) == 0:
                 value = None
             else:
-                value = list(data[0].values())[0]
+                value = data[0][0]
             if value is not None:
                 last_values[info['table_name']] = {info['column_name']: value}
 

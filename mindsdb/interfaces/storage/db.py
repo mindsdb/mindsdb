@@ -550,3 +550,19 @@ class QueryContext(Base):
         DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
     )
     created_at: datetime.datetime = Column(DateTime, default=datetime.datetime.now)
+
+
+class LLMLog(Base):
+    __tablename__ = "llm_log"
+    id: int = Column(Integer, primary_key=True)
+    company_id: int = Column(Integer, nullable=True)
+    api_key: str = Column(String, nullable=True)
+    model_id: int = Column(Integer, nullable=False)
+    input: str = Column(String, nullable=True)
+    output: str = Column(String, nullable=True)
+    start_time: datetime = Column(DateTime, nullable=False)
+    end_time: datetime = Column(DateTime, nullable=True)
+    prompt_tokens: int = Column(Integer, nullable=True)
+    completion_tokens: int = Column(Integer, nullable=True)
+    total_tokens: int = Column(Integer, nullable=True)
+    success: bool = Column(Boolean, nullable=False, default=True)

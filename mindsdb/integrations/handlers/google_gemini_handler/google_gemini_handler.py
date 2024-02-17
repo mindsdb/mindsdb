@@ -139,7 +139,9 @@ class GoogleGeminiHandler(BaseMLEngine):
         else:
             if args.get('prompt_template', False):
                 prompts, empty_prompt_ids = get_completed_prompts(base_template, df)
-
+        
+        
+        # Disclaimer: The following code has been adapted from the OpenAI handler.
             elif args.get('context_column', False):
                 empty_prompt_ids = np.where(
                     df[[args['context_column'], args['question_column']]]
@@ -153,7 +155,8 @@ class GoogleGeminiHandler(BaseMLEngine):
                     f'Give only answer for: \nContext: {c}\nQuestion: {q}\nAnswer: '
                     for c, q in zip(contexts, questions)
                 ]
-
+            
+                # Disclaimer: The following code has been adapted from the OpenAI handler.
             elif args.get('json_struct', False):
                 empty_prompt_ids = np.where(
                     df[[args['input_text']]].isna().all(axis=1).values
@@ -300,6 +303,7 @@ class GoogleGeminiHandler(BaseMLEngine):
 
         return pred_df
 
+    # Disclaimer: The following code has been adapted from the OpenAI handler.
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
 
         args = self.model_storage.json_get('args')

@@ -13,6 +13,9 @@ from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.integrations.libs.llm_utils import get_completed_prompts
+import concurrent.futures
+
+
 
 
 logger = log.getLogger(__name__)
@@ -280,6 +283,14 @@ class GoogleGeminiHandler(BaseMLEngine):
             raise Exception('Embedding mode needs a question_column')
 
     def vision_worker(self, args: Dict, df: pd.DataFrame):
+        def get_img(url):
+            # URL Validation
+            response = requests.get(url)
+            if response.status_code == 200 and response.headers.get('content-type', '').startswith('image/'):
+                return Image.open(BytesIO(response.content))
+            else:
+                raise Exception(f"{url} is not vaild image URL..")
+                
         if args.get('img_url'):
             urls = list(df[args['img_url']].apply(lambda x: str(x)))
 
@@ -293,7 +304,10 @@ class GoogleGeminiHandler(BaseMLEngine):
         api_key = self._get_google_gemini_api_key(args)
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-pro-vision')
-        imgs = [Image.open(BytesIO(requests.get(url).content)) for url in urls]
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            # Download images concurrently using ThreadPoolExecutor
+            imgs = list(executor.map(get_img, urls))
+        # imgs = [Image.open(BytesIO(requests.get(url).content)) for url in urls]
         if prompts:
             results = [model.generate_content([img, text]).text for img, text in zip(imgs, prompts)]
         else:

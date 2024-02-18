@@ -66,6 +66,9 @@ class SlackChannelsTable(APITable):
         filters = []
         params = {}
         order_by_conditions = {}
+        # to support IS NULL operator
+        params['is_null'] = []
+        params['is_not_null'] = []
         
         # Build the filters and parameters for the query
         for op, arg1, arg2 in conditions:
@@ -89,9 +92,15 @@ class SlackChannelsTable(APITable):
                     params['end_time'] = date
                 else:
                     raise NotImplementedError
+            
+            elif op == 'is':
+                params['is_null'].append(arg1)  
+
+            elif op == 'is not':
+                params['is_not_null'].append(arg1) 
 
             else:
-                filters.append([op, arg1, arg2])
+                filters.append([op, arg1, arg2]) 
 
         if query.limit:
             params['limit'] = int(query.limit.value)
@@ -154,10 +163,7 @@ class SlackChannelsTable(APITable):
 
         # convert SlackResponse object to pandas DataFrame
         result = pd.DataFrame(result['messages'])
-
-        # Remove null rows from the result
-        result = result[result['text'].notnull()]
-            
+                        
         # add absent columns
         for col in set(columns) & set(result.columns) ^ set(columns):
             result[col] = None
@@ -174,6 +180,16 @@ class SlackChannelsTable(APITable):
             result = result[result['ts_datetime'] > datetime.strptime(params['start_time'], '%Y-%m-%d %H:%M:%S')]
         elif 'end_time' in params:
             result = result[result['ts_datetime'] < datetime.strptime(params['end_time'], '%Y-%m-%d %H:%M:%S')]
+
+        # filter rows where column IS NULL
+        if len(params['is_null']) != 0:
+            for col in params['is_null']:
+                result = result[result[col].isnull()]
+
+        # filter rows where column IS NOT NULL
+        if len(params['is_not_null']) != 0:
+            for col in params['is_not_null']:
+                result = result[result[col].notnull()]
 
         # filter by columns to be returned
         result = result[columns]
@@ -315,7 +331,6 @@ class SlackChannelsTable(APITable):
                     params['ts'] = float(arg2)
                 else:
                     raise NotImplementedError(f'Unknown op: {op}')
-
             else:
                 filters.append([op, arg1, arg2])
 
@@ -327,7 +342,7 @@ class SlackChannelsTable(APITable):
         try:
             response = self.client.chat_delete(
                 channel=params['channel'],
-                ts=params['ts']
+                ts=params['ts'],
             )
             
         except SlackApiError as e:
@@ -545,3 +560,4 @@ class SlackHandler(APIChatHandler):
             }
             new_channels.append(new_channel)
         return new_channels
+

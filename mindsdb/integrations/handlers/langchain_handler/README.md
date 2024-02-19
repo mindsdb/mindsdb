@@ -8,7 +8,7 @@ CREATE MODEL airline_model
 	PREDICT answer USING
 	engine = "langchain_engine",
 	input_column = "question",
-	api_key = "<open api key>",
+	openai_api_key = "<open api key>",
 	mode = "conversational",
 	user_column = "question",
 	assistant_column = "answer",
@@ -21,12 +21,12 @@ Anyscale provider (defined in 'provider' param)
 ```sql
 CREATE MODEL airline_model
 	PREDICT answer 
-    USING
+	USING
 	engine = "langchain_engine",
-    provider='anyscale',
+	provider='anyscale',
 	model_name = "mistralai/Mistral-7B-Instruct-v0.1",
-    api_key = '<anyscale api key>',
-    base_url="https://api.endpoints.anyscale.com/v1",
+	anyscale_api_key = '<anyscale api key>',
+	base_url="https://api.endpoints.anyscale.com/v1",
 	mode = "conversational",
 	user_column = "question",
 	assistant_column = "answer",  
@@ -38,15 +38,15 @@ Using mindsdb litellm server
 ```sql
 CREATE MODEL airline_model5
 	PREDICT answer 
-    USING
+	USING
 	engine = "langchain_engine",
-    provider='litellm',
+	provider='litellm',
 	model_name = "assistant", -- model created in mindsdb
-    api_key = '<mindsdb api key>', -- api key created in mindsdb
-    base_url="https://ai.dev.mindsdb.com",
+	litellm_api_key = '<mindsdb api key>', -- api key created in mindsdb
+	base_url="https://ai.dev.mindsdb.com",
 	mode = "conversational",
 	user_column = "question",
-	assistant_column = "answer",    
+	assistant_column = "answer",	
 	verbose=True,
 	prompt_template="Answer the user input in a helpful way";
 ```

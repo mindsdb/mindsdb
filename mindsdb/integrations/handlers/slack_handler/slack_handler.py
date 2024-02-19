@@ -86,6 +86,8 @@ class SlackChannelsTable(APITable):
                 date = parse_utc_date(arg2)
                 if op == '>':
                     params['start_time'] = (date + timedelta(seconds=1)).strftime(DATE_FORMAT)
+                elif op == '>=':
+                    params['start_time'] = date.strftime(DATE_FORMAT)
                 elif op == '<':
                     params['end_time'] = date.strftime(DATE_FORMAT)
                 else:

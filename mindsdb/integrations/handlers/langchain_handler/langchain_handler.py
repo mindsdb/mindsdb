@@ -10,10 +10,12 @@ from langchain.schema import SystemMessage
 from langchain.agents import AgentType
 from langchain_community.llms import OpenAI
 from langchain_community.chat_models import ChatAnthropic, ChatOpenAI  # GPT-4 fails to follow the output langchain requires, avoid using for now
-from langchain.agents import initialize_agent, create_sql_agent
+from langchain.agents import initialize_agent, create_sql_agent  # TODO: initialize_agent is deprecated, replace with e.g. `create_react_agent`  # noqa
 from langchain.prompts import PromptTemplate
 from langchain_community.agent_toolkits import SQLDatabaseToolkit
 from langchain.chains.conversation.memory import ConversationSummaryBufferMemory
+
+from langfuse.callback import CallbackHandler
 
 from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS as OPEN_AI_CHAT_MODELS
 from mindsdb.integrations.handlers.langchain_handler.mindsdb_database_agent import MindsDBSQL
@@ -351,8 +353,17 @@ class LangChainHandler(BaseMLEngine):
             # TODO: ensure that agent completion plus prompt match the maximum allowed by the user
             if not prompt:
                 return ''
+            callbacks = []
+            if 'langfuse_public_key' in args and 'langfuse_secret_key' in args and 'langfuse_host' in args:
+                callbacks.append(
+                    CallbackHandler(
+                        args['langfuse_public_key'],
+                        args['langfuse_secret_key'],
+                        host=args['langfuse_host']
+                    )
+                )
             try:
-                return agent.run(prompt)
+                return agent.run(prompt, callbacks=callbacks)
             except ValueError as e:
                 # Handle parsing errors ourselves instead of using handle_parsing_errors=True in initialize_agent.
                 response = str(e)

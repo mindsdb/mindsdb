@@ -124,8 +124,9 @@ def _setup_standard_tools(tools, llm, executor, model_kwargs):
     all_standard_tools += load_tools(langchain_tools)
     return all_standard_tools
 
+
 # Collector
-def setup_tools(llm, model_kwargs, pred_args, executor, default_agent_tools, openai_api_key):
+def setup_tools(llm, model_kwargs, pred_args, executor, default_agent_tools):
     toolkit = pred_args['tools'] if pred_args.get('tools') is not None else default_agent_tools
 
     standard_tools = []
@@ -141,7 +142,7 @@ def setup_tools(llm, model_kwargs, pred_args, executor, default_agent_tools, ope
     tools = []
     skills = pred_args.get('skills', [])
     for skill in skills:
-        tools += make_tools_from_skill(skill, llm, openai_api_key, executor)
+        tools += make_tools_from_skill(skill, llm, executor)
 
     if len(tools) == 0:
         tools = _setup_standard_tools(standard_tools, llm, executor, model_kwargs)

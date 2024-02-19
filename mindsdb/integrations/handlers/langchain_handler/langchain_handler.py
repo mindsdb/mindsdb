@@ -248,8 +248,7 @@ class LangChainHandler(BaseMLEngine):
                             model_kwargs,
                             pred_args,
                             args['executor'],
-                            self.default_agent_tools,
-                            get_api_key('openai', args, self.engine_storage))
+                            self.default_agent_tools)
 
         memory = ConversationSummaryBufferMemory(llm=llm,
                                                  max_token_limit=max_tokens,
@@ -324,8 +323,7 @@ class LangChainHandler(BaseMLEngine):
                             model_kwargs,
                             pred_args,
                             args['executor'],
-                            self.default_agent_tools,
-                            get_api_key('openai', args, self.engine_storage))
+                            self.default_agent_tools)
 
         # langchain agent setup
         memory = ConversationSummaryBufferMemory(llm=llm, max_token_limit=max_tokens)

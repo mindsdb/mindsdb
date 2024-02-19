@@ -85,7 +85,6 @@ def _make_text_to_sql_tools(skill: db.Skills, llm, executor) -> List:
 
 def _get_rag_query_function(
         skill: db.Skills,
-        openai_api_key: str,
         session_controller):
 
     def _answer_question(question: str) -> str:
@@ -109,7 +108,6 @@ def _get_rag_query_function(
 
 def _make_knowledge_base_tools(
         skill: db.Skills,
-        openai_api_key: str,
         session_controller) -> List:
     # To prevent dependency on Langchain unless an actual tool uses it.
     try:
@@ -120,7 +118,7 @@ def _make_knowledge_base_tools(
     all_tools = []
     all_tools.append(Tool(
         name='Knowledge Base Retrieval',
-        func=_get_rag_query_function(skill, openai_api_key, session_controller),
+        func=_get_rag_query_function(skill, session_controller),
         description=f'Use this tool to get more context or information to answer a question about {description}. The input should be the exact question the user is asking.'
     ))
     return all_tools
@@ -129,7 +127,6 @@ def _make_knowledge_base_tools(
 def make_tools_from_skill(
         skill: db.Skills,
         llm,
-        openai_api_key: str,
         executor) -> List:
     """Makes Langchain compatible tools from a skill
 
@@ -145,5 +142,5 @@ def make_tools_from_skill(
     if skill.type == 'text_to_sql':
         return _make_text_to_sql_tools(skill, llm, executor)
     elif skill.type == 'knowledge_base':
-        return _make_knowledge_base_tools(skill, openai_api_key, executor.session)
+        return _make_knowledge_base_tools(skill, executor.session)
     raise NotImplementedError(f'skill of type {skill.type} is not supported as a tool')

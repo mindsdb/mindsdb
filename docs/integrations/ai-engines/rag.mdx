@@ -49,7 +49,8 @@ USING
    engine = 'rag_engine',
    llm_type = 'openai',                          -- choose one of OpenAI or Writer
    url = 'link-to-webpage',                      -- this is optional
-   vector_store_folder_name = 'db_connection';   -- provide a folder name which stores vector db data
+   vector_store_folder_name = 'db_connection',   -- provide a folder name which stores vector db data,
+   input_column = 'input';                       -- provide column name that stores the input to the model
 ```
 
 Where:
@@ -59,6 +60,7 @@ Where:
 | `llm_type`                 | It defines which LLM is used.                               |
 | `url`                      | It is used to provide training data from a website.         |
 | `vector_store_folder_name` | It is a folder name to which the vector db data in between sessions is persisted. |
+| `input_column`             | It is a column name which stores the input to the model. |
 
 <Info>
 When creating a RAG model, it is required to provide training data either in the `url` parameter or in the `FROM` clause.

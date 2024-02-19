@@ -12,7 +12,6 @@ import inspect
 import re
 
 from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import Identifier
 from mindsdb_sql.planner.steps import (
     ApplyTimeseriesPredictorStep,
     ApplyPredictorRowStep,
@@ -22,9 +21,8 @@ from mindsdb_sql.planner.steps import (
 from mindsdb_sql.exceptions import PlanningException
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.planner import query_planner
-from mindsdb_sql.planner.utils import query_traversal
 
-from mindsdb.api.executor.utilities.sql import query_df
+from mindsdb.api.executor.utilities.sql import query_df, get_query_models
 from mindsdb.interfaces.model.functions import get_model_record
 from mindsdb.api.executor.exceptions import (
     UnknownError,
@@ -102,24 +100,9 @@ class SQLQuery:
 
         predictor_metadata = []
 
-        query_tables = []
+        query_tables = get_query_models(self.query, default_database=self.session.database)
 
-        def get_all_query_tables(node, is_table, **kwargs):
-            if is_table and isinstance(node, Identifier):
-                table_name = node.parts[-1]
-                table_version = None
-                project_name = self.session.database
-                if table_name.isdigit():
-                    # is predictor version
-                    table_version = int(table_name)
-                    table_name = node.parts[-2]
-                if table_name != node.parts[0]:
-                    project_name = node.parts[0]
-                query_tables.append((table_name, table_version, project_name))
-
-        query_traversal(self.query, get_all_query_tables)
-
-        for table_name, table_version, project_name in query_tables:
+        for project_name, table_name, table_version in query_tables:
             args = {
                 'name': table_name,
                 'project_name': project_name

@@ -1,9 +1,11 @@
 import unittest
+from textwrap import dedent, indent
 
 import pandas as pd
 
+from mindsdb.integrations.libs.llm_utils import ft_chat_formatter, ft_code_formatter, ft_cqa_formatter
+from mindsdb.integrations.libs.llm_utils import ft_jsonl_validation, ft_chat_format_validation
 from mindsdb.integrations.libs.llm_utils import get_completed_prompts
-from mindsdb.integrations.libs.llm_utils import ft_jsonl_validation, ft_chat_formatter, ft_chat_format_validation
 
 
 class TestLLM(unittest.TestCase):
@@ -98,7 +100,7 @@ class TestLLM(unittest.TestCase):
         prompts, empties = get_completed_prompts(base_template, df)
 
         # should detect a single missing value in the relevant column (last row)
-        assert empties.shape == (1, )
+        assert empties.shape == (1,)
         assert empties.dtype == int
         assert empties[0] == 2
 
@@ -181,3 +183,51 @@ class TestLLM(unittest.TestCase):
         chats[0]['messages'][1]['role'] = 'invalid'
         with self.assertRaises(Exception):
             ft_jsonl_validation([line for line in chats])
+
+    def test_ft_code_formatter(self):
+        df = pd.DataFrame({'code': ["".join(
+            [
+                indent(dedent(
+                    """
+                    # format chunks into prompts
+                    roles = []
+                    contents = []
+
+                    for idx in range(0, len(chunks), 3):
+                    """),
+                    " " * 4 * 2),  # mind the base indent level
+                indent(dedent(
+                    """pre, mid, suf = chunks[idx:idx+3]
+
+                    interleaved = list(itertools.chain(*zip(templates, (pre, mid, suf))))
+                    """),
+                    " " * 4 * 3)  # mind the base indent level
+            ])
+        ]})
+        df2 = ft_code_formatter(df, chunk_size=110)
+
+        assert list(df2['role']) == ['system', 'user', 'assistant']
+        assert df2['content'].iloc[0] == 'You are a powerful text to code model. Your job is to provide great code completions. As context, you are given code that is found immediately before and after the code you must generate.\n\nYou must output the code that should go in between the prefix and suffix.\n\n'  # noqa
+        assert df2['content'].iloc[1] == '### Code prefix:\n# format chunks into prompts\n        roles = []\n        contents = []\n### Code suffix:\ninterleaved = list(itertools.chain(*zip(templates, (pre, mid, suf))))\n### Completion:'  # noqa
+        assert df2['content'].iloc[2] == 'for idx in range(0, len(chunks), 3):\n            pre, mid, suf = chunks[idx:idx+3]'  # noqa
+
+        df2 = ft_code_formatter(df, format='fim', chunk_size=110)
+        assert list(df2['role']) == ['system', 'user', 'assistant']
+        assert df2['content'].iloc[0] == 'You are a powerful text to code model. Your job is to provide great code completions. As context, you are given code that is found immediately before and after the code you must generate.\n\nYou must output the code that should go in between the prefix and suffix.\n\n'  # noqa
+        assert df2['content'].iloc[1] == '<PRE>\n# format chunks into prompts\n        roles = []\n        contents = []\n<SUF>\ninterleaved = list(itertools.chain(*zip(templates, (pre, mid, suf))))\n<MID>'  # noqa
+        assert df2['content'].iloc[2] == 'for idx in range(0, len(chunks), 3):\n            pre, mid, suf = chunks[idx:idx+3]'  # noqa
+
+    def test_ft_cqa_formatter(self):
+        df = pd.DataFrame({
+            'instruction': ['Answer accurately.'],
+            'context': ['You are a helpful assistant.'],
+            'question': ['What is the capital of France?'],
+            'answer': ['Paris'],
+        })
+
+        df2 = ft_cqa_formatter(df)
+
+        assert list(df2['role']) == ['system', 'user', 'assistant']
+        assert df2['content'].iloc[0] == 'Answer accurately.\nYou are a helpful assistant.'
+        assert df2['content'].iloc[1] == 'What is the capital of France?'
+        assert df2['content'].iloc[2] == 'Paris'

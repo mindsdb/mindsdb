@@ -133,6 +133,6 @@ class RAGHandler(BaseMLEngine):
 
         # get question from sql query
         # e.g. where question = 'What is the capital of France?'
-        response = question_answerer(df["question"].tolist()[0])
+        response = question_answerer(df[args.input_column].tolist()[0])
 
         return pd.DataFrame(response)

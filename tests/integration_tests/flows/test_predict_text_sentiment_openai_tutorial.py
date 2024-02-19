@@ -37,7 +37,7 @@ class QueryStorage:
 
     create_engine = """
                     CREATE ML_ENGINE openai2
-                    FROM openai USING api_key='%s';
+                    FROM openai USING openai_api_key='%s';
                         """
 
     create_model = """
@@ -50,7 +50,7 @@ class QueryStorage:
                     "I love the product":positive
                     "It is a scam":negative
                     "{{review}}.":',
-                    api_key = '%s';
+                    openai_api_key = '%s';
                     """
 
     check_status = """

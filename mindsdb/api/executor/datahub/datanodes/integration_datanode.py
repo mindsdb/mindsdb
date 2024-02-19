@@ -28,7 +28,7 @@ class IntegrationDataNode(DataNode):
         self.integration_name = integration_name
         self.ds_type = ds_type
         self.integration_controller = integration_controller
-        self.integration_handler = self.integration_controller.get_handler(self.integration_name)
+        self.integration_handler = self.integration_controller.get_data_handler(self.integration_name)
 
     def get_type(self):
         return self.type
@@ -190,5 +190,5 @@ class IntegrationDataNode(DataNode):
             }
             for k, v in df.dtypes.items()
         ]
-        data = df.to_dict(orient='records')
+        data = df.to_dict(orient='split')['data']
         return data, columns_info

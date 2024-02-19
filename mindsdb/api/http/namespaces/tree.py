@@ -17,7 +17,8 @@ class GetRoot(Resource):
             'class': 'db',
             'type': x['type'],
             'engine': x['engine'],
-            'deletable': x['type'] != 'system'
+            'deletable': x['deletable'],
+            'visible': x['visible']
         } for x in databases]
         return result
 
@@ -47,7 +48,7 @@ class GetLeaf(Resource):
                 'deletable': val.get('deletable')
             } for key, val in tables.items()]
         elif db['type'] == 'data':
-            handler = ca.integration_controller.get_handler(db_name)
+            handler = ca.integration_controller.get_data_handler(db_name)
             response = handler.get_tables()
             if response.type != 'table':
                 return []
@@ -79,6 +80,13 @@ class GetLeaf(Resource):
                     'children': val
                 } for key, val in schemas.items()]
         elif db['type'] == 'system':
-            # TODO
-            tables = []
+            system_db = ca.database_controller.get_system_db(db_name)
+            tables = system_db.get_tables()
+            tables = [{
+                'name': table.name,
+                'class': table.kind,
+                'type': None,
+                'engine': None,
+                'deletable': table.deletable,
+            } for table in tables.values()]
         return tables

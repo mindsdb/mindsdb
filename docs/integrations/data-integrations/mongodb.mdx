@@ -7,6 +7,14 @@ This is the implementation of the MongoDB data handler for MindsDB.
 
 [MongoDB](https://www.mongodb.com/) is an open-source cross-platform document-oriented database program. It is classified as a NoSQL database.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect MongoDB to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to MongoDB.
+
 ## Implementation
 
 This handler is implemented using `pymongo`, a Python library that contains tools for working with the MongoDB database.
@@ -22,10 +30,6 @@ Optionally, you can connect using these parameters:
 * `host` is the host name or IP address.
 * `port` is the port through which TCP/IP connection is to be made.
 * `database` is the database name to be connected.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/mongodb_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

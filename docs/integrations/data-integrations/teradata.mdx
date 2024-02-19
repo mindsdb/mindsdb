@@ -7,6 +7,14 @@ This is the implementation of the Teradata data handler for MindsDB.
 
 [Teradata Vantage Advanced SQL Engine](https://docs.teradata.com/r/Teradata-VantageTM-Advanced-SQL-Engine-Release-Summary/June-2022/Introduction/What-is-Teradata-Vantage) (formerly known as Teradata Database) is a connected multi-cloud data platform offering for enterprise analytics, that enables users to solve complex data challenges from start to scale. It supports huge data warehouse applications and was designed with a patented massively parallel processing (MPP) architecture. [Read more].
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect Teradata to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to Teradata.
+
 ## Implementation
 
 This handler is implemented using `teradatasql`, the Python driver for Teradata.
@@ -17,10 +25,6 @@ The required arguments to establish a connection are as follows:
 * `user` specifies the user name.
 * `password` specifies the password for the user.
 * `database` sets the database for the connection.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/teradata_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

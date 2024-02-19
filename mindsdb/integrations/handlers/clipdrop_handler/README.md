@@ -24,7 +24,7 @@ The first step is to create a ML Engine with the new `clipdrop` engine.
 CREATE ML_ENGINE clipdrop_engine
 FROM clipdrop
 USING
-  api_key = 'your_api_key';
+  clipdrop_api_key = 'your_api_key';
 ~~~~
 
 
@@ -46,8 +46,7 @@ PREDICT image
 USING
   engine = "clipdrop_engine",
   task = "remove_text",
-  local_directory_path = "/Users/Sam/Downloads/test",
-  api_key = "api_key"
+  local_directory_path = "/Users/Sam/Downloads/test"
 ~~~~
 
 ~~~~sql
@@ -56,8 +55,7 @@ PREDICT image
 USING
   engine = "clipdrop_engine",
   task = "remove_background",
-  local_directory_path = "/Users/Sam/Downloads/test",
-  api_key = "api_key"
+  local_directory_path = "/Users/Sam/Downloads/test"
 ~~~~
 
 ~~~~sql
@@ -66,8 +64,7 @@ PREDICT image
 USING
   engine = "clipdrop_engine",
   task = "sketch_to_image",
-  local_directory_path = "/Users/Sam/Downloads/test",
-  api_key = "api_key"
+  local_directory_path = "/Users/Sam/Downloads/test"
 ~~~~
 
 ~~~~sql
@@ -76,11 +73,10 @@ PREDICT image
 USING
   engine = "clipdrop_engine",
   task = "reimagine",
-  local_directory_path = "/Users/Sam/Downloads/test",
-  api_key = "api_key"
+  local_directory_path = "/Users/Sam/Downloads/test"
 ~~~~
 
-`task`, `local_directory_path` and `api_key` are mandatory parameters for creating a model.
+`task`, `local_directory_path` and `clipdrop_api_key` are mandatory parameters for creating a model. The `clipdrop_api_key` should be provided when createing an ML_ENGINE.
 
 ## Use the model
 

@@ -1,4 +1,3 @@
-import os
 import time
 from unittest.mock import patch
 import pandas as pd
@@ -10,9 +9,7 @@ from mindsdb_sql import parse_sql
 from mindsdb.integrations.handlers.merlion_handler.adapters import DefaultForecasterAdapter, SarimaForecasterAdapter, \
     ProphetForecasterAdapter, MSESForecasterAdapter, IsolationForestDetectorAdapter, \
     WindStatsDetectorAdapter, ProphetDetectorAdapter
-from .executor_test_base import BaseExecutorTest
-
-import pandas as pd
+from ..executor_test_base import BaseExecutorTest
 
 
 class TestMerlion(BaseExecutorTest):
@@ -51,7 +48,7 @@ class TestMerlion(BaseExecutorTest):
         df.rename(columns={"timestamp": "t", "value": "val"}, inplace=True)
         train_len = int(len(df) * 0.5)
         df_train = df.iloc[: train_len]
-        df_test = df.iloc[train_len: ]
+        df_test = df.iloc[train_len:]
         df_train["train"] = 1
         df_test["train"] = 0
         df = pd.concat([df_train, df_test], axis=0)
@@ -110,7 +107,7 @@ class TestMerlion(BaseExecutorTest):
         create_sql = f'''
                     CREATE PREDICTOR mindsdb.{model_name}_forecaster
                     FROM pg
-                    (select t, H1 from m4 where train = 1) 
+                    (select t, H1 from m4 where train = 1)
                     PREDICT H1
                     USING engine='merlion'{using}
                 '''
@@ -162,15 +159,14 @@ class TestMerlion(BaseExecutorTest):
         self.set_handler(mock_handler, name='pg', tables={'nba': df})
 
         # test isolation forest
-        self.exec_train_and_detect(mock_handler=mock_handler, model_name="isolation",
-                                     using_model=f", model_type='isolation'")
+        self.exec_train_and_detect(mock_handler=mock_handler, model_name="isolation", using_model=", model_type='isolation'")
 
     def exec_train_and_detect(self, mock_handler, model_name, using_model):
         # create predictor
         create_sql = f'''
                     CREATE PREDICTOR mindsdb.{model_name}_detector
                     FROM pg
-                    (select t, val from nba where train = 1) 
+                    (select t, val from nba where train = 1)
                     PREDICT val
                     USING engine='merlion', task='detector'{using_model}
                 '''

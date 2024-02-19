@@ -1,7 +1,5 @@
 from copy import deepcopy
 
-import pandas as pd
-
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import (
     BinaryOperation,
@@ -62,8 +60,8 @@ class ProjectDataNode(DataNode):
         model_metadata = model_metadata['metadata']
         if model_metadata['update_status'] == 'available':
             raise Exception(f"model '{model_name}' is obsolete and needs to be updated. Run 'RETRAIN {model_name};'")
-        handler = self.integration_controller.get_handler(model_metadata['engine_name'])
-        return handler.predict(model_name, data, project_name=self.project.name, version=version, params=params)
+        ml_handler = self.integration_controller.get_ml_handler(model_metadata['engine_name'])
+        return ml_handler.predict(model_name, data, project_name=self.project.name, version=version, params=params)
 
     def query(self, query=None, native_query=None, session=None):
         if query is None and native_query is not None:
@@ -75,7 +73,7 @@ class ProjectDataNode(DataNode):
             if kb_table:
                 # this is the knowledge db
                 kb_table.update_query(query)
-                return pd.DataFrame(), []
+                return [], []
 
             raise NotImplementedError(f"Can't update object: {query_table}")
 
@@ -85,7 +83,7 @@ class ProjectDataNode(DataNode):
             if kb_table:
                 # this is the knowledge db
                 kb_table.delete_query(query)
-                return pd.DataFrame(), []
+                return [], []
 
             raise NotImplementedError(f"Can't delete object: {query_table}")
 
@@ -147,7 +145,7 @@ class ProjectDataNode(DataNode):
                     for k, v in df.dtypes.items()
                 ]
 
-                return df.to_dict(orient='records'), columns_info
+                return df.to_dict(orient='split')['data'], columns_info
 
             kb_table = session.kb_controller.get_table(query_table, self.project.id)
             if kb_table:
@@ -161,7 +159,7 @@ class ProjectDataNode(DataNode):
                     for k, v in df.dtypes.items()
                 ]
 
-                return df.to_dict(orient='records'), columns_info
+                return df.to_dict(orient='split')['data'], columns_info
 
             raise EntityNotExistsError(f"Can't select from {query_table} in project")
         else:

@@ -7,6 +7,14 @@ This is the implementation of the SurrealDB data handler for MindsDB.
 
 [SurrealDB](https://surrealdb.com/) is an innovative NewSQL cloud database, suitable for serverless applications, jamstack applications, single-page applications, and traditional applications.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect SurrealDB to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to SurrealDB.
+
 ## Implementation
 
 This handler was implemented by using the python library `pysurrealdb`.
@@ -19,10 +27,6 @@ The required arguments to establish a connection are:
 * `password`: the password to authenticate the user
 * `database`: database name to be connected
 * `namespace`: namespace name to be connected
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/surrealdb_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

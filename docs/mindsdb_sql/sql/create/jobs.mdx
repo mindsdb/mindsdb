@@ -21,22 +21,24 @@ Here is the syntax:
 
 ```sql
 CREATE JOB [IF NOT EXISTS] [project_name.]job_name [AS] (
-   <mindsdb_sql_query_1>[; <mindsdb_sql_query_2>]
+   <statement_1>[; <statement_2>][; ...]
 )
 [START <date>]
 [END <date>]
-[EVERY [number] <period>];
+[EVERY [number] <period>]
+[IF (<statement_1>[; <statement_2>][; ...])];
 ```
 
 Where:
 
 | Expression                                          | Description                                                                                                                                                         |
 | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `[project_name.]job_name`                           | Name of the job preceded by an optional project name where the job is to be created.                                                                                |
-| `<mindsdb_sql_query_1>[; <mindsdb_sql_query_2>]`    | One or more queries separated by `;` to be executed by the job.                                                                                                     |
+| `[project_name.]job_name`                           | Name of the job preceded by an optional project name where the job is to be created. If you do not provide the `project_name` value, then the job is created in the default `mindsdb` project. |
+| `<statement_1>[; <statement_2>][; ...]`             | One or more statements separated by `;` to be executed by the job.                                                                                                     |
 | `[START <date>]`                                    | Optional. The date when the job starts its periodical or one-time execution. If not set, it is the current system date.                                             |
 | `[END <date>]`                                      | Optional. The date when the job ends its periodical or one-time execution. If it is not set (and the repetition rules are set), then the job repeats forever.       |
-| `[EVERY [number] <period>]`                         | Optional. The repetition rules for the job. If not set, the job runs once, not considering the end date value. If the `number` value is not set, it defaults to 1. |
+| `[EVERY [number] <period>]`                         | Optional. The repetition rules for the job. If not set, the job runs once, not considering the end date value. If the `number` value is not set, it defaults to 1.  |
+| `[IF (<statement_1>[; <statement_2>][; ...])]`      | Optional. If the last statement returns one or more rows, only then the job will execute.                                                                                    |
 
 <Info>
 **Available `<date>` formats**
@@ -59,6 +61,13 @@ And the supported `<period>` values:
 - `month` / `months`
 </Info>
 
+Further, you can query all jobs and their execution history like this:
+
+```sql
+SELECT * FROM [project_name.]jobs WHERE name = 'job_name';
+SELECT * FROM [project_name.]jobs_history WHERE name = 'job_name';
+```
+
 ### `LAST`
 
 MindsDB provides a custom `LAST` keyword that enables you to fetch data inserted/updated after the last time you queried for it. It is a convenient way to select only the newly added data rows when running a job.
@@ -74,7 +83,7 @@ Imagine you have the `fruit_data` table that contains the following:
 +-------+-----------+
 ```
 
-When you run the `SELECT` query with the `LAST` keyword for the first time, it'll fetch all records as below.
+When you run the `SELECT` query with the `LAST` keyword for the first time, it'll give an empty output.
 
 ```sql
 SELECT id, name
@@ -83,6 +92,16 @@ WHERE id > LAST;
 ```
 
 This query returns:
+
+```sql
++-------+-----------+
+| id    | name      |
++-------+-----------+
+| null  | null      |
++-------+-----------+
+```
+
+Now imagine you inserted a new record into the `fruit_data` table:
 
 ```sql
 +-------+-----------+
@@ -90,10 +109,11 @@ This query returns:
 +-------+-----------+
 | 1     | apple     |
 | 2     | orange    |
+| 3     | pear      |
 +-------+-----------+
 ```
 
-When you run this query again, you'll get an empty output, assuming there were no new data rows inserted since the last time you queried this table.
+When you run the `SELECT` query with the `LAST` keyword again, you'll get only the newly added record as output.
 
 ```sql
 SELECT id, name
@@ -102,24 +122,6 @@ WHERE id > LAST;
 ```
 
 This query returns:
-
-```sql
-+-------+-----------+
-| id    | name      |
-+-------+-----------+
-|       |           |
-+-------+-----------+
-```
-
-Let's insert another row with values `(3, 'pear')` into the `fruit_data` table. And now this query returns just the newly added row.
-
-```sql
-SELECT id, name
-FROM fruit_data
-WHERE id > LAST;
-```
-
-This returns:
 
 ```sql
 +-------+-----------+
@@ -128,6 +130,8 @@ This returns:
 | 3     | pear      |
 +-------+-----------+
 ```
+
+From this point on, whenever you add new records into the `fruit_data` table, it'll be returned by the next run of the `SELECT` query with the `LAST` keyword. And, if you do not add any new records between the query runs, then the output will be null.
 
 ## Examples
 

@@ -127,8 +127,9 @@ PREDICT answer
 USING
     engine = 'langchain',
     input_column = 'question',
-    api_key = 'your-model-api-key', -- choose one of OpenAI or Anthropic
-    model_name='gpt-4', -- optional model name from OpenAI or Anthropic
+    openai_api_key = 'your-model-api-key', -- choose one of OpenAI or Anthropic
+    anthropic_api_key = 'your-model-api-key', -- choose one of OpenAI or Anthropic
+    model_name='gpt-4',
     mode = 'conversational',
     user_column = 'question' ,
     assistant_column = 'answer',

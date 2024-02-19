@@ -1,22 +1,33 @@
 import sys
 import time
+import pickle
 import threading
 from typing import Optional, Callable
 from concurrent.futures import ProcessPoolExecutor, Future
 
 from pandas import DataFrame
 
+import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.ml_task_queue.const import ML_TASK_TYPE
-from mindsdb.integrations.libs.learn_process import learn_process, predict_process
+from mindsdb.integrations.libs.ml_handler_process import (
+    learn_process,
+    update_process,
+    predict_process,
+    describe_process,
+    create_engine_process,
+    update_engine_process,
+    create_validation_process
+)
 
 
 def init_ml_handler(module_path):
     import importlib  # noqa
 
-    from mindsdb.integrations.libs.learn_process import learn_process, predict_process  # noqa
+    import mindsdb.integrations.libs.ml_handler_process  # noqa
 
+    db.init()
     importlib.import_module(module_path)
 
 
@@ -26,6 +37,23 @@ def dummy_task():
 
 def empty_callback(_task):
     return None
+
+
+class MLProcessException(Exception):
+    """Wrapper for exception to safely send it back to the main process.
+
+    If exception can not be pickled (pickle.loads(pickle.dumps(e))) then it may lead to termination of the ML process.
+    Also in this case, the error sent to the user will not be relevant. This wrapper should prevent it.
+    """
+    base_exception_bytes: bytes = None
+
+    def __init__(self, base_exception: Exception, message: str = None) -> None:
+        super().__init__(message)
+        self.base_exception_bytes = pickle.dumps(base_exception)
+
+    @property
+    def base_exception(self) -> Exception:
+        return pickle.loads(self.base_exception_bytes)
 
 
 class WarmProcess:
@@ -143,7 +171,9 @@ def warm_function(func, context: str, *args, **kwargs):
     try:
         return func(*args, **kwargs)
     except Exception as e:
-        raise RuntimeError(str(e)) from e
+        if type(e) in (ImportError, ModuleNotFoundError):
+            raise
+        raise MLProcessException(base_exception=e)
 
 
 class ProcessCache:
@@ -218,33 +248,91 @@ class ProcessCache:
                         ]
                     }
 
-    def apply_async(self, task_type: ML_TASK_TYPE, model_id: int, payload: dict, dataframe: DataFrame = None) -> Future:
+    def apply_async(self, task_type: ML_TASK_TYPE, model_id: Optional[int],
+                    payload: dict, dataframe: Optional[DataFrame] = None) -> Future:
         """ run new task. If possible - do it in existing process, if not - start new one.
 
-            Args: TODO rewrite!
-                handler (object): handler class
-                func (Callable): function to run
-                model_marker (tuple): if any of processes processed task with same marker - new task will be sent to it
-                args (tuple): args to be passed to function
-                kwargs (dict): kwargs to be passed to function
+            Args:
+                task_type (ML_TASK_TYPE): type of the task (learn, predict, etc)
+                model_id (int): id of the model
+                payload (dict): any 'lightweight' data that needs to be send in the process
+                dataframe (DataFrame): DataFrame to be send in the process
 
             Returns:
                 Future
         """
+        handler_module_path = payload['handler_meta']['module_path']
+        integration_id = payload['handler_meta']['integration_id']
         if task_type in (ML_TASK_TYPE.LEARN, ML_TASK_TYPE.FINETUNE):
             func = learn_process
+            kwargs = {
+                'data_integration_ref': payload['data_integration_ref'],
+                'problem_definition': payload['problem_definition'],
+                'fetch_data_query': payload['fetch_data_query'],
+                'project_name': payload['project_name'],
+                'model_id': model_id,
+                'base_model_id': payload.get('base_model_id'),
+                'set_active': payload['set_active'],
+                'integration_id': integration_id,
+                'module_path': handler_module_path
+            }
         elif task_type == ML_TASK_TYPE.PREDICT:
             func = predict_process
+            kwargs = {
+                'predictor_record': payload['predictor_record'],
+                'ml_engine_name': payload['handler_meta']['engine'],
+                'args': payload['args'],
+                'dataframe': dataframe,
+                'integration_id': integration_id,
+                'module_path': handler_module_path
+            }
+        elif task_type == ML_TASK_TYPE.DESCRIBE:
+            func = describe_process
+            kwargs = {
+                'attribute': payload.get('attribute'),
+                'model_id': model_id,
+                'integration_id': integration_id,
+                'module_path': handler_module_path
+            }
+        elif task_type == ML_TASK_TYPE.CREATE_VALIDATION:
+            func = create_validation_process
+            kwargs = {
+                'target': payload.get('target'),
+                'args': payload.get('args'),
+                'integration_id': integration_id,
+                'module_path': handler_module_path
+            }
+        elif task_type == ML_TASK_TYPE.CREATE_ENGINE:
+            func = create_engine_process
+            kwargs = {
+                'connection_args': payload['connection_args'],
+                'integration_id': integration_id,
+                'module_path': handler_module_path
+            }
+        elif task_type == ML_TASK_TYPE.UPDATE_ENGINE:
+            func = update_engine_process
+            kwargs = {
+                'connection_args': payload['connection_args'],
+                'integration_id': integration_id,
+                'module_path': handler_module_path
+            }
+        elif task_type == ML_TASK_TYPE.UPDATE:
+            func = update_process
+            kwargs = {
+                'args': payload['args'],
+                'integration_id': integration_id,
+                'model_id': model_id,
+                'module_path': handler_module_path
+            }
         else:
             raise Exception(f'Unknown ML task type: {task_type}')
 
-        handler_module_path = payload['handler_meta']['module_path']
-        handler_name = payload['handler_meta']['engine']
+        ml_engine_name = payload['handler_meta']['engine']
         model_marker = (model_id, payload['context']['company_id'])
         with self._lock:
-            if handler_name not in self.cache:
+            if ml_engine_name not in self.cache:
                 warm_process = WarmProcess(init_ml_handler, (handler_module_path,))
-                self.cache[handler_name] = {
+                self.cache[ml_engine_name] = {
                     'last_usage_at': None,
                     'handler_module': handler_module_path,
                     'processes': [warm_process]
@@ -254,7 +342,7 @@ class ProcessCache:
                 if model_marker is not None:
                     try:
                         warm_process = next(
-                            p for p in self.cache[handler_name]['processes']
+                            p for p in self.cache[ml_engine_name]['processes']
                             if p.ready() and p.has_marker(model_marker)
                         )
                     except StopIteration:
@@ -262,17 +350,17 @@ class ProcessCache:
                 if warm_process is None:
                     try:
                         warm_process = next(
-                            p for p in self.cache[handler_name]['processes']
+                            p for p in self.cache[ml_engine_name]['processes']
                             if p.ready()
                         )
                     except StopIteration:
                         pass
                 if warm_process is None:
                     warm_process = WarmProcess(init_ml_handler, (handler_module_path,))
-                    self.cache[handler_name]['processes'].append(warm_process)
+                    self.cache[ml_engine_name]['processes'].append(warm_process)
 
-            task = warm_process.apply_async(warm_function, func, payload['context'], payload, dataframe)
-            self.cache[handler_name]['last_usage_at'] = time.time()
+            task = warm_process.apply_async(warm_function, func, payload['context'], **kwargs)
+            self.cache[ml_engine_name]['last_usage_at'] = time.time()
             warm_process.add_marker(model_marker)
         return task
 

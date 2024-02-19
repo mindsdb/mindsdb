@@ -1,5 +1,5 @@
 import os
-from datetime import datetime as datetime, timezone
+from datetime import datetime as datetime, timezone, timedelta
 import ast
 from typing import List
 import pandas as pd
@@ -32,6 +32,7 @@ from mindsdb.integrations.libs.response import (
 
 logger = log.getLogger(__name__)
 
+DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 class SlackChannelsTable(APITable):
     def __init__(self, handler):
@@ -54,7 +55,7 @@ class SlackChannelsTable(APITable):
         # override the default function
         def parse_utc_date(date_str):
             date_obj = datetime.fromisoformat(date_str).replace(tzinfo=timezone.utc)
-            return date_obj.strftime('%Y-%m-%d %H:%M:%S')
+            return date_obj
 
         # Get the channels list and ids
         channels = self.client.conversations_list(types="public_channel,private_channel")['channels']
@@ -81,12 +82,14 @@ class SlackChannelsTable(APITable):
                 else:
                     raise NotImplementedError(f'Unknown op: {op}')
 
-            elif arg1 == 'created_at':
+            elif arg1 == 'created_at' and arg2 is not None:
                 date = parse_utc_date(arg2)
                 if op == '>':
-                    params['start_time'] = date
+                    params['start_time'] = (date + timedelta(seconds=1)).strftime(DATE_FORMAT)
+                elif op == '>=':
+                    params['start_time'] = date.strftime(DATE_FORMAT)
                 elif op == '<':
-                    params['end_time'] = date
+                    params['end_time'] = date.strftime(DATE_FORMAT)
                 else:
                     raise NotImplementedError
 
@@ -101,17 +104,14 @@ class SlackChannelsTable(APITable):
             order_by_conditions["ascending"] = []
 
             for an_order in query.order_by:
-                if an_order.field.parts[1] == "messages":
-                    order_by_conditions["columns"].append("messages")
+                col = an_order.field.parts[-1]
 
-                    if an_order.direction == "ASC":
-                        order_by_conditions["ascending"].append(True)
-                    else:
-                        order_by_conditions["ascending"].append(False)
+                order_by_conditions["columns"].append(col)
+
+                if an_order.direction == "ASC":
+                    order_by_conditions["ascending"].append(True)
                 else:
-                    raise ValueError(
-                        f"Order by unknown column {an_order.field.parts[1]}"
-                    )
+                    order_by_conditions["ascending"].append(False)
 
         # Retrieve the conversation history
         try:

@@ -7,6 +7,14 @@ This is the implementation of the DuckDB data handler for MindsDB.
 
 [DuckDB](https://duckdb.org/) is an open-source analytical database system. It is designed for fast execution of analytical queries. There are no external dependencies and the DBMS runs completely embedded within a host process, similar to SQLite. DuckDB provides a rich SQL dialect with support for complex queries with transactional guarantees (ACID).
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect DuckDB to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to DuckDB.
+
 ## Implementation
 
 This handler is implemented using the `duckdb` Python client library.
@@ -22,10 +30,6 @@ The required arguments to establish a connection are as follows:
 The optional arguments are as follows:
 
 * `read_only` is a flag that specifies whether the connection is in the read-only mode. This is required if multiple processes want to access the same database file at the same time.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/duckdb_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

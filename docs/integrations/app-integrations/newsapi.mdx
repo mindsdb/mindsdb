@@ -9,6 +9,14 @@ In this section, we present how to connect News API to MindsDB.
 
 Data from News API can be utilized within MindsDB for model training and predictions.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect News API to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to News API.
+
 ## Connection
 
 This handler is implemented using the [newsapi-python](https://newsapi.org/docs/client-libraries/python) library.
@@ -32,10 +40,6 @@ PARAMETERS = {
 	"api_key": "Your api key"
 };
 ```
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/newsapi_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

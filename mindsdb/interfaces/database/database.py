@@ -4,6 +4,7 @@ from collections import OrderedDict
 from mindsdb.interfaces.database.projects import ProjectController
 import mindsdb.utilities.profiler as profiler
 from mindsdb.utilities.exception import EntityNotExistsError
+from mindsdb.interfaces.database.log import LogDBController
 
 
 class DatabaseController:
@@ -11,6 +12,9 @@ class DatabaseController:
         from mindsdb.interfaces.database.integrations import integration_controller
         self.integration_controller = integration_controller
         self.project_controller = ProjectController()
+
+        self.logs_db_controller = LogDBController()
+        self.information_schema_controller = None
 
     def delete(self, name: str):
         databases = self.get_dict()
@@ -33,6 +37,11 @@ class DatabaseController:
         integrations = self.integration_controller.get_all()
         result = [{
             'name': 'information_schema',
+            'type': 'system',
+            'id': None,
+            'engine': None
+        }, {
+            'name': 'log',
             'type': 'system',
             'id': None,
             'engine': None
@@ -92,3 +101,11 @@ class DatabaseController:
 
     def get_project(self, name: str):
         return self.project_controller.get(name=name)
+
+    def get_system_db(self, name: str):
+        if name == 'log':
+            return self.logs_db_controller
+        elif name == 'information_schema':
+            raise Exception("Not implemented")
+        else:
+            raise Exception(f"Database '{name}' does not exists")

@@ -37,7 +37,7 @@ class QueryStorage:
 
     create_engine = """
                     CREATE ML_ENGINE openai2
-                    FROM openai USING api_key='%s';
+                    FROM openai USING openai_api_key='%s';
                         """
 
     create_model = """

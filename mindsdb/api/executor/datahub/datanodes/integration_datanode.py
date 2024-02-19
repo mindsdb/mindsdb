@@ -190,5 +190,5 @@ class IntegrationDataNode(DataNode):
             }
             for k, v in df.dtypes.items()
         ]
-        data = df.to_dict(orient='records')
+        data = df.to_dict(orient='split')['data']
         return data, columns_info

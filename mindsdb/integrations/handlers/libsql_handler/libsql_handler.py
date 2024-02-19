@@ -101,7 +101,7 @@ class LibSQLHandler(DatabaseHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            log.logger.error(
+            logger.error(
                 f'Error connecting to SQLite {self.connection_data["database"]}, {e}!'
             )
             response.error_message = str(e)
@@ -141,7 +141,7 @@ class LibSQLHandler(DatabaseHandler):
                 connection.commit()
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
-            log.logger.error(
+            logger.error(
                 f'Error running query: {query} on {self.connection_data["database"]}!'
             )
             response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))

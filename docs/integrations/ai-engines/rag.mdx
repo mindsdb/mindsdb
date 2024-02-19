@@ -47,9 +47,9 @@ FROM datasource
 PREDICT answer
 USING
    engine = 'rag_engine',
-   llm_type = 'openai', -- choose one of OpenAI or Writer
-   url = 'link-to-webpage', -- this is optional
-   vector_store_folder_name = 'db_connection'; -- this is optional
+   llm_type = 'openai',                          -- choose one of OpenAI or Writer
+   url = 'link-to-webpage',                      -- this is optional
+   vector_store_folder_name = 'db_connection';   -- provide a folder name which stores vector db data
 ```
 
 Where:
@@ -58,7 +58,11 @@ Where:
 |----------------------------|-------------------------------------------------------------|
 | `llm_type`                 | It defines which LLM is used.                               |
 | `url`                      | It is used to provide training data from a website.         |
-| `vector_store_folder_name` | It is used to provide training data from a vector database. |
+| `vector_store_folder_name` | It is a folder name to which the vector db data in between sessions is persisted. |
+
+<Info>
+When creating a RAG model, it is required to provide training data either in the `url` parameter or in the `FROM` clause.
+</Info>
 
 ## Usage
 
@@ -83,7 +87,8 @@ predict answer
 USING
    engine = "rag_engine",
    llm_type = "openai",
-   url='https://docs.mindsdb.com/what-is-mindsdb';
+   url='https://docs.mindsdb.com/what-is-mindsdb',
+   vector_store_folder_name = 'db_connection';
 ```
 
 Check the status of the model.
@@ -180,7 +185,7 @@ Create a model and embed input data.
     summarize_context=true,
     vector_store_name="faiss",
     run_embeddings=true,
-    vector_store_folder_name='rag_handler_openai_test',
+    vector_store_folder_name='rag_handler_writer_test',
     embeddings_model_name="BAAI/bge-base-en",
     prompt_template='Use the following pieces of context to answer the question at the end. If you do not know the answer, just say that you do not know, do not try to make up an answer.
                         Context: {context}

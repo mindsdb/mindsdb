@@ -4,6 +4,8 @@
 """
 import warnings
 from typing import Iterable, List, Optional
+
+import pandas as pd
 from mindsdb_sql import parse_sql, Identifier
 from mindsdb_sql.planner.utils import query_traversal
 
@@ -161,11 +163,17 @@ class MindsDBSQL(SQLDatabase):
 
         def _repr_result(ret):
             limit_rows = 30
+
             columns_str = ', '.join([repr(col.name) for col in ret.columns])
             res = f'Output columns: {columns_str}\n'
 
             if len(ret.data) > limit_rows:
-                res += f'Result has {len(ret.data)} rows. First {limit_rows} rows:\n'
+                df = pd.DataFrame(ret.data, columns=[col.name for col in ret.columns])
+
+                res += f'Result has {len(ret.data)} rows. Description of data:\n'
+                res += str(df.describe(include='all')) + '\n\n'
+                res += f'First {limit_rows} rows:\n'
+
             else:
                 res += 'Result:\n'
 

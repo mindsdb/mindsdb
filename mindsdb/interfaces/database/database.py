@@ -39,19 +39,25 @@ class DatabaseController:
             'name': 'information_schema',
             'type': 'system',
             'id': None,
-            'engine': None
+            'engine': None,
+            'visible': False,
+            'deletable': False
         }, {
             'name': 'log',
             'type': 'system',
             'id': None,
-            'engine': None
+            'engine': None,
+            'visible': True,
+            'deletable': False
         }]
         for x in projects:
             result.append({
                 'name': x.name,
                 'type': 'project',
                 'id': x.id,
-                'engine': None
+                'engine': None,
+                'visible': True,
+                'deletable': True
             })
         for key, value in integrations.items():
             db_type = value.get('type', 'data')
@@ -63,6 +69,8 @@ class DatabaseController:
                     'engine': value.get('engine'),
                     'class_type': value.get('class_type'),
                     'connection_data': value.get('connection_data'),
+                    'visible': True,
+                    'deletable': True
                 })
 
         if filter_type is not None:

@@ -17,7 +17,8 @@ class GetRoot(Resource):
             'class': 'db',
             'type': x['type'],
             'engine': x['engine'],
-            'deletable': x['type'] != 'system'
+            'deletable': x['deletable'],
+            'visible': x['visible']
         } for x in databases]
         return result
 

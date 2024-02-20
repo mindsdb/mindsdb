@@ -12,7 +12,7 @@ from langchain.text_splitter import CharacterTextSplitter
 from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 from langchain.chains import ReduceDocumentsChain, MapReduceDocumentsChain
 
-from mindsdb.integrations.handlers.langchain_handler.skill_tool import make_tools_from_skill
+from mindsdb.interfaces.skills.skill_tool import skill_tool
 
 
 # Individual tools
@@ -125,6 +125,16 @@ def _setup_standard_tools(tools, llm, executor, model_kwargs):
     return all_standard_tools
 
 
+def langchain_tool_from_skill(skill):
+    # Makes Langchain compatible tools from a skill
+    tool = skill_tool.get_tool_from_skill(skill)
+
+    return Tool(
+        name=tool['name'],
+        func=tool['func'],
+        description=tool['description']
+    )
+
 # Collector
 def setup_tools(llm, model_kwargs, pred_args, executor, default_agent_tools):
     toolkit = pred_args['tools'] if pred_args.get('tools') is not None else default_agent_tools
@@ -142,7 +152,7 @@ def setup_tools(llm, model_kwargs, pred_args, executor, default_agent_tools):
     tools = []
     skills = pred_args.get('skills', [])
     for skill in skills:
-        tools += make_tools_from_skill(skill, llm, executor)
+        tools.append(langchain_tool_from_skill(skill))
 
     if len(tools) == 0:
         tools = _setup_standard_tools(standard_tools, llm, executor, model_kwargs)

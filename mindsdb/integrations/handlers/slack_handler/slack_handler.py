@@ -342,7 +342,7 @@ class SlackChannelsTable(APITable):
         try:
             response = self.client.chat_delete(
                 channel=params['channel'],
-                ts=params['ts'],
+                ts=params['ts']
             )
             
         except SlackApiError as e:
@@ -560,4 +560,3 @@ class SlackHandler(APIChatHandler):
             }
             new_channels.append(new_channel)
         return new_channels
-

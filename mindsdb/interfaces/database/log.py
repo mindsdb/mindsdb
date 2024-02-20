@@ -1,12 +1,12 @@
+from abc import ABC, abstractmethod
 from typing import List
 from collections import OrderedDict
 
-from sqlalchemy import Boolean
 import pandas as pd
 
 from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import Select, BinaryOperation, Identifier, Constant, Star
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb_sql.parser.ast import Select, Identifier, Star
+# from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.planner.utils import query_traversal
 
 from mindsdb.utilities.functions import resolve_table_identifier
@@ -16,18 +16,84 @@ import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.context import context as ctx
 
 
-class LogTable:
+class LogTable(ABC):
     def __init__(self, name: str) -> None:
         self.name = name
         self.deletable = False
         self.kind = 'table'
         self.visible = True
 
+    @abstractmethod
+    def _get_base(self):
+        pass
+
+
+class LLMLogTable(LogTable):
+    columns = [
+        'API_KEY', 'MODEL_NAME', 'INPUT', 'OUTPUT', 'START_TIME', 'END_TIME',
+        'PROMPT_TOKENS', 'COMPLETION_TOKENS', 'TOTAL_TOKENS', 'SUCCESS'
+    ]
+    types_map = {
+        'SUCCESS': 'boolean',
+        'START_TIME': 'datetime64[ns]',
+        'END_TIME': 'datetime64[ns]'
+    }
+
+    def _get_base(self):
+        query = db.session.query(
+            db.LLMLog, db.Predictor
+        ).filter_by(
+            company_id=ctx.company_id
+        ).outerjoin(
+            db.Predictor, db.Predictor.id == db.LLMLog.model_id
+        ).with_entities(
+            db.LLMLog.api_key.label('api_key'),
+            db.Predictor.name.label('model_name'),
+            db.LLMLog.input.label('input'),
+            db.LLMLog.output.label('output'),
+            db.LLMLog.start_time.label('start_time'),
+            db.LLMLog.end_time.label('end_time'),
+            db.LLMLog.prompt_tokens.label('prompt_tokens'),
+            db.LLMLog.completion_tokens.label('completion_tokens'),
+            db.LLMLog.total_tokens.label('total_tokens'),
+            db.LLMLog.success.label('success')
+        )
+        return query
+
+
+class JobsHistoryTable(LogTable):
+    columns = ['NAME', 'PROJECT', 'RUN_START', 'RUN_END', 'ERROR', 'QUERY']
+    types_map = {
+        'RUN_START': 'datetime64[ns]',
+        'RUN_END': 'datetime64[ns]'
+    }
+
+    def _get_base(self):
+        query = db.session.query(
+            db.JobsHistory, db.Jobs
+        ).filter_by(
+            company_id=ctx.company_id,
+        ).outerjoin(
+            db.Jobs, db.Jobs.id == db.JobsHistory.job_id
+        ).outerjoin(
+            db.Project, db.Project.id == db.Jobs.project_id
+        ).with_entities(
+            db.Jobs.name.label('name'),
+            db.Project.name.label('project'),
+            db.JobsHistory.start_at.label('run_start'),
+            db.JobsHistory.end_at.label('run_end'),
+            db.JobsHistory.error.label('error'),
+            db.JobsHistory.query_str.label('query')
+        )
+
+        return query
+
 
 class LogDBController:
     def __init__(self):
         self._tables = OrderedDict()
-        self._tables['llm_log'] = LogTable('llm_log')
+        self._tables['llm_log'] = LLMLogTable('llm_log')
+        self._tables['jobs_history'] = JobsHistoryTable('jobs_history')
 
     def get_list(self) -> List[LogTable]:
         return list(self._tables.values())
@@ -58,29 +124,10 @@ class LogDBController:
         if table[1].lower() not in self._tables.keys():
             raise Exception(f"There is no table '{table[1]}' in the log database")
 
-        # region inject company_id
-        company_id_op = BinaryOperation(
-            op='is' if ctx.company_id is None else '=',
-            args=(
-                Identifier('company_id'),
-                Constant(ctx.company_id),
-            )
-        )
-        if query.where is None:
-            query.where = company_id_op
-        else:
-            query.where = BinaryOperation(
-                op='and',
-                args=(
-                    query.where,
-                    company_id_op
-                )
-            )
-        # endregion
+        log_table = self._tables[table[1].lower()]
 
         # region check that only allowed identifiers are used in the query
-        available_columns_names = [column.name.lower() for column in db.LLMLog.__table__.columns]
-        available_columns_names.remove('id')
+        available_columns_names = [column.lower() for column in log_table.columns]
 
         def check_columns(node, is_table, **kwargs):
             # region replace * to available columns
@@ -104,22 +151,25 @@ class LogDBController:
         query_traversal(query, check_columns)
         # endregion
 
-        render_engine = db.engine.name
-        if render_engine == "postgresql":
-            'postgres'
-        render = SqlalchemyRender(render_engine)
-        query_str = render.get_string(query, with_failback=False)
-        df = pd.read_sql_query(query_str, db.engine)
+        # region TEMP
+        alias = query.from_table.alias or Identifier(query.from_table.parts[-1])
+        query.from_table = f'({log_table._get_base()}) as {alias}'
+        # query.from_table = NativeQuery(query=str(jht._get_base()), integration=Identifier('log'), alias=alias)
 
-        # region fix boolean column for sqllite (otherwise vals will be integer)
-        if render_engine == 'sqlite':
-            for column_name in df.columns:
-                model_columns_types = {
-                    x.name.lower(): type(x.type)
-                    for x in db.LLMLog.__table__.columns._all_columns
-                }
-                if model_columns_types[column_name.lower()] is Boolean:
-                    df['success'] = df['success'].astype(bool)
+        # render_engine = db.engine.name
+        # if render_engine == "postgresql":
+        #     'postgres'
+        # render = SqlalchemyRender(render_engine)
+        # query_str = render.get_string(query, with_failback=False)
+        query_str = str(query)
+        df = pd.read_sql_query(query_str, db.engine)
+        # endregion
+
+        # region cast columns values to proper types
+        for column_name, column_type in log_table.types_map.items():
+            for df_column_name in df.columns:
+                if df_column_name.lower() == column_name.lower() and df[df_column_name].dtype != column_type:
+                    df[df_column_name] = df[df_column_name].astype(column_type)
         # endregion
 
         columns_info = [{

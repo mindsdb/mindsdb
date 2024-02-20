@@ -279,6 +279,7 @@ class RAGBaseParameters(BaseModel):
 
     llm_params: Any
     vector_store_folder_name: str
+    input_column: str
     use_gpu: bool = False
     embeddings_batch_size: int = MAX_EMBEDDINGS_BATCH_SIZE  # not used, leaving in place to prevent breaking changes
     prompt_template: str = DEFAULT_QA_PROMPT_TEMPLATE

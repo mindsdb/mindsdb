@@ -41,7 +41,7 @@ from mindsdb.utilities.functions import mark_process
 import mindsdb.utilities.profiler as profiler
 from mindsdb.utilities.ml_task_queue.producer import MLTaskProducer
 from mindsdb.utilities.ml_task_queue.const import ML_TASK_TYPE
-from mindsdb.integrations.libs.process_cache import process_cache, empty_callback
+from mindsdb.integrations.libs.process_cache import process_cache, empty_callback, MLProcessException
 
 try:
     import torch.multiprocessing as mp
@@ -420,6 +420,8 @@ class BaseMLEngineExec:
         except (ImportError, ModuleNotFoundError):
             raise
         except Exception as e:
+            if type(e) is MLProcessException:
+                e = e.base_exception
             msg = str(e).strip()
             if msg == '':
                 msg = e.__class__.__name__

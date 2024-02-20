@@ -659,7 +659,6 @@ class OpenAIHandler(BaseMLEngine):
         org = using_args.get('api_organization')
         client = self._get_client(api_key=api_key, base_url=api_base, org=org)
 
-        self._check_ft_cols(df, [prompt_col, completion_col])
 
         args = {**using_args, **args}
         prev_model_name = self.base_model_storage.json_get('args').get('model_name', '')
@@ -747,17 +746,6 @@ class OpenAIHandler(BaseMLEngine):
 
         self.model_storage.json_set('args', args)
         shutil.rmtree(temp_storage_path)
-
-    @staticmethod
-    def _check_ft_cols(df, cols):
-        # TODO: refactor into common util
-        if 'chat_json' not in df.columns:
-            prompt_col, completion_col = cols
-            for col in [prompt_col, completion_col]:
-                if col not in set(df.columns):
-                    raise Exception(
-                        f"To fine-tune this OpenAI model, please format your select data query to have a `{prompt_col}` column and a `{completion_col}` column first."
-                    )  # noqa
 
     @staticmethod
     def _prepare_ft_jsonl(df, _, temp_filename, temp_model_path):

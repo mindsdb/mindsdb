@@ -359,7 +359,7 @@ class LangChainHandler(BaseMLEngine):
                     CallbackHandler(
                         args['langfuse_public_key'],
                         args['langfuse_secret_key'],
-                        host=args['langfuse_host']
+                        host=args['langfuse_host'],
                     )
                 )
             try:

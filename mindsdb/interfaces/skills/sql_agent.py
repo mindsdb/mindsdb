@@ -1,5 +1,3 @@
-
-import warnings
 from typing import Iterable, List, Optional
 
 import pandas as pd

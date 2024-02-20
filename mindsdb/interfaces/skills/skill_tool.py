@@ -1,11 +1,10 @@
+from typing import List, Optional
+
 from mindsdb_sql.parser.ast import Select, BinaryOperation, Identifier, Constant, Star
 
 from mindsdb.integrations.libs.vectordatabase_handler import TableField
 from mindsdb.interfaces.storage import db
 from .sql_agent import SQLAgent
-
-import os
-from typing import List, Optional
 
 _DEFAULT_TOP_K_SIMILARITY_SEARCH = 5
 
@@ -120,5 +119,3 @@ class SkillToolController:
 
 
 skill_tool = SkillToolController()
-
-

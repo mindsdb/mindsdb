@@ -205,3 +205,30 @@ class TwelveLabsHandler(BaseMLEngine):
 
         else:
             raise NotImplementedError(f"Task {args['task']} is not supported.")
+
+    def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
+        """
+        Describes the model. This method is called when describing the model.
+
+        Parameters
+        ----------
+        attribute : str, Optional
+            The attribute to describe.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame containing the description of the model.
+        """
+
+        if attribute == "args":
+            args = self.model_storage.json_get("args")
+            return pd.DataFrame(args.items(), columns=["key", "value"])
+                                
+        elif attribute == "indexed_videos":
+            indexed_videos = self.model_storage.json_get("indexed_videos")
+            return pd.DataFrame(indexed_videos)
+        
+        else:
+            tables = ["args", "indexed_videos"]
+            return pd.DataFrame(tables, columns=["tables"])

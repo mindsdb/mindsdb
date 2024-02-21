@@ -28,6 +28,30 @@ logger = log.getLogger(__name__)
 
 DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 
+
+class SlackChannelListsTable(APITable):
+
+    def list(self, **kwargs) -> pd.DataFrame:
+
+        client = self.handler.connect()
+
+        channels = client.conversations_list(types="public_channel,private_channel")['channels']
+
+        for channel in channels:
+            channel['created_at'] = dt.datetime.fromtimestamp(channel['created'])
+            channel['updated_at'] = dt.datetime.fromtimestamp(channel['updated'] / 1000)
+
+        return pd.DataFrame(channels, columns=self.get_columns())
+
+    def get_columns(self) -> List[str]:
+        return [
+            'id',
+            'name',
+            'created_at',
+            'updated_at'
+        ]
+
+
 class SlackChannelsTable(APITable):
 
     def list(self,
@@ -300,6 +324,9 @@ class SlackHandler(APIChatHandler):
         
         channels = SlackChannelsTable(self)
         self._register_table('channels', channels)
+
+        channel_lists = SlackChannelListsTable(self)
+        self._register_table('channel_lists', channel_lists)
 
         self._socket_mode_client = None
 

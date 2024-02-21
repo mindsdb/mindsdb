@@ -181,12 +181,12 @@ class TwelveLabsHandler(BaseMLEngine):
         # initialize TwelveLabsAPIClient
         twelve_labs_api_client = TwelveLabsAPIClient(api_key=api_key)
 
-        # get search query
-        # TODO: support multiple queries
-        query = df[args['query_column']].tolist()[0]
-
         # check if task is search
         if args['task'] == 'search':
+            # get search query
+            # TODO: support multiple queries
+            query = df[args['query_column']].tolist()[0]
+
             # search for query in index
             data = twelve_labs_api_client.search_index(
                 index_id=args['index_id'],
@@ -201,6 +201,17 @@ class TwelveLabsHandler(BaseMLEngine):
             # df_modules = pd.json_normalize(data, record_path='modules', meta=metadata, record_prefix='modules_')
             # df_predictions = pd.merge(df_metadata, df_modules, on=metadata)
             # return df_predictions
+            return pd.json_normalize(data).add_prefix(args['target'] + '_')
+        
+        # check if task is summarize
+        elif args['task'] == 'summarize':
+            # sumarize videos
+            video_ids = df['video_id'].tolist()
+            data = twelve_labs_api_client.summarize_videos(
+                video_ids=video_ids,
+                type=args['type']
+            )
+
             return pd.json_normalize(data).add_prefix(args['target'] + '_')
 
         else:

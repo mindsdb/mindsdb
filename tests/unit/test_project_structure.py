@@ -951,11 +951,8 @@ class TestJobs(BaseExecutorDummyML):
         assert sorted([x.upper() for x in list(ret.columns)]) == sorted([x.upper() for x in JobsHistoryTable.columns])
 
         # there is no 'jobs_history' table in project
-        # with pytest.raises(Exception):
-        #     try:
-        #         self.run_sql('select * from jobs_history', database='proj2')
-        #     except Exception as e:
-        #         x = 1
+        with pytest.raises(Exception):
+            self.run_sql('select * from jobs_history', database='proj2')
 
         with pytest.raises(Exception):
             self.run_sql('select company_id from log.jobs_history', database='proj2')

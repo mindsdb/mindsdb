@@ -103,6 +103,41 @@ class TwelveLabsAPIClient:
 
         data = result['data']
         return data[0]['_id'] if data else None
+    
+    def list_videos_in_index(self, index_name: str) -> List[Dict]:
+        """
+        List videos in an index.
+
+        Parameters
+        ----------
+        index_name : str
+            Name of the index.
+
+        Returns
+        -------
+        List[Dict]
+            List of videos in the index.
+        """
+
+        index_id = self.get_index_by_name(index_name=index_name)
+
+        data = []
+        result = self._submit_request(
+            method="GET",
+            endpoint=f"indexes/{index_id}/videos",
+        )
+        data.extend(result['data'])
+
+        while result['page_info']['page'] < result['page_info']['total_page']: 
+            result = self._submit_request(
+                method="GET",
+                endpoint=f"indexes/{index_id}/videos?page_token={result['page_info']['next_page_token']}",
+            )
+            data.extend(result['data'])
+
+        logger.info(f"Retrieved videos in index {index_id} successfully.")
+
+        return data
 
     def create_video_indexing_tasks(self, index_id: str, video_urls: List[str] = None, video_files: List[str] = None) -> List[str]:
         """
@@ -176,9 +211,11 @@ class TwelveLabsAPIClient:
         body = {
             "index_id": index_id,
         }
+
         file_to_close = None
         if video_url:
             body['video_url'] = video_url
+
         elif video_file:
             import mimetypes
             # WE need the file open for the duration of the request. Maybe simplify it with context manager later, but needs _create_video_indexing_task re-written

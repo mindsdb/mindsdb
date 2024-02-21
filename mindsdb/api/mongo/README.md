@@ -319,7 +319,7 @@ db.predictors.deleteOne({'name': "sales_model"})
 `CREATE ml_engine ...` alternative in mongo:
 
 ```
-db.ml_engines.insertOne({'name': "openai_2", "handler": "openai", "params": {"api_key": "qqq"}})
+db.ml_engines.insertOne({'name': "openai_2", "handler": "openai", "params": {"openai_api_key": "qqq"}})
 ```
 
 **List**

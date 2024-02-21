@@ -11,30 +11,30 @@ Google Generative AI is a library that provides access to powerful language mode
 Create a ML Engine with the new `google_gemini` engine.
 
 ```sql
-CREATE ML_ENGINE Gemini_ML_Engine
+CREATE ML_ENGINE gemini_engine
 FROM google_gemini
 USING
-  api_key = 'cloud_api_key';
+  google_gemini_api_key = 'google_gemini_api_key';
 ```
 
 ```sql
-CREATE MODEL mindsdb.Google Gemini_test
+CREATE MODEL mindsdb.Google_Gemini_test
 PREDICT answer
 USING
   column = 'question',
-  engine = 'Gemini_ML_Engine',
-  api_key = 'cloud_api_key',
+  engine = 'gemini_engine',
+  google_gemini_api_key = 'google_gemini_api_key',
   model = 'gemini-pro'
 ```
 
 ```sql
 SELECT question, answer
-FROM mindsdb.Google Gemini_test
+FROM mindsdb.Google_Gemini_test
 WHERE question = 'What is the meaning of life?';
 ```
 
 ```sql
 SELECT t.question, m.answer
-FROM mindsdb.Google Gemini_test as m
+FROM mindsdb.Google_Gemini_test as m
 JOIN files.question_table as t;
 ```

@@ -1,7 +1,7 @@
 __title__ = 'MindsDB'
 __package_name__ = 'mindsdb'
-__version__ = '23.12.4.2'
-__description__ = "MindsDB server, provides server capabilities to mindsdb native python library"
+__version__ = '24.2.3.0'
+__description__ = "MindsDB's AI SQL Server enables developers to build AI tools that need access to real-time data to perform their tasks"
 __email__ = "jorge@mindsdb.com"
 __author__ = 'MindsDB Inc'
 __github__ = 'https://github.com/mindsdb/mindsdb'

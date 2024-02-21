@@ -1,7 +1,6 @@
 import datetime as dt
 import json
 import threading
-import unittest
 import inspect
 from unittest.mock import patch
 import tempfile
@@ -10,9 +9,8 @@ import os
 from pymongo import MongoClient
 from mindsdb_sql import parse_sql
 
-import mindsdb.api.mongo.functions as helpers
-from mindsdb.api.mysql.mysql_proxy.executor.data_types import ExecuteAnswer, ANSWER_TYPE
-from mindsdb.api.mysql.mysql_proxy.classes.sql_query import Column
+from mindsdb.api.executor.data_types.answer import ExecuteAnswer, ANSWER_TYPE
+from mindsdb.api.executor import Column
 
 # How to run:
 #  env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
@@ -25,7 +23,7 @@ class TestMongoDBServer(BaseUnitTest):
     def test_mongo_server(self):
 
         # mock sqlquery
-        with patch('mindsdb.api.mysql.mysql_proxy.executor.executor_commands.ExecuteCommands.execute_command') as mock_executor:
+        with patch('mindsdb.api.executor.command_executor.ExecuteCommands.execute_command') as mock_executor:
 
             # if this module was imported in other test it prevents mocking SQLQuery inside MongoServer thread
             # unload_module('mindsdb.api.mysql.mysql_proxy.executor.executor_commands')
@@ -229,11 +227,11 @@ class TestMongoDBServer(BaseUnitTest):
 
     def t_create_ml_engine(self, client_con, mock_executor):
 
-        client_con.myproj.ml_engines.insert_one({'name': "openai2", "handler": "openai", "params": {"api_key": "qqq"}})
+        client_con.myproj.ml_engines.insert_one({'name': "openai2", "handler": "openai", "params": {"openai_api_key": "qqq"}})
 
         ast = mock_executor.call_args[0][0]
 
-        expected_sql = "CREATE ML_ENGINE openai2 FROM openai USING api_key= 'qqq'"
+        expected_sql = "CREATE ML_ENGINE openai2 FROM openai USING openai_api_key= 'qqq'"
         assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
 
     def t_list_ml_engines(self, client_con, mock_executor):

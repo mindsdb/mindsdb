@@ -9,7 +9,7 @@ MindsDB provides the Vertex handler that enables you to connect Vertex AI models
 
 Before creating a model, it is required to create an AI engine based on the provided handler.
 
-> If you installed MindsDB locally, make sure to install all Vertex dependencies by running `pip install [vertex]` or from the [requirements.txt](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/vertex_handler/requirements.txt) file.
+> If you installed MindsDB locally, make sure to install all Vertex dependencies by running `pip install mindsdb[vertex]` or `pip install .[vertex]`.
 
 You can create an Vertex engine using this command:
 

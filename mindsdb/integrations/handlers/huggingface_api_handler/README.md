@@ -18,7 +18,7 @@ The first step to make use of this handler is to create an ML Engine. This can b
 CREATE ML_ENGINE hf_api_engine
 FROM huggingface_api
 USING
-  api_key = '<YOUR_API_KEY>';
+  huggingface_api_api_key = '<YOUR_API_KEY>';
 ```
 
 ## Creating Models
@@ -46,8 +46,7 @@ PREDICT sentiment
 USING
   task = 'text-classification',
   engine = 'hf_api_engine',
-  api_key = '<YOUR_API_KEY>',
-  input_column = 'text'
+  input_column = 'text';
 ```
 
 ### Fill Mask
@@ -57,8 +56,7 @@ PREDICT sequence
 USING
   task = 'fill-mask',
   engine = 'hf_api_engine',
-  api_key = '<YOUR_API_KEY>',
-  input_column = 'text'
+  input_column = 'text';
 ```
 
 ### Summarization
@@ -68,8 +66,7 @@ PREDICT summary
 USING
   task = 'summarization',
   engine = 'hf_api_engine',
-  api_key = '<YOUR_API_KEY>',
-  input_column = 'text'
+  input_column = 'text';
 ```
 
 ### Text Generation
@@ -79,8 +76,7 @@ PREDICT generated_text
 USING
   task = 'text-generation',
   engine = 'hf_api_engine',
-  api_key = '<YOUR_API_KEY>',
-  input_column = 'text'
+  input_column = 'text';
 ```
 
 ### Question Answering
@@ -90,9 +86,8 @@ PREDICT answer
 USING
   task = 'question-answering',
   engine = 'hf_api_engine',
-  api_key = '<YOUR_API_KEY>',
   input_column = 'question',
-  context_column = 'context'
+  context_column = 'context';
 ```
 
 The `context_column` parameter is specific to the Question Answering task and is used to specify the column containing the context for the question.
@@ -104,9 +99,8 @@ PREDICT similarity
 USING
   task = 'sentence-similarity',
   engine = 'hf_api_engine',
-  api_key = '<YOUR_API_KEY>',
   input_column = 'sentence1',
-  input_column2 = 'sentence2'
+  input_column2 = 'sentence2';
 ```
 
 The `input_column2` parameter is specific to the Sentence Similarity task and is used to specify the column containing the second sentence to compare.
@@ -118,9 +112,8 @@ PREDICT label
 USING
   task = 'zero-shot-classification',
   engine = 'hf_api_engine',
-  api_key = '<YOUR_API_KEY>',
   input_column = 'text',
-  candidate_labels = ['label1', 'label2', 'label3']
+  candidate_labels = ['label1', 'label2', 'label3'];
 ```
 
 The `candidate_labels` parameter is specific to the Zero Shot Classification task and is used to specify the candidate labels to use for classification.
@@ -132,8 +125,7 @@ PREDICT label
 USING
   task = 'image-classification',
   engine = 'hf_api_engine',
-  api_key = '<YOUR_API_KEY>',
-  input_column = 'image_url'
+  input_column = 'image_url';
 ```
 
 ### Object Detection
@@ -143,8 +135,7 @@ PREDICT objects
 USING
   task = 'object-detection',
   engine = 'hf_api_engine',
-  api_key = '<YOUR_API_KEY>',
-  input_column = 'image_url'
+  input_column = 'image_url';
 ```
 
 ### Automatic Speech Recognition
@@ -154,8 +145,7 @@ PREDICT transcription
 USING
   task = 'automatic-speech-recognition',
   engine = 'hf_api_engine',
-  api_key = '<YOUR_API_KEY>',
-  input_column = 'audio_url'
+  input_column = 'audio_url';
 ```
 
 ### Audio Classification
@@ -165,8 +155,7 @@ PREDICT label
 USING
   task = 'audio-classification',
   engine = 'hf_api_engine',
-  api_key = '<YOUR_API_KEY>',
-  input_column = 'audio_url'
+  input_column = 'audio_url';
 ```
 
 ## Making Predictions

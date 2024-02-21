@@ -1,5 +1,9 @@
 -r mindsdb/integrations/handlers/chromadb_handler/requirements.txt
+faiss-cpu
 openai==1.6.1
 html2text
+sentence-transformers
 writerai~=1.1.0
 pydantic
+sentence-transformers
+faiss-cpu

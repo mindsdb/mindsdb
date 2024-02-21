@@ -16,6 +16,6 @@ except Exception as e:
 title = "Clipdrop"
 name = "clipdrop"
 type = HANDLER_TYPE.ML
-permanent = True
+permanent = False
 
 __all__ = ["Handler", "version", "name", "type", "title", "description", "import_error"]

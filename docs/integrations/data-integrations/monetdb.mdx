@@ -7,6 +7,14 @@ This is the implementation of the MonetDB data handler for MindsDB.
 
 [MonetDB](https://www.monetdb.org/) is an open-source column-oriented relational database management system originally developed at the Centrum Wiskunde & Informatica in the Netherlands. It is designed to provide high performance on complex queries against large databases, such as combining tables with hundreds of columns and millions of rows.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect MonetDB to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to MonetDB.
+
 ## Implementation
 
 This handler is implemented using `pymonetdb`, a Python library that allows you to use Python code to run SQL commands on the MonetDB database.
@@ -19,10 +27,6 @@ The required arguments to establish a connection are as follows:
 * `port` is the port through which TCP/IP connection is to be made.
 * `database` is the database name to be connected.
 * `schema_name` is the schema name to get tables. It is optional and defaults to the current schema if not provided.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/monetdb_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

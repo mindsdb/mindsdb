@@ -11,6 +11,14 @@ This is the implementation of the Google Sheets data handler for MindsDB.
 Please note that the integration of MindsDB with Google Sheets works for public sheets only.
 </Warning>
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect Google Sheets to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to Google Sheets.
+
 ## Implementation
 
 This handler is implemented using `duckdb`, a library that allows SQL queries to be executed on `pandas` DataFrames.
@@ -25,10 +33,6 @@ The required arguments to establish a connection are as follows:
 
 * `spreadsheet_id` is the unique ID of the Google Sheet.
 * `sheet_name` is the name of the sheet within the Google Sheet.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/sheets_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

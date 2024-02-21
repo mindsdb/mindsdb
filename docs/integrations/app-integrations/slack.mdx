@@ -9,6 +9,14 @@ In this section, we present how to connect Slack to MindsDB.
 
 The Slack handler provides interfaces to connect with Slack via APIs and perform various tasks such as sending messages, retrieving conversation history, and more.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect Slack to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to Slack.
+
 ## Connection
 
 This handler was implemented using [`slack-sdk`](https://slack.dev/python-slack-sdk/) library, which is a Python Library offering a package for each of Slack’s APIs.
@@ -25,6 +33,10 @@ Please note that `app_token` is an optional parameter. Without providing it, you
 ### Method 1: Chatbot responds in direct messages to a Slack app
 
 One way to connect Slack is to use both bot and app tokens. By following the instructions below, you'll set up the Slack app and be able to message this Slack app directly to chat with the bot.
+
+<Note>
+If you want to use Slack in the [`CREATE CHATBOT`](/agents/chatbot) syntax, use this method of connecting Slack to MindsDB.
+</Note>
 
 Here is how to set up a Slack app and generate both a Slack bot token and a Slack app token:
 
@@ -56,10 +68,6 @@ Here is how to set up a Slack app and generate both a Slack bot token and a Slac
       - Under *Subscribe to bot events*, click on *Add Bot User Event* and add `message.im`.
       - Click on *Save Changes*.
   8. Now you can use tokens from points 3 and 5 to initialize the Slack handler in MindsDB.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/slack_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 Here is how to connect Slack to MindsDB:
 
@@ -99,10 +107,6 @@ Here is how to set up a Slack app and generate a Slack bot token:
       - Select *Integrations*.
       - Click on *Add an App*.
   8. Now you can use the token from step 6 to initialize the Slack handler in MindsDB and use the channel name to query and write messages.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/slack_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 Here is how to connect Slack to MindsDB:
 

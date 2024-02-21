@@ -56,7 +56,7 @@ class OpenAIHandler(BaseMLEngine):
         self.max_batch_size = 20
         self.default_max_tokens = 100
         self.chat_completion_models = CHAT_MODELS
-        self.supported_ft_models = FINETUNING_MODELS # base models compatible with finetuning  # TODO #7387: transition to new endpoint before 4/1/24. Useful reference: Anyscale handler. # noqa
+        self.supported_ft_models = FINETUNING_MODELS # base models compatible with finetuning
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
@@ -119,9 +119,9 @@ class OpenAIHandler(BaseMLEngine):
                 "runtime",
                 "max_tokens",
                 "temperature",
-                "api_key",
                 "openai_api_key",
                 "api_organization",
+                "api_base"
             }
         )
 
@@ -648,24 +648,30 @@ class OpenAIHandler(BaseMLEngine):
         """  # noqa
 
         args = args if args else {}
+
+        api_key = get_api_key('openai', args, self.engine_storage)
+
         using_args = args.pop('using') if 'using' in args else {}
         prompt_col = using_args.get('prompt_column', 'prompt')
         completion_col = using_args.get('completion_column', 'completion')
         
-        api_key = get_api_key('openai', args, self.engine_storage)
-        api_base = using_args.get('api_base', os.environ['OPENAI_API_BASE'])
+        api_base = using_args.get('api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE))
         org = using_args.get('api_organization')
         client = self._get_client(api_key=api_key, base_url=api_base, org=org)
 
-        self._check_ft_cols(df, [prompt_col, completion_col])
 
         args = {**using_args, **args}
         prev_model_name = self.base_model_storage.json_get('args').get('model_name', '')
 
         if prev_model_name not in self.supported_ft_models:
-            raise Exception(
-                f"This model cannot be finetuned. Supported base models are {self.supported_ft_models}"
-            )
+            # base model may be already FTed, check prefixes
+            for model in self.supported_ft_models:
+                if model in prev_model_name:
+                    break
+            else:
+                raise Exception(
+                    f"This model cannot be finetuned. Supported base models are {self.supported_ft_models}."
+                )
 
         finetune_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
@@ -742,18 +748,10 @@ class OpenAIHandler(BaseMLEngine):
         shutil.rmtree(temp_storage_path)
 
     @staticmethod
-    def _check_ft_cols(df, cols):
-        prompt_col, completion_col = cols
-        for col in [prompt_col, completion_col]:
-            if col not in set(df.columns):
-                raise Exception(
-                    f"To fine-tune this OpenAI model, please format your select data query to have a `{prompt_col}` column and a `{completion_col}` column first."
-                )  # noqa
-
-    def _prepare_ft_jsonl(self, df, _, temp_filename, temp_model_path):
+    def _prepare_ft_jsonl(df, _, temp_filename, temp_model_path):
         df.to_json(temp_model_path, orient='records', lines=True)
 
-        # TODO avoid subprocess usage once OpenAI enables non-CLI access
+        # TODO avoid subprocess usage once OpenAI enables non-CLI access, or refactor to use our own LLM utils instead
         subprocess.run(
             [
                 "openai",
@@ -827,8 +825,10 @@ class OpenAIHandler(BaseMLEngine):
         ft_stats = _check_ft_status(ft_result.id)
 
         if ft_stats.status != 'succeeded':
+            err_message = ft_stats.events[-1].message if hasattr(ft_stats, 'events') else 'could not retrieve!'
+            ft_status = ft_stats.status if hasattr(ft_stats, 'status') else 'N/A'
             raise Exception(
-                f"Fine-tuning did not complete successfully (status: {ft_stats.status}). Error message: {ft_stats.events[-1].message}"
+                f"Fine-tuning did not complete successfully (status: {ft_status}). Error message: {err_message}"
             )  # noqa
 
         result_file_id = client.fine_tuning.jobs.retrieve(fine_tuning_job_id=ft_result.id).result_files[0]

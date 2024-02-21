@@ -1,7 +1,7 @@
 import ast
 import hashlib
 from enum import Enum
-from typing import Any, List, Optional
+from typing import List, Optional
 
 import pandas as pd
 from mindsdb_sql.parser.ast import (
@@ -20,63 +20,12 @@ from mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.integrations.libs.response import RESPONSE_TYPE, HandlerResponse
 from mindsdb.utilities import log
-from mindsdb.integrations.utilities.sql_utils import conditions_to_filter
+from mindsdb.integrations.utilities.sql_utils import conditions_to_filter, FilterCondition, FilterOperator
 
 from ..utilities.sql_utils import query_traversal
 from .base import BaseHandler
 
 LOG = log.getLogger(__name__)
-
-
-class FilterOperator(Enum):
-    """
-    Enum for filter operators.
-    """
-
-    EQUAL = "="
-    NOT_EQUAL = "!="
-    LESS_THAN = "<"
-    LESS_THAN_OR_EQUAL = "<="
-    GREATER_THAN = ">"
-    GREATER_THAN_OR_EQUAL = ">="
-    IN = "IN"
-    NOT_IN = "NOT IN"
-    BETWEEN = "BETWEEN"
-    NOT_BETWEEN = "NOT BETWEEN"
-    LIKE = "LIKE"
-    NOT_LIKE = "NOT LIKE"
-    IS_NULL = "IS NULL"
-    IS_NOT_NULL = "IS NOT NULL"
-
-
-class FilterCondition:
-    """
-    Base class for filter conditions.
-    """
-
-    def __init__(self, column: str, op: FilterOperator, value: Any):
-        self.column = column
-        self.op = op
-        self.value = value
-
-    def __eq__(self, __value: object) -> bool:
-        if isinstance(__value, FilterCondition):
-            return (
-                self.column == __value.column
-                and self.op == __value.op
-                and self.value == __value.value
-            )
-        else:
-            return False
-
-    def __repr__(self) -> str:
-        return f"""
-            FilterCondition(
-                column={self.column},
-                op={self.op},
-                value={self.value}
-            )
-        """
 
 
 class TableField(Enum):
@@ -213,12 +162,10 @@ class VectorStoreHandler(BaseHandler):
         """
         Dispatch drop table query to the appropriate method.
         """
-        # parse key arguments
-        table_names = [table.parts[-1] for table in query.tables]
+        table_name = query.tables[0].parts[-1]
         if_exists = getattr(query, "if_exists", False)
-        for table_name in table_names:
-            self.drop_table(table_name, if_exists=if_exists)
-        return HandlerResponse(resp_type=RESPONSE_TYPE.OK)
+
+        return self.drop_table(table_name, if_exists=if_exists)
 
     def _dispatch_insert(self, query: Insert):
         """

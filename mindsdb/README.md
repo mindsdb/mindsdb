@@ -1,76 +1,56 @@
-This simple documentation should guide over how to bring ML capabilities to clickhouse. The idea is that you should be able to treat ML models just as if they were normal Clickhouse tables. What we have built so far allows you to create, train models, and finally query such models straight from the database.
+Welcome to the Quickstart Guide for using MindsDB. This README is designed to provide developers with an efficient and straightforward introduction to integrating and utilizing MindsDB in your projects. To start, follow the steps bellow:
 
 
-## How can you try it?
+## 1. Create a MindsDB Cloud Account or Install MindsDB Locally
 
-We are trying to make it as simple as possible, what we have now is 3 simple steps:
+Create your [free MindsDB Cloud account](https://cloud.mindsdb.com/register) to
+start practicing right away using the MindsDB Cloud Editor.
 
-1. Install mindsdb which is a python based server that deals with the ML part: `pip3 install mindsdb`
+If you prefer a local MindsDB installation, follow the **Deployment** guides of
+MindsDB documentation. You can install MindsDB using
+[Docker](setup/self-hosted/docker/) or follow the standard installation using
+[pip](setup/self-hosted/pip/source/).
 
-2. Then you simply run the server:  `python3 -m mindsdb`
+## 2. Connect to MindsDB from a SQL Client
 
+You can use the MindsDB Editor or open your preferred SQL client, such
+as DBeaver or MySQL CLI, and connect to MindsDB.
 
+Learn more [here](/mindsdb-sql-overview).
 
-## Hands on ML  
+## 3. Connect a Database Using [`CREATE DATABASE`](/sql/create/databases/)
 
----
-## 1. Connect MindsDB to a MySQL Client
-
-You can use the MindsDB SQL Editor or open your preferred MySQL client and connect it to MindsDB.
-
-=== "Using the MindsDB SQL Editor"
-    Just log in to your account, and you will be automatically directed to the  [Editor](https://cloud.mindsdb.com/editor).
-
-=== "Connecting to a Third-party MySQL Client"
-    To connect to MindsDB from another SQL client use `cloud.mindsdb.com` as a host, `3306` port and your MindsDB Cloud credentials for username/password.
-    ```txt
-      "user":[your_mindsdb_cloud_username],
-      "password:"[your_mindsdb_cloud_password]",
-      "host":"cloud.mindsdb.com",
-      "port":"3306"
-    ```
-
-    !!! Tip ""
-        If you do not already have a preferred SQL client, we recommend [DBeaver Community Edition](https://dbeaver.io/download/).
-
----
-
-## 2. Connecting a Database [`#!sql CREATE DATABASE`](https://docs.mindsdb.com/sql/create/database)
-
-For this quickstart, we have already prepared some example data for you.  To add it to your account, use the [`#!sql CREATE DATABASE`](https://docs.mindsdb.com/sql/create/database) syntax by copying and pasting this command into your SQL client:
-
+We have a sample database that you can use right away. To connect a database to your MindsDB Cloud account, use the [`CREATE DATABASE`](/sql/create/databases/) statement, as below.
 
 ```sql
 CREATE DATABASE example_data
 WITH ENGINE = "postgres",
-PARAMETERS = { 
+PARAMETERS = {
   "user": "demo_user",
   "password": "demo_password",
   "host": "3.220.66.106",
   "port": "5432",
   "database": "demo"
-}
+};
 ```
 
-On execution, you should get:
+On execution, we get:
 
 ```sql
 Query OK, 0 rows affected (3.22 sec)
 ```
 
----
+## 4. Preview the Available Data Using [`SELECT`](/sql/api/select/)
 
-## 3. Previewing Available Data
+You can now preview the available data with a standard `SELECT` statement.
 
-You can now preview the available data with a standard `#!sql SELECT`. To preview the Home Rentals dataset, copy and paste this command into your SQL client:
-
-```sql 
-SELECT * 
+```sql
+SELECT *
 FROM example_data.demo_data.home_rentals
 LIMIT 10;
 ```
 
-On execution, you should get:
+On execution, we get:
 
 ```sql
 +-----------------+---------------------+------+----------+----------------+---------------+--------------+--------------+
@@ -89,36 +69,66 @@ On execution, you should get:
 +-----------------+---------------------+------+----------+----------------+---------------+--------------+--------------+
 ```
 
----
+You could also browse the databases of MindsDB using the command below.
 
-## 4. Creating a Predictor [`#!sql CREATE MODEL`](https://docs.mindsdb.com/sql/create/model)
+```sql
+SHOW databases;
+```
 
-Now you are ready to create your first predictor. Use the [`#!sql CREATE MODEL`](https://docs.mindsdb.com/sql/create/model) syntax by copying and pasting this command into your SQL client:
+On execution, we get:
 
-```sql 
-CREATE MODEL mindsdb.home_rentals_predictor
+```sql
++---------------------+
+| Database            |
++---------------------+
+| information_schema  |
+| mindsdb             |
+| files               |
+| example_data        |
++---------------------+
+```
+
+To learn more about MindsDB tables structure, check out
+[this guide](/sql/table-structure/).
+
+## 5. Create a Model Using [`CREATE MODEL`](/sql/create/model/)
+
+Now you are ready to create your first model. Use the
+[`CREATE MODEL`](/sql/create/model/) statement, as below.
+
+```sql
+CREATE MODEL mindsdb.home_rentals_model
 FROM example_data
   (SELECT * FROM demo_data.home_rentals)
 PREDICT rental_price;
 ```
 
+On execution, we get:
+
 ```sql
 Query OK, 0 rows affected (9.79 sec)
 ```
 
----
+## 6. Check the Status of a Model
 
-## 5. Checking the Status of a Predictor
-
-A predictor may take a couple of minutes for the training to complete. You can monitor the status of your predictor by copying and pasting this command into your SQL client:
+It may take a couple of minutes until the model is trained. You can monitor
+the status of your model by executing the following command:
 
 ```sql
-SELECT status
-FROM mindsdb.models
-WHERE name='home_rentals_predictor';
+DESCRIBE home_rentals_model;
 ```
 
-On execution, you should get:
+On execution, we get:
+
+```sql
++------------+
+| status     |
++------------+
+| generating |
++------------+
+```
+
+After a short time, we get:
 
 ```sql
 +----------+
@@ -127,7 +137,8 @@ On execution, you should get:
 | training |
 +----------+
 ```
-Or:
+
+And finally, we get:
 
 ```sql
 +----------+
@@ -137,21 +148,42 @@ Or:
 +----------+
 ```
 
-!!! attention "Predictor Status Must be 'complete' Before Making a Prediction"
+Alternatively, you can use the `SHOW MODELS` command as below.
 
----
-
-## 6. Making a Prediction via [`#!sql SELECT`](/sql/api/select/)
-
-The [`SELECT`](/sql/api/select/) syntax will allow you to make a prediction based on features.  Make your first prediction by copying and pasting this command into your SQL client:
-
-```sql 
-SELECT rental_price
-FROM mindsdb.home_rentals_predictor
-WHERE number_of_bathrooms=2 AND sqft=1000;
+```sql
+SHOW MODELS
+[FROM project_name]
+[LIKE 'model_name']
+[WHERE column_name = value];
 ```
 
-On execution, you should get:
+Here is an example:
+
+```sql
+SHOW MODELS
+FROM mindsdb
+LIKE 'home_rentals_model'
+WHERE status = 'complete';
+```
+> The status of the model must be `complete` before you can start making predictions.
+
+## 7. Make Predictions Using [`SELECT`](/sql/api/select/)
+
+The [`SELECT`](/sql/api/select/) statement allows you to make predictions based
+on features, where features are the input variables, or input columns, that are
+used to make forecasts.
+
+Let's predict what would be the rental price of a 1000 square feet house with
+two bathrooms.
+
+```sql
+SELECT rental_price
+FROM mindsdb.home_rentals_model
+WHERE number_of_bathrooms = 2
+AND sqft = 1000;
+```
+
+On execution, we get:
 
 ```sql
 +--------------+
@@ -161,5 +193,43 @@ On execution, you should get:
 +--------------+
 ```
 
-!!! done "Congratulations"
-      If you got this far, you have trained a predictive model using SQL and have used it to tell the future!
+Here is how to make batch predictions:
+
+```sql
+SELECT m.rental_price, m.rental_price_explain
+FROM mindsdb.home_rentals_model AS m
+JOIN example_data.demo_data.home_rentals AS d;
+```
+
+## 8. Automate the Workflow Using [`CREATE JOB`](/sql/create/jobs/)
+
+Now, we can take this even further. MindsDB includes powerful automation features called Jobs which allow us to automate queries in MindsDB. This is very handy for production AI/ML systems which all require automation logic to help them to work.
+
+We use the `CREATE JOB` statement to create a Job.
+
+Now, let's use a Job to set the model we've created to be retrained every two days, just like we might in production. You can [retrain](/sql/api/retrain/) the model to improve predictions every time when either new data or new MindsDB version is available. And, if you want to retrain your model considering only new data, then go for [finetuning](/sql/api/finetune/) it.
+
+In the same job, we will create a table and insert these new predictions back into a database so the predictions are ready to be used by our hypothetical application.
+
+```sql
+CREATE JOB retrain_model_and_save_predictions (
+
+   RETRAIN mindsdb.home_rentals_model
+   FROM example_data
+         (SELECT * FROM demo_data.home_rentals)
+   USING
+         join_learn_process = true;
+
+   CREATE TABLE my_integration.rentals_{{START_DATETIME}} (
+         SELECT m.rental_price, m.rental_price_explain
+         FROM mindsdb.home_rentals_model AS m
+         JOIN example_data.demo_data.home_rentals AS d
+   )
+
+)
+END '2023-10-30 00:00:00'
+EVERY 2 days;
+```
+
+Please note that `my_integration` is your database connection name in MindsDB. Before executing this job, make sure to connect your database to MindsDB with a user who has write access to be able to create a table.
+

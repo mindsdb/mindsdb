@@ -5,7 +5,7 @@ import openai
 import pandas as pd
 import llama_index
 
-from langchain.llms import OpenAI
+from llama_index.llms.openai import OpenAI
 from llama_index.readers.schema.base import Document
 from llama_index.readers import SimpleWebPageReader
 from llama_index.prompts import PromptTemplate
@@ -55,7 +55,8 @@ class LlamaIndexHandler(BaseMLEngine):
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
-        reader = args["using"].get("reader", None)
+        reader = args["using"].get("reader", "DFReader")
+
         if reader not in config.data_loaders:
             raise Exception(
                 f"Invalid reader argument. Please use one of {config.data_loaders.keys()}"
@@ -123,15 +124,13 @@ class LlamaIndexHandler(BaseMLEngine):
 
         elif args["using"]["reader"] == "GithubRepositoryReader":
             engine_storage = self.engine_storage
-
             key = "GITHUB_TOKEN"
             github_token = get_api_key(
-                key, "llama_index", args["using"], engine_storage, strict=False
+                key, args["using"], engine_storage, strict=False
             )
             if github_token is None:
                 github_token = get_api_key(
                     key.lower(),
-                    "llama_index",
                     args["using"],
                     engine_storage,
                     strict=True,
@@ -271,17 +270,9 @@ class LlamaIndexHandler(BaseMLEngine):
         args = self.model_storage.json_get("args")
         engine_storage = self.engine_storage
 
-        key = "OPENAI_API_KEY"
-        openai_api_key = get_api_key(
-            key, "llama_index", args["using"], engine_storage, strict=False
-        )
-        if openai_api_key is None:
-            openai_api_key = get_api_key(
-                key.lower(), "llama_index", args["using"], engine_storage, strict=True
-            )
-
-        openai.api_key = openai_api_key  # TODO: shouldn't have to do this! bug?
+        openai_api_key = get_api_key('openai', args["using"], engine_storage, strict=True)
         llm_kwargs = {"openai_api_key": openai_api_key}
+
         if "temperature" in args["using"]:
             llm_kwargs["temperature"] = args["using"]["temperature"]
         if "model_name" in args["using"]:
@@ -290,9 +281,10 @@ class LlamaIndexHandler(BaseMLEngine):
             llm_kwargs["max_tokens"] = args["using"]["max_tokens"]
 
         llm = OpenAI(**llm_kwargs)  # TODO: all usual params should go here
-        embed_model = OpenAIEmbedding(openai_api_key=openai_api_key)
+        embed_model = OpenAIEmbedding(api_key=openai_api_key)
         service_context = ServiceContext.from_defaults(
-            llm_predictor=LLMPredictor(llm=llm), embed_model=embed_model
+            llm=llm,
+            embed_model=embed_model
         )
         return service_context
 

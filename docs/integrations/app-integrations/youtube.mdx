@@ -5,51 +5,145 @@ sidebarTitle: YouTube
 
 In this section, we present how to connect YouTube to MindsDB.
 
-[YouTube](https://www.youtube.com/) is a popular online video-sharing platform and social media website where users can upload, view, share, and interact with videos created by individuals and organizations from around the world.
+[YouTube](https://www.youtube.com/) is a popular online video-sharing platform and social media website where users
+can upload, view, share, and interact with videos created by individuals and organizations from around the world.
 
-Data from YouTube can be utilized within MindsDB to train AI models and chatbots based on user comments, detect sentiment of comments, or use AI models to create replies.
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+ 1. Install MindsDB on your system or obtain access to cloud options.
+ 2. To use YouTube with MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
 
 ## Connection
 
-This handler is implemented using the `google-api-python-client` library, a Python library that from where we can use YouTube v3 API.
+There are two ways you can connect YouTube to MindsDB:
 
-The only required argument to establish a connection are as follows:
+1. Limited permissions: This option provides MindsDB with read-only access to YouTube, including viewing comments data.
+2. Elevated permissions: This optiona provides MindsDB with full access to YouTube, including viewing comments data and posting replies to comments.
 
-* `youtube_api_token` which is a Google API key used for authentication.
+### Option 1: Limited permissions
 
-<Tip>
-Check out [this guide](https://blog.hubspot.com/website/how-to-get-youtube-api-key) on how to create the API key in order to access YouTube data.
-</Tip>
-
-The first step is to create a database with the new `Youtube` engine using the following command:
+Establish a connection to YouTube from MindsDB by executing the below SQL command and following the Google authorization link provided as output:
 
 ```sql
 CREATE DATABASE mindsdb_youtube
 WITH ENGINE = 'youtube',
 PARAMETERS = {
-  "youtube_api_token": "<your-youtube-api-key-token>"  
+  "youtube_api_token": "<your-youtube-api-key-token>"
 };
 ```
 
 <Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/youtube_handler) and run this command: `pip install -r requirements.txt`.
+Alternatively, you can connect YouTube to MindsDB via the form.
+
+To do that, click on the `Add` button, choose `New Datasource`, search for `YouTube`, and follow the instructions in the form. After providing the connection name and the YouTube API token, click on the `Test Connection` button. Once the connection is established, click on the `Save and Continue` button.
 </Tip>
+
+Required connection parameters include the following:
+
+*    `youtube_api_token`: It is a Google API key used for authentication. Check out [this guide](https://blog.hubspot.com/website/how-to-get-youtube-api-key) on how to create the API key to access YouTube data.
+
+### Option 2: Elevated permissions
+
+Establish a connection to YouTube from MindsDB by executing the below SQL command and following the Google authorization link provided as output:
+
+```sql
+CREATE DATABASE mindsdb_youtube_oauth
+WITH ENGINE = 'youtube',
+PARAMETERS = {
+  "credentials_file": "path-to-credentials-json-file"
+  -- alternatively, use the credentials_url parameter
+};
+```
+
+<Tip>
+Alternatively, you can connect YouTube to MindsDB via the form.
+
+To do that, click on the `Add` button, choose `New Datasource`, search for `YouTube`, and follow the instructions in the form. After providing the connection name and the credentials file or URL, click on the `Test Connection` button and complete the authorization process in the pop-up window. Once the connection is established, click on the `Save and Continue` button.
+</Tip>
+
+Required connection parameters include one of the following:
+
+*    `credentials_file`: It is a path to a file generated from the Google Cloud Console, as described below.
+*    `credentials_url`: It is a URL to a file generated from the Google Cloud Console, as described below.
+
+<Accordion title="How to Generate the Credentials File" icon="youtube" iconType="thin">
+
+  1. Open the Google Cloud Console.
+
+  2. Create a new project.
+
+  3. Inside this project, go to APIs & Services:
+
+      - Go to Enabled APIs & services:
+        - Click on ENABLE APIS AND SERVICES from the top bar.
+        - Search for YouTube Data API v3 and enable it.
+
+      - Go to OAuth consent screen:
+        - Choose user type as External and click on Create.
+        - Provide app name and support email.
+        - In Scopes, add the following scopes: `../auth/youtube`, `.../auth/youtube.force-ssl`, `.../auth/youtubepartner`.
+        - Next, add test users.
+        - Save and continue.
+
+      - Go to Credentials:
+        - Click on CREATE CREDENTIALS from the top bar and choose OAuth client ID.
+        - Choose type as `Web application` and provide a name. In the Authorized redirect URIs, add the following: `http://localhost/verify-auth`, `https://cloud.mindsdb.com/verify-auth`, `http://127.0.0.1:47334/verify-auth`
+        - Click on CREATE.
+        - Download the JSON file that is required to connect YouTube to MindsDB.
+</Accordion>
 
 ## Usage
 
-Use the established connection to query the `get_comments` table for any YouTube Video of your choice.
+Use the established connection to query the `comments` table.
+
+You can query for one video's comments:
 
 ```sql
-SELECT * FROM mindsdb_youtube.get_comments
-WHERE youtube_video_id = "raWFGQ20OfA";
+SELECT * 
+FROM mindsdb_youtube.comments
+WHERE video_id = "raWFGQ20OfA";
 ```
 
-
-Advanced queries which are supported
+Or for one channels's comments:
 
 ```sql
-SELECT * FROM mindsdb_youtube.get_comments
-WHERE youtube_video_id = "raWFGQ20OfA"
+SELECT * 
+FROM mindsdb_youtube.comments
+WHERE channel_id="UC-...";
+```
+
+You can include ordering and limiting the output data:
+
+```sql
+SELECT * FROM mindsdb_youtube.comments
+WHERE video_id = "raWFGQ20OfA"
 ORDER BY display_name ASC
 LIMIT 5;
+```
+
+Use the established connection to query the `channels` table.
+
+```sql
+SELECT * FROM mindsdb_youtube.channels
+WHERE channel_id="UC-...";
+```
+
+Here, the `channel_id` column is mandatory in the `WHERE` clause.
+
+Use the established connection to query the `videos` table.
+
+```sql
+SELECT * FROM mindsdb_youtube.videos
+WHERE video_id="id";
+```
+
+Here, the `video_id` column is mandatory in the `WHERE` clause.
+
+With the connection option 2, you can insert replies to comments:
+
+```sql
+INSERT INTO mindsdb_youtube_oauth.comments (comment_id, reply)
+VALUES ("comment_id", "reply message");
 ```

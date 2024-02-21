@@ -34,7 +34,7 @@ class TimeGPTHandler(BaseMLEngine):
             assert time_settings["is_timeseries"], "Specify time series settings in your query"
 
         model_args = {
-            'token': get_api_key('TIMEGPT_TOKEN', using_args, self.engine_storage, strict=True),
+            'token': get_api_key('timegpt', using_args, self.engine_storage, strict=True),
             "target": target,
             "freq": using_args.get("frequency", None),
             "finetune_steps": using_args.get("finetune_steps", 0),

@@ -1,6 +1,6 @@
 import unittest
 from mindsdb.integrations.handlers.s3_handler.s3_handler import S3Handler
-from mindsdb.api.mysql.mysql_proxy.libs.constants.response_type import RESPONSE_TYPE
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 
 class S3HandlerTest(unittest.TestCase):

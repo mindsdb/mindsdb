@@ -14,7 +14,8 @@ Before creating a model, you can create an ML engine for LlamaIndex using the `C
 ```sql
 CREATE ML_ENGINE llama_index
 FROM llama_index
-USING api_key='your_openai_api_key';
+USING
+    llama_index_api_key='your-api-key';
 ```
 
 You can check the available engines with this command:

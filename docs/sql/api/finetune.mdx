@@ -7,10 +7,6 @@ sidebarTitle: Finetune a Model
 
 The `FINETUNE` statement lets you retrain a model with additional training data.
 
-<p align="center">
-  <img src="https://docs.google.com/drawings/d/e/2PACX-1vTwrR36VeRCMQYZ7AMQXS1gzMtgv6URfIlKFTUqZiTSZwsuXjiZCi8tIr4yU7NBs3_IuGzKgelvQ8l9/pub?w=955&h=460" />
-</p>
-
 Imagine you have a model that was trained with a certain dataset. Now there is more training data available and you wish to retrain this model with a new dataset. The `FINETUNE` statement lets you partially retrain the model, so it takes less time and resources than the [`RETRAIN`](/sql/api/retrain) statement. In the machine learning literature, this is also referred to as *fine-tuning* a model.
 
 ## Syntax
@@ -50,6 +46,7 @@ FROM project_name.models_versions;
 
 For more information on managing model versions, check out our docs [here](/sql/api/manage-models-versions).
 </Info>
+
 ## Examples 
 ### Example 1: [OpenAI Model Fine-Tuning](/finetune/openai)
 ### Example 2: [Llama2 Model Fine-Tuning](/finetune/anyscale)

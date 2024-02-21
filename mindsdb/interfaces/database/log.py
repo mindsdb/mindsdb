@@ -5,8 +5,9 @@ from collections import OrderedDict
 import pandas as pd
 
 from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import Select, Identifier, Star
-# from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb_sql.parser.ast import Select, Identifier, Star, BinaryOperation, Constant, Join
+from mindsdb_sql.parser.utils import JoinType
+from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.planner.utils import query_traversal
 
 from mindsdb.utilities.functions import resolve_table_identifier
@@ -17,83 +18,160 @@ from mindsdb.utilities.context import context as ctx
 
 
 class LogTable(ABC):
-    def __init__(self, name: str) -> None:
-        self.name = name
-        self.deletable = False
-        self.kind = 'table'
-        self.visible = True
+    name: str
+    deletable: bool = False
+    visible: bool = True
+    kind: str = 'table'
 
+    @staticmethod
     @abstractmethod
-    def _get_base(self):
+    def _get_base() -> Select:
         pass
 
 
 class LLMLogTable(LogTable):
+    name = 'llm_log'
+
     columns = [
         'API_KEY', 'MODEL_NAME', 'INPUT', 'OUTPUT', 'START_TIME', 'END_TIME',
         'PROMPT_TOKENS', 'COMPLETION_TOKENS', 'TOTAL_TOKENS', 'SUCCESS'
     ]
+
     types_map = {
         'SUCCESS': 'boolean',
         'START_TIME': 'datetime64[ns]',
         'END_TIME': 'datetime64[ns]'
     }
 
-    def _get_base(self):
-        query = db.session.query(
-            db.LLMLog, db.Predictor
-        ).filter_by(
-            company_id=ctx.company_id
-        ).outerjoin(
-            db.Predictor, db.Predictor.id == db.LLMLog.model_id
-        ).with_entities(
-            db.LLMLog.api_key.label('api_key'),
-            db.Predictor.name.label('model_name'),
-            db.LLMLog.input.label('input'),
-            db.LLMLog.output.label('output'),
-            db.LLMLog.start_time.label('start_time'),
-            db.LLMLog.end_time.label('end_time'),
-            db.LLMLog.prompt_tokens.label('prompt_tokens'),
-            db.LLMLog.completion_tokens.label('completion_tokens'),
-            db.LLMLog.total_tokens.label('total_tokens'),
-            db.LLMLog.success.label('success')
+    @staticmethod
+    def _get_base():
+        query = Select(
+            targets=[
+                Identifier('llm_log.api_key', alias=Identifier('api_key')),
+                Identifier('predictor.name', alias=Identifier('model_name')),
+                Identifier('llm_log.input', alias=Identifier('input')),
+                Identifier('llm_log.output', alias=Identifier('output')),
+                Identifier('llm_log.start_time', alias=Identifier('start_time')),
+                Identifier('llm_log.end_time', alias=Identifier('end_time')),
+                Identifier('llm_log.prompt_tokens', alias=Identifier('prompt_tokens')),
+                Identifier('llm_log.completion_tokens', alias=Identifier('completion_tokens')),
+                Identifier('llm_log.total_tokens', alias=Identifier('total_tokens')),
+                Identifier('llm_log.success', alias=Identifier('success'))
+            ],
+            from_table=Join(
+                left=Identifier('llm_log'),
+                right=Identifier('predictor'),
+                join_type=JoinType.LEFT_JOIN,
+                condition=BinaryOperation(
+                    op='and',
+                    args=(
+                        BinaryOperation(
+                            op='=',
+                            args=(
+                                Identifier('llm_log.company_id'),
+                                Identifier('predictor.company_id')
+                            )
+                        ),
+                        BinaryOperation(
+                            op='=',
+                            args=(
+                                Identifier('llm_log.model_id'),
+                                Identifier('predictor.id')
+                            )
+                        )
+                    )
+                )
+            ),
+            where=BinaryOperation(
+                op='is' if ctx.company_id is None else '=',
+                args=(Identifier('llm_log.company_id'), Constant(ctx.company_id))
+            ),
+            alias=Identifier('llm_log')
         )
         return query
 
 
 class JobsHistoryTable(LogTable):
+    name = 'jobs_history'
+
     columns = ['NAME', 'PROJECT', 'RUN_START', 'RUN_END', 'ERROR', 'QUERY']
     types_map = {
         'RUN_START': 'datetime64[ns]',
         'RUN_END': 'datetime64[ns]'
     }
 
-    def _get_base(self):
-        query = db.session.query(
-            db.JobsHistory, db.Jobs
-        ).filter_by(
-            company_id=ctx.company_id,
-        ).outerjoin(
-            db.Jobs, db.Jobs.id == db.JobsHistory.job_id
-        ).outerjoin(
-            db.Project, db.Project.id == db.Jobs.project_id
-        ).with_entities(
-            db.Jobs.name.label('name'),
-            db.Project.name.label('project'),
-            db.JobsHistory.start_at.label('run_start'),
-            db.JobsHistory.end_at.label('run_end'),
-            db.JobsHistory.error.label('error'),
-            db.JobsHistory.query_str.label('query')
+    @staticmethod
+    def _get_base():
+        query = Select(
+            targets=[
+                Identifier('jobs.name', alias=Identifier('name')),
+                Identifier('project.name', alias=Identifier('project')),
+                Identifier('jobs_history.start_at', alias=Identifier('run_start')),
+                Identifier('jobs_history.end_at', alias=Identifier('run_end')),
+                Identifier('jobs_history.error', alias=Identifier('error')),
+                Identifier('jobs_history.query_str', alias=Identifier('query'))
+            ],
+            from_table=Join(
+                left=Join(
+                    left=Identifier('jobs_history'),
+                    right=Identifier('jobs'),
+                    join_type=JoinType.LEFT_JOIN,
+                    condition=BinaryOperation(
+                        op='and',
+                        args=(
+                            BinaryOperation(
+                                op='=',
+                                args=(
+                                    Identifier('jobs_history.company_id'),
+                                    Identifier('jobs.company_id')
+                                )
+                            ),
+                            BinaryOperation(
+                                op='=',
+                                args=(
+                                    Identifier('jobs_history.job_id'),
+                                    Identifier('jobs.id')
+                                )
+                            )
+                        )
+                    )
+                ),
+                right=Identifier('project'),
+                join_type=JoinType.LEFT_JOIN,
+                condition=BinaryOperation(
+                    op='and',
+                    args=(
+                        BinaryOperation(
+                            op='=',
+                            args=(
+                                Identifier('project.company_id'),
+                                Identifier('jobs.company_id')
+                            )
+                        ),
+                        BinaryOperation(
+                            op='=',
+                            args=(
+                                Identifier('project.id'),
+                                Identifier('jobs.project_id')
+                            )
+                        )
+                    )
+                )
+            ),
+            where=BinaryOperation(
+                op='is' if ctx.company_id is None else '=',
+                args=(Identifier('jobs_history.company_id'), Constant(ctx.company_id))
+            ),
+            alias=Identifier('jobs_history')
         )
-
         return query
 
 
 class LogDBController:
     def __init__(self):
         self._tables = OrderedDict()
-        self._tables['llm_log'] = LLMLogTable('llm_log')
-        self._tables['jobs_history'] = JobsHistoryTable('jobs_history')
+        self._tables['llm_log'] = LLMLogTable
+        self._tables['jobs_history'] = JobsHistoryTable
 
     def get_list(self) -> List[LogTable]:
         return list(self._tables.values())
@@ -151,19 +229,14 @@ class LogDBController:
         query_traversal(query, check_columns)
         # endregion
 
-        # region TEMP
-        alias = query.from_table.alias or Identifier(query.from_table.parts[-1])
-        query.from_table = f'({log_table._get_base()}) as {alias}'
-        # query.from_table = NativeQuery(query=str(jht._get_base()), integration=Identifier('log'), alias=alias)
+        query.from_table = log_table._get_base()
 
-        # render_engine = db.engine.name
-        # if render_engine == "postgresql":
-        #     'postgres'
-        # render = SqlalchemyRender(render_engine)
-        # query_str = render.get_string(query, with_failback=False)
-        query_str = str(query)
+        render_engine = db.engine.name
+        if render_engine == "postgresql":
+            'postgres'
+        render = SqlalchemyRender(render_engine)
+        query_str = render.get_string(query, with_failback=False)
         df = pd.read_sql_query(query_str, db.engine)
-        # endregion
 
         # region cast columns values to proper types
         for column_name, column_type in log_table.types_map.items():

@@ -312,6 +312,38 @@ class TwelveLabsAPIClient:
 
         logger.info(f"Search for index {index_id} completed successfully.")
         return data
+    
+    def summarize_video(self, video_id: str, type: str) -> Dict:
+        """
+        Summarize a video.
+
+        Parameters
+        ----------
+        video_id : str
+            ID of the video.
+
+        type : str
+            Type of the summary to be generated. Supported types are 'summary', 'chapter' and 'highlight'.
+
+        Returns
+        -------
+        Dict
+            Summary of the video.
+        """
+
+        body = {
+            "video_id": video_id,
+            "type": type
+        }
+
+        result = self._submit_request(
+            method="POST",
+            endpoint="summarize",
+            data=body,
+        )
+
+        logger.info(f"Video {video_id} summarized successfully.")
+        return result
 
     def _submit_request(self, endpoint: str, headers: Dict = None, data: Dict = None, method: str = "GET") -> Dict:
         """

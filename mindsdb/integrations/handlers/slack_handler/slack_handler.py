@@ -121,7 +121,7 @@ class SlackChannelsTable(APITable):
         result = client.conversations_history(**params)
 
         # convert SlackResponse object to pandas DataFrame
-        result = pd.DataFrame(result['messages'])
+        result = pd.DataFrame(result['messages'], columns=self.get_columns())
 
         # Remove null rows from the result
         result = result[result['text'].notnull()]
@@ -130,11 +130,8 @@ class SlackChannelsTable(APITable):
         result['channel'] = channel_name
 
         # translate the time stamp into a 'created_at' field
-        result['ts_datetime'] = pd.to_datetime(result['ts'].astype(float), unit='s')
-        result['created_at'] = result['ts_datetime'].dt.strftime('%Y-%m-%d %H:%M:%S')
+        result['created_at'] = pd.to_datetime(result['ts'].astype(float), unit='s').dt.strftime('%Y-%m-%d %H:%M:%S')
 
-        # filter columns
-        result = result[self.get_columns()]
         return result
 
     def get_columns(self) -> List[str]:

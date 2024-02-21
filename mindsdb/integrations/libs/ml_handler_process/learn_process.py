@@ -52,6 +52,15 @@ def learn_process(data_integration_ref: dict, problem_definition: dict, fetch_da
                         )
                     )
                     sqlquery = SQLQuery(query, session=sql_session)
+                if data_integration_ref['type'] == 'system':
+                    query = Select(
+                        targets=[Star()],
+                        from_table=NativeQuery(
+                            integration=Identifier('log'),
+                            query=fetch_data_query
+                        )
+                    )
+                    sqlquery = SQLQuery(query, session=sql_session)
                 elif data_integration_ref['type'] == 'view':
                     project = database_controller.get_project(project_name)
                     query_ast = parse_sql(fetch_data_query, dialect='mindsdb')

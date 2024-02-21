@@ -1,9 +1,14 @@
 import re
 import json
+import itertools
 from typing import Optional, Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
+from langchain.text_splitter import (
+    Language,
+    RecursiveCharacterTextSplitter,
+)
 
 
 def get_completed_prompts(base_template: str, df: pd.DataFrame) -> Tuple[List[str], np.ndarray]:
@@ -206,6 +211,24 @@ def ft_chat_format_validation(
             state = role
 
 
+def ft_formatter(df: pd.DataFrame) -> List[Dict]:
+    """
+    Data preparation entry point for chat LLM finetuning. This method will dispatch to the appropriate formatters.
+
+    Supported formats:
+        - code: long tabular format with a `code` column
+        - chat: long tabular format with `role` and `content` columns, or a JSON format with a `chat_json` column.
+    """
+    if 'code' in df.columns:
+        df = ft_code_formatter(df)
+
+    elif {'question', 'context', 'answer'}.issubset(set(df.columns)):
+        # TODO: handler user-specified names for these columns
+        df = ft_cqa_formatter(df)
+
+    return ft_chat_formatter(df)
+
+
 def ft_chat_formatter(df: pd.DataFrame) -> List[Dict]:
     """
         For more details, check `FineTuning -> Data Format` in the Anyscale API reference, or the OpenAI equivalent.
@@ -275,3 +298,114 @@ def ft_chat_formatter(df: pd.DataFrame) -> List[Dict]:
         chats.append({'messages': chat})
 
     return chats
+
+
+def ft_code_formatter(
+        df: pd.DataFrame,
+        format='chat',
+        language='python',
+        chunk_size=100,
+        chunk_overlap=0,
+        chat_sections=('Code prefix', 'Code suffix', 'Completion'),
+        fim_tokens=('<PRE>', '<SUF>', '<MID>'),
+) -> pd.DataFrame:
+    """
+    This utility processes a raw codebase stored as a dataframe with a `code` column, where
+    every row may be an entire file or some portion of it.
+    It chunks code into triples made of a prefix, middle, and suffix.
+
+    Depending on the target LLM, these triples are then formatted into a chat-like prompt, or a
+    fill-in-the-middle (FIM) prompt. The latter is used for fine-tuning models like codellama,
+    while the former is more generic and should work with any LLM that supports the ChatCompletion
+    format, as the rest of our tools do.
+    """
+
+    # input and setup validation
+    assert len(df) > 0, "Input dataframe should not be empty"
+    assert 'code' in df.columns, "Input dataframe should have a 'code' column"
+    assert chunk_size > 0 and isinstance(chunk_size, int), "`chunk_size` should be a positive integer"
+
+    supported_formats = ['chat', 'fim']
+    supported_langs = [e.value for e in Language]
+    assert language.lower() in supported_langs, f"Invalid language. Valid choices are: {supported_langs}"
+
+    # ensure correct encoding
+    df['code'] = df['code'].map(lambda x: x.encode('utf8').decode('unicode_escape'))
+
+    # set prompt templates
+    system_prompt = "You are a powerful text to code model. Your job is to provide great code completions. As context, you are given code that is found immediately before and after the code you must generate.\n\nYou must output the code that should go in between the prefix and suffix.\n\n"
+    if format == 'chat':
+        templates = [f"### {c}:" for c in chat_sections]
+    elif format == 'fim':
+        templates = fim_tokens
+    else:
+        raise Exception(f"Invalid format. Please choose one of {supported_formats}")
+
+    # split code into chunks
+    code_splitter = RecursiveCharacterTextSplitter.from_language(
+        language=getattr(Language, language.upper()),
+        chunk_size=3 * chunk_size,  # each triplet element has `chunk_size`
+        chunk_overlap=chunk_overlap,  # some overlap here is fine
+    )
+    chunk_docs = code_splitter.create_documents(list(df['code']))
+    chunks = [c.page_content for c in chunk_docs]
+
+    # split each chunk into a triplet, with no overlap
+    triplet_splitter = RecursiveCharacterTextSplitter.from_language(
+        language=getattr(Language, language.upper()),
+        chunk_size=chunk_size,
+        chunk_overlap=0,  # no overlap admitted, otherwise context may leak into answer
+    )
+    triplet_chunk_docs = triplet_splitter.create_documents(chunks)
+    chunks = [c.page_content for c in triplet_chunk_docs]
+    chunks = chunks[:len(chunks) - len(chunks) % 3]  # should be a multiple of 3
+
+    # format chunks into prompts
+    roles = []
+    contents = []
+    for idx in range(0, len(chunks), 3):
+        pre, mid, suf = chunks[idx:idx + 3]
+        interleaved = list(itertools.chain(*zip(templates, (pre, suf, mid))))
+        user = "\n".join(interleaved[:-1])
+        assistant = "\n".join(interleaved[-1:])
+        roles.extend(['system', 'user', 'assistant'])
+        contents.extend([system_prompt, user, assistant])
+
+    # return formatted prompts in a dataframe to be processed by `ft_chat_formatter()`
+    df = pd.DataFrame({'role': roles, 'content': contents})
+    return df
+
+
+def ft_cqa_formatter(
+        df: pd.DataFrame,
+
+        question_col='question',
+        answer_col='answer',
+        instruction_col='instruction',
+        context_col='context',
+
+        default_instruction='You are a helpful assistant.',
+        default_context='',
+) -> pd.DataFrame:
+
+    # input and setup validation
+    assert len(df) > 0, "Input dataframe should not be empty"
+    assert {question_col, answer_col}.issubset(set(df.columns)), f"Input dataframe must have columns `{question_col}`, and `{answer_col}`"  # noqa
+
+    if instruction_col not in df.columns:
+        df[instruction_col] = default_instruction
+
+    if context_col not in df.columns:
+        df[context_col] = default_context
+
+    # format data into chat-like prompts
+    roles = []
+    contents = []
+    for i, row in df.iterrows():
+        system = "\n".join([row[instruction_col], row[context_col]])
+        user = row[question_col]
+        assistant = row[answer_col]
+        roles.extend(['system', 'user', 'assistant'])
+        contents.extend([system, user, assistant])
+
+    return pd.DataFrame({'role': roles, 'content': contents})

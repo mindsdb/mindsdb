@@ -50,7 +50,7 @@ class QueryStorage:
                     "I love the product":positive
                     "It is a scam":negative
                     "{{review}}.":',
-                    api_key = '%s';
+                    openai_api_key = '%s';
                     """
 
     check_status = """

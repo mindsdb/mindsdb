@@ -43,6 +43,8 @@ class EmailConnectionDetails(BaseModel):
     email: str
     password: str
     imap_server: str = "imap.gmail.com"
+    smtp_server: str = "smtp.gmail.com"
+    smtp_port: int = 587
 
     class Config:
         schema_extra = {
@@ -50,6 +52,8 @@ class EmailConnectionDetails(BaseModel):
                 "email": "joe@bloggs.com",
                 "password": "password",
                 "imap_server": "imap.gmail.com",
+                "smtp_server": "smtp.gmail.com",
+                "smtp_port": 587
             }
         }
         extra = "forbid"

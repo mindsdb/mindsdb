@@ -1,6 +1,10 @@
-from datetime import datetime, timedelta
-import email
 import imaplib
+import email
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
+from datetime import datetime, timedelta
 
 import pandas as pd
 from mindsdb.integrations.handlers.email_handler.settings import EmailSearchOptions, EmailConnectionDetails
@@ -13,10 +17,12 @@ class EmailClient:
 
     def __init__(
             self,
-            connection_data: EmailConnectionDetails):
+            connection_data: EmailConnectionDetails
+    ):
         self.email = connection_data.email
         self.password = connection_data.password
         self.imap_server = imaplib.IMAP4_SSL(connection_data.imap_server)
+        self.smtp_server = smtplib.SMTP(connection_data.smtp_server, connection_data.smtp_port)
 
     def select_mailbox(self, mailbox: str = 'INBOX'):
         '''Logs in & selects a mailbox from IMAP server. Defaults to INBOX, which is the default inbox.
@@ -40,6 +46,27 @@ class EmailClient:
         if ok != 'BYE':
             raise ValueError(
                 f'Unable to logout of IMAP client: {str(resp)}')
+
+    def send_email(self, to_addr, subject, body):
+        '''
+        Sends an email to the given address.
+        
+        Parameters:
+            to_addr (str): The email address to send the email to.
+            subject (str): The subject of the email.
+            body (str): The body of the email.
+        '''
+
+        msg = MIMEMultipart()
+        msg['From'] = self.email
+        msg['To'] = to_addr
+        msg['Subject'] = subject.value
+        msg.attach(MIMEText(body.value, 'plain'))
+
+        self.smtp_server.starttls()
+        self.smtp_server.login(self.email, self.password)
+        self.smtp_server.send_message(msg)
+        self.smtp_server.quit()
 
     def search_email(self, options: EmailSearchOptions) -> pd.DataFrame:
         '''Searches emails based on the given options and returns a DataFrame.

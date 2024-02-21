@@ -51,6 +51,9 @@ class TwelveLabsHandlerModel(BaseModel):
     query_column : str, Optional
         Name of the column containing the query to be used for searching. This will only be required if the task is search. Each query will be run against the entire index, not individual videos.
 
+    type : str, Optional
+        Type of the summary to be generated. This will only be required if the task is summarize. Supported types are 'summary', 'chapter' and 'highlight'.
+
     For more information, refer the API reference: https://docs.twelvelabs.io/reference/api-reference
     """
 
@@ -66,6 +69,7 @@ class TwelveLabsHandlerModel(BaseModel):
     task: str = None
     search_options: Optional[List[str]] = None
     query_column: Optional[str] = None
+    type: Optional[str] = None
 
     class Config:
         extra = Extra.forbid
@@ -155,6 +159,13 @@ class TwelveLabsHandlerModel(BaseModel):
             if not query_column:
                 raise ValueError(
                     "query_column has not been provided. Please provide query_column."
+                )
+            
+        elif task == "summarize":
+            type = values.get("type")
+            if not type:
+                raise ValueError(
+                    "type has not been provided. Please provide type."
                 )
 
         else:

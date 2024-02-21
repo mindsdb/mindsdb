@@ -56,10 +56,14 @@ class TwelveLabsAPIClient:
             ID of the created index.
         """
 
+        # TODO: change index_options to engine_options?
+        # TODO: support multiple engines per index?
         body = {
             "index_name": index_name,
-            "engine_id": engine_id if engine_id else twelve_labs_handler_config.DEFAULT_ENGINE,
-            "index_options": index_options,
+            "engines": [{
+                "engine_name": engine_id if engine_id else twelve_labs_handler_config.DEFAULT_ENGINE_ID,
+                "engine_options": index_options
+            }],
             "addons": addons,
         }
 

@@ -859,6 +859,8 @@ class TestProjectStructure(BaseExecutorDummyML):
 class TestJobs(BaseExecutorDummyML):
 
     def test_job(self, scheduler):
+        from mindsdb.interfaces.database.log import JobsHistoryTable
+
         df1 = pd.DataFrame([
             {'a': 1, 'c': 1, 'b': dt.datetime(2020, 1, 1)},
             {'a': 2, 'c': 1, 'b': dt.datetime(2020, 1, 2)},
@@ -921,16 +923,16 @@ class TestJobs(BaseExecutorDummyML):
         assert minutes > 58 and minutes < 62
 
         # check history table
-        ret = self.run_sql('select * from jobs_history', database='proj2')
+        ret = self.run_sql('select * from log.jobs_history', database='proj2')
         # proj2.j2 was run one time
         assert len(ret) == 1
-        assert ret.PROJECT[0] == 'proj2' and ret.NAME[0] == 'j2'
+        assert ret.project[0] == 'proj2' and ret.name[0] == 'j2'
 
         # run once again
         scheduler.check_timetable()
 
         # job wasn't executed
-        ret = self.run_sql('select * from jobs_history', database='proj2')
+        ret = self.run_sql('select * from log.jobs_history', database='proj2')
         assert len(ret) == 1
 
         # shift 'next run' and run once again
@@ -940,12 +942,23 @@ class TestJobs(BaseExecutorDummyML):
 
         scheduler.check_timetable()
 
-        ret = self.run_sql('select * from jobs_history', database='proj2')
+        ret = self.run_sql('select * from log.jobs_history', database='proj2')
         assert len(ret) == 2  # was executed
 
         # check global history table
         ret = self.run_sql('select * from information_schema.jobs_history', database='proj2')
-        assert len(ret) == 2  # was executed
+        assert len(ret) == 2
+        assert sorted([x.upper() for x in list(ret.columns)]) == sorted([x.upper() for x in JobsHistoryTable.columns])
+
+        # there is no 'jobs_history' table in project
+        # with pytest.raises(Exception):
+        #     try:
+        #         self.run_sql('select * from jobs_history', database='proj2')
+        #     except Exception as e:
+        #         x = 1
+
+        with pytest.raises(Exception):
+            self.run_sql('select company_id from log.jobs_history', database='proj2')
 
     def test_inactive_job(self, scheduler):
         # create job
@@ -963,7 +976,7 @@ class TestJobs(BaseExecutorDummyML):
         # run scheduler
         scheduler.check_timetable()
 
-        ret = self.run_sql('select * from jobs_history')
+        ret = self.run_sql('select * from log.jobs_history')
         # no history
         assert len(ret) == 0
 

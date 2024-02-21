@@ -93,7 +93,7 @@ class TwelveLabsHandlerModel(BaseModel):
         ParameterValidationUtilities.validate_parameter_spelling(cls, values)
 
         return values
-    
+
     @root_validator(pre=True, allow_reuse=True, skip_on_failure=True)
     def check_for_valid_engine_options(cls, values):
         """
@@ -187,7 +187,7 @@ class TwelveLabsHandlerModel(BaseModel):
                 raise ValueError(
                     "query_column has not been provided. Please provide query_column."
                 )
-            
+
         elif task == "summarization":
             summarization_type = values.get("summarization_type")
             if not summarization_type:

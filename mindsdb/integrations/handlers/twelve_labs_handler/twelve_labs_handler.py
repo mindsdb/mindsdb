@@ -200,7 +200,7 @@ class TwelveLabsHandler(BaseMLEngine):
             # df_predictions = pd.merge(df_metadata, df_modules, on=metadata)
             # return df_predictions
             return pd.json_normalize(data).add_prefix(args['target'] + '_')
-        
+
         # check if task is summarize
         elif args['task'] == 'summarization':
             # sumarize videos
@@ -233,7 +233,7 @@ class TwelveLabsHandler(BaseMLEngine):
         if attribute == "args":
             args = self.model_storage.json_get("args")
             return pd.DataFrame(args.items(), columns=["key", "value"])
-                                
+                   
         elif attribute == "indexed_videos":
             args = self.model_storage.json_get("args")
 
@@ -261,14 +261,14 @@ class TwelveLabsHandler(BaseMLEngine):
                 video_data['engine_ids'] = ", ".join(video_data['engine_ids'])
 
                 indexed_video_data.append(video_data)
-                                                                     
+                                          
             df_videos = pd.DataFrame(indexed_video_data)
-            
+
             # rename _id to video_id
             df_videos.rename(columns={"_id": "video_id"}, inplace=True)
 
             return df_videos
-        
+
         else:
             tables = ["args", "indexed_videos"]
             return pd.DataFrame(tables, columns=["tables"])

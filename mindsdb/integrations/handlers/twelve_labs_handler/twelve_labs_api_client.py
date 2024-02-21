@@ -103,7 +103,7 @@ class TwelveLabsAPIClient:
 
         data = result['data']
         return data[0]['_id'] if data else None
-    
+
     def list_videos_in_index(self, index_name: str) -> List[Dict]:
         """
         List videos in an index.
@@ -128,7 +128,7 @@ class TwelveLabsAPIClient:
         )
         data.extend(result['data'])
 
-        while result['page_info']['page'] < result['page_info']['total_page']: 
+        while result['page_info']['page'] < result['page_info']['total_page']:
             result = self._submit_request(
                 method="GET",
                 endpoint=f"indexes/{index_id}/videos?page_token={result['page_info']['next_page_token']}",
@@ -343,7 +343,7 @@ class TwelveLabsAPIClient:
 
         logger.info(f"Search for index {index_id} completed successfully.")
         return data
-    
+
     def summarize_videos(self, video_ids: List[str], summarization_type: str) -> Dict:
         """
         Summarize videos.
@@ -369,7 +369,7 @@ class TwelveLabsAPIClient:
 
         logger.info(f"Summarized videos {video_ids} successfully.")
         return results
-    
+
     def summarize_video(self, video_id: str, summarization_type: str) -> Dict:
         """
         Summarize a video.

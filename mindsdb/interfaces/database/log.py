@@ -18,6 +18,15 @@ from mindsdb.utilities.context import context as ctx
 
 
 class LogTable(ABC):
+    """Base class for 'table' entitie in internal 'log' database
+
+    Attributes:
+        name (str): name of the table
+        deletable (bool): is it possible to delete a table
+        visible (bool): should be table visible in GUI sidebar
+        kind (str): type of the table/view
+    """
+
     name: str
     deletable: bool = False
     visible: bool = True
@@ -25,7 +34,12 @@ class LogTable(ABC):
 
     @staticmethod
     @abstractmethod
-    def _get_base() -> Select:
+    def _get_base_subquery() -> Select:
+        """Get a query that returns the table from internal db
+
+        Returns:
+            Select: 'select' query that returns table
+        """
         pass
 
 
@@ -44,7 +58,7 @@ class LLMLogTable(LogTable):
     }
 
     @staticmethod
-    def _get_base():
+    def _get_base_subquery() -> Select:
         query = Select(
             targets=[
                 Identifier('llm_log.api_key', alias=Identifier('api_key')),
@@ -101,7 +115,7 @@ class JobsHistoryTable(LogTable):
     }
 
     @staticmethod
-    def _get_base():
+    def _get_base_subquery() -> Select:
         query = Select(
             targets=[
                 Identifier('jobs.name', alias=Identifier('name')),
@@ -229,7 +243,7 @@ class LogDBController:
         query_traversal(query, check_columns)
         # endregion
 
-        query.from_table = log_table._get_base()
+        query.from_table = log_table._get_base_subquery()
 
         render_engine = db.engine.name
         if render_engine == "postgresql":

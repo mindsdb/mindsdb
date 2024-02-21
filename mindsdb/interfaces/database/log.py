@@ -5,7 +5,7 @@ from collections import OrderedDict
 import pandas as pd
 
 from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import Select, Identifier, Star, BinaryOperation, Constant, Join
+from mindsdb_sql.parser.ast import Select, Identifier, Star, BinaryOperation, Constant, Join, Function
 from mindsdb_sql.parser.utils import JoinType
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.planner.utils import query_traversal
@@ -41,6 +41,37 @@ class LogTable(ABC):
             Select: 'select' query that returns table
         """
         pass
+
+    @staticmethod
+    def company_id_comparison(table_a: str, table_b: str) -> BinaryOperation:
+        """Make statement for 'safe' comparison of company_id of two tables
+
+        Args:
+            table_a (str): name of first table
+            table_b (str): name of second table
+
+        Returns:
+            BinaryOperation: statement that can be used for 'safe' comparison
+        """
+        return BinaryOperation(
+            op='=',
+            args=(
+                Function(
+                    op='coalesce',
+                    args=(
+                        Identifier(f'{table_a}.company_id'),
+                        0
+                    )
+                ),
+                Function(
+                    op='coalesce',
+                    args=(
+                        Identifier(f'{table_b}.company_id'),
+                        0
+                    )
+                )
+            )
+        )
 
 
 class LLMLogTable(LogTable):
@@ -79,13 +110,7 @@ class LLMLogTable(LogTable):
                 condition=BinaryOperation(
                     op='and',
                     args=(
-                        BinaryOperation(
-                            op='=',
-                            args=(
-                                Identifier('llm_log.company_id'),
-                                Identifier('predictor.company_id')
-                            )
-                        ),
+                        LLMLogTable.company_id_comparison('llm_log', 'predictor'),
                         BinaryOperation(
                             op='=',
                             args=(
@@ -133,13 +158,7 @@ class JobsHistoryTable(LogTable):
                     condition=BinaryOperation(
                         op='and',
                         args=(
-                            BinaryOperation(
-                                op='=',
-                                args=(
-                                    Identifier('jobs_history.company_id'),
-                                    Identifier('jobs.company_id')
-                                )
-                            ),
+                            LLMLogTable.company_id_comparison('jobs_history', 'jobs'),
                             BinaryOperation(
                                 op='=',
                                 args=(
@@ -155,13 +174,7 @@ class JobsHistoryTable(LogTable):
                 condition=BinaryOperation(
                     op='and',
                     args=(
-                        BinaryOperation(
-                            op='=',
-                            args=(
-                                Identifier('project.company_id'),
-                                Identifier('jobs.company_id')
-                            )
-                        ),
+                        LLMLogTable.company_id_comparison('project', 'jobs'),
                         BinaryOperation(
                             op='=',
                             args=(

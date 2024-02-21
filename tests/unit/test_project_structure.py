@@ -5,8 +5,6 @@ import pytest
 
 import pandas as pd
 
-from mindsdb_sql import parse_sql
-
 from .executor_test_base import BaseExecutorDummyML
 
 
@@ -40,21 +38,6 @@ class TestProjectStructure(BaseExecutorDummyML):
             time.sleep(0.5)
         if not done:
             raise RuntimeError("predictor didn't created")
-
-    def run_sql(self, sql, throw_error=True, database='mindsdb'):
-        parsed_sql = parse_sql(sql, dialect='mindsdb')
-        self.command_executor.session.database = database
-        ret = self.command_executor.execute_command(
-            parsed_sql
-        )
-        if throw_error:
-            assert ret.error_code is None
-        if ret.data is not None:
-            columns = [
-                col.alias if col.alias is not None else col.name
-                for col in ret.columns
-            ]
-            return pd.DataFrame(ret.data, columns=columns)
 
     def get_models(self):
         models = {}
@@ -829,22 +812,51 @@ class TestProjectStructure(BaseExecutorDummyML):
         first_row = ret.to_dict('split')['data'][0]
         assert first_row == [1, 1, 1, 10]
 
+    def test_llm_log(self):
+        from mindsdb.interfaces.database.log import LLMLogTable
+
+        ret = self.run_sql('select * from log.llm_log')
+        assert len(ret) == 0
+
+        record = self.db.Predictor(
+            id=1,
+            project_id=0,
+            name='test'
+        )
+        self.db.session.add(record)
+        self.db.session.commit()
+
+        for j in range(2):
+            for i in range(3 + j):
+                record = self.db.LLMLog(
+                    api_key=f'api_key_{j}',
+                    model_id=1,
+                    input='test_input',
+                    output='test_output',
+                    prompt_tokens=i,
+                    completion_tokens=i,
+                    total_tokens=i,
+                    start_time=dt.datetime.now(),
+                    end_time=dt.datetime.now()
+                )
+                self.db.session.add(record)
+                self.db.session.commit()
+
+        ret = self.run_sql('select * from log.llm_log')
+        assert len(ret) == 7
+        assert sorted([x.upper() for x in list(ret.columns)]) == sorted([x.upper() for x in LLMLogTable.columns])
+
+        with pytest.raises(Exception):
+            self.run_sql('select company_id from log.llm_log')
+
+        ret = self.run_sql("select model_name, input, output, api_key from log.llm_log where api_key = 'api_key_1'")
+        assert len(ret) == 4
+        assert len(ret.columns) == 4
+        assert ret['model_name'][0] == 'test'
+        assert ret['api_key'][0] == 'api_key_1'
+
 
 class TestJobs(BaseExecutorDummyML):
-
-    def run_sql(self, sql, throw_error=True, database='mindsdb'):
-        self.command_executor.session.database = database
-        ret = self.command_executor.execute_command(
-            parse_sql(sql, dialect='mindsdb')
-        )
-        if throw_error:
-            assert ret.error_code is None
-        if ret.data is not None:
-            columns = [
-                col.alias if col.alias is not None else col.name
-                for col in ret.columns
-            ]
-            return pd.DataFrame(ret.data, columns=columns)
 
     def test_job(self, scheduler):
         df1 = pd.DataFrame([

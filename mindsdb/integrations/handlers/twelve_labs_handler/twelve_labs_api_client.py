@@ -313,6 +313,32 @@ class TwelveLabsAPIClient:
         logger.info(f"Search for index {index_id} completed successfully.")
         return data
     
+    def summarize_videos(self, video_ids: List[str], type: str) -> Dict:
+        """
+        Summarize videos.
+
+        Parameters
+        ----------
+        video_ids : List[str]
+            List of video IDs.
+
+        type : str
+            Type of the summary to be generated. Supported types are 'summary', 'chapter' and 'highlight'.
+
+        Returns
+        -------
+        Dict
+            Summary of the videos.
+        """
+
+        results = []
+        for video_id in video_ids:
+            result = self.summarize_video(video_id=video_id, type=type)
+            results.append(result)
+
+        logger.info(f"Summarized videos {video_ids} successfully.")
+        return results
+    
     def summarize_video(self, video_id: str, type: str) -> Dict:
         """
         Summarize a video.

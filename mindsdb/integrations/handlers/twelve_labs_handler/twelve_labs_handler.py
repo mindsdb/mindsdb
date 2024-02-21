@@ -234,13 +234,42 @@ class TwelveLabsHandler(BaseMLEngine):
 
         if attribute == "args":
             args = self.model_storage.json_get("args")
-            # remove indexed_videos from args
-            args.pop("indexed_videos", None)
             return pd.DataFrame(args.items(), columns=["key", "value"])
                                 
         elif attribute == "indexed_videos":
-            indexed_videos = self.model_storage.json_get("args").get("indexed_videos")
-            return pd.DataFrame(indexed_videos)
+            args = self.model_storage.json_get("args")
+
+            api_key = get_api_key(
+                api_name=self.name,
+                create_args=args,
+                engine_storage=self.engine_storage,
+            )
+
+            # initialize TwelveLabsAPIClient
+            twelve_labs_api_client = TwelveLabsAPIClient(api_key=api_key)
+
+            # get videos indexed in the index
+            index_name = self.model_storage.json_get("args").get("index_name")
+            indexed_videos = twelve_labs_api_client.list_videos_in_index(index_name=index_name)
+
+            # structure nested columns
+            indexed_video_data = []
+            for video in indexed_videos:
+                video_data = video.copy()
+                video_data.pop("metadata")
+                video_data.update(video["metadata"])
+
+                # convert engine_ids to string
+                video_data['engine_ids'] = ", ".join(video_data['engine_ids'])
+
+                indexed_video_data.append(video_data)
+                                                                     
+            df_videos = pd.DataFrame(indexed_video_data)
+            
+            # rename _id to video_id
+            df_videos.rename(columns={"_id": "video_id"}, inplace=True)
+
+            return df_videos
         
         else:
             tables = ["args", "indexed_videos"]

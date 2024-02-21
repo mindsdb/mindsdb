@@ -88,4 +88,3 @@ class EmailHandler(APIHandler):
         """
         ast = parse_sql(query, dialect="mindsdb")
         return self.query(ast)
-

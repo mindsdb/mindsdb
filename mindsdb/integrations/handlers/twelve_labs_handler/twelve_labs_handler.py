@@ -207,7 +207,7 @@ class TwelveLabsHandler(BaseMLEngine):
             video_ids = df['video_id'].tolist()
             data = twelve_labs_api_client.summarize_videos(
                 video_ids=video_ids,
-                type=args['type']
+                summarization_type=args['summarization_type']
             )
 
             return pd.json_normalize(data).add_prefix(args['target'] + '_')

@@ -344,7 +344,7 @@ class TwelveLabsAPIClient:
         logger.info(f"Search for index {index_id} completed successfully.")
         return data
     
-    def summarize_videos(self, video_ids: List[str], type: str) -> Dict:
+    def summarize_videos(self, video_ids: List[str], summarization_type: str) -> Dict:
         """
         Summarize videos.
 
@@ -353,7 +353,7 @@ class TwelveLabsAPIClient:
         video_ids : List[str]
             List of video IDs.
 
-        type : str
+        summarization_type : str
             Type of the summary to be generated. Supported types are 'summary', 'chapter' and 'highlight'.
 
         Returns
@@ -364,13 +364,13 @@ class TwelveLabsAPIClient:
 
         results = []
         for video_id in video_ids:
-            result = self.summarize_video(video_id=video_id, type=type)
+            result = self.summarize_video(video_id=video_id, summarization_type=summarization_type)
             results.append(result)
 
         logger.info(f"Summarized videos {video_ids} successfully.")
         return results
     
-    def summarize_video(self, video_id: str, type: str) -> Dict:
+    def summarize_video(self, video_id: str, summarization_type: str) -> Dict:
         """
         Summarize a video.
 
@@ -379,7 +379,7 @@ class TwelveLabsAPIClient:
         video_id : str
             ID of the video.
 
-        type : str
+        summarization_type : str
             Type of the summary to be generated. Supported types are 'summary', 'chapter' and 'highlight'.
 
         Returns
@@ -390,7 +390,7 @@ class TwelveLabsAPIClient:
 
         body = {
             "video_id": video_id,
-            "type": type
+            "type": summarization_type
         }
 
         result = self._submit_request(

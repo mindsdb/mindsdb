@@ -147,10 +147,8 @@ class TwelveLabsHandler(BaseMLEngine):
         )
 
         # poll for video indexing tasks to complete
-        indexed_videos = twelve_labs_api_client.poll_for_video_indexing_tasks(task_ids=task_ids)
+        twelve_labs_api_client.poll_for_video_indexing_tasks(task_ids=task_ids)
 
-        # add indexed_videos to args
-        args['indexed_videos'] = indexed_videos
         # store args in model_storage
         self.model_storage.json_set('args', args)
 

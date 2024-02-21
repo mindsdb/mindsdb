@@ -250,7 +250,6 @@ class TwelveLabsAPIClient:
         None
         """
 
-        indexed_videos = []
         for task_id in task_ids:
             logger.info(f"Polling status of video indexing task {task_id}.")
             is_task_running = True
@@ -269,13 +268,6 @@ class TwelveLabsAPIClient:
                 elif status == 'ready':
                     logger.info(f"Task {task_id} completed successfully.")
                     is_task_running = False
-                    # store indexed video in indexed_videos
-                    indexed_video = {
-                        "video_id": task['video_id'],
-                        "video_url": task['hls']['video_url']
-                    }
-                    indexed_video.update(task['metadata'])
-                    indexed_videos.append(indexed_video)
 
                 else:
                     logger.error(f"Task {task_id} failed with status {task['status']}.")
@@ -283,8 +275,6 @@ class TwelveLabsAPIClient:
                     raise Exception(f"Task {task_id} failed with status {task['status']}.")
 
         logger.info("All videos indexed successfully.")
-
-        return indexed_videos
 
     def _get_video_indexing_task(self, task_id: str) -> Dict:
         """

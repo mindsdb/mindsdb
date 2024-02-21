@@ -147,10 +147,12 @@ class TwelveLabsHandler(BaseMLEngine):
         )
 
         # poll for video indexing tasks to complete
-        twelve_labs_api_client.poll_for_video_indexing_tasks(task_ids=task_ids)
+        indexed_videos = twelve_labs_api_client.poll_for_video_indexing_tasks(task_ids=task_ids)
 
         # store args in model_storage
         self.model_storage.json_set('args', args)
+        # store indexed_videos in model_storage
+        self.model_storage.json_set('indexed_videos', indexed_videos)
 
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         """

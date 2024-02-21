@@ -228,11 +228,13 @@ class TwelveLabsAPIClient:
                 elif status == 'ready':
                     logger.info(f"Task {task_id} completed successfully.")
                     is_task_running = False
-                    indexed_videos.append({
+                    # store indexed video in indexed_videos
+                    indexed_video = {
                         "video_id": task['video_id'],
-                        "video_url": task['hls']['video_url'],
-                        "metadata": task['metadata'],
-                    })
+                        "video_url": task['hls']['video_url']
+                    }
+                    indexed_video.update(task['metadata'])
+                    indexed_videos.append(indexed_video)
 
                 else:
                     logger.error(f"Task {task_id} failed with status {task['status']}.")

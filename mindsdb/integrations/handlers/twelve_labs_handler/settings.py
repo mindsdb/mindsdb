@@ -93,6 +93,33 @@ class TwelveLabsHandlerModel(BaseModel):
         ParameterValidationUtilities.validate_parameter_spelling(cls, values)
 
         return values
+    
+    @root_validator(pre=True, allow_reuse=True, skip_on_failure=True)
+    def check_for_valid_engine_options(cls, values):
+        """
+        Root validator to check if the options specified for particular engines are valid.
+
+        Parameters
+        ----------
+        values : Dict
+            Dictionary containing the attributes of the model.
+
+        Raises
+        ------
+        ValueError
+            If there are any typos in the parameters.
+        """
+
+        engine_id = values.get("engine_id")
+        index_options = values.get("index_options")
+
+        if engine_id and 'pegasus' in engine_id:
+            if not set(index_options).issubset(set(['visual', 'conversation'])):
+                raise ValueError(
+                    "index_optios for the Pegasus family of video understanding engines should be one or both of the following engine options: visual and conversation.."
+                )
+
+        return values
 
     @root_validator(allow_reuse=True, skip_on_failure=True)
     def check_for_video_urls_or_video_files(cls, values):

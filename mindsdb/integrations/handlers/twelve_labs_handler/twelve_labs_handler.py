@@ -202,7 +202,7 @@ class TwelveLabsHandler(BaseMLEngine):
             return pd.json_normalize(data).add_prefix(args['target'] + '_')
         
         # check if task is summarize
-        elif args['task'] == 'summarize':
+        elif args['task'] == 'summarization':
             # sumarize videos
             video_ids = df['video_id'].tolist()
             data = twelve_labs_api_client.summarize_videos(

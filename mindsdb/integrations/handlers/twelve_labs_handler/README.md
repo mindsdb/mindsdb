@@ -58,18 +58,17 @@ USING
 
 As mentioned above, the `search_options` parameter is specific to the `search` task and should be a subset of `index_options`.
 
-### Summarize
+### Summarization
 ```sql
 CREATE MODEL mindsdb.twelve_labs_summarization
 PREDICT search_results
 USING
   engine = 'twelve_labs_engine',
-  task = 'search',
+  task = 'summarization',
   engine_id = 'pegasus1',
   index_name = 'index_1',
   index_options = ['visual', 'conversation'],
   video_urls = ['https://.../video_1.mp4', 'https://.../video_2.mp4'],
-  summary = ['visual', 'conversation', 'text_in_video', 'logo'],
   summarization_type = 'summary';
 ```
 

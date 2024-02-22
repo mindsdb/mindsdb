@@ -21,7 +21,7 @@ def _make_text_to_sql_langchain_tools(skill: db.Skills, llm, executor) -> List:
         raise ImportError('To use the text-to-SQL skill, please install langchain with `pip install langchain`')
     database = skill.params['database']
     tables = skill.params['tables']
-    # tables_to_include = [f'{database}.{table}' for table in tables]
+
     db = MindsDBSQL(
         database=database,
         engine=executor,

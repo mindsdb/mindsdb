@@ -82,8 +82,8 @@ class TwelveLabsHandler(BaseMLEngine):
         args = args['using']
         args['target'] = target
 
-        # get api client
-        twelve_labs_api_client = self._get_api_client(args)
+        # get api client and api key
+        twelve_labs_api_client, api_key = self._get_api_client(args)
 
         # update args with api key
         args['twelve_labs_api_key'] = api_key
@@ -160,7 +160,7 @@ class TwelveLabsHandler(BaseMLEngine):
         """
 
         # get api client
-        twelve_labs_api_client = self._get_api_client()
+        twelve_labs_api_client, _ = self._get_api_client()
 
         # check if task is search
         if args['task'] == 'search':
@@ -219,7 +219,7 @@ class TwelveLabsHandler(BaseMLEngine):
 
         elif attribute == "indexed_videos":
             # get api client
-            twelve_labs_api_client = self._get_api_client()
+            twelve_labs_api_client, _ = self._get_api_client()
 
             # get videos indexed in the index
             index_name = self.model_storage.json_get("args").get("index_name")
@@ -275,4 +275,4 @@ class TwelveLabsHandler(BaseMLEngine):
         )
 
         # initialize TwelveLabsAPIClient
-        return TwelveLabsAPIClient(api_key=api_key)
+        return TwelveLabsAPIClient(api_key=api_key), api_key

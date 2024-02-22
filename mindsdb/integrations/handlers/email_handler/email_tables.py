@@ -45,7 +45,7 @@ class EmailsTable(APITable):
 
         search_params = {}
         for op, arg1, arg2 in where_conditions:
-            if arg1 == 'created_at':
+            if arg1 == 'datetime':
                 date = self.parse_date(arg2)
                 if op == '>':
                     search_params['since_date'] = date
@@ -78,6 +78,7 @@ class EmailsTable(APITable):
 
         emails_df = email_ingestor.ingest()
 
+        # ensure all queries from query are applied to the dataframe
         select_statement_executor = SELECTQueryExecutor(
             emails_df,
             selected_columns,
@@ -85,9 +86,7 @@ class EmailsTable(APITable):
             order_by_conditions,
             result_limit
         )
-        emails_df = select_statement_executor.execute_query()
-
-        return emails_df
+        return select_statement_executor.execute_query()
 
     def insert(self, query: ast.Insert) -> None:
         """Sends emails through the connected account.

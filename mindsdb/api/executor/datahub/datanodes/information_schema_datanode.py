@@ -17,6 +17,7 @@ from mindsdb.api.executor.datahub.datanodes.project_datanode import (
 )
 from mindsdb.api.executor import exceptions as exc
 from mindsdb.api.executor.utilities.sql import query_df
+from mindsdb.api.executor.utilities.sql import get_query_tables
 from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.jobs.jobs_controller import JobsController
@@ -24,33 +25,6 @@ from mindsdb.interfaces.skills.skills_controller import SkillsController
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
-
-
-def get_all_tables(stmt):
-    if isinstance(stmt, Union):
-        left = get_all_tables(stmt.left)
-        right = get_all_tables(stmt.right)
-        return left + right
-
-    if isinstance(stmt, Select):
-        from_stmt = stmt.from_table
-    elif isinstance(stmt, (Identifier, Join)):
-        from_stmt = stmt
-    elif isinstance(stmt, Insert):
-        from_stmt = stmt.table
-    elif isinstance(stmt, Delete):
-        from_stmt = stmt.table
-    else:
-        # raise SqlApiException(f'Unknown type of identifier: {stmt}')
-        return []
-
-    result = []
-    if isinstance(from_stmt, Identifier):
-        result.append(from_stmt.parts[-1])
-    elif isinstance(from_stmt, Join):
-        result.extend(get_all_tables(from_stmt.left))
-        result.extend(get_all_tables(from_stmt.right))
-    return result
 
 
 class InformationSchemaDataNode(DataNode):
@@ -1029,7 +1003,7 @@ class InformationSchemaDataNode(DataNode):
         return df
 
     def query(self, query: ASTNode, session=None):
-        query_tables = get_all_tables(query)
+        query_tables = [x[1] for x in get_query_tables(query)]
 
         if len(query_tables) != 1:
             raise exc.BadTableError(

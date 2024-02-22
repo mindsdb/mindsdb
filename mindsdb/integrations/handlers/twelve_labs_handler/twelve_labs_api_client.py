@@ -499,14 +499,23 @@ class TwelveLabsAPIClient:
         else:
             raise Exception(f"Method {method} not supported yet.")
 
-        result = response.json()
         if response.status_code in (200, 201):
-            logger.info("API request was successful.")
-            return result
+            if response.content:
+                result = response.json()
+                logger.info("API request was successful.")
+                return result
+            else:
+                logger.info("API request was successful. No content returned.")
+                return {}
         else:
-            logger.error(f"API request has failed: {result['message']}")
-            # TODO: update Exception to be more specific
-            raise Exception(f"API request has failed: {result['message']}")
+            if response.content:
+                result = response.json()
+                logger.error(f"API request has failed: {result['message']}")
+                # TODO: update Exception to be more specific
+                raise Exception(f"API request has failed: {result['message']}")
+            else:
+                logger.error("API request has failed. No content returned.")
+                raise Exception("API request has failed. No content returned.")
 
     def _submit_multi_part_request(self, endpoint: str, headers: Dict = None, data: Dict = None, method: str = "POST") -> Dict:
         """
@@ -549,11 +558,20 @@ class TwelveLabsAPIClient:
         else:
             raise Exception(f"Method {method} not supported yet.")
 
-        result = response.json()
         if response.status_code in (200, 201):
-            logger.info("API request was successful.")
-            return result
+            if response.content:
+                result = response.json()
+                logger.info("API request was successful.")
+                return result
+            else:
+                logger.info("API request was successful. No content returned.")
+                return {}
         else:
-            logger.error(f"API request has failed: {result['message']}")
-            # TODO: update Exception to be more specific
-            raise Exception(f"API request has failed: {result['message']}")
+            if response.content:
+                result = response.json()
+                logger.error(f"API request has failed: {result['message']}")
+                # TODO: update Exception to be more specific
+                raise Exception(f"API request has failed: {result['message']}")
+            else:
+                logger.error("API request has failed. No content returned.")
+                raise Exception("API request has failed. No content returned.")

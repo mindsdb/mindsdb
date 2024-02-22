@@ -6,10 +6,12 @@ import pandas as pd
 
 from mindsdb_sql.parser import ast
 
+from mindsdb.integrations.handlers.email_handler.email_ingestor import EmailIngestor
 from mindsdb.integrations.libs.api_handler import APITable
 
 from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
 from mindsdb.integrations.handlers.utilities.query_utilities.insert_query_utilities import INSERTQueryParser
+from mindsdb.integrations.handlers.email_handler.settings import EmailSearchOptions
 
 
 class EmailsTable(APITable):
@@ -53,20 +55,28 @@ class EmailsTable(APITable):
                     raise NotImplementedError("Only > and < operators are supported for created_at column.")
                 continue
 
-            elif arg1 in ['mailbox', 'subject', 'to', 'from', 'since_emailid']:
+            elif arg1 in ['mailbox', 'subject', 'to_field', 'from_field', 'since_email_id']:
                 if op != '=':
                     raise NotImplementedError("Only = operator is supported for mailbox, subject, to and from columns.")
                 else:
-                    if arg1 == 'from':
-                        search_params['from_'] = arg2
+                    if arg1 == 'from_field':
+                        search_params['from_field'] = arg2
                     else:
                         search_params[arg1] = arg2
 
             else:
                 raise NotImplementedError(f"Unsupported column: {arg1}.")
 
-        connection = self.handler.connect()
-        emails_df = connection.search_email(**search_params)
+        email_client = self.handler.connect()
+
+        if search_params:
+            search_options = EmailSearchOptions(**search_params)
+        else:
+            search_options = EmailSearchOptions()
+
+        email_ingestor = EmailIngestor(email_client, search_options)
+
+        emails_df = email_ingestor.ingest()
 
         select_statement_executor = SELECTQueryExecutor(
             emails_df,
@@ -98,24 +108,26 @@ class EmailsTable(APITable):
         """
         insert_statement_parser = INSERTQueryParser(
             query,
-            supported_columns=['to', 'subject', 'body'],
-            mandatory_columns=['to', 'subject', 'body'],
+            supported_columns=['to_field', 'subject', 'body'],
+            mandatory_columns=['to_field', 'subject', 'body'],
             all_mandatory=True
         )
         email_data = insert_statement_parser.parse_query()
 
         for email in email_data:
             connection = self.handler.connect()
-            to_addr = email['to']
-            del email['to']
+            to_addr = email['to_field'].value
+            del email['to_field']
             connection.send_email(to_addr, **email)
 
     def get_columns(self):
-        return ['id', 'created_at', 'to', 'from', 'subject', 'body']
+        return ['id', 'body', 'subject', 'to_field', 'from_field', 'datetime']
 
     @staticmethod
-    def parse_date(date_str):
+    def parse_date(date_str) -> dt.datetime:
+
         if isinstance(date_str, dt.datetime):
+
             return date_str
         date_formats = ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d']
         date = None
@@ -127,4 +139,5 @@ class EmailsTable(APITable):
         if date is None:
             raise ValueError(f"Can't parse date: {date_str}")
         date = date.astimezone(pytz.utc)
+
         return date

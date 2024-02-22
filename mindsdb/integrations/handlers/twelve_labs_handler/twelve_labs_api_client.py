@@ -138,6 +138,41 @@ class TwelveLabsAPIClient:
         logger.info(f"Retrieved videos in index {index_id} successfully.")
 
         return data
+    
+    def update_video_metadata(self, index_id: str, video_id: str, video_title: str, metadata: Dict = None) -> None:
+        """
+        Update the metadata of a video that has already been indexed.
+
+        Parameters
+        ----------
+        video_id : str
+            ID of the video.
+
+        video_title : str
+            Title of the video.
+
+        metadata : Dict, Optional
+            Metadata to be updated.
+
+        Returns
+        -------
+        None
+        """
+
+        body = {
+            "video_title": video_title
+        }
+
+        if metadata:
+            body['metadata'] = metadata
+
+        self._submit_request(
+            method="PUT",
+            endpoint=f"indexes/{index_id}/videos/{video_id}",
+            data=body,
+        )
+
+        logger.info(f"Updated metadata for video {video_id} successfully.")
 
     def create_video_indexing_tasks(self, index_id: str, video_urls: List[str] = None, video_files: List[str] = None) -> List[str]:
         """

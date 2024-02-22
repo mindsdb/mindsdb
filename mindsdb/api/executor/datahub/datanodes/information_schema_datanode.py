@@ -322,7 +322,9 @@ class InformationSchemaDataNode(DataNode):
         self.project_controller = ProjectController()
         self.database_controller = session.database_controller
 
-        self.persis_datanodes = {}
+        self.persis_datanodes = {
+            'log': self.database_controller.logs_db_controller
+        }
 
         databases = self.database_controller.get_dict()
         if "files" in databases:
@@ -509,7 +511,10 @@ class InformationSchemaDataNode(DataNode):
         for ds_name, ds in self.persis_datanodes.items():
             if target_table is not None and target_table != ds_name:
                 continue
-            ds_tables = ds.get_tables()
+            if hasattr(ds, 'get_tables_rows'):
+                ds_tables = ds.get_tables_rows()
+            else:
+                ds_tables = ds.get_tables()
             if len(ds_tables) == 0:
                 continue
             elif isinstance(ds_tables[0], dict):

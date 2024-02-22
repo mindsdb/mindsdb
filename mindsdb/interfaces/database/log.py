@@ -15,6 +15,10 @@ from mindsdb.api.executor.utilities.sql import get_query_tables
 from mindsdb.utilities.exception import EntityNotExistsError
 import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.context import context as ctx
+from mindsdb.api.executor.datahub.classes.tables_row import (
+    TABLES_ROW_TYPE,
+    TablesRow,
+)
 
 
 class LogTable(ABC):
@@ -211,6 +215,12 @@ class LogDBController:
 
     def get_tables(self) -> OrderedDict:
         return self._tables
+
+    def get_tables_rows(self) -> List[TablesRow]:
+        return [
+            TablesRow(TABLE_TYPE=TABLES_ROW_TYPE.SYSTEM_VIEW, TABLE_NAME=table_name)
+            for table_name in self._tables.keys()
+        ]
 
     def query(self, query: Select = None, native_query: str = None, session=None):
         if native_query is not None:

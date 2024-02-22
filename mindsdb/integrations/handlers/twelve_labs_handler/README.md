@@ -96,7 +96,7 @@ FROM mindsdb.twelve_labs_summarization
 WHERE video_id = 'video_1';
 ```
 
-Here, the video IDs that were indexed by a model can be found by running a `DESCRIBE` statement on the it. This can be done as follows,
+Here, the video IDs that were indexed by a model can be found by running a `DESCRIBE` statement on the it. The URL or file path of the video will be available in the `video_reference` column. The following is an example of how to run such a `DESCRIBE` statement,
 ```sql
 DESCRIBE mindsdb.twelve_labs_summarization.indexed_videos;
 ```

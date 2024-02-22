@@ -25,7 +25,7 @@ USING
   column = 'question',
   engine = 'anthropic_engine',
   max_tokens = 300,
-  model = 'claude-2';
+  model = 'claude-2.1'
 ~~~
 
 ~~~ sql

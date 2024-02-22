@@ -82,15 +82,8 @@ class TwelveLabsHandler(BaseMLEngine):
         args = args['using']
         args['target'] = target
 
-        # get api key
-        api_key = get_api_key(
-            api_name=self.name,
-            create_args=args,
-            engine_storage=self.engine_storage,
-        )
-
-        # initialize TwelveLabsAPIClient
-        twelve_labs_api_client = TwelveLabsAPIClient(api_key=api_key)
+        # get api client
+        twelve_labs_api_client = self._get_api_client(args)
 
         # update args with api key
         args['twelve_labs_api_key'] = api_key
@@ -166,18 +159,8 @@ class TwelveLabsHandler(BaseMLEngine):
 
         """
 
-        # get args from model_storage
-        args = self.model_storage.json_get('args')
-
-        # get api key
-        api_key = get_api_key(
-            api_name=self.name,
-            create_args=args,
-            engine_storage=self.engine_storage,
-        )
-
-        # initialize TwelveLabsAPIClient
-        twelve_labs_api_client = TwelveLabsAPIClient(api_key=api_key)
+        # get api client
+        twelve_labs_api_client = self._get_api_client()
 
         # check if task is search
         if args['task'] == 'search':
@@ -235,16 +218,8 @@ class TwelveLabsHandler(BaseMLEngine):
             return pd.DataFrame(args.items(), columns=["key", "value"])
 
         elif attribute == "indexed_videos":
-            args = self.model_storage.json_get("args")
-
-            api_key = get_api_key(
-                api_name=self.name,
-                create_args=args,
-                engine_storage=self.engine_storage,
-            )
-
-            # initialize TwelveLabsAPIClient
-            twelve_labs_api_client = TwelveLabsAPIClient(api_key=api_key)
+            # get api client
+            twelve_labs_api_client = self._get_api_client()
 
             # get videos indexed in the index
             index_name = self.model_storage.json_get("args").get("index_name")
@@ -272,3 +247,32 @@ class TwelveLabsHandler(BaseMLEngine):
         else:
             tables = ["args", "indexed_videos"]
             return pd.DataFrame(tables, columns=["tables"])
+        
+
+    def _get_api_client(self, args: Dict = None) -> TwelveLabsAPIClient:
+        """
+        Returns a TwelveLabsAPIClient instance.
+
+        Parameters
+        ----------
+        args : Dict
+            Arguments from the USING clause.
+
+        Returns
+        -------
+        TwelveLabsAPIClient
+            TwelveLabsAPIClient instance.
+        """
+
+        if not args:
+            args = self.model_storage.json_get('args')
+
+        # get api key
+        api_key = get_api_key(
+            api_name=self.name,
+            create_args=args,
+            engine_storage=self.engine_storage,
+        )
+
+        # initialize TwelveLabsAPIClient
+        return TwelveLabsAPIClient(api_key=api_key)

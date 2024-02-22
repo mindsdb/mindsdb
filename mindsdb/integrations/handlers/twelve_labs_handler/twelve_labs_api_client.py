@@ -139,7 +139,7 @@ class TwelveLabsAPIClient:
 
         return data
     
-    def update_video_metadata(self, index_id: str, video_id: str, video_title: str, metadata: Dict = None) -> None:
+    def _update_video_metadata(self, index_id: str, video_id: str, video_title: str, metadata: Dict = None) -> None:
         """
         Update the metadata of a video that has already been indexed.
 
@@ -269,6 +269,16 @@ class TwelveLabsAPIClient:
 
         task_id = result['_id']
         logger.info(f"Created video indexing task {task_id} for {video_url if video_url else video_file} successfully.")
+
+        # update the video title
+        video_title = video_url if video_url else video_file
+        task = self._get_video_indexing_task(task_id=task_id)
+        self._update_video_metadata(
+            index_id=index_id,
+            video_id=task['video_id'],
+            video_title=video_title
+        )
+
         return task_id
 
     def poll_for_video_indexing_tasks(self, task_ids: List[str]) -> None:

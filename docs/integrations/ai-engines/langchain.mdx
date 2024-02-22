@@ -219,3 +219,98 @@ On execution, we get:
 ```
 
 The agent uses the Write tool to `INSERT INTO` the `local_database` database.
+
+
+
+
+
+
+
+
+---------------------------------------------------------------------------------------
+TODO when this is merged https://github.com/mindsdb/mindsdb/pull/8765/files#diff-0fc65b238a4995425779a3a697ab8a73048fdbe91b9abef89082c2dbee3a93a2
+
+
+---
+title: LangChain
+sidebarTitle: LangChain
+---
+
+This documentation describes the integration of MindsDB with [LangChain](https://www.langchain.com/), a framework for developing applications powered by language models.
+The integration allows for the deployment of LangChain models within MindsDB, providing the models with access to data from various data sources.
+
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To use LangChain within MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Obtain the API key for one of OpenAI or Anyscale or LiteLLM required to deploy and use LangChain models within MindsDB. Follow the [instructions for obtaining the API key](<link>).
+
+## Setup
+
+Create an AI engine from the [LangChain handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/langchain_handler).
+
+```sql
+CREATE ML_ENGINE langchain_engine
+FROM langchain
+[USING
+      ..._api_key = 'api-key-value'];
+```
+
+<any additional info here>
+
+Create a model using `langchain_engine` as an engine.
+
+```sql
+CREATE MODEL <ai-framework-name_model>
+[FROM integration
+         (SELECT * FROM table)]
+PREDICT target_column
+[ORDER BY date_time_column]
+[GROUP BY data_column]
+[WINDOW <int>]
+[HORIZON <int>]
+[USING
+      engine = '<ai-framework-name_engine>',  -- engine name as created via CREATE ML_ENGINE
+      <other params specific to an ai engine>];
+```
+
+<any additional info here>
+
+## Usage
+
+The following usage examples utilize `<ai-framework-name_engine>` to create a model with the `CREATE MODEL` statement.
+
+<short description of a usage example>
+
+```sql
+<code to create a model>
+```
+
+<any additional info here>
+
+Query the model to get predictions.
+
+```sql
+<code to make predictions>
+```
+
+Here is the output:
+
+```sql
++-----------+-----------+
+| column  | column  |
++-----------+-----------+
+| value     | value     |
++-----------+-----------+
+```
+
+<any additional info here>
+
+<Tip>
+**Next Steps**
+
+Follow [this tutorial](<link to a tutorial>) to see more use case examples.
+<if no tutorial exists, then direct users to the Use Cases section: Go to the **Use Cases** section to see more examples.>
+</Tip>

@@ -72,10 +72,7 @@ When you create an Anthropic model in MindsDB, it uses the `claude-2` model by d
 When you create an Anthropic model in MindsDB, it uses 100 tokens as the maximum by default. But you can adjust this value by passing it to the `max_tokens` parameter in the `USING` clause of the `CREATE MODEL` statement.
 </Info>
 
-## Usage
-
-Once you have created an Anthropic model, you can use it to make predictions.
-
+Query the model to get predictions.
 
 ```sql
 SELECT question, answer

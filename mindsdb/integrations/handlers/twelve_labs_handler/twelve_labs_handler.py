@@ -247,7 +247,6 @@ class TwelveLabsHandler(BaseMLEngine):
         else:
             tables = ["args", "indexed_videos"]
             return pd.DataFrame(tables, columns=["tables"])
-        
 
     def _get_api_client(self, args: Dict = None) -> TwelveLabsAPIClient:
         """

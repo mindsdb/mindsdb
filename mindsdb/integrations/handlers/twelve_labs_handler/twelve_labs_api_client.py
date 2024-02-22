@@ -138,7 +138,7 @@ class TwelveLabsAPIClient:
         logger.info(f"Retrieved videos in index {index_id} successfully.")
 
         return data
-    
+
     def _update_video_metadata(self, index_id: str, video_id: str, video_title: str = None, metadata: Dict = None) -> None:
         """
         Update the metadata of a video that has already been indexed.
@@ -544,7 +544,7 @@ class TwelveLabsAPIClient:
 
         else:
             raise Exception(f"Method {method} not supported yet.")
-        
+
         return self._handle_response(response)
 
     def _handle_response(self, response):

@@ -479,6 +479,13 @@ class TwelveLabsAPIClient:
                 json=data if data else {},
             )
 
+        elif method == "PUT":
+            response = requests.put(
+                url=url,
+                headers=headers,
+                json=data if data else {},
+            )
+
         else:
             raise Exception(f"Method {method} not supported yet.")
 

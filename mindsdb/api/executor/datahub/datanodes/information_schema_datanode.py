@@ -1,7 +1,7 @@
 from functools import partial
 
 import pandas as pd
-from mindsdb_sql.parser.ast import BinaryOperation, Constant, Identifier, Select, Join, Union, Insert, Delete
+from mindsdb_sql.parser.ast import BinaryOperation, Constant, Identifier, Select
 from mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.api.executor.datahub.classes.tables_row import (
@@ -484,17 +484,17 @@ class InformationSchemaDataNode(DataNode):
 
         target_table = None
         if (
-            type(query) == Select
-            and type(query.where) == BinaryOperation
+            type(query) is Select
+            and type(query.where) is BinaryOperation
             and query.where.op == "and"
         ):
             for arg in query.where.args:
                 if (
-                    type(arg) == BinaryOperation
+                    type(arg) is BinaryOperation
                     and arg.op == "="
-                    and type(arg.args[0]) == Identifier
+                    and type(arg.args[0]) is Identifier
                     and arg.args[0].parts[-1].upper() == "TABLE_SCHEMA"
-                    and type(arg.args[1]) == Constant
+                    and type(arg.args[1]) is Constant
                 ):
                     target_table = arg.args[1].value
                     break
@@ -562,7 +562,7 @@ class InformationSchemaDataNode(DataNode):
         project_name = None
         if (
             isinstance(query, Select)
-            and type(query.where) == BinaryOperation
+            and type(query.where) is BinaryOperation
             and query.where.op == "="
             and query.where.args[0].parts == ["project"]
             and isinstance(query.where.args[1], Constant)
@@ -585,7 +585,7 @@ class InformationSchemaDataNode(DataNode):
         project_name = None
         if (
             isinstance(query, Select)
-            and type(query.where) == BinaryOperation
+            and type(query.where) is BinaryOperation
             and query.where.op == "="
             and query.where.args[0].parts == ["project"]
             and isinstance(query.where.args[1], Constant)
@@ -610,7 +610,7 @@ class InformationSchemaDataNode(DataNode):
         project_name = None
         if (
             isinstance(query, Select)
-            and type(query.where) == BinaryOperation
+            and type(query.where) is BinaryOperation
             and query.where.op == "="
             and query.where.args[0].parts == ["project"]
             and isinstance(query.where.args[1], Constant)
@@ -635,7 +635,7 @@ class InformationSchemaDataNode(DataNode):
         project_name = None
         if (
             isinstance(query, Select)
-            and type(query.where) == BinaryOperation
+            and type(query.where) is BinaryOperation
             and query.where.op == "="
             and query.where.args[0].parts == ["project"]
             and isinstance(query.where.args[1], Constant)
@@ -658,7 +658,7 @@ class InformationSchemaDataNode(DataNode):
         project_name = None
         if (
                 isinstance(query, Select)
-                and type(query.where) == BinaryOperation
+                and type(query.where) is BinaryOperation
                 and query.where.op == '='
                 and query.where.args[0].parts == ['project']
                 and isinstance(query.where.args[1], Constant)
@@ -689,7 +689,7 @@ class InformationSchemaDataNode(DataNode):
         project_name = None
         if (
                 isinstance(query, Select)
-                and type(query.where) == BinaryOperation
+                and type(query.where) is BinaryOperation
                 and query.where.op == '='
                 and query.where.args[0].parts == ['project']
                 and isinstance(query.where.args[1], Constant)
@@ -709,7 +709,7 @@ class InformationSchemaDataNode(DataNode):
         project_name = None
         if (
                 isinstance(query, Select)
-                and type(query.where) == BinaryOperation
+                and type(query.where) is BinaryOperation
                 and query.where.op == '='
                 and query.where.args[0].parts == ['project']
                 and isinstance(query.where.args[1], Constant)

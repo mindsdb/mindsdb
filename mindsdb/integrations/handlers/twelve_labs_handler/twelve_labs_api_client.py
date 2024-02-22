@@ -502,23 +502,7 @@ class TwelveLabsAPIClient:
         else:
             raise Exception(f"Method {method} not supported yet.")
 
-        if response.status_code in (200, 201):
-            if response.content:
-                result = response.json()
-                logger.info("API request was successful.")
-                return result
-            else:
-                logger.info("API request was successful. No content returned.")
-                return {}
-        else:
-            if response.content:
-                result = response.json()
-                logger.error(f"API request has failed: {result['message']}")
-                # TODO: update Exception to be more specific
-                raise Exception(f"API request has failed: {result['message']}")
-            else:
-                logger.error("API request has failed. No content returned.")
-                raise Exception("API request has failed. No content returned.")
+        return self._handle_response(response)
 
     def _submit_multi_part_request(self, endpoint: str, headers: Dict = None, data: Dict = None, method: str = "POST") -> Dict:
         """
@@ -560,7 +544,10 @@ class TwelveLabsAPIClient:
 
         else:
             raise Exception(f"Method {method} not supported yet.")
+        
+        return self._handle_response(response)
 
+    def _handle_response(self, response):
         if response.status_code in (200, 201):
             if response.content:
                 result = response.json()

@@ -159,8 +159,11 @@ class TwelveLabsHandler(BaseMLEngine):
 
         """
 
+        # get args from model_storage
+        args = self.model_storage.json_get('args')
+
         # get api client
-        twelve_labs_api_client, _ = self._get_api_client()
+        twelve_labs_api_client, _ = self._get_api_client(args)
 
         # check if task is search
         if args['task'] == 'search':

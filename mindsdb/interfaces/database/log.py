@@ -1,5 +1,6 @@
+from copy import deepcopy
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Union, Tuple
 from collections import OrderedDict
 
 import pandas as pd
@@ -222,11 +223,14 @@ class LogDBController:
             for table_name in self._tables.keys()
         ]
 
-    def query(self, query: Select = None, native_query: str = None, session=None):
+    def query(self, query: Select = None, native_query: str = None,
+              session=None, return_as: str = 'split') -> Union[pd.DataFrame, Tuple[list, list]]:
         if native_query is not None:
             if query is not None:
                 raise Exception("'query' and 'native_query' arguments can not be used together")
             query = parse_sql(native_query)
+        else:
+            query = deepcopy(query)
 
         if type(query) is not Select:
             raise Exception("Only 'SELECT' is allowed for tables in log database")
@@ -258,7 +262,7 @@ class LogDBController:
 
             if type(node) is Identifier and is_table is False:
                 parts = resolve_table_identifier(node)
-                if parts[0] is not None and parts[0].lower() != 'llm_log':
+                if parts[0] is not None and parts[0].lower() not in self._tables:
                     raise Exception(f"Table '{parts[0]}' can not be used in query")
                 if parts[1].lower() not in available_columns_names:
                     raise Exception(f"Column '{parts[1]}' can not be used in query")
@@ -281,6 +285,9 @@ class LogDBController:
                 if df_column_name.lower() == column_name.lower() and df[df_column_name].dtype != column_type:
                     df[df_column_name] = df[df_column_name].astype(column_type)
         # endregion
+
+        if return_as != 'split':
+            return df
 
         columns_info = [{
             'name': k,

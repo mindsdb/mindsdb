@@ -584,28 +584,10 @@ class InformationSchemaDataNode(DataNode):
 
         return pd.DataFrame(data, columns=columns)
 
-    def _get_jobs_history(self, query: ASTNode = None):
-        jobs_controller = JobsController()
-
-        project_name = None
-        if (
-            isinstance(query, Select)
-            and type(query.where) is BinaryOperation
-            and query.where.op == "="
-            and query.where.args[0].parts == ["project"]
-            and isinstance(query.where.args[1], Constant)
-        ):
-            project_name = query.where.args[1].value
-
-        data = jobs_controller.get_history(project_name)
-
-        columns = self.information_schema["JOBS_HISTORY"]
-        columns_lower = [col.lower() for col in columns]
-
-        # to list of lists
-        data = [[row[k] for k in columns_lower] for row in data]
-
-        return pd.DataFrame(data, columns=columns)
+    def _get_jobs_history(self, query: ASTNode = None) -> pd.DataFrame:
+        log_controller = self.persis_datanodes['log']
+        df = log_controller.query(query, return_as='DataFrame')
+        return df
 
     def _get_triggers(self, query: ASTNode = None):
         from mindsdb.interfaces.triggers.triggers_controller import TriggersController

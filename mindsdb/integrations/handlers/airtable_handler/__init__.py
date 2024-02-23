@@ -15,7 +15,7 @@ except Exception as e:
 title = 'Airtable'
 name = 'airtable'
 type = HANDLER_TYPE.DATA
-icon_path = 'icon.png'
+icon_path = 'icon.svg'
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'description',

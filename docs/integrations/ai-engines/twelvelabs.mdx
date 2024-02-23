@@ -20,15 +20,15 @@ Before proceeding, ensure the following prerequisites are met:
 
 The first step to use this handler is to create an ML Engine. The required argument to create the engine is:
 
-* `api_key` - The TweleveLabs api key. 
+* `twelve_labs_api_key` - The TweleveLabs api key. 
 
-Once you copy the api_key you can establish a connection by executing the following SQL command:
+Once you have the API key you can establish a connection by executing the following SQL command:
 
 ```sql
 CREATE ML_ENGINE twelve_labs_engine
 FROM twelve_labs
 USING
-  api_key = '<YOUR_API_KEY>';
+  twelve_labs_api_key = '<YOUR_API_KEY>';
 ```
 
 ## AI Model
@@ -37,7 +37,7 @@ Now, you can use this ML Engine to create Models for the different tasks support
 
 When executing the `CREATE MODEL` statement, the following parameters are supported in the `USING` clause of the query:
 - `engine`: The name of the ML Engine to use. This is a required parameter.
-- `api_key`: The Twelve Labs API key to use for authentication. This is a required parameter.
+- `twelve_labs_api_key`: The Twelve Labs API key to use for authentication. This is a required parameter.
 - `task`: The task to perform. This is a required parameter and must be one of `search` or `classification`.
 - `index_name`: The name of the index to use; if it does not exist, it will be created. This is a required parameter. More information about indexes can be found [here](https://docs.twelvelabs.io/docs/create-indexes).
 - `index_options`: A list of the types of information within the video that will be processed by the video understanding engine. This is a required parameter and can be any combination of `visual`, `conversation`, `text_in_video` and `logo`. More information about index options can be found [here](https://docs.twelvelabs.io/docs/indexing-options).
@@ -56,7 +56,7 @@ CREATE MODEL mindsdb.twelve_labs_search
 PREDICT search_results
 USING
   engine = 'twelve_labs_engine',
-  api_key = '<YOUR_API_KEY>',
+  twelve_labs_api_key = '<YOUR_API_KEY>',
   task = 'search',
   index_name = 'index_1',
   index_options = ['visual', 'conversation', 'text_in_video', 'logo'],

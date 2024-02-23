@@ -1,5 +1,5 @@
 import os
-from datetime import datetime as datetime, timezone
+from datetime import datetime as datetime, timezone, timedelta
 import ast
 from typing import List
 import pandas as pd
@@ -32,6 +32,7 @@ from mindsdb.integrations.libs.response import (
 
 logger = log.getLogger(__name__)
 
+DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 class SlackChannelsTable(APITable):
     def __init__(self, handler):
@@ -54,7 +55,7 @@ class SlackChannelsTable(APITable):
         # override the default function
         def parse_utc_date(date_str):
             date_obj = datetime.fromisoformat(date_str).replace(tzinfo=timezone.utc)
-            return date_obj.strftime('%Y-%m-%d %H:%M:%S')
+            return date_obj
 
         # Get the channels list and ids
         channels = self.client.conversations_list(types="public_channel,private_channel")['channels']
@@ -69,6 +70,8 @@ class SlackChannelsTable(APITable):
         # to support IS NULL operator
         params['is_null'] = []
         params['is_not_null'] = []
+        # to support general operator of equality
+        params['='] = []
         
         # Build the filters and parameters for the query
         for op, arg1, arg2 in conditions:
@@ -84,23 +87,29 @@ class SlackChannelsTable(APITable):
                 else:
                     raise NotImplementedError(f'Unknown op: {op}')
 
-            elif arg1 == 'created_at':
+            elif arg1 == 'created_at' and arg2 is not None:
                 date = parse_utc_date(arg2)
                 if op == '>':
-                    params['start_time'] = date
+                    params['start_time'] = (date + timedelta(seconds=1)).strftime(DATE_FORMAT)
+                elif op == '>=':
+                    params['start_time'] = date.strftime(DATE_FORMAT)
                 elif op == '<':
-                    params['end_time'] = date
+                    params['end_time'] = date.strftime(DATE_FORMAT)
                 else:
                     raise NotImplementedError
-            
+                
             elif op == 'is':
                 params['is_null'].append(arg1)  
 
             elif op == 'is not':
                 params['is_not_null'].append(arg1) 
+            
+            # general operator of equality
+            elif op == '=' or op == '!=':
+                params['='].append([op, arg1, arg2])
 
             else:
-                filters.append([op, arg1, arg2]) 
+                filters.append([op, arg1, arg2])
 
         if query.limit:
             params['limit'] = int(query.limit.value)
@@ -110,17 +119,14 @@ class SlackChannelsTable(APITable):
             order_by_conditions["ascending"] = []
 
             for an_order in query.order_by:
-                if an_order.field.parts[1] == "messages":
-                    order_by_conditions["columns"].append("messages")
+                col = an_order.field.parts[-1]
 
-                    if an_order.direction == "ASC":
-                        order_by_conditions["ascending"].append(True)
-                    else:
-                        order_by_conditions["ascending"].append(False)
+                order_by_conditions["columns"].append(col)
+
+                if an_order.direction == "ASC":
+                    order_by_conditions["ascending"].append(True)
                 else:
-                    raise ValueError(
-                        f"Order by unknown column {an_order.field.parts[1]}"
-                    )
+                    order_by_conditions["ascending"].append(False)
 
         # Retrieve the conversation history
         try:
@@ -163,7 +169,10 @@ class SlackChannelsTable(APITable):
 
         # convert SlackResponse object to pandas DataFrame
         result = pd.DataFrame(result['messages'])
-                        
+
+        # Remove null rows from the result
+        result = result[result['text'].notnull()]
+            
         # add absent columns
         for col in set(columns) & set(result.columns) ^ set(columns):
             result[col] = None
@@ -180,16 +189,24 @@ class SlackChannelsTable(APITable):
             result = result[result['ts_datetime'] > datetime.strptime(params['start_time'], '%Y-%m-%d %H:%M:%S')]
         elif 'end_time' in params:
             result = result[result['ts_datetime'] < datetime.strptime(params['end_time'], '%Y-%m-%d %H:%M:%S')]
-
+        
         # filter rows where column IS NULL
-        if len(params['is_null']) != 0:
-            for col in params['is_null']:
-                result = result[result[col].isnull()]
+        for col in params['is_null']:
+            result = result[result[col].isnull()]
 
         # filter rows where column IS NOT NULL
-        if len(params['is_not_null']) != 0:
-            for col in params['is_not_null']:
-                result = result[result[col].notnull()]
+        for col in params['is_not_null']:
+            result = result[result[col].notnull()]
+
+        # filter for general equality operator
+        for args in params['=']:
+            op = args[0]
+            col = args[1]
+            val = args[2]
+            if op == '=':
+                result = result[result[col] == val]
+            else:
+                result = result[result[col] != val]
 
         # filter by columns to be returned
         result = result[columns]
@@ -331,6 +348,7 @@ class SlackChannelsTable(APITable):
                     params['ts'] = float(arg2)
                 else:
                     raise NotImplementedError(f'Unknown op: {op}')
+
             else:
                 filters.append([op, arg1, arg2])
 

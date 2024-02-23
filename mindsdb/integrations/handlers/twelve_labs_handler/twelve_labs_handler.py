@@ -276,5 +276,7 @@ class TwelveLabsHandler(BaseMLEngine):
             engine_storage=self.engine_storage,
         )
 
+        base_url = args.get('base_url', None)
+
         # initialize TwelveLabsAPIClient
-        return TwelveLabsAPIClient(api_key=api_key), api_key
+        return TwelveLabsAPIClient(api_key=api_key, base_url=base_url), api_key

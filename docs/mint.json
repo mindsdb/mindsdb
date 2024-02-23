@@ -241,8 +241,8 @@
         {
           "group": "Quickstart",
           "pages": [
+            "quickstart-tutorial",
             "mindsdb-gui",
-            "connect/postgres-client",
             "sql/table-structure"
             
           ]
@@ -251,22 +251,12 @@
     },
     {
       "group": "Concepts",
-      "pages": [   
-        {
-          "group": "AI Tables",
-          "pages":[
-            "ai-engines/overview",
-            "generative-ai-tables"
-          ] 
-        },  
+      "pages": [
+        "generative-ai-tables",  
         {
           "group": "Data Sources",
           "pages": [
-            "datasources/overview",
-            "sql/create/database",
-            "sql/project",
-            "sql/create/view",
-            "sql/create/file",
+            "data_sources",
             {
               "group": "Data Preparation",
               "pages": [
@@ -277,13 +267,7 @@
             }
           ] 
         },
-        {
-          "group": "Automation",
-          "pages": [
-            "sql/create/jobs",
-            "sql/create/trigger"
-          ]
-        }
+        "automation"
       ]
     },
     {
@@ -859,6 +843,7 @@
     {
       "group": "Data Sources",
       "pages": [
+        "integrations/data-overview",
         {
           "group": "Applications",
           "pages": [
@@ -974,6 +959,7 @@
     {
       "group": "AI Engines",
       "pages": [
+        "integrations/ai-overview",
         {
           "group": "Large Language Models",
           "pages": [

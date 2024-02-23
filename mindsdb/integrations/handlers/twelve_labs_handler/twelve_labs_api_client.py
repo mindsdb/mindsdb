@@ -16,7 +16,7 @@ class TwelveLabsAPIClient:
     This client is used for accessing the Twelve Labs API endpoints.
     """
 
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, base_url: str = None):
         """
         The initializer for the TwelveLabsAPIClient.
 
@@ -24,6 +24,8 @@ class TwelveLabsAPIClient:
         ----------
         api_key : str
             The Twelve Labs API key.
+        base_url : str, Optional
+            The base URL for the Twelve Labs API. Defaults to the base URL in the Twelve Labs handler settings.
         """
 
         self.api_key = api_key
@@ -31,6 +33,7 @@ class TwelveLabsAPIClient:
             'Content-Type': 'application/json',
             'x-api-key': self.api_key
         }
+        self.base_url = base_url if base_url else twelve_labs_handler_config.BASE_URL
 
     def create_index(self, index_name: str, index_options: List[str], engine_id: Optional[str] = None, addons: Optional[List[str]] = None) -> str:
         """
@@ -474,27 +477,25 @@ class TwelveLabsAPIClient:
             Response from the API.
         """
 
-        url = f"{twelve_labs_handler_config.BASE_URL}/{endpoint}"
-
         headers = headers if headers else self.headers
 
         if method == "GET":
             response = requests.get(
-                url=url,
+                url=self.base_url,
                 headers=headers,
                 params=data if data else {},
             )
 
         elif method == "POST":
             response = requests.post(
-                url=url,
+                url=self.base_url,
                 headers=headers,
                 json=data if data else {},
             )
 
         elif method == "PUT":
             response = requests.put(
-                url=url,
+                url=self.base_url,
                 headers=headers,
                 json=data if data else {},
             )
@@ -528,8 +529,6 @@ class TwelveLabsAPIClient:
             Response from the API.
         """
 
-        url = f"{twelve_labs_handler_config.BASE_URL}/{endpoint}"
-
         headers = headers = headers if headers else self.headers
 
         multipart_data = MultipartEncoder(fields=data)
@@ -537,7 +536,7 @@ class TwelveLabsAPIClient:
 
         if method == "POST":
             response = requests.post(
-                url=url,
+                url=self.base_url,
                 headers=headers,
                 data=multipart_data if multipart_data else {}
             )

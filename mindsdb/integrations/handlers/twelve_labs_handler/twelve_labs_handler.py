@@ -201,9 +201,6 @@ class TwelveLabsHandler(BaseMLEngine):
             else:
                 return pd.json_normalize(data).add_prefix(args['target'] + '_')
 
-        else:
-            raise NotImplementedError(f"Task {args['task']} is not supported.")
-
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
         """
         Describes the model. This method is called when describing the model.

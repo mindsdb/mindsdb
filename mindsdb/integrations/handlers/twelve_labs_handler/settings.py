@@ -93,6 +93,31 @@ class TwelveLabsHandlerModel(BaseModel):
         ParameterValidationUtilities.validate_parameter_spelling(cls, values)
 
         return values
+    
+    @root_validator(pre=True, allow_reuse=True, skip_on_failure=True)
+    def check_for_valid_task(cls, values):
+        """
+        Root validator to check if the task provided is valid.
+
+        Parameters
+        ----------
+        values : Dict
+            Dictionary containing the attributes of the model.
+
+        Raises
+        ------
+        ValueError
+            If the task provided is not valid.
+        """
+
+        task = values.get("task")
+
+        if task and task not in ["search", "summarization"]:
+            raise ValueError(
+                f"task {task} is not supported. Please provide a valid task."
+            )
+
+        return values
 
     @root_validator(pre=True, allow_reuse=True, skip_on_failure=True)
     def check_for_valid_engine_options(cls, values):

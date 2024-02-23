@@ -510,7 +510,7 @@
           ]
         },
         {
-          "group": "Databases",
+          "group": "Integrate Databases",
           "pages": [
             "rest/databases/create-databases",
             "rest/databases/update-databases",
@@ -520,7 +520,7 @@
           ]
         },
         {
-          "group": "ML Engines",
+          "group": "Integrate AI Engines",
           "pages": [
             "rest/ml_engines/create",
             "rest/ml_engines/delete",
@@ -528,7 +528,7 @@
           ]
         },
         {
-          "group": "Projects",
+          "group": "Create Projects",
           "pages": [
             "rest/projects/create",
             "rest/projects/drop",
@@ -537,7 +537,7 @@
           ]
         },
         {
-          "group": "Models",
+          "group": "Deploy Models",
           "pages": [
             "rest/models/train-model",
             "rest/models/delete-model",
@@ -546,13 +546,18 @@
             "rest/models/list-model",
             "rest/models/retrain",
             "rest/models/finetune",
-            "rest/models/manage-model-versions",
+            "rest/models/manage-model-versions"
+          ]
+        },
+        {
+          "group": "Get Predictions",
+          "pages": [
             "rest/models/query-model",
             "rest/models/query-model-joined-with-data"
           ]
         },
         {
-          "group": "Tables",
+          "group": "Manipulate Data in Tables, Views, and Files",
           "pages": [
             "rest/tables/create-table",
             "rest/tables/delete-table",
@@ -561,28 +566,18 @@
             "rest/tables/update",
             "rest/tables/insert",
             "rest/tables/delete",
-            "rest/sql"
-          ]
-        },
-        {
-          "group": "Views",
-          "pages": [
+            "rest/sql",
             "rest/views/create-view",
             "rest/views/delete-views",
             "rest/views/update-view",             
             "rest/views/list-views",
-            "rest/views/list-view"
-          ]
-        },
-        {
-          "group": "Files",
-          "pages": [
+            "rest/views/list-view",
             "rest/files/upload",
             "rest/files/delete"
           ]
         },
         {
-          "group": "Jobs",
+          "group": "Automate with Jobs",
           "pages": [
             "rest/jobs/create",
             "rest/jobs/delete",
@@ -590,7 +585,7 @@
           ]
         },
         {
-          "group": "Agents",
+          "group": "Automate with Agents",
           "pages": [
             "rest/agents/agent",
             "rest/agents/chatbot"

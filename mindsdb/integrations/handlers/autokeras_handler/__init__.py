@@ -16,6 +16,7 @@ except Exception as e:
 title = "Autokeras"
 name = "autokeras"
 type = HANDLER_TYPE.ML
+icon_path = 'icon.svg'
 permanent = False
 
 __all__ = ["Handler", "version", "name", "type", "title", "description", "import_error"]

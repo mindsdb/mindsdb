@@ -11,6 +11,7 @@ except Exception as e:
 title = 'Auto-Sklearn'
 name = 'autosklearn'
 type = HANDLER_TYPE.ML
+icon_path = 'icon.png'
 permanent = True
 
 __all__ = [

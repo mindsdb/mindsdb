@@ -28,6 +28,7 @@ Now, you can use this ML Engine to create Models for the different tasks support
 When executing the `CREATE MODEL` statement, the following parameters are supported in the `USING` clause of the query:
 - `engine`: The name of the ML Engine to use. This is a required parameter.
 - `api_key`: The Twelve Labs API key to use for authentication. This is a required parameter.
+- `base_url`: The base URL of the Twelve Labs API. This is an optional parameter and defaults to `https://api.twelvelabs.io/v1.2`. 
 - `task`: The task to perform. This is a required parameter and must be one of `search` or `summarization`.
 - `engine_id`: The ID of the Twelve Labs engine to use. This is an optional parameter and defaults to `marengo2.5`. However, certain tasks may require a different engine ID; for instance, the `summarization` task runs only on the Pegasus family of engines. More information about the different engines can be found [here](https://docs.twelvelabs.io/v1.2/docs/engine-options).
 - `index_name`: The name of the index to use; if it does not exist, it will be created. This is a required parameter. More information about indexes can be found [here](https://docs.twelvelabs.io/docs/create-indexes).

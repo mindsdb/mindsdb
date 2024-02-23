@@ -24,6 +24,9 @@ class TwelveLabsHandlerModel(BaseModel):
             2. From the environment variable TWELVE_LABS_API_KEY.
             3. From the config.json file.
 
+    base_url : str, Optional
+        Base URL for the Twelve Labs API. If not provided, the default URL https://api.twelvelabs.io/v1.2 is used.
+
     index_options : List[str]
         List of that specifies how the platform will process the videos uploaded to this index. This will have no effect if the index already exists.
 
@@ -60,6 +63,7 @@ class TwelveLabsHandlerModel(BaseModel):
     index_name: str
     engine_id: Optional[str] = None
     api_key: Optional[str] = None
+    base_url: Optional[str] = None
     index_options: List[str]
     addons: List[str] = []
     video_urls: Optional[List[str]] = None

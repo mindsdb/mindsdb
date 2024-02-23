@@ -196,7 +196,10 @@ class TwelveLabsHandler(BaseMLEngine):
                 summarization_type=args['summarization_type']
             )
 
-            return pd.json_normalize(data).add_prefix(args['target'] + '_')
+            if args['summarization_type'] in ('chapter', 'highlight'):
+                return pd.json_normalize(data, record_path=f'{args['summarization_type']}s', meta=['id', 'video_id']).add_prefix(args['target'] + '_')
+            else:
+                return pd.json_normalize(data).add_prefix(args['target'] + '_')
 
         else:
             raise NotImplementedError(f"Task {args['task']} is not supported.")

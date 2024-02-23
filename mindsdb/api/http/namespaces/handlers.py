@@ -33,6 +33,16 @@ class HandlersList(Resource):
             result.append(row)
         return result
     
+    def _is_aws_product(self, handler_title):
+        # TODO: complete list
+        keywords = ['aws', 'amazon']
+
+        for keyword in keywords:
+            if keyword in handler_title.lower():
+                return True
+            
+        return False
+    
     # def _get_top_10_data_sources_and_ai_engines(self):
     #     from mindsdb.integrations.handlers.bigquery_handler.bigquery_handler import BigQueryHandler
 

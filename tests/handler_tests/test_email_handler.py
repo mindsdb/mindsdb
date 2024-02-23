@@ -1,4 +1,6 @@
 import os
+
+import pandas as pd
 import pytest
 from unittest.mock import MagicMock
 
@@ -35,7 +37,20 @@ class TestEmailHandler:
         Test the select method of EmailsTable Class
         """
 
-        self.emails_table_instance.handler.connection.search_email = MagicMock()
+        mock_df = pd.DataFrame({
+            'date': ["Wed, 02 Feb 2022 15:30:00 +0000",
+                     "Thu, 10 Mar 2022 10:45:15 +0530",
+                     "Fri, 16 Dec 2022 20:15:30 -0400"
+                     ],
+            'body_content_type': ['html', 'html', 'text'],
+            "body": ["<html><body><p>Hello, World!</p></body></html>", "<html><body><p>Hello, World!</p></body></html>", "Hello, World!"],
+            "from_field": ["", "", ""],
+            "id": ["", "", ""],
+            "to_field": ["", "", ""],
+            "subject": ["", "", ""],
+        })
+
+        self.emails_table_instance.handler.connection.search_email = MagicMock(return_value=mock_df)
 
         query = parse_sql('SELECT * FROM emails limit 1')
 

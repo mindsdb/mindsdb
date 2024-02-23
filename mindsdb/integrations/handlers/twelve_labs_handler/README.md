@@ -101,4 +101,9 @@ Here, the video IDs that were indexed by a model can be found by running a `DESC
 DESCRIBE mindsdb.twelve_labs_summarization.indexed_videos;
 ```
 
+The response returned will look something like this,
+| video_id | created_at | updated_at | duration | engine_ids | filename | fps | height | size | video_reference | width |
+| -------- | ---------- | ---------- | -------- | ---------- | -------- | --- | ------ | ---- | --------------- | ----- |
+| 66c8425e35db9fa680cd4195 | 2024-02-23T03:39:10Z | 2024-02-23T03:39:12Z | 43.733333 | pegasus1 | test.mp4 | 30 | 1280 | 3737394 | /path/to/Videos/test.mp4 | 720 |
+
 Note: This will display all of the indexed videos that are contained within the index specified in the `index_name` parameter of the `CREATE MODEL` statement. If the same index is used for multiple models, the `indexed_videos` table will contain all of the videos indexed by all of the models that use that index.

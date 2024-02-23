@@ -11,6 +11,7 @@ except Exception as e:
 title = 'CockroachDB'
 name = 'cockroachdb'
 type = HANDLER_TYPE.DATA
+icon_path = 'icon.svg'
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title',

@@ -12,6 +12,9 @@ from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
 from mindsdb.integrations.handlers.utilities.query_utilities.insert_query_utilities import INSERTQueryParser
 from mindsdb.integrations.handlers.email_handler.settings import EmailSearchOptions
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 class EmailsTable(APITable):
@@ -55,7 +58,15 @@ class EmailsTable(APITable):
                     raise NotImplementedError("Only > and < operators are supported for created_at column.")
                 continue
 
-            elif arg1 in ['mailbox', 'subject', 'to_field', 'from_field', 'since_email_id']:
+            elif arg1 == 'id':
+                if op not in ['=', '>', '>=']:
+                    raise NotImplementedError("Only =, > and >= operators are supported for id column.")
+                if op in ['=', '>=']:
+                    search_params['since_email_id'] = arg2
+                else:
+                    search_params['since_email_id'] = arg2 + 1
+
+            elif arg1 in ['mailbox', 'subject', 'to_field', 'from_field']:
                 if op != '=':
                     raise NotImplementedError("Only = operator is supported for mailbox, subject, to and from columns.")
                 else:

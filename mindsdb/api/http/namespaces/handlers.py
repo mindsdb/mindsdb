@@ -23,6 +23,8 @@ class HandlersList(Resource):
     @ns_conf.doc('handlers_list')
     def get(self):
         '''List all db handlers'''
+        # top_10_data_sources, top_10_ai_engines = self._get_top_10_data_sources_and_ai_engines()
+
         handlers = ca.integration_controller.get_handlers_import_status()
         result = []
         for handler_type, handler_meta in handlers.items():
@@ -30,7 +32,29 @@ class HandlersList(Resource):
             row.update(handler_meta)
             result.append(row)
         return result
+    
+    # def _get_top_10_data_sources_and_ai_engines(self):
+    #     from mindsdb.integrations.handlers.bigquery_handler.bigquery_handler import BigQueryHandler
 
+    #     # connect to MindsDB BigQuery DB
+    #     bq_handler = BigQueryHandler('bigquery', {
+    #         'project_id': os.environ.get('MINDSDB_BIGQUERY_PROJECT_ID'),
+    #         'dataset': os.environ.get('MINDSDB_BIGQUERY_DATASET'),
+    #         'service_account_json': os.environ.get('MINDSDB_BIGQUERY_SERVICE_ACCOUNT_JSON')
+    #     })
+
+    #     bq_client = bq_handler.connect()
+
+    #     # get top 10 most popular data sources and AI engines
+    #     top_10_data_sources_query = f"""
+    #     """
+    #     top_10_ai_engines_query = f"""
+    #     """
+
+    #     top_10_data_sources = bq_client.native_query(top_10_data_sources_query)
+    #     top_10_ai_engines = bq_client.native_query(top_10_ai_engines_query)
+
+    #     return top_10_data_sources, top_10_ai_engines
 
 @ns_conf.route('/<handler_name>/icon')
 class HandlerIcon(Resource):

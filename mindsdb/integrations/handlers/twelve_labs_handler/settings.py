@@ -97,7 +97,7 @@ class TwelveLabsHandlerModel(BaseModel):
         ParameterValidationUtilities.validate_parameter_spelling(cls, values)
 
         return values
-    
+
     @root_validator(pre=True, allow_reuse=True, skip_on_failure=True)
     def check_for_valid_task(cls, values):
         """

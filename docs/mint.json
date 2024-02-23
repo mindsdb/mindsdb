@@ -451,7 +451,8 @@
           "pages": [
             "mindsdb_sql/sql/get-single-prediction",
             "mindsdb_sql/sql/get-batch-predictions",
-            "mindsdb_sql/sql/api/join"
+            "mindsdb_sql/sql/api/join",
+            "mindsdb_sql/sql/api/evaluate"
           ]
         },
         {

@@ -79,7 +79,7 @@ class EmailIngestor:
         df['datetime'] = df['datetime'].str.replace(' (UTC)', '')
 
         # Convert datetime string to datetime object, and normalize timezone to UTC.
-        df['datetime'] = pd.to_datetime(df['datetime'], utc=True, format="%a, %d %b %Y %H:%M:%S %z")
+        df['datetime'] = pd.to_datetime(df['datetime'], utc=True, format="%a, %d %b %Y %H:%M:%S %z", errors='coerce')
 
         return df
 

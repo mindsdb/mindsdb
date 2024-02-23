@@ -156,7 +156,7 @@ class EmailClient:
                 email_line['body_content_type'] = content_type
                 ret.append(email_line)
         except Exception as e:
-            raise f'Error searching email: {e}'
+            raise Exception('Error searching email') from e
 
         finally:
             self.logout()

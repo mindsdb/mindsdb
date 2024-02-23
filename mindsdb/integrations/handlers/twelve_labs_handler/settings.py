@@ -190,7 +190,13 @@ class TwelveLabsHandlerModel(BaseModel):
 
         elif task == "summarization":
             summarization_type = values.get("summarization_type")
-            if not summarization_type:
+            if summarization_type:
+                if summarization_type not in ["summary", "chapter", "highlight"]:
+                    raise ValueError(
+                        "summarization_type should be one of the following: 'summary', 'chapter' and 'highlight'."
+                    )
+
+            else:
                 raise ValueError(
                     "type has not been provided. Please provide summarization_type."
                 )

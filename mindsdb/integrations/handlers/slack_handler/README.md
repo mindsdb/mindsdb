@@ -109,6 +109,40 @@ ORDER BY messages ASC
 LIMIT 5;
 ~~~~
 
+## Threads Table
+Retrieve the Conversation Replies from a specific Slack message
+
+~~~~sql
+SELECT *
+FROM mindsdb_slack.threads
+WHERE channel="<channel-name>"
+AND ts='<timestamp>';
+~~~~
+
+Please change the `channel-name` and `timestamp` in the `WHERE` clause to the channel and ts of messages of whic you want to see replies.
+
+Post a new reply to a message
+
+~~~~sql
+INSERT INTO mindsdb_slack.threads (channel, ts, message)
+VALUES("<channel-name>", "<timestamp>", "This is my Answer, Just wait and Watch. 🚀 ");
+~~~~
+
+Whoops, Sent it by mistake, No worries, use this to delete a specific thread/reply
+
+~~~~sql
+DELETE FROM mindsdb_slack.threads
+WHERE channel = "<channel-name>" AND ts = "1688863707.197229";
+~~~~
+
+Updating a reply in channel change the `channel-name` and `timestamp` in the `WHERE` clause
+~~~~sql
+UPDATE mindsdb_slack.threads
+SET text = 'sample message is updated.'
+WHERE channel = "<channel-name>" AND ts = '<timestamp>';
+~~~~
+
+
 ## Let's Use GPT Model to respond to messages for us
 Let's first create a GPT model that can respond to messages asked by the users. We will create a model that accepts prompt based on the prompt, the model will respond to the messages.
 

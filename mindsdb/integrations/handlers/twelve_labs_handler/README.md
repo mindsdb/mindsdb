@@ -38,7 +38,7 @@ When executing the `CREATE MODEL` statement, the following parameters are suppor
 - `video_urls_column`: The name of the column containing the URLs to the videos to be indexed. This is an optional parameter, but if not specified, one of `video_urls`, `video_files` or `video_files_column` must be specified instead.
 - `video_files_column`: The name of the column containing the local paths to the videos to be indexed. This is an optional parameter, but if not specified, one of `video_urls`, `video_files` or `video_urls_column` must be specified instead.
 - `search_options`: A list of the sources of information to use when performing a search. This parameter is required if the `task` is `search` and it should be a subset of `index_options`. More information about search options can be found [here](https://docs.twelvelabs.io/docs/search-options).
-- `query_column`: The name of the column containing the search queries. This parameter is required if the `task` is `search`.
+- `search_query_column`: The name of the column containing the search queries. This parameter is required if the `task` is `search`.
 - `summarization_type`: The type of summarization to perform. This parameter is required if the `task` is `summarization` and it should be one of `summary`, `chapter` or `highlight`.
 
 Given below are examples of creating Models for each of the supported tasks.
@@ -54,7 +54,7 @@ USING
   index_options = ['visual', 'conversation', 'text_in_video', 'logo'],
   video_urls = ['https://.../video_1.mp4', 'https://.../video_2.mp4'],
   search_options = ['visual', 'conversation', 'text_in_video', 'logo']
-  query_column = 'query';
+  search_query_column = 'query';
 ```
 
 As mentioned above, the `search_options` parameter is specific to the `search` task and should be a subset of `index_options`.

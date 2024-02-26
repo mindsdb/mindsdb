@@ -51,7 +51,7 @@ class TwelveLabsHandlerModel(BaseModel):
     search_options : List[str], Optional
         List of search options to be used for searching. This will only be required if the task is search.
 
-    query_column : str, Optional
+    search_query_column : str, Optional
         Name of the column containing the query to be used for searching. This will only be required if the task is search. Each query will be run against the entire index, not individual videos.
 
     summarization_type : str, Optional
@@ -72,7 +72,7 @@ class TwelveLabsHandlerModel(BaseModel):
     video_files_column: Optional[str] = None
     task: str = None
     search_options: Optional[List[str]] = None
-    query_column: Optional[str] = None
+    search_query_column: Optional[str] = None
     summarization_type: Optional[str] = None
 
     class Config:
@@ -211,10 +211,10 @@ class TwelveLabsHandlerModel(BaseModel):
                     "search_options should be a subset of index_options."
                 )
 
-            query_column = values.get("query_column")
-            if not query_column:
+            search_query_column = values.get("search_query_column")
+            if not search_query_column:
                 raise ValueError(
-                    "query_column has not been provided. Please provide query_column."
+                    "search_query_column has not been provided. Please provide query_column."
                 )
 
         elif task == "summarization":

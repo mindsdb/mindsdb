@@ -7,6 +7,7 @@ from .__about__ import __version__ as version
 title = 'File'
 name = 'files'
 type = HANDLER_TYPE.DATA
+icon_path = "icon.svg"
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title'

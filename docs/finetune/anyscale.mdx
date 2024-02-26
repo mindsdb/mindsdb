@@ -129,6 +129,10 @@ FROM models_versions
 WHERE name = 'mymistral7b';
 ```
 
+<Warning>
+While the model is being generated and trained, it is not active. The model becomes active only after it completes generating and training.
+</Warning>
+
 Once the new version status is complete and active, we can query the model again, expecting a more accurate output.
 
 ```sql

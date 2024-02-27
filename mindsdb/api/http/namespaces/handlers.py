@@ -56,7 +56,7 @@ class InstallDependencies(Resource):
     def post(self, handler_name):
         handler_import_status = ca.integration_controller.get_handlers_import_status()
         if handler_name not in handler_import_status:
-            return f'Unkown handler: {handler_name}', 400
+            return f'Unknown handler: {handler_name}', 400
 
         if handler_import_status[handler_name].get('import', {}).get('success', False) is True:
             return 'Installed', 200

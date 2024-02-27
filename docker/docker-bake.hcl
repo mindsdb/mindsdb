@@ -90,6 +90,11 @@ target "images" {
         extras = ".[lightwood,huggingface,statsforecast-extra,neuralforecast-extra,timegpt,surrealdb,mssql,youtube,ignite,gmail,pgvector,llama_index,writer,rag,github,snowflake,clickhouse,couchbase,twelve_labs] darts datasetsforecast"
         target = ""
       },
+      {
+        name = "cloud-data"
+        extras = ".[surrealdb,mssql,youtube,ignite,gmail,pgvector,github,snowflake,clickhouse,couchbase]"
+        target = ""
+      },
     ]
   }
   target = item.target

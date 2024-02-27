@@ -521,7 +521,7 @@
           ]
         },
         {
-          "group": "ML Engines",
+          "group": "AI Engines",
           "pages": [
             "rest/ml_engines/create",
             "rest/ml_engines/delete",

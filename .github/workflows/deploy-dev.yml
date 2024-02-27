@@ -34,9 +34,9 @@ jobs:
     needs: [get-deploy-labels]
     if: needs.get-deploy-labels.outputs.deploy-envs != '[]'
     steps:
-    - uses: actions/checkout@v2
-    # Build the bakefile and push
-    - uses: ./.github/actions/docker-bake
+      - uses: actions/checkout@v2
+      # Build the bakefile and push
+      - uses: ./.github/actions/docker-bake
 
   trigger_deploy:
     # Trigger private repo to deploy to dev envs

@@ -225,8 +225,7 @@
               "group": "Cloud",
               "pages": [
                 "setup/aws",
-                "setup/gcp",
-                "setup/community-deploys-mindsdb"
+                "setup/gcp"
               ]
             },
             {
@@ -349,22 +348,19 @@
           "pages": [
             "sql/tutorials/house-sales-forecasting",
             "sql/tutorials/house-sales-statsforecast",
-            "sql/tutorials/eeg-forecasting",
-            "sql/tutorials/time-series-community"
+            "sql/tutorials/eeg-forecasting"
           ]
         },
         {
           "group": "Classification",
           "pages": [
-            "sql/tutorials/customer-churn",
-            "sql/tutorials/classification-community"
+            "sql/tutorials/customer-churn"
           ]
         },
         {
           "group": "Regression",
           "pages": [
-            "sql/tutorials/home-rentals",
-            "sql/tutorials/regression-community"
+            "sql/tutorials/home-rentals"
           ]
         },
         {
@@ -373,8 +369,7 @@
             "sql/tutorials/hugging-face-examples",
             "sql/tutorials/hugging-face-inference-api-examples"
           ]
-        },
-        "tutorials"
+        }
       ]
     },
     {

@@ -6,7 +6,13 @@
 .pytest_cahce
 .deployment
 
-docker
+docker/db_images
+docker/handler_discovery
+docker/docker-bake.hcl
+docker/docker-compose.yml
+docker/*.Dockerfile
+docker/docker-compose*
+docker/README.md
 var
 
 **/__pycache__

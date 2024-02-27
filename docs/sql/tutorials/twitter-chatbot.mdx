@@ -53,10 +53,6 @@ model_name = 'gpt-4', -- you can also use 'text-davinci-003' or 'gpt-3.5-turbo'
 prompt_template = 'respond to {{text}} by {{author_username}}'; 
 ```
 
-<Note>
-If you are using MindsDB on Docker or if you want to use [your own OpenAI API key](https://platform.openai.com/account/api-keys), simply pass the `api_key` argument in the `USING` clause.
-</Note>
-
 One important attribute here is `prompt_template`. This is where we tell GPT how to write answers; it is a template because you can pass values from columns, in this case the template contains `{{author_username}}` and `{{text}}`, which will be replaced from the `WHERE` clause variables in the query. Let’s see it in action:
 
 ```sql

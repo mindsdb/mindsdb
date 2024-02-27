@@ -16,6 +16,7 @@ WORKDIR /mindsdb
 COPY requirements/requirements.txt /mindsdb/requirements/requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements/requirements.txt
 
+
 # Now copy the rest of the code and install it
 COPY . /mindsdb
 RUN --mount=type=cache,target=/root/.cache/pip pip install "."

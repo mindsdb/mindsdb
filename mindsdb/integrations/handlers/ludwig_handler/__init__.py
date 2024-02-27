@@ -11,6 +11,7 @@ except Exception as e:
 title = 'Ludwig'
 name = 'ludwig'
 type = HANDLER_TYPE.ML
+icon_path = 'icon.svg'
 permanent = True
 
 __all__ = [

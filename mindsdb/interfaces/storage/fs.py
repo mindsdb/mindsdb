@@ -575,7 +575,12 @@ class FileStorage:
 
             # region del file lock
             lock_folder_path = FileLock.lock_folder_path(self.folder_path)
-            shutil.rmtree(lock_folder_path)
+            try:
+                shutil.rmtree(lock_folder_path)
+            except FileNotFoundError:
+                logger.warning('Tried to delete file not found: %s', lock_folder_path)
+            except Exception as e:
+                raise e
             # endregion
             return
 

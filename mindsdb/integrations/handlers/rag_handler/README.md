@@ -76,7 +76,8 @@ PREDICT answer
 USING
    engine="rag",
    llm_type="openai",
-   vector_store_folder_name='test_db';
+   vector_store_folder_name='test_db',
+   input_column='question';
 
 select * from information_schema.models where name ="rag_handler_db_test" ;
 
@@ -94,7 +95,8 @@ USING
    engine="rag",
    llm_type="openai",
    url='https://docs.mindsdb.com/what-is-mindsdb',
-   vector_store_folder_name='test_url';
+   vector_store_folder_name='test_url',
+   input_column='question';
 
 
 SELECT *
@@ -112,7 +114,8 @@ USING
     engine="rag",
     llm_type="openai",
     url_column_name="url",
-    vector_store_folder_name='test_multi_url';
+    vector_store_folder_name='test_multi_url',
+    input_column='question';
 
 SELECT *
 FROM rag_handler_multi_url_test
@@ -126,7 +129,8 @@ from files (select * from uploaded_file)
 USING
    engine="rag",
    llm_type="openai",
-   vector_store_folder_name='test_file';
+   vector_store_folder_name='test_file',
+   input_column='question';
 
 SELECT *
 FROM rag_handler_file_test

@@ -1,4 +1,5 @@
 import copy
+from typing import List
 
 import duckdb
 from duckdb import InvalidInputException
@@ -8,14 +9,47 @@ from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.planner.utils import query_traversal
 from mindsdb_sql.parser.ast import (
-    Select, Identifier,
+    ASTNode, Select, Identifier,
     Function, Constant
 )
+from mindsdb.utilities.functions import resolve_table_identifier, resolve_model_identifier
 
 from mindsdb.utilities import log
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
 
 logger = log.getLogger(__name__)
+
+
+def _get_query_tables(query: ASTNode, resolve_function: callable, default_database: str = None) -> List[tuple]:
+    """Find all tables/models in the query
+
+    Args:
+        query (ASTNode): query
+        resolve_function (callable): function apply to identifier
+        default_database (str): database name that will be used if there is no db name in identifier
+
+    Returns:
+        List[tuple]: list with (db/project name, table name, version)
+    """
+    tables = []
+
+    def _get_tables(node, is_table, **kwargs):
+        if is_table and isinstance(node, Identifier):
+            table = resolve_function(node)
+            if table[0] is None:
+                table = (default_database,) + table[1:]
+            tables.append(table)
+
+    query_traversal(query, _get_tables)
+    return tables
+
+
+def get_query_tables(query: ASTNode, default_database: str = None) -> List[tuple]:
+    return _get_query_tables(query, resolve_table_identifier, default_database)
+
+
+def get_query_models(query: ASTNode, default_database: str = None) -> List[tuple]:
+    return _get_query_tables(query, resolve_model_identifier, default_database)
 
 
 def query_df_with_type_infer_fallback(query_str: str, dataframes: dict):

@@ -251,9 +251,16 @@
     },
     {
       "group": "Concepts",
-      "pages": [     
+      "pages": [   
         {
-          "group": "DataSources",
+          "group": "AI Tables",
+          "pages":[
+            "ai-engines/overview",
+            "generative-ai-tables"
+          ] 
+        },  
+        {
+          "group": "Data Sources",
           "pages": [
             "datasources/overview",
             "sql/create/database",
@@ -271,18 +278,11 @@
           ] 
         },
         {
-          "group": "JOBS & Automation",
+          "group": "Automation",
           "pages": [
             "sql/create/jobs",
             "sql/create/trigger"
           ]
-        },
-        {
-          "group": "AI-Tables",
-          "pages":[
-            "ai-engines/overview",
-            "generative-ai-tables"
-          ] 
         }
       ]
     },
@@ -451,7 +451,8 @@
           "pages": [
             "mindsdb_sql/sql/get-single-prediction",
             "mindsdb_sql/sql/get-batch-predictions",
-            "mindsdb_sql/sql/api/join"
+            "mindsdb_sql/sql/api/join",
+            "mindsdb_sql/sql/api/evaluate"
           ]
         },
         {
@@ -978,6 +979,7 @@
           "group": "Large Language Models",
           "pages": [
             "integrations/ai-engines/anthropic",
+            "integrations/ai-engines/anyscale",
             "integrations/ai-engines/cohere",
             "integrations/ai-engines/huggingface",
             "integrations/ai-engines/huggingface_inference_api",

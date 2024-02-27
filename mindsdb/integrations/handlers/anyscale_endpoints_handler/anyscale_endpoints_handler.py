@@ -9,7 +9,7 @@ import pandas as pd
 from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler
 from mindsdb.integrations.handlers.openai_handler.constants import OPENAI_API_BASE
 from mindsdb.integrations.utilities.handler_utils import get_api_key
-from mindsdb.integrations.libs.llm_utils import ft_jsonl_validation, ft_chat_formatter
+from mindsdb.integrations.libs.llm_utils import ft_jsonl_validation, ft_formatter
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -120,17 +120,9 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         self.supported_ft_models = self.chat_completion_models  # base models compatible with fine-tuning
 
     @staticmethod
-    def _check_ft_cols(df, cols):
-        # TODO: refactor into common util
-        if 'chat_json' not in df.columns:
-            for col in ['role', 'content']:
-                if col not in set(df.columns):
-                    raise Exception(f"To fine-tune this model, format your select data query to have a `role` column and a `content` column, or to have a `chat_json` column containing an entire chat on each row.")  # noqa
-
-    @staticmethod
     def _prepare_ft_jsonl(df, temp_storage_path, temp_filename, _, test_size=0.2):
         # 1. format data
-        chats = ft_chat_formatter(df)
+        chats = ft_formatter(df)
 
         # 2. split chats in training and validation subsets
         series = pd.Series(chats)

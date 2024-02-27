@@ -76,7 +76,9 @@ class ChatBotTask(BaseTask):
         except (SystemExit, KeyboardInterrupt):
             raise
         except Exception:
-            self.set_error(str(traceback.format_exc()))
+            error = traceback.format_exc()
+            logger.error(error)
+            self.set_error(str(error))
 
     def _on_message(self, chat_memory, message: ChatBotMessage):
         # add question to history

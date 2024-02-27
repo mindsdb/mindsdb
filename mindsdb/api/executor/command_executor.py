@@ -1111,9 +1111,17 @@ class ExecuteCommands:
         if handler_module_meta is None:
             raise ExecutorException(f"There is no engine '{statement.handler}'")
 
+        params = {}
+        if statement.params:
+            for key, value in statement.params.items():
+                # convert all complex types to string
+                if not isinstance(value, (int, float)):
+                    value = str(value)
+                params[key] = value
+
         try:
             self.session.integration_controller.add(
-                name=name, engine=statement.handler, connection_args=statement.params
+                name=name, engine=statement.handler, connection_args=params
             )
         except Exception as e:
             msg = str(e)

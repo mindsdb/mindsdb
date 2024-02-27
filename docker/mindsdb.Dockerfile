@@ -6,7 +6,7 @@ RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloa
 RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
     apt update && apt-get upgrade -y \
-    && apt-get install -y cudnn9-cuda-12 freetds-dev  # freetds required to build pymssql for mssql_handler
+    && apt-get install -y freetds-dev  # freetds required to build pymssql for mssql_handler
 
 WORKDIR /mindsdb
 
@@ -59,6 +59,13 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
     apt update && apt-get upgrade -y \
     && apt-get install -y libmagic1 libpq5 freetds-bin
+
+RUN add-apt-repository contrib && \
+    apt-key del 7fa2af80 && \
+    wget https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/cuda-keyring_1.1-1_all.deb && \
+    dpkg -i cuda-keyring_1.1-1_all.deb && \
+    apt update && \
+    apt install -y cuda
 
 COPY --link --from=extras /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json

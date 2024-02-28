@@ -13,27 +13,16 @@ jobs:
       - uses: actions/checkout@v2
       # Build the bakefile and push
       - uses: ./.github/actions/docker-bake
-  
-
-  setup-deploy:
-    runs-on: [self-hosted, dev]
-    needs: [build]
-    outputs:
-      matrix: ${{ steps.matrix.outputs.value }}
-    steps:
-      - id: matrix
-        run: |
-          echo "value=[\"staging\", \"hackathon\",  \"dev\",  \"alpha-dev\"]" >> $GITHUB_OUTPUT
 
   trigger_deploy:
     # Trigger private repo to deploy to staging and dev related environments
     runs-on: [self-hosted, dev]
-    needs: [setup-deploy]
+    needs: [build]
     strategy:
       matrix:
-        value: ${{fromJSON(needs.setup-deploy.outputs.matrix)}}
+        environment: [staging, hackathon, dev, alpha-dev]
     environment:
-      name: ${{ matrix.value }}
+      name: ${{ matrix.environment }}
     steps:
       - uses: FranzDiebold/github-env-vars-action@v2
       - uses: convictional/trigger-workflow-and-wait@v1.6.5
@@ -43,4 +32,4 @@ jobs:
           github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}
           workflow_file_name: deploy-dev.yml
           ref: master
-          client_payload: '{"image-tag-prefix": "${{ env.CI_SHA }}", "deploy-env": "${{ matrix.value }}"}'
+          client_payload: '{"image-tag-prefix": "${{ env.CI_SHA }}", "deploy-env": "${{ matrix.environment }}"}'

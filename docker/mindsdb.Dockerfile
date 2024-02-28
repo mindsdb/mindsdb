@@ -61,7 +61,7 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     apt update && apt-get upgrade -y \
     && apt-get install -y python3 python3-pip libmagic1 libpq5 freetds-bin
 
-COPY --link --from=extras /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
+COPY --link --from=extras /usr/local/lib/python3.10/dist-packages /usr/local/lib/python3.10/dist-packages
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
 ENV PYTHONUNBUFFERED=1

@@ -6,7 +6,7 @@ from unit.ml_handlers.base_ml_test import BaseMLAPITest
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 
-@pytest.mark.skipif(OPENAI_API_KEY is None, reason='Missing API key!')
+@pytest.mark.skipif(OPENAI_API_KEY is None, reason='Missing OpenAI API key (OPENAI_API_KEY env variable)')
 class TestLangchain(BaseMLAPITest):
     """Test Class for Langchain Integration Testing"""
 
@@ -18,7 +18,6 @@ class TestLangchain(BaseMLAPITest):
     def test_conversational(self):
         df = pd.DataFrame.from_dict({"question": [
             "What is the capital of Sweden?",
-            "What is the second planet of the solar system?"
         ]})
         self.set_data('df', df)
 

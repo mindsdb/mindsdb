@@ -59,7 +59,7 @@ RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloa
 RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
     apt update && apt-get upgrade -y \
-    && apt-get install -y libmagic1 libpq5 freetds-bin
+    && apt-get install -y python3 python3-pip libmagic1 libpq5 freetds-bin
 
 COPY --link --from=extras /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json

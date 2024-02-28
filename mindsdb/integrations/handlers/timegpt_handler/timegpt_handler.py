@@ -33,8 +33,12 @@ class TimeGPTHandler(BaseMLEngine):
         if mode == 'forecasting':
             assert time_settings["is_timeseries"], "Specify time series settings in your query"
 
+        timegpt_token =  get_api_key('timegpt', using_args, self.engine_storage, strict=True)
+        timegpt = TimeGPT(token=timegpt_token)
+        assert timegpt.validate_token(), "Invalid TimeGPT token provided."
+
         model_args = {
-            'token': get_api_key('timegpt', using_args, self.engine_storage, strict=True),
+            'token': timegpt_token,
             "target": target,
             "freq": using_args.get("frequency", None),
             "finetune_steps": using_args.get("finetune_steps", 0),
@@ -46,9 +50,6 @@ class TimeGPTHandler(BaseMLEngine):
             "add_history": using_args.get("add_history", False),
             'mode': mode,
         }
-
-        self.timegpt = TimeGPT(token=model_args['token'])
-        assert self.timegpt.validate_token(), "Invalid TimeGPT token provided. Please check your API key."
 
         if time_settings:
             model_args["horizon"] = time_settings["horizon"]
@@ -72,8 +73,11 @@ class TimeGPTHandler(BaseMLEngine):
         model_args = self.model_storage.json_get("model_args")
         args = args['predict_params']
         prediction_df = self._transform_to_nixtla_df(df, model_args)
+        
+        timegpt = TimeGPT(token=args['token'])
+        assert timegpt.validate_token(), "Invalid TimeGPT token provided."
 
-        forecast_df = self.timegpt.forecast(
+        forecast_df = timegpt.forecast(
             prediction_df,
 
             # TODO: supporting param override when JOINing with a WHERE clause is blocked by mindsdb_sql#285
@@ -92,7 +96,6 @@ class TimeGPTHandler(BaseMLEngine):
             # TODO: enable this post-refactor (#6861)
             # X_df=None,  # exogenous variables
         )
-
         if model_args['mode'] == 'forecasting':
             results_df = forecast_df[['unique_id', 'ds', 'TimeGPT']]
             results_df = get_results_from_nixtla_df(results_df, model_args)

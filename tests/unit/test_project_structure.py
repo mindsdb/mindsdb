@@ -755,12 +755,13 @@ class TestProjectStructure(BaseExecutorDummyML):
             {'a': 2, 'b': 'b'},
         ])
         self.set_handler(data_handler, name='pg', tables={'tasks': df})
+        self.save_file('tasks', df)
 
         # -- create model --
         self.run_sql(
             '''
                 CREATE model task_model
-                from pg (select * from tasks)
+                from files (select * from tasks)
                 PREDICT a
                 using engine='dummy_ml'
             '''

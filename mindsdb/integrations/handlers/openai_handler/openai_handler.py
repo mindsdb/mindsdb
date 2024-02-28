@@ -135,25 +135,26 @@ class OpenAIHandler(BaseMLEngine):
     def create(self, target, args=None, **kwargs):
         args = args['using']
         args['target'] = target
-        api_key = get_api_key('openai', args, self.engine_storage)
-        available_models = get_available_models(api_key)
+        try:
+            api_key = get_api_key('openai', args, self.engine_storage)
+            available_models = get_available_models(api_key)
 
-        if not args.get('mode'):
-            args['mode'] = self.default_mode
-        elif args['mode'] not in self.supported_modes:
-            raise Exception(
-                f"Invalid operation mode. Please use one of {self.supported_modes}"
-            )
+            if not args.get('mode'):
+                args['mode'] = self.default_mode
+            elif args['mode'] not in self.supported_modes:
+                raise Exception(
+                    f"Invalid operation mode. Please use one of {self.supported_modes}"
+                )
 
-        if not args.get('model_name'):
-            if args['mode'] == 'image':
-                args['model_name'] = self.default_image_model
-            else:
-                args['model_name'] = self.default_model
-        elif args['model_name'] not in available_models:
-            raise Exception(f"Invalid model name. Please use one of {available_models}")
-
-        self.model_storage.json_set('args', args)
+            if not args.get('model_name'):
+                if args['mode'] == 'image':
+                    args['model_name'] = self.default_image_model
+                else:
+                    args['model_name'] = self.default_model
+            elif args['model_name'] not in available_models:
+                raise Exception(f"Invalid model name. Please use one of {available_models}")
+        finally:
+            self.model_storage.json_set('args', args)
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         """
@@ -614,16 +615,19 @@ class OpenAIHandler(BaseMLEngine):
 
         args = self.model_storage.json_get('args')
         api_key = get_api_key('openai', args, self.engine_storage)
-        client= self._get_client(
-            api_key=api_key,
-            base_url=args.get('api_base'),
-            org=args.get('api_organization')
-            )
         if attribute == 'args':
             return pd.DataFrame(args.items(), columns=['key', 'value'])
         elif attribute == 'metadata':
             model_name = args.get('model_name', self.default_model)
-            meta = client.models.retrieve(model_name)
+            try:
+                client= self._get_client(
+                    api_key=api_key,
+                    base_url=args.get('api_base'),
+                    org=args.get('api_organization')
+                )
+                meta = client.models.retrieve(model_name)
+            except Exception as e:
+                meta = {'error': str(e)}
             return pd.DataFrame(dict(meta).items(), columns=['key', 'value'])
         else:
             tables = ['args', 'metadata']
@@ -659,7 +663,6 @@ class OpenAIHandler(BaseMLEngine):
         org = using_args.get('api_organization')
         client = self._get_client(api_key=api_key, base_url=api_base, org=org)
 
-        self._check_ft_cols(df, [prompt_col, completion_col])
 
         args = {**using_args, **args}
         prev_model_name = self.base_model_storage.json_get('args').get('model_name', '')
@@ -747,17 +750,6 @@ class OpenAIHandler(BaseMLEngine):
 
         self.model_storage.json_set('args', args)
         shutil.rmtree(temp_storage_path)
-
-    @staticmethod
-    def _check_ft_cols(df, cols):
-        # TODO: refactor into common util
-        if 'chat_json' not in df.columns:
-            prompt_col, completion_col = cols
-            for col in [prompt_col, completion_col]:
-                if col not in set(df.columns):
-                    raise Exception(
-                        f"To fine-tune this OpenAI model, please format your select data query to have a `{prompt_col}` column and a `{completion_col}` column first."
-                    )  # noqa
 
     @staticmethod
     def _prepare_ft_jsonl(df, _, temp_filename, temp_model_path):

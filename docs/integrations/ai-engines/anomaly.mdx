@@ -13,13 +13,13 @@ The Anomaly Detection handler implements supervised, semi-supervised, and unsupe
 
 - If we have labelled data, we use the regular model creation syntax. There is backend logic that chooses between a semi-supervised algorithm (currently XGBOD) vs. a supervised algorithm (currently CatBoost).
 
-- If multiple models are provided, then we create an ensemble and take use majority voting.
+- If multiple models are provided, then we create an ensemble and use majority voting.
 
 - See the anomaly detection proposal [document](https://docs.google.com/document/d/1Yd7ARZVg_67xlcY-JR2kuO7mak9Ia2YER1Jk0EdpEa0/edit#heading=h.mo4wxsae6t1d) for more information.
 
 # Example usage
 
-To run example queries, use the following [CSV file](https://raw.githubusercontent.com/mindsdb/mindsdb/staging/tests/unit/ml_handlers/data/anomaly_detection.csv).
+To run example queries, use the data from this [CSV file](https://raw.githubusercontent.com/mindsdb/mindsdb/staging/tests/unit/ml_handlers/data/anomaly_detection.csv).
 
 ### Unsupervised detection
 

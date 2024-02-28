@@ -52,8 +52,7 @@ class LogCallbackHandler(BaseCallbackHandler):
 
     def on_chain_end(self, outputs: Dict[str, Any], **kwargs: Any) -> Any:
         '''Run when chain ends running.'''
-        self.logger.debug('LLM chain ended with outputs:')
-        self.logger.debug(outputs)
+        self.logger.debug('LLM chain ended')
 
     def on_chain_error(
         self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any

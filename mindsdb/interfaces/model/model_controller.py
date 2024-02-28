@@ -239,6 +239,8 @@ class ModelController():
             integration_name = statement.integration_name.parts[0]
 
             databases_meta = database_controller.get_dict()
+            if integration_name not in databases_meta:
+                raise EntityNotExistsError('Database does not exist', integration_name)
             data_integration_meta = databases_meta[integration_name]
             # TODO improve here. Suppose that it is view
             if data_integration_meta['type'] == 'project':

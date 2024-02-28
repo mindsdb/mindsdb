@@ -1,5 +1,5 @@
 # Bare mindsdb with no extras is built as a separate stage for caching
-FROM python:3.10 as build
+FROM nvidia/cuda:12.2.0-runtime-ubuntu22.04 as build
 # "rm ... docker-clean" stops docker from removing packages from our cache
 # https://github.com/moby/buildkit/blob/master/frontend/dockerfile/docs/reference.md#example-cache-apt-packages
 RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
@@ -47,7 +47,7 @@ EXPOSE 47334/tcp
 EXPOSE 47335/tcp
 EXPOSE 47336/tcp
 
-ENTRYPOINT [ "sh", "-c", "python -m mindsdb --config=/root/mindsdb_config.json --api=http,mysql,mongodb" ]
+ENTRYPOINT [ "sh", "-c", "python3 -m mindsdb --config=/root/mindsdb_config.json --api=http,mysql,mongodb" ]
 
 
 # Copy installed pip packages and install only what we need

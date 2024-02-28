@@ -6,7 +6,7 @@ RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloa
 RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
     apt update && apt-get upgrade -y \
-    && apt-get install -y freetds-dev  # freetds required to build pymssql for mssql_handler
+    && apt-get install -y python3 python3-pip freetds-dev  # freetds required to build pymssql for mssql_handler
 
 WORKDIR /mindsdb
 
@@ -14,18 +14,18 @@ WORKDIR /mindsdb
 # Copy just requirements and install them to cache the layer
 # This won't include any of the default handlers, but it should still speed things up
 COPY requirements/requirements.txt /mindsdb/requirements/requirements.txt
-RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements/requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip pip3 install -r requirements/requirements.txt
 
 
 # Now copy the rest of the code and install it
 COPY . /mindsdb
-RUN --mount=type=cache,target=/root/.cache/pip pip install "."
+RUN --mount=type=cache,target=/root/.cache/pip pip3 install "."
 
 
 # Install extras on top of the bare mindsdb
 FROM build as extras
 ARG EXTRAS
-RUN --mount=type=cache,target=/root/.cache/pip if [ -n "$EXTRAS" ]; then pip install $EXTRAS; fi
+RUN --mount=type=cache,target=/root/.cache/pip if [ -n "$EXTRAS" ]; then pip3 install $EXTRAS; fi
 
 
 # For use in docker-compose
@@ -37,7 +37,7 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
     apt update && apt-get upgrade -y \
     && apt-get install -y libmagic1 libpq5 freetds-bin
-RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements/requirements-dev.txt
+RUN --mount=type=cache,target=/root/.cache/pip pip3 install -r requirements/requirements-dev.txt
 
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 

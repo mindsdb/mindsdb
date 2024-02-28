@@ -51,7 +51,8 @@ ENTRYPOINT [ "sh", "-c", "python -m mindsdb --config=/root/mindsdb_config.json -
 
 
 # Copy installed pip packages and install only what we need
-FROM python:3.10-slim
+#FROM python:3.10-slim
+FROM nvidia/cuda:12.2.0-runtime-ubuntu22.04
 # "rm ... docker-clean" stops docker from removing packages from our cache
 # https://github.com/moby/buildkit/blob/master/frontend/dockerfile/docs/reference.md#example-cache-apt-packages
 RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
@@ -59,13 +60,6 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
     apt update && apt-get upgrade -y \
     && apt-get install -y libmagic1 libpq5 freetds-bin
-
-RUN add-apt-repository contrib && \
-    apt-key del 7fa2af80 && \
-    wget https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/cuda-keyring_1.1-1_all.deb && \
-    dpkg -i cuda-keyring_1.1-1_all.deb && \
-    apt update && \
-    apt install -y cuda
 
 COPY --link --from=extras /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json

@@ -28,6 +28,7 @@ class TestLangchain(BaseMLAPITest):
            using
              engine='langchain',
              mode='conversational',
+             model_name='gpt-4-0125-preview',
              user_column='question',
              assistant_column='answer',
              prompt_template='Answer the user in a useful way: {{{{question}}}}',

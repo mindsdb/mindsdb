@@ -1,8 +1,5 @@
 import os
-import time
-import pandas as pd
 
-from mindsdb_sql import parse_sql
 from ..executor_test_base import BaseExecutorTest
 
 

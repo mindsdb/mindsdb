@@ -7,8 +7,8 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 
 @pytest.mark.skipif(OPENAI_API_KEY is None, reason='Missing API key!')
-class TestOpenAI(BaseMLAPITest):
-    """Test Class for OpenAI Integration Testing"""
+class TestLangchain(BaseMLAPITest):
+    """Test Class for Langchain Integration Testing"""
 
     def setup_method(self, method):
         """Setup test environment, creating a project"""

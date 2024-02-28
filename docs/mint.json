@@ -292,7 +292,7 @@
           "group": "Chatbots with Jobs",
           "pages": [
             "sql/tutorials/slack-chatbot",
-            "sql/tutorials/twitterbot-mariadb-enterprise-server-skysql",
+            "sql/tutorials/twitter-chatbot",
             "sql/tutorials/twilio-chatbot"
           ]
         },
@@ -347,7 +347,7 @@
           "group": "Forecasting",
           "pages": [
             "sql/tutorials/house-sales-forecasting",
-            "sql/tutorials/house-sales-statsforecast",
+            "sql/tutorials/expenditures-statsforecast",
             "sql/tutorials/eeg-forecasting"
           ]
         },
@@ -366,6 +366,7 @@
         {
           "group": "Natural Language Processing",
           "pages": [
+            "sql/tutorials/text-sentiment-hf",
             "sql/tutorials/hugging-face-examples",
             "sql/tutorials/hugging-face-inference-api-examples"
           ]

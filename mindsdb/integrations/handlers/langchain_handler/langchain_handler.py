@@ -27,7 +27,8 @@ from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 
 
 
-_DEFAULT_MODEL = 'gpt-3.5-turbo'
+# Default to latest GPT-4 model (https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo)
+_DEFAULT_MODEL = 'gpt-4-0125-preview'
 _DEFAULT_MAX_ITERATIONS = 10
 _DEFAULT_MAX_TOKENS = 2048  # requires more than vanilla OpenAI due to ongoing summarization and 3rd party input
 # 2 minutes should be more than enough time to complete chains.

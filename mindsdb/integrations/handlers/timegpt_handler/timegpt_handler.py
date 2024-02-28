@@ -47,6 +47,9 @@ class TimeGPTHandler(BaseMLEngine):
             'mode': mode,
         }
 
+        self.timegpt = TimeGPT(token=model_args['token'])
+        assert self.timegpt.validate_token(), "Invalid TimeGPT token provided. Please check your API key."
+
         if time_settings:
             model_args["horizon"] = time_settings["horizon"]
             model_args["order_by"] = time_settings["order_by"]
@@ -69,9 +72,8 @@ class TimeGPTHandler(BaseMLEngine):
         model_args = self.model_storage.json_get("model_args")
         args = args['predict_params']
         prediction_df = self._transform_to_nixtla_df(df, model_args)
-        timegpt = TimeGPT(token=model_args['token'])
 
-        forecast_df = timegpt.forecast(
+        forecast_df = self.timegpt.forecast(
             prediction_df,
 
             # TODO: supporting param override when JOINing with a WHERE clause is blocked by mindsdb_sql#285

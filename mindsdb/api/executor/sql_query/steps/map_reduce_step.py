@@ -80,8 +80,19 @@ class MapReduceStepCall(BaseStepCall):
         data = ResultSet()
 
         substep = step.step
-        if type(substep) == FetchDataframeStep:
+        if type(substep) is FetchDataframeStep:
             query = substep.query
+            if len(vars) == 0:
+                substep.query.limit = Constant(0)
+                substep.query.where = None
+
+                sub_data = self._fetch_dataframe_step(substep)
+
+                for column in sub_data.columns:
+                    data.add_column(column)
+
+                data.add_records(sub_data.get_records())
+
             for var_group in vars:
                 markQueryVar(query.where)
                 for name, value in var_group.items():
@@ -93,7 +104,7 @@ class MapReduceStepCall(BaseStepCall):
                     data.add_records(sub_data.get_records())
 
                 unmarkQueryVar(query.where)
-        elif type(substep) == MultipleSteps:
+        elif type(substep) is MultipleSteps:
             data = self._multiple_steps_reduce(substep, vars)
         else:
             raise LogicError(f'Unknown step type: {step.step}')

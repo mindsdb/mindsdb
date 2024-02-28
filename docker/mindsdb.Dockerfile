@@ -6,7 +6,7 @@ RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloa
 RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
     apt update && apt-get upgrade -y \
-    && apt-get install -y python3 python3-pip freetds-dev  # freetds required to build pymssql for mssql_handler
+    && apt-get install -y python3 python3-pip git freetds-dev  # freetds required to build pymssql for mssql_handler
 
 WORKDIR /mindsdb
 

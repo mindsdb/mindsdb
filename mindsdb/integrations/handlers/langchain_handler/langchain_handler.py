@@ -230,9 +230,9 @@ class LangChainHandler(BaseMLEngine):
             return ChatAnthropic(**model_kwargs)
         elif args['provider'] == 'openai':
             return ChatOpenAI(**model_kwargs)
-        if args['provider'] == 'anyscale':
+        elif args['provider'] == 'anyscale':
             return ChatAnyscale(**model_kwargs)
-        if args['provider'] == 'litellm':
+        elif args['provider'] == 'litellm':
             return ChatLiteLLM(**model_kwargs)
 
     def conversational_completion(self, df, args=None, pred_args=None):

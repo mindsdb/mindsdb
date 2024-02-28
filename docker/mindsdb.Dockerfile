@@ -70,4 +70,4 @@ EXPOSE 47334/tcp
 EXPOSE 47335/tcp
 EXPOSE 47336/tcp
 
-ENTRYPOINT [ "sh", "-c", "python -m mindsdb --config=/root/mindsdb_config.json --api=http,mysql,mongodb" ]
+ENTRYPOINT [ "sh", "-c", "python3 -m mindsdb --config=/root/mindsdb_config.json --api=http,mysql,mongodb" ]

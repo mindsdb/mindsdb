@@ -22,8 +22,8 @@ runs:
         docker buildx create --name=remote-buildkit-agent --node mdb_arm64 --platform linux/arm64 --append --driver=remote --use tcp://remote-buildkit-agent-arm.infrastructure.svc.cluster.local:80 || true # Same for ARM
 
         # Build amd64 and arm64 images in parallel and wait for both to finish
-        VERSION=${{ env.CI_SHA }} BRANCH=${{ env.CI_ACTION_REF_NAME }} PUSH_TO_DOCKERHUB=${{ inputs.push-to-dockerhub }} PLATFORM=linux/amd64 docker buildx bake --progress plain -f docker/docker-bake.hcl --load &
-        VERSION=${{ env.CI_SHA }} BRANCH=${{ env.CI_ACTION_REF_NAME }} PUSH_TO_DOCKERHUB=${{ inputs.push-to-dockerhub }} PLATFORM=linux/arm64 docker buildx bake --progress plain -f docker/docker-bake.hcl --load &
+        VERSION=${{ env.CI_SHA }} BRANCH=${{ env.CI_ACTION_REF_NAME }} PUSH_TO_DOCKERHUB=${{ inputs.push-to-dockerhub }} PLATFORM=linux/amd64 docker buildx bake --progress plain -f docker/docker-bake.hcl --load --print &
+        VERSION=${{ env.CI_SHA }} BRANCH=${{ env.CI_ACTION_REF_NAME }} PUSH_TO_DOCKERHUB=${{ inputs.push-to-dockerhub }} PLATFORM=linux/arm64 docker buildx bake --progress plain -f docker/docker-bake.hcl --load --print &
         wait
 
         echo "Built and tagged image: $REPO_IMAGE:$IMAGE_TAG and $REPO_IMAGE:latest"
@@ -32,8 +32,6 @@ runs:
 
         echo "docker buildx imagetools inspect"
         
-        docker buildx imagetools inspect
-
         # Create multi-arch manifests
         VERSION=${{ env.CI_SHA }} BRANCH=${{ env.CI_ACTION_REF_NAME }} PLATFORM="" docker buildx bake -f docker/docker-bake.hcl --print | jq '.target[] | .tags[]' | xargs -I'{}' docker buildx imagetools create -t '{}' '{}-amd64' '{}-arm64'
 

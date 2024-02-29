@@ -275,21 +275,16 @@ class AgentCompletions(Resource):
                 f'Model with name {existing_agent.model_name} not found'
             )
 
-        predict_params = {
+        completion = session.agents_controller.get_completion(
+            existing_agent,
+            request.json['messages'],
+            project_name=project_name,
             # Don't need to include backoffice_db related tools into this endpoint.
             # Underlying handler (e.g. Langchain) will handle default tools like mdb_read, mdb_write, etc.
-            'tools': [],
-            'skills': [s for s in existing_agent.skills],
-        }
-        project_datanode = session.datahub.get(project_name)
-        predictions = project_datanode.predict(
-            model_name=existing_agent.model_name,
-            data=request.json['messages'],
-            params=predict_params
+            tools=[]
         )
-
         output_col = agent_model_record.to_predict[0]
-        model_output = predictions.iloc[-1][output_col]
+        model_output = completion.iloc[-1][output_col]
         return {
             'message': {
                 'content': model_output,

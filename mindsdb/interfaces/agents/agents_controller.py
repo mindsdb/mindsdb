@@ -275,6 +275,9 @@ class AgentsController:
 
         Returns:
             pd.DataFrame (pd.DataFrame): Completion as a DataFrame
+
+        Raises:
+            ValueError: Agent's model does not exist.
         '''
         # Model needs to exist.
         model_name_no_version, version = db.Predictor.get_name_and_version(agent.model_name)

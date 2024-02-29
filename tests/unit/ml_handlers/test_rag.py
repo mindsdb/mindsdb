@@ -178,6 +178,7 @@ class TestRAG(BaseExecutorTest):
            using
              engine='rag',
              llm_type='openai',
+             input_column='question',
              openai_api_key='{OPENAI_API_KEY}',
              vector_store_folder_name='rag_openai_qa_test'
         """
@@ -204,6 +205,7 @@ class TestRAG(BaseExecutorTest):
            predict answer
            using
              engine='rag',
+             input_column='question',
              llm_type='openai',
              openai_api_key='{OPENAI_API_KEY}',
              vector_store_folder_name='rag_openai_qa_test_batch',
@@ -233,6 +235,7 @@ class TestRAG(BaseExecutorTest):
              engine='rag',
              llm_type='writer',
              vector_store_name='faiss',
+             input_column='question',
              writer_api_key='{WRITER_API_KEY}',
              writer_org_id='{WRITER_ORG_ID}',
              vector_store_folder_name='rag_writer_qa_test'
@@ -257,6 +260,7 @@ class TestRAG(BaseExecutorTest):
            using
              engine='rag',
              llm_type='writer',
+             input_column='question',
              url='https://docs.mindsdb.com/sql/tutorials/recommenders/',
              vector_store_name='faiss',
              writer_api_key='{WRITER_API_KEY}',
@@ -285,6 +289,7 @@ class TestRAG(BaseExecutorTest):
              engine='rag',
              llm_type='writer',
              vector_store_name='faiss',
+             input_column="question",
              url_column_name='url',
              writer_api_key='{WRITER_API_KEY}',
              writer_org_id='{WRITER_ORG_ID}',
@@ -314,6 +319,7 @@ class TestRAG(BaseExecutorTest):
            using
              engine='rag',
              llm_type="openai",
+             input_column="question",
              prompt_template="not valid format",
              openai_api_key='{OPENAI_API_KEY}';
         """

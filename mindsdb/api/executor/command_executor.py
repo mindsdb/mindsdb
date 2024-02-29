@@ -528,7 +528,7 @@ class ExecuteCommands:
                 select_statement = Select(
                     targets=[Star()],
                     from_table=Identifier(
-                        parts=["information_schema", "agents"]
+                        parts=["information_schema", sql_category]
                     ),
                     where=_get_show_where(statement, like_name="name"),
                 )

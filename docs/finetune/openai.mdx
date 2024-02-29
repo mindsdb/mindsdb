@@ -64,37 +64,7 @@ If you followed one of the MindsDB tutorials before, you'll see that the syntax 
 Now, we'll fine-tune our model using a table that stores details about MindsDB's custom SQL syntax.
 
 <Info>
-Here is a table we'll use to fine-tune our model:
-
-```sql
-SELECT prompt, completion
-FROM files.openai_learninghub_ft;
-```
-
-And here is its content:
-
-```sql
-+---------------------------------------------------------------------------------------------------+------------------------------------------+
-| prompt                                                                                            | completion                               |
-+---------------------------------------------------------------------------------------------------+------------------------------------------+
-| What is the SQL syntax to connect a database to MindsDB?                                          | CREATE DATABASE datasource_name          |
-|                                                                                                   | [WITH] [ENGINE [=] engine_name] [,]      |
-|                                                                                                   | [PARAMETERS [=] {                        |
-|                                                                                                   |    "key": "value",                       |
-|                                                                                                   |    ...                                   |
-|                                                                                                   |    }];                                   |
-|                                                                                                   |                                          |
-| What is the SQL command to create a home rentals MindsDB machine learning model?                  | CREATE MODEL                             |
-|                                                                                                   |   mindsdb.home_rentals_model             |
-|                                                                                                   | FROM example_db                          |
-|                                                                                                   |   (SELECT * FROM demo_data.home_rentals) |
-|                                                                                                   | PREDICT rental_price;                    |
-|                                                                                                   |                                          |
-| What is the SQL syntax to join input data with predictions from a MindsDB machine learning model? | SELECT t.column_name, p.column_name, ... |
-|                                                                                                   | FROM integration_name.table_name [AS] t  |
-|                                                                                                   | JOIN project_name.model_name [AS] p;     |
-+---------------------------------------------------------------------------------------------------+------------------------------------------+
-```
+Upload [this data file](/finetune/data.csv) to MindsDB and use it to finetune the model.
 </Info>
 
 This is how you can fine-tune an OpenAI model:

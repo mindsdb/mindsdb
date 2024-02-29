@@ -77,7 +77,7 @@ USING engine = 'engine_name',
 What is the SQL syntax to adjust a MindsDB machine learning model?,"ADJUST project_name.predictor_name
 [FROM integration_name
     (SELECT column_name, ... FROM table_name)
-USING key = value;
+USING key = value];
 "
 What is the SQL command to check status of a MindsDB home rentals machine learning model?,"SELECT *
 FROM mindsdb.models

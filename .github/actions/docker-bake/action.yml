@@ -30,6 +30,10 @@ runs:
 
         docker image ls
 
+        echo "docker buildx imagetools inspect"
+        
+        docker buildx imagetools inspect
+
         # Create multi-arch manifests
         VERSION=${{ env.CI_SHA }} BRANCH=${{ env.CI_ACTION_REF_NAME }} PLATFORM="" docker buildx bake -f docker/docker-bake.hcl --print | jq '.target[] | .tags[]' | xargs -I'{}' docker buildx imagetools create -t '{}' '{}-amd64' '{}-arm64'
 

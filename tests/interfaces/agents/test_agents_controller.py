@@ -18,7 +18,7 @@ def test_get_completion(mock_model_controller, mock_schema_datanode, mock_projec
     agents_controller = AgentsController(
         mock_datanode_instance,
         model_controller=mock_model_controller_instance)
-    
+
     completion_response = {'answer': '42'}
     df = pd.DataFrame.from_records([completion_response])
     mock_project_datanode_instance.predict.return_value = df
@@ -26,7 +26,7 @@ def test_get_completion(mock_model_controller, mock_schema_datanode, mock_projec
     agent.model_name = 'test_model'
     messages = [{'question': 'What is the meaning of life?', 'answer': None}]
     completion_df = agents_controller.get_completion(agent, messages)
-    
+
     assert not completion_df.empty
     assert 'answer' in completion_df.columns
     assert completion_df['answer'].loc[0] == '42'

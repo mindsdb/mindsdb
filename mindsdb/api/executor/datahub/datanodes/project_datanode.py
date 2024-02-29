@@ -69,7 +69,7 @@ class ProjectDataNode(DataNode):
 
     def _query_agent(self, query: ast.ASTNode, existing_agent: db.Agents, session):
         if len(query.targets) > 1:
-            raise ValueError(f'Can only select one target (must be * or {agent_column})')
+            raise ValueError('Can only select one target')
         try:
             model = session.model_controller.get_model(existing_agent.model_name, project_name=self.project.name)
             model_record = db.Predictor.query.get(model['id'])

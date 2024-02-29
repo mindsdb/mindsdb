@@ -14,17 +14,16 @@ from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.config import Config
 
 
-
 class AgentsController:
     '''Handles CRUD operations at the database level for Agents'''
 
     def __init__(
-            self,
-            datahub,
-            project_controller: ProjectController = None,
-            skills_controller: SkillsController = None,
-            model_controller: ModelController = None
-        ):
+        self,
+        datahub,
+        project_controller: ProjectController = None,
+        skills_controller: SkillsController = None,
+        model_controller: ModelController = None
+    ):
         if project_controller is None:
             project_controller = ProjectController()
         if skills_controller is None:

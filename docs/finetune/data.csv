@@ -1,0 +1,4 @@
+"prompt","completion"
+"What is the SQL syntax to connect a database to MindsDB?","CREATE DATABASE datasource_name [WITH] [ENGINE [=] engine_name] [,] [PARAMETERS [=] { "key": "value", ... }];"
+"What is the SQL command to create a home rentals MindsDB machine learning model?","CREATE MODEL mindsdb.home_rentals_model FROM example_db (SELECT * FROM demo_data.home_rentals) PREDICT rental_price;"
+"What is the SQL syntax to join input data with predictions from a MindsDB machine learning model?","SELECT t.column_name, p.column_name, ... FROM integration_name.table_name [AS] t JOIN project_name.model_name [AS] p;"

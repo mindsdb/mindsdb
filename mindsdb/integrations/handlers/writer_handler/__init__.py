@@ -26,4 +26,5 @@ __all__ = [
     "title",
     "description",
     "import_error",
+    "icon_path"
 ]

@@ -11,6 +11,7 @@ except Exception as e:
 title = 'OpenAI'
 name = 'openai'
 type = HANDLER_TYPE.ML
+icon_path = 'icon.svg'
 permanent = False
 
 __all__ = [

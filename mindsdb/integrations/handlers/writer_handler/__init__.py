@@ -15,6 +15,7 @@ title = "Writer"
 name = "writer"
 type = HANDLER_TYPE.ML
 permanent = False
+icon_path = 'icon.svg'
 
 
 __all__ = [

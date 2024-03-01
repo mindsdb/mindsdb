@@ -10,6 +10,7 @@ except Exception as e:
 title = 'MLFlow'
 name = 'mlflow'
 type = HANDLER_TYPE.ML
+icon_path = "icon.svg"
 permanent = True
 
 __all__ = [

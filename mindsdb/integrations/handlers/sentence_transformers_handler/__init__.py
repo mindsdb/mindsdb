@@ -18,4 +18,4 @@ icon_path = "icon.svg"
 permanent = True
 execution_method = "subprocess_keep"
 
-__all__ = ["Handler", "version", "name", "type", "title", "description", "import_error"]
+__all__ = ["Handler", "version", "name", "type", "title", "description", "import_error", "icon_path"]

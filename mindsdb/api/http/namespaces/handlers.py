@@ -26,9 +26,10 @@ class HandlersList(Resource):
         handlers = ca.integration_controller.get_handlers_import_status()
         result = []
         for handler_type, handler_meta in handlers.items():
-            row = {'name': handler_type}
-            row.update(handler_meta)
-            result.append(row)
+            if handler_type not in ['utilities', 'dummy_data']:
+                row = {'name': handler_type}
+                row.update(handler_meta)
+                result.append(row)
         return result
 
 

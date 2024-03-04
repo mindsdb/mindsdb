@@ -210,10 +210,8 @@ if __name__ == '__main__':
         if import_meta.get("success", False) is not True:
             logger.info(
                 dedent(
-                    """
-                Some handlers cannot be imported. You can check list of available handlers by execute command in sql editor:
-                    select * from information_schema.handlers;
-            """
+                    """Some handlers cannot be imported. You can check list of available handlers by execute command in sql editor:
+                    select * from information_schema.handlers;"""
                 )
             )
             break

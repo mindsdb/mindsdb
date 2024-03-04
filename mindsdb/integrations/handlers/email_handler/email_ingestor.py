@@ -72,5 +72,14 @@ class EmailIngestor:
         all_email_data = []
         for _, row in emails_df.iterrows():
             all_email_data.append(self._ingest_email_row(row))
-        self.email_client.logout()
-        return pd.DataFrame(all_email_data)
+
+        df = pd.DataFrame(all_email_data)
+
+        # Replace "(UTC)" with empty string over a pandas DataFrame column
+        df['datetime'] = df['datetime'].str.replace(' (UTC)', '')
+
+        # Convert datetime string to datetime object, and normalize timezone to UTC.
+        df['datetime'] = pd.to_datetime(df['datetime'], utc=True, format="%a, %d %b %Y %H:%M:%S %z", errors='coerce')
+
+        return df
+

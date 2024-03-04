@@ -124,9 +124,10 @@ def _setup_standard_tools(tools, llm, executor, model_kwargs):
     all_standard_tools += load_tools(langchain_tools)
     return all_standard_tools
 
+
 # Collector
-def setup_tools(llm, model_kwargs, pred_args, executor, default_agent_tools, openai_api_key):
-    toolkit = pred_args['tools'] if pred_args['tools'] is not None else default_agent_tools
+def setup_tools(llm, model_kwargs, pred_args, executor, default_agent_tools):
+    toolkit = pred_args['tools'] if pred_args.get('tools') is not None else default_agent_tools
 
     standard_tools = []
     function_tools = []
@@ -138,12 +139,14 @@ def setup_tools(llm, model_kwargs, pred_args, executor, default_agent_tools, ope
             # user defined custom functions
             function_tools.append(tool)
 
-    skill_tools = []
+    tools = []
     skills = pred_args.get('skills', [])
     for skill in skills:
-        skill_tools += make_tools_from_skill(skill, llm, openai_api_key, executor)
+        tools += make_tools_from_skill(skill, llm, executor)
 
-    tools = _setup_standard_tools(standard_tools, llm, executor, model_kwargs)
+    if len(tools) == 0:
+        tools = _setup_standard_tools(standard_tools, llm, executor, model_kwargs)
+
     if model_kwargs.get('serper_api_key', False):
         search = GoogleSerperAPIWrapper(serper_api_key=model_kwargs.pop('serper_api_key'))
         tools.append(Tool(
@@ -158,7 +161,6 @@ def setup_tools(llm, model_kwargs, pred_args, executor, default_agent_tools, ope
             func=tool['func'],
             description=tool['description'],
         ))
-    tools = tools + skill_tools
 
     return tools
 

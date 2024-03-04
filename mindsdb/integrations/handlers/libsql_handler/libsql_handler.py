@@ -3,11 +3,12 @@ from collections import OrderedDict
 
 import pandas as pd
 import libsql_experimental as libsql
+from sqlalchemy_libsql import SQLiteDialect_libsql
 
 from mindsdb_sql import parse_sql
-from mindsdb.integrations.libs.base import DatabaseHandler
-
 from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb.integrations.libs.base import DatabaseHandler
+from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
@@ -160,7 +161,10 @@ class LibSQLHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-        return self.native_query(query)
+
+        renderer = SqlalchemyRender(SQLiteDialect_libsql)
+        query_str = renderer.get_string(query, with_failback=True)
+        return self.native_query(query_str)
 
     def get_tables(self) -> StatusResponse:
         """

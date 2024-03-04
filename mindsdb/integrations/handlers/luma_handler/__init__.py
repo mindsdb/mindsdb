@@ -17,7 +17,7 @@ except Exception as e:
 title = "LUMAEvents"
 name = "luma"
 type = HANDLER_TYPE.DATA
-icon_path = "icon.webp"
+icon_path = "icon.png"
 
 __all__ = [
     "Handler",

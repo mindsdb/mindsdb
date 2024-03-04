@@ -35,7 +35,7 @@ class LogCallbackHandler(BaseCallbackHandler):
     def on_llm_end(self, response: LLMResult, **kwargs: Any) -> Any:
         '''Run when LLM ends running.'''
         self.logger.debug('LLM ended with response:')
-        self.logger.debug(response.llm_output)
+        self.logger.debug(str(response.llm_output))
 
     def on_llm_error(
         self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
@@ -48,12 +48,12 @@ class LogCallbackHandler(BaseCallbackHandler):
     ) -> Any:
         '''Run when chain starts running.'''
         self.logger.debug('Entering new LLM chain with inputs:')
-        self.logger.debug(inputs)
+        self.logger.debug(str(inputs))
 
     def on_chain_end(self, outputs: Dict[str, Any], **kwargs: Any) -> Any:
         '''Run when chain ends running.'''
         self.logger.debug('LLM chain ended with outputs:')
-        self.logger.debug(outputs)
+        self.logger.debug(str(outputs))
 
     def on_chain_error(
         self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
@@ -69,4 +69,4 @@ class LogCallbackHandler(BaseCallbackHandler):
     def on_agent_finish(self, finish: AgentFinish, **kwargs: Any) -> Any:
         '''Run on agent end.'''
         self.logger.debug('Agent finished with return values:')
-        self.logger.debug(finish.return_values)
+        self.logger.debug(str(finish.return_values))

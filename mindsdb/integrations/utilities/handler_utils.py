@@ -43,6 +43,7 @@ def get_api_key(
     connection_args = engine_storage.get_connection_args()
     if f"{api_name.lower()}_api_key" in connection_args:
         return connection_args[f"{api_name.lower()}_api_key"]
+
     # 4
     api_key = os.getenv(f"{api_name.lower()}_api_key")
     if api_key is not None:

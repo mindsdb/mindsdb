@@ -9,7 +9,7 @@ import subprocess
 import concurrent.futures
 from typing import Optional, Dict
 import openai
-from openai import OpenAI
+from openai import OpenAI, NotFoundError, AuthenticationError
 import numpy as np
 import pandas as pd
 
@@ -57,6 +57,36 @@ class OpenAIHandler(BaseMLEngine):
         self.default_max_tokens = 100
         self.chat_completion_models = CHAT_MODELS
         self.supported_ft_models = FINETUNING_MODELS # base models compatible with finetuning
+
+    def create_engine(self, connection_args):
+        '''check api key if provided
+        '''
+        connection_args = {k.lower(): v for k, v in connection_args.items()}
+        api_key = connection_args.get('openai_api_key')
+        if api_key is not None:
+            api_base = connection_args.get('api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE))
+            org = connection_args.get('api_organization')
+            client = self._get_client(api_key=api_key, base_url=api_base, org=org)
+            OpenAIHandler._check_client_connection(client)
+
+    @staticmethod
+    def _check_client_connection(client: OpenAI):
+        '''try to connect to api
+
+        Args:
+            client (OpenAI):
+
+        Raises:
+            Exception: if there is AuthenticationError
+        '''
+        try:
+            client.models.retrieve('test')
+        except NotFoundError:
+            pass
+        except AuthenticationError as e:
+            if e.body['code'] == 'invalid_api_key':
+                raise Exception('Invalid api key')
+            raise Exception(f'Something went wrong: {e}')
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
@@ -132,28 +162,36 @@ class OpenAIHandler(BaseMLEngine):
                 f"Unknown arguments: {', '.join(unknown_args)}.\n Known arguments are: {', '.join(known_args)}"
             )
 
+        engine_storage = kwargs['handler_storage']
+        api_key = get_api_key('openai', args, engine_storage=engine_storage)
+        api_base = args.get('api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE))
+        org = args.get('api_organization')
+        client = OpenAIHandler._get_client(api_key=api_key, base_url=api_base, org=org)
+        OpenAIHandler._check_client_connection(client)
+
     def create(self, target, args=None, **kwargs):
         args = args['using']
         args['target'] = target
-        api_key = get_api_key('openai', args, self.engine_storage)
-        available_models = get_available_models(api_key)
+        try:
+            api_key = get_api_key('openai', args, self.engine_storage)
+            available_models = get_available_models(api_key)
 
-        if not args.get('mode'):
-            args['mode'] = self.default_mode
-        elif args['mode'] not in self.supported_modes:
-            raise Exception(
-                f"Invalid operation mode. Please use one of {self.supported_modes}"
-            )
+            if not args.get('mode'):
+                args['mode'] = self.default_mode
+            elif args['mode'] not in self.supported_modes:
+                raise Exception(
+                    f"Invalid operation mode. Please use one of {self.supported_modes}"
+                )
 
-        if not args.get('model_name'):
-            if args['mode'] == 'image':
-                args['model_name'] = self.default_image_model
-            else:
-                args['model_name'] = self.default_model
-        elif args['model_name'] not in available_models:
-            raise Exception(f"Invalid model name. Please use one of {available_models}")
-
-        self.model_storage.json_set('args', args)
+            if not args.get('model_name'):
+                if args['mode'] == 'image':
+                    args['model_name'] = self.default_image_model
+                else:
+                    args['model_name'] = self.default_model
+            elif args['model_name'] not in available_models:
+                raise Exception(f"Invalid model name. Please use one of {available_models}")
+        finally:
+            self.model_storage.json_set('args', args)
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         """
@@ -614,16 +652,19 @@ class OpenAIHandler(BaseMLEngine):
 
         args = self.model_storage.json_get('args')
         api_key = get_api_key('openai', args, self.engine_storage)
-        client= self._get_client(
-            api_key=api_key,
-            base_url=args.get('api_base'),
-            org=args.get('api_organization')
-            )
         if attribute == 'args':
             return pd.DataFrame(args.items(), columns=['key', 'value'])
         elif attribute == 'metadata':
             model_name = args.get('model_name', self.default_model)
-            meta = client.models.retrieve(model_name)
+            try:
+                client= self._get_client(
+                    api_key=api_key,
+                    base_url=args.get('api_base'),
+                    org=args.get('api_organization')
+                )
+                meta = client.models.retrieve(model_name)
+            except Exception as e:
+                meta = {'error': str(e)}
             return pd.DataFrame(dict(meta).items(), columns=['key', 'value'])
         else:
             tables = ['args', 'metadata']

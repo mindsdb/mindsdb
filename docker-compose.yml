@@ -3,10 +3,12 @@ version: "3.2"
 services:
 
   mindsdb:
-    build:
-      context: .
-      dockerfile: docker/mindsdb.Dockerfile
-      target: dev
+    image: mindsdb/mindsdb:dev
+    # If you want to build the image instead:
+    # build:
+    #   context: .
+    #   dockerfile: docker/mindsdb.Dockerfile
+    #   target: dev  # Makes sure dev dependencies are installed
     restart: always
     ports:
       - '47334:47334'
@@ -17,6 +19,8 @@ services:
     environment:
       MINDSDB_DOCKER_ENV: "True"
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
+      FLASK_DEBUG: 1  # This will make sure http requests are logged regardless of log level
+      # MINDSDB_LOG_LEVEL: "DEBUG"
       # OPENAI_API_KEY: "..."
     volumes:
       - type: bind

@@ -699,14 +699,19 @@ class InformationSchemaDataNode(DataNode):
         columns = self.information_schema['KNOWLEDGE_BASES']
 
         # columns: NAME, PROJECT, MODEL, STORAGE
-        data = [
-            (
+        data = []
+
+        for kb in kb_list:
+            embedding_model = kb.embedding_model
+            vector_database = kb.vector_database
+            vector_database_name = '' if vector_database is None else vector_database.name
+
+            data.append((
                 kb.name,
                 project_name,
-                kb.embedding_model.name,
-                kb.vector_database.name + '.' + kb.vector_database_table
-            ) for kb in kb_list
-        ]
+                embedding_model.name if embedding_model is not None else None,
+                vector_database_name + '.' + kb.vector_database_table
+            ))
 
         return pd.DataFrame(data, columns=columns)
 

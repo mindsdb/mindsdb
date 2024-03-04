@@ -78,7 +78,6 @@ PACKAGE_NAME_MAP = {
     "google-api-python-client": ["googleapiclient"],
     "binance-connector": ["binance"],
     "pysqlite3": ["pysqlite3"],
-    "sqlalchemy-spanner": ["sqlalchemy"],
     "atlassian-python-api": ["atlassian"],
     "databricks-sql-connector": ["databricks"],
     "elasticsearch-dbapi": ["es"],

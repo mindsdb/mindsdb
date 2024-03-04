@@ -70,6 +70,7 @@ PACKAGE_NAME_MAP = {
     "google-cloud-aiplatform": ["google"],
     "google-cloud-bigquery": ["google"],
     "google-cloud-spanner": ["google"],
+    "sqlalchemy-spanner": ["google"],
     "google-auth-httplib2": ["google"],
     "google-generativeai": ["google"],
     "google-analytics-admin": ["google"],

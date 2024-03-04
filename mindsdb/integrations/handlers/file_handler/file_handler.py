@@ -16,7 +16,7 @@ from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import DropTables, Select
 from mindsdb_sql.parser.ast.base import ASTNode
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.document_loaders import TextLoader
+from langchain_community.document_loaders import TextLoader
 
 from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.integrations.libs.base import DatabaseHandler

@@ -748,6 +748,30 @@ class TestProjectStructure(BaseExecutorDummyML):
         # second call content one new line
         assert len(ret) == 1
 
+        # -- view with model
+
+        self.run_sql('''
+            create view v2 (
+                select t.a+1 as a from dummy_data.tasks t
+                JOIN task_model as m
+                where t.a>last
+            )
+       ''')
+
+        ret = self.run_sql('select * from v2')
+        # first call is empty
+        assert len(ret) == 0
+
+        # add row to dataframe
+        df.loc[len(df.index)] = [7, 'a']
+        self.set_data('tasks', df)
+
+        ret = self.run_sql('select * from v2')
+
+        # second call content one new line
+        assert len(ret) == 1
+        assert ret.a[0] == 8
+
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_last_in_job(self, data_handler, scheduler):
         df = pd.DataFrame([

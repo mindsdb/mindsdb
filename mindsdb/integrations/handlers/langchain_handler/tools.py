@@ -121,7 +121,6 @@ def _setup_standard_tools(tools, llm, executor, model_kwargs):
                 description="useful to write into data sources connected to mindsdb. command must be a valid SQL query with syntax: `INSERT INTO data_source_name.table_name (column_name_1, column_name_2, [...]) VALUES (column_1_value_row_1, column_2_value_row_1, [...]), (column_1_value_row_2, column_2_value_row_2, [...]), [...];`. note the command always ends with a semicolon. order of column names and values for each row must be a perfect match. If write fails, try casting value with a function, passing the value without quotes, or truncating string as needed.`."  # noqa
             )
             all_standard_tools.append(mdb_write_tool)
-        # TODO: langchain tool dispatch is not string based anymore, so we should improve this:
         elif tool == 'python_repl':
             tool = Tool(
                 name="python_repl",

@@ -3,9 +3,12 @@ import tiktoken
 from typing import Callable
 from mindsdb_sql import parse_sql, Insert
 
-from langchain.utilities import GoogleSerperAPIWrapper
 from langchain.prompts import PromptTemplate
 from langchain.agents import load_tools, Tool
+
+from langchain_experimental.utilities import PythonREPL
+from langchain_community.tools import WikipediaQueryRun
+from langchain_community.utilities import GoogleSerperAPIWrapper, WikipediaAPIWrapper
 
 from langchain.chains.llm import LLMChain
 from langchain.text_splitter import CharacterTextSplitter
@@ -118,8 +121,26 @@ def _setup_standard_tools(tools, llm, executor, model_kwargs):
                 description="useful to write into data sources connected to mindsdb. command must be a valid SQL query with syntax: `INSERT INTO data_source_name.table_name (column_name_1, column_name_2, [...]) VALUES (column_1_value_row_1, column_2_value_row_1, [...]), (column_1_value_row_2, column_2_value_row_2, [...]), [...];`. note the command always ends with a semicolon. order of column names and values for each row must be a perfect match. If write fails, try casting value with a function, passing the value without quotes, or truncating string as needed.`."  # noqa
             )
             all_standard_tools.append(mdb_write_tool)
-        else:
+        elif tool == 'python_repl':
+            tool = Tool(
+                name="python_repl",
+                func=PythonREPL().run,
+                description="useful for running custom Python code. Note: this is a powerful tool, so use with caution."  # noqa
+            )
             langchain_tools.append(tool)
+        elif tool == 'serper':
+            search = GoogleSerperAPIWrapper()
+            tool = Tool(
+                name="Intermediate Answer",
+                func=search.run,
+                description="useful for when you need to ask with search",
+            )
+            langchain_tools.append(tool)
+        elif tool == 'wikipedia':
+            tool = WikipediaQueryRun(api_wrapper=WikipediaAPIWrapper())
+            langchain_tools.append(tool)
+        else:
+            raise ValueError(f"Unsupported tool: {tool}")
     
     all_standard_tools += load_tools(langchain_tools)
     return all_standard_tools

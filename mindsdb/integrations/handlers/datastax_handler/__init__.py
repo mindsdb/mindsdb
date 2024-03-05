@@ -1,7 +1,7 @@
 from mindsdb.integrations.libs.const import HANDLER_TYPE
 
 try:
-    from .datastax_handler import DatastaxHandler as Handler, connection_args
+    from .datastax_handler import DatastaxHandler as Handler
 
     import_error = None
 except Exception as e:

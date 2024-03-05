@@ -208,7 +208,6 @@ class ExecuteCommands:
                     statement.modes = []
                 statement.modes = [x.upper() for x in statement.modes]
             if sql_category in ("predictors", "models"):
-                where = BinaryOperation("=", args=[Constant(1), Constant(1)])
 
                 new_statement = Select(
                     targets=[Star()],
@@ -520,6 +519,16 @@ class ExecuteCommands:
                     targets=[Star()],
                     from_table=Identifier(
                         parts=["information_schema", "knowledge_bases"]
+                    ),
+                    where=_get_show_where(statement, like_name="name"),
+                )
+                query = SQLQuery(select_statement, session=self.session)
+                return self.answer_select(query)
+            elif sql_category in ("agents", "jobs", "skills", "chatbots"):
+                select_statement = Select(
+                    targets=[Star()],
+                    from_table=Identifier(
+                        parts=["information_schema", sql_category]
                     ),
                     where=_get_show_where(statement, like_name="name"),
                 )
@@ -1111,9 +1120,17 @@ class ExecuteCommands:
         if handler_module_meta is None:
             raise ExecutorException(f"There is no engine '{statement.handler}'")
 
+        params = {}
+        if statement.params:
+            for key, value in statement.params.items():
+                # convert all complex types to string
+                if not isinstance(value, (int, float)):
+                    value = str(value)
+                params[key] = value
+
         try:
             self.session.integration_controller.add(
-                name=name, engine=statement.handler, connection_args=statement.params
+                name=name, engine=statement.handler, connection_args=params
             )
         except Exception as e:
             msg = str(e)

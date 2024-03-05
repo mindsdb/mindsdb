@@ -8,6 +8,8 @@ title = 'File'
 name = 'files'
 type = HANDLER_TYPE.DATA
 
+permanent = True
+
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title'
 ]

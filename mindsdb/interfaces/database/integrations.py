@@ -322,6 +322,7 @@ class IntegrationController:
             'type': integration_type,
             'class_type': class_type,
             'engine': integration_record.engine,
+            'permanent': getattr(integration_module, 'permanent', False),
             'date_last_update': deepcopy(integration_record.updated_at),
             'connection_data': data
         }

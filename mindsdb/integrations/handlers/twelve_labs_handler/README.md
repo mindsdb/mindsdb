@@ -63,7 +63,7 @@ As mentioned above, the `search_options` parameter is specific to the `search` t
 
 ```sql
 CREATE MODEL mindsdb.twelve_labs_summarization
-PREDICT ssummarization_results
+PREDICT summarization_results
 USING
   engine = 'twelve_labs_engine',
   task = 'summarization',

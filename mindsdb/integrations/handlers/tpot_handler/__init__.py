@@ -11,6 +11,7 @@ except Exception as e:
 title = 'Tpot'
 name = 'TPOT'
 type = HANDLER_TYPE.ML
+icon_path = 'icon.png'
 permanent = False
 
 __all__ = [

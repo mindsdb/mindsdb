@@ -8,33 +8,40 @@ import pandas as pd
 
 from langchain.schema import SystemMessage
 from langchain.agents import AgentType
-from langchain.llms import OpenAI
-from langchain.chat_models import ChatAnthropic, ChatOpenAI  # GPT-4 fails to follow the output langchain requires, avoid using for now
-from langchain.agents import initialize_agent, create_sql_agent
+from langchain_community.llms import OpenAI
+from langchain_community.chat_models import ChatAnthropic, ChatOpenAI, ChatAnyscale, ChatLiteLLM
+from langchain.agents import initialize_agent, create_sql_agent  # TODO: initialize_agent is deprecated, replace with e.g. `create_react_agent`  # noqa
 from langchain.prompts import PromptTemplate
-from langchain.agents.agent_toolkits import SQLDatabaseToolkit
+from langchain_community.agent_toolkits import SQLDatabaseToolkit
 from langchain.chains.conversation.memory import ConversationSummaryBufferMemory
+
+from langfuse.callback import CallbackHandler
 
 from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS as OPEN_AI_CHAT_MODELS
 from mindsdb.integrations.handlers.langchain_handler.mindsdb_database_agent import MindsDBSQL
 from mindsdb.integrations.handlers.langchain_handler.tools import setup_tools
+from mindsdb.integrations.handlers.langchain_handler.log_callback_handler import LogCallbackHandler
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.utilities.handler_utils import get_api_key
+from mindsdb.interfaces.storage.model_fs import HandlerStorage, ModelStorage
 from mindsdb.utilities import log
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 
 
-_DEFAULT_MODEL = 'gpt-3.5-turbo'
+
+# Default to latest GPT-4 model (https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo)
+_DEFAULT_MODEL = 'gpt-4-0125-preview'
 _DEFAULT_MAX_ITERATIONS = 10
 _DEFAULT_MAX_TOKENS = 2048  # requires more than vanilla OpenAI due to ongoing summarization and 3rd party input
 # 2 minutes should be more than enough time to complete chains.
 _DEFAULT_AGENT_TIMEOUT_SECONDS = 120
 _DEFAULT_AGENT_MODEL = 'zero-shot-react-description'
-_DEFAULT_AGENT_TOOLS = ['python_repl', 'wikipedia']  # these require no additional arguments
+_DEFAULT_AGENT_TOOLS = ['wikipedia']  # these require no additional arguments
 _ANTHROPIC_CHAT_MODELS = {'claude-2', 'claude-instant-1'}
-_PARSING_ERROR_PREFIX = 'An output parsing error occurred'
+_PARSING_ERROR_PREFIX = 'Could not parse LLM output'
 
 logger = log.getLogger(__name__)
+
 
 class LangChainHandler(BaseMLEngine):
     """
@@ -52,19 +59,29 @@ class LangChainHandler(BaseMLEngine):
     """
     name = 'langchain'
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(
+            self,
+            model_storage: ModelStorage,
+            engine_storage: HandlerStorage,
+            callback_handler: LogCallbackHandler = None,
+            **kwargs):
+        super().__init__(model_storage, engine_storage, **kwargs)
         self.generative = True
         self.stops = []
         self.default_mode = 'default'  # can also be 'conversational' or 'conversational-full'
         self.engine_to_supported_modes = {
             'openai': ['default', 'conversational', 'conversational-full', 'image'],
-            'anthropic': ['default', 'conversational', 'conversational-full']
+            'anthropic': ['default', 'conversational', 'conversational-full'],
+            'anyscale': ['default', 'conversational'],
+            'litellm': ['default', 'conversational'],
         }
         self.default_model = _DEFAULT_MODEL
         self.default_max_tokens = _DEFAULT_MAX_TOKENS
         self.default_agent_model = _DEFAULT_AGENT_MODEL
         self.default_agent_tools = _DEFAULT_AGENT_TOOLS
+        self.log_callback_handler = callback_handler
+        if self.log_callback_handler is None:
+            self.log_callback_handler = LogCallbackHandler(logger)
 
     # TODO (ref #7496): modify handler_utils.get_api_key to check for prefix in all sources, update usage in all handlers, deprecate  # noqa
     def _get_serper_api_key(self, args, strict=True):
@@ -89,18 +106,22 @@ class LangChainHandler(BaseMLEngine):
         args = args['using']
         args['target'] = target
         
-        available_models = {*OPEN_AI_CHAT_MODELS, *_ANTHROPIC_CHAT_MODELS}
         if not args.get('model_name'):
             args['model_name'] = self.default_model
-        elif args['model_name'] not in available_models:
-            raise Exception(f"Invalid model name. Please use one of {available_models}")
 
         if not args.get('mode'):
             args['mode'] = self.default_mode
 
-        supported_modes = self.engine_to_supported_modes['openai']
-        if args['model_name'] in _ANTHROPIC_CHAT_MODELS:
-            supported_modes = self.engine_to_supported_modes['anthropic']
+        if args.get('provider') is None:
+            if args['model_name'] in _ANTHROPIC_CHAT_MODELS:
+                args['provider'] = 'anthropic'
+            elif args['model_name'] in OPEN_AI_CHAT_MODELS:
+                args['provider'] = 'openai'
+            else:
+                raise Exception(f"Invalid provider name. Please define provider")
+
+        supported_modes = self.engine_to_supported_modes[args.get('provider')]
+
         if args['mode'] not in supported_modes:
             raise Exception(f"Invalid operation mode. Please use one of {supported_modes}")
 
@@ -126,6 +147,13 @@ class LangChainHandler(BaseMLEngine):
         pred_args = args['predict_params'] if args else {}
         args = self.model_storage.json_get('args')
         args['executor'] = executor
+
+        # back compatibility for old models
+        if args.get('provider') is None:
+            if args['model_name'] in _ANTHROPIC_CHAT_MODELS:
+                args['provider'] = 'anthropic'
+            else:
+                args['provider'] = 'openai'
 
         df = df.reset_index(drop=True)
 
@@ -161,7 +189,8 @@ class LangChainHandler(BaseMLEngine):
         timeout = pred_args.get('request_timeout', None)
         serper_api_key = self._get_serper_api_key(args, strict=False)
         model_kwargs = {}
-        if model_name in _ANTHROPIC_CHAT_MODELS:
+        provider = args.get('provider', 'openai')
+        if provider == 'anthropic':
             model_kwargs['model'] = model_name
             model_kwargs['temperature'] = temperature
             model_kwargs['max_tokens_to_sample'] = max_tokens
@@ -170,8 +199,28 @@ class LangChainHandler(BaseMLEngine):
             model_kwargs['stop_sequences'] = pred_args.get('stop_sequences', None)
             model_kwargs['serper_api_key'] = serper_api_key
             model_kwargs['anthropic_api_key'] = get_api_key('anthropic', args, self.engine_storage)
-        else:
-            # OpenAI
+        elif provider == 'litellm':
+            model_kwargs['model_name'] = model_name
+            model_kwargs['temperature'] = temperature
+            model_kwargs['max_tokens'] = max_tokens
+            model_kwargs['serper_api_key'] = serper_api_key
+            model_kwargs['n'] = pred_args.get('n', None)
+            model_kwargs['api_base'] = args.get('base_url', None)
+            model_kwargs['best_of'] = pred_args.get('best_of', None)
+            model_kwargs['custom_llm_provider'] = 'openai'
+            model_kwargs['model_kwargs'] = {
+                'api_key': get_api_key(provider, args, self.engine_storage),
+                'top_p': top_p,
+                'request_timeout': timeout,
+                'frequency_penalty': pred_args.get('frequency_penalty', None),
+                'presence_penalty': pred_args.get('presence_penalty', None),
+                'logit_bias': pred_args.get('logit_bias', None),
+            }
+        elif provider in ('openai', 'anyscale'):
+            # OpenAI compatible
+            base_url = args.get('base_url', None)
+            if provider == 'anyscale' and base_url is None:
+                base_url = "https://api.endpoints.anyscale.com/v1"
             model_kwargs['model_name'] = model_name
             model_kwargs['temperature'] = temperature
             model_kwargs['max_tokens'] = max_tokens
@@ -183,22 +232,24 @@ class LangChainHandler(BaseMLEngine):
             model_kwargs['n'] = pred_args.get('n', None)
             model_kwargs['best_of'] = pred_args.get('best_of', None)
             model_kwargs['logit_bias'] = pred_args.get('logit_bias', None)
-            model_kwargs['openai_api_key'] = get_api_key('openai', args, self.engine_storage)
-            model_kwargs['openai_organization'] = args.get('api_organization', None)
+            model_kwargs[f'{provider}_api_base'] = base_url
+            model_kwargs[f'{provider}_api_key'] = get_api_key(provider, args, self.engine_storage)
+            model_kwargs[f'{provider}_organization'] = args.get('api_organization', None)
 
         model_kwargs = {k: v for k, v in model_kwargs.items() if v is not None}  # filter out None values
         return model_kwargs
 
     def _create_chat_model(self, args, pred_args):
         model_kwargs = self._get_chat_model_params(args, pred_args)
-        model_name = args.get('model_name', self.default_model)
 
-        if model_name in _ANTHROPIC_CHAT_MODELS:
+        if args['provider'] == 'anthropic':
             return ChatAnthropic(**model_kwargs)
-        elif model_name in OPEN_AI_CHAT_MODELS:
+        elif args['provider'] == 'openai':
             return ChatOpenAI(**model_kwargs)
-        else:
-            return OpenAI(**model_kwargs)
+        elif args['provider'] == 'anyscale':
+            return ChatAnyscale(**model_kwargs)
+        elif args['provider'] == 'litellm':
+            return ChatLiteLLM(**model_kwargs)
 
     def conversational_completion(self, df, args=None, pred_args=None):
         pred_args = pred_args if pred_args else {}
@@ -211,8 +262,7 @@ class LangChainHandler(BaseMLEngine):
                             model_kwargs,
                             pred_args,
                             args['executor'],
-                            self.default_agent_tools,
-                            get_api_key('openai', args, self.engine_storage))
+                            self.default_agent_tools)
 
         memory = ConversationSummaryBufferMemory(llm=llm,
                                                  max_token_limit=max_tokens,
@@ -242,21 +292,26 @@ class LangChainHandler(BaseMLEngine):
         df.iloc[:-1, df.columns.get_loc(args['user_column'])] = ''
 
         agent_name = AgentType.CONVERSATIONAL_REACT_DESCRIPTION
-        agent = initialize_agent(
+        agent_executor = initialize_agent(
             tools,
             llm,
             memory=memory,
             agent=agent_name,
+            callbacks=[self.log_callback_handler],
+            # Calls the agent’s LLM Chain one final time to generate a final answer based on the previous steps
+            early_stopping_method='generate',
+            handle_parsing_errors=self._handle_parsing_errors,
+            # Timeout per agent invocation.
+            max_execution_time=pred_args.get('timeout_seconds', args.get('timeout_seconds', _DEFAULT_AGENT_TIMEOUT_SECONDS)),
             max_iterations=pred_args.get('max_iterations', args.get('max_iterations', _DEFAULT_MAX_ITERATIONS)),
             verbose=pred_args.get('verbose', args.get('verbose', False)),
-            handle_parsing_errors=False,
         )
 
         # setup model description
         description = {
-            'allowed_tools': [agent.agent.allowed_tools],  # packed as list to avoid additional rows
+            'allowed_tools': [agent_executor.agent.allowed_tools],  # packed as list to avoid additional rows
             'agent_type': agent_name,
-            'max_iterations': agent.max_iterations,
+            'max_iterations': agent_executor.max_iterations,
             'memory_type': memory.__class__.__name__,
         }
 
@@ -264,7 +319,7 @@ class LangChainHandler(BaseMLEngine):
         description.pop('openai_api_key', None)
         self.model_storage.json_set('description', description)
 
-        return agent, df
+        return agent_executor, df
 
     def default_completion(self, df, args=None, pred_args=None):
         """
@@ -287,34 +342,47 @@ class LangChainHandler(BaseMLEngine):
                             model_kwargs,
                             pred_args,
                             args['executor'],
-                            self.default_agent_tools,
-                            get_api_key('openai', args, self.engine_storage))
+                            self.default_agent_tools)
 
         # langchain agent setup
         memory = ConversationSummaryBufferMemory(llm=llm, max_token_limit=max_tokens)
         agent_name = pred_args.get('agent_name', args.get('agent_name', self.default_agent_model))
-        agent = initialize_agent(
+        agent_executor = initialize_agent(
             tools,
             llm,
             memory=memory,
             agent=agent_name,
-            max_iterations=pred_args.get('max_iterations', args.get('max_iterations', _DEFAULT_MAX_ITERATIONS)),
-            verbose=pred_args.get('verbose', args.get('verbose', False)),
-            handle_parsing_errors=False,
         )
 
         # setup model description
         description = {
-            'allowed_tools': [agent.agent.allowed_tools],   # packed as list to avoid additional rows
+            'allowed_tools': [agent_executor.agent.allowed_tools],   # packed as list to avoid additional rows
             'agent_type': agent_name,
-            'max_iterations': agent.max_iterations,
+            'max_iterations': agent_executor.max_iterations,
             'memory_type': memory.__class__.__name__,
         }
         description = {**description, **model_kwargs}
         description.pop('openai_api_key', None)
         self.model_storage.json_set('description', description)
 
-        return agent, df
+        return agent_executor, df
+    
+    def _handle_parsing_errors(self, error: Exception) -> str:
+        response = str(error)
+        if not response.startswith(_PARSING_ERROR_PREFIX):
+            return f'Agent failed with error:\n{str(error)}...'
+        else:
+            # Some OpenAI models always output a response formatted correctly. Anthropic, and others, sometimes just output
+            # the answer as text (when not using tools), even when prompted to output in a specific format.
+            # As a somewhat dirty workaround, we accept the output formatted incorrectly and use it as a response.
+            #
+            # Ideally, in the future, we would write a parser that is more robust and flexible than the one Langchain uses.
+            # Response is wrapped in ``
+            logger.info('Handling parsing error, salvaging response...')
+            response_output = response.split('`')
+            if len(response_output) >= 2:
+                response = response_output[-2]
+            return response
 
     def run_agent(self, df, agent, args, pred_args):
         # TODO abstract prompt templating into a common utility method, this is also used in vanilla OpenAI
@@ -330,7 +398,6 @@ class LangChainHandler(BaseMLEngine):
 
         for m in matches:
             input_variables.append(m[0].replace('{', '').replace('}', ''))
-
         empty_prompt_ids = np.where(df[input_variables].isna().all(axis=1).values)[0]
 
         base_template = base_template.replace('{{', '{').replace('}}', '}')
@@ -347,32 +414,25 @@ class LangChainHandler(BaseMLEngine):
                 # just add prompt
                 prompts.append(row[args['user_column']])
 
-        def _run_agent_with_prompt(agent, prompt):
+        def _invoke_agent_executor_with_prompt(agent_executor, prompt):
             # TODO: ensure that agent completion plus prompt match the maximum allowed by the user
             if not prompt:
                 return ''
-            try:
-                return agent.run(prompt)
-            except ValueError as e:
-                # Handle parsing errors ourselves instead of using handle_parsing_errors=True in initialize_agent.
-                response = str(e)
-                if not response.startswith(_PARSING_ERROR_PREFIX):
-                    return f'agent failed with error:\n{str(e)}...'
-                else:
-                    # By far the most common error is a Langchain parsing error. Some OpenAI models
-                    # always output a response formatted correctly. Anthropic, and others, sometimes just output
-                    # the answer as text (when not using tools), even when prompted to output in a specific format.
-                    # As a somewhat dirty workaround, we accept the output formatted incorrectly and use it as a response.
-                    #
-                    # Ideally, in the future, we would write a parser that is more robust and flexible than the one Langchain uses.
-                    # Response is wrapped in ``
-                    logger.info(f"Agent failure, salvaging response...")
-                    response_output = response.split('`')
-                    if len(response_output) >= 2:
-                        response = response_output[-2]
-                    return response
-            except Exception as e:
-                return f'agent failed with error:\n{str(e)}...'
+
+            callbacks = []
+            if 'langfuse_public_key' in args and 'langfuse_secret_key' in args and 'langfuse_host' in args:
+                callbacks.append(
+                    CallbackHandler(
+                        args['langfuse_public_key'],
+                        args['langfuse_secret_key'],
+                        host=args['langfuse_host'],
+                    )
+                )
+            answer = agent_executor.invoke(prompt, callbacks=callbacks)
+            if 'output' not in answer:
+                # This should never happen unless Langchain changes invoke output format, but just in case.
+                return agent_executor.run(prompt)
+            return answer['output']
 
         completions = []
         # max_workers defaults to number of processors on the machine multiplied by 5.
@@ -380,7 +440,7 @@ class LangChainHandler(BaseMLEngine):
         max_workers = args.get('max_workers', None)
         agent_timeout_seconds = args.get('timeout', _DEFAULT_AGENT_TIMEOUT_SECONDS)
         executor = ContextThreadPoolExecutor(max_workers=max_workers)
-        futures = [executor.submit(_run_agent_with_prompt, agent, prompt) for prompt in prompts]
+        futures = [executor.submit(_invoke_agent_executor_with_prompt, agent, prompt) for prompt in prompts]
         try:
             for future in as_completed(futures, timeout=agent_timeout_seconds):
                 completions.append(future.result())

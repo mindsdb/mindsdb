@@ -8,7 +8,7 @@ from mindsdb.api.executor.controllers.session_controller import SessionControlle
 from mindsdb.api.http.utils import http_error
 from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
-from mindsdb.interfaces.storage.db import Predictor
+from mindsdb.interfaces.storage import db
 
 
 def create_agent(project_name, name, agent):
@@ -165,7 +165,7 @@ class AgentResource(Resource):
         # Model needs to exist.
         if model_name is not None:
             session_controller = SessionController()
-            model_name_no_version, version = Predictor.get_name_and_version(model_name)
+            model_name_no_version, version = db.Predictor.get_name_and_version(model_name)
             try:
                 session_controller.model_controller.get_model(model_name_no_version, version=version, project_name=project_name)
             except PredictorRecordNotFound:
@@ -231,3 +231,70 @@ class AgentResource(Resource):
 
         agents_controller.delete_agent(agent_name, project_name=project_name)
         return '', HTTPStatus.NO_CONTENT
+
+
+@ns_conf.route('/<project_name>/agents/<agent_name>/completions')
+@ns_conf.param('project_name', 'Name of the project')
+@ns_conf.param('agent_name', 'Name of the agent')
+class AgentCompletions(Resource):
+    @ns_conf.doc('agent_completions')
+    def post(self, project_name, agent_name):
+        '''Queries an agent given a list of messages'''
+        # Check for required parameters.
+        if 'messages' not in request.json:
+            return http_error(
+                HTTPStatus.BAD_REQUEST,
+                'Missing parameter',
+                'Must provide "messages" parameter in POST body'
+            )
+        agents_controller = AgentsController()
+        try:
+            existing_agent = agents_controller.get_agent(agent_name, project_name=project_name)
+            if existing_agent is None:
+                return http_error(
+                    HTTPStatus.NOT_FOUND,
+                    'Agent not found',
+                    f'Agent with name {agent_name} does not exist'
+                )
+        except ValueError:
+            # Project needs to exist.
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                'Project not found',
+                f'Project with name {project_name} does not exist'
+            )
+
+        # Model needs to exist.
+        session_controller = SessionController()
+        model_name_no_version, version = db.Predictor.get_name_and_version(existing_agent.model_name)
+        try:
+            agent_model = session_controller.model_controller.get_model(model_name_no_version, version=version, project_name=project_name)
+            agent_model_record = db.Predictor.query.get(agent_model['id'])
+        except PredictorRecordNotFound:
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                'Model not found',
+                f'Model with name {existing_agent.model_name} not found'
+            )
+
+        predict_params = {
+            # Don't need to include backoffice_db related tools into this endpoint.
+            # Underlying handler (e.g. Langchain) will handle default tools like mdb_read, mdb_write, etc.
+            'tools': [],
+            'skills': [s for s in existing_agent.skills],
+        }
+        project_datanode = session_controller.datahub.get(project_name)
+        predictions = project_datanode.predict(
+            model_name=existing_agent.model_name,
+            data=request.json['messages'],
+            params=predict_params
+        )
+
+        output_col = agent_model_record.to_predict[0]
+        model_output = predictions.iloc[-1][output_col]
+        return {
+            'message': {
+                'content': model_output,
+                'role': 'assistant'
+            }
+        }

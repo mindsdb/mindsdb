@@ -38,7 +38,7 @@ Here is how to retrieve the 10 messages after specific timestamp:
 ```sql
 SELECT *
 FROM mindsdb_slack.channels
-WHERE channel="channel-name"
+WHERE channel = "<channel-name>"
 AND created_at > '2023-07-25 00:13:07'   -- created_at stores the timestamp when the message was created
 LIMIT 10;
 ```
@@ -48,7 +48,7 @@ You can also retrieve messages in alphabetical order:
 ```sql
 SELECT *
 FROM mindsdb_slack.channels
-WHERE channel="channel-name"
+WHERE channel = "<channel-name>"
 ORDER BY messages ASC
 LIMIT 5;
 ```
@@ -58,7 +58,7 @@ By default, it retrieves by the order the messages were sent, unless specified a
 Here is how to post messages:
 
 ```sql
-INSERT INTO mindsdb_slack.channels (channel, message)
+INSERT INTO mindsdb_slack.channels (channel, text)
 VALUES
     ("<channel-name>", "Hey MindsDB, Thanks to you! Now I can respond to my Slack messages through SQL Queries. 🚀 "),
     ("<channel-name>", "It's never been that easy to build ML apps using MindsDB!");
@@ -163,7 +163,7 @@ WHERE messages = 'if a time-traveling astronaut had a dance-off with a black hol
 
 ### 3. Let's Connect our GPT Model to Slack!
 
-The `channels` table can be used to search for `channels`, `messages`, and `timestamps`, as well as to post `messages` into slack channels. These functionalities can also be done by using Slack API or Webhooks.
+The `channels` table can be used to search for `channels`, `messages`, and `timestamps`, as well as to post messages into slack channels. These functionalities can also be done by using Slack API or Webhooks.
 
 Let's query the user's question and see how our GPT model responds to it, by joining the model with the `channels` table:
 
@@ -171,10 +171,10 @@ Let's query the user's question and see how our GPT model responds to it, by joi
 SELECT
     t.channel as channel,
     t.messages as input_text, 
-    r.response as message
+    r.response as text
 FROM mindsdb_slack.channels as t
 JOIN mindsdb.whizfizz_model as r
-WHERE t.channel = '<channel-name>'
+WHERE t.channel = "<channel-name>"
 LIMIT 3;
 ```
 
@@ -183,14 +183,13 @@ LIMIT 3;
 We want to respond to the user's questions by posting the output of our newly created **WhizFizz** Model. Let's post the message by querying and joining the user's questions to our model:
 
 ```sql
-INSERT INTO mindsdb_slack.channels(channel, message)
+INSERT INTO mindsdb_slack.channels(channel, text)
   SELECT
     t.channel as channel,
-    t.messages as input_text, 
-    r.response as message
+    r.response as text
   FROM mindsdb_slack.channels as t
   JOIN mindsdb.whizfizz_model as r
-  WHERE t.channel = '<channel-name>'
+  WHERE t.channel = "<channel-name>"
   LIMIT 3;
 ```
 
@@ -203,9 +202,9 @@ Works like a charm!!
 ### 5. Let's automate this
 
 We will `CREATE JOB` to schedule periodical execution of SQL statements. Thw job will execute evry hour and do the following:
-    1. Check for new messages
-    2. Generate an appropriate response
-    3. Post the response into the channel
+    1. Check for new messages using the [`LAST` keyword](/mindsdb_sql/sql/create/jobs#last).
+    2. Generate an appropriate response with the `whizfizz_model` model.
+    3. Insert the response into the channel.
 
 Let's do it in single SQL statement:
 
@@ -213,14 +212,13 @@ Let's do it in single SQL statement:
 CREATE JOB mindsdb.gpt4_slack_job AS (
 
    -- insert into channels the output of joining model and new responses
-  INSERT INTO mindsdb_slack.channels(channel, message)
+  INSERT INTO mindsdb_slack.channels(channel, text)
     SELECT
       t.channel as channel,
-      t.messages as input_text, 
-      r.response as message
+      r.response as text
     FROM mindsdb_slack.channels as t
     JOIN mindsdb.whizfizz_model as r
-    WHERE t.channel = '<channel-name>'
+    WHERE t.channel = "<channel-name>"
     AND t.created_at > LAST
 
 )

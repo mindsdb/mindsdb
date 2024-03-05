@@ -7,7 +7,7 @@ class BaseEntityException(Exception):
     """
     def __init__(self, message: str, entity_name: str = None) -> None:
         self.message = message
-        self.entity_name = entity_name or 'unkown'
+        self.entity_name = entity_name or 'unknown'
 
     def __str__(self) -> str:
         return f'{self.message}: {self.entity_name}'

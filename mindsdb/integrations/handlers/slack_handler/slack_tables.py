@@ -68,11 +68,7 @@ class SlackChannelsTable(APITable):
                     params['limit'] = int(arg2)
                 else:
                     raise NotImplementedError(f'Unknown op: {op}')
-            elif arg1 == 'with_threads':
-                if op == '=':
-                    params['with_threads']=arg2
-                else:
-                    raise NotImplementedError
+             
 
             elif arg1 == 'created_at':
                 date = parse_utc_date(arg2)
@@ -149,24 +145,7 @@ class SlackChannelsTable(APITable):
         # convert SlackResponse object to pandas DataFrame
         result = pd.DataFrame(result['messages'])
 
-        # threads are returned
-        if params.get('with_threads'):
-            def return_threads(ts):
-                threads = self.client.conversations_replies(
-                    channel=channel_ids['general'],
-                    ts=ts
-                )['messages'][1:]
-
-                return [t['text'] for t in threads]
-
-            try:
-                result['threads'] = result['ts'].apply(
-                    lambda x: return_threads(x)
-                )
-            except SlackApiError as e:
-                logger.error("Error creating conversation: {}".format(e))
-                raise e
-
+         
         # Remove null rows from the result
         result = result[result['text'].notnull()]
 

@@ -173,7 +173,7 @@ class OpenAIHandler(BaseMLEngine):
         args = args['using']
         args['target'] = target
         try:
-            api_key = get_api_key('openai', args, self.engine_storage)
+            api_key = get_api_key(self.name, args, self.engine_storage)
             available_models = get_available_models(api_key)
 
             if not args.get('mode'):
@@ -382,7 +382,7 @@ class OpenAIHandler(BaseMLEngine):
         # remove prompts without signal from completion queue
         prompts = [j for i, j in enumerate(prompts) if i not in empty_prompt_ids]
 
-        api_key = get_api_key('openai', args, self.engine_storage)
+        api_key = get_api_key(self.name, args, self.engine_storage)
         api_args = {
             k: v for k, v in api_args.items() if v is not None
         }  # filter out non-specified api args
@@ -651,7 +651,7 @@ class OpenAIHandler(BaseMLEngine):
         # TODO: Update to use update() artifacts
 
         args = self.model_storage.json_get('args')
-        api_key = get_api_key('openai', args, self.engine_storage)
+        api_key = get_api_key(self.name, args, self.engine_storage)
         if attribute == 'args':
             return pd.DataFrame(args.items(), columns=['key', 'value'])
         elif attribute == 'metadata':
@@ -690,7 +690,7 @@ class OpenAIHandler(BaseMLEngine):
 
         args = args if args else {}
 
-        api_key = get_api_key('openai', args, self.engine_storage)
+        api_key = get_api_key(self.name, args, self.engine_storage)
 
         using_args = args.pop('using') if 'using' in args else {}
         prompt_col = using_args.get('prompt_column', 'prompt')

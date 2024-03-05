@@ -1006,7 +1006,7 @@ class ExecuteCommands:
     @profiler.profile()
     @mark_process("learn")
     def answer_finetune_predictor(self, statement, database_name):
-        model_record = self._get_model_info(statement, database_name=database_name)["model_record"]
+        model_record = self._get_model_info(statement.name, database_name=database_name)["model_record"]
 
         if statement.using is not None:
             # repack using with lower names

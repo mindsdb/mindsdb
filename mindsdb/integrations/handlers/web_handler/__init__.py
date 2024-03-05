@@ -16,7 +16,7 @@ name = 'web'
 type = HANDLER_TYPE.DATA
 icon_path = 'icon.png'
 
-permanent = True
+permanent = False
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'description',

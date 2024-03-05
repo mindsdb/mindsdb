@@ -105,13 +105,7 @@ class GithubIssuesTable(APITable):
             if limit <= count:
                 break
 
-        df = pd.DataFrame(data, columns=self.get_columns())
-
-        if sort is not None and len(sort) > 1:
-            for col in sort[1:]:
-                df = df.sort_values(by=col.column, ascending=col.ascending)
-
-        return df
+        return pd.DataFrame(data, columns=self.get_columns())
 
     def add(self, issue: dict):
         """Inserts data into the GitHub "Create an issue" API

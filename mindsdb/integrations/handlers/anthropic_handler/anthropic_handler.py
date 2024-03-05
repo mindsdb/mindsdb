@@ -23,7 +23,7 @@ class AnthropicHandler(BaseMLEngine):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.default_chat_model = "claude-2.1"
-        self.supported_chat_models = ["claude-instant-1.2", "claude-2.1"]
+        self.supported_chat_models = ["claude-instant-1.2", "claude-2.1", "claude-3-opus-20240229", "claude-3-sonnet-20240229"]
         self.default_max_tokens = 100
         self.generative = True
         self.connection = None

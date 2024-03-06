@@ -34,7 +34,7 @@
 </div>
 
 ----------------------------------------
-
+MindsDB is celebrating reaching 20K stars by giving away limited edition T-shirts. Details listed ➡️ [here.][(hyperlink to the post](https://github.com/mindsdb/mindsdb/discussions/8817))
 
 [MindsDB](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) is the platform for building custom AI, enabling smarter organizations. 
  [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=The%20middleware%20for%20building%20custom%20AI,%20enabling%20smarter%20organizations&url=https://github.com/mindsdb/mindsdb&via=mindsdb&hashtags=ai,opensource)

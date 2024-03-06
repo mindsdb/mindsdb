@@ -1,4 +1,5 @@
 import os
+import shutil
 import tarfile
 import tempfile
 import zipfile
@@ -155,11 +156,14 @@ class File(Resource):
                     400, "Wrong content.", "Archive must contain data file in root."
                 )
 
-        ca.file_controller.save_file(
-            mindsdb_file_name, file_path, file_name=original_file_name
-        )
-
-        os.rmdir(temp_dir_path)
+        try:
+            ca.file_controller.save_file(
+                mindsdb_file_name, file_path, file_name=original_file_name
+            )
+        except Exception as e:
+            return http_error(500, 'Error', str(e))
+        finally:
+            shutil.rmtree(temp_dir_path, ignore_errors=True)
 
         return "", 200
 

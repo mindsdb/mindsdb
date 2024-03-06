@@ -143,10 +143,8 @@ class LangChainHandler(BaseMLEngine):
         Dispatch is performed depending on the underlying model type. Currently, only the default text completion
         is supported.
         """
-        executor = args['executor']  # used as tool in custom tool for the agent to have mindsdb-wide access
         pred_args = args['predict_params'] if args else {}
         args = self.model_storage.json_get('args')
-        args['executor'] = executor
 
         # back compatibility for old models
         if args.get('provider') is None:
@@ -261,7 +259,6 @@ class LangChainHandler(BaseMLEngine):
         tools = setup_tools(llm,
                             model_kwargs,
                             pred_args,
-                            args['executor'],
                             self.default_agent_tools)
 
         memory = ConversationSummaryBufferMemory(llm=llm,
@@ -341,7 +338,6 @@ class LangChainHandler(BaseMLEngine):
         tools = setup_tools(llm,
                             model_kwargs,
                             pred_args,
-                            args['executor'],
                             self.default_agent_tools)
 
         # langchain agent setup
@@ -478,7 +474,7 @@ class LangChainHandler(BaseMLEngine):
 
     def sql_agent_completion(self, df, args=None, pred_args=None):
         """This completion will be used to answer based on information passed by any MindsDB DB or API engine."""
-        db = MindsDBSQL(engine=args['executor'], metadata=args['executor'].session.integration_controller)
+        db = MindsDBSQL()
         model_name = args.get('model_name', self.default_model)
         llm = OpenAI(temperature=0) if model_name not in OPEN_AI_CHAT_MODELS else self._create_chat_model(args, pred_args)  # noqa
         toolkit = SQLDatabaseToolkit(db=db, llm=llm)

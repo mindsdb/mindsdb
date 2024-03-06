@@ -19,23 +19,6 @@ There are a few notable differences, though:
 ### Base URL
 The base URL for this API is `https://api.endpoints.anyscale.com/v1`.
 
-## Inference example
+## Examples
 
-Here is an example to produce sentiment analysis predictions on some text:
-
-```sql
-CREATE ML_ENGINE anyscale_endpoints 
-FROM anyscale_endpoints 
-USING anyscale_endpoints_api_key = 'your-api-key';
-    
-CREATE MODEL anyscale_endpoints_sentiment_model
-PREDICT sentiment
-USING
-engine = 'anyscale_endpoints',
-model_name = 'mistralai/Mistral-7B-Instruct-v0.1',
-prompt_template = 'Classify the sentiment of the following text as one of `positive`, `neutral` or `negative`: {{text}}';
-    
-SELECT sentiment 
-FROM anyscale_endpoints_sentiment_model
-WHERE text = 'I love machine learning!';
-```
+[Docs](https://docs.mindsdb.com/integrations/ai-engines/anyscale#usage)

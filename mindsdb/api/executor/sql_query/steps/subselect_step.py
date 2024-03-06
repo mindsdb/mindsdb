@@ -121,7 +121,7 @@ class QueryStepCall(BaseStepCall):
         query_traversal(query, fill_params)
 
         query_traversal(query, check_fields)
-        query_context_controller.remove_lasts(query.where)
+        query.where = query_context_controller.remove_lasts(query.where)
 
         query.from_table = Identifier('df_table')
         res = query_df(df, query)

@@ -78,16 +78,18 @@ class AnthropicHandler(BaseMLEngine):
 
     def predict_answer(self, text):
         """
-        connects with anthropic api to predict the answer for the particular question
+        connects with anthropic messages api to predict the answer for the particular question
 
         """
 
         args = self.model_storage.json_get("args")
 
-        completion = self.connection.completions.create(
+        message = self.connection.messages.create(
             model=args["using"]["model"],
-            max_tokens_to_sample=args["using"]["max_tokens"],
-            prompt=f"{HUMAN_PROMPT} {text} {AI_PROMPT}",
+            max_tokens=args["using"]["max_tokens"],
+            messages=[
+                {"role": "user", "content": text}
+            ]
         )
 
-        return completion.completion
+        return message.content

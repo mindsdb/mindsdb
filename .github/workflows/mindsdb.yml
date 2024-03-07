@@ -60,8 +60,7 @@ jobs:
     - name: Set up environment
       shell: bash
       run: |
-        mkdir prom
-        env PROMETHEUS_MULTIPROC_DIR=./prom
+        mkdir prometheus_metrics
     - name: Run integration api and flow tests
       run: |
 
@@ -106,6 +105,7 @@ jobs:
         fi
       shell: bash
       env:
+        PROMETHEUS_MULTIPROC_DIC: ./prometheus_metrics
         CHECK_FOR_UPDATES: False
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
         AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}

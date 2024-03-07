@@ -13,7 +13,7 @@ from mindsdb_sql.parser.ast import Insert, Identifier, CreateTable, TableColumn,
 from mindsdb.api.executor.datahub.datanodes.datanode import DataNode
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.api.executor.datahub.classes.tables_row import TablesRow
-from mindsdb.metrics.metrics import INTEGRATION_HANDLER_QUERY_TIME
+from mindsdb.metrics import metrics
 from mindsdb.utilities import log
 from mindsdb.utilities.profiler import profiler
 
@@ -151,7 +151,7 @@ class IntegrationDataNode(DataNode):
         time_before_query = time.perf_counter()
         result = self.integration_handler.query(query)
         elapsed_seconds = time.perf_counter() - time_before_query
-        query_time_with_labels = INTEGRATION_HANDLER_QUERY_TIME.labels(
+        query_time_with_labels = metrics.INTEGRATION_HANDLER_QUERY_TIME.labels(
             self.integration_handler.__class__.name, result.type)
         query_time_with_labels.observe(elapsed_seconds)
         return result
@@ -160,7 +160,7 @@ class IntegrationDataNode(DataNode):
         time_before_query = time.perf_counter()
         result = self.integration_handler.native_query(native_query)
         elapsed_seconds = time.perf_counter() - time_before_query
-        query_time_with_labels = INTEGRATION_HANDLER_QUERY_TIME.labels(
+        query_time_with_labels = metrics.INTEGRATION_HANDLER_QUERY_TIME.labels(
             self.integration_handler.__class__.name, result.type)
         query_time_with_labels.observe(elapsed_seconds)
         return result

@@ -172,7 +172,7 @@ class IntegrationDataNode(DataNode):
                 result = self._query(query)
             else:
                 # try to fetch native query
-                result = self._native_query(query)
+                result = self._native_query(native_query)
         except Exception as e:
             msg = str(e).strip()
             if msg == '':

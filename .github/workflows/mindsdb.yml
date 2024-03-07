@@ -15,11 +15,6 @@ jobs:
         uses: actions/setup-python@v4.7.0
         with:
           python-version: 3.9
-      - name: Set up environment
-        shell: bash
-        run: |
-          mkdir prom
-          env PROMETHEUS_MULTIPROC_DIR=./prom
       - name: Run code checks
         shell: bash
         run: |
@@ -62,6 +57,11 @@ jobs:
         pip install .[lightwood]  # TODO: for now some tests rely on lightwood
         pip freeze
       shell: bash
+    - name: Set up environment
+      shell: bash
+      run: |
+        mkdir prom
+        env PROMETHEUS_MULTIPROC_DIR=./prom
     - name: Run integration api and flow tests
       run: |
 

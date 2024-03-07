@@ -584,10 +584,10 @@ class FileStorage:
             # endregion
             return
 
-        with FileLock(self.folder_path, mode='w'):
-            if self.sync is True:
-                self._pull_no_lock()
+        if self.sync is True:
+            self.pull()
 
+        with FileLock(self.folder_path, mode='w'):
             if path.exists() is False:
                 raise Exception('Path does not exists')
 

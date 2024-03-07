@@ -15,6 +15,11 @@ jobs:
         uses: actions/setup-python@v4.7.0
         with:
           python-version: 3.9
+      - name: Set up environment
+        shell: bash
+        run: |
+          mkdir prom
+          env PROMETHEUS_MULTIPROC_DIR=./prom
       - name: Run code checks
         shell: bash
         run: |

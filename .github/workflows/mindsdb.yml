@@ -105,7 +105,7 @@ jobs:
         fi
       shell: bash
       env:
-        PROMETHEUS_MULTIPROC_DIC: ./prometheus_metrics
+        PROMETHEUS_MULTIPROC_DIR: ./prometheus_metrics
         CHECK_FOR_UPDATES: False
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
         AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}

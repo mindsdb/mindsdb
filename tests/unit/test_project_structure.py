@@ -368,10 +368,16 @@ class TestProjectStructure(BaseExecutorDummyML):
                 CREATE or REPLACE model task_model
                 PREDICT a
                 using engine='dummy_ml',
-                join_learn_process=true
+                join_learn_process=true, my_param='a'
             '''
         )
         self.wait_predictor('mindsdb', 'task_model')
+
+        # test json operator
+        resp = self.run_sql("select training_options->'using'->'my_param' param from models where name='task_model' ")
+
+        # FIXME duckdb returns result quoted
+        assert resp['param'][0] == '"a"'
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_complex_joins(self, data_handler):

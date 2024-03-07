@@ -1,4 +1,5 @@
 from functools import partial
+import json
 
 import pandas as pd
 from mindsdb_sql.parser.ast import BinaryOperation, Constant, Identifier, Select, Join, Union, Insert, Delete
@@ -51,6 +52,15 @@ def get_all_tables(stmt):
         result.extend(get_all_tables(from_stmt.left))
         result.extend(get_all_tables(from_stmt.right))
     return result
+
+
+def to_json(obj):
+    if obj is None:
+        return None
+    try:
+        return json.dumps(obj)
+    except TypeError:
+        return obj
 
 
 class InformationSchemaDataNode(DataNode):
@@ -471,7 +481,7 @@ class InformationSchemaDataNode(DataNode):
         for _key, val in handlers.items():
             connection_args = val.get("connection_args")
             if connection_args is not None:
-                connection_args = str(dict(connection_args))
+                connection_args = to_json(connection_args)
             import_success = val.get("import", {}).get("success")
             import_error = val.get("import", {}).get("error_message")
             data.append(
@@ -500,7 +510,7 @@ class InformationSchemaDataNode(DataNode):
 
         data = []
         for _key, val in ml_integrations.items():
-            data.append([val["name"], val.get("engine"), val.get("connection_data")])
+            data.append([val["name"], val.get("engine"), to_json(val.get("connection_data"))])
 
         df = pd.DataFrame(data, columns=columns)
         return df
@@ -668,13 +678,16 @@ class InformationSchemaDataNode(DataNode):
         ):
             project_name = query.where.args[1].value
 
-        data = chatbot_controller.get_chatbots(project_name)
+        chatbot_data = chatbot_controller.get_chatbots(project_name)
 
         columns = self.information_schema["CHATBOTS"]
         columns_lower = [col.lower() for col in columns]
 
         # to list of lists
-        data = [[row[k] for k in columns_lower] for row in data]
+        data = []
+        for row in chatbot_data:
+            row['params'] = to_json(row['params'])
+            data.append([row[k] for k in columns_lower])
 
         return pd.DataFrame(data, columns=columns)
 
@@ -752,7 +765,7 @@ class InformationSchemaDataNode(DataNode):
         columns = self.information_schema['AGENTS']
 
         # NAME, PROJECT, MODEL, SKILLS, PARAMS
-        data = [(a.name, project_name, a.model_name, list(map(lambda s: s.name, a.skills)), a.params) for a in all_agents]
+        data = [(a.name, project_name, a.model_name, list(map(lambda s: s.name, a.skills)), to_json(a.params)) for a in all_agents]
         return pd.DataFrame(data, columns=columns)
 
     def _get_databases(self, query: ASTNode = None):
@@ -760,7 +773,7 @@ class InformationSchemaDataNode(DataNode):
 
         project = self.database_controller.get_list()
         data = [
-            [x["name"], x["type"], x["engine"], str(x.get("connection_data"))]
+            [x["name"], x["type"], x["engine"], to_json(x.get("connection_data"))]
             for x in project
         ]
 
@@ -791,7 +804,7 @@ class InformationSchemaDataNode(DataNode):
                         table_meta["mindsdb_version"],
                         table_meta["error"],
                         table_meta["select_data_query"],
-                        table_meta["training_options"],
+                        to_json(table_meta["training_options"]),
                         table_meta["current_training_phase"],
                         table_meta["total_training_phases"],
                         table_meta["training_phase_name"],
@@ -830,7 +843,7 @@ class InformationSchemaDataNode(DataNode):
                         table_meta["mindsdb_version"],
                         table_meta["error"],
                         table_meta["select_data_query"],
-                        table_meta["training_options"],
+                        to_json(table_meta["training_options"]),
                         table_meta["label"],
                         row["created_at"],
                         table_meta["training_time"],

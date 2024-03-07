@@ -147,6 +147,7 @@ class IntegrationDataNode(DataNode):
 
         if result.type == RESPONSE_TYPE.ERROR:
             raise Exception(result.error_message)
+
     def _query(self, query):
         time_before_query = time.perf_counter()
         result = self.integration_handler.query(query)
@@ -164,7 +165,7 @@ class IntegrationDataNode(DataNode):
             self.integration_handler.__class__.name, result.type)
         query_time_with_labels.observe(elapsed_seconds)
         return result
-        
+
     @profiler.profile()
     def query(self, query=None, native_query=None, session=None):
         try:

@@ -12,7 +12,7 @@ class TestHandlerMetrics(BaseExecutorDummyML):
         ]))
         # Create & predict a simple model.
         self.run_sql('create database proj')
-        ret = self.run_sql(
+        self.run_sql(
             '''
                 CREATE model proj.task_model
                 from dummy_data (select * from tasks)
@@ -23,7 +23,7 @@ class TestHandlerMetrics(BaseExecutorDummyML):
             '''
         )
         self.wait_predictor('proj', 'task_model')
-        ret = self.run_sql('''
+        self.run_sql('''
              SELECT m.*
                FROM dummy_data.tasks as t
                JOIN proj.task_model as m

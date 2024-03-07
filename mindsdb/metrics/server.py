@@ -1,12 +1,14 @@
-from flask import Flask
-from prometheus_client import make_wsgi_app
-from werkzeug.middleware.dispatcher import DispatcherMiddleware
+from flask import Flask, Response
+from prometheus_client import generate_latest, multiprocess, CollectorRegistry
 
+
+# See: https://prometheus.github.io/client_python/multiprocess/
+registry = CollectorRegistry()
+multiprocess.MultiProcessCollector(registry)
+_CONTENT_TYPE_LATEST = str('text/plain; version=0.0.4; charset=utf-8')
 
 def init_metrics(app: Flask):
-    # Add prometheus WSGI middleware to route /metrics requests
-    # See: https://prometheus.github.io/client_python/exporting/http/flask/
-    # See: https://flask.palletsprojects.com/en/3.0.x/patterns/appdispatch/#combining-applications
-    app.wsgi_app = DispatcherMiddleware(app.wsgi_app, {
-        '/metrics': make_wsgi_app()
-    })
+    # It's important that the PROMETHEUS_MULTIPROC_DIR env variable is set, and the dir is empty.
+    @app.route('/metrics')
+    def metrics():
+        return Response(generate_latest(registry), mimetype=_CONTENT_TYPE_LATEST)

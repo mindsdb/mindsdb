@@ -245,6 +245,8 @@ class TwelveLabsHandler(BaseMLEngine):
             # rename _id to video_id
             df_videos.rename(columns={"_id": "video_id"}, inplace=True)
 
+            # MindsDB GUI fails to display NaN values, so we replace them with 0
+            df_videos.fillna(0, inplace=True)
             return df_videos
 
         else:

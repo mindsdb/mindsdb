@@ -7,6 +7,7 @@ registry = CollectorRegistry()
 multiprocess.MultiProcessCollector(registry)
 _CONTENT_TYPE_LATEST = str('text/plain; version=0.0.4; charset=utf-8')
 
+
 def init_metrics(app: Flask):
     # It's important that the PROMETHEUS_MULTIPROC_DIR env variable is set, and the dir is empty.
     @app.route('/metrics')

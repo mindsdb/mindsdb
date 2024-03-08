@@ -16,6 +16,7 @@ def init_metrics(app: Flask):
     # See: https://prometheus.github.io/client_python/multiprocess/
     registry = CollectorRegistry()
     multiprocess.MultiProcessCollector(registry)
+
     # It's important that the PROMETHEUS_MULTIPROC_DIR env variable is set, and the dir is empty.
     @app.route('/metrics')
     def metrics():

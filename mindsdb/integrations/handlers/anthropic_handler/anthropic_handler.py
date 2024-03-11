@@ -92,4 +92,17 @@ class AnthropicHandler(BaseMLEngine):
             ]
         )
 
-        return message.content
+        content_blocks = message.content
+
+        # assuming that message.content contains one ContentBlock item
+        # returning text value if type==text and content_blocks value if type!=text
+        if isinstance(content_blocks, list) and len(content_blocks) > 0:
+            content_block = content_blocks[0]
+            if content_block.type == 'text':
+                return content_block.text
+            else:
+                return content_blocks
+        else:
+            raise Exception(
+                f"Invalid output: {content_blocks}"
+            )

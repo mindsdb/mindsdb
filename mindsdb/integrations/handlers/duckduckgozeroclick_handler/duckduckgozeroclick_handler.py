@@ -97,15 +97,15 @@ class DuckDuckGoHandler(APIHandler):
 
         return response
 
-    connection_args = OrderedDict(
-        api_key={
-            "type": ARG_TYPE.PWD,
-            "description": "DuckDuckGo Zero-Click Info API key.",
-            "required": True,
-            "label": "API key",
-        },
-    )
+connection_args = OrderedDict(
+    api_key={
+        "type": ARG_TYPE.PWD,
+        "description": "DuckDuckGo Zero-Click Info API key.",
+        "required": True,
+        "label": "API key",
+    },
+)
 
-    connection_args_example = OrderedDict(
-        api_key="your_api_key_here",
-    )
+connection_args_example = OrderedDict(
+    api_key="your_api_key_here",
+)

@@ -17,6 +17,7 @@ _REST_API_LATENCY = Histogram(
     ('method', 'endpoint', 'status')
 )
 
+
 def api_endpoint_metrics(method: str, uri: str):
     def decorator_metrics(endpoint_func):
         @functools.wraps(endpoint_func)

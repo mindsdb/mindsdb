@@ -8,7 +8,7 @@ from typing import Dict
 from mindsdb.utilities.config import Config
 from tests.utils.http_test_helpers import HTTPHelperMixin
 # TODO: Refactor common fixtures out of conftest.
-from tests.integration_tests.flows.conftest import config, mindsdb_app, config, temp_dir
+from tests.integration_tests.flows.conftest import config, mindsdb_app, config, temp_dir # noqa
 
 # U by mindsdb_app fixture in conftest
 OVERRIDE_CONFIG = {
@@ -19,9 +19,9 @@ API_LIST = ["http"]
 
 
 def _get_metrics():
-    config = Config()
-    base_host = config['api']['http']['host']
-    port = config['api']['http']['port']
+    cfg = Config()
+    base_host = cfg['api']['http']['host']
+    port = cfg['api']['http']['port']
     url = f'http://{base_host}:{port}/metrics'
     return requests.get(url).text
 
@@ -32,6 +32,7 @@ def _wait_for_metric(name: str, labels: Dict[str, str], value: str, timeout: dat
     start_time = datetime.datetime.now()
     while datetime.datetime.now() - start_time < timeout:
         metrics = _get_metrics()
+        print(metrics)
         for metrics_line in metrics.split('\n'):
             if name not in metrics_line:
                 continue
@@ -58,7 +59,7 @@ class TestMetrics(HTTPHelperMixin):
             'method': 'GET',
             'status': '200'
         }
-        _ = self.api_request('get', f'/projects/mindsdb/models')
+        _ = self.api_request('get', '/projects/mindsdb/models')
         assert _wait_for_metric(
             'mindsdb_rest_api_latency_seconds_count',
             api_metric_labels,

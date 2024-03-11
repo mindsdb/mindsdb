@@ -128,7 +128,7 @@ class Integration(Resource):
                 if temp_dir_path not in file_path.parents:
                     raise Exception(f'Can not save file at path: {file_path}')
                 file.save(file_path)
-                params[key] = file_path
+                params[key] = str(file_path)
 
         is_test = params.get('test', False)
 

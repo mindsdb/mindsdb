@@ -165,11 +165,14 @@ class ExecuteCommands:
         self.datahub = session.datahub
 
     @profiler.profile()
-    def execute_command(self, statement) -> ExecuteAnswer:
+    def execute_command(self, statement, database_name: str = None) -> ExecuteAnswer:
         sql = None
         if isinstance(statement, ASTNode):
             sql = statement.to_string()
         sql_lower = sql.lower()
+
+        if database_name is None:
+            database_name = self.session.database
 
         if type(statement) is CreateDatabase:
             return self.answer_create_database(statement)
@@ -178,7 +181,6 @@ class ExecuteCommands:
         elif type(statement) is DropMLEngine:
             return self.answer_drop_ml_engine(statement)
         elif type(statement) is DropPredictor:
-            database_name = self.session.database
             if len(statement.name.parts) > 1:
                 database_name = statement.name.parts[0].lower()
             model_name = statement.name.parts[-1]
@@ -191,16 +193,16 @@ class ExecuteCommands:
                     raise e
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) is DropTables:
-            return self.answer_drop_tables(statement)
+            return self.answer_drop_tables(statement, database_name)
         elif type(statement) is DropDatasource or type(statement) is DropDatabase:
             return self.answer_drop_database(statement)
         elif type(statement) is Describe:
             # NOTE in sql 'describe table' is same as 'show columns'
-            return self.answer_describe_predictor(statement)
+            return self.answer_describe_predictor(statement, database_name)
         elif type(statement) is RetrainPredictor:
-            return self.answer_retrain_predictor(statement)
+            return self.answer_retrain_predictor(statement, database_name)
         elif type(statement) is FinetunePredictor:
-            return self.answer_finetune_predictor(statement)
+            return self.answer_finetune_predictor(statement, database_name)
         elif type(statement) is Show:
             sql_category = statement.category.lower()
             if hasattr(statement, "modes"):
@@ -208,7 +210,6 @@ class ExecuteCommands:
                     statement.modes = []
                 statement.modes = [x.upper() for x in statement.modes]
             if sql_category in ("predictors", "models"):
-                where = BinaryOperation("=", args=[Constant(1), Constant(1)])
 
                 new_statement = Select(
                     targets=[Star()],
@@ -217,7 +218,7 @@ class ExecuteCommands:
                         statement, from_name="project", like_name="name"
                     ),
                 )
-                query = SQLQuery(new_statement, session=self.session)
+                query = SQLQuery(new_statement, session=self.session, database=database_name)
                 return self.answer_select(query)
             elif sql_category == "ml_engines":
                 new_statement = Select(
@@ -226,7 +227,7 @@ class ExecuteCommands:
                     where=_get_show_where(statement, like_name="name"),
                 )
 
-                query = SQLQuery(new_statement, session=self.session)
+                query = SQLQuery(new_statement, session=self.session, database=database_name)
                 return self.answer_select(query)
             elif sql_category == "handlers":
                 new_statement = Select(
@@ -235,7 +236,7 @@ class ExecuteCommands:
                     where=_get_show_where(statement, like_name="name"),
                 )
 
-                query = SQLQuery(new_statement, session=self.session)
+                query = SQLQuery(new_statement, session=self.session, database=database_name)
                 return self.answer_select(query)
             elif sql_category == "plugins":
                 if statement.where is not None or statement.like:
@@ -246,7 +247,7 @@ class ExecuteCommands:
                     targets=[Star()],
                     from_table=Identifier(parts=["information_schema", "PLUGINS"]),
                 )
-                query = SQLQuery(new_statement, session=self.session)
+                query = SQLQuery(new_statement, session=self.session, database=database_name)
                 return self.answer_select(query)
             elif sql_category in ("databases", "schemas"):
                 new_statement = Select(
@@ -263,10 +264,10 @@ class ExecuteCommands:
                         ]
                     )
 
-                query = SQLQuery(new_statement, session=self.session)
+                query = SQLQuery(new_statement, session=self.session, database=database_name)
                 return self.answer_select(query)
             elif sql_category in ("tables", "full tables"):
-                schema = self.session.database or "mindsdb"
+                schema = database_name or "mindsdb"
                 if (
                     statement.from_table is not None
                     and statement.in_table is not None
@@ -348,7 +349,7 @@ class ExecuteCommands:
                         Identifier(parts=["TABLE_TYPE"], alias=Identifier("Table_type"))
                     )
 
-                query = SQLQuery(new_statement, session=self.session)
+                query = SQLQuery(new_statement, session=self.session, database=database_name)
                 return self.answer_select(query)
             elif sql_category in (
                 "variables",
@@ -443,7 +444,7 @@ class ExecuteCommands:
                     from_table=Identifier(parts=["information_schema", "STATISTICS"]),
                     where=statement.where,
                 )
-                query = SQLQuery(new_statement, session=self.session)
+                query = SQLQuery(new_statement, session=self.session, database=database_name)
                 return self.answer_select(query)
             # FIXME if have answer on that request, then DataGrip show warning '[S0022] Column 'Non_unique' not found.'
             elif "show create table" in sql_lower:
@@ -467,7 +468,7 @@ class ExecuteCommands:
                     ),
                     where=_get_show_where(statement, like_name="CHARACTER_SET_NAME"),
                 )
-                query = SQLQuery(new_statement, session=self.session)
+                query = SQLQuery(new_statement, session=self.session, database=database_name)
                 return self.answer_select(query)
             elif sql_category == "warnings":
                 return self.answer_show_warnings()
@@ -476,7 +477,7 @@ class ExecuteCommands:
                     targets=[Star()],
                     from_table=Identifier(parts=["information_schema", "ENGINES"]),
                 )
-                query = SQLQuery(new_statement, session=self.session)
+                query = SQLQuery(new_statement, session=self.session, database=database_name)
                 return self.answer_select(query)
             elif sql_category == "collation":
                 new_statement = Select(
@@ -492,7 +493,7 @@ class ExecuteCommands:
                     from_table=Identifier(parts=["INFORMATION_SCHEMA", "COLLATIONS"]),
                     where=_get_show_where(statement, like_name="Collation"),
                 )
-                query = SQLQuery(new_statement, session=self.session)
+                query = SQLQuery(new_statement, session=self.session, database=database_name)
                 return self.answer_select(query)
             elif sql_category == "table status":
                 # TODO improve it
@@ -514,12 +515,23 @@ class ExecuteCommands:
                     statement.where,
                     statement.like,
                     is_full=is_full,
+                    database_name=database_name,
                 )
             elif sql_category == "knowledge_bases" or sql_category == "knowledge bases":
                 select_statement = Select(
                     targets=[Star()],
                     from_table=Identifier(
                         parts=["information_schema", "knowledge_bases"]
+                    ),
+                    where=_get_show_where(statement, like_name="name"),
+                )
+                query = SQLQuery(select_statement, session=self.session, database=database_name)
+                return self.answer_select(query)
+            elif sql_category in ("agents", "jobs", "skills", "chatbots"):
+                select_statement = Select(
+                    targets=[Star()],
+                    from_table=Identifier(
+                        parts=["information_schema", sql_category]
                     ),
                     where=_get_show_where(statement, like_name="name"),
                 )
@@ -591,34 +603,34 @@ class ExecuteCommands:
             CreatePredictor,
             CreateAnomalyDetectionModel,  # we may want to specialize these in the future
         ):
-            return self.answer_create_predictor(statement)
+            return self.answer_create_predictor(statement, database_name)
         elif type(statement) is CreateView:
-            return self.answer_create_view(statement)
+            return self.answer_create_view(statement, database_name)
         elif type(statement) is DropView:
-            return self.answer_drop_view(statement)
+            return self.answer_drop_view(statement, database_name)
         elif type(statement) is Delete:
             if statement.table.parts[-1].lower() == "models_versions":
-                return self.answer_delete_model_version(statement)
+                return self.answer_delete_model_version(statement, database_name)
             if (
-                self.session.database != "mindsdb"
+                database_name != "mindsdb"
                 and statement.table.parts[0] != "mindsdb"
             ):
                 raise BadTableError(
                     "Only 'DELETE' from database 'mindsdb' is possible at this moment"
                 )
 
-            SQLQuery(statement, session=self.session, execute=True)
+            SQLQuery(statement, session=self.session, execute=True, database=database_name)
             return ExecuteAnswer(ANSWER_TYPE.OK)
 
         elif type(statement) is Insert:
-            SQLQuery(statement, session=self.session, execute=True)
+            SQLQuery(statement, session=self.session, execute=True, database=database_name)
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) is Update:
             if statement.from_select is None:
                 if statement.table.parts[-1].lower() == "models_versions":
-                    return self.answer_update_model_version(statement)
+                    return self.answer_update_model_version(statement, database_name)
 
-            SQLQuery(statement, session=self.session, execute=True)
+            SQLQuery(statement, session=self.session, execute=True, database=database_name)
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif (
             type(statement) is Alter
@@ -628,63 +640,63 @@ class ExecuteCommands:
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) is Select:
             if statement.from_table is None:
-                return self.answer_single_row_select(statement)
-            query = SQLQuery(statement, session=self.session)
+                return self.answer_single_row_select(statement, database_name)
+            query = SQLQuery(statement, session=self.session, database=database_name)
             return self.answer_select(query)
         elif type(statement) is Union:
-            query = SQLQuery(statement, session=self.session)
+            query = SQLQuery(statement, session=self.session, database=database_name)
             return self.answer_select(query)
         elif type(statement) is Explain:
-            return self.answer_show_columns(statement.target)
+            return self.answer_show_columns(statement.target, database_name=database_name)
         elif type(statement) is CreateTable:
             # TODO
-            return self.answer_apply_predictor(statement)
+            return self.answer_apply_predictor(statement, database_name)
         # -- jobs --
         elif type(statement) is CreateJob:
-            return self.answer_create_job(statement)
+            return self.answer_create_job(statement, database_name)
         elif type(statement) is DropJob:
-            return self.answer_drop_job(statement)
+            return self.answer_drop_job(statement, database_name)
         # -- triggers --
         elif type(statement) is CreateTrigger:
-            return self.answer_create_trigger(statement)
+            return self.answer_create_trigger(statement, database_name)
         elif type(statement) is DropTrigger:
-            return self.answer_drop_trigger(statement)
+            return self.answer_drop_trigger(statement, database_name)
         # -- chatbots
         elif type(statement) is CreateChatBot:
-            return self.answer_create_chatbot(statement)
+            return self.answer_create_chatbot(statement, database_name)
         elif type(statement) is UpdateChatBot:
-            return self.answer_update_chatbot(statement)
+            return self.answer_update_chatbot(statement, database_name)
         elif type(statement) is DropChatBot:
-            return self.answer_drop_chatbot(statement)
+            return self.answer_drop_chatbot(statement, database_name)
         elif type(statement) is CreateKnowledgeBase:
-            return self.answer_create_kb(statement)
+            return self.answer_create_kb(statement, database_name)
         elif type(statement) is DropKnowledgeBase:
-            return self.anwser_drop_kb(statement)
+            return self.anwser_drop_kb(statement, database_name)
         elif type(statement) is CreateSkill:
-            return self.answer_create_skill(statement)
+            return self.answer_create_skill(statement, database_name)
         elif type(statement) is DropSkill:
-            return self.answer_drop_skill(statement)
+            return self.answer_drop_skill(statement, database_name)
         elif type(statement) is UpdateSkill:
-            return self.answer_update_skill(statement)
+            return self.answer_update_skill(statement, database_name)
         elif type(statement) is CreateAgent:
-            return self.answer_create_agent(statement)
+            return self.answer_create_agent(statement, database_name)
         elif type(statement) is DropAgent:
-            return self.answer_drop_agent(statement)
+            return self.answer_drop_agent(statement, database_name)
         elif type(statement) is UpdateAgent:
-            return self.answer_update_agent(statement)
+            return self.answer_update_agent(statement, database_name)
         elif type(statement) is Evaluate:
             statement.data = parse_sql(statement.query_str, dialect="mindsdb")
-            return self.answer_evaluate_metric(statement)
+            return self.answer_evaluate_metric(statement, database_name)
         else:
             logger.warning(f"Unknown SQL statement: {sql}")
             raise NotSupportedYet(f"Unknown SQL statement: {sql}")
 
-    def answer_create_trigger(self, statement):
+    def answer_create_trigger(self, statement, database_name):
         triggers_controller = TriggersController()
 
         name = statement.name
         trigger_name = statement.name.parts[-1]
-        project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
+        project_name = name.parts[-2] if len(name.parts) > 1 else database_name
 
         triggers_controller.add(
             trigger_name,
@@ -695,23 +707,23 @@ class ExecuteCommands:
         )
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
-    def answer_drop_trigger(self, statement):
+    def answer_drop_trigger(self, statement, database_name):
         triggers_controller = TriggersController()
 
         name = statement.name
         trigger_name = statement.name.parts[-1]
-        project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
+        project_name = name.parts[-2] if len(name.parts) > 1 else database_name
 
         triggers_controller.delete(trigger_name, project_name)
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
-    def answer_create_job(self, statement: CreateJob):
+    def answer_create_job(self, statement: CreateJob, database_name):
         jobs_controller = JobsController()
 
         name = statement.name
         job_name = name.parts[-1]
-        project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
+        project_name = name.parts[-2] if len(name.parts) > 1 else database_name
 
         try:
             jobs_controller.add(job_name, project_name, statement)
@@ -721,12 +733,12 @@ class ExecuteCommands:
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
-    def answer_drop_job(self, statement):
+    def answer_drop_job(self, statement, database_name):
         jobs_controller = JobsController()
 
         name = statement.name
         job_name = name.parts[-1]
-        project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
+        project_name = name.parts[-2] if len(name.parts) > 1 else database_name
         try:
             jobs_controller.delete(job_name, project_name)
         except EntityNotExistsError:
@@ -737,11 +749,11 @@ class ExecuteCommands:
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
-    def answer_create_chatbot(self, statement):
+    def answer_create_chatbot(self, statement, database_name):
         chatbot_controller = ChatBotController()
 
         name = statement.name
-        project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
+        project_name = name.parts[-2] if len(name.parts) > 1 else database_name
         is_running = statement.params.pop("is_running", True)
 
         database = self.session.integration_controller.get(statement.database.parts[-1])
@@ -769,12 +781,12 @@ class ExecuteCommands:
         )
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
-    def answer_update_chatbot(self, statement):
+    def answer_update_chatbot(self, statement, database_name):
         chatbot_controller = ChatBotController()
 
         name = statement.name
         name_no_project = name.parts[-1]
-        project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
+        project_name = name.parts[-2] if len(name.parts) > 1 else database_name
 
         # From SET keyword parameters
         updated_name = statement.params.pop("name", None)
@@ -804,18 +816,18 @@ class ExecuteCommands:
             raise ExecutorException(f"Chatbot with name {name_no_project} not found")
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
-    def answer_drop_chatbot(self, statement):
+    def answer_drop_chatbot(self, statement, database_name):
         chatbot_controller = ChatBotController()
 
         name = statement.name
-        project_name = name.parts[-2] if len(name.parts) > 1 else self.session.database
+        project_name = name.parts[-2] if len(name.parts) > 1 else database_name
 
         chatbot_controller.delete_chatbot(name.parts[-1], project_name=project_name)
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
-    def answer_evaluate_metric(self, statement):
+    def answer_evaluate_metric(self, statement, database_name):
         try:
-            sqlquery = SQLQuery(statement.data, session=self.session)
+            sqlquery = SQLQuery(statement.data, session=self.session, database=database_name)
         except Exception as e:
             raise Exception(
                 f'Nested query failed to execute with error: "{e}", please check and try again.'
@@ -852,22 +864,22 @@ class ExecuteCommands:
             data=[[metric_value]],
         )
 
-    def answer_describe_predictor(self, statement):
+    def answer_describe_predictor(self, statement, database_name):
         value = statement.value.parts.copy()
         # project.model.version.?attrs
         parts = value[:3]
         attrs = value[3:]
-        model_info = self._get_model_info(Identifier(parts=parts), except_absent=False)
+        model_info = self._get_model_info(Identifier(parts=parts), except_absent=False, database_name=database_name)
         if model_info is None:
             # project.model.?attrs
             parts = value[:2]
             attrs = value[2:]
-            model_info = self._get_model_info(Identifier(parts=parts), except_absent=False)
+            model_info = self._get_model_info(Identifier(parts=parts), except_absent=False, database_name=database_name)
             if model_info is None:
                 # model.?attrs
                 parts = value[:1]
                 attrs = value[1:]
-                model_info = self._get_model_info(Identifier(parts=parts), except_absent=False)
+                model_info = self._get_model_info(Identifier(parts=parts), except_absent=False, database_name=database_name)
 
         if model_info is None:
             raise ExecutorException(f"Model not found: {statement.value}")
@@ -894,13 +906,13 @@ class ExecuteCommands:
             answer_type=ANSWER_TYPE.TABLE, columns=columns, data=df_dict["data"]
         )
 
-    def _get_model_info(self, identifier, except_absent=True):
+    def _get_model_info(self, identifier, except_absent=True, database_name=None):
         if len(identifier.parts) == 1:
-            identifier.parts = [self.session.database, identifier.parts[0]]
+            identifier.parts = [database_name, identifier.parts[0]]
 
         database_name, model_name, model_version = resolve_model_identifier(identifier)
         if database_name is None:
-            database_name = self.session.database
+            database_name = database_name
 
         if model_name is None:
             if except_absent:
@@ -946,8 +958,8 @@ class ExecuteCommands:
                     f"Can't start {phase_name} process while any other predictor is in status 'training' or 'generating'"
                 )
 
-    def answer_retrain_predictor(self, statement):
-        model_record = self._get_model_info(statement.name)["model_record"]
+    def answer_retrain_predictor(self, statement, database_name):
+        model_record = self._get_model_info(statement.name, database_name=database_name)["model_record"]
 
         if statement.integration_name is None:
             if model_record.data_integration_ref is not None:
@@ -993,8 +1005,8 @@ class ExecuteCommands:
 
     @profiler.profile()
     @mark_process("learn")
-    def answer_finetune_predictor(self, statement):
-        model_record = self._get_model_info(statement.name)["model_record"]
+    def answer_finetune_predictor(self, statement, database_name):
+        model_record = self._get_model_info(statement.name, database_name=database_name)["model_record"]
 
         if statement.using is not None:
             # repack using with lower names
@@ -1111,9 +1123,17 @@ class ExecuteCommands:
         if handler_module_meta is None:
             raise ExecutorException(f"There is no engine '{statement.handler}'")
 
+        params = {}
+        if statement.params:
+            for key, value in statement.params.items():
+                # convert all complex types to string
+                if not isinstance(value, (int, float)):
+                    value = str(value)
+                params[key] = value
+
         try:
             self.session.integration_controller.add(
-                name=name, engine=statement.handler, connection_args=statement.params
+                name=name, engine=statement.handler, connection_args=params
             )
         except Exception as e:
             msg = str(e)
@@ -1196,7 +1216,7 @@ class ExecuteCommands:
                 raise
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
-    def answer_drop_tables(self, statement):
+    def answer_drop_tables(self, statement, database_name):
         """answer on 'drop table [if exists] {name}'
         Args:
             statement: ast
@@ -1207,7 +1227,7 @@ class ExecuteCommands:
                 db_name = table.parts[0]
                 table = Identifier(parts=table.parts[1:])
             else:
-                db_name = self.session.database
+                db_name = database_name
 
             dn = self.session.datahub[db_name]
             if db_name is not None:
@@ -1239,8 +1259,8 @@ class ExecuteCommands:
 
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
-    def answer_create_view(self, statement):
-        project_name = self.session.database
+    def answer_create_view(self, statement, database_name):
+        project_name = database_name
         # TEMP
         if isinstance(statement.name, Identifier):
             parts = statement.name.parts
@@ -1271,7 +1291,7 @@ class ExecuteCommands:
                 query_context_controller.IGNORE_CONTEXT
             )
             try:
-                sqlquery = SQLQuery(query, session=self.session)
+                sqlquery = SQLQuery(query, session=self.session, database=database_name)
                 if sqlquery.fetch()["success"] is not True:
                     raise ExecutorException("Wrong view query")
             finally:
@@ -1287,7 +1307,7 @@ class ExecuteCommands:
                 raise
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
-    def answer_drop_view(self, statement):
+    def answer_drop_view(self, statement, database_name):
         names = statement.names
 
         for name in names:
@@ -1295,7 +1315,7 @@ class ExecuteCommands:
             if len(name.parts) > 1:
                 db_name = name.parts[0]
             else:
-                db_name = self.session.database
+                db_name = database_name
             project = self.session.database_controller.get_project(db_name)
 
             try:
@@ -1306,11 +1326,11 @@ class ExecuteCommands:
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
-    def answer_create_kb(self, statement: CreateKnowledgeBase):
+    def answer_create_kb(self, statement: CreateKnowledgeBase, database_name: str):
         project_name = (
             statement.name.parts[0]
             if len(statement.name.parts) > 1
-            else self.session.database
+            else database_name
         )
 
         if statement.storage is not None:
@@ -1340,12 +1360,12 @@ class ExecuteCommands:
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
-    def anwser_drop_kb(self, statement: DropKnowledgeBase):
+    def anwser_drop_kb(self, statement: DropKnowledgeBase, database_name: str):
         name = statement.name.parts[-1]
         project_name = (
             statement.name.parts[0]
             if len(statement.name.parts) > 1
-            else self.session.database
+            else database_name
         )
 
         # delete the knowledge base
@@ -1357,12 +1377,12 @@ class ExecuteCommands:
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
-    def answer_create_skill(self, statement):
+    def answer_create_skill(self, statement, database_name):
         name = statement.name.parts[-1]
         project_name = (
             statement.name.parts[0]
             if len(statement.name.parts) > 1
-            else self.session.database
+            else database_name
         )
 
         try:
@@ -1378,12 +1398,12 @@ class ExecuteCommands:
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
-    def answer_drop_skill(self, statement):
+    def answer_drop_skill(self, statement, database_name):
         name = statement.name.parts[-1]
         project_name = (
             statement.name.parts[0]
             if len(statement.name.parts) > 1
-            else self.session.database
+            else database_name
         )
 
         try:
@@ -1394,12 +1414,12 @@ class ExecuteCommands:
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
-    def answer_update_skill(self, statement):
+    def answer_update_skill(self, statement, database_name):
         name = statement.name.parts[-1]
         project_name = (
             statement.name.parts[0]
             if len(statement.name.parts) > 1
-            else self.session.database
+            else database_name
         )
 
         type = statement.params.pop('type', None)
@@ -1416,12 +1436,12 @@ class ExecuteCommands:
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
-    def answer_create_agent(self, statement):
+    def answer_create_agent(self, statement, database_name):
         name = statement.name.parts[-1]
         project_name = (
             statement.name.parts[0]
             if len(statement.name.parts) > 1
-            else self.session.database
+            else database_name
         )
 
         skills = statement.params.pop('skills', [])
@@ -1439,12 +1459,12 @@ class ExecuteCommands:
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
-    def answer_drop_agent(self, statement):
+    def answer_drop_agent(self, statement, database_name):
         name = statement.name.parts[-1]
         project_name = (
             statement.name.parts[0]
             if len(statement.name.parts) > 1
-            else self.session.database
+            else database_name
         )
 
         try:
@@ -1455,12 +1475,12 @@ class ExecuteCommands:
 
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
-    def answer_update_agent(self, statement):
+    def answer_update_agent(self, statement, database_name):
         name = statement.name.parts[-1]
         project_name = (
             statement.name.parts[0]
             if len(statement.name.parts) > 1
-            else self.session.database
+            else database_name
         )
 
         model = statement.params.pop('model', None)
@@ -1482,8 +1502,8 @@ class ExecuteCommands:
         return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
 
     @mark_process("learn")
-    def answer_create_predictor(self, statement: CreatePredictor):
-        integration_name = self.session.database
+    def answer_create_predictor(self, statement: CreatePredictor, database_name):
+        integration_name = database_name
 
         # allow creation in non-active projects, e.g. 'create mode proj.model' works whether `proj` is active or not
         if len(statement.name.parts) > 1:
@@ -1533,11 +1553,12 @@ class ExecuteCommands:
         where: Optional[Operation] = None,
         like: Optional[str] = None,
         is_full=False,
+        database_name=None,
     ):
         if len(target.parts) > 1:
             db = target.parts[0]
-        elif isinstance(self.session.database, str) and len(self.session.database) > 0:
-            db = self.session.database
+        elif isinstance(database_name, str) and len(database_name) > 0:
+            db = database_name
         else:
             db = "mindsdb"
         table_name = target.parts[-1]
@@ -1579,10 +1600,10 @@ class ExecuteCommands:
             where=new_where,
         )
 
-        query = SQLQuery(new_statement, session=self.session)
+        query = SQLQuery(new_statement, session=self.session, database=database_name)
         return self.answer_select(query)
 
-    def answer_single_row_select(self, statement):
+    def answer_single_row_select(self, statement, database_name):
         columns = []
         data = []
         for target in statement.targets:
@@ -1604,7 +1625,7 @@ class ExecuteCommands:
 
                 functions_results = {
                     # 'connection_id': self.executor.sqlserver.connection_id,
-                    "database": self.session.database,
+                    "database": database_name,
                     "current_user": self.session.username,
                     "user": self.session.username,
                     "version": "8.0.17",
@@ -1992,8 +2013,8 @@ class ExecuteCommands:
         data = [[self.context.get('connection_id')]]
         return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=data)
 
-    def answer_apply_predictor(self, statement):
-        SQLQuery(statement, session=self.session, execute=True)
+    def answer_apply_predictor(self, statement, database_name):
+        SQLQuery(statement, session=self.session, execute=True, database=database_name)
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def answer_select(self, query):
@@ -2005,13 +2026,13 @@ class ExecuteCommands:
             data=data["result"],
         )
 
-    def answer_update_model_version(self, statement):
+    def answer_update_model_version(self, statement, database_name):
 
         # get project name
         if len(statement.table.parts) > 1:
             project_name = statement.table.parts[0]
         else:
-            project_name = self.session.database
+            project_name = database_name
 
         project_datanode = self.datahub.get(project_name)
         if project_datanode is None:
@@ -2024,7 +2045,9 @@ class ExecuteCommands:
             where=statement.where,
         )
 
-        models, _ = project_datanode.query(query=query, session=self.session)
+        data, columns_info = project_datanode.query(query=query, session=self.session)
+        col_names = [col['name'] for col in columns_info]
+        models = [dict(zip(col_names, item)) for item in data]
 
         # get columns for update
         kwargs = {}
@@ -2035,12 +2058,12 @@ class ExecuteCommands:
         self.session.model_controller.update_model_version(models, **kwargs)
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
-    def answer_delete_model_version(self, statement):
+    def answer_delete_model_version(self, statement, database_name):
         # get project name
         if len(statement.table.parts) > 1:
             project_name = statement.table.parts[0]
         else:
-            project_name = self.session.database
+            project_name = database_name
 
         project_datanode = self.datahub.get(project_name)
         if project_datanode is None:
@@ -2053,7 +2076,9 @@ class ExecuteCommands:
             where=statement.where,
         )
 
-        models, _ = project_datanode.query(query=query, session=self.session)
+        data, columns_info = project_datanode.query(query=query, session=self.session)
+        col_names = [col['name'] for col in columns_info]
+        models = [dict(zip(col_names, item)) for item in data]
 
         self.session.model_controller.delete_model_version(models)
         return ExecuteAnswer(ANSWER_TYPE.OK)

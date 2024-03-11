@@ -8,13 +8,13 @@ import openai
 import pandas as pd
 import requests
 import writer
-from langchain.llms import Writer
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.docstore.document import Document
-from langchain.document_loaders import DataFrameLoader
 from langchain.embeddings.base import Embeddings
 from langchain.embeddings.huggingface import HuggingFaceEmbeddings
-from langchain.vectorstores import FAISS, Chroma, VectorStore
+from langchain_community.llms import Writer
+from langchain_community.document_loaders import DataFrameLoader
+from langchain_community.vectorstores import FAISS, Chroma, VectorStore
 from pydantic import BaseModel, Extra, Field, validator
 
 from mindsdb.integrations.handlers.chromadb_handler.chromadb_handler import get_chromadb
@@ -279,6 +279,7 @@ class RAGBaseParameters(BaseModel):
 
     llm_params: Any
     vector_store_folder_name: str
+    input_column: str
     use_gpu: bool = False
     embeddings_batch_size: int = MAX_EMBEDDINGS_BATCH_SIZE  # not used, leaving in place to prevent breaking changes
     prompt_template: str = DEFAULT_QA_PROMPT_TEMPLATE

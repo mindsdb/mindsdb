@@ -4,14 +4,18 @@ import json
 import os
 import sys
 import tempfile
+import time
 from unittest import mock
 from pathlib import Path
 
 import duckdb
 import numpy as np
 import pandas as pd
+from mindsdb.utilities import log
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql import parse_sql
+
+logger = log.getLogger(__name__)
 
 
 def unload_module(path):
@@ -74,7 +78,10 @@ class BaseUnitTest:
     def teardown_class(cls):
         # remove tmp db file
         cls.db.session.close()
-        os.unlink(cls.db_file)
+        try:
+            os.unlink(cls.db_file)
+        except PermissionError as e:
+            logger.warning('Unable to clean up temporary database file: %s', str(e))
 
         # remove environ for next tests
         del os.environ["MINDSDB_DB_CON"]
@@ -83,7 +90,14 @@ class BaseUnitTest:
         unload_module("mindsdb")
 
     def setup_method(self):
+        self._dummy_db_path = os.path.join(tempfile.mkdtemp(), '_mindsdb_duck_db')
         self.clear_db(self.db)
+
+    def teardown_method(self):
+        try:
+            os.unlink(self._dummy_db_path)
+        except (PermissionError, FileNotFoundError) as e:
+            logger.warning('Unable to clean up temporary database file: %s', str(e))
 
     def clear_db(self, db):
         # drop
@@ -127,6 +141,10 @@ class BaseUnitTest:
         )
         db.session.add(r)
         r = db.Integration(
+            name="langchain", data={}, engine="langchain"
+        )
+        db.session.add(r)
+        r = db.Integration(
             name="langchain_embedding", data={}, engine="langchain_embedding"
         )
         db.session.add(r)
@@ -135,6 +153,8 @@ class BaseUnitTest:
         r = db.Integration(name="rag", data={}, engine="rag")
         db.session.add(r)
         r = db.Integration(name="dummy_llm", data={}, engine="dummy_llm")
+        db.session.add(r)
+        r = db.Integration(name="dummy_data", data={'db_path': self._dummy_db_path}, engine="dummy_data")
         db.session.add(r)
         r = db.Integration(name="litellm", data={}, engine="litellm")
         db.session.add(r)
@@ -167,6 +187,35 @@ class BaseUnitTest:
 
         db.session.commit()
         return db
+
+    def set_data(self, table, data):
+        con = duckdb.connect(self._dummy_db_path)
+        con.execute('DROP TABLE IF EXISTS {}'.format(table))
+        con.execute('CREATE TABLE {} AS SELECT * FROM data'.format(table))
+
+    def wait_predictor(self, project, name, timeout=100):
+        """
+        Wait for the predictor to be created,
+        raising an exception if predictor creation fails or exceeds timeout
+        """
+        for attempt in range(timeout):
+            ret = self.run_sql(f"select * from {project}.models where name='{name}'")
+            if not ret.empty:
+                status = ret["STATUS"][0]
+                if status == "complete":
+                    return
+                elif status == "error":
+                    raise RuntimeError("Predictor failed", ret["ERROR"][0])
+            time.sleep(0.5)
+        raise RuntimeError("Predictor wasn't created")
+
+    def run_sql(self, sql):
+        """Execute SQL and return a DataFrame, raising an AssertionError if an error occurs"""
+        ret = self.command_executor.execute_command(parse_sql(sql, dialect="mindsdb"))
+        assert ret.error_code is None, f"SQL execution failed with error: {ret.error_code}"
+        if ret.data is not None:
+            columns = [col.alias if col.alias else col.name for col in ret.columns]
+            return pd.DataFrame(ret.data, columns=columns)
 
     @staticmethod
     def ret_to_df(ret):
@@ -256,6 +305,10 @@ class BaseExecutorTest(BaseUnitTest):
         self.mock_config = config_patch.__enter__()
         self.mock_config.side_effect = lambda x: None
 
+    def teardown_method(self):
+        # Don't want cache to pick up a stale version with the wrong duckdb_path.
+        self.command_executor.session.integration_controller.delete('dummy_data')
+
     def save_file(self, name, df):
         file_path = tempfile.mktemp(prefix="mindsdb_file_")
         df.to_parquet(file_path)
@@ -327,7 +380,10 @@ class BaseExecutorTest(BaseUnitTest):
             for table, df in tables.items():
                 con.register(table, df)
             try:
-                result_df = con.execute(query).fetchdf()
+                con.execute(query)
+                columns = [c[0] for c in con.description]
+                result_df = pd.DataFrame(con.fetchall(), columns=columns)
+
                 result_df = result_df.replace({np.nan: None})
             except Exception:
                 # it can be not supported command like update or insert

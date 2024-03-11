@@ -390,8 +390,11 @@ class InformationSchemaDataNode(DataNode):
     def get(self, name):
         name_lower = name.lower()
 
-        if name.lower() == "information_schema":
+        if name_lower == "information_schema":
             return self
+
+        if name_lower == 'log':
+            return self.database_controller.get_system_db('log')
 
         if name_lower in self.persis_datanodes:
             return self.persis_datanodes[name_lower]
@@ -696,14 +699,19 @@ class InformationSchemaDataNode(DataNode):
         columns = self.information_schema['KNOWLEDGE_BASES']
 
         # columns: NAME, PROJECT, MODEL, STORAGE
-        data = [
-            (
+        data = []
+
+        for kb in kb_list:
+            embedding_model = kb.embedding_model
+            vector_database = kb.vector_database
+            vector_database_name = '' if vector_database is None else vector_database.name
+
+            data.append((
                 kb.name,
                 project_name,
-                kb.embedding_model.name,
-                kb.vector_database.name + '.' + kb.vector_database_table
-            ) for kb in kb_list
-        ]
+                embedding_model.name if embedding_model is not None else None,
+                vector_database_name + '.' + kb.vector_database_table
+            ))
 
         return pd.DataFrame(data, columns=columns)
 
@@ -1043,4 +1051,4 @@ class InformationSchemaDataNode(DataNode):
 
         columns_info = [{"name": k, "type": v} for k, v in data.dtypes.items()]
 
-        return data.to_dict(orient="records"), columns_info
+        return data.to_dict(orient="split")['data'], columns_info

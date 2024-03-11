@@ -105,7 +105,7 @@ db.house_sales.find({
 Append data to collection:
 
 ```
-db.house_sales.insert({
+db.house_sales.insertOne({
     'real_price': 10000
 })
 ```
@@ -131,7 +131,7 @@ From mongo:
 // working with mindsdb database
 use mindsdb
 
-db.predictors.insert(
+db.models.insertOne(
 {
      "name": "sales_model",
      "predict": "sale_price",
@@ -153,7 +153,7 @@ db.predictors.insert(
 Retrain predictor: 
 The same syntax as create model, but using "action": "retrain"
 ```
-db.models.insert({
+db.models.insertOne({
      "name": "sales_model",
      "action": "retrain",
 })
@@ -162,7 +162,7 @@ db.models.insert({
 Finetune predictor:
 The same syntax as create model, but using "action": "finetune"
 ```
-db.models.insert({
+db.models.insertOne({
      "name": "sales_model",
      "action": "finetune",
 })
@@ -186,13 +186,13 @@ You can unnest it using aggregate mongo query:
 - $unwind - is doing unnesting
 - $project - is moving keys to top level
 
-## List of predictors from mongo:
+## List of models from mongo:
 ```
-// all predictors
-db.predictors.find({})
+// all models
+db.models.find({})
 
 // filter by name
-db.predictors.find({'name': "sales_model"})
+db.models.find({'name': "sales_model"})
 ```
 
 
@@ -307,9 +307,9 @@ db.sales_model.stats({'scale':'ensemble'})
 ```
 
 
-## Delete predictor 
+## Delete models 
 ```
-db.predictors.deleteOne({'name': "sales_model"})
+db.models.deleteOne({'name': "sales_model"})
 ```
 
 ## ML Engines
@@ -319,7 +319,7 @@ db.predictors.deleteOne({'name': "sales_model"})
 `CREATE ml_engine ...` alternative in mongo:
 
 ```
-db.ml_engines.insertOne({'name': "openai_2", "handler": "openai", "params": {"api_key": "qqq"}})
+db.ml_engines.insertOne({'name': "openai_2", "handler": "openai", "params": {"openai_api_key": "qqq"}})
 ```
 
 **List**
@@ -342,7 +342,7 @@ db.ml_engines.deleteOne({"name": "openai_2"})
 
 **Create**
 ```
-db.jobs.insert({
+db.jobs.insertOne({
     'name': 'job1',
     'schedule_str': 'every day',
     'start_at': '2023-03-30',    
@@ -372,7 +372,7 @@ in case of mongo syntax it will be converted to sql
 
 One more example:
 ```
-db.jobs.insert({
+db.jobs.insertOne({
     'name': 'job2',
     'query': "select * from models"
 })

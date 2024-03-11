@@ -8,11 +8,11 @@
  * permission of MindsDB Inc
  *******************************************************
 """
-import inspect
 import re
+import inspect
+from textwrap import dedent
 
 from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import Identifier
 from mindsdb_sql.planner.steps import (
     ApplyTimeseriesPredictorStep,
     ApplyPredictorRowStep,
@@ -22,11 +22,11 @@ from mindsdb_sql.planner.steps import (
 from mindsdb_sql.exceptions import PlanningException
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.planner import query_planner
-from mindsdb_sql.planner.utils import query_traversal
 
-from mindsdb.api.executor.utilities.sql import query_df
+from mindsdb.api.executor.utilities.sql import query_df, get_query_models
 from mindsdb.interfaces.model.functions import get_model_record
 from mindsdb.api.executor.exceptions import (
+    BadTableError,
     UnknownError,
     LogicError,
 )
@@ -44,11 +44,16 @@ class SQLQuery:
 
     step_handlers = {}
 
-    def __init__(self, sql, session, execute=True):
+    def __init__(self, sql, session, execute=True, database=None):
         self.session = session
 
+        if database is not None:
+            self.database = database
+        else:
+            self.database = session.database
+
         self.context = {
-            'database': None if session.database == '' else session.database.lower(),
+            'database': None if self.database == '' else self.database.lower(),
             'row_id': 0
         }
 
@@ -102,24 +107,9 @@ class SQLQuery:
 
         predictor_metadata = []
 
-        query_tables = []
+        query_tables = get_query_models(self.query, default_database=self.database)
 
-        def get_all_query_tables(node, is_table, **kwargs):
-            if is_table and isinstance(node, Identifier):
-                table_name = node.parts[-1]
-                table_version = None
-                project_name = self.session.database
-                if table_name.isdigit():
-                    # is predictor version
-                    table_version = int(table_name)
-                    table_name = node.parts[-2]
-                if table_name != node.parts[0]:
-                    project_name = node.parts[0]
-                query_tables.append((table_name, table_version, project_name))
-
-        query_traversal(self.query, get_all_query_tables)
-
-        for table_name, table_version, project_name in query_tables:
+        for project_name, table_name, table_version in query_tables:
             args = {
                 'name': table_name,
                 'project_name': project_name
@@ -132,8 +122,19 @@ class SQLQuery:
             if model_record is None:
                 continue
 
-            if isinstance(model_record.data, dict) is False or 'error' in model_record.data:
-                continue
+            if model_record.status == 'error':
+                dot_version_str = ''
+                and_version_str = ''
+                if table_version is not None:
+                    dot_version_str = f'.{table_version}'
+                    and_version_str = f' and version = {table_version}'
+
+                raise BadTableError(dedent(f'''\
+                    The model '{table_name}{dot_version_str}' cannot be used as it is currently in 'error' status.
+                    For detailed information about the error, please execute the following command:
+
+                        select error from information_schema.models where name = '{table_name}'{and_version_str};
+                '''))
 
             ts_settings = model_record.learn_args.get('timeseries_settings', {})
             predictor = {
@@ -163,7 +164,7 @@ class SQLQuery:
 
             predictor_metadata.append(predictor)
 
-        database = None if self.session.database == '' else self.session.database.lower()
+        database = None if self.database == '' else self.database.lower()
 
         self.context['predictor_metadata'] = predictor_metadata
         self.planner = query_planner.QueryPlanner(

@@ -1,0 +1,77 @@
+---
+title: Hugging Face Inference API
+sidebarTitle: Hugging Face Inference API
+---
+
+This documentation describes the integration of MindsDB with [Hugging Face Inference API](https://huggingface.co/inference-endpoints/serverless).
+The integration allows for the deployment of Hugging Face models through Inference API within MindsDB, providing the models with access to data from various data sources.
+
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To use Hugging Face Inference API within MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Obtain the API key for Hugging Face Inference API required to deploy and use Hugging Face models through Inference API within MindsDB. Generate tokens in the `Settings -> Access Tokens` tab of the Hugging Face account.
+
+## Setup
+
+Create an AI engine from the [Hugging Face Inference API handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/huggingface_api_handler).
+
+```sql
+CREATE ML_ENGINE huggingface_api_engine
+FROM huggingface_api
+USING
+      huggingface_api_api_key = 'api-key-value';
+```
+
+Create a model using `huggingface_api_engine` as an engine.
+
+```sql
+CREATE MODEL huggingface_api_model
+PREDICT target_column
+USING
+      engine = 'huggingface_api_engine',     -- engine name as created via CREATE ML_ENGINE
+      task = 'task_name',                -- choose one of 'text-classification', 'text-generation', 'question-answering', 'sentence-similarity', 'zero-shot-classification', 'summarization', 'fill-mask', 'image-classification', 'object-detection', 'automatic-speech-recognition', 'audio-classification'
+      input_column = 'column_name',      -- column that stores input/question to the model
+      labels = ['label 1', 'label 2'];   -- labels used to classify data (used for classification tasks)
+```
+
+## Usage
+
+The following usage examples utilize `huggingface_api_engine` to create a model with the `CREATE MODEL` statement.
+
+Create a model to classify input text as spam or ham.
+
+```sql
+CREATE MODEL spam_classifier
+PREDICT is_spam
+USING
+      engine = 'huggingface_api_engine',
+      task = 'text-classification',
+      column = 'text';
+```
+
+Query the model to get predictions.
+
+```sql
+SELECT text, is_spam
+FROM spam_classifier
+WHERE text = 'Subscribe to this channel asap';
+```
+
+Here is the output:
+
+```sql
++--------------------------------+---------+
+| text                           | is_spam |
++--------------------------------+---------+
+| Subscribe to this channel asap | spam    |
++--------------------------------+---------+
+```
+
+<Tip>
+**Next Steps**
+
+Follow [this link](/sql/tutorials/hugging-face-inference-api-examples) to see more use case examples.
+</Tip>

@@ -95,7 +95,7 @@ Here is how to install the dependencies in the Docker container:
     ```bash
     pip install mindsdb[handler_name]
     ```
-    For example, run this command to install dependencies for OpenAI:
+    For example, run this command to install dependencies for the [OpenAI handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/openai_handler):
     ```bash
     pip install mindsdb[openai]
     ```
@@ -158,7 +158,7 @@ The default configuration for MindsDB's Docker image is stored as a JSON code, a
 To override the default configuration, you can mount a config file over `/root/mindsdb_config.json`, as below.
 
 ```bash
-docker run -v mbd_config.json:/root/mindsdb_config.json mindsdb/mindsdb
+docker run -v mdb_config.json:/root/mindsdb_config.json mindsdb/mindsdb
 ```
 
 ## Known Issues

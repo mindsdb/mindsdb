@@ -14,6 +14,7 @@ from pyod.models.knn import KNN
 from pyod.models.pca import PCA
 from xgboost import XGBClassifier
 from sklearn.naive_bayes import GaussianNB
+from sklearn.preprocessing import StandardScaler
 import numpy as np
 import os
 
@@ -62,7 +63,6 @@ def choose_model(df, model_name=None, model_type=None, target=None, supervised_t
         model = None
     if model_type == "unsupervised":
         return train_unsupervised(training_df, model=model)
-
     X_train = training_df.drop(target, axis=1)
     y_train = training_df[target].astype(int)
 
@@ -97,7 +97,9 @@ def preprocess_data(df):
     df[categorical_columns] = df[categorical_columns].apply(lambda x: x.cat.codes)
     df = pd.get_dummies(df, columns=categorical_columns)
     numeric_columns = list(df.select_dtypes(include=["number"]).columns.values)
-    df[numeric_columns] = (df[numeric_columns] - df[numeric_columns].mean()) / df[numeric_columns].std()
+
+    scaler = StandardScaler()
+    df[numeric_columns] = scaler.fit_transform(df[numeric_columns])
     return df
 
 
@@ -145,6 +147,7 @@ class AnomalyDetectionHandler(BaseMLEngine):
             model_class_names.append(model.__class__.__name__)
         model_args = {"model_path": model_save_paths, "target": model_targets, "model_name": model_class_names}
         self.model_storage.json_set("model_args", model_args)
+        self.model_storage.folder_sync("context")
 
     def predict(self, df, args=None):
         """Load a model from the model storage and use it to make predictions"""

@@ -217,7 +217,7 @@
         "what-is-mindsdb",
         
         {
-          "group": "Setup/Install",
+          "group": "Setup & Install",
           "pages": [
             "setup/self-hosted/docker",
             "setup/self-hosted/docker-desktop",
@@ -225,8 +225,7 @@
               "group": "Cloud",
               "pages": [
                 "setup/aws",
-                "setup/gcp",
-                "setup/community-deploys-mindsdb"
+                "setup/gcp"
               ]
             },
             {
@@ -241,8 +240,8 @@
         {
           "group": "Quickstart",
           "pages": [
+            "quickstart-tutorial",
             "mindsdb-gui",
-            "connect/postgres-client",
             "sql/table-structure"
             
           ]
@@ -251,15 +250,12 @@
     },
     {
       "group": "Concepts",
-      "pages": [     
+      "pages": [
+        "generative-ai-tables",  
         {
-          "group": "DataSources",
+          "group": "Data Sources",
           "pages": [
-            "datasources/overview",
-            "sql/create/database",
-            "sql/project",
-            "sql/create/view",
-            "sql/create/file",
+            "data_sources",
             {
               "group": "Data Preparation",
               "pages": [
@@ -270,20 +266,7 @@
             }
           ] 
         },
-        {
-          "group": "JOBS & Automation",
-          "pages": [
-            "sql/create/jobs",
-            "sql/create/trigger"
-          ]
-        },
-        {
-          "group": "AI-Tables",
-          "pages":[
-            "ai-engines/overview",
-            "generative-ai-tables"
-          ] 
-        }
+        "automation"
       ]
     },
     {
@@ -309,8 +292,15 @@
           "group": "Chatbots with Jobs",
           "pages": [
             "sql/tutorials/slack-chatbot",
-            "sql/tutorials/twitterbot-mariadb-enterprise-server-skysql",
+            "sql/tutorials/twitter-chatbot",
             "sql/tutorials/twilio-chatbot"
+          ]
+        },
+        {
+          "group": "Alert Systems",
+          "pages": [
+            "sql/tutorials/customer-reviews-notifications",
+            "sql/tutorials/real-time-trading-forecasts"
           ]
         },
         {
@@ -357,26 +347,30 @@
           "group": "Forecasting",
           "pages": [
             "sql/tutorials/house-sales-forecasting",
-            "sql/tutorials/house-sales-statsforecast",
-            "sql/tutorials/eeg-forecasting",
-            "sql/tutorials/time-series-community"
+            "sql/tutorials/expenditures-statsforecast",
+            "sql/tutorials/eeg-forecasting"
           ]
         },
         {
           "group": "Classification",
           "pages": [
-            "sql/tutorials/customer-churn",
-            "sql/tutorials/classification-community"
+            "sql/tutorials/customer-churn"
           ]
         },
         {
           "group": "Regression",
           "pages": [
-            "sql/tutorials/home-rentals",
-            "sql/tutorials/regression-community"
+            "sql/tutorials/home-rentals"
           ]
         },
-        "tutorials"
+        {
+          "group": "Natural Language Processing",
+          "pages": [
+            "sql/tutorials/text-sentiment-hf",
+            "sql/tutorials/hugging-face-examples",
+            "sql/tutorials/hugging-face-inference-api-examples"
+          ]
+        }
       ]
     },
     {
@@ -444,7 +438,8 @@
           "pages": [
             "mindsdb_sql/sql/get-single-prediction",
             "mindsdb_sql/sql/get-batch-predictions",
-            "mindsdb_sql/sql/api/join"
+            "mindsdb_sql/sql/api/join",
+            "mindsdb_sql/sql/api/evaluate"
           ]
         },
         {
@@ -513,7 +508,7 @@
           ]
         },
         {
-          "group": "ML Engines",
+          "group": "AI Engines",
           "pages": [
             "rest/ml_engines/create",
             "rest/ml_engines/delete",
@@ -852,6 +847,7 @@
     {
       "group": "Data Sources",
       "pages": [
+        "integrations/data-overview",
         {
           "group": "Applications",
           "pages": [
@@ -967,28 +963,31 @@
     {
       "group": "AI Engines",
       "pages": [
+        "integrations/ai-overview",
         {
           "group": "Large Language Models",
           "pages": [
-            "integrations/ai-engines/ollama",
-            "integrations/ai-engines/replicate-llm",
-            "integrations/ai-engines/vertex",
             "integrations/ai-engines/anthropic",
+            "integrations/ai-engines/anyscale",
             "integrations/ai-engines/cohere",
-            "integrations/ai-engines/openai",
             "integrations/ai-engines/huggingface",
+            "integrations/ai-engines/huggingface_inference_api",
             "integrations/ai-engines/langchain",
             "integrations/ai-engines/llamaindex",
             "integrations/ai-engines/monkeylearn",
-            "integrations/ai-engines/rag"           
+            "integrations/ai-engines/ollama",
+            "integrations/ai-engines/openai",
+            "integrations/ai-engines/replicate-llm",
+            "integrations/ai-engines/rag",
+            "integrations/ai-engines/vertex"       
           ]
         },
         {
           "group": "Bring Your Own Models",
           "pages": [
             "integrations/ai-engines/byom",
-            "integrations/ai-engines/ray-serve",
-            "integrations/ai-engines/mlflow"
+            "integrations/ai-engines/mlflow",
+            "integrations/ai-engines/ray-serve"
           ]
         },
         {
@@ -1001,8 +1000,8 @@
         {
           "group": "Time Series Models",
           "pages": [
-            "integrations/ai-engines/statsforecast",
             "integrations/ai-engines/neuralforecast",
+            "integrations/ai-engines/statsforecast",
             "integrations/ai-engines/timegpt"
           ]
         },

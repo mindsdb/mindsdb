@@ -7,6 +7,14 @@ This is the implementation of the Microsoft SQL Server data handler for MindsDB.
 
 [Microsoft SQL Server](https://www.microsoft.com/en-us/sql-server) is a relational database management system developed by Microsoft. As a database server, it stores and retrieves data as requested by other software applications, which may run either on the same computer or on another computer across a network.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect Microsoft SQL Server to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to Microsoft SQL Server.
+
 ## Implementation
 
 This handler is implemented using `pymssql`, the Python language extension module that provides access to Microsoft SQL Server from Python scripts.
@@ -18,10 +26,6 @@ The required arguments to establish a connection are as follows:
 * `database` is the database name.
 * `user` is the database user.
 * `password` is the database password.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/mssql_handler) and run this command:   `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

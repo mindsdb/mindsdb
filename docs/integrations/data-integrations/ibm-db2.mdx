@@ -7,6 +7,14 @@ This is the implementation of the IBM Db2 data handler for MindsDB.
 
 [Db2](https://www.ibm.com/products/db2/database) is a database product from IBM. It is a Relational Database Management System (RDBMS). Db2 is designed to store, analyze, and retrieve the data efficiently. Db2 product is extended with the support of Object-Oriented features and non-relational structures with XML.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect IBM Db2 to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to IBM Db2.
+
 ## Implementation
 
 This handler is implemented using `ibm_db/ibm_db_dbi`, a Python library that allows you to use Python code to run SQL commands on the Db2 database.
@@ -19,10 +27,6 @@ The required arguments to establish a connection are as follows:
 * `port` is the port through which TCP/IP connection is to be made.
 * `database` is the database name to be connected.
 * `schema` is required to get the tables.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/db2_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

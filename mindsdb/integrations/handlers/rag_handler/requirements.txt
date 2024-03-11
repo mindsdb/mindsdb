@@ -7,4 +7,4 @@ writerai~=1.1.0
 pydantic
 sentence-transformers
 faiss-cpu
-langchain==0.0.347
+langchain-community  # for Writer LLM integration

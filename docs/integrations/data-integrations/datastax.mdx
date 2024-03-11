@@ -7,6 +7,14 @@ This is the implementation of the DataStax data handler for MindsDB.
 
 [DataStax](https://www.datastax.com/) Astra DB is a cloud database-as-a-service based on Apache Cassandra. DataStax also offers DataStax Enterprise (DSE), an on-premises database built on Apache Cassandra, and Astra Streaming, a messaging and event streaming cloud service based on Apache Pulsar.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect DataStax to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to DataStax.
+
 ## Implementation
 
 DataStax Astra DB is API-compatible with Apache Cassandra and ScyllaDB. Therefore, its implementation extends the ScyllaDB handler and is using the `scylla-driver` Python library.
@@ -16,10 +24,6 @@ The required arguments to establish a connection are as follows:
 * `user` is the user to authenticate.
 * `password` is the password to authenticate the user.
 * `secure_connect_bundle` is the path to the `secure_connect_bundle` zip file.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/datastax_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

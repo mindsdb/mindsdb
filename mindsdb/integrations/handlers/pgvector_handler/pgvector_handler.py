@@ -1,3 +1,4 @@
+import json
 from collections import OrderedDict
 from typing import List, Union
 
@@ -203,6 +204,9 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         Insert data into the pgvector table database.
         """
         data_dict = data.to_dict(orient="list")
+
+        if 'metadata' in data_dict:
+            data_dict['metadata'] = [json.dumps(i) for i in data_dict['metadata']]
         transposed_data = list(zip(*data_dict.values()))
 
         columns = ", ".join(data.keys())

@@ -1,12 +1,23 @@
-from flask import Flask
-from prometheus_client import make_wsgi_app
-from werkzeug.middleware.dispatcher import DispatcherMiddleware
+import os
+
+from flask import Flask, Response
+from prometheus_client import generate_latest, multiprocess, CollectorRegistry
+
+from mindsdb.utilities import log
+
+_CONTENT_TYPE_LATEST = str('text/plain; version=0.0.4; charset=utf-8')
+logger = log.getLogger(__name__)
 
 
 def init_metrics(app: Flask):
-    # Add prometheus WSGI middleware to route /metrics requests
-    # See: https://prometheus.github.io/client_python/exporting/http/flask/
-    # See: https://flask.palletsprojects.com/en/3.0.x/patterns/appdispatch/#combining-applications
-    app.wsgi_app = DispatcherMiddleware(app.wsgi_app, {
-        '/metrics': make_wsgi_app()
-    })
+    if os.environ.get('PROMETHEUS_MULTIPROC_DIR', None) is None:
+        logger.warning('PROMETHEUS_MULTIPROC_DIR environment variable is not set and is needed for metrics server.')
+        return
+    # See: https://prometheus.github.io/client_python/multiprocess/
+    registry = CollectorRegistry()
+    multiprocess.MultiProcessCollector(registry)
+
+    # It's important that the PROMETHEUS_MULTIPROC_DIR env variable is set, and the dir is empty.
+    @app.route('/metrics')
+    def metrics():
+        return Response(generate_latest(registry), mimetype=_CONTENT_TYPE_LATEST)

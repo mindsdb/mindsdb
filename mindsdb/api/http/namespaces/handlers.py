@@ -30,6 +30,10 @@ class HandlersList(Resource):
         for handler_type, handler_meta in handlers.items():
             row = {'name': handler_type}
             row.update(handler_meta)
+
+            # check if handler is AWS product
+            row['is_aws'] = self._is_aws_product(handler_meta['import']['title'])
+
             result.append(row)
         return result
     

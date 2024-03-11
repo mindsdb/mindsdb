@@ -156,6 +156,13 @@ class IntegrationDataNode(DataNode):
         query_time_with_labels = metrics.INTEGRATION_HANDLER_QUERY_TIME.labels(
             get_class_name(self.integration_handler), result.type)
         query_time_with_labels.observe(elapsed_seconds)
+
+        num_rows = 0
+        if result.data_frame is not None:
+            num_rows = len(result.data_frame.index)
+        response_size_with_labels = metrics.INTEGRATION_HANDLER_RESPONSE_SIZE.labels(
+            get_class_name(self.integration_handler), result.type)
+        response_size_with_labels.observe(num_rows)
         return result
 
     def _native_query(self, native_query):
@@ -165,6 +172,13 @@ class IntegrationDataNode(DataNode):
         query_time_with_labels = metrics.INTEGRATION_HANDLER_QUERY_TIME.labels(
             get_class_name(self.integration_handler), result.type)
         query_time_with_labels.observe(elapsed_seconds)
+
+        num_rows = 0
+        if result.data_frame is not None:
+            num_rows = len(result.data_frame.index)
+        response_size_with_labels = metrics.INTEGRATION_HANDLER_RESPONSE_SIZE.labels(
+            get_class_name(self.integration_handler), result.type)
+        response_size_with_labels.observe(num_rows)
         return result
 
     @profiler.profile()

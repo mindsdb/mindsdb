@@ -31,9 +31,19 @@ class TestHandlerMetrics(BaseExecutorDummyML):
         # Import here so we don't reuse registry across test functions.
         from mindsdb.metrics import metrics
         query_time_metric = list(metrics.INTEGRATION_HANDLER_QUERY_TIME.collect())[0]
+        query_size_metric = list(metrics.INTEGRATION_HANDLER_RESPONSE_SIZE.collect())[0]
         assert len(query_time_metric.samples) == 3
+        assert len(query_size_metric.samples) == 3
         for sample in query_time_metric.samples:
             assert sample.name.startswith('mindsdb_integration_handler_query_seconds')
+            if sample.name.endswith('count'):
+                assert sample.value == 1.0
+            elif sample.name.endswith('sum'):
+                assert sample.value > 0.0
+            elif sample.name.endswith('created'):
+                assert sample.value > 0.0
+        for sample in query_size_metric.samples:
+            assert sample.name.startswith('mindsdb_integration_handler_response_size')
             if sample.name.endswith('count'):
                 assert sample.value == 1.0
             elif sample.name.endswith('sum'):

@@ -47,28 +47,40 @@ class HandlersList(Resource):
             
         return False
     
-    # def _get_top_10_data_sources_and_ai_engines(self):
-    #     from mindsdb.integrations.handlers.bigquery_handler.bigquery_handler import BigQueryHandler
+    def _get_top_10_data_sources_and_ai_engines(self):
+        from mindsdb.integrations.handlers.bigquery_handler.bigquery_handler import BigQueryHandler
 
-    #     # connect to MindsDB BigQuery DB
-    #     bq_handler = BigQueryHandler('bigquery', {
-    #         'project_id': os.environ.get('MINDSDB_BIGQUERY_PROJECT_ID'),
-    #         'dataset': os.environ.get('MINDSDB_BIGQUERY_DATASET'),
-    #         'service_account_json': os.environ.get('MINDSDB_BIGQUERY_SERVICE_ACCOUNT_JSON')
-    #     })
+        # connect to MindsDB BigQuery DB
+        bq_handler = BigQueryHandler('bigquery', {
+            'project_id': os.environ.get('MINDSDB_BIGQUERY_PROJECT_ID'),
+            'dataset': os.environ.get('MINDSDB_BIGQUERY_DATASET'),
+            'service_account_json': os.environ.get('MINDSDB_BIGQUERY_SERVICE_ACCOUNT_JSON')
+        })
 
-    #     bq_client = bq_handler.connect()
+        bq_client = bq_handler.connect()
 
-    #     # get top 10 most popular data sources and AI engines
-    #     top_10_data_sources_query = f"""
-    #     """
-    #     top_10_ai_engines_query = f"""
-    #     """
+        # get top 10 most popular data sources and AI engines
+        top_10_data_sources_query = f"""
+            SELECT data_source_type, COUNT(*) AS count
+            FROM dataform_3_reports.model_stats
+            WHERE data_source_type IS NOT NULL AND is_quickstart IS FALSE AND is_bot IS FALSE
+            GROUP BY data_source_type
+            ORDER BY COUNT(*) DESC
+            LIMIT 10
+        """
+        top_10_ai_engines_query = f"""
+            SELECT engine, COUNT(*) AS count
+            FROM dataform_3_reports.model_stats
+            WHERE engine IS NOT NULL AND is_quickstart IS FALSE AND is_bot IS FALSE
+            GROUP BY engine
+            ORDER BY COUNT(*) DESC
+            LIMIT 10
+        """
 
-    #     top_10_data_sources = bq_client.native_query(top_10_data_sources_query)
-    #     top_10_ai_engines = bq_client.native_query(top_10_ai_engines_query)
+        top_10_data_sources = bq_client.native_query(top_10_data_sources_query)
+        top_10_ai_engines = bq_client.native_query(top_10_ai_engines_query)
 
-    #     return top_10_data_sources, top_10_ai_engines
+        return top_10_data_sources, top_10_ai_engines
 
 @ns_conf.route('/<handler_name>/icon')
 class HandlerIcon(Resource):

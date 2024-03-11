@@ -140,7 +140,6 @@ jobs:
         PROMETHEUS_MULTIPROC_DIR: ./prometheus_metrics
     - name: Run Handlers tests and submit Coverage to coveralls
       run: |
-        python -m unittest discover -s tests/unit/handlers 
         pytest --cov=tests/unit/handler tests/unit/handlers/test_postgresql.py && coveralls
         coveralls
       env:

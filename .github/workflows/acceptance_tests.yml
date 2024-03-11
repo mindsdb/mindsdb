@@ -15,7 +15,7 @@ jobs:
     steps: 
       - name: Create Matrix Variable
         id: step1
-        run: echo "python-versions=${{vars.CI_TEST_PYTHON_VERSIONS}}" >> $GITHUB_OUTPUT
+        run: echo python-versions=${{vars.CI_TEST_PYTHON_VERSIONS}} >> $GITHUB_OUTPUT
 
   tutorials_test:
     name: Learning Hub Acceptance Tests

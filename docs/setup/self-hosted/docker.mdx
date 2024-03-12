@@ -40,13 +40,13 @@ By default, Docker for Mac allocates 2 GB of RAM, which is insufficient for depl
 As MindsDB integrates with numerous [data sources](/integrations/data-overview) and [AI frameworks](/integrations/ai-overview), each integration requires a set of dependencies. Hence, MindsDB provides multiple Docker images for different tasks, as outlined below.
 
 * `mindsdb/mindsdb:latest` (or `mindsdb/mindsdb`)
-It is the lightweight Docker image of MindsDB that comes with [these integrations preloaded](https://github.com/mindsdb/mindsdb/blob/b9787ce237ccb6eb31493afdf763c419c0df5d51/setup.py#L13-L29).
+It is the lightweight Docker image of MindsDB that comes with [these integrations preloaded](https://github.com/mindsdb/mindsdb/blob/staging/default_handlers.txt).
 
 * `mindsdb/mindsdb:lightwood`
-It is the Docker image of MindsDB that comes with [these integrations](https://github.com/mindsdb/mindsdb/blob/b9787ce237ccb6eb31493afdf763c419c0df5d51/setup.py#L13-L29) and the Lightwood integration preloaded.
+It is the Docker image of MindsDB that comes with [these integrations](https://github.com/mindsdb/mindsdb/blob/staging/default_handlers.txt) and the Lightwood integration preloaded.
 
 * `mindsdb/mindsdb:huggingface`
-It is the Docker image of MindsDB that comes with [these integrations](https://github.com/mindsdb/mindsdb/blob/b9787ce237ccb6eb31493afdf763c419c0df5d51/setup.py#L13-L29) and the Hugging Face integration preloaded.
+It is the Docker image of MindsDB that comes with [these integrations](https://github.com/mindsdb/mindsdb/blob/staging/default_handlers.txt) and the Hugging Face integration preloaded.
 </Tip>
 
 Run the command below, providing the selected Docker image, to start MindsDB in Docker and follow the logs:

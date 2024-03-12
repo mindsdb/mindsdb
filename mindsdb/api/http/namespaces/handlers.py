@@ -8,6 +8,8 @@ import multipart
 from flask import request, send_file, abort, current_app as ca
 from flask_restx import Resource
 
+from mindsdb.utilities import log
+
 from mindsdb_sql.parser.ast import Identifier
 from mindsdb_sql.parser.dialects.mindsdb import CreateMLEngine
 
@@ -18,13 +20,19 @@ from mindsdb.api.http.namespaces.configs.handlers import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.api.executor.command_executor import ExecuteCommands
 
+logger = log.getLogger(__name__)
+
 
 @ns_conf.route('/')
 class HandlersList(Resource):
     @ns_conf.doc('handlers_list')
     def get(self):
         '''List all db handlers'''
-        top_10_data_sources, top_10_ai_engines = self._get_top_10_data_sources_and_ai_engines()
+        try:
+            top_10_data_sources, top_10_ai_engines = self._get_top_10_data_sources_and_ai_engines()
+        except Exception as e:
+            logger.error(f'Failed to get top 10 data sources and AI engines: {e}')
+            top_10_data_sources, top_10_ai_engines = [], []
 
         handlers = ca.integration_controller.get_handlers_import_status()
         result = []
@@ -35,7 +43,11 @@ class HandlersList(Resource):
                 row.update(handler_meta)
     
                 # check if handler is AWS product
-                # row['is_aws'] = self._is_aws_product(handler_meta['title'])
+                try:
+                    row['is_aws'] = self._is_aws_product(handler_meta['title'])
+                except Exception:
+                    logger.error(f'Failed to check if {handler_type} is AWS product')
+                    row['is_aws'] = False
 
                 # check if handler is in top 10 data sources or AI engines
                 if handler_type in top_10_data_sources or handler_type in top_10_ai_engines:

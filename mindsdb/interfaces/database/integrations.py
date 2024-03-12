@@ -668,7 +668,7 @@ class IntegrationController:
                 handler_meta['icon']['type'] = icon_type
             except Exception as e:
                 logger.error(f'Error reading icon for {handler_folder_name}, {e}!')
-                
+
         # endregion
         if hasattr(module, 'permanent'):
             handler_meta['permanent'] = module.permanent

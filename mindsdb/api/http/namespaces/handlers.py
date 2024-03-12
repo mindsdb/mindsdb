@@ -1,5 +1,6 @@
 import os
 import json
+import platform
 import importlib
 from pathlib import Path
 import tempfile
@@ -67,6 +68,16 @@ class HandlersList(Resource):
                 return True
             
         return False
+    
+    def _get_creation_date(self, path_to_file):
+        if platform.system() == 'Windows':
+            return os.path.getctime(path_to_file)
+        else:
+            stat = os.stat(path_to_file)
+            try:
+                return stat.st_birthtime
+            except AttributeError:
+                return stat.st_mtime
     
     def _get_top_10_data_sources_and_ai_engines(self):
         from mindsdb.integrations.handlers.bigquery_handler.bigquery_handler import BigQueryHandler

@@ -84,14 +84,14 @@ class EmailsTable(APITable):
             else:
                 raise NotImplementedError(f"Unsupported column: {arg1}.")
 
-        email_client = self.handler.connect()
+        self.handler.connect()
 
         if search_params:
             search_options = EmailSearchOptions(**search_params)
         else:
             search_options = EmailSearchOptions()
 
-        email_ingestor = EmailIngestor(email_client, search_options)
+        email_ingestor = EmailIngestor(self.handler.connection, search_options)
 
         emails_df = email_ingestor.ingest()
 

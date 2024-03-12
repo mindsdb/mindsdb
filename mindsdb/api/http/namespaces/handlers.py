@@ -32,6 +32,7 @@ class HandlersList(Resource):
     def get(self):
         '''List all db handlers'''
         try:
+            # TODO: is 10 the right number?
             top_10_data_sources, top_10_ai_engines = self._get_top_10_data_sources_and_ai_engines()
         except Exception as e:
             logger.error(f'Failed to get top 10 data sources and AI engines: {e}')
@@ -54,8 +55,10 @@ class HandlersList(Resource):
 
                 # check if handler is new using creation date
                 try:
+                    # TODO: is 3 months the right number?
                     # get the timestamp for three months ago
                     three_months_ago_timestamp = time.mktime((datetime.datetime.now() - datetime.timedelta(days=90)).timetuple())
+                    # TODO: is __about__.py the right file to check?
                     # check if the handler was created before one month ago
                     row['is_new'] = self._get_creation_date(f'mindsdb/integrations/handlers/{handler_meta["import"]["folder"]}/__about__.py') > three_months_ago_timestamp
                 except Exception:
@@ -72,7 +75,7 @@ class HandlersList(Resource):
         return result
     
     def _is_aws_product(self, handler_title):
-        # TODO: complete list
+        # TODO: can this list be more comprehensive?
         keywords = ['aws', 'amazon']
 
         for keyword in keywords:

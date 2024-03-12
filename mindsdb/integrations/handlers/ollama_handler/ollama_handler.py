@@ -10,7 +10,7 @@ from mindsdb.integrations.libs.llm_utils import get_completed_prompts
 
 class OllamaHandler(BaseMLEngine):
     name = "ollama"
-    SERVE_URL = 'http://localhost:11434'
+    DEFAULT_SERVE_URL = "http://localhost:11434"
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
@@ -23,7 +23,8 @@ class OllamaHandler(BaseMLEngine):
             raise Exception('`model_name` must be provided in the USING clause.')
 
         # check ollama service health
-        status = requests.get(OllamaHandler.SERVE_URL + '/api/tags').status_code
+        connection = args.get('ollama_serve_url', OllamaHandler.DEFAULT_SERVE_URL)
+        status = requests.get(connection + '/api/tags').status_code
         if status != 200:
             raise Exception(f"Ollama service is not working (status `{status}`). Please double check it is running and try again.")  # noqa
 
@@ -32,13 +33,14 @@ class OllamaHandler(BaseMLEngine):
         # arg setter
         args = args['using']
         args['target'] = target
+        connection = args.get('ollama_serve_url', OllamaHandler.DEFAULT_SERVE_URL)
         self.model_storage.json_set('args', args)
 
         def _model_check():
             """ Checks model has been pulled and that it works correctly. """
             try:
                 return requests.post(
-                    OllamaHandler.SERVE_URL + '/api/generate',
+                    connection + '/api/generate',
                     json={
                         'model': args['model_name'],
                         'prompt': 'Hello.',
@@ -52,7 +54,8 @@ class OllamaHandler(BaseMLEngine):
         if response != 200:
             # pull model (blocking operation) and serve
             # TODO: point to the engine storage folder instead of default location
-            requests.post(OllamaHandler.SERVE_URL + '/api/pull', json={'name': args['model_name']})
+            connection = args.get('ollama_serve_url', OllamaHandler.DEFAULT_SERVE_URL)
+            requests.post(connection + '/api/pull', json={'name': args['model_name']})
             # try one last time
             response = _model_check()
             if response != 200:
@@ -83,8 +86,9 @@ class OllamaHandler(BaseMLEngine):
         completions = []
         for i, row in df.iterrows():
             if i not in empty_prompt_ids:
+                connection = args.get('ollama_serve_url', OllamaHandler.DEFAULT_SERVE_URL)
                 raw_output = requests.post(
-                    OllamaHandler.SERVE_URL + '/api/generate',
+                    connection + '/api/generate',
                     json={
                         'model': args['model_name'],
                         'prompt': row['__mdb_prompt'],
@@ -120,7 +124,8 @@ class OllamaHandler(BaseMLEngine):
 
         # get model info
         else:
-            model_info = requests.post(OllamaHandler.SERVE_URL + '/api/show', json={'name': model_name}).json()
+            connection = args.get('ollama_serve_url', OllamaHandler.DEFAULT_SERVE_URL)
+            model_info = requests.post(connection + '/api/show', json={'name': model_name}).json()
             return pd.DataFrame([[
                 model_name,
                 model_info.get('license', 'N/A'),

@@ -4,7 +4,7 @@ from typing import List
 import pandas as pd
 from langchain.schema import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.vectorstores import VectorStore
+from langchain_community.vectorstores import VectorStore
 
 from mindsdb.integrations.handlers.rag_handler.settings import (
     PersistedVectorStoreSaver,

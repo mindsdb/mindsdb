@@ -90,6 +90,16 @@ class TestHTTP(HTTPHelperMixin):
         assert len([x for x in data if x['group'] == 'a']) == 3
         assert data[0]['date'] == (datetime.date.today() + datetime.timedelta(days=30))
 
+    def test_gt_latest_date_empty_join(self):
+        sql = '''
+            select p.date, p.group, p.value
+            from mindsdb.testv as t join mindsdb.tstest as p
+            where t.date > LATEST and t.group = 'wrong'
+        '''
+        resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
+        data = to_dicts(resp['data'])
+        assert len(data) == 0
+
     def test_eq_latest_date(self):
         sql = '''
             select p.date, p.group, p.value

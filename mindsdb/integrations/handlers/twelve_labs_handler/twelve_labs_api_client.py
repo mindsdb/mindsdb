@@ -16,7 +16,7 @@ class TwelveLabsAPIClient:
     This client is used for accessing the Twelve Labs API endpoints.
     """
 
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, base_url: str = None):
         """
         The initializer for the TwelveLabsAPIClient.
 
@@ -24,6 +24,8 @@ class TwelveLabsAPIClient:
         ----------
         api_key : str
             The Twelve Labs API key.
+        base_url : str, Optional
+            The base URL for the Twelve Labs API. Defaults to the base URL in the Twelve Labs handler settings.
         """
 
         self.api_key = api_key
@@ -31,6 +33,7 @@ class TwelveLabsAPIClient:
             'Content-Type': 'application/json',
             'x-api-key': self.api_key
         }
+        self.base_url = base_url if base_url else twelve_labs_handler_config.BASE_URL
 
     def create_index(self, index_name: str, index_options: List[str], engine_id: Optional[str] = None, addons: Optional[List[str]] = None) -> str:
         """
@@ -56,16 +59,20 @@ class TwelveLabsAPIClient:
             ID of the created index.
         """
 
+        # TODO: change index_options to engine_options?
+        # TODO: support multiple engines per index?
         body = {
             "index_name": index_name,
-            "engine_id": engine_id if engine_id else twelve_labs_handler_config.DEFAULT_ENGINE,
-            "index_options": index_options,
+            "engines": [{
+                "engine_name": engine_id if engine_id else twelve_labs_handler_config.DEFAULT_ENGINE_ID,
+                "engine_options": index_options
+            }],
             "addons": addons,
         }
 
         result = self._submit_request(
             method="POST",
-            endpoint="indexes",
+            endpoint="/indexes",
             data=body,
         )
 
@@ -93,12 +100,83 @@ class TwelveLabsAPIClient:
 
         result = self._submit_request(
             method="GET",
-            endpoint="indexes",
+            endpoint="/indexes",
             data=params,
         )
 
         data = result['data']
         return data[0]['_id'] if data else None
+
+    def list_videos_in_index(self, index_name: str) -> List[Dict]:
+        """
+        List videos in an index.
+
+        Parameters
+        ----------
+        index_name : str
+            Name of the index.
+
+        Returns
+        -------
+        List[Dict]
+            List of videos in the index.
+        """
+
+        index_id = self.get_index_by_name(index_name=index_name)
+
+        data = []
+        result = self._submit_request(
+            method="GET",
+            endpoint=f"/indexes/{index_id}/videos",
+        )
+        data.extend(result['data'])
+
+        while result['page_info']['page'] < result['page_info']['total_page']:
+            result = self._submit_request(
+                method="GET",
+                endpoint=f"/indexes/{index_id}/videos?page_token={result['page_info']['next_page_token']}",
+            )
+            data.extend(result['data'])
+
+        logger.info(f"Retrieved videos in index {index_id} successfully.")
+
+        return data
+
+    def _update_video_metadata(self, index_id: str, video_id: str, video_title: str = None, metadata: Dict = None) -> None:
+        """
+        Update the metadata of a video that has already been indexed.
+
+        Parameters
+        ----------
+        video_id : str
+            ID of the video.
+
+        video_title : str
+            Title of the video.
+
+        metadata : Dict, Optional
+            Metadata to be updated.
+
+        Returns
+        -------
+        None
+        """
+
+        body = {}
+
+        if video_title:
+            body['video_title'] = video_title
+
+        if metadata:
+            body['metadata'] = metadata
+
+        self._submit_request(
+            method="PUT",
+            endpoint=f"/indexes/{index_id}/videos/{video_id}",
+            data=body,
+        )
+
+        logger.info(f"Updated metadata for video {video_id} successfully.")
 
     def create_video_indexing_tasks(self, index_id: str, video_urls: List[str] = None, video_files: List[str] = None) -> List[str]:
         """
@@ -172,9 +250,11 @@ class TwelveLabsAPIClient:
         body = {
             "index_id": index_id,
         }
+
         file_to_close = None
         if video_url:
             body['video_url'] = video_url
+
         elif video_file:
             import mimetypes
             # WE need the file open for the duration of the request. Maybe simplify it with context manager later, but needs _create_video_indexing_task re-written
@@ -193,6 +273,18 @@ class TwelveLabsAPIClient:
 
         task_id = result['_id']
         logger.info(f"Created video indexing task {task_id} for {video_url if video_url else video_file} successfully.")
+
+        # update the video title
+        video_reference = video_url if video_url else video_file
+        task = self._get_video_indexing_task(task_id=task_id)
+        self._update_video_metadata(
+            index_id=index_id,
+            video_id=task['video_id'],
+            metadata={
+                "video_reference": video_reference
+            }
+        )
+
         return task_id
 
     def poll_for_video_indexing_tasks(self, task_ids: List[str]) -> None:
@@ -233,7 +325,7 @@ class TwelveLabsAPIClient:
                     # TODO: update Exception to be more specific
                     raise Exception(f"Task {task_id} failed with status {task['status']}.")
 
-        logger.info("All videos indexed successfully.")
+        logger.info("All videos indexed successffully.")
 
     def _get_video_indexing_task(self, task_id: str) -> Dict:
         """
@@ -252,7 +344,7 @@ class TwelveLabsAPIClient:
 
         result = self._submit_request(
             method="GET",
-            endpoint=f"tasks/{task_id}",
+            endpoint=f"/tasks/{task_id}",
         )
 
         logger.info(f"Retrieved video indexing task {task_id} successfully.")
@@ -288,7 +380,7 @@ class TwelveLabsAPIClient:
         data = []
         result = self._submit_request(
             method="POST",
-            endpoint="search",
+            endpoint="/search",
             data=body,
         )
         data.extend(result['data'])
@@ -296,12 +388,70 @@ class TwelveLabsAPIClient:
         while 'next_page_token' in result['page_info']:
             result = self._submit_request(
                 method="GET",
-                endpoint=f"search/{result['page_info']['next_page_token']}"
+                endpoint=f"/search/{result['page_info']['next_page_token']}"
             )
             data.extend(result['data'])
 
         logger.info(f"Search for index {index_id} completed successfully.")
         return data
+
+    def summarize_videos(self, video_ids: List[str], summarization_type: str) -> Dict:
+        """
+        Summarize videos.
+
+        Parameters
+        ----------
+        video_ids : List[str]
+            List of video IDs.
+
+        summarization_type : str
+            Type of the summary to be generated. Supported types are 'summary', 'chapter' and 'highlight'.
+
+        Returns
+        -------
+        Dict
+            Summary of the videos.
+        """
+
+        results = []
+        for video_id in video_ids:
+            result = self.summarize_video(video_id=video_id, summarization_type=summarization_type)
+            results.append(result)
+
+        logger.info(f"Summarized videos {video_ids} successfully.")
+        return results
+
+    def summarize_video(self, video_id: str, summarization_type: str) -> Dict:
+        """
+        Summarize a video.
+
+        Parameters
+        ----------
+        video_id : str
+            ID of the video.
+
+        summarization_type : str
+            Type of the summary to be generated. Supported types are 'summary', 'chapter' and 'highlight'.
+
+        Returns
+        -------
+        Dict
+            Summary of the video.
+        """
+
+        body = {
+            "video_id": video_id,
+            "type": summarization_type
+        }
+
+        result = self._submit_request(
+            method="POST",
+            endpoint="/summarize",
+            data=body,
+        )
+
+        logger.info(f"Video {video_id} summarized successfully.")
+        return result
 
     def _submit_request(self, endpoint: str, headers: Dict = None, data: Dict = None, method: str = "GET") -> Dict:
         """
@@ -327,20 +477,25 @@ class TwelveLabsAPIClient:
             Response from the API.
         """
 
-        url = f"{twelve_labs_handler_config.BASE_URL}/{endpoint}"
-
         headers = headers if headers else self.headers
 
         if method == "GET":
             response = requests.get(
-                url=url,
+                url=self.base_url + endpoint,
                 headers=headers,
                 params=data if data else {},
             )
 
         elif method == "POST":
             response = requests.post(
-                url=url,
+                url=self.base_url + endpoint,
+                headers=headers,
+                json=data if data else {},
+            )
+
+        elif method == "PUT":
+            response = requests.put(
+                url=self.base_url + endpoint,
                 headers=headers,
                 json=data if data else {},
             )
@@ -348,14 +503,7 @@ class TwelveLabsAPIClient:
         else:
             raise Exception(f"Method {method} not supported yet.")
 
-        result = response.json()
-        if response.status_code in (200, 201):
-            logger.info("API request was successful.")
-            return result
-        else:
-            logger.error(f"API request has failed: {result['message']}")
-            # TODO: update Exception to be more specific
-            raise Exception(f"API request has failed: {result['message']}")
+        return self._handle_response(response)
 
     def _submit_multi_part_request(self, endpoint: str, headers: Dict = None, data: Dict = None, method: str = "POST") -> Dict:
         """
@@ -381,28 +529,35 @@ class TwelveLabsAPIClient:
             Response from the API.
         """
 
-        url = f"{twelve_labs_handler_config.BASE_URL}/{endpoint}"
-
         headers = headers = headers if headers else self.headers
 
         multipart_data = MultipartEncoder(fields=data)
         headers['Content-Type'] = multipart_data.content_type
-
         if method == "POST":
             response = requests.post(
-                url=url,
+                url=self.base_url + endpoint,
                 headers=headers,
                 data=multipart_data if multipart_data else {}
             )
 
         else:
             raise Exception(f"Method {method} not supported yet.")
+        return self._handle_response(response)
 
-        result = response.json()
+    def _handle_response(self, response):
         if response.status_code in (200, 201):
-            logger.info("API request was successful.")
-            return result
+            if response.content:
+                result = response.json()
+                logger.info("API request was successful.")
+                return result
+            else:
+                logger.info("API request was successful. No content returned.")
+                return {}
         else:
-            logger.error(f"API request has failed: {result['message']}")
-            # TODO: update Exception to be more specific
-            raise Exception(f"API request has failed: {result['message']}")
+            if response.content:
+                logger.error(f"API request has failed: {response.content}")
+                # TODO: update Exception to be more specific
+                raise Exception(f"API request has failed: {response.content}")
+            else:
+                logger.error("API request has failed. No content returned.")
+                raise Exception("API request has failed. No content returned.")

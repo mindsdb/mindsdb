@@ -131,7 +131,12 @@ class APITable():
             if isinstance(col, Identifier):
                 targets.append(col.parts[-1])
 
-        result = self.list(conditions, limit, sort, targets)
+        result = self.list(
+            conditions=conditions,
+            limit=limit,
+            sort=sort,
+            targets=targets
+        )
 
         filters = []
         for cond in conditions:

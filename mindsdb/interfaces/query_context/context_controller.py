@@ -71,11 +71,12 @@ class QueryContextController:
             # find last in where
             if isinstance(node, BinaryOperation):
                 if isinstance(node.args[0], Identifier) and isinstance(node.args[1], Last):
-                    # memorize node
-                    return BinaryOperation(op='=', args=[Constant(0), Constant(0)])
+                    node.args = [Constant(0), Constant(0)]
+                    node.op = '='
 
         # find lasts
         query_traversal(query, replace_lasts)
+        return query
 
     def _result_callback(self, l_query: LastQuery,
                          context_name: str, query_str: str,

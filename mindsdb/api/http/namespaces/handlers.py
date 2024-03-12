@@ -29,19 +29,21 @@ class HandlersList(Resource):
         handlers = ca.integration_controller.get_handlers_import_status()
         result = []
         for handler_type, handler_meta in handlers.items():
-            row = {'name': handler_type}
-            row.update(handler_meta)
+            # remove non-integration handlers
+            if handler_type not in ['utilities', 'dummy_data']:
+                row = {'name': handler_type}
+                row.update(handler_meta)
+    
+                # check if handler is AWS product
+                # row['is_aws'] = self._is_aws_product(handler_meta['title'])
 
-            # check if handler is AWS product
-            # row['is_aws'] = self._is_aws_product(handler_meta['title'])
+                # check if handler is in top 10 data sources or AI engines
+                if handler_type in top_10_data_sources or handler_type in top_10_ai_engines:
+                    row['most_popular'] = True
+                else:
+                    row['most_popular'] = False
 
-            # check if handler is in top 10 data sources or AI engines
-            if handler_type in top_10_data_sources or handler_type in top_10_ai_engines:
-                row['most_popular'] = True
-            else:
-                row['most_popular'] = False
-
-            result.append(row)
+                result.append(row)
         return result
     
     def _is_aws_product(self, handler_title):
@@ -111,7 +113,7 @@ class InstallDependencies(Resource):
     def post(self, handler_name):
         handler_import_status = ca.integration_controller.get_handlers_import_status()
         if handler_name not in handler_import_status:
-            return f'Unkown handler: {handler_name}', 400
+            return f'Unknown handler: {handler_name}', 400
 
         if handler_import_status[handler_name].get('import', {}).get('success', False) is True:
             return 'Installed', 200

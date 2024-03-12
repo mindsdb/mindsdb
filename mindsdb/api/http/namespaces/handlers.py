@@ -1,4 +1,5 @@
 import os
+import json
 import importlib
 from pathlib import Path
 import tempfile
@@ -23,7 +24,7 @@ class HandlersList(Resource):
     @ns_conf.doc('handlers_list')
     def get(self):
         '''List all db handlers'''
-        # top_10_data_sources, top_10_ai_engines = self._get_top_10_data_sources_and_ai_engines()
+        top_10_data_sources, top_10_ai_engines = self._get_top_10_data_sources_and_ai_engines()
 
         handlers = ca.integration_controller.get_handlers_import_status()
         result = []
@@ -32,7 +33,13 @@ class HandlersList(Resource):
             row.update(handler_meta)
 
             # check if handler is AWS product
-            row['is_aws'] = self._is_aws_product(handler_meta['import']['title'])
+            # row['is_aws'] = self._is_aws_product(handler_meta['title'])
+
+            # check if handler is in top 10 data sources or AI engines
+            if handler_type in top_10_data_sources or handler_type in top_10_ai_engines:
+                row['most_popular'] = True
+            else:
+                row['most_popular'] = False
 
             result.append(row)
         return result
@@ -54,14 +61,12 @@ class HandlersList(Resource):
         bq_handler = BigQueryHandler('bigquery', {
             'project_id': os.environ.get('MINDSDB_BIGQUERY_PROJECT_ID'),
             'dataset': os.environ.get('MINDSDB_BIGQUERY_DATASET'),
-            'service_account_json': os.environ.get('MINDSDB_BIGQUERY_SERVICE_ACCOUNT_JSON')
+            'service_account_json': json.loads(os.environ.get('MINDSDB_BIGQUERY_SERVICE_ACCOUNT_JSON'))
         })
-
-        bq_client = bq_handler.connect()
 
         # get top 10 most popular data sources and AI engines
         top_10_data_sources_query = f"""
-            SELECT data_source_type, COUNT(*) AS count
+            SELECT data_source_type
             FROM dataform_3_reports.model_stats
             WHERE data_source_type IS NOT NULL AND is_quickstart IS FALSE AND is_bot IS FALSE
             GROUP BY data_source_type
@@ -69,7 +74,7 @@ class HandlersList(Resource):
             LIMIT 10
         """
         top_10_ai_engines_query = f"""
-            SELECT engine, COUNT(*) AS count
+            SELECT engine
             FROM dataform_3_reports.model_stats
             WHERE engine IS NOT NULL AND is_quickstart IS FALSE AND is_bot IS FALSE
             GROUP BY engine
@@ -77,10 +82,10 @@ class HandlersList(Resource):
             LIMIT 10
         """
 
-        top_10_data_sources = bq_client.native_query(top_10_data_sources_query)
-        top_10_ai_engines = bq_client.native_query(top_10_ai_engines_query)
+        top_10_data_sources_df = bq_handler.native_query(top_10_data_sources_query).data_frame
+        top_10_ai_engines_df = bq_handler.native_query(top_10_ai_engines_query).data_frame
 
-        return top_10_data_sources, top_10_ai_engines
+        return top_10_data_sources_df['data_source_type'].tolist(), top_10_ai_engines_df['engine'].tolist()
 
 @ns_conf.route('/<handler_name>/icon')
 class HandlerIcon(Resource):

@@ -11,6 +11,12 @@ INTEGRATION_HANDLER_QUERY_TIME = Summary(
     ('integration', 'response_type')
 )
 
+INTEGRATION_HANDLER_RESPONSE_SIZE = Summary(
+    'mindsdb_integration_handler_response_size',
+    'How many rows are returned by an integration handler query',
+    ('integration', 'response_type')
+)
+
 _REST_API_LATENCY = Histogram(
     'mindsdb_rest_api_latency_seconds',
     'How long REST API requests take to complete, grouped by method, endpoint, and status',

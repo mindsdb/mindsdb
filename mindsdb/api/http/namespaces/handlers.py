@@ -1,5 +1,7 @@
 import os
 import json
+import time
+import datetime
 import platform
 import importlib
 from pathlib import Path
@@ -49,6 +51,16 @@ class HandlersList(Resource):
                 except Exception:
                     logger.error(f'Failed to check if {handler_type} is AWS product')
                     row['is_aws'] = False
+
+                # check if handler is new using creation date
+                try:
+                    # get the timestamp for three months ago
+                    three_months_ago_timestamp = time.mktime((datetime.datetime.now() - datetime.timedelta(days=90)).timetuple())
+                    # check if the handler was created before one month ago
+                    row['is_new'] = self._get_creation_date(f'mindsdb/integrations/handlers/{handler_meta["import"]["folder"]}/__about__.py') > three_months_ago_timestamp
+                except Exception:
+                    logger.error(f'Failed to check if {handler_type} is new')
+                    row['is_new'] = False
 
                 # check if handler is in top 10 data sources or AI engines
                 if handler_type in top_10_data_sources or handler_type in top_10_ai_engines:

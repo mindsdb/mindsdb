@@ -649,17 +649,26 @@ class IntegrationController:
 
         # region icon
         if hasattr(module, 'icon_path'):
-            icon_path = handler_dir.joinpath(module.icon_path)
-            handler_meta['icon'] = {
-                'name': icon_path.name,
-                'type': icon_path.name[icon_path.name.rfind('.') + 1:].lower()
-            }
-            if handler_meta['icon']['type'] == 'svg':
-                with open(str(icon_path), 'rt') as f:
-                    handler_meta['icon']['data'] = f.read()
-            else:
-                with open(str(icon_path), 'rb') as f:
-                    handler_meta['icon']['data'] = base64.b64encode(f.read()).decode('utf-8')
+            try:
+                icon_path = handler_dir.joinpath(module.icon_path)
+                icon_type = icon_path.name[icon_path.name.rfind('.') + 1:].lower()
+
+                if icon_type == 'svg':
+                    with open(str(icon_path), 'rt') as f:
+                        handler_meta['icon'] = {
+                            'data': f.read()
+                        }
+                else:
+                    with open(str(icon_path), 'rb') as f:
+                        handler_meta['icon'] = {
+                            'data': base64.b64encode(f.read()).decode('utf-8')
+                        }
+
+                handler_meta['icon']['name'] = icon_path.name
+                handler_meta['icon']['type'] = icon_type
+            except Exception as e:
+                logger.error(f'Error reading icon for {handler_folder_name}, {e}!')
+                
         # endregion
         if hasattr(module, 'permanent'):
             handler_meta['permanent'] = module.permanent

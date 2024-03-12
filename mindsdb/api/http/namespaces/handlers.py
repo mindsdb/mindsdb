@@ -45,7 +45,7 @@ class HandlersList(Resource):
             if handler_type not in ['utilities', 'dummy_data']:
                 row = {'name': handler_type}
                 row.update(handler_meta)
-    
+
                 # check if handler is AWS product
                 try:
                     row['is_aws'] = self._is_aws_product(handler_meta['title'])
@@ -73,7 +73,7 @@ class HandlersList(Resource):
 
                 result.append(row)
         return result
-    
+
     def _is_aws_product(self, handler_title):
         # TODO: can this list be more comprehensive?
         keywords = ['aws', 'amazon']
@@ -81,9 +81,9 @@ class HandlersList(Resource):
         for keyword in keywords:
             if keyword in handler_title.lower():
                 return True
-            
+
         return False
-    
+
     def _get_creation_date(self, path_to_file):
         if platform.system() == 'Windows':
             return os.path.getctime(path_to_file)
@@ -93,7 +93,7 @@ class HandlersList(Resource):
                 return stat.st_birthtime
             except AttributeError:
                 return stat.st_mtime
-    
+
     def _get_top_10_data_sources_and_ai_engines(self):
         from mindsdb.integrations.handlers.bigquery_handler.bigquery_handler import BigQueryHandler
 
@@ -105,7 +105,7 @@ class HandlersList(Resource):
         })
 
         # get top 10 most popular data sources and AI engines
-        top_10_data_sources_query = f"""
+        top_10_data_sources_query = """
             SELECT data_source_type
             FROM dataform_3_reports.model_stats
             WHERE data_source_type IS NOT NULL AND is_quickstart IS FALSE AND is_bot IS FALSE
@@ -113,7 +113,7 @@ class HandlersList(Resource):
             ORDER BY COUNT(*) DESC
             LIMIT 10
         """
-        top_10_ai_engines_query = f"""
+        top_10_ai_engines_query = """
             SELECT engine
             FROM dataform_3_reports.model_stats
             WHERE engine IS NOT NULL AND is_quickstart IS FALSE AND is_bot IS FALSE
@@ -126,6 +126,7 @@ class HandlersList(Resource):
         top_10_ai_engines_df = bq_handler.native_query(top_10_ai_engines_query).data_frame
 
         return top_10_data_sources_df['data_source_type'].tolist(), top_10_ai_engines_df['engine'].tolist()
+
 
 @ns_conf.route('/<handler_name>/icon')
 class HandlerIcon(Resource):

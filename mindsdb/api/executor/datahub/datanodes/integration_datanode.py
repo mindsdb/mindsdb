@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 from numpy import dtype as np_dtype
 import pandas as pd
@@ -11,6 +13,8 @@ from mindsdb_sql.parser.ast import Insert, Identifier, CreateTable, TableColumn,
 from mindsdb.api.executor.datahub.datanodes.datanode import DataNode
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.api.executor.datahub.classes.tables_row import TablesRow
+from mindsdb.integrations.utilities.utils import get_class_name
+from mindsdb.metrics import metrics
 from mindsdb.utilities import log
 from mindsdb.utilities.profiler import profiler
 
@@ -55,7 +59,7 @@ class IntegrationDataNode(DataNode):
             tables=[name],
             if_exists=if_exists
         )
-        result = self.integration_handler.query(drop_ast)
+        result = self._query(drop_ast)
         if result.type == RESPONSE_TYPE.ERROR:
             raise Exception(result.error_message)
 
@@ -89,7 +93,7 @@ class IntegrationDataNode(DataNode):
                 tables=[table_name],
                 if_exists=True
             )
-            result = self.integration_handler.query(drop_ast)
+            result = self._query(drop_ast)
             if result.type == RESPONSE_TYPE.ERROR:
                 raise Exception(result.error_message)
             is_create = True
@@ -100,8 +104,7 @@ class IntegrationDataNode(DataNode):
                 columns=table_columns,
                 is_replace=True
             )
-
-            result = self.integration_handler.query(create_table_ast)
+            result = self._query(create_table_ast)
             if result.type == RESPONSE_TYPE.ERROR:
                 raise Exception(result.error_message)
 
@@ -138,7 +141,7 @@ class IntegrationDataNode(DataNode):
         )
 
         try:
-            result = self.integration_handler.query(insert_ast)
+            result = self._query(insert_ast)
         except Exception as e:
             msg = f'[{self.ds_type}/{self.integration_name}]: {str(e)}'
             raise DBHandlerException(msg) from e
@@ -146,14 +149,46 @@ class IntegrationDataNode(DataNode):
         if result.type == RESPONSE_TYPE.ERROR:
             raise Exception(result.error_message)
 
+    def _query(self, query):
+        time_before_query = time.perf_counter()
+        result = self.integration_handler.query(query)
+        elapsed_seconds = time.perf_counter() - time_before_query
+        query_time_with_labels = metrics.INTEGRATION_HANDLER_QUERY_TIME.labels(
+            get_class_name(self.integration_handler), result.type)
+        query_time_with_labels.observe(elapsed_seconds)
+
+        num_rows = 0
+        if result.data_frame is not None:
+            num_rows = len(result.data_frame.index)
+        response_size_with_labels = metrics.INTEGRATION_HANDLER_RESPONSE_SIZE.labels(
+            get_class_name(self.integration_handler), result.type)
+        response_size_with_labels.observe(num_rows)
+        return result
+
+    def _native_query(self, native_query):
+        time_before_query = time.perf_counter()
+        result = self.integration_handler.native_query(native_query)
+        elapsed_seconds = time.perf_counter() - time_before_query
+        query_time_with_labels = metrics.INTEGRATION_HANDLER_QUERY_TIME.labels(
+            get_class_name(self.integration_handler), result.type)
+        query_time_with_labels.observe(elapsed_seconds)
+
+        num_rows = 0
+        if result.data_frame is not None:
+            num_rows = len(result.data_frame.index)
+        response_size_with_labels = metrics.INTEGRATION_HANDLER_RESPONSE_SIZE.labels(
+            get_class_name(self.integration_handler), result.type)
+        response_size_with_labels.observe(num_rows)
+        return result
+
     @profiler.profile()
     def query(self, query=None, native_query=None, session=None):
         try:
             if query is not None:
-                result = self.integration_handler.query(query)
+                result = self._query(query)
             else:
                 # try to fetch native query
-                result = self.integration_handler.native_query(native_query)
+                result = self._native_query(native_query)
         except Exception as e:
             msg = str(e).strip()
             if msg == '':

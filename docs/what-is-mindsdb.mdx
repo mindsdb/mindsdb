@@ -3,80 +3,93 @@ title: MindsDB - Platform for Building Custom AI
 sidebarTitle: Introduction
 ---
 
-MindsDB is the platform for building custom AI, enabling smarter organizations.
+MindsDB is the platform for building custom AI from enterprise data, enabling smarter organizations.
 
-We believe AI will help every company thrive, but off-the-shelf, generic AI usually doesn’t completely meet their needs. With MindsDB’s nearly 200 integrations, any developer can create AI customized for their purpose, faster and more securely. Their AI systems will constantly improve themselves — using companies’ own data, in real-time.
+<p align="center">
+  <img src="/assets/diagram.png"/>
+</p>
+
+We believe AI will help every company thrive. But off-the-shelf, generic AI doesn’t completely meet anyone’s needs.
+
+With MindsDB and its nearly 200 integrations to data sources and AI frameworks, any developer can use their enterprise data to customize AI for their purpose, faster and more securely.
 
 ## Features
 
-TODO - align concepts and features with new website design
-
-TODO - update concepts section
-
 MindsDB integrates with numerous [data sources](/integrations/data-overview), including databases, vector stores, and applications, and popular [AI frameworks](/integrations/ai-overview), including AutoML and LLMs. Doing so, MindsDB brings data and AI together, enabling intuitive implementation and automation of AI systems.
-
-MindsDB abstracts AI models as virtual AI tables that users can select from, join with data, or fine-tune.
 
 Common concepts and features brought by MindsDB include the following:
 
-| | |
-|------------|------------|
-| [AI Tables](/integrations/ai-overview) | One of MindsDB's innovations is the ability to treat AI ([MODELS](/model-types), [AGENTS](/agents/agent), [KNOWLEDGE BASES](/agents/knowledge-bases)) as [virtual tables](/generative-ai-tables) that you can [SELECT FROM](/sql/get-single-prediction), [JOIN](/sql/get-batch-predictions), and [FINE-TUNE](/sql/api/finetune) from any data source using any [AI engine](/integrations/ai-overview). |
-| [Data Sources](/integrations/data-overview) | Connect any data to MindsDB, which facilitates translating SQL queries into requests that can access and combine data from a wide range of sources, including databases, vector stores, and applications. |
-| [Automation](/sql/create/jobs) | Automate tasks with [JOBS](/sql/create/jobs) by scheduling execution at defined frequency, or with [TRIGGERS](/sql/create/trigger) by defining a triggering event. |
+<Card title="Model Management" icon="link" href="/model-management">
+Manage every aspect of AI models, including creation, deployment, training, fine-tuning, and version control.
+</Card>
 
-## Architecture
+<Card title="AI Integrations" icon="link" href="/ai-integrations">
+MindsDB gives you access to a wide range of AI frameworks within your enterprise data environment. This includes models from OpenAI, Anthropic, HuggingFace, Anyscale, and more.
+</Card>
 
-This is the architecture diagram that presents how MindsDB works.
+<Card title="Data Integrations" icon="link" href="/data-integrations">
+Connect any data source to MindsDB, including databases, vector stores, and applications.
+</Card>
 
-<p align="center">
-  <img src="https://docs.google.com/drawings/d/e/2PACX-1vRAViEKpgXsOrwgqHUL-E2XSeo48ZLFYFJAiU69qE0OH__mcNvp1I8Dx4KebH1Rvp-9GjUTz4MtCVBp/pub?w=903&h=500"/>
-</p>  
+<Card title="Automation" icon="link" href="/automation">
+Automate tasks with [JOBS](/sql/create/jobs) by scheduling execution at defined frequency, or with [TRIGGERS](/sql/create/trigger) by defining a triggering event.
+</Card>
+
+<br></br>
+
+<Note>
+An innovation introduced by MindsDB is the ability to abstract AI models as [virtual tables](/generative-ai-tables) that you can [SELECT FROM](/sql/get-single-prediction), [JOIN](/sql/get-batch-predictions) with data, and [FINE-TUNE](/sql/api/finetune) from any data source using any [AI engine](/integrations/ai-overview).
+</Note>
 
 ## Use Cases
 
 Common applications of MindsDB include AI and LLM use cases, machine learning use cases, and more. See a complete list with links below.
 
-**AI**
+<AccordionGroup>
 
-<CardGroup cols={3}>
+  <Accordion title="Large Language Models">
+    <CardGroup cols={4}>
 
-    <Card title="Fine-Tune" icon="link" href="/sql/api/finetune#example-3-openai-model"></Card>
-    <Card title="Knowledge bases" icon="link" href="/agents/knowledge-bases"></Card>
-    <Card title="Agents" icon="link" href="/agents/agent"></Card>
-    <Card title="Chatbots" icon="link" href="/sql/tutorials/twitterbot-mariadb-enterprise-server-skysql"></Card>
-    <Card title="Classification" icon="link" href="/nlp/nlp-extended-examples#text-classification"></Card>
-    <Card title="Sentiment analysis" icon="link" href="/nlp/sentiment-analysis-inside-mysql-with-openai"></Card>
-    <Card title="Summarisation" icon="link" href="/nlp/text-summarization-inside-mysql-with-openai"></Card>
-    <Card title="Translation" icon="link" href="/nlp/nlp-extended-examples#translation"></Card>
-    <Card title="RAG/Semantic search" icon="link" href="/integrations/ai-engines/rag"></Card>
-    <Card title="Q&A" icon="link" href="/nlp/question-answering-inside-mysql-with-openai"></Card>
+        <Card title="Fine-Tune" icon="link" href="/sql/api/finetune#example-3-openai-model"></Card>
+        <Card title="Knowledge bases" icon="link" href="/agents/knowledge-bases"></Card>
+        <Card title="Agents" icon="link" href="/agents/agent"></Card>
+        <Card title="Chatbots" icon="link" href="/sql/tutorials/twitterbot-mariadb-enterprise-server-skysql"></Card>
+        <Card title="Classification" icon="link" href="/nlp/nlp-extended-examples#text-classification"></Card>
+        <Card title="Sentiment analysis" icon="link" href="/nlp/sentiment-analysis-inside-mysql-with-openai"></Card>
+        <Card title="Summarisation" icon="link" href="/nlp/text-summarization-inside-mysql-with-openai"></Card>
+        <Card title="Translation" icon="link" href="/nlp/nlp-extended-examples#translation"></Card>
+        <Card title="RAG/Semantic search" icon="link" href="/integrations/ai-engines/rag"></Card>
+        <Card title="Q&A" icon="link" href="/nlp/question-answering-inside-mysql-with-openai"></Card>
 
-</CardGroup>
+    </CardGroup>
+  </Accordion>
 
-**ML**
+  <Accordion title="Machine Learning">
+    <CardGroup cols={4}>
 
-<CardGroup cols={3}>
+        <Card title="Anomaly detection" icon="link" href="/integrations/ai-engines/anomaly"></Card>
+        <Card title="Forecasting" icon="link" href="/sql/tutorials/eeg-forecasting"></Card>
+        <Card title="Recommenders" icon="link" href="/sql/tutorials/recommenders"></Card>
+        <Card title="Classification" icon="link" href="/sql/tutorials/customer-churn"></Card>
+        <Card title="Regression" icon="link" href="/sql/tutorials/home-rentals"></Card>
 
-    <Card title="Anomaly detection" icon="link" href="/integrations/ai-engines/anomaly"></Card>
-    <Card title="Forecasting" icon="link" href="/sql/tutorials/eeg-forecasting"></Card>
-    <Card title="Recommenders" icon="link" href="/sql/tutorials/recommenders"></Card>
-    <Card title="Classification" icon="link" href="/sql/tutorials/customer-churn"></Card>
-    <Card title="Regression" icon="link" href="/sql/tutorials/home-rentals"></Card>
+    </CardGroup>
+  </Accordion>
 
-</CardGroup>
+  <Accordion title="Multi-Media">
+    <CardGroup cols={4}>
 
-**Multi-Media**
+        <Card title="Video semantic search" icon="link" href="/integrations/ai-engines/twelvelabs"></Card>
+        <Card title="Text semantic search" icon="link" href="/integrations/ai-engines/replicate-img2text"></Card>
+        <Card title="Text to Audio" icon="link" href="/integrations/ai-engines/replicate-audio"></Card>
+        <Card title="Text to Video" icon="link" href="/integrations/ai-engines/replicate-text2video"></Card>
+        <Card title="Text to Image" icon="link" href="/integrations/ai-engines/replicate-text2img"></Card>
 
-<CardGroup cols={3}>
+    </CardGroup>
+  </Accordion>
+</AccordionGroup>
 
-    <Card title="Video semantic search" icon="link" href="/integrations/ai-engines/twelvelabs"></Card>
-    <Card title="Text semantic search" icon="link" href="/integrations/ai-engines/replicate-img2text"></Card>
-    <Card title="Text to Audio" icon="link" href="/integrations/ai-engines/replicate-audio"></Card>
-    <Card title="Text to Video" icon="link" href="/integrations/ai-engines/replicate-text2video"></Card>
-    <Card title="Text to Image" icon="link" href="/integrations/ai-engines/replicate-text2img"></Card>
-
-</CardGroup>
+<br></br>
 
 <Tip>
 Check out the [Use Cases](/use-cases/overview) section for examples and tutorials.
@@ -84,6 +97,6 @@ Check out the [Use Cases](/use-cases/overview) section for examples and tutorial
 
 <Info>
 Learn more:
-- [What are the benefits of using Mindsdb](/faq/benefits)
-- [How to contrinute/join to the MindsDB project?](/contribute/contribute)
+- [What are the benefits of using MindsDB?](/faq/benefits)
+- [How to contrinute to the MindsDB project?](/contribute/contribute)
 </Info>

@@ -1,4 +1,4 @@
-name: MindsDB Releases
+name: Build and deploy release
 
 on:
   release:

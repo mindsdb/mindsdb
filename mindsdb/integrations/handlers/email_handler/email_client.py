@@ -158,7 +158,4 @@ class EmailClient:
         except Exception as e:
             raise Exception('Error searching email') from e
 
-        finally:
-            self.logout()
-
         return pd.DataFrame(ret)

@@ -123,3 +123,9 @@ jobs:
           env PYTHONPATH=./ pytest tests/unit/test_llm_utils.py
 
         fi
+    - name: Run Handlers tests and submit Coverage to coveralls
+      run: |
+        pytest --cov=tests/unit/handler tests/unit/handlers/test_postgresql.py && coveralls
+        coveralls
+      env:
+        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}

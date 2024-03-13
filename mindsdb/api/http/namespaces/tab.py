@@ -103,6 +103,17 @@ class TabsController:
             tabs[int(tab_id)] = child
         return tabs
 
+    def _get_tabs_meta(self) -> List[Dict]:
+        """Get tabs info without content
+
+        Returns:
+            List[Dict]
+        """
+        all_tabs = self.get_all()
+        for tab in all_tabs:
+            del tab['content']
+        return all_tabs
+
     def _migrate_legacy(self) -> None:
         """Convert old single-file tabs storage to multiple files
         """
@@ -209,7 +220,7 @@ class TabsController:
             content (str, optional): content of new tab
 
         Returns:
-            dict: id and index of new tab
+            dict: new tab meta info: id, name and index
         """
         file_storage = self._get_file_storage()
         tab_id = self._get_next_tab_id()
@@ -240,9 +251,9 @@ class TabsController:
             file_storage.sync = True
             file_storage.push()
 
-        return {'id': tab_id, 'index': index}
+        return {'id': tab_id, 'index': index, 'name': name}
 
-    def modify(self, tab_id: int, index: int = None, name: str = None, content: str = None) -> None:
+    def modify(self, tab_id: int, index: int = None, name: str = None, content: str = None) -> Dict:
         """Modify the tab
 
         Args:
@@ -250,6 +261,9 @@ class TabsController:
             index (int, optional): tab's new index
             name (str, optional): tab's new name
             content (str, optional): tab's new content
+
+        Returns:
+            dict: new tab meta info: id, name and index
         """
         file_storage = self._get_file_storage()
         current_data = self.get(tab_id)
@@ -284,6 +298,12 @@ class TabsController:
         data_bytes = json.dumps(current_data).encode('utf-8')
         file_storage.file_set(f'tab_{tab_id}', data_bytes)
 
+        return {
+            'id': current_data['id'],
+            'index': current_data['index'],
+            'name': current_data['name']
+        }
+
     def delete(self, tab_id: int):
         file_storage = self._get_file_storage()
         try:
@@ -317,7 +337,7 @@ class Tabs(Resource):
                 return {}, 200
             return tabs, 200
 
-    @ns_conf.doc('save_tabs')
+    @ns_conf.doc('save_tab')
     def post(self):
         mode = request.args.get('mode')
 
@@ -325,8 +345,12 @@ class Tabs(Resource):
             if _is_request_valid() is False:
                 return http_error(400, 'Error', 'Invalid parameters')
             data = request.json
-            new_tab_id = tabs_controller.add(**data)
-            return new_tab_id, 200
+            tab_meta = tabs_controller.add(**data)
+            tabs_meta = tabs_controller._get_tabs_meta()
+            return {
+                'tab_meta': tab_meta,
+                'tabs_meta': tabs_meta
+            }, 200
         else:
             # deprecated
             storage = get_storage()
@@ -349,12 +373,13 @@ class Tabs(Resource):
 @ns_conf.route("/<tab_id>")
 @ns_conf.param("tab_id", "id of tab")
 class Tab(Resource):
-    @ns_conf.doc("put_tab")
+    @ns_conf.doc("get_tab")
     def get(self, tab_id: int):
         try:
             tab_data = tabs_controller.get(int(tab_id))
         except EntityNotExistsError:
             return http_error(404, 'Error', 'The tab does not exist')
+
         return tab_data, 200
 
     @ns_conf.doc("put_tab")
@@ -363,10 +388,16 @@ class Tab(Resource):
             return http_error(400, 'Error', 'Invalid parameters')
         data = request.json
         try:
-            tabs_controller.modify(int(tab_id), **data)
+            tab_meta = tabs_controller.modify(int(tab_id), **data)
         except EntityNotExistsError:
             return http_error(404, 'Error', 'The tab does not exist')
-        return '', 200
+
+        tabs_meta = tabs_controller._get_tabs_meta()
+
+        return {
+            'tab_meta': tab_meta,
+            'tabs_meta': tabs_meta
+        }, 200
 
     @ns_conf.doc("delete_tab")
     def delete(self, tab_id: int):

@@ -526,9 +526,9 @@ class TestHTTP(HTTPHelperMixin):
         tab_1_2 = tab(1, 2)
         tab_2_2 = tab(2, 2)
         for tab_dict, company_id in ((tab_1_2, 1), (tab_2_2, 2)):
-            tab_data = tabs_requets('post', '?mode=new', payload=tab_dict, company_id=company_id).json()
-            tab_dict['id'] = tab_data['id']
-            tab_dict['index'] = tab_data['index']
+            tab_meta = tabs_requets('post', '?mode=new', payload=tab_dict, company_id=company_id).json()['tab_meta']
+            tab_dict['id'] = tab_meta['id']
+            tab_dict['index'] = tab_meta['index']
 
         resp_list = tabs_requets('get', '?mode=new', company_id=1).json()
         assert compate_tabs_list(resp_list, [tab_1_1, tab_1_2])
@@ -539,8 +539,8 @@ class TestHTTP(HTTPHelperMixin):
         # add tab to second index
         tab_1_3 = tab(1, 3)
         tab_1_3['index'] = tab_1_1['index'] + 1
-        tab_data = tabs_requets('post', '?mode=new', payload=tab_1_3, company_id=1).json()
-        tab_1_3['id'] = tab_data['id']
+        tab_meta = tabs_requets('post', '?mode=new', payload=tab_1_3, company_id=1).json()['tab_meta']
+        tab_1_3['id'] = tab_meta['id']
         tabs_list = tabs_requets('get', '?mode=new', company_id=1).json()
         assert len(tabs_list) == 3
         tab_1_1['index'] = tabs_list[0]['index']
@@ -552,8 +552,15 @@ class TestHTTP(HTTPHelperMixin):
         # update tab content and index
         tab_1_2['index'] = tab_1_1['index'] + 1
         tab_1_2['content'] = tab_1_2['content'] + '_new'
-        tabs_requets('put', str(tab_1_2['id']),
-                     payload={'index': tab_1_2['index'], 'content': tab_1_2['content']}, company_id=1)
+        tab_meta = tabs_requets(
+            'put',
+            str(tab_1_2['id']),
+            payload={'index': tab_1_2['index'], 'content': tab_1_2['content']},
+            company_id=1
+        ).json()['tab_meta']
+        assert tab_meta['index'] == tab_1_2['index']
+        assert tab_meta['name'] == tab_1_2['name']
+        assert tab_meta['id'] == tab_1_2['id']
         tabs_list = tabs_requets('get', '?mode=new', company_id=1).json()
         tab_1_3['index'] = tab_1_2['index'] + 1
         assert compate_tabs_list(tabs_list, [tab_1_1, tab_1_2, tab_1_3])

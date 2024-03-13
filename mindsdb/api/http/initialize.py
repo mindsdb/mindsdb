@@ -39,6 +39,7 @@ from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.interfaces.storage import db
+from mindsdb.metrics.server import init_metrics
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
@@ -324,6 +325,7 @@ def initialize_flask(config, init_static_thread, no_studio):
         logger.debug(f"Static path: {static_path}")
 
     app = Flask(__name__, **kwargs)
+    init_metrics(app)
 
     app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', secrets.token_hex(32))
     app.config['SESSION_COOKIE_NAME'] = 'session'

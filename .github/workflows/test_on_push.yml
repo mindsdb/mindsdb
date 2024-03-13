@@ -129,3 +129,4 @@ jobs:
         coveralls
       env:
         COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+        PROMETHEUS_MULTIPROC_DIR: ./prometheus_metrics

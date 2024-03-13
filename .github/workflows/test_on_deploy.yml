@@ -42,11 +42,13 @@ jobs:
         pip install -r requirements/requirements-test.txt
         pip install .[lightwood]  # TODO: for now some tests rely on lightwood and huggingface
         pip install .[huggingface]
-        pip freeze
+        pip freeze  
     - name: Run integration api and flow tests
       run: |
 
         if [ "$RUNNER_OS" == "Linux" ]; then
+
+          mkdir prometheus_metrics
 
           pytest -vx tests/integration_tests/flows/test_ml_task_queue.py
 
@@ -70,6 +72,7 @@ jobs:
           pytest -vx tests/integration_tests/flows/test_company_independent.py
         fi
       env:
+        PROMETHEUS_MULTIPROC_DIR: ./prometheus_metrics
         CHECK_FOR_UPDATES: False
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
         AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}

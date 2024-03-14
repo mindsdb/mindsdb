@@ -16,7 +16,7 @@ from .__about__ import __version__ as version, __description__ as description
 title = "Sap MaxDB"
 name = "maxdb"
 type = HANDLER_TYPE.DATA
-icon_path = "icon.png"
+icon_path = "icon.svg"
 
 __all__ = [
     "Handler",

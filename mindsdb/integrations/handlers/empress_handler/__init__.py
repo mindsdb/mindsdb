@@ -17,7 +17,7 @@ except Exception as e:
 title = 'Empress Embedded'
 name = 'empress'
 type = HANDLER_TYPE.DATA
-icon_path = 'icon.svg'
+icon_path = 'icon.png'
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'connection_args', 'connection_args_example',

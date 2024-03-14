@@ -1,48 +1,107 @@
-import requests  
-
+import requests
 from typing import Dict, Any
 from collections import OrderedDict
 import pandas as pd
-from mindsdb.utilities import log  
-
+from mindsdb.utilities import log
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
+import re
+from mindsdb.integrations.libs.api_handler import APITable
+from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+from mindsdb_sql import parse_sql
+from mindsdb.integrations.handlers.utilities.query_utilities.select_query_utilities import SELECTQueryParser, SELECTQueryExecutor
+from collections import OrderedDict
+logger = log.getLogger(__name__)
 
-logger = log.getLogger(__name__)  
+class DuckDuckGoSearchTable(APITable):
+    def __init__(self, handler: 'DuckDuckGoHandler'):
+        super().__init__(handler)
+        self.handler = handler
+
+    def select(self, query: ast.Select) -> pd.DataFrame:
+        """
+        Performs a DuckDuckGo search based on the provided SQL query and returns the results as a pandas DataFrame.
+
+        Args:
+            query (ast.Select): The SQL query object.
+
+        Returns:
+            pd.DataFrame: The search results as a pandas DataFrame.
+        """
+        # Extract the search query from the SQL statement
+        match = re.search(r"from\s+my_duckduckgo\s*\(\s*['\"](.*?)['\"]\s*\)", str(query), re.IGNORECASE)
+        if match:
+            search_query = match.group(1)
+        else:
+            error_message = "Invalid SQL query format"
+            logger.error(error_message)
+            raise ValueError(error_message)
+
+        params = {
+            "q": search_query,
+            "format": "json",
+            "no_html": "1",
+            "no_redirect": "1",
+            "skip_disambig": "1"
+        }
+
+        try:
+            # Call the handler's call_duckduckgo_api method
+            result = self.handler.call_duckduckgo_api(params=params)
+            if result is not None:
+                data_frame = pd.json_normalize(result)
+                return data_frame
+            else:
+                error_message = "API request failed"
+                logger.error(error_message)
+                raise ValueError(error_message)
+        except Exception as e:
+            error_message = str(e)
+            logger.error(error_message)
+            raise ValueError(error_message)
+
+    def get_columns(self) -> list:
+        """
+        Gets all columns to be returned in the pandas DataFrame response.
+        """
+        return [
+            "Abstract",
+            "AbstractSource",
+            "AbstractText",
+            "AbstractURL",
+            "Answer",
+            "AnswerType",
+            "Definition",
+            "DefinitionSource",
+            "DefinitionURL",
+            "Heading",
+            "Image",
+            "Redirect",
+            "RelatedTopics",
+        ]
 
 class DuckDuckGoHandler(APIHandler):
     def __init__(self, name: str = None, **kwargs):
         super().__init__(name)
         self.api_key = None
-        self.is_connected = False
-
         args = kwargs.get('connection_data', {})
         if 'api_key' in args:
             self.api_key = args['api_key']
 
-    def connect(self) -> bool:
-        if self.api_key:
-            self.is_connected = True
-            return True
-        else:
-            return False
+        duckduckgo_search_table = DuckDuckGoSearchTable(self)
+        self._register_table("my_duckduckgo", duckduckgo_search_table)
 
     def check_connection(self) -> StatusResponse:
         response = StatusResponse(False)
-
-        try:
-            if self.connect():
-                response.success = True
-            else:
-                response.error_message = "API key is missing"
-        except Exception as e:
-            response.error_message = str(e)
-
+        if self.api_key is None:
+            response.error_message = "API key is missing"
+        else:
+            response.success = True
         return response
 
     def call_duckduckgo_api(self, params: Dict = None) -> Any:
@@ -51,9 +110,7 @@ class DuckDuckGoHandler(APIHandler):
             "X-RapidAPI-Key": self.api_key,
             "X-RapidAPI-Host": "duckduckgo-duckduckgo-zero-click-info.p.rapidapi.com"
         }
-
         response = requests.get(url, headers=headers, params=params)
-
         if response.status_code == 200:
             return response.json()
         else:

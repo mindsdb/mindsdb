@@ -79,10 +79,10 @@ Here is the output:
 ```
 
 <Info>
+
 Find more quick examples below:
 
-<AccordionGroup>
-<Accordion title="Text Classification">
+Text Classification:
 ```sql
 CREATE MODEL mindsdb.hf_text_classifier
 PREDICT sentiment
@@ -91,8 +91,8 @@ USING
   engine = 'hf_api_engine',
   input_column = 'text';
 ```
-</Accordion>
-<Accordion title="Fill Mask">
+
+Fill Mask:
 ```sql
 CREATE MODEL mindsdb.hf_fill_mask
 PREDICT sequence
@@ -101,8 +101,8 @@ USING
   engine = 'hf_api_engine',
   input_column = 'text';
 ```
-</Accordion>
-<Accordion title="Summarization">
+
+Summarization:
 ```sql
 CREATE MODEL mindsdb.hf_summarizer
 PREDICT summary
@@ -111,8 +111,8 @@ USING
   engine = 'hf_api_engine',
   input_column = 'text';
 ```
-</Accordion>
-<Accordion title="Text Generation">
+
+Text Generation:
 ```sql
 CREATE MODEL mindsdb.hf_text_generator
 PREDICT generated_text
@@ -121,8 +121,8 @@ USING
   engine = 'hf_api_engine',
   input_column = 'text';
 ```
-</Accordion>
-<Accordion title="Question Answering">
+
+Question Answering:
 ```sql
 CREATE MODEL mindsdb.hf_question_answerer
 PREDICT answer
@@ -132,8 +132,8 @@ USING
   input_column = 'question',
   context_column = 'context';
 ```
-</Accordion>
-<Accordion title="Sentences Similarity">
+
+Sentences Similarity:
 ```sql
 CREATE MODEL mindsdb.hf_sentence_similarity
 PREDICT similarity
@@ -143,8 +143,8 @@ USING
   input_column = 'sentence1',
   input_column2 = 'sentence2';
 ```
-</Accordion>
-<Accordion title="Zero Shot Classification">
+
+Zero Shot Classification:
 ```sql
 CREATE MODEL mindsdb.hf_zero_shot_classifier
 PREDICT label
@@ -154,8 +154,8 @@ USING
   input_column = 'text',
   candidate_labels = ['label1', 'label2', 'label3'];
 ```
-</Accordion>
-<Accordion title="Image Classification">
+
+Image Classification:
 ```sql
 CREATE MODEL mindsdb.hf_image_classifier
 PREDICT label
@@ -164,8 +164,8 @@ USING
   engine = 'hf_api_engine',
   input_column = 'image_url';
 ```
-</Accordion>
-<Accordion title="Object Detection">
+
+Object Detection:
 ```sql
 CREATE MODEL mindsdb.hf_object_detector
 PREDICT objects
@@ -174,8 +174,8 @@ USING
   engine = 'hf_api_engine',
   input_column = 'image_url';
 ```
-</Accordion>
-<Accordion title="Automatic Speech Recognition">
+
+Automatic Speech Recognition:
 ```sql
 CREATE MODEL mindsdb.hf_speech_recognizer
 PREDICT transcription
@@ -184,8 +184,8 @@ USING
   engine = 'hf_api_engine',
   input_column = 'audio_url';
 ```
-</Accordion>
-<Accordion title="Audio Classification">
+
+Audio Classification:
 ```sql
 CREATE MODEL mindsdb.hf_audio_classifier
 PREDICT label
@@ -194,11 +194,10 @@ USING
   engine = 'hf_api_engine',
   input_column = 'audio_url';
 ```
-</Accordion>
-</AccordionGroup>
 </Info>
 
 <Tip>
+
 **Next Steps**
 
 Follow [this link](/sql/tutorials/hugging-face-inference-api-examples) to see more use case examples.

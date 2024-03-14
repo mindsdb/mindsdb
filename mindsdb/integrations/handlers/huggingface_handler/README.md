@@ -67,6 +67,7 @@ Here is the output:
 ```
 
 <Tip>
+
 **Next Steps**
 
 Follow [this link](/sql/tutorials/hugging-face-examples) to see more use case examples.

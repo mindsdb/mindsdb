@@ -34,6 +34,7 @@ USING
 ```
 
 <Note>
+
 The implementation is based on the engine for the OpenAI API, as Anyscale conforms to it. There are a few notable differences, though:
 
 1. All models supported by Anyscale Endpoints are open source. A full list can be found [here for inference-only under section *Supported models*](https://app.endpoints.anyscale.com/docs).
@@ -47,6 +48,7 @@ The implementation is based on the engine for the OpenAI API, as Anyscale confor
 </Note>
 
 <Info>
+
 The base URL for this API is `https://api.endpoints.anyscale.com/v1`.
 </Info>
 
@@ -84,6 +86,7 @@ Here is the output:
 ```
 
 <Tip>
+
 **Next Steps**
 
 Follow [this tutorial](/finetune/anyscale) to see more use case examples.

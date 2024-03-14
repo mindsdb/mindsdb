@@ -952,7 +952,7 @@
           ]
         },
         {
-          "group": "Vector Databases",
+          "group": "Vector Stores",
           "pages": [
             "integrations/vector-db-integrations/chromadb",
             "integrations/vector-db-integrations/pgvector",

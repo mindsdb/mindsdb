@@ -57,6 +57,10 @@ jobs:
         pip install .[lightwood]  # TODO: for now some tests rely on lightwood
         pip freeze
       shell: bash
+    - name: Set up environment
+      shell: bash
+      run: |
+        mkdir prometheus_metrics
     - name: Run integration api and flow tests
       run: |
 
@@ -101,6 +105,7 @@ jobs:
         fi
       shell: bash
       env:
+        PROMETHEUS_MULTIPROC_DIR: ./prometheus_metrics
         CHECK_FOR_UPDATES: False
         AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
         AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
@@ -132,6 +137,11 @@ jobs:
         CHECK_FOR_UPDATES: False
         OPENAI_API_KEY: ${{secrets.OPENAI_API_KEY}}
         ANYSCALE_ENDPOINTS_API_KEY: ${{secrets.ANYSCALE_ENDPOINTS_API_KEY}}
-    - name: Run Integrations unittest
+        PROMETHEUS_MULTIPROC_DIR: ./prometheus_metrics
+    - name: Run Handlers tests and submit Coverage to coveralls
       run: |
-        python -m unittest discover -s tests/unit/handlers 
+        pytest --cov=tests/unit/handler tests/unit/handlers/test_postgresql.py && coveralls --service=github
+      env:
+        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+        PROMETHEUS_MULTIPROC_DIR: ./prometheus_metrics
+        github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}

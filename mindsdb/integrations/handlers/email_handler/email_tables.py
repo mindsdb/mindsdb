@@ -48,6 +48,12 @@ class EmailsTable(APITable):
 
         search_params = {}
         for op, arg1, arg2 in where_conditions:
+            if arg2 is None:
+                logger.warning(f"Skipping condition: {arg1} {op} {arg2}."
+                               "Please ignore if this is intentional, e.g. 'id > last' on first query of job run."
+                               )
+                continue
+
             if arg1 == 'datetime':
                 date = self.parse_date(arg2)
                 if op == '>':
@@ -62,9 +68,9 @@ class EmailsTable(APITable):
                 if op not in ['=', '>', '>=']:
                     raise NotImplementedError("Only =, > and >= operators are supported for id column.")
                 if op in ['=', '>=']:
-                    search_params['since_email_id'] = arg2
-                else:
-                    search_params['since_email_id'] = arg2 + 1
+                    search_params['since_email_id'] = int(arg2)
+                elif op == '>':
+                    search_params['since_email_id'] = int(arg2) + 1
 
             elif arg1 in ['mailbox', 'subject', 'to_field', 'from_field']:
                 if op != '=':
@@ -78,14 +84,14 @@ class EmailsTable(APITable):
             else:
                 raise NotImplementedError(f"Unsupported column: {arg1}.")
 
-        email_client = self.handler.connect()
+        self.handler.connect()
 
         if search_params:
             search_options = EmailSearchOptions(**search_params)
         else:
             search_options = EmailSearchOptions()
 
-        email_ingestor = EmailIngestor(email_client, search_options)
+        email_ingestor = EmailIngestor(self.handler.connection, search_options)
 
         emails_df = email_ingestor.ingest()
 

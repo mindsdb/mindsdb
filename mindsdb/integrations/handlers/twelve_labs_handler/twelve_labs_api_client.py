@@ -264,7 +264,7 @@ class TwelveLabsAPIClient:
 
         result = self._submit_multi_part_request(
             method="POST",
-            endpoint="tasks",
+            endpoint="/tasks",
             data=body,
         )
 
@@ -395,7 +395,7 @@ class TwelveLabsAPIClient:
         logger.info(f"Search for index {index_id} completed successfully.")
         return data
 
-    def summarize_videos(self, video_ids: List[str], summarization_type: str) -> Dict:
+    def summarize_videos(self, video_ids: List[str], summarization_type: str, prompt: str) -> Dict:
         """
         Summarize videos.
 
@@ -406,6 +406,9 @@ class TwelveLabsAPIClient:
 
         summarization_type : str
             Type of the summary to be generated. Supported types are 'summary', 'chapter' and 'highlight'.
+        
+        prompt: str
+            Prompt to be used for the Summarize task
 
         Returns
         -------
@@ -414,14 +417,13 @@ class TwelveLabsAPIClient:
         """
 
         results = []
-        for video_id in video_ids:
-            result = self.summarize_video(video_id=video_id, summarization_type=summarization_type)
-            results.append(result)
+        results = [self.summarize_video(video_id, summarization_type, prompt) for video_id in video_ids]
+
 
         logger.info(f"Summarized videos {video_ids} successfully.")
         return results
 
-    def summarize_video(self, video_id: str, summarization_type: str) -> Dict:
+    def summarize_video(self, video_id: str, summarization_type: str, prompt:str) -> Dict:
         """
         Summarize a video.
 
@@ -432,16 +434,19 @@ class TwelveLabsAPIClient:
 
         summarization_type : str
             Type of the summary to be generated. Supported types are 'summary', 'chapter' and 'highlight'.
+        
+        prompt: str
+            Prompt to be used for the Summarize task
 
         Returns
         -------
         Dict
             Summary of the video.
         """
-
         body = {
             "video_id": video_id,
-            "type": summarization_type
+            "type": summarization_type,
+            "prompt": prompt
         }
 
         result = self._submit_request(

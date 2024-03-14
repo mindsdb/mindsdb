@@ -1,10 +1,9 @@
 import datetime as dt
-from json import JSONEncoder
-
+import json
 from bson import ObjectId
 
 
-class MongoJSONEncoder(JSONEncoder):
+class MongoJSONEncoder(json.JSONEncoder):
 
     def default(self, obj):
         if isinstance(obj, dt.datetime):

@@ -406,7 +406,7 @@ class TwelveLabsAPIClient:
 
         summarization_type : str
             Type of the summary to be generated. Supported types are 'summary', 'chapter' and 'highlight'.
-        
+
         prompt: str
             Prompt to be used for the Summarize task
 
@@ -419,11 +419,10 @@ class TwelveLabsAPIClient:
         results = []
         results = [self.summarize_video(video_id, summarization_type, prompt) for video_id in video_ids]
 
-
         logger.info(f"Summarized videos {video_ids} successfully.")
         return results
 
-    def summarize_video(self, video_id: str, summarization_type: str, prompt:str) -> Dict:
+    def summarize_video(self, video_id: str, summarization_type: str, prompt: str) -> Dict:
         """
         Summarize a video.
 
@@ -434,7 +433,7 @@ class TwelveLabsAPIClient:
 
         summarization_type : str
             Type of the summary to be generated. Supported types are 'summary', 'chapter' and 'highlight'.
-        
+
         prompt: str
             Prompt to be used for the Summarize task
 

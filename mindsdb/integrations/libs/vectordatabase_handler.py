@@ -75,7 +75,7 @@ class VectorStoreHandler(BaseHandler):
             self.disconnect()
 
     def disconnect(self):
-        raise NotImplementedError()
+        pass
 
     def _value_or_self(self, value):
         if isinstance(value, Constant):

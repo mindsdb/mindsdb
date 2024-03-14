@@ -29,7 +29,7 @@ class BaseMemory:
         set date to start hiding messages
         '''
         history = self.get_chat_history(chat_id)
-        if left_count < len(history) - 1:
+        if left_count > len(history) - 1:
             left_count = len(history) - 1
         sent_at = history[-left_count].sent_at
 
@@ -58,7 +58,9 @@ class BaseMemory:
 
     def add_to_history(self, chat_id, chat_message):
 
-        return self._add_to_history(chat_id, chat_message)
+        self._add_to_history(chat_id, chat_message)
+        if chat_id in self._cache:
+            del self._cache[chat_id]
 
     def get_chat_history(self, chat_id, cached=True):
         if cached and chat_id in self._cache:
@@ -156,7 +158,7 @@ class DBMemory(BaseMemory):
                 db.ChatBotsHistory.chat_bot_id == chat_bot_id,
                 db.ChatBotsHistory.destination == chat_id
             )\
-            .order_by(db.ChatBotsHistory.sent_at)\
+            .order_by(db.ChatBotsHistory.sent_at.desc())\
             .limit(self.MAX_DEPTH)
 
         result = [
@@ -168,6 +170,7 @@ class DBMemory(BaseMemory):
             )
             for rec in query
         ]
+        result.reverse()
         return result
 
 

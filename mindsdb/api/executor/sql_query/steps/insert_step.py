@@ -52,7 +52,7 @@ class InsertToTableCall(BaseStepCall):
         dn = self.session.datahub.get(integration_name)
 
         if hasattr(dn, 'create_table') is False:
-            raise NotSupportedYet(f"Creating table in '{integration_name}' is not supporting")
+            raise NotSupportedYet(f"Creating table in '{integration_name}' is not supported")
 
         #  del 'service' columns
         for col in data.find_columns('__mindsdb_row_id'):

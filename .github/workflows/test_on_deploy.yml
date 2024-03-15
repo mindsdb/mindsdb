@@ -74,8 +74,8 @@ jobs:
       env:
         PROMETHEUS_MULTIPROC_DIR: ./prometheus_metrics
         CHECK_FOR_UPDATES: False
-        AWS_SECRET_ACCESS_KEY: ${{secrets.AWS_SECRET_ACCESS_KEY}}
-        AWS_ACCESS_KEY_ID: ${{secrets.AWS_ACCESS_KEY_ID}}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
 
     - name: Run Learning Hub Tests
       run: |
@@ -106,5 +106,5 @@ jobs:
           pytest -vx tests/integration_tests/flows/test_predict_text_sentiment_openai_tutorial.py
       env:
         CHECK_FOR_UPDATES: False
-        OPENAI_API_KEY: ${{secrets.OPENAI_API_KEY}}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     

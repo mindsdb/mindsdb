@@ -62,3 +62,4 @@ jobs:
   run_tests:
     name: Run Post-Deploy Tests
     uses: ./.github/workflows/test_on_deploy.yml
+    secrets: inherit

@@ -1,3 +1,8 @@
+---
+title: Hugging Face Inference API
+sidebarTitle: Hugging Face Inference API
+---
+
 This documentation describes the integration of MindsDB with [Hugging Face Inference API](https://huggingface.co/inference-endpoints/serverless).
 The integration allows for the deployment of Hugging Face models through Inference API within MindsDB, providing the models with access to data from various data sources.
 
@@ -34,16 +39,18 @@ USING
 
 The following parameters are supported in the `USING` clause of the `CREATE MODEL` statement:
 
-- `engine` is a required parameter. It is the name of the ML engine created with the `CREATE ML_ENGINE` statement.
-- `task` is an optional parameter. It describes a task to be performed. If not provided, the `model_name` parameter must be provided.
-- `model_name` is an optional parameter. It specifies a model to be used. If not provided, the `task` parameter must be provided.
-- `input_column` is a required parameter. It is the name of the column that stores input to the model.
-- `endpoint` is an optional parameter. It defines the endpoint to use for API calls. If not specified, the hosted Inference API from Hugging Face will be used.
-- `options` is an optional parameter. It is a JSON object containing additional options to pass to the API call. More information about the available options for each task can be found [here](https://huggingface.co/docs/api-inference/detailed_parameters).
-- `parameters` is an optional parameter. It is a JSON object containing additional parameters to pass to the API call. More information about the available parameters for each task can be found [here](https://huggingface.co/docs/api-inference/detailed_parameters).
-- `context_column` is an optional parameter. It is used for the `question-answering` task to provide context to the question.
-- `input_column2` is an optional parameter. It is used for the `sentence-similarity` task to provide the second input sentence for comparison.
-- `candidate_labels` is an optional parameter. It is used for the `zero-shot-classification` task to classify input data according to provided labels.
+| Parameter          | Required                                     | Description     |
+| ------------------ | -------------------------------------------- | --------------- |
+| `engine`           | Yes                                          | It is the name of the ML engine created with the `CREATE ML_ENGINE` statement.|
+| `task`             | Only if `model_name` is not provided         | It describes a task to be performed.|
+| `model_name`       | Only if `task` is not provided               | It specifies a model to be used.|
+| `input_column`     | Yes                                          | It is the name of the column that stores input to the model.|
+| `endpoint`         | No                                           | It defines the endpoint to use for API calls. If not specified, the hosted Inference API from Hugging Face will be used.|
+| `options`          | No                                           | It is a JSON object containing additional options to pass to the API call. More information about the available options for each task can be found [here](https://huggingface.co/docs/api-inference/detailed_parameters).|
+| `parameters`       | No                                           | It is a JSON object containing additional parameters to pass to the API call. More information about the available parameters for each task can be found [here](https://huggingface.co/docs/api-inference/detailed_parameters).|
+| `context_column`   | Only if `task` is `question-answering`       | It is used for the `question-answering` task to provide context to the question.|
+| `input_column2`    | Only if `task` is `sentence-similarity`      | It is used for the `sentence-similarity` task to provide the second input sentence for comparison.|
+| `candidate_labels` | Only if `task` is `zero-shot-classification` | It is used for the `zero-shot-classification` task to classify input data according to provided labels.|
 
 ## Usage
 
@@ -82,7 +89,9 @@ Here is the output:
 
 Find more quick examples below:
 
-Text Classification:
+<AccordionGroup>
+
+<Accordion title="Text Classification">
 ```sql
 CREATE MODEL mindsdb.hf_text_classifier
 PREDICT sentiment
@@ -91,8 +100,9 @@ USING
   engine = 'hf_api_engine',
   input_column = 'text';
 ```
+</Accordion>
 
-Fill Mask:
+<Accordion title="Fill Mask">
 ```sql
 CREATE MODEL mindsdb.hf_fill_mask
 PREDICT sequence
@@ -101,8 +111,9 @@ USING
   engine = 'hf_api_engine',
   input_column = 'text';
 ```
+</Accordion>
 
-Summarization:
+<Accordion title="Summarization">
 ```sql
 CREATE MODEL mindsdb.hf_summarizer
 PREDICT summary
@@ -111,8 +122,9 @@ USING
   engine = 'hf_api_engine',
   input_column = 'text';
 ```
+</Accordion>
 
-Text Generation:
+<Accordion title="Text Generation">
 ```sql
 CREATE MODEL mindsdb.hf_text_generator
 PREDICT generated_text
@@ -121,8 +133,9 @@ USING
   engine = 'hf_api_engine',
   input_column = 'text';
 ```
+</Accordion>
 
-Question Answering:
+<Accordion title="Question Answering">
 ```sql
 CREATE MODEL mindsdb.hf_question_answerer
 PREDICT answer
@@ -132,8 +145,9 @@ USING
   input_column = 'question',
   context_column = 'context';
 ```
+</Accordion>
 
-Sentences Similarity:
+<Accordion title="Sentences Similarity">
 ```sql
 CREATE MODEL mindsdb.hf_sentence_similarity
 PREDICT similarity
@@ -143,8 +157,9 @@ USING
   input_column = 'sentence1',
   input_column2 = 'sentence2';
 ```
+</Accordion>
 
-Zero Shot Classification:
+<Accordion title="Zero Shot Classification">
 ```sql
 CREATE MODEL mindsdb.hf_zero_shot_classifier
 PREDICT label
@@ -154,8 +169,9 @@ USING
   input_column = 'text',
   candidate_labels = ['label1', 'label2', 'label3'];
 ```
+</Accordion>
 
-Image Classification:
+<Accordion title="Image Classification">
 ```sql
 CREATE MODEL mindsdb.hf_image_classifier
 PREDICT label
@@ -164,8 +180,9 @@ USING
   engine = 'hf_api_engine',
   input_column = 'image_url';
 ```
+</Accordion>
 
-Object Detection:
+<Accordion title="Object Detection">
 ```sql
 CREATE MODEL mindsdb.hf_object_detector
 PREDICT objects
@@ -174,8 +191,9 @@ USING
   engine = 'hf_api_engine',
   input_column = 'image_url';
 ```
+</Accordion>
 
-Automatic Speech Recognition:
+<Accordion title="Automatic Speech Recognition">
 ```sql
 CREATE MODEL mindsdb.hf_speech_recognizer
 PREDICT transcription
@@ -184,8 +202,9 @@ USING
   engine = 'hf_api_engine',
   input_column = 'audio_url';
 ```
+</Accordion>
 
-Audio Classification:
+<Accordion title="Audio Classification">
 ```sql
 CREATE MODEL mindsdb.hf_audio_classifier
 PREDICT label
@@ -194,6 +213,10 @@ USING
   engine = 'hf_api_engine',
   input_column = 'audio_url';
 ```
+</Accordion>
+
+</AccordionGroup>
+
 </Info>
 
 <Tip>

@@ -2,6 +2,9 @@ name: Test on Deploy
 
 on:
   workflow_call:
+    secrets:
+      OPENAI_API_KEY:
+        required: true
 
 defaults:
   run:

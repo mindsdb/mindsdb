@@ -1,3 +1,8 @@
+---
+title: Anthropic
+sidebarTitle: Anthropic
+---
+
 This documentation describes the integration of MindsDB with [Anthropic](https://www.anthropic.com/), an AI research company.
 The integration allows for the deployment of Anthropic models within MindsDB, providing the models with access to data from various data sources.
 
@@ -65,12 +70,14 @@ Where:
 <Info>
 
 **Default Model**
+
 When you create an Anthropic model in MindsDB, it uses the `claude-2.1` model by default. But you can use other available models by passing the model name to the `model` parameter in the `USING` clause of the `CREATE MODEL` statement.
 </Info>
 
 <Info>
 
 **Default Max Tokens**
+
 When you create an Anthropic model in MindsDB, it uses 100 tokens as the maximum by default. But you can adjust this value by passing it to the `max_tokens` parameter in the `USING` clause of the `CREATE MODEL` statement.
 </Info>
 

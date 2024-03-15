@@ -38,6 +38,7 @@ USING
 ```
 
 <Info>
+
 The integrations between Anthropic and MindsDB was implemented using [Anthropic Python SDK](https://github.com/anthropics/anthropic-sdk-python).
 </Info>
 
@@ -67,12 +68,16 @@ Where:
 | `model`           | It defines model that will complete your prompt.                          |
 
 <Info>
+
 **Default Model**
+
 When you create an Anthropic model in MindsDB, it uses the `claude-2.1` model by default. But you can use other available models by passing the model name to the `model` parameter in the `USING` clause of the `CREATE MODEL` statement.
 </Info>
 
 <Info>
+
 **Default Max Tokens**
+
 When you create an Anthropic model in MindsDB, it uses 100 tokens as the maximum by default. But you can adjust this value by passing it to the `max_tokens` parameter in the `USING` clause of the `CREATE MODEL` statement.
 </Info>
 
@@ -95,6 +100,7 @@ Here is the output:
 ```
 
 <Tip>
+
 **Next Steps**
 
 Go to the [Use Cases](/use-cases/overview) section to see more examples.

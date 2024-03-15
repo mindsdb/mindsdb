@@ -94,12 +94,9 @@ class DuckDuckGoHandler(APIHandler):
         duckduckgo_search_table = DuckDuckGoSearchTable(self)
         self._register_table("my_duckduckgo", duckduckgo_search_table)
     
-    def connect(self) -> Dict[str, Any]:
-        if self.api_key:
-            self.is_connected = True
-            return {"api_key": self.api_key}
-        else:
-            return {}    
+    def connect(self) -> typing.Union[str, None]:
+        self.is_connected = True if self.is_connected else False
+        return self.api_key or None  
 
     def check_connection(self) -> StatusResponse:
         response = StatusResponse(False)

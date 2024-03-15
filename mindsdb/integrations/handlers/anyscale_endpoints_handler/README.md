@@ -1,3 +1,8 @@
+---
+title: Anyscale Endpoints
+sidebarTitle: Anyscale Endpoints
+---
+
 This documentation describes the integration of MindsDB with [Anyscale Endpoints](https://www.anyscale.com/endpoints), a fast and scalable API to integrate OSS LLMs into apps.
 The integration allows for the deployment of Anyscale Endpoints models within MindsDB, providing the models with access to data from various data sources.
 

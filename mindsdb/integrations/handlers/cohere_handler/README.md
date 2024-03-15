@@ -1,3 +1,8 @@
+---
+title: Cohere
+sidebarTitle: Cohere
+---
+
 This documentation describes the integration of MindsDB with [Cohere](https://cohere.com/), a technology company focused on artificial intelligence for the enterprise.
 The integration allows for the deployment of Cohere models within MindsDB, providing the models with access to data from various data sources.
 
@@ -78,10 +83,3 @@ Here is the output:
 
 Go to the [Use Cases](/use-cases/overview) section to see more examples.
 </Tip>
-
-## Implemented Features
-
-- [x] Cohere ML Handler
-  - [x] Support Generate
-  - [x] Support Detect_language 
-  - [x] Support Summarize

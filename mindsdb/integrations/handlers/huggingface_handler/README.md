@@ -1,3 +1,8 @@
+---
+title: Hugging Face
+sidebarTitle: Hugging Face
+---
+
 This documentation describes the integration of MindsDB with [Hugging Face](https://huggingface.co/), a company that develops computer tools for building applications using machine learning.
 The integration allows for the deployment of Hugging Face models within MindsDB, providing the models with access to data from various data sources.
 

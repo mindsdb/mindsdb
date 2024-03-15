@@ -13,8 +13,6 @@ import re
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
-from mindsdb_sql import parse_sql
-from mindsdb.integrations.handlers.utilities.query_utilities.select_query_utilities import SELECTQueryParser, SELECTQueryExecutor
 from collections import OrderedDict
 logger = log.getLogger(__name__)
 
@@ -33,7 +31,7 @@ class DuckDuckGoSearchTable(APITable):
         Returns:
             pd.DataFrame: The search results as a pandas DataFrame.
         """
-        # Extract the search query from the SQL statement
+        
         match = re.search(r"from\s+my_duckduckgo\s*\(\s*['\"](.*?)['\"]\s*\)", str(query), re.IGNORECASE)
         if match:
             search_query = match.group(1)
@@ -51,7 +49,7 @@ class DuckDuckGoSearchTable(APITable):
         }
 
         try:
-            # Call the handler's call_duckduckgo_api method
+           
             result = self.handler.call_duckduckgo_api(params=params)
             if result is not None:
                 data_frame = pd.json_normalize(result)
@@ -95,6 +93,13 @@ class DuckDuckGoHandler(APIHandler):
 
         duckduckgo_search_table = DuckDuckGoSearchTable(self)
         self._register_table("my_duckduckgo", duckduckgo_search_table)
+    
+    def connect(self) -> Dict[str, Any]:
+        if self.api_key:
+            self.is_connected = True
+            return {"api_key": self.api_key}
+        else:
+            return {}    
 
     def check_connection(self) -> StatusResponse:
         response = StatusResponse(False)
@@ -128,7 +133,7 @@ class DuckDuckGoHandler(APIHandler):
         Returns:
             Response: The response object containing the search results.
         """
-        logger.info(f"Performing search for '{query}'")  # Log the search query
+        logger.info(f"Performing search for '{query}'")  
 
         params = {
             "q": query,
@@ -145,11 +150,11 @@ class DuckDuckGoHandler(APIHandler):
                 response = Response(RESPONSE_TYPE.TABLE, data_frame=data_frame)
             else:
                 error_message = "API request failed"
-                logger.error(error_message)  # Log the error message
+                logger.error(error_message)  
                 response = Response(RESPONSE_TYPE.ERROR, error_message=error_message)
         except Exception as e:
             error_message = str(e)
-            logger.error(error_message)  # Log the exception
+            logger.error(error_message)  
             response = Response(RESPONSE_TYPE.ERROR, error_message=error_message)
 
         return response

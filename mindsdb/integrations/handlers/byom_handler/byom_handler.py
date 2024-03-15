@@ -34,6 +34,8 @@ from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.integrations.utilities.utils import format_exception_error
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 import mindsdb.utilities.profiler as profiler
+from mindsdb.utilities.fs import safe_extract
+
 
 from .proc_wrapper import (
     pd_decode, pd_encode, encode, decode, BYOM_METHOD,
@@ -475,7 +477,7 @@ class ModelWrapperSafe:
                 tar_path = self.env_storage_path.with_suffix('.tar')
                 if self.env_path.exists() is False and tar_path.exists() is True:
                     with tarfile.open(tar_path) as tar:
-                        tar.extractall(path=bese_env_path)
+                        safe_extract(tar, path=bese_env_path)
             else:
                 self.env_path = self.env_storage_path
 

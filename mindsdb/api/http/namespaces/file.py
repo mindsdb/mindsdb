@@ -11,11 +11,12 @@ from flask import request
 from flask_restx import Resource
 
 from mindsdb.api.http.namespaces.configs.files import ns_conf
-from mindsdb.api.http.utils import http_error, safe_extract
+from mindsdb.api.http.utils import http_error
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities import log
 from mindsdb.utilities.security import is_private_url, clear_filename
+from mindsdb.utilities.fs import safe_extract
 
 logger = log.getLogger(__name__)
 

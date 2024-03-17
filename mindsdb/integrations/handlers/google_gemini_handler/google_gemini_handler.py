@@ -12,7 +12,7 @@ import pandas as pd
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
-from mindsdb.integrations.libs.llm_utils import get_completed_prompts
+from mindsdb.integrations.libs.llm_utils import get_completed_prompts, validate_args
 import concurrent.futures
 
 
@@ -38,69 +38,18 @@ class GoogleGeminiHandler(BaseMLEngine):
     # Similiar to openai handler
     @staticmethod
     def create_validation(target, args=None, **kwargs):
-        if 'using' not in args:
-            raise Exception(
-                "Gemini engine requires a USING clause! Refer to its documentation for more details."
-            )
-        else:
-            args = args['using']
-
-        if (len(set(args.keys()) & {'img_url', 'input_text', 'question_column', 'prompt_template', 'json_struct', 'prompt'}) == 0):
-            raise Exception(
-                'One of `question_column`, `prompt_template` or `json_struct` is required for this engine.'
-            )
-
-        keys_collection = [
+        required_keys = ['img_url', 'input_text', 'question_column', 'prompt_template', 'json_struct', 'prompt']
+        extra_keys= {"target","model_name","mode",'title_column',"predict_params","type","max_tokens","temperature","api_key",}
+        key_collection = [
             ['prompt_template'],
             ['question_column', 'context_column'],
             ['prompt', 'user_column', 'assistant_column'],
             ['json_struct', 'input_text'],
             ['img_url', 'ctx_column']
         ]
-        for keys in keys_collection:
-            if keys[0] in args and any(
-                x[0] in args for x in keys_collection if x != keys
-            ):
-                raise Exception(
-                    textwrap.dedent(
-                        '''\
-                    Please provide one of
-                        1) a `prompt_template`
-                        2) a `question_column` and an optional `context_column`
-                        3) a `json_struct`
-                        4) a `prompt' and 'user_column' and 'assistant_column`
-                        5) a `img_url` and optional `ctx_column` for mode=`vision`
-                '''
-                    )
-                )
 
-        # for all args that are not expected, raise an error
-        known_args = set()
-        # flatten of keys_collection
-        for keys in keys_collection:
-            known_args = known_args.union(set(keys))
-
-        # TODO: need a systematic way to maintain a list of known args
-        known_args = known_args.union(
-            {
-                "target",
-                "model_name",
-                "mode",
-                'title_column',
-                "predict_params",
-                "type",
-                "max_tokens",
-                "temperature",
-                "api_key",
-            }
-        )
-
-        unknown_args = set(args.keys()) - known_args
-        if unknown_args:
-            # return a list of unknown args as a string
-            raise Exception(
-                f"Unknown arguments: {', '.join(unknown_args)}.\n Known arguments are: {', '.join(known_args)}"
-            )
+        # Call the validation function
+        validate_args(args, required_keys, key_collection, extra_keys)
 
     def create(self, target, args=None, **kwargs):
         args = args['using']
@@ -142,7 +91,6 @@ class GoogleGeminiHandler(BaseMLEngine):
         else:
             if args.get('prompt_template', False):
                 prompts, empty_prompt_ids = get_completed_prompts(base_template, df)
-        
         
         # Disclaimer: The following code has been adapted from the OpenAI handler.
             elif args.get('context_column', False):

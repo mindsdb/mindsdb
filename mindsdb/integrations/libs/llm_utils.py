@@ -1,7 +1,7 @@
 import re
 import json
 from typing import Optional, Dict, List, Tuple
-
+import textwrap
 import numpy as np
 import pandas as pd
 
@@ -275,3 +275,45 @@ def ft_chat_formatter(df: pd.DataFrame) -> List[Dict]:
         chats.append({'messages': chat})
 
     return chats
+
+def validate_args(args, required_keys, keys_collection, extra_keys):
+    ''' args: The dictionary containing the arguments to be validated.
+        required_keys: A list of keys that are required for the handler.
+        keys_collection: A list of sets of keys, where only one key from each set can be present in the args.
+    '''
+    if 'using' not in args:
+        raise Exception(
+            "Handler requires a USING clause! Refer to its documentation for more details."
+        )
+    else:
+        args = args['using']
+
+    # Check if at least one of the required keys is present
+    if not any(key in args for key in required_keys):
+        raise Exception(
+            f"At least one of {', '.join(required_keys)} is required for this handler."
+        )
+
+    # Check if exclusive sets of keys are mutually exclusive
+    for keys in keys_collection:
+        if keys[0] in args and any(
+                x[0] in args for x in keys_collection if x != keys
+            ):
+            raise Exception(
+                textwrap.dedent(
+                    f"""\
+                    Please provide only one of the following key sets:
+                    {', '.join(str(key_set))}
+                """
+                )
+            )
+
+    # Check for unknown arguments
+    known_args = set(required_keys) | extra_keys
+    known_args = known_args.union(*keys_collection)
+
+    unknown_args = set(args.keys()) - known_args
+    if unknown_args:
+        raise Exception(
+            f"Unknown arguments: {', '.join(unknown_args)}.\n Known arguments are: {', '.join(known_args)}"
+        )

@@ -60,78 +60,19 @@ class OpenAIHandler(BaseMLEngine):
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
-        if 'using' not in args:
-            raise Exception(
-                "OpenAI engine requires a USING clause! Refer to its documentation for more details."
-            )
-        else:
-            args = args['using']
-
-        if (
-            len(
-                set(args.keys())
-                & {'question_column', 'prompt_template', 'json_struct', 'prompt'}
-            )
-            == 0
-        ):
-            raise Exception(
-                'One of `question_column`, `prompt_template` or `json_struct` is required for this engine.'
-            )
-
+        
+        required_keys={'question_column', 'prompt_template', 'json_struct', 'prompt'}
+        extra_keys={"target","model_name","mode","predict_params","input_text","ft_api_info","ft_result_stats","runtime","max_tokens","temperature","openai_api_key","api_organization","api_base"}
+        
         keys_collection = [
             ['prompt_template'],
             ['question_column', 'context_column'],
             ['prompt', 'user_column', 'assistant_column'],
             ['json_struct'],
         ]
-        for keys in keys_collection:
-            if keys[0] in args and any(
-                x[0] in args for x in keys_collection if x != keys
-            ):
-                raise Exception(
-                    textwrap.dedent(
-                        '''\
-                    Please provide one of
-                        1) a `prompt_template`
-                        2) a `question_column` and an optional `context_column`
-                        3) a `json_struct`
-                        4) a `prompt' and 'user_column' and 'assistant_column`
-                '''
-                    )
-                )
 
-        # for all args that are not expected, raise an error
-        known_args = set()
-        # flatten of keys_collection
-        for keys in keys_collection:
-            known_args = known_args.union(set(keys))
-
-        # TODO: need a systematic way to maintain a list of known args
-        known_args = known_args.union(
-            {
-                "target",
-                "model_name",
-                "mode",
-                "predict_params",
-                "input_text",
-                "ft_api_info",
-                "ft_result_stats",
-                "runtime",
-                "max_tokens",
-                "temperature",
-                "openai_api_key",
-                "api_organization",
-                "api_base"
-            }
-        )
-
-        unknown_args = set(args.keys()) - known_args
-        if unknown_args:
-            # return a list of unknown args as a string
-            raise Exception(
-                f"Unknown arguments: {', '.join(unknown_args)}.\n Known arguments are: {', '.join(known_args)}"
-            )
-
+        validate_args(args, required_keys, key_collection, extra_keys)
+        
     def create(self, target, args=None, **kwargs):
         args = args['using']
         args['target'] = target

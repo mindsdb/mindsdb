@@ -1,7 +1,7 @@
 from functools import partial
 
 import pandas as pd
-from mindsdb_sql.parser.ast import BinaryOperation, Constant, Identifier, Select, Join, Union, Insert, Delete
+from mindsdb_sql.parser.ast import BinaryOperation, Constant, Identifier, Select
 from mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.api.executor.datahub.classes.tables_row import (
@@ -17,6 +17,7 @@ from mindsdb.api.executor.datahub.datanodes.project_datanode import (
 )
 from mindsdb.api.executor import exceptions as exc
 from mindsdb.api.executor.utilities.sql import query_df
+from mindsdb.api.executor.utilities.sql import get_query_tables
 from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.jobs.jobs_controller import JobsController
@@ -24,33 +25,6 @@ from mindsdb.interfaces.skills.skills_controller import SkillsController
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
-
-
-def get_all_tables(stmt):
-    if isinstance(stmt, Union):
-        left = get_all_tables(stmt.left)
-        right = get_all_tables(stmt.right)
-        return left + right
-
-    if isinstance(stmt, Select):
-        from_stmt = stmt.from_table
-    elif isinstance(stmt, (Identifier, Join)):
-        from_stmt = stmt
-    elif isinstance(stmt, Insert):
-        from_stmt = stmt.table
-    elif isinstance(stmt, Delete):
-        from_stmt = stmt.table
-    else:
-        # raise SqlApiException(f'Unknown type of identifier: {stmt}')
-        return []
-
-    result = []
-    if isinstance(from_stmt, Identifier):
-        result.append(from_stmt.parts[-1])
-    elif isinstance(from_stmt, Join):
-        result.extend(get_all_tables(from_stmt.left))
-        result.extend(get_all_tables(from_stmt.right))
-    return result
 
 
 class InformationSchemaDataNode(DataNode):
@@ -348,7 +322,9 @@ class InformationSchemaDataNode(DataNode):
         self.project_controller = ProjectController()
         self.database_controller = session.database_controller
 
-        self.persis_datanodes = {}
+        self.persis_datanodes = {
+            'log': self.database_controller.logs_db_controller
+        }
 
         databases = self.database_controller.get_dict()
         if "files" in databases:
@@ -510,17 +486,17 @@ class InformationSchemaDataNode(DataNode):
 
         target_table = None
         if (
-            type(query) == Select
-            and type(query.where) == BinaryOperation
+            type(query) is Select
+            and type(query.where) is BinaryOperation
             and query.where.op == "and"
         ):
             for arg in query.where.args:
                 if (
-                    type(arg) == BinaryOperation
+                    type(arg) is BinaryOperation
                     and arg.op == "="
-                    and type(arg.args[0]) == Identifier
+                    and type(arg.args[0]) is Identifier
                     and arg.args[0].parts[-1].upper() == "TABLE_SCHEMA"
-                    and type(arg.args[1]) == Constant
+                    and type(arg.args[1]) is Constant
                 ):
                     target_table = arg.args[1].value
                     break
@@ -535,7 +511,10 @@ class InformationSchemaDataNode(DataNode):
         for ds_name, ds in self.persis_datanodes.items():
             if target_table is not None and target_table != ds_name:
                 continue
-            ds_tables = ds.get_tables()
+            if hasattr(ds, 'get_tables_rows'):
+                ds_tables = ds.get_tables_rows()
+            else:
+                ds_tables = ds.get_tables()
             if len(ds_tables) == 0:
                 continue
             elif isinstance(ds_tables[0], dict):
@@ -588,7 +567,7 @@ class InformationSchemaDataNode(DataNode):
         project_name = None
         if (
             isinstance(query, Select)
-            and type(query.where) == BinaryOperation
+            and type(query.where) is BinaryOperation
             and query.where.op == "="
             and query.where.args[0].parts == ["project"]
             and isinstance(query.where.args[1], Constant)
@@ -605,28 +584,10 @@ class InformationSchemaDataNode(DataNode):
 
         return pd.DataFrame(data, columns=columns)
 
-    def _get_jobs_history(self, query: ASTNode = None):
-        jobs_controller = JobsController()
-
-        project_name = None
-        if (
-            isinstance(query, Select)
-            and type(query.where) == BinaryOperation
-            and query.where.op == "="
-            and query.where.args[0].parts == ["project"]
-            and isinstance(query.where.args[1], Constant)
-        ):
-            project_name = query.where.args[1].value
-
-        data = jobs_controller.get_history(project_name)
-
-        columns = self.information_schema["JOBS_HISTORY"]
-        columns_lower = [col.lower() for col in columns]
-
-        # to list of lists
-        data = [[row[k] for k in columns_lower] for row in data]
-
-        return pd.DataFrame(data, columns=columns)
+    def _get_jobs_history(self, query: ASTNode = None) -> pd.DataFrame:
+        log_controller = self.persis_datanodes['log']
+        df = log_controller.query(query, return_as='DataFrame')
+        return df
 
     def _get_triggers(self, query: ASTNode = None):
         from mindsdb.interfaces.triggers.triggers_controller import TriggersController
@@ -636,7 +597,7 @@ class InformationSchemaDataNode(DataNode):
         project_name = None
         if (
             isinstance(query, Select)
-            and type(query.where) == BinaryOperation
+            and type(query.where) is BinaryOperation
             and query.where.op == "="
             and query.where.args[0].parts == ["project"]
             and isinstance(query.where.args[1], Constant)
@@ -661,7 +622,7 @@ class InformationSchemaDataNode(DataNode):
         project_name = None
         if (
             isinstance(query, Select)
-            and type(query.where) == BinaryOperation
+            and type(query.where) is BinaryOperation
             and query.where.op == "="
             and query.where.args[0].parts == ["project"]
             and isinstance(query.where.args[1], Constant)
@@ -684,7 +645,7 @@ class InformationSchemaDataNode(DataNode):
         project_name = None
         if (
                 isinstance(query, Select)
-                and type(query.where) == BinaryOperation
+                and type(query.where) is BinaryOperation
                 and query.where.op == '='
                 and query.where.args[0].parts == ['project']
                 and isinstance(query.where.args[1], Constant)
@@ -720,7 +681,7 @@ class InformationSchemaDataNode(DataNode):
         project_name = None
         if (
                 isinstance(query, Select)
-                and type(query.where) == BinaryOperation
+                and type(query.where) is BinaryOperation
                 and query.where.op == '='
                 and query.where.args[0].parts == ['project']
                 and isinstance(query.where.args[1], Constant)
@@ -740,7 +701,7 @@ class InformationSchemaDataNode(DataNode):
         project_name = None
         if (
                 isinstance(query, Select)
-                and type(query.where) == BinaryOperation
+                and type(query.where) is BinaryOperation
                 and query.where.op == '='
                 and query.where.args[0].parts == ['project']
                 and isinstance(query.where.args[1], Constant)
@@ -1034,7 +995,7 @@ class InformationSchemaDataNode(DataNode):
         return df
 
     def query(self, query: ASTNode, session=None):
-        query_tables = get_all_tables(query)
+        query_tables = [x[1] for x in get_query_tables(query)]
 
         if len(query_tables) != 1:
             raise exc.BadTableError(

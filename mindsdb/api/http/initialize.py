@@ -269,12 +269,23 @@ def initialize_app(config, no_studio):
         # endregion
 
         company_id = request.headers.get('company-id')
+        user_id = request.headers.get('user-id')
         user_class = request.headers.get('user-class')
+        encryption_key = request.headers.get('encryption-key')
 
         try:
             email_confirmed = int(request.headers.get('email-confirmed', 1))
         except ValueError:
             email_confirmed = 1
+
+        if user_id is not None:
+            try:
+                user_id = int(user_id)
+            except Exception as e:
+                logger.error(
+                    f"Cloud not parse user id: {user_id} | exception: {e}"
+                )
+                user_id = None
 
         if company_id is not None:
             try:
@@ -296,8 +307,27 @@ def initialize_app(config, no_studio):
         else:
             user_class = 0
 
+        if encryption_key is not None:
+            try:
+                encryption_key = encryption_key.decode()
+            except Exception as e:
+                logger.error(
+                    f"Can't parse encryption key for company_id={company_id}, exception: {e}"
+                )
+                raise Exception("Can't parse encryption key")
+
+        if (
+            config.get("cloud", False) is False and (
+                company_id is None
+                or user_class is None
+            )
+        ):
+            raise Exception('Request cannot be processed due to insufficient metadata')
+
+        ctx.user_id = user_id
         ctx.company_id = company_id
         ctx.user_class = user_class
+        ctx.encryption_key = encryption_key
         ctx.email_confirmed = email_confirmed
 
     # Wait for static initialization.

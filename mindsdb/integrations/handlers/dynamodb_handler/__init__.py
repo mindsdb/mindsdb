@@ -15,7 +15,7 @@ except Exception as e:
 title = 'DynamoDb'
 name = 'dynamodb'
 type = HANDLER_TYPE.DATA
-icon_path = 'icon.png'
+icon_path = 'icon.svg'
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'description',

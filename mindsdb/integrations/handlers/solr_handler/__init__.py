@@ -15,7 +15,7 @@ except Exception as e:
 title = 'Solr'
 name = 'solr'
 type = HANDLER_TYPE.DATA
-icon_path = 'solr.svg'
+icon_path = 'icon.svg'
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'description',

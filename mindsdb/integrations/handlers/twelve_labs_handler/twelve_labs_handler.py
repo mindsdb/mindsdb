@@ -82,15 +82,8 @@ class TwelveLabsHandler(BaseMLEngine):
         args = args['using']
         args['target'] = target
 
-        # get api key
-        api_key = get_api_key(
-            api_name=self.name,
-            create_args=args,
-            engine_storage=self.engine_storage,
-        )
-
-        # initialize TwelveLabsAPIClient
-        twelve_labs_api_client = TwelveLabsAPIClient(api_key=api_key)
+        # get api client and api key
+        twelve_labs_api_client, api_key = self._get_api_client(args)
 
         # update args with api key
         args['twelve_labs_api_key'] = api_key
@@ -169,22 +162,15 @@ class TwelveLabsHandler(BaseMLEngine):
         # get args from model_storage
         args = self.model_storage.json_get('args')
 
-        # get api key
-        api_key = get_api_key(
-            api_name=self.name,
-            create_args=args,
-            engine_storage=self.engine_storage,
-        )
-
-        # initialize TwelveLabsAPIClient
-        twelve_labs_api_client = TwelveLabsAPIClient(api_key=api_key)
-
-        # get search query
-        # TODO: support multiple queries
-        query = df[args['query_column']].tolist()[0]
+        # get api client
+        twelve_labs_api_client, _ = self._get_api_client(args)
 
         # check if task is search
         if args['task'] == 'search':
+            # get search query
+            # TODO: support multiple queries
+            query = df[args['search_query_column']].tolist()[0]
+
             # search for query in index
             data = twelve_labs_api_client.search_index(
                 index_id=args['index_id'],
@@ -201,5 +187,98 @@ class TwelveLabsHandler(BaseMLEngine):
             # return df_predictions
             return pd.json_normalize(data).add_prefix(args['target'] + '_')
 
+        # check if task is summarize
+        elif args['task'] == 'summarization':
+            # sumarize videos
+            video_ids = df['video_id'].tolist()
+            data = twelve_labs_api_client.summarize_videos(
+                video_ids=video_ids,
+                summarization_type=args['summarization_type']
+            )
+
+            if args['summarization_type'] in ('chapter', 'highlight'):
+                return pd.json_normalize(data, record_path=f"{args['summarization_type']}s", meta=['id']).add_prefix(args['target'] + '_')
+            else:
+                return pd.json_normalize(data).add_prefix(args['target'] + '_')
+
+    def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
+        """
+        Describes the model. This method is called when describing the model.
+
+        Parameters
+        ----------
+        attribute : str, Optional
+            The attribute to describe.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame containing the description of the model.
+        """
+
+        if attribute == "args":
+            args = self.model_storage.json_get("args")
+            return pd.DataFrame(args.items(), columns=["key", "value"])
+
+        elif attribute == "indexed_videos":
+            # get api client
+            twelve_labs_api_client, _ = self._get_api_client()
+
+            # get videos indexed in the index
+            index_name = self.model_storage.json_get("args").get("index_name")
+            indexed_videos = twelve_labs_api_client.list_videos_in_index(index_name=index_name)
+
+            # structure nested columns
+            indexed_video_data = []
+            for video in indexed_videos:
+                video_data = video.copy()
+                video_data.pop("metadata")
+                video_data.update(video["metadata"])
+
+                # convert engine_ids to string
+                video_data['engine_ids'] = ", ".join(video_data['engine_ids'])
+
+                indexed_video_data.append(video_data)
+
+            df_videos = pd.DataFrame(indexed_video_data)
+
+            # rename _id to video_id
+            df_videos.rename(columns={"_id": "video_id"}, inplace=True)
+
+            # MindsDB GUI fails to display NaN values, so we replace them with 0
+            df_videos.fillna(0, inplace=True)
+            return df_videos
+
         else:
-            raise NotImplementedError(f"Task {args['task']} is not supported.")
+            tables = ["args", "indexed_videos"]
+            return pd.DataFrame(tables, columns=["tables"])
+
+    def _get_api_client(self, args: Dict = None) -> TwelveLabsAPIClient:
+        """
+        Returns a TwelveLabsAPIClient instance.
+
+        Parameters
+        ----------
+        args : Dict
+            Arguments from the USING clause.
+
+        Returns
+        -------
+        TwelveLabsAPIClient
+            TwelveLabsAPIClient instance.
+        """
+
+        if not args:
+            args = self.model_storage.json_get('args')
+
+        # get api key
+        api_key = get_api_key(
+            api_name=self.name,
+            create_args=args,
+            engine_storage=self.engine_storage,
+        )
+
+        base_url = args.get('base_url', None)
+
+        # initialize TwelveLabsAPIClient
+        return TwelveLabsAPIClient(api_key=api_key, base_url=base_url), api_key

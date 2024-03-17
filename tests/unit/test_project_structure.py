@@ -731,6 +731,30 @@ class TestProjectStructure(BaseExecutorDummyML):
         # second call content one new line
         assert len(ret) == 1
 
+        # -- view with model
+
+        self.run_sql('''
+            create view v2 (
+                select t.a+1 as a from dummy_data.tasks t
+                JOIN task_model as m
+                where t.a>last
+            )
+       ''')
+
+        ret = self.run_sql('select * from v2')
+        # first call is empty
+        assert len(ret) == 0
+
+        # add row to dataframe
+        df.loc[len(df.index)] = [7, 'a']
+        self.set_data('tasks', df)
+
+        ret = self.run_sql('select * from v2')
+
+        # second call content one new line
+        assert len(ret) == 1
+        assert ret.a[0] == 8
+
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_last_in_job(self, data_handler, scheduler):
         df = pd.DataFrame([
@@ -738,12 +762,13 @@ class TestProjectStructure(BaseExecutorDummyML):
             {'a': 2, 'b': 'b'},
         ])
         self.set_handler(data_handler, name='pg', tables={'tasks': df})
+        self.save_file('tasks', df)
 
         # -- create model --
         self.run_sql(
             '''
                 CREATE model task_model
-                from pg (select * from tasks)
+                from files (select * from tasks)
                 PREDICT a
                 using engine='dummy_ml'
             '''
@@ -854,6 +879,11 @@ class TestProjectStructure(BaseExecutorDummyML):
         assert len(ret.columns) == 4
         assert ret['model_name'][0] == 'test'
         assert ret['api_key'][0] == 'api_key_1'
+
+    def test_show(self):
+        for item in ('chatbots', 'knowledge_bases', 'agents', 'skills', 'jobs'):
+
+            self.run_sql(f'show {item}')
 
 
 class TestJobs(BaseExecutorDummyML):

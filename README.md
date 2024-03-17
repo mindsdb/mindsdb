@@ -28,20 +28,21 @@
 	<a href="https://mindsdb.com/joincommunity">Community Slack</a>
 	<span> | </span>
 	<a href="https://github.com/mindsdb/mindsdb/issues?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22">Contribute</a>
-
+ 	<span> | </span>
+	<a href="https://github.com/mindsdb/mindsdb/discussions/8817"> 20K🌟🎉 </a>
 </h3>
 
 </div>
 
 ----------------------------------------
-
-
-[MindsDB](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) is the middleware for building custom AI, enabling smarter organizations. 
- [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=The%20middleware%20for%20building%20custom%20AI,%20enabling%20smarter%20organizations&url=https://github.com/mindsdb/mindsdb&via=mindsdb&hashtags=ai,opensource)
+[MindsDB](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) is the platform for customizing AI from enterprise data. You can create, serve, and fine-tune models in real-time from your database, vector store, and application data.
+ [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=The%platform%20for%customizing%20AI,%20from%20enterprise%20data&url=https://github.com/mindsdb/mindsdb&via=mindsdb&hashtags=ai,opensource)
 
 We believe AI will help every company thrive, but off-the-shelf, generic AI usually doesn’t completely meet their needs. With MindsDB’s nearly 200 integrations, any developer can create AI customized for their purpose, faster and more securely. Their AI systems will constantly improve themselves — using companies’ own data, in real-time.
 
-MindsDB has introduced an abstraction for AI development utilizing "enhanced SQL" syntax, a language familiar to developers worldwide:
+MindsDB "enhances" SQL syntax with AI capabilities to make it accessible for developers worldwide:
+
+
 | 🎯  Solutions                 | ⚙️ SQL Query Examples |
 |---------------------------|-----------|
 | 🤖 [Fine-Tuning](https://docs.mindsdb.com/sql/api/finetune#example-3-openai-model)            |  <code> FINETUNE mindsdb.hf_model FROM postgresql.table; </code>  |

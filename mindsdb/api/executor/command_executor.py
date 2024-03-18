@@ -649,8 +649,7 @@ class ExecuteCommands:
         elif type(statement) is Explain:
             return self.answer_show_columns(statement.target, database_name=database_name)
         elif type(statement) is CreateTable:
-            # TODO
-            return self.answer_apply_predictor(statement, database_name)
+            return self.answer_create_table(statement, database_name)
         # -- jobs --
         elif type(statement) is CreateJob:
             return self.answer_create_job(statement, database_name)
@@ -2016,7 +2015,7 @@ class ExecuteCommands:
         data = [[self.context.get('connection_id')]]
         return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=data)
 
-    def answer_apply_predictor(self, statement, database_name):
+    def answer_create_table(self, statement, database_name):
         SQLQuery(statement, session=self.session, execute=True, database=database_name)
         return ExecuteAnswer(ANSWER_TYPE.OK)
 

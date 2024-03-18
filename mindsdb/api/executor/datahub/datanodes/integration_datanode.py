@@ -63,29 +63,33 @@ class IntegrationDataNode(DataNode):
         if result.type == RESPONSE_TYPE.ERROR:
             raise Exception(result.error_message)
 
-    def create_table(self, table_name: Identifier, result_set, is_replace=False, is_create=False):
+    def create_table(self, table_name: Identifier, result_set=None, columns=None,
+                           is_replace=False, is_create=False):
         # is_create - create table
         # is_replace - drop table if exists
         # is_create==False and is_replace==False: just insert
 
         table_columns_meta = {}
-        table_columns = []
-        for col in result_set.columns:
-            # assume this is pandas type
-            column_type = Text
-            if isinstance(col.type, np_dtype):
-                if pd_types.is_integer_dtype(col.type):
-                    column_type = Integer
-                elif pd_types.is_numeric_dtype(col.type):
-                    column_type = Float
 
-            table_columns.append(
-                TableColumn(
-                    name=col.alias,
-                    type=column_type
+        if columns is None:
+            columns = []
+
+            for col in result_set.columns:
+                # assume this is pandas type
+                column_type = Text
+                if isinstance(col.type, np_dtype):
+                    if pd_types.is_integer_dtype(col.type):
+                        column_type = Integer
+                    elif pd_types.is_numeric_dtype(col.type):
+                        column_type = Float
+
+                columns.append(
+                    TableColumn(
+                        name=col.alias,
+                        type=column_type
+                    )
                 )
-            )
-            table_columns_meta[col.alias] = column_type
+                table_columns_meta[col.alias] = column_type
 
         if is_replace:
             # drop
@@ -101,12 +105,16 @@ class IntegrationDataNode(DataNode):
         if is_create:
             create_table_ast = CreateTable(
                 name=table_name,
-                columns=table_columns,
+                columns=columns,
                 is_replace=True
             )
             result = self._query(create_table_ast)
             if result.type == RESPONSE_TYPE.ERROR:
                 raise Exception(result.error_message)
+
+        if result_set is None:
+            # it is just a 'create table'
+            return
 
         insert_columns = [Identifier(parts=[x.alias]) for x in result_set.columns]
         formatted_data = []

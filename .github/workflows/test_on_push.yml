@@ -11,7 +11,7 @@ defaults:
 jobs:
   # Run all of our static code checks here
   code_checking:
-    name: Run code checks
+    name: Run static code checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3.5.3

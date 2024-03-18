@@ -24,11 +24,12 @@ jobs:
         with:
           filter: '[?runOnBranch==`${{ github.ref }}` || runOnBranch==`always`]'
 
+  # Run our integration tests
   test:
-    needs: matrix_prep
+    needs: [matrix_prep]
     strategy:
       matrix: ${{fromJson(needs.matrix_prep.outputs.matrix)}}
-    name: Tests
+    name: Run integration tests
     runs-on: ${{ matrix.runs_on }}
     if: github.ref_type == 'branch'
     steps:

@@ -1,42 +1,11 @@
 ---
-title: Setup for Docker
+title: Docker for MindsDB
 sidebarTitle: Docker
 ---
 
-<iframe
-    className="w-full h-96"
-    width="628"
-    height="286"
-    src="https://www.youtube.com/embed/Bmuavy0MelQ"
-    title="Deploy MindsDB using Docker"
-    frameBorder="0"
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-    allowFullScreen
-></iframe>
-
-## Install Docker
-
-Install Docker on your machine following [the instructions](https://docs.docker.com/install).
-
-To make sure Docker is successfully installed on your machine, run a test container as follows:
-
-```bash
-docker run hello-world
-```
-
-You should see the `Hello from Docker!` message. Otherwise, check the [Docker's Get Started](https://www.docker.com/get-started) documentation.
-
-<Warning>
-**Docker for Mac users - RAM allocation issues**
-
-By default, Docker for Mac allocates 2 GB of RAM, which is insufficient for deploying MindsDB with Docker. We recommend increasing the default RAM limit to 8 GB. Please refer to the [Docker Desktop for Mac users manual](https://docs.docker.com/desktop/mac/#resources) for more information on how to increase the allocated memory.
-</Warning>
-
-## Install MindsDB
+MindsDB provides Docker images that facilitate running MinsdDB in Docker containers.
 
 <Tip>
-**Choose one of the available [Docker images for MindsDB](https://hub.docker.com/r/mindsdb/mindsdb/tags)**
-
 As MindsDB integrates with numerous [data sources](/integrations/data-overview) and [AI frameworks](/integrations/ai-overview), each integration requires a set of dependencies. Hence, MindsDB provides multiple Docker images for different tasks, as outlined below.
 
 * `mindsdb/mindsdb:latest` (or `mindsdb/mindsdb`)
@@ -49,35 +18,48 @@ It is the Docker image of MindsDB that comes with [these integrations](https://g
 It is the Docker image of MindsDB that comes with [these integrations](https://github.com/mindsdb/mindsdb/blob/staging/default_handlers.txt) and the Hugging Face integration preloaded.
 </Tip>
 
-Run the command below, providing the selected Docker image, to start MindsDB in Docker and follow the logs:
+## Prerequisites
+
+Before proceeding, ensure you have installed Docker, following the [official Docker documentation](https://docs.docker.com/install).
+
+## Setup
+
+This setup of MindsDB uses one of the available Docker images, as listed above.
+
+Follow the steps to set up MindsDB in a Docker container.
+
+### Install MindsDB
+
+Run this command to start MindsDB in Docker:
 
 ```bash
 docker run -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
 ```
 
-<Info>
-Alternatively, if you run this command with the `detach` flag, it will return the container ID and not follow the logs:
+Where:
+
+-   `docker run` is a native Docker command used to start a container.
+-   `-p 47334:47334` publishes port 47334 to access MindsDB GUI and HTTP API.
+-   `-p 47335:47335` publishes port 47335 to access MindsDB MySQL API.
+-   `mindsdb/mindsdb` is a Docker image provided by MindsDB. You can choose a different one from the list above.
+
+<Tip>
+If you don't want to follow the logs and get the prompt back, add the `-d` flag that stands for *detach*.
 
 ```bash
 docker run -d -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
 ```
-</Info>
+</Tip>
 
 <Tip>
-If you would like to persist your models & configurations in the host machine, run the following commands:
+If you want to persist your models and configurations in the host machine, run these commands:
 
 ```bash
 mkdir mdb_data
 docker run -p 47334:47334 -p 47335:47335 -v $(pwd)/mdb_data:/root/mdb_storage mindsdb/mindsdb
 ```
 
-Let's analyze this command part by part:
-
--   `docker run` is a native Docker command used to start a container
--   `-p 47334:47334` publishes port 47334 to access MindsDB GUI and HTTP API
--   `-p 47335:47335` publishes port 47335 to access MindsDB MySQL API
--   `-v $(pwd)/mdb_data:/root/mdb_storage` maps the newly created folder `mdb_data` on the host machine to the `/root/mdb_storage` inside the container
--   `mindsdb/mindsdb` is the container we want to start
+Where `-v $(pwd)/mdb_data:/root/mdb_storage` maps the newly created folder `mdb_data` on the host machine to the `/root/mdb_storage` inside the container.
 </Tip>
 
 Now you can access the MindsDB editor by going to `127.0.0.1:47334` in your browser.
@@ -86,44 +68,63 @@ Now you can access the MindsDB editor by going to `127.0.0.1:47334` in your brow
   <img src="/assets/mindsdb-local-editor.png" />
 </p>
 
-## Install dependencies
+<Warning>
+If you experience any issues related to MKL or your training process does not complete, please add the `MKL_SERVICE_FORCE_INTEL` environment variable, as below.
+
+```bash
+docker run -e MKL_SERVICE_FORCE_INTEL=1 -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+```
+</Warning>
+
+### Install dependencies
 
 MindsDB integrates with numerous data sources and AI frameworks. To use any of the integrations, you should enure that the required dependencies are installed in the Docker container.
 
-Here is how to install the dependencies in the Docker container:
+<Info>
+Alternative way is to install dependencies directly from MindsDB editor. Go to *Settings* and *Manage Integrations*, select integrations you want to use and click on *Install*.
+</Info>
 
-1. Run the MindsDB Docker container:
-    ```bash
-    docker run -d -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
-    ```
+Run the MindsDB Docker container:
 
-2. Start an interactive shell in the container:
-    ```bash
-    docker exec -it container-name sh
-    ```
+```bash
+docker run -d -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+```
 
-3. Install the dependencies:
-    ```bash
-    pip install mindsdb[handler_name]
-    ```
-    For example, run this command to install dependencies for the [OpenAI handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/openai_handler):
-    ```bash
-    pip install mindsdb[openai]
-    ```
+Start an interactive shell in the container:
 
-4. Exit the interactive shell:
-    ```bash
-    exit
-    ```
+```bash
+docker exec -it container-name sh
+```
 
-5. Restart the container:
-    ```bash
-    docker restart container-name
-    ```
+Install the dependencies:
 
-## Configuration Options
+```bash
+pip install mindsdb[handler_name]
+```
 
-### Default Configuration
+For example, run this command to install dependencies for the [OpenAI handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/openai_handler):
+
+```bash
+pip install mindsdb[openai]
+```
+
+Exit the interactive shell:
+
+```bash
+exit
+```
+
+Restart the container:
+
+```bash
+docker restart container-name
+```
+
+## Configuration
+
+This is a configuration for MindsDB's Docker image that includes storage location, log level, debugging information, installed integrations, and API endpoints. These parameters can be customized by modifying a JSON file that stores default configuration.
+
+### Default configuration
 
 The default configuration for MindsDB's Docker image is stored as a JSON code, as below.
 
@@ -164,7 +165,7 @@ The default configuration for MindsDB's Docker image is stored as a JSON code, a
 }
 ```
 
-### Custom Configuration
+### Custom configuration
 
 To override the default configuration, you can mount a config file over `/root/mindsdb_config.json`, as below.
 
@@ -172,18 +173,10 @@ To override the default configuration, you can mount a config file over `/root/m
 docker run -v mdb_config.json:/root/mindsdb_config.json mindsdb/mindsdb
 ```
 
-## Known Issues
-
-### #1
-
-If you experience any issues related to MKL or your training process does not complete, please add the `MKL_SERVICE_FORCE_INTEL` environment variable, as below.
-
-```bash
-docker run -e MKL_SERVICE_FORCE_INTEL=1 -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
-```
-
-## What's Next
+<Tip>
+**What's next?**
 
 Now that you installed and started MindsDB locally in your Docker container, go ahead and find out how to create and train a model using the [`CREATE MODEL`](/sql/create/model) statement.
 
 Check out the [Use Cases](/use-cases/overview) section to follow tutorials that cover Large Language Models, Chatbots, Time Series, Classification, and Regression models, Semantic Search, and more.
+</Tip>

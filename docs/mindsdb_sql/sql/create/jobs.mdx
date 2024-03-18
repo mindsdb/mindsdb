@@ -65,7 +65,7 @@ Further, you can query all jobs and their execution history like this:
 
 ```sql
 SELECT * FROM [project_name.]jobs WHERE name = 'job_name';
-SELECT * FROM [project_name.]jobs_history WHERE name = 'job_name';
+SELECT * FROM log.jobs_history WHERE project = 'mindsdb' AND name = 'job_name';
 ```
 
 ### `LAST`

@@ -24,6 +24,9 @@ class TwelveLabsHandlerModel(BaseModel):
             2. From the environment variable TWELVE_LABS_API_KEY.
             3. From the config.json file.
 
+    base_url : str, Optional
+        Base URL for the Twelve Labs API. If not provided, the default URL https://api.twelvelabs.io/v1.2 is used.
+
     index_options : List[str]
         List of that specifies how the platform will process the videos uploaded to this index. This will have no effect if the index already exists.
 
@@ -48,8 +51,11 @@ class TwelveLabsHandlerModel(BaseModel):
     search_options : List[str], Optional
         List of search options to be used for searching. This will only be required if the task is search.
 
-    query_column : str, Optional
+    search_query_column : str, Optional
         Name of the column containing the query to be used for searching. This will only be required if the task is search. Each query will be run against the entire index, not individual videos.
+
+    summarization_type : str, Optional
+        Type of the summary to be generated. This will only be required if the task is summarize. Supported types are 'summary', 'chapter' and 'highlight'.
 
     For more information, refer the API reference: https://docs.twelvelabs.io/reference/api-reference
     """
@@ -57,6 +63,7 @@ class TwelveLabsHandlerModel(BaseModel):
     index_name: str
     engine_id: Optional[str] = None
     api_key: Optional[str] = None
+    base_url: Optional[str] = None
     index_options: List[str]
     addons: List[str] = []
     video_urls: Optional[List[str]] = None
@@ -65,7 +72,8 @@ class TwelveLabsHandlerModel(BaseModel):
     video_files_column: Optional[str] = None
     task: str = None
     search_options: Optional[List[str]] = None
-    query_column: Optional[str] = None
+    search_query_column: Optional[str] = None
+    summarization_type: Optional[str] = None
 
     class Config:
         extra = Extra.forbid
@@ -87,6 +95,58 @@ class TwelveLabsHandlerModel(BaseModel):
         """
 
         ParameterValidationUtilities.validate_parameter_spelling(cls, values)
+
+        return values
+
+    @root_validator(pre=True, allow_reuse=True, skip_on_failure=True)
+    def check_for_valid_task(cls, values):
+        """
+        Root validator to check if the task provided is valid.
+
+        Parameters
+        ----------
+        values : Dict
+            Dictionary containing the attributes of the model.
+
+        Raises
+        ------
+        ValueError
+            If the task provided is not valid.
+        """
+
+        task = values.get("task")
+
+        if task and task not in ["search", "summarization"]:
+            raise ValueError(
+                f"task {task} is not supported. Please provide a valid task."
+            )
+
+        return values
+
+    @root_validator(pre=True, allow_reuse=True, skip_on_failure=True)
+    def check_for_valid_engine_options(cls, values):
+        """
+        Root validator to check if the options specified for particular engines are valid.
+
+        Parameters
+        ----------
+        values : Dict
+            Dictionary containing the attributes of the model.
+
+        Raises
+        ------
+        ValueError
+            If there are any typos in the parameters.
+        """
+
+        engine_id = values.get("engine_id")
+        index_options = values.get("index_options")
+
+        if engine_id and 'pegasus' in engine_id:
+            if not set(index_options).issubset(set(['visual', 'conversation'])):
+                raise ValueError(
+                    "index_optios for the Pegasus family of video understanding engines should be one or both of the following engine options: visual and conversation.."
+                )
 
         return values
 
@@ -151,10 +211,23 @@ class TwelveLabsHandlerModel(BaseModel):
                     "search_options should be a subset of index_options."
                 )
 
-            query_column = values.get("query_column")
-            if not query_column:
+            search_query_column = values.get("search_query_column")
+            if not search_query_column:
                 raise ValueError(
-                    "query_column has not been provided. Please provide query_column."
+                    "search_query_column has not been provided. Please provide query_column."
+                )
+
+        elif task == "summarization":
+            summarization_type = values.get("summarization_type")
+            if summarization_type:
+                if summarization_type not in ["summary", "chapter", "highlight"]:
+                    raise ValueError(
+                        "summarization_type should be one of the following: 'summary', 'chapter' and 'highlight'."
+                    )
+
+            else:
+                raise ValueError(
+                    "type has not been provided. Please provide summarization_type."
                 )
 
         else:
@@ -182,7 +255,7 @@ class TwelveLabsHandlerConfig(BaseSettings):
         Default wait duration when polling video indexing tasks created via the Twelve Labs API.
     """
 
-    BASE_URL = "https://api.twelvelabs.io/v1.1"
+    BASE_URL = "https://api.twelvelabs.io/v1.2"
     DEFAULT_ENGINE = "marengo2.5"
     DEFAULT_WAIT_DURATION = 5
 

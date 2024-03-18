@@ -36,4 +36,5 @@ protobuf==3.20.3
 hierarchicalforecast~=0.4.0
 google-auth-oauthlib
 msal
-langchain==0.1.5
+langchain==0.1.9
+prometheus-client==0.20.0

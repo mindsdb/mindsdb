@@ -1,8 +1,9 @@
 import re
+from typing import List
 
 import pandas as pd
 
-from typing import List
+from mindsdb_sql.parser import ast
 
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
@@ -10,7 +11,6 @@ from mindsdb.integrations.utilities.sql_utils import (
     extract_comparison_conditions, FilterCondition, FilterOperator, SortColumn)
 from mindsdb.utilities import log
 
-from mindsdb_sql.parser import ast
 
 logger = log.getLogger(__name__)
 
@@ -51,7 +51,7 @@ class GithubIssuesTable(APITable):
                     break
 
         for condition in conditions:
-            if (condition.column in ('state' 'assignee', 'creator', 'mentioned', 'milestone')
+            if (condition.column in ('state', 'assignee', 'creator', 'mentioned', 'milestone')
                     and condition.op == FilterOperator.EQUAL):
 
                 issues_kwargs[condition.column] = condition.value

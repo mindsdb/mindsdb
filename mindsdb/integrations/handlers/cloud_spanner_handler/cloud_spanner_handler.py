@@ -2,8 +2,7 @@ import json
 from collections import OrderedDict
 
 from google.oauth2 import service_account
-from google.cloud import spanner_dbapi
-from google.cloud.spanner_dbapi import Connection
+from google.cloud.spanner_dbapi.connection import connect, Connection
 from google.cloud.sqlalchemy_spanner import SpannerDialect
 
 import pandas as pd
@@ -68,7 +67,7 @@ class CloudSpannerHandler(DatabaseHandler):
         args['credentials'] = service_account.Credentials.from_service_account_info(
             json.loads(args['credentials'])
         )
-        self.connection = spanner_dbapi.connect(**args)
+        self.connection = connect(**args)
         self.is_connected = True
 
         return self.connection

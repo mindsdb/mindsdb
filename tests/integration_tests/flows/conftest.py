@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import json
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -13,8 +14,11 @@ import netifaces
 import pandas as pd
 from walrus import Database
 
+from mindsdb.utilities import log
 from mindsdb.utilities.ps import get_child_pids
 
+
+logger = log.getLogger(__name__)
 
 HTTP_API_ROOT = 'http://127.0.0.1:47334/api'
 USE_PERSISTENT_STORAGE = bool(int(os.getenv('USE_PERSISTENT_STORAGE') or "0"))
@@ -190,7 +194,17 @@ def mindsdb_app(request, config):
                     pass
             app.kill()
     request.addfinalizer(cleanup)
-    return
+    yield
+    # Clean up metrics in between test suites.
+    try:
+        prom_dir = os.getenv('PROMETHEUS_MULTIPROC_DIR')
+        if prom_dir is None:
+            # Nothing to clean up.
+            return
+        shutil.rmtree(prom_dir)
+        os.mkdir(prom_dir)
+    except Exception as e:
+        logger.error(f'Unable to reset PROMETHEUS_MULTIPROC_DIR: {str(e)}')
 
 
 def waitReadiness(container, match_msg, match_number=2, timeout=30):

@@ -10,6 +10,7 @@ from sqlalchemy.exc import NoResultFound
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.executor.controllers.session_controller import SessionController
+from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.interfaces.storage.db import Predictor
 from mindsdb_sql import parse_sql
@@ -19,6 +20,7 @@ from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor
 @ns_conf.route('/<project_name>/models')
 class ModelsList(Resource):
     @ns_conf.doc('list_models')
+    @api_endpoint_metrics('GET', '/models')
     def get(self, project_name):
         ''' List all models '''
         session = SessionController()
@@ -34,6 +36,7 @@ class ModelsList(Resource):
         return session.model_controller.get_models(with_versions=True, project_name=project_name)
 
     @ns_conf.doc('train_model')
+    @api_endpoint_metrics('POST', '/models')
     def post(self, project_name):
         '''Creates a new model and trains it'''
         session = SessionController()
@@ -117,6 +120,7 @@ class ModelsList(Resource):
 @ns_conf.param('model_name', 'Name of the model')
 class ModelResource(Resource):
     @ns_conf.doc('get_model')
+    @api_endpoint_metrics('GET', '/models/model')
     def get(self, project_name, model_name):
         '''Get a model by name and version'''
         session = SessionController()
@@ -138,6 +142,7 @@ class ModelResource(Resource):
                 f'Model with name {model_name} not found')
 
     @ns_conf.doc('update_model')
+    @api_endpoint_metrics('PUT', '/models/model')
     def put(self, project_name, model_name):
         """Update model"""
 
@@ -169,6 +174,8 @@ class ModelResource(Resource):
         )
         return session.model_controller.get_model(model_name, version=version, project_name=project_name)
 
+    @ns_conf.doc('delete_model')
+    @api_endpoint_metrics('DELETE', '/models/model')
     def delete(self, project_name, model_name):
         '''Deletes a model by name'''
 
@@ -206,6 +213,7 @@ class ModelResource(Resource):
 @ns_conf.param('model_name', 'Name of the model')
 class ModelPredict(Resource):
     @ns_conf.doc('post_model_predict')
+    @api_endpoint_metrics('POST', '/models/model/predict')
     def post(self, project_name, model_name):
         '''Call prediction'''
 
@@ -248,6 +256,7 @@ class ModelPredict(Resource):
 @ns_conf.param('model_name', 'Name of the model')
 class ModelDescribe(Resource):
     @ns_conf.doc('describe_model')
+    @api_endpoint_metrics('GET', '/models/model/describe')
     def get(self, project_name, model_name):
         '''Describes a model'''
         session = SessionController()

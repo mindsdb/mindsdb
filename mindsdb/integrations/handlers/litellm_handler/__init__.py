@@ -14,6 +14,7 @@ except Exception as e:
 title = "LiteLLM Handler"
 name = "litellm"
 type = HANDLER_TYPE.ML
+icon_path = "icon.png"
 permanent = False
 
 
@@ -25,4 +26,5 @@ __all__ = [
     "title",
     "description",
     "import_error",
+    "icon_path",
 ]

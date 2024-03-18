@@ -13,6 +13,7 @@ except Exception as e:
 title = "Anomaly_Detection"
 name = "anomaly_detection"
 type = HANDLER_TYPE.ML
+icon_path = "icon.svg"
 permanent = True
 
 __all__ = ["Handler", "version", "name", "type", "title", "description", "import_error"]

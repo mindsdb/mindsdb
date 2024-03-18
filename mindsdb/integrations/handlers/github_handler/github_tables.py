@@ -5,7 +5,7 @@ import pandas as pd
 
 from mindsdb_sql.parser import ast
 
-from mindsdb.integrations.libs.api_handler import APITable
+from mindsdb.integrations.libs.api_handler import APIResource
 from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
 from mindsdb.integrations.utilities.sql_utils import (
     extract_comparison_conditions, FilterCondition, FilterOperator, SortColumn)
@@ -15,7 +15,7 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 
-class GithubIssuesTable(APITable):
+class GithubIssuesTable(APIResource):
     """The GitHub Issue Table implementation"""
 
     def list(self,
@@ -228,7 +228,7 @@ class GithubIssuesTable(APITable):
         ]
 
 
-class GithubPullRequestsTable(APITable):
+class GithubPullRequestsTable(APIResource):
     """The GitHub Issue Table implementation"""
 
     def list(self,
@@ -383,7 +383,7 @@ class GithubPullRequestsTable(APITable):
         ]
 
 
-class GithubCommitsTable(APITable):
+class GithubCommitsTable(APIResource):
     """The GitHub Commits Table implementation"""
 
     def list(self,
@@ -458,7 +458,7 @@ class GithubCommitsTable(APITable):
         return ["sha", "author", "date", "message"]
 
 
-class GithubReleasesTable(APITable):
+class GithubReleasesTable(APIResource):
     """The GitHub Releases Table implementation"""
 
     def list(self,
@@ -535,7 +535,7 @@ class GithubReleasesTable(APITable):
         ]
 
 
-class GithubBranchesTable(APITable):
+class GithubBranchesTable(APIResource):
     """The GitHub Branches Table implementation"""
 
     def list(self,
@@ -601,7 +601,7 @@ class GithubBranchesTable(APITable):
         ]
 
 
-class GithubContributorsTable(APITable):
+class GithubContributorsTable(APIResource):
     """The GitHub Contributors Table implementation"""
 
     def list(self,
@@ -703,7 +703,7 @@ class GithubContributorsTable(APITable):
         ]
 
 
-class GithubProjectsTable(APITable):
+class GithubProjectsTable(APIResource):
     """The GitHub Projects Table implementation"""
 
     def list(self,
@@ -792,7 +792,7 @@ class GithubProjectsTable(APITable):
             "creator_site_admin"
         ]
 
-class GithubMilestonesTable(APITable):
+class GithubMilestonesTable(APIResource):
     """The GitHub Milestones Table implementation"""
 
     def list(self,
@@ -880,7 +880,7 @@ class GithubMilestonesTable(APITable):
         ]
 
 
-class GithubFilesTable(APITable):
+class GithubFilesTable(APIResource):
 
     def get_path(self, repo, path, file_matches=None, file_not_matches=None, limit=None):
 

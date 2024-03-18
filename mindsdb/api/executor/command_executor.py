@@ -1621,7 +1621,10 @@ class ExecuteCommands:
             elif target_type == Function:
                 function_name = target.op.lower()
                 if function_name == "connection_id":
-                    return self.answer_connection_id()
+                    alias = None
+                    if isinstance(target.alias, Identifier):
+                        alias = target.alias.parts[-1]
+                    return self.answer_connection_id(alias=alias)
 
                 functions_results = {
                     # 'connection_id': self.executor.sqlserver.connection_id,
@@ -1998,13 +2001,13 @@ class ExecuteCommands:
         columns = [Column(**d) for d in columns]
         return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=[])
 
-    def answer_connection_id(self):
+    def answer_connection_id(self, alias: str = None):
         columns = [
             {
                 "database": "",
                 "table_name": "",
-                "name": "conn_id",
-                "alias": "conn_id",
+                "name": "connection_id()",
+                "alias": alias or "connection_id()",
                 "type": TYPES.MYSQL_TYPE_LONG,
                 "charset": CHARSET_NUMBERS["binary"],
             }

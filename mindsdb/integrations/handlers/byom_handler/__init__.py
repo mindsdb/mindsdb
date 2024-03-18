@@ -12,6 +12,7 @@ except Exception as e:
 title = 'BYOM'
 name = 'byom'
 type = HANDLER_TYPE.ML
+icon_path = "icon.svg"
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'description', 'connection_args'

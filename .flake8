@@ -8,7 +8,9 @@ ignore =
   # Line break occurred before a binary operator
   W503,
   # Function is too complex
-  C901
+  C901,
+  # https://www.flake8rules.com/rules/E721.html
+  E721
 per-file-ignores =
   mindsdb/__main__.py: E402
   mindsdb/api/mysql/mysql_proxy/libs/constants/mysql.py: E241

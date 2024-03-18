@@ -7,3 +7,6 @@ pytest-lazy-fixture~=0.6.3
 pytest-subtests
 lightwood==23.12.4.0  # This is required for tests/unit/test_executor.py. These tests need to be refactored.
 responses
+pytest-cov 
+coveralls
+locust

@@ -272,6 +272,7 @@
     {
       "group": "Use Cases",
       "pages": [
+        "use-cases/overview",
         {
           "group": "Fine-Tuning",
           "pages": [

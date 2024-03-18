@@ -382,21 +382,21 @@ class GithubPullRequestsTable(APITable):
             "closed",
         ]
 
+
 class GithubCommitsTable(APITable):
     """The GitHub Commits Table implementation"""
 
-    def select(self, query: ast.Select) -> pd.DataFrame:
-        """Pulls data from the GitHub "List commits" API
+    def list(self,
+             conditions: List[FilterCondition] = None,
+             limit: int = None,
+             sort: List[SortColumn] = None,
+             targets: List[str] = None) -> pd.DataFrame:
 
-        Parameters
-        ----------
-        query : ast.Select
-           Given SQL SELECT query
+        """Pulls data from the GitHub "List commits" API
 
         Returns
         -------
         pd.DataFrame
-
             GitHub commits matching the query
 
         Raises
@@ -405,118 +405,46 @@ class GithubCommitsTable(APITable):
             If the query contains an unsupported condition
         """
 
-        conditions = extract_comparison_conditions(query.where)
-
-        if query.limit:
-            total_results = query.limit.value
-        else:
-            total_results = 20
+        limit = limit or 20
 
         commits_kwargs = {}
-        order_by_conditions = {}
 
-        if query.order_by and len(query.order_by) > 0:
-            order_by_conditions["columns"] = []
-            order_by_conditions["ascending"] = []
+        if sort is not None:
+            for col in sort:
+                if col.column in ("author", "date", "message"):
+                    commits_kwargs['sort'] = col.column
+                    commits_kwargs['direction'] = 'asc' if col.ascending else 'desc'
 
-            for an_order in query.order_by:
-                if an_order.field.parts[0] != "commits":
-                    next
+                    # supported only 1 column
+                    break
 
-                if an_order.field.parts[1] in ["author", "date", "message"]:
-                    if commits_kwargs != {}:
-                        raise ValueError(
-                            "Duplicate order conditions found for author/date/message"
-                        )
-
-                    commits_kwargs["sort"] = an_order.field.parts[1]
-                    commits_kwargs["direction"] = an_order.direction
-                elif an_order.field.parts[1] in self.get_columns():
-                    order_by_conditions["columns"].append(an_order.field.parts[1])
-
-                    if an_order.direction == "ASC":
-                        order_by_conditions["ascending"].append(True)
-                    else:
-                        order_by_conditions["ascending"].append(False)
-                else:
-                    raise ValueError(
-                        f"Order by unknown column {an_order.field.parts[1]}"
-                    )
-
-        for a_where in conditions:
-            if a_where[1] == "author":
-                if a_where[0] != "=":
+        for condition in conditions:
+            if condition.column == 'author':
+                if condition.op != FilterOperator.EQUAL:
                     raise ValueError("Unsupported where operation for author")
-                commits_kwargs["author"] = a_where[2]
-            else:
-                raise ValueError(f"Unsupported where argument {a_where[1]}")
+                commits_kwargs["author"] = condition.value
+                condition.applied = True
 
         self.handler.connect()
 
-        github_commits_df = pd.DataFrame(columns=self.get_columns())
+        data = []
+        for a_commit in self.handler.connection.get_repo(
+                self.handler.repository
+        ).get_commits(**commits_kwargs):
 
-        start = 0
+            item = {
+                "sha": a_commit.sha,
+                "author": a_commit.commit.author.name,
+                "date": a_commit.commit.author.date,
+                "message": a_commit.commit.message,
+            }
 
-        while True:
-            try:
+            data.append(item)
 
-                for a_commit in self.handler.connection.get_repo(
-                    self.handler.repository
-                ).get_commits(**commits_kwargs)[start : start + 10]:
-                    logger.debug(f"Processing commit {a_commit.sha}")
-
-                    github_commits_df = pd.concat(
-                        [
-                            github_commits_df,
-                            pd.DataFrame(
-                                [
-                                    {
-                                        "sha": a_commit.sha,
-                                        "author": a_commit.commit.author.name,
-                                        "date": a_commit.commit.author.date,
-                                        "message": a_commit.commit.message,
-                                    }
-                                ]
-                            ),
-                        ]
-                    )
-
-                    if github_commits_df.shape[0] >= total_results:
-                        break
-            except IndexError:
+            if limit <= len(data):
                 break
 
-            if github_commits_df.shape[0] >= total_results:
-                break
-            else:
-                start += 10
-
-        selected_columns = []
-        for target in query.targets:
-            if isinstance(target, ast.Star):
-                selected_columns = self.get_columns()
-                break
-            elif isinstance(target, ast.Identifier):
-                selected_columns.append(target.parts[-1])
-            else:
-                raise ValueError(f"Unknown query target {type(target)}")
-
-        if len(github_commits_df) == 0:
-            github_commits_df = pd.DataFrame([], columns=selected_columns)
-        else:
-            github_commits_df.columns = self.get_columns()
-            for col in set(github_commits_df.columns).difference(
-                set(selected_columns)
-            ):
-                github_commits_df = github_commits_df.drop(col, axis=1)
-
-            if len(order_by_conditions.get("columns", [])) > 0:
-                github_commits_df = github_commits_df.sort_values(
-                    by=order_by_conditions["columns"],
-                    ascending=order_by_conditions["ascending"],
-                )
-
-        return github_commits_df
+        return pd.DataFrame(data, columns=self.get_columns())
 
     def get_columns(self) -> List[str]:
         """Gets all columns to be returned in pandas DataFrame responses
@@ -529,21 +457,21 @@ class GithubCommitsTable(APITable):
 
         return ["sha", "author", "date", "message"]
 
+
 class GithubReleasesTable(APITable):
     """The GitHub Releases Table implementation"""
 
-    def select(self, query: ast.Select) -> pd.DataFrame:
-        """Pulls data from the GitHub "List repository releases" API
+    def list(self,
+             conditions: List[FilterCondition] = None,
+             limit: int = None,
+             sort: List[SortColumn] = None,
+             targets: List[str] = None) -> pd.DataFrame:
 
-        Parameters
-        ----------
-        query : ast.Select
-           Given SQL SELECT query
+        """Pulls data from the GitHub "List repository releases" API
 
         Returns
         -------
         pd.DataFrame
-
             GitHub releases matching the query
 
         Raises
@@ -552,73 +480,34 @@ class GithubReleasesTable(APITable):
             If the query contains an unsupported condition
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'releases',
-            self.get_columns()
-        )
-
-        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
-
-        total_results = result_limit if result_limit else 20
+        limit = limit or 20
 
         self.handler.connect()
 
-        github_releases_df = pd.DataFrame(columns=self.get_columns())
+        data = []
+        for a_release in self.handler.connection.get_repo(
+                self.handler.repository
+        ).get_releases():
 
-        start = 0
+            item = {
+                "id": self.check_none(a_release.id),
+                "author": self.check_none(a_release.author.login),
+                "body": self.check_none(a_release.body),
+                "created_at": self.check_none(str(a_release.created_at)),
+                "html_url": self.check_none(a_release.html_url),
+                "published_at": self.check_none(str(a_release.published_at)),
+                "tag_name": self.check_none(a_release.tag_name),
+                "title": self.check_none(a_release.title),
+                "url": self.check_none(a_release.url),
+                "zipball_url": self.check_none(a_release.zipball_url)
+            }
 
-        while True:
-            try:
+            data.append(item)
 
-                for a_release in self.handler.connection.get_repo(
-                    self.handler.repository
-                ).get_releases()[start: start + 10]:
-
-                    logger.debug(f"Processing release {a_release.id}")
-
-                    github_releases_df = pd.concat(
-                        [
-                            github_releases_df,
-                            pd.DataFrame(
-                                [
-                                    {
-                                        "id": self.check_none(a_release.id),
-                                        "author": self.check_none(a_release.author.login),
-                                        "body": self.check_none(a_release.body),
-                                        "created_at": self.check_none(str(a_release.created_at)),
-                                        "html_url": self.check_none(a_release.html_url),
-                                        "published_at": self.check_none(str(a_release.published_at)),
-                                        "tag_name": self.check_none(a_release.tag_name),
-                                        "title": self.check_none(a_release.title),
-                                        "url": self.check_none(a_release.url),
-                                        "zipball_url": self.check_none(a_release.zipball_url)
-                                    }
-                                ]
-                            ),
-                        ]
-                    )
-
-                    if github_releases_df.shape[0] >= total_results:
-                        break
-            except IndexError:
+            if limit <= len(data):
                 break
 
-            if github_releases_df.shape[0] >= total_results:
-                break
-            else:
-                start += 10
-
-        select_statement_executor = SELECTQueryExecutor(
-            github_releases_df,
-            selected_columns,
-            where_conditions,
-            order_by_conditions
-        )
-
-        github_releases_df = select_statement_executor.execute_query()
-
-        return github_releases_df
+        return pd.DataFrame(data, columns=self.get_columns())
 
     def check_none(self, val):
         return "" if val is None else val
@@ -645,21 +534,21 @@ class GithubReleasesTable(APITable):
             "zipball_url"
         ]
 
+
 class GithubBranchesTable(APITable):
     """The GitHub Branches Table implementation"""
 
-    def select(self, query: ast.Select) -> pd.DataFrame:
-        """Pulls data from the GitHub "List repository branches" API
+    def list(self,
+             conditions: List[FilterCondition] = None,
+             limit: int = None,
+             sort: List[SortColumn] = None,
+             targets: List[str] = None) -> pd.DataFrame:
 
-        Parameters
-        ----------
-        query : ast.Select
-           Given SQL SELECT query
+        """Pulls data from the GitHub "List repository branches" API
 
         Returns
         -------
         pd.DataFrame
-
             GitHub branches matching the query
 
         Raises
@@ -668,64 +557,28 @@ class GithubBranchesTable(APITable):
             If the query contains an unsupported condition
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'branches',
-            self.get_columns()
-        )
-
-        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
-
-        total_results = result_limit if result_limit else 20
+        limit = limit or 20
 
         self.handler.connect()
 
-        github_branches_df = pd.DataFrame(columns=self.get_columns())
+        data = []
+        for branch in self.handler.connection.get_repo(self.handler.repository).get_branches():
+            raw_data = branch.raw_data
 
-        start = 0
+            item = {
+                "name": self.check_none(raw_data["name"]),
+                "url": "https://github.com/" + self.handler.repository + "/tree/" + raw_data["name"],
+                "commit_sha": self.check_none(raw_data["commit"]["sha"]),
+                "commit_url": self.check_none(raw_data["commit"]["url"]),
+                "protected": self.check_none(raw_data["protected"])
+            }
 
-        while True:
-            try:
+            data.append(item)
 
-                for branch in self.handler.connection.get_repo(self.handler.repository).get_branches()[start: start + 10]:
-                    logger.debug(f"Processing branch {branch.name}")
-                    raw_data = branch.raw_data
-                    github_branches_df = pd.concat(
-                        [
-                            github_branches_df,
-                            pd.DataFrame(
-                                [
-                                    {
-                                        "name": self.check_none(raw_data["name"]),
-                                        "url": "https://github.com/" + self.handler.repository + "/tree/" + raw_data["name"],
-                                        "commit_sha": self.check_none(raw_data["commit"]["sha"]),
-                                        "commit_url": self.check_none(raw_data["commit"]["url"]),
-                                        "protected": self.check_none(raw_data["protected"])
-                                    }
-                                ]
-                            ),
-                        ]
-                    )
-
-                    if github_branches_df.shape[0] >= total_results: break
-            except IndexError:
+            if limit <= len(data):
                 break
 
-            if github_branches_df.shape[0] >= total_results:
-                break
-            else:
-                start += 10
-
-        select_statement_executor = SELECTQueryExecutor(
-            github_branches_df,
-            selected_columns,
-            where_conditions,
-            order_by_conditions
-        )
-
-        github_branches_df = select_statement_executor.execute_query()
-
-        return github_branches_df
+        return pd.DataFrame(data, columns=self.get_columns())
 
     def check_none(self, val):
         return "" if val is None else val
@@ -747,21 +600,21 @@ class GithubBranchesTable(APITable):
             "protected"
         ]
 
+
 class GithubContributorsTable(APITable):
     """The GitHub Contributors Table implementation"""
 
-    def select(self, query: ast.Select) -> pd.DataFrame:
-        """Pulls data from the GitHub "List repository contributors" API
+    def list(self,
+             conditions: List[FilterCondition] = None,
+             limit: int = None,
+             sort: List[SortColumn] = None,
+             targets: List[str] = None) -> pd.DataFrame:
 
-        Parameters
-        ----------
-        query : ast.Select
-           Given SQL SELECT query
+        """Pulls data from the GitHub "List repository contributors" API
 
         Returns
         -------
         pd.DataFrame
-
             GitHub contributors matching the query
 
         Raises
@@ -770,83 +623,46 @@ class GithubContributorsTable(APITable):
             If the query contains an unsupported condition
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'contributors',
-            self.get_columns()
-        )
-
-        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
-
-        total_results = result_limit if result_limit else 20
+        limit = limit or 20
 
         self.handler.connect()
 
-        github_contributors_df = pd.DataFrame(columns=self.get_columns())
+        data = []
+        for contributor in self.handler.connection.get_repo(self.handler.repository).get_contributors():
+            raw_data = contributor.raw_data
 
-        start = 0
+            item = {
+                "avatar_url": self.check_none(raw_data["avatar_url"]),
+                "html_url": self.check_none(raw_data["html_url"]),
+                "followers_url": self.check_none(raw_data["followers_url"]),
+                "subscriptions_url": self.check_none(raw_data["subscriptions_url"]),
+                "organizations_url": self.check_none(raw_data["organizations_url"]),
+                "repos_url": self.check_none(raw_data["repos_url"]),
+                "events_url": self.check_none(raw_data["events_url"]),
+                "received_events_url": self.check_none(raw_data["received_events_url"]),
+                "site_admin": self.check_none(raw_data["site_admin"]),
+                "name": self.check_none(raw_data["name"]),
+                "company": self.check_none(raw_data["company"]),
+                "blog": self.check_none(raw_data["blog"]),
+                "location": self.check_none(raw_data["location"]),
+                "email": self.check_none(raw_data["email"]),
+                "hireable": self.check_none(raw_data["hireable"]),
+                "bio": self.check_none(raw_data["bio"]),
+                "twitter_username": self.check_none(raw_data["twitter_username"]),
+                "public_repos": self.check_none(raw_data["public_repos"]),
+                "public_gists": self.check_none(raw_data["public_repos"]),
+                "followers": self.check_none(raw_data["followers"]),
+                "following": self.check_none(raw_data["following"]),
+                "created_at": self.check_none(raw_data["created_at"]),
+                "updated_at": self.check_none(raw_data["updated_at"])
+            }
 
-        while True:
-            try:
+            data.append(item)
 
-                for contributor in self.handler.connection.get_repo(self.handler.repository).get_contributors()[start: start + 10]:
-
-                    raw_data = contributor.raw_data
-                    github_contributors_df = pd.concat(
-                        [
-                            github_contributors_df,
-                            pd.DataFrame(
-                                [
-                                    {
-                                        "avatar_url": self.check_none(raw_data["avatar_url"]),
-                                        "html_url": self.check_none(raw_data["html_url"]),
-                                        "followers_url": self.check_none(raw_data["followers_url"]),
-                                        "subscriptions_url": self.check_none(raw_data["subscriptions_url"]),
-                                        "organizations_url": self.check_none(raw_data["organizations_url"]),
-                                        "repos_url": self.check_none(raw_data["repos_url"]),
-                                        "events_url": self.check_none(raw_data["events_url"]),
-                                        "received_events_url": self.check_none(raw_data["received_events_url"]),
-                                        "site_admin": self.check_none(raw_data["site_admin"]),
-                                        "name": self.check_none(raw_data["name"]),
-                                        "company": self.check_none(raw_data["company"]),
-                                        "blog": self.check_none(raw_data["blog"]),
-                                        "location": self.check_none(raw_data["location"]),
-                                        "email": self.check_none(raw_data["email"]),
-                                        "hireable": self.check_none(raw_data["hireable"]),
-                                        "bio": self.check_none(raw_data["bio"]),
-                                        "twitter_username": self.check_none(raw_data["twitter_username"]),
-                                        "public_repos": self.check_none(raw_data["public_repos"]),
-                                        "public_gists": self.check_none(raw_data["public_repos"]),
-                                        "followers": self.check_none(raw_data["followers"]),
-                                        "following": self.check_none(raw_data["following"]),
-                                        "created_at": self.check_none(raw_data["created_at"]),
-                                        "updated_at": self.check_none(raw_data["updated_at"])
-                                    }
-                                ]
-                            ),
-                        ]
-                    )
-
-                    if github_contributors_df.shape[0] >= total_results:
-                        break
-            except IndexError:
+            if limit <= len(data):
                 break
 
-            if github_contributors_df.shape[0] >= total_results:
-                break
-            else:
-                start += 10
-
-        select_statement_executor = SELECTQueryExecutor(
-            github_contributors_df,
-            selected_columns,
-            where_conditions,
-            order_by_conditions
-        )
-
-        github_contributors_df = select_statement_executor.execute_query()
-
-        return github_contributors_df
+        return pd.DataFrame(data, columns=self.get_columns())
 
     def check_none(self, val):
         return "" if val is None else val
@@ -886,21 +702,21 @@ class GithubContributorsTable(APITable):
             "updated_at"
         ]
 
+
 class GithubProjectsTable(APITable):
     """The GitHub Projects Table implementation"""
 
-    def select(self, query: ast.Select) -> pd.DataFrame:
-        """Pulls data from the GitHub "List repository projects" API
+    def list(self,
+             conditions: List[FilterCondition] = None,
+             limit: int = None,
+             sort: List[SortColumn] = None,
+             targets: List[str] = None) -> pd.DataFrame:
 
-        Parameters
-        ----------
-        query : ast.Select
-           Given SQL SELECT query
+        """Pulls data from the GitHub "List repository projects" API
 
         Returns
         -------
         pd.DataFrame
-
             GitHub projects matching the query
 
         Raises
@@ -909,77 +725,40 @@ class GithubProjectsTable(APITable):
             If the query contains an unsupported condition
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'projects',
-            self.get_columns()
-        )
-
-        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
-
-        total_results = result_limit if result_limit else 20
+        limit = limit or 20
 
         self.handler.connect()
 
-        github_projects_df = pd.DataFrame(columns=self.get_columns())
+        data = []
+        for project in self.handler.connection.get_repo(self.handler.repository).get_projects():
+            raw_data = project.raw_data
 
-        start = 0
+            item = {
+                "owner_url": self.check_none(raw_data["owner_url"]),
+                "url": self.check_none(raw_data["url"]),
+                "html_url": self.check_none(raw_data["html_url"]),
+                "columns_url": self.check_none(raw_data["columns_url"]),
+                "id": self.check_none(raw_data["id"]),
+                "node_id": self.check_none(raw_data["node_id"]),
+                "name": self.check_none(raw_data["name"]),
+                "body": self.check_none(raw_data["body"]),
+                "number": self.check_none(raw_data["number"]),
+                "state": self.check_none(raw_data["state"]),
+                "created_at": self.check_none(raw_data["created_at"]),
+                "updated_at": self.check_none(raw_data["updated_at"]),
+                "creator_login": self.check_none(raw_data["creator"]["login"]),
+                "creator_id": self.check_none(raw_data["creator"]["id"]),
+                "creator_url": self.check_none(raw_data["creator"]["url"]),
+                "creator_html_url": self.check_none(raw_data["creator"]["html_url"]),
+                "creator_site_admin": self.check_none(raw_data["creator"]["site_admin"])
+            }
 
-        while True:
-            try:
+            data.append(item)
 
-                for project in self.handler.connection.get_repo(self.handler.repository).get_projects()[start: start + 10]:
-
-                    raw_data = project.raw_data
-                    github_projects_df = pd.concat(
-                        [
-                            github_projects_df,
-                            pd.DataFrame(
-                                [
-                                    {
-                                        "owner_url": self.check_none(raw_data["owner_url"]),
-                                        "url": self.check_none(raw_data["url"]),
-                                        "html_url": self.check_none(raw_data["html_url"]),
-                                        "columns_url": self.check_none(raw_data["columns_url"]),
-                                        "id": self.check_none(raw_data["id"]),
-                                        "node_id": self.check_none(raw_data["node_id"]),
-                                        "name": self.check_none(raw_data["name"]),
-                                        "body": self.check_none(raw_data["body"]),
-                                        "number": self.check_none(raw_data["number"]),
-                                        "state": self.check_none(raw_data["state"]),
-                                        "created_at": self.check_none(raw_data["created_at"]),
-                                        "updated_at": self.check_none(raw_data["updated_at"]),
-                                        "creator_login": self.check_none(raw_data["creator"]["login"]),
-                                        "creator_id": self.check_none(raw_data["creator"]["id"]),
-                                        "creator_url": self.check_none(raw_data["creator"]["url"]),
-                                        "creator_html_url": self.check_none(raw_data["creator"]["html_url"]),
-                                        "creator_site_admin": self.check_none(raw_data["creator"]["site_admin"])
-                                    }
-                                ]
-                            ),
-                        ]
-                    )
-
-                    if github_projects_df.shape[0] >= total_results:
-                        break
-            except IndexError:
+            if limit <= len(data):
                 break
 
-            if github_projects_df.shape[0] >= total_results:
-                break
-            else:
-                start += 10
-
-        select_statement_executor = SELECTQueryExecutor(
-            github_projects_df,
-            selected_columns,
-            where_conditions,
-            order_by_conditions
-        )
-
-        github_projects_df = select_statement_executor.execute_query()
-
-        return github_projects_df
+        return pd.DataFrame(data, columns=self.get_columns())
 
     def check_none(self, val):
         return "" if val is None else val
@@ -1016,18 +795,17 @@ class GithubProjectsTable(APITable):
 class GithubMilestonesTable(APITable):
     """The GitHub Milestones Table implementation"""
 
-    def select(self, query: ast.Select) -> pd.DataFrame:
-        """Pulls data from the GitHub "List repository milestones" API
+    def list(self,
+             conditions: List[FilterCondition] = None,
+             limit: int = None,
+             sort: List[SortColumn] = None,
+             targets: List[str] = None) -> pd.DataFrame:
 
-        Parameters
-        ----------
-        query : ast.Select
-           Given SQL SELECT query
+        """Pulls data from the GitHub "List repository milestones" API
 
         Returns
         -------
         pd.DataFrame
-
             GitHub milestones matching the query
 
         Raises
@@ -1036,76 +814,39 @@ class GithubMilestonesTable(APITable):
             If the query contains an unsupported condition
         """
 
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'milestones',
-            self.get_columns()
-        )
-
-        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
-
-        total_results = result_limit if result_limit else 20
+        limit = limit or 20
 
         self.handler.connect()
 
-        github_milestones_df = pd.DataFrame(columns=self.get_columns())
+        data = []
+        for milestone in self.handler.connection.get_repo(self.handler.repository).get_milestones():
+            raw_data = milestone.raw_data
 
-        start = 0
+            item = {
+                "url": self.check_none(raw_data["url"]),
+                "html_url": self.check_none(raw_data["html_url"]),
+                "labels_url": self.check_none(raw_data["labels_url"]),
+                "id": self.check_none(raw_data["id"]),
+                "node_id": self.check_none(raw_data["node_id"]),
+                "number": self.check_none(raw_data["number"]),
+                "title": self.check_none(raw_data["title"]),
+                "description": self.check_none(raw_data["description"]),
+                "creator": self.check_none(raw_data["creator"]),
+                "open_issues": self.check_none(raw_data["open_issues"]),
+                "closed_issues": self.check_none(raw_data["closed_issues"]),
+                "state": self.check_none(raw_data["state"]),
+                "created_at": self.check_none(raw_data["created_at"]),
+                "updated_at": self.check_none(raw_data["updated_at"]),
+                "due_on": self.check_none(raw_data["due_on"]),
+                "closed_at": self.check_none(raw_data["closed_at"])
+            }
 
-        while True:
-            try:
+            data.append(item)
 
-                for milestone in self.handler.connection.get_repo(self.handler.repository).get_milestones()[start: start + 10]:
-
-                    raw_data = milestone.raw_data
-                    github_milestones_df = pd.concat(
-                        [
-                            github_milestones_df,
-                            pd.DataFrame(
-                                [
-                                    {
-                                        "url": self.check_none(raw_data["url"]),
-                                        "html_url": self.check_none(raw_data["html_url"]),
-                                        "labels_url": self.check_none(raw_data["labels_url"]),
-                                        "id": self.check_none(raw_data["id"]),
-                                        "node_id": self.check_none(raw_data["node_id"]),
-                                        "number": self.check_none(raw_data["number"]),
-                                        "title": self.check_none(raw_data["title"]),
-                                        "description": self.check_none(raw_data["description"]),
-                                        "creator": self.check_none(raw_data["creator"]),
-                                        "open_issues": self.check_none(raw_data["open_issues"]),
-                                        "closed_issues": self.check_none(raw_data["closed_issues"]),
-                                        "state": self.check_none(raw_data["state"]),
-                                        "created_at": self.check_none(raw_data["created_at"]),
-                                        "updated_at": self.check_none(raw_data["updated_at"]),
-                                        "due_on": self.check_none(raw_data["due_on"]),
-                                        "closed_at": self.check_none(raw_data["closed_at"])
-                                    }
-                                ]
-                            ),
-                        ]
-                    )
-
-                    if github_milestones_df.shape[0] >= total_results:
-                        break
-            except IndexError:
+            if limit <= len(data):
                 break
 
-            if github_milestones_df.shape[0] >= total_results:
-                break
-            else:
-                start += 10
-
-        select_statement_executor = SELECTQueryExecutor(
-            github_milestones_df,
-            selected_columns,
-            where_conditions,
-            order_by_conditions
-        )
-
-        github_milestones_df = select_statement_executor.execute_query()
-
-        return github_milestones_df
+        return pd.DataFrame(data, columns=self.get_columns())
 
     def check_none(self, val):
         return "" if val is None else val

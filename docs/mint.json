@@ -314,7 +314,7 @@
         {
           "group": "Semantic Search",
           "pages": [
-            "sql/tutorials/rag"
+            "integrations/ai-engines/rag"
           ]
         },
         {

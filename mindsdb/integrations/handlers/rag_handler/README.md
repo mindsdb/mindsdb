@@ -17,11 +17,12 @@ Before proceeding, ensure the following prerequisites are met:
 
 1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
 2. To use RAG within MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
-
+3. Obtain the [OpenAI](https://help.openai.com/en/articles/4936850-where-do-i-find-my-openai-api-key) or [Writer](https://dev.writer.com/docs/quickstart#step-1-obtain-your-api-keys) API key. 
 
 ## Setup
 
-Create an AI engine from the [RAG](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/rag_handler):
+Create an AI engine from the [RAG handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/rag_handler).
+You can create a RAG engine using this command and providing either [OpenAI](/integrations/ai-engines/openai) or [Writer](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/writer_handler#readme) parameters:
 
 ```sql
 CREATE ML_ENGINE rag_engine
@@ -31,9 +32,6 @@ USING
     writer_org_id="writer-org", -- optional if openai is used
     writer_api_key="writer-api-key"; -- optional if openai is used
 ```
-
-
-You can create a RAG engine using this command and providing either [OpenAI](/integrations/ai-engines/openai) or [Writer](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/writer_handler#readme) parameters:
 
 Create a model using the `rag_engine`:
 
@@ -165,64 +163,3 @@ On execution, we get:
 |----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------|-----------------------------------------|
 |   ShopRite Arthritis Pain Acetaminophen is not specifically designed for treating a cold. It may help to temporarily relieve minor aches and pains associated with a cold, but it is not the best product for treating a cold. It is always best to consult with a doctor or pharmacist for the most appropriate medication for treating a cold. | `{"column":["full_ingredients","indications_and_usage","intended_purpose_of_product","active_ingredient"],"sources_content":["ShopRite Arthritis  ..."],"sources_document":["dataframe"],"sources_row":[1,1,1,1]}`   | what product is best for treating a cold? |
 
-
-
-
-### From VectorDB
-
-The following example utilize `rag_engine` to create a model with the `CREATE MODEL` statement and `ChromaDB` database as a knowlege base.
-
-
-```sql
-CREATE ML_ENGINE rag_engine
-FROM rag
-USING
-    openai_api_key = 'sk-xxx';
-```
-
-Connect to ChromaDB:
-
-```sql
-CREATE DATABASE chromadb_datasource
-WITH ENGINE = "chromadb",
-PARAMETERS = {
-    "persist_directory": "~/MyProjects"
-}
-```
-
-Create a model using this engine and include the FORM clause:
-
-```sql
- CREATE MODEL rag_openai_model4
- FROM mysql_demo_db (select * from demo_fda_context limit 2)
- PREDICT answer
- USING
-    engine="rag_engine",
-    top_k=4,
-    llm_type="openai",
-    summarize_context=true,
-    vector_store_name="chromadb",
-    run_embeddings=true,
-    vector_store_folder_name='~/MyProjects/rag_handler_openai_test',
-    embeddings_model_name="BAAI/bge-base-en",
-    input_column='question',
-    prompt_template='Use the following pieces of context to answer the question at the end. If you do not know the answer, just say that you do not know, do not try to make up an answer.
-                        Context: {context}
-                        Question: {question}
-                        Helpful Answer:';
-```
-
-Now you can use the model to answer your questions.
-
-```sql
-SELECT *
-FROM rag_handler_db
-WHERE question='what product is best for treating a cold?';
-```
-
-On execution, we get:
-
-
-| answer                                                                                                                                                                                       | source_documents | question                                |
-|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------|----------------------------------------|
-|       ShopRite Arthritis Pain Acetaminophen   |  `{"column":["full_ingredients","indications_and_usage","intended_purpose_of_product","active_ingredient"],"sources_content":["ShopRite Arthritis Pain Acetaminophen ACETAMINOPHEN ACETAMINOPHEN CARNAUBA WAX SILICON DIOXIDE CROSCARMELLOSE SODIUM HYPROMELLOSES MAGNESIUM STEARATE MALTODEXTRIN CELLULOSE MICROCRYSTALLINE POLYETHYLENE GLYCOLS POLYSORBATE 80 POVIDONES STEARIC ACID TITANIUM DIOXIDE caplet L544","Uses temporarily relieves minor aches and pains due to minor pain of arthritis muscular aches backache premenstrual and menstrual cramps the common cold headache toothache temporarily reduces fever","Purpose Pain relieverfever reducer","Active ingredient in each caplet Acetaminophen 650 mg"],"sources_document":["dataframe","dataframe","dataframe","dataframe"],"sources_row":[1,1,1,1]} `              |  what product is best for treating a cold?  |

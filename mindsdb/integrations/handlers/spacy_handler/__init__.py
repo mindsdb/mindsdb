@@ -8,7 +8,7 @@ except Exception as e:
     Handler = None
     import_error = e
 
-title = 'Spacy'
+title = 'spaCy'
 name = 'spacy'
 type = HANDLER_TYPE.ML
 icon_path = 'icon.svg'

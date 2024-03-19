@@ -17,11 +17,11 @@ Before proceeding, ensure the following prerequisites are met:
 
 1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
 2. To use RAG within MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
-
+3. Obtain the OpenAI or Writer API key required to deploy and use this models within MindsDB. Follow the instructions for obtaining the API key in OpenAI docs or Writer docs.
 
 ## Setup
 
-Create an AI engine from the [RAG](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/rag_handler):
+Create an AI engine from the [RAG handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/rag_handler):
 
 ```sql
 CREATE ML_ENGINE rag_engine

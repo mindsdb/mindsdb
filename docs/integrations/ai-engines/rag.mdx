@@ -21,7 +21,8 @@ Before proceeding, ensure the following prerequisites are met:
 
 ## Setup
 
-Create an AI engine from the [RAG handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/rag_handler):
+Create an AI engine from the [RAG handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/rag_handler).
+You can create a RAG engine using this command and providing either [OpenAI](/integrations/ai-engines/openai) or [Writer](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/writer_handler#readme) parameters:
 
 ```sql
 CREATE ML_ENGINE rag_engine
@@ -31,9 +32,6 @@ USING
     writer_org_id="writer-org", -- optional if openai is used
     writer_api_key="writer-api-key"; -- optional if openai is used
 ```
-
-
-You can create a RAG engine using this command and providing either [OpenAI](/integrations/ai-engines/openai) or [Writer](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/writer_handler#readme) parameters:
 
 Create a model using the `rag_engine`:
 

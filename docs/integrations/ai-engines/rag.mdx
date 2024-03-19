@@ -163,3 +163,44 @@ On execution, we get:
 |----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------|-----------------------------------------|
 |   ShopRite Arthritis Pain Acetaminophen is not specifically designed for treating a cold. It may help to temporarily relieve minor aches and pains associated with a cold, but it is not the best product for treating a cold. It is always best to consult with a doctor or pharmacist for the most appropriate medication for treating a cold. | `{"column":["full_ingredients","indications_and_usage","intended_purpose_of_product","active_ingredient"],"sources_content":["ShopRite Arthritis  ..."],"sources_document":["dataframe"],"sources_row":[1,1,1,1]}`   | what product is best for treating a cold? |
 
+
+### From File
+
+The following example utilize `rag_engine` to create a model with the `CREATE MODEL` statement and  uploaded file as a knowlege base.
+
+
+```sql
+CREATE ML_ENGINE rag_engine
+FROM rag
+USING
+    openai_api_key = 'sk-xxx';
+```
+
+Upload a [file](mindsdb_sql/sql/create/file) using the GUI `Upload File` option. Create a model using this engine and include the FORM clause:
+
+```sql
+CREATE MODEL rag_handler_files
+FROM files 
+    (SELECT * FROM uploaded_file)
+PREDICT answer
+USING
+   engine="rag",
+   llm_type="openai",
+   vector_store_folder_name='test_db',
+   input_column='question';
+```
+
+Now you can use the model to answer your questions.
+
+```sql
+SELECT *
+FROM rag_handler_files
+WHERE question='what product is best for treating a cold?';
+```
+
+On execution, we get:
+
+| answer                                                                                                                                                                                       | source_documents | question                                |
+|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------|-----------------------------------------|
+|   ShopRite Arthritis Pain Acetaminophen is not specifically designed for treating a cold. It may help to temporarily relieve minor aches and pains associated with a cold, but it is not the best product for treating a cold. It is always best to consult with a doctor or pharmacist for the most appropriate medication for treating a cold. | `{"column":["full_ingredients","indications_and_usage","intended_purpose_of_product","active_ingredient"],"sources_content":["ShopRite Arthritis  ..."],"sources_document":["dataframe"],"sources_row":[1,1,1,1]}`   | what product is best for treating a cold? |
+

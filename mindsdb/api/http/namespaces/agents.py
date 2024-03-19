@@ -6,6 +6,7 @@ from flask_restx import Resource
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.api.http.utils import http_error
+from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.interfaces.storage import db
@@ -76,6 +77,7 @@ def create_agent(project_name, name, agent):
 @ns_conf.route('/<project_name>/agents')
 class AgentsResource(Resource):
     @ns_conf.doc('list_agents')
+    @api_endpoint_metrics('GET', '/agents')
     def get(self, project_name):
         ''' List all agents '''
         agents_controller = AgentsController()
@@ -90,6 +92,7 @@ class AgentsResource(Resource):
         return [a.as_dict() for a in all_agents]
 
     @ns_conf.doc('create_agent')
+    @api_endpoint_metrics('POST', '/agents')
     def post(self, project_name):
         '''Create a agent'''
 
@@ -112,6 +115,7 @@ class AgentsResource(Resource):
 @ns_conf.param('agent_name', 'Name of the agent')
 class AgentResource(Resource):
     @ns_conf.doc('get_agent')
+    @api_endpoint_metrics('GET', '/agents/agent')
     def get(self, project_name, agent_name):
         '''Gets a agent by name'''
         agents_controller = AgentsController()
@@ -133,6 +137,7 @@ class AgentResource(Resource):
             )
 
     @ns_conf.doc('update_agent')
+    @api_endpoint_metrics('PUT', '/agents/agent')
     def put(self, project_name, agent_name):
         '''Updates a agent by name, creating one if it doesn't exist'''
 
@@ -210,6 +215,7 @@ class AgentResource(Resource):
             )
 
     @ns_conf.doc('delete_agent')
+    @api_endpoint_metrics('DELETE', '/agents/agent')
     def delete(self, project_name, agent_name):
         '''Deletes a agent by name'''
         agents_controller = AgentsController()
@@ -238,6 +244,7 @@ class AgentResource(Resource):
 @ns_conf.param('agent_name', 'Name of the agent')
 class AgentCompletions(Resource):
     @ns_conf.doc('agent_completions')
+    @api_endpoint_metrics('POST', '/agents/agent/completions')
     def post(self, project_name, agent_name):
         '''Queries an agent given a list of messages'''
         # Check for required parameters.

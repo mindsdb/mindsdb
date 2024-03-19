@@ -1,5 +1,5 @@
 ---
-title: MindsDB and MonkeyLearn
+title: MonkeyLearn
 sidebarTitle: MonkeyLearn
 ---
 
@@ -10,8 +10,10 @@ MonkeyLearn is a No-code text analysis tool. MindsDB allows you to use pre-built
 Before creating a model, you will need to create the ML_ENGINE for MonkeyLearn using the `CREATE ML_ENGINE` syntax
 
 ```sql
-Create ML_ENGINE monkeylearn
+CREATE ML_ENGINE monkeylearn_engine
 FROM monkeylearn
+USING
+  monkeylearn_api_key = 'monkeylearn_api_key';
 ```
 
 <p align="center">
@@ -27,8 +29,8 @@ For this example, you will make use of MonkeyLearn's pre-made model `E-commerce 
 CREATE MODEL mindsdb.ecommerce_ticket_classifier
 PREDICT tag
 USING
-engine = 'monkeylearn',
-api_key = 'api_key',
+engine = 'monkeylearn_engine',
+monkeylearn_api_key = 'api_key',
 model_id = 'model_id',
 input_column = 'text';
 ```
@@ -46,7 +48,7 @@ Where:
 | `ecommerce_ticket_classifier`          | The model name provided to the model created in MindsDB. |
 | `tag`     	                           | The column that will provide the predicted result.       | 
 | `engine`                               | The ML framework engine used, which is MonkeyLearn.      | 
-| `api_key`                              | The API Key of the model provided by MonkeyLearn.        | 
+| `monkeylearn_api_key`                  | The API Key of the model provided by MonkeyLearn.        | 
 | `model_id`                             | The respective model's ID you want to make use of.       | 
 | `input_column`                         | Specifies the input column fed to the model              | 
 
@@ -87,8 +89,8 @@ CREATE MODEL mindsdb.ecommerce_ticket_classifier2
 FROM files (select * from queries2)
 PREDICT tag
 USING
-engine = 'monkeylearn',
-api_key = 'api_key',
+engine = 'monkeylearn_engine',
+monkeylearn_api_key = 'api_key',
 model_id = 'model_id',
 input_column = 'text';
 ```

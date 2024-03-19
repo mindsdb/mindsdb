@@ -39,7 +39,7 @@ Where:
 <Info>
 **Model Versions**
 
-Every time the model is retrained/adjusted, its new version is created with an incremented version number. Unless overridden, the most recent version becomes active when training completes.
+Every time the model is finetuned or retrained, its new version is created with an incremented version number. Unless overridden, the most recent version becomes active when training completes.
 
 You can query for all model versions like this:
 
@@ -50,6 +50,11 @@ FROM project_name.models_versions;
 
 For more information on managing model versions, check out our docs [here](/sql/api/manage-models-versions).
 </Info>
+
+<Warning>
+While the model is being generated and trained, it is not active. The model becomes active only after it completes generating and training.
+</Warning>
+
 ## Examples 
 ### Example 1: [OpenAI Model Fine-Tuning](/finetune/openai)
 ### Example 2: [Llama2 Model Fine-Tuning](/finetune/anyscale)

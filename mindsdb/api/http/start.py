@@ -4,6 +4,7 @@ try:
 except Exception:
     import multiprocessing as mp
 
+from flask import Flask
 from waitress import serve
 
 from mindsdb.api.http.initialize import initialize_app
@@ -16,14 +17,15 @@ from mindsdb.integrations.libs.ml_exec_base import process_cache
 logger = log.getLogger(__name__)
 
 
-def start(verbose, no_studio):
+def start(verbose, no_studio, app: Flask = None):
     config = Config()
 
     server = os.environ.get('MINDSDB_DEFAULT_SERVER', 'waitress')
     db.init()
     init_lexer_parsers()
 
-    app = initialize_app(config, no_studio)
+    if app is None:
+        app = initialize_app(config, no_studio)
 
     port = config['api']['http']['port']
     host = config['api']['http']['host']

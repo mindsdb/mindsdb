@@ -29,7 +29,7 @@ First, create an AnyScale engine, passing your Anyscale API key:
 CREATE ML_ENGINE anyscale_engine
 FROM anyscale_endpoints
 USING
-    api_key = 'your-anyscale-api-key';
+    anyscale_endpoints_api_key = 'your-anyscale-api-key';
 ```
 
 Then, create a model using this engine:
@@ -83,15 +83,16 @@ PARAMETERS = {
     "password": "demo_password",
     "host": "3.220.66.106",
     "port": "5432",
-    "database": "demo"
+    "database": "demo",
+    "schema": "demo_data"
     };
 ```
 
 Now we can take a look at the fine-tuning data:
 
 ```sql
-SELECT prompt, completion
-FROM example_db.demo_data.chat_llm_mindsdb_docs
+SELECT message_id, role, content
+FROM example_db.chat_llm_mindsdb_docs
 LIMIT 5;
 ```
 
@@ -118,7 +119,7 @@ Now, you can fine-tune a Mistral model with this data like so:
 ```sql
 FINETUNE mymistral7b
 FROM example_db
-    (SELECT * FROM demo_data.chat_llm_mindsdb_docs);
+    (SELECT * FROM chat_llm_mindsdb_docs);
 ```
 
 The [`FINETUNE`](/sql/api/finetune) command creates a new version of the `mistralai/Mistral-7B-Instruct-v0.1` model. You can query all available versions as below:
@@ -128,6 +129,10 @@ SELECT *
 FROM models_versions
 WHERE name = 'mymistral7b';
 ```
+
+<Warning>
+While the model is being generated and trained, it is not active. The model becomes active only after it completes generating and training.
+</Warning>
 
 Once the new version status is complete and active, we can query the model again, expecting a more accurate output.
 

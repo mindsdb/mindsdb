@@ -47,7 +47,7 @@ MAIN_RULE_IGNORES = {
 # (pysqlite3 is imported in an unusual way in the chromadb handler and needs to be excluded too)
 # pypdf and openpyxl are optional deps of langchain, that are used for the file handler
 OPTIONAL_HANDLER_DEPS = ["pysqlite3", "torch", "openai", "tiktoken", "wikipedia", "anthropic", "pypdf", "openpyxl",
-                         "sentence-transformers", "faiss-cpu"]
+                         "sentence-transformers", "faiss-cpu", "litellm"]
 
 # List of rules we can ignore for specific packages
 # Here we ignore any packages in the main requirements.txt for "listed but not used" errors, because they will be used for the core code but not necessarily in a given handler
@@ -70,6 +70,7 @@ PACKAGE_NAME_MAP = {
     "google-cloud-aiplatform": ["google"],
     "google-cloud-bigquery": ["google"],
     "google-cloud-spanner": ["google"],
+    "sqlalchemy-spanner": ["google"],
     "google-auth-httplib2": ["google"],
     "google-generativeai": ["google"],
     "google-analytics-admin": ["google"],
@@ -77,7 +78,6 @@ PACKAGE_NAME_MAP = {
     "google-api-python-client": ["googleapiclient"],
     "binance-connector": ["binance"],
     "pysqlite3": ["pysqlite3"],
-    "sqlalchemy-spanner": ["sqlalchemy"],
     "atlassian-python-api": ["atlassian"],
     "databricks-sql-connector": ["databricks"],
     "elasticsearch-dbapi": ["es"],
@@ -217,7 +217,7 @@ def check_relative_reqs():
         # regex for finding imports of other handlers like "from mindsdb.integrations.handlers.file_handler import FileHandler"
         # excludes the current handler importing parts of itself
         import_pattern = re.compile(
-            f"(?:\s|^)(?:from|import) mindsdb\.integrations\.handlers\.(?!{handler_name})\w+_handler")  # noqa: W605
+            f"(?:\s|^)(?:from|import) mindsdb\.integrations\.handlers\.(?!{handler_name}_handler)\w+_handler")  # noqa: W605
 
         # requirements entries for this handler that point to another handler's requirements file
         required_handlers = get_relative_requirements(
@@ -254,7 +254,7 @@ def check_relative_reqs():
             print_errors(file, errors)
 
         # Report on requirements.txt entries that point to a handler that isn't used
-        requirements_errors = [required_handler_name for required_handler_name in required_handlers if
+        requirements_errors = [required_handler_name + " in requirements.txt but not used in code" for required_handler_name in required_handlers if
                                required_handler_name not in all_imported_handlers]
         print_errors(handler_dir, requirements_errors)
 

@@ -9,7 +9,7 @@ import subprocess
 import concurrent.futures
 from typing import Optional, Dict
 import openai
-from openai import OpenAI
+from openai import OpenAI, NotFoundError, AuthenticationError
 import numpy as np
 import pandas as pd
 
@@ -57,6 +57,36 @@ class OpenAIHandler(BaseMLEngine):
         self.default_max_tokens = 100
         self.chat_completion_models = CHAT_MODELS
         self.supported_ft_models = FINETUNING_MODELS # base models compatible with finetuning
+
+    def create_engine(self, connection_args):
+        '''check api key if provided
+        '''
+        connection_args = {k.lower(): v for k, v in connection_args.items()}
+        api_key = connection_args.get('openai_api_key')
+        if api_key is not None:
+            api_base = connection_args.get('api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE))
+            org = connection_args.get('api_organization')
+            client = self._get_client(api_key=api_key, base_url=api_base, org=org)
+            OpenAIHandler._check_client_connection(client)
+
+    @staticmethod
+    def _check_client_connection(client: OpenAI):
+        '''try to connect to api
+
+        Args:
+            client (OpenAI):
+
+        Raises:
+            Exception: if there is AuthenticationError
+        '''
+        try:
+            client.models.retrieve('test')
+        except NotFoundError:
+            pass
+        except AuthenticationError as e:
+            if e.body['code'] == 'invalid_api_key':
+                raise Exception('Invalid api key')
+            raise Exception(f'Something went wrong: {e}')
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
@@ -119,7 +149,6 @@ class OpenAIHandler(BaseMLEngine):
                 "runtime",
                 "max_tokens",
                 "temperature",
-                "api_key",
                 "openai_api_key",
                 "api_organization",
                 "api_base"
@@ -133,28 +162,36 @@ class OpenAIHandler(BaseMLEngine):
                 f"Unknown arguments: {', '.join(unknown_args)}.\n Known arguments are: {', '.join(known_args)}"
             )
 
+        engine_storage = kwargs['handler_storage']
+        api_key = get_api_key('openai', args, engine_storage=engine_storage)
+        api_base = args.get('api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE))
+        org = args.get('api_organization')
+        client = OpenAIHandler._get_client(api_key=api_key, base_url=api_base, org=org)
+        OpenAIHandler._check_client_connection(client)
+
     def create(self, target, args=None, **kwargs):
         args = args['using']
         args['target'] = target
-        api_key = get_api_key('openai', args, self.engine_storage)
-        available_models = get_available_models(api_key)
+        try:
+            api_key = get_api_key(self.name, args, self.engine_storage)
+            available_models = get_available_models(api_key)
 
-        if not args.get('mode'):
-            args['mode'] = self.default_mode
-        elif args['mode'] not in self.supported_modes:
-            raise Exception(
-                f"Invalid operation mode. Please use one of {self.supported_modes}"
-            )
+            if not args.get('mode'):
+                args['mode'] = self.default_mode
+            elif args['mode'] not in self.supported_modes:
+                raise Exception(
+                    f"Invalid operation mode. Please use one of {self.supported_modes}"
+                )
 
-        if not args.get('model_name'):
-            if args['mode'] == 'image':
-                args['model_name'] = self.default_image_model
-            else:
-                args['model_name'] = self.default_model
-        elif args['model_name'] not in available_models:
-            raise Exception(f"Invalid model name. Please use one of {available_models}")
-
-        self.model_storage.json_set('args', args)
+            if not args.get('model_name'):
+                if args['mode'] == 'image':
+                    args['model_name'] = self.default_image_model
+                else:
+                    args['model_name'] = self.default_model
+            elif args['model_name'] not in available_models:
+                raise Exception(f"Invalid model name. Please use one of {available_models}")
+        finally:
+            self.model_storage.json_set('args', args)
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         """
@@ -345,7 +382,7 @@ class OpenAIHandler(BaseMLEngine):
         # remove prompts without signal from completion queue
         prompts = [j for i, j in enumerate(prompts) if i not in empty_prompt_ids]
 
-        api_key = get_api_key('openai', args, self.engine_storage)
+        api_key = get_api_key(self.name, args, self.engine_storage)
         api_args = {
             k: v for k, v in api_args.items() if v is not None
         }  # filter out non-specified api args
@@ -614,17 +651,20 @@ class OpenAIHandler(BaseMLEngine):
         # TODO: Update to use update() artifacts
 
         args = self.model_storage.json_get('args')
-        api_key = get_api_key('openai', args, self.engine_storage)
-        client= self._get_client(
-            api_key=api_key,
-            base_url=args.get('api_base'),
-            org=args.get('api_organization')
-            )
+        api_key = get_api_key(self.name, args, self.engine_storage)
         if attribute == 'args':
             return pd.DataFrame(args.items(), columns=['key', 'value'])
         elif attribute == 'metadata':
             model_name = args.get('model_name', self.default_model)
-            meta = client.models.retrieve(model_name)
+            try:
+                client= self._get_client(
+                    api_key=api_key,
+                    base_url=args.get('api_base'),
+                    org=args.get('api_organization')
+                )
+                meta = client.models.retrieve(model_name)
+            except Exception as e:
+                meta = {'error': str(e)}
             return pd.DataFrame(dict(meta).items(), columns=['key', 'value'])
         else:
             tables = ['args', 'metadata']
@@ -649,24 +689,30 @@ class OpenAIHandler(BaseMLEngine):
         """  # noqa
 
         args = args if args else {}
+
+        api_key = get_api_key(self.name, args, self.engine_storage)
+
         using_args = args.pop('using') if 'using' in args else {}
         prompt_col = using_args.get('prompt_column', 'prompt')
         completion_col = using_args.get('completion_column', 'completion')
         
-        api_key = get_api_key('openai', args, self.engine_storage)
         api_base = using_args.get('api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE))
         org = using_args.get('api_organization')
         client = self._get_client(api_key=api_key, base_url=api_base, org=org)
 
-        self._check_ft_cols(df, [prompt_col, completion_col])
 
         args = {**using_args, **args}
         prev_model_name = self.base_model_storage.json_get('args').get('model_name', '')
 
         if prev_model_name not in self.supported_ft_models:
-            raise Exception(
-                f"This model cannot be finetuned. Supported base models are {self.supported_ft_models}"
-            )
+            # base model may be already FTed, check prefixes
+            for model in self.supported_ft_models:
+                if model in prev_model_name:
+                    break
+            else:
+                raise Exception(
+                    f"This model cannot be finetuned. Supported base models are {self.supported_ft_models}."
+                )
 
         finetune_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
@@ -741,15 +787,6 @@ class OpenAIHandler(BaseMLEngine):
 
         self.model_storage.json_set('args', args)
         shutil.rmtree(temp_storage_path)
-
-    @staticmethod
-    def _check_ft_cols(df, cols):
-        prompt_col, completion_col = cols
-        for col in [prompt_col, completion_col]:
-            if col not in set(df.columns):
-                raise Exception(
-                    f"To fine-tune this OpenAI model, please format your select data query to have a `{prompt_col}` column and a `{completion_col}` column first."
-                )  # noqa
 
     @staticmethod
     def _prepare_ft_jsonl(df, _, temp_filename, temp_model_path):

@@ -7,7 +7,16 @@ This is the implementation of the EdgelessDB data handler for MindsDB.
 
 [Edgeless](https://edgeless.systems/) is a full SQL database, tailor-made for confidential computing. It seamlessly integrates with your existing tools and workflows to help you unlock the full potential of your data.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect EdgelessDB to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to EdgelessDB.
+
 ## Implementation
+
 This handler is implemented by extending the MySQL connector.
 The required arguments to establish a connection are as follows:
 
@@ -23,10 +32,6 @@ To use the full potensial of EdgelessDB, you can also specify the following argu
 * `ssl_ca`: path or url to the CA certificate
 * `ssl_cert`: path or url to the client certificate
 * `ssl_key`: path or url to the client key
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/edgelessdb_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

@@ -7,6 +7,14 @@ This is the implementation of the YugabyteDB data handler for MindsDB.
 
 [YugabyteDB](https://www.yugabyte.com/) is a high-performance, cloud-native distributed SQL database that aims to support all PostgreSQL features. It is best fit for cloud-native OLTP (i.e. real-time, business-critical) applications that need absolute data correctness and require at least one of the following: scalability, high tolerance to failures, or globally-distributed deployments.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect YugabyteDB to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to YugabyteDB.
+
 ## Implementation
 
 This handler is implemented using `psycopg2`, a Python library that allows you to use Python code to run SQL commands on the YugabyteDB database.
@@ -19,10 +27,6 @@ The required arguments to establish a connection are as follows:
 - `port` is the port used to make TCP/IP connection.
 - `database` is the database name.
 - `schema` is the schema to which your table belongs.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/yugabyte_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

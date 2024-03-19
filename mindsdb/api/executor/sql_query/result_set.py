@@ -52,6 +52,9 @@ class ResultSet:
 
         return f'{self.__class__.__name__}({self.length()} rows, cols: {col_names})\n {data}'
 
+    def __len__(self) -> int:
+        return len(self._records)
+
     # --- converters ---
 
     def from_df(self, df, database, table_name, table_alias=None):

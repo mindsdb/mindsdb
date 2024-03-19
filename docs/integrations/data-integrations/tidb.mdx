@@ -7,6 +7,14 @@ This is the implementation of the TiDB data handler for MindsDB.
 
 [TiDB](https://www.pingcap.com/tidb/) is an open-source NewSQL database that supports Hybrid Transactional and Analytical Processing workloads. It is MySQL-compatible and can provide horizontal scalability, strong consistency, and high availability.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect TiDB to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to TiDB.
+
 ## Implementation
 
 This handler is implemented by extending the MySQL data handler.
@@ -18,10 +26,6 @@ The required arguments to establish a connection are as follows:
 * `host` is the host name, IP address, or URL.
 * `port` is the port used to make TCP/IP connection.
 * `database` is the database name.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/tidb_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

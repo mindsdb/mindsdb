@@ -6,6 +6,13 @@ sidebarTitle: GitLab
 In this section, we present how to connect GitLab repository to MindsDB.
 [GitLab](https://about.gitlab.com/) is a DevSecOps Platform. Data from GitLab, including issues and MRs, can be utilized within MindsDB to make relevant predictions or automate the issue/MR creation.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect GitLab to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to GitLab.
 
 ## Connection
 
@@ -27,10 +34,6 @@ PARAMETERS = {
   "api_key": "api_key",    -- optional GitLab API key
 };
 ```
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/github_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

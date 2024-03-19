@@ -14,6 +14,7 @@ except Exception as e:
 title = "AutoGluon"
 name = "autogluon"
 type = HANDLER_TYPE.ML
-permanent = True
+icon_path = 'icon.svg'
+permanent = False
 
-__all__ = ["Handler", "version", "name", "type", "title", "description", "import_error"]
+__all__ = ["Handler", "version", "name", "type", "title", "description", "import_error", "icon_path"]

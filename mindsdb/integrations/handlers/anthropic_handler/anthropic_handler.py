@@ -8,6 +8,8 @@ from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 
+from mindsdb.integrations.utilities.handler_utils import get_api_key
+
 logger = log.getLogger(__name__)
 
 
@@ -20,8 +22,8 @@ class AnthropicHandler(BaseMLEngine):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.default_chat_model = "claude-2"
-        self.supported_chat_models = ["claude-1", "claude-2"]
+        self.default_chat_model = "claude-2.1"
+        self.supported_chat_models = ["claude-instant-1.2", "claude-2.1", "claude-3-opus-20240229", "claude-3-sonnet-20240229"]
         self.default_max_tokens = 100
         self.generative = True
         self.connection = None
@@ -55,7 +57,7 @@ class AnthropicHandler(BaseMLEngine):
     ) -> None:
 
         args = self.model_storage.json_get("args")
-        api_key = self._get_anthropic_api_key(args)
+        api_key = get_api_key('anthropic', args["using"], self.engine_storage, strict=False)
 
         self.connection = Anthropic(
             api_key=api_key,
@@ -74,50 +76,33 @@ class AnthropicHandler(BaseMLEngine):
 
         return result_df
 
-    def _get_anthropic_api_key(self, args, strict=True):
-        """
-        API_KEY preference order:
-            1. provided at model creation
-            2. provided at engine creation
-            3. ANTHROPIC_API_KEY env variable
-            4. anthropic.api_key setting in config.json
-        """
-
-        # 1
-        if "api_key" in args["using"]:
-            return args["using"]["api_key"]
-        # 2
-        connection_args = self.engine_storage.get_connection_args()
-        if "api_key" in connection_args:
-            return connection_args["api_key"]
-        # 3
-        api_key = os.getenv("ANTHROPIC_API_KEY")
-        if api_key is not None:
-            return api_key
-        # 4
-        config = Config()
-        anthropic_cfg = config.get("anthropic", {})
-        if "api_key" in anthropic_cfg:
-            return anthropic_cfg["api_key"]
-
-        if strict:
-            raise Exception(
-                f'Missing API key "api_key". Either re-create this ML_ENGINE specifying the `api_key` parameter,\
-                 or re-create this model and pass the API key with `USING` syntax.'
-            )
-
     def predict_answer(self, text):
         """
-        connects with anthropic api to predict the answer for the particular question
+        connects with anthropic messages api to predict the answer for the particular question
 
         """
 
         args = self.model_storage.json_get("args")
 
-        completion = self.connection.completions.create(
+        message = self.connection.messages.create(
             model=args["using"]["model"],
-            max_tokens_to_sample=args["using"]["max_tokens"],
-            prompt=f"{HUMAN_PROMPT} {text} {AI_PROMPT}",
+            max_tokens=args["using"]["max_tokens"],
+            messages=[
+                {"role": "user", "content": text}
+            ]
         )
 
-        return completion.completion
+        content_blocks = message.content
+
+        # assuming that message.content contains one ContentBlock item
+        # returning text value if type==text and content_blocks value if type!=text
+        if isinstance(content_blocks, list) and len(content_blocks) > 0:
+            content_block = content_blocks[0]
+            if content_block.type == 'text':
+                return content_block.text
+            else:
+                return content_blocks
+        else:
+            raise Exception(
+                f"Invalid output: {content_blocks}"
+            )

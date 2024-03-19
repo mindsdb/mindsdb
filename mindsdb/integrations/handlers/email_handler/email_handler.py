@@ -8,26 +8,33 @@ from mindsdb.integrations.libs.response import (
 from mindsdb_sql import parse_sql
 
 from mindsdb.integrations.handlers.email_handler.email_tables import EmailsTable
-from mindsdb.integrations.handlers.email_handler.email_helpers import EmailClient
+from mindsdb.integrations.handlers.email_handler.email_client import EmailClient
+from mindsdb.integrations.handlers.email_handler.settings import EmailConnectionDetails
+
 
 logger = log.getLogger(__name__)
 
-class EmailHandler(APIHandler):
-    """A class for handling connections and interactions with Email (send and search).
 
-    Attributes:
-        "email": "Email address used to login to the SMTP and IMAP servers.",
-        "password": "Password used to login to the SMTP and IMAP servers.",
-        "smtp_server": "SMTP server to be used for sending emails. Default value is 'smtp.gmail.com'.",
-        "smtp_port": "Port number for the SMTP server. Default value is 587.",
-        "imap_server": "IMAP server to be used for reading emails. Default value is 'imap.gmail.com'."
+class EmailHandler(APIHandler):
+    """
+    A class for handling connections and interactions with Email (send and search).
+
+    Parameters
+    ----------
+    name : str
+        The name of the handler
+    connection_data : EmailConnectionDetails
+        The connection details for the email server
+
+        see `EmailConnectionDetails` for more details and examples
+
     """
 
     def __init__(self, name=None, **kwargs):
         super().__init__(name)
 
         connection_data = kwargs.get("connection_data", {})
-        self.connection_data = connection_data
+        self.connection_data = EmailConnectionDetails(**connection_data)
         self.kwargs = kwargs
 
         self.connection = None
@@ -43,13 +50,22 @@ class EmailHandler(APIHandler):
             return self.connection
 
         try:
-            self.connection = EmailClient(**self.connection_data)
+            self.connection = EmailClient(self.connection_data)
         except Exception as e:
             logger.error(f'Error connecting to email api: {e}!')
             raise e
 
         self.is_connected = True
         return self.connection
+
+    def disconnect(self):
+        """ Close any existing connections
+
+        Should switch self.is_connected.
+        """
+        self.is_connected = False
+
+        return self.connection.logout()
 
     def check_connection(self) -> StatusResponse:
 
@@ -81,4 +97,3 @@ class EmailHandler(APIHandler):
         """
         ast = parse_sql(query, dialect="mindsdb")
         return self.query(ast)
-

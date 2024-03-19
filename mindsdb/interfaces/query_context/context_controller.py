@@ -71,11 +71,12 @@ class QueryContextController:
             # find last in where
             if isinstance(node, BinaryOperation):
                 if isinstance(node.args[0], Identifier) and isinstance(node.args[1], Last):
-                    # memorize node
-                    return BinaryOperation(op='=', args=[Constant(0), Constant(0)])
+                    node.args = [Constant(0), Constant(0)]
+                    node.op = '='
 
         # find lasts
         query_traversal(query, replace_lasts)
+        return query
 
     def _result_callback(self, l_query: LastQuery,
                          context_name: str, query_str: str,
@@ -96,7 +97,7 @@ class QueryContextController:
         if len(data) == 0:
             return
 
-        df = pd.DataFrame(data)
+        df = pd.DataFrame(data, columns=[col['name'] for col in columns_info])
         values = {}
         # get max values
         for info in l_query.get_last_columns():
@@ -161,7 +162,7 @@ class QueryContextController:
             if len(data) == 0:
                 value = None
             else:
-                value = list(data[0].values())[0]
+                value = data[0][0]
             if value is not None:
                 last_values[info['table_name']] = {info['column_name']: value}
 

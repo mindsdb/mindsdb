@@ -5,16 +5,17 @@ from dataprep_ml.insights import analyze_dataset
 from flask import request
 from flask_restx import Resource
 from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import Constant, Identifier
-from mindsdb_sql.planner.utils import query_traversal
+from mindsdb_sql.parser.ast import Constant
 from pandas.core.frame import DataFrame
 
 from mindsdb.api.http.namespaces.configs.analysis import ns_conf
+from mindsdb.api.executor.utilities.sql import get_query_tables
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
 from mindsdb.api.executor.data_types.response_type import (
     RESPONSE_TYPE as SQL_RESPONSE_TYPE,
 )
+from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -42,6 +43,7 @@ def analyze_df(df: DataFrame) -> dict:
 @ns_conf.route("/query")
 class QueryAnalysis(Resource):
     @ns_conf.doc("post_query_to_analyze")
+    @api_endpoint_metrics('POST', '/analysis/query')
     def post(self):
         data = request.json
         query = data.get("query")
@@ -79,13 +81,9 @@ class QueryAnalysis(Resource):
         df = DataFrame(result.data, columns=column_names)
         analysis = analyze_df(df)
 
-        query_tables = []
-
-        def find_tables(node, is_table, **kwargs):
-            if is_table and isinstance(node, Identifier):
-                query_tables.append(".".join(node.parts))
-
-        query_traversal(ast, find_tables)
+        query_tables = [
+            table.to_string() for table in get_query_tables(ast)
+        ]
 
         return {
             "analysis": analysis,
@@ -99,6 +97,7 @@ class QueryAnalysis(Resource):
 @ns_conf.route("/data")
 class DataAnalysis(Resource):
     @ns_conf.doc("post_data_to_analyze")
+    @api_endpoint_metrics('POST', '/analysis/data')
     def post(self):
         payload = request.json
         column_names = payload.get("column_names")

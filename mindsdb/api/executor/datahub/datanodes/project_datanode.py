@@ -1,7 +1,5 @@
 from copy import deepcopy
 
-import pandas as pd
-
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import (
     BinaryOperation,
@@ -75,7 +73,7 @@ class ProjectDataNode(DataNode):
             if kb_table:
                 # this is the knowledge db
                 kb_table.update_query(query)
-                return pd.DataFrame(), []
+                return [], []
 
             raise NotImplementedError(f"Can't update object: {query_table}")
 
@@ -85,7 +83,7 @@ class ProjectDataNode(DataNode):
             if kb_table:
                 # this is the knowledge db
                 kb_table.delete_query(query)
-                return pd.DataFrame(), []
+                return [], []
 
             raise NotImplementedError(f"Can't delete object: {query_table}")
 
@@ -97,7 +95,7 @@ class ProjectDataNode(DataNode):
                 query.from_table.parts[0] = 'models'
                 query_table = 'models'
             # endregion
-            if query_table in ('models', 'models_versions', 'jobs', 'jobs_history', 'mdb_triggers', 'chatbots', 'skills', 'agents'):
+            if query_table in ('models', 'models_versions', 'jobs', 'mdb_triggers', 'chatbots', 'skills', 'agents'):
                 new_query = deepcopy(query)
                 project_filter = BinaryOperation('=', args=[
                     Identifier('project'),
@@ -147,7 +145,7 @@ class ProjectDataNode(DataNode):
                     for k, v in df.dtypes.items()
                 ]
 
-                return df.to_dict(orient='records'), columns_info
+                return df.to_dict(orient='split')['data'], columns_info
 
             kb_table = session.kb_controller.get_table(query_table, self.project.id)
             if kb_table:
@@ -161,7 +159,7 @@ class ProjectDataNode(DataNode):
                     for k, v in df.dtypes.items()
                 ]
 
-                return df.to_dict(orient='records'), columns_info
+                return df.to_dict(orient='split')['data'], columns_info
 
             raise EntityNotExistsError(f"Can't select from {query_table} in project")
         else:

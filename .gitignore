@@ -48,10 +48,9 @@ pyvenv.cfg
 .python-version
 .DS_Store
 /Scripts
+Scripts
 Include
 xgboost
-
-tests/__init__.py
 
 # Docs
 node_modules

@@ -165,7 +165,7 @@ class ProjectDataNode(DataNode):
         else:
             raise NotImplementedError(f"Query not supported {query}")
 
-    def create_table(self, table_name: Identifier, result_set, is_replace=False, **kwargs):
+    def create_table(self, table_name: Identifier, result_set=None, is_replace=False, **kwargs):
         # is_create - create table
         # is_replace - drop table if exists
         # is_create==False and is_replace==False: just insert

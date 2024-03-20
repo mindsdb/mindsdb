@@ -1,4 +1,4 @@
-name: Deploy to staging
+name: Build and deploy to staging
 
 on:
   push:
@@ -34,3 +34,7 @@ jobs:
           workflow_file_name: deploy-dev.yml
           ref: master
           client_payload: '{"image-tag-prefix": "${{ env.CI_SHA }}", "deploy-env": "${{ matrix.environment }}"}'
+
+  run_tests:
+    name: Run Post-Deploy Tests
+    uses: ./.github/workflows/test_on_deploy.yml

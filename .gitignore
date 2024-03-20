@@ -25,6 +25,7 @@ storage_dir
 docker/dist/*
 .directory
 MindsDB.egg-info/*
+/build
 
 # Autokeras generated files
 auto_model
@@ -41,15 +42,14 @@ doc/lib/
 run.csh
 
 # Virtualenv
-bin
-lib
-lib64
+mindsdb/bin
+mindsdb/lib
+mindsdb/lib64
 pyvenv.cfg
 .python-version
 .DS_Store
-/Scripts
-Scripts
-Include
+mindsdb/Scripts
+mindsdb/Include
 xgboost
 
 # Docs

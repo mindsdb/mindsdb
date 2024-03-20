@@ -20,11 +20,11 @@ class DummyHandler(BaseMLEngine):
         df['predictor_id'] = self.model_storage.predictor_id
         df['row_id'] = self.model_storage.predictor_id * 100 + df.reset_index().index
 
-        args = self.engine_storage.json_get('args')
+        args = self.engine_storage.json_get('engine_args')
 
-        df.insert(len(df.columns), 'args', [args] * len(df))
+        df.insert(len(df.columns), 'engine_args', [args] * len(df))
 
-        return df[['predicted', 'predictor_id', 'row_id', 'args']]
+        return df[['predicted', 'predictor_id', 'row_id', 'engine_args']]
 
     def _get_model_verison(self):
         return self.model_storage._get_model_record(
@@ -47,4 +47,4 @@ class DummyHandler(BaseMLEngine):
             return pd.DataFrame(tables, columns=['tables'])
 
     def create_engine(self, connection_args):
-        self.engine_storage.json_set('args', connection_args)
+        self.engine_storage.json_set('engine_args', connection_args)

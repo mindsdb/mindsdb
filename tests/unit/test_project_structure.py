@@ -908,7 +908,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         )
 
         ret = self.run_sql('select * from pred where a=1')
-        args = ret['args'][0]
+        args = ret['engine_args'][0]
 
         # check unquoted value
         assert args['unquoted_arg'] == 'yourkey'

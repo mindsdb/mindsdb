@@ -1,5 +1,12 @@
-# Bare mindsdb with no extras is built as a separate stage for caching
-FROM nvidia/cuda:12.2.0-runtime-ubuntu22.04 as build
+# This is specified as an ARG so that we can set it to an nvidia base image for gpu-compatible ml engines
+ARG BASE_IMAGE=python:3.10-slim
+
+FROM ${BASE_IMAGE} as build
+
+# List of pip packages to install on top of bare mindsdb
+ARG EXTRAS
+WORKDIR /mindsdb
+
 # "rm ... docker-clean" stops docker from removing packages from our cache
 # https://github.com/moby/buildkit/blob/master/frontend/dockerfile/docs/reference.md#example-cache-apt-packages
 RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
@@ -8,11 +15,9 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     apt update && apt-get upgrade -y \
     && apt-get install -y python3 python3-pip git freetds-dev  # freetds required to build pymssql for mssql_handler
 
-WORKDIR /mindsdb
 
-
-# Copy just requirements and install them to cache the layer
-# This won't include any of the default handlers, but it should still speed things up
+# Copy just requirements and install them to cache the layer. This won't include any of the default handlers,
+# but this layer should rarely change so will be cached most of the time
 COPY requirements/requirements.txt /mindsdb/requirements/requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip pip3 install -r requirements/requirements.txt
 
@@ -23,13 +28,12 @@ RUN --mount=type=cache,target=/root/.cache/pip pip3 install "."
 
 
 # Install extras on top of the bare mindsdb
-FROM build as extras
-ARG EXTRAS
 RUN --mount=type=cache,target=/root/.cache/pip if [ -n "$EXTRAS" ]; then pip3 install $EXTRAS; fi
 
 
-# For use in docker-compose
-FROM extras as dev
+# For use in docker-compose/development. Installs our development requirements
+FROM build as dev
+
 # "rm ... docker-clean" stops docker from removing packages from our cache
 # https://github.com/moby/buildkit/blob/master/frontend/dockerfile/docs/reference.md#example-cache-apt-packages
 RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
@@ -41,6 +45,7 @@ RUN --mount=type=cache,target=/root/.cache/pip pip3 install -r requirements/requ
 
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
+# Makes sure we see all output in the container logs
 ENV PYTHONUNBUFFERED=1
 
 EXPOSE 47334/tcp
@@ -51,8 +56,8 @@ ENTRYPOINT [ "sh", "-c", "python3 -m mindsdb --config=/root/mindsdb_config.json 
 
 
 # Copy installed pip packages and install only what we need
-#FROM python:3.10-slim
-FROM nvidia/cuda:12.2.0-runtime-ubuntu22.04
+FROM ${BASE_IMAGE}
+# FROM nvidia/cuda:12.2.0-runtime-ubuntu22.04
 # "rm ... docker-clean" stops docker from removing packages from our cache
 # https://github.com/moby/buildkit/blob/master/frontend/dockerfile/docs/reference.md#example-cache-apt-packages
 RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
@@ -61,9 +66,11 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     apt update && apt-get upgrade -y \
     && apt-get install -y python3 python3-pip libmagic1 libpq5 freetds-bin
 
-COPY --link --from=extras /usr/local/lib/python3.10/dist-packages /usr/local/lib/python3.10/dist-packages
+# Copy python packages from the build stage
+COPY --link --from=build /usr/local/lib/python3.10/dist-packages /usr/local/lib/python3.10/dist-packages
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
+# Makes sure we see all output in the container logs
 ENV PYTHONUNBUFFERED=1
 
 EXPOSE 47334/tcp

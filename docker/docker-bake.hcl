@@ -69,38 +69,45 @@ target "images" {
         name = "bare"
         extras = ""
         target = ""
+        base_image = null
       },
       {
         name = "devel"
         extras = ""
         target = "dev"
+        base_image = null
       },
       {
         name = "lightwood"
         extras = ".[lightwood]"
         target = ""
+        base_image = "nvidia/cuda:12.2.0-runtime-ubuntu22.04"
       },
       {
         name = "huggingface"
         extras = ".[huggingface]"
         target = ""
+        base_image = "nvidia/cuda:12.2.0-runtime-ubuntu22.04"
       },
       {
         name = "cloud"
         extras = ".[lightwood,huggingface,statsforecast-extra,neuralforecast-extra,timegpt,surrealdb,mssql,youtube,ignite,gmail,pgvector,llama_index,writer,rag,github,snowflake,clickhouse,couchbase,twelve_labs] darts datasetsforecast"
         target = ""
+        base_image = "nvidia/cuda:12.2.0-runtime-ubuntu22.04"
       },
       {
         name = "cloud-data"
         extras = ".[surrealdb,mssql,youtube,ignite,gmail,pgvector,github,snowflake,clickhouse,couchbase]"
         target = ""
+        base_image = null
       },
     ]
   }
   target = item.target
   tags = get_tags(item.name)
   args = {
-    EXTRAS = item.extras
+    EXTRAS = item.extras,
+    BASE_IMAGE = item.base_image
   }
   cache-to = get_cache_to(item.name)
   cache-from = get_cache_from(item.name)

@@ -33,21 +33,27 @@ Follow the steps to set up MindsDB in a Docker container.
 Run this command to start MindsDB in Docker:
 
 ```bash
-docker run -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+docker run --name mindsdb_container -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
 ```
 
 Where:
 
--   `docker run` is a native Docker command used to start a container.
+-   `docker run` is a native Docker command used to spin up a container.
+-   `--name mindsdb_container` defines a name for the container.
 -   `-p 47334:47334` publishes port 47334 to access MindsDB GUI and HTTP API.
 -   `-p 47335:47335` publishes port 47335 to access MindsDB MySQL API.
 -   `mindsdb/mindsdb` is a Docker image provided by MindsDB. You can choose a different one from the list above.
+
+Once the container is created, you can use the following commands:
+
+-   `docker stop mindsdb_container` to stop the container. Note that this may not always be necessary because when turning off the host machine, the container will also be shut down.
+-   `docker start mindsdb_container` to start the container back up.
 
 <Tip>
 If you don't want to follow the logs and get the prompt back, add the `-d` flag that stands for *detach*.
 
 ```bash
-docker run -d -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+docker run --name mindsdb_container -d -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
 ```
 </Tip>
 
@@ -56,7 +62,7 @@ If you want to persist your models and configurations in the host machine, run t
 
 ```bash
 mkdir mdb_data
-docker run -p 47334:47334 -p 47335:47335 -v $(pwd)/mdb_data:/root/mdb_storage mindsdb/mindsdb
+docker run --name mindsdb_container -p 47334:47334 -p 47335:47335 -v $(pwd)/mdb_data:/root/mdb_storage mindsdb/mindsdb
 ```
 
 Where `-v $(pwd)/mdb_data:/root/mdb_storage` maps the newly created folder `mdb_data` on the host machine to the `/root/mdb_storage` inside the container.
@@ -87,13 +93,17 @@ Alternative way is to install dependencies directly from MindsDB editor. Go to *
 Run the MindsDB Docker container:
 
 ```bash
-docker run -d -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+docker run --name mindsdb_container -d -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
 ```
+
+<Tip>
+If you haven't specified a container name when spinning up a container with `docker run`, you can find it by running `docker ps`.
+</Tip>
 
 Start an interactive shell in the container:
 
 ```bash
-docker exec -it container-name sh
+docker exec -it mindsdb_container sh
 ```
 
 Install the dependencies:
@@ -117,7 +127,7 @@ exit
 Restart the container:
 
 ```bash
-docker restart container-name
+docker restart mindsdb_container
 ```
 
 ## Configuration

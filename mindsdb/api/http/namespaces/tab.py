@@ -5,6 +5,7 @@ from http import HTTPStatus
 from flask import request
 from flask_restx import Resource
 
+from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.interfaces.storage.fs import FileStorageFactory, RESOURCE_GROUP
 from mindsdb.api.http.namespaces.configs.tabs import ns_conf
 from mindsdb.utilities import log
@@ -32,6 +33,7 @@ def get_storage():
 @ns_conf.route('/')
 class Tab(Resource):
     @ns_conf.doc('get_tabs')
+    @api_endpoint_metrics('GET', '/tabs')
     def get(self):
         company_id = request.headers.get("company-id", None)
         ctx.company_id = company_id
@@ -46,6 +48,7 @@ class Tab(Resource):
         return tabs, 200
 
     @ns_conf.doc('save_tabs')
+    @api_endpoint_metrics('POST', '/tabs')
     def post(self):
         company_id = request.headers.get("company-id", None)
         ctx.company_id = company_id

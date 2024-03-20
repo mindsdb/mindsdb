@@ -1,4 +1,4 @@
-name: MindsDB Releases
+name: Build and deploy release
 
 on:
   release:
@@ -79,5 +79,12 @@ jobs:
           repo: INTERNAL-mindsdb-build-deploy-to-kubernetes
           github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}
           workflow_file_name: deploy-prod.yml
-          ref: master
+          ref: main
           client_payload: '{"image-tag-prefix": "${{ env.CI_REF_NAME }}", "deploy-env": "prod"}'
+
+
+  run_tests:
+    name: Run Post-Deploy Tests
+    needs: [trigger_deploy]
+    uses: ./.github/workflows/test_on_deploy.yml
+    secrets: inherit

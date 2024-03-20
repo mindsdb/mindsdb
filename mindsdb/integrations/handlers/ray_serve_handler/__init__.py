@@ -7,7 +7,7 @@ except Exception as e:
     Handler = None
     import_error = e
 
-title = 'RayServe'
+title = 'Ray Serve'
 name = 'ray_serve'
 type = HANDLER_TYPE.ML
 icon_path = 'icon.svg'

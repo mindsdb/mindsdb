@@ -8,7 +8,7 @@ except Exception as e:
     Handler = None
     import_error = e
 
-title = 'PaLM'
+title = 'Google PaLM'
 name = 'palm'
 type = HANDLER_TYPE.ML
 icon_path = 'icon.svg'

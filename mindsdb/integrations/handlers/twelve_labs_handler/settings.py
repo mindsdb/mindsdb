@@ -57,6 +57,8 @@ class TwelveLabsHandlerModel(BaseModel):
     summarization_type : str, Optional
         Type of the summary to be generated. This will only be required if the task is summarize. Supported types are 'summary', 'chapter' and 'highlight'.
 
+    prompt : str, Optional
+        Prompt to be used for the summarize. This will only be required if the type is summary, chapter or highlight.
     For more information, refer the API reference: https://docs.twelvelabs.io/reference/api-reference
     """
 
@@ -74,6 +76,7 @@ class TwelveLabsHandlerModel(BaseModel):
     search_options: Optional[List[str]] = None
     search_query_column: Optional[str] = None
     summarization_type: Optional[str] = None
+    prompt: Optional[str] = None
 
     class Config:
         extra = Extra.forbid

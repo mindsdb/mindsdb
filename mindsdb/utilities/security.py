@@ -2,7 +2,7 @@ from urllib.parse import urlparse
 import socket
 import ipaddress
 import secrets
-import json
+import pickle
 import base64
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -51,8 +51,8 @@ def encrypt_dict(message: dict) -> dict:
         return message
 
     nonce = secrets.token_bytes(12)
-    message_bytes = json.dumps(message).encode()
-    encrypted_bytes = nonce + AESGCM(key).encrypt(nonce, message_bytes)
+    message_bytes = pickle.dumps(message)  # json.dumps(message).encode()
+    encrypted_bytes = nonce + AESGCM(key).encrypt(nonce, message_bytes, None)
     encrypted_bytes = base64.b64encode(encrypted_bytes).decode('utf-8')
 
     return {
@@ -76,7 +76,6 @@ def decrypt_dict(message: dict) -> dict:
         raise Exception('Something wrong')
 
     encrypted_message = base64.b64decode(encrypted_message.encode('utf-8'))
-    decrypted_message = AESGCM(key).decrypt(encrypted_message[:12], encrypted_message[12:])
-    # decrypted_message = 
+    decrypted_message = AESGCM(key).decrypt(encrypted_message[:12], encrypted_message[12:], None)
+    decrypted_message = pickle.loads(decrypted_message)
     return decrypted_message
-

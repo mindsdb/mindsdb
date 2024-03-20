@@ -9,7 +9,7 @@ except Exception as e:
 from .__about__ import __version__ as version, __description__ as description
 
 
-title = 'BigQuery'
+title = 'Google BigQuery'
 name = 'bigquery'
 type = HANDLER_TYPE.DATA
 icon_path = 'icon.svg'

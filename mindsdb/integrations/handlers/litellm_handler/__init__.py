@@ -11,7 +11,7 @@ except Exception as e:
     Handler = None
     import_error = e
 
-title = "LiteLLM Handler"
+title = "LiteLLM"
 name = "litellm"
 type = HANDLER_TYPE.ML
 icon_path = "icon.png"

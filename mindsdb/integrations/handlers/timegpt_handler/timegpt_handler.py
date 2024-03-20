@@ -74,7 +74,7 @@ class TimeGPTHandler(BaseMLEngine):
         args = args['predict_params']
         prediction_df = self._transform_to_nixtla_df(df, model_args)
         
-        timegpt = TimeGPT(token=args['token'])
+        timegpt = TimeGPT(token=model_args['token'])
         assert timegpt.validate_token(), "Invalid TimeGPT token provided."
 
         forecast_df = timegpt.forecast(

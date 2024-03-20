@@ -1,4 +1,4 @@
-name: Deploy to dev
+name: Build and deploy to dev
 
 on:
   pull_request:
@@ -58,3 +58,9 @@ jobs:
           workflow_file_name: deploy-dev.yml
           ref: master
           client_payload: '{"image-tag-prefix": "${{ env.CI_SHA }}", "deploy-env": "${{matrix.deploy-env}}"}'
+
+  run_tests:
+    name: Run Post-Deploy Tests
+    needs: [trigger_deploy]
+    uses: ./.github/workflows/test_on_deploy.yml
+    secrets: inherit

@@ -319,7 +319,7 @@ class ChromaDBHandler(VectorStoreHandler):
         Insert data into the ChromaDB database.
         """
 
-        collection = self._client.get_collection(table_name)
+        collection = self._client.get_or_create_collection(name=table_name)
 
         # drop columns with all None values
 

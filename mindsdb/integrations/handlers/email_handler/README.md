@@ -46,7 +46,7 @@ At the moment, the handler has only been tested with Gmail and Outlook accounts.
     - [x] Support ORDER BY
     - [x] Support column selection
   - [x] Support INSERT: send emails
-    - [x] Support to, subject and body columns
+    - [x] Support to_field, subject and body columns
 
 ## TODO
 
@@ -76,7 +76,7 @@ FROM email_datasource.emails;
 And you can apply filters like this:
 
 ```sql
-SELECT id, to, subject, body
+SELECT id, to_field, subject, body
 FROM email_datasource.emails
 WHERE subject = 'MindsDB'
 ORDER BY id
@@ -86,7 +86,7 @@ LIMIT 5;
 Or, write emails like this:
 
 ```sql
-INSERT INTO email_datasource.emails(to, subject, body)
+INSERT INTO email_datasource.emails(to_field, subject, body)
 VALUES ("toemail@email.com", "MindsDB", "Hello from MindsDB!");
 ```
 
@@ -116,7 +116,7 @@ FROM email_datasource.emails;
 And you can apply filters like this:
 
 ```sql
-SELECT id, to, subject, body
+SELECT id, to_field, subject, body
 FROM email_datasource.emails
 WHERE subject = 'MindsDB'
 ORDER BY id

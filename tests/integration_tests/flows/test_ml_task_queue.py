@@ -6,7 +6,7 @@ from walrus import Database
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.utilities.ml_task_queue.const import TASKS_STREAM_NAME
 
-from .http_test_helpers import HTTPHelperMixin
+from tests.utils.http_test_helpers import HTTPHelperMixin
 
 
 # used by mindsdb_app fixture in conftest

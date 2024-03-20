@@ -47,7 +47,7 @@ MAIN_RULE_IGNORES = {
 # (pysqlite3 is imported in an unusual way in the chromadb handler and needs to be excluded too)
 # pypdf and openpyxl are optional deps of langchain, that are used for the file handler
 OPTIONAL_HANDLER_DEPS = ["pysqlite3", "torch", "openai", "tiktoken", "wikipedia", "anthropic", "pypdf", "openpyxl",
-                         "sentence-transformers", "faiss-cpu"]
+                         "sentence-transformers", "faiss-cpu", "litellm"]
 
 # List of rules we can ignore for specific packages
 # Here we ignore any packages in the main requirements.txt for "listed but not used" errors, because they will be used for the core code but not necessarily in a given handler
@@ -70,6 +70,7 @@ PACKAGE_NAME_MAP = {
     "google-cloud-aiplatform": ["google"],
     "google-cloud-bigquery": ["google"],
     "google-cloud-spanner": ["google"],
+    "sqlalchemy-spanner": ["google"],
     "google-auth-httplib2": ["google"],
     "google-generativeai": ["google"],
     "google-analytics-admin": ["google"],
@@ -77,7 +78,6 @@ PACKAGE_NAME_MAP = {
     "google-api-python-client": ["googleapiclient"],
     "binance-connector": ["binance"],
     "pysqlite3": ["pysqlite3"],
-    "sqlalchemy-spanner": ["sqlalchemy"],
     "atlassian-python-api": ["atlassian"],
     "databricks-sql-connector": ["databricks"],
     "elasticsearch-dbapi": ["es"],

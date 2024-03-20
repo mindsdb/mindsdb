@@ -1,139 +1,206 @@
-# General RAG ML Handler
+---
+title: Semantic Search with RAG
+sidebarTitle: RAG
+---
 
-## Briefly describe what ML framework does this handler integrate to MindsDB, and how?
-A simplified interface for users to create and query Retrieval-Augmented Generation (RAG) models.
+This documentation describes the Retrieval Augmented Generation integration that can be used to create, train, and deploy models within MindsDB.
 
-This handler supports:
-- For LLMs:
-    - OpenAI API
-    - Writer API
-- For vectorDBs:
-    - ChromaDB
-    - FAISS
-- For Embedding models:
-    - Any compatible model with HF `sentence_transformers` library
+It supports the following:
 
-## Why is this integration useful? What does the ideal predictive use case for this integration look like? When would you definitely not use this integration?
+* Large language models such as [OpenAI](/integrations/ai-engines/openai) and [Writer](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/writer_handler#readme).
+* Vector databases such as [ChromaDB](/integrations/vector-db-integrations/chromadb) and FAISS.
+* Embedding models compatible with the [Hugging Face sentence_transformers library](https://huggingface.co/sentence-transformers).
 
-This integration is useful for a number of reasons:
-- Makes it possible to query large document corpus that may exceed most LLM token limit by making use of an intermediate vectorDB, in this case ChromaDB.
-- You can load in existing persisted ChromaDB with embeddings.
-- Run Question and Answer queries against the powerful different LLM APIs.
+## Prerequisites
 
-An ideal use case would be long and complex business documents that you want to be able to ask questions about or alternatively academic papers or other long form texts of interest.
+Before proceeding, ensure the following prerequisites are met:
 
-This integration is not suitable for other LLM tasks other than Question Answering.
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To use RAG within MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Obtain the [OpenAI](https://help.openai.com/en/articles/4936850-where-do-i-find-my-openai-api-key) or [Writer](https://dev.writer.com/docs/quickstart#step-1-obtain-your-api-keys) API key. 
 
-## Are models created with this integration fast and scalable, in general?
-The rate limiting step is the ingestion of data from regular Database table in text format to vector embeddings in ChromaDB collection or FAISS index. Depending on the Embedding model used, the size of the document corpus and your compute specification it can take a long time to complete!
+## Setup
 
-Once you have ingested your data, the LLM API you choose to utilise is very fast and scalable when querying on a question and answer task.
-
-## What are the recommended system specifications for models created with this framework?
-Since we use hosted LLM APIs, there is no need for any additional system specifications. As noted above, the embedding step can take longer on less powerful hardware. The only real requirement is to have an internet connection.
-
-## To what degree can users control the underlying framework by passing parameters via the USING syntax?
-Users are allowed complete control over the underlying framework by passing parameters via the USING syntax.
-
-## Does this integration offer model explainability or insights via the DESCRIBE syntax?
-No, this integration doesn't support DESCRIBE syntax.
-
-## Does this integration support fine-tuning pre-existing models (i.e. is the update() method implemented)? Are there any caveats?
-No, fine-tuning is not supported.
-
-## Are there any other noteworthy aspects to this handler?
-The handler has a number of default parameters set, the user only needs to pass:
-
-- `llm_type: str`
-- llm auth parameters - depending on the llm_type, one of the following:
-    - `open_ai_api_key: str`
-    - `writer_api_key: str` and `writer_org_id: str`
-- `vector_store_folder_name: str`
-
-The other parameters have default values, see `settings.py` for more details.
-
-## Any directions for future work in subsequent versions of the handler?
-tbc
-
-## Please provide a minimal SQL example that uses this ML engine (pointers to integration tests in the PR also valid)
+Create an AI engine from the [RAG handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/rag_handler).
+You can create a RAG engine using this command and providing either [OpenAI](/integrations/ai-engines/openai) or [Writer](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/writer_handler#readme) parameters:
 
 ```sql
--- Create RAG engine NB you can provide api keys here or at create
--- You only need to provide key of llm you intend to use
+CREATE ML_ENGINE rag_engine
+FROM rag
+USING
+    openai_api_key="openai-api-key", 
+    writer_org_id="writer-org", -- optional if openai is used
+    writer_api_key="writer-api-key"; -- optional if openai is used
+```
 
-create ML_Engine rag from rag
-using
-openai_api_key="openai-api-key",
-writer_org_id="writer-org",
-writer_api_key="writer-api-key";
+Create a model using the `rag_engine`:
+
+```sql
+CREATE MODEL rag_model
+PREDICT answer
+USING
+   engine = 'rag_engine',
+   llm_type = 'openai',                          -- choose one of OpenAI or Writer
+   url = 'link-to-webpage',                      -- this is optional if the FROM cluse is provided
+   vector_store_folder_name = 'db_connection',   -- provide a folder name that will/stores vector db data
+   input_column = 'question';                       -- provide column name that stores the input to the model
+```
+
+Where:
+
+| Name                       | Description                                                 |
+|----------------------------|-------------------------------------------------------------|
+| `llm_type`                 | It defines which LLM is used.                               |
+| `url`                      | It is used to find the knowlege from a website.         |
+| `vector_store_folder_name` | It is a folder name to which the vector db data in between sessions is persisted. |
+| `input_column`             | It is a column name that stores the input to the model. |
+
+<Info>
+When creating a RAG model, it is required to provide data either in the `url` parameter or in the `FROM` clause.
+</Info>
+
+## Usage
+
+The following examples illustrate various ways to integrate RAG with different data sources, including files, URLs, databases, and vector databases.
+
+### From a URL
+
+The following example utilize `rag_engine` to create a model with the `CREATE MODEL` statement.
+
+```sql
+CREATE ML_ENGINE rag_engine
+FROM rag
+USING
+    openai_api_key = 'sk-xxx';
+```
+
+Create a model using this engine:
+
+```sql
+CREATE MODEL mindsdb_rag_model
+predict answer
+USING
+   engine = "rag_engine",
+   llm_type = "openai",
+   url='https://docs.mindsdb.com/what-is-mindsdb',
+   vector_store_folder_name = 'db_connection',
+   input_column = 'question'; 
+```
+
+Check the status of the model.
+
+```sql
+DESCRIBE mindsdb_rag_model;
+```
+
+Now you can use the model to answer your questions.
+
+```sql
+SELECT *
+FROM mindsdb_rag_model
+WHERE question = 'What ML use cases does MindsDB support?';
+```
+
+On execution, we get:
 
 
---using DB table as input
+| answer                                                                                                                                                                                       | source_documents | question                                |
+|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------|-----------------------------------------|
+|   MindsDB supports various machine learning use cases such as anomaly detection, forecasting, recommenders, classification, and regression. It also supports multimedia use cases such as video and text semantic search, text to audio, text to video, and text to image. | `{} `              | What ML use cases does MindsDB support? |
 
-CREATE MODEL rag_handler_db_test
-FROM mysql_demo_db (select * from demo_fda_context limit 2)
+
+### From Database
+
+The following example utilize `rag_engine` to create a model with the `CREATE MODEL` statement and `MySQL` database as a knowlege base.
+
+
+```sql
+CREATE ML_ENGINE rag_engine
+FROM rag
+USING
+    openai_api_key = 'sk-xxx';
+```
+
+Connect to MySQL database:
+
+```sql
+CREATE DATABASE mysql_demo_db
+WITH ENGINE = 'mysql',
+PARAMETERS = {
+    "user": "user",
+    "password": "MindsDBUser123!",
+    "host": "db-demo-data.cwoyhfn6bzs0.us-east-1.rds.amazonaws.com",
+    "port": "3306",
+    "database": "public"
+};
+```
+
+Create a model using this engine and include the FORM clause:
+
+```sql
+CREATE MODEL rag_handler_db
+FROM mysql_demo_db 
+    (SELECT * FROM demo_fda_context LIMIT 2)
 PREDICT answer
 USING
    engine="rag",
    llm_type="openai",
    vector_store_folder_name='test_db',
    input_column='question';
-
-select * from information_schema.models where name ="rag_handler_db_test" ;
-
-
-SELECT *
-FROM rag_handler_db_test
-WHERE question='what product is best for treating a cold?';
-
-
---using url as input
-
-CREATE MODEL rag_handler_url_test
-predict answer
-USING
-   engine="rag",
-   llm_type="openai",
-   url='https://docs.mindsdb.com/what-is-mindsdb',
-   vector_store_folder_name='test_url',
-   input_column='question';
-
-
-SELECT *
-FROM rag_handler_url_test
-WHERE question='what ML use cases does mindsdb support?';
-
--- multiple urls as input
---upload files to UI first that contains a list of urls i.e. a csv with a column containing urls
---then use the following syntax
-
-CREATE MODEL rag_handler_multi_url_test
-FROM files (select * from file_with_urls)     
-predict answer
-USING
-    engine="rag",
-    llm_type="openai",
-    url_column_name="url",
-    vector_store_folder_name='test_multi_url',
-    input_column='question';
-
-SELECT *
-FROM rag_handler_multi_url_test
-WHERE question='answer to question?';
-
---using .txt or .pdf as input (first upload file using UI)
-
-CREATE MODEL rag_handler_file_test
-predict answer
-from files (select * from uploaded_file)
-USING
-   engine="rag",
-   llm_type="openai",
-   vector_store_folder_name='test_file',
-   input_column='question';
-
-SELECT *
-FROM rag_handler_file_test
-WHERE question='what data types are supported?';
-
 ```
+
+Now you can use the model to answer your questions.
+
+```sql
+SELECT *
+FROM rag_handler_db
+WHERE question='what product is best for treating a cold?';
+```
+
+On execution, we get:
+
+| answer                                                                                                                                                                                       | source_documents | question                                |
+|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------|-----------------------------------------|
+|   ShopRite Arthritis Pain Acetaminophen is not specifically designed for treating a cold. It may help to temporarily relieve minor aches and pains associated with a cold, but it is not the best product for treating a cold. It is always best to consult with a doctor or pharmacist for the most appropriate medication for treating a cold. | `{"column":["full_ingredients","indications_and_usage","intended_purpose_of_product","active_ingredient"],"sources_content":["ShopRite Arthritis  ..."],"sources_document":["dataframe"],"sources_row":[1,1,1,1]}`   | what product is best for treating a cold? |
+
+
+### From File
+
+The following example utilize `rag_engine` to create a model with the `CREATE MODEL` statement and  uploaded file as a knowlege base.
+
+
+```sql
+CREATE ML_ENGINE rag_engine
+FROM rag
+USING
+    openai_api_key = 'sk-xxx';
+```
+
+Upload a [file](mindsdb_sql/sql/create/file) using the GUI `Upload File` option. Create a model using this engine and include the FORM clause:
+
+```sql
+CREATE MODEL rag_handler_files
+FROM files 
+    (SELECT * FROM uploaded_file)
+PREDICT answer
+USING
+   engine="rag",
+   llm_type="openai",
+   vector_store_folder_name='test_db',
+   input_column='question';
+```
+
+Now you can use the model to answer your questions.
+
+```sql
+SELECT *
+FROM rag_handler_files
+WHERE question='what product is best for treating a cold?';
+```
+
+On execution, we get:
+
+| answer                                                                                                                                                                                       | source_documents | question                                |
+|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------|-----------------------------------------|
+|   ShopRite Arthritis Pain Acetaminophen is not specifically designed for treating a cold. It may help to temporarily relieve minor aches and pains associated with a cold, but it is not the best product for treating a cold. It is always best to consult with a doctor or pharmacist for the most appropriate medication for treating a cold. | `{"column":["full_ingredients","indications_and_usage","intended_purpose_of_product","active_ingredient"],"sources_content":["ShopRite Arthritis  ..."],"sources_document":["dataframe"],"sources_row":[1,1,1,1]}`   | what product is best for treating a cold? |
+

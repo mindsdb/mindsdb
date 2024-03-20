@@ -35,10 +35,21 @@ By default, Docker for Mac allocates 2 GB of RAM, which is insufficient for depl
 ## Install MindsDB
 
 <Tip>
-Please note that this method of MindsDB installation requires a minimum of 8 GB RAM and 20 GB free storage.
+**Choose one of the available [Docker images for MindsDB](https://hub.docker.com/r/mindsdb/mindsdb/tags)**
+
+As MindsDB integrates with numerous [data sources](/integrations/data-overview) and [AI frameworks](/integrations/ai-overview), each integration requires a set of dependencies. Hence, MindsDB provides multiple Docker images for different tasks, as outlined below.
+
+* `mindsdb/mindsdb:latest` (or `mindsdb/mindsdb`)
+It is the lightweight Docker image of MindsDB that comes with [these integrations preloaded](https://github.com/mindsdb/mindsdb/blob/staging/default_handlers.txt).
+
+* `mindsdb/mindsdb:lightwood`
+It is the Docker image of MindsDB that comes with [these integrations](https://github.com/mindsdb/mindsdb/blob/staging/default_handlers.txt) and the Lightwood integration preloaded.
+
+* `mindsdb/mindsdb:huggingface`
+It is the Docker image of MindsDB that comes with [these integrations](https://github.com/mindsdb/mindsdb/blob/staging/default_handlers.txt) and the Hugging Face integration preloaded.
 </Tip>
 
-Run the command below to start MindsDB in Docker and follow the logs:
+Run the command below, providing the selected Docker image, to start MindsDB in Docker and follow the logs:
 
 ```bash
 docker run -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
@@ -158,7 +169,7 @@ The default configuration for MindsDB's Docker image is stored as a JSON code, a
 To override the default configuration, you can mount a config file over `/root/mindsdb_config.json`, as below.
 
 ```bash
-docker run -v mbd_config.json:/root/mindsdb_config.json mindsdb/mindsdb
+docker run -v mdb_config.json:/root/mindsdb_config.json mindsdb/mindsdb
 ```
 
 ## Known Issues
@@ -175,4 +186,4 @@ docker run -e MKL_SERVICE_FORCE_INTEL=1 -p 47334:47334 -p 47335:47335 mindsdb/mi
 
 Now that you installed and started MindsDB locally in your Docker container, go ahead and find out how to create and train a model using the [`CREATE MODEL`](/sql/create/model) statement.
 
-Check out the **Use Cases** section to follow tutorials that cover Large Language Models, Chatbots, Time Series, Classification, and Regression models, Semantic Search, and more.
+Check out the [Use Cases](/use-cases/overview) section to follow tutorials that cover Large Language Models, Chatbots, Time Series, Classification, and Regression models, Semantic Search, and more.

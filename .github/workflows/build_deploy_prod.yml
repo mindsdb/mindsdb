@@ -79,7 +79,7 @@ jobs:
           repo: INTERNAL-mindsdb-build-deploy-to-kubernetes
           github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}
           workflow_file_name: deploy-prod.yml
-          ref: master
+          ref: main
           client_payload: '{"image-tag-prefix": "${{ env.CI_REF_NAME }}", "deploy-env": "prod"}'
 
 

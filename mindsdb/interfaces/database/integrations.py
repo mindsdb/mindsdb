@@ -33,6 +33,8 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 from mindsdb.integrations.libs.base import BaseHandler
 import mindsdb.utilities.profiler as profiler
+from mindsdb.utilities.security import encrypt, decrypt
+
 
 logger = log.getLogger(__name__)
 
@@ -160,6 +162,10 @@ class IntegrationController:
         self.handlers_cache = HandlersCache()
 
     def _add_integration_record(self, name, engine, connection_args):
+        # connection_args = connection_args or {}
+        # ctx.encryption_key = ''
+        # connection_args = encrypt(connection_args)
+
         integration_record = db.Integration(
             name=name,
             engine=engine,

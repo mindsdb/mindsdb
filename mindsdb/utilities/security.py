@@ -1,6 +1,13 @@
 from urllib.parse import urlparse
 import socket
 import ipaddress
+import secrets
+import json
+import base64
+
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+from mindsdb.utilities.context import context as ctx
 
 
 def is_private_url(url: str):
@@ -31,3 +38,45 @@ def clear_filename(filename: str) -> str:
     for c in badchars:
         filename = filename.replace(c, '')
     return filename
+
+
+def encrypt_dict(message: dict) -> dict:
+    """
+    """
+
+    key = ctx.encryption_key
+    if len(key) == 0:
+        # if is_cloud:
+        #     raise Exception()
+        return message
+
+    nonce = secrets.token_bytes(12)
+    message_bytes = json.dumps(message).encode()
+    encrypted_bytes = nonce + AESGCM(key).encrypt(nonce, message_bytes)
+    encrypted_bytes = base64.b64encode(encrypted_bytes).decode('utf-8')
+
+    return {
+        '_mindsdb_encrypted_data': encrypted_bytes,
+        'keys': list(message.keys())
+    }
+
+
+def decrypt_dict(message: dict) -> dict:
+    """
+    """
+    encrypted_message = message.get('_mindsdb_encrypted_data')
+
+    if '_mindsdb_encrypted_data' is None:
+        # if is_cloud:
+        #     raise Exception()
+        return message
+
+    key = ctx.encryption_key
+    if len(key) == 0:
+        raise Exception('Something wrong')
+
+    encrypted_message = base64.b64decode(encrypted_message.encode('utf-8'))
+    decrypted_message = AESGCM(key).decrypt(encrypted_message[:12], encrypted_message[12:])
+    # decrypted_message = 
+    return decrypted_message
+

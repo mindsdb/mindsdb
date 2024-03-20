@@ -15,7 +15,9 @@ class Context:
 
     def set_default(self) -> None:
         self._storage.set({
+            'user_id': None,
             'company_id': None,
+            'encryption_key': None,
             'user_class': 0,
             'profiling': {
                 'level': 0,

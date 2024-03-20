@@ -81,3 +81,10 @@ jobs:
           workflow_file_name: deploy-prod.yml
           ref: master
           client_payload: '{"image-tag-prefix": "${{ env.CI_REF_NAME }}", "deploy-env": "prod"}'
+
+
+  run_tests:
+    name: Run Post-Deploy Tests
+    needs: [trigger_deploy]
+    uses: ./.github/workflows/test_on_deploy.yml
+    secrets: inherit

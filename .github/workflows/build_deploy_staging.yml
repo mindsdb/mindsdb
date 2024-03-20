@@ -37,4 +37,6 @@ jobs:
 
   run_tests:
     name: Run Post-Deploy Tests
+    needs: [trigger_deploy]
     uses: ./.github/workflows/test_on_deploy.yml
+    secrets: inherit

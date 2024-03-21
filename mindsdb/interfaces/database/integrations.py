@@ -273,6 +273,7 @@ class IntegrationController:
         ):
             return None
         data = deepcopy(integration_record.data)
+        data = decrypt_dict(data)
 
         bundle_path = data.get('secure_connect_bundle')
         mysql_ssl_ca = data.get('ssl_ca')

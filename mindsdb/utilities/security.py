@@ -45,7 +45,7 @@ def encrypt_dict(message: dict) -> dict:
     """
 
     key = ctx.encryption_key
-    if len(key) == 0:
+    if key is None or len(key) == 0:
         # if is_cloud:
         #     raise Exception()
         return message
@@ -66,13 +66,13 @@ def decrypt_dict(message: dict) -> dict:
     """
     encrypted_message = message.get('_mindsdb_encrypted_data')
 
-    if '_mindsdb_encrypted_data' is None:
+    if encrypted_message is None:
         # if is_cloud:
         #     raise Exception()
-        return message
+        return message  # return deepcopy of message!
 
     key = ctx.encryption_key
-    if len(key) == 0:
+    if key is None or len(key) == 0:
         raise Exception('Something wrong')
 
     encrypted_message = base64.b64decode(encrypted_message.encode('utf-8'))

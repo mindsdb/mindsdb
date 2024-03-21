@@ -34,7 +34,7 @@ function "get_cache_to" {
 function "get_cache_from" {
   params = [target]
   result = [
-    "type=registry,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:${replace("${BRANCH}", "/", "-")}, -${target}${get_platform_tag()}",
+    "type=registry,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:${replace("${BRANCH}", "/", "-")}-${target}${get_platform_tag()}",
     "type=registry,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:staging-${target}${get_platform_tag()}",
     "type=registry,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:stable-${target}${get_platform_tag()}"
   ]

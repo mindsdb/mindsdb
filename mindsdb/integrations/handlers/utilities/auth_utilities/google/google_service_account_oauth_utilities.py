@@ -1,8 +1,9 @@
+import requests
+from google.oauth2 import service_account
+
 from mindsdb.utilities import log
 
 from ..exceptions import NoCredentialsException
-
-from google.oauth2 import service_account
 
 
 logger = log.getLogger(__name__)
@@ -28,3 +29,11 @@ class GoogleServiceAccountOauth2Utilities:
         if self.credentials_json:
             creds = service_account.Credentials.from_service_account_info(self.credentials_json)
             return creds
+        
+    def _download_credentials_file(self):
+        response = requests.get(self.credentials_url)
+        if response.status_code == 200:
+            return response.json()
+
+        else:
+            logger.error(f"Failed to get credentials from {self.credentials_url}", response.status_code)

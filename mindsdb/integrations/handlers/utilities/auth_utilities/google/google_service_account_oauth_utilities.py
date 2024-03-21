@@ -18,13 +18,7 @@ class GoogleServiceAccountOAuth2Manager:
             raise NoCredentialsException('No valid Google Service Account credentials provided.')
         self.credentials_url = credentials_url
         self.credentials_file = credentials_file
-        if isinstance(credentials_json, str):
-            # convert to JSON
-            self.credentials_json = json.loads(credentials_json)
-        else:
-            # unescape new lines in private_key
-            credentials_json['private_key'] = credentials_json['private_key'].replace('\\n', '\n')
-            self.credentials_json = credentials_json
+        self.credentials_json = self._parse_credentials_json(credentials_json)
 
     def get_oauth2_credentials(self):
         try:
@@ -46,7 +40,16 @@ class GoogleServiceAccountOAuth2Manager:
     def _download_credentials_file(self):
         response = requests.get(self.credentials_url)
         if response.status_code == 200:
-            return response.json()
+            return self._parse_credentials_json(response.json())
 
         else:
             logger.error(f"Failed to get credentials from {self.credentials_url}", response.status_code)
+
+    def _parse_credentials_json(self, credentials_json: str) -> dict:
+        if isinstance(credentials_json, str):
+            # convert to JSON
+            return json.loads(credentials_json)
+        else:
+            # unescape new lines in private_key
+            credentials_json['private_key'] = credentials_json['private_key'].replace('\\n', '\n')
+            return credentials_json

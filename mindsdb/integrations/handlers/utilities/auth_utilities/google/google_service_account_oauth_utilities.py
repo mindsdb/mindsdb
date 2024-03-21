@@ -20,7 +20,8 @@ class GoogleServiceAccountOauth2Utilities:
 
     def get_oauth2_credentials(self):
         if self.credenetials_url:
-            pass
+            creds = service_account.Credentials.from_service_account_info(self._download_credentials_file())
+            return creds
 
         if self.credentials_file:
             creds = service_account.Credentials.from_service_account_file(self.credentials_file)

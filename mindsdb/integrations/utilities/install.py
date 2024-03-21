@@ -32,5 +32,5 @@ def install_dependencies(dependencies):
         result['success'] = False
     else:
         result['success'] = True
-        
+
     return result

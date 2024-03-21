@@ -3,7 +3,7 @@ from google.oauth2 import service_account
 
 from mindsdb.utilities import log
 
-from ..exceptions import NoCredentialsException
+from ..exceptions import NoCredentialsException, AuthException
 
 
 logger = log.getLogger(__name__)
@@ -19,18 +19,22 @@ class GoogleServiceAccountOAuth2Manager:
         self.credentials_json = credentials_json
 
     def get_oauth2_credentials(self):
-        if self.credenetials_url:
-            creds = service_account.Credentials.from_service_account_info(self._download_credentials_file())
-            return creds
+        try:
+            if self.credenetials_url:
+                creds = service_account.Credentials.from_service_account_info(self._download_credentials_file())
+                return creds
 
-        if self.credentials_file:
-            creds = service_account.Credentials.from_service_account_file(self.credentials_file)
-            return creds
-        
-        if self.credentials_json:
-            creds = service_account.Credentials.from_service_account_info(self.credentials_json)
-            return creds
-        
+            if self.credentials_file:
+                creds = service_account.Credentials.from_service_account_file(self.credentials_file)
+                return creds
+            
+            if self.credentials_json:
+                creds = service_account.Credentials.from_service_account_info(self.credentials_json)
+                return creds
+        except Exception as e:
+            raise AuthException(f"Authentication failed: {e}")
+
+
     def _download_credentials_file(self):
         response = requests.get(self.credentials_url)
         if response.status_code == 200:

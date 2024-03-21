@@ -346,7 +346,7 @@ def generate_llm_prompts(df, args, base_template, json_prompt):
     else:
         prompts, empty_prompt_ids = generate_default_prompts(df, args)
     prompts = [j for i, j in enumerate(prompts) if i not in empty_prompt_ids]
-    return prompts
+    return prompts, empty_prompt_ids
 
 def generate_context_prompts(df, args):
     empty_prompt_ids = np.where(

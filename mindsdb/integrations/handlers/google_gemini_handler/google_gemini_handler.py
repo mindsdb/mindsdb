@@ -107,7 +107,7 @@ class GoogleGeminiHandler(BaseMLEngine):
                     )
             else:
                 json_prompt=None
-            prompts = generate_llm_prompts(df, args, base_template, json_prompt)
+            prompts, _ = generate_llm_prompts(df, args, base_template, json_prompt)
             
         api_key = self._get_google_gemini_api_key(args)
         genai.configure(api_key=api_key)

@@ -220,7 +220,7 @@ class OpenAIHandler(BaseMLEngine):
                     )   
             else:
                 json_prompt=None
-            prompts=generate_llm_prompts(df, args, base_template, json_prompt)
+            prompts, empty_prompt_ids = generate_llm_prompts(df, args, base_template, json_prompt)
 
         api_key = get_api_key('openai', args, self.engine_storage)
         api_args = {

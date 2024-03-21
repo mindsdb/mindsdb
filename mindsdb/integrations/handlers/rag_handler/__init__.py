@@ -11,9 +11,10 @@ except Exception as e:
     Handler = None
     import_error = e
 
-title = "RAG Handler"
+title = "RAG"
 name = "rag"
 type = HANDLER_TYPE.ML
+icon_path = "icon.svg"
 permanent = False
 
 

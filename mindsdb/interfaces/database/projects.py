@@ -256,7 +256,6 @@ class Project:
         data['models'] = {'type': 'table', 'deletable': False}
         data['models_versions'] = {'type': 'table', 'deletable': False}
         data['jobs'] = {'type': 'table', 'deletable': False}
-        data['jobs_history'] = {'type': 'table', 'deletable': False}
         data['mdb_triggers'] = {'type': 'table', 'deletable': False}
         data['chatbots'] = {'type': 'table', 'deletable': False}
 

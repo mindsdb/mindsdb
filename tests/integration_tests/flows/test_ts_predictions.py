@@ -4,7 +4,7 @@ import random
 import pytest
 
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
-from .http_test_helpers import HTTPHelperMixin
+from tests.utils.http_test_helpers import HTTPHelperMixin
 
 
 # used by (required for) mindsdb_app fixture in conftest

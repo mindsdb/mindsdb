@@ -212,15 +212,19 @@
   ],
   "navigation": [
     {
-      "group": "Overview",
+      "group": "Get Started",
       "pages": [
         "what-is-mindsdb",
-        
         {
-          "group": "Setup & Install",
+          "group": "Installation",
           "pages": [
-            "setup/self-hosted/docker",
-            "setup/self-hosted/docker-desktop",
+            {
+              "group": "Local",
+              "pages": [
+                "setup/self-hosted/docker",
+                "setup/self-hosted/docker-desktop"
+              ]
+            },
             {
               "group": "Cloud",
               "pages": [
@@ -237,41 +241,39 @@
             }
           ]
         },
-        {
-          "group": "Quickstart",
-          "pages": [
-            "quickstart-tutorial",
-            "mindsdb-gui",
-            "sql/table-structure"
-            
-          ]
-        }
+        "quickstart-tutorial"
       ]
     },
+    
     {
-      "group": "Concepts",
+      "group": "Features",
       "pages": [
-        "generative-ai-tables",  
+        "model-management",
+        "ai-integrations",
+        "data-integrations",
+        "automation",
         {
-          "group": "Data Sources",
+          "group": "Learn more",
           "pages": [
-            "data_sources",
+            "generative-ai-tables",  
             {
               "group": "Data Preparation",
               "pages": [
                 "sql/feature-eng",
                 "sql/data-insights",
-                "sql/feature-importance" 
-              ]
-            }
-          ] 
-        },
-        "automation"
+                "sql/feature-importance"
+              ] 
+            },
+            "mindsdb-gui",
+            "sql/table-structure"
+          ]
+        }
       ]
     },
     {
       "group": "Use Cases",
       "pages": [
+        "use-cases/overview",
         {
           "group": "Fine-Tuning",
           "pages": [
@@ -313,7 +315,7 @@
         {
           "group": "Semantic Search",
           "pages": [
-            "sql/tutorials/rag"
+            "integrations/ai-engines/rag"
           ]
         },
         {
@@ -950,7 +952,7 @@
           ]
         },
         {
-          "group": "Vector Databases",
+          "group": "Vector Stores",
           "pages": [
             "integrations/vector-db-integrations/chromadb",
             "integrations/vector-db-integrations/pgvector",

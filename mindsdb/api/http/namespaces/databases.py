@@ -10,6 +10,7 @@ from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProx
 from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.api.executor.datahub.classes.tables_row import TablesRow
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
+from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb_sql import parse_sql, ParsingException
 from mindsdb_sql.parser.ast import CreateTable, DropTables
 
@@ -17,12 +18,14 @@ from mindsdb_sql.parser.ast import CreateTable, DropTables
 @ns_conf.route('/')
 class DatabasesResource(Resource):
     @ns_conf.doc('list_databases')
+    @api_endpoint_metrics('GET', '/databases')
     def get(self):
         '''List all databases'''
         session = SessionController()
         return session.database_controller.get_list()
 
     @ns_conf.doc('create_database')
+    @api_endpoint_metrics('POST', '/databases')
     def post(self):
         '''Create a database'''
         if 'database' not in request.json:
@@ -48,6 +51,7 @@ class DatabasesResource(Resource):
 @ns_conf.route('/<database_name>')
 class DatabaseResource(Resource):
     @ns_conf.doc('get_database')
+    @api_endpoint_metrics('GET', '/databases/database')
     def get(self, database_name):
         '''Gets a database by name'''
         session = SessionController()
@@ -66,6 +70,7 @@ class DatabaseResource(Resource):
             return integration
 
     @ns_conf.doc('update_database')
+    @api_endpoint_metrics('PUT', '/databases/database')
     def put(self, database_name):
         '''Updates or creates a database'''
         if 'database' not in request.json:
@@ -88,6 +93,7 @@ class DatabaseResource(Resource):
         return session.integration_controller.get(database_name)
 
     @ns_conf.doc('delete_database')
+    @api_endpoint_metrics('DELETE', '/databases/database')
     def delete(self, database_name):
         '''Deletes a database by name'''
         session = SessionController()
@@ -118,6 +124,7 @@ def _tables_row_to_obj(table_row: TablesRow) -> Dict:
 @ns_conf.route('/<database_name>/tables')
 class TablesList(Resource):
     @ns_conf.doc('list_tables')
+    @api_endpoint_metrics('GET', '/databases/database/tables')
     def get(self, database_name):
         '''Get all tables in a database'''
         session = SessionController()
@@ -127,6 +134,7 @@ class TablesList(Resource):
         return table_objs
 
     @ns_conf.doc('create_table')
+    @api_endpoint_metrics('POST', '/databases/database/tables')
     def post(self, database_name):
         '''Creates a table in a database'''
         if 'table' not in request.json:
@@ -192,6 +200,7 @@ class TablesList(Resource):
 @ns_conf.param('table_name', 'Name of the table')
 class TableResource(Resource):
     @ns_conf.doc('get_table')
+    @api_endpoint_metrics('GET', '/databases/database/tables/table')
     def get(self, database_name, table_name):
         session = SessionController()
         datanode = session.datahub.get(database_name)
@@ -203,6 +212,7 @@ class TableResource(Resource):
             abort(HTTPStatus.NOT_FOUND, f'Table with name {table_name} not found')
 
     @ns_conf.doc('drop_table')
+    @api_endpoint_metrics('DELETE', '/databases/database/tables/table')
     def delete(self, database_name, table_name):
         session = SessionController()
         try:

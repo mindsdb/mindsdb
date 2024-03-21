@@ -13,7 +13,7 @@ except Exception as e:
 title = "Eventbrite"
 name = "eventbrite"
 type = HANDLER_TYPE.DATA
-icon_path = "icon.svg"
+icon_path = "icon.png"
 
 __all__ = [
     "Handler",

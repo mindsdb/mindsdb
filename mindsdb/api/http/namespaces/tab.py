@@ -7,6 +7,7 @@ from http import HTTPStatus
 from flask import request
 from flask_restx import Resource
 
+from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.interfaces.storage.fs import FileStorageFactory, RESOURCE_GROUP, FileStorage
 from mindsdb.api.http.namespaces.configs.tabs import ns_conf
 from mindsdb.utilities import log
@@ -320,6 +321,7 @@ tabs_controller = TabsController()
 @ns_conf.route('/')
 class Tabs(Resource):
     @ns_conf.doc('get_tabs')
+    @api_endpoint_metrics('GET', '/tabs')
     def get(self):
         mode = request.args.get('mode')
 
@@ -338,6 +340,7 @@ class Tabs(Resource):
             return tabs, 200
 
     @ns_conf.doc('save_tab')
+    @api_endpoint_metrics('POST', '/tabs')
     def post(self):
         mode = request.args.get('mode')
 

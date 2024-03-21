@@ -272,8 +272,7 @@ class IntegrationController:
             or isinstance(integration_record.data, dict) is False
         ):
             return None
-        data = deepcopy(integration_record.data)
-        data = decrypt_dict(data)
+        data = decrypt_dict(integration_record.data)
 
         bundle_path = data.get('secure_connect_bundle')
         mysql_ssl_ca = data.get('ssl_ca')

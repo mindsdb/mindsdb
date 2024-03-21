@@ -10,10 +10,10 @@ except Exception as e:
     Handler = None
     import_error = e
 
-title = "Sharepoint"
+title = "Microsoft Sharepoint"
 name = "sharepoint"
 type = HANDLER_TYPE.DATA
-icon_path = "icon.png"
+icon_path = "icon.svg"
 
 __all__ = [
     "Handler",

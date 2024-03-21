@@ -212,21 +212,24 @@
   ],
   "navigation": [
     {
-      "group": "Overview",
+      "group": "Get Started",
       "pages": [
         "what-is-mindsdb",
-        
         {
-          "group": "Setup/Install",
+          "group": "Installation",
           "pages": [
-            "setup/self-hosted/docker",
-            "setup/self-hosted/docker-desktop",
+            {
+              "group": "Local",
+              "pages": [
+                "setup/self-hosted/docker",
+                "setup/self-hosted/docker-desktop"
+              ]
+            },
             {
               "group": "Cloud",
               "pages": [
                 "setup/aws",
-                "setup/gcp",
-                "setup/community-deploys-mindsdb"
+                "setup/gcp"
               ]
             },
             {
@@ -238,50 +241,31 @@
             }
           ]
         },
-        {
-          "group": "Quickstart",
-          "pages": [
-            "mindsdb-gui",
-            "connect/postgres-client",
-            "sql/table-structure"
-            
-          ]
-        }
+        "quickstart-tutorial"
       ]
     },
+    
     {
-      "group": "Concepts",
-      "pages": [   
+      "group": "Features",
+      "pages": [
+        "model-management",
+        "ai-integrations",
+        "data-integrations",
+        "automation",
         {
-          "group": "AI Tables",
-          "pages":[
-            "ai-engines/overview",
-            "generative-ai-tables"
-          ] 
-        },  
-        {
-          "group": "Data Sources",
+          "group": "Learn more",
           "pages": [
-            "datasources/overview",
-            "sql/create/database",
-            "sql/project",
-            "sql/create/view",
-            "sql/create/file",
+            "generative-ai-tables",  
             {
               "group": "Data Preparation",
               "pages": [
                 "sql/feature-eng",
                 "sql/data-insights",
-                "sql/feature-importance" 
-              ]
-            }
-          ] 
-        },
-        {
-          "group": "Automation",
-          "pages": [
-            "sql/create/jobs",
-            "sql/create/trigger"
+                "sql/feature-importance"
+              ] 
+            },
+            "mindsdb-gui",
+            "sql/table-structure"
           ]
         }
       ]
@@ -289,6 +273,7 @@
     {
       "group": "Use Cases",
       "pages": [
+        "use-cases/overview",
         {
           "group": "Fine-Tuning",
           "pages": [
@@ -309,8 +294,15 @@
           "group": "Chatbots with Jobs",
           "pages": [
             "sql/tutorials/slack-chatbot",
-            "sql/tutorials/twitterbot-mariadb-enterprise-server-skysql",
+            "sql/tutorials/twitter-chatbot",
             "sql/tutorials/twilio-chatbot"
+          ]
+        },
+        {
+          "group": "Alert Systems",
+          "pages": [
+            "sql/tutorials/customer-reviews-notifications",
+            "sql/tutorials/real-time-trading-forecasts"
           ]
         },
         {
@@ -323,7 +315,7 @@
         {
           "group": "Semantic Search",
           "pages": [
-            "sql/tutorials/rag"
+            "integrations/ai-engines/rag"
           ]
         },
         {
@@ -357,33 +349,30 @@
           "group": "Forecasting",
           "pages": [
             "sql/tutorials/house-sales-forecasting",
-            "sql/tutorials/house-sales-statsforecast",
-            "sql/tutorials/eeg-forecasting",
-            "sql/tutorials/time-series-community"
+            "sql/tutorials/expenditures-statsforecast",
+            "sql/tutorials/eeg-forecasting"
           ]
         },
         {
           "group": "Classification",
           "pages": [
-            "sql/tutorials/customer-churn",
-            "sql/tutorials/classification-community"
+            "sql/tutorials/customer-churn"
           ]
         },
         {
           "group": "Regression",
           "pages": [
-            "sql/tutorials/home-rentals",
-            "sql/tutorials/regression-community"
+            "sql/tutorials/home-rentals"
           ]
         },
         {
           "group": "Natural Language Processing",
           "pages": [
+            "sql/tutorials/text-sentiment-hf",
             "sql/tutorials/hugging-face-examples",
             "sql/tutorials/hugging-face-inference-api-examples"
           ]
-        },
-        "tutorials"
+        }
       ]
     },
     {
@@ -451,7 +440,8 @@
           "pages": [
             "mindsdb_sql/sql/get-single-prediction",
             "mindsdb_sql/sql/get-batch-predictions",
-            "mindsdb_sql/sql/api/join"
+            "mindsdb_sql/sql/api/join",
+            "mindsdb_sql/sql/api/evaluate"
           ]
         },
         {
@@ -520,7 +510,7 @@
           ]
         },
         {
-          "group": "ML Engines",
+          "group": "AI Engines",
           "pages": [
             "rest/ml_engines/create",
             "rest/ml_engines/delete",
@@ -859,6 +849,7 @@
     {
       "group": "Data Sources",
       "pages": [
+        "integrations/data-overview",
         {
           "group": "Applications",
           "pages": [
@@ -961,7 +952,7 @@
           ]
         },
         {
-          "group": "Vector Databases",
+          "group": "Vector Stores",
           "pages": [
             "integrations/vector-db-integrations/chromadb",
             "integrations/vector-db-integrations/pgvector",
@@ -974,6 +965,7 @@
     {
       "group": "AI Engines",
       "pages": [
+        "integrations/ai-overview",
         {
           "group": "Large Language Models",
           "pages": [

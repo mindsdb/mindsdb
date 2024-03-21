@@ -5,7 +5,7 @@ import pytest
 
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from .conftest import CONFIG_PATH
-from .http_test_helpers import HTTPHelperMixin
+from tests.utils.http_test_helpers import HTTPHelperMixin
 
 
 # used by mindsdb_app fixture in conftest
@@ -50,7 +50,7 @@ class QueryStorage:
                     "I love the product":positive
                     "It is a scam":negative
                     "{{review}}.":',
-                    api_key = '%s';
+                    openai_api_key = '%s';
                     """
 
     check_status = """

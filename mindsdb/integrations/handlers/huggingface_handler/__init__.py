@@ -11,9 +11,10 @@ except Exception as e:
 title = 'Hugging Face'
 name = 'huggingface'
 type = HANDLER_TYPE.ML
+icon_path = "icon.svg"
 permanent = True
 execution_method = 'subprocess_keep'
 
 __all__ = [
-    'Handler', 'version', 'name', 'type', 'title', 'description', 'import_error'
+    'Handler', 'version', 'name', 'type', 'title', 'description', 'import_error', 'icon_path'
 ]

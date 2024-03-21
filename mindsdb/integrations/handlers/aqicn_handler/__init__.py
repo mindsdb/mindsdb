@@ -14,7 +14,7 @@ except Exception as e:
     Handler = None
     import_error = e
 
-title = "World Air Quality Index"
+title = "Air Quality Index API"
 name = "aqicn"
 type = HANDLER_TYPE.DATA
 icon_path = "icon.png"

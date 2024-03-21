@@ -224,32 +224,6 @@ class JobsController:
             })
         return data
 
-    def get_history(self, project_name=None):
-        query = db.session.query(db.JobsHistory, db.Jobs).filter_by(
-            company_id=ctx.company_id,
-        ).outerjoin(db.Jobs, db.Jobs.id == db.JobsHistory.job_id)
-
-        project_controller = ProjectController()
-        if project_name is not None:
-            project = project_controller.get(name=project_name)
-            query = query.filter_by(project_id=project.id)
-
-        data = []
-        project_names = {
-            i.id: i.name
-            for i in project_controller.get_list()
-        }
-        for record in query:
-            data.append({
-                'name': record.Jobs.name,
-                'project': project_names[record.Jobs.project_id],
-                'run_start': record.JobsHistory.start_at,
-                'run_end': record.JobsHistory.end_at,
-                'error': record.JobsHistory.error,
-                'query': record.JobsHistory.query_str,
-            })
-        return data
-
 
 class JobsExecutor:
 

@@ -14,7 +14,6 @@ import asyncio
 import secrets
 import traceback
 import threading
-from textwrap import dedent
 from packaging import version
 
 from mindsdb.__about__ import __version__ as mindsdb_version
@@ -209,12 +208,8 @@ if __name__ == '__main__':
         import_meta = handler_meta.get("import", {})
         if import_meta.get("success", False) is not True:
             logger.info(
-                dedent(
-                    """
-                Some handlers cannot be imported. You can check list of available handlers by execute command in sql editor:
-                    select * from information_schema.handlers;
-            """
-                )
+                """Some handlers cannot be imported. You can check list of available handlers by execute command in sql editor:
+select * from information_schema.handlers;"""
             )
             break
     # @TODO Backwards compatibility for tests, remove later

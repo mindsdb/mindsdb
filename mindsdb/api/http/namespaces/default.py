@@ -7,6 +7,7 @@ from flask_restx import fields
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.api.http.namespaces.configs.default import ns_conf
 from mindsdb.api.http.utils import http_error
+from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.utilities.config import Config
 from mindsdb.utilities import log
 
@@ -49,6 +50,7 @@ class LoginRoute(Resource):
             'password': fields.String(description='Password')
         })
     )
+    @api_endpoint_metrics('POST', '/default/login')
     def post(self):
         ''' Check user's credentials and creates a session
         '''
@@ -90,6 +92,7 @@ class LogoutRoute(Resource):
             200: 'Success'
         }
     )
+    @api_endpoint_metrics('POST', '/default/logout')
     def post(self):
         session.clear()
         return '', 200
@@ -113,6 +116,7 @@ class StatusRoute(Resource):
             )
         })
     )
+    @api_endpoint_metrics('GET', '/default/status')
     def get(self):
         ''' returns auth and environment data
         '''

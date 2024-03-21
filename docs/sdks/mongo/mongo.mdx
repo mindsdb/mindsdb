@@ -6,9 +6,9 @@ Note: This is work in progress, please join our slack channel if you have any qu
 
 ### Train new model
 
-To train a new model, you will need to `insert()` a new document inside the mindsdb.models collection.
+To train a new model, you will need to `insertOne()` a new document inside the mindsdb.models collection.
 
-The object sent to the `insert()` for training the new model should contain:
+The object sent to the `insertOne()` for training the new model should contain:
 
 - name (string) -- The name of the model.
 - predict (string) -- The feature you want to predict. To predict multiple features, include a list of features.
@@ -20,7 +20,7 @@ The object sent to the `insert()` for training the new model should contain:
 - training_options (dict) -- Optional value that contains additional training parameters. To train timeseries model you need to provide `training_options`.
 
 ```javascript
-db.predictors.insert({
+db.models.insertOne({
     'name': str,
     'predict': str | list of fields,
     'connection': str,  # optional
@@ -36,7 +36,7 @@ db.predictors.insert({
 For the timeseries model:
 
 ```
-db.predictors.insert({
+db.models.insertOne({
     'name': str,
     'predict': str | list of fields,
     'connection': str,  # optional
@@ -63,7 +63,7 @@ db.predictors.insert({
 The following example shows you how to train a new model from a mongo client. The collection used for training the model is the [Telcom Customer Churn](https://www.kaggle.com/blastchar/telco-customer-churn) dataset.
 
 ```sql
-db.predictors.insert({
+db.models.insertOne({
     'name': 'churn',
     'predict': 'Churn',
     'select_data_query':{
@@ -83,7 +83,7 @@ This `INSERT` query will train a new model called `churn` that predicts the cust
 To check that the training finished successfully, you can `find()` the model status inside mindsdb.models collection e.g.:
 
 ```javascript
-db.predictors.find();
+db.models.find();
 ```
 
 ![Training model status](/assets/predictors/mongo/mongo-status.gif)
@@ -93,10 +93,10 @@ You have successfully trained a new model from a mongo shell. The next step is t
 
 #### Delete model
 
-To delete the model run `remove` function on predictors collection and send the name of the model to delete as:
+To delete the model run `remove` function on models collection and send the name of the model to delete as:
 
 ```javascript
-db.predictors.remove({ name: "model_name" });
+db.models.remove({ name: "model_name" });
 ```
 
 ## Query the model from MongoDB API

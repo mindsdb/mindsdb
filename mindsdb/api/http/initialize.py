@@ -317,7 +317,7 @@ def initialize_app(config, no_studio):
                 raise Exception("Can't parse encryption key")
 
         if (
-            config.get("cloud", False) is False and (
+            config.get("cloud", False) is True and (
                 company_id is None
                 or user_class is None
             )

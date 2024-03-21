@@ -16,3 +16,15 @@ class GoogleServiceAccountOauth2Utilities:
         self.credentials_url = credentials_url
         self.credentials_file = credentials_file
         self.credentials_json = credentials_json
+
+    def get_oauth2_credentials(self):
+        if self.credenetials_url:
+            pass
+
+        if self.credentials_file:
+            creds = service_account.Credentials.from_service_account_file(self.credentials_file)
+            return creds
+        
+        if self.credentials_json:
+            creds = service_account.Credentials.from_service_account_info(self.credentials_json)
+            return creds

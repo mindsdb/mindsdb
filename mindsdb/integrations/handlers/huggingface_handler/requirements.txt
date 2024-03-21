@@ -1,4 +1,4 @@
-transformers==4.33.2
+transformers >= 4.34.0, < 5.0.0
 datasets
 evaluate
 torch

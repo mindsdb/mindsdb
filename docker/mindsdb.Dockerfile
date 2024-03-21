@@ -66,6 +66,7 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
 COPY --link --from=extras /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
+
 ENV PYTHONUNBUFFERED=1
 ENV PROMETHEUS_MULTIPROC_DIR="./prometheus_metrics"
 

@@ -30,7 +30,7 @@ Follow the steps to set up MindsDB in a Docker container.
 
 ### Install MindsDB
 
-Run this command to start MindsDB in Docker:
+Run this command to create a Docker container with MindsDB:
 
 ```bash
 docker run --name mindsdb_container -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
@@ -46,8 +46,8 @@ Where:
 
 Once the container is created, you can use the following commands:
 
--   `docker stop mindsdb_container` to stop the container. Note that this may not always be necessary because when turning off the host machine, the container will also be shut down.
--   `docker start mindsdb_container` to start the container back up.
+-   `docker stop mindsdb_container` to stop the container. *Note that this may not always be necessary because when turning off the host machine, the container will also be shut down.*
+-   `docker start mindsdb_container` to restart a stopped container with all its previous changes (such as any dependencies that were installed) intact. *Note that `docker start` restarts a stopped container, while `docker run` creates a new container.*
 
 <Tip>
 If you don't want to follow the logs and get the prompt back, add the `-d` flag that stands for *detach*.
@@ -86,18 +86,32 @@ docker run -e MKL_SERVICE_FORCE_INTEL=1 -p 47334:47334 -p 47335:47335 mindsdb/mi
 
 MindsDB integrates with numerous data sources and AI frameworks. To use any of the integrations, you should enure that the required dependencies are installed in the Docker container.
 
-<Info>
-Alternative way is to install dependencies directly from MindsDB editor. Go to *Settings* and *Manage Integrations*, select integrations you want to use and click on *Install*.
-</Info>
+**Method 1**
 
-Run the MindsDB Docker container:
+Install dependencies directly from MindsDB editor. Go to *Settings* and *Manage Integrations*, select integrations you want to use and click on *Install*.
+
+<p align="center">
+  <img src="/assets/install-dependencies-gui.png"/>
+</p>
+
+**Method 2**
+
+Start the MindsDB Docker container:
 
 ```bash
-docker run --name mindsdb_container -d -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+docker start mindsdb_container
 ```
 
 <Tip>
 If you haven't specified a container name when spinning up a container with `docker run`, you can find it by running `docker ps`.
+</Tip>
+
+<Tip>
+If you haven't yet created a container, use this command:
+
+```bash
+docker run --name mindsdb_container -d -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+```
 </Tip>
 
 Start an interactive shell in the container:

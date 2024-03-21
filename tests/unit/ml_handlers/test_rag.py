@@ -293,7 +293,7 @@ class TestRAG(BaseExecutorTest):
              writer_api_key='{WRITER_API_KEY}',
              writer_org_id='{WRITER_ORG_ID}',
              vector_store_folder_name='rag_writer_qa_test_multi_url',
-             input_columnn='question'
+             input_column='question'
         """
         )
 

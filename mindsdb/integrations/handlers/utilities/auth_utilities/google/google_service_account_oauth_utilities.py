@@ -9,7 +9,7 @@ from ..exceptions import NoCredentialsException
 logger = log.getLogger(__name__)
 
 
-class GoogleServiceAccountOauth2Utilities:
+class GoogleServiceAccountOAuth2Manager:
     def __init__(self, credentials_url: str = None, credentials_file: str = None, credentials_json: dict = None) -> None:
         # if no credentials provided, raise an exception
         if not any([credentials_url, credentials_file, credentials_json]):

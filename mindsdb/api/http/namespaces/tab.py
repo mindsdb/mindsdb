@@ -377,6 +377,7 @@ class Tabs(Resource):
 @ns_conf.param("tab_id", "id of tab")
 class Tab(Resource):
     @ns_conf.doc("get_tab")
+    @api_endpoint_metrics('GET', '/tabs/tab')
     def get(self, tab_id: int):
         try:
             tab_data = tabs_controller.get(int(tab_id))
@@ -386,6 +387,7 @@ class Tab(Resource):
         return tab_data, 200
 
     @ns_conf.doc("put_tab")
+    @api_endpoint_metrics('PUT', '/tabs/tab')
     def put(self, tab_id: int):
         if _is_request_valid() is False:
             return http_error(400, 'Error', 'Invalid parameters')
@@ -403,6 +405,7 @@ class Tab(Resource):
         }, 200
 
     @ns_conf.doc("delete_tab")
+    @api_endpoint_metrics('DELETE', '/tabs/tab')
     def delete(self, tab_id: int):
         try:
             tabs_controller.delete(int(tab_id))

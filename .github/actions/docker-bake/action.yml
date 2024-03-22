@@ -17,9 +17,16 @@ runs:
     - name: Build and push
       shell: bash
       run: |
+        # Get a githash or tag name to use as image prefix
+        TAG_NAME=${{ github.event.release.tag_name }}
+        GIT_SHA=${{ env.CI_SHA }}
+        IMAGE_PREFIX=${TAG_NAME:-$GIT_SHA}
+
         # Configure our buildkit builders
         docker buildx create --name remote-buildkit-agent --node mdb_amd64 --platform linux/amd64 --driver=remote --use tcp://remote-buildkit-agent.infrastructure.svc.cluster.local:80 || true # Create the builder (might already exist)
         docker buildx create --name=remote-buildkit-agent --node mdb_arm64 --platform linux/arm64 --append --driver=remote --use tcp://remote-buildkit-agent-arm.infrastructure.svc.cluster.local:80 || true # Same for ARM
+
+        VERSION=${{ env.CI_SHA }} BRANCH=${{ env.CI_ACTION_REF_NAME }} PUSH_TO_DOCKERHUB=${{ inputs.push-to-dockerhub }} PLATFORM="" docker buildx bake -f docker/docker-bake.hcl --print
 
         # Build amd64 and arm64 images in parallel and wait for both to finish
         VERSION=${{ env.CI_SHA }} BRANCH=${{ env.CI_ACTION_REF_NAME }} PUSH_TO_DOCKERHUB=${{ inputs.push-to-dockerhub }} PLATFORM=linux/amd64 docker buildx bake --progress plain --push -f docker/docker-bake.hcl &
@@ -27,4 +34,4 @@ runs:
         wait
 
         # Create multi-arch manifests
-        VERSION=${{ env.CI_SHA }} BRANCH=${{ env.CI_ACTION_REF_NAME }} PLATFORM="" docker buildx bake -f docker/docker-bake.hcl --print | jq '.target[] | .tags[]' | xargs -I'{}' docker buildx imagetools create -t '{}' '{}-amd64' '{}-arm64'
+        VERSION=${{ env.CI_SHA }} BRANCH=${{ env.CI_ACTION_REF_NAME }} PUSH_TO_DOCKERHUB=${{ inputs.push-to-dockerhub }} PLATFORM="" docker buildx bake -f docker/docker-bake.hcl --print | jq '.target[] | .tags[]' | xargs -I'{}' docker buildx imagetools create -t '{}' '{}-amd64' '{}-arm64'

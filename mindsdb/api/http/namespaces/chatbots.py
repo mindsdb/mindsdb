@@ -7,7 +7,6 @@ from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.api.http.utils import http_error
 from mindsdb.metrics.metrics import api_endpoint_metrics
-from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.interfaces.chatbot.chatbot_controller import ChatBotController
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.interfaces.storage.db import Predictor
@@ -78,9 +77,8 @@ def create_chatbot(project_name, name, chatbot):
         )
 
     # Model and agent need to exist.
-    agents_controller = AgentsController()
     if agent_name is not None:
-        agent = agents_controller.get_agent(agent_name, project_name)
+        agent = session_controller.agents_controller.get_agent(agent_name, project_name)
         if agent is None:
             return http_error(
                 HTTPStatus.NOT_FOUND,
@@ -205,11 +203,11 @@ class ChatBotResource(Resource):
         params = chatbot.get('params', None)
 
         # Model needs to exist.
+        session = SessionController()
         if model_name is not None:
-            session_controller = SessionController()
             model_name_no_version, version = Predictor.get_name_and_version(model_name)
             try:
-                session_controller.model_controller.get_model(model_name_no_version, version=version, project_name=project_name)
+                session.model_controller.get_model(model_name_no_version, version=version, project_name=project_name)
             except PredictorRecordNotFound:
                 return http_error(
                     HTTPStatus.NOT_FOUND,
@@ -218,8 +216,7 @@ class ChatBotResource(Resource):
 
         # Agent needs to exist.
         if agent_name is not None:
-            agents_controller = AgentsController()
-            agent = agents_controller.get_agent(agent_name, project_name)
+            agent = session.agents_controller.get_agent(agent_name, project_name)
             if agent is None:
                 return http_error(
                     HTTPStatus.NOT_FOUND,

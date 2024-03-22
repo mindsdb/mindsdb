@@ -374,7 +374,7 @@ class LangChainHandler(BaseMLEngine):
                 memory.chat_memory.add_ai_message(answer)
 
         # use last message as prompt, remove other questions
-        df.iloc[:-1, df.columns.get_loc(args['user_column'])] = ''
+        df.iloc[:-1, df.columns.get_loc(args['user_column'])] = None
 
         agent_name = AgentType.CONVERSATIONAL_REACT_DESCRIPTION
         agent_executor = initialize_agent(
@@ -534,7 +534,7 @@ class LangChainHandler(BaseMLEngine):
         executor.shutdown(wait=False)
 
         # add null completion for empty prompts
-        for i in sorted(empty_prompt_ids):
+        for i in sorted(empty_prompt_ids)[:-1]:
             completions.insert(i, None)
 
         pred_df = pd.DataFrame(completions, columns=[args['target']])

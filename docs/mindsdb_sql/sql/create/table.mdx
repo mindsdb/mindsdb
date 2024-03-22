@@ -5,11 +5,20 @@ sidebarTitle: Create a Table
 
 ## Description
 
-The `CREATE TABLE` statement creates a table and fills it with a subselect query output. It is usually used to materialize prediction results as tables.
+The `CREATE TABLE` statement creates a table and optionally fills it with data from provided query. It may be used to materialize prediction results as tables.
 
 ## Syntax
 
-You can use the usual `CREATE TABLE` statement:
+You can use the `CREATE TABLE` statement to create an empty table:
+
+```sql
+CREATE TABLE integration_name.table_name (
+  column_name data_type,
+  ...
+);
+```
+
+You can use the `CREATE TABLE` statement to create a table and fill it with data:
 
 ```sql
 CREATE TABLE integration_name.table_name

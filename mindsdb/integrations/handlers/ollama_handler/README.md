@@ -3,7 +3,7 @@
 ## Briefly describe the ML framework this handler integrates with MindsDB, and how?
 [Ollama](https://ollama.ai/) is a project that enables easy local deployment of Large Language Models (LLMs). All models supported by Ollama are available in MindsDB through this integration.
 
-For now, this integration will only work in MacOS, with Linux and Windows to come later.
+For now, this integration will only work in MacOS and Linux. Windows is untested.
 
 Call this handler by
 `USING ENGINE="ollama"`, you can see a full example at the end of this readme.
@@ -75,6 +75,7 @@ PREDICT completion
 USING
 model_name = 'llama2',
 engine = 'ollama';
+ollama_serve_url = 'ollama:11434'
 
 DESCRIBE my_llama2.model;
 DESCRIBE my_llama2.features;

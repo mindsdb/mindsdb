@@ -1,26 +1,42 @@
 ---
-title: Setup as a Docker Extension
-sidebarTitle: Docker Extension
+title: Docker Desktop Extension for MindsDB
+sidebarTitle: Docker Desktop
 ---
 
-This is work in progress but [Ajeet Singh Raina](https://github.com/ajeetraina) has built a great docker extension, should look like this
+MindsDB provides an extension for Docker Desktop that facilitates running MindsDB on Docker Desktop.
+
+<Tip>
+Visit the [GitHub repository for MinsdDB Docker Desktop Extension](https://github.com/mindsdb/mindsdb-docker-extension) to learn more.
+</Tip>
+
+## Prerequisites
+
+Before proceeding, ensure you have installed Docker Desktop, following the [official Docker Desktop documentation](https://www.docker.com/products/docker-desktop/).
+
+## Setup
+
+This setup of MindsDB uses the `mindsdb/mindsdb:latest` Docker image, which is a lightweight Docker image of MindsDB that comes with [these integrations preloaded](https://github.com/mindsdb/mindsdb/blob/staging/default_handlers.txt).
+
+Follow the steps to set up MindsDB in Docker Desktop.
+
+## Install MindsDB
+
+Go to the Extensions page in Docker Desktop and search for MindsDB.
+
+Install the MindsDB extension.
+
+Access MindsDB inside Docker Desktop.
 
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/34368930/230012152-c60bc8a8-3c00-48c9-961c-6d10421e7e26.png"/>
+  <img src="/assets/mindsdb_docker_desktop.png"/>
 </p>
 
+## Install dependencies
 
+In the MindsDB editor, go to *Settings* and *Manage Integrations*.
 
-<Info>
-## Install
-Follow the instructions here if you want to try it:
+Select integrations you want to use and click on *Install*.
 
-<CardGroup cols={1}>
-
-    <Card title="MindsDB Docker extension guide" icon="link" href="https://github.com/collabnix/mindsdb-docker-extension"></Card>
-
-
-</CardGroup>
-
-</Info>
-
+<p align="center">
+  <img src="/assets/install-dependencies-gui.png"/>
+</p>

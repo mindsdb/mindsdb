@@ -3,11 +3,8 @@ title: Slack
 sidebarTitle: Slack
 ---
 
-In this section, we present how to connect Slack to MindsDB.
-
-[Slack](https://slack.com/) is a cloud-based collaboration platform that is designed to facilitate communication and teamwork within organizations and teams. It offers a variety of features that enable users to chat, share files, collaborate on projects, and integrate with other tools and services.
-
-The Slack handler provides interfaces to connect with Slack via APIs and perform various tasks such as sending messages, retrieving conversation history, and more.
+This documentation describes the integration of MindsDB with [Slack](https://slack.com/), a cloud-based collaboration platform.
+The integration allows MindsDB to access data from Slack and enhance Slack with AI capabilities.
 
 ## Prerequisites
 
@@ -19,7 +16,16 @@ Before proceeding, ensure the following prerequisites are met:
 
 ## Connection
 
-This handler was implemented using [`slack-sdk`](https://slack.dev/python-slack-sdk/) library, which is a Python Library offering a package for each of Slack’s APIs.
+Establish a connection to Slack from MindsDB by executing the following SQL command and providing its [handler name](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/slack_handler) as an engine.
+
+```sql
+CREATE DATABASE slack_conn
+WITH ENGINE = 'slack', 
+PARAMETERS = {
+   "token": "values",     -- required parameter
+   "app_token": "values"  -- optional parameter
+};
+```
 
 The Slack handler is initialized with the following parameters:
 
@@ -38,6 +44,7 @@ One way to connect Slack is to use both bot and app tokens. By following the ins
 If you want to use Slack in the [`CREATE CHATBOT`](/agents/chatbot) syntax, use this method of connecting Slack to MindsDB.
 </Note>
 
+<Accordion title="Set up a Slack app and generate tokens">
 Here is how to set up a Slack app and generate both a Slack bot token and a Slack app token:
 
   1. Follow [this link](https://api.slack.com/apps) and sign in with your Slack account.
@@ -68,6 +75,7 @@ Here is how to set up a Slack app and generate both a Slack bot token and a Slac
       - Under *Subscribe to bot events*, click on *Add Bot User Event* and add `message.im`.
       - Click on *Save Changes*.
   8. Now you can use tokens from points 3 and 5 to initialize the Slack handler in MindsDB.
+</Accordion>
 
 Here is how to connect Slack to MindsDB:
 
@@ -81,10 +89,13 @@ WITH
     };
 ```
 
+It comes with the `channels` and `channel_lists` table.
+
 ### Method 2: Chatbot responds on a defined Slack channel
 
 Another way to connect to Slack is to use the bot token only. By following the instructions below, you'll set up the Slack app and integrate it into one of the channels from which you can directly chat with the bot.
 
+<Accordion title="Set up a Slack app and generate tokens">
 Here is how to set up a Slack app and generate a Slack bot token:
 
   1. Follow [this link](https://api.slack.com/apps) and sign in with your Slack account.
@@ -107,6 +118,7 @@ Here is how to set up a Slack app and generate a Slack bot token:
       - Select *Integrations*.
       - Click on *Add an App*.
   8. Now you can use the token from step 6 to initialize the Slack handler in MindsDB and use the channel name to query and write messages.
+</Accordion>
 
 Here is how to connect Slack to MindsDB:
 
@@ -119,14 +131,14 @@ WITH
     };
 ```
 
-It comes with the `channels` table.
+It comes with the `channels` and `channel_lists` table.
 
 ## Usage
 
 <Warning>
 The following usage applies when **Connection Method 2** was used to connect Slack.
 
-See the usage for **Connection Method 1** [via LLM UI](/sql/tutorials/llm-chatbot-ui) or [via the `CREATE CHATBOT` syntax](/sql/tutorials/create-chatbot).
+See the usage for **Connection Method 1** [via the `CREATE CHATBOT` syntax](/sql/tutorials/create-chatbot).
 </Warning>
 
 You can select all messages from the channel using the below query.
@@ -172,6 +184,15 @@ ORDER BY messages ASC
 LIMIT 5;
 ```
 
-<Info>
-You can find more examples [here](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/slack_handler#lets-use-gpt-model-to-respond-to-messages-for-us).
-</Info>
+List all channels by selecting from the `channel_lists` table.
+
+```sql
+SELECT *
+FROM mindsdb_slack.channel_lists;
+```
+
+<Tip>
+**Next Steps**
+
+Follow [this tutorial](/sql/tutorials/slack-chatbot) to see more use case examples.
+</Tip>

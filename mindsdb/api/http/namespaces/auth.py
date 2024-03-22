@@ -8,6 +8,7 @@ from flask import redirect, request, session, url_for
 from flask_restx import Resource
 
 from mindsdb.api.http.namespaces.configs.auth import ns_conf
+from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.utilities.config import Config
 from mindsdb.utilities import log
 
@@ -57,6 +58,7 @@ def request_user_info(access_token: str = None) -> dict:
 @ns_conf.hide
 class Auth(Resource):
     @ns_conf.doc(params={"code": "authentification code"})
+    @api_endpoint_metrics('GET', '/auth/code')
     def get(self):
         """callback from auth server if authentification is successful"""
         config = Config()
@@ -138,6 +140,7 @@ class CloudLoginRoute(Resource):
         responses={302: "Redirect to auth server"},
         params={"location": "final redirection should lead to that location"},
     )
+    @api_endpoint_metrics('GET', '/auth/cloud_login')
     def get(self):
         """redirect to cloud login form"""
         location = request.args.get("location")

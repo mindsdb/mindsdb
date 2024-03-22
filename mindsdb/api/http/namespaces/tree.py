@@ -5,11 +5,13 @@ from flask_restx import Resource
 
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.tree import ns_conf
+from mindsdb.metrics.metrics import api_endpoint_metrics
 
 
 @ns_conf.route('/')
 class GetRoot(Resource):
     @ns_conf.doc('get_tree_root')
+    @api_endpoint_metrics('GET', '/tree')
     def get(self):
         databases = ca.database_controller.get_list()
         result = [{
@@ -27,6 +29,7 @@ class GetRoot(Resource):
 @ns_conf.param('db_name', "Name of the database")
 class GetLeaf(Resource):
     @ns_conf.doc('get_tree_leaf')
+    @api_endpoint_metrics('GET', '/tree/database')
     def get(self, db_name):
         databases = ca.database_controller.get_dict()
         if db_name not in databases:
@@ -85,7 +88,7 @@ class GetLeaf(Resource):
             tables = [{
                 'name': table.name,
                 'class': table.kind,
-                'type': None,
+                'type': 'system view',
                 'engine': None,
                 'deletable': table.deletable,
             } for table in tables.values()]

@@ -14,7 +14,7 @@ except Exception as e:
 title = "Lindorm"
 name = "lindorm"
 type = HANDLER_TYPE.DATA
-icon_path = 'icon.png'
+icon_path = 'icon.svg'
 
 __all__ = [
     "Handler",

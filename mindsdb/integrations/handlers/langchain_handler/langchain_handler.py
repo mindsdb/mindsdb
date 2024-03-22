@@ -446,7 +446,7 @@ class LangChainHandler(BaseMLEngine):
         executor.shutdown(wait=False)
 
         # add null completion for empty prompts
-        for i in sorted(empty_prompt_ids):
+        for i in sorted(empty_prompt_ids)[:-1]:
             completions.insert(i, None)
 
         pred_df = pd.DataFrame(completions, columns=[args['target']])

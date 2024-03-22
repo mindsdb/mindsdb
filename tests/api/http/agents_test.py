@@ -34,7 +34,7 @@ def app():
                 'parameters': {
                     "user": "demo_user",
                     "password": "demo_password",
-                    "host": "3.220.66.106",
+                    "host": "sampledatabases.mindsdb.com",
                     "port": "5432",
                     "database": "demo"
                 }

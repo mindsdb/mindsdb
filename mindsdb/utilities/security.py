@@ -46,6 +46,25 @@ def clear_filename(filename: str) -> str:
     return filename
 
 
+def _encrypt(data: bytes) -> str:
+    key = ctx.encryption_key_bytes
+    nonce = secrets.token_bytes(12)
+    encrypted_bytes = nonce + AESGCM(key).encrypt(nonce, data, None)
+    encrypted_str = base64.b64encode(encrypted_bytes).decode('utf-8')
+    return encrypted_str
+
+
+def _decrypt(data) -> bytes:
+    key = ctx.encryption_key_bytes
+
+    encrypted_message = base64.b64decode(data.encode('utf-8'))
+    try:
+        decrypted_message = AESGCM(key).decrypt(encrypted_message[:12], encrypted_message[12:], None)
+    except Exception as e:
+        logger.error(f'Wrong encryption key: {e}')
+    return decrypted_message
+
+
 def encrypt_dict(message: dict) -> dict:
     """Encrypt dict using key in context
 
@@ -56,20 +75,16 @@ def encrypt_dict(message: dict) -> dict:
         dict: dcit containing a key (_mindsdb_encrypted_data) with encrypted data
     """
 
-    key = ctx.encryption_key
+    key = ctx.encryption_key_bytes
     if key is None or len(key) == 0:
         if Config().get('cloud', False) is False:
             logger.error(f"Encryption key is not found for company_id={ctx.company_id}")
             raise Exception("Encryption key cannot be found")
         return message
 
-    nonce = secrets.token_bytes(12)
-    message_bytes = pickle.dumps(message)  # json.dumps(message).encode()
-    encrypted_bytes = nonce + AESGCM(key).encrypt(nonce, message_bytes, None)
-    encrypted_bytes = base64.b64encode(encrypted_bytes).decode('utf-8')
-
+    encrypted_str = encrypt_object(message)
     return {
-        '_mindsdb_encrypted_data': encrypted_bytes,
+        '_mindsdb_encrypted_data': encrypted_str,
         'keys': list(message.keys())
     }
 
@@ -90,12 +105,64 @@ def decrypt_dict(message: dict) -> dict:
             logger.warn(f"Data is not encrypted for company_id={ctx.company_id}")
         return deepcopy(message)
 
-    key = ctx.encryption_key
+    decrypted_dict = decrypt_object(encrypted_message)
+    return decrypted_dict
+
+
+def encrypt_object(data: object) -> str:
+    """Serialize object to encrypted string
+
+    Args:
+        data (object): any object that can be pickled
+
+    Returns:
+        str: encrypted string
+    """
+    message_bytes = pickle.dumps(data)
+    return _encrypt(message_bytes)
+
+
+def decrypt_object(data: str) -> object:
+    """Deserialize string to an object
+
+    Args:
+        data (str): encrypted string
+
+    Returns:
+        object: unpickled object
+    """
+    decrypted_message = _decrypt(data)
+    decrypted_object = pickle.loads(decrypted_message)
+    return decrypted_object
+
+
+def encrypt_str(data: str) -> str:
+    """Encrypt string
+
+    Args:
+        data (str): string to be encrypted
+
+    Returns:
+        str: encrypted string
+    """
+    message_bytes = data.encode('utf-8')
+    return _encrypt(message_bytes)
+
+
+def decrypt_str(data: str) -> str:
+    """Decrypt string
+
+    Args:
+        data (str): encrypted string
+
+    Returns:
+        str: decrypted string
+    """
+    key = ctx.encryption_key_bytes
     if key is None or len(key) == 0:
         logger.error(f"Encryption key is not found for company_id={ctx.company_id}")
         raise Exception("Encryption key cannot be found")
 
-    encrypted_message = base64.b64decode(encrypted_message.encode('utf-8'))
-    decrypted_message = AESGCM(key).decrypt(encrypted_message[:12], encrypted_message[12:], None)
-    decrypted_message = pickle.loads(decrypted_message)
-    return decrypted_message
+    decrypted_message = _decrypt(data)
+    decrypted_str = decrypted_message.decode()
+    return decrypted_str

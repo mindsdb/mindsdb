@@ -5,6 +5,7 @@ from pathlib import Path
 from mindsdb.utilities import log
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.exception import EntityNotExistsError
+from mindsdb.utilities.security import encrypt_str, decrypt_str
 from mindsdb.interfaces.storage.fs import FileStorageFactory, RESOURCE_GROUP, FileStorage
 
 
@@ -132,6 +133,45 @@ class TabsController:
 
         file_storage.delete(TABS_FILENAME)
 
+    @staticmethod
+    def _parse_tab(data: str) -> dict:
+        """Parse tab from string to dict
+
+        Args:
+            data (str): file content
+
+        Returns:
+            dict: tab key-value representation
+        """
+        data = json.loads(data)
+
+        encrypted_content = data.get('_encrypted_content')
+        if encrypted_content is None:
+            return data
+
+        del data['_encrypted_content']
+        content = decrypt_str(encrypted_content)
+        data['content'] = content
+
+        return data
+
+    @staticmethod
+    def _dump_tab(data: dict) -> bytes:
+        """dump tab structure to bytes
+
+        Args:
+            data (dict): tab key-value representation
+
+        Returns:
+            bytes: serialyzed tab
+        """
+        content = data.get('content', '')
+        if ctx.encryption_key is not None:
+            encrypted_content = encrypt_str(content)
+            del data['content']
+            data['_encrypted_content'] = encrypted_content
+        return json.dumps(data).encode("utf-8")
+
     def get_all(self) -> List[Dict]:
         """Get list of all tabs
 
@@ -145,7 +185,7 @@ class TabsController:
         tabs_list = []
         for tab_id, tab_path in tabs_files.items():
             try:
-                data = json.loads(tab_path.read_text())
+                data = self._parse_tab(tab_path.read_text())
             except Exception as e:
                 logger.error(f"Can't read data of tab {ctx.company_id}/{tab_id}: {e}")
                 continue
@@ -175,10 +215,10 @@ class TabsController:
             raise EntityNotExistsError(f'tab {tab_id}')
 
         try:
-            data = json.loads(raw_tab_data)
+            data = self._parse_tab(raw_tab_data.decode())
         except Exception as e:
-            logger.error(f"Can't read data of tab {ctx.company_id}/{tab_id}: {e}")
-            raise Exception(f"Can't read data of tab: {e}")
+            logger.error(f"Can't read data of the tab {ctx.company_id}/{tab_id}: {e}")
+            raise Exception("Can't read data of the tab")
 
         return {
             'id': tab_id,
@@ -207,11 +247,11 @@ class TabsController:
             else:
                 index = max([x.get('index', 0) for x in all_tabs]) + 1
 
-        data_bytes = json.dumps({
+        data_bytes = self._dump_tab({
             'index': index,
             'name': name,
             'content': content
-        }).encode("utf-8")
+        })
         file_storage.file_set(f'tab_{tab_id}', data_bytes)
 
         if reorder_required:
@@ -220,7 +260,7 @@ class TabsController:
             file_storage.sync = False
             for tab_index, tab in enumerate(all_tabs):
                 tab['index'] = tab_index
-                data_bytes = json.dumps(tab).encode('utf-8')
+                data_bytes = self._dump_tab(tab)
                 file_storage.file_set(f'tab_{tab["id"]}', data_bytes)
             file_storage.sync = True
             file_storage.push()
@@ -253,7 +293,7 @@ class TabsController:
                     tab['index'] = tab_index
                 else:
                     tab['index'] = tab_index + 1
-                data_bytes = json.dumps(tab).encode('utf-8')
+                data_bytes = self._dump_tab(tab)
                 file_storage.file_set(f'tab_{tab["id"]}', data_bytes)
             file_storage.sync = True
             file_storage.push()
@@ -269,7 +309,7 @@ class TabsController:
             current_data['content'] = content
         # endregion
 
-        data_bytes = json.dumps(current_data).encode('utf-8')
+        data_bytes = self._dump_tab(current_data)
         file_storage.file_set(f'tab_{tab_id}', data_bytes)
 
         return {

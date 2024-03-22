@@ -14,10 +14,10 @@ except Exception as e:
     Handler = None
     import_error = e
 
-title = "LUMAEvents"
+title = "Luma"
 name = "luma"
 type = HANDLER_TYPE.DATA
-icon_path = "icon.webp"
+icon_path = "icon.png"
 
 __all__ = [
     "Handler",

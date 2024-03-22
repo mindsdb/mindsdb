@@ -72,7 +72,7 @@ class TwelveLabsAPIClient:
 
         result = self._submit_request(
             method="POST",
-            endpoint="indexes",
+            endpoint="/indexes",
             data=body,
         )
 
@@ -100,7 +100,7 @@ class TwelveLabsAPIClient:
 
         result = self._submit_request(
             method="GET",
-            endpoint="indexes",
+            endpoint="/indexes",
             data=params,
         )
 
@@ -127,14 +127,14 @@ class TwelveLabsAPIClient:
         data = []
         result = self._submit_request(
             method="GET",
-            endpoint=f"indexes/{index_id}/videos",
+            endpoint=f"/indexes/{index_id}/videos",
         )
         data.extend(result['data'])
 
         while result['page_info']['page'] < result['page_info']['total_page']:
             result = self._submit_request(
                 method="GET",
-                endpoint=f"indexes/{index_id}/videos?page_token={result['page_info']['next_page_token']}",
+                endpoint=f"/indexes/{index_id}/videos?page_token={result['page_info']['next_page_token']}",
             )
             data.extend(result['data'])
 
@@ -172,7 +172,7 @@ class TwelveLabsAPIClient:
 
         self._submit_request(
             method="PUT",
-            endpoint=f"indexes/{index_id}/videos/{video_id}",
+            endpoint=f"/indexes/{index_id}/videos/{video_id}",
             data=body,
         )
 
@@ -264,7 +264,7 @@ class TwelveLabsAPIClient:
 
         result = self._submit_multi_part_request(
             method="POST",
-            endpoint="tasks",
+            endpoint="/tasks",
             data=body,
         )
 
@@ -325,7 +325,7 @@ class TwelveLabsAPIClient:
                     # TODO: update Exception to be more specific
                     raise Exception(f"Task {task_id} failed with status {task['status']}.")
 
-        logger.info("All videos indexed successfully.")
+        logger.info("All videos indexed successffully.")
 
     def _get_video_indexing_task(self, task_id: str) -> Dict:
         """
@@ -344,7 +344,7 @@ class TwelveLabsAPIClient:
 
         result = self._submit_request(
             method="GET",
-            endpoint=f"tasks/{task_id}",
+            endpoint=f"/tasks/{task_id}",
         )
 
         logger.info(f"Retrieved video indexing task {task_id} successfully.")
@@ -380,7 +380,7 @@ class TwelveLabsAPIClient:
         data = []
         result = self._submit_request(
             method="POST",
-            endpoint="search",
+            endpoint="/search",
             data=body,
         )
         data.extend(result['data'])
@@ -388,14 +388,14 @@ class TwelveLabsAPIClient:
         while 'next_page_token' in result['page_info']:
             result = self._submit_request(
                 method="GET",
-                endpoint=f"search/{result['page_info']['next_page_token']}"
+                endpoint=f"/search/{result['page_info']['next_page_token']}"
             )
             data.extend(result['data'])
 
         logger.info(f"Search for index {index_id} completed successfully.")
         return data
 
-    def summarize_videos(self, video_ids: List[str], summarization_type: str) -> Dict:
+    def summarize_videos(self, video_ids: List[str], summarization_type: str, prompt: str) -> Dict:
         """
         Summarize videos.
 
@@ -407,6 +407,9 @@ class TwelveLabsAPIClient:
         summarization_type : str
             Type of the summary to be generated. Supported types are 'summary', 'chapter' and 'highlight'.
 
+        prompt: str
+            Prompt to be used for the Summarize task
+
         Returns
         -------
         Dict
@@ -414,14 +417,12 @@ class TwelveLabsAPIClient:
         """
 
         results = []
-        for video_id in video_ids:
-            result = self.summarize_video(video_id=video_id, summarization_type=summarization_type)
-            results.append(result)
+        results = [self.summarize_video(video_id, summarization_type, prompt) for video_id in video_ids]
 
         logger.info(f"Summarized videos {video_ids} successfully.")
         return results
 
-    def summarize_video(self, video_id: str, summarization_type: str) -> Dict:
+    def summarize_video(self, video_id: str, summarization_type: str, prompt: str) -> Dict:
         """
         Summarize a video.
 
@@ -433,20 +434,23 @@ class TwelveLabsAPIClient:
         summarization_type : str
             Type of the summary to be generated. Supported types are 'summary', 'chapter' and 'highlight'.
 
+        prompt: str
+            Prompt to be used for the Summarize task
+
         Returns
         -------
         Dict
             Summary of the video.
         """
-
         body = {
             "video_id": video_id,
-            "type": summarization_type
+            "type": summarization_type,
+            "prompt": prompt
         }
 
         result = self._submit_request(
             method="POST",
-            endpoint="summarize",
+            endpoint="/summarize",
             data=body,
         )
 
@@ -481,21 +485,21 @@ class TwelveLabsAPIClient:
 
         if method == "GET":
             response = requests.get(
-                url=self.base_url,
+                url=self.base_url + endpoint,
                 headers=headers,
                 params=data if data else {},
             )
 
         elif method == "POST":
             response = requests.post(
-                url=self.base_url,
+                url=self.base_url + endpoint,
                 headers=headers,
                 json=data if data else {},
             )
 
         elif method == "PUT":
             response = requests.put(
-                url=self.base_url,
+                url=self.base_url + endpoint,
                 headers=headers,
                 json=data if data else {},
             )
@@ -533,17 +537,15 @@ class TwelveLabsAPIClient:
 
         multipart_data = MultipartEncoder(fields=data)
         headers['Content-Type'] = multipart_data.content_type
-
         if method == "POST":
             response = requests.post(
-                url=self.base_url,
+                url=self.base_url + endpoint,
                 headers=headers,
                 data=multipart_data if multipart_data else {}
             )
 
         else:
             raise Exception(f"Method {method} not supported yet.")
-
         return self._handle_response(response)
 
     def _handle_response(self, response):
@@ -557,10 +559,9 @@ class TwelveLabsAPIClient:
                 return {}
         else:
             if response.content:
-                result = response.json()
-                logger.error(f"API request has failed: {result['message']}")
+                logger.error(f"API request has failed: {response.content}")
                 # TODO: update Exception to be more specific
-                raise Exception(f"API request has failed: {result['message']}")
+                raise Exception(f"API request has failed: {response.content}")
             else:
                 logger.error("API request has failed. No content returned.")
                 raise Exception("API request has failed. No content returned.")

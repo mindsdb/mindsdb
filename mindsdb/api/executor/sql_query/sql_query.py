@@ -44,11 +44,16 @@ class SQLQuery:
 
     step_handlers = {}
 
-    def __init__(self, sql, session, execute=True):
+    def __init__(self, sql, session, execute=True, database=None):
         self.session = session
 
+        if database is not None:
+            self.database = database
+        else:
+            self.database = session.database
+
         self.context = {
-            'database': None if session.database == '' else session.database.lower(),
+            'database': None if self.database == '' else self.database.lower(),
             'row_id': 0
         }
 
@@ -102,7 +107,7 @@ class SQLQuery:
 
         predictor_metadata = []
 
-        query_tables = get_query_models(self.query, default_database=self.session.database)
+        query_tables = get_query_models(self.query, default_database=self.database)
 
         for project_name, table_name, table_version in query_tables:
             args = {
@@ -159,7 +164,7 @@ class SQLQuery:
 
             predictor_metadata.append(predictor)
 
-        database = None if self.session.database == '' else self.session.database.lower()
+        database = None if self.database == '' else self.database.lower()
 
         self.context['predictor_metadata'] = predictor_metadata
         self.planner = query_planner.QueryPlanner(

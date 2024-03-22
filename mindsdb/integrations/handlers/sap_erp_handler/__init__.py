@@ -13,7 +13,7 @@ except Exception as e:
 title = "SAP ERP"
 name = "sap_erp"
 type = HANDLER_TYPE.DATA
-icon_path = "icon.png"
+icon_path = "icon.svg"
 
 __all__ = [
     "Handler",

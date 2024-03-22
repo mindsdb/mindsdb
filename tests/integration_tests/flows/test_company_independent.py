@@ -7,7 +7,7 @@ from pymongo import MongoClient
 
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from .conftest import CONFIG_PATH
-from .http_test_helpers import HTTPHelperMixin
+from tests.utils.http_test_helpers import HTTPHelperMixin
 
 # used by mindsdb_app fixture in conftest
 OVERRIDE_CONFIG = {
@@ -238,7 +238,6 @@ class TestCompanyIndependent(HTTPHelperMixin):
             self.assert_list(
                 tables, {
                     'jobs',
-                    'jobs_history',
                     'models',
                     'models_versions',
                     'mdb_triggers',
@@ -301,7 +300,6 @@ class TestCompanyIndependent(HTTPHelperMixin):
             self.assert_list(
                 tables, {
                     'jobs',
-                    'jobs_history',
                     'models',
                     'models_versions',
                     'mdb_triggers',
@@ -328,7 +326,6 @@ class TestCompanyIndependent(HTTPHelperMixin):
             self.assert_list(
                 tables, {
                     'jobs',
-                    'jobs_history',
                     'models',
                     'models_versions',
                     'mdb_triggers',
@@ -405,7 +402,6 @@ class TestCompanyIndependent(HTTPHelperMixin):
         collections = client_a.mindsdb.list_collection_names()
         self.assert_list(collections, {
             'jobs',
-            'jobs_history',
             'models',
             'models_versions',
             'mdb_triggers',
@@ -416,7 +412,6 @@ class TestCompanyIndependent(HTTPHelperMixin):
         collections = client_b.mindsdb.list_collection_names()
         self.assert_list(collections, {
             'jobs',
-            'jobs_history',
             'models',
             'models_versions',
             'mdb_triggers',

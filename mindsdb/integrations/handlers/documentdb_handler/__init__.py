@@ -9,7 +9,7 @@ except Exception as e:
 from .__about__ import __version__ as version, __description__ as description
 
 
-title = 'DocumentDB'
+title = 'Amazon DocumentDB'
 name = 'documentdb'
 type = HANDLER_TYPE.DATA
 icon_path = 'icon.svg'

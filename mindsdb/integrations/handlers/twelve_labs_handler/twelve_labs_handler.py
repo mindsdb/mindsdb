@@ -193,7 +193,8 @@ class TwelveLabsHandler(BaseMLEngine):
             video_ids = df['video_id'].tolist()
             data = twelve_labs_api_client.summarize_videos(
                 video_ids=video_ids,
-                summarization_type=args['summarization_type']
+                summarization_type=args['summarization_type'],
+                prompt=args['prompt']
             )
 
             if args['summarization_type'] in ('chapter', 'highlight'):
@@ -245,6 +246,8 @@ class TwelveLabsHandler(BaseMLEngine):
             # rename _id to video_id
             df_videos.rename(columns={"_id": "video_id"}, inplace=True)
 
+            # MindsDB GUI fails to display NaN values, so we replace them with 0
+            df_videos.fillna(0, inplace=True)
             return df_videos
 
         else:

@@ -24,8 +24,19 @@ class EmailClient:
     ):
         self.email = connection_data.email
         self.password = connection_data.password
-        self.imap_server = imaplib.IMAP4_SSL(connection_data.imap_server)
-        self.smtp_server = smtplib.SMTP(connection_data.smtp_server, connection_data.smtp_port)
+        try:
+            self.imap_server = imaplib.IMAP4_SSL(connection_data.imap_server)
+        except (imaplib.IMAP4.error, socket.error) as e:
+            # This handles IMAP connection error
+            print(f"Error connecting to IMAP server: {e}")
+            self.imap_server = None
+
+        try:
+            self.smtp_server = smtplib.SMTP(connection_data.smtp_server, connection_data.smtp_port)
+        except (smtplib.SMTPException, socket.error) as e:
+            # This handles SMTP connection error
+            print(f"Error connecting to SMTP server: {e}")
+            self.smtp_server = None 
 
     def select_mailbox(self, mailbox: str = 'INBOX'):
         '''Logs in & selects a mailbox from IMAP server. Defaults to INBOX, which is the default inbox.

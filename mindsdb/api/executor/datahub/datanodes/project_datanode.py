@@ -10,16 +10,12 @@ from mindsdb_sql.parser.ast import (
     Delete,
 )
 
-from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
-from mindsdb.interfaces.model.functions import PredictorRecordNotFound
-from mindsdb.interfaces.storage import db
 from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.api.executor.datahub.datanodes.datanode import DataNode
 from mindsdb.api.executor.datahub.classes.tables_row import TablesRow
 from mindsdb.api.executor import SQLQuery
 from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
-from mindsdb_sql.parser import ast
 
 
 class ProjectDataNode(DataNode):
@@ -66,52 +62,6 @@ class ProjectDataNode(DataNode):
             raise Exception(f"model '{model_name}' is obsolete and needs to be updated. Run 'RETRAIN {model_name};'")
         ml_handler = self.integration_controller.get_ml_handler(model_metadata['engine_name'])
         return ml_handler.predict(model_name, data, project_name=self.project.name, version=version, params=params)
-
-    def _query_agent(self, query: ast.ASTNode, existing_agent: db.Agents, session):
-        if len(query.targets) > 1:
-            raise ValueError('Can only select one target')
-        try:
-            model = session.model_controller.get_model(existing_agent.model_name, project_name=self.project.name)
-            model_record = db.Predictor.query.get(model['id'])
-        except PredictorRecordNotFound as e:
-            raise ValueError(f'Model with name {existing_agent.model_name} does not exist') from e
-        input_column = model_record.learn_args['using'].get('user_column')
-        agent_column = model_record.learn_args['using'].get('assistant_column')
-        # Filter targets
-        for target in query.targets:
-            if isinstance(target, ast.Star):
-                break
-            elif isinstance(target, ast.Identifier):
-                col_name = target.parts[-1]
-                if col_name != agent_column:
-                    raise ValueError(f'Target must be * or {agent_column}')
-        # Filter conditions
-        question = ''
-        conditions = extract_comparison_conditions(query.where)
-        for op, arg1, arg2 in conditions:
-            if op != '=':
-                raise ValueError('Only = operator is supported in WHERE clause')
-            if arg1 != input_column:
-                raise ValueError(f'Agent input column {input_column} not found in WHERE clause')
-            question = arg2
-            break
-
-        messages = [{input_column: question, agent_column: None}]
-        predictions = session.agents_controller.get_completion(
-            existing_agent,
-            messages=messages,
-            project_name=self.project.name,
-            # Don't need to include backoffice_db related tools here.
-            tools=[]
-        )
-        columns_info = [
-            {
-                'name': k,
-                'type': v
-            }
-            for k, v in predictions.dtypes.items()
-        ]
-        return predictions.to_dict(orient='split')['data'], columns_info
 
     def query(self, query=None, native_query=None, session=None):
         if query is None and native_query is not None:
@@ -210,10 +160,6 @@ class ProjectDataNode(DataNode):
                 ]
 
                 return df.to_dict(orient='split')['data'], columns_info
-
-            existing_agent = session.agents_controller.get_agent(query_table, self.project.name)
-            if existing_agent is not None:
-                return self._query_agent(query, existing_agent, session)
 
             raise EntityNotExistsError(f"Can't select from {query_table} in project")
         else:

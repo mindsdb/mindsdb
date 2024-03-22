@@ -10,3 +10,4 @@ responses
 pytest-cov 
 coveralls
 locust
+ollama >= 0.1.7 # Langchain tests

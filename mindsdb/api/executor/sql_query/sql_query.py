@@ -127,8 +127,8 @@ class SQLQuery:
                     continue
                 if agent is not None:
                     model = self.session.model_controller.get_model(
-                          agent.model_name,
-                          project_name=project_name
+                        agent.model_name,
+                        project_name=project_name
                     )
 
                     predictor = {

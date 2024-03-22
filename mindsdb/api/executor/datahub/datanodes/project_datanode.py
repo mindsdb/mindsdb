@@ -10,16 +10,12 @@ from mindsdb_sql.parser.ast import (
     Delete,
 )
 
-from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
-from mindsdb.interfaces.model.functions import PredictorRecordNotFound
-from mindsdb.interfaces.storage import db
 from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.api.executor.datahub.datanodes.datanode import DataNode
 from mindsdb.api.executor.datahub.classes.tables_row import TablesRow
 from mindsdb.api.executor import SQLQuery
 from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
-from mindsdb_sql.parser import ast
 
 
 class ProjectDataNode(DataNode):

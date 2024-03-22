@@ -307,22 +307,19 @@ def initialize_app(config, no_studio):
         else:
             user_class = 0
 
-        if encryption_key is not None:
-            try:
-                encryption_key = encryption_key.decode()
-            except Exception as e:
-                logger.error(
-                    f"Can't parse encryption key for company_id={company_id}, exception: {e}"
-                )
-                raise Exception("Can't parse encryption key")
-
         if (
-            config.get("cloud", False) is True and (
+            config.get("cloud", False) is True
+            and (
                 company_id is None
                 or user_class is None
             )
         ):
+            logger.error(f"Got cloud HTTP request with missed headers: company_id={company_id}, user_class={user_class}")
             raise Exception('Request cannot be processed due to insufficient metadata')
+
+        if config.get("cloud", False) is True and encryption_key is None:
+            logger.warn("Got cloud HHTP request with missed encryption key")
+            # TODO Raise exception here after cloud migrations
 
         ctx.user_id = user_id
         ctx.company_id = company_id

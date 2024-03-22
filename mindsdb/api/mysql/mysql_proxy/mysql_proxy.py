@@ -479,8 +479,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 key_len = struct.unpack("H", key_len)[0]
                 if key_len > 0:
                     ctx.encryption_key = self.request.recv(database_name_len)
-                else:
-                    ctx.encryption_key = ''
+
+            if ctx.encryption_key is None:
+                logger.warn("Got cloud MySQL request with missed encryption key")
+                # TODO Raise exception here after cloud migrations
         except Exception as e:
             logger.warn(f"Something went wrong during 'is_cloud' check in mysql API: {e}")
             raise ValueError("Something went wrong during processing of first packet")

@@ -74,14 +74,6 @@ def encrypt_dict(message: dict) -> dict:
     Returns:
         dict: dcit containing a key (_mindsdb_encrypted_data) with encrypted data
     """
-
-    key = ctx.encryption_key_bytes
-    if key is None or len(key) == 0:
-        if Config().get('cloud', False) is False:
-            logger.error(f"Encryption key is not found for company_id={ctx.company_id}")
-            raise Exception("Encryption key cannot be found")
-        return message
-
     encrypted_str = encrypt_object(message)
     return {
         '_mindsdb_encrypted_data': encrypted_str,

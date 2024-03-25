@@ -232,8 +232,11 @@ That sums up the tutorial! Here it will continually check for new messages poste
 To check the `jobs` and `jobs_history`, we can use the following:
 
 ```sql
-SELECT * FROM jobs WHERE name="gpt4_slack_job";
-SELECT * FROM jobs_history WHERE name="gpt4_slack_job";
+SHOW JOBS WHERE name = 'gpt4_slack_job';
+
+SELECT * FROM mindsdb.jobs WHERE name = 'gpt4_slack_job';
+
+SELECT * FROM log.jobs_history WHERE project = 'mindsdb' AND name = 'gpt4_slack_job';
 ```
 
 To stop the sheduled job, we can use the following:

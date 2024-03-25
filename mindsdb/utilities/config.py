@@ -36,6 +36,8 @@ class Config():
         if self.use_docker_env:
             self.use_docker_env = True
 
+        self.encryption_enabled = os.environ.get('MINDSDB_ENCRYPTION_ENABLED', '').lower() in ('1', 'true')
+
         if Path(self.config_path).is_file():
             current_config_mtime = os.path.getmtime(self.config_path)
             if config_mtime != current_config_mtime:

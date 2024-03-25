@@ -3,6 +3,7 @@ from typing import Dict, List
 from pathlib import Path
 
 from mindsdb.utilities import log
+from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.utilities.security import encrypt_str, decrypt_str
@@ -40,6 +41,7 @@ class TabsController:
             resource_group=RESOURCE_GROUP.TAB,
             sync=True
         )
+        self.encryption_enabled = Config().encryption_enabled
 
     def _get_file_storage(self) -> FileStorage:
         """Get user's tabs file storage
@@ -155,8 +157,7 @@ class TabsController:
 
         return data
 
-    @staticmethod
-    def _dump_tab(data: dict) -> bytes:
+    def _dump_tab(self, data: dict) -> bytes:
         """dump tab structure to bytes
 
         Args:
@@ -166,7 +167,7 @@ class TabsController:
             bytes: serialyzed tab
         """
         content = data.get('content', '')
-        if ctx.encryption_key is not None:
+        if self.encryption_enabled:
             encrypted_content = encrypt_str(content)
             del data['content']
             data['_encrypted_content'] = encrypted_content

@@ -163,7 +163,7 @@ class IntegrationController:
 
     def _add_integration_record(self, name, engine, connection_args):
         connection_args = connection_args or {}
-        if ctx.encryption_key is not None:
+        if Config().encryption_enabled:
             connection_args = encrypt_dict(connection_args)
 
         integration_record = db.Integration(

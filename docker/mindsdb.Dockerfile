@@ -43,7 +43,9 @@ RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements/requi
 
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
+
 ENV PYTHONUNBUFFERED=1
+ENV MINDSDB_DOCKER_ENV 1
 ENV PROMETHEUS_MULTIPROC_DIR="./prometheus_metrics"
 
 EXPOSE 47334/tcp
@@ -67,6 +69,7 @@ COPY --link --from=extras /usr/local/lib/python3.10/site-packages /usr/local/lib
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
 ENV PYTHONUNBUFFERED=1
+ENV MINDSDB_DOCKER_ENV 1
 ENV PROMETHEUS_MULTIPROC_DIR="./prometheus_metrics"
 
 EXPOSE 47334/tcp

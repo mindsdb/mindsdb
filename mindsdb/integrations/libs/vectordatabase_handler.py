@@ -35,6 +35,7 @@ class TableField(Enum):
 
     ID = "id"
     CONTENT = "content"
+    CONTEXT = "embedding_context"
     EMBEDDINGS = "embeddings"
     METADATA = "metadata"
     SEARCH_VECTOR = "search_vector"
@@ -139,7 +140,7 @@ class VectorStoreHandler(BaseHandler):
         return set(columns).issubset(allowed_columns)
 
     def _is_condition_allowed(self, condition: FilterCondition) -> bool:
-        allowed_field_values = set([field.value for field in TableField])
+        allowed_field_values = set([field['name'] for field in self.SCHEMA])
         if condition.column in allowed_field_values:
             return True
         else:

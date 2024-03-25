@@ -126,6 +126,12 @@ class KnowledgeBaseTable:
         df_emb = self._df_to_embeddings(df)
         df = pd.concat([df, df_emb], axis=1)
 
+        # drop original 'content' column and rename model's 'embedding_context' column to 'content'
+        df = df.drop(TableField.CONTENT.value, axis='columns')
+        df = df.rename(
+            columns={TableField.CONTEXT.value: TableField.CONTENT.value}
+        )
+
         # send to vector db
         db_handler = self._get_vector_db()
         db_handler.do_upsert(self._kb.vector_database_table, df)
@@ -185,7 +191,7 @@ class KnowledgeBaseTable:
             if target != TableField.EMBEDDINGS.value:
                 # adapt output for vectordb
                 df_out = df_out.rename(columns={target: TableField.EMBEDDINGS.value})
-            df_out = df_out[[TableField.EMBEDDINGS.value]]
+            df_out = df_out[[TableField.CONTEXT.value, TableField.EMBEDDINGS.value]]
 
         return df_out
 

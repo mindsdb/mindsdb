@@ -537,6 +537,18 @@ class ExecuteCommands:
                 )
                 query = SQLQuery(select_statement, session=self.session)
                 return self.answer_select(query)
+            elif sql_category == "projects":
+                where = BinaryOperation(op='=', args=[Identifier('type'), Constant('project')])
+                select_statement = Select(
+                    targets=[Identifier(parts=["NAME"], alias=Identifier('project'))],
+                    from_table=Identifier(
+                        parts=["information_schema", "DATABASES"]
+                    ),
+                    where=_get_show_where(statement, like_name="project", from_name="project", initial=where),
+                )
+
+                query = SQLQuery(select_statement, session=self.session)
+                return self.answer_select(query)
             else:
                 raise NotSupportedYet(f"Statement not implemented: {sql}")
         elif type(statement) in (

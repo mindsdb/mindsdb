@@ -52,8 +52,6 @@ jobs:
 
         if [ "$RUNNER_OS" == "Linux" ]; then
 
-          mkdir prometheus_metrics
-
           pytest -vx tests/integration_tests/flows/test_ml_task_queue.py
 
           # MySQL API

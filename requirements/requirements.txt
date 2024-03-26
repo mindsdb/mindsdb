@@ -25,6 +25,7 @@ requests >= 2.30.0
 pydateinfer==0.3.0
 dataprep_ml==0.0.22
 dill == 0.3.6
+pydantic >= 1.8.2
 numpy
 pytz
 botocore
@@ -38,4 +39,5 @@ google-auth-oauthlib
 msal
 langchain>=0.1.9
 langchain-core>=0.1.28
+langchain_openai
 prometheus-client==0.20.0

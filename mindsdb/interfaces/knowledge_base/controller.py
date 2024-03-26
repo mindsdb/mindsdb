@@ -130,7 +130,7 @@ class KnowledgeBaseTable:
 
         # drop original 'content' column if it exists
         if TableField.CONTENT.value in df.columns:
-            df = df.drop(TableField.CONTENT.value, axis='columns')
+            df = df.rename(columns={TableField.CONTENT.value: "original_context"})
 
         # rename model's 'embedding_context' column to 'content'
         df = df.rename(

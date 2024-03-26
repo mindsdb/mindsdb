@@ -85,9 +85,6 @@ def get_llm_config(provider: str, config: Dict) -> BaseLLMConfig:
 
         :return: LLMConfig object with the configuration for the provider.
     """
-    print('Getting LLM CONFIG!')
-    print(provider)
-    print(config)
     temperature = min(1.0, max(0.0, config.get('temperature', 0.0)))
     if provider == 'openai':
         return OpenAIConfig(

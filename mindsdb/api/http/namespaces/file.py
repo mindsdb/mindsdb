@@ -12,6 +12,7 @@ from flask_restx import Resource
 
 from mindsdb.api.http.namespaces.configs.files import ns_conf
 from mindsdb.api.http.utils import http_error
+from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities import log
@@ -24,6 +25,7 @@ logger = log.getLogger(__name__)
 @ns_conf.route("/")
 class FilesList(Resource):
     @ns_conf.doc("get_files_list")
+    @api_endpoint_metrics('GET', '/files')
     def get(self):
         """List all files"""
         return ca.file_controller.get_files()
@@ -33,6 +35,7 @@ class FilesList(Resource):
 @ns_conf.param("name", "MindsDB's name for file")
 class File(Resource):
     @ns_conf.doc("put_file")
+    @api_endpoint_metrics('PUT', '/files/file')
     def put(self, name: str):
         """add new file
         params in FormData:
@@ -169,6 +172,7 @@ class File(Resource):
         return "", 200
 
     @ns_conf.doc("delete_file")
+    @api_endpoint_metrics('DELETE', '/files/file')
     def delete(self, name: str):
         """delete file"""
 

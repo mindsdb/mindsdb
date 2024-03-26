@@ -1,1 +1,1 @@
-clickhouse-sqlalchemy @ git+https://github.com/StpMax/clickhouse-sqlalchemy@5eadc4f
+clickhouse-sqlalchemy>=0.3.1

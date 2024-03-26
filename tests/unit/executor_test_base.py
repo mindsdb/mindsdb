@@ -440,6 +440,20 @@ class BaseExecutorDummyML(BaseExecutorTest):
         super().setup_method()
         self.set_executor(import_dummy_ml=True)
 
+    def run_sql(self, sql, throw_error=True, database='mindsdb'):
+        self.command_executor.session.database = database
+        ret = self.command_executor.execute_command(
+            parse_sql(sql, dialect='mindsdb')
+        )
+        if throw_error:
+            assert ret.error_code is None
+        if ret.data is not None:
+            columns = [
+                col.alias if col.alias is not None else col.name
+                for col in ret.columns
+            ]
+            return pd.DataFrame(ret.data, columns=columns)
+
 
 class BaseExecutorDummyLLM(BaseExecutorTest):
     """

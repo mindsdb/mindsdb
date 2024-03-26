@@ -10,6 +10,7 @@ from flask_restx import Resource
 from mindsdb_sql.parser.ast import Identifier
 from mindsdb_sql.parser.dialects.mindsdb import CreateMLEngine
 
+from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.integrations.utilities.install import install_dependencies
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.api.http.utils import http_error
@@ -21,6 +22,7 @@ from mindsdb.api.executor.command_executor import ExecuteCommands
 @ns_conf.route('/')
 class HandlersList(Resource):
     @ns_conf.doc('handlers_list')
+    @api_endpoint_metrics('GET', '/handlers')
     def get(self):
         '''List all db handlers'''
         handlers = ca.integration_controller.get_handlers_import_status()
@@ -37,6 +39,7 @@ class HandlersList(Resource):
 @ns_conf.route('/<handler_name>/icon')
 class HandlerIcon(Resource):
     @ns_conf.param('handler_name', 'Handler name')
+    @api_endpoint_metrics('GET', '/handlers/handler/icon')
     def get(self, handler_name):
         try:
             handlers_import_status = ca.integration_controller.get_handlers_import_status()
@@ -55,6 +58,7 @@ class HandlerIcon(Resource):
 @ns_conf.route('/<handler_name>/install')
 class InstallDependencies(Resource):
     @ns_conf.param('handler_name', 'Handler name')
+    @api_endpoint_metrics('POST', '/handlers/handler/install')
     def post(self, handler_name):
         handler_import_status = ca.integration_controller.get_handlers_import_status()
         if handler_name not in handler_import_status:
@@ -127,6 +131,7 @@ def prepare_formdata():
 @ns_conf.param('name', "Name of the model")
 class BYOMUpload(Resource):
     @ns_conf.doc('post_file')
+    @api_endpoint_metrics('POST', '/handlers/byom/handler')
     def post(self, name):
         params = prepare_formdata()
 
@@ -161,6 +166,7 @@ class BYOMUpload(Resource):
         }
 
     @ns_conf.doc('put_file')
+    @api_endpoint_metrics('PUT', '/handlers/byom/handler')
     def put(self, name):
         ''' upload new model
             params in FormData:

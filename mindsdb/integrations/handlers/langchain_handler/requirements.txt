@@ -6,5 +6,4 @@ langchain-community  # OpenAI, Anthropic LLM integrations
 langchain-experimental  # Tools
 langfuse  # Tracing
 litellm==1.23.2
-langchain-core # Even though langchain depends on this, make it explicit just in case that changes in the future.
 -r mindsdb/integrations/handlers/openai_handler/requirements.txt

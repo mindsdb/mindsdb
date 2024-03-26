@@ -13,7 +13,7 @@ from mindsdb.utilities.config import Config
 
 from mindsdb_sql.parser import ast
 from mindsdb_sql.parser.ast import ASTNode
-from mindsdb.integrations.libs.api_handler import APIChatHandler, APITable, FuncParser
+from mindsdb.integrations.libs.api_handler import APIChatHandler, APIResource, FuncParser
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
 
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
@@ -29,7 +29,7 @@ logger = log.getLogger(__name__)
 DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 
-class SlackChannelListsTable(APITable):
+class SlackChannelListsTable(APIResource):
 
     def list(self, **kwargs) -> pd.DataFrame:
 
@@ -52,7 +52,7 @@ class SlackChannelListsTable(APITable):
         ]
 
 
-class SlackChannelsTable(APITable):
+class SlackChannelsTable(APIResource):
 
     def list(self,
              conditions: List[FilterCondition] = None,
@@ -292,6 +292,7 @@ class SlackChannelsTable(APITable):
             
         except SlackApiError as e:
             raise Exception(f"Error deleting message from Slack channel '{params['channel']}' with timestamp '{params['ts']}': {e.response['error']}")
+
 
 class SlackHandler(APIChatHandler):
     """

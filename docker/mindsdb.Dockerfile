@@ -10,7 +10,6 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
 
 WORKDIR /mindsdb
 
-
 # Copy just requirements and install them to cache the layer
 # This won't include any of the default handlers, but it should still speed things up
 COPY requirements/requirements.txt /mindsdb/requirements/requirements.txt

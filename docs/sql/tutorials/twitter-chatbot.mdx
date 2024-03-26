@@ -126,9 +126,11 @@ This job is executed every minute. It fetches all recently added tweets with the
 Here are some useful commands to monitor the job:
 
 ```sql
+SHOW JOBS WHERE name = 'twitter_chatbot';
+
 SELECT * FROM jobs
 WHERE name = 'twitter_chatbot';
 
-SELECT * FROM jobs_history
-WHERE name = 'twitter_chatbot';
+SELECT * FROM log.jobs_history
+WHERE project = 'mindsdb' AND name = 'twitter_chatbot';
 ```

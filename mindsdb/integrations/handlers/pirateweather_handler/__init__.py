@@ -12,7 +12,7 @@ except Exception as e:
     Handler = None
     import_error = e
 
-title = "pirateweather"
+title = "Pirate Weather"
 name = "pirateweather"
 type = HANDLER_TYPE.DATA
 icon_path = "icon.png"

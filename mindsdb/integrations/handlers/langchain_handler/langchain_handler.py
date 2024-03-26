@@ -9,7 +9,7 @@ import pandas as pd
 from langchain.schema import SystemMessage
 from langchain.agents import AgentType
 from langchain_community.llms import OpenAI
-from langchain_community.chat_models import ChatAnthropic, ChatOpenAI, ChatAnyscale, ChatLiteLLM
+from langchain_community.chat_models import ChatAnthropic, ChatOpenAI, ChatAnyscale, ChatLiteLLM, ChatOllama
 from langchain.agents import initialize_agent, create_sql_agent  # TODO: initialize_agent is deprecated, replace with e.g. `create_react_agent`  # noqa
 from langchain.prompts import PromptTemplate
 from langchain_community.agent_toolkits import SQLDatabaseToolkit
@@ -34,11 +34,85 @@ _DEFAULT_MODEL = 'gpt-4-0125-preview'
 _DEFAULT_MAX_ITERATIONS = 10
 _DEFAULT_MAX_TOKENS = 2048  # requires more than vanilla OpenAI due to ongoing summarization and 3rd party input
 # 2 minutes should be more than enough time to complete chains.
-_DEFAULT_AGENT_TIMEOUT_SECONDS = 120
+_DEFAULT_AGENT_TIMEOUT_SECONDS = 300
 _DEFAULT_AGENT_MODEL = 'zero-shot-react-description'
-_DEFAULT_AGENT_TOOLS = ['wikipedia']  # these require no additional arguments
+_DEFAULT_AGENT_TOOLS = []  # these require no additional arguments
+_DEFAULT_OLLAMA_BASE_URL = 'http://localhost:11434'
 _ANTHROPIC_CHAT_MODELS = {'claude-2', 'claude-instant-1'}
-_PARSING_ERROR_PREFIX = 'Could not parse LLM output'
+# See https://ollama.com/library.
+_OLLAMA_CHAT_MODELS = {
+    "gemma",
+    "llama2",
+    "mistral",
+    "mixtral",
+    "llava",
+    "neural-chat",
+    "codellama",
+    "dolphin-mixtral",
+    "qwen",
+    "llama2-uncensored",
+    "mistral-openorca",
+    "deepseek-coder",
+    "nous-hermes2",
+    "phi",
+    "orca-mini",
+    "dolphin-mistral",
+    "wizard-vicuna-uncensored",
+    "vicuna",
+    "tinydolphin",
+    "llama2-chinese",
+    "openhermes",
+    "zephyr",
+    "nomic-embed-text",
+    "tinyllama",
+    "openchat",
+    "wizardcoder",
+    "phind-codellama",
+    "starcoder",
+    "yi",
+    "orca2",
+    "falcon",
+    "starcoder2",
+    "wizard-math",
+    "dolphin-phi",
+    "nous-hermes",
+    "starling-lm",
+    "stable-code",
+    "medllama2",
+    "bakllava",
+    "codeup",
+    "wizardlm-uncensored",
+    "solar",
+    "everythinglm",
+    "sqlcoder",
+    "nous-hermes2-mixtral",
+    "stable-beluga",
+    "yarn-mistral",
+    "samantha-mistral",
+    "stablelm2",
+    "meditron",
+    "stablelm-zephyr",
+    "magicoder",
+    "yarn-llama2",
+    "wizard-vicuna",
+    "llama-pro",
+    "deepseek-llm",
+    "codebooga",
+    "mistrallite",
+    "dolphincoder",
+    "nexusraven",
+    "open-orca-platypus2",
+    "all-minilm",
+    "goliath",
+    "notux",
+    "alfred",
+    "megadolphin",
+    "xwinlm",
+    "wizardlm",
+    "duckdb-nsql",
+    "notus"
+}
+_PARSING_ERROR_PREFIX = 'An output parsing error occured'
 
 logger = log.getLogger(__name__)
 
@@ -53,7 +127,6 @@ class LangChainHandler(BaseMLEngine):
     for additional ones if an API key is provided. Ongoing memory is also provided.
 
     Full tool support list:
-        - wikipedia
         - python_repl
         - serper.dev search
     """
@@ -74,6 +147,7 @@ class LangChainHandler(BaseMLEngine):
             'anthropic': ['default', 'conversational', 'conversational-full'],
             'anyscale': ['default', 'conversational'],
             'litellm': ['default', 'conversational'],
+            'ollama': ['default', 'conversational']
         }
         self.default_model = _DEFAULT_MODEL
         self.default_max_tokens = _DEFAULT_MAX_TOKENS
@@ -117,6 +191,8 @@ class LangChainHandler(BaseMLEngine):
                 args['provider'] = 'anthropic'
             elif args['model_name'] in OPEN_AI_CHAT_MODELS:
                 args['provider'] = 'openai'
+            elif args['model_name'] in _OLLAMA_CHAT_MODELS:
+                args['provider'] = 'ollama'
             else:
                 raise Exception(f"Invalid provider name. Please define provider")
 
@@ -233,6 +309,16 @@ class LangChainHandler(BaseMLEngine):
             model_kwargs[f'{provider}_api_base'] = base_url
             model_kwargs[f'{provider}_api_key'] = get_api_key(provider, args, self.engine_storage)
             model_kwargs[f'{provider}_organization'] = args.get('api_organization', None)
+        elif provider == 'ollama':
+            model_kwargs['base_url'] = args.get('base_url', _DEFAULT_OLLAMA_BASE_URL)
+            model_kwargs['model'] = model_name
+            model_kwargs['temperature'] = temperature
+            model_kwargs['top_p'] = top_p
+            for param_name in ['top_k', 'timeout', 'format', 'headers', 'keep_alive', 'num_predict', 'num_ctx', 'num_gpu','repeat_penalty', 'stop', 'template']:
+                if param_name in args:
+                    # See ChatOllama docs for more info
+                    # https://api.python.langchain.com/en/latest/chat_models/langchain_community.chat_models.ollama.ChatOllama.html
+                    model_kwargs[param_name] = args.get(param_name)
 
         model_kwargs = {k: v for k, v in model_kwargs.items() if v is not None}  # filter out None values
         return model_kwargs
@@ -242,12 +328,14 @@ class LangChainHandler(BaseMLEngine):
 
         if args['provider'] == 'anthropic':
             return ChatAnthropic(**model_kwargs)
-        elif args['provider'] == 'openai':
+        if args['provider'] == 'openai':
             return ChatOpenAI(**model_kwargs)
-        elif args['provider'] == 'anyscale':
+        if args['provider'] == 'anyscale':
             return ChatAnyscale(**model_kwargs)
-        elif args['provider'] == 'litellm':
+        if args['provider'] == 'litellm':
             return ChatLiteLLM(**model_kwargs)
+        if args['provider'] == 'ollama':
+            return ChatOllama(**model_kwargs)
 
     def conversational_completion(self, df, args=None, pred_args=None):
         pred_args = pred_args if pred_args else {}
@@ -286,7 +374,7 @@ class LangChainHandler(BaseMLEngine):
                 memory.chat_memory.add_ai_message(answer)
 
         # use last message as prompt, remove other questions
-        df.iloc[:-1, df.columns.get_loc(args['user_column'])] = ''
+        df.iloc[:-1, df.columns.get_loc(args['user_column'])] = None
 
         agent_name = AgentType.CONVERSATIONAL_REACT_DESCRIPTION
         agent_executor = initialize_agent(
@@ -446,7 +534,7 @@ class LangChainHandler(BaseMLEngine):
         executor.shutdown(wait=False)
 
         # add null completion for empty prompts
-        for i in sorted(empty_prompt_ids):
+        for i in sorted(empty_prompt_ids)[:-1]:
             completions.insert(i, None)
 
         pred_df = pd.DataFrame(completions, columns=[args['target']])

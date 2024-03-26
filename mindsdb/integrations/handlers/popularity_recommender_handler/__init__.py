@@ -12,7 +12,7 @@ except Exception as e:
     Handler = None
     import_error = e
 
-title = "Popularity_Recommender"
+title = "Popularity Recommender"
 name = "popularity_recommender"
 type = HANDLER_TYPE.ML
 icon_path = "icon.svg"

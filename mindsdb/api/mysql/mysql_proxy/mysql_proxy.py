@@ -438,13 +438,14 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             first_bytes = self.request.recv(3, socket.MSG_PEEK)
             if first_bytes != b"\x00\x00\x00":
                 Exception(f'First packet starts with: {first_bytes}')
+            self.request.recv(3)
 
             protocol_byte = self.request.recv(1, socket.MSG_PEEK)
             if protocol_byte not in (b"\x00", b"\x01"):
                 raise Exception(f"Unknown protocol identifier: {protocol_byte}")
+            self.request.recv(1)
 
             # region for both protocols \x00 and \x01
-            self.request.recv(4)
             client_capabilities = self.request.recv(8)
             client_capabilities = struct.unpack("L", client_capabilities)[0]
 
@@ -478,7 +479,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 key_len = self.request.recv(2)
                 key_len = struct.unpack("H", key_len)[0]
                 if key_len > 0:
-                    ctx.encryption_key = self.request.recv(database_name_len)
+                    ctx.encryption_key = base64.b64encode(self.request.recv(key_len)).decode()
 
             if ctx.encryption_key is None:
                 logger.warn("Got cloud MySQL request with missed encryption key")

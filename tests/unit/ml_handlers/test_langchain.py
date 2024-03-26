@@ -27,6 +27,29 @@ class TestLangchain(BaseMLAPITest):
         self.run_sql("create database proj")
 
     @pytest.mark.skipif(OPENAI_API_KEY is None, reason='Missing OpenAI API key (OPENAI_API_KEY env variable)')
+    def test_mdb_read(self):
+        self.run_sql(
+            f"""
+           create model proj.test_mdb_model
+           predict answer
+           using
+             engine='langchain',
+             prompt_template='Answer the user in a useful way: {{{{question}}}}',
+             openai_api_key='{self.get_api_key('OPENAI_API_KEY')}';
+        """
+        )
+        self.wait_predictor("proj", "test_mdb_model")
+
+        result_df = self.run_sql(
+            """
+            SELECT answer
+            FROM proj.test_mdb_model
+            WHERE question='Can you get a list of all available MindsDB models?'
+        """
+        )
+        assert "test_mdb_model" in result_df['answer'].iloc[0].lower()
+
+    @pytest.mark.skipif(OPENAI_API_KEY is None, reason='Missing OpenAI API key (OPENAI_API_KEY env variable)')
     def test_default_provider(self):
         self.run_sql(
             f"""
@@ -134,3 +157,27 @@ class TestLangchain(BaseMLAPITest):
         self.wait_predictor("proj", "test_describe_model")
         result_df = self.run_sql('DESCRIBE proj.test_describe_model')
         assert not result_df.empty
+
+    @pytest.mark.skipif(OPENAI_API_KEY is None, reason='Missing OpenAI API key (OPENAI_API_KEY env variable)')
+    def test_prompt_template_args(self):
+        self.run_sql(
+            f"""
+           create model proj.test_prompt_template_model
+           predict answer
+           using
+             engine='langchain',
+             prompt_template='Your name is {{{{name}}}}. Answer the user in a useful way: {{{{question}}}}',
+             openai_api_key='{self.get_api_key('OPENAI_API_KEY')}';
+        """
+        )
+        self.wait_predictor("proj", "test_prompt_template_model")
+
+        agent_name = 'professor farnsworth'
+        result_df = self.run_sql(
+            f"""
+            SELECT answer
+            FROM proj.test_prompt_template_model
+            WHERE question='What is your name?' AND name='{agent_name}'
+        """
+        )
+        assert agent_name in result_df['answer'].iloc[0].lower()

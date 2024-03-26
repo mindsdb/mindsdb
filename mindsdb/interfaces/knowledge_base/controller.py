@@ -19,6 +19,8 @@ import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.libs.vectordatabase_handler import TableField
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
+from mindsdb.utilities import log
+logger = log.getLogger(__name__)
 
 class KnowledgeBaseTable:
     """
@@ -126,8 +128,11 @@ class KnowledgeBaseTable:
         df_emb = self._df_to_embeddings(df)
         df = pd.concat([df, df_emb], axis=1)
 
-        # drop original 'content' column and rename model's 'embedding_context' column to 'content'
-        df = df.drop(TableField.CONTENT.value, axis='columns')
+        # drop original 'content' column if it exists
+        if TableField.CONTENT.value in df.columns:
+            df = df.drop(TableField.CONTENT.value, axis='columns')
+
+        # rename model's 'embedding_context' column to 'content'
         df = df.rename(
             columns={TableField.CONTEXT.value: TableField.CONTENT.value}
         )

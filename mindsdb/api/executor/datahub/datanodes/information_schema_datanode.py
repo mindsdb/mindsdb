@@ -247,6 +247,7 @@ class InformationSchemaDataNode(DataNode):
             "NAME",
             "ENGINE",
             "PROJECT",
+            "ACTIVE",
             "VERSION",
             "STATUS",
             "ACCURACY",
@@ -259,24 +260,6 @@ class InformationSchemaDataNode(DataNode):
             "CURRENT_TRAINING_PHASE",
             "TOTAL_TRAINING_PHASES",
             "TRAINING_PHASE_NAME",
-            "TAG",
-            "CREATED_AT",
-            "TRAINING_TIME",
-        ],
-        "MODELS_VERSIONS": [
-            "NAME",
-            "ENGINE",
-            "PROJECT",
-            "ACTIVE",
-            "VERSION",
-            "STATUS",
-            "ACCURACY",
-            "PREDICT",
-            "UPDATE_STATUS",
-            "MINDSDB_VERSION",
-            "ERROR",
-            "SELECT_DATA_QUERY",
-            "TRAINING_OPTIONS",
             "TAG",
             "CREATED_AT",
             "TRAINING_TIME",
@@ -352,7 +335,7 @@ class InformationSchemaDataNode(DataNode):
             "CHARACTER_SETS": self._get_charsets,
             "COLLATIONS": self._get_collations,
             "MODELS": self._get_models,
-            "MODELS_VERSIONS": self._get_models_versions,
+            "MODELS_VERSIONS": self._get_models,
             "DATABASES": self._get_databases,
             "ML_ENGINES": self._get_ml_engines,
             "HANDLERS": self._get_handlers,
@@ -746,7 +729,7 @@ class InformationSchemaDataNode(DataNode):
         data = []
         for project_name in self.get_projects_names():
             project = self.database_controller.get_project(name=project_name)
-            project_models = project.get_models()
+            project_models = project.get_models(active=None)
             for row in project_models:
                 table_name = row["name"]
                 table_meta = row["metadata"]
@@ -757,6 +740,7 @@ class InformationSchemaDataNode(DataNode):
                         table_name,
                         table_meta["engine"],
                         project_name,
+                        table_meta["active"],
                         table_meta["version"],
                         table_meta["status"],
                         table_meta["accuracy"],
@@ -777,39 +761,6 @@ class InformationSchemaDataNode(DataNode):
             # TODO optimise here
             # if target_table is not None and target_table != project_name:
             #     continue
-
-        df = pd.DataFrame(data, columns=columns)
-        return df
-
-    def _get_models_versions(self, query: ASTNode = None):
-        columns = self.information_schema["MODELS_VERSIONS"]
-        data = []
-        for project_name in self.get_projects_names():
-            project = self.database_controller.get_project(name=project_name)
-            project_models = project.get_models(active=None)
-            for row in project_models:
-                table_name = row["name"]
-                table_meta = row["metadata"]
-                data.append(
-                    [
-                        table_name,
-                        table_meta["engine"],
-                        project_name,
-                        table_meta["active"],
-                        table_meta["version"],
-                        table_meta["status"],
-                        table_meta["accuracy"],
-                        table_meta["predict"],
-                        table_meta["update_status"],
-                        table_meta["mindsdb_version"],
-                        table_meta["error"],
-                        table_meta["select_data_query"],
-                        to_json(table_meta["training_options"]),
-                        table_meta["label"],
-                        row["created_at"],
-                        table_meta["training_time"],
-                    ]
-                )
 
         df = pd.DataFrame(data, columns=columns)
         return df

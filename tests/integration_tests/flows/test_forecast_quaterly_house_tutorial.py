@@ -22,7 +22,7 @@ WITH ENGINE = "postgres",
 PARAMETERS = {
     "user": "demo_user",
     "password": "demo_password",
-    "host": "sampledatabases.mindsdb.com",
+    "host": "samples.mindsdb.com",
     "port": "5432",
     "database": "demo"
     };

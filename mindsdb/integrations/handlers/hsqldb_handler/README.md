@@ -37,7 +37,7 @@ CREATE DATABASE exampledb
 WITH
 engine='hsqldb',
 parameters={
-    "server_name": "sampledatabases.mindsdb.com",
+    "server_name": "samples.mindsdb.com",
     "port":  "5432",
     "database_name": "demo",
     "username": "demo_user",

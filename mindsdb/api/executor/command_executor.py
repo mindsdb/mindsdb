@@ -533,7 +533,7 @@ class ExecuteCommands:
                     from_table=Identifier(
                         parts=["information_schema", sql_category]
                     ),
-                    where=_get_show_where(statement, like_name="name"),
+                    where=_get_show_where(statement, like_name="name", from_name="project"),
                 )
                 query = SQLQuery(select_statement, session=self.session)
                 return self.answer_select(query)

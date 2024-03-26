@@ -2,7 +2,7 @@ import os
 import requests
 import time
 from typing import Dict, Optional
-from mindsdb.integrations.libs.llm_utils import get_completed_prompts
+from mindsdb.mindsdb.integrations.libs.llm.utils import get_completed_prompts
 
 import pandas as pd
 

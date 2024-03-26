@@ -1,11 +1,12 @@
 import os
 
 import ollama
-import pandas as pd
 import pytest
 
 from ..ml_handlers.base_ml_test import BaseMLAPITest
 
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
+ANYSCALE_API_KEY = os.environ.get("ANYSCALE_API_KEY")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 
@@ -26,22 +27,13 @@ class TestLangchain(BaseMLAPITest):
         self.run_sql("create database proj")
 
     @pytest.mark.skipif(OPENAI_API_KEY is None, reason='Missing OpenAI API key (OPENAI_API_KEY env variable)')
-    def test_conversational(self):
-        df = pd.DataFrame.from_dict({"question": [
-            "What is the capital of Sweden?",
-        ]})
-        self.set_data('df', df)
-
+    def test_default_provider(self):
         self.run_sql(
             f"""
            create model proj.test_conversational_model
            predict answer
            using
              engine='langchain',
-             mode='conversational',
-             model_name='gpt-4-0125-preview',
-             user_column='question',
-             assistant_column='answer',
              prompt_template='Answer the user in a useful way: {{{{question}}}}',
              openai_api_key='{self.get_api_key('OPENAI_API_KEY')}';
         """
@@ -57,37 +49,29 @@ class TestLangchain(BaseMLAPITest):
         )
         assert "stockholm" in result_df['answer'].iloc[0].lower()
 
-    @pytest.mark.skipif(OPENAI_API_KEY is None, reason='Missing OpenAI API key (OPENAI_API_KEY env variable)')
-    def test_mdb_read(self):
-        df = pd.DataFrame.from_dict({"question": [
-            "Can you get a list of all available MindsDB models?",
-        ]})
-        self.set_data('df', df)
-
+    @pytest.mark.skipif(ANTHROPIC_API_KEY is None, reason='Missing Anthropic API key (ANTHROPIC_API_KEY env variable)')
+    def test_anthropic_provider(self):
         self.run_sql(
             f"""
-           create model proj.test_mdb_model
+           create model proj.test_anthropic_langchain_model
            predict answer
            using
              engine='langchain',
-             mode='conversational',
-             model_name='gpt-4-0125-preview',
-             user_column='question',
-             assistant_column='answer',
+             model_name='claude-2.1',
              prompt_template='Answer the user in a useful way: {{{{question}}}}',
-             openai_api_key='{self.get_api_key('OPENAI_API_KEY')}';
+             anthropic_api_key='{self.get_api_key('ANTHROPIC_API_KEY')}';
         """
         )
-        self.wait_predictor("proj", "test_mdb_model")
+        self.wait_predictor("proj", "test_anthropic_langchain_model")
 
         result_df = self.run_sql(
             """
             SELECT answer
-            FROM proj.test_mdb_model
-            WHERE question='Can you get a list of all available MindsDB models?'
+            FROM proj.test_anthropic_langchain_model
+            WHERE question='What is the capital of Sweden?'
         """
         )
-        assert "test_mdb_model" in result_df['answer'].iloc[0].lower()
+        assert "stockholm" in result_df['answer'].iloc[0].lower()
 
     @pytest.mark.skipif(not ollama_model_exists('mistral'), reason='Make sure the mistral model is available locally by running `ollama pull mistral`')
     def test_ollama_provider(self):
@@ -97,11 +81,8 @@ class TestLangchain(BaseMLAPITest):
            predict answer
            using
              engine='langchain',
-             mode='conversational',
              model_name='mistral',
-             user_column='question',
-             assistant_column='answer',
-             prompt_template='Answer the user in a useful way: {{{{question}}}}'
+             prompt_template='Answer the user in a useful way: {{question}}'
             """
         )
         self.wait_predictor("proj", "test_ollama_model")
@@ -114,3 +95,42 @@ class TestLangchain(BaseMLAPITest):
         """
         )
         assert "victoria" in result_df['answer'].iloc[0].lower()
+
+    @pytest.mark.skipif(ANYSCALE_API_KEY is None, reason='Missing Anyscale API key (ANYSCALE_API_KEY env variable)')
+    def test_anyscale_provider(self):
+        self.run_sql(
+            f"""
+           create model proj.test_anyscale_langchain_model
+           predict answer
+           using
+             engine='langchain',
+             provider='anyscale',
+             model_name='meta-llama/Llama-2-7b-chat-hf',
+             prompt_template='Answer the user in a useful way: {{{{question}}}}',
+             anyscale_api_key='{self.get_api_key('ANYSCALE_API_KEY')}';
+        """
+        )
+        self.wait_predictor("proj", "test_anyscale_langchain_model")
+
+        result_df = self.run_sql(
+            """
+            SELECT answer
+            FROM proj.test_anyscale_langchain_model
+            WHERE question='What is the capital of Sweden?'
+        """
+        )
+        assert "stockholm" in result_df['answer'].iloc[0].lower()
+
+    def test_describe(self):
+        self.run_sql(
+            """
+           create model proj.test_describe_model
+           predict answer
+           using
+             engine='langchain',
+             prompt_template='Answer the user in a useful way: {{question}}';
+        """
+        )
+        self.wait_predictor("proj", "test_describe_model")
+        result_df = self.run_sql('DESCRIBE proj.test_describe_model')
+        assert not result_df.empty

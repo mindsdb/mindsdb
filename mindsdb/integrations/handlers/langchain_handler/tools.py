@@ -117,7 +117,7 @@ def _setup_standard_tools(tools, llm, model_kwargs):
             )
             all_standard_tools.append(mdb_tool)
             all_standard_tools.append(mdb_meta_tool)
-        if tool == 'mindsdb_write':
+        elif tool == 'mindsdb_write':
             mdb_write_tool = Tool(
                 name="MDB-Write",
                 func=get_mdb_write_tool(executor),

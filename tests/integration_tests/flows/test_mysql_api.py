@@ -3,6 +3,8 @@ import time
 import tempfile
 import json
 from pathlib import Path
+import subprocess
+import mysql.connector
 
 import docker
 import pandas as pd
@@ -16,15 +18,15 @@ from .conftest import docker_inet_ip, TEMP_DIR
 OVERRIDE_CONFIG = {
     'integrations': {},
     'api': {
-        "http": {"host": docker_inet_ip()},
-        "mysql": {"host": docker_inet_ip()}
+        "http": {"host": "127.0.0.1"},
+        "mysql": {"host": "127.0.0.1"}
     }
 }
 # used by (required for) mindsdb_app fixture in conftest
 API_LIST = ["http", "mysql"]
 
 # used by (required for) mindsdb_app fixture in conftest
-HTTP_API_ROOT = f'http://{docker_inet_ip()}:47334/api'
+HTTP_API_ROOT = f'http://127.0.0.1:47334/api'
 
 
 class Dlist(list):
@@ -63,28 +65,52 @@ class BaseStuff:
         return res
 
     def query(self, _query, encoding='utf-8'):
-        """Run mysql docker container
-           Perform connection to mindsdb database
-           Execute sql request
-           ----------------------
-           It is very problematic (or even impossible)
-           to provide sql statement as it is in 'docker run command',
-           that's why this action is splitted on three steps:
-               Save sql statement into temporary dir in .sql file
-               Run docker container with volume points to this temp dir,
-               Provide .sql file as input parameter for 'mysql' command"""
+
+        # Establish the connection.
+        conn = mysql.connector.connect(user='mindsdb', host='127.0.0.1', database='mindsdb')  # password='mindsdb',
+
+        # Create a cursor object using the cursor() method
+        cursor = conn.cursor()
+
+        # Execute a SQL query.
+        cursor.execute(_query)
+
+        # Fetch all rows from the result.
+        results = cursor.fetchall()
+
+        # Close the cursor and connection.
+        cursor.close()
+        conn.close()
+
+        return self.to_dicts(results)
+
+        # Now you can use 'results' as needed.
+        #for row in results:
+        #    print(row)
+
         with tempfile.TemporaryDirectory() as tmpdirname:
-            with open(f"{tmpdirname}/test.sql", 'w') as f:
+            with open(f"/tmp/test.sql", 'w') as f:
                 f.write(_query)
-            cmd = f"{self.launch_query_tmpl} < /temp/test.sql"
-            cmd = 'sh -c "' + cmd + '"'
-            res = self.docker_client.containers.run(
-                self.mysql_image,
-                command=cmd,
-                remove=True,
-                volumes={str(tmpdirname): {'bind': '/temp', 'mode': 'ro'}},
-                environment={"MYSQL_PWD": self.config["auth"]["password"]}
-            )
+
+            cmd = f"{self.launch_query_tmpl} < /tmp/test.sql"
+            print(cmd)
+            completed_process = subprocess.run(cmd, text=True, capture_output=True, check=True)
+            stdout = completed_process.stdout
+            stderr = completed_process.stderr
+
+            print('Output:', stdout)
+            if stderr:
+                print('Errors:', stderr)
+
+
+            #res = self.docker_client.containers.run(
+            #    self.mysql_image,
+            #    command=cmd,
+            #    remove=True,
+            #    volumes={str(tmpdirname): {'bind': '/temp', 'mode': 'ro'}},
+            #    environment={"MYSQL_PWD": self.config["auth"]["password"]}
+            #)
+        return self.to_dicts("test")
         return self.to_dicts(res.decode(encoding))
 
     def create_database(self, db_data):
@@ -162,17 +188,18 @@ class TestMySqlApi(BaseStuff):
     @classmethod
     def setup_class(cls):
 
-        cls.docker_client = docker.from_env()
-        cls.mysql_image = 'mysql'
+        # cls.docker_client = docker.from_env()
+        # cls.mysql_image = 'mysql'
         cls.config = json.loads(Path(os.path.join(TEMP_DIR, "config.json")).read_text())
 
-        cls.launch_query_tmpl = "mysql --host=%s --port=%s --user=%s --database=mindsdb" % (
+        cls.launch_query_tmpl = "/usr/bin/mysql --host=%s --port=%s --user=%s --database=mindsdb" % (
             cls.config["api"]["mysql"]["host"],
             cls.config["api"]["mysql"]["port"],
             cls.config["auth"]["username"])
 
     @classmethod
     def tear_down(cls):
+        return
         cls.docker_client.close()
 
     def test_create_postgres_datasources(self):

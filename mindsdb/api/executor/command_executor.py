@@ -210,18 +210,7 @@ class ExecuteCommands:
                 if isinstance(statement.modes, list) is False:
                     statement.modes = []
                 statement.modes = [x.upper() for x in statement.modes]
-            if sql_category in ("predictors", "models"):
-
-                new_statement = Select(
-                    targets=[Star()],
-                    from_table=Identifier(parts=["information_schema", "models"]),
-                    where=_get_show_where(
-                        statement, from_name="project", like_name="name"
-                    ),
-                )
-                query = SQLQuery(new_statement, session=self.session, database=database_name)
-                return self.answer_select(query)
-            elif sql_category == "ml_engines":
+            if sql_category == "ml_engines":
                 new_statement = Select(
                     targets=[Star()],
                     from_table=Identifier(parts=["information_schema", "ml_engines"]),
@@ -479,26 +468,32 @@ class ExecuteCommands:
                     is_full=is_full,
                     database_name=database_name,
                 )
-            elif sql_category == "knowledge_bases" or sql_category == "knowledge bases":
-                select_statement = Select(
-                    targets=[Star()],
-                    from_table=Identifier(
-                        parts=["information_schema", "knowledge_bases"]
-                    ),
-                    where=_get_show_where(statement, like_name="name"),
-                )
-                query = SQLQuery(select_statement, session=self.session, database=database_name)
-                return self.answer_select(query)
-            elif sql_category in ("agents", "jobs", "skills", "chatbots"):
+
+            elif sql_category in ("agents", "jobs", "skills", "chatbots", "triggers", "views",
+                                  "knowledge_bases", "knowledge bases", "predictors", "models"):
+
+                if sql_category == "knowledge bases":
+                    sql_category = "knowledge_bases"
+
+                if sql_category == "predictors":
+                    sql_category = "models"
+
+                db_name = database_name
+                if statement.from_table is not None:
+                    db_name = statement.from_table.parts[-1]
+
+                where = BinaryOperation(op='=', args=[Identifier('project'), Constant(db_name)])
+
                 select_statement = Select(
                     targets=[Star()],
                     from_table=Identifier(
                         parts=["information_schema", sql_category]
                     ),
-                    where=_get_show_where(statement, like_name="name", from_name="project"),
+                    where=_get_show_where(statement, like_name="name", initial=where),
                 )
                 query = SQLQuery(select_statement, session=self.session)
                 return self.answer_select(query)
+
             elif sql_category == "projects":
                 where = BinaryOperation(op='=', args=[Identifier('type'), Constant('project')])
                 select_statement = Select(

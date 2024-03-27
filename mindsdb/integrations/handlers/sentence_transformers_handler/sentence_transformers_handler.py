@@ -63,7 +63,10 @@ class SentenceTransformersHandler(BaseMLEngine):
 
         embeddings = model.embed_documents(texts=content)
 
-        embeddings_df = pd.DataFrame(data={"content": content, "embeddings": embeddings, "metadata": metadata})
+        embeddings_df = pd.DataFrame(data={"content": content,
+                                           "embedding_context": content,
+                                           "embeddings": embeddings,
+                                           "metadata": metadata})
 
         return embeddings_df
 

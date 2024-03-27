@@ -161,7 +161,7 @@ class LangchainEmbeddingHandler(BaseMLEngine):
         embeddings = model.embed_documents(df_texts.tolist())
 
         # create a new dataframe with the embeddings
-        df_embeddings = df.copy().assign(**{target: embeddings})
+        df_embeddings = df.copy().assign(**{'embedding_context': df_texts, target: embeddings})
 
         return df_embeddings
 

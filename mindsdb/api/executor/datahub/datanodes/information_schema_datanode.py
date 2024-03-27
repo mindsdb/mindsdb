@@ -636,22 +636,19 @@ class InformationSchemaDataNode(DataNode):
         return pd.DataFrame(data, columns=columns)
 
     def _get_knowledge_bases(self, query: ASTNode = None):
-        from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseController
-        controller = KnowledgeBaseController(self.session)
         project_name = None
         if (
                 isinstance(query, Select)
                 and type(query.where) is BinaryOperation
-                and query.where.op == '='
-                and query.where.args[0].parts == ['project']
+                and query.where.op == "="
+                and query.where.args[0].parts == ["project"]
                 and isinstance(query.where.args[1], Constant)
         ):
             project_name = query.where.args[1].value
 
-        # get the project id from the project name
-        project_controller = ProjectController()
-        project_id = project_controller.get(name=project_name).id
-        kb_list = controller.list(project_id=project_id)
+        from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseController
+        controller = KnowledgeBaseController(self.session)
+        kb_list = controller.list(project_name)
 
         columns = self.information_schema['KNOWLEDGE_BASES']
 
@@ -659,15 +656,13 @@ class InformationSchemaDataNode(DataNode):
         data = []
 
         for kb in kb_list:
-            embedding_model = kb.embedding_model
-            vector_database = kb.vector_database
-            vector_database_name = '' if vector_database is None else vector_database.name
+            vector_database_name = kb['vector_database'] or ''
 
             data.append((
-                kb.name,
-                project_name,
-                embedding_model.name if embedding_model is not None else None,
-                vector_database_name + '.' + kb.vector_database_table
+                kb['name'],
+                kb['project_name'],
+                kb['embedding_model'],
+                vector_database_name + '.' + kb['vector_database_table']
             ))
 
         return pd.DataFrame(data, columns=columns)

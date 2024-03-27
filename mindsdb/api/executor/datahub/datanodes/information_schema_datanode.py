@@ -23,6 +23,8 @@ from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.jobs.jobs_controller import JobsController
 from mindsdb.interfaces.skills.skills_controller import SkillsController
+from mindsdb.interfaces.database.views import ViewController
+
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -306,7 +308,8 @@ class InformationSchemaDataNode(DataNode):
             "MODEL_NAME",
             "SKILLS",
             "PARAMS"
-        ]
+        ],
+        "VIEWS": ["NAME", "PROJECT", "QUERY"]
     }
 
     def __init__(self, session):
@@ -345,7 +348,8 @@ class InformationSchemaDataNode(DataNode):
             "CHATBOTS": self._get_chatbots,
             "KNOWLEDGE_BASES": self._get_knowledge_bases,
             "SKILLS": self._get_skills,
-            "AGENTS": self._get_agents
+            "AGENTS": self._get_agents,
+            "VIEWS": self._get_views
         }
         for table_name in self.information_schema:
             if table_name not in self.get_dataframe_funcs:
@@ -705,6 +709,27 @@ class InformationSchemaDataNode(DataNode):
 
         # NAME, PROJECT, MODEL, SKILLS, PARAMS
         data = [(a.name, project_name, a.model_name, list(map(lambda s: s.name, a.skills)), to_json(a.params)) for a in all_agents]
+        return pd.DataFrame(data, columns=columns)
+
+    def _get_views(self, query: ASTNode = None):
+        project_name = None
+        if (
+                isinstance(query, Select)
+                and type(query.where) is BinaryOperation
+                and query.where.op == '='
+                and query.where.args[0].parts == ['project']
+                and isinstance(query.where.args[1], Constant)
+        ):
+            project_name = query.where.args[1].value
+
+        data = ViewController().list(project_name)
+
+        columns = self.information_schema["VIEWS"]
+        columns_lower = [col.lower() for col in columns]
+
+        # to list of lists
+        data = [[row[k] for k in columns_lower] for row in data]
+
         return pd.DataFrame(data, columns=columns)
 
     def _get_databases(self, query: ASTNode = None):

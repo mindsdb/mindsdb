@@ -1,5 +1,4 @@
 include requirements/requirements.txt
-include requirements/requirements-grpc.txt
 include requirements/requirements-telemetry.txt
 include mindsdb/migrations/alembic.ini
 recursive-include mindsdb/integrations/utilities/datasets *.csv

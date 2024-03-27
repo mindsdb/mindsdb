@@ -3,9 +3,9 @@ from textwrap import dedent, indent
 
 import pandas as pd
 
-from mindsdb.integrations.libs.llm_utils import ft_chat_formatter, ft_code_formatter, ft_cqa_formatter
-from mindsdb.integrations.libs.llm_utils import ft_jsonl_validation, ft_chat_format_validation
-from mindsdb.integrations.libs.llm_utils import get_completed_prompts
+from mindsdb.integrations.libs.llm.utils import ft_chat_formatter, ft_code_formatter, ft_cqa_formatter
+from mindsdb.integrations.libs.llm.utils import ft_jsonl_validation, ft_chat_format_validation
+from mindsdb.integrations.libs.llm.utils import get_completed_prompts
 
 
 class TestLLM(unittest.TestCase):

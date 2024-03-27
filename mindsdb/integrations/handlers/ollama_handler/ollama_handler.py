@@ -5,7 +5,7 @@ from typing import Dict, Optional
 import pandas as pd
 
 from mindsdb.integrations.libs.base import BaseMLEngine
-from mindsdb.integrations.libs.llm_utils import get_completed_prompts
+from mindsdb.integrations.libs.llm.utils import get_completed_prompts
 
 
 class OllamaHandler(BaseMLEngine):

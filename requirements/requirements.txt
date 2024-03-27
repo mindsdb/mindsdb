@@ -39,3 +39,4 @@ msal
 langchain>=0.1.9
 langchain-core>=0.1.28
 prometheus-client==0.20.0
+pydantic

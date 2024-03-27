@@ -21,8 +21,7 @@ Available models include the following:
 - Anthropic ([how to get the API key](https://docs.anthropic.com/claude/docs/getting-access-to-claude))
 - OpenAI ([how to get the API key](https://help.openai.com/en/articles/4936850-where-do-i-find-my-openai-api-key))
 - Anyscale ([how to get the API key](https://docs.endpoints.anyscale.com/guides/authenticate/))
-
-The LiteLLM model provider is available in MindsDB Cloud only. Use the MindsDB API key, which can be generated in the MindsDB Cloud editor at `cloud.mindsdb.com/account`.
+- Ollama ([how to download Ollama](https://ollama.com/download))
 </Info>
 
 ## Setup
@@ -33,25 +32,24 @@ Create an AI engine from the [LangChain handler](https://github.com/mindsdb/mind
 CREATE ML_ENGINE langchain_engine
 FROM langchain
 [USING
-      serper_api_key = 'your-serper-api-key', -- it is an optional parameter (if provided, the model will use serper.dev search to enhance the output)
-
-      -- provide one of the below parameters
-      anthropic_api_key = 'api-key-value',
-      anyscale_api_key = 'api-key-value',
-      litellm_api_key = 'api-key-value',
-      openai_api_key = 'api-key-value'];
+    -- Provide one of the below parameters here or during prediction.
+    anthropic_api_key = 'api-key-value',
+    anyscale_api_key = 'api-key-value',
+    litellm_api_key = 'api-key-value',
+    openai_api_key = 'api-key-value'];
 ```
 
 Create a model using `langchain_engine` as an engine and one of OpenAI/Anthropic/Anyscale/LiteLLM as a model provider.
 
 ```sql
 CREATE MODEL langchain_model
-PREDICT target_column
+PREDICT answer
 USING
-      engine = 'langchain_engine',           -- engine name as created via CREATE ML_ENGINE
-      <provider>_api_key = 'api-key-value',  -- if not provided in CREATE ML_ENGINE (replace <provider> with one of the available values)
-      model_name = 'model-name',             -- optional, model to be used (for example, 'gpt-4' if 'openai_api_key' provided)
-      prompt_template = 'message to the model that may include some {{input}} columns as variables';
+      engine = 'langchain_engine', -- via CREATE ML_ENGINE
+      prompt_template = 'message to the model that may include some {{question}} columns as variables',
+      <provider>_api_key = 'api-key-value',  -- include if not provided in CREATE ML_ENGINE
+      provider = 'openai', -- optional, default to OpenAI
+      model_name = 'model-name' -- optional, default to latest gpt-4
 ```
 
 <Tip>
@@ -75,6 +73,7 @@ Create a conversational model using `langchain_engine` as an engine and one of O
 <AccordionGroup>
 
 <Accordion title="OpenAI">
+
 ```sql
 CREATE MODEL langchain_openai_model
 PREDICT answer
@@ -92,6 +91,7 @@ USING
 </Accordion>
 
 <Accordion title="Anthropic">
+
 ```sql
 CREATE MODEL langchain_openai_model
 PREDICT answer
@@ -109,6 +109,7 @@ USING
 </Accordion>
 
 <Accordion title="Anyscale">
+
 ```sql
 CREATE MODEL langchain_anyscale_model
 PREDICT answer 
@@ -127,6 +128,7 @@ USING
 </Accordion>
 
 <Accordion title="LiteLLM">
+
 ```sql
 CREATE MODEL langchain_litellm_model
 PREDICT answer 

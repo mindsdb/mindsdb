@@ -28,8 +28,8 @@ from mindsdb.integrations.handlers.openai_handler.constants import (
     FINETUNING_MODELS,
     OPENAI_API_BASE,
 )
+from mindsdb.integrations.libs.llm.utils import get_completed_prompts
 from mindsdb.integrations.utilities.handler_utils import get_api_key
-from mindsdb.integrations.libs.llm_utils import get_completed_prompts
 
 logger = log.getLogger(__name__)
 

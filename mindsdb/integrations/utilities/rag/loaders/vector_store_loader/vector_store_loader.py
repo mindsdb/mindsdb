@@ -8,11 +8,15 @@ from pydantic import BaseModel
 
 from mindsdb.integrations.libs.vectordatabase_handler import TableField
 from mindsdb.integrations.utilities.rag.settings import VectorStoreType, VectorStoreConfig
+from mindsdb.utilities import log
+
 import pandas as pd
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.exc import DisconnectionError
+
+logger = log.getLogger(__name__)
 
 
 class VectorStoreLoader(BaseModel):
@@ -107,8 +111,7 @@ class VectorStoreFactory:
 
             return df
         except DisconnectionError as e:
-            # todo replace with logger when integrated in mindsdb
-            print("Unable to connect to the database. Please check your connection string and try again.")
+            logger.error("Unable to connect to the database. Please check your connection string and try again.")
             raise e
         finally:
             db.close()

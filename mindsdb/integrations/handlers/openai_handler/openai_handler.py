@@ -29,7 +29,7 @@ from mindsdb.integrations.handlers.openai_handler.constants import (
     OPENAI_API_BASE,
 )
 from mindsdb.integrations.utilities.handler_utils import get_api_key
-from mindsdb.integrations.libs.llm_utils import get_completed_prompts
+from mindsdb.integrations.libs.llm_utils import generate_llm_prompts, get_completed_prompts, validate_args, pred_time_args
 
 logger = log.getLogger(__name__)
 
@@ -90,77 +90,19 @@ class OpenAIHandler(BaseMLEngine):
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
-        if 'using' not in args:
-            raise Exception(
-                "OpenAI engine requires a USING clause! Refer to its documentation for more details."
-            )
-        else:
-            args = args['using']
-
-        if (
-            len(
-                set(args.keys())
-                & {'question_column', 'prompt_template', 'json_struct', 'prompt'}
-            )
-            == 0
-        ):
-            raise Exception(
-                'One of `question_column`, `prompt_template` or `json_struct` is required for this engine.'
-            )
-
+        
+        required_keys={'question_column', 'prompt_template', 'json_struct', 'prompt'}
+        extra_keys={"target","model_name","mode","predict_params","input_text","ft_api_info","ft_result_stats","runtime","max_tokens","temperature","openai_api_key","api_organization","api_base"}
+        
         keys_collection = [
             ['prompt_template'],
             ['question_column', 'context_column'],
             ['prompt', 'user_column', 'assistant_column'],
             ['json_struct'],
         ]
-        for keys in keys_collection:
-            if keys[0] in args and any(
-                x[0] in args for x in keys_collection if x != keys
-            ):
-                raise Exception(
-                    textwrap.dedent(
-                        '''\
-                    Please provide one of
-                        1) a `prompt_template`
-                        2) a `question_column` and an optional `context_column`
-                        3) a `json_struct`
-                        4) a `prompt' and 'user_column' and 'assistant_column`
-                '''
-                    )
-                )
 
-        # for all args that are not expected, raise an error
-        known_args = set()
-        # flatten of keys_collection
-        for keys in keys_collection:
-            known_args = known_args.union(set(keys))
 
-        # TODO: need a systematic way to maintain a list of known args
-        known_args = known_args.union(
-            {
-                "target",
-                "model_name",
-                "mode",
-                "predict_params",
-                "input_text",
-                "ft_api_info",
-                "ft_result_stats",
-                "runtime",
-                "max_tokens",
-                "temperature",
-                "openai_api_key",
-                "api_organization",
-                "api_base"
-            }
-        )
-
-        unknown_args = set(args.keys()) - known_args
-        if unknown_args:
-            # return a list of unknown args as a string
-            raise Exception(
-                f"Unknown arguments: {', '.join(unknown_args)}.\n Known arguments are: {', '.join(known_args)}"
-            )
+        validate_args(args, required_keys, keys_collection, extra_keys)
 
         engine_storage = kwargs['handler_storage']
         api_key = get_api_key('openai', args, engine_storage=engine_storage)
@@ -168,6 +110,7 @@ class OpenAIHandler(BaseMLEngine):
         org = args.get('api_organization')
         client = OpenAIHandler._get_client(api_key=api_key, base_url=api_base, org=org)
         OpenAIHandler._check_client_connection(client)
+
 
     def create(self, target, args=None, **kwargs):
         args = args['using']
@@ -210,22 +153,8 @@ class OpenAIHandler(BaseMLEngine):
             args['api_organization'] = pred_args['api_organization']
         df = df.reset_index(drop=True)
 
-        if pred_args.get('mode'):
-            if pred_args['mode'] in self.supported_modes:
-                args['mode'] = pred_args['mode']
-            else:
-                raise Exception(
-                    f"Invalid operation mode. Please use one of {self.supported_modes}."
-                )  # noqa
-
-        if pred_args.get('prompt_template', False):
-            base_template = pred_args[
-                'prompt_template'
-            ]  # override with predict-time template if available
-        elif args.get('prompt_template', False):
-            base_template = args['prompt_template']
-        else:
-            base_template = None
+        args = pred_time_args(args, pred_args, self.supported_modes)
+        base_template = args.get('prompt_template', None)
 
         # Embedding Mode
         if args.get('mode', self.default_mode) == 'embedding':
@@ -243,7 +172,6 @@ class OpenAIHandler(BaseMLEngine):
                 raise Exception('Embedding mode needs a question_column')
 
         # Image mode
-
         elif args.get('mode', self.default_mode) == 'image':
             api_args = {
                 'n': pred_args.get('n', None),
@@ -260,7 +188,7 @@ class OpenAIHandler(BaseMLEngine):
                 empty_prompt_ids = np.where(
                     df[[args['question_column']]].isna().all(axis=1).values
                 )[0]
-            elif args.get('prompt_template'):
+            elif base_template:
                 prompts, empty_prompt_ids = get_completed_prompts(base_template, df)
             else:
                 raise Exception(
@@ -314,42 +242,8 @@ class OpenAIHandler(BaseMLEngine):
                 raise Exception(
                     f"Conversational modes are only available for the following models: {', '.join(self.chat_completion_models)}"
                 )  # noqa
-
-            if args.get('prompt_template', False):
-                prompts, empty_prompt_ids = get_completed_prompts(base_template, df)
-
-            elif args.get('context_column', False):
-                empty_prompt_ids = np.where(
-                    df[[args['context_column'], args['question_column']]]
-                    .isna()
-                    .all(axis=1)
-                    .values
-                )[0]
-                contexts = list(df[args['context_column']].apply(lambda x: str(x)))
-                questions = list(df[args['question_column']].apply(lambda x: str(x)))
-                prompts = [
-                    f'Context: {c}\nQuestion: {q}\nAnswer: '
-                    for c, q in zip(contexts, questions)
-                ]
-
-            elif args.get('json_struct', False):
-                empty_prompt_ids = np.where(
-                    df[[args['input_text']]].isna().all(axis=1).values
-                )[0]
-                prompts = []
-                for i in df.index:
-                    if 'json_struct' in df.columns:
-                        if isinstance(df['json_struct'][i], str):
-                            df['json_struct'][i] = json.loads(df['json_struct'][i])
-                        json_struct = ''
-                        for ind, val in enumerate(df['json_struct'][i].values()):
-                            json_struct = json_struct + f'{ind}. {val}\n'
-                    else:
-                        json_struct = ''
-                        for ind, val in enumerate(args['json_struct'].values()):
-                            json_struct = json_struct + f'{ind + 1}. {val}\n'
-
-                    p = textwrap.dedent(
+            if args.get('json_struct', False):
+                json_prompt = textwrap.dedent(
                         f'''\
                         Using text starting after 'The text is:', give exactly {len(args['json_struct'])} answers to the questions:
                         {{{{json_struct}}}}
@@ -363,24 +257,10 @@ class OpenAIHandler(BaseMLEngine):
                         The text is:
                         {{{{{args['input_text']}}}}}
                     '''
-                    )
-                    p = p.replace('{{json_struct}}', json_struct)
-                    for column in df.columns:
-                        if column == 'json_struct':
-                            continue
-                        p = p.replace(f'{{{{{column}}}}}', str(df[column][i]))
-                    prompts.append(p)
-            elif 'prompt' in args:
-                empty_prompt_ids = []
-                prompts = list(df[args['user_column']])
+                    )   
             else:
-                empty_prompt_ids = np.where(
-                    df[[args['question_column']]].isna().all(axis=1).values
-                )[0]
-                prompts = list(df[args['question_column']].apply(lambda x: str(x)))
-
-        # remove prompts without signal from completion queue
-        prompts = [j for i, j in enumerate(prompts) if i not in empty_prompt_ids]
+                json_prompt=None
+            prompts, empty_prompt_ids = generate_llm_prompts(df, args, base_template, json_prompt)
 
         api_key = get_api_key(self.name, args, self.engine_storage)
         api_args = {

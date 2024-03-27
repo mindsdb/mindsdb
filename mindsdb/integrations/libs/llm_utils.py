@@ -2,7 +2,7 @@ import re
 import json
 import itertools
 from typing import Optional, Dict, List, Tuple
-
+import textwrap
 import numpy as np
 import pandas as pd
 from langchain.text_splitter import (
@@ -300,6 +300,130 @@ def ft_chat_formatter(df: pd.DataFrame) -> List[Dict]:
     return chats
 
 
+
+def validate_args(args, required_keys, keys_collection, extra_keys):
+    ''' args: The dictionary containing the arguments to be validated.
+        required_keys: A list of keys that are required for the handler.
+        keys_collection: A list of sets of keys, where only one key from each set can be present in the args.
+    '''
+    if 'using' not in args:
+        raise Exception(
+            "Handler requires a USING clause! Refer to its documentation for more details."
+        )
+    else:
+        args = args['using']
+
+    # Check if at least one of the required keys is present
+    if not any(key in args for key in required_keys):
+        raise Exception(
+            f"At least one of {', '.join(required_keys)} is required for this handler."
+        )
+
+    # Check if exclusive sets of keys are mutually exclusive
+    for keys in keys_collection:
+        if keys[0] in args and any(
+                x[0] in args for x in keys_collection if x != keys
+            ):
+            raise Exception(
+                textwrap.dedent(
+                    f"""\
+                    Please provide only one of the following key sets:
+                    {', '.join(str(keys))}
+                """
+                )
+            )
+
+    # Check for unknown arguments
+    known_args = set(required_keys) | extra_keys
+    known_args = known_args.union(*keys_collection)
+
+    unknown_args = set(args.keys()) - known_args
+    if unknown_args:
+        raise Exception(
+            f"Unknown arguments: {', '.join(unknown_args)}.\n Known arguments are: {', '.join(known_args)}"
+        )
+
+
+# overide_pred_args_over_args_check supported mode
+def pred_time_args(args, pred_args, supported_modes):
+    
+    if pred_args.get('mode'):
+        if pred_args['mode'] in supported_modes:
+            args['mode'] = pred_args['mode']
+        else:
+            raise Exception(
+                f"Invalid operation mode. Please use one of {supported_modes}."
+            )
+    args.update(pred_args)
+    return args
+
+def generate_llm_prompts(df, args, base_template, json_prompt):
+    if base_template:
+        prompts, empty_prompt_ids = get_completed_prompts(base_template=base_template, df=df)
+    elif args.get('context_column', False):
+        prompts, empty_prompt_ids = generate_context_prompts(df, args)
+    elif args.get('json_struct', False):
+        prompts, empty_prompt_ids = generate_json_prompts(df, args, json_prompt)
+        
+    elif 'prompt' in args:
+        prompts, empty_prompt_ids = generate_prompt_column(df, args)
+    else:
+        prompts, empty_prompt_ids = generate_default_prompts(df, args)
+    prompts = [j for i, j in enumerate(prompts) if i not in empty_prompt_ids]
+    return prompts, empty_prompt_ids
+
+def generate_context_prompts(df, args):
+    empty_prompt_ids = np.where(
+        df[[args['context_column'], args['question_column']]]
+        .isna()
+        .all(axis=1)
+        .values
+    )[0]
+    contexts = list(df[args['context_column']].apply(lambda x: str(x)))
+    questions = list(df[args['question_column']].apply(lambda x: str(x)))
+    prompts = [
+        f'Give only answer for: \nContext: {c}\nQuestion: {q}\nAnswer: '
+        for c, q in zip(contexts, questions)
+    ]
+    return prompts, empty_prompt_ids
+
+def generate_json_prompts(df, args, json_prompt):
+    empty_prompt_ids = np.where(
+        df[[args['input_text']]].isna().all(axis=1).values
+    )[0]
+    prompts = []
+    for i in df.index:
+        if 'json_struct' in df.columns:
+            if isinstance(df['json_struct'][i], str):
+                df['json_struct'][i] = json.loads(df['json_struct'][i])
+            json_struct = ''
+            for ind, val in enumerate(df['json_struct'][i].values()):
+                json_struct = json_struct + f'{ind}. {val}\n'
+        else:
+            json_struct = ''
+            for ind, val in enumerate(args['json_struct'].values()):
+                json_struct = json_struct + f'{ind + 1}. {val}\n'
+
+        p = json_prompt.replace('{{json_struct}}', json_struct)
+        for column in df.columns:
+            if column == 'json_struct':
+                continue
+            p = p.replace(f'{{{{{column}}}}}', str(df[column][i]))
+        prompts.append(p)
+    return prompts, empty_prompt_ids
+
+def generate_prompt_column(df, args):
+    empty_prompt_ids = []
+    prompts = list(df[args['user_column']])
+    return prompts, empty_prompt_ids
+
+def generate_default_prompts(df, args):
+    empty_prompt_ids = np.where(
+        df[[args['question_column']]].isna().all(axis=1).values
+    )[0]
+    prompts = list(df[args['question_column']].apply(lambda x: str(x)))
+    return prompts, empty_prompt_ids
+
 def ft_code_formatter(
         df: pd.DataFrame,
         format='chat',
@@ -409,3 +533,4 @@ def ft_cqa_formatter(
         contents.extend([system, user, assistant])
 
     return pd.DataFrame({'role': roles, 'content': contents})
+

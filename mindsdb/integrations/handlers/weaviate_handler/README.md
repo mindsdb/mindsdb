@@ -14,7 +14,7 @@ The required arguments to establish a connection are:
 
 * `weaviate_url`: url of the weaviate database
 * `weaviate_api_key`: API key to authenticate with weaviate (in case of cloud instance).
-* `persistence_directory`: directory to be used in case of local storage
+* `persist_directory`: directory to be used in case of local storage
 
 
 ### Creating connection
@@ -23,26 +23,26 @@ In order to make use of this handler and connect to a Weaviate server in MindsDB
 
 ```sql
 CREATE DATABASE weaviate_datasource
-            WITH ENGINE = "weaviate",
-            PARAMETERS = {
-                "weaviate_url" : "https://sample.weaviate.network",
-                "weaviate_api_key": "api-key"
+WITH ENGINE = "weaviate",
+PARAMETERS = {
+    "weaviate_url" : "https://sample.weaviate.network",
+    "weaviate_api_key": "api-key"
 };
 ```
 
 ```sql
 CREATE DATABASE weaviate_datasource
-            WITH ENGINE = "weaviate",
-            PARAMETERS = {
-                "weaviate_url" : "https://localhost:8080",
+WITH ENGINE = "weaviate",
+PARAMETERS = {
+    "weaviate_url" : "https://localhost:8080"
 };
 ```
 
 ```sql
 CREATE DATABASE weaviate_datasource
-            WITH ENGINE = "weaviate",
-            PARAMETERS = {
-                "persistence_directory" : "db_path",
+WITH ENGINE = "weaviate",
+PARAMETERS = {
+    "persist_directory" : "db_path"
 };
 ```
 

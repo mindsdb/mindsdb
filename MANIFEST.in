@@ -4,3 +4,4 @@ include requirements/requirements-telemetry.txt
 include mindsdb/migrations/alembic.ini
 recursive-include mindsdb/integrations/utilities/datasets *.csv
 recursive-include mindsdb/integrations/handlers *.txt *.png *.svg *.jpg
+include default_handlers.txt

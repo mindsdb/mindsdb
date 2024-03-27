@@ -28,6 +28,7 @@ from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
 import mindsdb.utilities.profiler as profiler
 from mindsdb.utilities import log
+from mindsdb.utilities.fs import safe_extract
 
 logger = log.getLogger(__name__)
 
@@ -299,7 +300,7 @@ class S3FSStore(BaseFSStore):
             fh = io.BytesIO()
             self.s3.download_fileobj(self.bucket, remote_ziped_name, fh)
             with tarfile.open(fileobj=fh) as tar:
-                tar.extractall(path=base_dir)
+                safe_extract(tar, path=base_dir)
         else:
             self.s3.download_file(self.bucket, remote_ziped_name, local_ziped_path)
             shutil.unpack_archive(local_ziped_path, base_dir)
@@ -584,10 +585,10 @@ class FileStorage:
             # endregion
             return
 
-        with FileLock(self.folder_path, mode='w'):
-            if self.sync is True:
-                self._pull_no_lock()
+        if self.sync is True:
+            self.pull()
 
+        with FileLock(self.folder_path, mode='w'):
             if path.exists() is False:
                 raise Exception('Path does not exists')
 

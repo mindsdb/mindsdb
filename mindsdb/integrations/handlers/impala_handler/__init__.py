@@ -12,7 +12,7 @@ except Exception as e:
     Handler = None
     import_error = e
 
-title = 'Impala'
+title = 'Apache Impala'
 name = 'impala'
 type = HANDLER_TYPE.DATA
 icon_path = 'icon.svg'

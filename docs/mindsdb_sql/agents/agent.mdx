@@ -77,7 +77,9 @@ Start by setting up the skills. Here is how you can create and manage skills usi
 You can query all skills using this command:
 
 ```sql
-SELECT * FROM skills;
+SHOW KNOWLEDGE_BASES;
+
+SHOW SKILLS;
 ```
 
 ### Create an agent
@@ -112,6 +114,8 @@ An agent can be created, deleted, queried, and updated. Here is how you can do t
 You can query all agents using this command:
 
 ```sql
+SHOW AGENTS [FROM project_name];
+
 SELECT * FROM agents;
 ```
 

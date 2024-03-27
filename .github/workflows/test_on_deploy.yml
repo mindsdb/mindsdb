@@ -1,0 +1,110 @@
+name: Test on Deploy
+
+on:
+  workflow_call:
+    secrets:
+      OPENAI_API_KEY:
+        required: true
+
+defaults:
+  run:
+    shell: bash
+
+
+jobs:
+  # Creates a matrix of environments to test against using matrix_includes.json
+  matrix_prep:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v3.5.3
+      - id: set-matrix
+        uses: JoshuaTheMiller/conditional-build-matrix@v1.0.1
+        with:
+          filter: '[?runOnBranch==`${{ github.ref }}` || runOnBranch==`always`]'
+
+  # Run our integration tests
+  test:
+    needs: [matrix_prep]
+    strategy:
+      matrix: ${{fromJson(needs.matrix_prep.outputs.matrix)}}
+    name: Run integration tests
+    runs-on: ${{ matrix.runs_on }}
+    if: github.ref_type == 'branch'
+    steps:
+    - uses: actions/checkout@v3.5.3
+    - name: Set up Python
+      uses: actions/setup-python@v4.7.0
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: pip
+        cache-dependency-path: '**/requirements*.txt'
+    - name: Install dependencies
+      run: |
+        pip install .
+        pip install -r requirements/requirements-test.txt
+        pip install .[lightwood]  # TODO: for now some tests rely on lightwood and huggingface
+        pip install .[huggingface]
+        pip freeze  
+    - name: Run integration api and flow tests
+      run: |
+
+        if [ "$RUNNER_OS" == "Linux" ]; then
+
+          pytest -vx tests/integration_tests/flows/test_ml_task_queue.py
+
+          # MySQL API
+          echo -e "\n===============test MySQL API===============\n"
+          pytest -vx tests/integration_tests/flows/test_mysql_api.py
+          
+          # MySQL binary API
+          echo -e "\n===============test MySQL binary API===============\n"
+          pytest -vx -k 'not TestMySqlApi' tests/integration_tests/flows/test_mysql_bin_api.py
+
+          # echo -e "\n===============TS predictions===============\n"
+          pytest -svx tests/integration_tests/flows/test_ts_predictions.py
+
+          # HTTP
+          echo -e "\n===============test HTTP===============\n"
+          pytest -vx tests/integration_tests/flows/test_http.py
+
+          # Company independent
+          echo -e "\n===============test company independent===============\n"
+          pytest -vx tests/integration_tests/flows/test_company_independent.py
+        fi
+      env:
+        PROMETHEUS_MULTIPROC_DIR: ./prometheus_metrics
+        CHECK_FOR_UPDATES: False
+
+    - name: Run Learning Hub Tests
+      run: |
+          # Currently requires a DB to be running. New testing system is being set up
+          # echo -e "\n===============MySQL Handler===============\n"
+          # pytest -svx mindsdb/integrations/handlers/mysql_handler/
+
+          # Currently requires a DB to be running. New testing system is being set up
+          # echo -e "\n===============PostgreSQL Handler===============\n"
+          # pytest -svx mindsdb/integrations/handlers/postgres_handler/
+
+          echo -e "\n===============MariaDB Handler===============\n"
+          pytest -svx tests/handler_tests/test_mariadb_handler.py
+
+          echo -e "\n===============File Handler===============\n"
+          pytest -svx mindsdb/integrations/handlers/file_handler/
+
+          echo -e "\n===============Home Rental Home Prices===============\n"
+          pytest -vx tests/integration_tests/flows/test_home_rental_prices_tutorial.py
+
+          echo -e "\n===============Forecast Quaterly House Sales===============\n"
+          pytest -vx tests/integration_tests/flows/test_forecast_quaterly_house_tutorial.py
+
+          echo -e "\n===============Predict Text Sentiment Wih Huggingface===============\n"
+          pytest -vx tests/integration_tests/flows/test_predict_text_sentiment_huggingface_tutorial.py
+
+          echo -e "\n===============Predict Text Sentiment Wih OpenAI===============\n"
+          pytest -vx tests/integration_tests/flows/test_predict_text_sentiment_openai_tutorial.py
+      env:
+        CHECK_FOR_UPDATES: False
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    

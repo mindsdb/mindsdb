@@ -1125,9 +1125,9 @@ class ExecuteCommands:
         params = {}
         if statement.params:
             for key, value in statement.params.items():
-                # convert all complex types to string
-                if not isinstance(value, (int, float)):
-                    value = str(value)
+                # convert ast types to string
+                if isinstance(value, (Constant, Identifier)):
+                    value = value.to_string()
                 params[key] = value
 
         try:

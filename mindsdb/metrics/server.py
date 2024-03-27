@@ -10,9 +10,12 @@ logger = log.getLogger(__name__)
 
 
 def init_metrics(app: Flask):
-    if os.environ.get('PROMETHEUS_MULTIPROC_DIR', None) is None:
-        logger.warning('PROMETHEUS_MULTIPROC_DIR environment variable is not set and is needed for metrics server.')
+    prometheus_dir = os.environ.get('PROMETHEUS_MULTIPROC_DIR', None)
+    if prometheus_dir is None:
+        logger.info("PROMETHEUS_MULTIPROC_DIR environment variable is not set. Metrics server won't be started.")
         return
+    elif not os.path.isdir(prometheus_dir):
+        os.makedirs(prometheus_dir)
     # See: https://prometheus.github.io/client_python/multiprocess/
     registry = CollectorRegistry()
     multiprocess.MultiProcessCollector(registry)

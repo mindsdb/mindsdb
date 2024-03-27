@@ -80,7 +80,14 @@ jobs:
         cache-dependency-path: '**/requirements*.txt'
     - name: Check requirements files are installable
       run: |
-        pip install --ignore-installed . # Install only the default handlers. We can expand this to all handlers later with: .[all_handlers_extras]
+        # Install dev requirements and build our pip package
+        pip install -r requirements/requirements-dev.txt
+        python setup.py sdist
+
+        # Install from the pip package
+        # If we install from source, we don't know if the pip package is installable.
+        cd dist
+        pip install --ignore-installed *.tar.gz
 
   unit_tests:
     name: Run Unit Tests

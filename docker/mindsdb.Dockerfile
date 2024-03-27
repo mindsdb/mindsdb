@@ -9,9 +9,6 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     && apt-get install -y freetds-dev  # freetds required to build pymssql for mssql_handler
 
 WORKDIR /mindsdb
-# Have to make sure we have a clean metrics dir.
-RUN mkdir prometheus_metrics
-
 
 # Copy just requirements and install them to cache the layer
 # This won't include any of the default handlers, but it should still speed things up
@@ -44,7 +41,6 @@ RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements/requi
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
 ENV PYTHONUNBUFFERED=1
-ENV PROMETHEUS_MULTIPROC_DIR="./prometheus_metrics"
 
 EXPOSE 47334/tcp
 EXPOSE 47335/tcp
@@ -67,7 +63,6 @@ COPY --link --from=extras /usr/local/lib/python3.10/site-packages /usr/local/lib
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
 ENV PYTHONUNBUFFERED=1
-ENV PROMETHEUS_MULTIPROC_DIR="./prometheus_metrics"
 
 EXPOSE 47334/tcp
 EXPOSE 47335/tcp

@@ -174,7 +174,7 @@ def __is_within_directory(directory, target):
 def safe_extract(tarfile, path=".", members=None, *, numeric_owner=False):
     # for py >= 3.12
     if hasattr(tarfile, 'data_filter'):
-        tarfile.extractall(path, members, numeric_owner, filter='data')
+        tarfile.extractall(path, members=members, numeric_owner=numeric_owner, filter='data')
         return
 
     # for py < 3.12
@@ -182,4 +182,4 @@ def safe_extract(tarfile, path=".", members=None, *, numeric_owner=False):
         member_path = os.path.join(path, member.name)
         if not __is_within_directory(path, member_path):
             raise Exception("Attempted Path Traversal in Tar File")
-    tarfile.extractall(path, members, numeric_owner)
+    tarfile.extractall(path, members=members, numeric_owner=numeric_owner)

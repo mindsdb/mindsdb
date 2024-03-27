@@ -1,4 +1,5 @@
 import pytest
+import pymssql
 import pandas as pd
 from unittest.mock import MagicMock
 from mindsdb.integrations.handlers.mssql_handler.mssql_handler import SqlServerHandler
@@ -10,34 +11,19 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE,
 )
 
-
-@pytest.fixture(scope="class")
-def sql_server_handler():
-    HANDLER_KWARGS = {
-        "connection_data": {
-            "host": "localhost",
-            "port": "1433",
-            "user": "sa",
-            "password": "admin5678@",
-            "database": "master",
-        }
+HANDLER_KWARGS = {
+    "connection_data": {
+        "host": "localhost",
+        "port": "1433",
+        "user": "sa",
+        "password": "admin5678@",
+        "database": "mdb_db_handler_test",
     }
-    handler = SqlServerHandler("test_sqlserver_handler", **HANDLER_KWARGS)
-    yield handler
-    handler.disconnect()
-
-
-@pytest.fixture(scope="class")
-def database_connection_and_cursor():
-    connection = MagicMock()
-    cursor = MagicMock()
-    connection.cursor.return_value = cursor
-    return connection, cursor
-
+}
 
 expected_columns = {
     "Field": ["col_one", "col_two", "col_three", "col_four"],
-    "Type": ["int", "int", "float", "text"],
+    "Type": ["int", "int", "float", "varchar"],
 }
 
 expected_data = {
@@ -47,6 +33,34 @@ expected_data = {
     "col_four": ["A", "B", "C"],
 }
 
+def seed_db():
+    """Seed the test DB with some data"""
+    
+    # Connect to 'master' while we create our test DB
+    conn_info = HANDLER_KWARGS["connection_data"].copy()
+    conn_info["database"] = "master"
+    db = pymssql.connect(**conn_info, autocommit=True)
+    cursor = db.cursor()
+
+    with open("mindsdb/integrations/handlers/mssql_handler/tests/seed.sql", "r") as f:
+        for line in f.readlines():
+            cursor.execute(line)
+    cursor.close()
+    db.close()
+
+@pytest.fixture(scope="class")
+def sql_server_handler():
+    seed_db()
+    handler = SqlServerHandler("test_sqlserver_handler", **HANDLER_KWARGS)
+    yield handler
+    handler.disconnect()
+
+@pytest.fixture(scope="class")
+def database_connection_and_cursor():
+    connection = MagicMock()
+    cursor = MagicMock()
+    connection.cursor.return_value = cursor
+    return connection, cursor
 
 def check_valid_response(res):
     if res.resp_type == RESPONSE_TYPE.TABLE:

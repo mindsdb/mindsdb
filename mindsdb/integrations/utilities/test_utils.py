@@ -5,7 +5,7 @@ PG_HANDLER_NAME = 'test_handler'
 PG_CONNECTION_DATA = {
     "user": "demo_user",
     "password": "demo_password",
-    "host": "3.220.66.106",
+    "host": "samples.mindsdb.com",
     "port": "5432",
     "database": "demo"
 }

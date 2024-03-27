@@ -35,7 +35,8 @@ from mindsdb_sql.parser.ast import (
     Union,
     Update,
     Use,
-    Variable
+    Variable,
+    Tuple,
 )
 
 # typed models
@@ -209,18 +210,7 @@ class ExecuteCommands:
                 if isinstance(statement.modes, list) is False:
                     statement.modes = []
                 statement.modes = [x.upper() for x in statement.modes]
-            if sql_category in ("predictors", "models"):
-
-                new_statement = Select(
-                    targets=[Star()],
-                    from_table=Identifier(parts=["information_schema", "models"]),
-                    where=_get_show_where(
-                        statement, from_name="project", like_name="name"
-                    ),
-                )
-                query = SQLQuery(new_statement, session=self.session, database=database_name)
-                return self.answer_select(query)
-            elif sql_category == "ml_engines":
+            if sql_category == "ml_engines":
                 new_statement = Select(
                     targets=[Star()],
                     from_table=Identifier(parts=["information_schema", "ml_engines"]),
@@ -282,53 +272,14 @@ class ExecuteCommands:
                 if statement.in_table is not None:
                     schema = statement.in_table.parts[-1]
                     statement.in_table = None
+
+                table_types = [Constant(t) for t in ['MODEL', 'BASE TABLE', 'SYSTEM VIEW', 'VIEW']]
                 where = BinaryOperation(
                     "and",
                     args=[
-                        BinaryOperation(
-                            "=", args=[Identifier("table_schema"), Constant(schema)]
-                        ),
-                        BinaryOperation(
-                            "or",
-                            args=[
-                                BinaryOperation(
-                                    "=",
-                                    args=[Identifier("table_type"), Constant("MODEL")],
-                                ),
-                                BinaryOperation(
-                                    "or",
-                                    args=[
-                                        BinaryOperation(
-                                            "=",
-                                            args=[
-                                                Identifier("table_type"),
-                                                Constant("BASE TABLE"),
-                                            ],
-                                        ),
-                                        BinaryOperation(
-                                            "or",
-                                            args=[
-                                                BinaryOperation(
-                                                    "=",
-                                                    args=[
-                                                        Identifier("table_type"),
-                                                        Constant("SYSTEM VIEW"),
-                                                    ],
-                                                ),
-                                                BinaryOperation(
-                                                    "=",
-                                                    args=[
-                                                        Identifier("table_type"),
-                                                        Constant("VIEW"),
-                                                    ],
-                                                ),
-                                            ],
-                                        ),
-                                    ],
-                                ),
-                            ],
-                        ),
-                    ],
+                        BinaryOperation("=", args=[Identifier("table_schema"), Constant(schema)]),
+                        BinaryOperation("in", args=[Identifier("table_type"), Tuple(table_types)])
+                    ]
                 )
 
                 new_statement = Select(
@@ -517,24 +468,42 @@ class ExecuteCommands:
                     is_full=is_full,
                     database_name=database_name,
                 )
-            elif sql_category == "knowledge_bases" or sql_category == "knowledge bases":
-                select_statement = Select(
-                    targets=[Star()],
-                    from_table=Identifier(
-                        parts=["information_schema", "knowledge_bases"]
-                    ),
-                    where=_get_show_where(statement, like_name="name"),
-                )
-                query = SQLQuery(select_statement, session=self.session, database=database_name)
-                return self.answer_select(query)
-            elif sql_category in ("agents", "jobs", "skills", "chatbots"):
+
+            elif sql_category in ("agents", "jobs", "skills", "chatbots", "triggers", "views",
+                                  "knowledge_bases", "knowledge bases", "predictors", "models"):
+
+                if sql_category == "knowledge bases":
+                    sql_category = "knowledge_bases"
+
+                if sql_category == "predictors":
+                    sql_category = "models"
+
+                db_name = database_name
+                if statement.from_table is not None:
+                    db_name = statement.from_table.parts[-1]
+
+                where = BinaryOperation(op='=', args=[Identifier('project'), Constant(db_name)])
+
                 select_statement = Select(
                     targets=[Star()],
                     from_table=Identifier(
                         parts=["information_schema", sql_category]
                     ),
-                    where=_get_show_where(statement, like_name="name"),
+                    where=_get_show_where(statement, like_name="name", initial=where),
                 )
+                query = SQLQuery(select_statement, session=self.session)
+                return self.answer_select(query)
+
+            elif sql_category == "projects":
+                where = BinaryOperation(op='=', args=[Identifier('type'), Constant('project')])
+                select_statement = Select(
+                    targets=[Identifier(parts=["NAME"], alias=Identifier('project'))],
+                    from_table=Identifier(
+                        parts=["information_schema", "DATABASES"]
+                    ),
+                    where=_get_show_where(statement, like_name="project", from_name="project", initial=where),
+                )
+
                 query = SQLQuery(select_statement, session=self.session)
                 return self.answer_select(query)
             else:

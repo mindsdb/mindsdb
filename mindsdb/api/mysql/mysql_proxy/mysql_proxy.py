@@ -171,7 +171,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.server.connection_id = 0
         self.server.connection_id += 1
         self.connection_id = self.server.connection_id
-        self.session = SessionController()
+        self.session = SessionController(api_type='sql')
 
         if hasattr(self.server, "salt") and isinstance(self.server.salt, str):
             self.salt = self.server.salt

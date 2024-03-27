@@ -23,6 +23,8 @@ from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.jobs.jobs_controller import JobsController
 from mindsdb.interfaces.skills.skills_controller import SkillsController
+from mindsdb.interfaces.database.views import ViewController
+
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -247,6 +249,7 @@ class InformationSchemaDataNode(DataNode):
             "NAME",
             "ENGINE",
             "PROJECT",
+            "ACTIVE",
             "VERSION",
             "STATUS",
             "ACCURACY",
@@ -259,24 +262,6 @@ class InformationSchemaDataNode(DataNode):
             "CURRENT_TRAINING_PHASE",
             "TOTAL_TRAINING_PHASES",
             "TRAINING_PHASE_NAME",
-            "TAG",
-            "CREATED_AT",
-            "TRAINING_TIME",
-        ],
-        "MODELS_VERSIONS": [
-            "NAME",
-            "ENGINE",
-            "PROJECT",
-            "ACTIVE",
-            "VERSION",
-            "STATUS",
-            "ACCURACY",
-            "PREDICT",
-            "UPDATE_STATUS",
-            "MINDSDB_VERSION",
-            "ERROR",
-            "SELECT_DATA_QUERY",
-            "TRAINING_OPTIONS",
             "TAG",
             "CREATED_AT",
             "TRAINING_TIME",
@@ -323,7 +308,8 @@ class InformationSchemaDataNode(DataNode):
             "MODEL_NAME",
             "SKILLS",
             "PARAMS"
-        ]
+        ],
+        "VIEWS": ["NAME", "PROJECT", "QUERY"]
     }
 
     def __init__(self, session):
@@ -352,17 +338,18 @@ class InformationSchemaDataNode(DataNode):
             "CHARACTER_SETS": self._get_charsets,
             "COLLATIONS": self._get_collations,
             "MODELS": self._get_models,
-            "MODELS_VERSIONS": self._get_models_versions,
+            "MODELS_VERSIONS": self._get_models,
             "DATABASES": self._get_databases,
             "ML_ENGINES": self._get_ml_engines,
             "HANDLERS": self._get_handlers,
             "JOBS": self._get_jobs,
             "JOBS_HISTORY": self._get_jobs_history,
-            "MDB_TRIGGERS": self._get_triggers,
+            "TRIGGERS": self._get_triggers,
             "CHATBOTS": self._get_chatbots,
             "KNOWLEDGE_BASES": self._get_knowledge_bases,
             "SKILLS": self._get_skills,
-            "AGENTS": self._get_agents
+            "AGENTS": self._get_agents,
+            "VIEWS": self._get_views
         }
         for table_name in self.information_schema:
             if table_name not in self.get_dataframe_funcs:
@@ -617,10 +604,12 @@ class InformationSchemaDataNode(DataNode):
         data = triggers_controller.get_list(project_name)
 
         columns = self.information_schema["MDB_TRIGGERS"]
+        if self.session.api_type == 'sql':
+            columns = columns + self.information_schema["TRIGGERS"]
         columns_lower = [col.lower() for col in columns]
 
         # to list of lists
-        data = [[row[k] for k in columns_lower] for row in data]
+        data = [[row.get(k) for k in columns_lower] for row in data]
 
         return pd.DataFrame(data, columns=columns)
 
@@ -653,22 +642,19 @@ class InformationSchemaDataNode(DataNode):
         return pd.DataFrame(data, columns=columns)
 
     def _get_knowledge_bases(self, query: ASTNode = None):
-        from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseController
-        controller = KnowledgeBaseController(self.session)
         project_name = None
         if (
                 isinstance(query, Select)
                 and type(query.where) is BinaryOperation
-                and query.where.op == '='
-                and query.where.args[0].parts == ['project']
+                and query.where.op == "="
+                and query.where.args[0].parts == ["project"]
                 and isinstance(query.where.args[1], Constant)
         ):
             project_name = query.where.args[1].value
 
-        # get the project id from the project name
-        project_controller = ProjectController()
-        project_id = project_controller.get(name=project_name).id
-        kb_list = controller.list(project_id=project_id)
+        from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseController
+        controller = KnowledgeBaseController(self.session)
+        kb_list = controller.list(project_name)
 
         columns = self.information_schema['KNOWLEDGE_BASES']
 
@@ -676,15 +662,13 @@ class InformationSchemaDataNode(DataNode):
         data = []
 
         for kb in kb_list:
-            embedding_model = kb.embedding_model
-            vector_database = kb.vector_database
-            vector_database_name = '' if vector_database is None else vector_database.name
+            vector_database_name = kb['vector_database'] or ''
 
             data.append((
-                kb.name,
-                project_name,
-                embedding_model.name if embedding_model is not None else None,
-                vector_database_name + '.' + kb.vector_database_table
+                kb['name'],
+                kb['project_name'],
+                kb['embedding_model'],
+                vector_database_name + '.' + kb['vector_database_table']
             ))
 
         return pd.DataFrame(data, columns=columns)
@@ -729,6 +713,27 @@ class InformationSchemaDataNode(DataNode):
         data = [(a.name, project_name, a.model_name, list(map(lambda s: s.name, a.skills)), to_json(a.params)) for a in all_agents]
         return pd.DataFrame(data, columns=columns)
 
+    def _get_views(self, query: ASTNode = None):
+        project_name = None
+        if (
+                isinstance(query, Select)
+                and type(query.where) is BinaryOperation
+                and query.where.op == '='
+                and query.where.args[0].parts == ['project']
+                and isinstance(query.where.args[1], Constant)
+        ):
+            project_name = query.where.args[1].value
+
+        data = ViewController().list(project_name)
+
+        columns = self.information_schema["VIEWS"]
+        columns_lower = [col.lower() for col in columns]
+
+        # to list of lists
+        data = [[row[k] for k in columns_lower] for row in data]
+
+        return pd.DataFrame(data, columns=columns)
+
     def _get_databases(self, query: ASTNode = None):
         columns = self.information_schema["DATABASES"]
 
@@ -746,7 +751,7 @@ class InformationSchemaDataNode(DataNode):
         data = []
         for project_name in self.get_projects_names():
             project = self.database_controller.get_project(name=project_name)
-            project_models = project.get_models()
+            project_models = project.get_models(active=None)
             for row in project_models:
                 table_name = row["name"]
                 table_meta = row["metadata"]
@@ -757,6 +762,7 @@ class InformationSchemaDataNode(DataNode):
                         table_name,
                         table_meta["engine"],
                         project_name,
+                        table_meta["active"],
                         table_meta["version"],
                         table_meta["status"],
                         table_meta["accuracy"],
@@ -777,39 +783,6 @@ class InformationSchemaDataNode(DataNode):
             # TODO optimise here
             # if target_table is not None and target_table != project_name:
             #     continue
-
-        df = pd.DataFrame(data, columns=columns)
-        return df
-
-    def _get_models_versions(self, query: ASTNode = None):
-        columns = self.information_schema["MODELS_VERSIONS"]
-        data = []
-        for project_name in self.get_projects_names():
-            project = self.database_controller.get_project(name=project_name)
-            project_models = project.get_models(active=None)
-            for row in project_models:
-                table_name = row["name"]
-                table_meta = row["metadata"]
-                data.append(
-                    [
-                        table_name,
-                        table_meta["engine"],
-                        project_name,
-                        table_meta["active"],
-                        table_meta["version"],
-                        table_meta["status"],
-                        table_meta["accuracy"],
-                        table_meta["predict"],
-                        table_meta["update_status"],
-                        table_meta["mindsdb_version"],
-                        table_meta["error"],
-                        table_meta["select_data_query"],
-                        to_json(table_meta["training_options"]),
-                        table_meta["label"],
-                        row["created_at"],
-                        table_meta["training_time"],
-                    ]
-                )
 
         df = pd.DataFrame(data, columns=columns)
         return df

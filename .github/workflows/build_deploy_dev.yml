@@ -37,6 +37,16 @@ jobs:
       - uses: actions/checkout@v2
       # Build the bakefile and push
       - uses: ./.github/actions/docker-bake
+  
+  build_cache:
+    # Build our docker images based on our bake file
+    # This job only pushes the layers to the cache repo
+    # It's done separately so other jobs can run without waiting for this one
+    runs-on: [self-hosted, dev]
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./.github/actions/docker-bake-cache
 
   trigger_deploy:
     # Trigger private repo to deploy to dev envs

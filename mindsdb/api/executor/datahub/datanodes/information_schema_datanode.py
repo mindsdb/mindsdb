@@ -344,7 +344,7 @@ class InformationSchemaDataNode(DataNode):
             "HANDLERS": self._get_handlers,
             "JOBS": self._get_jobs,
             "JOBS_HISTORY": self._get_jobs_history,
-            "MDB_TRIGGERS": self._get_triggers,
+            "TRIGGERS": self._get_triggers,
             "CHATBOTS": self._get_chatbots,
             "KNOWLEDGE_BASES": self._get_knowledge_bases,
             "SKILLS": self._get_skills,
@@ -604,10 +604,12 @@ class InformationSchemaDataNode(DataNode):
         data = triggers_controller.get_list(project_name)
 
         columns = self.information_schema["MDB_TRIGGERS"]
+        if self.session.api_type == 'sql':
+            columns = columns + self.information_schema["TRIGGERS"]
         columns_lower = [col.lower() for col in columns]
 
         # to list of lists
-        data = [[row[k] for k in columns_lower] for row in data]
+        data = [[row.get(k) for k in columns_lower] for row in data]
 
         return pd.DataFrame(data, columns=columns)
 

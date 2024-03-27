@@ -35,7 +35,8 @@ from mindsdb_sql.parser.ast import (
     Union,
     Update,
     Use,
-    Variable
+    Variable,
+    Tuple,
 )
 
 # typed models
@@ -282,53 +283,14 @@ class ExecuteCommands:
                 if statement.in_table is not None:
                     schema = statement.in_table.parts[-1]
                     statement.in_table = None
+
+                table_types = [Constant(t) for t in ['MODEL', 'BASE TABLE', 'SYSTEM VIEW', 'VIEW']]
                 where = BinaryOperation(
                     "and",
                     args=[
-                        BinaryOperation(
-                            "=", args=[Identifier("table_schema"), Constant(schema)]
-                        ),
-                        BinaryOperation(
-                            "or",
-                            args=[
-                                BinaryOperation(
-                                    "=",
-                                    args=[Identifier("table_type"), Constant("MODEL")],
-                                ),
-                                BinaryOperation(
-                                    "or",
-                                    args=[
-                                        BinaryOperation(
-                                            "=",
-                                            args=[
-                                                Identifier("table_type"),
-                                                Constant("BASE TABLE"),
-                                            ],
-                                        ),
-                                        BinaryOperation(
-                                            "or",
-                                            args=[
-                                                BinaryOperation(
-                                                    "=",
-                                                    args=[
-                                                        Identifier("table_type"),
-                                                        Constant("SYSTEM VIEW"),
-                                                    ],
-                                                ),
-                                                BinaryOperation(
-                                                    "=",
-                                                    args=[
-                                                        Identifier("table_type"),
-                                                        Constant("VIEW"),
-                                                    ],
-                                                ),
-                                            ],
-                                        ),
-                                    ],
-                                ),
-                            ],
-                        ),
-                    ],
+                        BinaryOperation("=", args=[Identifier("table_schema"), Constant(schema)]),
+                        BinaryOperation("in", args=[Identifier("table_type"), Tuple(table_types)])
+                    ]
                 )
 
                 new_statement = Select(

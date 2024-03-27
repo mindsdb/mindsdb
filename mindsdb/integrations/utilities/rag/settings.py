@@ -28,7 +28,7 @@ Return a JSON list with an entry for each column. Each entry should have
 {{"name": "column name", "description": "column description", "type": "column data type"}}
 \n\n{dataframe}\n\nJSON:\n
 """
-DEFAULT_EVALUATION_PROMPT_TEMPLATE = '''You are an assistant for
+DEFAULT_RAG_PROMPT_TEMPLATE = '''You are an assistant for
 question-answering tasks. Use the following pieces of retrieved context
 to answer the question. If you don't know the answer, just say that you
 don't know. Use two sentences maximum and keep the answer concise.
@@ -107,12 +107,6 @@ class RetrieverType(Enum):
     MULTI = 'multi'
 
 
-class InputDataType(Enum):
-    EMAIL = 'email'
-    FILE = 'file'
-    VECTOR_STORE = 'vector_store'
-
-
 class VectorStoreConfig(BaseModel):
     Vector_store_type: VectorStoreType = VectorStoreType.CHROMA
     persist_directory: str = None
@@ -134,7 +128,7 @@ class RAGPipelineModel(BaseModel):
     vector_store: VectorStore = DEFAUlT_VECTOR_STORE
     llm: BaseChatModel = DEFAULT_LLM
     embeddings_model: Embeddings = DEFAULT_EMBEDDINGS
-    rag_prompt_template: str = DEFAULT_EVALUATION_PROMPT_TEMPLATE
+    rag_prompt_template: str = DEFAULT_RAG_PROMPT_TEMPLATE
     retriever_prompt_template: Union[str, dict] = None
     retriever_type: RetrieverType = RetrieverType.VECTOR_STORE
     multi_retriever_mode: MultiVectorRetrieverMode = MultiVectorRetrieverMode.BOTH

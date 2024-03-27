@@ -4,7 +4,9 @@ import uuid
 from langchain_core.embeddings import Embeddings
 from langchain_community.vectorstores import Chroma, PGVector
 from langchain_core.vectorstores import VectorStore
-from pydantic import BaseModel, parse_obj_as
+from pydantic import BaseModel
+
+from mindsdb.integrations.libs.vectordatabase_handler import TableField
 from mindsdb.integrations.utilities.rag.settings import VectorStoreType, VectorStoreConfig
 import pandas as pd
 
@@ -12,22 +14,35 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.exc import DisconnectionError
 
-_COL_ID = "id"
-_COL_EMBEDDINGS = "embeddings"
-_COL_METADATA = "metadata"
-_COL_CONTENT = "content"
+
+class VectorStoreLoader(BaseModel):
+    embeddings_model: Embeddings
+    vector_store: VectorStore = None
+    config: dict = None
+
+    class Config:
+        arbitrary_types_allowed = True
+        extra = "forbid"
+        validate_assignment = True
+
+    def load(self) -> VectorStore:
+        """
+        Loads the vector store based on the provided config and embeddings model
+        :return:
+        """
+        self.vector_store = VectorStoreFactory.create(self.embeddings_model, self.config)
+        return self.vector_store
 
 
 class VectorStoreFactory:
     @staticmethod
     def create(embeddings_model: Embeddings, config: dict):
-        if config:
-            settings = parse_obj_as(VectorStoreConfig, config)
-        else:
-            settings = VectorStoreConfig()
-        if settings.type == VectorStoreType.CHROMA:
+
+        settings = VectorStoreConfig(**config)
+
+        if settings.Vector_store_type == VectorStoreType.CHROMA:
             return VectorStoreFactory._load_chromadb_store(embeddings_model, settings)
-        elif settings.type == VectorStoreType.PGVECTOR:
+        elif settings.Vector_store_type == VectorStoreType.PGVECTOR:
             return VectorStoreFactory._load_pgvector_store(embeddings_model, settings)
         else:
             raise ValueError(f"Invalid vector store type, must be one either {VectorStoreType.__members__.keys()}")
@@ -60,13 +75,14 @@ class VectorStoreFactory:
         """
         df = VectorStoreFactory._fetch_data_from_db(settings)
 
-        df[_COL_EMBEDDINGS] = df[_COL_EMBEDDINGS].apply(ast.literal_eval)
-        df[_COL_METADATA] = df[_COL_METADATA].apply(ast.literal_eval)
+        df[TableField.EMBEDDINGS] = df[TableField.EMBEDDINGS].apply(ast.literal_eval)
+        df[TableField.METADATA] = df[TableField.METADATA].apply(ast.literal_eval)
 
-        metadata = df[_COL_METADATA].tolist()
-        embeddings = df[_COL_EMBEDDINGS].tolist()
-        texts = df[_COL_CONTENT].tolist()
-        ids = [str(uuid.uuid1()) for _ in range(len(df))] if _COL_ID not in df.columns else df[_COL_ID].tolist()
+        metadata = df[TableField.METADATA].tolist()
+        embeddings = df[TableField.EMBEDDINGS].tolist()
+        texts = df[TableField.CONTENT].tolist()
+        ids = [str(uuid.uuid1()) for _ in range(len(df))] \
+            if TableField.ID not in df.columns else df[TableField.ID].tolist()
 
         vectorstore.add_embeddings(
             texts=texts,
@@ -96,22 +112,3 @@ class VectorStoreFactory:
             raise e
         finally:
             db.close()
-
-
-class VectorStoreLoader(BaseModel):
-    embeddings_model: Embeddings
-    vector_store: VectorStore = None
-    config: dict = None
-
-    class Config:
-        arbitrary_types_allowed = True
-        extra = "forbid"
-        validate_assignment = True
-
-    def load(self) -> VectorStore:
-        """
-        Loads the vector store based on the provided config and embeddings model
-        :return:
-        """
-        self.vector_store = VectorStoreFactory.create(self.embeddings_model, self.config)
-        return self.vector_store

@@ -399,41 +399,6 @@ class IntegrationController:
 
         return handler_ars
 
-    def create_tmp_handler(self, handler_type: str, connection_data: dict) -> object:
-        """ Returns temporary handler. That handler does not exist in database.
-
-            Args:
-                handler_type (str)
-                connection_data (dict)
-
-            Returns:
-                Handler object
-        """
-        handler_meta = self.handlers_import_status[handler_type]
-        if not handler_meta["import"]["success"]:
-            logger.info(f"to use {handler_type} please install 'pip install mindsdb[{handler_type}]'")
-
-        logger.debug("%s.create_tmp_handler: connection args - %s", self.__class__.__name__, connection_data)
-        integration_id = int(time() * 10000)
-        file_storage = FileStorage(
-            resource_group=RESOURCE_GROUP.INTEGRATION,
-            resource_id=integration_id,
-            root_dir='tmp',
-            sync=False
-        )
-        handler_storage = HandlerStorage(integration_id, root_dir='tmp', is_temporal=True)
-        handler_ars = self._make_handler_args(
-            name='tmp_handler',
-            handler_type=handler_type,
-            connection_data=connection_data,
-            integration_id=integration_id,
-            file_storage=file_storage,
-            handler_storage=handler_storage,
-        )
-
-        logger.debug("%s.create_tmp_handler: create a client to db of %s type", self.__class__.__name__, handler_type)
-        return DBClient(handler_type, self.handler_modules[handler_type].Handler, **handler_ars)
-
     def copy_integration_storage(self, integration_id_from, integration_id_to):
         storage_from = HandlerStorage(integration_id_from)
         root_path = ''

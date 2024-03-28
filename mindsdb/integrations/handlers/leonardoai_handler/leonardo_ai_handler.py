@@ -2,11 +2,11 @@ import os
 import requests
 import time
 from typing import Dict, Optional
-from mindsdb.integrations.libs.llm_utils import get_completed_prompts
 
 import pandas as pd
 
 from mindsdb.integrations.libs.base import BaseMLEngine
+from mindsdb.integrations.libs.llm.utils import get_completed_prompts
 from mindsdb.utilities import log
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.utilities.config import Config

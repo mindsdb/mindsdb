@@ -19,16 +19,16 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
 # Copy just requirements and install them to cache the layer. This won't include any of the default handlers,
 # but this layer should rarely change so will be cached most of the time
 COPY requirements/requirements.txt /mindsdb/requirements/requirements.txt
-RUN --mount=type=cache,target=/root/.cache/pip pip3 install -r requirements/requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip pip3 install --user -r requirements/requirements.txt
 
 
 # Now copy the rest of the code and install it
 COPY . /mindsdb
-RUN --mount=type=cache,target=/root/.cache/pip pip3 install "."
+RUN --mount=type=cache,target=/root/.cache/pip pip3 install --user "."
 
 
 # Install extras on top of the bare mindsdb
-RUN --mount=type=cache,target=/root/.cache/pip if [ -n "$EXTRAS" ]; then pip3 install $EXTRAS; fi
+RUN --mount=type=cache,target=/root/.cache/pip if [ -n "$EXTRAS" ]; then pip3 install --user $EXTRAS; fi
 
 
 # For use in docker-compose/development. Installs our development requirements
@@ -67,7 +67,7 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     && apt-get install -y python3 python3-pip libmagic1 libpq5 freetds-bin
 
 # Copy python packages from the build stage
-COPY --link --from=build /usr/local/lib/python3.10/dist-packages /usr/local/lib/python3.10/dist-packages
+COPY --link --from=build /root/.local/lib/python3.10 /root/.local/lib/python3.10
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
 # Makes sure we see all output in the container logs

@@ -6,7 +6,7 @@ from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.exception import EntityNotExistsError
-from mindsdb.utilities.security import encrypt_str, decrypt_str
+from mindsdb.utilities.security import encrypt, decrypt
 from mindsdb.interfaces.storage.fs import FileStorageFactory, RESOURCE_GROUP, FileStorage
 
 
@@ -152,7 +152,7 @@ class TabsController:
             return data
 
         del data['_encrypted_content']
-        content = decrypt_str(encrypted_content)
+        content = decrypt(encrypted_content)
         data['content'] = content
 
         return data
@@ -168,7 +168,7 @@ class TabsController:
         """
         content = data.get('content', '')
         if self.encryption_enabled:
-            encrypted_content = encrypt_str(content)
+            encrypted_content = encrypt(content)
             del data['content']
             data['_encrypted_content'] = encrypted_content
         return json.dumps(data).encode("utf-8")

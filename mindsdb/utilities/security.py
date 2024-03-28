@@ -4,12 +4,10 @@ import ipaddress
 import secrets
 import pickle
 import base64
-from copy import deepcopy
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from mindsdb.utilities.context import context as ctx
-from mindsdb.utilities.config import Config
 from mindsdb.utilities import log
 
 
@@ -46,6 +44,53 @@ def clear_filename(filename: str) -> str:
     return filename
 
 
+def encrypt(obj: object) -> dict:
+    """Encrypt object
+
+    Args:
+        obj (Any): python object
+
+    Returns:
+        dict: structure with encrypted data
+    """
+    protocol_version = 1
+    if ctx.encryption_key is None:
+        raise Exception('The encryption key is missing')
+    if obj is None:
+        raise ValueError('Cannot encrypt None')
+    if isinstance(obj, str):
+        return {
+            'protocol_version': protocol_version,
+            'object_type': 'str',
+            'encrypted_object': encrypt_str(obj)
+        }
+    return {
+        'protocol_version': protocol_version,
+        'object_type': 'object',
+        'encrypted_object': encrypt_object(obj)
+    }
+
+
+def decrypt(encrypted_object: dict) -> object:
+    """Decrypt object
+
+    Args:
+        encrypted_object (dict): structure with encrypted data
+
+    Returns:
+        object: decrypted python object
+    """
+    if isinstance(encrypted_object, dict) is False:
+        raise ValueError('Encrypted object must be dict')
+    protocol_version = encrypted_object.get('protocol_version')
+    if protocol_version != 1:
+        raise ValueError(f'Encrypted object protocol version is unknown: {protocol_version}')
+    object_type = encrypted_object.get('object_type')
+    if object_type == 'str':
+        return decrypt_str(encrypted_object['encrypted_object'])
+    return decrypt_object(encrypted_object['encrypted_object'])
+
+
 def _encrypt(data: bytes) -> str:
     key = ctx.encryption_key_bytes
     nonce = secrets.token_bytes(12)
@@ -63,42 +108,6 @@ def _decrypt(data) -> bytes:
     except Exception as e:
         logger.error(f'Wrong encryption key: {e}')
     return decrypted_message
-
-
-def encrypt_dict(message: dict) -> dict:
-    """Encrypt dict using key in context
-
-    Args:
-        message (dict): dict to encrypt
-
-    Returns:
-        dict: dcit containing a key (_mindsdb_encrypted_data) with encrypted data
-    """
-    encrypted_str = encrypt_object(message)
-    return {
-        '_mindsdb_encrypted_data': encrypted_str,
-        'keys': list(message.keys())
-    }
-
-
-def decrypt_dict(message: dict) -> dict:
-    """Decrypt dict using key in context
-
-    Args:
-        message (dict): dict to decrypt, must have `_mindsdb_encrypted_data` key
-
-    Returns:
-        dict: decrypted dict
-    """
-    encrypted_message = message.get('_mindsdb_encrypted_data')
-
-    if encrypted_message is None:
-        if Config().get('cloud', False) is False:
-            logger.warn(f"Data is not encrypted for company_id={ctx.company_id}")
-        return deepcopy(message)
-
-    decrypted_dict = decrypt_object(encrypted_message)
-    return decrypted_dict
 
 
 def encrypt_object(data: object) -> str:

@@ -234,6 +234,7 @@ class Integration(Resource):
             abort(500, f"Error during integration modifycation: {str(e)}")
         return "", 200
 
+
 @ns_conf.route('/vars')
 class Vars(Resource):
     @api_endpoint_metrics('GET', '/config/vars')

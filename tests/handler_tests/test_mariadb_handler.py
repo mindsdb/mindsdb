@@ -8,6 +8,7 @@ import docker
 
 from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
+from mindsdb.utilities.fs import safe_extract
 
 HANDLER_KWARGS = {
     "connection_data": {
@@ -42,7 +43,7 @@ def get_certificates(container):
             f.write(chunk)
 
     with tarfile.open(archive_path) as tf:
-        tf.extractall(path=cur_dir)
+        safe_extract(tf, path=cur_dir)
     certs = get_certs()
     HANDLER_KWARGS["connection_data"].update(certs)
 

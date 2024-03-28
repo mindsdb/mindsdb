@@ -234,19 +234,6 @@ class Integration(Resource):
             abort(500, f"Error during integration modifycation: {str(e)}")
         return "", 200
 
-
-@ns_conf.route('/integrations/<name>/check')
-@ns_conf.param('name', 'Database integration checks')
-class Check(Resource):
-    @ns_conf.doc('check')
-    @api_endpoint_metrics('GET', '/config/integrations/integration/check')
-    def get(self, name):
-        if ca.integration_controller.get(name) is None:
-            abort(404, f'Can\'t find database integration: {name}')
-        connections = ca.integration_controller.check_connections()
-        return connections.get(name, False), 200
-
-
 @ns_conf.route('/vars')
 class Vars(Resource):
     @api_endpoint_metrics('GET', '/config/vars')

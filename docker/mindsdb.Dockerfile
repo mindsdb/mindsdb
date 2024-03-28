@@ -15,9 +15,8 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     apt update && apt-get upgrade -y \
     && apt-get install -y python3 python3-pip git freetds-dev  # freetds required to build pymssql for mssql_handler
 
-
-# Copy just requirements and install them to cache the layer. This won't include any of the default handlers,
-# but this layer should rarely change so will be cached most of the time
+# Copy just requirements and install them to cache the layer
+# This won't include any of the default handlers, but it should still speed things up
 COPY requirements/requirements.txt /mindsdb/requirements/requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip pip3 install --user -r requirements/requirements.txt
 

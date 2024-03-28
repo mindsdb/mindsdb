@@ -57,10 +57,9 @@ FROM mindsdb_github.issues;
 You can run more advanced queries to fetch specific issues in a defined order:
 
 ```sql
-SELECT number, state, creator, assignee, title, labels
+SELECT number, state, creator, assignees, title, labels
 FROM mindsdb_github.issues
-WHERE state="all"
-ORDER BY created ASC, creator DESC
+WHERE state = 'open'
 LIMIT 10;
 ```
 
@@ -69,8 +68,7 @@ And the same goes for pull requests:
 ```sql
 SELECT number, state, title, creator, head, commits
 FROM mindsdb_github.pull_requests
-WHERE state="all"
-ORDER BY long_running DESC, commits DESC
+WHERE state = 'open'
 LIMIT 10;
 ```
 

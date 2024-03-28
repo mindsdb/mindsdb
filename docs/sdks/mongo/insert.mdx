@@ -3,20 +3,20 @@ title: Creating Predictors in Mongo
 sidebarTitle: predictors.insertOne()
 ---
 
-Predictors are the machine learning models that enable us to forecast future data based on the available data. By using the `db.predictors.insertOne()` method, we create and train predictors in Mongo.
+Predictors are the machine learning models that enable us to forecast future data based on the available data. By using the `db.models.insertOne()` method, we create and train predictors in Mongo.
 
-## The `db.predictors.insertOne()` Method
+## The `db.models.insertOne()` Method
 
 ### Description
 
-The `db.predictors.insertOne()` method creates and trains a new model.
+The `db.models.insertOne()` method creates and trains a new model.
 
 ### Syntax
 
 Here is the syntax:
 
 ```sql
-db.predictors.insertOne({
+db.models.insertOne({
      name: "predictor_name",
      predict: "target_column",
      connection: "integration_name",
@@ -44,12 +44,12 @@ Where:
 <Note>
 Checking Predictor Status
 
-After running the `db.predictors.insertOne()`
-method, execute the `db.predictors.find()` method from the `mindsdb.models`
+After running the `db.models.insertOne()`
+method, execute the `db.models.find()` method from the `mindsdb.models`
 collection to check the status of the model.
 
 ```sql
-db.predictors.find({name: "model_name"});
+db.models.find({name: "model_name"});
 ```
 
 </Note>
@@ -63,7 +63,7 @@ learning model to predict the rental prices for real estate properties inside
 the dataset.
 
 ```sql
-db.predictors.insertOne({
+db.models.insertOne({
      name: "home_rentals_model",
      predict: "rental_price",
      connection: "mongo_integration",
@@ -83,10 +83,10 @@ WriteResult({
 
 To check the predictor status, query the
 `mindsdb.models` table
-using the `db.predictors.find()` command.
+using the `db.models.find()` command.
 
 ```sql
-db.predictors.find({name: "home_rentals_model"});
+db.models.find({name: "home_rentals_model"});
 ```
 
 On execution, we get:

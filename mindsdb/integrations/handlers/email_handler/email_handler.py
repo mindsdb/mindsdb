@@ -58,6 +58,15 @@ class EmailHandler(APIHandler):
         self.is_connected = True
         return self.connection
 
+    def disconnect(self):
+        """ Close any existing connections
+
+        Should switch self.is_connected.
+        """
+        self.is_connected = False
+
+        return self.connection.logout()
+
     def check_connection(self) -> StatusResponse:
 
         response = StatusResponse(False)

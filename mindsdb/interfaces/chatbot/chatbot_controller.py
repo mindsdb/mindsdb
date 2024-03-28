@@ -19,7 +19,8 @@ class ChatBotController:
         if project_controller is None:
             project_controller = ProjectController()
         if agents_controller is None:
-            agents_controller = AgentsController()
+            session_controller = SessionController()
+            agents_controller = AgentsController(session_controller.datahub)
         self.project_controller = project_controller
         self.agents_controller = agents_controller
 

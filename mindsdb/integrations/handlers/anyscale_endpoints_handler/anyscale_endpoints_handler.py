@@ -57,13 +57,22 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
-        # remove original key for the validation check in `OpenAIHandler`
-        api_key_name = 'anyscale_endpoints_api_key'
-        if api_key_name in args['using']:
-            del args['using'][api_key_name]
-        if api_key_name in args:
-            del args[api_key_name]
-        OpenAIHandler.create_validation(target, args, **kwargs)
+        api_key = AnyscaleEndpointsHandler._get_api_key(args, kwargs['handler_storage'])
+        args['using']['openai_api_key'] = api_key
+
+        key = 'OPENAI_API_BASE'
+        old_base = os.environ.get(key, OPENAI_API_BASE)
+        os.environ[key] = ANYSCALE_API_BASE
+        try:
+            # remove original key for the validation check in `OpenAIHandler`
+            api_key_name = 'anyscale_endpoints_api_key'
+            if api_key_name in args['using']:
+                del args['using'][api_key_name]
+            if api_key_name in args:
+                del args[api_key_name]
+            OpenAIHandler.create_validation(target, args, **kwargs)
+        finally:
+            os.environ[key] = old_base
 
     def create(self, target, args=None, **kwargs):
         with self._anyscale_base_api(args):

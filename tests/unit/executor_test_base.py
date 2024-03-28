@@ -4,8 +4,10 @@ import json
 import os
 import sys
 import tempfile
+import time
 from unittest import mock
 from pathlib import Path
+from prometheus_client import REGISTRY
 
 import duckdb
 import numpy as np
@@ -91,6 +93,7 @@ class BaseUnitTest:
     def setup_method(self):
         self._dummy_db_path = os.path.join(tempfile.mkdtemp(), '_mindsdb_duck_db')
         self.clear_db(self.db)
+        self.reset_prom_collectors()
 
     def teardown_method(self):
         try:
@@ -137,6 +140,10 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(
             name="anyscale_endpoints", data={}, engine="anyscale_endpoints"
+        )
+        db.session.add(r)
+        r = db.Integration(
+            name="langchain", data={}, engine="langchain"
         )
         db.session.add(r)
         r = db.Integration(
@@ -188,11 +195,48 @@ class BaseUnitTest:
         con.execute('DROP TABLE IF EXISTS {}'.format(table))
         con.execute('CREATE TABLE {} AS SELECT * FROM data'.format(table))
 
+    def wait_predictor(self, project, name, timeout=100):
+        """
+        Wait for the predictor to be created,
+        raising an exception if predictor creation fails or exceeds timeout
+        """
+        for attempt in range(timeout):
+            ret = self.run_sql(f"select * from {project}.models where name='{name}'")
+            if not ret.empty:
+                status = ret["STATUS"][0]
+                if status == "complete":
+                    return
+                elif status == "error":
+                    raise RuntimeError("Predictor failed", ret["ERROR"][0])
+            time.sleep(0.5)
+        raise RuntimeError("Predictor wasn't created")
+
+    def run_sql(self, sql):
+        """Execute SQL and return a DataFrame, raising an AssertionError if an error occurs"""
+        ret = self.command_executor.execute_command(parse_sql(sql, dialect="mindsdb"))
+        assert ret.error_code is None, f"SQL execution failed with error: {ret.error_code}"
+        if ret.data is not None:
+            columns = [col.alias if col.alias else col.name for col in ret.columns]
+            return pd.DataFrame(ret.data, columns=columns)
+
     @staticmethod
     def ret_to_df(ret):
         # converts executor response to dataframe
         columns = [col.alias if col.alias is not None else col.name for col in ret.columns]
         return pd.DataFrame(ret.data, columns=columns)
+
+    def reset_prom_collectors(self) -> None:
+        """Resets collectors in the default Prometheus registry.
+
+        Modifies the `REGISTRY` registry. Supposed to be called at the beginning
+        of individual test functions. Else registry is reused across test functions
+        and so we can run into errors like duplicate metrics or unexpected values
+        for metrics.
+        """
+        # Unregister all collectors.
+        collectors = list(REGISTRY._collector_to_names.keys())
+        for collector in collectors:
+            REGISTRY.unregister(collector)
 
 
 class BaseExecutorTest(BaseUnitTest):
@@ -395,6 +439,20 @@ class BaseExecutorDummyML(BaseExecutorTest):
     def setup_method(self):
         super().setup_method()
         self.set_executor(import_dummy_ml=True)
+
+    def run_sql(self, sql, throw_error=True, database='mindsdb'):
+        self.command_executor.session.database = database
+        ret = self.command_executor.execute_command(
+            parse_sql(sql, dialect='mindsdb')
+        )
+        if throw_error:
+            assert ret.error_code is None
+        if ret.data is not None:
+            columns = [
+                col.alias if col.alias is not None else col.name
+                for col in ret.columns
+            ]
+            return pd.DataFrame(ret.data, columns=columns)
 
 
 class BaseExecutorDummyLLM(BaseExecutorTest):

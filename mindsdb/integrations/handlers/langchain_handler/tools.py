@@ -3,16 +3,19 @@ import tiktoken
 from typing import Callable
 from mindsdb_sql import parse_sql, Insert
 
-from langchain.utilities import GoogleSerperAPIWrapper
 from langchain.prompts import PromptTemplate
 from langchain.agents import load_tools, Tool
+
+from langchain_experimental.utilities import PythonREPL
+from langchain_community.tools import WikipediaQueryRun
+from langchain_community.utilities import GoogleSerperAPIWrapper, WikipediaAPIWrapper
 
 from langchain.chains.llm import LLMChain
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 from langchain.chains import ReduceDocumentsChain, MapReduceDocumentsChain
 
-from mindsdb.integrations.handlers.langchain_handler.skill_tool import make_tools_from_skill
+from mindsdb.interfaces.skills.skill_tool import skill_tool
 
 
 # Individual tools
@@ -94,23 +97,26 @@ def get_mdb_write_tool(executor) -> Callable:
             return f"mindsdb write tool failed with error:\n{str(e)}"
     return mdb_write_call
 
-def _setup_standard_tools(tools, llm, executor, model_kwargs):
-    all_standard_tools = []
-    mdb_tool = Tool(
-        name="MindsDB",
-        func=get_exec_call_tool(llm, executor, model_kwargs),
-        description="useful to read from databases or tables connected to the mindsdb machine learning package. the action must be a valid simple SQL query, always ending with a semicolon. For example, you can do `show databases;` to list the available data sources, and `show tables;` to list the available tables within each data source."  # noqa
-    )
+def _setup_standard_tools(tools, llm, model_kwargs):
+    executor = skill_tool.get_command_executor()
 
-    mdb_meta_tool = Tool(
-        name="MDB-Metadata",
-        func=get_exec_metadata_tool(llm, executor, model_kwargs),
-        description="useful to get column names from a mindsdb table or metadata from a mindsdb data source. the command should be either 1) a data source name, to list all available tables that it exposes, or 2) a string with the format `data_source_name.table_name` (for example, `files.my_table`), to get the table name, table type, column names, data types per column, and amount of rows of the specified table."  # noqa
-    )
-    all_standard_tools.append(mdb_tool)
-    all_standard_tools.append(mdb_meta_tool)
+    all_standard_tools = []
     langchain_tools = []
     for tool in tools:
+        if tool == 'mdb_read':
+            mdb_tool = Tool(
+                name="MindsDB",
+                func=get_exec_call_tool(llm, executor, model_kwargs),
+                description="useful to read from databases or tables connected to the mindsdb machine learning package. the action must be a valid simple SQL query, always ending with a semicolon. For example, you can do `show databases;` to list the available data sources, and `show tables;` to list the available tables within each data source."  # noqa
+            )
+
+            mdb_meta_tool = Tool(
+                name="MDB-Metadata",
+                func=get_exec_metadata_tool(llm, executor, model_kwargs),
+                description="useful to get column names from a mindsdb table or metadata from a mindsdb data source. the command should be either 1) a data source name, to list all available tables that it exposes, or 2) a string with the format `data_source_name.table_name` (for example, `files.my_table`), to get the table name, table type, column names, data types per column, and amount of rows of the specified table."  # noqa
+            )
+            all_standard_tools.append(mdb_tool)
+            all_standard_tools.append(mdb_meta_tool)
         if tool == 'mindsdb_write':
             mdb_write_tool = Tool(
                 name="MDB-Write",
@@ -118,15 +124,40 @@ def _setup_standard_tools(tools, llm, executor, model_kwargs):
                 description="useful to write into data sources connected to mindsdb. command must be a valid SQL query with syntax: `INSERT INTO data_source_name.table_name (column_name_1, column_name_2, [...]) VALUES (column_1_value_row_1, column_2_value_row_1, [...]), (column_1_value_row_2, column_2_value_row_2, [...]), [...];`. note the command always ends with a semicolon. order of column names and values for each row must be a perfect match. If write fails, try casting value with a function, passing the value without quotes, or truncating string as needed.`."  # noqa
             )
             all_standard_tools.append(mdb_write_tool)
-        else:
+        elif tool == 'python_repl':
+            tool = Tool(
+                name="python_repl",
+                func=PythonREPL().run,
+                description="useful for running custom Python code. Note: this is a powerful tool, so use with caution."  # noqa
+            )
             langchain_tools.append(tool)
+        elif tool == 'serper':
+            search = GoogleSerperAPIWrapper()
+            tool = Tool(
+                name="Intermediate Answer",
+                func=search.run,
+                description="useful for when you need to ask with search",
+            )
+            langchain_tools.append(tool)
+        else:
+            raise ValueError(f"Unsupported tool: {tool}")
     
     all_standard_tools += load_tools(langchain_tools)
     return all_standard_tools
 
 
+def langchain_tool_from_skill(skill):
+    # Makes Langchain compatible tools from a skill
+    tool = skill_tool.get_tool_from_skill(skill)
+
+    return Tool(
+        name=tool['name'],
+        func=tool['func'],
+        description=tool['description']
+    )
+
 # Collector
-def setup_tools(llm, model_kwargs, pred_args, executor, default_agent_tools):
+def setup_tools(llm, model_kwargs, pred_args, default_agent_tools):
     toolkit = pred_args['tools'] if pred_args.get('tools') is not None else default_agent_tools
 
     standard_tools = []
@@ -142,10 +173,10 @@ def setup_tools(llm, model_kwargs, pred_args, executor, default_agent_tools):
     tools = []
     skills = pred_args.get('skills', [])
     for skill in skills:
-        tools += make_tools_from_skill(skill, llm, executor)
+        tools.append(langchain_tool_from_skill(skill))
 
     if len(tools) == 0:
-        tools = _setup_standard_tools(standard_tools, llm, executor, model_kwargs)
+        tools = _setup_standard_tools(standard_tools, llm, model_kwargs)
 
     if model_kwargs.get('serper_api_key', False):
         search = GoogleSerperAPIWrapper(serper_api_key=model_kwargs.pop('serper_api_key'))

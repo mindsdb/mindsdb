@@ -57,7 +57,7 @@ class DatabaseController:
                 'id': x.id,
                 'engine': None,
                 'visible': True,
-                'deletable': True
+                'deletable': x.name.lower() != 'mindsdb'
             })
         for key, value in integrations.items():
             db_type = value.get('type', 'data')
@@ -70,7 +70,7 @@ class DatabaseController:
                     'class_type': value.get('class_type'),
                     'connection_data': value.get('connection_data'),
                     'visible': True,
-                    'deletable': True
+                    'deletable': value.get('permanent', False) is False
                 })
 
         if filter_type is not None:

@@ -1,6 +1,5 @@
 import sys
 import time
-import pickle
 import threading
 from typing import Optional, Callable
 from concurrent.futures import ProcessPoolExecutor, Future
@@ -49,11 +48,11 @@ class MLProcessException(Exception):
 
     def __init__(self, base_exception: Exception, message: str = None) -> None:
         super().__init__(message)
-        self.base_exception_bytes = pickle.dumps(base_exception)
+        self.message = f'{base_exception.__class__.__name__}: {base_exception}'
 
     @property
     def base_exception(self) -> Exception:
-        return pickle.loads(self.base_exception_bytes)
+        return RuntimeError(self.message)
 
 
 class WarmProcess:

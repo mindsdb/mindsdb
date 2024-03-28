@@ -110,6 +110,61 @@ class APITable():
             pd.DataFrame
         """
 
+        raise NotImplementedError()
+
+    def insert(self, query: Insert) -> None:
+        """Receive query as AST (abstract syntax tree) and act upon it somehow.
+
+        Args:
+            query (ASTNode): sql query represented as AST. Usually it should be ast.Insert
+
+        Returns:
+            None
+        """
+        raise NotImplementedError()
+
+    def update(self, query: ASTNode) -> None:
+        """Receive query as AST (abstract syntax tree) and act upon it somehow.
+
+        Args:
+            query (ASTNode): sql query represented as AST. Usually it should be ast.Update
+        Returns:
+            None
+        """
+        raise NotImplementedError()
+
+    def delete(self, query: ASTNode) -> None:
+        """Receive query as AST (abstract syntax tree) and act upon it somehow.
+
+        Args:
+            query (ASTNode): sql query represented as AST. Usually it should be ast.Delete
+
+        Returns:
+            None
+        """
+        raise NotImplementedError()
+
+    def get_columns(self) -> list:
+        """Maps the columns names from the API call resource
+
+        Returns:
+            List
+        """
+        raise NotImplementedError()
+
+
+class APIResource(APITable):
+
+    def select(self, query: Select) -> pd.DataFrame:
+        """Receive query as AST (abstract syntax tree) and act upon it.
+
+        Args:
+            query (ASTNode): sql query represented as AST. Usually it should be ast.Select
+
+        Returns:
+            pd.DataFrame
+        """
+
         conditions = [
             FilterCondition(i[1], FilterOperator(i[0].upper()), i[2])
             for i in extract_comparison_conditions(query.where)
@@ -131,7 +186,12 @@ class APITable():
             if isinstance(col, Identifier):
                 targets.append(col.parts[-1])
 
-        result = self.list(conditions, limit, sort, targets)
+        result = self.list(
+            conditions=conditions,
+            limit=limit,
+            sort=sort,
+            targets=targets
+        )
 
         filters = []
         for cond in conditions:
@@ -192,35 +252,6 @@ class APITable():
 
         Raises:
             NotImplementedError: This is an abstract method and should be implemented in a subclass.
-        """
-        raise NotImplementedError()
-
-    def update(self, query: ASTNode) -> None:
-        """Receive query as AST (abstract syntax tree) and act upon it somehow.
-
-        Args:
-            query (ASTNode): sql query represented as AST. Usually it should be ast.Update
-        Returns:
-            None
-        """
-        raise NotImplementedError()
-
-    def delete(self, query: ASTNode) -> None:
-        """Receive query as AST (abstract syntax tree) and act upon it somehow.
-
-        Args:
-            query (ASTNode): sql query represented as AST. Usually it should be ast.Delete
-
-        Returns:
-            None
-        """
-        raise NotImplementedError()
-
-    def get_columns(self) -> list:
-        """Maps the columns names from the API call resource
-
-        Returns:
-            List
         """
         raise NotImplementedError()
 

@@ -1,1 +1,2 @@
 google-cloud-spanner
+sqlalchemy-spanner

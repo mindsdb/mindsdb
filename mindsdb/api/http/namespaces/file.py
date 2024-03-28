@@ -1,4 +1,5 @@
 import os
+import shutil
 import tarfile
 import tempfile
 import zipfile
@@ -10,11 +11,13 @@ from flask import request
 from flask_restx import Resource
 
 from mindsdb.api.http.namespaces.configs.files import ns_conf
-from mindsdb.api.http.utils import http_error, safe_extract
+from mindsdb.api.http.utils import http_error
+from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities import log
 from mindsdb.utilities.security import is_private_url, clear_filename
+from mindsdb.utilities.fs import safe_extract
 
 logger = log.getLogger(__name__)
 
@@ -22,6 +25,7 @@ logger = log.getLogger(__name__)
 @ns_conf.route("/")
 class FilesList(Resource):
     @ns_conf.doc("get_files_list")
+    @api_endpoint_metrics('GET', '/files')
     def get(self):
         """List all files"""
         return ca.file_controller.get_files()
@@ -31,6 +35,7 @@ class FilesList(Resource):
 @ns_conf.param("name", "MindsDB's name for file")
 class File(Resource):
     @ns_conf.doc("put_file")
+    @api_endpoint_metrics('PUT', '/files/file')
     def put(self, name: str):
         """add new file
         params in FormData:
@@ -155,15 +160,19 @@ class File(Resource):
                     400, "Wrong content.", "Archive must contain data file in root."
                 )
 
-        ca.file_controller.save_file(
-            mindsdb_file_name, file_path, file_name=original_file_name
-        )
-
-        os.rmdir(temp_dir_path)
+        try:
+            ca.file_controller.save_file(
+                mindsdb_file_name, file_path, file_name=original_file_name
+            )
+        except Exception as e:
+            return http_error(500, 'Error', str(e))
+        finally:
+            shutil.rmtree(temp_dir_path, ignore_errors=True)
 
         return "", 200
 
     @ns_conf.doc("delete_file")
+    @api_endpoint_metrics('DELETE', '/files/file')
     def delete(self, name: str):
         """delete file"""
 

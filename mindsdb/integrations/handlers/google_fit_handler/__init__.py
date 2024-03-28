@@ -11,7 +11,7 @@ except Exception as e:
 title = 'Google Fit'
 name = 'google_fit'
 type = HANDLER_TYPE.DATA
-icon_path = 'icon.png'
+icon_path = 'icon.svg'
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'description',

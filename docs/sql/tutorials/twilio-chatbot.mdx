@@ -147,11 +147,13 @@ This job inserts replies to Twilio messages into the `messages` table. We provid
 You can monitor this job with the following commands:
 
 ```sql
+SHOW JOBS WHERE name='twilio_bot_images_job';
+
 SELECT * FROM jobs
 WHERE name='twilio_bot_images_job';
  
-SELECT * FROM jobs_history
-WHERE name='twilio_bot_images_job';
+SELECT * FROM log.jobs_history
+WHERE project = 'mindsdb' AND name='twilio_bot_images_job';
 ```
 
 Here is a sample reply:

@@ -1,18 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Generator: Adobe Illustrator 22.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
-<svg version="1.0" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-	 width="1000px" height="750px" viewBox="0 0 1000 750" style="enable-background:new 0 0 1000 750;" xml:space="preserve">
-<style type="text/css">
-	.st0{fill-rule:evenodd;clip-rule:evenodd;fill:#0B5EA0;}
-	.st1{fill-rule:evenodd;clip-rule:evenodd;fill:#3FDCFF;}
-	.st2{fill-rule:evenodd;clip-rule:evenodd;fill:#009AF0;}
-</style>
-<g>
-	<path class="st0" d="M286.3,117.2c83.4,42.1,164.4,85.7,244.6,130v37l37.4-16.3c46.5,25.8,92.8,51.8,139.1,77.8
-		c30.2,16.4,29.4,36,0,52.5c-137.2,80.1-274.5,159.4-411.7,231c-16.2,9.1-31.6,8.4-31.6-15.7c0-162.4,0-324.8,0-487.2
-		C264.2,108.6,276.9,112.1,286.3,117.2L286.3,117.2z"/>
-	<path class="st1" d="M330.8,179.3h200.1v104.9l41.8-18.1l41.8,18.1V179.3h44.7c7.6,0,12.3,6.6,12.3,13.5v226.5
-		c-113.6,66.1-227.1,131.3-340.7,191.5V179.3L330.8,179.3z"/>
-	<path class="st2" d="M405.2,570.5V179.3h-74.5v431.5C355.6,597.5,380.4,584.1,405.2,570.5L405.2,570.5z"/>
-</g>
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40" fill="none">
+  <path fill-rule="evenodd" clip-rule="evenodd" d="M4.57042 1.46205C10.5921 4.50176 16.4405 7.64977 22.2311 10.8483V13.5198L24.9314 12.3429C28.2888 14.2057 31.6318 16.083 34.9748 17.9602C37.1553 19.1444 37.0975 20.5595 34.9748 21.7509C25.0686 27.5343 15.1553 33.2599 5.24912 38.4296C4.07944 39.0866 2.96753 39.0361 2.96753 37.296C2.96753 25.5704 2.96753 13.8447 2.96753 2.11909C2.97475 0.841111 3.89172 1.09382 4.57042 1.46205Z" fill="#0B5EA0"/>
+  <path fill-rule="evenodd" clip-rule="evenodd" d="M7.78342 5.9458H22.2311V13.5198L25.2491 12.2129L28.2672 13.5198V5.9458H31.4946C32.0433 5.9458 32.3827 6.42234 32.3827 6.92053V23.2743C24.1805 28.0469 15.9856 32.7545 7.78342 37.101V5.9458Z" fill="#3FDCFF"/>
+  <path fill-rule="evenodd" clip-rule="evenodd" d="M13.1553 34.1913V5.9458H7.7762V37.101C9.57403 36.1407 11.3646 35.1732 13.1553 34.1913Z" fill="#009AF0"/>
 </svg>

@@ -120,26 +120,7 @@ class ModelController():
 
         ml_handler_base = session.integration_controller.get_ml_handler(integration_record.name)
 
-        if attribute is None:
-            model_info = self.get_model_info(model_record)
-
-            try:
-                df = ml_handler_base.describe(model_record.id, attribute)
-            except NotImplementedError:
-                df = pd.DataFrame()
-
-            # expecting list of attributes in first column df
-            attributes = []
-            if len(df) > 0 and len(df.columns) > 0:
-                attributes = list(df[df.columns[0]])
-                if len(attributes) == 1 and isinstance(attributes[0], list):
-                    # first cell already has a list
-                    attributes = attributes[0]
-
-            model_info.insert(0, 'TABLES', [attributes])
-            return model_info
-        else:
-            return ml_handler_base.describe(model_record.id, attribute)
+        return ml_handler_base.describe(model_record.id, attribute)
 
     def get_model(self, name, version=None, ml_handler_name=None, project_name=None):
         show_active = True if version is None else None
@@ -239,6 +220,8 @@ class ModelController():
             integration_name = statement.integration_name.parts[0]
 
             databases_meta = database_controller.get_dict()
+            if integration_name not in databases_meta:
+                raise EntityNotExistsError('Database does not exist', integration_name)
             data_integration_meta = databases_meta[integration_name]
             # TODO improve here. Suppose that it is view
             if data_integration_meta['type'] == 'project':
@@ -318,7 +301,7 @@ class ModelController():
             raise EntityExistsError('Model already exists', f"{params['project_name']}.{params['model_name']}")
         predictor_record = ml_handler.learn(**params)
 
-        return self.get_model_info(predictor_record)
+        return ModelController.get_model_info(predictor_record)
 
     def retrain_model(self, statement, ml_handler):
         # active setting
@@ -353,7 +336,7 @@ class ModelController():
         params['set_active'] = set_active
         predictor_record = ml_handler.learn(**params)
 
-        return self.get_model_info(predictor_record)
+        return ModelController.get_model_info(predictor_record)
 
     def prepare_finetune_statement(self, statement, database_controller):
         project_name, model_name, model_version = resolve_model_identifier(statement.name)
@@ -403,7 +386,7 @@ class ModelController():
     def finetune_model(self, statement, ml_handler):
         params = self.prepare_finetune_statement(statement, ml_handler.database_controller)
         predictor_record = ml_handler.finetune(**params)
-        return self.get_model_info(predictor_record)
+        return ModelController.get_model_info(predictor_record)
 
     def update_model(self, session, project_name: str, model_name: str, problem_definition, version=None):
 
@@ -425,7 +408,8 @@ class ModelController():
             model_record.learn_args = learn_args
             db.session.commit()
 
-    def get_model_info(self, predictor_record):
+    @staticmethod
+    def get_model_info(predictor_record):
         from mindsdb.interfaces.database.projects import ProjectController
         projects_controller = ProjectController()
         project = projects_controller.get(id=predictor_record.project_id)

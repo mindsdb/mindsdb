@@ -432,7 +432,6 @@ class KnowledgeBaseController:
 
         return data
 
-
     def update(self, name: str, project_id: str, **kwargs) -> db.KnowledgeBase:
         """
         Update a knowledge base record

@@ -36,6 +36,7 @@ class LogCallbackHandler(BaseCallbackHandler):
         '''Run when LLM ends running.'''
         self.logger.debug('LLM ended with response:')
         self.logger.debug(str(response.llm_output))
+        self.logger.debug('LLM output saved successfully.')
 
     def on_llm_error(
         self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
@@ -66,7 +67,32 @@ class LogCallbackHandler(BaseCallbackHandler):
         self.logger.debug(f'Running tool {action.tool} with input:')
         self.logger.debug(action.tool_input)
 
+    #Logs the actual tool/if self improvement can be added to this agent
+    #This can be modified based on how the actual self improvement will work
+    def on_agent_tool_use(self, action: AgentAction, **kwargs: Any) -> Any:
+        '''Log when an agent uses a tool, its type, and self-improvement intent.'''
+        self.logger.debug(f'Running tool: {action.tool} of type: {type(action).__name__}')
+        if hasattr(action, 'self_improvement_input') and action.self_improvement_input:
+            self.logger.debug('Self-improvement enabled for this tool.')
+        else:
+            self.logger.debug('Self-improvement not enabled for this tool.')
+
     def on_agent_finish(self, finish: AgentFinish, **kwargs: Any) -> Any:
         '''Run on agent end.'''
         self.logger.debug('Agent finished with return values:')
         self.logger.debug(str(finish.return_values))
+
+    #when self improvement is implemented:
+    def on_self_improvement_start(self, context: Dict[str, Any]) -> Any:
+        '''Run when the agent's self-improvement process starts.'''
+        self.logger.debug('Self-improvement process started with context:')
+        self.logger.debug(str(context))
+
+    def on_self_improvement_end(self, result: Dict[str, Any]) -> Any:
+        '''Run when the agent's self-improvement process ends.'''
+        self.logger.debug('Self-improvement process ended with result:')
+        self.logger.debug(str(result))
+
+    def on_self_improvement_error(self, error: Union[Exception, KeyboardInterrupt]) -> Any:
+        '''Run when an error occurs during the self-improvement process.'''
+        self.logger.debug(f'Self-improvement process encountered an error: {str(error)}')

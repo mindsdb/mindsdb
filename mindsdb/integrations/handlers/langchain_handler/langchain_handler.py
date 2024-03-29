@@ -6,6 +6,9 @@ from concurrent.futures import as_completed, TimeoutError
 import numpy as np
 import pandas as pd
 
+#how to save the output of the llm
+import sqlite3
+
 from langchain.schema import SystemMessage
 from langchain.agents import AgentType
 from langchain_community.llms import OpenAI
@@ -79,6 +82,8 @@ class LangChainHandler(BaseMLEngine):
         self.default_max_tokens = _DEFAULT_MAX_TOKENS
         self.default_agent_model = _DEFAULT_AGENT_MODEL
         self.default_agent_tools = _DEFAULT_AGENT_TOOLS
+        #create the database in the init
+        self.initialize_database()
         self.log_callback_handler = callback_handler
         if self.log_callback_handler is None:
             self.log_callback_handler = LogCallbackHandler(logger)
@@ -406,6 +411,8 @@ class LangChainHandler(BaseMLEngine):
                 for col in input_variables:
                     kwargs[col] = row[col] if row[col] is not None else ''  # add empty quote if data is missing
                 prompts.append(prompt.format(**kwargs))
+                #add the prompt to the inputs list
+                inputs.append(prompt)
             elif row.get(args['user_column']):
                 # just add prompt
                 prompts.append(row[args['user_column']])
@@ -431,6 +438,8 @@ class LangChainHandler(BaseMLEngine):
             return answer['output']
 
         completions = []
+        #save the inputs too
+        inputs = []
         # max_workers defaults to number of processors on the machine multiplied by 5.
         # https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor
         max_workers = args.get('max_workers', None)
@@ -440,6 +449,8 @@ class LangChainHandler(BaseMLEngine):
         try:
             for future in as_completed(futures, timeout=agent_timeout_seconds):
                 completions.append(future.result())
+                #add a place to store output
+                self.store_llm_output(input_text, completion)
         except TimeoutError:
             completions.append("I'm sorry! I couldn't come up with a response in time. Please try again.")
         # Can't use ThreadPoolExecutor as context manager since we need wait=False.
@@ -452,6 +463,27 @@ class LangChainHandler(BaseMLEngine):
         pred_df = pd.DataFrame(completions, columns=[args['target']])
 
         return pred_df
+
+    def initialize_database(self):
+        # connect to an sqlite database
+        self.con = sqlite3.connect('llm_data.db')
+        cursor = self.con.cursor()
+        # Input of llm is a dataframe- this creates a place for both the input
+        # and the output to be saved
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS llm_io_data (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                input TEXT,
+                output TEXT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )''')
+        self.con.commit()
+
+    def store_llm_output(self, input_data, output_data):
+        cursor = self.con.cursor()
+        #store the input and output into the llm_io_data table
+        cursor.execute('INSERT INTO llm_io_data (input, output) VALUES (?, ?)', (input_data, output_data))
+        self.con.commit()
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
         info = self.model_storage.json_get('description')

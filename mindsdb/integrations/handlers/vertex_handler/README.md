@@ -21,12 +21,12 @@ USING
     staging_bucket="gs://my_staging_bucket",
     experiment="my-experiment",
     experiment_description="my experiment description",
-    service_account = {
+    service_account_key_json = {
       ...paste service account keys here
     };
 ```
 
-> Please note that you need to provide your service_account key's here. 
+> Please note that you need to provide your service_account key here. It is also possible to pass your service account key as either a either a file path or a URL using the 'service_account_key_file` and `service_account_key_url` parameters respectively.
 
 The name of the engine (here, `vertex`) should be used as a value for the `engine` parameter in the `USING` clause of the `CREATE MODEL` statement.
 

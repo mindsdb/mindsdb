@@ -44,9 +44,9 @@ class VectorStoreFactory:
 
         settings = VectorStoreConfig(**config)
 
-        if settings.Vector_store_type == VectorStoreType.CHROMA:
+        if settings.vector_store_type == VectorStoreType.CHROMA:
             return VectorStoreFactory._load_chromadb_store(embeddings_model, settings)
-        elif settings.Vector_store_type == VectorStoreType.PGVECTOR:
+        elif settings.vector_store_type == VectorStoreType.PGVECTOR:
             return VectorStoreFactory._load_pgvector_store(embeddings_model, settings)
         else:
             raise ValueError(f"Invalid vector store type, must be one either {VectorStoreType.__members__.keys()}")

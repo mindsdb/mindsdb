@@ -1,17 +1,12 @@
 import re
 
 from langchain.sql_database import SQLDatabase
-from langchain_core.embeddings import Embeddings
-from langchain_core.language_models import BaseChatModel
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnablePassthrough, RunnableSerializable
 
 from mindsdb.integrations.utilities.rag.retrievers.base import BaseRetriever
-from mindsdb.integrations.utilities.rag.settings import (DEFAULT_LLM,
-                                                         DEFAULT_EMBEDDINGS,
-                                                         DEFAULT_SQL_RETRIEVAL_PROMPT_TEMPLATE
-                                                         )
+from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel
 
 
 class SQLRetriever(BaseRetriever):
@@ -20,16 +15,13 @@ class SQLRetriever(BaseRetriever):
     """
 
     def __init__(self,
-                 connection_string: str,
-                 llm: BaseChatModel = DEFAULT_LLM,
-                 embeddings_model: Embeddings = DEFAULT_EMBEDDINGS,
-                 prompt_template: dict = DEFAULT_SQL_RETRIEVAL_PROMPT_TEMPLATE
+                 config: RAGPipelineModel,
                  ):
-        self.prompt_template = prompt_template
+        self.prompt_template = config.retriever_prompt_template
 
-        self.db = SQLDatabase.from_uri(connection_string)
-        self.llm = llm
-        self.embeddings_model = embeddings_model
+        self.db = SQLDatabase.from_uri(config.db_connection_string)
+        self.llm = config.llm
+        self.embeddings_model = config.embeddings_model
 
     @staticmethod
     def format_prompt(prompt_template: str):

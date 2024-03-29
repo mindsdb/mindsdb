@@ -2,14 +2,19 @@ from enum import Enum
 from typing import List, Union
 
 from langchain_community.vectorstores.chroma import Chroma
+from langchain_community.vectorstores.pgvector import PGVector
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
 from langchain_core.vectorstores import VectorStore
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-from pydantic import BaseModel
+from langchain_core.stores import BaseStore
+from langchain.text_splitter import TextSplitter
+from pydantic import BaseModel, root_validator
 
-from mindsdb.integrations.utilities.rag.retrievers.multi_vector_retriever import MultiVectorRetrieverMode
+# Multi retriever specific
+DEFAULT_ID_KEY = "doc_id"
+DEFAULT_MAX_CONCURRENCY = 5
 
 DEFAULT_CARDINALITY_THRESHOLD = 40
 DEFAULT_CHUNK_SIZE = 1000
@@ -21,7 +26,7 @@ DEFAULT_DATASET_DESCRIPTION = "email inbox"
 DEFAULT_TEST_TABLE_NAME = "test_email"
 DEFAULT_LLM = ChatOpenAI(model_name=DEFAULT_LLM_MODEL, temperature=0)
 DEFAULT_EMBEDDINGS = OpenAIEmbeddings()
-DEFAUlT_VECTOR_STORE = Chroma
+DEFAULT_VECTOR_STORE = Chroma
 DEFAULT_AUTO_META_PROMPT_TEMPLATE = """
 Below is a json representation of a table with information about {description}.
 Return a JSON list with an entry for each column. Each entry should have
@@ -95,9 +100,24 @@ DEFAULT_SQL_RETRIEVAL_PROMPT_TEMPLATE = {
 }
 
 
+class MultiVectorRetrieverMode(Enum):
+    """
+    Enum for MultiVectorRetriever types.
+    """
+    SPLIT = "split"
+    SUMMARIZE = "summarize"
+    BOTH = "both"
+
+
 class VectorStoreType(Enum):
     CHROMA = 'chroma'
     PGVECTOR = 'pgvector'
+
+
+vector_store_map = {
+    VectorStoreType.CHROMA: Chroma,
+    VectorStoreType.PGVECTOR: PGVector
+}
 
 
 class RetrieverType(Enum):
@@ -108,7 +128,7 @@ class RetrieverType(Enum):
 
 
 class VectorStoreConfig(BaseModel):
-    Vector_store_type: VectorStoreType = VectorStoreType.CHROMA
+    vector_store_type: VectorStoreType = VectorStoreType.CHROMA
     persist_directory: str = None
     collection_name: str = None
     connection_string: str = None
@@ -119,21 +139,45 @@ class VectorStoreConfig(BaseModel):
 
 
 class RAGPipelineModel(BaseModel):
-    documents: List[Document] = None
-    content_column_name: str = DEFAULT_CONTENT_COLUMN_NAME
-    dataset_description: str = DEFAULT_DATASET_DESCRIPTION
-    vector_store_config: VectorStoreConfig = None
-    db_connection_string: str = None
-    test_table_name: str = DEFAULT_TEST_TABLE_NAME
-    vector_store: VectorStore = DEFAUlT_VECTOR_STORE
-    llm: BaseChatModel = DEFAULT_LLM
-    embeddings_model: Embeddings = DEFAULT_EMBEDDINGS
-    rag_prompt_template: str = DEFAULT_RAG_PROMPT_TEMPLATE
-    retriever_prompt_template: Union[str, dict] = None
-    retriever_type: RetrieverType = RetrieverType.VECTOR_STORE
-    multi_retriever_mode: MultiVectorRetrieverMode = MultiVectorRetrieverMode.BOTH
-    existing_vector_store: bool = False
+    documents: List[Document] = None  # List of documents
+
+    # used for loading an existing vector store
+    vector_store_config: VectorStoreConfig = VectorStoreConfig()  # Vector store configuration
+
+    vector_store: VectorStore = vector_store_map[vector_store_config.vector_store_type]  # Vector store
+    db_connection_string: str = None  # Database connection string
+    table_name: str = DEFAULT_TEST_TABLE_NAME  # table name
+    llm: BaseChatModel  # Language model
+    embeddings_model: Embeddings  # Embeddings model
+    rag_prompt_template: str = DEFAULT_RAG_PROMPT_TEMPLATE  # RAG prompt template
+    retriever_prompt_template: Union[str, dict] = None  # Retriever prompt template
+    retriever_type: RetrieverType = RetrieverType.VECTOR_STORE  # Retriever type
+
+    # Multi retriever specific
+    multi_retriever_mode: MultiVectorRetrieverMode = MultiVectorRetrieverMode.BOTH  # Multi retriever mode
+    max_concurrency: int = DEFAULT_MAX_CONCURRENCY  # Maximum concurrency
+    id_key: int = DEFAULT_ID_KEY  # ID key
+    parent_store: BaseStore = None  # Parent store
+    text_splitter: TextSplitter = None  # Text splitter
+    chunk_size: int = DEFAULT_CHUNK_SIZE  # Chunk size
+    chunk_overlap: int = DEFAULT_CHUNK_OVERLAP  # Chunk overlap
+
+    # Auto retriever specific
+    auto_retriever_filter_columns: List[str] = None  # Filter columns
+    cardinality_threshold: int = DEFAULT_CARDINALITY_THRESHOLD  # Cardinality threshold
+    content_column_name: str = DEFAULT_CONTENT_COLUMN_NAME  # content column name (the column we will get embeddings)
+    dataset_description: str = DEFAULT_DATASET_DESCRIPTION  # Description of the dataset
 
     class Config:
         arbitrary_types_allowed = True
         extra = "forbid"
+
+    @root_validator(pre=True)
+    def check_documents_or_vector_store_config(cls, values):
+        documents = values.get("documents")
+        vector_store_config = values.get("vector_store_config")
+
+        if documents is None and vector_store_config is None:
+            raise ValueError("At least documents or vector_store_config must be provided")
+
+        return values

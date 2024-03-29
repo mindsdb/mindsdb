@@ -1,34 +1,17 @@
-from enum import Enum
 from typing import List
 import uuid
 
 from langchain.retrievers.multi_vector import MultiVectorRetriever as LangChainMultiVectorRetriever
-from langchain.storage import InMemoryByteStore
-from langchain.text_splitter import TextSplitter
 from langchain_core.documents import Document
-from langchain_core.embeddings import Embeddings
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableSerializable
-from langchain_core.stores import BaseStore
-from langchain_core.vectorstores import VectorStore
 from langchain_openai import ChatOpenAI
 
 from mindsdb.integrations.utilities.rag.retrievers.base import BaseRetriever
-from mindsdb.integrations.utilities.rag.settings import DEFAULT_EMBEDDINGS, DEFAUlT_VECTOR_STORE, DEFAULT_LLM_MODEL
+from mindsdb.integrations.utilities.rag.settings import DEFAULT_LLM_MODEL, \
+    MultiVectorRetrieverMode, RAGPipelineModel
 from mindsdb.integrations.utilities.rag.utils import VectorStoreOperator
-
-_DEFAULT_ID_KEY = "doc_id"
-_MAX_CONCURRENCY = 5
-
-
-class MultiVectorRetrieverMode(Enum):
-    """
-    Enum for MultiVectorRetriever types.
-    """
-    SPLIT = "split"
-    SUMMARIZE = "summarize"
-    BOTH = "both"
 
 
 class MultiVectorRetriever(BaseRetriever):
@@ -36,23 +19,15 @@ class MultiVectorRetriever(BaseRetriever):
     MultiVectorRetriever stores multiple vectors per document.
     """
 
-    def __init__(
-            self,
-            documents: List[Document],
-            id_key: str = _DEFAULT_ID_KEY,
-            vectorstore: VectorStore = DEFAUlT_VECTOR_STORE,
-            parentstore: BaseStore = None,
-            text_splitter: TextSplitter = None,
-            embeddings_model: Embeddings = DEFAULT_EMBEDDINGS,
-            mode: MultiVectorRetrieverMode = MultiVectorRetrieverMode.BOTH
-    ):
-        self.vectorstore = vectorstore
-        self.parentstore = parentstore if parentstore is not None else InMemoryByteStore()
-        self.id_key = id_key
-        self.documents = documents
-        self.text_splitter = text_splitter
-        self.embeddings_model = embeddings_model
-        self.mode = mode
+    def __init__(self, config: RAGPipelineModel):
+        self.vectorstore = config.vector_store
+        self.parent_store = config.parent_store
+        self.id_key = config.id_key
+        self.documents = config.documents
+        self.text_splitter = config.text_splitter
+        self.embeddings_model = config.embeddings_model
+        self.max_concurrency = config.max_concurrency
+        self.mode = config.multi_retriever_mode
 
     def _generate_id_and_split_document(self, doc: Document) -> tuple[str, list[Document]]:
         """
@@ -85,7 +60,7 @@ class MultiVectorRetriever(BaseRetriever):
         )
         retriever = LangChainMultiVectorRetriever(
             vectorstore=vstore_operator.vector_store,
-            byte_store=self.parentstore,
+            byte_store=self.parent_store,
             id_key=self.id_key
         )
         return retriever, vstore_operator
@@ -97,7 +72,7 @@ class MultiVectorRetriever(BaseRetriever):
                 | ChatOpenAI(max_retries=0, model_name=DEFAULT_LLM_MODEL)
                 | StrOutputParser()
         )
-        return chain.batch(self.documents, {"max_concurrency": _MAX_CONCURRENCY})
+        return chain.batch(self.documents, {"max_concurrency": self.max_concurrency})
 
     def as_runnable(self) -> RunnableSerializable:
         if self.mode in {MultiVectorRetrieverMode.SPLIT, MultiVectorRetrieverMode.BOTH}:

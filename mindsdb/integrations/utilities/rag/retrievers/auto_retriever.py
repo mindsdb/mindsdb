@@ -1,23 +1,18 @@
 from typing import List
 import json
 
-from langchain.docstore.document import Document
+
 from langchain.retrievers.self_query.base import SelfQueryRetriever
-from langchain_core.embeddings import Embeddings
-from langchain_core.language_models import BaseChatModel
+
 from langchain_core.runnables import RunnableSerializable
-from langchain_core.vectorstores import VectorStore
+
 import pandas as pd
 
 from mindsdb.integrations.utilities.rag.retrievers.base import BaseRetriever
-from mindsdb.integrations.utilities.rag.settings import (
-    DEFAULT_LLM,
-    DEFAULT_EMBEDDINGS,
-    DEFAULT_AUTO_META_PROMPT_TEMPLATE,
-    DEFAULT_CARDINALITY_THRESHOLD,
-    DEFAUlT_VECTOR_STORE, DEFAULT_CONTENT_COLUMN_NAME
-)
+
 from mindsdb.integrations.utilities.rag.utils import documents_to_df, VectorStoreOperator
+
+from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel
 
 
 class AutoRetriever(BaseRetriever):
@@ -28,39 +23,24 @@ class AutoRetriever(BaseRetriever):
 
     def __init__(
             self,
-            data: List[Document],
-            content_column_name: str = DEFAULT_CONTENT_COLUMN_NAME,
-            vectorstore: VectorStore = DEFAUlT_VECTOR_STORE,
-            embeddings_model: Embeddings = DEFAULT_EMBEDDINGS,
-            llm: BaseChatModel = DEFAULT_LLM,
-            filter_columns: List[str] = None,
-            document_description: str = "",
-            prompt_template: str = DEFAULT_AUTO_META_PROMPT_TEMPLATE,
-            cardinality_threshold: int = DEFAULT_CARDINALITY_THRESHOLD
+            config: RAGPipelineModel
     ):
         """
-        Given a list of Document, use llm to extract metadata from it.
-        :param data: List[Document]
-        :param content_column_name: str
-        :param vectorstore: VectorStore
-        :param filter_columns: List[str]
-        :param document_description: str
-        :param embeddings_model: Embeddings
-        :param llm: BaseChatModel
-        :param prompt_template: str
-        :param cardinality_threshold: int
+
+        :param config: RAGPipelineModel
+
 
         """
 
-        self.data = data
-        self.content_column_name = content_column_name
-        self.vectorstore = vectorstore
-        self.filter_columns = filter_columns
-        self.document_description = document_description
-        self.llm = llm
-        self.embeddings_model = embeddings_model
-        self.prompt_template = prompt_template
-        self.cardinality_threshold = cardinality_threshold
+        self.documents = config.documents
+        self.content_column_name = config.content_column_name
+        self.vectorstore = config.vector_store
+        self.filter_columns = config.auto_retriever_filter_columns
+        self.document_description = config.dataset_description
+        self.llm = config.llm
+        self.embeddings_model = config.embeddings_model
+        self.prompt_template = config.retriever_prompt_template
+        self.cardinality_threshold = config.cardinality_threshold
 
     def _get_low_cardinality_columns(self, data: pd.DataFrame):
         """
@@ -98,7 +78,7 @@ class AutoRetriever(BaseRetriever):
 
         data = documents_to_df(
             self.content_column_name,
-            self.data
+            self.documents
         )
 
         prompt = self.prompt_template.format(dataframe=data.head().to_json(),
@@ -119,7 +99,7 @@ class AutoRetriever(BaseRetriever):
         :return:
         """
         return VectorStoreOperator(vector_store=self.vectorstore,
-                                   documents=self.data,
+                                   documents=self.documents,
                                    embeddings_model=self.embeddings_model).vector_store
 
     def as_runnable(self) -> RunnableSerializable:

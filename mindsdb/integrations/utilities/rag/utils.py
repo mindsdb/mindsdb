@@ -93,7 +93,7 @@ class VectorStoreOperator:
             self._vector_store = vector_store
         elif issubclass(vector_store, VectorStore):
             # checking is it an uninstantiated subclass of VectorStore i.e. Chroma or PGVector
-            raise ValueError("If not documents are provided, an instantiated vector_store must be provided")
+            raise ValueError("If documents are not provided, an instantiated vector_store must be provided")
 
     @property
     def vector_store(self):

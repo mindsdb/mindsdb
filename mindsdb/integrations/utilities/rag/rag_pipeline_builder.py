@@ -1,18 +1,16 @@
 import pandas as pd
+from langchain.storage import InMemoryByteStore
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.runnables import RunnableSerializable
 from sqlalchemy import create_engine
 from mindsdb.integrations.utilities.rag.pipelines.rag import LangChainRAGPipeline
 from mindsdb.integrations.utilities.rag.settings import (
-    DEFAULT_CHUNK_OVERLAP,
-    DEFAULT_CHUNK_SIZE,
-    DEFAULT_RAG_PROMPT_TEMPLATE,
     DEFAULT_POOL_RECYCLE,
     RetrieverType,
     RAGPipelineModel
 )
-from mindsdb.integrations.utilities.rag.utils import documents_to_df, VectorStoreOperator
+from mindsdb.integrations.utilities.rag.utils import documents_to_df
 
 
 _retriever_strategies = {
@@ -29,53 +27,37 @@ def _create_pipeline_from_sql_retriever(config: RAGPipelineModel) -> LangChainRA
         config.db_connection_string, pool_recycle=DEFAULT_POOL_RECYCLE)
     db_connection = alchemyEngine.connect()
 
-    documents_df.to_sql(config.test_table_name, db_connection, index=False, if_exists='replace')
+    documents_df.to_sql(config.table_name, db_connection, index=False, if_exists='replace')
 
     return LangChainRAGPipeline.from_sql_retriever(
-        connection_string=config.db_connection_string,
-        retriever_prompt_template=config.retriever_prompt_template,
-        rag_prompt_template=config.rag_prompt_template,
-        llm=config.llm
+        config=config
     )
 
 
 def _create_pipeline_from_vector_store(config: RAGPipelineModel) -> LangChainRAGPipeline:
-    vector_store_operator = VectorStoreOperator(
-        vector_store=config.vector_store,
-        documents=config.documents,
-        embeddings_model=config.embeddings_model
-    )
 
     return LangChainRAGPipeline.from_retriever(
-        retriever=vector_store_operator.vector_store.as_retriever(),
-        prompt_template=DEFAULT_RAG_PROMPT_TEMPLATE,
-        llm=config.llm
+        config=config
     )
 
 
 def _create_pipeline_from_auto_retriever(config: RAGPipelineModel) -> LangChainRAGPipeline:
     return LangChainRAGPipeline.from_auto_retriever(
-        vectorstore=config.vector_store,
-        data=config.documents,
-        data_description=config.dataset_description,
-        content_column_name=config.content_column_name,
-        retriever_prompt_template=config.retriever_prompt_template,
-        rag_prompt_template=DEFAULT_RAG_PROMPT_TEMPLATE,
-        llm=config.llm
+        config=config
     )
 
 
 def _create_pipeline_from_multi_retriever(config: RAGPipelineModel) -> LangChainRAGPipeline:
-    child_text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=DEFAULT_CHUNK_SIZE, chunk_overlap=DEFAULT_CHUNK_OVERLAP)
+
+    if config.text_splitter is None:
+        config.text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=config.chunk_size, chunk_overlap=config.chunk_overlap
+        )
+    if config.parent_store is None:
+        config.parent_store = InMemoryByteStore()
 
     return LangChainRAGPipeline.from_multi_vector_retriever(
-        documents=config.documents,
-        rag_prompt_template=DEFAULT_RAG_PROMPT_TEMPLATE,
-        vectorstore=config.vector_store,
-        text_splitter=child_text_splitter,
-        llm=config.llm,
-        mode=config.multi_retriever_mode
+        config=config
     )
 
 
@@ -96,7 +78,8 @@ def get_pipeline_from_retriever(config: RAGPipelineModel) -> RunnableSerializabl
 
 
 class RAG:
-    def __init__(self, config: RAGPipelineModel):
+    def __init__(self, config: dict):
+        config = RAGPipelineModel(**config)
         self.pipeline = get_pipeline_from_retriever(config)
 
     def __call__(self, question: str):

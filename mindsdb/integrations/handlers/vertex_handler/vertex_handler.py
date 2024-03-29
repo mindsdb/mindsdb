@@ -26,11 +26,8 @@ class VertexHandler(BaseMLEngine):
         model_name = args.pop("model_name")
         custom_model = args.pop("custom_model", False)
 
-        # get credentials from handler
-        engine_args = self.engine_storage.json_get('args')
-        credentials_url = engine_args.get('service_account_key_url')
-        credentials_file = engine_args.get('service_account_key_file')
-        credentials_json = engine_args.get('service_account_key_json')
+        # get credentials from engine
+        credentials_url, credentials_file, credentials_json = self._get_credentials_from_engine()
 
         # get vertex args from handler then update args from model
         vertex_args = self.engine_storage.json_get('args')
@@ -66,9 +63,11 @@ class VertexHandler(BaseMLEngine):
 
         predict_args = self.model_storage.json_get("predict_args")
         vertex_args = self.model_storage.json_get("vertex_args")
-        service_account_info = self.engine_storage.json_get('service_account')
 
-        vertex = VertexClient(service_account_info, vertex_args)
+        # get credentials from engine
+        credentials_url, credentials_file, credentials_json = self._get_credentials_from_engine()
+
+        vertex = VertexClient(credentials_url, credentials_file, credentials_json, vertex_args)
         results = vertex.predict_from_df(predict_args["endpoint_name"], df, custom_model=predict_args["custom_model"])
 
         if predict_args["custom_model"]:
@@ -82,3 +81,8 @@ class VertexHandler(BaseMLEngine):
             raise KeyError('Either service_account_key_url, service_account_key_file, or service_account_key_json must be provided')
 
         self.engine_storage.json_set('args', connection_args)
+
+    def _get_credentials_from_engine(self):
+        engine_args = self.engine_storage.json_get('args')
+
+        return engine_args.get('service_account_key_url'), engine_args.get('service_account_key_file'), engine_args.get('service_account_key_json')

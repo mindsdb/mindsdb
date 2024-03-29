@@ -1,5 +1,4 @@
 import pandas as pd
-import json
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.handlers.vertex_handler.vertex_client import VertexClient
 from mindsdb.utilities import log

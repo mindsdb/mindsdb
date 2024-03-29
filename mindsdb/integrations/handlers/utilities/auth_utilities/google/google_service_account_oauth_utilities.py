@@ -18,7 +18,10 @@ class GoogleServiceAccountOAuth2Manager:
             raise NoCredentialsException('No valid Google Service Account credentials provided.')
         self.credentials_url = credentials_url
         self.credentials_file = credentials_file
-        self.credentials_json = self._parse_credentials_json(credentials_json)
+        if credentials_json:
+            self.credentials_json = self._parse_credentials_json(credentials_json)
+        else:
+            self.credentials_json = None
 
     def get_oauth2_credentials(self):
         try:

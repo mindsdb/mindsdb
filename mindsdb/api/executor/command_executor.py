@@ -80,7 +80,6 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
 from .exceptions import (
     ExecutorException,
     BadDbError,
-    BadTableError,
     NotSupportedYet,
     WrongArgumentError,
     TableNotExistError,
@@ -611,13 +610,6 @@ class ExecuteCommands:
         elif type(statement) is Delete:
             if statement.table.parts[-1].lower() == "models_versions":
                 return self.answer_delete_model_version(statement, database_name)
-            if (
-                database_name != "mindsdb"
-                and statement.table.parts[0] != "mindsdb"
-            ):
-                raise BadTableError(
-                    "Only 'DELETE' from database 'mindsdb' is possible at this moment"
-                )
 
             SQLQuery(statement, session=self.session, execute=True, database=database_name)
             return ExecuteAnswer(ANSWER_TYPE.OK)

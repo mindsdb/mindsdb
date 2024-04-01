@@ -106,7 +106,7 @@ class IntegrationDataNode(DataNode):
             create_table_ast = CreateTable(
                 name=table_name,
                 columns=columns,
-                is_replace=True
+                is_replace=is_replace
             )
             result = self._query(create_table_ast)
             if result.type == RESPONSE_TYPE.ERROR:

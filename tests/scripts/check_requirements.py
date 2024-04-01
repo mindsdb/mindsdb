@@ -40,7 +40,7 @@ MAIN_RULE_IGNORES = {
     "DEP003": ["torch"],
     # Ignore Langhchain since the requirements check will still fail even if it's conditionally imported for certain features.
     "DEP001": ["torch"],
-    "DEP002": ["psycopg2-binary"],
+    "DEP002": ["psycopg2-binary", "lark"],
 }
 
 # THe following packages need exceptions because they are optional deps of some other packages. e.g. langchain CAN use openai
@@ -100,6 +100,7 @@ PACKAGE_NAME_MAP = {
     "ibm-db": ["ibm_db_dbi"],
     "python-dateutil": ["dateutil"],
     "grpcio": ["grpc"],
+    "langchain-community": ["langchain_community"],
     "sqlalchemy-redshift": ["redshift_sqlalchemy"],
     "sqlalchemy-vertica-python": ["sqla_vertica_python"],
     "grpcio-tools": ["grpc"],

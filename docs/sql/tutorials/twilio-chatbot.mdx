@@ -25,7 +25,7 @@ Then go to your MindsDB SQL Editor and enter the following commands to create AI
     CREATE ML_ENGINE openai_engine
     FROM openai
     USING
-    api_key = 'sk-xxx';
+        openai_api_key = 'sk-xxx';
     ```
 
     Now you can create a model:
@@ -147,11 +147,13 @@ This job inserts replies to Twilio messages into the `messages` table. We provid
 You can monitor this job with the following commands:
 
 ```sql
+SHOW JOBS WHERE name='twilio_bot_images_job';
+
 SELECT * FROM jobs
 WHERE name='twilio_bot_images_job';
  
-SELECT * FROM jobs_history
-WHERE name='twilio_bot_images_job';
+SELECT * FROM log.jobs_history
+WHERE project = 'mindsdb' AND name='twilio_bot_images_job';
 ```
 
 Here is a sample reply:

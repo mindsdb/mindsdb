@@ -1,2 +1,2 @@
-google-cloud-bigquery
+google-cloud-bigquery[pandas]
 sqlalchemy-bigquery

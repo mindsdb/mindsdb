@@ -5,11 +5,13 @@ from flask_restx import Resource
 
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.tree import ns_conf
+from mindsdb.metrics.metrics import api_endpoint_metrics
 
 
 @ns_conf.route('/')
 class GetRoot(Resource):
     @ns_conf.doc('get_tree_root')
+    @api_endpoint_metrics('GET', '/tree')
     def get(self):
         databases = ca.database_controller.get_list()
         result = [{
@@ -17,7 +19,8 @@ class GetRoot(Resource):
             'class': 'db',
             'type': x['type'],
             'engine': x['engine'],
-            'deletable': x['type'] != 'system'
+            'deletable': x['deletable'],
+            'visible': x['visible']
         } for x in databases]
         return result
 
@@ -26,6 +29,7 @@ class GetRoot(Resource):
 @ns_conf.param('db_name', "Name of the database")
 class GetLeaf(Resource):
     @ns_conf.doc('get_tree_leaf')
+    @api_endpoint_metrics('GET', '/tree/database')
     def get(self, db_name):
         databases = ca.database_controller.get_dict()
         if db_name not in databases:
@@ -79,6 +83,13 @@ class GetLeaf(Resource):
                     'children': val
                 } for key, val in schemas.items()]
         elif db['type'] == 'system':
-            # TODO
-            tables = []
+            system_db = ca.database_controller.get_system_db(db_name)
+            tables = system_db.get_tables()
+            tables = [{
+                'name': table.name,
+                'class': table.kind,
+                'type': 'system view',
+                'engine': None,
+                'deletable': table.deletable,
+            } for table in tables.values()]
         return tables

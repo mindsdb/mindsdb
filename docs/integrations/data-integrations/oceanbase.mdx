@@ -7,6 +7,14 @@ This is the implementation of the OceanBase data handler for MindsDB.
 
 OceanBase is a distributed relational database. It is the only distributed database in the world that has broken both TPC-C and TPC-H records. OceanBase adopts an independently developed integrated architecture, which encompasses both the scalability of a distributed architecture and the performance advantage of a centralized architecture. It supports hybrid transaction/analytical processing (HTAP) with one engine. Its features include strong data consistency, high availability, high performance, online scalability, high compatibility with SQL and mainstream relational databases, transparency to applications, and a high cost/performance ratio.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect OceanBase to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to OceanBase.
+
 ## Implementation
 
 This handler is implemented by extending the MySQL data handler.
@@ -18,10 +26,6 @@ The required arguments to establish a connection are as follows:
 * `host` is the host name, IP address, or URL.
 * `port` is the port used to make TCP/IP connection.
 * `database` is the database name.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/oceanbase_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

@@ -652,7 +652,7 @@ class TestComplexQueries(BaseExecutorMockPredictor):
         assert mock_handler().query.call_count == 3
 
         # second is update
-        assert mock_handler().query.call_args_list[1][0][0].to_string() == "update table2 set a1=1, c1='ccc' where (a1 = 1) AND (b1 = 'ccc')"
+        assert mock_handler().query.call_args_list[1][0][0].to_string() == "update table2 set a1=1, c1='ccc' where a1 = 1 AND b1 = 'ccc'"
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_update_in_integration(self, mock_handler):

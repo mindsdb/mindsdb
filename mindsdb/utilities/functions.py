@@ -115,8 +115,22 @@ def init_lexer_parsers():
     get_lexer_parser('mysql')
 
 
-def resolve_model_identifier(name: Identifier) -> tuple:
+def resolve_table_identifier(identifier: Identifier, default_database: str = None) -> tuple:
+    parts = identifier.parts
+
+    parts_count = len(parts)
+    if parts_count == 1:
+        return (None, parts[0])
+    elif parts_count == 2:
+        return (parts[0], parts[1])
+    else:
+        raise Exception(f'Table identifier must contain max 2 parts: {parts}')
+
+
+def resolve_model_identifier(identifier: Identifier) -> tuple:
     """ split model name to parts
+
+        Identifier may be:
 
         Examples:
             >>> resolve_model_identifier(['a', 'b'])
@@ -132,34 +146,35 @@ def resolve_model_identifier(name: Identifier) -> tuple:
             (None, None, None)  # not found
 
         Args:
-            name (list): Identifier parts
+            name (Identifier): Identifier parts
 
         Returns:
-            tuple: (database_name, model_name, model_version, describe)
+            tuple: (database_name, model_name, model_version)
     """
-    name = name.parts
+    parts = identifier.parts
     database_name = None
     model_name = None
     model_version = None
-    parts_count = len(name)
+
+    parts_count = len(parts)
     if parts_count == 1:
         database_name = None
-        model_name = name[0]
+        model_name = parts[0]
         model_version = None
     elif parts_count == 2:
-        if name[-1].isdigit():
+        if parts[-1].isdigit():
             database_name = None
-            model_name = name[0]
-            model_version = int(name[-1])
+            model_name = parts[0]
+            model_version = int(parts[-1])
         else:
-            database_name = name[0]
-            model_name = name[1]
+            database_name = parts[0]
+            model_name = parts[1]
             model_version = None
     elif parts_count == 3:
-        database_name = name[0]
-        model_name = name[1]
-        if name[2].isdigit():
-            model_version = int(name[2])
+        database_name = parts[0]
+        model_name = parts[1]
+        if parts[2].isdigit():
+            model_version = int(parts[2])
         else:
             # not found
             return None, None, None

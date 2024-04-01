@@ -7,6 +7,14 @@ This is the implementation of the Amazon Aurora handler for MindsDB.
 
 [Amazon Aurora](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/CHAP_AuroraOverview.html) is a fully managed relational database engine that's compatible with MySQL and PostgreSQL.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect Amazon Aurora to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to Amazon Aurora.
+
 ## Implementation
 
 This handler was implemented using the existing MindsDB handlers for MySQL and PostgreSQL.
@@ -24,10 +32,6 @@ There optional arguments that can be used are as follows:
 * `db_engine`: the database engine of the Amazon Aurora DB cluster. This can take one of two values: 'mysql' or 'postgresql'. This parameter is optional, but if it is not provided, `aws_access_key_id` and `aws_secret_access_key` parameters must be provided.
 * `aws_access_key_id`: the access key for the AWS account. This parameter is optional and is only required to be provided if the `db_engine` parameter is not provided.
 * `aws_secret_access_key`: the secret key for the AWS account. This parameter is optional and is only required to be provided if the `db_engine` parameter is not provided.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/aurora_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

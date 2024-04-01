@@ -5,8 +5,6 @@ import pytest
 
 import pandas as pd
 
-from mindsdb_sql import parse_sql
-
 from .executor_test_base import BaseExecutorDummyML
 
 
@@ -41,37 +39,20 @@ class TestProjectStructure(BaseExecutorDummyML):
         if not done:
             raise RuntimeError("predictor didn't created")
 
-    def run_sql(self, sql, throw_error=True, database='mindsdb'):
-        self.command_executor.session.database = database
-        ret = self.command_executor.execute_command(
-            parse_sql(sql, dialect='mindsdb')
-        )
-        if throw_error:
-            assert ret.error_code is None
-        if ret.data is not None:
-            columns = [
-                col.alias if col.alias is not None else col.name
-                for col in ret.columns
-            ]
-            return pd.DataFrame(ret.data, columns=columns)
-
     def get_models(self):
         models = {}
         for p in self.db.Predictor.query.all():
             models[p.id] = p
         return models
 
-    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
-    def test_version_managing(self, data_handler):
+    def test_version_managing(self):
         from mindsdb.utilities.exception import EntityNotExistsError
         # set up
-
-        df = pd.DataFrame([
+        self.set_data('tasks', pd.DataFrame([
             {'a': 1, 'b': dt.datetime(2020, 1, 1)},
             {'a': 2, 'b': dt.datetime(2020, 1, 2)},
             {'a': 1, 'b': dt.datetime(2020, 1, 3)},
-        ])
-        self.set_handler(data_handler, name='pg', tables={'tasks': df})
+        ]))
 
         # ================= retrain cycles =====================
 
@@ -82,7 +63,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         ret = self.run_sql(
             '''
                 CREATE model proj.task_model
-                from pg (select * from tasks)
+                from dummy_data (select * from tasks)
                 PREDICT a
                 using engine='dummy_ml',
                 tag = 'first',
@@ -100,7 +81,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         # use model
         ret = self.run_sql('''
              SELECT m.*
-               FROM pg.tasks as t
+               FROM dummy_data.tasks as t
                JOIN proj.task_model as m
         ''')
 
@@ -108,11 +89,10 @@ class TestProjectStructure(BaseExecutorDummyML):
         assert ret.predicted[0] == 42
 
         # -- retrain predictor with tag --
-        data_handler.reset_mock()
         ret = self.run_sql(
             '''
                 retrain proj.task_model
-                from pg (select * from tasks where a=2)
+                from dummy_data (select * from tasks where a=2)
                 PREDICT b
                 using tag = 'second',
                 join_learn_process=true
@@ -134,7 +114,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         # use model
         ret = self.run_sql('''
              SELECT m.*
-               FROM pg.tasks as t
+               FROM dummy_data.tasks as t
                JOIN proj.task_model as m
         ''')
         assert ret.predicted[0] == 42
@@ -145,11 +125,10 @@ class TestProjectStructure(BaseExecutorDummyML):
         assert models[model_id].label == 'second'
 
         # -- retrain again with active=0 --
-        data_handler.reset_mock()
         self.run_sql(
             '''
                 retrain proj.task_model
-                from pg (select * from tasks where a=2)
+                from dummy_data (select * from tasks where a=2)
                 PREDICT a
                 using tag='third', active=0
             '''
@@ -164,7 +143,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         # use model
         ret = self.run_sql('''
              SELECT m.*
-               FROM pg.tasks as t
+               FROM dummy_data.tasks as t
                JOIN proj.task_model as m
         ''')
 
@@ -178,7 +157,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         # run 3rd version model and check used model version
         ret = self.run_sql('''
              SELECT m.*
-               FROM pg.tasks as t
+               FROM dummy_data.tasks as t
                JOIN proj.task_model.3 as m
         ''')
 
@@ -354,6 +333,35 @@ class TestProjectStructure(BaseExecutorDummyML):
         )
         self.wait_predictor('mindsdb', 'task_model')
 
+    def test_replace_model(self):
+        # create model
+        self.run_sql(
+            '''
+                CREATE or REPLACE model task_model
+                PREDICT a
+                using engine='dummy_ml',
+                join_learn_process=true
+            '''
+        )
+        self.wait_predictor('mindsdb', 'task_model')
+
+        # recreate
+        self.run_sql(
+            '''
+                CREATE or REPLACE model task_model
+                PREDICT a
+                using engine='dummy_ml',
+                join_learn_process=true, my_param='a'
+            '''
+        )
+        self.wait_predictor('mindsdb', 'task_model')
+
+        # test json operator
+        resp = self.run_sql("select training_options->'using'->'my_param' param from models where name='task_model' ")
+
+        # FIXME duckdb returns result quoted
+        assert resp['param'][0] == '"a"'
+
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_complex_joins(self, data_handler):
         df1 = pd.DataFrame([
@@ -367,7 +375,8 @@ class TestProjectStructure(BaseExecutorDummyML):
             {'a': 4, 'c': 2},
             {'a': 2, 'c': 3},
         ])
-        self.set_handler(data_handler, name='pg', tables={'tbl1': df1, 'tbl2': df2})
+        self.set_data('tbl1', df1)
+        self.set_data('tbl2', df2)
 
         self.run_sql(
             '''
@@ -380,16 +389,16 @@ class TestProjectStructure(BaseExecutorDummyML):
 
         self.run_sql('''
             create view mindsdb.view2 (
-                select * from pg.tbl2 where a!=4
+                select * from dummy_data.tbl2 where a!=4
             )
         ''')
 
         # --- test join table-table-table ---
         ret = self.run_sql('''
             SELECT t1.a as t1a,  t3.a t3a
-              FROM pg.tbl1 as t1
-              JOIN pg.tbl2 as t2 on t1.c=t2.c
-              LEFT JOIN pg.tbl1 as t3 on t2.a=t3.a
+              FROM dummy_data.tbl1 as t1
+              JOIN dummy_data.tbl2 as t2 on t1.c=t2.c
+              LEFT JOIN dummy_data.tbl1 as t3 on t2.a=t3.a
               where t1.a=1
         ''')
 
@@ -404,10 +413,9 @@ class TestProjectStructure(BaseExecutorDummyML):
         assert len(ret[ret.t3a.isna()]) == 1
 
         # --- test join table-predictor-view ---
-
         ret = self.run_sql('''
             SELECT t1.a t1a, t3.a t3a, m.*
-              FROM pg.tbl1 as t1
+              FROM dummy_data.tbl1 as t1
               JOIN mindsdb.pred m
               LEFT JOIN mindsdb.view2 as t3 on t1.c=t3.c
               where t1.a>1
@@ -435,12 +443,12 @@ class TestProjectStructure(BaseExecutorDummyML):
             SELECT t1.a t1a,
                    t2.t1a t2t1a, t2.t3a t2t3a,
                    t3.c t3c, t3.a t3a
-              FROM pg.tbl1 as t1
+              FROM dummy_data.tbl1 as t1
               JOIN (
                   SELECT t1.a as t1a,  t3.a t3a
-                  FROM pg.tbl1 as t1
-                  JOIN pg.tbl2 as t2 on t1.c=t2.c
-                  LEFT JOIN pg.tbl1 as t3 on t2.a=t3.a
+                  FROM dummy_data.tbl1 as t1
+                  JOIN dummy_data.tbl2 as t2 on t1.c=t2.c
+                  LEFT JOIN dummy_data.tbl1 as t3 on t2.a=t3.a
                   where t1.a=1
               ) t2 on t2.t3a = t1.a
               LEFT JOIN mindsdb.view2 as t3 on t1.c=t3.c
@@ -575,7 +583,6 @@ class TestProjectStructure(BaseExecutorDummyML):
         assert ret.c_count[0] == 4
         assert ret.c_avg[0] == 62.5
 
-        # -- window functions --
         sql = '''
            SELECT
              s.*,
@@ -642,20 +649,19 @@ class TestProjectStructure(BaseExecutorDummyML):
         ret = self.run_sql('describe pred.info')
         assert ret['type'][0] == 'dummy'
 
-    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
-    def test_last(self, data_handler):
+    def test_last(self):
         df = pd.DataFrame([
             {'a': 1, 'b': 'a'},
             {'a': 2, 'b': 'b'},
             {'a': 3, 'b': 'c'},
         ])
-        self.set_handler(data_handler, name='pg', tables={'tasks': df})
+        self.set_data('tasks', df)
 
         # -- create model --
         self.run_sql(
             '''
                 CREATE model task_model
-                from pg (select * from tasks)
+                from dummy_data (select * from tasks)
                 PREDICT a
                 using engine='dummy_ml'
             '''
@@ -663,7 +669,7 @@ class TestProjectStructure(BaseExecutorDummyML):
 
         # --- check web editor  ---
         ret = self.run_sql('''
-            select * from pg.tasks where a>last
+            select * from dummy_data.tasks where a>last
          ''')
         # first call is empty
         assert len(ret) == 0
@@ -671,9 +677,10 @@ class TestProjectStructure(BaseExecutorDummyML):
         # add rows to dataframe
         df.loc[len(df.index)] = [4, 'd']  # should be tracked
         df.loc[len(df.index)] = [0, 'z']  # not tracked
+        self.set_data('tasks', df)
 
         ret = self.run_sql('''
-            select * from pg.tasks where a>last
+            select * from dummy_data.tasks where a>last
         ''')
 
         # second call content one new line
@@ -686,7 +693,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         with pytest.raises(Exception) as exc_info:
             self.run_sql('''
                 create view v1 (
-                    select b from pg.tasks where a>last
+                    select b from dummy_data.tasks where a>last
                 )
             ''')
         assert 'should be in query target' in str(exc_info.value)
@@ -694,7 +701,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         # view with target
         self.run_sql('''
             create view v1 (
-                select * from pg.tasks where a>last
+                select * from dummy_data.tasks where a>last
             )
         ''')
 
@@ -706,6 +713,7 @@ class TestProjectStructure(BaseExecutorDummyML):
 
         # add row to dataframe
         df.loc[len(df.index)] = [5, 'a']
+        self.set_data('tasks', df)
 
         ret = self.run_sql('''
             select * from v1
@@ -717,6 +725,7 @@ class TestProjectStructure(BaseExecutorDummyML):
 
         # add row to dataframe
         df.loc[len(df.index)] = [6, 'a']
+        self.set_data('tasks', df)
 
         # use model
         ret = self.run_sql('''
@@ -728,6 +737,30 @@ class TestProjectStructure(BaseExecutorDummyML):
         # second call content one new line
         assert len(ret) == 1
 
+        # -- view with model
+
+        self.run_sql('''
+            create view v2 (
+                select t.a+1 as a from dummy_data.tasks t
+                JOIN task_model as m
+                where t.a>last
+            )
+       ''')
+
+        ret = self.run_sql('select * from v2')
+        # first call is empty
+        assert len(ret) == 0
+
+        # add row to dataframe
+        df.loc[len(df.index)] = [7, 'a']
+        self.set_data('tasks', df)
+
+        ret = self.run_sql('select * from v2')
+
+        # second call content one new line
+        assert len(ret) == 1
+        assert ret.a[0] == 8
+
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_last_in_job(self, data_handler, scheduler):
         df = pd.DataFrame([
@@ -735,12 +768,13 @@ class TestProjectStructure(BaseExecutorDummyML):
             {'a': 2, 'b': 'b'},
         ])
         self.set_handler(data_handler, name='pg', tables={'tasks': df})
+        self.save_file('tasks', df)
 
         # -- create model --
         self.run_sql(
             '''
                 CREATE model task_model
-                from pg (select * from tasks)
+                from files (select * from tasks)
                 PREDICT a
                 using engine='dummy_ml'
             '''
@@ -788,32 +822,139 @@ class TestProjectStructure(BaseExecutorDummyML):
         assert 'a > 2' in sql
         assert "b = 'b'" in sql
 
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_duplicated_cols(self, data_handler):
+        df1 = pd.DataFrame([
+            {'id': 1, 'a': 1},
+            {'id': 2, 'a': 2},
+            {'id': 3, 'a': 3},
+        ])
+        df2 = pd.DataFrame([
+            {'id': 1, 'a': 10},
+            {'id': 2, 'a': 20},
+        ])
+        self.set_handler(data_handler, name='pg', tables={'tbl1': df1, 'tbl2': df2})
+
+        ret = self.run_sql('''
+            select * from pg.tbl1 as a
+            join pg.tbl2 as b on a.id=b.id
+        ''')
+
+        first_row = ret.to_dict('split')['data'][0]
+        assert first_row == [1, 1, 1, 10]
+
+    def test_llm_log(self):
+        from mindsdb.interfaces.database.log import LLMLogTable
+
+        ret = self.run_sql('select * from log.llm_log')
+        assert len(ret) == 0
+
+        record = self.db.Predictor(
+            id=1,
+            project_id=0,
+            name='test'
+        )
+        self.db.session.add(record)
+        self.db.session.commit()
+
+        for j in range(2):
+            for i in range(3 + j):
+                record = self.db.LLMLog(
+                    api_key=f'api_key_{j}',
+                    model_id=1,
+                    input='test_input',
+                    output='test_output',
+                    prompt_tokens=i,
+                    completion_tokens=i,
+                    total_tokens=i,
+                    start_time=dt.datetime.now(),
+                    end_time=dt.datetime.now()
+                )
+                self.db.session.add(record)
+                self.db.session.commit()
+
+        ret = self.run_sql('select * from log.llm_log')
+        assert len(ret) == 7
+        assert sorted([x.upper() for x in list(ret.columns)]) == sorted([x.upper() for x in LLMLogTable.columns])
+
+        with pytest.raises(Exception):
+            self.run_sql('select company_id from log.llm_log')
+
+        ret = self.run_sql("select model_name, input, output, api_key from log.llm_log where api_key = 'api_key_1'")
+        assert len(ret) == 4
+        assert len(ret.columns) == 4
+        assert ret['model_name'][0] == 'test'
+        assert ret['api_key'][0] == 'api_key_1'
+
+    def test_create_engine(self):
+        self.run_sql('''
+            CREATE ML_ENGINE my_engine
+            FROM dummy_ml
+            USING
+               unquoted_arg = yourkey,
+               json_arg = {
+                  "type": "service_account",
+                  "project_id": "123456"
+               }
+        ''')
+
+        self.run_sql(
+            '''
+               CREATE model pred
+                PREDICT p
+                using engine='my_engine',
+                join_learn_process=true
+            '''
+        )
+
+        ret = self.run_sql('select * from pred where a=1')
+        args = ret['engine_args'][0]
+
+        # check unquoted value
+        assert args['unquoted_arg'] == 'yourkey'
+
+        # check json value
+        assert args['json_arg']['project_id'] == '123456'
+
+    def test_show(self):
+        for item in ('chatbots', 'knowledge_bases', 'agents', 'skills', 'jobs'):
+
+            self.run_sql(f'show {item}')
+
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_create_empty_table(self, data_handler):
+        self.set_handler(data_handler, name='pg', tables={})
+
+        self.run_sql('create table pg.table1 (a DATE, b INTEGER)')
+
+        calls = data_handler().query.call_args_list
+        sql = calls[0][0][0].to_string()
+        assert sql.strip() == 'CREATE TABLE table1 (a DATE, b INTEGER)'
+
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_interval(self, data_handler):
+        df = pd.DataFrame([
+            {'last_date': dt.datetime(2020, 1, 2)},
+        ])
+        self.set_handler(data_handler, name='pg', tables={'branch': df})
+
+        ret = self.run_sql("select (last_date + INTERVAL '2 days') d from pg.branch")
+
+        assert ret.d[0] == dt.datetime(2020, 1, 4)
+
 
 class TestJobs(BaseExecutorDummyML):
 
-    def run_sql(self, sql, throw_error=True, database='mindsdb'):
-        self.command_executor.session.database = database
-        ret = self.command_executor.execute_command(
-            parse_sql(sql, dialect='mindsdb')
-        )
-        if throw_error:
-            assert ret.error_code is None
-        if ret.data is not None:
-            columns = [
-                col.alias if col.alias is not None else col.name
-                for col in ret.columns
-            ]
-            return pd.DataFrame(ret.data, columns=columns)
+    def test_job(self, scheduler):
+        from mindsdb.interfaces.database.log import JobsHistoryTable
 
-    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
-    def test_job(self, data_handler, scheduler):
         df1 = pd.DataFrame([
             {'a': 1, 'c': 1, 'b': dt.datetime(2020, 1, 1)},
             {'a': 2, 'c': 1, 'b': dt.datetime(2020, 1, 2)},
             {'a': 1, 'c': 3, 'b': dt.datetime(2020, 1, 3)},
             {'a': 3, 'c': 2, 'b': dt.datetime(2020, 1, 2)},
         ])
-        self.set_handler(data_handler, name='pg', tables={'tbl1': df1})
+        self.set_data('tbl1', df1)
 
         self.run_sql('create database proj1')
         # create job
@@ -834,7 +975,7 @@ class TestJobs(BaseExecutorDummyML):
         # create job with start time and schedule
         self.run_sql('''
             create job proj2.j2 (
-                select * from pg.tbl1 where b>'{{PREVIOUS_START_DATETIME}}'
+                select * from dummy_data.tbl1 where b>'{{PREVIOUS_START_DATETIME}}'
             )
             start now
             every hour
@@ -857,10 +998,6 @@ class TestJobs(BaseExecutorDummyML):
         self.run_sql('drop job proj1.j1')
 
         # ------------ executing
-
-        # run scheduler once
-        data_handler.reset_mock()
-
         scheduler.check_timetable()
 
         # check query to integration
@@ -873,16 +1010,16 @@ class TestJobs(BaseExecutorDummyML):
         assert minutes > 58 and minutes < 62
 
         # check history table
-        ret = self.run_sql('select * from jobs_history', database='proj2')
+        ret = self.run_sql('select * from log.jobs_history', database='proj2')
         # proj2.j2 was run one time
         assert len(ret) == 1
-        assert ret.PROJECT[0] == 'proj2' and ret.NAME[0] == 'j2'
+        assert ret.project[0] == 'proj2' and ret.name[0] == 'j2'
 
         # run once again
         scheduler.check_timetable()
 
         # job wasn't executed
-        ret = self.run_sql('select * from jobs_history', database='proj2')
+        ret = self.run_sql('select * from log.jobs_history', database='proj2')
         assert len(ret) == 1
 
         # shift 'next run' and run once again
@@ -890,18 +1027,24 @@ class TestJobs(BaseExecutorDummyML):
         job.next_run_at = job.start_at - dt.timedelta(seconds=1)  # different time because there is unique key
         self.db.session.commit()
 
-        data_handler.reset_mock()
         scheduler.check_timetable()
 
-        ret = self.run_sql('select * from jobs_history', database='proj2')
+        ret = self.run_sql('select * from log.jobs_history', database='proj2')
         assert len(ret) == 2  # was executed
 
         # check global history table
         ret = self.run_sql('select * from information_schema.jobs_history', database='proj2')
-        assert len(ret) == 2  # was executed
+        assert len(ret) == 2
+        assert sorted([x.upper() for x in list(ret.columns)]) == sorted([x.upper() for x in JobsHistoryTable.columns])
+
+        # there is no 'jobs_history' table in project
+        with pytest.raises(Exception):
+            self.run_sql('select * from jobs_history', database='proj2')
+
+        with pytest.raises(Exception):
+            self.run_sql('select company_id from log.jobs_history', database='proj2')
 
     def test_inactive_job(self, scheduler):
-
         # create job
         self.run_sql('create job j1 (select * from models)')
 
@@ -917,12 +1060,53 @@ class TestJobs(BaseExecutorDummyML):
         # run scheduler
         scheduler.check_timetable()
 
-        ret = self.run_sql('select * from jobs_history')
+        ret = self.run_sql('select * from log.jobs_history')
         # no history
         assert len(ret) == 0
 
+    def test_conditional_job(self, scheduler):
+        df = pd.DataFrame([
+            {'a': 1, 'b': '2'},
+        ])
+        self.save_file('tasks', df)
 
-class TestTriggers(BaseExecutorDummyML):
-    def test_triggers(self):
-        # TODO
-        ...
+        # create job
+        job_str = '''
+            create job j1 (
+                CREATE model pred
+                PREDICT p
+                using engine='dummy_ml',
+                join_learn_process=true
+            )
+            if (
+                select * from files.tasks where a={var}
+            )
+        '''
+
+        self.run_sql(job_str.format(var=2))
+
+        # check jobs table
+        ret = self.run_sql('select * from jobs')
+        assert len(ret) == 1, "should be 1 job"
+
+        # run scheduler
+        scheduler.check_timetable()
+
+        # check no models created
+        ret = self.run_sql('select * from models where name="pred"')
+        assert len(ret) == 0
+
+        # --- attempt2 ---
+
+        self.run_sql(job_str.format(var=1))
+
+        # check jobs table, still one job - previous was one time job
+        ret = self.run_sql('select * from jobs')
+        assert len(ret) == 1, "should be 1 job"
+
+        # run scheduler
+        scheduler.check_timetable()
+
+        # check 1 model
+        ret = self.run_sql('select * from models where name="pred"')
+        assert len(ret) == 1

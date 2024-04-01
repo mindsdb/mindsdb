@@ -7,6 +7,14 @@ This is the implementation of the TimescaleDB data handler for MindsDB.
 
 [TimescaleDB](https://docs.timescale.com) is an open-source relational database that is optimized for time-series data. It is designed to handle large volumes of data. It enables you to query and analyze data in real-time. TimescaleDB can be used for a wide range of applications, including IoT, finance, and monitoring.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect TimescaleDB to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to TimescaleDB.
+
 ## Implementation
 
 This handler is implemented using the `psycopg2` library, which is a PostgreSQL adapter for the Python programming language. TimescaleDB is built on top of PostgreSQL and therefore can be accessed using the same client libraries and APIs.
@@ -18,10 +26,6 @@ The required arguments to establish a connection are as follows:
 *`database` is the database name to use when connecting with the TimescaleDB server.
 *`user` is the user to authenticate the user with the TimescaleDB server.
 *`password` is the password to authenticate the user with the TimescaleDB server.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/timescaledb_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

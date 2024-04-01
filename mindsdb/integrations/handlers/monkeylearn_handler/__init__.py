@@ -11,8 +11,9 @@ except Exception as e:
 title = 'MonkeyLearn'
 name = 'monkeylearn'
 type = HANDLER_TYPE.ML
-permanent = True
+icon_path = 'icon.png'
+permanent = False
 
 __all__ = [
-    'Handler', 'version', 'name', 'type', 'title', 'description', 'import_error'
+    'Handler', 'version', 'name', 'type', 'title', 'description', 'import_error', 'icon_path'
 ]

@@ -15,7 +15,7 @@ Before creating a model, you will need to create an ML engine for TimeGPT using 
 CREATE ML_ENGINE timegpt
 FROM timegpt
 USING
-    api_key = 'timegpt_api_key';
+    timegpt_api_key = 'timegpt_api_key';
 ```
 
 Once the ML engine is created, we use the `CREATE MODEL` statement to create the TimeGPT model in MindsDB.
@@ -56,7 +56,7 @@ Please note that before using the TimeGPT engine, you should create it from the 
 CREATE ML_ENGINE timegpt
 FROM timegpt
 USING
-    api_key = 'timegpt_api_key';
+    timegpt_api_key = 'timegpt_api_key';
 ```
 
 You can check the available engines with this command:

@@ -7,6 +7,14 @@ This is the implementation of the CockroachDB data handler for MindsDB.
 
 [CockroachDB](https://www.cockroachlabs.com/docs/) was architected for complex, high performant distributed writes and delivers scale-out read capability. CockroachDB delivers simple relational SQL transactions and obscures complexity away from developers. It is wire-compatible with PostgreSQL and provides a familiar and easy interface for developers.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect CockroachDB to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to CockroachDB.
+
 ## Implementation
 
 CockroachDB is wire-compatible with PostgreSQL. Therefore, its implementation extends the PostgreSQL handler.
@@ -18,12 +26,6 @@ The required arguments to establish a connection are as follows:
 * `user` is the user to authenticate with the CockroachDB.
 * `port` is the port to use when connecting.
 * `password` is the password to authenticate the user.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/cockroach_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
-
-## Usage
 
 In order to make use of this handler and connect to the CockroachDB server in MindsDB, the following syntax can be used:
 
@@ -39,6 +41,8 @@ WITH
         "port": "5432"
     };
 ```
+
+## Usage
 
 You can use this established connection to query your table as follows:
 

@@ -186,15 +186,6 @@ class TestKnowledgeBase(BaseExecutorTest):
         assert kb_obj is not None
         assert kb_obj.embedding_model.name == "test_kb6_default_model"
 
-        # create a knowledge base without a model or storage
-        # todo this should be supported but requires a fix to the sql parser
-        sql = """
-            CREATE KNOWLEDGE BASE test_kb7
-        """
-
-        with pytest.raises(Exception):
-            self.run_sql(sql)
-
     def test_drop_kb(self):
         # create a knowledge base
         sql = f"""

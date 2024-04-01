@@ -2,7 +2,7 @@ import sib_api_v3_sdk
 import pandas as pd
 
 
-from typing import List, Optional, Dict, Text
+from typing import List, Optional, Dict, Text, Any
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.api_handler import APITable
 
@@ -18,6 +18,7 @@ from mindsdb.integrations.handlers.utilities.query_utilities import (
     UPDATEQueryParser,
     DELETEQueryParser,
     DELETEQueryExecutor,
+    INSERTQueryParser,
 )
 
 logger = log.getLogger(__name__)
@@ -179,3 +180,97 @@ class EmailCampaignsTable(APITable):
                 raise RuntimeError(
                     f"Failed to execute the update command for Email Campaign {campaign_id}"
                 ) from e
+    def insert(self, query: 'ast.Insert') -> None:
+        """
+        Inserts new email campaigns into Sendinblue.
+
+        Parameters
+        ----------
+        query : ast.Insert
+            The SQL INSERT query to be parsed and executed.
+
+        Raises
+        ------
+        ValueError
+            If the necessary sender information is incomplete or incorrectly formatted.
+        Exception
+            For any unexpected errors during the email campaign creation.
+        """
+        #this defines columns that are supported and mandatory for an INSERT operation.
+        supported_columns = [
+            'name', 'subject', 'sender_name', 'sender_email', 
+            'html_content', 'scheduled_at', 'recipients_lists', 'tag'
+        ]
+        mandatory_columns = ['name', 'subject', 'sender_name', 'sender_email', 'html_content']
+
+        #this Parse the INSERT query to extract data.
+        insert_statement_parser = INSERTQueryParser(
+            query, supported_columns=supported_columns, 
+            mandatory_columns=mandatory_columns, all_mandatory=True
+        )
+        email_campaigns_data = insert_statement_parser.parse_query()
+
+        #this processes each campaign data extracted from the query.
+        for email_campaign_data in email_campaigns_data:
+            #this extracts and format sender information.
+            sender_info = {}
+            if 'sender_name' in email_campaign_data:
+                sender_info['name'] = email_campaign_data.pop('sender_name')
+            if 'sender_email' in email_campaign_data and email_campaign_data['sender_email'] is not None:
+                sender_info['email'] = email_campaign_data.pop('sender_email')
+            if 'sender_id' in email_campaign_data and email_campaign_data['sender_id'] is not None:
+                sender_info['id'] = email_campaign_data.pop('sender_id')
+
+            # this validates sender information.
+            if not sender_info.get('name') or (not sender_info.get('email') and not sender_info.get('id')):
+                raise ValueError("Sender information is incomplete or incorrectly formatted.")
+
+            email_campaign_data['sender'] = sender_info
+
+            #this creates each email campaign.
+            self.create_email_campaign(email_campaign_data)
+
+    def create_email_campaign(self, email_campaign_data: Dict[str, Any]) -> None:
+        """
+        Creates a new email campaign in Sendinblue.
+
+        Parameters
+        ----------
+        email_campaign_data : Dict[str, Any]
+            The data for the email campaign to be created.
+
+        Raises
+        ------
+        Exception
+            For any errors during the email campaign creation process.
+        """
+        #this establish a connection to the Sendinblue API.
+        api_session = self.handler.connect()
+        email_campaigns_api_instance = sib_api_v3_sdk.EmailCampaignsApi(api_session)
+
+        #this logs the data for the email campaign being created.
+        logger.info(f"Email campaign data before creating the object: {email_campaign_data}")
+
+        try:
+            #this creates the email campaign object and send it to Sendinblue.
+            email_campaign = sib_api_v3_sdk.CreateEmailCampaign(**email_campaign_data)
+            logger.info(f"Email campaign object after creation: {email_campaign}")
+
+            #this executes the API call to create the campaign.
+            created_campaign = email_campaigns_api_instance.create_email_campaign(email_campaign)
+
+            #this checks and log the response from the API.
+            if 'id' not in created_campaign.to_dict():
+                logger.error('Email campaign creation failed')
+            else:
+                logger.info(f'Email Campaign {created_campaign.to_dict()["id"]} created')
+        except ApiException as e:
+            #this handles API exceptions and log the detailed response.
+            logger.error(f"Exception when calling EmailCampaignsApi->create_email_campaign: {e}")
+            if hasattr(e, 'body'):
+                logger.error(f"Sendinblue API response body: {e.body}")
+            raise Exception(f'Failed to create Email Campaign with data: {email_campaign_data}') from e
+        except Exception as e:
+            #this handles any other unexpected exceptions.
+            logger.error(f"Unexpected error occurred: {e}")
+            raise Exception(f'Unexpected error during Email Campaign creation: {e}') from e

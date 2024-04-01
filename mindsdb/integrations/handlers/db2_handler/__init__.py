@@ -17,7 +17,7 @@ from .__about__ import __version__ as version, __description__ as description
 title = "IBM DB2"
 name = "db2"
 type = HANDLER_TYPE.DATA
-icon_path = "icon.png"
+icon_path = "icon.svg"
 
 __all__ = [
     "Handler",

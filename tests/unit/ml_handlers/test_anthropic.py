@@ -19,7 +19,7 @@ class TestAnthropic(BaseMLAPITest):
             CREATE ML_ENGINE anthropic
             FROM anthropic
             USING
-            api_key = '{self.get_api_key('ANTHROPIC_API_KEY')}';
+            anthropic_api_key = '{self.get_api_key('ANTHROPIC_API_KEY')}';
             """
         )
 

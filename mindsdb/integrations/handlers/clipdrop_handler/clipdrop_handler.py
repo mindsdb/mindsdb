@@ -7,6 +7,8 @@ from mindsdb.integrations.libs.base import BaseMLEngine
 
 from mindsdb.utilities import log
 
+from mindsdb.integrations.utilities.handler_utils import get_api_key
+
 
 logger = log.getLogger(__name__)
 
@@ -19,9 +21,6 @@ class ClipdropHandler(BaseMLEngine):
         args = args['using']
 
         available_tasks = ["remove_text", "remove_background", "sketch_to_image", "text_to_image", "replace_background", "reimagine"]
-
-        if 'api_key' not in args:
-            raise Exception('api_key has to be specified')
 
         if 'task' not in args:
             raise Exception('task has to be specified. Available tasks are - ' + available_tasks)
@@ -42,7 +41,7 @@ class ClipdropHandler(BaseMLEngine):
         self.model_storage.json_set('args', args)
 
     def _get_clipdrop_client(self, args):
-        api_key = self._get_clipdrop_api_key(args)
+        api_key = get_api_key('clipdrop', args["using"], self.engine_storage, strict=False)
 
         local_directory_path = args["local_directory_path"]
 
@@ -192,15 +191,3 @@ class ClipdropHandler(BaseMLEngine):
         result_df = result_df.rename(columns={'predictions': args['target']})
 
         return result_df
-
-    def _get_clipdrop_api_key(self, args):
-        if 'api_key' in args:
-            return args['api_key']
-
-        connection_args = self.engine_storage.get_connection_args()
-
-        if 'api_key' in connection_args:
-            return connection_args['api_key']
-
-        raise Exception("Missing API key 'api_key'. Either re-create this ML_ENGINE specifying the `api_key` parameter\
-                 or re-create this model and pass the API key with `USING` syntax.")

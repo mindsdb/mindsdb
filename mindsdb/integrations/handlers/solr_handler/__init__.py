@@ -12,10 +12,10 @@ except Exception as e:
     Handler = None
     import_error = e
 
-title = 'Solr'
+title = 'Apache Solr'
 name = 'solr'
 type = HANDLER_TYPE.DATA
-icon_path = 'solr.svg'
+icon_path = 'icon.svg'
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'description',

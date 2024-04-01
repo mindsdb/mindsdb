@@ -9,6 +9,14 @@ In this section, we present how to connect Stripe to MindsDB.
 
 Data from Stripe can be utilized within MindsDB to train AI models and chatbots based on customers, products, and payment intents, and make relevant predictions and forecasts.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect Stripe to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to Stripe.
+
 ## Connection
 
 This handler was implemented using [stripe-python](https://github.com/stripe/stripe-python), the Python library for the Stripe API.
@@ -29,10 +37,6 @@ PARAMETERS = {
   "api_key": "sk_..."
 };
 ```
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/stripe_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

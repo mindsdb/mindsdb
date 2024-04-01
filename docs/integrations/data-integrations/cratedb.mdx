@@ -7,6 +7,14 @@ This is the implementation of the CrateDB data handler for MindsDB.
 
 [CrateDB](https://crate.io/) is a distributed SQL database management system that integrates a fully searchable document-oriented data store. It is open-source, written in Java, based on a shared-nothing architecture, and designed for high scalability. CrateDB includes components from Lucene, Elasticsearch and Netty.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect CrateDB to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to CrateDB.
+
 ## Implementation
 
 This handler is implemented using `crate`, a Python library that allows you to use Python code to run SQL commands on CrateDB.
@@ -18,10 +26,6 @@ The required arguments to establish a connection are as follows:
 * `host` is the hostname or IP adress of the server.
 * `port` is the port through which connection is to be made.
 * `schema_name` is schema name to get tables from. Defaults to `doc`.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/crate_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

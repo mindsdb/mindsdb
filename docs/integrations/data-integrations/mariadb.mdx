@@ -7,6 +7,14 @@ This is the implementation of the MariaDB data handler for MindsDB.
 
 [MariaDB](https://mariadb.org/documentation/) is a community-developed, commercially supported fork of the MySQL relational database management system (RDBMS), intended to remain free and open-source software under the GNU General Public License. MariaDB is intended to maintain high compatibility with MySQL, library binary parity and exact matching with MySQL APIs and commands, allowing it in many cases to function as a replacement for MySQL.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect MariaDB to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to MariaDB.
+
 ## Implementation
 
 This handler is implemented using `mysql-connector`, a self-contained Python driver for communicating with MariaDB servers.
@@ -39,12 +47,6 @@ There are several optional parameters that can be used as well.
 </Tab>
 
 </Tabs>
-
-<br></br>
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/mariadb_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

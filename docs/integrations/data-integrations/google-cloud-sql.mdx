@@ -6,7 +6,17 @@ sidebarTitle: Google Cloud SQL
 This is the implementation of the Google Cloud SQL data handler for MindsDB.
 
 [Cloud SQL](https://cloud.google.com/sql) is a fully-managed database service that makes it easy to set up, maintain, manage, and administer your relational PostgreSQL, MySQL, and SQL Server databases in the cloud.
+
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect Google Cloud SQL to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to Google Cloud SQL.
+
 ## Implementation
+
 This handler was implemented using the existing MindsDB handlers for MySQL, PostgreSQL and SQL Server.
 
 The required arguments to establish a connection are,
@@ -16,13 +26,6 @@ The required arguments to establish a connection are,
 * `password`: the password to authenticate the user with the Google Cloud SQL instance.
 * `database`: the database name to use when connecting with the Google Cloud SQL instance.
 * `db_engine`: the database engine of the Google Cloud SQL instance. This can take one of three values: 'mysql', 'postgresql' or 'mssql'.
-
-
-<Tip>
-    If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the
-    handler's folder (mindsdb/integrations/handlers/cloud_sql_handler) and run this command: `pip install -r
-    requirements.txt`.
-</Tip>
 
 ## Usage
 

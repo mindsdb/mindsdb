@@ -93,7 +93,7 @@ Here we create an ML engine using the OpenAI handler and providing an OpenAI API
 CREATE ML_ENGINE my_openai_engine
 FROM openai
 USING
-    api_key = '<your opanai api key>';
+    openai_api_key = '<your opanai api key>';
 ```
 
 On execution, we get:
@@ -111,14 +111,14 @@ SHOW ML_ENGINES;
 On execution, we get:
 
 ```sql
-+-------------------+------------+-----------------------------------------------+
-|NAME               |HANDLER     |CONNECTION_DATA                                |
-+-------------------+------------+-----------------------------------------------+
-|lightwood          |lightwood   |{"key":["password"],"value":[""]}              |
-|huggingface        |huggingface |{"key":["password"],"value":[""]}              |
-|openai             |openai      |{"key":["password"],"value":[""]}              |
-|my_openai_engine   |openai      |{"key":["api_key","password"],"value":["",""]} |
-+-------------------+------------+-----------------------------------------------+
++-------------------+------------+------------------------------------------------------+
+|NAME               |HANDLER     |CONNECTION_DATA                                       |
++-------------------+------------+------------------------------------------------------+
+|lightwood          |lightwood   |{"key":["password"],"value":[""]}                     |
+|huggingface        |huggingface |{"key":["password"],"value":[""]}                     |
+|openai             |openai      |{"key":["password"],"value":[""]}                     |
+|my_openai_engine   |openai      |{"key":["openai_api_key","password"],"value":["",""]} |
++-------------------+------------+------------------------------------------------------+
 ```
 
 Please note that the `USING` clause is optional, as it depends on the ML handler whether it requires some arguments or not. Here, we created an OpenAI engine and provided own API key.

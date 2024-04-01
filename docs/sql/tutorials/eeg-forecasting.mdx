@@ -3,6 +3,10 @@ title: Forecasting Eye State from Electroencephalogram Readings with MindsDB
 sidebarTitle: Brain Activity
 ---
 
+<Note>
+This tutorial uses the Lightwood integration that requires the `mindsdb/mindsdb:lightwood` Docker image. [Learn more here](/setup/self-hosted/docker#install-mindsdb).
+</Note>
+
 ## Introduction
 
 In this tutorial, we'll create and train a machine learning model, or as we call
@@ -98,20 +102,14 @@ Where:
 | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | --------- | ------- |
 | `AF3`,`F7`,`F3`,`FC5`,`T7`,`P7`,`O1`,`O2`,`P8`,`T8`,`FC6`,`F4`,`F8`,`AF4` | The EEG measurement data.                                                                 | `float`   | Feature |
 | `eyeDetectin`                                                             | The state of the patient's eye where `0` indicates open eye and `1` indicates closed eye. | `binary`  | Label   |
-
 <Info>
 **Labels and Features**
-
 A **label** is a column whose values will be predicted (the y variable in simple
 linear regression).
-
 A **feature** is a column used to train the model (the x variable in simple
 linear regression).
-
 </Info>
-
 ## Training a Predictor
-
 Let's create and train the machine learning model. For that, we use the
 [`CREATE MODEL`](/sql/create/model) statement and specify the
 input columns used to train `FROM` (features) and what we want to
@@ -191,7 +189,6 @@ have a special keyword for that, the `LATEST` keyword.
 
 Let's run a query to get predictions for the next `HORIZON` timesteps into
 the future, which in this case is roughly 80 milliseconds.
-
 ```sql
 SELECT m.timestamps, m.eyedetection
 FROM example_db.demo_data.eeg_eye as t
@@ -199,9 +196,7 @@ JOIN mindsdb.eeg_eye_forecast as m
 WHERE t.timestamps > LATEST
 LIMIT 10;
 ```
-
 On execution, we get:
-
 ```sql
 +----------------------------+--------------+
 | timestamps                 | eyedetection |
@@ -218,25 +213,19 @@ On execution, we get:
 | 2001-09-03 08:01:57.072000 | 1            |
 +----------------------------+--------------+
 ```
-
 That's it. We can now `JOIN` any set of `WINDOW` rows worth of
 measurements with this predictor, and forecasts will be emitted to help us
 expect a change in the state of the patient's eye based on the EEG readings.
-
 ## Alternate Problem Framings
-
 It is also possible to reframe this task as a _normal_ forecasting scenario
 where the variable is numeric. There are a few options here. It boils down to
 what the broader scenario is and what format would maximize the value of any
 specific prediction.
-
 For example, a simple mapping of `eye is open` to `0` and `eye is closed` to `1`
 would be enough to replicate the above behavior.
-
 We could also explore other options. With some data transformations on the data
 layer, we could get a countdown to the next change in state, effectively
 predicting a _date_ if we cast this back into the timestamp domain.
-
 ## What's Next?
 
 Have fun while trying it out yourself!

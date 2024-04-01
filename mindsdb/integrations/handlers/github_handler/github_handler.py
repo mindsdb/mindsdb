@@ -9,7 +9,7 @@ from mindsdb.integrations.handlers.github_handler.github_tables import (
     GithubBranchesTable,
     GithubContributorsTable,
     GithubMilestonesTable,
-    GithubProjectsTable
+    GithubProjectsTable, GithubFilesTable
 )
 
 from mindsdb.integrations.libs.api_handler import APIHandler
@@ -45,23 +45,15 @@ class GithubHandler(APIHandler):
         self.connection = None
         self.is_connected = False
 
-        github_issues_data = GithubIssuesTable(self)
-        github_pull_requests_data = GithubPullRequestsTable(self)
-        github_commits_data = GithubCommitsTable(self)
-        github_releases_data = GithubReleasesTable(self)
-        github_branches_data = GithubBranchesTable(self)
-        github_contributors_data = GithubContributorsTable(self)
-        github_milestones_data = GithubMilestonesTable(self)
-        github_projects_data = GithubProjectsTable(self)
-
-        self._register_table("issues", github_issues_data)
-        self._register_table("pull_requests", github_pull_requests_data)
-        self._register_table("commits", github_commits_data)
-        self._register_table("releases", github_releases_data)
-        self._register_table("branches", github_branches_data)
-        self._register_table("contributors", github_contributors_data)
-        self._register_table("milestones", github_milestones_data)
-        self._register_table("projects", github_projects_data)
+        self._register_table("issues", GithubIssuesTable(self))
+        self._register_table("pull_requests", GithubPullRequestsTable(self))
+        self._register_table("commits", GithubCommitsTable(self))
+        self._register_table("releases", GithubReleasesTable(self))
+        self._register_table("branches", GithubBranchesTable(self))
+        self._register_table("contributors", GithubContributorsTable(self))
+        self._register_table("milestones", GithubMilestonesTable(self))
+        self._register_table("projects", GithubProjectsTable(self))
+        self._register_table("files", GithubFilesTable(self))
 
     def connect(self) -> StatusResponse:
         """Set up the connection required by the handler.
@@ -71,6 +63,9 @@ class GithubHandler(APIHandler):
         StatusResponse
             connection object
         """
+
+        if self.is_connected is True:
+            return self.connection
 
         connection_kwargs = {}
 

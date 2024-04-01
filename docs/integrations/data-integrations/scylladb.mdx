@@ -7,6 +7,14 @@ This is the implementation of the ScyllaDB data handler for MindsDB.
 
 [ScyllaDB](https://www.scylladb.com/) is an open-source distributed NoSQL wide-column data store. It was purposefully designed to offer compatibility with Apache Cassandra while outperforming it with higher throughputs and reduced latencies. For a comprehensive understanding of ScyllaDB, visit ScyllaDB's official website.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect ScyllaDB to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to ScyllaDB.
+
 ### Implementation
 
 The ScyllaDB handler for MindsDB was developed using the scylla-driver library for Python.
@@ -19,10 +27,6 @@ The required arguments to establish a connection are as follows:
 * `keyspace`: The specific keyspace (top-level container for tables) to connect to.
 * `protocol_version`: Optional. Defaults to 4.
 * `secure_connect_bundle`: Optional. Needed only for connections to DataStax Astra.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/scylla_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage 
 

@@ -7,6 +7,14 @@ This is the implementation of the Redshift data handler for MindsDB.
 
 [Amazon Redshift](https://docs.aws.amazon.com/redshift/latest/mgmt/welcome.html) is a fully managed, petabyte-scale data warehouse service in the cloud. You can start with just a few hundred gigabytes of data and scale to a petabyte or more, enabling you to use your data to acquire new insights for your business and customers.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect Amazon Redshift to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to Amazon Redshift.
+
 ## Implementation
 
 This handler is implemented using the `redshift_connector` library that is provided by Amazon Web Services.
@@ -18,9 +26,6 @@ The required arguments to establish a connection are as follows:
 * `database` is the database name to use when connecting with the Redshift cluster.
 * `user` is the username to authenticate the user with the Redshift cluster.
 * `password` is the password to authenticate the user with the Redshift cluster.
-<Tip>
-If you installed MindsDB locally via pip, you must manually install all handler dependencies. To do so, go to the handler's folder (mindsdb/integrations/handlers/redshift_handler) and run the following command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

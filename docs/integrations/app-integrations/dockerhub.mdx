@@ -9,6 +9,14 @@ In this section, we present how to connect Docker Hub repository to MindsDB.
 
 Data from Docker Hub can be utilized within MindsDB to train models and make predictions about Docker Hub repositories.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect Docker Hub to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to Docker Hub.
+
 ## Connection
 
 This handler is implemented using the `requests` library that makes http calls to https://docs.docker.com/docker-hub/api/latest/#tag/resources.
@@ -32,10 +40,6 @@ PARAMETERS = {
   "password": "password"
 };
 ```
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/dockerhub_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

@@ -16,6 +16,7 @@ from .__about__ import __version__ as version, __description__ as description
 title = 'TiDB'
 name = 'tidb'
 type = HANDLER_TYPE.DATA
+icon_path = 'icon.svg'
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'description',

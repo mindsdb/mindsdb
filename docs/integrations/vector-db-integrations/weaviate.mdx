@@ -3,14 +3,18 @@ title: Weaviate
 sidebarTitle: Weaviate
 ---
 
-
-
 This is the implementation of the Weaviate for MindsDB.
 
-## Weaviate
-
 Weaviate is an open-source vector database. It allows you to store data objects and vector embeddings from your favorite ML-models, and scale seamlessly into billions of data objects.
-_
+
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect Weaviate to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to Weaviate.
+
 ## Implementation
 
 This handler uses `weaviate-client` python library connect to a weaviate instance.

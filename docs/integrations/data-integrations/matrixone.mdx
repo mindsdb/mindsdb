@@ -7,6 +7,14 @@ This is the implementation of the MatrixOne data handler for MindsDB.
 
 [MatrixOne](https://github.com/matrixorigin/matrixone) is a future-oriented hyper-converged cloud and edge native DBMS that supports transactional, analytical, and streaming workloads with a simplified and distributed database engine, across multiple data centers, clouds, edges, and other heterogeneous infrastructures.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect MatrixOne to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to MatrixOne.
+
 ## Implementation
 
 This handler is implemented using `PyMySQL`, a Python library that allows you to use Python code to run SQL commands on the MatrixOne database.
@@ -25,10 +33,6 @@ There are several optional arguments that can be used as well.
 * `ssl_ca` is the SSL Certificate Authority.
 * `ssl_cert` stores the SSL certificates.
 * `ssl_key` stores the SSL keys.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/matrixone_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

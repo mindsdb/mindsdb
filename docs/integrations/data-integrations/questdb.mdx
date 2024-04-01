@@ -7,6 +7,14 @@ This is the implementation of the QuestDB data handler for MindsDB.
 
 [QuestDB](https://questdb.io/) is a columnar time-series database with high performance ingestion and SQL analytics. It is open-source and available on the cloud.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect QuestDB to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to QuestDB.
+
 ## Implementation
 
 This handler is implemented by extending the PostgreSQL data handler.
@@ -19,9 +27,7 @@ The required arguments to establish a connection are as follows:
 * `port` is the port used to make TCP/IP connection.
 * `database` is the database name.
 * `public` stores a value of `True` or `False`. Defaults to `True` if left blank.
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/questdb_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
+
 ## Usage
 
 In order to make use of this handler and connect to the QuestDB server in MindsDB, the following syntax can be used:

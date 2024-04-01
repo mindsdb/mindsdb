@@ -7,6 +7,8 @@ from mindsdb.integrations.libs.base import BaseMLEngine
 
 from mindsdb.utilities import log
 
+from mindsdb.integrations.utilities.handler_utils import get_api_key
+
 
 logger = log.getLogger(__name__)
 
@@ -20,9 +22,6 @@ class StabilityAIHandler(BaseMLEngine):
 
         available_tasks = ["text-to-image", "image-to-image", "image-upscaling", "image-masking"]
 
-        if 'api_key' not in args:
-            raise Exception('api_key has to be specified')
-
         if 'task' not in args:
             raise Exception('task has to be specified. Available tasks are - ' + available_tasks)
 
@@ -32,7 +31,7 @@ class StabilityAIHandler(BaseMLEngine):
         if 'local_directory_path' not in args:
             raise Exception('local_directory_path has to be specified')
 
-        client = StabilityAPIClient(args["api_key"], args["local_directory_path"])
+        client = StabilityAPIClient(args["stabilityai_api_key"], args["local_directory_path"])
 
         if "engine_id" in args:
             if not client._is_valid_engine(args["engine_id"]):
@@ -56,7 +55,7 @@ class StabilityAIHandler(BaseMLEngine):
         self.model_storage.json_set('args', args)
 
     def _get_stability_client(self, args):
-        api_key = self._get_stability_api_key(args)
+        api_key = get_api_key('stabilityai', args["using"], self.engine_storage, strict=False)
 
         local_directory_path = args["local_directory_path"]
         engine_id = args.get('engine_id', "stable-diffusion-xl-1024-v1-0")
@@ -165,21 +164,9 @@ class StabilityAIHandler(BaseMLEngine):
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
         args = self.model_storage.json_get('args')
-        client = StabilityAPIClient(args["api_key"], "")
+        client = StabilityAPIClient(args["stabilityai_api_key"], "")
         engine_id = args["engine_id"]
         upscale_engine_id = args["upscale_engine_id"]
         engine_id_res = client.available_engines.get(engine_id)
         upscale_engine_id_res = client.available_engines.get(upscale_engine_id)
         return pd.json_normalize([engine_id_res, upscale_engine_id_res])
-
-    def _get_stability_api_key(self, args):
-        if 'api_key' in args:
-            return args['api_key']
-
-        connection_args = self.engine_storage.get_connection_args()
-
-        if 'api_key' in connection_args:
-            return connection_args['api_key']
-
-        raise Exception("Missing API key 'api_key'. Either re-create this ML_ENGINE specifying the `api_key` parameter\
-                 or re-create this model and pass the API key with `USING` syntax.")

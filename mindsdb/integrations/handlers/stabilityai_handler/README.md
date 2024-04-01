@@ -27,7 +27,7 @@ The first step is to create a ML Engine with the new `stabilityai` engine.
 CREATE ML_ENGINE stabilityai_engine
 FROM stabilityai
 USING
-  api_key = 'your_api_key';
+  stabilityai_api_key = 'your_api_key';
 ~~~~
 
 

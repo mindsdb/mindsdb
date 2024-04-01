@@ -73,11 +73,11 @@ def test_arg_probing(mock_handler_class):
         },
         {
             "name": "test_required_at_some_point",
-            "required": True,
+            "required": False,
         },
         {
             "name": "this_is_actually_required",
-            "required": True,
+            "required": False,
         },
     ]
 
@@ -92,11 +92,7 @@ def test_arg_probing(mock_handler_class):
         {
             "name": "test_optional2",
             "required": False,
-        },
-        {
-            "name": "test_required",
-            "required": True,
-        },
+        }
     ]
 
 
@@ -138,4 +134,4 @@ def test_statsforecast_handler_probing():
 
     handler = MockClass
     assert len(handler.prediction_args()) == 0
-    assert len(handler.creation_args()) > 0
+    assert len(handler.creation_args()) == 0

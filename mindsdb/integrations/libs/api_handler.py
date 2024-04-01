@@ -1,10 +1,14 @@
-from typing import Any
+from typing import Any, List
 import ast as py_ast
 
 import pandas as pd
-from mindsdb_sql.parser.ast import ASTNode, Select, Insert, Update, Delete
+from mindsdb_sql.parser.ast import ASTNode, Select, Insert, Update, Delete, Star
 from mindsdb_sql.parser.ast.select.identifier import Identifier
 
+from mindsdb.integrations.utilities.sql_utils import (
+    extract_comparison_conditions, filter_dataframe,
+    FilterCondition, FilterOperator, SortColumn
+)
 from mindsdb.integrations.libs.base import BaseHandler
 from mindsdb.integrations.libs.api_handler_exceptions import TableAlreadyExists, TableNotFound
 
@@ -96,18 +100,19 @@ class APITable():
     def __init__(self, handler):
         self.handler = handler
 
-    def select(self, query: ASTNode) -> pd.DataFrame:
+    def select(self, query: Select) -> pd.DataFrame:
         """Receive query as AST (abstract syntax tree) and act upon it.
 
         Args:
             query (ASTNode): sql query represented as AST. Usually it should be ast.Select
 
         Returns:
-            HandlerResponse
+            pd.DataFrame
         """
+
         raise NotImplementedError()
 
-    def insert(self, query: ASTNode) -> None:
+    def insert(self, query: Insert) -> None:
         """Receive query as AST (abstract syntax tree) and act upon it somehow.
 
         Args:
@@ -148,6 +153,109 @@ class APITable():
         raise NotImplementedError()
 
 
+class APIResource(APITable):
+
+    def select(self, query: Select) -> pd.DataFrame:
+        """Receive query as AST (abstract syntax tree) and act upon it.
+
+        Args:
+            query (ASTNode): sql query represented as AST. Usually it should be ast.Select
+
+        Returns:
+            pd.DataFrame
+        """
+
+        conditions = [
+            FilterCondition(i[1], FilterOperator(i[0].upper()), i[2])
+            for i in extract_comparison_conditions(query.where)
+        ]
+
+        limit = None
+        if query.limit:
+            limit = query.limit.value
+
+        sort = None
+        if query.order_by and len(query.order_by) > 0:
+            sort = []
+            for an_order in query.order_by:
+                sort.append(SortColumn(an_order.field.parts[-1],
+                                       an_order.direction.upper() != 'DESC'))
+
+        targets = []
+        for col in query.targets:
+            if isinstance(col, Identifier):
+                targets.append(col.parts[-1])
+
+        result = self.list(
+            conditions=conditions,
+            limit=limit,
+            sort=sort,
+            targets=targets
+        )
+
+        filters = []
+        for cond in conditions:
+            if not cond.applied:
+                filters.append([cond.op.value, cond.column, cond.value])
+
+        result = filter_dataframe(result, filters)
+
+        if limit is not None and len(result) > limit:
+            result = result[:int(limit)]
+
+        return result
+
+    def list(self,
+             conditions: List[FilterCondition] = None,
+             limit: int = None,
+             sort: List[SortColumn] = None,
+             targets: List[str] = None
+             ):
+        """
+        List items based on specified conditions, limits, sorting, and targets.
+
+        Args:
+            conditions (List[FilterCondition]): Optional. A list of conditions to filter the items. Each condition
+                                                should be an instance of the FilterCondition class.
+            limit (int): Optional. An integer to limit the number of items to be listed.
+            sort (List[SortColumn]): Optional. A list of sorting criteria
+            targets (List[str]): Optional. A list of strings representing specific fields
+
+        Raises:
+            NotImplementedError: This is an abstract method and should be implemented in a subclass.
+        """
+        raise NotImplementedError()
+
+    def insert(self, query: Insert) -> None:
+        """Receive query as AST (abstract syntax tree) and act upon it somehow.
+
+        Args:
+            query (ASTNode): sql query represented as AST. Usually it should be ast.Insert
+
+        Returns:
+            None
+        """
+
+        columns = [col.name for col in query.columns]
+
+        for a_row in query.values:
+            row = dict(zip(columns, a_row))
+
+            self.add(row)
+
+    def add(self, row: dict):
+        """
+        Add a single item to the dataa collection
+
+        Args:
+        r   ow (dict): A dictionary representing the item to be added.
+
+        Raises:
+            NotImplementedError: This is an abstract method and should be implemented in a subclass.
+        """
+        raise NotImplementedError()
+
+
 class APIHandler(BaseHandler):
     """
     Base class for handlers associated to the applications APIs (e.g. twitter, slack, discord  etc.)
@@ -184,6 +292,11 @@ class APIHandler(BaseHandler):
     def query(self, query: ASTNode):
 
         if isinstance(query, Select):
+            table = self._get_table(query.from_table)
+            if not hasattr(table, 'list'):
+                # for back compatibility, targets wasn't passed in previous version
+                query.targets = [Star()]
+
             result = self._get_table(query.from_table).select(query)
         elif isinstance(query, Update):
             result = self._get_table(query.table).update(query)

@@ -227,11 +227,11 @@ class TestMongoDBServer(BaseUnitTest):
 
     def t_create_ml_engine(self, client_con, mock_executor):
 
-        client_con.myproj.ml_engines.insert_one({'name': "openai2", "handler": "openai", "params": {"api_key": "qqq"}})
+        client_con.myproj.ml_engines.insert_one({'name': "openai2", "handler": "openai", "params": {"openai_api_key": "qqq"}})
 
         ast = mock_executor.call_args[0][0]
 
-        expected_sql = "CREATE ML_ENGINE openai2 FROM openai USING api_key= 'qqq'"
+        expected_sql = "CREATE ML_ENGINE openai2 FROM openai USING openai_api_key= 'qqq'"
         assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
 
     def t_list_ml_engines(self, client_con, mock_executor):

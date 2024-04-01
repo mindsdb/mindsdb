@@ -43,7 +43,7 @@ PREDICT answer
 USING
     engine = 'langchain',
     input_column = 'question',
-    api_key = 'your-model-api-key', -- choose one of OpenAI or Anthropic
+    openai_api_key = 'your-model-api-key', -- choose one of OpenAI (openai_api_key) or Anthropic (anthropic_api_key)
     model_name='gpt-4', -- optional model name from OpenAI or Anthropic
     mode = 'conversational',
     user_column = 'question' ,
@@ -70,7 +70,7 @@ In this example, let's create an embedding model (you can choose one from OpenAI
 CREATE ML_ENGINE openai_engine
 FROM openai
 USING
-   api_key = 'your-openai-api-key';
+   openai_api_key = 'your-openai-api-key';
 
 CREATE MODEL embedding_model
 PREDICT embeddings

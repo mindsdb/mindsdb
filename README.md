@@ -2,7 +2,6 @@
 	<img width="300" src="https://github.com/mindsdb/mindsdb_native/blob/stable/assets/MindsDBColorPurp@3x.png?raw=true" alt="MindsDB">
 	<br>
 </h1>
-<h4 align="center"> <blockquote> With our AI SQL Server, personalizing AI using your data is just a matter of simple SQL queries.</blockquote> </h4>
 
 <div align="center">
 
@@ -29,19 +28,22 @@
 	<a href="https://mindsdb.com/joincommunity">Community Slack</a>
 	<span> | </span>
 	<a href="https://github.com/mindsdb/mindsdb/issues?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22">Contribute</a>
-	<span> | </span>
-	<a href="https://hashnode.com/hackathons/mindsdb">Hashnode Hackathon</a>
+ 	<span> | </span>
+	<a href="https://github.com/mindsdb/mindsdb/discussions/8817"> 20K🌟🎉 </a>
 </h3>
 
 </div>
 
 ----------------------------------------
+[MindsDB](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) is the platform for customizing AI from enterprise data. You can create, serve, and fine-tune models in real-time from your database, vector store, and application data.
+ [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=The%platform%20for%customizing%20AI,%20from%20enterprise%20data&url=https://github.com/mindsdb/mindsdb&via=mindsdb&hashtags=ai,opensource)
+
+We believe AI will help every company thrive, but off-the-shelf, generic AI usually doesn’t completely meet their needs. With MindsDB’s nearly 200 integrations, any developer can create AI customized for their purpose, faster and more securely. Their AI systems will constantly improve themselves — using companies’ own data, in real-time.
+
+MindsDB "enhances" SQL syntax with AI capabilities to make it accessible for developers worldwide:
 
 
-[MindsDB's](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) **AI SQL Server** enables developers to build **AI tools** that need access to **real-time data** to perform their tasks.
- [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=Build%20AI%20using%20SQL%20&url=https://github.com/mindsdb/mindsdb&via=mindsdb&hashtags=ai,ml,nlp,machine_learning,neural_networks,databases,gpt3)
-
-| 🎯  Features                 | ⚙️ SQL Query Examples |
+| 🎯  Solutions                 | ⚙️ SQL Query Examples |
 |---------------------------|-----------|
 | 🤖 [Fine-Tuning](https://docs.mindsdb.com/sql/api/finetune#example-3-openai-model)            |  <code> FINETUNE mindsdb.hf_model FROM postgresql.table; </code>  |
 | 📚 [Knowledge Base](https://docs.mindsdb.com/agents/knowledge-bases)         | <code> CREATE KNOWLEDGE_BASE my_knowledge FROM (SELECT contents FROM drive.files); </code> |

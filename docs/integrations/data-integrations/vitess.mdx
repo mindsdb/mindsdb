@@ -7,6 +7,14 @@ This is the implementation of the Vitess data handler for MindsDB.
 
 [Vitess](https://vitess.io/) is a database solution for deploying, scaling, and managing large clusters of open-source database instances. It currently supports MySQL and Percona Server for MySQL. It's architected to run as effectively in a public or private cloud architecture as it does on dedicated hardware. It combines and extends many important SQL features with the scalability of a NoSQL database.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect Vitess to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to Vitess.
+
 ## Implementation
 
 This handler is implemented by extending the MySQL data handler.
@@ -18,10 +26,6 @@ The required arguments to establish a connection are as follows:
 * `host` is the host name, IP address, or URL.
 * `port` is the port used to make TCP/IP connection.
 * `database` is the database name.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/vitess_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

@@ -1,0 +1,139 @@
+name: Test on Push
+
+on:
+  pull_request:
+    branches: [stable, staging]
+    
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # Run all of our static code checks here
+  code_checking:
+    name: Run static code checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3.5.3
+      - name: Set up Python
+        uses: actions/setup-python@v4.7.0
+        with:
+          python-version: ${{ vars.CI_PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: '**/requirements*.txt'
+      
+      # Checks the codebase for print() statements and fails if any are found
+      # We should be using loggers instead
+      - name: Check for print statements
+        run: |
+          python tests/scripts/check_print_statements.py
+
+      # Gathers a list of changed files for pre-commit to use
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v41
+
+      # Run pre-commit on all changed files
+      # See .pre-commit-config.yaml for the list of checks
+      - name: Run pre-commit
+        uses: pre-commit/action@v3.0.0
+        with:
+          extra_args: --files ${{ steps.changed-files.outputs.all_changed_files }}
+      
+      # Runs a few different checks against our many requirements files
+      # to make sure they're in order
+      - name: Check requirements files
+        run: |
+          # We don't need to install mindsdb itself here because these are just static code checks
+          pip install -r requirements/requirements-dev.txt
+
+          python tests/scripts/check_requirements.py
+
+  # Creates a matrix of environments to test against using matrix_includes.json
+  # Used for installation checks below
+  matrix_prep:
+    name: Prepare matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v3.5.3
+      - id: set-matrix
+        uses: JoshuaTheMiller/conditional-build-matrix@v1.0.1
+        with:
+          filter: '[?runOnBranch==`${{ github.ref }}` || runOnBranch==`always`]'
+    
+  # Check that our pip package is able to be installed in all of our supported environments
+  check_install:
+    name: Check pip installation
+    needs: [matrix_prep, code_checking]
+    strategy:
+      matrix: ${{fromJson(needs.matrix_prep.outputs.matrix)}}
+    runs-on: ${{ matrix.runs_on }}
+    steps:
+    - uses: actions/checkout@v3.5.3
+    - name: Set up Python
+      uses: actions/setup-python@v4.7.0
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: pip
+        cache-dependency-path: '**/requirements*.txt'
+    - name: Check requirements files are installable
+      run: |
+        # Install dev requirements and build our pip package
+        pip install -r requirements/requirements-dev.txt
+        python setup.py sdist
+
+        # Install from the pip package
+        # If we install from source, we don't know if the pip package is installable.
+        cd dist
+        pip install --ignore-installed *.tar.gz
+
+  unit_tests:
+    name: Run Unit Tests
+    needs: [matrix_prep, code_checking]
+    strategy:
+      matrix: ${{fromJson(needs.matrix_prep.outputs.matrix)}}
+    runs-on: ${{ matrix.runs_on }}
+    if: github.ref_type == 'branch'
+    steps:
+    - uses: actions/checkout@v3.5.3
+    - name: Set up Python
+      uses: actions/setup-python@v4.7.0
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: pip
+        cache-dependency-path: '**/requirements*.txt'
+    - name: Install dependencies
+      run: |
+        pip install .
+        pip install -r requirements/requirements-test.txt
+        pip install .[lightwood]  # TODO: for now some tests rely on lightwood
+        pip freeze
+    - name: Run unit tests
+      run: |
+
+        if [ "$RUNNER_OS" == "Linux" ]; then
+
+          env PYTHONPATH=./ pytest tests/unit/test_executor.py
+
+          env PYTHONPATH=./ pytest tests/unit/test_project_structure.py
+
+          env PYTHONPATH=./ pytest tests/unit/test_predictor_params.py
+
+          env PYTHONPATH=./ pytest tests/unit/test_mongodb_handler.py
+
+          env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
+
+          env PYTHONPATH=./ pytest tests/unit/test_cache.py
+        
+          env PYTHONPATH=./ pytest tests/unit/test_llm_utils.py
+
+        fi
+    - name: Run Handlers tests and submit Coverage to coveralls
+      run: |
+        pytest --cov=tests/unit/handler tests/unit/handlers/test_postgresql.py && coveralls --service=github
+      env:
+        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+        PROMETHEUS_MULTIPROC_DIR: ./prometheus_metrics
+        github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}

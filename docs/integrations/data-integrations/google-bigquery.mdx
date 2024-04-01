@@ -7,6 +7,14 @@ This is the implementation of the BigQuery data handler for MindsDB.
 
 [BigQuery](https://cloud.google.com/bigquery/) is a fully-managed, serverless data warehouse that enables scalable analysis over petabytes of data. It is a Platform-as-a-Service that supports querying using ANSI SQL.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect Google BigQuery to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to Google BigQuery.
+
 ## Implementation
 
 This handler is implemented using the `google-cloud-bigquery` Python library.
@@ -20,10 +28,6 @@ The required arguments to establish a connection are as follows:
 
 <Tip>
 For more info about creating and managing the service account key visit [this page](https://cloud.google.com/iam/docs/creating-managing-service-account-keys).
-</Tip>
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/bigquery_handler) and run this command: `pip install -r requirements.txt`.
 </Tip>
 
 ## Usage

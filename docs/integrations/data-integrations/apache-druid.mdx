@@ -7,6 +7,14 @@ This is the implementation of the Druid data handler for MindsDB.
 
 [Apache Druid](https://druid.apache.org/docs/latest/design) is a real-time analytics database designed for fast slice-and-dice analytics (_OLAP_ queries) on large data sets. Most often, Druid powers use cases where real-time ingestion, fast query performance, and high uptime are important.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect Apache Druid to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to Apache Druid.
+
 ## Implementation
 
 This handler was implemented using the `pydruid` library, the Python API for Apache Druid.
@@ -19,10 +27,6 @@ The required arguments to establish a connection are as follows:
 * `scheme` is the URI schema. This parameter is optional and defaults to `http`.
 * `user` is the username used to authenticate with Apache Druid. This parameter is optional.
 * `password` is the password used to authenticate with Apache Druid. This parameter is optional.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/druid_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

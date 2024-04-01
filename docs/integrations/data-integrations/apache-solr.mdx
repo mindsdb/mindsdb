@@ -7,6 +7,14 @@ This is the implementation of the Solr data handler for MindsDB.
 
 [Apache Solr](https://solr.apache.org/) is a highly reliable, scalable and fault tolerant, providing distributed indexing, replication and load-balanced querying, automated failover and recovery, centralized configuration, and more.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect Apache Solr to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to Apache Solr.
+
 ## Implementation
 
 This handler is implemented using the `sqlalchemy-solr` library, which provides a Python/SQLAlchemy interface.
@@ -23,10 +31,6 @@ The required arguments to establish a connection are as follows:
 
 <Tip>
 Further reference: [https://pypi.org/project/sqlalchemy-solr/](https://pypi.org/project/sqlalchemy-solr/).
-</Tip>
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/solr_handler) and run this command: `pip install -r requirements.txt`. 
 </Tip>
 
 ## Usage

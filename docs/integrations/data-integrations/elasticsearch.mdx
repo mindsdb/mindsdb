@@ -7,6 +7,14 @@ This is the implementation of the Elasticsearch data handler for MindsDB.
 
 [Elasticsearch](https://www.elastic.co/what-is/elasticsearch) is a distributed, free and open search and analytics engine for all types of data, including textual, numerical, geospatial, structured, and unstructured. Elasticsearch is built on Apache Lucene and was first released in 2010 by Elasticsearch N.V. (now known as Elastic).
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect Elasticsearch to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to Elasticsearch.
+
 ## Implementation
 
 This handler is implemented using the `elasticsearch` library, the Python Elasticsearch client.
@@ -17,10 +25,6 @@ The required arguments to establish a connection are as follows:
 * `cloud_id` is the unique ID to your hosted Elasticsearch cluster on Elasticsearch Service. This parameter is optional, but it should be provided if `hosts` is not.
 * `username` is the username used to authenticate with the Elasticsearch server. This parameter is optional.
 * `password` is the password used to authenticate the user with the Elasticsearch server. This parameter is optional.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/elasticsearch_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

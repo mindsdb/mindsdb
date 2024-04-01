@@ -13,8 +13,9 @@ except Exception as e:
     Handler = None
     import_error = e
 
-title = "google_gemini"
+title = "Google Gemini"
 name = "google_gemini"
 type = HANDLER_TYPE.ML
+icon_path = 'icon.svg'
 permanent = True
-__all__ = ['Handler', 'version', 'name', 'type', 'title', 'description', 'import_error']
+__all__ = ['Handler', 'version', 'name', 'type', 'title', 'description', 'import_error', 'icon_path']

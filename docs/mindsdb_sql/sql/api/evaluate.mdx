@@ -1,0 +1,39 @@
+---
+title: EVALUATE
+sidebarTitle: Evaluate Predictions
+---
+
+## Description
+
+The `EVALUATE` statement evaluates predictions based on [available metrics](https://scikit-learn.org/stable/modules/model_evaluation.html).
+
+## Syntax
+
+Here is the syntax:
+
+```sql
+EVALUATE metric_name
+FROM (SELECT real_value AS actual,
+             predicted_value AS prediction
+      FROM table_name);
+```
+
+Where:
+
+| Name              | Description                                                                                                                     |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `metric_name`     | It is the name of the metric to be evaluated chosen from [here](https://scikit-learn.org/stable/modules/model_evaluation.html). |
+| `real_value`      | It is the real value that will be compared with the predicted value.                                                            |
+| `predicted_value` | It is the value predicted by the model.                                                                                         |
+| `table_name`      | It is the table that stores corresponding real and predicted values.                                                            |
+
+## Example
+
+This example calculates the mean absolute error.
+
+```sql
+EVALUATE mean_absolute_error
+FROM (SELECT column_name_that_stores_real_value AS actual,
+             column_name_that_stores_predicted_value AS prediction
+      FROM table);
+```

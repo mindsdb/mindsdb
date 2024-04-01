@@ -8,9 +8,9 @@ import pandas as pd
 from mindsdb.utilities.hooks import before_palm_query, after_palm_query
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import BaseMLEngine
+from mindsdb.integrations.libs.llm.utils import get_completed_prompts
 
 from mindsdb.integrations.utilities.handler_utils import get_api_key
-from mindsdb.integrations.libs.llm_utils import get_completed_prompts
 
 CHAT_MODELS = (
     "models/chat-bison-001",
@@ -114,7 +114,7 @@ class PalmHandler(BaseMLEngine):
         args_model = PalmHandlerArgs(**args)
 
         args_model.target = target
-        api_key = get_api_key("palm", args, self.engine_storage)
+        api_key = get_api_key("palm", args["using"], self.engine_storage, strict=False)
 
         # Set palm api key
         palm.configure(api_key=api_key)
@@ -254,7 +254,7 @@ class PalmHandler(BaseMLEngine):
         # remove prompts without signal from completion queue
         prompts = [j for i, j in enumerate(prompts) if i not in empty_prompt_ids]
 
-        api_key = get_api_key("palm", args_model.dict(), self.engine_storage)
+        api_key = get_api_key("palm", args["using"], self.engine_storage, strict=False)
         api_args = {
             k: v for k, v in api_args.items() if v is not None
         }  # filter out non-specified api args
@@ -304,7 +304,7 @@ class PalmHandler(BaseMLEngine):
             after_palm_query(params, response)
 
             params2 = params.copy()
-            params2.pop("api_key", None)
+            params2.pop("palm_api_key", None)
             params2.pop("user", None)
             logger.debug(f">>>palm call: {params2}:\n{response}")
 

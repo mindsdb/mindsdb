@@ -7,6 +7,14 @@ This is the implementation of the Couchbase data handler for MindsDB.
 
 [Couchbase](https://www.couchbase.com/) is an open-source, distributed multi-model NoSQL document-oriented database software package optimized for interactive applications. These applications may serve many concurrent users by creating, storing, retrieving, aggregating, manipulating, and presenting data.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect Couchbase to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to Couchbase.
+
 ## Implementation
 
 This handler is implemented using the `couchbase` library, the Python driver for Couchbase.
@@ -23,11 +31,6 @@ If you are using Couchbase Capella, the `host` should be the connection string f
 It will also be required to whitelist the machine(s) that will be running MindsDB and database credentials will need to be created for the user. These steps can also be taken under the Connect tab.
 </Tip>
 
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/couchbase_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
-
-## Usage
 In order to make use of this handler and connect to a Couchbase server in MindsDB, the following syntax can be used. Note, that the example uses the default `travel-sample` bucket which can be enabled from the couchbase UI with pre-defined scope and documents. 
 
 ```sql
@@ -42,6 +45,8 @@ parameters={
     "scope": "inventory"
 };
 ```
+
+## Usage
 
 Now, you can use this established connection to query your database as follows:
 

@@ -9,6 +9,14 @@ In this section, we present how to connect GitHub repository to MindsDB.
 
 Data from GitHub, including issues and PRs, can be utilized within MindsDB to make relevant predictions or automate the issue/PR creation.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect GitHub to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to GitHub.
+
 ## Connection
 
 This handler is implemented using the `pygithub` library, a Python library that wraps GitHub API v3.
@@ -35,10 +43,6 @@ PARAMETERS = {
 };
 ```
 
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/github_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
-
 ## Usage
 
 The `mindsdb_github` connection contains two tables: `issues` and `pull_requests`.
@@ -53,10 +57,9 @@ FROM mindsdb_github.issues;
 You can run more advanced queries to fetch specific issues in a defined order:
 
 ```sql
-SELECT number, state, creator, assignee, title, labels
+SELECT number, state, creator, assignees, title, labels
 FROM mindsdb_github.issues
-WHERE state="all"
-ORDER BY created ASC, creator DESC
+WHERE state = 'open'
 LIMIT 10;
 ```
 
@@ -65,8 +68,7 @@ And the same goes for pull requests:
 ```sql
 SELECT number, state, title, creator, head, commits
 FROM mindsdb_github.pull_requests
-WHERE state="all"
-ORDER BY long_running DESC, commits DESC
+WHERE state = 'open'
 LIMIT 10;
 ```
 

@@ -7,6 +7,14 @@ This is the implementation of the SAP HANA data handler for MindsDB.
 
 [SAP HANA](https://www.sap.com/products/technology-platform/hana/what-is-sap-hana.html), where HANA stands for High-performance ANalytic Appliance, is a multi-model database that stores data in its memory instead of keeping it on a disk. The column-oriented in-memory database design used by SAP HANA allows users to run advanced analytics alongside high-speed transactions in a single system.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect SAP HANA to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to SAP HANA.
+
 ## Implementation
 
 This handler is implemented using `hdbcli`, the Python driver for SAP HANA.
@@ -18,10 +26,6 @@ The required arguments to establish a connection are as follows:
 * `user` specifies the user name.
 * `password` specifies the password for the user.
 * `schema` sets the current schema, which is used for identifiers without a defined schema.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/hana_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

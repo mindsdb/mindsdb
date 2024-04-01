@@ -1,5 +1,6 @@
-from pathlib import Path
 import json
+from typing import List
+from pathlib import Path
 
 import requests
 import pandas as pd
@@ -7,7 +8,7 @@ import pytest
 
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from .conftest import make_test_csv
-from .http_test_helpers import HTTPHelperMixin
+from tests.utils.http_test_helpers import HTTPHelperMixin
 
 
 # used by mindsdb_app fixture in conftest
@@ -461,20 +462,130 @@ class TestHTTP(HTTPHelperMixin):
 
         assert len(response.json()) == 2
 
-    @pytest.mark.parametrize("method,payload,expected_code,result,headers", [
-        ("post", {}, 200, {}, {"company-id": "1"}),
-        ("get", {}, 200, {}, {"company-id": "1"}),
-        ("post", {"tab1": "select * from foo.bar limit 1"}, 200, {}, {"company-id": "1"}),
-        ("get", {}, 200, {"tab1": "select * from foo.bar limit 1"}, {"company-id": "1"}),
-        ("get", {}, 200, {}, {"company-id": "2"}),
-    ])
-    def test_tabs(self, method, payload, expected_code, result, headers):
-        uri = '/tabs/'
-        call_desc = f"{method.upper()} - {uri} payload={payload} headers={headers}"
-        resp = self.api_request(method, uri, payload=payload, headers=headers)
-        assert resp.status_code == expected_code, \
-               f"expected to have {expected_code} for {call_desc}, but got {resp.status_code}"
-        # no needs to check reponse body for POST request
-        if method != "post":
-            assert result == resp.json(), \
-                   f"expected to have {result} for {call_desc}, but got {resp.json()}"
+    def test_tabs(self):
+        def tabs_requets(method: str, url: str = '', payload: dict = {},
+                         company_id: int = 1, expected_status: int = 200):
+            resp = self.api_request(method, f'/tabs/{url}', payload=payload, headers={'company-id': str(company_id)})
+            assert resp.status_code == expected_status
+            return resp
+
+        def compare_tabs(ta: dict, tb: dict) -> bool:
+            for key in ('id', 'index', 'name', 'content'):
+                if ta.get(key) != tb.get(key):
+                    return False
+            return True
+
+        def compate_tabs_list(list_a: List[dict], list_b: List[dict]) -> bool:
+            if len(list_a) != len(list_b):
+                return False
+            for i in range(len(list_a)):
+                if compare_tabs(list_a[i], list_b[i]) is False:
+                    return False
+            return True
+
+        def tab(company_id: int, tab_number: int):
+            return {
+                'name': f'tab_name_{company_id}_{tab_number}',
+                'content': f'tab_content_{company_id}_{tab_number}'
+            }
+
+        # users has empty tabs list
+        for company_id in (1, 2):
+            resp = tabs_requets('get', company_id=company_id)
+            assert len(resp.json()) == 0
+
+        # add tab and check fields
+        tab_1_1 = tab(1, 1)
+        tabs_requets('post', '?mode=new', payload=tab_1_1, company_id=1)
+        resp_list = tabs_requets('get', '?mode=new', company_id=1).json()
+        assert len(resp_list) == 1
+        resp_1_1 = resp_list[0]
+        assert resp_1_1['name'] == tab_1_1['name']
+        assert resp_1_1['content'] == tab_1_1['content']
+        assert isinstance(resp_1_1['id'], int)
+        assert isinstance(resp_1_1['index'], int)
+        tab_1_1['id'] = resp_1_1['id']
+        tab_1_1['index'] = resp_1_1['index']
+
+        # second list is empty
+        resp = tabs_requets('get', '?mode=new', company_id=2).json()
+        assert len(resp) == 0
+
+        # add tab to second user
+        tab_2_1 = tab(2, 1)
+        tabs_requets('post', '?mode=new', payload=tab_2_1, company_id=2)
+        resp_list = tabs_requets('get', '?mode=new', company_id=2).json()
+        assert len(resp_list) == 1
+        resp_2_1 = resp_list[0]
+        assert resp_2_1['name'] == tab_2_1['name']
+        assert resp_2_1['content'] == tab_2_1['content']
+        tab_2_1['id'] = resp_2_1['id']
+        tab_2_1['index'] = resp_2_1['index']
+
+        # add few tabs for tests
+        tab_1_2 = tab(1, 2)
+        tab_2_2 = tab(2, 2)
+        for tab_dict, company_id in ((tab_1_2, 1), (tab_2_2, 2)):
+            tab_meta = tabs_requets('post', '?mode=new', payload=tab_dict, company_id=company_id).json()['tab_meta']
+            tab_dict['id'] = tab_meta['id']
+            tab_dict['index'] = tab_meta['index']
+
+        resp_list = tabs_requets('get', '?mode=new', company_id=1).json()
+        assert compate_tabs_list(resp_list, [tab_1_1, tab_1_2])
+
+        resp_list = tabs_requets('get', '?mode=new', company_id=2).json()
+        assert compate_tabs_list(resp_list, [tab_2_1, tab_2_2])
+
+        # add tab to second index
+        tab_1_3 = tab(1, 3)
+        tab_1_3['index'] = tab_1_1['index'] + 1
+        tab_meta = tabs_requets('post', '?mode=new', payload=tab_1_3, company_id=1).json()['tab_meta']
+        tab_1_3['id'] = tab_meta['id']
+        tabs_list = tabs_requets('get', '?mode=new', company_id=1).json()
+        assert len(tabs_list) == 3
+        tab_1_1['index'] = tabs_list[0]['index']
+        tab_1_3['index'] = tabs_list[1]['index']
+        tab_1_2['index'] = tabs_list[2]['index']
+        assert compate_tabs_list(tabs_list, [tab_1_1, tab_1_3, tab_1_2])
+        assert tab_1_1['index'] < tab_1_3['index'] < tab_1_2['index']
+
+        # update tab content and index
+        tab_1_2['index'] = tab_1_1['index'] + 1
+        tab_1_2['content'] = tab_1_2['content'] + '_new'
+        tab_meta = tabs_requets(
+            'put',
+            str(tab_1_2['id']),
+            payload={'index': tab_1_2['index'], 'content': tab_1_2['content']},
+            company_id=1
+        ).json()['tab_meta']
+        assert tab_meta['index'] == tab_1_2['index']
+        assert tab_meta['name'] == tab_1_2['name']
+        assert tab_meta['id'] == tab_1_2['id']
+        tabs_list = tabs_requets('get', '?mode=new', company_id=1).json()
+        tab_1_3['index'] = tab_1_2['index'] + 1
+        assert compate_tabs_list(tabs_list, [tab_1_1, tab_1_2, tab_1_3])
+
+        # update tab content and name
+        tab_1_2['content'] = tab_1_2['content'] + '_new'
+        tab_1_2['name'] = tab_1_2['name'] + '_new'
+        tabs_requets('put', str(tab_1_2['id']),
+                     payload={'name': tab_1_2['name'], 'content': tab_1_2['content']}, company_id=1)
+        tabs_list = tabs_requets('get', '?mode=new', company_id=1).json()
+        assert compate_tabs_list(tabs_list, [tab_1_1, tab_1_2, tab_1_3])
+
+        # second list does not changed
+        tabs_list = tabs_requets('get', '?mode=new', company_id=2).json()
+        assert compate_tabs_list(tabs_list, [tab_2_1, tab_2_2])
+
+        # get each tab one by one
+        for company_id, tabs in ((1, [tab_1_1, tab_1_2, tab_1_3]), (2, [tab_2_1, tab_2_2])):
+            for tab_dict in tabs:
+                tab_resp = tabs_requets('get', str(tab_dict['id']), company_id=company_id).json()
+                assert compare_tabs(tab_resp, tab_dict)
+
+        # check failures
+        tabs_requets('get', '99', company_id=1, expected_status=404)
+        tabs_requets('delete', '99', company_id=1, expected_status=404)
+        tabs_requets('post', '?mode=new', payload={'whaaat': '?', 'name': 'test'}, company_id=1, expected_status=400)
+        tabs_requets('put', '99', payload={'name': 'test'}, company_id=1, expected_status=404)
+        tabs_requets('put', str(tab_1_1['id']), payload={'whaaat': '?'}, company_id=1, expected_status=400)

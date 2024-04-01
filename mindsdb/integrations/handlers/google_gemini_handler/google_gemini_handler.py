@@ -1,11 +1,11 @@
-import os
 from typing import Dict, Optional
 
 import google.generativeai as genai
 import pandas as pd
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities import log
-from mindsdb.utilities.config import Config
+
+from mindsdb.integrations.utilities.handler_utils import get_api_key
 
 logger = log.getLogger(__name__)
 
@@ -37,7 +37,7 @@ class GoogleGeminiHandler(BaseMLEngine):
                 f"Invalid chat model. Please use one of {self.supported_chat_models}"
             )
 
-        api_key = self._get_google_gemini_api_key(args)
+        api_key = get_api_key('google_gemini', args["using"], self.engine_storage, strict=False)
 
         try:
             genai.configure(api_key=api_key)
@@ -48,7 +48,7 @@ class GoogleGeminiHandler(BaseMLEngine):
                 f"{e}: Invalid api key please check your api key"
             )
 
-        args["using"]["api_key"] = api_key
+        args["using"]["google_gemini_api_key"] = api_key
 
         self.model_storage.json_set("args", args)
 
@@ -56,7 +56,7 @@ class GoogleGeminiHandler(BaseMLEngine):
         self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None
     ) -> pd.DataFrame:
         args = self.model_storage.json_get("args")
-        api_key = args["using"]["api_key"]
+        api_key = args["using"]["google_gemini_api_key"]
         genai.configure(api_key=api_key)
 
         input_column = args["using"]["column"]
@@ -68,37 +68,6 @@ class GoogleGeminiHandler(BaseMLEngine):
         result_df["predictions"] = df[input_column].apply(self.predict_answer)
         result_df = result_df.rename(columns={"predictions": args["target"]})
         return result_df
-
-    def _get_google_gemini_api_key(self, args, strict=True):
-        """
-        API_KEY preference order:
-            1. provided at model creation
-            2. provided at engine creation
-            3. GOOGLE_GENAI_API_KEY env variable
-            4. google_gemini.api_key setting in config.json
-        """
-
-        if "api_key" in args["using"]:
-            return args["using"]["api_key"]
-        # 2
-        connection_args = self.engine_storage.get_connection_args()
-        if "api_key" in connection_args:
-            return connection_args["api_key"]
-        # 3
-        api_key = os.getenv("GOOGLE_GENAI_API_KEY")
-        if api_key is not None:
-            return api_key
-        # 4
-        config = Config()
-        google_gemini_config = config.get("google_gemini", {})
-        if "api_key" in google_gemini_config:
-            return google_gemini_config["api_key"]
-
-        if strict:
-            raise Exception(
-                'Missing API key "api_key". Either re-create this ML_ENGINE specifying the `api_key` parameter,\
-                 or re-create this model and pass the API key with `USING` syntax.'
-            )
 
     def predict_answer(self, text):
         """

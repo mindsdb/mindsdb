@@ -7,6 +7,14 @@ This is the implementation of the Databricks data handler for MindsDB.
 
 [Databricks](https://databricks.com/) is a data lakehouse that unifies the best of data warehouses and data lakes in one simple platform to handle all your data, analytics, and AI use cases. It’s built on an open and reliable data foundation that efficiently handles all data types and applies one common security and governance approach across all of your data and cloud platforms.
 
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect Databricks to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to Databricks.
+
 ## Implementation
 
 This handler is implemented using `databricks-sql-connector`, a Python library that allows you to use Python code to run SQL commands on Databricks clusters and Databricks SQL warehouses.
@@ -23,10 +31,6 @@ There are several optional arguments as follows:
 * `http_headers` stores additional (key, value) pairs to set in HTTP headers on every RPC request the client makes.
 * `catalog` is the catalog to use for the connection. Typically, defaults to `hive_metastore` if not provided.
 * `schema` is the schema (database) to use for the connection. Defaults to `default` if not provided.
-
-<Tip>
-If you installed MindsDB locally via pip, you need to install all handler dependencies manually. To do so, go to the handler's folder (mindsdb/integrations/handlers/databricks_handler) and run this command: `pip install -r requirements.txt`.
-</Tip>
 
 ## Usage
 

@@ -69,7 +69,7 @@ CREATE TABLE pvec.embed
 CREATE ML_ENGINE openai
 FROM openai
 USING
-    api_key = 'your-openai-api-key';
+    openai_api_key = 'your-openai-api-key';
 
 CREATE MODEL openai_emb 
 PREDICT embedding 

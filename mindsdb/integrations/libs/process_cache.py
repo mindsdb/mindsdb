@@ -38,6 +38,23 @@ def empty_callback(_task):
     return None
 
 
+class MLProcessException(Exception):
+    """Wrapper for exception to safely send it back to the main process.
+
+    If exception can not be pickled (pickle.loads(pickle.dumps(e))) then it may lead to termination of the ML process.
+    Also in this case, the error sent to the user will not be relevant. This wrapper should prevent it.
+    """
+    base_exception_bytes: bytes = None
+
+    def __init__(self, base_exception: Exception, message: str = None) -> None:
+        super().__init__(message)
+        self.message = f'{base_exception.__class__.__name__}: {base_exception}'
+
+    @property
+    def base_exception(self) -> Exception:
+        return RuntimeError(self.message)
+
+
 class WarmProcess:
     """ Class-wrapper for a process that persist for a long time. The process
         may be initialized with any handler requirements. Current implimentation
@@ -152,8 +169,10 @@ def warm_function(func, context: str, *args, **kwargs):
     ctx.load(context)
     try:
         return func(*args, **kwargs)
-    except Exception:
-        raise
+    except Exception as e:
+        if type(e) in (ImportError, ModuleNotFoundError):
+            raise
+        raise MLProcessException(base_exception=e)
 
 
 class ProcessCache:

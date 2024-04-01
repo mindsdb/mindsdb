@@ -36,6 +36,8 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.to
 # Torch.multiprocessing is imported in a 'try'. Falls back to multiprocessing so we dont NEED it.
 # Psycopg2 is needed in core codebase for sqlalchemy.
 # Hierarchicalforecast is an optional dep of neural/statsforecast
+# lark is an optional dep, it is required for auto retrieval (RAG utilities). It is used by langchain
+# and not explicitly imported in mindsdb.
 MAIN_RULE_IGNORES = {
     "DEP003": ["torch"],
     # Ignore Langhchain since the requirements check will still fail even if it's conditionally imported for certain features.

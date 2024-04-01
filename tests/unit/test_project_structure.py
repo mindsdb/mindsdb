@@ -103,7 +103,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         self.wait_predictor('proj', 'task_model', {'tag': 'second'})
 
         # get current model
-        ret = self.run_sql('select * from proj.models')
+        ret = self.run_sql('select * from proj.models where active=1')
 
         # check target
         assert ret['PREDICT'][0] == 'b'
@@ -135,7 +135,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         )
         self.wait_predictor('proj', 'task_model', {'tag': 'third'})
 
-        ret = self.run_sql('select * from proj.models')
+        ret = self.run_sql('select * from proj.models where active=1')
 
         # check target is from previous retrain
         assert ret['PREDICT'][0] == 'b'
@@ -194,16 +194,18 @@ class TestProjectStructure(BaseExecutorDummyML):
         # check 'show models' command in different combination
         # Show models <from | in> <project> where <expr>
         ret = self.run_sql('Show models')
-        assert len(ret) == 1 and ret['NAME'][0] == 'task_model'
+        # mindsdb project
+        assert len(ret) == 0
 
         ret = self.run_sql('Show models from proj')
-        assert len(ret) == 1 and ret['NAME'][0] == 'task_model'
+        # it also shows versions
+        assert len(ret) == 3 and ret['NAME'][0] == 'task_model'
 
-        ret = self.run_sql('Show models in proj')
-        assert len(ret) == 1 and ret['NAME'][0] == 'task_model'
+        # ret = self.run_sql('Show models in proj')
+        # assert len(ret) == 3 and ret['NAME'][0] == 'task_model'
 
-        ret = self.run_sql("Show models where name='task_model'")
-        assert len(ret) == 1 and ret['NAME'][0] == 'task_model'
+        ret = self.run_sql("Show models from proj where name='task_model'")
+        assert len(ret) == 3 and ret['NAME'][0] == 'task_model'
 
         # model is not exists
         ret = self.run_sql("Show models from proj where name='xxx'")

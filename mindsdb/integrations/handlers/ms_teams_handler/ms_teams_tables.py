@@ -228,29 +228,6 @@ class ChatMessagesTable(APITable):
         else:
             chat_messages = api_client.get_all_chat_messages()
 
-        # define the empty eventDetail attribute that is missing from the API response
-        eventDetail = {
-            '@odata.type': None, 
-            'visibleHistoryStartDateTime': None, 
-            'members': None, 
-            'initiator': {
-                'application': None, 
-                'device': None, 
-                'user': {
-                    '@odata.type': None, 
-                    'id': None,
-                    'displayName': None,
-                    'userIdentityType': None,
-                    'tenantId': None
-                }
-            }
-        }
-
-        # add the missing eventDetail attribute to the chat messages if it is missing
-        for chat_message in chat_messages:
-            if chat_message.get("eventDetail") is None:
-                chat_message['eventDetail'] = eventDetail
-
         return chat_messages
 
     def insert(self, query: ast.Insert) -> None:

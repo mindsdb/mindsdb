@@ -100,7 +100,6 @@ PACKAGE_NAME_MAP = {
     "ibm-db": ["ibm_db_dbi"],
     "python-dateutil": ["dateutil"],
     "grpcio": ["grpc"],
-    "langchain-community": ["langchain_community"],
     "sqlalchemy-redshift": ["redshift_sqlalchemy"],
     "sqlalchemy-vertica-python": ["sqla_vertica_python"],
     "grpcio-tools": ["grpc"],

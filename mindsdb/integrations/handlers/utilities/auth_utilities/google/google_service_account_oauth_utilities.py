@@ -44,13 +44,16 @@ class GoogleServiceAccountOAuth2Manager:
         response = requests.get(self.credentials_url)
         # raise a HTTPError if the status is 4xx or 5xx
         response.raise_for_status()
-        
+
         return self._parse_credentials_json(response.json())
 
     def _parse_credentials_json(self, credentials_json: str) -> dict:
         if isinstance(credentials_json, str):
-            # convert to JSON
-            return json.loads(credentials_json)
+            try:
+                # attempt to convert to JSON
+                return json.loads(credentials_json)
+            except json.JSONDecodeError:
+                raise ValueError("Failed to parse credentials provided. Please provide a valid JSON string.")
         else:
             # unescape new lines in private_key
             credentials_json['private_key'] = credentials_json['private_key'].replace('\\n', '\n')

@@ -42,11 +42,10 @@ class GoogleServiceAccountOAuth2Manager:
 
     def _download_credentials_file(self):
         response = requests.get(self.credentials_url)
-        if response.status_code == 200:
-            return self._parse_credentials_json(response.json())
-
-        else:
-            logger.error(f"Failed to get credentials from {self.credentials_url}", response.status_code)
+        # raise a HTTPError if the status is 4xx or 5xx
+        response.raise_for_status()
+        
+        return self._parse_credentials_json(response.json())
 
     def _parse_credentials_json(self, credentials_json: str) -> dict:
         if isinstance(credentials_json, str):

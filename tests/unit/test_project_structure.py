@@ -927,7 +927,6 @@ class TestProjectStructure(BaseExecutorDummyML):
 class TestJobs(BaseExecutorDummyML):
 
     def test_job(self, scheduler):
-        from mindsdb.interfaces.database.log import JobsHistoryTable
 
         df1 = pd.DataFrame([
             {'a': 1, 'c': 1, 'b': dt.datetime(2020, 1, 1)},

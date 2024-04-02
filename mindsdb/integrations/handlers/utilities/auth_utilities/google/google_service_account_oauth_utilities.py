@@ -53,7 +53,7 @@ class GoogleServiceAccountOAuth2Manager:
                 # attempt to convert to JSON
                 return json.loads(credentials_json)
             except json.JSONDecodeError:
-                raise ValueError("Failed to parse credentials provided. Please provide a valid JSON string.")
+                raise ValueError("Failed to parse credentials provided. Please provide a valid service account key.")
         else:
             # unescape new lines in private_key
             credentials_json['private_key'] = credentials_json['private_key'].replace('\\n', '\n')

@@ -58,6 +58,7 @@ class InformationSchemaDataNode(DataNode):
             )
 
         self.tables = {t.name: t() for t in self.tables_list}
+        self.tables['MODELS_VERSIONS'] = self.tables['MODELS']
 
     def __getitem__(self, key):
         return self.get(key)

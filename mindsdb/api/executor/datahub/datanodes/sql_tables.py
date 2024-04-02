@@ -88,7 +88,7 @@ class TablesTable(Table):
                     break
 
         data = []
-        for name in inf_schema.information_schema.keys():
+        for name in inf_schema.tables.keys():
             if target_table is not None and target_table != name:
                 continue
             row = TablesRow(TABLE_TYPE=TABLES_ROW_TYPE.SYSTEM_VIEW, TABLE_NAME=name)
@@ -275,8 +275,8 @@ class ColumnsTable(Table):
 
         result = []
 
-        for table_name in inf_schema.information_schema:
-            table_columns = inf_schema.information_schema[table_name]
+        for table_name, table in inf_schema.tables.items():
+            table_columns = table.columns
             for i, column_name in enumerate(table_columns):
                 result_row = row_templates["text"].copy()
                 result_row[1] = "information_schema"

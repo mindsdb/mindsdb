@@ -205,7 +205,10 @@ class OpenAIHandler(BaseMLEngine):
         pred_args = args['predict_params'] if args else {}
         args = self.model_storage.json_get('args')
         connection_args = self.engine_storage.get_connection_args()
-        args['api_base'] = connection_args.get('api_base') or args.get('api_base') or os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
+        args['api_base'] = (pred_args.get('api_base') or
+                            connection_args.get('api_base') or
+                            args.get('api_base') or
+                            os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE))
         if pred_args.get('api_organization'):
             args['api_organization'] = pred_args['api_organization']
         df = df.reset_index(drop=True)

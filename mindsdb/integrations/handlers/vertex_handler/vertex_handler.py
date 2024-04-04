@@ -32,7 +32,7 @@ class VertexHandler(BaseMLEngine):
         vertex_args = self.engine_storage.json_get('args')
         vertex_args.update(args)
 
-        vertex = VertexClient(credentials_url, credentials_file, credentials_json, vertex_args)
+        vertex = VertexClient(vertex_args, credentials_url, credentials_file, credentials_json)
 
         model = vertex.get_model_by_display_name(model_name)
         if not model:
@@ -66,7 +66,7 @@ class VertexHandler(BaseMLEngine):
         # get credentials from engine
         credentials_url, credentials_file, credentials_json = self._get_credentials_from_engine()
 
-        vertex = VertexClient(credentials_url, credentials_file, credentials_json, vertex_args)
+        vertex = VertexClient(vertex_args, credentials_url, credentials_file, credentials_json)
         results = vertex.predict_from_df(predict_args["endpoint_name"], df, custom_model=predict_args["custom_model"])
 
         if predict_args["custom_model"]:

@@ -9,6 +9,7 @@ from langchain.schema import SystemMessage
 from langchain_community.chat_models import ChatAnthropic, ChatOpenAI, ChatAnyscale, ChatLiteLLM, ChatOllama
 from langchain_core.prompts import PromptTemplate
 from langfuse.callback import CallbackHandler
+from langchain.tools.retriever import create_retriever_tool
 
 import numpy as np
 import pandas as pd
@@ -224,15 +225,20 @@ class LangChainHandler(BaseMLEngine):
                             self.default_agent_tools)
 
         if args.get('mode') == 'rag':
-            embeddings_args = args.pop('embedding_model', {})
+            # get args for embeddings model
+            embeddings_args = args.pop('embedding_model_args', {})
+            # create embeddings model
             args['embeddings_model'] = self._create_embeddings_model(embeddings_args)
             args['llm'] = llm
+            # get args for RAG model
             rag_params = self._get_rag_params(args, pred_args)
             rag_config = RAGPipelineModel(**rag_params)
 
+            # build retriever
             retriever = build_retriever(rag_config)
 
-            rag_tool = get_rag_query_tool(
+            # create RAG tool
+            rag_tool = create_retriever_tool(
                 retriever=retriever,
                 name=args.get('retriever_name', 'retriever'),
                 description=args.get('retriever_description', 'a retriever tool for RAG model'),

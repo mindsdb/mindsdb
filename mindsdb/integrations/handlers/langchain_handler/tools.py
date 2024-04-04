@@ -16,7 +16,6 @@ from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 from langchain.chains import ReduceDocumentsChain, MapReduceDocumentsChain
 
 from mindsdb.interfaces.skills.skill_tool import skill_tool
-from langchain.tools.retriever import create_retriever_tool
 
 # Individual tools
 # Note: all tools are defined in a closure to pass required args (apart from LLM input) through it, as custom tools don't allow custom field assignment.  # noqa
@@ -84,10 +83,6 @@ def get_exec_metadata_tool(llm, executor, model_kwargs) -> Callable:
 
         return data
     return mdb_exec_metadata_call
-
-def get_rag_query_tool(retriever, name, description) -> Callable:
-    return create_retriever_tool(retriever, name, description)
-
 
 def get_mdb_write_tool(executor) -> Callable:
     def mdb_write_call(query: str) -> str:

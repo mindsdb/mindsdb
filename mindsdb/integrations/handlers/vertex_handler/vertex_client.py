@@ -10,7 +10,7 @@ logger = log.getLogger(__name__)
 class VertexClient:
     """A class to interact with Vertex AI"""
 
-    def __init__(self, credentials_url, credentials_file, credentials_json, args_json):
+    def __init__(self, args_json, credentials_url=None, credentials_file=None, credentials_json=None):
         google_sa_oauth2_manager = GoogleServiceAccountOAuth2Manager(
             credentials_url=credentials_url,
             credentials_file=credentials_file,

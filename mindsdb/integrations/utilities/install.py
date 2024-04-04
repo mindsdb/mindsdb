@@ -9,9 +9,19 @@ def install_dependencies(dependencies):
         'success': False,
         'error_message': None
     }
+
+    split_dependencies = []
+    for dependency in dependencies:
+        # check if the dependency is a path to a requirements file
+        if dependency.startswith('-r'):
+            # split the string into '-r' and the path
+            split_dependencies.extend(dependency.split(' '))
+        else:
+            split_dependencies.append(dependency)
+
     try:
         sp = subprocess.Popen(
-            [sys.executable, '-m', 'pip', 'install', *dependencies],
+            [sys.executable, '-m', 'pip', 'install', *split_dependencies],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         )

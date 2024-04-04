@@ -27,13 +27,15 @@ from mindsdb.integrations.handlers.langchain_handler.constants import (
     DEFAULT_ASSISTANT_COLUMN
 )
 from mindsdb.integrations.handlers.langchain_handler.log_callback_handler import LogCallbackHandler
-from mindsdb.integrations.handlers.langchain_handler.mindsdb_database_agent import MindsDBSQL
-from mindsdb.integrations.handlers.langchain_handler.tools import setup_tools
+from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel
+from mindsdb.integrations.handlers.langchain_handler.tools import setup_tools, get_rag_query_tool
+from mindsdb.integrations.utilities.rag.retriever_builder import build_retriever
 from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS as OPEN_AI_CHAT_MODELS
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.libs.llm.utils import get_llm_config
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.interfaces.storage.model_fs import HandlerStorage, ModelStorage
+from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
 from mindsdb.utilities import log
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 
@@ -76,7 +78,7 @@ class LangChainHandler(BaseMLEngine):
         if self.log_callback_handler is None:
             self.log_callback_handler = LogCallbackHandler(logger)
 
-    def _get_provider(self, args: Dict) -> str:
+    def _get_llm_provider(self, args: Dict) -> str:
         if 'provider' in args:
             return args['provider']
         if args['model_name'] in ANTHROPIC_CHAT_MODELS:
@@ -87,6 +89,28 @@ class LangChainHandler(BaseMLEngine):
             return 'ollama'
         raise ValueError(f"Invalid model name. Please define provider")
 
+    def _get_embedding_model_provider(self, args: Dict) -> str:
+        if 'embedding_model_provider' in args:
+            return args['embedding_model_provider']
+        if 'embedding_model_provider' not in args:
+            logger.warning('No embedding model provider specified. trying to use llm provider.')
+            return args.get('embedding_model_provider', self._get_llm_provider(args))
+        raise ValueError(f"Invalid model name. Please define provider")
+
+    def _get_rag_params(self, args: Dict, pred_args: Dict) -> Dict:
+        model_config = args.copy()
+        # Override with prediction args.
+        model_config.update(pred_args)
+        # Include API keys.
+        model_config['api_keys'] = {
+            p: get_api_key(p, args, self.engine_storage, strict=False) for p in SUPPORTED_PROVIDERS
+        }
+        supported_rag_params = RAGPipelineModel.__fields__.keys()
+
+        rag_params = {k: v for k, v in model_config.items() if k in supported_rag_params}
+
+        return rag_params
+
     def _get_chat_model_params(self, args: Dict, pred_args: Dict) -> Dict:
         model_config = args.copy()
         # Override with prediction args.
@@ -95,7 +119,7 @@ class LangChainHandler(BaseMLEngine):
         model_config['api_keys'] = {
             p: get_api_key(p, args, self.engine_storage, strict=False) for p in SUPPORTED_PROVIDERS
         }
-        llm_config = get_llm_config(args.get('provider', self._get_provider(args)), model_config)
+        llm_config = get_llm_config(args.get('provider', self._get_llm_provider(args)), model_config)
         config_dict = llm_config.model_dump()
         config_dict = {k: v for k, v in config_dict.items() if v is not None}
         return config_dict
@@ -131,6 +155,9 @@ class LangChainHandler(BaseMLEngine):
             return ChatOllama(**model_kwargs)
         raise ValueError(f'Unknown provider: {args["provider"]}')
 
+    def _create_embeddings_model(self, args: Dict):
+        return construct_model_from_args(args)
+
     def _handle_parsing_errors(self, error: Exception) -> str:
         response = str(error)
         if not response.startswith(_PARSING_ERROR_PREFIX):
@@ -152,7 +179,8 @@ class LangChainHandler(BaseMLEngine):
         args = args['using']
         args['target'] = target
         args['model_name'] = args.get('model_name', DEFAULT_MODEL_NAME)
-        args['provider'] = args.get('provider', self._get_provider(args))
+        args['provider'] = args.get('provider', self._get_llm_provider(args))
+        args['embedding_model_provider'] = args.get('embedding_model', self._get_embedding_model_provider(args))
         self.model_storage.json_set('args', args)
 
     @staticmethod
@@ -174,7 +202,8 @@ class LangChainHandler(BaseMLEngine):
         if 'prompt_template' not in args and 'prompt_template' not in pred_args:
             raise ValueError(f"This model expects a `prompt_template`, please provide one.")
         # Back compatibility for old models
-        args['provider'] = args.get('provider', self._get_provider(args))
+        args['provider'] = args.get('provider', self._get_llm_provider(args))
+        args['embedding_model_provider'] = args.get('embedding_model', self._get_embedding_model_provider(args))
 
         df = df.reset_index(drop=True)
         agent = self.create_agent(df, args, pred_args)
@@ -193,6 +222,23 @@ class LangChainHandler(BaseMLEngine):
                             model_kwargs,
                             pred_args,
                             self.default_agent_tools)
+
+        if args.get('mode') == 'rag':
+            embeddings_args = args.pop('embedding_model', {})
+            args['embeddings_model'] = self._create_embeddings_model(embeddings_args)
+            args['llm'] = llm
+            rag_params = self._get_rag_params(args, pred_args)
+            rag_config = RAGPipelineModel(**rag_params)
+
+            retriever = build_retriever(rag_config)
+
+            rag_tool = get_rag_query_tool(
+                retriever=retriever,
+                name=args.get('retriever_name', 'retriever'),
+                description=args.get('retriever_description', 'a retriever tool for RAG model'),
+            )
+
+            tools.append(rag_tool)
 
         # Prefer prediction prompt template over original if provided.
         prompt_template = pred_args.get('prompt_template', args['prompt_template'])

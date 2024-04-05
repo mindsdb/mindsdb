@@ -52,7 +52,6 @@ def install_dependencies(dependencies):
                 output = output + '\n'
             output = output + 'Errors: ' + errs.decode()
         result['error_message'] = output
-        result['success'] = False
     else:
         result['success'] = True
 

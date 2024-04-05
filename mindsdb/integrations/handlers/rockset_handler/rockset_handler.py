@@ -16,31 +16,31 @@ class RocksetHandler(MySQLHandler):
 
 connection_args = OrderedDict(
     user = {
-        'type': ARG_TYPE.STRING,
+        'type': ARG_TYPE.STR,
         'description': 'Rockset user name'
     },
     password = {
-        'type': ARG_TYPE.STRING,
+        'type': ARG_TYPE.STR,
         'description': 'Rockset password'
     },
     api_key = {
-        'type': ARG_TYPE.STRING,
+        'type': ARG_TYPE.STR,
         'description': 'Rockset API key'
     },
     api_server = {
-        'type': ARG_TYPE.STRING,
+        'type': ARG_TYPE.STR,
         'description': 'Rockset API server'
     },
     host = {
-        'type': ARG_TYPE.STRING,
+        'type': ARG_TYPE.STR,
         'description': 'Rockset host'
     },
     port = {
-        'type': ARG_TYPE.STRING,
+        'type': ARG_TYPE.INT,
         'description': 'Rockset port'
     },
     database = {
-        'type': ARG_TYPE.STRING,
+        'type': ARG_TYPE.STR,
         'description': 'Rockset database'
     }
 )

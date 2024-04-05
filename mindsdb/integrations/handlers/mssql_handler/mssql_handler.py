@@ -49,6 +49,13 @@ class SqlServerHandler(DatabaseHandler):
         self.is_connected = True
 
         return self.connection
+    
+    def disconnect(self):
+        if self.is_connected is False:
+            return
+        self.connection.close()
+        self.is_connected = False
+        return
 
     def check_connection(self) -> StatusResponse:
         """

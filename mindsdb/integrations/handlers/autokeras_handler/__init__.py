@@ -13,7 +13,7 @@ except Exception as e:
     Handler = None
     import_error = e
 
-title = "Autokeras"
+title = "AutoKeras"
 name = "autokeras"
 type = HANDLER_TYPE.ML
 icon_path = 'icon.svg'

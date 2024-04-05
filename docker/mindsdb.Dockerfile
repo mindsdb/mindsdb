@@ -9,9 +9,6 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     && apt-get install -y freetds-dev  # freetds required to build pymssql for mssql_handler
 
 WORKDIR /mindsdb
-# Have to make sure we have a clean metrics dir.
-RUN mkdir prometheus_metrics
-
 
 # Copy just requirements and install them to cache the layer
 # This won't include any of the default handlers, but it should still speed things up

@@ -710,7 +710,7 @@ class InformationSchemaDataNode(DataNode):
         return pd.DataFrame(data, columns=columns)
 
     def _get_agents(self, query: ASTNode = None):
-        agents_controller = AgentsController()
+        agents_controller = AgentsController(self)
         project_name = None
         if (
                 isinstance(query, Select)

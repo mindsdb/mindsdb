@@ -175,6 +175,7 @@ class PersistedVectorStoreLoader:
                 folder_path=self.config.persist_directory,
                 embeddings=self.config.embeddings_model,
                 index_name=self.config.collection_name,
+                allow_dangerous_deserialization=True
             )
 
         else:

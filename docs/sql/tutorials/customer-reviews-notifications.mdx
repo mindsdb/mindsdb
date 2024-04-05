@@ -127,9 +127,11 @@ EVERY 1 minute;
 These commands are used to monitor the job.
 
 ```sql
-SELECT * FROM jobs WHERE name = 'customer_reviews_notifications';
+SHOW JOBS WHERE name = 'customer_reviews_notifications';
 
-SELECT * FROM jobs_history WHERE name = 'customer_reviews_notifications';
+SELECT * FROM mindsdb.jobs WHERE name = 'customer_reviews_notifications';
+
+SELECT * FROM log.jobs_history WHERE project = 'mindsdb' AND name = 'customer_reviews_notifications';
 ```
 
 Use this command to disable the job.
@@ -202,9 +204,9 @@ EVERY 1 minute;
 These commands are used to monitor the job.
 
 ```sql
-SELECT * FROM jobs WHERE name = 'customer_reviews_and_reponses_notifications';
+SELECT * FROM mindsdb.jobs WHERE name = 'customer_reviews_and_reponses_notifications';
 
-SELECT * FROM jobs_history WHERE name = 'customer_reviews_and_reponses_notifications';
+SELECT * FROM log.jobs_history WHERE project = 'mindsdb' AND name = 'customer_reviews_and_reponses_notifications';
 ```
 
 Use this command to disable the job.

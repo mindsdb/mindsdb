@@ -88,7 +88,7 @@ class GetLeaf(Resource):
             tables = [{
                 'name': table.name,
                 'class': table.kind,
-                'type': None,
+                'type': 'system view',
                 'engine': None,
                 'deletable': table.deletable,
             } for table in tables.values()]

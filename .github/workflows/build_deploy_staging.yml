@@ -1,4 +1,4 @@
-name: Deploy to staging
+name: Build and deploy to staging
 
 on:
   push:
@@ -32,5 +32,11 @@ jobs:
           repo: INTERNAL-mindsdb-build-deploy-to-kubernetes
           github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}
           workflow_file_name: deploy-dev.yml
-          ref: master
+          ref: main
           client_payload: '{"image-tag-prefix": "${{ env.CI_SHA }}", "deploy-env": "${{ matrix.environment }}"}'
+
+  run_tests:
+    name: Run Post-Deploy Tests
+    needs: [trigger_deploy]
+    uses: ./.github/workflows/test_on_deploy.yml
+    secrets: inherit

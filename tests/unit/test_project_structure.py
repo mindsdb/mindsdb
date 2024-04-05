@@ -886,10 +886,69 @@ class TestProjectStructure(BaseExecutorDummyML):
         assert ret['model_name'][0] == 'test'
         assert ret['api_key'][0] == 'api_key_1'
 
+    def test_create_engine(self):
+        self.run_sql('''
+            CREATE ML_ENGINE my_engine
+            FROM dummy_ml
+            USING
+               unquoted_arg = yourkey,
+               json_arg = {
+                  "type": "service_account",
+                  "project_id": "123456"
+               }
+        ''')
+
+        self.run_sql(
+            '''
+               CREATE model pred
+                PREDICT p
+                using engine='my_engine',
+                join_learn_process=true
+            '''
+        )
+
+        ret = self.run_sql('select * from pred where a=1')
+        args = ret['engine_args'][0]
+
+        # check unquoted value
+        assert args['unquoted_arg'] == 'yourkey'
+
+        # check json value
+        assert args['json_arg']['project_id'] == '123456'
+
     def test_show(self):
         for item in ('chatbots', 'knowledge_bases', 'agents', 'skills', 'jobs'):
 
             self.run_sql(f'show {item}')
+
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_create_empty_table(self, data_handler):
+        self.set_handler(data_handler, name='pg', tables={})
+
+        self.run_sql('create table pg.table1 (a DATE, b INTEGER)')
+
+        calls = data_handler().query.call_args_list
+        sql = calls[0][0][0].to_string()
+        assert sql.strip() == 'CREATE TABLE table1 (a DATE, b INTEGER)'
+
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_interval(self, data_handler):
+        df = pd.DataFrame([
+            {'last_date': dt.datetime(2020, 1, 2)},
+        ])
+        self.set_handler(data_handler, name='pg', tables={'branch': df})
+
+        ret = self.run_sql("select (last_date + INTERVAL '2 days') d from pg.branch")
+
+        assert ret.d[0] == dt.datetime(2020, 1, 4)
+
+    def test_delete_from_table(self):
+        df1 = pd.DataFrame([
+            {'a': 1}
+        ])
+        self.set_data('tbl1', df1)
+
+        self.run_sql('delete from tbl1 where a=1', database='dummy_data')
 
 
 class TestJobs(BaseExecutorDummyML):

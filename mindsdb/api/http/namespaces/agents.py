@@ -7,7 +7,6 @@ from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.api.http.utils import http_error
 from mindsdb.metrics.metrics import api_endpoint_metrics
-from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.interfaces.storage import db
 
@@ -31,10 +30,10 @@ def create_agent(project_name, name, agent):
     params = agent.get('params', {})
     skills = agent.get('skills', [])
 
-    agents_controller = AgentsController()
+    session = SessionController()
 
     try:
-        existing_agent = agents_controller.get_agent(name, project_name=project_name)
+        existing_agent = session.agents_controller.get_agent(name, project_name=project_name)
     except ValueError:
         # Project must exist.
         return http_error(
@@ -50,7 +49,7 @@ def create_agent(project_name, name, agent):
         )
 
     try:
-        created_agent = agents_controller.add_agent(
+        created_agent = session.agents_controller.add_agent(
             name,
             project_name,
             model_name,
@@ -80,9 +79,9 @@ class AgentsResource(Resource):
     @api_endpoint_metrics('GET', '/agents')
     def get(self, project_name):
         ''' List all agents '''
-        agents_controller = AgentsController()
+        session = SessionController()
         try:
-            all_agents = agents_controller.get_agents(project_name)
+            all_agents = session.agents_controller.get_agents(project_name)
         except ValueError:
             # Project needs to exist.
             return http_error(
@@ -118,9 +117,9 @@ class AgentResource(Resource):
     @api_endpoint_metrics('GET', '/agents/agent')
     def get(self, project_name, agent_name):
         '''Gets a agent by name'''
-        agents_controller = AgentsController()
+        session = SessionController()
         try:
-            existing_agent = agents_controller.get_agent(agent_name, project_name=project_name)
+            existing_agent = session.agents_controller.get_agent(agent_name, project_name=project_name)
             if existing_agent is None:
                 return http_error(
                     HTTPStatus.NOT_FOUND,
@@ -148,10 +147,10 @@ class AgentResource(Resource):
                 'Missing parameter',
                 'Must provide "agent" parameter in POST body'
             )
-        agents_controller = AgentsController()
+        session = SessionController()
 
         try:
-            existing_agent = agents_controller.get_agent(agent_name, project_name=project_name)
+            existing_agent = session.agents_controller.get_agent(agent_name, project_name=project_name)
         except ValueError:
             # Project must exist.
             return http_error(
@@ -182,7 +181,7 @@ class AgentResource(Resource):
 
         # Agent must not exist with new name.
         if name is not None and name != agent_name:
-            agent_with_new_name = agents_controller.get_agent(name, project_name=project_name)
+            agent_with_new_name = session.agents_controller.get_agent(name, project_name=project_name)
             if agent_with_new_name is not None:
                 return http_error(
                     HTTPStatus.CONFLICT,
@@ -196,7 +195,7 @@ class AgentResource(Resource):
 
         # Update
         try:
-            updated_agent = agents_controller.update_agent(
+            updated_agent = session.agents_controller.update_agent(
                 agent_name,
                 project_name=project_name,
                 name=name,
@@ -218,9 +217,9 @@ class AgentResource(Resource):
     @api_endpoint_metrics('DELETE', '/agents/agent')
     def delete(self, project_name, agent_name):
         '''Deletes a agent by name'''
-        agents_controller = AgentsController()
+        session = SessionController()
         try:
-            existing_agent = agents_controller.get_agent(agent_name, project_name=project_name)
+            existing_agent = session.agents_controller.get_agent(agent_name, project_name=project_name)
             if existing_agent is None:
                 return http_error(
                     HTTPStatus.NOT_FOUND,
@@ -235,7 +234,7 @@ class AgentResource(Resource):
                 f'Project with name {project_name} does not exist'
             )
 
-        agents_controller.delete_agent(agent_name, project_name=project_name)
+        session.agents_controller.delete_agent(agent_name, project_name=project_name)
         return '', HTTPStatus.NO_CONTENT
 
 
@@ -254,9 +253,9 @@ class AgentCompletions(Resource):
                 'Missing parameter',
                 'Must provide "messages" parameter in POST body'
             )
-        agents_controller = AgentsController()
+        session = SessionController()
         try:
-            existing_agent = agents_controller.get_agent(agent_name, project_name=project_name)
+            existing_agent = session.agents_controller.get_agent(agent_name, project_name=project_name)
             if existing_agent is None:
                 return http_error(
                     HTTPStatus.NOT_FOUND,
@@ -272,10 +271,9 @@ class AgentCompletions(Resource):
             )
 
         # Model needs to exist.
-        session_controller = SessionController()
         model_name_no_version, version = db.Predictor.get_name_and_version(existing_agent.model_name)
         try:
-            agent_model = session_controller.model_controller.get_model(model_name_no_version, version=version, project_name=project_name)
+            agent_model = session.model_controller.get_model(model_name_no_version, version=version, project_name=project_name)
             agent_model_record = db.Predictor.query.get(agent_model['id'])
         except PredictorRecordNotFound:
             return http_error(
@@ -284,21 +282,16 @@ class AgentCompletions(Resource):
                 f'Model with name {existing_agent.model_name} not found'
             )
 
-        predict_params = {
+        completion = session.agents_controller.get_completion(
+            existing_agent,
+            request.json['messages'],
+            project_name=project_name,
             # Don't need to include backoffice_db related tools into this endpoint.
             # Underlying handler (e.g. Langchain) will handle default tools like mdb_read, mdb_write, etc.
-            'tools': [],
-            'skills': [s for s in existing_agent.skills],
-        }
-        project_datanode = session_controller.datahub.get(project_name)
-        predictions = project_datanode.predict(
-            model_name=existing_agent.model_name,
-            data=request.json['messages'],
-            params=predict_params
+            tools=[]
         )
-
         output_col = agent_model_record.to_predict[0]
-        model_output = predictions.iloc[-1][output_col]
+        model_output = completion.iloc[-1][output_col]
         return {
             'message': {
                 'content': model_output,

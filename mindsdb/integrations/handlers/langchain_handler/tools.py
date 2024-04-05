@@ -101,6 +101,7 @@ def _setup_standard_tools(tools, llm, model_kwargs):
     executor = skill_tool.get_command_executor()
 
     all_standard_tools = []
+    langchain_tools = []
     mdb_tool = Tool(
         name="MindsDB",
         func=get_exec_call_tool(llm, executor, model_kwargs),
@@ -114,7 +115,6 @@ def _setup_standard_tools(tools, llm, model_kwargs):
     )
     all_standard_tools.append(mdb_tool)
     all_standard_tools.append(mdb_meta_tool)
-    langchain_tools = []
     for tool in tools:
         if tool == 'mindsdb_write':
             mdb_write_tool = Tool(
@@ -137,9 +137,6 @@ def _setup_standard_tools(tools, llm, model_kwargs):
                 func=search.run,
                 description="useful for when you need to ask with search",
             )
-            langchain_tools.append(tool)
-        elif tool == 'wikipedia':
-            tool = WikipediaQueryRun(api_wrapper=WikipediaAPIWrapper())
             langchain_tools.append(tool)
         else:
             raise ValueError(f"Unsupported tool: {tool}")

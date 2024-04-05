@@ -3,6 +3,8 @@ import datetime
 from functools import wraps
 import hashlib
 import base64
+import os
+import textwrap
 from cryptography.fernet import Fernet
 from collections.abc import Callable
 
@@ -12,6 +14,8 @@ from mindsdb_sql.parser.ast import Identifier
 
 from mindsdb.utilities.fs import create_process_mark, delete_process_mark, set_process_mark
 from mindsdb.utilities import log
+from mindsdb.utilities.config import Config
+
 
 logger = log.getLogger(__name__)
 
@@ -26,6 +30,22 @@ def args_parse():
     parser.add_argument('-v', '--version', action='store_true')
     parser.add_argument('--ml_task_queue_consumer', action='store_true', default=None)
     return parser.parse_args()
+
+
+def get_handler_install_message(handler_name):
+    if Config().use_docker_env:
+        container_id = os.environ.get("HOSTNAME", "<container_id>")
+        return textwrap.dedent(f"""\
+            To install the {handler_name} handler, run the following in your terminal outside the docker container
+            ({container_id} is the ID of this container):
+
+                docker exec {container_id} pip install 'mindsdb[{handler_name}]'""")
+    else:
+        return textwrap.dedent(f"""\
+            To install the {handler_name} handler, run the following in your terminal:
+
+                pip install 'mindsdb[{handler_name}]'  # If you installed mindsdb via pip
+                pip install '.[{handler_name}]'        # If you installed mindsdb from source""")
 
 
 def cast_row_types(row, field_types):

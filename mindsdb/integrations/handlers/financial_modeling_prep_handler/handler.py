@@ -8,3 +8,12 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
+
+
+_FINANCIAL_MODELING_URL = 'https://api.binance.us'
+
+logger = log.getLogger(__name__)
+
+class Financial_Modeling_Handler{
+    def Financial_Modeling_Handler:
+}

@@ -89,14 +89,23 @@ class ChatBotController:
             all_bots (List[db.ChatBots]): List of database chatbot object
         '''
 
-        project = self.project_controller.get(name=project_name)
+        query = db.session.query(db.Project).filter_by(
+            company_id=ctx.company_id,
+            deleted_at=None
+        )
+        if project_name is not None:
+            query = query.filter_by(name=project_name)
+        project_names = {
+            i.id: i.name
+            for i in query
+        }
 
         query = db.session.query(
             db.ChatBots, db.Tasks
         ).join(
             db.Tasks, db.ChatBots.id == db.Tasks.object_id
         ).filter(
-            db.ChatBots.project_id == project.id,
+            db.ChatBots.project_id.in_(list(project_names.keys())),
             db.Tasks.object_type == self.OBJECT_TYPE,
             db.Tasks.company_id == ctx.company_id,
         )
@@ -115,7 +124,7 @@ class ChatBotController:
                 {
                     'id': bot.id,
                     'name': bot.name,
-                    'project': project_name,
+                    'project': project_names[bot.project_id],
                     'agent': agent_obj,
                     'database_id': bot.database_id,  # TODO remove in future
                     'database': database_names.get(bot.database_id, '?'),

@@ -199,7 +199,13 @@ class ExecuteCommands:
             return self.answer_drop_database(statement)
         elif type(statement) is Describe:
             # NOTE in sql 'describe table' is same as 'show columns'
-            return self.answer_describe_predictor(statement, database_name)
+            obj_type = statement.type
+
+            if obj_type is None or obj_type.upper() in ('MODEL', 'PREDICTOR'):
+                return self.answer_describe_predictor(statement.value, database_name)
+            else:
+                return self.answer_describe_object(obj_type.upper(), statement.value, database_name)
+
         elif type(statement) is RetrainPredictor:
             return self.answer_retrain_predictor(statement, database_name)
         elif type(statement) is FinetunePredictor:
@@ -832,8 +838,49 @@ class ExecuteCommands:
             data=[[metric_value]],
         )
 
-    def answer_describe_predictor(self, statement, database_name):
-        value = statement.value.parts.copy()
+    def answer_describe_object(self, obj_type: str, obj_name: Identifier, database_name: str):
+
+        project_objects = ("AGENTS", "JOBS", "SKILLS", "CHATBOTS", "TRIGGERS", "VIEWS",
+                           "KNOWLEDGE_BASES", "PREDICTORS", "MODELS")
+
+        global_objects = ("DATABASES", "PROJECTS", "HANDLERS", "ML_ENGINES")
+
+        all_objects = project_objects + global_objects
+
+        # is not plural?
+        if obj_type not in all_objects:
+            if obj_type + 'S' in all_objects:
+                obj_type = obj_type + 'S'
+            elif obj_type + 'ES' in all_objects:
+                obj_type = obj_type + 'ES'
+            else:
+                raise WrongArgumentError(f'Unknown describe type: {obj_type}')
+
+        name = obj_name.parts[-1]
+        where = BinaryOperation(op='=', args=[
+            Identifier('name'),
+            Constant(name)
+        ])
+
+        if obj_type in project_objects:
+            where = BinaryOperation(op='and', args=[
+                where,
+                BinaryOperation(op='=', args=[Identifier('project'), Constant(database_name)])
+            ])
+
+        select_statement = Select(
+            targets=[Star()],
+            from_table=Identifier(
+                parts=["information_schema", obj_type]
+            ),
+
+            where=where,
+        )
+        query = SQLQuery(select_statement, session=self.session)
+        return self.answer_select(query)
+
+    def answer_describe_predictor(self, obj_name, database_name):
+        value = obj_name.parts.copy()
         # project.model.version.?attrs
         parts = value[:3]
         attrs = value[3:]
@@ -850,7 +897,7 @@ class ExecuteCommands:
                 model_info = self._get_model_info(Identifier(parts=parts), except_absent=False, database_name=database_name)
 
         if model_info is None:
-            raise ExecutorException(f"Model not found: {statement.value}")
+            raise ExecutorException(f"Model not found: {obj_name}")
 
         if len(attrs) == 1:
             attrs = attrs[0]

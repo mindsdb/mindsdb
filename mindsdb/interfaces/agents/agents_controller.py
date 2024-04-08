@@ -76,7 +76,7 @@ class AgentsController:
         return agent
 
     def get_agents(self, project_name: str) -> List[dict]:
-        '''
+        """
         Gets all agents in a project.
 
         Parameters:
@@ -84,15 +84,18 @@ class AgentsController:
 
         Returns:
             all-agents (List[db.Agents]): List of database agent object
-        '''
-        if project_name is None:
-            project_name = 'mindsdb'
-        project = self.project_controller.get(name=project_name)
+        """
+
         all_agents = db.Agents.query.filter(
-            db.Agents.project_id == project.id,
             db.Agents.company_id == ctx.company_id
-        ).all()
-        return all_agents
+        )
+
+        if project_name is None:
+            project = self.project_controller.get(name=project_name)
+
+            all_agents = all_agents.filter(db.Agents.project_id == project.id)
+
+        return all_agents.all()
 
     def add_agent(
             self,

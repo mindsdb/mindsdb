@@ -8,6 +8,7 @@ from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.interfaces.jobs.jobs_controller import JobsController
 from mindsdb.interfaces.skills.skills_controller import SkillsController
 from mindsdb.interfaces.database.views import ViewController
+from mindsdb.interfaces.database.projects import ProjectController
 
 
 from .sql_tables import Table
@@ -369,14 +370,29 @@ class AgentsTable(MdbTable):
         "PARAMS"
     ]
 
-    def get_data(self, query: ASTNode = None, **kwargs):
+    def get_data(self, query: ASTNode = None, inf_schema=None, **kwargs):
         agents_controller = AgentsController(self)
 
         project_name = self.get_project_name(query)
         all_agents = agents_controller.get_agents(project_name)
 
+        project_controller = ProjectController()
+        project_names = {
+            i.id: i.name
+            for i in project_controller.get_list()
+        }
+
         # NAME, PROJECT, MODEL, SKILLS, PARAMS
-        data = [(a.name, project_name, a.model_name, list(map(lambda s: s.name, a.skills)), to_json(a.params)) for a in all_agents]
+        data = [
+            (
+                a.name,
+                project_names[a.project_id],
+                a.model_name,
+                list(map(lambda s: s.name, a.skills)),
+                to_json(a.params)
+            )
+            for a in all_agents
+        ]
         return pd.DataFrame(data, columns=self.columns)
 
 

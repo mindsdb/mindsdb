@@ -277,10 +277,6 @@ class Project:
     def get_tables(self):
         data = OrderedDict()
         data['models'] = {'type': 'table', 'deletable': False}
-        data['models_versions'] = {'type': 'table', 'deletable': False}
-        data['jobs'] = {'type': 'table', 'deletable': False}
-        data['mdb_triggers'] = {'type': 'table', 'deletable': False}
-        data['chatbots'] = {'type': 'table', 'deletable': False}
 
         models = self.get_models()
         for model in models:

@@ -1,3 +1,4 @@
+import os
 import sys
 import subprocess
 
@@ -10,12 +11,24 @@ def install_dependencies(dependencies):
         'error_message': None
     }
 
+    # get the path to this script
+    script_path = os.path.dirname(os.path.realpath(__file__))
     split_dependencies = []
     for dependency in dependencies:
         # check if the dependency is a path to a requirements file
         if dependency.startswith('-r'):
             # split the string into '-r' and the path
-            split_dependencies.extend(dependency.split(' '))
+            r_flag, req_path = dependency.split(' ')
+            # create the absolute path to the requirements file
+            abs_req_path = os.path.abspath(os.path.join(script_path, req_path.replace('mindsdb/integrations', '..')))
+
+            # check if the file exists
+            if os.path.exists(abs_req_path):
+                split_dependencies.append(r_flag)
+                split_dependencies.append(abs_req_path)
+            else:
+                raise FileNotFoundError(f"Requirements file not found: {req_path}")
+
         else:
             split_dependencies.append(dependency)
 
@@ -39,7 +52,6 @@ def install_dependencies(dependencies):
                 output = output + '\n'
             output = output + 'Errors: ' + errs.decode()
         result['error_message'] = output
-        result['success'] = False
     else:
         result['success'] = True
 

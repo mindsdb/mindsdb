@@ -147,7 +147,7 @@ class RAGPipelineModel(BaseModel):
     vector_store: VectorStore = vector_store_map[vector_store_config.vector_store_type]  # Vector store
     db_connection_string: str = None  # Database connection string
     table_name: str = DEFAULT_TEST_TABLE_NAME  # table name
-    llm: BaseChatModel  # Language model
+    llm: BaseChatModel = None  # Language model
     embeddings_model: Embeddings  # Embeddings model
     rag_prompt_template: str = DEFAULT_RAG_PROMPT_TEMPLATE  # RAG prompt template
     retriever_prompt_template: Union[str, dict] = None  # Retriever prompt template

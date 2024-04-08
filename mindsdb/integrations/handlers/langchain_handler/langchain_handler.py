@@ -9,7 +9,6 @@ from langchain.schema import SystemMessage
 from langchain_community.chat_models import ChatAnthropic, ChatOpenAI, ChatAnyscale, ChatLiteLLM, ChatOllama
 from langchain_core.prompts import PromptTemplate
 from langfuse.callback import CallbackHandler
-from langchain.tools.retriever import create_retriever_tool
 
 import numpy as np
 import pandas as pd
@@ -28,9 +27,8 @@ from mindsdb.integrations.handlers.langchain_handler.constants import (
     DEFAULT_ASSISTANT_COLUMN
 )
 from mindsdb.integrations.handlers.langchain_handler.log_callback_handler import LogCallbackHandler
-from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel
-from mindsdb.integrations.handlers.langchain_handler.tools import setup_tools, get_rag_query_tool
-from mindsdb.integrations.utilities.rag.retriever_builder import build_retriever
+from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
+from mindsdb.integrations.handlers.langchain_handler.tools import setup_tools
 from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS as OPEN_AI_CHAT_MODELS
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.libs.llm.utils import get_llm_config
@@ -98,20 +96,6 @@ class LangChainHandler(BaseMLEngine):
             return args.get('embedding_model_provider', self._get_llm_provider(args))
         raise ValueError(f"Invalid model name. Please define provider")
 
-    def _get_rag_params(self, args: Dict, pred_args: Dict) -> Dict:
-        model_config = args.copy()
-        # Override with prediction args.
-        model_config.update(pred_args)
-        # Include API keys.
-        model_config['api_keys'] = {
-            p: get_api_key(p, args, self.engine_storage, strict=False) for p in SUPPORTED_PROVIDERS
-        }
-        supported_rag_params = RAGPipelineModel.__fields__.keys()
-
-        rag_params = {k: v for k, v in model_config.items() if k in supported_rag_params}
-
-        return rag_params
-
     def _get_chat_model_params(self, args: Dict, pred_args: Dict) -> Dict:
         model_config = args.copy()
         # Override with prediction args.
@@ -121,7 +105,7 @@ class LangChainHandler(BaseMLEngine):
             p: get_api_key(p, args, self.engine_storage, strict=False) for p in SUPPORTED_PROVIDERS
         }
         llm_config = get_llm_config(args.get('provider', self._get_llm_provider(args)), model_config)
-        config_dict = llm_config.model_dump()
+        config_dict = llm_config.dict()
         config_dict = {k: v for k, v in config_dict.items() if v is not None}
         return config_dict
 
@@ -182,6 +166,11 @@ class LangChainHandler(BaseMLEngine):
         args['model_name'] = args.get('model_name', DEFAULT_MODEL_NAME)
         args['provider'] = args.get('provider', self._get_llm_provider(args))
         args['embedding_model_provider'] = args.get('embedding_model', self._get_embedding_model_provider(args))
+        if args.get('mode') == 'retrieval':
+            # use default prompt template for retrieval i.e. RAG if not provided
+            if "prompt_template" not in args:
+                args["prompt_template"] = DEFAULT_RAG_PROMPT_TEMPLATE
+
         self.model_storage.json_set('args', args)
 
     @staticmethod
@@ -191,7 +180,8 @@ class LangChainHandler(BaseMLEngine):
         else:
             args = args['using']
         if 'prompt_template' not in args:
-            raise ValueError('Please provide a `prompt_template` for this engine.')
+            if not args.get('mode') == 'retrieval':
+                raise ValueError('Please provide a `prompt_template` for this engine.')
 
     def predict(self, df: pd.DataFrame, args: Dict=None) -> pd.DataFrame:
         """
@@ -219,32 +209,19 @@ class LangChainHandler(BaseMLEngine):
         # Set up tools.
         model_kwargs = self._get_chat_model_params(args, pred_args)
         llm = self._create_chat_model(args, pred_args)
+
+        # Set up embeddings model if needed.
+        if args.get('mode') == 'retrieval':
+            # get args for embeddings model
+            embeddings_args = args.pop('embedding_model_args', {})
+            # create embeddings model
+            pred_args['embeddings_model'] = self._create_embeddings_model(embeddings_args)
+            pred_args['llm'] = llm
+
         tools = setup_tools(llm,
                             model_kwargs,
                             pred_args,
                             self.default_agent_tools)
-
-        if args.get('mode') == 'rag':
-            # get args for embeddings model
-            embeddings_args = args.pop('embedding_model_args', {})
-            # create embeddings model
-            args['embeddings_model'] = self._create_embeddings_model(embeddings_args)
-            args['llm'] = llm
-            # get args for RAG model
-            rag_params = self._get_rag_params(args, pred_args)
-            rag_config = RAGPipelineModel(**rag_params)
-
-            # build retriever
-            retriever = build_retriever(rag_config)
-
-            # create RAG tool
-            rag_tool = create_retriever_tool(
-                retriever=retriever,
-                name=args.get('retriever_name', 'retriever'),
-                description=args.get('retriever_description', 'a retriever tool for RAG model'),
-            )
-
-            tools.append(rag_tool)
 
         # Prefer prediction prompt template over original if provided.
         prompt_template = pred_args.get('prompt_template', args['prompt_template'])

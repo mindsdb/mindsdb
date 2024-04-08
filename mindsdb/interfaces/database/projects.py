@@ -222,8 +222,8 @@ class Project:
         )
         data = [
             {
-            'name': record.name,
-            'query': record.query,
+                'name': record.name,
+                'query': record.query,
                 'metadata': {
                     'type': 'agent',
                     'id': record.id,

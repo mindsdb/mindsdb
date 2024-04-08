@@ -1,3 +1,4 @@
+import enum
 from typing import List, Optional
 
 from mindsdb_sql.parser.ast import Select, BinaryOperation, Identifier, Constant, Star
@@ -9,7 +10,14 @@ from .sql_agent import SQLAgent
 _DEFAULT_TOP_K_SIMILARITY_SEARCH = 5
 
 
+class SkillType(enum.Enum):
+    TEXT_TO_SQL = 'text_to_sql'
+    KNOWLEDGE_BASE = 'knowledge_base'
+    RETRIEVAL = 'retrieval'
+
+
 class SkillToolController:
+
     def __init__(self):
         self.command_executor = None
 
@@ -66,7 +74,20 @@ class SkillToolController:
         return dict(
             name='sql_db_query',
             func=sql_agent.query_safe,
-            description=description
+            description=description,
+            type=SkillType.TEXT_TO_SQL
+        )
+
+    def _make_retrieval_tools(self, skill: db.Skills) -> dict:
+        """
+        creates advanced retrieval tool i.e. RAG
+        """
+        params = skill.params
+        return dict(
+            name=params['name'],
+            config=params['retriever_config'],
+            description=params['description'],
+            type=SkillType.RETRIEVAL
         )
 
     def _get_rag_query_function(self, skill: db.Skills):
@@ -98,7 +119,8 @@ class SkillToolController:
         return dict(
             name='Knowledge Base Retrieval',
             func=self._get_rag_query_function(skill),
-            description=f'Use this tool to get more context or information to answer a question about {description}. The input should be the exact question the user is asking.'
+            description=f'Use this tool to get more context or information to answer a question about {description}. The input should be the exact question the user is asking.',
+            type=SkillType.KNOWLEDGE_BASE
         )
 
     def get_tool_from_skill(self, skill: db.Skills) -> dict:
@@ -113,8 +135,10 @@ class SkillToolController:
 
         if skill.type == 'text_to_sql':
             return self._make_text_to_sql_tools(skill)
-        elif skill.type == 'knowledge_base':
+        if skill.type == 'knowledge_base':
             return self._make_knowledge_base_tools(skill)
+        if skill.type == 'retrieval':
+            return self._make_retrieval_tools(skill)
         raise NotImplementedError(f'skill of type {skill.type} is not supported as a tool')
 
 

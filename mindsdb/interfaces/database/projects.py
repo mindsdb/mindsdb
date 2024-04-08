@@ -211,6 +211,29 @@ class Project:
 
         return data
 
+    def get_agents(self):
+        records = (
+            db.session.query(db.Agents).filter_by(
+                project_id=self.id,
+                company_id=ctx.company_id
+            )
+            .order_by(db.Agents.name)
+            .all()
+        )
+        data = [
+            {
+            'name': record.name,
+            'query': record.query,
+                'metadata': {
+                    'type': 'agent',
+                    'id': record.id,
+                    'deletable': True
+                }
+            }
+            for record in records
+        ]
+        return data
+
     def get_views(self):
         records = (
             db.session.query(db.View).filter_by(
@@ -267,6 +290,10 @@ class Project:
         views = self.get_views()
         for view in views:
             data[view['name']] = view['metadata']
+
+        agents = self.get_agents()
+        for agent in agents:
+            data[agent['name']] = agent['metadata']
 
         return data
 

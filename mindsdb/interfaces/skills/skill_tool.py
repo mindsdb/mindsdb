@@ -11,13 +11,12 @@ _DEFAULT_TOP_K_SIMILARITY_SEARCH = 5
 
 
 class SkillType(enum.Enum):
-    TEXT_TO_SQL = 'text_to_sql'
+    TEXT2SQL = 'text2sql'
     KNOWLEDGE_BASE = 'knowledge_base'
     RETRIEVAL = 'retrieval'
 
 
 class SkillToolController:
-
     def __init__(self):
         self.command_executor = None
 
@@ -75,7 +74,7 @@ class SkillToolController:
             name='sql_db_query',
             func=sql_agent.query_safe,
             description=description,
-            type=SkillType.TEXT_TO_SQL
+            type=skill.type
         )
 
     def _make_retrieval_tools(self, skill: db.Skills) -> dict:
@@ -87,7 +86,7 @@ class SkillToolController:
             name=params['name'],
             config=params['retriever_config'],
             description=params['description'],
-            type=SkillType.RETRIEVAL
+            type=skill.type
         )
 
     def _get_rag_query_function(self, skill: db.Skills):
@@ -120,7 +119,7 @@ class SkillToolController:
             name='Knowledge Base Retrieval',
             func=self._get_rag_query_function(skill),
             description=f'Use this tool to get more context or information to answer a question about {description}. The input should be the exact question the user is asking.',
-            type=SkillType.KNOWLEDGE_BASE
+            type=skill.type
         )
 
     def get_tool_from_skill(self, skill: db.Skills) -> dict:
@@ -133,13 +132,14 @@ class SkillToolController:
             dict with keys: name, description, func
         """
 
-        if skill.type == 'text_to_sql':
+        if skill.type == SkillType.TEXT2SQL:
             return self._make_text_to_sql_tools(skill)
-        if skill.type == 'knowledge_base':
+        if skill.type == SkillType.KNOWLEDGE_BASE:
             return self._make_knowledge_base_tools(skill)
-        if skill.type == 'retrieval':
+        if skill.type == SkillType.RETRIEVAL:
             return self._make_retrieval_tools(skill)
-        raise NotImplementedError(f'skill of type {skill.type} is not supported as a tool')
+        raise NotImplementedError(f'skill of type {skill.type} is not supported as a tool, supported types are:'
+                                  f' {SkillType.__members__}')
 
 
 skill_tool = SkillToolController()

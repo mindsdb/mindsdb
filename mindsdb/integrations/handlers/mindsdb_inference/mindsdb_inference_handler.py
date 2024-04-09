@@ -34,7 +34,7 @@ class MindsDBInferenceHandler(OpenAIHandler):
             str: API key
         """
         return get_api_key('mindsdb_inference', args, engine_storage)
-    
+
     @staticmethod
     def create_validation(target, args=None, **kwargs):
         """
@@ -76,7 +76,7 @@ class MindsDBInferenceHandler(OpenAIHandler):
         supported_models = self._get_supported_models(api_key, self.base_api)
         self.chat_completion_models = [model.id for model in supported_models]
         return super().predict(df, args)
-    
+
     @staticmethod
     def _get_supported_models(api_key, base_url, org=None):
         """

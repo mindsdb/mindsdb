@@ -3,7 +3,7 @@ title: MindsDB Inference Endpoints
 sidebarTitle: MindsDB Inference Endpoints
 ---
 
-This documentation describes the integration of MindsDB with [MindsDB Inference Endpoints](https://mindsdb-docs.hashnode.space/), a cloud service that simplifies the way developers interact with cutting-edge LLMs through a universal API.
+This documentation describes the integration of MindsDB with [MindsDB Inference Endpoints](https://docs.mdb.ai/), a cloud service that simplifies the way developers interact with cutting-edge LLMs through a universal API.
 
 ## Prerequisites
 
@@ -11,7 +11,7 @@ Before proceeding, ensure the following prerequisites are met:
 
 1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
 2. To use MindsDB Inference Endpoints within MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
-3. Obtain the MindsDB Inference API key required to deploy and use MindsDB Inference Endpoints models within MindsDB. Follow the [instructions for obtaining the API key](https://mindsdb-docs.hashnode.space/docs/authentication).
+3. Obtain the MindsDB Inference API key required to deploy and use MindsDB Inference Endpoints models within MindsDB. Follow the [instructions for obtaining the API key](https://docs.mdb.ai/docs/authentication).
 
 ## Setup
 
@@ -33,7 +33,7 @@ USING
       engine = 'mindsdb_serve',   -- engine name as created via CREATE ML_ENGINE
       model_name = 'model-name',              -- choose one of available models
       prompt_teplate = 'prompt-to-the-model'; -- prompt message to be completed by the model
-      mode = 'mode_name' -- choose one of the avaiable modes: 'conversational',  'conversational-full','image', 'embedding'
+      mode = 'mode_name' -- choose one of the available modes: 'conversational', 'conversational-full', 'image', 'embedding'
 ```
 
 ## Usage
@@ -71,4 +71,4 @@ Here is the output:
 
 ## Supported Models
 
-For an overview of the models supported, visit the [following docs](https://mindsdb-docs.hashnode.space/docs/models). This list will help you quickly identify the right models for your needs.
+For an overview of the models supported, visit the [following docs](https://docs.mdb.ai/docs/models). This list will help you quickly identify the right models for your needs.

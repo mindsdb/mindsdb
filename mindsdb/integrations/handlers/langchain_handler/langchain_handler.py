@@ -37,6 +37,8 @@ from mindsdb.interfaces.storage.model_fs import HandlerStorage, ModelStorage
 from mindsdb.utilities import log
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 
+from .mindsdb_chat_model import ChatMindsdb
+
 _PARSING_ERROR_PREFIX = 'An output parsing error occured'
 
 logger = log.getLogger(__name__)
@@ -129,6 +131,8 @@ class LangChainHandler(BaseMLEngine):
             return ChatLiteLLM(**model_kwargs)
         if args['provider'] == 'ollama':
             return ChatOllama(**model_kwargs)
+        if args['provider'] == 'mindsdb':
+            return ChatMindsdb(**model_kwargs)
         raise ValueError(f'Unknown provider: {args["provider"]}')
 
     def _handle_parsing_errors(self, error: Exception) -> str:

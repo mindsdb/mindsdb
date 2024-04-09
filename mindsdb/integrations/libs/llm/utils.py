@@ -10,7 +10,8 @@ from langchain.text_splitter import (
     RecursiveCharacterTextSplitter,
 )
 
-from mindsdb.integrations.libs.llm.config import AnthropicConfig, AnyscaleConfig, BaseLLMConfig, LiteLLMConfig, OllamaConfig, OpenAIConfig
+from mindsdb.integrations.libs.llm.config import (AnthropicConfig, AnyscaleConfig, BaseLLMConfig, LiteLLMConfig,
+                                                  OllamaConfig, OpenAIConfig, MindsdbConfig)
 
 # Default to latest GPT-4 model (https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo)
 DEFAULT_OPENAI_MODEL = 'gpt-4-0125-preview'
@@ -158,6 +159,11 @@ def get_llm_config(provider: str, config: Dict) -> BaseLLMConfig:
             repeat_penalty=config.get('repeat_penalty', None),
             stop=config.get('stop', None),
             template=config.get('template', None),
+        )
+    if provider == 'mindsdb':
+        return MindsdbConfig(
+            model_name=config['model_name'],
+            project_name=config.get('project_name', 'mindsdb'),
         )
     raise ValueError(f'Provider {provider} is not supported.')
 

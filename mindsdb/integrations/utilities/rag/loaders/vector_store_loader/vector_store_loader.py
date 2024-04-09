@@ -113,5 +113,8 @@ class VectorStoreFactory:
         except DisconnectionError as e:
             logger.error("Unable to connect to the database. Please check your connection string and try again.")
             raise e
+        except Exception as e:
+            logger.error(f"An error occurred while fetching data from the database: {e}")
+            raise e
         finally:
             db.close()

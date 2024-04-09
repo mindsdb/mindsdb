@@ -39,8 +39,13 @@ CREATE MODEL ollama_model
 PREDICT completion
 USING
    engine = 'ollama_engine',   -- engine name as created via CREATE ML_ENGINE
-   model_name = 'model-name';  -- model run with 'ollama run model-name'
+   model_name = 'model-name',  -- model run with 'ollama run model-name'
+   ollama_serve_url = 'http://localhost:11434';
 ```
+
+<Tip>
+If you run MindsDB inside the Docker container, use the following parameter value: `ollama_serve_url = 'http://host.docker.internal:11434'`.
+</Tip>
 
 You can find [available models here](https://github.com/ollama/ollama?tab=readme-ov-file#model-library).
 

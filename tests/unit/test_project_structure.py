@@ -942,6 +942,14 @@ class TestProjectStructure(BaseExecutorDummyML):
 
         assert ret.d[0] == dt.datetime(2020, 1, 4)
 
+    def test_delete_from_table(self):
+        df1 = pd.DataFrame([
+            {'a': 1}
+        ])
+        self.set_data('tbl1', df1)
+
+        self.run_sql('delete from tbl1 where a=1', database='dummy_data')
+
 
 class TestJobs(BaseExecutorDummyML):
 

@@ -17,7 +17,7 @@ from google.auth.transport.requests import Request
 logger = log.getLogger(__name__)
 
 
-class GoogleOAuth2Manager:
+class GoogleUserOAuth2Manager:
     def __init__(self, handler_stroage: str, scopes: list, credentials_file: str = None, credentials_url: str = None, code: str = None):
         self.handler_storage = handler_stroage
         self.scopes = scopes

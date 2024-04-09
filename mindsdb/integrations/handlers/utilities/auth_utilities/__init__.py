@@ -1,2 +1,2 @@
-from .google import GoogleOAuth2Manager
+from .google import GoogleUserOAuth2Manager, GoogleServiceAccountOAuth2Manager
 from .microsoft import MSGraphAPIAuthManager

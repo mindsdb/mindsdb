@@ -75,7 +75,7 @@ class ChatMindsdb(BaseChatModel):
 
         model_info = self.model_info
 
-        # TODO all to one string
+        # TODO create table for conversational model?
         if len(messages) > 1:
             content = '\n'.join([
                 f"{m['role']}: {m['content']}"

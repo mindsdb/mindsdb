@@ -24,18 +24,6 @@ class MindsDBInferenceHandler(OpenAIHandler):
         self.default_mode = 'default'
 
     @staticmethod
-    def _get_api_key(args, engine_storage):
-        """
-        Get the API key for the MindsDB Inference engine
-        Args:
-            args (dict): Handler arguments
-            engine_storage (dict): Handler storage
-        Returns:
-            str: API key
-        """
-        return get_api_key('mindsdb_inference', args, engine_storage)
-
-    @staticmethod
     def create_validation(target, args=None, **kwargs):
         """
         Validate the MindsDB Inference engine handler

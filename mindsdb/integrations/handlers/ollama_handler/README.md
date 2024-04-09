@@ -17,7 +17,6 @@ Before proceeding, ensure the following prerequisites are met:
 <Info>
 Here are the recommended system specifications:
 
-- A macOS machine, M1 chip or greater.
 - A working Ollama installation, as in point 3.
 - For 7B models, at least 8GB RAM is recommended.
 - For 13B models, at least 16GB RAM is recommended.
@@ -40,8 +39,13 @@ CREATE MODEL ollama_model
 PREDICT completion
 USING
    engine = 'ollama_engine',   -- engine name as created via CREATE ML_ENGINE
-   model_name = 'model-name';  -- model run with 'ollama run model-name'
+   model_name = 'model-name',  -- model run with 'ollama run model-name'
+   ollama_serve_url = 'http://localhost:11434';
 ```
+
+<Tip>
+If you run Ollama inside the Docker container, use the following parameter value: `ollama_serve_url = 'http://host.docker.internal:11434'`.
+</Tip>
 
 You can find [available models here](https://github.com/ollama/ollama?tab=readme-ov-file#model-library).
 

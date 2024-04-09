@@ -9,6 +9,7 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 MINDSDB_INFERENCE_BASE = 'https://llm.mdb.ai/'
 
+
 class MindsDBInferenceHandler(OpenAIHandler):
     """
     Handler for MindsDB Inference Endpoints

@@ -66,8 +66,8 @@ class OpenAIHandler(BaseMLEngine):
         connection_args = {k.lower(): v for k, v in connection_args.items()}
         api_key = connection_args.get('openai_api_key')
         if api_key is not None:
-            api_base = connection_args.get('api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE))
             org = connection_args.get('api_organization')
+            api_base = connection_args.get('api_base') or os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
             client = self._get_client(api_key=api_key, base_url=api_base, org=org)
             OpenAIHandler._check_client_connection(client)
 
@@ -165,8 +165,9 @@ class OpenAIHandler(BaseMLEngine):
             )
 
         engine_storage = kwargs['handler_storage']
+        connection_args = engine_storage.get_connection_args()
         api_key = get_api_key('openai', args, engine_storage=engine_storage)
-        api_base = args.get('api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE))
+        api_base = connection_args.get('api_base') or args.get('api_base') or os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
         org = args.get('api_organization')
         client = OpenAIHandler._get_client(api_key=api_key, base_url=api_base, org=org)
         OpenAIHandler._check_client_connection(client)
@@ -205,11 +206,11 @@ class OpenAIHandler(BaseMLEngine):
 
         pred_args = args['predict_params'] if args else {}
         args = self.model_storage.json_get('args')
-        args['api_base'] = pred_args.get(
-                    'api_base',
-                    args.get(
-                        'api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
-                    ))
+        connection_args = self.engine_storage.get_connection_args()
+        args['api_base'] = (pred_args.get('api_base') or
+                            connection_args.get('api_base') or
+                            args.get('api_base') or
+                            os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE))
         if pred_args.get('api_organization'):
             args['api_organization'] = pred_args['api_organization']
         df = df.reset_index(drop=True)
@@ -587,8 +588,6 @@ class OpenAIHandler(BaseMLEngine):
                 for p in prompts
             ]
             return _tidy(completions)
-        
-
         client = self._get_client(
             api_key=api_key,
             base_url=args.get('api_base'),
@@ -697,8 +696,6 @@ class OpenAIHandler(BaseMLEngine):
         api_key = get_api_key(self.api_key_name, args, self.engine_storage)
 
         using_args = args.pop('using') if 'using' in args else {}
-        prompt_col = using_args.get('prompt_column', 'prompt')
-        completion_col = using_args.get('completion_column', 'completion')
         
         api_base = using_args.get('api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE))
         org = using_args.get('api_organization')
@@ -883,5 +880,5 @@ class OpenAIHandler(BaseMLEngine):
         return ft_stats, result_file_id
     
     @staticmethod
-    def _get_client(api_key, base_url=OPENAI_API_BASE, org=None):
+    def _get_client(api_key, base_url, org=None):
         return OpenAI(api_key=api_key, base_url=base_url, organization=org)

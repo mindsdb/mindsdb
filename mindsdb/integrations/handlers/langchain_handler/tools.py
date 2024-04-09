@@ -150,7 +150,7 @@ def _setup_standard_tools(tools, llm, model_kwargs):
 def _get_rag_params(pred_args: Dict) -> Dict:
     model_config = pred_args.copy()
 
-    supported_rag_params = RAGPipelineModel.__fields__.keys()
+    supported_rag_params = RAGPipelineModel.schema()['properties'].keys()
 
     rag_params = {k: v for k, v in model_config.items() if k in supported_rag_params}
 

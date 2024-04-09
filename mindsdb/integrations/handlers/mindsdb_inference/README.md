@@ -33,7 +33,7 @@ USING
       engine = 'mindsdb_serve',   -- engine name as created via CREATE ML_ENGINE
       model_name = 'model-name',              -- choose one of available models
       prompt_teplate = 'prompt-to-the-model'; -- prompt message to be completed by the model
-      mode = 'mode_name' -- choose one of the avaiable modes
+      mode = 'mode_name' -- choose one of the avaiable modes: 'conversational',  'conversational-full','image', 'embedding'
 ```
 
 ## Usage
@@ -68,3 +68,7 @@ Here is the output:
 | I love machine learning! | positive  |
 +--------------------------+-----------+
 ```
+
+## Supported Models
+
+For an overview of the models supported, visit the [following docs](https://mindsdb-docs.hashnode.space/docs/models). This list will help you quickly identify the right models for your needs.

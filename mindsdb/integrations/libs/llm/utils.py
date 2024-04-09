@@ -46,7 +46,10 @@ def get_completed_prompts(base_template: str, df: pd.DataFrame) -> Tuple[List[st
     spans = []
     matches = list(re.finditer("{{(.*?)}}", base_template))
 
-    assert len(matches) > 0, 'No placeholders found in the prompt, please provide a valid prompt template.'
+    if len(matches) == 0:
+        # no placeholders
+        prompts = [base_template] * len(df)
+        return prompts, np.ndarray(0)
 
     first_span = matches[0].start()
     last_span = matches[-1].end()

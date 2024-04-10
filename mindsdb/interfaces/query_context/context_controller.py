@@ -130,7 +130,7 @@ class QueryContextController:
 
         self.__update_context_record(context_name, query_str, values)
 
-    def drop_query_context(self, object_type: str, object_id: int):
+    def drop_query_context(self, object_type: str, object_id: int = None):
         """
         Drop context for object
         :param object_type: type of the object

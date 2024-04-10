@@ -8,7 +8,8 @@ import pandas as pd
 
 from mindsdb.integrations.utilities.rag.retrievers.base import BaseRetriever
 
-from mindsdb.integrations.utilities.rag.utils import documents_to_df, VectorStoreOperator
+from mindsdb.integrations.utilities.rag.utils import documents_to_df
+from mindsdb.integrations.utilities.rag.vector_store import VectorStoreOperator
 
 from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel
 

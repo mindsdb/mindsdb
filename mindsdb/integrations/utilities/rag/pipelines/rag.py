@@ -6,12 +6,10 @@ from langchain_core.runnables import RunnableParallel, RunnablePassthrough, Runn
 
 from mindsdb.integrations.utilities.rag.retrievers.auto_retriever import AutoRetriever
 from mindsdb.integrations.utilities.rag.retrievers.multi_vector_retriever import MultiVectorRetriever
-from mindsdb.integrations.utilities.rag.retrievers.sql_retriever import SQLRetriever
 
 
-from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel, DEFAULT_SQL_RETRIEVAL_PROMPT_TEMPLATE, \
-    DEFAULT_AUTO_META_PROMPT_TEMPLATE
-from mindsdb.integrations.utilities.rag.utils import VectorStoreOperator
+from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel, DEFAULT_AUTO_META_PROMPT_TEMPLATE
+from mindsdb.integrations.utilities.rag.vector_store import VectorStoreOperator
 
 
 class LangChainRAGPipeline:
@@ -68,20 +66,6 @@ class LangChainRAGPipeline:
         )
 
         return cls(vector_store_operator.vector_store.as_retriever(), config.rag_prompt_template, config.llm)
-
-    @classmethod
-    def from_sql_retriever(cls, config: RAGPipelineModel):
-        """
-        Builds a RAG pipeline with returned sources using a SQLRetriever
-        :param config: RAGPipelineModel
-
-        :return:
-        """
-        if not config.retriever_prompt_template:
-            config.retriever_prompt_template = DEFAULT_SQL_RETRIEVAL_PROMPT_TEMPLATE
-
-        retriever_runnable = SQLRetriever(config=config).as_runnable()
-        return cls(retriever_runnable, config.rag_prompt_template, config.llm)
 
     @classmethod
     def from_auto_retriever(cls, config: RAGPipelineModel):

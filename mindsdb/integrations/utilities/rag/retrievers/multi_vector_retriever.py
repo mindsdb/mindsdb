@@ -11,7 +11,7 @@ from langchain_openai import ChatOpenAI
 from mindsdb.integrations.utilities.rag.retrievers.base import BaseRetriever
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_LLM_MODEL, \
     MultiVectorRetrieverMode, RAGPipelineModel
-from mindsdb.integrations.utilities.rag.utils import VectorStoreOperator
+from mindsdb.integrations.utilities.rag.vector_store import VectorStoreOperator
 
 
 class MultiVectorRetriever(BaseRetriever):

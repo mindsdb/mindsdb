@@ -3,10 +3,8 @@ from langchain.storage import InMemoryByteStore
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.runnables import RunnableSerializable
-from sqlalchemy import create_engine
 from mindsdb.integrations.utilities.rag.pipelines.rag import LangChainRAGPipeline
 from mindsdb.integrations.utilities.rag.settings import (
-    DEFAULT_POOL_RECYCLE,
     RetrieverType,
     RAGPipelineModel
 )
@@ -14,24 +12,10 @@ from mindsdb.integrations.utilities.rag.utils import documents_to_df
 
 
 _retriever_strategies = {
-    RetrieverType.SQL: lambda config: _create_pipeline_from_sql_retriever(config),
     RetrieverType.VECTOR_STORE: lambda config: _create_pipeline_from_vector_store(config),
     RetrieverType.AUTO: lambda config: _create_pipeline_from_auto_retriever(config),
     RetrieverType.MULTI: lambda config: _create_pipeline_from_multi_retriever(config),
 }
-
-
-def _create_pipeline_from_sql_retriever(config: RAGPipelineModel) -> LangChainRAGPipeline:
-    documents_df = _process_documents_to_df(config)
-    alchemyEngine = create_engine(
-        config.db_connection_string, pool_recycle=DEFAULT_POOL_RECYCLE)
-    db_connection = alchemyEngine.connect()
-
-    documents_df.to_sql(config.table_name, db_connection, index=False, if_exists='replace')
-
-    return LangChainRAGPipeline.from_sql_retriever(
-        config=config
-    )
 
 
 def _create_pipeline_from_vector_store(config: RAGPipelineModel) -> LangChainRAGPipeline:

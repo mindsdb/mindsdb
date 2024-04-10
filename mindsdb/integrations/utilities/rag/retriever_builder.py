@@ -5,27 +5,17 @@ from langchain_core.retrievers import BaseRetriever
 
 from mindsdb.integrations.utilities.rag.retrievers.auto_retriever import AutoRetriever
 from mindsdb.integrations.utilities.rag.retrievers.multi_vector_retriever import MultiVectorRetriever
-from mindsdb.integrations.utilities.rag.retrievers.sql_retriever import SQLRetriever
 from mindsdb.integrations.utilities.rag.settings import (
     RetrieverType,
-    RAGPipelineModel, DEFAULT_SQL_RETRIEVAL_PROMPT_TEMPLATE, DEFAULT_AUTO_META_PROMPT_TEMPLATE
+    RAGPipelineModel, DEFAULT_AUTO_META_PROMPT_TEMPLATE
 )
-from mindsdb.integrations.utilities.rag.utils import VectorStoreOperator
+from mindsdb.integrations.utilities.rag.vector_store import VectorStoreOperator
 
 _retriever_strategies = {
-    RetrieverType.SQL: lambda config: create_sql_retriever(config),
     RetrieverType.VECTOR_STORE: lambda config: create_vector_store_retriever(config),
     RetrieverType.AUTO: lambda config: create_auto_retriever(config),
     RetrieverType.MULTI: lambda config: create_multi_retriever(config),
 }
-
-
-def create_sql_retriever(config: RAGPipelineModel) -> BaseRetriever:
-    # todo need to fix this one, not stable
-    if not config.retriever_prompt_template:
-        config.retriever_prompt_template = DEFAULT_SQL_RETRIEVAL_PROMPT_TEMPLATE
-
-    return SQLRetriever(config=config).as_runnable()
 
 
 def create_vector_store_retriever(config: RAGPipelineModel) -> BaseRetriever:
@@ -40,7 +30,6 @@ def create_vector_store_retriever(config: RAGPipelineModel) -> BaseRetriever:
 
 
 def create_auto_retriever(config: RAGPipelineModel) -> BaseRetriever:
-    # todo need to fix to work with agent
     if not config.retriever_prompt_template:
         config.retriever_prompt_template = DEFAULT_AUTO_META_PROMPT_TEMPLATE
 

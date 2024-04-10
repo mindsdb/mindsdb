@@ -181,3 +181,25 @@ class TestLangchain(BaseMLAPITest):
         """
         )
         assert agent_name in result_df['answer'].iloc[0].lower()
+
+    def test_retrieval_skill(self):
+        self.run_sql(
+            """
+           create model proj.test_retrieval_model
+           predict answer
+           using
+             engine='langchain',
+             mode='retrieval',
+             skill
+        """
+        )
+        self.wait_predictor("proj", "test_retrieval_model")
+
+        result_df = self.run_sql(
+            """
+            SELECT answer
+            FROM proj.test_retrieval_model
+            WHERE question='What is the capital of Sweden?'
+        """
+        )
+        assert "stockholm" in result_df['answer'].iloc[0].lower()

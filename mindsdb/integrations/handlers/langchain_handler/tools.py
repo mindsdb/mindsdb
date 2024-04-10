@@ -190,6 +190,7 @@ def langchain_tool_from_skill(skill, pred_args):
         description=tool['description']
     )
 
+
 # Collector
 def setup_tools(llm, model_kwargs, pred_args, default_agent_tools):
     toolkit = pred_args['tools'] if pred_args.get('tools') is not None else default_agent_tools

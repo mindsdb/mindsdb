@@ -221,10 +221,12 @@ class OpenAIHandler(BaseMLEngine):
                     f"Invalid operation mode. Please use one of {self.supported_modes}."
                 )  # noqa
 
+        strict_prompt_template = True
         if pred_args.get('prompt_template', False):
             base_template = pred_args[
                 'prompt_template'
             ]  # override with predict-time template if available
+            strict_prompt_template = False
         elif args.get('prompt_template', False):
             base_template = args['prompt_template']
         else:
@@ -319,7 +321,7 @@ class OpenAIHandler(BaseMLEngine):
                 )  # noqa
 
             if args.get('prompt_template', False):
-                prompts, empty_prompt_ids = get_completed_prompts(base_template, df)
+                prompts, empty_prompt_ids = get_completed_prompts(base_template, df, strict=strict_prompt_template)
 
             elif args.get('context_column', False):
                 empty_prompt_ids = np.where(

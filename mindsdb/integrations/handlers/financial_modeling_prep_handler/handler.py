@@ -10,7 +10,7 @@ from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 
 
-_FINANCIAL_MODELING_URL = 'https://api.binance.us'
+_FINANCIAL_MODELING_URL = 'https://financialmodelingprep.com/api/v3/search?query=AA'
 
 logger = log.getLogger(__name__)
 

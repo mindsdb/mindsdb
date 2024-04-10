@@ -1,9 +1,4 @@
-# Builds our docker bake file
-inputs:
-  push-to-dockerhub:
-    description: "Whether to push to Dockerhub as well as ECR"
-    required: false
-    default: false
+# Builds our docker bake file without pushing to a repo, and pushes the layers to repo cache
 
 runs:
   using: 'composite'
@@ -25,9 +20,7 @@ runs:
         # Configure our buildkit builders
         docker buildx create --name remote-buildkit-agent --node mdb_amd64 --platform linux/amd64 --driver=remote --use tcp://remote-buildkit-agent.infrastructure.svc.cluster.local:80 || true # Create the builder (might already exist)
         docker buildx create --name=remote-buildkit-agent --node mdb_arm64 --platform linux/arm64 --append --driver=remote --use tcp://remote-buildkit-agent-arm.infrastructure.svc.cluster.local:80 || true # Same for ARM
-
-        # Print what bake is going to do
-        VERSION=$IMAGE_PREFIX BRANCH=${{ env.CI_ACTION_REF_NAME }} PUSH_TO_DOCKERHUB=${{ inputs.push-to-dockerhub }} PLATFORM="" docker buildx bake -f docker/docker-bake.hcl --print
-
-        # Build amd64 and arm64 images and push to repos
-        VERSION=$IMAGE_PREFIX BRANCH=${{ env.CI_ACTION_REF_NAME }} PUSH_TO_DOCKERHUB=${{ inputs.push-to-dockerhub }} docker buildx bake --progress plain --push -f docker/docker-bake.hcl
+        
+        # Build each platform individually and don't push (bake file has logic to push cache when only one platform is built)
+        VERSION=$IMAGE_PREFIX BRANCH=${{ env.CI_ACTION_REF_NAME }} PLATFORMS=linux/amd64 docker buildx bake --progress plain -f docker/docker-bake.hcl
+        VERSION=$IMAGE_PREFIX BRANCH=${{ env.CI_ACTION_REF_NAME }} PLATFORMS=linux/arm64 docker buildx bake --progress plain -f docker/docker-bake.hcl

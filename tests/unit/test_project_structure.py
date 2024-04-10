@@ -921,6 +921,35 @@ class TestProjectStructure(BaseExecutorDummyML):
 
             self.run_sql(f'show {item}')
 
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_create_empty_table(self, data_handler):
+        self.set_handler(data_handler, name='pg', tables={})
+
+        self.run_sql('create table pg.table1 (a DATE, b INTEGER)')
+
+        calls = data_handler().query.call_args_list
+        sql = calls[0][0][0].to_string()
+        assert sql.strip() == 'CREATE TABLE table1 (a DATE, b INTEGER)'
+
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_interval(self, data_handler):
+        df = pd.DataFrame([
+            {'last_date': dt.datetime(2020, 1, 2)},
+        ])
+        self.set_handler(data_handler, name='pg', tables={'branch': df})
+
+        ret = self.run_sql("select (last_date + INTERVAL '2 days') d from pg.branch")
+
+        assert ret.d[0] == dt.datetime(2020, 1, 4)
+
+    def test_delete_from_table(self):
+        df1 = pd.DataFrame([
+            {'a': 1}
+        ])
+        self.set_data('tbl1', df1)
+
+        self.run_sql('delete from tbl1 where a=1', database='dummy_data')
+
 
 class TestJobs(BaseExecutorDummyML):
 

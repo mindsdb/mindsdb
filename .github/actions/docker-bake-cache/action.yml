@@ -1,0 +1,26 @@
+# Builds our docker bake file without pushing to a repo, and pushes the layers to repo cache
+
+runs:
+  using: 'composite'
+  steps:
+    # Get clean environment variables via https://github.com/marketplace/actions/github-environment-variables-action
+    - uses: FranzDiebold/github-env-vars-action@v2
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    - name: Login to Amazon ECR
+      uses: aws-actions/amazon-ecr-login@v1
+    - name: Build and push
+      shell: bash
+      run: |
+        # Get a githash or tag name to use as image prefix
+        TAG_NAME=${{ github.event.release.tag_name }}
+        GIT_SHA=${{ env.CI_SHA }}
+        IMAGE_PREFIX=${TAG_NAME:-$GIT_SHA}
+
+        # Configure our buildkit builders
+        docker buildx create --name remote-buildkit-agent --node mdb_amd64 --platform linux/amd64 --driver=remote --use tcp://remote-buildkit-agent.infrastructure.svc.cluster.local:80 || true # Create the builder (might already exist)
+        docker buildx create --name=remote-buildkit-agent --node mdb_arm64 --platform linux/arm64 --append --driver=remote --use tcp://remote-buildkit-agent-arm.infrastructure.svc.cluster.local:80 || true # Same for ARM
+        
+        # Build each platform individually and don't push (bake file has logic to push cache when only one platform is built)
+        VERSION=$IMAGE_PREFIX BRANCH=${{ env.CI_ACTION_REF_NAME }} PLATFORMS=linux/amd64 docker buildx bake --progress plain -f docker/docker-bake.hcl
+        VERSION=$IMAGE_PREFIX BRANCH=${{ env.CI_ACTION_REF_NAME }} PLATFORMS=linux/arm64 docker buildx bake --progress plain -f docker/docker-bake.hcl

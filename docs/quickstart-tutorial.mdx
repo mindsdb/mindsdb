@@ -51,7 +51,7 @@ LIMIT 3;
 
 Here is the output:
 
-```sql
+```
 +------------------+--------------------------------------------------------+-------------+
 | article_title    | question                                               | true_answer |
 +------------------+--------------------------------------------------------+-------------+
@@ -99,7 +99,7 @@ LIMIT 3;
 
 Here is the output data:
 
-```sql
+```
 +------------------+--------------------------------------------------------+--------------------------------------------------------+
 | article_title    | question                                               | answer                                                 |
 +------------------+--------------------------------------------------------+--------------------------------------------------------+
@@ -113,6 +113,7 @@ Here is the output data:
 
 With MindsDB, you can create custom automation workflows. Let's set up a workflow that uses [Jobs](/mindsdb_sql/sql/create/jobs) and (re)creates a table with predicted answers to all questions.
 
+```sql
 CREATE JOB answer_questions (
 
     CREATE OR REPLACE TABLE data_source.questions_answers (
@@ -122,6 +123,7 @@ CREATE JOB answer_questions (
     )
 )
 EVERY 1 day;
+```
 
 The `data_source` connection should be made using the `CREATE DATABASE` statement to a data source with a user that has the write access.
 

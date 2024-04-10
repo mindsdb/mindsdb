@@ -11,3 +11,4 @@ pytest-cov
 coveralls
 locust
 ollama >= 0.1.7 # Langchain tests
+anthropic >= 0.21.3 # Langchain tests

@@ -141,12 +141,17 @@ def count_tokens(messages, encoder, model_name='gpt-3.5-turbo-0301'):
         )
 
 
-def get_available_models(api_key: str) -> List[str]:
+def get_available_models(api_key: str, base_url: str) -> List[str]:
     """
-    Returns a list of available openai models for the given API key.
-    """
+    Returns a list of all available OpenAI models for the given API key.
 
-    api_base = os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
-    res = OpenAI(api_key=api_key, base_url=api_base).models.list()
+    Args:
+        api_key (str): The API key used for authenticating with the OpenAI API. 
+        base_url (str): The base URL of the OpenAI API.
+
+    Returns:
+        List[str]: A list of string identifiers, each representing a model that is available with the provided OpenAI key.
+    """
+    res = OpenAI(api_key=api_key, base_url=base_url).models.list()
 
     return [models.id for models in res.data]

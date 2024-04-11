@@ -2,4 +2,3 @@
 nltk>=3.8.1
 rouge-score>=0.1.2
 scipy
-langchain-community  # for Writer LLM integration

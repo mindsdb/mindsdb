@@ -87,17 +87,7 @@ class MSTeamsHandlerConfig(BaseSettings):
         "from_user_userIdentityType",
         "from_user_tenantId",
         "body_contentType",
-        "body_content",
-        "eventDetail_@odata.type",
-        "eventDetail_visibleHistoryStartDateTime",
-        "eventDetail_members",
-        "eventDetail_initiator_application",
-        "eventDetail_initiator_device",
-        "eventDetail_initiator_user_@odata.type",
-        "eventDetail_initiator_user_id",
-        "eventDetail_initiator_user_displayName",
-        "eventDetail_initiator_user_userIdentityType",
-        "eventDetail_initiator_user_tenantId",
+        "body_content"
     ]
 
     CHANNELS_TABLE_COLUMNS: List = [

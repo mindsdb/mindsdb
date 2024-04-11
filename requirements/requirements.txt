@@ -38,5 +38,8 @@ google-auth-oauthlib
 msal
 langchain>=0.1.9
 langchain-core>=0.1.28
+langchain-community
+langchain-openai
+lark
 prometheus-client==0.20.0
 pydantic

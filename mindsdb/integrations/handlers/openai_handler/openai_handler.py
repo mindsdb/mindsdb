@@ -57,8 +57,9 @@ class OpenAIHandler(BaseMLEngine):
         self.default_max_tokens = 100
         self.chat_completion_models = CHAT_MODELS
         self.supported_ft_models = FINETUNING_MODELS # base models compatible with finetuning
-        # For now this is only used for handlers that extends OpenAIHandler to change the api key name
+        # For now this are only used for handlers that inherits OpenAIHandler and don't need to override base methods
         self.api_key_name = getattr(self, 'api_key_name', self.name)
+        self.api_base = getattr(self, 'api_base', OPENAI_API_BASE)
 
     def create_engine(self, connection_args):
         '''check api key if provided
@@ -178,7 +179,7 @@ class OpenAIHandler(BaseMLEngine):
         try:
             api_key = get_api_key(self.api_key_name, args, self.engine_storage)
             connection_args = self.engine_storage.get_connection_args()
-            api_base = connection_args.get('api_base') or args.get('api_base') or os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
+            api_base = connection_args.get('api_base') or self.api_base or args.get('api_base') or os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
             available_models = get_available_models(api_key, api_base)
 
             if not args.get('mode'):
@@ -207,7 +208,9 @@ class OpenAIHandler(BaseMLEngine):
         pred_args = args['predict_params'] if args else {}
         args = self.model_storage.json_get('args')
         connection_args = self.engine_storage.get_connection_args()
+
         args['api_base'] = (pred_args.get('api_base') or
+                            self.api_base or
                             connection_args.get('api_base') or
                             args.get('api_base') or
                             os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE))

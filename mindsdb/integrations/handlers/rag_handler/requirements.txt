@@ -4,4 +4,3 @@ openai==1.6.1
 html2text
 writerai~=1.1.0
 sentence-transformers # needed for HuggingFaceEmbeddings from langchain-community
-

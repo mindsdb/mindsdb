@@ -150,7 +150,7 @@ def _setup_standard_tools(tools, llm, model_kwargs):
 def _get_rag_params(pred_args: Dict) -> Dict:
     model_config = pred_args.copy()
 
-    supported_rag_params = RAGPipelineModel.schema()['properties'].keys()
+    supported_rag_params = RAGPipelineModel.get_field_names()
 
     rag_params = {k: v for k, v in model_config.items() if k in supported_rag_params}
 
@@ -161,26 +161,37 @@ def _build_retrieval_tool(tool: dict, pred_args: dict):
     """
     Builds a retrieval tool i.e RAG
     """
+    # build RAG config
 
-    rag_params = _get_rag_params(pred_args)
+    tools_config = tool['config']
+
+    mindsdb_path = pred_args['mindsdb_path']
+
+    # we update the config with the pred_args to allow for custom config
+    tools_config.update(pred_args)
+
+    rag_params = _get_rag_params(tools_config)
+
+    if 'vector_store_config' not in rag_params:
+
+        rag_params['vector_store_config'] = {'persist_directory': mindsdb_path('persisted_chroma')}
+
     rag_config = RAGPipelineModel(**rag_params)
 
     # build retriever
     retriever = build_retriever(rag_config)
-
     # create RAG tool
     return create_retriever_tool(
         retriever=retriever,
         name=tool['name'],
-        description=tool['description'],
+        description=tool['description']
     )
-
 
 def langchain_tool_from_skill(skill, pred_args):
     # Makes Langchain compatible tools from a skill
     tool = skill_tool.get_tool_from_skill(skill)
 
-    if tool['type'] != SkillType.RETRIEVAL:
+    if tool['type'] == SkillType.RETRIEVAL.value:
 
         return _build_retrieval_tool(tool, pred_args)
 
@@ -190,9 +201,12 @@ def langchain_tool_from_skill(skill, pred_args):
         description=tool['description']
     )
 
+def get_skills(pred_args):
+    return pred_args.get('skills', [])
 
 # Collector
 def setup_tools(llm, model_kwargs, pred_args, default_agent_tools):
+
     toolkit = pred_args['tools'] if pred_args.get('tools') is not None else default_agent_tools
 
     standard_tools = []
@@ -206,7 +220,7 @@ def setup_tools(llm, model_kwargs, pred_args, default_agent_tools):
             function_tools.append(tool)
 
     tools = []
-    skills = pred_args.get('skills', [])
+    skills = get_skills(pred_args)
     for skill in skills:
         tools.append(langchain_tool_from_skill(skill, pred_args))
 

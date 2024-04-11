@@ -56,7 +56,7 @@ class MultiVectorRetriever(BaseRetriever):
         vstore_operator = VectorStoreOperator(
             vector_store=self.vectorstore,
             documents=docs,
-            embeddings_model=self.embeddings_model
+            embeddings_model=self.embeddings_model,
         )
         retriever = LangChainMultiVectorRetriever(
             vectorstore=vstore_operator.vector_store,

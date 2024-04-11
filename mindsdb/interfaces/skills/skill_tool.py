@@ -83,9 +83,9 @@ class SkillToolController:
         """
         params = skill.params
         return dict(
-            name=params['name'],
-            config=params['retriever_config'],
-            description=params['description'],
+            name=params.get('name', skill.name),
+            config=params.get('retriever_config', {}),
+            description=params.get('description', 'a retrieval tool that uses a vector store to retrieve documents.'),
             type=skill.type
         )
 
@@ -132,14 +132,18 @@ class SkillToolController:
             dict with keys: name, description, func
         """
 
-        if skill.type == SkillType.TEXT2SQL:
+        try:
+            skill_type = SkillType(skill.type)
+        except ValueError:
+            raise NotImplementedError(
+                f'skill of type {skill.type} is not supported as a tool, supported types are: {list(SkillType._member_names_)}')
+
+        if skill_type == SkillType.TEXT2SQL:
             return self._make_text_to_sql_tools(skill)
-        if skill.type == SkillType.KNOWLEDGE_BASE:
+        if skill_type == SkillType.KNOWLEDGE_BASE.value:
             return self._make_knowledge_base_tools(skill)
-        if skill.type == SkillType.RETRIEVAL:
+        if skill_type == SkillType.RETRIEVAL:
             return self._make_retrieval_tools(skill)
-        raise NotImplementedError(f'skill of type {skill.type} is not supported as a tool, supported types are:'
-                                  f' {SkillType.__members__}')
 
 
 skill_tool = SkillToolController()

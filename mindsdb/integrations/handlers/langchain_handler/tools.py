@@ -16,7 +16,7 @@ from langchain.text_splitter import CharacterTextSplitter
 from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 from langchain.chains import ReduceDocumentsChain, MapReduceDocumentsChain
 
-from mindsdb.integrations.utilities.rag.retriever_builder import build_retriever
+from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
 from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel
 from mindsdb.interfaces.skills.skill_tool import skill_tool, SkillType
 
@@ -179,10 +179,11 @@ def _build_retrieval_tool(tool: dict, pred_args: dict):
     rag_config = RAGPipelineModel(**rag_params)
 
     # build retriever
-    retriever = build_retriever(rag_config)
+    rag_pipeline = RAG(rag_config)
+
     # create RAG tool
-    return create_retriever_tool(
-        retriever=retriever,
+    return Tool(
+        func=rag_pipeline,
         name=tool['name'],
         description=tool['description']
     )
@@ -198,7 +199,8 @@ def langchain_tool_from_skill(skill, pred_args):
     return Tool(
         name=tool['name'],
         func=tool['func'],
-        description=tool['description']
+        description=tool['description'],
+        return_direct=True
     )
 
 def get_skills(pred_args):

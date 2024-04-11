@@ -258,7 +258,7 @@ class LangChainHandler(BaseMLEngine):
             max_execution_time=pred_args.get('timeout_seconds', args.get('timeout_seconds', DEFAULT_AGENT_TIMEOUT_SECONDS)),
             max_iterations=pred_args.get('max_iterations', args.get('max_iterations', DEFAULT_MAX_ITERATIONS)),
             memory=memory,
-            verbose=pred_args.get('verbose', args.get('verbose', False))
+            verbose=pred_args.get('verbose', args.get('verbose', True))
         )
         return agent_executor
 

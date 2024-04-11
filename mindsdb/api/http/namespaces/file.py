@@ -60,7 +60,10 @@ class File(Resource):
             data["file"] = file.file_name.decode()
             file_object = file.file_object
 
-        temp_dir_path = tempfile.mkdtemp(prefix="mindsdb_file_")
+        temp_dir_path = tempfile.mkdtemp(
+            prefix='mindsdb_byom_file_',
+            dir=Config().paths['tmp']
+        )
 
         if request.headers["Content-Type"].startswith("multipart/form-data"):
             parser = multipart.create_form_parser(

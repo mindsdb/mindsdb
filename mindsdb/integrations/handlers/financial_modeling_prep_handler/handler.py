@@ -14,6 +14,9 @@ _FINANCIAL_MODELING_URL = 'https://financialmodelingprep.com/api/v3/search?query
 
 logger = log.getLogger(__name__)
 
-class Financial_Modeling_Handler{
-    def Financial_Modeling_Handler:
-}
+class FinancialModelingHandler(APIHandler):
+    def __init__(self, name=None, **kwargs):
+            super().__init__(name)
+
+            self.api_key = None
+

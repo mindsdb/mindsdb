@@ -20,3 +20,13 @@ class FinancialModelingHandler(APIHandler):
 
             self.api_key = None
 
+            args = kwargs.get('connection_data', {})
+            if 'api_key' in args:
+                self.api_key = args['api_key']
+            
+            self.client = None
+            self.is_connected = False
+
+
+            def connect(self): 
+                self.is_connected = True

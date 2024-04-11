@@ -33,7 +33,7 @@ USING
       engine = 'mindsdb_serve',   -- engine name as created via CREATE ML_ENGINE
       model_name = 'model-name',              -- choose one of available models
       prompt_teplate = 'prompt-to-the-model'; -- prompt message to be completed by the model
-      mode = 'mode_name' -- choose one of the available modes: 'conversational', 'conversational-full', 'image', 'embedding'
+      mode = 'mode_name' -- choose one of the available modes: 'conversational', 'conversational-full'
 ```
 
 ## Usage

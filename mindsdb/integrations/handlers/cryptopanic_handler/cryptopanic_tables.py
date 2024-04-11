@@ -4,7 +4,7 @@ from mindsdb_sql.parser import ast
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from typing import List, Tuple
 from math import ceil
-from utils.cryptopanic_api import call_cryptopanic_api
+from mindsdb.integrations.handlers.cryptopanic_handler.utils.cryptopanic_api import call_cryptopanic_api
 
 DEFAULT_NUMBER_OF_NEWS=200
 
@@ -27,14 +27,14 @@ class NewsTable(APITable):
         # Apply any WHERE clauses in the SQL query to the DataFrame
         conditions = extract_comparison_conditions(query.where)
         for condition in conditions:
-            if condition[0] == '=' and condition[1] == 'filters':
-                api_condition['filters'] = condition[2] if isinstance(condition[2], str) else condition[2].join(',')
+            if condition[0] == '=' and condition[1] == 'filter':
+                api_condition['filter'] = condition[2] 
                 conditions.remove(condition)
-            elif condition[0] == '=' and condition[1] == 'currency':
-                api_condition['currencies'] = condition[2] if isinstance(condition[2], str) else condition[2].join(',')
+            elif condition[0] == '=' and condition[1] == 'currencies':
+                api_condition['currencies'] = condition[2] 
                 conditions.remove(condition)
             elif condition[0] == '=' and condition[1] == 'regions':
-                api_condition['regions'] = condition[2] if isinstance(condition[2], str) else condition[2].join(',')
+                api_condition['regions'] = condition[2] 
                 conditions.remove(condition)
             elif condition[0] == '=' and condition[1] == 'kind':
                 api_condition['kind'] = condition[2] 
@@ -61,7 +61,7 @@ class NewsTable(APITable):
         Returns:
             list: A list of column names for the stories table.
         """
-        return self.columns
+        return ['id', 'kind', 'domain', 'source', 'title', 'published_at', 'slug', 'currencies',  'url', 'created_at', 'votes', 'region']
 
     def filter_columns(self, df, query):
         """Filter the columns in the DataFrame according to the SQL query.

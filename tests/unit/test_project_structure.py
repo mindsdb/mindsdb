@@ -950,6 +950,75 @@ class TestProjectStructure(BaseExecutorDummyML):
 
         self.run_sql('delete from tbl1 where a=1', database='dummy_data')
 
+    def test_KB(self):
+
+        df = pd.DataFrame([
+            {'id': 1, 'ticket': 'NFLX', 'value': 532, 'created_at': '2020-01-01', 'ma': 100},
+            {'id': 2, 'ticket': 'MSFT', 'value': 311, 'created_at': '2020-01-02', 'ma': 200},
+        ])
+
+        self.save_file('stock', df)
+
+        # ---- default ----
+        self.run_sql('create knowledge base kb_test')
+        self.run_sql('INSERT INTO kb_test select * from files.stock')
+        ret = self.run_sql("select * from kb_test where content='msft'")
+        self.run_sql('drop knowledge base kb_test')  # have to drop KB with model and vector sore before assertions
+
+        # second row is the result, all columns in content
+        content = ret.content[0]
+        assert 'MSFT' in content and 'created_at' in content and '311' in content and '200' in content
+
+        # metadata is empty
+        assert ret.metadata[0] is None
+
+        # id = 2
+        assert ret.id[0] == '2'
+
+        # ---- choose content ----
+        self.run_sql('''
+           create knowledge base kb_test
+           using content_columns = ['ticket', 'value']
+        ''')
+        self.run_sql('INSERT INTO kb_test select * from files.stock')
+        ret = self.run_sql("select * from kb_test where content='msft'")
+        self.run_sql('drop knowledge base kb_test')
+
+        metadata = ret.metadata[0]
+        content = ret.content[0]
+        # ticket and value in content
+        assert 'MSFT' in content and '311' in content
+        # created and ma in metadata
+        assert 'created_at' in metadata and 'ma' in metadata
+
+        # ---- choose metadata ----
+        self.run_sql('''
+           create knowledge base kb_test
+           using metadata_columns = ['created_at', 'value']
+        ''')
+        self.run_sql('INSERT INTO kb_test select * from files.stock')
+        ret = self.run_sql("select * from kb_test where content='msft'")
+        self.run_sql('drop knowledge base kb_test')
+
+        metadata = ret.metadata[0]
+        content = ret.content[0]
+        # ticket and ma in content
+        assert 'MSFT' in content and '200' in content
+        # created and value in metadata
+        assert 'created_at' in metadata and 'value' in metadata
+
+        # ---- choose id ----
+        self.run_sql('''
+           create knowledge base kb_test
+           using id_column='ma'
+        ''')
+        self.run_sql('INSERT INTO kb_test select * from files.stock')
+        ret = self.run_sql("select * from kb_test where content='msft'")
+        self.run_sql('drop knowledge base kb_test')
+
+        # id = 200
+        assert ret.id[0] == '200'
+
 
 class TestJobs(BaseExecutorDummyML):
 

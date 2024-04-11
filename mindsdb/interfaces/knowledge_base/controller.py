@@ -230,7 +230,7 @@ class KnowledgeBaseTable:
         df_out = pd.DataFrame(c_content)
 
         if id_column is not None:
-            df_out[TableField.ID.value] = df_out[id_column]
+            df_out[TableField.ID.value] = df[id_column]
 
         if metadata_columns and len(metadata_columns) > 0:
             df_out[TableField.METADATA.value] = df[metadata_columns].apply(lambda row: str(dict(row)), axis=1)
@@ -281,7 +281,7 @@ class KnowledgeBaseTable:
         if input_col is not None and input_col != TableField.CONTENT.value:
             df = df.rename(columns={TableField.CONTENT.value: input_col})
 
-        data = df.to_dict('records')
+        data = df[[TableField.CONTENT.value]].to_dict('records')
 
         df_out = project_datanode.predict(
             model_name=model_rec.name,

@@ -85,7 +85,7 @@ class SkillToolController:
         return dict(
             name=params.get('name', skill.name),
             config=params.get('retriever_config', {}),
-            description=params.get('description', 'a retrieval tool that uses a vector store to retrieve documents.'),
+            description=f'Use this tool to get more context or information to answer a question about {params['description']}. The input should be the exact question the user is asking.',
             type=skill.type
         )
 
@@ -140,7 +140,7 @@ class SkillToolController:
 
         if skill_type == SkillType.TEXT2SQL:
             return self._make_text_to_sql_tools(skill)
-        if skill_type == SkillType.KNOWLEDGE_BASE.value:
+        if skill_type == SkillType.KNOWLEDGE_BASE:
             return self._make_knowledge_base_tools(skill)
         if skill_type == SkillType.RETRIEVAL:
             return self._make_retrieval_tools(skill)

@@ -13,6 +13,7 @@ class LogCallbackHandler(BaseCallbackHandler):
     def __init__(self, logger: logging.Logger):
         logger.setLevel('DEBUG')
         self.logger = logger
+        self._num_running_chains = 0
 
     def on_llm_start(
         self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any

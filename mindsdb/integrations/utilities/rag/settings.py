@@ -10,7 +10,7 @@ from langchain_core.vectorstores import VectorStore
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_core.stores import BaseStore
 from langchain.text_splitter import TextSplitter
-from pydantic import BaseModel, root_validator
+from pydantic import BaseModel
 
 # Multi retriever specific
 DEFAULT_ID_KEY = "doc_id"
@@ -91,7 +91,7 @@ class RetrieverType(Enum):
 class VectorStoreConfig(BaseModel):
     vector_store_type: VectorStoreType = VectorStoreType.CHROMA
     persist_directory: str = None
-    collection_name: str = None
+    collection_name: str = 'default'
     connection_string: str = None
 
     class Config:
@@ -108,7 +108,7 @@ class RAGPipelineModel(BaseModel):
     vector_store: VectorStore = vector_store_map[vector_store_config.vector_store_type]  # Vector store
     db_connection_string: str = None  # Database connection string
     table_name: str = DEFAULT_TEST_TABLE_NAME  # table name
-    llm: BaseChatModel  # Language model
+    llm: BaseChatModel = None  # Language model
     embeddings_model: Embeddings  # Embeddings model
     rag_prompt_template: str = DEFAULT_RAG_PROMPT_TEMPLATE  # RAG prompt template
     retriever_prompt_template: Union[str, dict] = None  # Retriever prompt template
@@ -133,12 +133,6 @@ class RAGPipelineModel(BaseModel):
         arbitrary_types_allowed = True
         extra = "forbid"
 
-    @root_validator(pre=True)
-    def check_documents_or_vector_store_config(cls, values):
-        documents = values.get("documents")
-        vector_store_config = values.get("vector_store_config")
-
-        if documents is None and vector_store_config is None:
-            raise ValueError("At least documents or vector_store_config must be provided")
-
-        return values
+    @classmethod
+    def get_field_names(cls):
+        return list(cls.__fields__.keys())

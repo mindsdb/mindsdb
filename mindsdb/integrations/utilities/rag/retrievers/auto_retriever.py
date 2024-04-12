@@ -4,8 +4,6 @@ import json
 
 from langchain.retrievers.self_query.base import SelfQueryRetriever
 
-from langchain_core.runnables import RunnableSerializable
-
 import pandas as pd
 
 from mindsdb.integrations.utilities.rag.retrievers.base import BaseRetriever
@@ -103,7 +101,7 @@ class AutoRetriever(BaseRetriever):
                                    documents=self.documents,
                                    embeddings_model=self.embeddings_model).vector_store
 
-    def as_runnable(self) -> RunnableSerializable:
+    def as_runnable(self) -> BaseRetriever:
         """
         return the self-query retriever
         :return:

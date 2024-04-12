@@ -42,4 +42,3 @@ langchain-community
 langchain-openai
 lark
 prometheus-client==0.20.0
-pydantic

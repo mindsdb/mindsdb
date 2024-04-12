@@ -22,7 +22,7 @@ logger = log.getLogger(__name__)
 class VectorStoreLoader(BaseModel):
     embeddings_model: Embeddings
     vector_store: VectorStore = None
-    config: dict = None
+    config: VectorStoreConfig = None
 
     class Config:
         arbitrary_types_allowed = True
@@ -40,14 +40,12 @@ class VectorStoreLoader(BaseModel):
 
 class VectorStoreFactory:
     @staticmethod
-    def create(embeddings_model: Embeddings, config: dict):
+    def create(embeddings_model: Embeddings, config: VectorStoreConfig):
 
-        settings = VectorStoreConfig(**config)
-
-        if settings.vector_store_type == VectorStoreType.CHROMA:
-            return VectorStoreFactory._load_chromadb_store(embeddings_model, settings)
-        elif settings.vector_store_type == VectorStoreType.PGVECTOR:
-            return VectorStoreFactory._load_pgvector_store(embeddings_model, settings)
+        if config.vector_store_type == VectorStoreType.CHROMA:
+            return VectorStoreFactory._load_chromadb_store(embeddings_model, config)
+        elif config.vector_store_type == VectorStoreType.PGVECTOR:
+            return VectorStoreFactory._load_pgvector_store(embeddings_model, config)
         else:
             raise ValueError(f"Invalid vector store type, must be one either {VectorStoreType.__members__.keys()}")
 

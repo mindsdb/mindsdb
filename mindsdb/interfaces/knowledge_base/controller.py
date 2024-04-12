@@ -251,7 +251,10 @@ class KnowledgeBaseTable:
         helper to get vector db handler
         """
         if self._vector_db is None:
-            database_name = db.Integration.query.get(self._kb.vector_database_id).name
+            database = db.Integration.query.get(self._kb.vector_database_id)
+            if database is None:
+                raise ValueError(f'Vector database not found. Is it deleted?')
+            database_name = database.name
             self._vector_db = self.session.integration_controller.get_data_handler(database_name)
         return self._vector_db
 

@@ -111,7 +111,7 @@ class SkillToolController:
             dict with keys: name, description, func
         """
 
-        if skill.type == 'text_to_sql':
+        if skill.type == 'text_to_sql' or skill.type == 'sql':
             return self._make_text_to_sql_tools(skill)
         elif skill.type == 'knowledge_base':
             return self._make_knowledge_base_tools(skill)

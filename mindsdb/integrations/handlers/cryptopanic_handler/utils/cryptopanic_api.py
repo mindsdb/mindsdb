@@ -19,7 +19,7 @@ def get_single_page_json(url):
     time.sleep(API_RATE_LIMIT_DELAY)  # Rate limiting to avoid exceeding 5 requests per second
     response = requests.get(url)
     data = response.json()
-    return data.get('results', [])
+    return data.get('results', []),  data.get('next')
 
 # Function to retrieve JSON data for multiple pages from the API
 def get_multiple_pages_json(url, num_pages=None):
@@ -34,12 +34,11 @@ def get_multiple_pages_json(url, num_pages=None):
         list: List of JSON data for each page.
     """
     pages_list_json = []
-    while url and (num_pages is None or len(pages_list_json) < num_pages):
-        page_data = get_single_page_json(url)
+    while url and (num_pages is None or len(pages_list_json) < num_pages*20):
+        page_data, url = get_single_page_json(url)
         if not page_data:
             break
         pages_list_json.extend(page_data)
-        url = page_data[-1].get('next')
     return pages_list_json
 
 def format_data(data):
@@ -56,7 +55,7 @@ def format_data(data):
 
 
 # Function to call the CryptoPanic API and return DataFrame
-def call_cryptopanic_api(api_token=None, filter=None, currencies=None, kind=None, regions=None, page=None, lookback=None):
+def call_cryptopanic_api(api_token=None, filter=None, currencies=None, kind=None, regions=None, page=None, num_pages=None):
     """
     Calls the CryptoPanic API and returns data in a DataFrame.
 
@@ -67,7 +66,7 @@ def call_cryptopanic_api(api_token=None, filter=None, currencies=None, kind=None
         kind (str): Type of content (e.g., 'news', 'media').
         regions (str): Language regions (e.g., 'en', 'de', 'es').
         page (int): Page number to retrieve.
-        lookback (int): Number of pages to retrieve.
+        num_pages (int): Number of pages to retrieve.
 
     Returns:
         pandas.DataFrame: DataFrame containing the retrieved data.
@@ -84,6 +83,6 @@ def call_cryptopanic_api(api_token=None, filter=None, currencies=None, kind=None
     if page is not None:
         api_url += "&page={}".format(page)
 
-    data = get_multiple_pages_json(api_url, lookback)
+    data = get_multiple_pages_json(api_url, num_pages)
     format_data(data)
     return pd.DataFrame(data)

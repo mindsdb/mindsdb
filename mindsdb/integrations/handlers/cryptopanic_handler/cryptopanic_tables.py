@@ -6,7 +6,7 @@ from typing import List, Tuple
 from math import ceil
 from mindsdb.integrations.handlers.cryptopanic_handler.utils.cryptopanic_api import call_cryptopanic_api
 
-DEFAULT_NUMBER_OF_NEWS=200
+DEFAULT_NUMBER_OF_NEWS=20
 
 class NewsTable(APITable):
     def select(self, query: ast.Select) -> pd.DataFrame:
@@ -44,16 +44,15 @@ class NewsTable(APITable):
                 conditions.remove(condition)
 
                        
-        api_condition['lookback'] = ceil(DEFAULT_NUMBER_OF_NEWS // 200) if limit is None else  ceil(limit // 200)
+        api_condition['num_pages'] = ceil(DEFAULT_NUMBER_OF_NEWS / 20) if limit is None else  ceil(limit / 20)
         api_condition['api_token'] = self.handler.api_token
 
         df = call_cryptopanic_api(**api_condition)
 
-
         # Filter the columns in the DataFrame according to the SQL query
         self.filter_columns(df, query)
 
-        return df
+        return df.head(limit)
 
 
     def get_columns(self):

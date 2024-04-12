@@ -51,6 +51,7 @@ This handler was implemented using the official Cryptopanic API. It provides a s
   - Accepts a boolean value (`true` or `false`).
   - Example usage: `following=true`.
 
+NOTE: Returns 20 news by default but can be customize by LIMIT clause
 
 ## Example Usage
 ```

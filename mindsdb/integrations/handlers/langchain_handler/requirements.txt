@@ -6,3 +6,4 @@ langchain-experimental  # Tools
 langfuse  # Tracing
 litellm==1.35.0
 -r mindsdb/integrations/handlers/openai_handler/requirements.txt
+-r mindsdb/integrations/handlers/langchain_embedding_handler/requirements.txt

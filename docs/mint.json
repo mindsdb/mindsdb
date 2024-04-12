@@ -977,6 +977,7 @@
             "integrations/ai-engines/langchain",
             "integrations/ai-engines/llamaindex",
             "integrations/ai-engines/monkeylearn",
+            "integrations/ai-engines/mindsdb_inference",
             "integrations/ai-engines/ollama",
             "integrations/ai-engines/openai",
             "integrations/ai-engines/replicate-llm",

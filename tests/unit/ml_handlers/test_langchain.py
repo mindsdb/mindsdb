@@ -204,9 +204,7 @@ class TestLangchain(BaseExecutorTest):
             using
             type='retrieval',
             name='country_info_search',
-            description='Search for information about countries.
-            For any questions countries about you must use this tool,
-            use full user input question!';
+            description='countries';
         """
         )
 

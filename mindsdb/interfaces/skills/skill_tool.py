@@ -85,7 +85,9 @@ class SkillToolController:
         return dict(
             name=params.get('name', skill.name),
             config=params.get('retriever_config', {}),
-            description=f'Use this tool to get more context or information to answer a question about {params['description']}. The input should be the exact question the user is asking.',
+            description=f'You must use this tool to get more context or information '
+                        f'to answer a question about {params["description"]}. '
+                        f'The input should be the exact question the user is asking.',
             type=skill.type
         )
 

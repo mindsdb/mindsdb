@@ -33,7 +33,6 @@ class CryptoPanicHandler(APIHandler):
             return StatusResponse(False, str(e))
 
     def native_query(self, query_string: str = None):
-        # method_name, params = self.parse_native_query(query_string)
 
         df = self.query(query_string)
 

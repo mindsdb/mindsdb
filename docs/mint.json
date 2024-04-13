@@ -108,6 +108,7 @@
     {"source": "/data-integrations/google-bigquery","destination": "/integrations/data-integrations/google-bigquery"},
     {"source": "/data-integrations/google-cloud-sql","destination": "/integrations/data-integrations/google-cloud-sql"},
     {"source": "/data-integrations/google-sheets","destination": "/integrations/data-integrations/google-sheets"},
+    {"source": "/data-integrations/greptimedb","destination": "/integrations/data-integrations/greptimedb"},
     {"source": "/data-integrations/ibm-db2","destination": "/integrations/data-integrations/ibm-db2"},
     {"source": "/data-integrations/ibm-informix","destination": "/integrations/data-integrations/ibm-informix"},
     {"source": "/data-integrations/influxdb","destination": "/integrations/data-integrations/influxdb"},
@@ -244,7 +245,7 @@
         "quickstart-tutorial"
       ]
     },
-    
+
     {
       "group": "Features",
       "pages": [
@@ -255,14 +256,14 @@
         {
           "group": "Learn more",
           "pages": [
-            "generative-ai-tables",  
+            "generative-ai-tables",
             {
               "group": "Data Preparation",
               "pages": [
                 "sql/feature-eng",
                 "sql/data-insights",
                 "sql/feature-importance"
-              ] 
+              ]
             },
             "mindsdb-gui",
             "sql/table-structure"
@@ -559,7 +560,7 @@
           "pages": [
             "rest/views/create-view",
             "rest/views/delete-views",
-            "rest/views/update-view",             
+            "rest/views/update-view",
             "rest/views/list-views",
             "rest/views/list-view"
           ]
@@ -915,6 +916,7 @@
             "integrations/data-integrations/google-bigquery",
             "integrations/data-integrations/google-cloud-sql",
             "integrations/data-integrations/google-sheets",
+            "integrations/data-integrations/greptimedb",
             "integrations/data-integrations/ibm-db2",
             "integrations/data-integrations/ibm-informix",
             "integrations/data-integrations/influxdb",
@@ -982,7 +984,7 @@
             "integrations/ai-engines/openai",
             "integrations/ai-engines/replicate-llm",
             "integrations/ai-engines/rag",
-            "integrations/ai-engines/vertex"       
+            "integrations/ai-engines/vertex"
           ]
         },
         {

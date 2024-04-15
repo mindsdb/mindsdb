@@ -19,6 +19,7 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 
 logger = log.getLogger(__name__)
 
+
 class MySQLHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the MySQL statements.
@@ -70,28 +71,28 @@ class MySQLHandler(DatabaseHandler):
             if urlfields.scheme != 'mysql':
                 raise ValueError(
                       "If using a URL to connect to MySQL, the URL needs to start with 'mysql://'"
-                )
+                      )
             if urlfields.username and self.connection_data.get('user'):
                 raise ValueError(
                       "Cannot specify a user in both the URL and elsewhere"
-                )
+                      )
             if urlfields.username and self.connection_data.get('password'):
                 raise ValueError(
                       "Cannot specify a password in both the URL and elsewhere"
-                )
+                      )
             if not urlfields.host:
                 raise ValueError(
                       "Connection URL does not include hostname"
-                )
+                      )
             if not urlfields.path:
                 raise ValueError(
                       "Connection URL does not include database"
-                )
+                      )
             database = urlfields.path[1:] if urlfields.path.startswith('/') else urlfields.path
             config = {
-                'host'    : urlfields.host,
-                'port'    : urlfields.port or  3306,
-                'user'    : urlfields.username or self.connection_data.get('user'),
+                'host': urlfields.host,
+                'port': urlfields.port or 3306,
+                'user': urlfields.username or self.connection_data.get('user'),
                 'password': urlfields.password or self.connection_data.get('password'),
                 'database': database,
             }
@@ -166,8 +167,8 @@ class MySQLHandler(DatabaseHandler):
 
     def check_connection(self) -> StatusResponse:
         """
-        Checks the status of the connection to the MySQL database
-        
+        Checks the status of the connection to the MySQL database.
+
         Returns:
             StatusResponse: An object containing the success status and an error message if an error occurs.
         """
@@ -250,7 +251,7 @@ class MySQLHandler(DatabaseHandler):
             FROM
                 information_schema.TABLES
             WHERE
-                TABLE_TYPE IN ('BASE TABLE', 'VIEW') 
+                TABLE_TYPE IN ('BASE TABLE', 'VIEW')
                 AND TABLE_SCHEMA = DATABASE()
             ORDER BY 2
             ;

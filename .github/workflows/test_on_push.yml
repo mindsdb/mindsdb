@@ -14,7 +14,7 @@ jobs:
     name: Run static code checks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3.5.3
+      - uses: actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@v4.7.0
         with:
@@ -57,7 +57,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v3.5.3
+      - uses: actions/checkout@v4
       - id: set-matrix
         uses: JoshuaTheMiller/conditional-build-matrix@v1.0.1
         with:
@@ -71,7 +71,7 @@ jobs:
       matrix: ${{fromJson(needs.matrix_prep.outputs.matrix)}}
     runs-on: ${{ matrix.runs_on }}
     steps:
-    - uses: actions/checkout@v3.5.3
+    - uses: actions/checkout@v4
     - name: Set up Python
       uses: actions/setup-python@v4.7.0
       with:
@@ -97,7 +97,7 @@ jobs:
     runs-on: ${{ matrix.runs_on }}
     if: github.ref_type == 'branch'
     steps:
-    - uses: actions/checkout@v3.5.3
+    - uses: actions/checkout@v4
     - name: Set up Python
       uses: actions/setup-python@v4.7.0
       with:

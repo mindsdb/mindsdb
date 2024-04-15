@@ -251,7 +251,10 @@ class KnowledgeBaseTable:
         helper to get vector db handler
         """
         if self._vector_db is None:
-            database_name = db.Integration.query.get(self._kb.vector_database_id).name
+            database = db.Integration.query.get(self._kb.vector_database_id)
+            if database is None:
+                raise ValueError('Vector database not found. Is it deleted?')
+            database_name = database.name
             self._vector_db = self.session.integration_controller.get_data_handler(database_name)
         return self._vector_db
 
@@ -276,12 +279,15 @@ class KnowledgeBaseTable:
 
         project_datanode = self.session.datahub.get(model_project.name)
 
-        # TODO adjust input
+        # keep only content
+        df = df[[TableField.CONTENT.value]]
+
         input_col = model_rec.learn_args.get('using', {}).get('question_column')
+
         if input_col is not None and input_col != TableField.CONTENT.value:
             df = df.rename(columns={TableField.CONTENT.value: input_col})
 
-        data = df[[TableField.CONTENT.value]].to_dict('records')
+        data = df.to_dict('records')
 
         df_out = project_datanode.predict(
             model_name=model_rec.name,

@@ -315,7 +315,7 @@ class InformationSchemaDataNode(DataNode):
             "IS_RUNNING",
             "LAST_ERROR",
         ],
-        "KNOWLEDGE_BASES": ["NAME", "PROJECT", "MODEL", "STORAGE"],
+        "KNOWLEDGE_BASES": ["NAME", "PROJECT", "MODEL", "STORAGE", "PARAMS"],
         "SKILLS": ["NAME", "PROJECT", "TYPE", "PARAMS"],
         "AGENTS": [
             "NAME",
@@ -672,7 +672,7 @@ class InformationSchemaDataNode(DataNode):
 
         columns = self.information_schema['KNOWLEDGE_BASES']
 
-        # columns: NAME, PROJECT, MODEL, STORAGE
+        # columns: NAME, PROJECT, MODEL, STORAGE, PARAMS
         data = []
 
         for kb in kb_list:
@@ -684,7 +684,8 @@ class InformationSchemaDataNode(DataNode):
                 kb.name,
                 project_name,
                 embedding_model.name if embedding_model is not None else None,
-                vector_database_name + '.' + kb.vector_database_table
+                vector_database_name + '.' + kb.vector_database_table,
+                to_json(kb.params),
             ))
 
         return pd.DataFrame(data, columns=columns)

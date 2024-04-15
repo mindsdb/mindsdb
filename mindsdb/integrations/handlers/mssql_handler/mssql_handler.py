@@ -1,5 +1,3 @@
-from contextlib import closing
-
 import pymssql
 import pandas as pd
 

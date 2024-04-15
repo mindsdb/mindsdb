@@ -80,23 +80,29 @@ class SqlServerHandler(DatabaseHandler):
 
     def check_connection(self) -> StatusResponse:
         """
-        Check the connection of the SQL Server database
-        :return: success status and error message if error occurs
+        Checks the status of the connection to the Microsoft SQL Server database.
+
+        Returns:
+            StatusResponse: An object containing the success status and an error message if an error occurs.
         """
+
         response = StatusResponse(False)
         need_to_close = self.is_connected is False
 
         try:
-            self.connect()
+            connection = self.connect()
+            with connection.cursor() as cur:
+                # Execute a simple query to test the connection
+                cur.execute('select 1;')
             response.success = True
-        except Exception as e:
-            logger.error(f'Error connecting to SQL Server {self.database}, {e}!')
+        except OperationalError as e:
+            logger.error(f'Error connecting to Microsoft SQL Server {self.database}, {e}!')
             response.error_message = str(e)
-        finally:
-            if response.success is True and need_to_close:
-                self.disconnect()
-            if response.success is False and self.is_connected is True:
-                self.is_connected = False
+
+        if response.success and need_to_close:
+            self.disconnect()
+        elif not response.success and self.is_connected:
+            self.is_connected = False
 
         return response
 

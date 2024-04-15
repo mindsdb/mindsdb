@@ -16,7 +16,7 @@ jobs:
     # Get clean environment variables via https://github.com/marketplace/actions/github-environment-variables-action
     - uses: FranzDiebold/github-env-vars-action@v2
     - name: Set up Python
-      uses: actions/setup-python@v4.7.0
+      uses: actions/setup-python@v5.1.0
       with:
         python-version: ${{ vars.CI_PYTHON_VERSION }}
     - name: Check Version
@@ -30,7 +30,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python
-      uses: actions/setup-python@v4.7.0
+      uses: actions/setup-python@v5.1.0
       with:
         python-version: ${{ vars.CI_PYTHON_VERSION }}
     - name: Install dependencies

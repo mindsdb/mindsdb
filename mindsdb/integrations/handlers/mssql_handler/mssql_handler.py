@@ -169,9 +169,18 @@ class SqlServerHandler(DatabaseHandler):
 
     def get_columns(self, table_name) -> Response:
         """
-        Show details about the table
+        Retrieves column details for a specified table in the Microsoft SQL Server database.
+
+        Args:
+            table_name (str): The name of the table for which to retrieve column information.
+
+        Returns:
+            Response: A response object containing the column details, formatted as per the `Response` class.
+        Raises:
+            ValueError: If the 'table_name' is not a valid string.
         """
-        q = f"""
+
+        query = f"""
             SELECT
                 column_name as "Field",
                 data_type as "Type"
@@ -180,5 +189,4 @@ class SqlServerHandler(DatabaseHandler):
             WHERE
                 table_name = '{table_name}'
         """
-        result = self.native_query(q)
-        return result
+        return self.native_query(query)

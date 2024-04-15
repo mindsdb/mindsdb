@@ -1,20 +1,8 @@
-"""
-This is the MySQL integration handler for mindsdb.  It provides the routines
-which provide for interacting with the database.
-
-MindsDB currently does not appear to multiple round trip transactions. This
-makes sense given the niche that the project fulfills.  If this changes, most
-handlers will require modification.  Here we would need a context manager for
-handling transactions.  This would be safer than explicit commits since errors
-would result in rolling back automatically.
-"""
-
 from collections import OrderedDict
 
 import pandas as pd
 import mysql.connector
 from urllib.parse import urlparse
-from sqlalchemy import create_engine
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
@@ -193,31 +181,31 @@ class MySQLHandler(DatabaseHandler):
         """
 
         need_to_close = self.is_connected is False
-
-        connection = self.connect()
-        with connection.cursor(dictionary=True, buffered=True) as cur:
-            try:
-                cur.execute(query)
-                if cur.with_rows:
-                    result = cur.fetchall()
-                    response = Response(
-                        RESPONSE_TYPE.TABLE,
-                        pd.DataFrame(
-                            result,
-                            columns=[x[0] for x in cur.description]
+        try:
+            with self.connect() as connection:
+                with connection.cursor(dictionary=True, buffered=True) as cur:
+                    cur.execute(query)
+                    if cur.with_rows:
+                        result = cur.fetchall()
+                        response = Response(
+                            RESPONSE_TYPE.TABLE,
+                            pd.DataFrame(
+                                result,
+                                columns=[x[0] for x in cur.description]
+                            )
                         )
-                    )
-                else:
-                    response = Response(RESPONSE_TYPE.OK)
-            except Exception as e:
-                logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=str(e)
-                )
+                    else:
+                        response = Response(RESPONSE_TYPE.OK)
+        except Exception as e:
+            logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(e)
+            )
+            if connection.is_connected():
                 connection.rollback()
 
-        if need_to_close is True:
+        if need_to_close:
             self.disconnect()
 
         return response
@@ -292,7 +280,7 @@ connection_args = OrderedDict(
     },
     ssl={
         'type': ARG_TYPE.BOOL,
-        'description': 'Set it to False to disable ssl.',
+        'description': 'Set it to True to enable ssl.',
         'required': False,
         'label': 'ssl'
     },

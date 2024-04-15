@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - id: set-matrix
-        uses: JoshuaTheMiller/conditional-build-matrix@v1.0.1
+        uses: JoshuaTheMiller/conditional-build-matrix@v2
         with:
           filter: '[?runOnBranch==`${{ github.ref }}` || runOnBranch==`always`]'
 

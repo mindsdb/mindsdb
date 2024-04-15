@@ -26,10 +26,10 @@ class SqlServerHandler(DatabaseHandler):
     def __init__(self, name, **kwargs):
         super().__init__(name)
         self.parser = parse_sql
-        self.connection_args = kwargs
-        self.connection_data = self.connection_args.get('connection_data')
+        self.connection_args = kwargs.get('connection_data')
         self.dialect = 'mssql'
-        self.database = self.connection_data.get('database')
+        self.database = self.connection_args.get('database')
+        self.renderer = SqlalchemyRender('mssql')
 
         self.connection = None
         self.is_connected = False
@@ -53,10 +53,10 @@ class SqlServerHandler(DatabaseHandler):
             return self.connection
         
         config = {
-            'server': self.connection_data.get('host'),
-            'user': self.connection_data.get('user'),
-            'password': self.connection_data.get('password'),
-            'database': self.connection_data.get('database')
+            'server': self.connection_args.get('host'),
+            'user': self.connection_args.get('user'),
+            'password': self.connection_args.get('password'),
+            'database': self.connection_args.get('database')
         }
 
         try:
@@ -146,10 +146,17 @@ class SqlServerHandler(DatabaseHandler):
 
     def query(self, query: ASTNode) -> Response:
         """
-        Retrieve the data from the SQL statement.
+        Executes a SQL query represented by an ASTNode and retrieves the data.
+
+        Args:
+            query (ASTNode): An ASTNode representing the SQL query to be executed.
+
+        Returns:
+            Response: The response from the `native_query` method, containing the result of the SQL query execution.
         """
-        renderer = SqlalchemyRender('mssql')
-        query_str = renderer.get_string(query, with_failback=True)
+
+        query_str = self.renderer.get_string(query, with_failback=True)
+        logger.debug(f"Executing SQL query: {query_str}")
         return self.native_query(query_str)
 
     def get_tables(self) -> Response:

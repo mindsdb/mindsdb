@@ -155,6 +155,9 @@ class MySQLHandler(DatabaseHandler):
         return self.connection
 
     def disconnect(self):
+        """
+        Closes the connection to the MySQL database if it's currently open.
+        """
         if self.is_connected is False:
             return
         self.connection.close()
@@ -163,35 +166,41 @@ class MySQLHandler(DatabaseHandler):
 
     def check_connection(self) -> StatusResponse:
         """
-        Check the connection of the MySQL database
-        :return: success status and error message if error occurs
+        Checks the status of the connection to the MySQL database
+        
+        Returns:
+            StatusResponse: An object containing the success status and an error message if an error occurs.
         """
 
         result = StatusResponse(False)
-        need_to_close = self.is_connected is False
+        need_to_close = not self.is_connected
 
         try:
-            connection = self.connect()
-            result.success = connection.is_connected()
-        except Exception as e:
+            with self.connect() as connection:
+                result.success = connection.is_connected()
+        except mysql.connector.Error as e:
             logger.error(f'Error connecting to MySQL {self.connection_data["database"]}, {e}!')
             result.error_message = str(e)
 
-        if result.success is True and need_to_close:
+        if result.success and need_to_close:
             self.disconnect()
-        if result.success is False and self.is_connected is True:
+        if not result.success and self.is_connected:
             self.is_connected = False
 
         return result
 
     def native_query(self, query: str) -> Response:
         """
-        Receive SQL query and runs it
-        :param query: The SQL query to run in MySQL
-        :return: returns the records from the current recordset
+        Executes a SQL query on the MySQL database and returns the result.
+
+        Args:
+            query (str): The SQL query to be executed.
+
+        Returns:
+            Response: A response object containing the result of the query or an error message.
         """
 
-        need_to_close = self.is_connected is False
+        need_to_close = not self.is_connected
         try:
             with self.connect() as connection:
                 with connection.cursor(dictionary=True, buffered=True) as cur:
@@ -207,7 +216,7 @@ class MySQLHandler(DatabaseHandler):
                         )
                     else:
                         response = Response(RESPONSE_TYPE.OK)
-        except Exception as e:
+        except mysql.connector.Error as e:
             logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
             response = Response(
                 RESPONSE_TYPE.ERROR,

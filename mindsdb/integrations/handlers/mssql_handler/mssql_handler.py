@@ -69,11 +69,14 @@ class SqlServerHandler(DatabaseHandler):
             raise
     
     def disconnect(self):
-        if self.is_connected is False:
+        """
+        Closes the connection to the Microsoft SQL Server database if it's currently open.
+        """
+
+        if not self.is_connected:
             return
         self.connection.close()
         self.is_connected = False
-        return
 
     def check_connection(self) -> StatusResponse:
         """

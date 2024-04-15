@@ -154,8 +154,12 @@ class SqlServerHandler(DatabaseHandler):
 
     def get_tables(self) -> Response:
         """
-        Get a list with all of the tabels in MySQL
+        Retrieves a list of all non-system tables and views in the current schema of the Microsoft SQL Server database.
+
+        Returns:
+            Response: A response object containing the list of tables and views, formatted as per the `Response` class.
         """
+
         query = f"""
             SELECT
                 table_schema,
@@ -164,8 +168,7 @@ class SqlServerHandler(DatabaseHandler):
             FROM {self.database}.INFORMATION_SCHEMA.TABLES
             WHERE TABLE_TYPE in ('BASE TABLE', 'VIEW');
         """
-        result = self.native_query(query)
-        return result
+        return self.native_query(query)
 
     def get_columns(self, table_name) -> Response:
         """

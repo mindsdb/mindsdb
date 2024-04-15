@@ -1,4 +1,5 @@
 import pymssql
+from pymssql._mssql import OperationalError
 import pandas as pd
 
 from mindsdb_sql import parse_sql
@@ -14,6 +15,7 @@ from mindsdb.integrations.libs.response import (
 )
 
 logger = log.getLogger(__name__)
+
 
 class SqlServerHandler(DatabaseHandler):
     """
@@ -38,15 +40,33 @@ class SqlServerHandler(DatabaseHandler):
 
     def connect(self):
         """
-        Handles the connection to a SQL Server insance.
+        Establishes a connection to a Microsoft SQL Server database.
+
+        Raises:
+            pymssql._mssql.OperationalError: If an error occurs while connecting to the Microsoft SQL Server database.
+
+        Returns:
+            pymssql.Connection: A connection object to the Microsoft SQL Server database.
         """
+
         if self.is_connected is True:
             return self.connection
+        
+        config = {
+            'server': self.connection_data.get('host'),
+            'user': self.connection_data.get('user'),
+            'password': self.connection_data.get('password'),
+            'database': self.connection_data.get('database')
+        }
 
-        self.connection = pymssql.connect(**self.connection_data)
-        self.is_connected = True
-
-        return self.connection
+        try:
+            self.connection = pymssql.connect(**config)
+            self.is_connected = True
+            return self.connection
+        except OperationalError as e:
+            logger.error(f'Error connecting to Microsoft SQL Server {self.database}, {e}!')
+            self.is_connected = False
+            raise
     
     def disconnect(self):
         if self.is_connected is False:

@@ -115,6 +115,19 @@ def get_dir_size(path: str):
     return total
 
 
+class AbsentFSStore(BaseFSStore):
+    """Storage class that does not store anything. It is just a dummy.
+    """
+    def get(self, *args, **kwargs):
+        pass
+
+    def put(self, *args, **kwargs):
+        pass
+
+    def delete(self, *args, **kwargs):
+        pass
+
+
 class LocalFSStore(BaseFSStore):
     """Storage that stores files locally
     """
@@ -393,12 +406,13 @@ class S3FSStore(BaseFSStore):
 
 def FsStore():
     storage_location = Config()['permanent_storage']['location']
+    if storage_location == 'absent':
+        return AbsentFSStore()
     if storage_location == 'local':
         return LocalFSStore()
-    elif storage_location == 's3':
+    if storage_location == 's3':
         return S3FSStore()
-    else:
-        raise Exception(f"Location: '{storage_location}' not supported")
+    raise Exception(f"Location: '{storage_location}' not supported")
 
 
 class FileStorage:

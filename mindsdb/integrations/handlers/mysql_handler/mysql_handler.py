@@ -106,17 +106,23 @@ class MySQLHandler(DatabaseHandler):
             }
 
             if not config.get('host'):
-                raise ValueError("Must supply a host")
+                raise ValueError("Missing required host")
             if not config.get('database'):
-                raise ValueError("Must supply a database name")
+                raise ValueError("Missing required database name")
 
         if not config.get('user'):
-            raise ValueError('Must supply a user')
+            raise ValueError('Missing required user')
         if not config.get('password'):
-            raise ValueError('Must supply a password for connections')
+            raise ValueError('Missing required password')
         return config
 
     def connect(self):
+        """
+        Establishes a connection to a MySQL database.
+
+        Returns:
+            MySQLConnection: An active connection to the database.
+        """
         if self.is_connected is True:
             return self.connection
 
@@ -137,8 +143,12 @@ class MySQLHandler(DatabaseHandler):
                 config["ssl_cert"] = ssl_cert
             if ssl_key is not None:
                 config["ssl_key"] = ssl_key
+        try:
+            connection = mysql.connector.connect(**config)
+        except mysql.connector.Error as e:
+            logger.error(f"Error connecting to MySQL {self.database}, {e}!")
+            self.is_connected = False
 
-        connection = mysql.connector.connect(**config)
         connection.autocommit = True
         self.is_connected = True
         self.connection = connection

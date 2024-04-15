@@ -87,12 +87,13 @@ class MySQLHandler(DatabaseHandler):
                 raise ValueError(
                       "Connection URL does not include database"
                 )
+            database = urlfields.path[1:] if urlfields.path.startswith('/') else urlfields.path
             config = {
                 'host'    : urlfields.host,
                 'port'    : urlfields.port or  3306,
                 'user'    : urlfields.username or self.connection_data.get('user'),
                 'password': urlfields.password or self.connection_data.get('password'),
-                'database': urlfields.path,
+                'database': database,
             }
 
         else:

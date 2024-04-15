@@ -7,7 +7,6 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
 from langchain_core.vectorstores import VectorStore
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_core.stores import BaseStore
 from langchain.text_splitter import TextSplitter
 from pydantic import BaseModel
@@ -24,8 +23,6 @@ DEFAULT_LLM_MODEL = "gpt-3.5-turbo"
 DEFAULT_CONTENT_COLUMN_NAME = "body"
 DEFAULT_DATASET_DESCRIPTION = "email inbox"
 DEFAULT_TEST_TABLE_NAME = "test_email"
-DEFAULT_LLM = ChatOpenAI(model_name=DEFAULT_LLM_MODEL, temperature=0)
-DEFAULT_EMBEDDINGS = OpenAIEmbeddings()
 DEFAULT_VECTOR_STORE = Chroma
 DEFAULT_AUTO_META_PROMPT_TEMPLATE = """
 Below is a json representation of a table with information about {description}.

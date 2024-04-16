@@ -12,11 +12,11 @@ jobs:
     runs-on: [self-hosted, dev]
     if: github.actor != 'mindsdbadmin'
     steps:
-    - uses: actions/checkout@v3.5.3
+    - uses: actions/checkout@v4
     # Get clean environment variables via https://github.com/marketplace/actions/github-environment-variables-action
     - uses: FranzDiebold/github-env-vars-action@v2
     - name: Set up Python
-      uses: actions/setup-python@v4.7.0
+      uses: actions/setup-python@v5.1.0
       with:
         python-version: ${{ vars.CI_PYTHON_VERSION }}
     - name: Check Version
@@ -28,9 +28,9 @@ jobs:
     needs: check-version
     if: github.actor != 'mindsdbadmin'
     steps:
-    - uses: actions/checkout@v3.5.3
+    - uses: actions/checkout@v4
     - name: Set up Python
-      uses: actions/setup-python@v4.7.0
+      uses: actions/setup-python@v5.1.0
       with:
         python-version: ${{ vars.CI_PYTHON_VERSION }}
     - name: Install dependencies
@@ -52,14 +52,20 @@ jobs:
     needs: [check-version]
     if: github.actor != 'mindsdbadmin'
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Docker Login
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Pull MindsDB Github Actions
+        uses: actions/checkout@v4
+        with:
+          repository: mindsdb/github-actions
+          path: github-actions
+          ssh-key: ${{ secrets.GH_ACTIONS_PULL_SSH }}
       # Build the bakefile and push
-      - uses: ./.github/actions/docker-bake
+      - uses: ./github-actions/docker-bake
         with:
           push-to-dockerhub: true
 
@@ -70,8 +76,14 @@ jobs:
     runs-on: [self-hosted, dev]
     needs: [docker_build]
     steps:
-      - uses: actions/checkout@v2
-      - uses: ./.github/actions/docker-bake-cache
+      - uses: actions/checkout@v4
+      - name: Pull MindsDB Github Actions
+        uses: actions/checkout@v4
+        with:
+          repository: mindsdb/github-actions
+          path: github-actions
+          ssh-key: ${{ secrets.GH_ACTIONS_PULL_SSH }}
+      - uses: ./github-actions/docker-bake-cache
 
   trigger_deploy:
     # Trigger private repo to deploy to prod env

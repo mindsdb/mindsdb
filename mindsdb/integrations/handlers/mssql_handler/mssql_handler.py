@@ -19,7 +19,7 @@ logger = log.getLogger(__name__)
 
 class SqlServerHandler(DatabaseHandler):
     """
-    This handler handles connection and execution of the Microsoft SQL Server statements. 
+    This handler handles connection and execution of the Microsoft SQL Server statements.
     """
     name = 'mssql'
 
@@ -51,7 +51,7 @@ class SqlServerHandler(DatabaseHandler):
 
         if self.is_connected is True:
             return self.connection
-        
+
         config = {
             'server': self.connection_args.get('host'),
             'user': self.connection_args.get('user'),
@@ -67,7 +67,7 @@ class SqlServerHandler(DatabaseHandler):
             logger.error(f'Error connecting to Microsoft SQL Server {self.database}, {e}!')
             self.is_connected = False
             raise
-    
+
     def disconnect(self):
         """
         Closes the connection to the Microsoft SQL Server database if it's currently open.

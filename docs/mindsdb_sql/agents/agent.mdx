@@ -41,7 +41,7 @@ Start by setting up the skills. Here is how you can create and manage skills usi
     DROP KNOWLEDGE BASE my_knowledge_base;
     ```
 
-* Creating, updating, and deleting a skill that utilizes a knowledge base:
+* Creating, updating, and deleting a `knowledge_base` skill:
 
     ```sql
     CREATE SKILL kb_skill
@@ -57,12 +57,12 @@ Start by setting up the skills. Here is how you can create and manage skills usi
     DROP SKILL kb_skill;
     ```
 
-* Creating, updating, and deleting a text-to-SQL skill:
+* Creating, updating, and deleting a `text2sql` skill:
 
     ```sql
     CREATE SKILL text_to_sql_skill
     USING
-        type = 'text_to_sql',
+        type = 'text2sql',
         database = 'example_db', -- this must be created with CREATE DATABASE
         tables = ['sales_data']; -- this is a list of tables passed to this skill
 
@@ -174,7 +174,7 @@ Create a skill using one or more tables from a connected data source.
 ```sql
 CREATE SKILL text_to_sql_skill
 USING
-    type = 'text_to_sql',
+    type = 'text2sql',
     database = 'example_db',
     tables = ['car_sales'];
 ```

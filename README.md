@@ -17,9 +17,9 @@
   <p align="center">
     <br />
     <a href="https://www.mindsdb.com">Website</a>
-      ·  
+    ·
     <a href="https://docs.mindsdb.com">Docs</a>
-      ·  
+    ·
     <a href="https://mindsdb.com/joincommunity">Community Slack</a>
   </p>
 </div>

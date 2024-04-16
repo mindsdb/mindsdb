@@ -7,23 +7,23 @@ This is a general-purpose Retrieval Augmented Generation handler that can be use
 
 It supports the following:
 
-* Large language models such as [OpenAI](/integrations/ai-engines/openai) and [Writer](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/writer_handler#readme).
+* Large language models such as [OpenAI](/integrations/ai-engines/openai) and [Writer](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/writer_handler#readme).
 * Vector databases such as [ChromaDB](/integrations/vector-db-integrations/chromadb) and FAISS.
 * Embedding models compatible with the [Hugging Face sentence_transformers library](https://huggingface.co/sentence-transformers).
 
 ## Setup
 
-MindsDB provides the [RAG handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/rag_handler) that enables you to use RAG methods for training models within MindsDB.
+MindsDB provides the [RAG handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/rag_handler) that enables you to use RAG methods for training models within MindsDB.
 
 ### AI Engine
 
 Before creating a model, it is required to create an AI engine based on the provided handler.
 
 <Tip>
-If you installed MindsDB locally, make sure to install all RAG dependencies by running `pip install .[rag]` or from the [requirements.txt](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/rag_handler/requirements.txt) file.
+If you installed MindsDB locally, make sure to install all RAG dependencies by running `pip install .[rag]` or from the [requirements.txt](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/integrations/handlers/rag_handler/requirements.txt) file.
 </Tip>
 
-You can create a RAG engine using this command and providing either [OpenAI](/integrations/ai-engines/openai) or [Writer](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/writer_handler#readme) parameters:
+You can create a RAG engine using this command and providing either [OpenAI](/integrations/ai-engines/openai) or [Writer](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/writer_handler#readme) parameters:
 
 ```sql
 CREATE ML_ENGINE rag_engine

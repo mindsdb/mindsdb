@@ -16,7 +16,7 @@ Before proceeding, ensure the following prerequisites are met:
 
 ## Setup
 
-Create an AI engine from the [Anyscale Endpoints handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/anyscale_endpoints_handler).
+Create an AI engine from the [Anyscale Endpoints handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/anyscale_endpoints_handler).
 
 ```sql
 CREATE ML_ENGINE anyscale_endpoints_engine

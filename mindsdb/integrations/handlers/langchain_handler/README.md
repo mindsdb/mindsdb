@@ -26,7 +26,7 @@ Available models include the following:
 
 ## Setup
 
-Create an AI engine from the [LangChain handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/langchain_handler).
+Create an AI engine from the [LangChain handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/langchain_handler).
 
 ```sql
 CREATE ML_ENGINE langchain_engine

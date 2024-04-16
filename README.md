@@ -1,5 +1,5 @@
 <h1 align="center">
-	<img width="300" src="https://github.com/mindsdb/mindsdb_native/blob/stable/assets/MindsDBColorPurp@3x.png?raw=true" alt="MindsDB">
+	<img width="300" src="https://github.com/mindsdb/mindsdb_native/blob/main/assets/MindsDBColorPurp@3x.png?raw=true" alt="MindsDB">
 	<br>
 </h1>
 
@@ -140,7 +140,7 @@ We are always open to suggestions, so feel free to open new issues with your ide
 Being part of the core team is accessible to anyone who is motivated and wants to be part of that journey!
 If you'd like to contribute to the project, refer to the [contributing documentation](https://docs.mindsdb.com/contribute/?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
 
-This project is released with a [Contributor Code of Conduct](https://github.com/mindsdb/mindsdb/blob/stable/CODE_OF_CONDUCT.md). By participating in this project, you agree to follow its terms.
+This project is released with a [Contributor Code of Conduct](https://github.com/mindsdb/mindsdb/blob/main/CODE_OF_CONDUCT.md). By participating in this project, you agree to follow its terms.
 
 Also, check out the [rewards and community programs](https://mindsdb.com/community?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
 

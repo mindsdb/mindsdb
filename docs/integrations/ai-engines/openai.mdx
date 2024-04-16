@@ -11,14 +11,14 @@ Read on to find out how to use OpenAI models within MinsdDB.
 
 ## Setup
 
-MindsDB provides the [OpenAI handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/openai_handler) that enables you to create OpenAI models within MindsDB.
+MindsDB provides the [OpenAI handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/openai_handler) that enables you to create OpenAI models within MindsDB.
 
 ### AI Engine
 
 Before creating a model, it is required to create an AI engine based on the provided handler.
 
 <Tip>
-If you installed MindsDB locally, make sure to install all OpenAI dependencies by running `pip install .[openai]` or from the [requirements.txt](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/openai_handler/requirements.txt) file.
+If you installed MindsDB locally, make sure to install all OpenAI dependencies by running `pip install .[openai]` or from the [requirements.txt](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/integrations/handlers/openai_handler/requirements.txt) file.
 </Tip>
 
 You can create an OpenAI engine using this command:
@@ -55,7 +55,7 @@ USING
 When you create an OpenAI model in MindsDB, it uses the `gpt-3.5-turbo` model by default. But you can use the `gpt-4` model as well by passing it to the `model-name` parameter in the `USING` clause of the `CREATE MODEL` statement.
 
 **Supported Models**
-To see all supported models, including chat models, embedding models, and more, click [here](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/openai_handler/constants.py).
+To see all supported models, including chat models, embedding models, and more, click [here](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/integrations/handlers/openai_handler/constants.py).
 </Info>
 The `USING` clause takes more parameters depending on the operation mode. Follow the next section to learn about available operation modes.
 

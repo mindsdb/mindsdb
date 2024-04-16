@@ -3,8 +3,7 @@ name: Build and deploy to staging
 on:
   push:
     branches:
-      - stable
-      - staging
+      - main
 
 jobs:
   build:

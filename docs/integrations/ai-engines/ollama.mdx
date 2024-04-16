@@ -25,7 +25,7 @@ Here are the recommended system specifications:
 
 ## Setup
 
-Create an AI engine from the [Ollama handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/ollama_handler).
+Create an AI engine from the [Ollama handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/ollama_handler).
 
 ```sql
 CREATE ML_ENGINE ollama_engine

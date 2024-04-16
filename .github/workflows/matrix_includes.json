@@ -2,12 +2,12 @@
   {
     "runs_on": "ubuntu-latest",
     "python-version": "3.10",
-    "runOnBranch": "refs/heads/staging"
+    "runOnBranch": "refs/heads/main"
   },
   {
     "runs_on": "ubuntu-latest",
     "python-version": 3.9,
-    "runOnBranch": "refs/heads/staging"
+    "runOnBranch": "refs/heads/main"
   },
   {
     "runs_on": "ubuntu-latest",
@@ -17,6 +17,6 @@
   {
     "runs_on": "macos-latest",
     "python-version": 3.8,
-    "runOnBranch": "refs/heads/stable"
+    "runOnBranch": "refs/heads/main"
   }
 ]

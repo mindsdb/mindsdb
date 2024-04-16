@@ -16,7 +16,7 @@ Before proceeding, ensure the following prerequisites are met:
 
 ## Setup
 
-Create an AI engine from the [Anthropic handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/anthropic_handler).
+Create an AI engine from the [Anthropic handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/anthropic_handler).
 
 ```sql
 CREATE ML_ENGINE anthropic_engine

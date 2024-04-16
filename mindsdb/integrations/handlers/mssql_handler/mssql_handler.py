@@ -1,5 +1,5 @@
 import pymssql
-from pymssql._mssql import OperationalError
+from pymssql import OperationalError
 import pandas as pd
 
 from mindsdb_sql import parse_sql

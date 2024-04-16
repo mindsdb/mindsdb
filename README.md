@@ -112,6 +112,10 @@ MindsDB enables you to deploy AI/ML models, send predictions to your application
 
 This example showcases the data enrichment flow, where input data comes from a PostgreSQL database and is passed through an OpenAI model to generate new content which is saved into a data destination.
 
+<p align="center">
+  <img src="/docs/assets/sentiment_analysis_diagram.png"/>
+</p>
+
 We take customer reviews from a PostgreSQL database. Then, we deploy an OpenAI model that analyzes all customer reviews and assigns sentiment values. Finally, to automate the workflow for incoming customer reviews, we create a job that generates and saves AI output into a data destination.
 
 ```sql

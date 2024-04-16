@@ -58,7 +58,7 @@ Automate tasks with JOBS by scheduling execution at a defined frequency, or with
 
 MindsDB covers a wide range of use cases, including the following:
 
-|   |   |
+| Solutions  | Examples  |
 |---|---|
 | **Automated Fine-Tuning**        | Fine-tuning of Large Language models <br> Fine-tuning of AutoML models |
 | **AI Agents**                    | Knowledge bases <br> Skills <br> Agents <br> Chatbots |

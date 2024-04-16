@@ -11,8 +11,9 @@ except Exception as e:
 title = 'Twelve Labs'
 name = 'twelve_labs'
 type = HANDLER_TYPE.ML
+icon_path = 'icon.svg'
 permanent = True
 
 __all__ = [
-    'Handler', 'version', 'name', 'type', 'title', 'description', 'import_error'
+    'Handler', 'version', 'name', 'type', 'title', 'description', 'import_error', 'icon_path'
 ]

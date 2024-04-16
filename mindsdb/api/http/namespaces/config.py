@@ -11,12 +11,13 @@ from flask_restx import Resource, abort
 from flask import current_app as ca
 from dateutil.tz import tzlocal
 
+from mindsdb.api.http.namespaces.configs.config import ns_conf
+from mindsdb.api.http.utils import http_error
+from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.utilities import log
 from mindsdb.utilities.functions import encrypt, decrypt
-from mindsdb.api.http.namespaces.configs.config import ns_conf
 from mindsdb.utilities.log_controller import get_logs
 from mindsdb.utilities.config import Config
-from mindsdb.api.http.utils import http_error
 
 logger = log.getLogger(__name__)
 
@@ -25,6 +26,7 @@ logger = log.getLogger(__name__)
 @ns_conf.param('name', 'Get logs')
 class GetLogs(Resource):
     @ns_conf.doc('get_integrations')
+    @api_endpoint_metrics('GET', '/config/logs')
     def get(self):
         min_timestamp = parse_datetime(request.args['min_timestamp'])
         max_timestamp = request.args.get('max_timestamp', None)
@@ -41,6 +43,7 @@ class GetLogs(Resource):
 @ns_conf.param('name', 'Get config')
 class GetConfig(Resource):
     @ns_conf.doc('get_config')
+    @api_endpoint_metrics('GET', '/config')
     def get(self):
         config = Config()
         return {
@@ -52,6 +55,7 @@ class GetConfig(Resource):
         }
 
     @ns_conf.doc('put_config')
+    @api_endpoint_metrics('PUT', '/config')
     def put(self):
         data = request.json
 
@@ -80,6 +84,7 @@ class GetConfig(Resource):
 @ns_conf.route('/integrations')
 @ns_conf.param('name', 'List all database integration')
 class ListIntegration(Resource):
+    @api_endpoint_metrics('GET', '/config/integrations')
     def get(self):
         return {
             'integrations': [k for k in ca.integration_controller.get_all(sensitive_info=False)]
@@ -90,6 +95,7 @@ class ListIntegration(Resource):
 @ns_conf.param('name', 'List all database integration')
 class AllIntegration(Resource):
     @ns_conf.doc('get_all_integrations')
+    @api_endpoint_metrics('GET', '/config/all_integrations')
     def get(self):
         integrations = ca.integration_controller.get_all(sensitive_info=False)
         return integrations
@@ -99,6 +105,7 @@ class AllIntegration(Resource):
 @ns_conf.param('name', 'Database integration')
 class Integration(Resource):
     @ns_conf.doc('get_integration')
+    @api_endpoint_metrics('GET', '/config/integrations/integration')
     def get(self, name):
         integration = ca.integration_controller.get(name, sensitive_info=False)
         if integration is None:
@@ -107,6 +114,7 @@ class Integration(Resource):
         return integration
 
     @ns_conf.doc('put_integration')
+    @api_endpoint_metrics('PUT', '/config/integrations/integration')
     def put(self, name):
         params = {}
         if request.is_json:
@@ -191,6 +199,7 @@ class Integration(Resource):
         return {}, 200
 
     @ns_conf.doc('delete_integration')
+    @api_endpoint_metrics('DELETE', '/config/integrations/integration')
     def delete(self, name):
         integration = ca.integration_controller.get(name)
         if integration is None:
@@ -203,6 +212,7 @@ class Integration(Resource):
         return "", 200
 
     @ns_conf.doc('modify_integration')
+    @api_endpoint_metrics('POST', '/config/integrations/integration')
     def post(self, name):
         params = {}
         params.update((request.json or {}).get('params', {}))
@@ -229,6 +239,7 @@ class Integration(Resource):
 @ns_conf.param('name', 'Database integration checks')
 class Check(Resource):
     @ns_conf.doc('check')
+    @api_endpoint_metrics('GET', '/config/integrations/integration/check')
     def get(self, name):
         if ca.integration_controller.get(name) is None:
             abort(404, f'Can\'t find database integration: {name}')
@@ -238,6 +249,7 @@ class Check(Resource):
 
 @ns_conf.route('/vars')
 class Vars(Resource):
+    @api_endpoint_metrics('GET', '/config/vars')
     def get(self):
         if os.getenv('CHECK_FOR_UPDATES', '1').lower() in ['0', 'false']:
             telemtry = False

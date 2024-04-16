@@ -80,7 +80,6 @@ from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
 from .exceptions import (
     ExecutorException,
     BadDbError,
-    BadTableError,
     NotSupportedYet,
     WrongArgumentError,
     TableNotExistError,
@@ -103,7 +102,7 @@ from mindsdb.interfaces.model.functions import (
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
 from mindsdb.interfaces.triggers.triggers_controller import TriggersController
 from mindsdb.utilities.context import context as ctx
-from mindsdb.utilities.functions import mark_process, resolve_model_identifier
+from mindsdb.utilities.functions import mark_process, resolve_model_identifier, get_handler_install_message
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 from mindsdb.utilities import log
 
@@ -566,6 +565,11 @@ class ExecuteCommands:
                         self.session.predictor_cache = True
                     else:
                         self.session.predictor_cache = False
+                elif param == "context":
+                    if value in (0, False, None):
+                        # drop context
+                        query_context_controller.drop_query_context(None)
+
                 return ExecuteAnswer(ANSWER_TYPE.OK)
             elif category == "autocommit":
                 return ExecuteAnswer(ANSWER_TYPE.OK)
@@ -611,13 +615,6 @@ class ExecuteCommands:
         elif type(statement) is Delete:
             if statement.table.parts[-1].lower() == "models_versions":
                 return self.answer_delete_model_version(statement, database_name)
-            if (
-                database_name != "mindsdb"
-                and statement.table.parts[0] != "mindsdb"
-            ):
-                raise BadTableError(
-                    "Only 'DELETE' from database 'mindsdb' is possible at this moment"
-                )
 
             SQLQuery(statement, session=self.session, execute=True, database=database_name)
             return ExecuteAnswer(ANSWER_TYPE.OK)
@@ -649,8 +646,7 @@ class ExecuteCommands:
         elif type(statement) is Explain:
             return self.answer_show_columns(statement.target, database_name=database_name)
         elif type(statement) is CreateTable:
-            # TODO
-            return self.answer_apply_predictor(statement, database_name)
+            return self.answer_create_table(statement, database_name)
         # -- jobs --
         elif type(statement) is CreateJob:
             return self.answer_create_job(statement, database_name)
@@ -1048,7 +1044,7 @@ class ExecuteCommands:
             )
             handler_meta = handlers_meta[engine]
             if handler_meta.get("import", {}).get("success") is not True:
-                raise ExecutorException(f"Handler '{engine}' can not be used")
+                raise ExecutorException(f"The '{engine}' handler isn't installed.\n" + get_handler_install_message(engine))
 
             accept_connection_args = handler_meta.get("connection_args")
             if accept_connection_args is not None and connection_args is not None:
@@ -1126,9 +1122,9 @@ class ExecuteCommands:
         params = {}
         if statement.params:
             for key, value in statement.params.items():
-                # convert all complex types to string
-                if not isinstance(value, (int, float)):
-                    value = str(value)
+                # convert ast types to string
+                if isinstance(value, (Constant, Identifier)):
+                    value = value.to_string()
                 params[key] = value
 
         try:
@@ -1140,22 +1136,13 @@ class ExecuteCommands:
             if type(e) in (ImportError, ModuleNotFoundError):
                 msg = dedent(
                     f"""\
-                    Handler '{handler_module_meta['name']}' cannot be used. Reason is:
+                    The '{handler_module_meta['name']}' handler cannot be used. Reason is:
                         {handler_module_meta['import']['error_message']}
                 """
                 )
                 is_cloud = self.session.config.get("cloud", False)
-                if is_cloud is False:
-                    msg += dedent(
-                        f"""
-
-                    If the error is related to missing dependencies, then try to run one of the following commands in a shell and restart mindsdb:
-                        If you have cloned the github repo, run "pip install '.[{handler_module_meta['name']}]'"
-                        If you have installed via pip, run "pip install 'mindsdb[{handler_module_meta['name']}]'"
-                        If you are using docker, run "docker exec <container_name> pip install 'mindsdb[{handler_module_meta['name']}]'"
-                    """
-                    )
-                logger.info(msg)
+                if is_cloud is False and "No module named" in handler_module_meta['import']['error_message']:
+                    logger.info(get_handler_install_message(handler_module_meta['name']))
             ast_drop = DropMLEngine(name=statement.name)
             self.answer_drop_ml_engine(ast_drop)
             logger.info(msg)
@@ -1621,7 +1608,10 @@ class ExecuteCommands:
             elif target_type == Function:
                 function_name = target.op.lower()
                 if function_name == "connection_id":
-                    return self.answer_connection_id()
+                    alias = None
+                    if isinstance(target.alias, Identifier):
+                        alias = target.alias.parts[-1]
+                    return self.answer_connection_id(alias=alias)
 
                 functions_results = {
                     # 'connection_id': self.executor.sqlserver.connection_id,
@@ -1998,13 +1988,13 @@ class ExecuteCommands:
         columns = [Column(**d) for d in columns]
         return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=[])
 
-    def answer_connection_id(self):
+    def answer_connection_id(self, alias: str = None):
         columns = [
             {
                 "database": "",
                 "table_name": "",
-                "name": "conn_id",
-                "alias": "conn_id",
+                "name": "connection_id()",
+                "alias": alias or "connection_id()",
                 "type": TYPES.MYSQL_TYPE_LONG,
                 "charset": CHARSET_NUMBERS["binary"],
             }
@@ -2013,7 +2003,7 @@ class ExecuteCommands:
         data = [[self.context.get('connection_id')]]
         return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=data)
 
-    def answer_apply_predictor(self, statement, database_name):
+    def answer_create_table(self, statement, database_name):
         SQLQuery(statement, session=self.session, execute=True, database=database_name)
         return ExecuteAnswer(ANSWER_TYPE.OK)
 

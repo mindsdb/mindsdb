@@ -19,7 +19,16 @@ class DummyHandler(BaseMLEngine):
         df['predicted'] = 42
         df['predictor_id'] = self.model_storage.predictor_id
         df['row_id'] = self.model_storage.predictor_id * 100 + df.reset_index().index
-        return df[['predicted', 'predictor_id', 'row_id']]
+
+        if 'engine_args' in df.columns:
+            # could exist from previous model
+            df = df.drop('engine_args', axis=1)
+            print(1)
+        args = self.engine_storage.json_get('engine_args')
+
+        df.insert(len(df.columns), 'engine_args', [args] * len(df))
+
+        return df[['predicted', 'predictor_id', 'row_id', 'engine_args']]
 
     def _get_model_verison(self):
         return self.model_storage._get_model_record(
@@ -40,3 +49,6 @@ class DummyHandler(BaseMLEngine):
         else:
             tables = ['info']
             return pd.DataFrame(tables, columns=['tables'])
+
+    def create_engine(self, connection_args):
+        self.engine_storage.json_set('engine_args', connection_args)

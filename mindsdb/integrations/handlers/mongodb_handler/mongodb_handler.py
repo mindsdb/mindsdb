@@ -295,7 +295,7 @@ connection_args = OrderedDict(
     database={
         'type': ARG_TYPE.STR,
         'description': 'The database name to use when connecting with the MongoDB server.',
-        'required': True,
+        'required': False,
         'label': 'Database'
     },
     host={

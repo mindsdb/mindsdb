@@ -40,6 +40,7 @@ When executing the `CREATE MODEL` statement, the following parameters are suppor
 - `search_options`: A list of the sources of information to use when performing a search. This parameter is required if the `task` is `search` and it should be a subset of `index_options`. More information about search options can be found [here](https://docs.twelvelabs.io/docs/search-options).
 - `search_query_column`: The name of the column containing the search queries. This parameter is required if the `task` is `search`.
 - `summarization_type`: The type of summarization to perform. This parameter is required if the `task` is `summarization` and it should be one of `summary`, `chapter` or `highlight`.
+- `prompt` - Provide context for the summarization task, such as the target audience, style, tone of voice, and purpose. This is an optional parameter.
 
 Given below are examples of creating Models for each of the supported tasks.
 

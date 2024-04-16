@@ -220,32 +220,15 @@ class ChatMessagesTable(APITable):
 
         # if both chat_id and message_id are given, get the message with that id from the API
         if message_id and chat_id:
-            chat_message = api_client.get_chat_message(chat_id, message_id)
-            # add the missing eventDetail attribute to the chat message
-            chat_message['eventDetail'] = {
-                '@odata.type': None, 
-                'visibleHistoryStartDateTime': None, 
-                'members': None, 
-                'initiator': {
-                    'application': None, 
-                    'device': None, 
-                    'user': {
-                        '@odata.type': None, 
-                        'id': None,
-                        'displayName': None,
-                        'userIdentityType': None,
-                        'tenantId': None
-                    }
-                }
-            }
-
-            return [chat_message]
+            chat_messages = [api_client.get_chat_message(chat_id, message_id)]
         # if only the chat_id is given, get all the messages from that chat
         elif chat_id:
-            return api_client.get_chat_messages(chat_id)
+            chat_messages = api_client.get_chat_messages(chat_id)
         # if no parameters are given or only the message_id is given, get all the messages from all the chats
         else:
-            return api_client.get_all_chat_messages()
+            chat_messages = api_client.get_all_chat_messages()
+
+        return chat_messages
 
     def insert(self, query: ast.Insert) -> None:
         """

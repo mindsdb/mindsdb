@@ -179,7 +179,8 @@ class TestRAG(BaseExecutorTest):
              engine='rag',
              llm_type='openai',
              openai_api_key='{OPENAI_API_KEY}',
-             vector_store_folder_name='rag_openai_qa_test'
+             vector_store_folder_name='rag_openai_qa_test',
+             input_column='question'
         """
         )
         self.wait_predictor("proj", "test_rag_openai_qa")
@@ -207,7 +208,8 @@ class TestRAG(BaseExecutorTest):
              llm_type='openai',
              openai_api_key='{OPENAI_API_KEY}',
              vector_store_folder_name='rag_openai_qa_test_batch',
-             embeddings_batch_size={embeddings_batch_size}
+             embeddings_batch_size={embeddings_batch_size},
+             input_column='question'
         """
         )
 
@@ -235,7 +237,8 @@ class TestRAG(BaseExecutorTest):
              vector_store_name='faiss',
              writer_api_key='{WRITER_API_KEY}',
              writer_org_id='{WRITER_ORG_ID}',
-             vector_store_folder_name='rag_writer_qa_test'
+             vector_store_folder_name='rag_writer_qa_test',
+             input_column='question'
         """
         )
         self.wait_predictor("proj", "test_rag_writer_qa")
@@ -261,7 +264,8 @@ class TestRAG(BaseExecutorTest):
              vector_store_name='faiss',
              writer_api_key='{WRITER_API_KEY}',
              writer_org_id='{WRITER_ORG_ID}',
-             vector_store_folder_name='rag_writer_qa_test_single_url'
+             vector_store_folder_name='rag_writer_qa_test_single_url',
+             input_column='question'
         """
         )
         self.wait_predictor("proj", "test_rag_writer_qa_single_url")
@@ -288,7 +292,8 @@ class TestRAG(BaseExecutorTest):
              url_column_name='url',
              writer_api_key='{WRITER_API_KEY}',
              writer_org_id='{WRITER_ORG_ID}',
-             vector_store_folder_name='rag_writer_qa_test_multi_url'
+             vector_store_folder_name='rag_writer_qa_test_multi_url',
+             input_column='question'
         """
         )
 

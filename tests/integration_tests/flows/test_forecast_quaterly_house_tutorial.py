@@ -4,7 +4,7 @@ import pytest
 
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from .conftest import CONFIG_PATH
-from .http_test_helpers import HTTPHelperMixin
+from tests.utils.http_test_helpers import HTTPHelperMixin
 
 
 # used by mindsdb_app fixture in conftest
@@ -22,7 +22,7 @@ WITH ENGINE = "postgres",
 PARAMETERS = {
     "user": "demo_user",
     "password": "demo_password",
-    "host": "3.220.66.106",
+    "host": "samples.mindsdb.com",
     "port": "5432",
     "database": "demo"
     };

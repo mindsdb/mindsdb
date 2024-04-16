@@ -13,6 +13,7 @@ except Exception as e:
 title = ''
 name = 'dummy_data'
 type = HANDLER_TYPE.DATA
+icon_path = 'icon.svg'
 permanent = False
 
-__all__ = ['Handler', 'version', 'name', 'type', 'title', 'description', 'import_error']
+__all__ = ['Handler', 'version', 'name', 'type', 'title', 'description', 'import_error', 'icon_path']

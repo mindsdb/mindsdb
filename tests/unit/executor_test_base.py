@@ -7,6 +7,7 @@ import tempfile
 import time
 from unittest import mock
 from pathlib import Path
+from prometheus_client import REGISTRY
 
 import duckdb
 import numpy as np
@@ -92,6 +93,7 @@ class BaseUnitTest:
     def setup_method(self):
         self._dummy_db_path = os.path.join(tempfile.mkdtemp(), '_mindsdb_duck_db')
         self.clear_db(self.db)
+        self.reset_prom_collectors()
 
     def teardown_method(self):
         try:
@@ -222,6 +224,19 @@ class BaseUnitTest:
         # converts executor response to dataframe
         columns = [col.alias if col.alias is not None else col.name for col in ret.columns]
         return pd.DataFrame(ret.data, columns=columns)
+
+    def reset_prom_collectors(self) -> None:
+        """Resets collectors in the default Prometheus registry.
+
+        Modifies the `REGISTRY` registry. Supposed to be called at the beginning
+        of individual test functions. Else registry is reused across test functions
+        and so we can run into errors like duplicate metrics or unexpected values
+        for metrics.
+        """
+        # Unregister all collectors.
+        collectors = list(REGISTRY._collector_to_names.keys())
+        for collector in collectors:
+            REGISTRY.unregister(collector)
 
 
 class BaseExecutorTest(BaseUnitTest):
@@ -424,6 +439,20 @@ class BaseExecutorDummyML(BaseExecutorTest):
     def setup_method(self):
         super().setup_method()
         self.set_executor(import_dummy_ml=True)
+
+    def run_sql(self, sql, throw_error=True, database='mindsdb'):
+        self.command_executor.session.database = database
+        ret = self.command_executor.execute_command(
+            parse_sql(sql, dialect='mindsdb')
+        )
+        if throw_error:
+            assert ret.error_code is None
+        if ret.data is not None:
+            columns = [
+                col.alias if col.alias is not None else col.name
+                for col in ret.columns
+            ]
+            return pd.DataFrame(ret.data, columns=columns)
 
 
 class BaseExecutorDummyLLM(BaseExecutorTest):

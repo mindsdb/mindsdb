@@ -1,3 +1,5 @@
+from typing import Any
+
 import sys
 
 
@@ -21,3 +23,10 @@ def dict_to_yaml(d, indent=0):
         else:
             yaml_str += str(v) + "\n"
     return yaml_str
+
+
+# Mocks won't always have 'name' attribute.
+def get_class_name(instance: Any, default: str = 'unknown'):
+    if hasattr(instance.__class__, 'name'):
+        return instance.__class__.name
+    return default

@@ -7,11 +7,13 @@ from sqlalchemy.exc import NoResultFound
 
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
+from mindsdb.metrics.metrics import api_endpoint_metrics
 
 
 @ns_conf.route('/<project_name>/views')
 class ViewsList(Resource):
     @ns_conf.doc('list_views')
+    @api_endpoint_metrics('GET', '/views')
     def get(self, project_name):
         '''List all views'''
         session = SessionController()
@@ -32,6 +34,7 @@ class ViewsList(Resource):
         return all_view_objs
 
     @ns_conf.doc('create_view')
+    @api_endpoint_metrics('POST', '/views')
     def post(self, project_name):
         '''Create a new view'''
         if 'view' not in request.json:
@@ -68,6 +71,7 @@ class ViewsList(Resource):
 @ns_conf.param('view_name', 'Name of the view')
 class ViewResource(Resource):
     @ns_conf.doc('get_view')
+    @api_endpoint_metrics('GET', '/views/view')
     def get(self, project_name, view_name):
         '''Get a view by name'''
         session = SessionController()
@@ -88,6 +92,7 @@ class ViewResource(Resource):
         }
 
     @ns_conf.doc('update_view')
+    @api_endpoint_metrics('PUT', '/views/view')
     def put(self, project_name, view_name):
         '''Updates or creates a view'''
         if 'view' not in request.json:
@@ -127,6 +132,7 @@ class ViewResource(Resource):
         }
 
     @ns_conf.doc('delete_view')
+    @api_endpoint_metrics('DELETE', '/views/view')
     def delete(self, project_name, view_name):
         '''Deletes a view by name'''
         session = SessionController()

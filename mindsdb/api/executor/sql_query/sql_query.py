@@ -120,6 +120,26 @@ class SQLQuery:
 
             model_record = get_model_record(**args)
             if model_record is None:
+                # check if it is an agent
+                try:
+                    agent = self.session.agents_controller.get_agent(table_name, project_name)
+                except ValueError:
+                    continue
+                if agent is not None:
+                    model = self.session.model_controller.get_model(
+                        agent.model_name,
+                        project_name=project_name
+                    )
+
+                    predictor = {
+                        'name': table_name,
+                        'integration_name': project_name,  # integration_name,
+                        'timeseries': False,
+                        'id': model['id'],
+                        'to_predict': model['predict'],
+                    }
+                    predictor_metadata.append(predictor)
+
                 continue
 
             if model_record.status == 'error':

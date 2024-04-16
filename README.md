@@ -62,8 +62,8 @@ Automate tasks with JOBS by scheduling execution at a defined frequency, or with
 
 MindsDB covers a wide range of use cases, including the following:
 
-|          |         |
-| -------- | ------- |
+| Category                         | Examples        |
+| -------------------------------- | --------------- |
 | **Automated Fine-Tuning**        | Fine-tuning of Large Language models <br> Fine-tuning of AutoML models |
 | **AI Agents**                    | Knowledge bases <br> Skills <br> Agents <br> Chatbots |
 | **AI-Powered Data Retrieval**    | Semantic search <br> Embeddings models <br> Recommenders |
@@ -149,7 +149,7 @@ JOIN sentiment_classifier AS output;
 -- Step 4. Automate this workflow to accomodate real-time and dynamic data
 CREATE DATABASE data_destination
 WITH ENGINE = "engine-name",      -- choose the data source you want to connect to save AI output
-PARAMETERS = {					  -- list of available data sources: https://docs.mindsdb.com/integrations/data-overview
+PARAMETERS = {                    -- list of available data sources: https://docs.mindsdb.com/integrations/data-overview
     "key": "value",
 	...
 };
@@ -289,7 +289,7 @@ Here is how you can get community support:
 
 If you need commercial support, please [contact the MindsDB team](https://mindsdb.com/contact).
 
-### 💚 Current contributors
+## 💚 Current contributors
 
 <a href="https://github.com/mindsdb/mindsdb/graphs/contributors">
   <img src="https://contributors-img.web.app/image?repo=mindsdb/mindsdb" />
@@ -300,7 +300,6 @@ Made with [contributors-img](https://contributors-img.web.app).
 ## 🔔 Subscribe to updates
 
 Join our [Slack community](https://mindsdb.com/joincommunity) and subscribe to the monthly [Developer Newsletter](https://mindsdb.com/newsletter) to get product updates, information about MindsDB events and contests, and useful content, like tutorials.
-
 
 ## ⚖️ License 
 

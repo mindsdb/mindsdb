@@ -108,14 +108,18 @@ class SqlServerHandler(DatabaseHandler):
 
     def native_query(self, query: str) -> Response:
         """
-        Receive SQL query and runs it
-        :param query: The SQL query to run in SQL Server
-        :return: returns the records from the current recordset
+        Executes a SQL query on the Microsoft SQL Server database and returns the result.
+
+        Args:
+            query (str): The SQL query to be executed.
+
+        Returns:
+            Response: A response object containing the result of the query or an error message.
         """
+
         need_to_close = self.is_connected is False
 
         connection = self.connect()
-        # with closing(connection) as con:
         with connection.cursor(as_dict=True) as cur:
             try:
                 cur.execute(query)
@@ -132,9 +136,10 @@ class SqlServerHandler(DatabaseHandler):
                     response = Response(RESPONSE_TYPE.OK)
                 connection.commit()
             except Exception as e:
-                logger.error(f'Error running query: {query} on {self.database}!')
+                logger.error(f'Error running query: {query} on {self.database}, {e}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
+                    error_code=0,
                     error_message=str(e)
                 )
                 connection.rollback()

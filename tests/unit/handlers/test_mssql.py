@@ -28,9 +28,21 @@ class TestMSSQLHandler(unittest.TestCase):
         Test if `connect` method successfully establishes a connection and sets `is_connected` flag to True.
         Also, verifies that pymssql.connect is called exactly once.
         """
-        
+
         self.mock_connect.return_value = MagicMock()
         connection = self.handler.connect()
         self.assertIsNotNone(connection)
         self.assertTrue(self.handler.is_connected)
         self.mock_connect.assert_called_once()
+
+    def test_connect_failure(self):
+        """
+        Ensures that the connect method correctly handles a connection failure.
+        by raising a pymssql.OperationalError and sets is_connected to False.
+        """
+
+        self.mock_connect.side_effect = pymssql.OperationalError("Connection Failed")
+
+        with self.assertRaises(pymssql.OperationalError):
+            self.handler.connect()
+        self.assertFalse(self.handler.is_connected)

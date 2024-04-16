@@ -10,6 +10,14 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.integrations.handlers.mssql_handler.mssql_handler import SqlServerHandler
 
 
+class CursorContextManager(Mock):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        pass
+
+
 class TestMSSQLHandler(unittest.TestCase):
 
     dummy_connection_data = OrderedDict(
@@ -62,6 +70,26 @@ class TestMSSQLHandler(unittest.TestCase):
         self.assertTrue(connected)
         assert isinstance(connected, StatusResponse)
         self.assertFalse(connected.error_message)
+
+    def test_native_query(self):
+        """
+        Tests the `native_query` method to ensure it executes a SQL query using a mock cursor and returns a Response object.
+        """
+
+        mock_conn = MagicMock()
+        mock_cursor = CursorContextManager()
+
+        self.handler.connect = MagicMock(return_value=mock_conn)
+        mock_conn.cursor = MagicMock(return_value=mock_cursor)
+
+        mock_cursor.execute.return_value = None
+        mock_cursor.fetchall.return_value = None
+
+        query_str = "SELECT * FROM table"
+        data = self.handler.native_query(query_str)
+        mock_cursor.execute.assert_called_once_with(query_str)
+        assert isinstance(data, Response)
+        self.assertFalse(data.error_code)
 
     def test_get_columns(self):
         """

@@ -1,11 +1,14 @@
 <a name="readme-top"></a>
 
-[![Contributors][contributors-shield]][contributors-url]
-[![Forks][forks-shield]][forks-url]
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
-[![MIT License][license-shield]][license-url]
-[![LinkedIn][linkedin-shield]][linkedin-url]
+<p>
+	<a href="https://pypi.org/project/MindsDB/" target="_blank"><img src="https://badge.fury.io/py/MindsDB.svg" alt="MindsDB Release"></a>
+	<a href="https://www.python.org/downloads/" target="_blank"><img src="https://img.shields.io/badge/python-3.8.x%7C%203.9.x%7C%203.10.x%7C%203.11.x-brightgreen.svg" alt="Python supported"></a>
+	<a href="https://ossrank.com/p/630"><img src="https://shields.io/endpoint?url=https://ossrank.com/shield/630"></a>
+	<br />
+	<img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dm/Mindsdb">
+	<a href="https://hub.docker.com/u/mindsdb" target="_blank"><img src="https://img.shields.io/docker/pulls/mindsdb/mindsdb" alt="Docker pulls"></a>
+	<br />
+</p>
 
 <br />
 <div align="center">
@@ -18,9 +21,9 @@
     <br />
     <br />
     <a href="https://www.mindsdb.com">Website</a>
-    ·
+      ·  
     <a href="https://docs.mindsdb.com">Docs</a>
-    ·
+      ·  
     <a href="https://mindsdb.com/joincommunity">Community Slack</a>
   </p>
 </div>

@@ -88,7 +88,7 @@ To get started, install MindsDB locally via [Docker](https://docs.mindsdb.com/se
 | ⏲️ [Time Driven Automation](https://docs.mindsdb.com/sql/create/jobs)      |  <code> CREATE JOB twitter_bot ( <sql_query1>, <sql_query2> ) START '2023-04-01 00:00:00';   </code>           |
 | 🔔 [Event Driven Automation](https://docs.mindsdb.com/sql/create/trigger)      | <code> CREATE TRIGGER data_updated ON mysql.customers_data (sql_code)           |
 
-## ⚙️ Examples
+## Examples
 
 MindsDB enables you to deploy AI/ML models, send predictions to your application, and automate AI workflows.
 

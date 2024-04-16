@@ -46,21 +46,30 @@ MindsDB integrates with numerous [data sources](https://docs.mindsdb.com/integra
 
 Common concepts and features brought by MindsDB include the following:
 
-**Model Management**
+* **Model Management**
 Manage every aspect of AI models, including creation, deployment, training, fine-tuning, and version control.
 
-**AI Integrations**
+* **AI Integrations**
 MindsDB gives you access to a wide range of AI frameworks within your enterprise data environment. This includes models from OpenAI, Anthropic, HuggingFace, Anyscale, and more.
 
-**Data Integrations**
+* **Data Integrations**
 Connect any data source to MindsDB, including databases, vector stores, and applications.
 
-**Automation**
+* **Automation**
 Automate tasks with JOBS by scheduling execution at a defined frequency, or with TRIGGERS by defining a triggering event.
 
 ### Use Cases
 
 MindsDB covers a wide range of use cases, including the following:
+
+| Category    | Examples |
+| -------- | ------- |
+| **Automated Fine-Tuning**        | Fine-tuning of Large Language models <br> Fine-tuning of AutoML models |
+| **AI Agents**                    | Knowledge bases <br> Skills <br> Agents <br> Chatbots |
+| **AI-Powered Data Retrieval**    | Semantic search <br> Embeddings models <br> Recommenders |
+| **Data Enrichment**              | Natural Language Processing (NLP) <br> Content generation <br> QA-driven data enrichment <br> Sentiment analysis <br> Text summarization |
+| **Predictive Analytics**         | Time-series forecasting <br> Anomaly detection |
+| **In-Database Machine Learning** | Automated classification models <br> Automated regression models <br> Bring Your Own Model (BYOM) to MindsDB |
 
 **Automated Fine-Tuning**
 - Fine-tuning of Large Language models

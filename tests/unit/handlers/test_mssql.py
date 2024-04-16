@@ -23,7 +23,7 @@ class TestMSSQLHandler(unittest.TestCase):
     def setUp(self):
         self.patcher = patch('pymssql.connect')
         self.mock_connect = self.patcher.start()
-        self.handler = SqlServerHandler('mssql', connection_data={'connection_data': self.dummy_connection_data})
+        self.handler = SqlServerHandler('mssql', connection_data=self.dummy_connection_data)
 
     def tearDown(self):
         self.patcher.stop()
@@ -62,3 +62,44 @@ class TestMSSQLHandler(unittest.TestCase):
         self.assertTrue(connected)
         assert isinstance(connected, StatusResponse)
         self.assertFalse(connected.error_message)
+
+    def test_get_columns(self):
+        """
+        Checks if the `get_columns` method correctly constructs the SQL query and if it calls `native_query` with the correct query.
+        """
+
+        self.handler.native_query = MagicMock()
+
+        table_name = 'mock_table'
+        self.handler.get_columns(table_name)
+
+        expected_query = f"""
+            SELECT
+                column_name as "Field",
+                data_type as "Type"
+            FROM
+                information_schema.columns
+            WHERE
+                table_name = '{table_name}'
+        """
+
+        self.handler.native_query.assert_called_once_with(expected_query)
+
+    def test_get_tables(self):
+        """
+        Tests the `get_tables` method to confirm it correctly calls `native_query` with the appropriate SQL command.
+        """
+
+        self.handler.native_query = MagicMock()
+        self.handler.get_tables()
+        
+        expected_query = f"""
+            SELECT
+                table_schema,
+                table_name,
+                table_type
+            FROM {self.dummy_connection_data['database']}.INFORMATION_SCHEMA.TABLES
+            WHERE TABLE_TYPE in ('BASE TABLE', 'VIEW');
+        """
+
+        self.handler.native_query.assert_called_once_with(expected_query)

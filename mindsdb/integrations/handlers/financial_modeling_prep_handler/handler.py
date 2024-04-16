@@ -9,7 +9,6 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 
-
 _FINANCIAL_MODELING_URL = 'https://financialmodelingprep.com/api/v3/search?query=AA'
 
 logger = log.getLogger(__name__)
@@ -30,3 +29,7 @@ class FinancialModelingHandler(APIHandler):
 
             def connect(self): 
                 self.is_connected = True
+
+            def native_query(self, query: str = None) -> Response:
+                ast = parse_sql(query, dialect='mindsdb')
+                return self.query(ast)

@@ -62,7 +62,7 @@ Automate tasks with JOBS by scheduling execution at a defined frequency, or with
 
 MindsDB covers a wide range of use cases, including the following:
 
-| Category    | Examples |
+|          |         |
 | -------- | ------- |
 | **Automated Fine-Tuning**        | Fine-tuning of Large Language models <br> Fine-tuning of AutoML models |
 | **AI Agents**                    | Knowledge bases <br> Skills <br> Agents <br> Chatbots |
@@ -70,37 +70,6 @@ MindsDB covers a wide range of use cases, including the following:
 | **Data Enrichment**              | Natural Language Processing (NLP) <br> Content generation <br> QA-driven data enrichment <br> Sentiment analysis <br> Text summarization |
 | **Predictive Analytics**         | Time-series forecasting <br> Anomaly detection |
 | **In-Database Machine Learning** | Automated classification models <br> Automated regression models <br> Bring Your Own Model (BYOM) to MindsDB |
-
-**Automated Fine-Tuning**
-- Fine-tuning of Large Language models
-- Fine-tuning of AutoML models
-
-**AI Agents**
-- Knowledge bases
-- Skills
-- Agents
-- Chatbots
-
-**AI-Powered Data Retrieval**
-- Semantic search
-- Embeddings models
-- Recommenders
-
-**Data Enrichment**
-- Natural Language Processing (NLP)
-- Content generation
-- QA-driven data enrichment
-- Sentiment analysis
-- Text summarization
-
-**Predictive Analytics**
-- Time-series forecasting
-- Anomaly detection
-
-**In-Database Machine Learning**
-- Automated classification models
-- Automated regression models
-- Bring Your Own Model (BYOM) to MindsDB
 
 [Discover tutorials and use cases here](https://docs.mindsdb.com/use-cases/overview).
 

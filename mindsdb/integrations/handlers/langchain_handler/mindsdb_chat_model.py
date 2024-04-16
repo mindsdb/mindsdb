@@ -70,7 +70,7 @@ class ChatMindsdb(BaseChatModel):
         return {}
 
     def completion(
-        self, messages
+        self, messages: List[dict]
     ) -> Any:
 
         model_info = self.model_info

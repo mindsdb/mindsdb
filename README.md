@@ -16,7 +16,6 @@
 
   <p align="center">
     <br />
-    <br />
     <a href="https://www.mindsdb.com">Website</a>
       ·  
     <a href="https://docs.mindsdb.com">Docs</a>

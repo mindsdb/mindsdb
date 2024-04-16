@@ -2,6 +2,11 @@ import unittest
 import pymssql
 from unittest.mock import patch, MagicMock, Mock
 from collections import OrderedDict
+
+from mindsdb.integrations.libs.response import (
+    HandlerResponse as Response,
+    HandlerStatusResponse as StatusResponse,
+)
 from mindsdb.integrations.handlers.mssql_handler.mssql_handler import SqlServerHandler
 
 
@@ -46,3 +51,14 @@ class TestMSSQLHandler(unittest.TestCase):
         with self.assertRaises(pymssql.OperationalError):
             self.handler.connect()
         self.assertFalse(self.handler.is_connected)
+
+    def test_check_connection(self):
+        """
+        Verifies that the `check_connection` method returns a StatusResponse object and accurately reflects the connection status.
+        """
+
+        self.mock_connect.return_value = MagicMock()
+        connected = self.handler.check_connection()
+        self.assertTrue(connected)
+        assert isinstance(connected, StatusResponse)
+        self.assertFalse(connected.error_message)

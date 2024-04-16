@@ -120,7 +120,7 @@ class TestMSSQLHandler(unittest.TestCase):
 
         self.handler.native_query = MagicMock()
         self.handler.get_tables()
-        
+
         expected_query = f"""
             SELECT
                 table_schema,

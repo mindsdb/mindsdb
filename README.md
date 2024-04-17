@@ -11,7 +11,7 @@
   <br />
 
   <a href="https://github.com/othneildrew/Best-README-Template">
-    <img src="https://github.com/mindsdb/mindsdb_native/blob/stable/assets/MindsDBColorPurp@3x.png?raw=true" alt="MindsDB" width="300">
+    <img src="/docs/assets/mindsdb_logo.jpg" alt="MindsDB">
   </a>
 
   <p align="center">
@@ -69,28 +69,6 @@ MindsDB covers a wide range of use cases, including the following:
 
 [Discover more tutorials and use cases here](https://docs.mindsdb.com/use-cases/overview).
 
-These use cases fall into two patterns:
-
-1. AI Workflow Automation
-
-    This category of use cases involves tasks that get data from a data source, pass it through an AI/ML model, and write the output to a data destination.
-
-    <p align="center">
-      <img src="/docs/assets/ai_workflow_automation.png"/>
-    </p>
-
-    Common use cases are anomaly detection, data indexing/labeling/cleaning, and data transformation.
-
-2. AI System Deployment
-
-    This category of use cases involves creating AI systems composed of multiple connected parts, including various AI/ML models and data sources, and exposing such AI systems via APIs.
-
-    <p align="center">
-      <img src="/docs/assets/ai_system_deployment.png"/>
-    </p>
-
-    Common use cases are agents and assistants, recommender systems, forecasting systems, and semantic search.
-
 ## 🚀 Get Started
 
 To get started, install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop), following the instructions in linked doc pages.
@@ -110,11 +88,17 @@ To get started, install MindsDB locally via [Docker](https://docs.mindsdb.com/se
 
 MindsDB enables you to deploy AI/ML models, send predictions to your application, and automate AI workflows.
 
-This example showcases the data enrichment flow, where input data comes from a PostgreSQL database and is passed through an OpenAI model to generate new content which is saved into a data destination.
+### AI Workflow Automation
+
+This category of use cases involves tasks that get data from a data source, pass it through an AI/ML model, and write the output to a data destination.
 
 <p align="center">
-  <img src="/docs/assets/sentiment_analysis_diagram.png"/>
+  <img src="/docs/assets/ai_workflow_automation.png"/>
 </p>
+
+Common use cases are anomaly detection, data indexing/labeling/cleaning, and data transformation.
+
+This example showcases the data enrichment flow, where input data comes from a PostgreSQL database and is passed through an OpenAI model to generate new content which is saved into a data destination.
 
 We take customer reviews from a PostgreSQL database. Then, we deploy an OpenAI model that analyzes all customer reviews and assigns sentiment values. Finally, to automate the workflow for incoming customer reviews, we create a job that generates and saves AI output into a data destination.
 
@@ -167,7 +151,6 @@ PARAMETERS = {                    -- list of available data sources: https://doc
 };
 
 CREATE JOB ai_automation_flow (
-
 	INSERT INTO data_destination.ai_output (
 		SELECT input.created_at,
 			   input.product_name,
@@ -179,6 +162,101 @@ CREATE JOB ai_automation_flow (
 	);
 );
 ```
+
+[Discover more tutorials and use cases here](https://docs.mindsdb.com/use-cases/overview).
+
+### AI System Deployment
+
+This category of use cases involves creating AI systems composed of multiple connected parts, including various AI/ML models and data sources, and exposing such AI systems via APIs.
+
+<p align="center">
+  <img src="/docs/assets/ai_system_deployment.png"/>
+</p>
+
+Common use cases are agents and assistants, recommender systems, forecasting systems, and semantic search.
+
+This example showcases AI agents, a feature developed by MindsDB. AI agents can be assigned certain skills, including text-to-SQL skills and knowledge bases. Skills provide an AI agent with input data that can be in the form of a database, a file, or a website.
+
+We create a text-to-SQL skill based on the car sales dataset and deploy a conversational model, which are both components of an agent. Then, we create an agent and assign this skill and this model to it. This agent can be queried to ask questions about data stored in assigned skills.
+
+```sql
+-- Step 1. Connect a data source to MindsDB
+CREATE DATABASE data_source
+WITH ENGINE = "postgres",
+PARAMETERS = {
+    "user": "demo_user",
+    "password": "demo_password",
+    "host": "samples.mindsdb.com",
+    "port": "5432",
+    "database": "demo",
+    "schema": "demo_data"
+};
+
+SELECT *
+FROM data_source.car_sales;
+
+-- Step 2. Create a skill
+CREATE SKILL my_skill
+USING
+    type = 'text2sql',
+    database = 'data_source',
+    tables = ['car_sales'],
+    description = 'car sales data of different car types';
+
+SHOW SKILLS;
+
+-- Step 3. Deploy a conversational model
+CREATE ML_ENGINE langchain_engine
+FROM langchain
+USING
+      openai_api_key = 'your openai-api-key';
+      
+CREATE MODEL my_conv_model
+PREDICT answer
+USING
+    engine = 'langchain_engine',
+    model_name = 'gpt-4',
+    mode = 'conversational',
+    user_column = 'question' ,
+    assistant_column = 'answer',
+    max_tokens = 100,
+    temperature = 0,
+    verbose = True,
+    prompt_template = 'Answer the user input in a helpful way';
+
+DESCRIBE my_conv_model;
+
+-- Step 4. Create an agent
+CREATE AGENT my_agent
+USING
+    model = 'my_conv_model',
+    skills = ['my_skill'];
+
+SHOW AGENTS;
+
+-- Step 5. Query an agent
+SELECT *
+FROM my_agent
+WHERE question = 'what is the average price of cars from 2018?';
+
+SELECT *
+FROM my_agent
+WHERE question = 'what is the max mileage of cars from 2017?';
+
+SELECT *
+FROM my_agent
+WHERE question = 'what percentage of sold cars (from 2016) are automatic/semi-automatic/manual cars?';
+
+SELECT *
+FROM my_agent
+WHERE question = 'is petrol or diesel more common for cars from 2019?';
+
+SELECT *
+FROM my_agent
+WHERE question = 'what is the most commonly sold model?';
+```
+
+[Agents are accessible via API endpoints](https://docs.mindsdb.com/rest/agents/agent).
 
 [Discover more tutorials and use cases here](https://docs.mindsdb.com/use-cases/overview).
 

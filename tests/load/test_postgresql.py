@@ -1,4 +1,4 @@
-from load.tasks import BaseDBConnectionBehavior
+from tests.load.tasks import BaseDBConnectionBehavior
 
 
 class PostgreSQLConnectionBehavior(BaseDBConnectionBehavior):

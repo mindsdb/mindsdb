@@ -131,3 +131,7 @@ class TestMSSQLHandler(unittest.TestCase):
         """
 
         self.handler.native_query.assert_called_once_with(expected_query)
+
+
+if __name__ == '__main__':
+    unittest.main()

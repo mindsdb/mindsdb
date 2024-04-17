@@ -1,7 +1,10 @@
-import logging
 from locust import SequentialTaskSet, task, events
 from tests.utils.query_generator import QueryGenerator as query
 from tests.utils.config import get_value_from_json_env_var, generate_random_db_name
+
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 class BaseDBConnectionBehavior(SequentialTaskSet):
@@ -19,7 +22,7 @@ class BaseDBConnectionBehavior(SequentialTaskSet):
             assert 'error' not in response.json()
             return response
         except Exception as e:
-            logging.error(f'Error running {query}', e)
+            logger.error(f'Error running {query}: {e}')
             events.request.fire(request_type="POST", name="/api/sql/query", response_time=0, response_length=0, exception=e)
             self.interrupt(reschedule=True)
 

@@ -1,7 +1,10 @@
-import logging
 from locust import between, HttpUser
 from tests.load.test_postgresql import PostgreSQLConnectionBehavior
 from tests.utils.config import get_value_from_json_env_var
+
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 class DBConnectionUser(HttpUser):
@@ -13,10 +16,11 @@ class DBConnectionUser(HttpUser):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         try:
-            response = self.client.post('/cloud/login', json={
+            response = self.client.post('/api/login', json={
                 'email': self.config['user'],
                 'password': self.config['password']
             })
             response.raise_for_status()
         except Exception as e:
-            logging.error('Logging to MindsDB failed: ', e)
+            logger.error(f'Logging to MindsDB failed: {e}')
+

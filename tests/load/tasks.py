@@ -18,8 +18,7 @@ class BaseDBConnectionBehavior(SequentialTaskSet):
         try:
             response = self.client.post('/api/sql/query', json={'query': query})
             response.raise_for_status()
-            # assert response.json()['type'] == 'table', f'Failed to SELECT from the integration {self.random_db_name}'
-            assert 'error' not in response.json()
+            assert response.json()['type'] != 'error'
             return response
         except Exception as e:
             logger.error(f'Error running {query}: {e}')

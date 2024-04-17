@@ -1,8 +1,9 @@
 from pydantic import BaseModel, AnyUrl, root_validator
 from urllib.parse import urlparse
 
+
 class ConnectionConfig(BaseModel):
-    #TODO: For now validate AnyURL since MySQLDsn wasn't working
+    # TODO: For now validate AnyURL since MySQLDsn wasn't working
     url: AnyUrl = None
     host: str = None
     port: int = 3306

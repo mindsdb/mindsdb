@@ -7,12 +7,14 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response
 )
 
+
 class CursorContextManager(Mock):
     def __enter__(self):
         return self
 
     def __exit__(self, *args):
         pass
+
 
 class TestMySQLHandler(unittest.TestCase):
 
@@ -62,8 +64,7 @@ class TestMySQLHandler(unittest.TestCase):
         query_str = "SELECT * FROM table"
         data = self.handler.native_query(query_str)
 
-
-        assert isinstance(data, Response) 
+        assert isinstance(data, Response)
         self.assertFalse(data.error_code)
 
     def test_get_columns(self):

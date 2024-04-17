@@ -1,7 +1,7 @@
 import logging
 from locust import between, HttpUser
-from load.test_postgresql import PostgreSQLConnectionBehavior
-from utils.config import get_value_from_json_env_var
+from tests.load.test_postgresql import PostgreSQLConnectionBehavior
+from tests.utils.config import get_value_from_json_env_var
 
 
 class DBConnectionUser(HttpUser):

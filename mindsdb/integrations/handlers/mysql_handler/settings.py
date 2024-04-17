@@ -2,13 +2,13 @@ from pydantic import BaseModel, AnyUrl, root_validator
 from urllib.parse import urlparse
 
 class ConnectionConfig(BaseModel):
+    #TODO: For now validate AnyURL since MySQLDsn wasn't working
     url: AnyUrl = None
     host: str = None
     port: int = 3306
     user: str = None
     password: str = None
     database: str = None
-
 
     @root_validator(pre=True)
     def check_db_params(cls, values):
@@ -18,7 +18,6 @@ class ConnectionConfig(BaseModel):
         user = values.get('user')
         password = values.get('password')
         database = values.get('database')
-
         if not url and not (host and user and password and database):
             raise ValueError("Either a valid URL or required parameters (host, user, password, database) must be provided.")
 

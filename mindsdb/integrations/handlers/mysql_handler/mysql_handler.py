@@ -62,7 +62,7 @@ class MySQLHandler(DatabaseHandler):
         Returns:
             MySQLConnection: An active connection to the database.
         """
-        if self.is_connected is True:
+        if self.is_connected:
             return self.connection
         config = self._unpack_config()
         if 'conn_attrs' in self.connection_data:
@@ -82,14 +82,14 @@ class MySQLHandler(DatabaseHandler):
                 config["ssl_key"] = ssl_key
         try:
             connection = mysql.connector.connect(**config)
+            connection.autocommit = True
+            self.connection = connection
+            self.is_connected = True
+            return self.connection
         except mysql.connector.Error as e:
             logger.error(f"Error connecting to MySQL {self.database}, {e}!")
             self.is_connected = False
-
-        connection.autocommit = True
-        self.is_connected = True
-        self.connection = connection
-        return self.connection
+            raise
 
     def disconnect(self):
         """

@@ -16,7 +16,7 @@ class DBConnectionUser(HttpUser):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         try:
-            response = self.client.post('/api/login', json={
+            response = self.client.post('/cloud/login', json={
                 'email': self.config['user'],
                 'password': self.config['password']
             })

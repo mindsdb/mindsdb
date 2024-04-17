@@ -24,12 +24,12 @@ A chatbot can be created, deleted, queried, and updated. Here is how you can do 
     ```sql
     CREATE CHATBOT my_chatbot
     USING
-        database = 'my_slack', -- this must be created with CREATE DATABASE
-        agent = 'customer_support_agent', -- this must be created with CREATE AGENT
-        included_channels = ['support', 'help'], -- Default is all
-        excluded_channels = [], -- Default is none
-        enable_dms = true,
-        is_running = true; -- Default is true
+        database = 'my_slack',                    -- this must be created with CREATE DATABASE
+        agent = 'customer_support_agent',         -- this must be created with CREATE AGENT
+        included_channels = ['support', 'help'],  -- default is all
+        excluded_channels = [],                   -- default is none
+        enable_dms = true,                        -- default is true
+        is_running = true;                        -- default is true
     ```
 
     The parameters include the following:
@@ -72,8 +72,8 @@ Next, create a chatbot.
 ```sql
 CREATE CHATBOT text_to_sql_chatbot
 USING
-    database = 'my_slack', -- this must be created with CREATE DATABASE
-    agent = 'text_to_sql_agent', -- this must be created with CREATE AGENT
+    database = 'my_slack',        -- this must be created with CREATE DATABASE
+    agent = 'text_to_sql_agent',  -- this must be created with CREATE AGENT
     enable_dms = true,
     is_running = true;
 ```

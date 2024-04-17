@@ -17,6 +17,7 @@ from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.handlers import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.api.executor.command_executor import ExecuteCommands
+from mindsdb.utilities.config import Config
 
 
 @ns_conf.route('/')
@@ -99,7 +100,10 @@ def prepare_formdata():
         params[file.field_name.decode()] = file.file_object
         file_names.append(file.field_name.decode())
 
-    temp_dir_path = tempfile.mkdtemp(prefix='mindsdb_file_')
+    temp_dir_path = temp_dir_path = tempfile.mkdtemp(
+        prefix='mindsdb_byom_file_',
+        dir=Config().paths['tmp']
+    )
 
     parser = multipart.create_form_parser(
         headers=request.headers,

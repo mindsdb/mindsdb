@@ -14,9 +14,9 @@ jobs:
     name: Run static code checks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3.5.3
+      - uses: actions/checkout@v4
       - name: Set up Python
-        uses: actions/setup-python@v4.7.0
+        uses: actions/setup-python@v5.1.0
         with:
           python-version: ${{ vars.CI_PYTHON_VERSION }}
           cache: pip
@@ -57,9 +57,9 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v3.5.3
+      - uses: actions/checkout@v4
       - id: set-matrix
-        uses: JoshuaTheMiller/conditional-build-matrix@v1.0.1
+        uses: JoshuaTheMiller/conditional-build-matrix@v2.0.1
         with:
           filter: '[?runOnBranch==`${{ github.ref }}` || runOnBranch==`always`]'
     
@@ -71,9 +71,9 @@ jobs:
       matrix: ${{fromJson(needs.matrix_prep.outputs.matrix)}}
     runs-on: ${{ matrix.runs_on }}
     steps:
-    - uses: actions/checkout@v3.5.3
+    - uses: actions/checkout@v4
     - name: Set up Python
-      uses: actions/setup-python@v4.7.0
+      uses: actions/setup-python@v5.1.0
       with:
         python-version: ${{ matrix.python-version }}
         cache: pip
@@ -97,9 +97,9 @@ jobs:
     runs-on: ${{ matrix.runs_on }}
     if: github.ref_type == 'branch'
     steps:
-    - uses: actions/checkout@v3.5.3
+    - uses: actions/checkout@v4
     - name: Set up Python
-      uses: actions/setup-python@v4.7.0
+      uses: actions/setup-python@v5.1.0
       with:
         python-version: ${{ matrix.python-version }}
         cache: pip

@@ -38,40 +38,13 @@ With MindsDB, you can deploy, serve, and fine-tune models in real-time, utilizin
 
 MindsDB integrates with numerous [data sources](https://docs.mindsdb.com/integrations/data-overview?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo), including databases, vector stores, and applications, and popular [AI/ML frameworks](https://docs.mindsdb.com/integrations/ai-overview?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo), including AutoML and LLMs. MindsDB connects data sources with AI/ML frameworks and automates routine workflows between them. By doing so, we bring data and AI together, enabling the intuitive implementation of customized AI systems.
 
-## ⚙️ Features
-
-Common concepts and features brought by MindsDB include the following:
-
-* **Model Management**
-Manage every aspect of AI models, including creation, deployment, training, fine-tuning, and version control.
-
-* **AI Integrations**
-MindsDB gives you access to a wide range of AI frameworks within your enterprise data environment. This includes models from OpenAI, Anthropic, HuggingFace, Anyscale, and more.
-
-* **Data Integrations**
-Connect any data source to MindsDB, including databases, vector stores, and applications.
-
-* **Automation**
-Automate tasks with JOBS by scheduling execution at a defined frequency, or with TRIGGERS by defining a triggering event.
-
-## 🧩 Use Cases
-
-MindsDB covers a wide range of use cases, including the following:
-
-| Solutions  | Examples  |
-|---|---|
-| **Automated Fine-Tuning**        | Fine-tuning of Large Language models <br> Fine-tuning of AutoML models |
-| **AI Agents**                    | Knowledge bases <br> Skills <br> Agents <br> Chatbots |
-| **AI-Powered Data Retrieval**    | Semantic search <br> Embeddings models <br> Recommenders |
-| **Data Enrichment**              | Natural Language Processing (NLP) <br> Content generation <br> QA-driven data enrichment <br> Sentiment analysis <br> Text summarization |
-| **Predictive Analytics**         | Time-series forecasting <br> Anomaly detection |
-| **In-Database Machine Learning** | Automated classification models <br> Automated regression models <br> Bring Your Own Model (BYOM) to MindsDB |
-
-[Discover more tutorials and use cases here](https://docs.mindsdb.com/use-cases/overview?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
+Learn more about [features and use cases of MindsDB here](https://docs.mindsdb.com/what-is-mindsdb?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
 
 ## 🚀 Get Started
 
 To get started, install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo), following the instructions in linked doc pages.
+
+MindsDB enhances SQL syntax to enable seamless development and deployment of AI-powered applications. Furthermore, users can interact with MindsDB not only via [SQL API](https://docs.mindsdb.com/mindsdb_sql/overview?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) but also via [REST APIs](https://docs.mindsdb.com/rest/overview?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo), [Python SDK](https://docs.mindsdb.com/sdks/python/overview?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo), [JavaScript SDK](https://docs.mindsdb.com/sdks/javascript/overview?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo), and [MongoDB-QL](https://docs.mindsdb.com/sdks/mongo/mindsdb-mongo-ql-overview?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
 
 | 🎯  Solutions                 | ⚙️ SQL Query Examples |
 |---------------------------|-----------|
@@ -87,6 +60,8 @@ To get started, install MindsDB locally via [Docker](https://docs.mindsdb.com/se
 ## 💡 Examples
 
 MindsDB enables you to deploy AI/ML models, send predictions to your application, and automate AI workflows.
+
+[Discover more tutorials and use cases here](https://docs.mindsdb.com/use-cases/overview?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
 
 ### AI Workflow Automation
 
@@ -162,8 +137,6 @@ CREATE JOB ai_automation_flow (
 	);
 );
 ```
-
-[Discover more tutorials and use cases here](https://docs.mindsdb.com/use-cases/overview?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
 
 ### AI System Deployment
 
@@ -257,8 +230,6 @@ WHERE question = 'what is the most commonly sold model?';
 ```
 
 [Agents are accessible via API endpoints](https://docs.mindsdb.com/rest/agents/agent?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
-
-[Discover more tutorials and use cases here](https://docs.mindsdb.com/use-cases/overview?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
 
 ## 🤝 Contribute
 

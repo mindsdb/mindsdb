@@ -16,6 +16,7 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+from mindsdb.integrations.handlers.mysql_handler.settings import ConnectionConfig
 
 logger = log.getLogger(__name__)
 
@@ -29,7 +30,6 @@ class MySQLHandler(DatabaseHandler):
 
     def __init__(self, name, **kwargs):
         super().__init__(name)
-        self.mysql_url = None
         self.parser = parse_sql
         self.dialect = 'mysql'
         self.connection_data = kwargs.get('connection_data', {})
@@ -44,78 +44,16 @@ class MySQLHandler(DatabaseHandler):
 
     def _unpack_config(self):
         """
-        Unpacks the config from the connection_data.
+        Unpacks the config from the connection_data by validation all parameters.
 
-        The connection_data must include either the old style of dictionary
-        attriutes (host, optional port, user, password, database) OR have
-        a url connection string with username and password optionally supplied
-        in the dictionary itself.
-
-        Arguments:
-        - conection_data is the dictionary parsed from the JSON payload
-
-        Exceptions thrown:
-        - ValueError if data validation rules fail with a description as the sole
-        argument
-
-        Returns a dictionary with the relevant config info:
-        - host
-        - port
-        - user
-        - password
-        - database
+        Returns:
+            dict: A dictionary containing the validated connection parameters.
         """
-        url = self.connection_data.get('url')
-        if url:
-            urlfields = urlparse(url)
-            if urlfields.scheme != 'mysql':
-                raise ValueError(
-                      "If using a URL to connect to MySQL, the URL needs to start with 'mysql://'"
-                      )
-            if urlfields.username and self.connection_data.get('user'):
-                raise ValueError(
-                      "Cannot specify a user in both the URL and elsewhere"
-                      )
-            if urlfields.username and self.connection_data.get('password'):
-                raise ValueError(
-                      "Cannot specify a password in both the URL and elsewhere"
-                      )
-            if not urlfields.host:
-                raise ValueError(
-                      "Connection URL does not include hostname"
-                      )
-            if not urlfields.path:
-                raise ValueError(
-                      "Connection URL does not include database"
-                      )
-            database = urlfields.path[1:] if urlfields.path.startswith('/') else urlfields.path
-            config = {
-                'host': urlfields.host,
-                'port': urlfields.port or 3306,
-                'user': urlfields.username or self.connection_data.get('user'),
-                'password': urlfields.password or self.connection_data.get('password'),
-                'database': database,
-            }
-
-        else:
-            config = {
-                'host': self.connection_data.get('host'),
-                'port': self.connection_data.get('port') or 3306,
-                'user': self.connection_data.get('user'),
-                'password': self.connection_data.get('password'),
-                'database': self.connection_data.get('database')
-            }
-
-            if not config.get('host'):
-                raise ValueError("Missing required host")
-            if not config.get('database'):
-                raise ValueError("Missing required database name")
-
-        if not config.get('user'):
-            raise ValueError('Missing required user')
-        if not config.get('password'):
-            raise ValueError('Missing required password')
-        return config
+        try:
+            config = ConnectionConfig(**self.connection_data)
+            return config.dict(exclude_unset=True)
+        except ValueError as e:
+            raise ValueError(str(e))
 
     def connect(self):
         """
@@ -126,9 +64,7 @@ class MySQLHandler(DatabaseHandler):
         """
         if self.is_connected is True:
             return self.connection
-
         config = self._unpack_config()
-
         if 'conn_attrs' in self.connection_data:
             config['conn_attrs'] = self.connection_data['conn_attrs']
 
@@ -269,6 +205,12 @@ class MySQLHandler(DatabaseHandler):
 
 
 connection_args = OrderedDict(
+    url={
+        'type': ARG_TYPE.STR,
+        'description': 'The URI-Like connection string to the MySQL server. If provided, it will override the other connection arguments.',
+        'required': False,
+        'label': 'URL'
+    },
     user={
         'type': ARG_TYPE.STR,
         'description': 'The user name used to authenticate with the MySQL server.',

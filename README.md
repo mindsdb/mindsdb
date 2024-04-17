@@ -11,7 +11,7 @@
   <br />
 
   <a href="https://github.com/othneildrew/Best-README-Template">
-    <img src="/docs/assets/mindsdb_logo.jpg" alt="MindsDB">
+    <img src="/docs/assets/mindsdb_logo.jpg" alt="MindsDB" width="300">
   </a>
 
   <p align="center">

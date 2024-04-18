@@ -52,12 +52,20 @@ class SqlServerHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
+        # Mandatory connection parameters
         config = {
-            'server': self.connection_args.get('host'),
+            'host': self.connection_args.get('host'),
             'user': self.connection_args.get('user'),
             'password': self.connection_args.get('password'),
             'database': self.connection_args.get('database')
         }
+
+        # Optional connection parameters
+        if 'port' in self.connection_args:
+            config['port'] = self.connection_args.get('port')
+
+        if 'server' in self.connection_args:
+            config['server'] = self.connection_args.get('server')
 
         try:
             self.connection = pymssql.connect(**config)

@@ -422,18 +422,25 @@ class OrdersTable(APITable):
             supported_columns=['address1_b', 'address2_b', 'city_b', 'company_b', 'country_b',
                                'country_code_b', 'first_name_b', 'last_name_b', 'latitude_b', 
                                'longitude_b', 'name_b', 'phone_b', 'province_b', 'province_code_b', 
-                               'zip_b', 'address1_s', 'address2_s', 'city_s', 'company_s',
+                               'zip_b', 
+                               'address1_s', 'address2_s', 'city_s', 'company_s',
                                'country_s', 'country_code_s', 'first_name_s', 'last_name_s', 
                                'latitude_s', 'longitude_s', 'name_s', 'phone_s', 'province_s', 
-                               'province_code_s', 'zip_s', 'amount_dc', 'code_dc', 'type_dc',
+                               'province_code_s', 'zip_s', 
+                               'amount_dc', 'code_dc', 'type_dc',
                                'price_tl', 'rate_tl', 'title_tl', 'channel_liable_tl',
-                               'buyer_accepts_marketing', 'cancel_reason', 'currency', 
-                               'email', 'fulfillment_status', 'gift_card', 'grams', 
-                               'merchant_of_record_app_id', 'note', 'phone', 'po_number', 
-                               'price', 'processed_at', 'quantity', 'referring_site', 
-                               'source_name', 'source_identifier', 'source_url', 'tags', 
-                               'taxes_included', 'test', 'title', 'total_tax', 'total_weight', 
-                               'user_id', 'vendor'],
+                               'name_na', 'value_na',
+                               'code_sl', 'price_sl', 'discounted_price_sl', 'source_sl', 
+                               'title_sl', 
+                               'carrier_identifier_sl', 'requested_fulfillment_service_id_sl', 
+                               'is_removed_sl',
+                               'browser_ip', 'buyer_accepts_marketing', 'cancel_reason', 
+                               'customer_locale', 'currency', 'email', 'fulfillment_status', 
+                               'gift_card', 'grams', 'merchant_of_record_app_id', 'note', 
+                               'phone', 'po_number', 'price', 'processed_at', 'quantity', 
+                               'referring_site', 'source_name', 'source_identifier', 
+                               'source_url', 'tags', 'taxes_included', 'test', 'title', 
+                               'total_tax', 'total_weight', 'user_id', 'vendor'],
             mandatory_columns=['price', 'title'],
             all_mandatory=False
         )
@@ -516,7 +523,7 @@ class OrdersTable(APITable):
     def create_orders(self, order_data: List[Dict[Text, Any]]) -> None:
         api_session = self.handler.connect()
         shopify.ShopifyResource.activate_session(api_session)
-        # build line_items object
+        # build API objects
         line_item_columns = {'gift_card', 'grams', 'price', 'quantity', 'title', 'vendor'}
         billing_address_columns = {'address1_b', 'address2_b', 'city_b', 'company_b',
                                    'country_b', 'country_code_b', 'first_name_b', 'last_name_b', 
@@ -528,16 +535,22 @@ class OrdersTable(APITable):
                                    'province_code_s', 'zip_s'}
         discount_codes_columns = {'amount_dc', 'code_dc', 'type_dc'}
         tax_lines_columns = {'price_tl', 'rate_tl', 'title_tl', 'channel_liable_tl'}
+        note_attributes_columns = {'name_na', 'value_na'}
+        shipping_lines_columns = {'code_sl', 'price_sl', 'discounted_price_sl',
+                                  'source_sl', 'title_sl', 'carrier_identifier_sl', 
+                                  'requested_fulfillment_service_id_sl', 'is_removed_sl'}
         modified_order_data = []
 
         for order in order_data:
-            # separate values related to 'line_items'
+            # separate values by object
             order_data_trimmed = {key: val for key, val in order.items()
                                 if key not in line_item_columns
                                 and key not in billing_address_columns
                                 and key not in shipping_address_columns
                                 and key not in discount_codes_columns
-                                and key not in tax_lines_columns}
+                                and key not in tax_lines_columns
+                                and key not in note_attributes_columns
+                                and key not in shipping_lines_columns}
             line_items_data = {key: val for key, val in order.items()
                             if key in line_item_columns}
             billing_address_data = {key[:-2]: val for key, val in order.items()
@@ -548,30 +561,42 @@ class OrdersTable(APITable):
                                     if key in discount_codes_columns}
             tax_lines_data = {key[:-3]: val for key, val in order.items()
                                     if key in tax_lines_columns}
+            note_attributes_data = {key[:-3]: val for key, val in order.items()
+                                    if key in note_attributes_columns}
+            shipping_lines_data = {key[:-3]: val for key, val in order.items()
+                                    if key in shipping_lines_columns}
 
-            # add JSON string to dictionary as 'line_items'
-            order_data_trimmed['line_items'] = json.dumps([line_items_data])
-            order_data_trimmed['billing_address'] = json.dumps(billing_address_data)
-            order_data_trimmed['shipping_address'] = json.dumps(shipping_address_data)
-            order_data_trimmed['discount_codes'] = json.dumps([discount_codes_data])
-            order_data_trimmed['tax_lines'] = json.dumps([tax_lines_data])
+            # add JSON string to dictionary
+            order_data_trimmed['line_items'] = json.loads(json.dumps([line_items_data]))
+            order_data_trimmed['billing_address'] = json.loads(json.dumps(billing_address_data))
+            order_data_trimmed['shipping_address'] = json.loads(json.dumps(shipping_address_data))
+            order_data_trimmed['discount_codes'] = json.loads(json.dumps([discount_codes_data]))
+            order_data_trimmed['tax_lines'] = json.loads(json.dumps([tax_lines_data]))
+            order_data_trimmed['note_attributes'] = json.loads(json.dumps([note_attributes_data]))
+            order_data_trimmed['shipping_lines'] = json.loads(json.dumps([shipping_lines_data]))
             modified_order_data.append(order_data_trimmed)
 
         for order in modified_order_data:
-            if 'line_items' in order and isinstance(order['line_items'], str):
-                order['line_items'] = json.loads(order['line_items'])
+            # if 'line_items' in order and isinstance(order['line_items'], str):
+            #     order['line_items'] = json.loads(order['line_items'])
 
-            if 'billing_address' in order and isinstance(order['billing_address'], str):
-                order['billing_address'] = json.loads(order['billing_address'])
+            # if 'billing_address' in order and isinstance(order['billing_address'], str):
+            #     order['billing_address'] = json.loads(order['billing_address'])
 
-            if 'shipping_address' in order and isinstance(order['shipping_address'], str):
-                order['shipping_address'] = json.loads(order['shipping_address'])
+            # if 'shipping_address' in order and isinstance(order['shipping_address'], str):
+            #     order['shipping_address'] = json.loads(order['shipping_address'])
 
-            if 'discount_codes' in order and isinstance(order['discount_codes'], str):
-                order['discount_codes'] = json.loads(order['discount_codes'])
+            # if 'discount_codes' in order and isinstance(order['discount_codes'], str):
+            #     order['discount_codes'] = json.loads(order['discount_codes'])
 
-            if 'tax_lines' in order and isinstance(order['tax_lines'], str):
-                order['tax_lines'] = json.loads(order['tax_lines'])
+            # if 'tax_lines' in order and isinstance(order['tax_lines'], str):
+            #     order['tax_lines'] = json.loads(order['tax_lines'])
+
+            # if 'note_attributes' in order and isinstance(order['note_attributes'], str):
+            #     order['note_attributes'] = json.loads(order['note_attributes'])
+
+            # if 'shipping_lines' in order and isinstance(order['shipping_lines'], str):
+            #     order['shipping_lines'] = json.loads(order['shipping_lines'])
 
             created_order = shopify.Order.create(order)
             if 'id' not in created_order.to_dict():

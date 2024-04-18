@@ -136,8 +136,8 @@ class SqlServerHandler(DatabaseHandler):
         with connection.cursor(as_dict=True) as cur:
             try:
                 cur.execute(query)
-                result = cur.fetchall()
-                if result:
+                if cur.description:       
+                    result = cur.fetchall()
                     response = Response(
                         RESPONSE_TYPE.TABLE,
                         data_frame=pd.DataFrame(

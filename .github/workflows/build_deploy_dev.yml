@@ -4,6 +4,11 @@ on:
   pull_request:
     types: [opened, reopened, synchronize, labeled]
 
+# Cancel any existing runs of this workflow on the same branch/pr
+# We always want to build/deploy/test a new commit over an older one
+concurrency:
+  group: ${{ github.workflow_ref }}
+  cancel-in-progress: true
 
 jobs:
   # Looks for labels like "deploy-to-<env>" attached to a PR so we can deploy to those envs
@@ -62,6 +67,11 @@ jobs:
         deploy-env: ${{fromJson(needs.get-deploy-labels.outputs.deploy-envs)}}
     environment:
       name: dev
+    # We only want to run one deploy job for an env at a time
+    # Don't cancel in progress jobs because it may be for a different PR
+    concurrency:
+      group: deploy-${{ matrix.deploy-env }}
+      cancel-in-progress: false
     if: needs.get-deploy-labels.outputs.deploy-envs != '[]'
     steps:
       - uses: FranzDiebold/github-env-vars-action@v2

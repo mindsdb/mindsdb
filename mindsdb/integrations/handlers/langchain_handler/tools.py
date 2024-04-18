@@ -1,22 +1,24 @@
 import tiktoken
 
-from typing import Callable
+from typing import Callable, Dict
+
+from langchain.tools.retriever import create_retriever_tool
 from mindsdb_sql import parse_sql, Insert
 
 from langchain.prompts import PromptTemplate
 from langchain.agents import load_tools, Tool
 
 from langchain_experimental.utilities import PythonREPL
-from langchain_community.tools import WikipediaQueryRun
-from langchain_community.utilities import GoogleSerperAPIWrapper, WikipediaAPIWrapper
+from langchain_community.utilities import GoogleSerperAPIWrapper
 
 from langchain.chains.llm import LLMChain
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 from langchain.chains import ReduceDocumentsChain, MapReduceDocumentsChain
 
-from mindsdb.interfaces.skills.skill_tool import skill_tool
-
+from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
+from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel
+from mindsdb.interfaces.skills.skill_tool import skill_tool, SkillType
 
 # Individual tools
 # Note: all tools are defined in a closure to pass required args (apart from LLM input) through it, as custom tools don't allow custom field assignment.  # noqa
@@ -102,21 +104,20 @@ def _setup_standard_tools(tools, llm, model_kwargs):
 
     all_standard_tools = []
     langchain_tools = []
-    for tool in tools:
-        if tool == 'mdb_read':
-            mdb_tool = Tool(
-                name="MindsDB",
-                func=get_exec_call_tool(llm, executor, model_kwargs),
-                description="useful to read from databases or tables connected to the mindsdb machine learning package. the action must be a valid simple SQL query, always ending with a semicolon. For example, you can do `show databases;` to list the available data sources, and `show tables;` to list the available tables within each data source."  # noqa
-            )
+    mdb_tool = Tool(
+        name="MindsDB",
+        func=get_exec_call_tool(llm, executor, model_kwargs),
+        description="useful to read from databases or tables connected to the mindsdb machine learning package. the action must be a valid simple SQL query, always ending with a semicolon. For example, you can do `show databases;` to list the available data sources, and `show tables;` to list the available tables within each data source."  # noqa
+    )
 
-            mdb_meta_tool = Tool(
-                name="MDB-Metadata",
-                func=get_exec_metadata_tool(llm, executor, model_kwargs),
-                description="useful to get column names from a mindsdb table or metadata from a mindsdb data source. the command should be either 1) a data source name, to list all available tables that it exposes, or 2) a string with the format `data_source_name.table_name` (for example, `files.my_table`), to get the table name, table type, column names, data types per column, and amount of rows of the specified table."  # noqa
-            )
-            all_standard_tools.append(mdb_tool)
-            all_standard_tools.append(mdb_meta_tool)
+    mdb_meta_tool = Tool(
+        name="MDB-Metadata",
+        func=get_exec_metadata_tool(llm, executor, model_kwargs),
+        description="useful to get column names from a mindsdb table or metadata from a mindsdb data source. the command should be either 1) a data source name, to list all available tables that it exposes, or 2) a string with the format `data_source_name.table_name` (for example, `files.my_table`), to get the table name, table type, column names, data types per column, and amount of rows of the specified table."  # noqa
+    )
+    all_standard_tools.append(mdb_tool)
+    all_standard_tools.append(mdb_meta_tool)
+    for tool in tools:
         if tool == 'mindsdb_write':
             mdb_write_tool = Tool(
                 name="MDB-Write",
@@ -146,18 +147,68 @@ def _setup_standard_tools(tools, llm, model_kwargs):
     return all_standard_tools
 
 
-def langchain_tool_from_skill(skill):
+def _get_rag_params(pred_args: Dict) -> Dict:
+    model_config = pred_args.copy()
+
+    supported_rag_params = RAGPipelineModel.get_field_names()
+
+    rag_params = {k: v for k, v in model_config.items() if k in supported_rag_params}
+
+    return rag_params
+
+
+def _build_retrieval_tool(tool: dict, pred_args: dict):
+    """
+    Builds a retrieval tool i.e RAG
+    """
+    # build RAG config
+
+    tools_config = tool['config']
+
+    mindsdb_path = pred_args['mindsdb_path']
+
+    # we update the config with the pred_args to allow for custom config
+    tools_config.update(pred_args)
+
+    rag_params = _get_rag_params(tools_config)
+
+    if 'vector_store_config' not in rag_params:
+
+        rag_params['vector_store_config'] = {'persist_directory': mindsdb_path('persisted_chroma')}
+
+    rag_config = RAGPipelineModel(**rag_params)
+
+    # build retriever
+    rag_pipeline = RAG(rag_config)
+
+    # create RAG tool
+    return Tool(
+        func=rag_pipeline,
+        name=tool['name'],
+        description=tool['description']
+    )
+
+def langchain_tool_from_skill(skill, pred_args):
     # Makes Langchain compatible tools from a skill
     tool = skill_tool.get_tool_from_skill(skill)
+
+    if tool['type'] == SkillType.RETRIEVAL.value:
+
+        return _build_retrieval_tool(tool, pred_args)
 
     return Tool(
         name=tool['name'],
         func=tool['func'],
-        description=tool['description']
+        description=tool['description'],
+        return_direct=True
     )
+
+def get_skills(pred_args):
+    return pred_args.get('skills', [])
 
 # Collector
 def setup_tools(llm, model_kwargs, pred_args, default_agent_tools):
+
     toolkit = pred_args['tools'] if pred_args.get('tools') is not None else default_agent_tools
 
     standard_tools = []
@@ -171,9 +222,9 @@ def setup_tools(llm, model_kwargs, pred_args, default_agent_tools):
             function_tools.append(tool)
 
     tools = []
-    skills = pred_args.get('skills', [])
+    skills = get_skills(pred_args)
     for skill in skills:
-        tools.append(langchain_tool_from_skill(skill))
+        tools.append(langchain_tool_from_skill(skill, pred_args))
 
     if len(tools) == 0:
         tools = _setup_standard_tools(standard_tools, llm, model_kwargs)

@@ -17,7 +17,8 @@ redis >=5.0.0, < 6.0.0
 walrus==0.9.3
 flask-compress >= 1.0.0
 appdirs >= 1.0.0
-mindsdb-sql ~= 0.11.0
+mindsdb-sql ~= 0.12.0
+pydantic >= 1.8.2
 mindsdb-evaluator >= 0.0.7, < 0.1.0
 checksumdir >= 1.2.0
 duckdb == 0.9.1
@@ -38,4 +39,7 @@ google-auth-oauthlib
 msal
 langchain>=0.1.9
 langchain-core>=0.1.28
+langchain-community
+langchain-openai
+lark
 prometheus-client==0.20.0

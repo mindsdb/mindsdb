@@ -320,7 +320,7 @@ class ChatbotsTable(MdbTable):
 
 class KBTable(MdbTable):
     name = 'KNOWLEDGE_BASES'
-    columns = ["NAME", "PROJECT", "MODEL", "STORAGE"]
+    columns = ["NAME", "PROJECT", "MODEL", "STORAGE", "PARAMS"]
 
     def get_data(self, query: ASTNode = None, inf_schema=None, **kwargs):
         project_name = self.get_project_name(query)
@@ -338,7 +338,8 @@ class KBTable(MdbTable):
                 kb['name'],
                 kb['project_name'],
                 kb['embedding_model'],
-                vector_database_name + '.' + kb['vector_database_table']
+                vector_database_name + '.' + kb['vector_database_table'],
+                to_json(kb['params']),
             ))
 
         return pd.DataFrame(data, columns=self.columns)

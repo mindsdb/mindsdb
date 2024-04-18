@@ -23,7 +23,7 @@ jobs:
 
   build:
     # Build our docker images based on our bake file
-    runs-on: [self-hosted, dev]
+    runs-on: mdb-dev
     needs: [get-deploy-labels]
     if: needs.get-deploy-labels.outputs.deploy-envs != '[]'
     steps:
@@ -41,7 +41,7 @@ jobs:
     # Build our docker images based on our bake file
     # This job only pushes the layers to the cache repo
     # It's done separately so other jobs can run without waiting for this one
-    runs-on: [self-hosted, dev]
+    runs-on: mdb-dev
     needs: [build]
     steps:
       - uses: actions/checkout@v4
@@ -55,7 +55,7 @@ jobs:
 
   trigger_deploy:
     # Trigger private repo to deploy to dev envs
-    runs-on: [self-hosted, dev]
+    runs-on: mdb-dev
     needs: [build, get-deploy-labels]
     strategy:
       matrix:

@@ -128,7 +128,7 @@ jobs:
         do
           pytest --cov=mindsdb/integrations/handlers/${file}_handler tests/unit/handlers/${file}.py 
         done
-        coveralls --service=github
+        coveralls --service=github --basedir=mindsdb/integrations/handlers
       env:
         COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
         github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}

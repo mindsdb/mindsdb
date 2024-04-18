@@ -1,3 +1,4 @@
+import os
 import pytest
 import pymssql
 import pandas as pd
@@ -11,11 +12,11 @@ from mindsdb.integrations.libs.response import (
 
 HANDLER_KWARGS = {
     "connection_data": {
-        "host": "localhost",
-        "port": "1433",
-        "user": "sa",
-        "password": "admin5678@",
-        "database": "mdb_db_handler_test",
+        "host": os.environ.get("MDB_TEST_MSSQL_HOST", "localhost"),
+        "port": os.environ.get("MDB_TEST_MSSQL_PORT", "1433"),
+        "user": os.environ.get("MDB_TEST_MSSQL_USER", "sa"),
+        "password": os.environ.get("MDB_TEST_MSSQL_PASSWORD", "admin5678@"),
+        "database": os.environ.get("MDB_TEST_MSSQL_DATABASE", "mdb_db_handler_test"),
     }
 }
 

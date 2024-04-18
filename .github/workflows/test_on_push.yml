@@ -135,5 +135,4 @@ jobs:
         pytest --cov=tests/unit/handler tests/unit/handlers/test_postgresql.py && coveralls --service=github
       env:
         COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
-        PROMETHEUS_MULTIPROC_DIR: ./prometheus_metrics
         github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}

@@ -198,7 +198,7 @@ class MySQLHandler(DatabaseHandler):
         """
         Show details about the table
         """
-        q = f"DESCRIBE {table_name};"
+        q = f"DESCRIBE `{table_name}`;"
         result = self.native_query(q)
         return result
 

@@ -9,7 +9,7 @@ on:
 
 jobs:
   check-version:
-    runs-on: [self-hosted, dev]
+    runs-on: mdb-dev
     if: github.actor != 'mindsdbadmin'
     steps:
     - uses: actions/checkout@v4
@@ -24,7 +24,7 @@ jobs:
         PYTHONPATH=./ python tests/scripts/check_version.py ${{ env.CI_REF_NAME }} ${{ github.event.release.prerelease }}
 
   deploy_to_pypi:
-    runs-on: [self-hosted, dev]
+    runs-on: mdb-dev
     needs: check-version
     if: github.actor != 'mindsdbadmin'
     steps:
@@ -48,7 +48,7 @@ jobs:
   docker_build:
     # Build our docker images based on our bake file
     # This will tag with the release version tag and push to both dockerhub and ECR
-    runs-on: [self-hosted, dev]
+    runs-on: mdb-dev
     needs: [check-version]
     if: github.actor != 'mindsdbadmin'
     steps:
@@ -73,7 +73,7 @@ jobs:
     # Build our docker images based on our bake file
     # This job only pushes the layers to the cache repo
     # It's done separately so other jobs can run without waiting for this one
-    runs-on: [self-hosted, dev]
+    runs-on: mdb-dev
     needs: [docker_build]
     steps:
       - uses: actions/checkout@v4
@@ -87,7 +87,7 @@ jobs:
 
   trigger_deploy:
     # Trigger private repo to deploy to prod env
-    runs-on: [self-hosted, dev]
+    runs-on: mdb-dev
     needs: docker_build
     if: github.actor != 'mindsdbadmin'
     environment:

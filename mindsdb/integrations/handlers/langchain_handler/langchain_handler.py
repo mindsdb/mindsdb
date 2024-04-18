@@ -212,8 +212,21 @@ class LangChainHandler(BaseMLEngine):
 
         # Set up embeddings model if needed.
         if args.get('mode') == 'retrieval':
-            # get args for embeddings model
+
             embeddings_args = args.pop('embedding_model_args', {})
+
+            # no embedding model args provided, use same provider as llm
+            if not embeddings_args:
+                logger.warning("'embedding_model_args' not found in input params, "
+                               "Trying to use the same provider and model as used for llm. "
+                               f"provider: {args['provider']}"
+                               f"model: {args['model_name']}"
+                               )
+
+                # get args for embeddings model
+                embeddings_args['class'] = args['provider']
+                embeddings_args['model'] = args['model_name']
+
             # create embeddings model
             pred_args['embeddings_model'] = self._create_embeddings_model(embeddings_args)
             pred_args['llm'] = llm

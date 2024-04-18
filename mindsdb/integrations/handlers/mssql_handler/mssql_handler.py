@@ -253,7 +253,7 @@ connection_args = OrderedDict(
     },
     server={
         'type': ARG_TYPE.STR,
-        'description': 'The server name of the Microsoft SQL Server. Typically only used with named instances.',
+        'description': 'The server name of the Microsoft SQL Server. Typically only used with named instances or Azure SQL Database.',
         'required': False,
         'label': 'Server'
     }

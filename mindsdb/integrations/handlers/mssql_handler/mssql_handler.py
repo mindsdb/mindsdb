@@ -57,7 +57,7 @@ class SqlServerHandler(DatabaseHandler):
         # Mandatory connection parameters
         if not all(key in self.connection_args for key in ['host', 'user', 'password', 'database']):
             raise ValueError('Required parameters (host, user, password, database) must be provided.')
-        
+
         config = {
             'host': self.connection_args.get('host'),
             'user': self.connection_args.get('user'),
@@ -136,7 +136,7 @@ class SqlServerHandler(DatabaseHandler):
         with connection.cursor(as_dict=True) as cur:
             try:
                 cur.execute(query)
-                if cur.description:       
+                if cur.description:
                     result = cur.fetchall()
                     response = Response(
                         RESPONSE_TYPE.TABLE,

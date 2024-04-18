@@ -2,9 +2,7 @@ import os
 import pytest
 import pymssql
 import pandas as pd
-from unittest.mock import MagicMock
 from mindsdb.integrations.handlers.mssql_handler.mssql_handler import SqlServerHandler
-from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE,
@@ -20,6 +18,7 @@ HANDLER_KWARGS = {
     }
 }
 
+
 @pytest.fixture(scope="class")
 def sql_server_handler():
     seed_db()
@@ -27,9 +26,10 @@ def sql_server_handler():
     yield handler
     handler.disconnect()
 
+
 def seed_db():
     """Seed the test DB with some data"""
-    
+
     # Connect to 'master' while we create our test DB
     conn_info = HANDLER_KWARGS["connection_data"].copy()
     conn_info["database"] = "master"
@@ -42,6 +42,7 @@ def seed_db():
     cursor.close()
     db.close()
 
+
 def check_valid_response(res):
     if res.resp_type == RESPONSE_TYPE.TABLE:
         assert res.data_frame is not None, "expected to have some data, but got None"
@@ -51,6 +52,7 @@ def check_valid_response(res):
     assert (
         res.error_message is None
     ), f"expected to have None in error message, but got {res.error_message}"
+
 
 def get_table_names(sql_server_handler):
     res = sql_server_handler.get_tables()
@@ -76,7 +78,7 @@ class TestMSSQLHandlerConnect:
 class TestMSSQLHandlerDisconnect:
     def test_disconnect(self, sql_server_handler):
         sql_server_handler.disconnect()
-        assert sql_server_handler.is_connected == False, "failed to disconnect"
+        assert sql_server_handler.is_connected is False, "failed to disconnect"
 
     def test_check_connection(self, sql_server_handler):
         res = sql_server_handler.check_connection()
@@ -98,11 +100,11 @@ class TestMSSQLHandlerTables:
         ), f"expected to get 'table_name' in the response but got: {tables}"
         assert (
             "test" in tables["table_name"].values
-        ), f"expected to have 'test' in the response."
+        ), "expected to have 'test' in the response."
 
     def test_get_columns(self, sql_server_handler):
         response = sql_server_handler.get_columns("test")
-        assert response.type == RESPONSE_TYPE.TABLE, f"expected a TABLE"
+        assert response.type == RESPONSE_TYPE.TABLE, "expected a TABLE"
         assert len(response.data_frame) > 0, "expected > O columns"
 
         expected_columns = {

@@ -304,8 +304,13 @@ class LangChainHandler(BaseMLEngine):
         def _invoke_agent_executor_with_prompt(agent_executor, prompt):
             if not prompt:
                 return ''
-
-            answer = agent_executor.invoke(prompt)
+            try:
+                answer = agent_executor.invoke(prompt)
+            except Exception as e:
+                answer = str(e)
+                if not answer.startswith("Could not parse LLM output: `"):
+                    raise e
+                answer = {'output': answer.removeprefix("Could not parse LLM output: `").removesuffix("`")}
 
             if 'output' not in answer:
                 # This should never happen unless Langchain changes invoke output format, but just in case.

@@ -53,6 +53,9 @@ class SqlServerHandler(DatabaseHandler):
             return self.connection
 
         # Mandatory connection parameters
+        if not all(key in self.connection_args for key in ['host', 'user', 'password', 'database']):
+            raise ValueError('Required parameters (host, user, password, database) must be provided.')
+        
         config = {
             'host': self.connection_args.get('host'),
             'user': self.connection_args.get('user'),

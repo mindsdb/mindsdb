@@ -19,9 +19,9 @@ Use the following syntax to create a connection to the Microsoft SQL Server data
     PARAMETERS = {
         "host": "127.0.0.1",
         "port": 1433,
-        "user": "mssql",
+        "user": "sa",
         "password": "password",
-        "database": "mssql"
+        "database": "master"
     };
 ```
 
@@ -30,20 +30,34 @@ Required Parameters:
 * `user`: The username for the Microsoft SQL Server database.
 * `password`: The password for the Microsoft SQL Server database.
 * `host` The hostname, IP address, or URL of the Microsoft SQL Server server.
-* `port` The port number for connecting to the Microsoft SQL Server server.
 * `database` The name of the Microsoft SQL Server database to connect to.
+
+Optional Parameters:
+
+* `port`: The port number for connecting to the Microsoft SQL Server. Default is 1433.
+* `server`: The server name to connect to. Typically only used with named instances or Azure SQL Database.
 
 ### Example Usage
 
 Querying a Table:
 
  ```sql
-
+    SELECT *
+    FROM mssql_datasource.schema_name.table_name
+    LIMIT 10;
 ```
 
-Running native queries by wrapping them inside the postgresql integration SELECT:
+Running T-SQL queries by wrapping them inside the mssql integration SELECT:
 
 ```sql
-
+SELECT * FROM mssql_datasource (
+    --Native Query Goes Here
+    SELECT 
+      SUM(orderqty) total
+    FROM Product p JOIN SalesOrderDetail sd ON p.productid = sd.productid
+    JOIN SalesOrderHeader sh ON sd.salesorderid = sh.salesorderid
+    JOIN Customer c ON sh.customerid = c.customerid
+    WHERE (Name = 'Racing Socks, L') AND (companyname = 'Riding Cycles');
+);
 ```
 > Note: In the above examples we are using `mssql_datasource` name, which was created with CREATE DATABASE query.

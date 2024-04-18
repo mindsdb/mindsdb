@@ -67,7 +67,7 @@ Next step is to create one or more skills for an AI agent. Here we create a Text
 ```sql
 CREATE SKILL text_to_sql_skill
 USING
-    type = 'text_to_sql',
+    type = 'text2sql',
     database = 'example_db',   -- this is a data source that must be connected to MindsDB with CREATE DATABASE statement
     tables = ['sales_data'],   -- this table comes from the connected example_db data source
     description = "Sales data that includes stores, sold products, and other sale details";

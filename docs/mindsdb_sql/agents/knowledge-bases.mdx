@@ -27,6 +27,18 @@ CREATE KNOWLEDGE_BASE my_kb
    [storage = vector_database.storage_table;]]
 ```
 
+### Managing input columns
+
+Knowledge base can accept optional columns parameters to define where id, content and metadata columns are located:
+```sql
+CREATE KNOWLEDGE_BASE my_kb
+USING
+   metadata_columns = ['date', 'creator'],  -- optional, if not set: no metadata columns
+   content_columns = ['review'],  -- optional, if not set: all columns is content
+   id_column='index'   -- optional, default: id
+```
+
+
 ## Step by step guide
 
 

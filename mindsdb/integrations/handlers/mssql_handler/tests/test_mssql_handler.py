@@ -20,6 +20,13 @@ HANDLER_KWARGS = {
     }
 }
 
+@pytest.fixture(scope="class")
+def sql_server_handler():
+    seed_db()
+    handler = SqlServerHandler("test_sqlserver_handler", **HANDLER_KWARGS)
+    yield handler
+    handler.disconnect()
+
 def seed_db():
     """Seed the test DB with some data"""
     
@@ -34,13 +41,6 @@ def seed_db():
             cursor.execute(line)
     cursor.close()
     db.close()
-
-@pytest.fixture(scope="class")
-def sql_server_handler():
-    seed_db()
-    handler = SqlServerHandler("test_sqlserver_handler", **HANDLER_KWARGS)
-    yield handler
-    handler.disconnect()
 
 def check_valid_response(res):
     if res.resp_type == RESPONSE_TYPE.TABLE:
@@ -85,6 +85,8 @@ class TestMSSQLHandlerDisconnect:
 
 @pytest.mark.usefixtures("sql_server_handler")
 class TestMSSQLHandlerTables:
+    table_for_creation = "test_mdb"
+
     def test_get_tables(self, sql_server_handler):
         res = sql_server_handler.get_tables()
         tables = res.data_frame
@@ -111,6 +113,27 @@ class TestMSSQLHandlerTables:
         assert response.data_frame.equals(
             expected_df
         ), "response does not contain the expected columns"
+
+    def test_create_table(self, sql_server_handler):
+        query = f"""
+        IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = '{self.table_for_creation}')
+        BEGIN
+            CREATE TABLE {self.table_for_creation} (test_col INT)
+        END
+        """
+        res = sql_server_handler.native_query(query)
+        check_valid_response(res)
+        tables = get_table_names(sql_server_handler)
+        assert (
+            self.table_for_creation in tables
+        ), f"expected to have {self.table_for_creation} in database, but got: {tables}"
+
+    def test_drop_table(self, sql_server_handler):
+        query = f"DROP TABLE IF EXISTS {self.table_for_creation}"
+        res = sql_server_handler.native_query(query)
+        check_valid_response(res)
+        tables = get_table_names(sql_server_handler)
+        assert self.table_for_creation not in tables
 
 
 @pytest.mark.usefixtures("sql_server_handler")

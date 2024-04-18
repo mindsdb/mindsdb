@@ -73,7 +73,7 @@ class TestMySQLHandler(unittest.TestCase):
         table_name = 'mock_table'
         self.handler.get_columns(table_name)
 
-        expected_query = f"DESCRIBE {table_name};"
+        expected_query = f"DESCRIBE `{table_name}`;"
         self.handler.native_query.assert_called_once_with(expected_query)
 
     def test_get_tables(self):

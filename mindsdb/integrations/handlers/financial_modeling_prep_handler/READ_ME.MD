@@ -15,3 +15,5 @@ Now, you can use this established connection to query your database as follows:
 ~~~~sql
 SELECT * FROM my_table;
 ~~~~
+
+# git push origin Riyana/FinancialHandler

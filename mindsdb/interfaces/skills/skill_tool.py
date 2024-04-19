@@ -84,6 +84,7 @@ class SkillToolController:
         params = skill.params
         return dict(
             name=params.get('name', skill.name),
+            source=params.get('source', None),
             config=params.get('config', {}),
             description=f'You must use this tool to get more context or information '
                         f'to answer a question about {params["description"]}. '

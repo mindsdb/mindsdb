@@ -1,5 +1,6 @@
 ---
-title: Mistral7B Model Fine-Tuning
+title: Fine-Tune the Mistral-7B Model
+sidebarTitle: Mistral-7B
 ---
 
 <Tip>
@@ -152,3 +153,33 @@ On execution, we get:
 | What is the SQL syntax to join input data with predictions from a MindsDB machine learning model? | SELECT * FROM mindsdb.models.my_model JOIN mindsdb.input_data_name;                                  |
 +---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
 ```
+
+<Tip>
+If you have dynamic data that gets updated regularly, you can set up an automated fine-tuning as below.
+
+Note that the data source must contain an incremental column, such as timestamp or integer, so MindsDB can pick up only the recently added data.
+
+Create a view to store recently added data with the help of the [`LAST` keyword](/mindsdb_sql/sql/create/jobs#last):
+
+```sql
+CREATE VIEW recent_data (
+    SELECT *
+    FROM example_db.chat_llm_mindsdb_docs
+    WHERE timestamp > LAST
+);
+```
+
+Create a job to fine-tune the model periodically.
+
+```sql
+CREATE JOB automated_finetuning (
+
+    FINETUNE mymistral7b
+    FROM mindsdb
+        (SELECT * FROM recent_data)
+)
+EVERY 1 day;
+```
+
+Now your model will be fine-tuned with newly added data every day.
+</Tip>

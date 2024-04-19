@@ -168,19 +168,10 @@ def _build_retrieval_tool(tool: dict, pred_args: dict):
 
     tools_config = tool['config']
 
-    mindsdb_path = pred_args['mindsdb_path']
-
     # we update the config with the pred_args to allow for custom config
     tools_config.update(pred_args)
 
     rag_params = _get_rag_params(tools_config)
-
-    if 'vector_store_config' not in rag_params:
-        persist_dir = mindsdb_path('persisted_chroma')
-        rag_params['vector_store_config'] = {'persist_directory': persist_dir}
-
-        logger.warning("No 'vector_store_config' provided, using default vector store "
-                       f"and persist_directory: {persist_dir}")
 
     rag_config = RAGPipelineModel(**rag_params)
 

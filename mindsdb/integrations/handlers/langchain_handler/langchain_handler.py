@@ -228,7 +228,6 @@ class LangChainHandler(BaseMLEngine):
             # create embeddings model
             pred_args['embeddings_model'] = self._create_embeddings_model(embeddings_args)
             pred_args['llm'] = llm
-            pred_args['mindsdb_path'] = self.engine_storage.folder_get
 
         tools = setup_tools(llm,
                             model_kwargs,

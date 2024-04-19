@@ -9,7 +9,10 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 
-_FINANCIAL_MODELING_URL = 'https://financialmodelingprep.com/api/v3/search?query=AA'
+# https://site.financialmodelingprep.com/developer/docs/daily-chart-charts
+#To authorize your requests, add ?apikey=GJvlw9YgVm5J4KIxdP1VPkvWzt747Q6j at the end of every request.
+
+_FINANCIAL_MODELING_URL = 'https://financialmodelingprep.com/api/v3/'
 
 logger = log.getLogger(__name__)
 
@@ -33,3 +36,22 @@ class FinancialModelingHandler(APIHandler):
             def native_query(self, query: str = None) -> Response:
                 ast = parse_sql(query, dialect='mindsdb')
                 return self.query(ast)
+
+            def call_financial_modeling_api(self, endpoint_name: str = None, params: Dict = None) -> pd.DataFrame:
+                """Calls the financial modeling API method with the given params.
+
+                Returns results as a pandas DataFrame.
+
+                Args:
+                    
+                    params (Dict): Params to pass to the API call
+                """
+                if endpoint_name == 'daily_chart':
+                    return self._get_daily_chart(params)
+                raise NotImplementedError('Endpoint {} not supported by Financial Modeling API Handler'.format(endpoint_name))
+            
+            
+            
+
+            
+            

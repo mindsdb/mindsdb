@@ -17,9 +17,13 @@ from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 from langchain.chains import ReduceDocumentsChain, MapReduceDocumentsChain
 
 from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
-from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel
+from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel, VectorStoreType, DEFAULT_COLLECTION_NAME
 from mindsdb.interfaces.skills.skill_tool import skill_tool, SkillType
 from mindsdb.interfaces.storage import db
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
+from mindsdb.interfaces.storage.db import KnowledgeBase
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -161,6 +165,61 @@ def _get_rag_params(pred_args: Dict) -> Dict:
     return rag_params
 
 
+def _create_conn_string(connection_args: dict) -> str:
+    """
+    Creates a PostgreSQL connection string from connection args.
+    """
+    user = connection_args.get('user')
+    host = connection_args.get('host')
+    port = connection_args.get('port')
+    password = connection_args.get('password')
+    dbname = connection_args.get('database')
+
+    if password:
+        return f"postgresql://{user}:{password}@{host}:{port}/{dbname}"
+    else:
+        return f"postgresql://{user}@{host}:{port}/{dbname}"
+
+
+def _get_knowledge_base(knowledge_base_name: str, project_id, executor) -> db.KnowledgeBase:
+
+    kb = executor.session.kb_controller.get(knowledge_base_name, project_id)
+
+    return kb
+
+
+def _build_vector_store_config_from_knowledge_base(rag_params: Dict, knowledge_base: KnowledgeBase, executor) -> Dict:
+    """
+    build vector store config from knowledge base
+    """
+
+    vector_store_config = rag_params['vector_store_config'].copy()
+
+    vector_store_type = knowledge_base.vector_database.engine
+    vector_store_config['vector_store_type'] = vector_store_type
+
+    if vector_store_type == VectorStoreType.CHROMA.value:
+        # For chromadb used, we get persist_directory
+        vector_store_folder_name = knowledge_base.vector_database.data['persist_directory']
+        integration_handler = executor.session.integration_controller.get_data_handler(
+            knowledge_base.vector_database.name
+        )
+        persist_dir = integration_handler.handler_storage.folder_get(vector_store_folder_name)
+        vector_store_config['persist_directory'] = persist_dir
+
+    elif vector_store_type == VectorStoreType.PGVECTOR.value:
+        # For pgvector, we get connection string
+        #todo requires further testing
+        connection_params = knowledge_base.vector_database.data
+        vector_store_config['connection_string'] = _create_conn_string(connection_params)
+
+    else:
+        raise ValueError(f"Invalid vector store type: {vector_store_type}. "
+                         f"Only {[v.name for v in VectorStoreType]} are currently supported.")
+
+    return vector_store_config
+
+
 def _build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
     """
     Builds a retrieval tool i.e RAG
@@ -175,13 +234,20 @@ def _build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
     rag_params = _get_rag_params(tools_config)
 
     if 'vector_store_config' not in rag_params:
+        rag_params['vector_store_config'] = {}
+        logger.warning(f'No collection_name specified for the retrieval tool, '
+                       f"using default collection_name: '{DEFAULT_COLLECTION_NAME}'"
+                       f'\nWarning: If this collection does not exist, no data will be retrieved')
+
+    if 'source' in tool:
         kb_name = tool['source']
-        default_persist_directory = f'{kb_name}_chromadb'
         executor = skill_tool.get_command_executor()
-        kb = executor.session.kb_controller.get(kb_name, skill.project_id)
-        integration_handler = executor.session.integration_controller.get_data_handler(kb.vector_database.name)
-        persist_dir = integration_handler.handler_storage.folder_get(default_persist_directory)
-        rag_params['vector_store_config'] = {'persist_directory': persist_dir}
+        kb = _get_knowledge_base(kb_name, skill.project_id, executor)
+
+        if not kb:
+            raise ValueError(f"Knowledge base not found: {kb_name}")
+
+        rag_params['vector_store_config'] = _build_vector_store_config_from_knowledge_base(rag_params, kb, executor)
 
     # Can run into weird validation errors when unpacking rag_params directly into constructor.
     rag_config = RAGPipelineModel(
@@ -201,7 +267,6 @@ def _build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
         rag_config.rag_prompt_template = rag_params['rag_prompt_template']
     if 'retriever_prompt_template' in rag_params:
         rag_config.retriever_prompt_template = rag_params['retriever_prompt_template']
-    
 
     # build retriever
     rag_pipeline = RAG(rag_config)

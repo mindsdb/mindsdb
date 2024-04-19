@@ -11,6 +11,8 @@ from langchain_core.stores import BaseStore
 from langchain.text_splitter import TextSplitter
 from pydantic import BaseModel
 
+DEFAULT_COLLECTION_NAME = 'default_collection'
+
 # Multi retriever specific
 DEFAULT_ID_KEY = "doc_id"
 DEFAULT_MAX_CONCURRENCY = 5
@@ -69,7 +71,7 @@ class MultiVectorRetrieverMode(Enum):
 
 
 class VectorStoreType(Enum):
-    CHROMA = 'chroma'
+    CHROMA = 'chromadb'
     PGVECTOR = 'pgvector'
 
 
@@ -88,7 +90,7 @@ class RetrieverType(Enum):
 class VectorStoreConfig(BaseModel):
     vector_store_type: VectorStoreType = VectorStoreType.CHROMA
     persist_directory: str = None
-    collection_name: str = 'default'
+    collection_name: str = DEFAULT_COLLECTION_NAME
     connection_string: str = None
 
     class Config:

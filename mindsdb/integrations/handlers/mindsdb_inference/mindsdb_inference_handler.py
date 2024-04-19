@@ -36,7 +36,7 @@ class MindsDBInferenceHandler(OpenAIHandler):
             AuthenticationError: If the handler is not properly configured.
 
         Returns:
-            None
+            None.
         """
         if 'using' not in args:
             raise Exception(
@@ -62,7 +62,7 @@ class MindsDBInferenceHandler(OpenAIHandler):
             args (dict): Handler arguments.
 
         Returns:
-            pd.DataFrame: Predicted data
+            pd.DataFrame: Predicted data.
         """
         api_key = get_api_key('mindsdb_inference', args, self.engine_storage)
         supported_models = self._get_supported_models(api_key, mindsdb_inference_handler_config.BASE_URL)

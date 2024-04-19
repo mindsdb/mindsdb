@@ -19,6 +19,7 @@ from langchain.chains import ReduceDocumentsChain, MapReduceDocumentsChain
 from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
 from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel
 from mindsdb.interfaces.skills.skill_tool import skill_tool, SkillType
+from mindsdb.interfaces.storage import db
 
 # Individual tools
 # Note: all tools are defined in a closure to pass required args (apart from LLM input) through it, as custom tools don't allow custom field assignment.  # noqa
@@ -157,7 +158,7 @@ def _get_rag_params(pred_args: Dict) -> Dict:
     return rag_params
 
 
-def _build_retrieval_tool(tool: dict, pred_args: dict):
+def _build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
     """
     Builds a retrieval tool i.e RAG
     """
@@ -165,7 +166,6 @@ def _build_retrieval_tool(tool: dict, pred_args: dict):
 
     tools_config = tool['config']
 
-    mindsdb_path = pred_args['mindsdb_path']
 
     # we update the config with the pred_args to allow for custom config
     tools_config.update(pred_args)
@@ -173,10 +173,33 @@ def _build_retrieval_tool(tool: dict, pred_args: dict):
     rag_params = _get_rag_params(tools_config)
 
     if 'vector_store_config' not in rag_params:
+        kb_name = tool['source']
+        default_persist_directory = f'{kb_name}_chromadb'
+        executor = skill_tool.get_command_executor()
+        kb = executor.session.kb_controller.get(kb_name, skill.project_id)
+        integration_handler = executor.session.integration_controller.get_data_handler(kb.vector_database.name)
+        persist_dir = integration_handler.handler_storage.folder_get(default_persist_directory)
+        rag_params['vector_store_config'] = {'persist_directory': persist_dir}
 
-        rag_params['vector_store_config'] = {'persist_directory': mindsdb_path('persisted_chroma')}
-
-    rag_config = RAGPipelineModel(**rag_params)
+    # Can run into weird validation errors when unpacking rag_params directly into constructor.
+    rag_config = RAGPipelineModel(
+        embeddings_model=rag_params['embeddings_model']
+    )
+    if 'documents' in rag_params:
+        rag_config.documents = rag_params['documents']
+    if 'vector_store_config' in rag_params:
+        rag_config.vector_store_config = rag_params['vector_store_config']
+    if 'db_connection_string' in rag_params:
+        rag_config.db_connection_string = rag_params['db_connection_string']
+    if 'table_name' in rag_params:
+        rag_config.table_name = rag_params['table_name']
+    if 'llm' in rag_params:
+        rag_config.llm = rag_params['llm']
+    if 'rag_prompt_template' in rag_params:
+        rag_config.rag_prompt_template = rag_params['rag_prompt_template']
+    if 'retriever_prompt_template' in rag_params:
+        rag_config.retriever_prompt_template = rag_params['retriever_prompt_template']
+    
 
     # build retriever
     rag_pipeline = RAG(rag_config)
@@ -194,7 +217,7 @@ def langchain_tool_from_skill(skill, pred_args):
 
     if tool['type'] == SkillType.RETRIEVAL.value:
 
-        return _build_retrieval_tool(tool, pred_args)
+        return _build_retrieval_tool(tool, pred_args, skill)
 
     return Tool(
         name=tool['name'],

@@ -233,7 +233,7 @@ def _build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
     if 'vector_store_config' not in rag_params:
         rag_params['vector_store_config'] = {}
         logger.warning(f'No collection_name specified for the retrieval tool, '
-                       f'using default collection_name: "{DEFAULT_COLLECTION_NAME}"'
+                       f"using default collection_name: '{DEFAULT_COLLECTION_NAME}'"
                        f'\nWarning: If this collection does not exist, no data will be retrieved')
 
     if 'source' in tool:

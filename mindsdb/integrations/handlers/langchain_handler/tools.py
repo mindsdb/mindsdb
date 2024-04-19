@@ -19,6 +19,9 @@ from langchain.chains import ReduceDocumentsChain, MapReduceDocumentsChain
 from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
 from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel
 from mindsdb.interfaces.skills.skill_tool import skill_tool, SkillType
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 # Individual tools
 # Note: all tools are defined in a closure to pass required args (apart from LLM input) through it, as custom tools don't allow custom field assignment.  # noqa
@@ -173,8 +176,11 @@ def _build_retrieval_tool(tool: dict, pred_args: dict):
     rag_params = _get_rag_params(tools_config)
 
     if 'vector_store_config' not in rag_params:
+        persist_dir = mindsdb_path('persisted_chroma')
+        rag_params['vector_store_config'] = {'persist_directory': persist_dir}
 
-        rag_params['vector_store_config'] = {'persist_directory': mindsdb_path('persisted_chroma')}
+        logger.warning("No 'vector_store_config' provided, using default vector store "
+                       f"and persist_directory: {persist_dir}")
 
     rag_config = RAGPipelineModel(**rag_params)
 
@@ -187,6 +193,7 @@ def _build_retrieval_tool(tool: dict, pred_args: dict):
         name=tool['name'],
         description=tool['description']
     )
+
 
 def langchain_tool_from_skill(skill, pred_args):
     # Makes Langchain compatible tools from a skill

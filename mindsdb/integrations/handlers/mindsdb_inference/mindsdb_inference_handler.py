@@ -12,7 +12,7 @@ MINDSDB_INFERENCE_BASE = 'https://llm.mdb.ai/'
 
 class MindsDBInferenceHandler(OpenAIHandler):
     """
-    Handler for MindsDB Inference Endpoints
+    This handler handles connection and inference with the MindsDB Inference Endpoints.
     """
 
     name = 'mindsdb_inference'
@@ -26,13 +26,16 @@ class MindsDBInferenceHandler(OpenAIHandler):
     @staticmethod
     def create_validation(target, args=None, **kwargs):
         """
-        Validate the MindsDB Inference engine handler
+        Validate the MindsDB Inference engine handler.
+
         Args:
-            target (str): Target column, not required for LLMs
-            args (dict): Handler arguments
-            kwargs (dict): Handler keyword arguments
+            target (str): Target column, not required for LLMs.
+            args (dict): Handler arguments.
+            kwargs (dict): Handler keyword arguments.
+
         Raises:
-            AuthenticationError: If the handler is not properly configured
+            AuthenticationError: If the handler is not properly configured.
+
         Returns:
             None
         """
@@ -53,10 +56,12 @@ class MindsDBInferenceHandler(OpenAIHandler):
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         """
-        Call the MindsDB Inference engine to predict the next token
+        Call the MindsDB Inference engine to predict the next token.
+
         Args:
-            df (pd.DataFrame): Input data
-            args (dict): Handler arguments
+            df (pd.DataFrame): Input data.
+            args (dict): Handler arguments.
+
         Returns:
             pd.DataFrame: Predicted data
         """
@@ -68,14 +73,15 @@ class MindsDBInferenceHandler(OpenAIHandler):
     @staticmethod
     def _get_supported_models(api_key, base_url, org=None):
         """
-        Get the list of supported models for the MindsDB Inference engine
+        Get the list of supported models for the MindsDB Inference engine.
 
         Args:
-            api_key (str): API key
-            base_url (str): Base URL
-            org (str): Organization name
+            api_key (str): API key.
+            base_url (str): Base URL.
+            org (str): Organization name.
+
         Returns:
-            List: List of supported models
+            List: List of supported models.
         """
         client = openai.OpenAI(api_key=api_key, base_url=base_url, organization=org)
         return client.models.list()

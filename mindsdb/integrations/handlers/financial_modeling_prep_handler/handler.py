@@ -10,7 +10,7 @@ from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 
 # https://site.financialmodelingprep.com/developer/docs/daily-chart-charts
-#To authorize your requests, add ?apikey=GJvlw9YgVm5J4KIxdP1VPkvWzt747Q6j at the end of every request.
+#To authorize your requests, add ?apikey= ----- at the end of every request.
 
 _FINANCIAL_MODELING_URL = 'https://financialmodelingprep.com/api/v3/'
 

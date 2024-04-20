@@ -18,3 +18,4 @@ class FinancialModelingTradesTable(APITable):
         conditions = extract_comparison_conditions(query.where)
         params = self._get_daily_endpoint_params_from_conditions(conditions)
 
+    

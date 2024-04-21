@@ -434,7 +434,7 @@ class OrdersTable(APITable):
                                'title_sl', 
                                'carrier_identifier_sl', 'requested_fulfillment_service_id_sl', 
                                'is_removed_sl',
-                               'browser_ip', 'buyer_accepts_marketing', 'cancel_reason', 
+                               'buyer_accepts_marketing', 
                                'customer_locale', 'currency', 'email', 'fulfillment_status', 
                                'gift_card', 'grams', 'merchant_of_record_app_id', 'note', 
                                'phone', 'po_number', 'price', 'processed_at', 'quantity', 

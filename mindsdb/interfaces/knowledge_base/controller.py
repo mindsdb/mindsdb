@@ -444,7 +444,7 @@ class KnowledgeBaseController:
 
         return model_name
 
-    def delete(self, name: str, project_name: str, if_exists: bool = False) -> None:
+    def delete(self, name: str, project_name: int, if_exists: bool = False) -> None:
         """
         Delete a knowledge base from the database
         """
@@ -473,15 +473,21 @@ class KnowledgeBaseController:
 
         # drop objects if they were created automatically
         if 'vector_storage' in kb.params:
-            self.session.integration_controller.delete(kb.params['vector_storage'])
+            try:
+                self.session.integration_controller.delete(kb.params['vector_storage'])
+            except EntityNotExistsError:
+                pass
         if 'embedding_model' in kb.params:
-            self.session.model_controller.delete_model(kb.params['embedding_model'], project_name)
+            try:
+                self.session.model_controller.delete_model(kb.params['embedding_model'], project_name)
+            except EntityNotExistsError:
+                pass
 
         # kb exists
         db.session.delete(kb)
         db.session.commit()
 
-    def get(self, name: str, project_id: str) -> db.KnowledgeBase:
+    def get(self, name: str, project_id: int) -> db.KnowledgeBase:
         """
         Get a knowledge base from the database
         by name + project_id
@@ -496,7 +502,7 @@ class KnowledgeBaseController:
         )
         return kb
 
-    def get_table(self, name: str, project_id: str) -> KnowledgeBaseTable:
+    def get_table(self, name: str, project_id: int) -> KnowledgeBaseTable:
         """
         Returns kb table object
         :param name: table name
@@ -507,7 +513,7 @@ class KnowledgeBaseController:
         if kb is not None:
             return KnowledgeBaseTable(kb, self.session)
 
-    def list(self, project_id: str) -> List[db.KnowledgeBase]:
+    def list(self, project_id: int) -> List[db.KnowledgeBase]:
         """
         List all knowledge bases from the database
         belonging to a project
@@ -521,7 +527,7 @@ class KnowledgeBaseController:
         )
         return kbs
 
-    def update(self, name: str, project_id: str, **kwargs) -> db.KnowledgeBase:
+    def update(self, name: str, project_id: int, **kwargs) -> db.KnowledgeBase:
         """
         Update a knowledge base record
         """

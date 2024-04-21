@@ -1,5 +1,6 @@
 import os
-import ast
+
+from mindsdb_sql.parser import ast
 
 from pyzotero import zotero
 import pandas as pd
@@ -21,7 +22,7 @@ logger = log.getLogger(__name__)
 class AnnotationsTable(APITable):
     """Represents a table of annotations in Zotero."""
 
-    def select(self, query: ast.Select) -> Response:
+    def select(self, query: ast.Select):
         """Select annotations based on the provided query.
 
         Parameters
@@ -57,17 +58,15 @@ class AnnotationsTable(APITable):
             
         params.update({'itemType': 'annotation'})  # Add item type to params
 
-        annotations_data = self.handler.call_zotero_api(method_name, params)
-        annotations = [annotation['data'] for annotation in annotations_data]
-        df = pd.DataFrame(annotations)
+        df = self.handler.call_find_annotations_zotero_api(method_name, params)
         
         # Get the columns of the annotations table
         columns = self.get_columns()
 
         # Filter the DataFrame by columns
         df = df[columns]
-
-        return Response(RESPONSE_TYPE.TABLE, data_frame=df)
+        
+        return df
     
     def get_columns(self):
         """Get the columns of the annotations table.
@@ -147,6 +146,7 @@ class ZoteroHandler(APIHandler):
                                   self.connection_args['api_key'])
 
         self.is_connected = True
+        
         return self.api
     
     def check_connection(self) -> StatusResponse:
@@ -196,8 +196,9 @@ class ZoteroHandler(APIHandler):
             data_frame=df
         )
     
-    def call_zotero_api(self, method_name: str = None, params: dict = None) -> pd.DataFrame:
-        """Call a method in the Zotero API.
+    def call_find_annotations_zotero_api(self, method_name: str = None, params: dict = None) -> pd.DataFrame:
+        """Call a method in the Zotero API. 
+        Specifically made for annotation related method calling. 
 
         Parameters
         ----------
@@ -212,16 +213,52 @@ class ZoteroHandler(APIHandler):
             DataFrame containing the result of the API call.
         """
 
-        if self.is_connected is False:
+        if not self.is_connected:
             self.connect()
 
         method = getattr(self.api, method_name)
 
         try:
-            result = method(**params)
+            # Extract parameters
+            item_id = params.pop('item_id', None)
+            parent_id = params.pop('parent_item_id', None)
+
+            # Call method
+            if item_id is not None:
+                result = method(item_id, **params)
+            elif parent_id is not None:
+                result = method(parent_id, **params)
+            else:
+                result = method(**params)
+
+            # Process Result
+            # If only one entry is returned (dictionary)
+            if isinstance(result, dict):
+                # Extract the 'data' subdictionary from the result
+                data_dict = result.get('data', {})
+                result_df = pd.DataFrame([data_dict])
+            elif isinstance(result, list) and all(isinstance(item, dict) for item in result):
+                # If many entries are returned (a list of dictionaries)
+                # Extract the 'data' subdictionary from each item
+                data_list = [item.get('data', {}) for item in result]
+                # Ensure that all dictionaries in the list have consistent keys
+                consistent_data = [{k: v for k, v in data.items() if isinstance(v, (int, float, str))} for data in data_list]
+                # Convert each 'data' subdictionary into a DataFrame
+                dfs = [pd.DataFrame(data, index=[0]) for data in consistent_data]
+                # Add missing columns if not present in any DataFrame
+                missing_columns = set(['relations', 'tags']) - set.union(*[set(df.columns) for df in dfs])
+                for df in dfs:
+                    for column in missing_columns:
+                        df[column] = None
+                # Concatenate the DataFrames along the appropriate axis
+                result_df = pd.concat(dfs, axis=0, ignore_index=True)
+            else:
+                result_df = pd.DataFrame()
+
         except Exception as e:
             error = f"Error calling method '{method_name}' with params '{params}': {e}"
             logger.error(error)
             raise e
-        return pd.DataFrame(result)
+        
+        return result_df
 

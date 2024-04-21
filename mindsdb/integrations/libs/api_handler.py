@@ -296,7 +296,7 @@ class APIHandler(BaseHandler):
             if not hasattr(table, 'list'):
                 # for back compatibility, targets wasn't passed in previous version
                 query.targets = [Star()]
-
+                
             result = self._get_table(query.from_table).select(query)
         elif isinstance(query, Update):
             result = self._get_table(query.table).update(query)

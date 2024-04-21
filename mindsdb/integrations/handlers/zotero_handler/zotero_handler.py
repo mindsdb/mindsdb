@@ -19,6 +19,7 @@ from mindsdb.integrations.libs.response import (
 
 logger = log.getLogger(__name__)
 
+
 class AnnotationsTable(APITable):
     """Represents a table of annotations in Zotero."""
 
@@ -42,7 +43,7 @@ class AnnotationsTable(APITable):
         for op, arg1, arg2 in conditions:
 
             if op in {'or', 'and'}:
-                raise NotImplementedError(f'OR and AND are not supported')
+                raise NotImplementedError('OR and AND are not supported')
             if arg1 == 'item_id':
                 if op == '=':
                     params['item_id'] = arg2
@@ -55,19 +56,19 @@ class AnnotationsTable(APITable):
                     method_name = 'children'
                 else:
                     NotImplementedError('Only  "parent_item_id=" is implemented')
-            
+
         params.update({'itemType': 'annotation'})  # Add item type to params
 
         df = self.handler.call_find_annotations_zotero_api(method_name, params)
-        
+
         # Get the columns of the annotations table
         columns = self.get_columns()
 
         # Filter the DataFrame by columns
         df = df[columns]
-        
+
         return df
-    
+
     def get_columns(self):
         """Get the columns of the annotations table.
 
@@ -90,6 +91,7 @@ class AnnotationsTable(APITable):
             'tags',
             'version'
         ]
+
 
 class ZoteroHandler(APIHandler):
     """Handles communication with the Zotero API."""
@@ -122,14 +124,14 @@ class ZoteroHandler(APIHandler):
                 self.connection_args[k] = os.environ[f'ZOTERO_{k.upper()}']
             elif k in handler_config:
                 self.connection_args[k] = handler_config[k]
-            
+
         self.is_connected = False
         self.api = None
 
         annotations_table = AnnotationsTable(self)
         self._register_table('annotations', annotations_table)
 
-    def connect(self) -> StatusResponse :
+    def connect(self) -> StatusResponse:
         """Connect to the Zotero API.
 
         Returns
@@ -141,14 +143,15 @@ class ZoteroHandler(APIHandler):
         if self.is_connected is True:
             return self.api
 
-        self.api = zotero.Zotero(self.connection_args['library_id'],
-                                  self.connection_args['library_type'], 
-                                  self.connection_args['api_key'])
+        self.api = zotero.Zotero(
+            self.connection_args['library_id'],
+            self.connection_args['library_type'],
+            self.connection_args['api_key'])
 
         self.is_connected = True
-        
+
         return self.api
-    
+
     def check_connection(self) -> StatusResponse:
         """Check the connection status to the Zotero API.
 
@@ -195,10 +198,10 @@ class ZoteroHandler(APIHandler):
             RESPONSE_TYPE.TABLE,
             data_frame=df
         )
-    
+
     def call_find_annotations_zotero_api(self, method_name: str = None, params: dict = None) -> pd.DataFrame:
-        """Call a method in the Zotero API. 
-        Specifically made for annotation related method calling. 
+        """Call a method in the Zotero API.
+        Specifically made for annotation related method calling.
 
         Parameters
         ----------
@@ -259,6 +262,5 @@ class ZoteroHandler(APIHandler):
             error = f"Error calling method '{method_name}' with params '{params}': {e}"
             logger.error(error)
             raise e
-        
-        return result_df
 
+        return result_df

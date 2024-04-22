@@ -1,4 +1,7 @@
-# MindsDB Inference Endpoints
+---
+title: MindsDB Inference Endpoints
+sidebarTitle: MindsDB Inference Endpoints
+---
 
 This documentation describes the integration of MindsDB with [MindsDB Inference Endpoints](https://docs.mdb.ai/), a cloud service that simplifies the way developers interact with cutting-edge LLMs through a universal API.
 

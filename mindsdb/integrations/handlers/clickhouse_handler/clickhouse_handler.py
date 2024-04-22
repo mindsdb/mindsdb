@@ -68,7 +68,7 @@ class ClickHouseHandler(DatabaseHandler):
             self.is_connected = True
             self.connection = connection
         except SQLAlchemyError as e:
-            logger.error(f'Failed to connect to ClickHouse database at {url}: {e}')
+            logger.error(f'Error connecting to ClickHouse {self.connection_data["database"]}, {e}!')
             self.is_connected = False
             raise
 

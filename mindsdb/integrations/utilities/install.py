@@ -15,6 +15,14 @@ def install_dependencies(dependencies):
     script_path = os.path.dirname(os.path.realpath(__file__))
     split_dependencies = []
     for dependency in dependencies:
+        # ignore standalone comments
+        if dependency.startswith('#'):
+            continue
+
+        # remove inline comments
+        if '#' in dependency:
+            dependency = dependency.split('#')[0].strip()
+
         # check if the dependency is a path to a requirements file
         if dependency.startswith('-r'):
             # split the string into '-r' and the path

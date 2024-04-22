@@ -27,13 +27,14 @@ from mindsdb.integrations.handlers.langchain_handler.constants import (
     DEFAULT_ASSISTANT_COLUMN
 )
 from mindsdb.integrations.handlers.langchain_handler.log_callback_handler import LogCallbackHandler
-from mindsdb.integrations.handlers.langchain_handler.mindsdb_database_agent import MindsDBSQL
+from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
 from mindsdb.integrations.handlers.langchain_handler.tools import setup_tools
 from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS as OPEN_AI_CHAT_MODELS
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.libs.llm.utils import get_llm_config
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.interfaces.storage.model_fs import HandlerStorage, ModelStorage
+from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
 from mindsdb.utilities import log
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 
@@ -78,7 +79,7 @@ class LangChainHandler(BaseMLEngine):
         if self.log_callback_handler is None:
             self.log_callback_handler = LogCallbackHandler(logger)
 
-    def _get_provider(self, args: Dict) -> str:
+    def _get_llm_provider(self, args: Dict) -> str:
         if 'provider' in args:
             return args['provider']
         if args['model_name'] in ANTHROPIC_CHAT_MODELS:
@@ -89,6 +90,14 @@ class LangChainHandler(BaseMLEngine):
             return 'ollama'
         raise ValueError(f"Invalid model name. Please define provider")
 
+    def _get_embedding_model_provider(self, args: Dict) -> str:
+        if 'embedding_model_provider' in args:
+            return args['embedding_model_provider']
+        if 'embedding_model_provider' not in args:
+            logger.warning('No embedding model provider specified. trying to use llm provider.')
+            return args.get('embedding_model_provider', self._get_llm_provider(args))
+        raise ValueError(f"Invalid model name. Please define provider")
+
     def _get_chat_model_params(self, args: Dict, pred_args: Dict) -> Dict:
         model_config = args.copy()
         # Override with prediction args.
@@ -97,8 +106,8 @@ class LangChainHandler(BaseMLEngine):
         model_config['api_keys'] = {
             p: get_api_key(p, args, self.engine_storage, strict=False) for p in SUPPORTED_PROVIDERS
         }
-        llm_config = get_llm_config(args.get('provider', self._get_provider(args)), model_config)
-        config_dict = llm_config.model_dump()
+        llm_config = get_llm_config(args.get('provider', self._get_llm_provider(args)), model_config)
+        config_dict = llm_config.dict()
         config_dict = {k: v for k, v in config_dict.items() if v is not None}
         return config_dict
 
@@ -135,6 +144,9 @@ class LangChainHandler(BaseMLEngine):
             return ChatMindsdb(**model_kwargs)
         raise ValueError(f'Unknown provider: {args["provider"]}')
 
+    def _create_embeddings_model(self, args: Dict):
+        return construct_model_from_args(args)
+
     def _handle_parsing_errors(self, error: Exception) -> str:
         response = str(error)
         if not response.startswith(_PARSING_ERROR_PREFIX):
@@ -156,7 +168,13 @@ class LangChainHandler(BaseMLEngine):
         args = args['using']
         args['target'] = target
         args['model_name'] = args.get('model_name', DEFAULT_MODEL_NAME)
-        args['provider'] = args.get('provider', self._get_provider(args))
+        args['provider'] = args.get('provider', self._get_llm_provider(args))
+        args['embedding_model_provider'] = args.get('embedding_model', self._get_embedding_model_provider(args))
+        if args.get('mode') == 'retrieval':
+            # use default prompt template for retrieval i.e. RAG if not provided
+            if "prompt_template" not in args:
+                args["prompt_template"] = DEFAULT_RAG_PROMPT_TEMPLATE
+
         self.model_storage.json_set('args', args)
 
     @staticmethod
@@ -166,7 +184,8 @@ class LangChainHandler(BaseMLEngine):
         else:
             args = args['using']
         if 'prompt_template' not in args:
-            raise ValueError('Please provide a `prompt_template` for this engine.')
+            if not args.get('mode') == 'retrieval':
+                raise ValueError('Please provide a `prompt_template` for this engine.')
 
     def predict(self, df: pd.DataFrame, args: Dict=None) -> pd.DataFrame:
         """
@@ -178,7 +197,8 @@ class LangChainHandler(BaseMLEngine):
         if 'prompt_template' not in args and 'prompt_template' not in pred_args:
             raise ValueError(f"This model expects a `prompt_template`, please provide one.")
         # Back compatibility for old models
-        args['provider'] = args.get('provider', self._get_provider(args))
+        args['provider'] = args.get('provider', self._get_llm_provider(args))
+        args['embedding_model_provider'] = args.get('embedding_model', self._get_embedding_model_provider(args))
 
         df = df.reset_index(drop=True)
         agent = self.create_agent(df, args, pred_args)
@@ -193,6 +213,26 @@ class LangChainHandler(BaseMLEngine):
         # Set up tools.
         model_kwargs = self._get_chat_model_params(args, pred_args)
         llm = self._create_chat_model(args, pred_args)
+
+        # Set up embeddings model if needed.
+        if args.get('mode') == 'retrieval':
+
+            embeddings_args = args.pop('embedding_model_args', {})
+
+            # no embedding model args provided, use same provider as llm
+            if not embeddings_args:
+                logger.warning("'embedding_model_args' not found in input params, "
+                               "Trying to use the same provider used for llm. "
+                               f"provider: {args['provider']}"
+                               )
+
+                # get args for embeddings model
+                embeddings_args['class'] = args['provider']
+
+            # create embeddings model
+            pred_args['embeddings_model'] = self._create_embeddings_model(embeddings_args)
+            pred_args['llm'] = llm
+
         tools = setup_tools(llm,
                             model_kwargs,
                             pred_args,
@@ -232,7 +272,7 @@ class LangChainHandler(BaseMLEngine):
             max_execution_time=pred_args.get('timeout_seconds', args.get('timeout_seconds', DEFAULT_AGENT_TIMEOUT_SECONDS)),
             max_iterations=pred_args.get('max_iterations', args.get('max_iterations', DEFAULT_MAX_ITERATIONS)),
             memory=memory,
-            verbose=pred_args.get('verbose', args.get('verbose', False))
+            verbose=pred_args.get('verbose', args.get('verbose', True))
         )
         return agent_executor
 
@@ -265,8 +305,13 @@ class LangChainHandler(BaseMLEngine):
         def _invoke_agent_executor_with_prompt(agent_executor, prompt):
             if not prompt:
                 return ''
-
-            answer = agent_executor.invoke(prompt)
+            try:
+                answer = agent_executor.invoke(prompt)
+            except Exception as e:
+                answer = str(e)
+                if not answer.startswith("Could not parse LLM output: `"):
+                    raise e
+                answer = {'output': answer.removeprefix("Could not parse LLM output: `").removesuffix("`")}
 
             if 'output' not in answer:
                 # This should never happen unless Langchain changes invoke output format, but just in case.

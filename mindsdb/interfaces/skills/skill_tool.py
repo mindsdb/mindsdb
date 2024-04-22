@@ -1,3 +1,4 @@
+import enum
 from typing import List, Optional
 
 from mindsdb_sql.parser.ast import Select, BinaryOperation, Identifier, Constant, Star
@@ -7,6 +8,12 @@ from mindsdb.interfaces.storage import db
 from .sql_agent import SQLAgent
 
 _DEFAULT_TOP_K_SIMILARITY_SEARCH = 5
+
+
+class SkillType(enum.Enum):
+    TEXT2SQL = 'text2sql'
+    KNOWLEDGE_BASE = 'knowledge_base'
+    RETRIEVAL = 'retrieval'
 
 
 class SkillToolController:
@@ -66,7 +73,23 @@ class SkillToolController:
         return dict(
             name='sql_db_query',
             func=sql_agent.query_safe,
-            description=description
+            description=description,
+            type=skill.type
+        )
+
+    def _make_retrieval_tools(self, skill: db.Skills) -> dict:
+        """
+        creates advanced retrieval tool i.e. RAG
+        """
+        params = skill.params
+        return dict(
+            name=params.get('name', skill.name),
+            source=params.get('source', None),
+            config=params.get('config', {}),
+            description=f'You must use this tool to get more context or information '
+                        f'to answer a question about {params["description"]}. '
+                        f'The input should be the exact question the user is asking.',
+            type=skill.type
         )
 
     def _get_rag_query_function(self, skill: db.Skills):
@@ -98,7 +121,8 @@ class SkillToolController:
         return dict(
             name='Knowledge Base Retrieval',
             func=self._get_rag_query_function(skill),
-            description=f'Use this tool to get more context or information to answer a question about {description}. The input should be the exact question the user is asking.'
+            description=f'Use this tool to get more context or information to answer a question about {description}. The input should be the exact question the user is asking.',
+            type=skill.type
         )
 
     def get_tool_from_skill(self, skill: db.Skills) -> dict:
@@ -111,11 +135,18 @@ class SkillToolController:
             dict with keys: name, description, func
         """
 
-        if skill.type == 'text_to_sql':
+        try:
+            skill_type = SkillType(skill.type)
+        except ValueError:
+            raise NotImplementedError(
+                f'skill of type {skill.type} is not supported as a tool, supported types are: {list(SkillType._member_names_)}')
+
+        if skill_type == SkillType.TEXT2SQL:
             return self._make_text_to_sql_tools(skill)
-        elif skill.type == 'knowledge_base':
+        if skill_type == SkillType.KNOWLEDGE_BASE:
             return self._make_knowledge_base_tools(skill)
-        raise NotImplementedError(f'skill of type {skill.type} is not supported as a tool')
+        if skill_type == SkillType.RETRIEVAL:
+            return self._make_retrieval_tools(skill)
 
 
 skill_tool = SkillToolController()

@@ -565,6 +565,11 @@ class ExecuteCommands:
                         self.session.predictor_cache = True
                     else:
                         self.session.predictor_cache = False
+                elif param == "context":
+                    if value in (0, False, None):
+                        # drop context
+                        query_context_controller.drop_query_context(None)
+
                 return ExecuteAnswer(ANSWER_TYPE.OK)
             elif category == "autocommit":
                 return ExecuteAnswer(ANSWER_TYPE.OK)

@@ -3,6 +3,4 @@ faiss-cpu
 openai==1.6.1
 html2text
 writerai~=1.1.0
-langchain-community  # for Writer LLM integration
 sentence-transformers # needed for HuggingFaceEmbeddings from langchain-community
-

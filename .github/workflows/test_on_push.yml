@@ -109,6 +109,7 @@ jobs:
         pip install .
         pip install -r requirements/requirements-test.txt
         pip install .[lightwood]  # TODO: for now some tests rely on lightwood
+        pip install .[mssql]
         pip freeze
     - name: Run unit tests
       run: |

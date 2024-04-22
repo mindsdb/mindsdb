@@ -1135,7 +1135,7 @@ class TestJobs(BaseExecutorDummyML):
 
         # ml_engine
         self.run_sql('''
-            CREATE ML_ENGINE engine1 from dummy_ml          
+            CREATE ML_ENGINE engine1 from dummy_ml
         ''')
 
         # job
@@ -1183,7 +1183,6 @@ class TestJobs(BaseExecutorDummyML):
 
         df = self.run_sql('describe trigger trigger1')
         assert df.NAME[0] == 'trigger1' and df.QUERY[0] == 'show models'
-
 
         # agent
         self.run_sql('''

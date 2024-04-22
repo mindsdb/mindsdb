@@ -15,6 +15,7 @@ servers:
     description: MindsDB local deployments
 components:
   schemas:
+
     Database:
       type: object
       properties:
@@ -26,6 +27,7 @@ components:
         type:
           type: string
           description: Type of database (data | project | system)
+
     Model:
       type: object
       properties:
@@ -88,6 +90,48 @@ components:
         query:
           type: string
           description: SELECT query used to create the view
+
+    Skill:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        source: # used when type = knowledge_base
+          type: strng
+        database: # used when type = text2sql
+          type: string
+        tables: # used when type = text2sql
+          type: array
+            items:
+              type: string
+        description:
+          type: string
+        
+    Agent:
+      type: object
+      properties:
+        name:
+          type: string
+        model:
+          type: string
+          description: A conversational model used by an agent
+        skills:
+          type: array
+            items:
+              type: string
+
+    Chatbot:
+      type: object
+      properties:
+        name:
+          type: string
+        database:
+          type: string
+        agent:
+          type: string
+        
 paths:
   '/api/databases':
     get:
@@ -1244,3 +1288,37 @@ paths:
                 type: object
                 items:
                   type: string
+
+  '/projects/{project_name}/skills':
+    get:
+      security:
+        - ApiKeyAuth: []
+      summary: Returns a list of all created skills.
+      description: Gets all skills created by the user.
+      responses:
+        '200':
+          description: A JSON array of skill names
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Skill'
+
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+  

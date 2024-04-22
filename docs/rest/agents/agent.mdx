@@ -24,3 +24,24 @@ Here is how to interact with agents using REST API endpoints:
 * `PUT /projects/<project_name>/agents/<agent_name>` updates agent with new settings
 * `POST /projects/<project_name>/agents` - creates a new agent
 * `DELETE /projects/<project_name>/agent/<agent_name>` - deletes an agent by name or ID
+* `POST /api/projects/<project_name>/agents/<agent_name>/completions` - query an agent
+
+    Request body:
+
+    ```
+    {
+        "messages": [
+            { "question": "What is the meaning of life?", "answer": "The meaning of life is a philosophical question that no one knows." },
+            { "question": "Why do you not understand?", "answer": null }
+        ]
+    }
+    ```
+
+    Response body:
+
+    ```
+    "message": {
+        "role": "assistant",
+        "content": "I'm AI!"
+    }
+    ```

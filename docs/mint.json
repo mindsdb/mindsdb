@@ -601,6 +601,7 @@
         {
           "group": "Agents",
           "pages": [
+            "rest/agents/list-skills",
             "rest/agents/agent",
             "rest/agents/chatbot"
           ]

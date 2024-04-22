@@ -1,37 +1,25 @@
-# ClickHouse Handler
+---
+title: ClickHouse
+sidebarTitle: ClickHouse
+---
 
-This is the implementation of the ClickHouse handler for MindsDB.
+This documentation describes the integration of MindsDB with [ClickHouse](https://clickhouse.com/docs/en/intro), a high-performance, column-oriented SQL database management system (DBMS) for online analytical processing (OLAP).
+The integration allows MindsDB to access data from ClickHouse and enhance ClickHouse with AI capabilities.
 
-## ClickHouse
+## Prerequisites
 
-ClickHouse is a column-oriented database management system (DBMS) for online analytical processing of queries (OLAP). https://clickhouse.com/docs/en/intro/
+Before proceeding, ensure the following prerequisites are met:
 
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect ClickHouse to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
 
+## Connection
 
-## Implementation
-This handler was implemented using the standard `clickhouse-sqlalchemy` library https://clickhouse-sqlalchemy.readthedocs.io/en/latest/.
-Please install it before using this handler:
-
-```
-pip install clickhouse-sqlalchemy
-```
-
-The required arguments to establish a connection are as follows:
-
-* `host` is the hostname or IP address of the ClickHouse server.
-* `port` is the TCP/IP port of the ClickHouse server.
-* `user` is the username used to authenticate with the ClickHouse server.
-* `password` is the password to authenticate the user with the ClickHouse server.
-* `database` defaults to `default`. It is the database name to use when connecting with the ClickHouse server.
-* `protocol` defaults to `native`. It is an optional parameter. Its supported values are `native`, `http` and `https`.
-
-## Usage
-
-To connect to ClickHouse use add `engine=clickhouse` to the CREATE DATABASE statement as:
+Establish a connection to ClickHouse from MindsDB by executing the following SQL command and providing its [handler name](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/clickhouse_handler) as an engine.
 
 ```sql
-CREATE DATABASE clic
-WITH ENGINE = "clickhouse",
+CREATE DATABASE clickhouse_conn
+WITH ENGINE = 'clickhouse', 
 PARAMETERS = {
    "host": "127.0.0.1",
     "port": "8443",
@@ -42,8 +30,56 @@ PARAMETERS = {
     }
 ```
 
-Now, you can use this established connection to query your database as follows,
+Required connection parameters include the following:
+
+* `host`: is the hostname or IP address of the ClickHouse server.
+* `port`: is the TCP/IP port of the ClickHouse server.
+* `user`: is the username used to authenticate with the ClickHouse server.
+* `password`: is the password to authenticate the user with the ClickHouse server.
+* `database`: defaults to `default`. It is the database name to use when connecting with the ClickHouse server.
+* `protocol`: defaults to `native`. It is an optional parameter. Its supported values are `native`, `http` and `https`.
+
+## Usage
+
+The following usage examples utilize the connection to ClickHouse made via the `CREATE DATABASE` statement and named `clickhouse_conn`.
+
+Retrieve data from a specified table by providing the integration and table name.
 
 ```sql
-SELECT * FROM clic.test_data.table
+SELECT *
+FROM clickhouse_conn.table_name
+LIMIT 10;
 ```
+
+## Troubleshooting
+
+<Warning>
+`Database Connection Error`
+
+* **Symptoms**: Failure to connect MindsDB with the ClickHouse database.
+* **Checklist**:
+    1. Ensure that the ClickHouse server is running and accessible
+    2. Confirm that host, port, user, and password are correct. Try a direct MySQL connection.
+    3. Test the network connection between the MindsDB host and the ClickHouse server.
+</Warning>
+
+<Warning>
+`Slow Connection Initialization`
+
+* **Symptoms**: Connecting to the ClickHouse server takes an exceptionally long time, or connections hang without completing
+* **Checklist**:
+    1. Ensure that you are using the appropriate protocol (http, https, or native) for your ClickHouse setup. Misconfigurations here can lead to significant delays.
+    2. Ensure that firewalls or security groups (in cloud environments) are properly configured to allow traffic on the necessary ports (as 8123 for HTTP or 9000 for native).
+</Warning>
+
+<Warning>
+`SQL statement cannot be parsed by mindsdb_sql`
+
+* **Symptoms**: SQL queries failing or not recognizing table names containing spaces, reserved words or special characters.
+* **Checklist**:
+    1. Ensure table names with spaces or special characters are enclosed in backticks.
+    2. Examples:
+        * Incorrect: SELECT * FROM integration.travel data
+        * Incorrect: SELECT * FROM integration.'travel data'
+        * Correct: SELECT * FROM integration.\`travel data\`
+</Warning>

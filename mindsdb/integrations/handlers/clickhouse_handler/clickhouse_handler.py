@@ -18,6 +18,7 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 
 logger = log.getLogger(__name__)
 
+
 class ClickHouseHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the ClickHouse statements.
@@ -32,8 +33,6 @@ class ClickHouseHandler(DatabaseHandler):
         self.renderer = SqlalchemyRender(ClickHouseDialect)
         self.is_connected = False
         self.protocol = connection_data.get('protocol', 'native')
-
-        
 
     def __del__(self):
         if self.is_connected is True:
@@ -190,12 +189,11 @@ connection_args = OrderedDict(
         'description': 'The password to authenticate the user with the ClickHouse server.',
         'required': True,
         'label': 'Password'
-    },
-    
+    }
 )
 
 connection_args_example = OrderedDict(
-    protocol='clickhouse',
+    protocol='native',
     host='127.0.0.1',
     port=9000,
     user='root',

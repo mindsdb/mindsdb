@@ -43,15 +43,12 @@ from mindsdb.integrations.handlers.langchain_handler.tools import setup_tools
 from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS as OPEN_AI_CHAT_MODELS
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.libs.llm.utils import get_llm_config
-from mindsdb.integrations.libs.llm.utils import get_llm_config
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.interfaces.storage.model_fs import HandlerStorage, ModelStorage
-from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
 from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
 from mindsdb.utilities import log
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 
-_PARSING_ERROR_PREFIX = 'An output parsing error occured'
 _PARSING_ERROR_PREFIX = 'An output parsing error occured'
 
 logger = log.getLogger(__name__)
@@ -89,11 +86,8 @@ class LangChainHandler(BaseMLEngine):
             engine_storage: HandlerStorage,
             log_callback_handler: LogCallbackHandler = None,
             langfuse_callback_handler: CallbackHandler = None,
-            log_callback_handler: LogCallbackHandler = None,
-            langfuse_callback_handler: CallbackHandler = None,
             **kwargs):
         super().__init__(model_storage, engine_storage, **kwargs)
-        # if True, the target column name does not have to be specified at creation time.
         # if True, the target column name does not have to be specified at creation time.
         self.generative = True
         self.default_agent_tools = DEFAULT_AGENT_TOOLS
@@ -188,18 +182,10 @@ class LangChainHandler(BaseMLEngine):
             return response
 
     def create(self, target: str, args: Dict = None, **kwargs):
-    def create(self, target: str, args: Dict = None, **kwargs):
         self.default_agent_tools = args.get('tools', self.default_agent_tools)
 
         args = args['using']
         args['target'] = target
-        args['model_name'] = args.get('model_name', DEFAULT_MODEL_NAME)
-        args['provider'] = args.get('provider', self._get_llm_provider(args))
-        args['embedding_model_provider'] = args.get('embedding_model', self._get_embedding_model_provider(args))
-        if args.get('mode') == 'retrieval':
-            # use default prompt template for retrieval i.e. RAG if not provided
-            if "prompt_template" not in args:
-                args["prompt_template"] = DEFAULT_RAG_PROMPT_TEMPLATE
         args['model_name'] = args.get('model_name', DEFAULT_MODEL_NAME)
         args['provider'] = args.get('provider', self._get_llm_provider(args))
         args['embedding_model_provider'] = args.get('embedding_model', self._get_embedding_model_provider(args))
@@ -212,7 +198,6 @@ class LangChainHandler(BaseMLEngine):
 
     @staticmethod
     def create_validation(_, args: Dict=None, **kwargs):
-    def create_validation(_, args: Dict=None, **kwargs):
         if 'using' not in args:
             raise Exception("LangChain engine requires a USING clause! Refer to its documentation for more details.")
         else:
@@ -220,11 +205,7 @@ class LangChainHandler(BaseMLEngine):
         if 'prompt_template' not in args:
             if not args.get('mode') == 'retrieval':
                 raise ValueError('Please provide a `prompt_template` for this engine.')
-        if 'prompt_template' not in args:
-            if not args.get('mode') == 'retrieval':
-                raise ValueError('Please provide a `prompt_template` for this engine.')
 
-    def predict(self, df: pd.DataFrame, args: Dict=None) -> pd.DataFrame:
     def predict(self, df: pd.DataFrame, args: Dict=None) -> pd.DataFrame:
         """
         Dispatch is performed depending on the underlying model type. Currently, only the default text completion
@@ -237,17 +218,8 @@ class LangChainHandler(BaseMLEngine):
         # Back compatibility for old models
         args['provider'] = args.get('provider', self._get_llm_provider(args))
         args['embedding_model_provider'] = args.get('embedding_model', self._get_embedding_model_provider(args))
-        if 'prompt_template' not in args and 'prompt_template' not in pred_args:
-            raise ValueError(f"This model expects a `prompt_template`, please provide one.")
-        # Back compatibility for old models
-        args['provider'] = args.get('provider', self._get_llm_provider(args))
-        args['embedding_model_provider'] = args.get('embedding_model', self._get_embedding_model_provider(args))
 
         df = df.reset_index(drop=True)
-        agent = self.create_agent(df, args, pred_args)
-        # Use last message as prompt, remove other questions.
-        user_column = args.get('user_column', DEFAULT_USER_COLUMN)
-        df.iloc[:-1, df.columns.get_loc(user_column)] = None
         agent = self.create_agent(df, args, pred_args)
         # Use last message as prompt, remove other questions.
         user_column = args.get('user_column', DEFAULT_USER_COLUMN)
@@ -255,10 +227,8 @@ class LangChainHandler(BaseMLEngine):
         return self.run_agent(df, agent, args, pred_args)
 
     def create_agent(self, df: pd.DataFrame, args: Dict=None, pred_args: Dict=None) -> AgentExecutor:
-    def create_agent(self, df: pd.DataFrame, args: Dict=None, pred_args: Dict=None) -> AgentExecutor:
         pred_args = pred_args if pred_args else {}
 
-        # Set up tools.
         # Set up tools.
         model_kwargs = self._get_chat_model_params(args, pred_args)
         llm = self._create_chat_model(args, pred_args)
@@ -267,30 +237,25 @@ class LangChainHandler(BaseMLEngine):
         if args.get('mode') == 'retrieval':
             # get args for embeddings model
             embeddings_args = args.pop('embedding_model_args', {})
-            # create embeddings model
-            pred_args['embeddings_model'] = self._create_embeddings_model(embeddings_args)
-            pred_args['llm'] = llm
-            pred_args['mindsdb_path'] = self.engine_storage.folder_get
 
+            # no embedding model args provided, use same provider as llm
+            if not embeddings_args:
+                logger.warning("embedding_model_args' not found in input params, "
+                            "Trying to use the same provider used for llm. "
+                            f"provider: {args['provider']}"
+                            )
 
-        # Set up embeddings model if needed.
-        if args.get('mode') == 'retrieval':
             # get args for embeddings model
-            embeddings_args = args.pop('embedding_model_args', {})
+            embeddings_args['class'] = args['provider']
+
             # create embeddings model
             pred_args['embeddings_model'] = self._create_embeddings_model(embeddings_args)
             pred_args['llm'] = llm
-            pred_args['mindsdb_path'] = self.engine_storage.folder_get
 
         tools = setup_tools(llm,
                             model_kwargs,
                             pred_args,
                             self.default_agent_tools)
-
-        # Prefer prediction prompt template over original if provided.
-        prompt_template = pred_args.get('prompt_template', args['prompt_template'])
-        if 'context' in pred_args:
-            prompt_template += '\n\n' + 'Useful information:\n' + pred_args['context'] + '\n'
 
         # Set up memory.
         # Prefer prediction prompt template over original if provided.
@@ -300,12 +265,6 @@ class LangChainHandler(BaseMLEngine):
 
         # Set up memory.
         memory = ConversationSummaryBufferMemory(llm=llm,
-                                                 max_token_limit=model_kwargs.get('max_tokens', DEFAULT_MAX_TOKENS),
-                                                 memory_key='chat_history')
-        memory.chat_memory.messages.insert(0, SystemMessage(content=prompt_template))
-        # User - Assistant conversation. All except the last message.
-        user_column = args.get('user_column', DEFAULT_USER_COLUMN)
-        assistant_column = args.get('assistant_column', DEFAULT_ASSISTANT_COLUMN)
                                                  max_token_limit=model_kwargs.get('max_tokens', DEFAULT_MAX_TOKENS),
                                                  memory_key='chat_history')
         memory.chat_memory.messages.insert(0, SystemMessage(content=prompt_template))
@@ -323,12 +282,9 @@ class LangChainHandler(BaseMLEngine):
                 memory.chat_memory.add_ai_message(answer)
 
         agent_type = args.get('agent_type', DEFAULT_AGENT_TYPE)
-        agent_type = args.get('agent_type', DEFAULT_AGENT_TYPE)
         agent_executor = initialize_agent(
             tools,
             llm,
-            agent=agent_type,
-            callbacks=self._get_agent_callbacks(args),
             agent=agent_type,
             callbacks=self._get_agent_callbacks(args),
             # Calls the agent’s LLM Chain one final time to generate a final answer based on the previous steps
@@ -337,16 +293,7 @@ class LangChainHandler(BaseMLEngine):
             # Timeout per agent invocation.
             max_execution_time=pred_args.get('timeout_seconds', args.get('timeout_seconds', DEFAULT_AGENT_TIMEOUT_SECONDS)),
             max_iterations=pred_args.get('max_iterations', args.get('max_iterations', DEFAULT_MAX_ITERATIONS)),
-            max_execution_time=pred_args.get('timeout_seconds', args.get('timeout_seconds', DEFAULT_AGENT_TIMEOUT_SECONDS)),
-            max_iterations=pred_args.get('max_iterations', args.get('max_iterations', DEFAULT_MAX_ITERATIONS)),
             memory=memory,
-            verbose=pred_args.get('verbose', args.get('verbose', True))
-        )
-        return agent_executor
-
-    def run_agent(self, df: pd.DataFrame, agent: AgentExecutor, args: Dict, pred_args: Dict) -> str:
-        # Prefer prediction time prompt template, if available.
-        base_template = pred_args.get('prompt_template', args['prompt_template'])
             verbose=pred_args.get('verbose', args.get('verbose', True))
         )
         return agent_executor
@@ -366,7 +313,6 @@ class LangChainHandler(BaseMLEngine):
         prompts = []
 
         user_column = args.get('user_column', DEFAULT_USER_COLUMN)
-        user_column = args.get('user_column', DEFAULT_USER_COLUMN)
         for i, row in df.iterrows():
             if i not in empty_prompt_ids:
                 prompt = PromptTemplate(input_variables=input_variables, template=base_template)
@@ -377,17 +323,19 @@ class LangChainHandler(BaseMLEngine):
             elif row.get(user_column):
                 # Just add prompt
                 prompts.append(row[user_column])
-            elif row.get(user_column):
-                # Just add prompt
-                prompts.append(row[user_column])
 
         def _invoke_agent_executor_with_prompt(agent_executor, prompt):
             if not prompt:
                 return ''
+            try:
+                answer = agent_executor.invoke(prompt)
 
-            answer = agent_executor.invoke(prompt)
+            except Exception as e:
+                answer = str(e)
+                if not answer.startswith("Could not parse LLM output: "):
+                    raise e
+                answer = {'output': answer.removeprefix("Could not parse LLM output: ").removesuffix(" ")}
 
-            answer = agent_executor.invoke(prompt)
 
             if 'output' not in answer:
                 # This should never happen unless Langchain changes invoke output format, but just in case.
@@ -399,21 +347,18 @@ class LangChainHandler(BaseMLEngine):
         # https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor
         max_workers = args.get('max_workers', None)
         agent_timeout_seconds = args.get('timeout', DEFAULT_AGENT_TIMEOUT_SECONDS)
-        agent_timeout_seconds = args.get('timeout', DEFAULT_AGENT_TIMEOUT_SECONDS)
         executor = ContextThreadPoolExecutor(max_workers=max_workers)
         futures = [executor.submit(_invoke_agent_executor_with_prompt, agent, prompt) for prompt in prompts]
         try:
             for future in as_completed(futures, timeout=agent_timeout_seconds):
                 completions.append(future.result())
             # add a place to store output
-            self.store_llm_output(prompts, completion)
+            self.store_llm_output(prompts, completions, False)
         except TimeoutError:
             completions.append("I'm sorry! I couldn't come up with a response in time. Please try again.")
         # Can't use ThreadPoolExecutor as context manager since we need wait=False.
         executor.shutdown(wait=False)
 
-        # Add null completion for empty prompts
-        for i in sorted(empty_prompt_ids)[:-1]:
         # Add null completion for empty prompts
         for i in sorted(empty_prompt_ids)[:-1]:
             completions.insert(i, None)
@@ -459,17 +404,15 @@ class LangChainHandler(BaseMLEngine):
         context = " ".join([item[0] for item in fetched_data]) if fetched_data else ""
         return context
 
-    def store_llm_output(self, input_data, output_data):
+    def store_llm_output(self, input_data, output_data, retrieval):
         cursor = self.con.cursor()
         # Store the input and output into the llm_io_data table
         cursor.execute('INSERT INTO llm_io_data (input, output) VALUES (?, ?)', (input_data, output_data))
         self.con.commit()
-
-        update_retrieval_index(self.con, input_data, output_data)
+        if retrevial:
+            update_retrieval_index(self.con, input_data, output_data)
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
-        tables = ['info']
-        return pd.DataFrame(tables, columns=['tables'])
         tables = ['info']
         return pd.DataFrame(tables, columns=['tables'])
 
@@ -524,7 +467,7 @@ class LangChainHandler(BaseMLEngine):
                 context = self.fetch_context_from_db(question)
                 answer, context_used = self.generate_dspy_response(question, context)
                 responses.append({'answer': answer, 'context': context_used})
-                self.store_llm_output(question, answer)
+                self.store_llm_output(question, answer, True)
 
             return pd.DataFrame(responses)
 

@@ -16,7 +16,7 @@ from mindsdb.interfaces.database.projects import ProjectController
 
 from mindsdb.utilities import log
 
-from .sql_tables import (
+from .system_tables import (
     SchemataTable, TablesTable, ColumnsTable, EventsTable, RoutinesTable,
     PluginsTable, EnginesTable, KeyColumnUsageTable, StatisticsTable,
     CharacterSetsTable, CollationsTable)

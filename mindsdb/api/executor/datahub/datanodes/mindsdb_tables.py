@@ -11,7 +11,7 @@ from mindsdb.interfaces.database.views import ViewController
 from mindsdb.interfaces.database.projects import ProjectController
 
 
-from .sql_tables import Table
+from .system_tables import Table
 
 
 def to_json(obj):

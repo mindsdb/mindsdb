@@ -74,7 +74,7 @@ class ElasticsearchHandler(DatabaseHandler):
             self.connection = Elasticsearch(
                 hosts=self.connection_data['hosts'].split(','),
                 cloud_id=self.connection_data['cloud_id'],
-                basic_auth=(self.connection_data['username'], self.connection_data['password'])
+                http_auth=(self.connection_data['username'], self.connection_data['password'])
             )
             self.is_connected = True
             return StatusResponse(True)
@@ -135,7 +135,8 @@ class ElasticsearchHandler(DatabaseHandler):
 
         need_to_close = self.is_connected is False
 
-        connection = self.connect()
+        self.connect()
+        connection = self.connection
 
         try:
             response = connection.sql.query(body={'query': query})

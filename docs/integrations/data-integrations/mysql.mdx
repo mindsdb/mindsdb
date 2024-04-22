@@ -3,40 +3,40 @@ title: MySQL
 sidebarTitle: MySQL
 ---
 
-This documentation describes the integration of MindsDB with MySQL, a fast, reliable, and scalable open-source database. 
-The integration allows MindsDB to access data stored in the MySQL database and enhance MySQL with AI capabilities.
+This documentation describes the integration of MindsDB with [MySQL](https://www.mysql.com/), a fast, reliable, and scalable open-source database.
+The integration allows MindsDB to access data from MySQL and enhance MySQL with AI capabilities.
 
-### Prerequisites
+## Prerequisites
 
 Before proceeding, ensure the following prerequisites are met:
 
- 1. Install MindsDB and MySQL on your system or obtain access to cloud options.
- 2. To use MySQL with MindsDB, install the required dependencies by running `pip install mindsdb[mysql]`.
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect MySQL to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
 
 ## Connection
 
-Establish a connection to your MySQL database from MindsDB by executing the following SQL command:
+Establish a connection to MySQL from MindsDB by executing the following SQL command and providing its [handler name](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/mysql_handler) as an engine.
 
 ```sql
-CREATE DATABASE mysql_datasource 
+CREATE DATABASE mysql_conn
 WITH ENGINE = 'mysql', 
 PARAMETERS = {
-    "host": "127.0.0.1",
+    "host": "host-name",
     "port": 3306,
-    "database": "mysql",
-    "user": "root",
+    "database": "db-name",
+    "user": "user-name",
     "password": "password"
 };
 ```
 
-Or, using the `url` parameter:
+Or:
 
 ```sql
 CREATE DATABASE mysql_datasource
 WITH
   ENGINE = 'mysql',
   PARAMETERS = {
-    "url": "mysql://user@127.0.0.1:3306"
+    "url": "mysql://user-name@host-name:3306"
   };
 ```
 
@@ -47,7 +47,10 @@ Required connection parameters include the following:
 *    `host`: The hostname, IP address, or URL of the MySQL server.
 *    `port`: The port number for connecting to the MySQL server.
 *    `database`: The name of the MySQL database to connect to.
-*    `url`: You can specify a connection to MySQL Server using a URI-like string, if the above params are not provided.
+
+Or:
+
+*    `url`: You can specify a connection to MySQL Server using a URI-like string, as an alternative connection option.
 
 Optional connection parameters include the following:
 
@@ -58,25 +61,23 @@ Optional connection parameters include the following:
 
 ## Usage
 
-Retrieve data from a specified table by providing the integration and table name:
+The following usage examples utilize the connection to MySQL made via the `CREATE DATABASE` statement and named `mysql_conn`.
+
+Retrieve data from a specified table by providing the integration and table name.
 
 ```sql
 SELECT *
-FROM mysql_datasource.table_name
+FROM mysql_conn.table_name
 LIMIT 10;
 ```
-
-<Note>
-The above examples utilize `mysql_datasource` as the datasource name, which is defined in the `CREATE DATABASE` command.
-</Note>
 
 <Tip>
 **Next Steps**
 
- Check out the [Forecast Monthly Expenditures tutorial](https://docs.mindsdb.com/sql/tutorials/expenditures-statsforecast), which uses the data from MySQL database to MindsDB.
+Follow [this tutorial](/use-cases/data_enrichment/text-summarization-inside-mysql-with-openai) to see more use case examples.
 </Tip>
 
-## Troubleshooting Guide
+## Troubleshooting
 
 <Warning>
 `Database Connection Error`

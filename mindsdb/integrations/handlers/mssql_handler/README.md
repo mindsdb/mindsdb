@@ -1,56 +1,61 @@
-# Microsoft SQL Server Integration
+---
+title: Microsoft SQL Server
+sidebarTitle: Microsoft SQL Server
+---
 
-This documentation describes the integration of MindsDB with Microsoft SQL Server, a relational database management system developed by Microsoft. The integration allows for advanced SQL functionalities, extending PostgreSQL's capabilities with MindsDB's features.
+This documentation describes the integration of MindsDB with Microsoft SQL Server, a relational database management system developed by Microsoft.
+The integration allows for advanced SQL functionalities, extending Microsoft SQL Server's capabilities with MindsDB's features.
 
-## Getting Started
+## Prerequisites
 
-### Prerequisites
+Before proceeding, ensure the following prerequisites are met:
 
    1. Ensure that MindsDB and Microsoft SQL Server are installed on your system or you have access to cloud options.
    2. If running locally install the dependencies as `pip install mindsdb[mssql]`.
 
-### Connection
+## Connection
 
-Use the following syntax to create a connection to the Microsoft SQL Server database in MindsDB:
+Establish a connection to your Microsoft SQL Server database from MindsDB by executing the following SQL command:
 
 ```sql
-    CREATE DATABASE mssql_datasource 
-    WITH ENGINE = 'mssql', 
-    PARAMETERS = {
-        "host": "127.0.0.1",
-        "port": 1433,
-        "user": "sa",
-        "password": "password",
-        "database": "master"
-    };
+CREATE DATABASE mssql_datasource 
+WITH ENGINE = 'mssql', 
+PARAMETERS = {
+    "host": "127.0.0.1",
+    "port": 1433,
+    "user": "sa",
+    "password": "password",
+    "database": "master"
+};
 ```
 
-Required Parameters:
+Required connection parameters include the following:
 
-* `user`: The username for the Microsoft SQL Server database.
-* `password`: The password for the Microsoft SQL Server database.
-* `host` The hostname, IP address, or URL of the Microsoft SQL Server server.
+* `user`: The username for the Microsoft SQL Server.
+* `password`: The password for the Microsoft SQL Server.
+* `host` The hostname, IP address, or URL of the Microsoft SQL Server.
 * `database` The name of the Microsoft SQL Server database to connect to.
 
-Optional Parameters:
+Optional connection parameters include the following:
 
 * `port`: The port number for connecting to the Microsoft SQL Server. Default is 1433.
 * `server`: The server name to connect to. Typically only used with named instances or Azure SQL Database.
 
-### Example Usage
+## Usage
 
-Querying a Table:
+Retrieve data from a specified table by providing the integration name, schema, and table name:
 
- ```sql
-    SELECT *
-    FROM mssql_datasource.schema_name.table_name
-    LIMIT 10;
+```sql
+SELECT *
+FROM mssql_datasource.schema_name.table_name
+LIMIT 10;
 ```
 
-Running T-SQL queries by wrapping them inside the mssql integration SELECT:
+Run T-SQL queries directly on the connected Microsoft SQL Server database:
 
 ```sql
 SELECT * FROM mssql_datasource (
+
     --Native Query Goes Here
     SELECT 
       SUM(orderqty) total
@@ -58,6 +63,34 @@ SELECT * FROM mssql_datasource (
     JOIN SalesOrderHeader sh ON sd.salesorderid = sh.salesorderid
     JOIN Customer c ON sh.customerid = c.customerid
     WHERE (Name = 'Racing Socks, L') AND (companyname = 'Riding Cycles');
+
 );
 ```
-> Note: In the above examples we are using `mssql_datasource` name, which was created with CREATE DATABASE query.
+
+<Note>
+The above examples utilize `mssql_datasource` as the datasource name, which is defined in the `CREATE DATABASE` command.
+</Note>
+
+## Troubleshooting Guide
+
+<Warning>
+`Database Connection Error`
+
+* **Symptoms**: Failure to connect MindsDB with the Microsoft SQL Server database.
+* **Checklist**:
+    1. Make sure the Microsoft SQL Server is active.
+    2. Confirm that host, port, user, and password are correct. Try a direct Microsoft SQL Server connection using a client like SQL Server Management Studio or DBeaver.
+    3. Ensure a stable network between MindsDB and Microsoft SQL Server.
+</Warning>
+
+<Warning>
+`SQL statement cannot be parsed by mindsdb_sql`
+
+* **Symptoms**: SQL queries failing or not recognizing table names containing spaces or special characters.
+* **Checklist**:
+    1. Ensure table names with spaces or special characters are enclosed in backticks.
+    2. Examples:
+        * Incorrect: SELECT * FROM integration.travel data
+        * Incorrect: SELECT * FROM integration.'travel data'
+        * Correct: SELECT * FROM integration.\`travel data\`
+</Warning>

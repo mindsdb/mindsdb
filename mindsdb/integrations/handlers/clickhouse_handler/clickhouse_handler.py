@@ -45,7 +45,7 @@ class ClickHouseHandler(DatabaseHandler):
 
         Raises:
             SQLAlchemyError: If an error occurs while connecting to the database.
-        
+
         Returns:
             Connection: A SQLAlchemy Connection object to the ClickHouse database.
         """
@@ -112,7 +112,7 @@ class ClickHouseHandler(DatabaseHandler):
         Returns:
             Response: A response object containing the result of the query or an error message.
         """
-    
+
         connection = self.connect()
         cur = connection.cursor()
         try:

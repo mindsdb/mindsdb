@@ -212,12 +212,22 @@ class LangChainHandler(BaseMLEngine):
 
         # Set up embeddings model if needed.
         if args.get('mode') == 'retrieval':
-            # get args for embeddings model
+
             embeddings_args = args.pop('embedding_model_args', {})
+
+            # no embedding model args provided, use same provider as llm
+            if not embeddings_args:
+                logger.warning("'embedding_model_args' not found in input params, "
+                               "Trying to use the same provider used for llm. "
+                               f"provider: {args['provider']}"
+                               )
+
+                # get args for embeddings model
+                embeddings_args['class'] = args['provider']
+
             # create embeddings model
             pred_args['embeddings_model'] = self._create_embeddings_model(embeddings_args)
             pred_args['llm'] = llm
-            pred_args['mindsdb_path'] = self.engine_storage.folder_get
 
         tools = setup_tools(llm,
                             model_kwargs,
@@ -291,8 +301,13 @@ class LangChainHandler(BaseMLEngine):
         def _invoke_agent_executor_with_prompt(agent_executor, prompt):
             if not prompt:
                 return ''
-
-            answer = agent_executor.invoke(prompt)
+            try:
+                answer = agent_executor.invoke(prompt)
+            except Exception as e:
+                answer = str(e)
+                if not answer.startswith("Could not parse LLM output: `"):
+                    raise e
+                answer = {'output': answer.removeprefix("Could not parse LLM output: `").removesuffix("`")}
 
             if 'output' not in answer:
                 # This should never happen unless Langchain changes invoke output format, but just in case.

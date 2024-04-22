@@ -1,0 +1,144 @@
+---
+title: Fine-Tune the Classification Model
+sidebarTitle: Classification
+---
+
+In this example, we again use our sample PostgreSQL database.
+
+First, we create and train the model using a subset of the `customer_churn` data, considering only female customers.
+
+```sql
+CREATE MODEL mindsdb.adjust_customer_churn_model
+FROM example_db
+    (SELECT *
+    FROM demo_data.customer_churn
+    WHERE gender = 'Female')
+PREDICT churn;
+```
+
+On execution, we get:
+
+```sql
+Query successfully completed
+```
+
+We can check its status using this command:
+
+```sql
+SELECT *
+FROM mindsdb.models
+WHERE name = 'adjust_customer_churn_model';
+```
+
+Once the status is complete, we can query for predictions.
+
+```sql
+SELECT churn, churn_explain
+FROM mindsdb.adjust_customer_churn_model
+WHERE seniorcitizen = 0
+AND partner = 'Yes'
+AND dependents = 'No'
+AND tenure = 1
+AND phoneservice = 'No'
+AND multiplelines = 'No phone service'
+AND internetservice = 'DSL';
+```
+
+On execution, we get:
+
+```sql
++--------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| churn  | churn_explain                                                                                                                                              |
++--------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| No     | {"predicted_value": "No", "confidence": 0.9887640449438202, "anomaly": null, "truth": null, "probability_class_No": 0.934, "probability_class_Yes": 0.066} |
++--------+------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+ 
+Let’s adjust this model with more training data. Now we also consider male customers.
+
+```sql
+FINETUNE mindsdb.adjust_customer_churn_model
+FROM example_db
+    (SELECT *
+    FROM demo_data.customer_churn
+    WHERE gender = 'Male');
+```
+
+<Warning>
+While the model is being generated and trained, it is not active. The model becomes active only after it completes generating and training.
+</Warning>
+
+To check the status and versions of the model, run this command:
+
+```sql
+SELECT name, engine, project, active, version, status
+FROM mindsdb.models_versions
+WHERE name = 'adjust_customer_churn_model';
+```
+
+On execution, we get:
+
+```sql
++-----------------------------+-----------+---------+--------+---------+----------+
+| name                        | engine    | project | active | version | status   |
++-----------------------------+-----------+---------+--------+---------+----------+
+| adjust_customer_churn_model | lightwood | mindsdb | false  | 1       | complete |
+| adjust_customer_churn_model | lightwood | mindsdb | true   | 2       | complete |
++-----------------------------+-----------+---------+--------+---------+----------+
+```
+
+Let’s query for a prediction again.
+
+```sql
+SELECT churn, churn_explain
+FROM mindsdb.adjust_customer_churn_model
+WHERE seniorcitizen = 0
+AND partner = 'Yes'
+AND dependents = 'No'
+AND tenure = 1
+AND phoneservice = 'No'
+AND multiplelines = 'No phone service'
+AND internetservice = 'DSL';
+```
+
+On execution, we get:
+
+```sql
++--------+--------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| churn  | churn_explain                                                                                                                                                |
++--------+--------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| No     | {"predicted_value": "No", "confidence": 0.9887640449438202, "anomaly": null, "truth": null, "probability_class_No": 0.9294, "probability_class_Yes": 0.0706} |
++--------+--------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+Here after adjusting the model, there are no significant changes to the predictions. However, the probability class for `Yes` and `No` values has been updated. The probability of a `Yes` value has increased slightly, while the probability of a `No` value has decreased.
+
+<Tip>
+If you have dynamic data that gets updated regularly, you can set up an automated fine-tuning as below.
+
+Note that the data source must contain an incremental column, such as timestamp or integer, so MindsDB can pick up only the recently added data.
+
+Create a view to store recently added data with the help of the [`LAST` keyword](/mindsdb_sql/sql/create/jobs#last):
+
+```sql
+CREATE VIEW recent_data (
+    SELECT *
+    FROM example_db.customer_churn
+    WHERE timestamp > LAST
+);
+```
+
+Create a job to fine-tune the model periodically.
+
+```sql
+CREATE JOB automated_finetuning (
+
+    FINETUNE adjust_customer_churn_model
+    FROM mindsdb
+        (SELECT * FROM recent_data)
+)
+EVERY 1 day;
+```
+
+Now your model will be fine-tuned with newly added data every day.
+</Tip>

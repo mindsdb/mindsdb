@@ -155,7 +155,6 @@ exclude =
   mindsdb/integrations/handlers/hsqldb_handler/*
   mindsdb/integrations/handlers/newsapi_handler/*
   mindsdb/integrations/handlers/monkeylearn_handler/*
-  mindsdb/integrations/handlers/mysql_handler/*
   mindsdb/integrations/handlers/google_search_handler/*
   mindsdb/integrations/handlers/ollama_handler/*
   mindsdb/integrations/handlers/aurora_handler/*

@@ -90,7 +90,7 @@ class AgentsController:
             db.Agents.company_id == ctx.company_id
         )
 
-        if project_name is None:
+        if project_name is not None:
             project = self.project_controller.get(name=project_name)
 
             all_agents = all_agents.filter(db.Agents.project_id == project.id)

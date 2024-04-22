@@ -48,11 +48,16 @@ class SkillsController:
             ValueError: If `project_name` does not exist
         '''
 
-        query = db.Skills.query
+        project_controller = ProjectController()
+        projects = project_controller.get_list()
+        if project_name is not None:
+            projects = list([p for p in projects if p.name == project_name])
+        project_ids = list([p.id for p in projects])
 
-        if project_name is None:
-            project = self.project_controller.get(name=project_name)
-            query = query.filter(db.Skills.project_id == project.id)
+        query = (
+            db.session.query(db.Skills)
+            .filter(db.Skills.project_id.in_(project_ids))
+        )
 
         return query.all()
 

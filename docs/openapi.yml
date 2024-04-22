@@ -11,7 +11,7 @@ info:
     name: GNU General Public License v3.0
     url: 'https://github.com/mindsdb/mindsdb/blob/staging/LICENSE'
 servers:
-  - url: 'http://127.0.0.1:47334/v1/api'
+  - url: 'http://127.0.0.1:47334/'
     description: MindsDB local deployments
 components:
   schemas:

@@ -109,31 +109,27 @@ jobs:
         pip install .
         pip install -r requirements/requirements-test.txt
         pip install .[lightwood]  # TODO: for now some tests rely on lightwood
+        pip install .[mssql]
         pip freeze
     - name: Run unit tests
       run: |
-
         if [ "$RUNNER_OS" == "Linux" ]; then
-
           env PYTHONPATH=./ pytest tests/unit/test_executor.py
-
           env PYTHONPATH=./ pytest tests/unit/test_project_structure.py
-
           env PYTHONPATH=./ pytest tests/unit/test_predictor_params.py
-
           env PYTHONPATH=./ pytest tests/unit/test_mongodb_handler.py
-
           env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
-
           env PYTHONPATH=./ pytest tests/unit/test_cache.py
-        
           env PYTHONPATH=./ pytest tests/unit/test_llm_utils.py
-
         fi
     - name: Run Handlers tests and submit Coverage to coveralls
       run: |
-        pytest --cov=tests/unit/handler tests/unit/handlers/test_postgresql.py && coveralls --service=github
+        files=("test_mysql" "test_postgresql" "test_mssql")
+        for file in "${files[@]}"
+        do
+          pytest --cov=mindsdb/integrations/handlers/${file}_handler tests/unit/handlers/${file}.py 
+        done
+        coveralls --service=github --basedir=mindsdb/integrations/handlers
       env:
         COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
-        PROMETHEUS_MULTIPROC_DIR: ./prometheus_metrics
         github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}

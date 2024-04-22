@@ -1,20 +1,7 @@
-"""
-This is the MySQL integration handler for mindsdb.  It provides the routines
-which provide for interacting with the database.
-
-MindsDB currently does not appear to multiple round trip transactions. This
-makes sense given the niche that the project fulfills.  If this changes, most
-handlers will require modification.  Here we would need a context manager for
-handling transactions.  This would be safer than explicit commits since errors
-would result in rolling back automatically.
-"""
-
 from collections import OrderedDict
 
 import pandas as pd
 import mysql.connector
-from urllib.parse import urlparse
-from sqlalchemy import create_engine
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
@@ -28,8 +15,10 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+from mindsdb.integrations.handlers.mysql_handler.settings import ConnectionConfig
 
 logger = log.getLogger(__name__)
+
 
 class MySQLHandler(DatabaseHandler):
     """
@@ -40,7 +29,6 @@ class MySQLHandler(DatabaseHandler):
 
     def __init__(self, name, **kwargs):
         super().__init__(name)
-        self.mysql_url = None
         self.parser = parse_sql
         self.dialect = 'mysql'
         self.connection_data = kwargs.get('connection_data', {})
@@ -55,84 +43,27 @@ class MySQLHandler(DatabaseHandler):
 
     def _unpack_config(self):
         """
-        Unpacks the config from the connection_data.
+        Unpacks the config from the connection_data by validation all parameters.
 
-        The connection_data must include either the old style of dictionary
-        attriutes (host, optional port, user, password, database) OR have
-        a url connection string with username and password optionally supplied
-        in the dictionary itself.
-
-        Arguments:
-        - conection_data is the dictionary parsed from the JSON payload
-
-        Exceptions thrown:
-        - ValueError if data validation rules fail with a description as the sole
-        argument
-
-        Returns a dictionary with the relevant config info:
-        - host
-        - port
-        - user
-        - password
-        - database
+        Returns:
+            dict: A dictionary containing the validated connection parameters.
         """
-        url = self.connection_data.get('url')
-        if url:
-            urlfields = urlparse(url)
-            if urlfields.scheme != 'mysql':
-                raise ValueError(
-                      "If using a URL to connect to MySQL, the URL needs to start with 'mysql://'"
-                )
-            if urlfields.username and self.connection_data.get('user'):
-                raise ValueError(
-                      "Cannot specify a user in both the URL and elsewhere"
-                )
-            if urlfields.username and self.connection_data.get('password'):
-                raise ValueError(
-                      "Cannot specify a password in both the URL and elsewhere"
-                )
-            if not urlfields.host:
-                raise ValueError(
-                      "Connection URL does not include hostname"
-                )
-            if not urlfields.path:
-                raise ValueError(
-                      "Connection URL does not include database"
-                )
-            config = {
-                'host'    : urlfields.host,
-                'port'    : urlfields.port or  3306,
-                'user'    : urlfields.username or self.connection_data.get('user'),
-                'password': urlfields.password or self.connection_data.get('password'),
-                'database': urlfields.path,
-            }
-
-        else:
-            config = {
-                'host': self.connection_data.get('host'),
-                'port': self.connection_data.get('port') or 3306,
-                'user': self.connection_data.get('user'),
-                'password': self.connection_data.get('password'),
-                'database': self.connection_data.get('database')
-            }
-
-            if not config.get('host'):
-                raise ValueError("Must supply a host")
-            if not config.get('database'):
-                raise ValueError("Must supply a database name")
-
-        if not config.get('user'):
-            raise ValueError('Must supply a user')
-        if not config.get('password'):
-            raise ValueError('Must supply a password for connections')
-        return config
+        try:
+            config = ConnectionConfig(**self.connection_data)
+            return config.dict(exclude_unset=True)
+        except ValueError as e:
+            raise ValueError(str(e))
 
     def connect(self):
-        if self.is_connected is True:
+        """
+        Establishes a connection to a MySQL database.
+
+        Returns:
+            MySQLConnection: An active connection to the database.
+        """
+        if self.is_connected:
             return self.connection
-
         config = self._unpack_config()
-
         if 'conn_attrs' in self.connection_data:
             config['conn_attrs'] = self.connection_data['conn_attrs']
 
@@ -148,14 +79,21 @@ class MySQLHandler(DatabaseHandler):
                 config["ssl_cert"] = ssl_cert
             if ssl_key is not None:
                 config["ssl_key"] = ssl_key
-
-        connection = mysql.connector.connect(**config)
-        connection.autocommit = True
-        self.is_connected = True
-        self.connection = connection
-        return self.connection
+        try:
+            connection = mysql.connector.connect(**config)
+            connection.autocommit = True
+            self.connection = connection
+            self.is_connected = True
+            return self.connection
+        except mysql.connector.Error as e:
+            logger.error(f"Error connecting to MySQL {self.database}, {e}!")
+            self.is_connected = False
+            raise
 
     def disconnect(self):
+        """
+        Closes the connection to the MySQL database if it's currently open.
+        """
         if self.is_connected is False:
             return
         self.connection.close()
@@ -164,60 +102,66 @@ class MySQLHandler(DatabaseHandler):
 
     def check_connection(self) -> StatusResponse:
         """
-        Check the connection of the MySQL database
-        :return: success status and error message if error occurs
+        Checks the status of the connection to the MySQL database.
+
+        Returns:
+            StatusResponse: An object containing the success status and an error message if an error occurs.
         """
 
         result = StatusResponse(False)
-        need_to_close = self.is_connected is False
+        need_to_close = not self.is_connected
 
         try:
-            connection = self.connect()
-            result.success = connection.is_connected()
-        except Exception as e:
+            with self.connect() as connection:
+                result.success = connection.is_connected()
+        except mysql.connector.Error as e:
             logger.error(f'Error connecting to MySQL {self.connection_data["database"]}, {e}!')
             result.error_message = str(e)
 
-        if result.success is True and need_to_close:
+        if result.success and need_to_close:
             self.disconnect()
-        if result.success is False and self.is_connected is True:
+        if not result.success and self.is_connected:
             self.is_connected = False
 
         return result
 
     def native_query(self, query: str) -> Response:
         """
-        Receive SQL query and runs it
-        :param query: The SQL query to run in MySQL
-        :return: returns the records from the current recordset
+        Executes a SQL query on the MySQL database and returns the result.
+
+        Args:
+            query (str): The SQL query to be executed.
+
+        Returns:
+            Response: A response object containing the result of the query or an error message.
         """
 
-        need_to_close = self.is_connected is False
-
-        connection = self.connect()
-        with connection.cursor(dictionary=True, buffered=True) as cur:
-            try:
-                cur.execute(query)
-                if cur.with_rows:
-                    result = cur.fetchall()
-                    response = Response(
-                        RESPONSE_TYPE.TABLE,
-                        pd.DataFrame(
-                            result,
-                            columns=[x[0] for x in cur.description]
+        need_to_close = not self.is_connected
+        try:
+            with self.connect() as connection:
+                with connection.cursor(dictionary=True, buffered=True) as cur:
+                    cur.execute(query)
+                    if cur.with_rows:
+                        result = cur.fetchall()
+                        response = Response(
+                            RESPONSE_TYPE.TABLE,
+                            pd.DataFrame(
+                                result,
+                                columns=[x[0] for x in cur.description]
+                            )
                         )
-                    )
-                else:
-                    response = Response(RESPONSE_TYPE.OK)
-            except Exception as e:
-                logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=str(e)
-                )
+                    else:
+                        response = Response(RESPONSE_TYPE.OK)
+        except mysql.connector.Error as e:
+            logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(e)
+            )
+            if connection.is_connected():
                 connection.rollback()
 
-        if need_to_close is True:
+        if need_to_close:
             self.disconnect()
 
         return response
@@ -242,7 +186,7 @@ class MySQLHandler(DatabaseHandler):
             FROM
                 information_schema.TABLES
             WHERE
-                TABLE_TYPE IN ('BASE TABLE', 'VIEW') 
+                TABLE_TYPE IN ('BASE TABLE', 'VIEW')
                 AND TABLE_SCHEMA = DATABASE()
             ORDER BY 2
             ;
@@ -254,12 +198,18 @@ class MySQLHandler(DatabaseHandler):
         """
         Show details about the table
         """
-        q = f"DESCRIBE {table_name};"
+        q = f"DESCRIBE `{table_name}`;"
         result = self.native_query(q)
         return result
 
 
 connection_args = OrderedDict(
+    url={
+        'type': ARG_TYPE.STR,
+        'description': 'The URI-Like connection string to the MySQL server. If provided, it will override the other connection arguments.',
+        'required': False,
+        'label': 'URL'
+    },
     user={
         'type': ARG_TYPE.STR,
         'description': 'The user name used to authenticate with the MySQL server.',
@@ -292,7 +242,7 @@ connection_args = OrderedDict(
     },
     ssl={
         'type': ARG_TYPE.BOOL,
-        'description': 'Set it to False to disable ssl.',
+        'description': 'Set it to True to enable ssl.',
         'required': False,
         'label': 'ssl'
     },

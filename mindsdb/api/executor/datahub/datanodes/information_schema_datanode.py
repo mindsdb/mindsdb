@@ -22,7 +22,7 @@ from .system_tables import (
     CharacterSetsTable, CollationsTable)
 from .mindsdb_tables import (
     ModelsTable, DatabasesTable, MLEnginesTable, HandlersTable, JobsTable,
-    ChatbotsTable, KBTable, SkillsTable, AgentsTable, ViewsTable)
+    ChatbotsTable, KBTable, SkillsTable, AgentsTable, ViewsTable, TriggersTable)
 
 
 logger = log.getLogger(__name__)
@@ -36,7 +36,7 @@ class InformationSchemaDataNode(DataNode):
         PluginsTable, EnginesTable, KeyColumnUsageTable, StatisticsTable,
         CharacterSetsTable, CollationsTable,
         ModelsTable, DatabasesTable, MLEnginesTable, HandlersTable, JobsTable,
-        ChatbotsTable, KBTable, SkillsTable, AgentsTable, ViewsTable
+        ChatbotsTable, KBTable, SkillsTable, AgentsTable, ViewsTable, TriggersTable
     ]
 
     def __init__(self, session):

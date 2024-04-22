@@ -356,8 +356,11 @@ class SkillsTable(MdbTable):
 
         all_skills = skills_controller.get_skills(project_name)
 
+        project_controller = ProjectController()
+        project_names = {p.id: p.name for p in project_controller.get_list()}
+
         # NAME, PROJECT, TYPE, PARAMS
-        data = [(s.name, project_name, s.type, s.params) for s in all_skills]
+        data = [(s.name, project_names[s.project_id], s.type, s.params) for s in all_skills]
         return pd.DataFrame(data, columns=self.columns)
 
 

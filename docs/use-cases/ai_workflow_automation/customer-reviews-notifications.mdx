@@ -1,0 +1,216 @@
+---
+title: Automate notifications about incoming customer reviews
+sidebarTitle: Customer Reviews Notifications
+---
+
+This tutorial presents how to chain OpenAI models within MindsDB to analyze text sentiment and generate responses, which will be sent in the form of Slack notifications.
+
+## Data setup
+
+Connect your database to MindsDB.
+
+```sql
+CREATE DATABASE local_postgres
+WITH ENGINE = 'postgres',
+PARAMETERS = {
+    "host": "4.tcp.eu.ngrok.io",
+    "port": 12888,
+    "database": "postgres",
+    "user": "postgres",
+    "password": "password"
+    };
+```
+
+Query the input data table.
+
+```sql
+SELECT *
+FROM local_postgres.demo.amazon_reviews;
+```
+
+```sql
++----------------------------+-----------------------------+------------------------+
+| created_at                 | product_name                | review                 |
++----------------------------+-----------------------------+------------------------+
+| 2023-11-08 17:23:21.028485 | Power Adapter               | It is a great product. |
+| 2023-11-08 17:23:21.028485 | Bluetooth and Wi-Fi Speaker | It is ok.              |
+| 2023-11-08 17:23:21.028485 | Kindle eReader              | It doesn’t work.       |
++----------------------------+-----------------------------+------------------------+
+```
+
+## Model 1 setup
+
+Configure an AI engine, providing the OpenAI API key.
+
+```sql
+CREATE ML_ENGINE openai_engine
+FROM openai
+USING
+    openai_api_key = 'sk-xxx';
+```
+
+Deploy a model using this AI engine.
+
+```sql
+CREATE MODEL sentiment_classifier
+PREDICT sentiment
+USING
+    engine = 'openai_engine',
+    model_name = 'gpt-4',
+    prompt_template = 'describe the sentiment of the reviews
+    strictly as "positive", "neutral", or "negative".
+    "I love the product":positive
+    "It is a scam":negative
+    "{{review}}.":';
+```
+
+Check its status.
+
+```sql
+DESCRIBE sentiment_classifier;
+```
+
+## Predictions from Model 1
+
+You can make a single predictions, providing input to the mode in the `WHERE` clause.
+
+```sql
+SELECT review, sentiment
+FROM sentiment_classifier
+WHERE review = 'It is ok.';
+```
+
+Or, make batch predictions, joining the data table with the model.
+
+```sql
+SELECT input.review, output.sentiment
+FROM local_postgres.demo.amazon_reviews AS input
+JOIN sentiment_classifier AS output;
+```
+
+## Automation
+
+The alert system will send notification to Slack. Here is how to [connect Slack to MindsDB](/integrations/app-integrations/slack#method-2-chatbot-responds-on-a-defined-slack-channel).
+
+```sql
+CREATE DATABASE customer_reviews_slack_app
+WITH
+ENGINE = 'slack',
+PARAMETERS =  {
+    "token": "xoxb-xxx" 
+};
+```
+
+Send a test message to test the connection.
+
+```sql
+INSERT INTO customer_reviews_slack_app.channels (channel, text)
+VALUES("customer-reviews", "Testing Slack connection");
+```
+
+[Create a job](/mindsdb_sql/sql/create/jobs) to send notification every time a negative review is received.
+
+```sql
+CREATE JOB customer_reviews_notifications (
+
+    INSERT INTO customer_reviews_slack_app.channels (channel, text)
+        SELECT "customer-reviews" as channel,
+                concat('Product: ', input.product_name, chr(10), 'Received negative review at: ', input.created_at, chr(10), 'Review: ', input.review) as text
+        FROM local_postgres.demo.amazon_reviews AS input
+        JOIN sentiment_classifier AS output
+        WHERE input.created_at > LAST
+        AND output.sentiment = 'negative'
+)
+EVERY 1 minute;
+```
+
+These commands are used to monitor the job.
+
+```sql
+SHOW JOBS WHERE name = 'customer_reviews_notifications';
+
+SELECT * FROM mindsdb.jobs WHERE name = 'customer_reviews_notifications';
+
+SELECT * FROM log.jobs_history WHERE project = 'mindsdb' AND name = 'customer_reviews_notifications';
+```
+
+Use this command to disable the job.
+
+```sql
+DROP JOB customer_reviews_notifications;
+```
+
+## Model 2 setup
+
+Deploy a model using the AI engine created earlier.
+
+```sql
+CREATE MODEL response_model
+PREDICT response
+USING
+    engine = 'openai_engine',
+    model_name = 'gpt-4',
+    prompt_template = 'briefly respond to the customer review: {{review}}';
+```
+
+Check its status.
+
+```sql
+DESCRIBE response_model;
+```
+
+## Predictions from Model 2
+
+You can make a single predictions, providing input to the mode in the `WHERE` clause.
+
+```sql
+SELECT review, response
+FROM response_model
+WHERE review = 'It is ok.';
+```
+
+Or, make batch predictions, joining the data table with the model.
+
+```sql
+SELECT input.review, output.response
+FROM local_postgres.demo.amazon_reviews AS input
+JOIN response_model AS output;
+```
+
+## Automation and Chaining Models 1 & 2
+
+[Create a job](/mindsdb_sql/sql/create/jobs) to send notification, including a sample response, every time a positive review is received.
+
+```sql
+CREATE JOB customer_reviews_and_reponses_notifications (
+
+    INSERT INTO customer_reviews_slack_app.channels (channel, text)
+        SELECT "customer-reviews" as channel,
+                concat('---------', chr(10),
+                       'Product: ', input.product_name, chr(10), 
+                       'Received ', input.sentiment, ' review at: ', input.created_at, chr(10), 
+                       'Review: ', input.review, chr(10), 
+                       'Sample response: ', output.response) as text
+        FROM (SELECT inp.created_at AS created_at, inp.product_name AS product_name, inp.review AS review, outp.sentiment AS sentiment
+              FROM local_postgres.demo.amazon_reviews AS inp
+              JOIN sentiment_classifier AS outp
+              WHERE inp.created_at > LAST) AS input --'2023-10-03 16:50:00' AND inp.created_at > "{{PREVIOUS_START_DATETIME}}"
+        JOIN response_model AS output
+        WHERE input.sentiment = 'positive';
+)
+EVERY 1 minute;
+```
+
+These commands are used to monitor the job.
+
+```sql
+SELECT * FROM mindsdb.jobs WHERE name = 'customer_reviews_and_reponses_notifications';
+
+SELECT * FROM log.jobs_history WHERE project = 'mindsdb' AND name = 'customer_reviews_and_reponses_notifications';
+```
+
+Use this command to disable the job.
+
+```sql
+DROP JOB customer_reviews_and_reponses_notifications;
+```

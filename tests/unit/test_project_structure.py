@@ -24,7 +24,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         # wait
         done = False
         for attempt in range(200):
-            sql = f"select * from {project}.models_versions where name='{name}'"
+            sql = f"select * from {project}.models where name='{name}'"
             if filter is not None:
                 for k, v in filter.items():
                     sql += f" and {k}='{v}'"
@@ -214,32 +214,24 @@ class TestProjectStructure(BaseExecutorDummyML):
         # ----------------
 
         # See all versions
-        ret = self.run_sql('select * from proj.models_versions')
+        ret = self.run_sql('select * from proj.models')
         # we have all tags in versions
         assert set(ret['TAG']) == {'first', 'second', 'third'}
 
         # Set active selected version
-        self.run_sql('''
-           update proj.models_versions
-           set active=1
-           where version=1 and name='task_model'
-        ''')
+        self.run_sql('set model_active = proj.task_model.1')
 
         # get active version
-        ret = self.run_sql('select * from proj.models_versions where active = 1')
+        ret = self.run_sql('select * from proj.models where active = 1')
         assert ret['TAG'][0] == 'first'
 
         # use active version ?
 
         # Delete specific version
-        self.run_sql('''
-           delete from proj.models_versions
-           where version=2
-           and name='task_model'
-        ''')
+        self.run_sql('drop model proj.task_model.2')
 
         # deleted version not in list
-        ret = self.run_sql('select * from proj.models_versions')
+        ret = self.run_sql('select * from proj.models')
         assert len(ret) == 2
         assert 'second' not in ret['TAG']
 
@@ -251,20 +243,12 @@ class TestProjectStructure(BaseExecutorDummyML):
 
         # exception with deleting active version
         with pytest.raises(Exception) as exc_info:
-            self.run_sql('''
-               delete from proj.models_versions
-               where version=1
-               and name='task_model'
-            ''')
+            self.run_sql('drop model proj.task_model.1')
         assert "Can't remove active version" in str(exc_info.value)
 
         # exception with deleting non-existing version
         with pytest.raises(Exception) as exc_info:
-            self.run_sql('''
-               delete from proj.models_versions
-               where version=11
-               and name='task_model'
-            ''')
+            self.run_sql('drop model proj.task_model.11')
         assert "is not found" in str(exc_info.value)
 
         # ----------------------------------------------------
@@ -285,7 +269,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         assert len(ret) == 0
 
         # versions are also deleted
-        ret = self.run_sql('select * from proj.models_versions')
+        ret = self.run_sql('select * from proj.models')
         assert len(ret) == 0
 
     def test_view(self):

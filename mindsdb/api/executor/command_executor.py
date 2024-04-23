@@ -181,17 +181,8 @@ class ExecuteCommands:
         elif type(statement) is DropMLEngine:
             return self.answer_drop_ml_engine(statement)
         elif type(statement) is DropPredictor:
-            if len(statement.name.parts) > 1:
-                database_name = statement.name.parts[0].lower()
-            model_name = statement.name.parts[-1]
+            return self.answer_drop_model(statement, database_name)
 
-            try:
-                project = self.session.database_controller.get_project(database_name)
-                project.drop_model(model_name)
-            except Exception as e:
-                if not statement.if_exists:
-                    raise e
-            return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) is DropTables:
             return self.answer_drop_tables(statement, database_name)
         elif type(statement) is DropDatasource or type(statement) is DropDatabase:
@@ -544,6 +535,8 @@ class ExecuteCommands:
                     if value in (0, False, None):
                         # drop context
                         query_context_controller.drop_query_context(None)
+                elif param == "model_active":
+                    return self.answer_update_model_version(statement.value, database_name)
 
                 return ExecuteAnswer(ANSWER_TYPE.OK)
             elif category == "autocommit":
@@ -588,9 +581,6 @@ class ExecuteCommands:
         elif type(statement) is DropView:
             return self.answer_drop_view(statement, database_name)
         elif type(statement) is Delete:
-            if statement.table.parts[-1].lower() == "models_versions":
-                return self.answer_delete_model_version(statement, database_name)
-
             SQLQuery(statement, session=self.session, execute=True, database=database_name)
             return ExecuteAnswer(ANSWER_TYPE.OK)
 
@@ -598,10 +588,6 @@ class ExecuteCommands:
             SQLQuery(statement, session=self.session, execute=True, database=database_name)
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) is Update:
-            if statement.from_select is None:
-                if statement.table.parts[-1].lower() == "models_versions":
-                    return self.answer_update_model_version(statement, database_name)
-
             SQLQuery(statement, session=self.session, execute=True, database=database_name)
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif (
@@ -2032,61 +2018,60 @@ class ExecuteCommands:
             data=data["result"],
         )
 
-    def answer_update_model_version(self, statement, database_name):
+    def answer_update_model_version(self, model_version, database_name):
 
-        # get project name
-        if len(statement.table.parts) > 1:
-            project_name = statement.table.parts[0]
+        model_parts = model_version.parts
+        version = model_parts[-1]
+        if version.isdigit():
+            version = int(version)
         else:
+            raise ExecutorException(f'Unknown version: {version}')
+
+        if len(model_parts) == 3:
+            project_name, model_name = model_parts[:2]
+        elif len(model_parts) == 2:
+            model_name = model_parts[0]
             project_name = database_name
+        else:
+            raise ExecutorException(f'Unknown model: {model_version}')
 
-        project_datanode = self.datahub.get(project_name)
-        if project_datanode is None:
-            raise Exception(f"Project not found: {project_name}")
-
-        # get list of model versions using filter
-        query = Select(
-            targets=[Identifier("version"), Identifier("name"), Identifier("project")],
-            from_table=Identifier("models_versions"),
-            where=statement.where,
-        )
-
-        data, columns_info = project_datanode.query(query=query, session=self.session)
-        col_names = [col['name'] for col in columns_info]
-        models = [dict(zip(col_names, item)) for item in data]
-
-        # get columns for update
-        kwargs = {}
-        for k, v in statement.update_columns.items():
-            if isinstance(v, Constant):
-                v = v.value
-            kwargs[k.lower()] = v
-        self.session.model_controller.update_model_version(models, **kwargs)
+        self.session.model_controller.set_model_active_version(project_name, model_name, version)
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
-    def answer_delete_model_version(self, statement, database_name):
-        # get project name
-        if len(statement.table.parts) > 1:
-            project_name = statement.table.parts[0]
-        else:
+    def answer_drop_model(self, statement, database_name):
+
+        model_parts = statement.name.parts
+        version = None
+
+        # with version?
+        if model_parts[-1].isdigit():
+            version = int(model_parts[-1])
+            model_parts = model_parts[:-1]
+
+        if len(model_parts) == 2:
+            project_name, model_name = model_parts
+        elif len(model_parts) == 1:
+            model_name = model_parts[0]
             project_name = database_name
+        else:
+            raise ExecutorException(f'Unknown model: {statement.name}')
 
-        project_datanode = self.datahub.get(project_name)
-        if project_datanode is None:
-            raise Exception(f"Project not found: {project_name}")
+        if version is not None:
+            # delete version
+            try:
+                self.session.model_controller.delete_model_version(project_name, model_name, version)
+            except EntityNotExistsError as e:
+                if not statement.if_exists:
+                    raise e
+        else:
+            # drop model
+            try:
+                project = self.session.database_controller.get_project(project_name)
+                project.drop_model(model_name)
+            except Exception as e:
+                if not statement.if_exists:
+                    raise e
 
-        # get list of model versions using filter
-        query = Select(
-            targets=[Identifier("version"), Identifier("name"), Identifier("project")],
-            from_table=Identifier("models_versions"),
-            where=statement.where,
-        )
-
-        data, columns_info = project_datanode.query(query=query, session=self.session)
-        col_names = [col['name'] for col in columns_info]
-        models = [dict(zip(col_names, item)) for item in data]
-
-        self.session.model_controller.delete_model_version(models)
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def change_default_db(self, db_name):

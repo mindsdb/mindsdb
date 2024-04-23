@@ -9,22 +9,24 @@ Here you'll find REST API endpoints to create, update, delete, and interact with
 
 Here is how to interact with skills using REST API endpoints:
 
-* `GET /projects/<project_name>/skills` - gets all skills created by the user (allow params to filter by agent)
-* `GET /projects/<project_name>/skills/<skill_name>` - gets a skill by name or ID
-* `PUT /projects/<project_name>/skills/<skill_name>` - updates skill with new params
-* `POST /projects/<project_name>/skills` - creates a new skill
-* `DELETE /projects/<project_name>/skills/<skills>` - deletes a skill by name or ID
+* `GET /api/projects/<project_name>/skills` - gets all skills created by the user (allow params to filter by agent)
+* `POST /api/projects/<project_name>/skills` - creates a new skill
+* `GET /api/projects/<project_name>/skills/<skill_name>` - gets a skill by name or ID
+* `PUT /api/projects/<project_name>/skills/<skill_name>` - updates skill with new params
+* `DELETE /api/projects/<project_name>/skills/<skills>` - deletes a skill by name or ID
 
 ### REST API for Agents
 
 Here is how to interact with agents using REST API endpoints:
 
-* `GET /projects/<project_name>/agents` - gets all agents created by the user
-* `GET /projects/<project_name>/agents/<agent>` - gets an agent by name or ID
-* `PUT /projects/<project_name>/agents/<agent_name>` updates agent with new settings
-* `POST /projects/<project_name>/agents` - creates a new agent
-* `DELETE /projects/<project_name>/agent/<agent_name>` - deletes an agent by name or ID
-* `POST /api/projects/<project_name>/agents/<agent_name>/completions` - query an agent
+* `GET /api/projects/{projectName}/agents` - gets all agents created by the user
+* `POST /api/projects/{projectName}/agents` - creates a new agent
+
+* `GET /api/projects/{projectName}/agents/{agentName}` - gets an agent by name or ID
+* `PUT /api/projects/{projectName}/agents/{agentName}` updates agent with new settings
+* `DELETE /api/projects/{projectName}/agents/{agentName}` - deletes an agent by name or ID
+
+* `POST /api/projects/{projectName}/agents/{agentName}/completions` - query an agent
 
     Request body:
 
@@ -45,3 +47,286 @@ Here is how to interact with agents using REST API endpoints:
         "content": "I'm AI!"
     }
     ```
+
+
+
+5/6 above
+```
+  '/api/projects/{projectName}/agents':
+    get:
+      security:
+        - ApiKeyAuth: []
+      summary: Returns a list of all created agents.
+      description: Gets all agents created by the user.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project where agent resides
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A JSON array of skill names
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Agent'
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+    post:
+      security:
+        - ApiKeyAuth: []
+      summary: Creates a new agent.
+      description: Creates a new agent.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project where agent resides
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agent:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    model:
+                      type: string
+                      description: A conversational model used by an agent
+                    skills:
+                      type: array
+                      items:
+                        type: string
+                      description: One or more skills that an agent can use
+      responses:
+        '200':
+          description: Created an agent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '400':
+          description: Bad request format
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '409':
+          description: Agent already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+  '/api/projects/{projectName}/agents/{agentName}':
+    get:
+      security:
+        - ApiKeyAuth: []
+      summary: Gets info about existing agent.
+      description: Gets info about an existing agent.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project where agent resides
+          required: true
+          schema:
+            type: string
+        - name: agentName
+          in: path
+          description: Name of existing agent
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A JSON object with skills
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '404':
+          description: Agent not found
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+    put:
+      security:
+        - ApiKeyAuth: []
+      summary: Updates an existing agent.
+      description: Updates an existing agent, or creates a new agent if one doesn't exist.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project where agent resides
+          required: true
+          schema:
+            type: string
+        - name: agentName
+          in: path
+          description: The name of the agent
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agent:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    model:
+                      type: string
+                      description: A conversational model used by an agent
+                    skills:
+                      type: array
+                      items:
+                        type: string
+                      description: One or more skills that an agent can use
+      responses:
+        '200':
+          description: Agent was successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '400':
+          description: Bad request format
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+    delete:
+      security:
+        - ApiKeyAuth: []
+      summary: Deletes an existing agent.
+      description: Deletes an existing agent by name.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project where agent resides
+          required: true
+          schema:
+            type: string
+        - name: agentName
+          in: path
+          description: Name of existing agent to delete
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: An empty response indicates success
+          content:
+            application/json:
+              schema:
+                type: string
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '404':
+          description: Agent not found
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+```

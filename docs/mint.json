@@ -602,6 +602,10 @@
           "group": "Agents",
           "pages": [
             "rest/agents/list-skills",
+            "rest/agents/create-skill",
+            "rest/agents/get-skill",
+            "rest/agents/update-skill",
+            "rest/agents/delete-skill",
             "rest/agents/agent",
             "rest/agents/chatbot"
           ]

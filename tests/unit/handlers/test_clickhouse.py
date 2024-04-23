@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch, MagicMock, Mock
+from unittest.mock import patch, MagicMock
 from sqlalchemy.exc import SQLAlchemyError
 from collections import OrderedDict
 from mindsdb.integrations.handlers.clickhouse_handler.clickhouse_handler import ClickHouseHandler
@@ -47,7 +47,7 @@ class TestClickHouseHandler(unittest.TestCase):
         self.mock_connect.return_value = MagicMock()
         connected = self.handler.check_connection()
         self.assertTrue(connected)
-    
+
     def test_connect_failure(self):
         self.mock_connect.side_effect = SQLAlchemyError("Connection Failed")
 

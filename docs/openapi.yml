@@ -130,7 +130,7 @@ components:
           description: Connection to a chat app like Slack or MS Teams
         agent:
           type: string
-          description: Agent object created beforehand   
+          description: Agent object created beforehand
 paths:
   '/api/databases':
     get:
@@ -1917,6 +1917,279 @@ paths:
                   type: string
         '400':
           description: Bad request format
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+  '/api/projects/{projectName}/chatbots':
+    get:
+      security:
+        - ApiKeyAuth: []
+      summary: Returns a list of all created chatbots.
+      description: Gets all chatbots created by the user.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project where agent resides
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A JSON array of skill names
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Chatbot'
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+    post:
+      security:
+        - ApiKeyAuth: []
+      summary: Creates a new chatbot.
+      description: Creates a new chatbot.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project where agent resides
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                chatbot:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    database:
+                      type: string
+                      description: Connection to a chat app like Slack or MS Teams
+                    agent:
+                      type: string
+                      description: Agent object created beforehand
+      responses:
+        '200':
+          description: Created a chatbot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chatbot'
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '400':
+          description: Bad request format
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '409':
+          description: Chatbot already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+  '/api/projects/{projectName}/chatbots/{chatbotName}':
+    get:
+      security:
+        - ApiKeyAuth: []
+      summary: Gets info about existing chatbots.
+      description: Gets info about an existing chatbot.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project where agent resides
+          required: true
+          schema:
+            type: string
+        - name: chatbotName
+          in: path
+          description: Name of existing chatbot
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A JSON object with chatbots
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chatbot'
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '404':
+          description: Chatbot not found
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+    put:
+      security:
+        - ApiKeyAuth: []
+      summary: Updates an existing chatbot.
+      description: Updates an existing chatbot, or creates a new chatbot if one doesn't exist.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project where agent resides
+          required: true
+          schema:
+            type: string
+        - name: chatbotName
+          in: path
+          description: The name of the chatbot
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                chatbot:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    database:
+                      type: string
+                      description: Connection to a chat app like Slack or MS Teams
+                    agent:
+                      type: string
+                      description: Agent object created beforehand
+      responses:
+        '200':
+          description: Chatbot was successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chatbot'
+        '400':
+          description: Bad request format
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+    delete:
+      security:
+        - ApiKeyAuth: []
+      summary: Deletes an existing chatbot.
+      description: Deletes an existing chatbot by name.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project where agent resides
+          required: true
+          schema:
+            type: string
+        - name: chatbotName
+          in: path
+          description: Name of existing chatbot to delete
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: An empty response indicates success
+          content:
+            application/json:
+              schema:
+                type: string
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '404':
+          description: Chatbot not found
           content:
             application/json:
               schema:

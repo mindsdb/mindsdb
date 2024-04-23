@@ -150,7 +150,7 @@ USING
 
 Using mindsdb model in langchain: 
 ```sql
-CREATE MODEL langchain_openai_model
+CREATE MODEL langchain_mindsdb_model
 PREDICT answer
 USING
      engine = 'langchain_engine',       -- engine name as created via CREATE ML_ENGINE

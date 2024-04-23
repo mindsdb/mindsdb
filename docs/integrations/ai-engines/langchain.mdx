@@ -144,6 +144,24 @@ USING
 ```
 </Accordion>
 
+<Accordion title="Mindsdb">
+
+Using mindsdb model in langchain:
+```sql
+CREATE MODEL langchain_mindsdb_model
+PREDICT answer
+USING
+     engine = 'langchain_engine',       -- engine name as created via CREATE ML_ENGINE
+     provider = 'mindsdb',              -- one of the available providers
+     model_name = 'gpt_model',          -- mindsdb model
+     mode = 'conversational',           -- conversational mode
+     user_column = 'question',          -- column name that stores input from the user
+     assistant_column = 'answer',       -- column name that stores output of the model (see PREDICT column)
+     verbose = True,
+     prompt_template = 'Answer the user input in a helpful way';
+```
+</Accordion>
+
 </AccordionGroup>
 
 ## Usage

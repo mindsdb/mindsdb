@@ -606,7 +606,12 @@
             "rest/agents/get-skill",
             "rest/agents/update-skill",
             "rest/agents/delete-skill",
-            "rest/agents/agent",
+            "rest/agents/list-agents",
+            "rest/agents/create-agent",
+            "rest/agents/get-agent",
+            "rest/agents/update-agent",
+            "rest/agents/delete-agent",
+            "rest/agents/query-agent",
             "rest/agents/chatbot"
           ]
         }

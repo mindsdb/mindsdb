@@ -19,6 +19,7 @@ class MindsDBInferenceHandler(OpenAIHandler):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.api_base = mindsdb_inference_handler_config.BASE_URL
         self.default_model = 'gpt-3.5-turbo'
         self.default_mode = 'default'
 
@@ -65,7 +66,7 @@ class MindsDBInferenceHandler(OpenAIHandler):
             pd.DataFrame: Predicted data
         """
         api_key = get_api_key('mindsdb_inference', args, self.engine_storage)
-        supported_models = self._get_supported_models(api_key, mindsdb_inference_handler_config.BASE_URL)
+        supported_models = self._get_supported_models(api_key, self.api_base)
         self.chat_completion_models = [model.id for model in supported_models]
         return super().predict(df, args)
 

@@ -310,8 +310,7 @@
             "mindsdb-gui",
             "model-types",
             "sql/table-structure",
-            "mindsdb-handlers",
-            "callbacks"
+            "mindsdb-handlers"
           ]
         }
       ]

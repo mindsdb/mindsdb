@@ -297,7 +297,7 @@
         {
           "group": "Learn more",
           "pages": [
-            "generative-ai-tables",  
+            "generative-ai-tables",
             {
               "group": "Data Preparation",
               "pages": [
@@ -306,8 +306,12 @@
                 "sql/feature-importance"
               ] 
             },
+            "sql/project",
             "mindsdb-gui",
-            "sql/table-structure"
+            "model-types",
+            "sql/table-structure",
+            "mindsdb-handlers",
+            "callbacks"
           ]
         }
       ]
@@ -1079,10 +1083,11 @@
     {
       "group": "FAQs",
       "pages": [
+        "faqs/benefits",
         "faqs/whitelist-ips",
         "faqs/persist-predictions",
         "faqs/mindsdb-with-php",
-        "faqs/benefits"
+        "faqs/disposable-email-doman-and-openai"
       ]
     }
   ],

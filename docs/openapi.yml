@@ -134,8 +134,6 @@ components:
 paths:
   '/api/databases':
     get:
-      security:
-        - ApiKeyAuth: []
       summary: Returns a list of database names.
       description: Gets all databases created by the user.
       responses:
@@ -164,8 +162,6 @@ paths:
                 items:
                   type: string
     post:
-      security:
-        - ApiKeyAuth: []
       summary: Creates a new database connection.
       description: Creates a new database connection. The example parameters below are for connecting to [MySQL](/data-integrations/mysql). See [here](/data-integrations/all-data-integrations) for which parameters to use for your datasource.
       requestBody:
@@ -239,8 +235,6 @@ paths:
                   type: string
   '/api/databases/{databaseName}':
     get:
-      security:
-        - ApiKeyAuth: []
       summary: Gets info about existing database.
       description: Gets info about an existing database.
       parameters:
@@ -282,8 +276,6 @@ paths:
                 items:
                   type: string
     put:
-      security:
-        - ApiKeyAuth: []
       summary: Updates an existing database connection.
       description: Updates an existing database connection, or creates a new connection if one doesn't exist. The example parameters below are for updating a [MySQL](/data-integrations/mysql) connection. See [here](/data-integrations/all-data-integrations) for which parameters to use for your datasource.
       parameters:
@@ -351,8 +343,6 @@ paths:
                 items:
                   type: string
     delete:
-      security:
-        - ApiKeyAuth: []
       summary: Deletes an existing database.
       description: Deletes an existing database connection by name.
       parameters:
@@ -395,8 +385,6 @@ paths:
                   type: string
   '/api/projects':
     get:
-      security:
-        - ApiKeyAuth: []
       summary: Returns a list of projects.
       description: Gets all projects created by the user.
       responses:
@@ -426,8 +414,6 @@ paths:
                   type: string
   '/api/projects/{projectName}':
     get:
-      security:
-        - ApiKeyAuth: []
       summary: Get a project by name.
       description: Gets a project created by the user.
       parameters:
@@ -470,8 +456,6 @@ paths:
                   type: string
   '/api/projects/{projectName}/models':
     post:
-      security:
-        - ApiKeyAuth: []
       summary: This endpoint trains a new ML Model.
       description: Starts training a new Machine Learning model.
       parameters:
@@ -531,8 +515,6 @@ paths:
                 items:
                   type: string
     get:
-      security:
-        - ApiKeyAuth: []
       summary: Returns a list of models.
       description: Gets info about all models in the project.
       parameters:
@@ -577,8 +559,6 @@ paths:
                   type: string
   '/api/projects/{projectName}/models/{modelName}':
     get:
-      security:
-        - ApiKeyAuth: []
       summary: Gets info about specific model.
       description: Gets info for a specific model in the project.
       parameters:
@@ -626,8 +606,6 @@ paths:
                 items:
                   type: string
     delete:
-      security:
-        - ApiKeyAuth: []
       summary: Deletes an existing model.
       description: Deletes a model in the project.
       parameters:
@@ -676,8 +654,6 @@ paths:
                   type: string
   '/api/projects/{projectName}/models/{modelName}/predict':
     post:
-      security:
-        - ApiKeyAuth: []
       summary: This endpoint fetches predictions from the model.
       description: Uses this model to make a prediction for values of new data.
       parameters:
@@ -739,8 +715,6 @@ paths:
                   type: string
   '/api/projects/{projectName}/models/{modelName}/describe':
     get:
-      security:
-        - ApiKeyAuth: []
       summary: Describe a model
       description: Gets the attributes of a specific model.
       parameters:
@@ -801,8 +775,6 @@ paths:
                   type: string
   '/api/projects/{projectName}/views':
     post:
-      security:
-        - ApiKeyAuth: []
       summary: This endpoint creates a view which is a result-set of the SELECT statement.
       description: Creates a [view](https://docs.mindsdb.com/sql/create/view) from a SELECT statement.
       parameters:
@@ -862,8 +834,6 @@ paths:
                 items:
                   type: string
     get:
-      security:
-        - ApiKeyAuth: []
       summary: List all views in a project
       description: Gets all views in a project.
       parameters:
@@ -908,8 +878,6 @@ paths:
                   type: string
   '/api/projects/{projectName}/views/{viewName}':
     get:
-      security:
-        - ApiKeyAuth: []
       summary: SELECT from VIEW
       description: Gets a single view.
       parameters:
@@ -957,8 +925,6 @@ paths:
                 items:
                   type: string
     delete:
-      security:
-        - ApiKeyAuth: []
       summary: Deletes an existing view.
       description: Deletes an existing view in the project.
       parameters:
@@ -1008,8 +974,6 @@ paths:
                 items:
                   type: string
     put:
-      security:
-        - ApiKeyAuth: []
       summary: Updates an existing view.
       description: Updates an existing view, or creates a new view if one doesn't exist.
       parameters:
@@ -1074,8 +1038,6 @@ paths:
                   type: string
   '/api/databases/{databaseName}/tables':
     post:
-      security:
-        - ApiKeyAuth: []
       summary: This endpoint creates a new table with the predictions result-set.
       description: Creates a new table from a select query. See [CREATE table documentation](https://docs.mindsdb.com/sql/create/table).
       parameters:
@@ -1135,8 +1097,6 @@ paths:
                 items:
                   type: string
     get:
-      security:
-        - ApiKeyAuth: []
       summary: Returns a list of tables in a database.
       description: Gets metadata for all tables in a database.
       parameters:
@@ -1181,8 +1141,6 @@ paths:
                   type: string
   '/api/databases/{databaseName}/tables/{tableName}':
     get:
-      security:
-        - ApiKeyAuth: []
       summary: SELECT from Table
       description: Gets metadata for a table in a database.
       parameters:
@@ -1230,8 +1188,6 @@ paths:
                 items:
                   type: string
     delete:
-      security:
-        - ApiKeyAuth: []
       summary: Deletes an existing table.
       description: Deletes a table in a database.
       parameters:
@@ -1282,8 +1238,6 @@ paths:
                   type: string
   '/api/projects/{projectName}/skills':
     get:
-      security:
-        - ApiKeyAuth: []
       summary: Returns a list of all created skills.
       description: Gets all skills created by the user.
       parameters:
@@ -1319,8 +1273,6 @@ paths:
                 items:
                   type: string
     post:
-      security:
-        - ApiKeyAuth: []
       summary: Creates a new skill.
       description: Creates a new skill.
       parameters:
@@ -1400,8 +1352,6 @@ paths:
                   type: string
   '/api/projects/{projectName}/skills/{skillName}':
     get:
-      security:
-        - ApiKeyAuth: []
       summary: Gets info about existing skills.
       description: Gets info about an existing skill.
       parameters:
@@ -1449,8 +1399,6 @@ paths:
                 items:
                   type: string
     put:
-      security:
-        - ApiKeyAuth: []
       summary: Updates an existing skill.
       description: Updates an existing skill, or creates a new skill if one doesn't exist.
       parameters:
@@ -1527,8 +1475,6 @@ paths:
                 items:
                   type: string
     delete:
-      security:
-        - ApiKeyAuth: []
       summary: Deletes an existing skill.
       description: Deletes an existing skill by name.
       parameters:
@@ -1577,8 +1523,6 @@ paths:
                   type: string
   '/api/projects/{projectName}/agents':
     get:
-      security:
-        - ApiKeyAuth: []
       summary: Returns a list of all created agents.
       description: Gets all agents created by the user.
       parameters:
@@ -1614,8 +1558,6 @@ paths:
                 items:
                   type: string
     post:
-      security:
-        - ApiKeyAuth: []
       summary: Creates a new agent.
       description: Creates a new agent.
       parameters:
@@ -1686,8 +1628,6 @@ paths:
                   type: string
   '/api/projects/{projectName}/agents/{agentName}':
     get:
-      security:
-        - ApiKeyAuth: []
       summary: Gets info about existing agent.
       description: Gets info about an existing agent.
       parameters:
@@ -1735,8 +1675,6 @@ paths:
                 items:
                   type: string
     put:
-      security:
-        - ApiKeyAuth: []
       summary: Updates an existing agent.
       description: Updates an existing agent, or creates a new agent if one doesn't exist.
       parameters:
@@ -1804,8 +1742,6 @@ paths:
                 items:
                   type: string
     delete:
-      security:
-        - ApiKeyAuth: []
       summary: Deletes an existing agent.
       description: Deletes an existing agent by name.
       parameters:
@@ -1854,8 +1790,6 @@ paths:
                   type: string
   '/api/projects/{projectName}/agents/{agentName}/completions':
     post:
-      security:
-        - ApiKeyAuth: []
       summary: Quesries an agent.
       description: Quesries an agent.
       parameters:
@@ -1933,8 +1867,6 @@ paths:
                   type: string
   '/api/projects/{projectName}/chatbots':
     get:
-      security:
-        - ApiKeyAuth: []
       summary: Returns a list of all created chatbots.
       description: Gets all chatbots created by the user.
       parameters:
@@ -1970,8 +1902,6 @@ paths:
                 items:
                   type: string
     post:
-      security:
-        - ApiKeyAuth: []
       summary: Creates a new chatbot.
       description: Creates a new chatbot.
       parameters:
@@ -2040,8 +1970,6 @@ paths:
                   type: string
   '/api/projects/{projectName}/chatbots/{chatbotName}':
     get:
-      security:
-        - ApiKeyAuth: []
       summary: Gets info about existing chatbots.
       description: Gets info about an existing chatbot.
       parameters:
@@ -2089,8 +2017,6 @@ paths:
                 items:
                   type: string
     put:
-      security:
-        - ApiKeyAuth: []
       summary: Updates an existing chatbot.
       description: Updates an existing chatbot, or creates a new chatbot if one doesn't exist.
       parameters:
@@ -2156,8 +2082,6 @@ paths:
                 items:
                   type: string
     delete:
-      security:
-        - ApiKeyAuth: []
       summary: Deletes an existing chatbot.
       description: Deletes an existing chatbot by name.
       parameters:

@@ -15,3 +15,4 @@ statsforecast
 timegpt
 binance
 twitter
+mindsdb_inference

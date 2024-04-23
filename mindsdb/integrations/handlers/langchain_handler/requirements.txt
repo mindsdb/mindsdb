@@ -1,6 +1,6 @@
 openai==1.6.1
 wikipedia==1.4.0
-tiktoken==0.4.0
+tiktoken==0.5.2
 anthropic==0.3.5
 langchain-experimental==0.0.57  # Tools
 langfuse==2.27.1  # Tracing

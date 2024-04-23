@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import patch, MagicMock, Mock
+from sqlalchemy.exc import SQLAlchemyError
 from collections import OrderedDict
 from mindsdb.integrations.handlers.clickhouse_handler.clickhouse_handler import ClickHouseHandler
 from mindsdb.integrations.libs.response import (
@@ -19,7 +20,7 @@ class TestClickHouseHandler(unittest.TestCase):
     )
 
     def setUp(self):
-        self.patcher = patch('sqlalchemy.create_engine', return_value=MagicMock())
+        self.patcher = patch('mindsdb.integrations.handlers.clickhouse_handler.clickhouse_handler.create_engine', return_value=MagicMock())
         self.mock_connect = self.patcher.start()
         self.mock_engine = MagicMock()
         self.handler = ClickHouseHandler("test_handler", connection_data=self.dummy_connection_data)
@@ -34,6 +35,39 @@ class TestClickHouseHandler(unittest.TestCase):
         self.assertEqual(self.handler.dialect, "clickhouse")
         self.assertFalse(self.handler.is_connected)
         self.assertEqual(self.handler.protocol, "native")
+
+    def test_connect(self):
+        self.mock_connect.return_value = MagicMock()
+        self.handler.connect()
+        self.mock_connect.assert_called_once_with(
+            f"clickhouse+{self.dummy_connection_data['protocol']}://{self.dummy_connection_data['user']}:{self.dummy_connection_data['password']}@{self.dummy_connection_data['host']}:{self.dummy_connection_data['port']}/{self.dummy_connection_data['database']}"
+        )
+
+    def test_check_connection(self):
+        self.mock_connect.return_value = MagicMock()
+        connected = self.handler.check_connection()
+        self.assertTrue(connected)
+    
+    def test_connect_failure(self):
+        self.mock_connect.side_effect = SQLAlchemyError("Connection Failed")
+
+        with self.assertRaises(SQLAlchemyError):
+            self.handler.connect()
+        self.assertFalse(self.handler.is_connected)
+
+    def test_native_query(self):
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+
+        self.handler.connect = MagicMock(return_value=mock_conn)
+        mock_conn.cursor = MagicMock(return_value=mock_cursor)
+
+        query_str = "SELECT * FROM table"
+        data = self.handler.native_query(query_str)
+
+        assert isinstance(data, Response)
+        self.assertFalse(data.error_code)
+        self.assertTrue(mock_cursor.execute.called)
 
     def test_get_columns(self):
         self.handler.native_query = MagicMock()

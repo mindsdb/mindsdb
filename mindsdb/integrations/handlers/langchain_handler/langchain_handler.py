@@ -220,7 +220,7 @@ class LangChainHandler(BaseMLEngine):
 
             embeddings_args = args.pop('embedding_model_args', {})
 
-            # no embedding model args provided, use same provider as llm
+            # no embedding model args provided, use default provider.
             if not embeddings_args:
                 logger.warning("'embedding_model_args' not found in input params, "
                                f"Trying to use default provider: {DEFAULT_EMBEDDINGS_MODEL_PROVIDER}"

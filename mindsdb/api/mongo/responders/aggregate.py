@@ -61,9 +61,20 @@ class Responce(Responder):
         db = query['$db']
         collection = query['aggregate']
 
-        ast_query = aggregate_to_ast(query, request_env.get('database', 'mindsdb'))
+        first_step = query['pipeline'][0]
+        if '$match' in first_step:
+            ast_query = aggregate_to_ast(query, request_env.get('database', 'mindsdb'))
 
-        data = run_sql_command(request_env, ast_query)
+            data = run_sql_command(request_env, ast_query)
+
+        elif '$collStats' in first_step:
+            raise NotImplementedError(
+                "To describe model use:"
+                " db.runCommand( { collStats: 'model_name', scale: 'describe_type'})"
+            )
+
+        else:
+            raise NotImplementedError
 
         cursor = {
             'id': Int64(0),

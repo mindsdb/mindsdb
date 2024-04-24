@@ -1109,7 +1109,7 @@ class ExecuteCommands:
             handler = self.session.integration_controller.get_data_handler(name)
             handler.handler_storage.import_files(storage)
 
-    def answer_create_ml_engine(self, name: str, handler: str, params: dict=None, if_not_exists=False):
+    def answer_create_ml_engine(self, name: str, handler: str, params: dict = None, if_not_exists=False):
 
         integrations = self.session.integration_controller.get_all()
         if name in integrations:
@@ -1516,7 +1516,7 @@ class ExecuteCommands:
             ml_handler = self.session.integration_controller.get_ml_handler(
                 ml_integration_name
             )
-        except EntityNotExistsError as e:
+        except EntityNotExistsError:
             # not exist, try to create it with same name as handler
             self.answer_create_ml_engine(ml_integration_name, handler=ml_integration_name)
 

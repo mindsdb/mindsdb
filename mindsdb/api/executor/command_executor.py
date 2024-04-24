@@ -1096,6 +1096,12 @@ class ExecuteCommands:
         integration = self.session.integration_controller.get(name)
         if integration is not None:
             raise EntityExistsError('Database already exists', name)
+        try:
+            integration = ProjectController().get(name=name)
+        except ValueError:
+            pass
+        if integration is not None:
+            raise EntityExistsError('Project exists with this name', name)
 
         self.session.integration_controller.add(name, engine, connection_args)
         if storage:

@@ -1,0 +1,18 @@
+mariadbd, Version: 11.2.2-MariaDB-1:11.2.2+maria~ubu2204 (mariadb.org binary distribution). started with:
+Tcp port: 3306  Unix socket: /run/mysqld/mysqld.sock
+Time		    Id Command	Argument
+240424  1:40:14	     4 Query	SET global log_output = 'file'
+240424  1:41:59	     4 Quit	
+240424  1:42:17	     5 Connect	root@192.168.65.1 on test using TCP/IP
+		     5 Query	SET NAMES 'utf8mb4' COLLATE 'utf8mb4_general_ci'
+		     5 Query	SET NAMES utf8mb4
+		     5 Query	set autocommit=0
+		     5 Query	set autocommit=1
+		     5 Quit	
+240424  1:43:21	     6 Connect	root@192.168.65.1 on test using TCP/IP
+		     6 Query	SET NAMES 'utf8mb4' COLLATE 'utf8mb4_general_ci'
+		     6 Query	SET NAMES utf8mb4
+		     6 Query	set autocommit=0
+		     6 Query	set autocommit=1
+		     6 Query	SHOW DATABASES
+240424  1:43:22	     6 Quit	

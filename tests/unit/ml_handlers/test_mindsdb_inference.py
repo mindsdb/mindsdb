@@ -80,10 +80,10 @@ class TestMindsDBInference(unittest.TestCase):
         mock_get_client.return_value = mock_openai
 
         result = self.handler.predict(df, args={})
-        
+
         self.assertIsInstance(result, pandas.DataFrame)
         self.assertTrue('sentiment' in result.columns)
-        
+
         pandas.testing.assert_frame_equal(result, pandas.DataFrame({'sentiment': ['positive']}))
 
 

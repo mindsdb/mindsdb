@@ -22,13 +22,27 @@ class TestMindsDBInference(unittest.TestCase):
 
         self.handler = MindsDBInferenceHandler(mock_model_storage, mock_engine_storage, connection_data={'connection_data': self.dummy_connection_data})
 
-    def test_create_validation(self):
+    def test_create_validation_raises_exception_without_using_clause(self):
         """
-        Test if model creation is validated correctly.
+        Test if model creation raises an exception without a USING clause.
         """
 
-        with self.assertRaises(Exception):
+        with self.assertRaisesRegex(Exception, "MindsDB Inference engine requires a USING clause! Refer to its documentation for more details."):
             self.handler.create_validation('target', args={}, handler_storage=None)
+
+    @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
+    def test_create_validation_with_valid_arguments(self, mock_openai):
+        """
+        Test if model creation is validated correctly with valid arguments.
+        """
+
+        # Mock the chat.completions.create method of the OpenAI client (for the OpenAI handler)
+        mock_openai_client = MagicMock()
+        mock_openai_client.models.retrieve.return_value = MagicMock()
+
+        mock_openai.return_value = mock_openai_client
+
+        self.handler.create_validation('target', args={'using': {'model_name': 'dummy_model_name', 'prompt_template': 'dummy_prompt_template'}}, handler_storage=self.handler.engine_storage)
 
     @patch('mindsdb.integrations.handlers.openai_handler.helpers.OpenAI')
     def test_create(self, mock_openai):

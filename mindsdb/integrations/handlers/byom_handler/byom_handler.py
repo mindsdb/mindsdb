@@ -638,7 +638,8 @@ class ModelWrapperSafe:
             'model_state': model_state,
             'attribute': attribute
         }
-        df = self._run_command(params)
+        enc_df = self._run_command(params)
+        df = pd_decode(enc_df)
         return df
 
 

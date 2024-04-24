@@ -70,7 +70,7 @@ class TestMindsDBInference(unittest.TestCase):
         # Mock the models.list method of the OpenAI client (for the MindsDB Inference handler)
         mock_supported_models = [MagicMock(id='mistral-7b')]
         mock_openai_mdb_inference_handler.return_value.models.list.return_value = mock_supported_models
-        
+
         # Mock the json_get method of the model storage
         self.handler.model_storage.json_get.return_value = {
             'model_name': 'mistral-7b',

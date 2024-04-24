@@ -1,3 +1,4 @@
+import pandas
 import unittest
 from unittest.mock import patch, MagicMock
 from collections import OrderedDict
@@ -19,9 +20,6 @@ class TestMindsDBInference(unittest.TestCase):
         # Define a return value for the `get_connection_args` method of the mock engine storage
         mock_engine_storage.get_connection_args.return_value = self.dummy_connection_data
 
-        # Define a return value for the 'json_get' method of the mock model storage
-        mock_model_storage.json_get.return_value = {}
-
         self.handler = MindsDBInferenceHandler(mock_model_storage, mock_engine_storage, connection_data={'connection_data': self.dummy_connection_data})
 
     def test_create_validation(self):
@@ -32,15 +30,47 @@ class TestMindsDBInference(unittest.TestCase):
             self.handler.create_validation('target', args={}, handler_storage=None)
 
     @patch('mindsdb.integrations.handlers.mindsdb_inference.mindsdb_inference_handler.MindsDBInferenceHandler._get_supported_models')
-    def test_predict(self, mock_get_models):
+    @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAIHandler._get_client')
+    def test_predict_sentiment_analysis(self, mock_get_client, mock_get_models):
         """
         Test if `predict` method returns a DataFrame.
         """
 
         # Create a list of mock objects each with an `id` attribute
-        mock_supported_models = [MagicMock(id='model1'), MagicMock(id='model2'), MagicMock(id='model3')]
+        mock_supported_models = [MagicMock(id='mistral-7b')]
         mock_get_models.return_value = mock_supported_models
 
-        df = MagicMock()
+        # Define a return value for the `json_get` method of the mock model storage
+        self.handler.model_storage.json_get.return_value = {
+            'model_name': 'mistral-7b',
+            'prompt_template': 'Classify the sentiment of the following text as one of `positive`, `neutral` or `negative`: {{text}}',
+            'target': 'sentiment',
+            'mode': 'default',
+            'api_base': 'https://llm.mdb.ai/'
+        }
+
+        df = pandas.DataFrame({'text': ['I love MindsDB!']})
+
+        mock_openai = MagicMock()
+        mock_openai.chat.completions.create.return_value = MagicMock(
+            choices=[
+                MagicMock(
+                    message=MagicMock(
+                        content='positive'
+                    )
+                )
+            ]
+        )
+
+        mock_get_client.return_value = mock_openai
+
         result = self.handler.predict(df, args={})
-        self.assertIsInstance(result, MagicMock)
+        
+        self.assertIsInstance(result, pandas.DataFrame)
+        self.assertTrue('sentiment' in result.columns)
+        
+        pandas.testing.assert_frame_equal(result, pandas.DataFrame({'sentiment': ['positive']}))
+
+
+if __name__ == '__main__':
+    unittest.main()

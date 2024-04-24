@@ -35,10 +35,9 @@ class MySQLHandler(DatabaseHandler):
         self.database = self.connection_data.get('database')
 
         self.connection = None
-        self.is_connected = False
 
     def __del__(self):
-        if self.is_connected is True:
+        if self.is_connected:
             self.disconnect()
 
     def _unpack_config(self):
@@ -53,6 +52,20 @@ class MySQLHandler(DatabaseHandler):
             return config.dict(exclude_unset=True)
         except ValueError as e:
             raise ValueError(str(e))
+
+    @property
+    def is_connected(self):
+        """
+        Checks if the handler is connected to the MySQL database.
+
+        Returns:
+            bool: True if the handler is connected, False otherwise.
+        """
+        return self.connection is not None and self.connection.is_connected()
+
+    @is_connected.setter
+    def is_connected(self, value):
+        pass
 
     def connect(self):
         """
@@ -83,11 +96,9 @@ class MySQLHandler(DatabaseHandler):
             connection = mysql.connector.connect(**config)
             connection.autocommit = True
             self.connection = connection
-            self.is_connected = True
             return self.connection
         except mysql.connector.Error as e:
             logger.error(f"Error connecting to MySQL {self.database}, {e}!")
-            self.is_connected = False
             raise
 
     def disconnect(self):
@@ -97,7 +108,6 @@ class MySQLHandler(DatabaseHandler):
         if self.is_connected is False:
             return
         self.connection.close()
-        self.is_connected = False
         return
 
     def check_connection(self) -> StatusResponse:
@@ -120,8 +130,6 @@ class MySQLHandler(DatabaseHandler):
 
         if result.success and need_to_close:
             self.disconnect()
-        if not result.success and self.is_connected:
-            self.is_connected = False
 
         return result
 

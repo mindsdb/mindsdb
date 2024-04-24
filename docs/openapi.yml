@@ -11,7 +11,7 @@ info:
     name: GNU General Public License v3.0
     url: 'https://github.com/mindsdb/mindsdb/blob/staging/LICENSE'
 servers:
-  - url: 'http://127.0.0.1:47334/v1/api'
+  - url: 'http://127.0.0.1:47334/'
     description: MindsDB local deployments
 components:
   schemas:
@@ -63,14 +63,12 @@ components:
           description: How long training this model took in HH:MM:SS format (trained models only)
         update:
           type: string
-          description: Set to "available" when a new version of MindsDB is available that makes the model obsolete, or when new data is available in the data that was used to train the model (trained models only).
-        
+          description: Set to "available" when a new version of MindsDB is available that makes the model obsolete, or when new data is available in the data that was used to train the model (trained models only).        
     Project:
       type: object
       properties:
         name:
           type: string
-
     Table:
       type: object
       properties:
@@ -79,7 +77,6 @@ components:
         type:
           type: string
           description: Type of table (data | view)
-
     View:
       type: object
       properties:
@@ -88,11 +85,55 @@ components:
         query:
           type: string
           description: SELECT query used to create the view
+    Skill:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          description: Type of skill (text2sql | knowledge_base).
+        source: # used when type = knowledge_base
+          type: string
+          description: Used to store a knowledge_base object when type is set to knowledge_base.
+        database: # used when type = text2sql
+          type: string
+          description: Used to store a data source connection when type is set to text2sql.
+        tables: # used when type = text2sql
+          type: array
+          items:
+            type: string
+          description: Used to store table(s) names when type is set to text2sql.
+        description:
+          type: string
+          description: Skill description is important for an agent to decide which skill to use. 
+    Agent:
+      type: object
+      properties:
+        name:
+          type: string
+        model:
+          type: string
+          description: A conversational model used by an agent
+        skills:
+          type: array
+          items:
+            type: string
+          description: One or more skills that an agent can use
+    Chatbot:
+      type: object
+      properties:
+        name:
+          type: string
+        database:
+          type: string
+          description: Connection to a chat app like Slack or MS Teams
+        agent:
+          type: string
+          description: Agent object created beforehand
 paths:
   '/api/databases':
     get:
-      security:
-        - ApiKeyAuth: []
       summary: Returns a list of database names.
       description: Gets all databases created by the user.
       responses:
@@ -104,7 +145,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Database'
-
         '401':
           description: Invalid API key error message
           content:
@@ -122,8 +162,6 @@ paths:
                 items:
                   type: string
     post:
-      security:
-        - ApiKeyAuth: []
       summary: Creates a new database connection.
       description: Creates a new database connection. The example parameters below are for connecting to [MySQL](/data-integrations/mysql). See [here](/data-integrations/all-data-integrations) for which parameters to use for your datasource.
       requestBody:
@@ -195,11 +233,8 @@ paths:
                 type: object
                 items:
                   type: string
-
   '/api/databases/{databaseName}':
     get:
-      security:
-        - ApiKeyAuth: []
       summary: Gets info about existing database.
       description: Gets info about an existing database.
       parameters:
@@ -216,7 +251,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Database'
-
         '401':
           description: Invalid API key error message
           content:
@@ -241,10 +275,7 @@ paths:
                 type: object
                 items:
                   type: string
-
     put:
-      security:
-        - ApiKeyAuth: []
       summary: Updates an existing database connection.
       description: Updates an existing database connection, or creates a new connection if one doesn't exist. The example parameters below are for updating a [MySQL](/data-integrations/mysql) connection. See [here](/data-integrations/all-data-integrations) for which parameters to use for your datasource.
       parameters:
@@ -312,8 +343,6 @@ paths:
                 items:
                   type: string
     delete:
-      security:
-        - ApiKeyAuth: []
       summary: Deletes an existing database.
       description: Deletes an existing database connection by name.
       parameters:
@@ -356,8 +385,6 @@ paths:
                   type: string
   '/api/projects':
     get:
-      security:
-        - ApiKeyAuth: []
       summary: Returns a list of projects.
       description: Gets all projects created by the user.
       responses:
@@ -387,8 +414,6 @@ paths:
                   type: string
   '/api/projects/{projectName}':
     get:
-      security:
-        - ApiKeyAuth: []
       summary: Get a project by name.
       description: Gets a project created by the user.
       parameters:
@@ -429,11 +454,8 @@ paths:
                 type: object
                 items:
                   type: string
-
   '/api/projects/{projectName}/models':
     post:
-      security:
-        - ApiKeyAuth: []
       summary: This endpoint trains a new ML Model.
       description: Starts training a new Machine Learning model.
       parameters:
@@ -493,8 +515,6 @@ paths:
                 items:
                   type: string
     get:
-      security:
-        - ApiKeyAuth: []
       summary: Returns a list of models.
       description: Gets info about all models in the project.
       parameters:
@@ -539,8 +559,6 @@ paths:
                   type: string
   '/api/projects/{projectName}/models/{modelName}':
     get:
-      security:
-        - ApiKeyAuth: []
       summary: Gets info about specific model.
       description: Gets info for a specific model in the project.
       parameters:
@@ -588,8 +606,6 @@ paths:
                 items:
                   type: string
     delete:
-      security:
-        - ApiKeyAuth: []
       summary: Deletes an existing model.
       description: Deletes a model in the project.
       parameters:
@@ -638,8 +654,6 @@ paths:
                   type: string
   '/api/projects/{projectName}/models/{modelName}/predict':
     post:
-      security:
-        - ApiKeyAuth: []
       summary: This endpoint fetches predictions from the model.
       description: Uses this model to make a prediction for values of new data.
       parameters:
@@ -701,8 +715,6 @@ paths:
                   type: string
   '/api/projects/{projectName}/models/{modelName}/describe':
     get:
-      security:
-        - ApiKeyAuth: []
       summary: Describe a model
       description: Gets the attributes of a specific model.
       parameters:
@@ -727,7 +739,6 @@ paths:
                   attribute:
                     type: string
                     description: Attribute of the model to describe. See our [DESCRIBE documentation](https://docs.mindsdb.com/sql/api/describe). E.g. info, features, model
-
       responses:
         '200':
           description: A JSON object with model informations
@@ -764,8 +775,6 @@ paths:
                   type: string
   '/api/projects/{projectName}/views':
     post:
-      security:
-        - ApiKeyAuth: []
       summary: This endpoint creates a view which is a result-set of the SELECT statement.
       description: Creates a [view](https://docs.mindsdb.com/sql/create/view) from a SELECT statement.
       parameters:
@@ -825,8 +834,6 @@ paths:
                 items:
                   type: string
     get:
-      security:
-        - ApiKeyAuth: []
       summary: List all views in a project
       description: Gets all views in a project.
       parameters:
@@ -871,8 +878,6 @@ paths:
                   type: string
   '/api/projects/{projectName}/views/{viewName}':
     get:
-      security:
-        - ApiKeyAuth: []
       summary: SELECT from VIEW
       description: Gets a single view.
       parameters:
@@ -920,8 +925,6 @@ paths:
                 items:
                   type: string
     delete:
-      security:
-        - ApiKeyAuth: []
       summary: Deletes an existing view.
       description: Deletes an existing view in the project.
       parameters:
@@ -971,8 +974,6 @@ paths:
                 items:
                   type: string
     put:
-      security:
-        - ApiKeyAuth: []
       summary: Updates an existing view.
       description: Updates an existing view, or creates a new view if one doesn't exist.
       parameters:
@@ -1037,8 +1038,6 @@ paths:
                   type: string
   '/api/databases/{databaseName}/tables':
     post:
-      security:
-        - ApiKeyAuth: []
       summary: This endpoint creates a new table with the predictions result-set.
       description: Creates a new table from a select query. See [CREATE table documentation](https://docs.mindsdb.com/sql/create/table).
       parameters:
@@ -1097,10 +1096,7 @@ paths:
                 type: object
                 items:
                   type: string
-
     get:
-      security:
-        - ApiKeyAuth: []
       summary: Returns a list of tables in a database.
       description: Gets metadata for all tables in a database.
       parameters:
@@ -1145,8 +1141,6 @@ paths:
                   type: string
   '/api/databases/{databaseName}/tables/{tableName}':
     get:
-      security:
-        - ApiKeyAuth: []
       summary: SELECT from Table
       description: Gets metadata for a table in a database.
       parameters:
@@ -1194,8 +1188,6 @@ paths:
                 items:
                   type: string
     delete:
-      security:
-        - ApiKeyAuth: []
       summary: Deletes an existing table.
       description: Deletes a table in a database.
       parameters:
@@ -1230,6 +1222,898 @@ paths:
                   type: string
         '404':
           description: Table or database not found
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+  '/api/projects/{projectName}/skills':
+    get:
+      summary: Returns a list of all created skills.
+      description: Gets all skills created by the user.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project where agent resides
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A JSON array of skill names
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Skill'
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+    post:
+      summary: Creates a new skill.
+      description: Creates a new skill.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project where agent resides
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                skill:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    type:
+                      type: string
+                      description: Type of skill (text2sql | knowledge_base).
+                    source: # used when type = knowledge_base
+                      type: string
+                      description: Used to store a knowledge_base object when type is set to knowledge_base.
+                    database: # used when type = text2sql
+                      type: string
+                      description: Used to store a data source connection when type is set to text2sql.
+                    tables: # used when type = text2sql
+                      type: array
+                      items:
+                        type: string
+                      description: Used to store table(s) names when type is set to text2sql.
+                    description:
+                      type: string
+                      description: Skill description is important for an agent to decide which skill to use.
+      responses:
+        '200':
+          description: Created a skill
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Skill'
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '400':
+          description: Bad request format
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '409':
+          description: Skill already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+  '/api/projects/{projectName}/skills/{skillName}':
+    get:
+      summary: Gets info about existing skills.
+      description: Gets info about an existing skill.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project where agent resides
+          required: true
+          schema:
+            type: string
+        - name: skillName
+          in: path
+          description: Name of existing skill
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A JSON object with skills
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Skill'
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '404':
+          description: Skill not found
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+    put:
+      summary: Updates an existing skill.
+      description: Updates an existing skill, or creates a new skill if one doesn't exist.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project where agent resides
+          required: true
+          schema:
+            type: string
+        - name: skillName
+          in: path
+          description: The name of the skill
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                skill:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    type:
+                      type: string
+                      description: Type of skill (text2sql | knowledge_base).
+                    source: # used when type = knowledge_base
+                      type: string
+                      description: Used to store a knowledge_base object when type is set to knowledge_base.
+                    database: # used when type = text2sql
+                      type: string
+                      description: Used to store a data source connection when type is set to text2sql.
+                    tables: # used when type = text2sql
+                      type: array
+                      items:
+                        type: string
+                      description: Used to store table(s) names when type is set to text2sql.
+                    description:
+                      type: string
+                      description: Skill description is important for an agent to decide which skill to use.
+      responses:
+        '200':
+          description: Skill was successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Skill'
+        '400':
+          description: Bad request format
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+    delete:
+      summary: Deletes an existing skill.
+      description: Deletes an existing skill by name.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project where agent resides
+          required: true
+          schema:
+            type: string
+        - name: skillName
+          in: path
+          description: Name of existing skill to delete
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: An empty response indicates success
+          content:
+            application/json:
+              schema:
+                type: string
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '404':
+          description: Skill not found
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+  '/api/projects/{projectName}/agents':
+    get:
+      summary: Returns a list of all created agents.
+      description: Gets all agents created by the user.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project where agent resides
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A JSON array of skill names
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Agent'
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+    post:
+      summary: Creates a new agent.
+      description: Creates a new agent.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project where agent resides
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agent:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    model:
+                      type: string
+                      description: A conversational model used by an agent
+                    skills:
+                      type: array
+                      items:
+                        type: string
+                      description: One or more skills that an agent can use
+      responses:
+        '200':
+          description: Created an agent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '400':
+          description: Bad request format
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '409':
+          description: Agent already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+  '/api/projects/{projectName}/agents/{agentName}':
+    get:
+      summary: Gets info about existing agent.
+      description: Gets info about an existing agent.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project where agent resides
+          required: true
+          schema:
+            type: string
+        - name: agentName
+          in: path
+          description: Name of existing agent
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A JSON object with skills
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '404':
+          description: Agent not found
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+    put:
+      summary: Updates an existing agent.
+      description: Updates an existing agent, or creates a new agent if one doesn't exist.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project where agent resides
+          required: true
+          schema:
+            type: string
+        - name: agentName
+          in: path
+          description: The name of the agent
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agent:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    model:
+                      type: string
+                      description: A conversational model used by an agent
+                    skills:
+                      type: array
+                      items:
+                        type: string
+                      description: One or more skills that an agent can use
+      responses:
+        '200':
+          description: Agent was successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '400':
+          description: Bad request format
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+    delete:
+      summary: Deletes an existing agent.
+      description: Deletes an existing agent by name.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project where agent resides
+          required: true
+          schema:
+            type: string
+        - name: agentName
+          in: path
+          description: Name of existing agent to delete
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: An empty response indicates success
+          content:
+            application/json:
+              schema:
+                type: string
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '404':
+          description: Agent not found
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+  '/api/projects/{projectName}/agents/{agentName}/completions':
+    post:
+      summary: Quesries an agent.
+      description: Quesries an agent.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project where agent resides
+          required: true
+          schema:
+            type: string
+        - name: agentName
+          in: path
+          description: The name of the agent
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                messages:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      question:
+                        type: string
+                        description: The question being asked
+                      answer:
+                        type: string
+                        nullable: true
+                        description: The answer to the question (can be null)
+      responses:
+        '200':
+          description: Message submission successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: object
+                    properties:
+                      role:
+                        type: string
+                        description: The role of the responder
+                      content:
+                        type: string
+                        description: The content of the response
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '400':
+          description: Bad request format
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+  '/api/projects/{projectName}/chatbots':
+    get:
+      summary: Returns a list of all created chatbots.
+      description: Gets all chatbots created by the user.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project where agent resides
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A JSON array of skill names
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Chatbot'
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+    post:
+      summary: Creates a new chatbot.
+      description: Creates a new chatbot.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project where agent resides
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                chatbot:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    database:
+                      type: string
+                      description: Connection to a chat app like Slack or MS Teams
+                    agent:
+                      type: string
+                      description: Agent object created beforehand
+      responses:
+        '200':
+          description: Created a chatbot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chatbot'
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '400':
+          description: Bad request format
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '409':
+          description: Chatbot already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+  '/api/projects/{projectName}/chatbots/{chatbotName}':
+    get:
+      summary: Gets info about existing chatbots.
+      description: Gets info about an existing chatbot.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project where agent resides
+          required: true
+          schema:
+            type: string
+        - name: chatbotName
+          in: path
+          description: Name of existing chatbot
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A JSON object with chatbots
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chatbot'
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '404':
+          description: Chatbot not found
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+    put:
+      summary: Updates an existing chatbot.
+      description: Updates an existing chatbot, or creates a new chatbot if one doesn't exist.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project where agent resides
+          required: true
+          schema:
+            type: string
+        - name: chatbotName
+          in: path
+          description: The name of the chatbot
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                chatbot:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    database:
+                      type: string
+                      description: Connection to a chat app like Slack or MS Teams
+                    agent:
+                      type: string
+                      description: Agent object created beforehand
+      responses:
+        '200':
+          description: Chatbot was successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chatbot'
+        '400':
+          description: Bad request format
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+    delete:
+      summary: Deletes an existing chatbot.
+      description: Deletes an existing chatbot by name.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project where agent resides
+          required: true
+          schema:
+            type: string
+        - name: chatbotName
+          in: path
+          description: Name of existing chatbot to delete
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: An empty response indicates success
+          content:
+            application/json:
+              schema:
+                type: string
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '404':
+          description: Chatbot not found
           content:
             application/json:
               schema:

@@ -109,6 +109,7 @@ jobs:
         pip install .
         pip install -r requirements/requirements-test.txt
         pip install .[lightwood]  # TODO: for now some tests rely on lightwood
+        pip install .[mssql]
         pip freeze
     - name: Run unit tests
       run: |
@@ -123,7 +124,7 @@ jobs:
         fi
     - name: Run Handlers tests and submit Coverage to coveralls
       run: |
-        files=("test_mysql" "test_postgresql")
+        files=("test_mysql" "test_postgresql" "test_mssql")
         for file in "${files[@]}"
         do
           pytest --cov=mindsdb/integrations/handlers/${file}_handler tests/unit/handlers/${file}.py 

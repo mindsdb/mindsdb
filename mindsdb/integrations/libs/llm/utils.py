@@ -10,7 +10,8 @@ from langchain.text_splitter import (
     RecursiveCharacterTextSplitter,
 )
 
-from mindsdb.integrations.libs.llm.config import AnthropicConfig, AnyscaleConfig, BaseLLMConfig, LiteLLMConfig, OllamaConfig, OpenAIConfig
+from mindsdb.integrations.libs.llm.config import (AnthropicConfig, AnyscaleConfig, BaseLLMConfig, LiteLLMConfig,
+                                                  OllamaConfig, OpenAIConfig, MindsdbConfig)
 
 # Default to latest GPT-4 model (https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo)
 DEFAULT_OPENAI_MODEL = 'gpt-4-0125-preview'
@@ -31,14 +32,15 @@ DEFAULT_OLLAMA_BASE_URL = 'http://localhost:11434'
 DEFAULT_OLLAMA_MODEL = 'llama2'
 
 
-def get_completed_prompts(base_template: str, df: pd.DataFrame) -> Tuple[List[str], np.ndarray]:
+def get_completed_prompts(base_template: str, df: pd.DataFrame, strict=True) -> Tuple[List[str], np.ndarray]:
     """
         Helper method that produces formatted prompts given a template and data in a Pandas DataFrame.
         It also returns the ID of any empty templates that failed to be filled due to missing data.
         
         :param base_template: string with placeholders for each column in the DataFrame. Placeholders should follow double curly braces format, e.g. `{{column_name}}`. All placeholders should have matching columns in `df`.
         :param df: pd.DataFrame to generate full prompts. Each placeholder in `base_template` must exist as a column in the DataFrame. If a column is not in the template, it is ignored entirely.
-        
+        :param strict: raise exception if base_template doesn't contain placeholders 
+
         :return prompts: list of in-filled prompts using `base_template` and relevant columns from `df`
         :return empty_prompt_ids: np.int numpy array (shape (n_missing_rows,)) with the row indexes where in-fill failed due to missing data.
     """  # noqa
@@ -46,7 +48,12 @@ def get_completed_prompts(base_template: str, df: pd.DataFrame) -> Tuple[List[st
     spans = []
     matches = list(re.finditer("{{(.*?)}}", base_template))
 
-    assert len(matches) > 0, 'No placeholders found in the prompt, please provide a valid prompt template.'
+    if len(matches) == 0:
+        # no placeholders
+        if strict:
+            raise AssertionError('No placeholders found in the prompt, please provide a valid prompt template.')
+        prompts = [base_template] * len(df)
+        return prompts, np.ndarray(0)
 
     first_span = matches[0].start()
     last_span = matches[-1].end()
@@ -155,6 +162,11 @@ def get_llm_config(provider: str, config: Dict) -> BaseLLMConfig:
             repeat_penalty=config.get('repeat_penalty', None),
             stop=config.get('stop', None),
             template=config.get('template', None),
+        )
+    if provider == 'mindsdb':
+        return MindsdbConfig(
+            model_name=config['model_name'],
+            project_name=config.get('project_name', 'mindsdb'),
         )
     raise ValueError(f'Provider {provider} is not supported.')
 

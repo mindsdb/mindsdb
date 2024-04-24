@@ -7,6 +7,9 @@ from mindsdb.integrations.handlers.mindsdb_inference.mindsdb_inference_handler i
 
 
 class TestMindsDBInference(unittest.TestCase):
+    """
+    Unit tests for the MindsDB Inference handler.
+    """
 
     dummy_connection_data = OrderedDict(
         mindsdb_inference_api_key='dummy_api_key',

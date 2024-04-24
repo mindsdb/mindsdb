@@ -29,6 +29,21 @@ class TestMindsDBInference(unittest.TestCase):
         with self.assertRaises(Exception):
             self.handler.create_validation('target', args={}, handler_storage=None)
 
+    @patch('mindsdb.integrations.handlers.openai_handler.helpers.OpenAI')
+    def test_create(self, mock_openai):
+        """
+        Test if `create` method returns a MindsDBInferenceHandler object.
+        """
+
+        mock_models_list = MagicMock()
+        mock_models_list.data = [
+            MagicMock(id='dummy_model_name')
+        ]
+
+        mock_openai.return_value.models.list.return_value = mock_models_list
+
+        self.handler.create('dummy_target', args={'using': {'model_name': 'dummy_model_name', 'prompt_template': 'dummy_prompt_template'}})
+
     @patch('mindsdb.integrations.handlers.mindsdb_inference.mindsdb_inference_handler.MindsDBInferenceHandler._get_supported_models')
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAIHandler._get_client')
     def test_predict_sentiment_analysis(self, mock_get_client, mock_get_models):

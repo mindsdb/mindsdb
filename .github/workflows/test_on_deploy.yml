@@ -10,12 +10,6 @@ defaults:
   run:
     shell: bash
 
-# Cancel any existing runs of this workflow on the same branch/pr
-# We always want to build/deploy/test a new commit over an older one
-concurrency:
-  group: ${{ github.workflow_ref }}
-  cancel-in-progress: true
-
 
 jobs:
   # Creates a matrix of environments to test against using matrix_includes.json

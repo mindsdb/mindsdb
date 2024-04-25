@@ -219,7 +219,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         assert set(ret['TAG']) == {'first', 'second', 'third'}
 
         # Set active selected version
-        self.run_sql('set model_active = proj.task_model.1')
+        self.run_sql('set active proj.task_model.1')
 
         # get active version
         ret = self.run_sql('select * from proj.models where active = 1')

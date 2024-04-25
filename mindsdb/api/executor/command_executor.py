@@ -535,8 +535,6 @@ class ExecuteCommands:
                     if value in (0, False, None):
                         # drop context
                         query_context_controller.drop_query_context(None)
-                elif param == "model_active":
-                    return self.answer_update_model_version(statement.value, database_name)
 
                 return ExecuteAnswer(ANSWER_TYPE.OK)
             elif category == "autocommit":
@@ -562,6 +560,9 @@ class ExecuteCommands:
                         ["character_set_results", self.charset],
                     ],
                 )
+            elif category == "active":
+                return self.answer_update_model_version(statement.value, database_name)
+
             else:
                 logger.warning(
                     f"SQL statement is not processable, return OK package: {sql}"
@@ -2019,6 +2020,8 @@ class ExecuteCommands:
         )
 
     def answer_update_model_version(self, model_version, database_name):
+        if not isinstance(model_version, Identifier):
+            raise ExecutorException(f'Please define version: {model_version}')
 
         model_parts = model_version.parts
         version = model_parts[-1]

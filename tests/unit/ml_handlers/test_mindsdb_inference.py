@@ -39,7 +39,7 @@ class TestMindsDBInference(unittest.TestCase):
         Test if model creation raises an exception with an invalid API key.
         """
 
-        with self.assertRaisesRegex(AuthenticationError):
+        with self.assertRaises(AuthenticationError):
             self.handler.create_validation('target', args={"using": {}}, handler_storage=self.handler.engine_storage)
 
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
@@ -57,7 +57,24 @@ class TestMindsDBInference(unittest.TestCase):
         self.handler.create_validation('target', args={'using': {'model_name': 'dummy_model_name', 'prompt_template': 'dummy_prompt_template'}}, handler_storage=self.handler.engine_storage)
 
     @patch('mindsdb.integrations.handlers.openai_handler.helpers.OpenAI')
-    def test_create(self, mock_openai):
+    def test_create_with_unsupported_mode(self, mock_openai):
+        """
+        Test if model creation runs without raising an Exception.
+        """
+
+        # Mock the models.list method of the OpenAI client
+        mock_models_list = MagicMock()
+        mock_models_list.data = [
+            MagicMock(id='dummy_model_name')
+        ]
+
+        mock_openai.return_value.models.list.return_value = mock_models_list
+
+        with self.assertRaisesRegex(Exception, "^Invalid operation mode."):
+            self.handler.create('dummy_target', args={'using': {'model_name': 'dummy_model_name', 'prompt_template': 'dummy_prompt_template', 'mode': 'dummy_mode'}})
+
+    @patch('mindsdb.integrations.handlers.openai_handler.helpers.OpenAI')
+    def test_create_with_valid_arguments(self, mock_openai):
         """
         Test if model creation runs without raising an Exception.
         """

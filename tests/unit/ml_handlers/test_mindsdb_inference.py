@@ -114,7 +114,7 @@ class TestMindsDBInference(unittest.TestCase):
 
     @patch('mindsdb.integrations.handlers.mindsdb_inference.mindsdb_inference_handler.openai.OpenAI')
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
-    def test_predict_runs_no_errors_on_chat_completion_sentiment_analysis(self, mock_openai_openai_handler, mock_openai_mdb_inference_handler):
+    def test_predict_runs_no_errors_on_chat_completion_prompt_completion(self, mock_openai_openai_handler, mock_openai_mdb_inference_handler):
         """
         Test if model prediction returns the expected result for a sentiment analysis task.
         """

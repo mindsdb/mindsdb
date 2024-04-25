@@ -1,7 +1,9 @@
 import os
 import pytest
+import pandas as pd
+from unittest.mock import patch
 
-from .base_ml_test import BaseMLAPITest
+from tests.unit.ml_handlers.base_ml_test import BaseMLAPITest
 
 
 @pytest.mark.skipif(os.environ.get('MDB_TEST_MDB_INFERENCE_API_KEY') is None, reason='Missing API key!')
@@ -93,6 +95,41 @@ class TestMindsDBInference(BaseMLAPITest):
         )
 
         assert "stockholm" in result_df["answer"].iloc[0].lower()
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_select_runs_no_errors_on_chat_completion_question_answering_bulk(self, mock_postgres_handler):
+        """
+        Test for valid answers to bulk questions in a question answering task (chat completion).
+        """
+
+        df = pd.DataFrame.from_dict({"question": [
+            "What is the capital of Sweden?",
+            "What is the second planet in the solar system?"
+        ]})
+        self.set_handler(mock_postgres_handler, name="pg", tables={"df": df})
+
+        self.run_sql(
+            f"""
+            CREATE MODEL proj.test_mdb_inference_bulk_qa
+            PREDICT answer
+            USING
+                engine='mindsdb_inference_engine',
+                question_column='question',
+                mindsdb_inference_api_key='{self.get_api_key('MDB_TEST_MDB_INFERENCE_API_KEY')}';
+            """
+        )
+        self.wait_predictor("proj", "test_mdb_inference_bulk_qa")
+
+        result_df = self.run_sql(
+            """
+            SELECT p.answer
+            FROM pg.df as t
+            JOIN proj.test_mdb_inference_bulk_qa as p;
+        """
+        )
+        
+        assert "stockholm" in result_df["answer"].iloc[0].lower()
+        assert "venus" in result_df["answer"].iloc[1].lower()
 
 
 if __name__ == "__main__":

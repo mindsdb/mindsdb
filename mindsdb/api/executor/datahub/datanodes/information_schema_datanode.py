@@ -57,7 +57,7 @@ class InformationSchemaDataNode(DataNode):
                 integration_controller=self.session.integration_controller,
             )
 
-        self.tables = {t.name: t() for t in self.tables_list}
+        self.tables = {t.name: t for t in self.tables_list}
 
     def __getitem__(self, key):
         return self.get(key)

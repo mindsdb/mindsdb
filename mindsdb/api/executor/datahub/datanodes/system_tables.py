@@ -29,7 +29,8 @@ class SchemataTable(Table):
         "SQL_PATH",
     ]
 
-    def get_data(self, inf_schema=None, **kwargs):
+    @classmethod
+    def get_data(cls, inf_schema=None, **kwargs):
 
         databases_meta = inf_schema.session.database_controller.get_list()
         data = [
@@ -37,7 +38,7 @@ class SchemataTable(Table):
             for x in databases_meta
         ]
 
-        df = pd.DataFrame(data, columns=self.columns)
+        df = pd.DataFrame(data, columns=cls.columns)
         return df
 
 
@@ -68,7 +69,8 @@ class TablesTable(Table):
         "TABLE_COMMENT",
     ]
 
-    def get_data(self, query: ASTNode = None, inf_schema=None, **kwargs):
+    @classmethod
+    def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
 
         target_table = None
         if (
@@ -144,7 +146,7 @@ class TablesTable(Table):
                 row.TABLE_SCHEMA = project_name
                 data.append(row.to_list())
 
-        df = pd.DataFrame(data, columns=self.columns)
+        df = pd.DataFrame(data, columns=cls.columns)
         return df
 
 
@@ -175,7 +177,8 @@ class ColumnsTable(Table):
         "GENERATION_EXPRESSION",
     ]
 
-    def get_data(self, inf_schema=None, **kwargs):
+    @classmethod
+    def get_data(cls, inf_schema=None, **kwargs):
 
         # NOTE there is a lot of types in mysql, but listed below should be enough for our purposes
         row_templates = {
@@ -308,7 +311,7 @@ class ColumnsTable(Table):
                 result_row[4] = i
                 result.append(result_row)
 
-        df = pd.DataFrame(result, columns=self.columns)
+        df = pd.DataFrame(result, columns=cls.columns)
         return df
 
 
@@ -403,7 +406,8 @@ class EnginesTable(Table):
     name = "ENGINES"
     columns = ["ENGINE", "SUPPORT", "COMMENT", "TRANSACTIONS", "XA", "SAVEPOINTS"]
 
-    def get_data(self, **kwargs):
+    @classmethod
+    def get_data(cls, **kwargs):
         data = [
             [
                 "InnoDB",
@@ -415,7 +419,7 @@ class EnginesTable(Table):
             ]
         ]
 
-        df = pd.DataFrame(data, columns=self.columns)
+        df = pd.DataFrame(data, columns=cls.columns)
         return df
 
 
@@ -470,14 +474,15 @@ class CharacterSetsTable(Table):
         "MAXLEN",
     ]
 
-    def get_data(self, **kwargs):
+    @classmethod
+    def get_data(cls, **kwargs):
         data = [
             ["utf8", "UTF-8 Unicode", "utf8_general_ci", 3],
             ["latin1", "cp1252 West European", "latin1_swedish_ci", 1],
             ["utf8mb4", "UTF-8 Unicode", "utf8mb4_general_ci", 4],
         ]
 
-        df = pd.DataFrame(data, columns=self.columns)
+        df = pd.DataFrame(data, columns=cls.columns)
         return df
 
 
@@ -494,11 +499,12 @@ class CollationsTable(Table):
         "PAD_ATTRIBUTE",
     ]
 
-    def get_data(self, **kwargs):
+    @classmethod
+    def get_data(cls, **kwargs):
         data = [
             ["utf8_general_ci", "utf8", 33, "Yes", "Yes", 1, "PAD SPACE"],
             ["latin1_swedish_ci", "latin1", 8, "Yes", "Yes", 1, "PAD SPACE"],
         ]
 
-        df = pd.DataFrame(data, columns=self.columns)
+        df = pd.DataFrame(data, columns=cls.columns)
         return df

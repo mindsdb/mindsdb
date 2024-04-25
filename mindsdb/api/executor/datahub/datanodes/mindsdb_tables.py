@@ -22,21 +22,22 @@ def to_json(obj):
         return obj
 
 
+def get_project_name(query: ASTNode = None):
+    project_name = None
+    if (
+            isinstance(query, Select)
+            and type(query.where) is BinaryOperation
+            and query.where.op == '='
+            and query.where.args[0].parts == ['project']
+            and isinstance(query.where.args[1], Constant)
+    ):
+        project_name = query.where.args[1].value
+    return project_name
+
+
 class MdbTable(Table):
 
     visible: bool = True
-
-    def get_project_name(self, query: ASTNode = None):
-        project_name = None
-        if (
-                isinstance(query, Select)
-                and type(query.where) is BinaryOperation
-                and query.where.op == '='
-                and query.where.args[0].parts == ['project']
-                and isinstance(query.where.args[1], Constant)
-        ):
-            project_name = query.where.args[1].value
-        return project_name
 
 
 class ModelsTable(MdbTable):
@@ -63,7 +64,8 @@ class ModelsTable(MdbTable):
         "TRAINING_TIME",
     ]
 
-    def get_data(self, inf_schema=None, **kwargs):
+    @classmethod
+    def get_data(cls, inf_schema=None, **kwargs):
         data = []
         for project_name in inf_schema.get_projects_names():
             project = inf_schema.database_controller.get_project(name=project_name)
@@ -99,7 +101,7 @@ class ModelsTable(MdbTable):
             # if target_table is not None and target_table != project_name:
             #     continue
 
-        df = pd.DataFrame(data, columns=self.columns)
+        df = pd.DataFrame(data, columns=cls.columns)
         return df
 
 
@@ -107,7 +109,8 @@ class DatabasesTable(MdbTable):
     name = "DATABASES"
     columns = ["NAME", "TYPE", "ENGINE", "CONNECTION_DATA"]
 
-    def get_data(self, inf_schema=None, **kwargs):
+    @classmethod
+    def get_data(cls, inf_schema=None, **kwargs):
 
         project = inf_schema.database_controller.get_list()
         data = [
@@ -115,7 +118,7 @@ class DatabasesTable(MdbTable):
             for x in project
         ]
 
-        df = pd.DataFrame(data, columns=self.columns)
+        df = pd.DataFrame(data, columns=cls.columns)
         return df
 
 
@@ -125,7 +128,8 @@ class MLEnginesTable(MdbTable):
         "NAME", "HANDLER", "CONNECTION_DATA"
     ]
 
-    def get_data(self, inf_schema=None, **kwargs):
+    @classmethod
+    def get_data(cls, inf_schema=None, **kwargs):
 
         integrations = inf_schema.integration_controller.get_all()
         ml_integrations = {
@@ -136,7 +140,7 @@ class MLEnginesTable(MdbTable):
         for _key, val in ml_integrations.items():
             data.append([val["name"], val.get("engine"), to_json(val.get("connection_data"))])
 
-        df = pd.DataFrame(data, columns=self.columns)
+        df = pd.DataFrame(data, columns=cls.columns)
         return df
 
 
@@ -153,7 +157,8 @@ class HandlersTable(MdbTable):
         "IMPORT_ERROR",
     ]
 
-    def get_data(self, inf_schema=None, **kwargs):
+    @classmethod
+    def get_data(cls, inf_schema=None, **kwargs):
 
         handlers = inf_schema.integration_controller.get_handlers_import_status()
 
@@ -177,7 +182,7 @@ class HandlersTable(MdbTable):
                 ]
             )
 
-        df = pd.DataFrame(data, columns=self.columns)
+        df = pd.DataFrame(data, columns=cls.columns)
         return df
 
 
@@ -195,7 +200,8 @@ class JobsTable(MdbTable):
         "VARIABLES",
     ]
 
-    def get_data(self, query: ASTNode = None, **kwargs):
+    @classmethod
+    def get_data(cls, query: ASTNode = None, **kwargs):
         jobs_controller = JobsController()
 
         project_name = None
@@ -210,7 +216,7 @@ class JobsTable(MdbTable):
 
         data = jobs_controller.get_list(project_name)
 
-        columns = self.columns
+        columns = cls.columns
         columns_lower = [col.lower() for col in columns]
 
         # to list of lists
@@ -248,7 +254,8 @@ class TriggersTable(MdbTable):
 
     mindsdb_columns = ["NAME", "PROJECT", "DATABASE", "TABLE", "QUERY", "LAST_ERROR"]
 
-    def get_data(self, query: ASTNode = None, inf_schema=None, **kwargs):
+    @classmethod
+    def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
         from mindsdb.interfaces.triggers.triggers_controller import TriggersController
 
         triggers_controller = TriggersController()
@@ -265,9 +272,9 @@ class TriggersTable(MdbTable):
 
         data = triggers_controller.get_list(project_name)
 
-        columns = self.mindsdb_columns
+        columns = cls.mindsdb_columns
         if inf_schema.session.api_type == 'sql':
-            columns = columns + self.columns
+            columns = columns + cls.columns
         columns_lower = [col.lower() for col in columns]
 
         # to list of lists
@@ -288,7 +295,8 @@ class ChatbotsTable(MdbTable):
         "LAST_ERROR",
     ]
 
-    def get_data(self, query: ASTNode = None, **kwargs):
+    @classmethod
+    def get_data(cls, query: ASTNode = None, **kwargs):
         from mindsdb.interfaces.chatbot.chatbot_controller import ChatBotController
 
         chatbot_controller = ChatBotController()
@@ -305,7 +313,7 @@ class ChatbotsTable(MdbTable):
 
         chatbot_data = chatbot_controller.get_chatbots(project_name)
 
-        columns = self.columns
+        columns = cls.columns
         columns_lower = [col.lower() for col in columns]
 
         # to list of lists
@@ -321,8 +329,9 @@ class KBTable(MdbTable):
     name = 'KNOWLEDGE_BASES'
     columns = ["NAME", "PROJECT", "MODEL", "STORAGE", "PARAMS"]
 
-    def get_data(self, query: ASTNode = None, inf_schema=None, **kwargs):
-        project_name = self.get_project_name(query)
+    @classmethod
+    def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
+        project_name = get_project_name(query)
 
         from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseController
         controller = KnowledgeBaseController(inf_schema.session)
@@ -341,17 +350,18 @@ class KBTable(MdbTable):
                 to_json(kb['params']),
             ))
 
-        return pd.DataFrame(data, columns=self.columns)
+        return pd.DataFrame(data, columns=cls.columns)
 
 
 class SkillsTable(MdbTable):
     name = 'SKILLS'
     columns = ["NAME", "PROJECT", "TYPE", "PARAMS"]
 
-    def get_data(self, query: ASTNode = None, **kwargs):
+    @classmethod
+    def get_data(cls, query: ASTNode = None, **kwargs):
         skills_controller = SkillsController()
 
-        project_name = self.get_project_name(query)
+        project_name = get_project_name(query)
 
         all_skills = skills_controller.get_skills(project_name)
 
@@ -360,7 +370,7 @@ class SkillsTable(MdbTable):
 
         # NAME, PROJECT, TYPE, PARAMS
         data = [(s.name, project_names[s.project_id], s.type, s.params) for s in all_skills]
-        return pd.DataFrame(data, columns=self.columns)
+        return pd.DataFrame(data, columns=cls.columns)
 
 
 class AgentsTable(MdbTable):
@@ -373,10 +383,11 @@ class AgentsTable(MdbTable):
         "PARAMS"
     ]
 
-    def get_data(self, query: ASTNode = None, inf_schema=None, **kwargs):
-        agents_controller = AgentsController(self)
+    @classmethod
+    def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
+        agents_controller = AgentsController(inf_schema)
 
-        project_name = self.get_project_name(query)
+        project_name = get_project_name(query)
         all_agents = agents_controller.get_agents(project_name)
 
         project_controller = ProjectController()
@@ -396,22 +407,23 @@ class AgentsTable(MdbTable):
             )
             for a in all_agents
         ]
-        return pd.DataFrame(data, columns=self.columns)
+        return pd.DataFrame(data, columns=cls.columns)
 
 
 class ViewsTable(MdbTable):
     name = 'VIEWS'
     columns = ["NAME", "PROJECT", "QUERY"]
 
-    def get_data(self, query: ASTNode = None, **kwargs):
+    @classmethod
+    def get_data(cls, query: ASTNode = None, **kwargs):
 
-        project_name = self.get_project_name(query)
+        project_name = get_project_name(query)
 
         data = ViewController().list(project_name)
 
-        columns_lower = [col.lower() for col in self.columns]
+        columns_lower = [col.lower() for col in cls.columns]
 
         # to list of lists
         data = [[row[k] for k in columns_lower] for row in data]
 
-        return pd.DataFrame(data, columns=self.columns)
+        return pd.DataFrame(data, columns=cls.columns)

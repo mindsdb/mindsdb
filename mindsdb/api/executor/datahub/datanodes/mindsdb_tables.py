@@ -10,8 +10,7 @@ from mindsdb.interfaces.skills.skills_controller import SkillsController
 from mindsdb.interfaces.database.views import ViewController
 from mindsdb.interfaces.database.projects import ProjectController
 
-
-from .system_tables import Table
+from mindsdb.api.executor.datahub.datanodes.system_tables import Table
 
 
 def to_json(obj):

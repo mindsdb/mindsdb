@@ -1,7 +1,8 @@
 import pandas
 import unittest
-from unittest.mock import patch, MagicMock
 from collections import OrderedDict
+from openai import AuthenticationError
+from unittest.mock import patch, MagicMock
 
 from mindsdb.integrations.handlers.mindsdb_inference.mindsdb_inference_handler import MindsDBInferenceHandler
 
@@ -32,6 +33,14 @@ class TestMindsDBInference(unittest.TestCase):
 
         with self.assertRaisesRegex(Exception, "MindsDB Inference engine requires a USING clause! Refer to its documentation for more details."):
             self.handler.create_validation('target', args={}, handler_storage=None)
+
+    def test_create_validation_raises_exception_with_invalid_api_key(self):
+        """
+        Test if model creation raises an exception with an invalid API key.
+        """
+
+        with self.assertRaisesRegex(AuthenticationError):
+            self.handler.create_validation('target', args={"using": {}}, handler_storage=self.handler.engine_storage)
 
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
     def test_create_validation_with_valid_arguments(self, mock_openai):

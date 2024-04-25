@@ -957,7 +957,7 @@ class ExecuteCommands:
     def answer_retrain_predictor(self, statement, database_name):
         model_record = self._get_model_info(statement.name, database_name=database_name)["model_record"]
 
-        if statement.integration_name is None:
+        if statement.query_str is None:
             if model_record.data_integration_ref is not None:
                 if model_record.data_integration_ref["type"] == "integration":
                     integration = self.session.integration_controller.get_by_id(
@@ -967,6 +967,9 @@ class ExecuteCommands:
                         raise EntityNotExistsError(
                             "The database from which the model was trained no longer exists"
                         )
+        elif statement.integration_name is None:
+            # set to current project
+            statement.integration_name = Identifier(database_name)
 
         ml_handler = None
         if statement.using is not None:
@@ -1007,6 +1010,10 @@ class ExecuteCommands:
         if statement.using is not None:
             # repack using with lower names
             statement.using = {k.lower(): v for k, v in statement.using.items()}
+
+        if statement.query_str is not None and statement.integration_name is None:
+            # set to current project
+            statement.integration_name = Identifier(database_name)
 
         # use current ml handler
         integration_record = get_predictor_integration(model_record)
@@ -1504,6 +1511,10 @@ class ExecuteCommands:
             statement.using = {k.lower(): v for k, v in statement.using.items()}
 
             ml_integration_name = statement.using.pop("engine", ml_integration_name)
+
+        if statement.query_str is not None and statement.integration_name is None:
+            # set to current project
+            statement.integration_name = Identifier(database_name)
 
         ml_handler = self.session.integration_controller.get_ml_handler(
             ml_integration_name

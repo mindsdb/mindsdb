@@ -3,19 +3,19 @@ title: MindsDB Cloud
 sidebarTitle: MindsDB Cloud
 ---
 
-This documentation describes the integration of MindsDB with [MindsDB Cloud Endpoints](https://mindsdb-docs.hashnode.space/), a cloud service that simplifies the way developers interact with cutting-edge LLMs through a universal API.
+This documentation describes the integration of MindsDB with [MindsDB Cloud](https://mindsdb-docs.hashnode.space/), a cloud service that simplifies the way developers interact with cutting-edge LLMs through a universal API.
 
 ## Prerequisites
 
 Before proceeding, ensure the following prerequisites are met:
 
-1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
-2. To use MindsDB Cloud Endpoints within MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
-3. Obtain the MindsDB Cloud API key required to deploy and use MindsDB Cloud Endpoints models within MindsDB. Follow the [instructions for obtaining the API key](https://mindsdb-docs.hashnode.space/docs/authentication).
+1. Install MindsDB locally via [Docker](/setup/self-hosted/docker) or [Docker Desktop](/setup/self-hosted/docker-desktop).
+2. To use MindsDB Cloud within MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Obtain the MindsDB Cloud API key required to deploy and use MindsDB Cloud  models within MindsDB. Follow the [instructions for obtaining the API key](https://mindsdb-docs.hashnode.space/docs/authentication).
 
 ## Setup
 
-Create an AI engine from the [MindsDB Cloud Endpoints handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/mindsdb_cloud).
+Create an AI engine from the [MindsDB Cloud handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/mindsdb_cloud).
 
 ```sql
 CREATE ML_ENGINE mindsdb_serve

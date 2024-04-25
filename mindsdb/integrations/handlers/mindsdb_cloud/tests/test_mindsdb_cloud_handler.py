@@ -6,7 +6,7 @@ from unittest.mock import patch
 from tests.unit.ml_handlers.base_ml_test import BaseMLAPITest
 
 
-@pytest.mark.skipif(os.environ.get('MDB_TEST_MDB_Cloud_API_KEY') is None, reason='Missing API key!')
+@pytest.mark.skipif(os.environ.get('MDB_TEST_MDB_CLOUD_API_KEY') is None, reason='Missing API key!')
 class TestMindsDBCloud(BaseMLAPITest):
     """
     Integration tests for MindsDB Cloud engine.

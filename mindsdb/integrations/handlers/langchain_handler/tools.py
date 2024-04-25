@@ -150,8 +150,9 @@ def _setup_standard_tools(tools, llm, model_kwargs):
             langchain_tools.append(tool)
         else:
             raise ValueError(f"Unsupported tool: {tool}")
-    
-    all_standard_tools += load_tools(langchain_tools)
+
+    if langchain_tools:
+        all_standard_tools += load_tools(langchain_tools)
     return all_standard_tools
 
 

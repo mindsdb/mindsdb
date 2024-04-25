@@ -419,7 +419,7 @@ class OrdersTable(APITable):
         """
         insert_statement_parser = INSERTQueryParser(
             query,
-            supported_columns=['address1_b', 'address2_b', 'city_b', 'company_b', 'country_b',
+            supported_columns=['id_as', 'quantity_as', 'address1_b', 'address2_b', 'city_b', 'company_b', 'country_b',
                                'country_code_b', 'first_name_b', 'last_name_b', 'latitude_b', 
                                'longitude_b', 'name_b', 'phone_b', 'province_b', 'province_code_b', 
                                'zip_b', 
@@ -428,20 +428,24 @@ class OrdersTable(APITable):
                                'latitude_s', 'longitude_s', 'name_s', 'phone_s', 'province_s', 
                                'province_code_s', 'zip_s', 
                                'amount_dc', 'code_dc', 'type_dc',
-                               'price_tl', 'rate_tl', 'title_tl', 'channel_liable_tl',
+                               'gift_card_li', 'grams_li',  'price_li', 'quantity_li', 'title_li', 
+                               'vendor_li', 'fulfillment_status_li', 'sku_li', 'variant_id_li',
+                               'price_tl', 'rate_tl', 'title_tl', 'channel_liable_tl', 'name_li', 'value_li',
                                'name_na', 'value_na',
                                'code_sl', 'price_sl', 'discounted_price_sl', 'source_sl', 
                                'title_sl', 
                                'carrier_identifier_sl', 'requested_fulfillment_service_id_sl', 
                                'is_removed_sl',
+                            #    'accept_language_cd', 'browser_height_cd', 'browser_ip_cd', 
+                            #    'browser_width_cd', 'session_hash_cd', 'user_agent_cd', #remove
                                'buyer_accepts_marketing', 
-                               'customer_locale', 'currency', 'email', 'fulfillment_status', 
-                               'gift_card', 'grams', 'merchant_of_record_app_id', 'note', 
-                               'phone', 'po_number', 'price', 'processed_at', 'quantity', 
+                               'currency', 'email', 'financial_status', 'fulfillment_status', 
+                               'merchant_of_record_app_id', 'note',
+                               'phone', 'po_number', 'processed_at', 
                                'referring_site', 'source_name', 'source_identifier', 
-                               'source_url', 'tags', 'taxes_included', 'test', 'title', 
-                               'total_tax', 'total_weight', 'user_id', 'vendor'],
-            mandatory_columns=['price', 'title'],
+                               'source_url', 'tags', 'taxes_included', 'test', 
+                               'total_tax', 'total_weight'],
+            mandatory_columns=['price_li', 'title_li'],
             all_mandatory=False
         )
         order_data = insert_statement_parser.parse_query()
@@ -524,7 +528,8 @@ class OrdersTable(APITable):
         api_session = self.handler.connect()
         shopify.ShopifyResource.activate_session(api_session)
         # build API objects
-        line_item_columns = {'gift_card', 'grams', 'price', 'quantity', 'title', 'vendor'}
+        line_item_columns = {'gift_card_li', 'grams_li', 'price_li', 'quantity_li', 'title_li',
+                             'vendor_li', 'fulfillment_status_li', 'sku_li', 'variant_id_li'}
         billing_address_columns = {'address1_b', 'address2_b', 'city_b', 'company_b',
                                    'country_b', 'country_code_b', 'first_name_b', 'last_name_b', 
                                    'latitude_b', 'longitude_b', 'name_b', 'phone_b', 'province_b', 
@@ -539,6 +544,11 @@ class OrdersTable(APITable):
         shipping_lines_columns = {'code_sl', 'price_sl', 'discounted_price_sl',
                                   'source_sl', 'title_sl', 'carrier_identifier_sl', 
                                   'requested_fulfillment_service_id_sl', 'is_removed_sl'}
+        attributed_staffs_columns = {'id_as', 'quantity_as'}
+        line_items_properties_columns = {'name_li', 'value_li'}
+        # client_details_columns = {'accept_language_cd', 'browser_height_cd',
+        #                           'browser_ip_cd', 'browser_width_cd', 'session_hash_cd', 
+        #                           'user_agent_cd'}
         modified_order_data = []
 
         for order in order_data:
@@ -550,8 +560,10 @@ class OrdersTable(APITable):
                                 and key not in discount_codes_columns
                                 and key not in tax_lines_columns
                                 and key not in note_attributes_columns
-                                and key not in shipping_lines_columns}
-            line_items_data = {key: val for key, val in order.items()
+                                and key not in shipping_lines_columns
+                                and key not in attributed_staffs_columns
+                                and key not in line_items_properties_columns}
+            line_items_data = {key[:-3]: val for key, val in order.items()
                             if key in line_item_columns}
             billing_address_data = {key[:-2]: val for key, val in order.items()
                                     if key in billing_address_columns}
@@ -565,6 +577,15 @@ class OrdersTable(APITable):
                                     if key in note_attributes_columns}
             shipping_lines_data = {key[:-3]: val for key, val in order.items()
                                     if key in shipping_lines_columns}
+            attributed_staffs_data = {key[:-3]: val for key, val in order.items()
+                                    if key in attributed_staffs_columns}
+            line_items_properties_data = {key[:-3]: val for key, val in order.items()
+                                    if key in line_items_properties_columns}
+
+            line_items_data['attributed_staffs'] = [attributed_staffs_data]
+            line_items_data['properties'] = [line_items_properties_data]
+            # client_details_data = {key[:-3]: val for key, val in order.items()
+            #                         if key in client_details_columns}
 
             # add JSON string to dictionary
             order_data_trimmed['line_items'] = json.loads(json.dumps([line_items_data]))
@@ -574,6 +595,7 @@ class OrdersTable(APITable):
             order_data_trimmed['tax_lines'] = json.loads(json.dumps([tax_lines_data]))
             order_data_trimmed['note_attributes'] = json.loads(json.dumps([note_attributes_data]))
             order_data_trimmed['shipping_lines'] = json.loads(json.dumps([shipping_lines_data]))
+            # order_data_trimmed['client_details'] = json.loads(json.dumps(client_details_data)) #remove
             modified_order_data.append(order_data_trimmed)
 
         for order in modified_order_data:

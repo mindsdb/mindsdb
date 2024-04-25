@@ -127,7 +127,7 @@ class TestMindsDBInference(BaseMLAPITest):
             JOIN proj.test_mdb_inference_bulk_qa as p;
         """
         )
-        
+
         assert "stockholm" in result_df["answer"].iloc[0].lower()
         assert "venus" in result_df["answer"].iloc[1].lower()
 
@@ -159,6 +159,3 @@ class TestMindsDBInference(BaseMLAPITest):
 
         assert isinstance(result_df["embeddings"].iloc[0], list)
 
-
-if __name__ == "__main__":
-    pytest.main()

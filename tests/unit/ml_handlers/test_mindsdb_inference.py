@@ -24,6 +24,9 @@ class TestMindsDBInference(unittest.TestCase):
         # Define a return value for the `get_connection_args` method of the mock engine storage
         mock_engine_storage.get_connection_args.return_value = self.dummy_connection_data
 
+        # Assign mock engine storage to instance variable for create validation tests
+        self.mock_engine_storage = mock_engine_storage
+
         self.handler = MindsDBInferenceHandler(mock_model_storage, mock_engine_storage, connection_data={'connection_data': self.dummy_connection_data})
 
     def test_create_validation_raises_exception_without_using_clause(self):
@@ -40,7 +43,7 @@ class TestMindsDBInference(unittest.TestCase):
         """
 
         with self.assertRaises(AuthenticationError):
-            self.handler.create_validation('target', args={"using": {}}, handler_storage=self.handler.engine_storage)
+            self.handler.create_validation('target', args={"using": {}}, handler_storage=self.mock_engine_storage)
 
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
     def test_create_validation_with_valid_arguments(self, mock_openai):
@@ -54,10 +57,10 @@ class TestMindsDBInference(unittest.TestCase):
 
         mock_openai.return_value = mock_openai_client
 
-        self.handler.create_validation('target', args={'using': {'model_name': 'dummy_model_name', 'prompt_template': 'dummy_prompt_template'}}, handler_storage=self.handler.engine_storage)
+        self.handler.create_validation('target', args={'using': {'model_name': 'dummy_model_name', 'prompt_template': 'dummy_prompt_template'}}, handler_storage=self.mock_engine_storage)
 
     @patch('mindsdb.integrations.handlers.openai_handler.helpers.OpenAI')
-    def test_create_with_invalid_mode(self, mock_openai):
+    def test_create_raises_exception_with_invalid_mode(self, mock_openai):
         """
         Test if model creation runs without raising an Exception.
         """
@@ -75,7 +78,7 @@ class TestMindsDBInference(unittest.TestCase):
             self.handler.create('dummy_target', args={'using': {'model_name': 'dummy_model_name', 'prompt_template': 'dummy_prompt_template', 'mode': 'dummy_mode'}})
 
     @patch('mindsdb.integrations.handlers.openai_handler.helpers.OpenAI')
-    def test_create_with_unsupported_model(self, mock_openai):
+    def test_create_raises_exception_with_unsupported_model(self, mock_openai):
         """
         Test if model creation runs without raising an Exception.
         """
@@ -93,7 +96,7 @@ class TestMindsDBInference(unittest.TestCase):
             self.handler.create('dummy_target', args={'using': {'model_name': 'dummy_unsupported_model_name', 'prompt_template': 'dummy_prompt_template'}})
 
     @patch('mindsdb.integrations.handlers.openai_handler.helpers.OpenAI')
-    def test_create_with_valid_arguments(self, mock_openai):
+    def test_create_runs_no_errors_with_valid_arguments(self, mock_openai):
         """
         Test if model creation runs without raising an Exception.
         """
@@ -111,7 +114,7 @@ class TestMindsDBInference(unittest.TestCase):
 
     @patch('mindsdb.integrations.handlers.mindsdb_inference.mindsdb_inference_handler.openai.OpenAI')
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
-    def test_predict_sentiment_analysis(self, mock_openai_openai_handler, mock_openai_mdb_inference_handler):
+    def test_predict_runs_no_errors_on_chat_completion_sentiment_analysis(self, mock_openai_openai_handler, mock_openai_mdb_inference_handler):
         """
         Test if model prediction returns the expected result for a sentiment analysis task.
         """

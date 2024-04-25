@@ -67,8 +67,6 @@ def _insert_web_pages_into_knowledge_base(table: KnowledgeBaseTable, urls: List[
         })
     docs_df = pd.DataFrame.from_records(doc_objs)
     # Insert documents into KB.
-    print('FINAL DOCS DF')
-    print(docs_df)
     table.insert(docs_df)
 
 

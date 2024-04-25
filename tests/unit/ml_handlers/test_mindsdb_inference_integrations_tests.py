@@ -29,7 +29,7 @@ class TestMindsDBInference(BaseMLAPITest):
             """
         )
 
-    def test_invalid_model_parameter(self):
+    def test_create_model_raises_exception_with_invalid_model_parameter(self):
         """
         Test for invalid parameter during model creation.
         """
@@ -48,7 +48,7 @@ class TestMindsDBInference(BaseMLAPITest):
         with pytest.raises(Exception):
             self.wait_predictor("proj", "test_mdb_inference_invalid_model")
 
-    def test_unknown_model_argument(self):
+    def test_create_model_raises_exception_with_unknown_model_argument(self):
         """
         Test for unknown argument during model creation.
         """
@@ -67,9 +67,9 @@ class TestMindsDBInference(BaseMLAPITest):
         with pytest.raises(Exception):
             self.wait_predictor("proj", "test_mdb_inference_unknown_argument_model")
 
-    def test_single_qa(self):
+    def test_select_runs_no_errors_on_chat_completion_question_answering_single(self):
         """
-        Test for a valid answer to a single question.
+        Test for a valid answer to a question answering task (chat completion).
         """
 
         self.run_sql(
@@ -89,7 +89,7 @@ class TestMindsDBInference(BaseMLAPITest):
             SELECT answer
             FROM proj.test_mdb_inference_single_qa
             WHERE question = 'What is the capital of Sweden?';
-        """
+            """
         )
 
         assert "stockholm" in result_df["answer"].iloc[0].lower()

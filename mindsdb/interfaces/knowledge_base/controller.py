@@ -424,7 +424,7 @@ class KnowledgeBaseController:
         self.session.integration_controller.add(vector_store_name, engine, connection_args)
         return vector_store_name
 
-    def _create_default_embedding_model(self, project_name, kb_name, engine="sentence_transformers"):
+    def _create_default_embedding_model(self, project_name, kb_name, engine="langchain_embedding"):
         """create a default embedding model for knowledge base, if not specified"""
         model_name = f"{kb_name}_default_model"
 
@@ -437,7 +437,7 @@ class KnowledgeBaseController:
         )
         ml_handler = self.session.integration_controller.get_ml_handler(engine)
 
-        self.session.model_controller.create_model(
+        _ = self.session.model_controller.create_model(
             statement,
             ml_handler
         )

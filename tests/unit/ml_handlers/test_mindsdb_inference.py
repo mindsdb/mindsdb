@@ -120,6 +120,7 @@ class TestMindsDBInference(unittest.TestCase):
         """
 
         # Mock the models.list method of the OpenAI client (for the MindsDB Inference handler)
+        # TODO: Figure out how to remove duplicate code in predict tests
         mock_supported_models = [MagicMock(id='mistral-7b')]
         mock_openai_mdb_inference_handler.return_value.models.list.return_value = mock_supported_models
 
@@ -138,7 +139,7 @@ class TestMindsDBInference(unittest.TestCase):
             choices=[
                 MagicMock(
                     message=MagicMock(
-                        content='positive'
+                        content='Positive'
                     )
                 )
             ]
@@ -152,7 +153,50 @@ class TestMindsDBInference(unittest.TestCase):
         self.assertIsInstance(result, pandas.DataFrame)
         self.assertTrue('sentiment' in result.columns)
 
-        pandas.testing.assert_frame_equal(result, pandas.DataFrame({'sentiment': ['positive']}))
+        pandas.testing.assert_frame_equal(result, pandas.DataFrame({'sentiment': ['Positive']}))
+
+    @patch('mindsdb.integrations.handlers.mindsdb_inference.mindsdb_inference_handler.openai.OpenAI')
+    @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
+    def test_predict_runs_no_errors_on_chat_completion_question_answering(self, mock_openai_openai_handler, mock_openai_mdb_inference_handler):
+        """
+        Test if model prediction returns the expected result for a question answering task.
+        """
+
+        # Mock the models.list method of the OpenAI client (for the MindsDB Inference handler)
+        # TODO: Figure out how to remove duplicate code in predict tests
+        mock_supported_models = [MagicMock(id='mistral-7b')]
+        mock_openai_mdb_inference_handler.return_value.models.list.return_value = mock_supported_models
+
+        # Mock the json_get method of the model storage
+        self.handler.model_storage.json_get.return_value = {
+            'model_name': 'mistral-7b',
+            'question_column': 'question',
+            'target': 'answer',
+            'mode': 'default',
+            'api_base': 'https://llm.mdb.ai/'
+        }
+
+        # Mock the chat.completions.create method of the OpenAI client (for the OpenAI handler)
+        mock_openai_client = MagicMock()
+        mock_openai_client.chat.completions.create.return_value = MagicMock(
+            choices=[
+                MagicMock(
+                    message=MagicMock(
+                        content='Sweden'
+                    )
+                )
+            ]
+        )
+
+        mock_openai_openai_handler.return_value = mock_openai_client
+
+        df = pandas.DataFrame({'question': ['Where is Stockholm located?']})
+        result = self.handler.predict(df, args={})
+
+        self.assertIsInstance(result, pandas.DataFrame)
+        self.assertTrue('answer' in result.columns)
+
+        pandas.testing.assert_frame_equal(result, pandas.DataFrame({'answer': ['Sweden']}))
 
 
 if __name__ == '__main__':

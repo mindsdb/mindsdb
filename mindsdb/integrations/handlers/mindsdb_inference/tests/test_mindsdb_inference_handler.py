@@ -158,4 +158,3 @@ class TestMindsDBInference(BaseMLAPITest):
         )
 
         assert isinstance(result_df["embeddings"].iloc[0], list)
-

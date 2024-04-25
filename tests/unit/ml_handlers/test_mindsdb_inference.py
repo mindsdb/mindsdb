@@ -48,7 +48,7 @@ class TestMindsDBInference(unittest.TestCase):
         Test if model creation is validated correctly with valid arguments.
         """
 
-        # Mock the chat.completions.create method of the OpenAI client (for the OpenAI handler)
+        # Mock the models.retrieve method of the OpenAI client
         mock_openai_client = MagicMock()
         mock_openai_client.models.retrieve.return_value = MagicMock()
 
@@ -63,6 +63,7 @@ class TestMindsDBInference(unittest.TestCase):
         """
 
         # Mock the models.list method of the OpenAI client
+        # TODO: Figure out how to remove duplicate code in create tests
         mock_models_list = MagicMock()
         mock_models_list.data = [
             MagicMock(id='dummy_model_name')
@@ -80,6 +81,7 @@ class TestMindsDBInference(unittest.TestCase):
         """
 
         # Mock the models.list method of the OpenAI client
+        # TODO: Figure out how to remove duplicate code in create tests
         mock_models_list = MagicMock()
         mock_models_list.data = [
             MagicMock(id='dummy_model_name')
@@ -97,6 +99,7 @@ class TestMindsDBInference(unittest.TestCase):
         """
 
         # Mock the models.list method of the OpenAI client
+        # TODO: Figure out how to remove duplicate code in create tests
         mock_models_list = MagicMock()
         mock_models_list.data = [
             MagicMock(id='dummy_model_name')

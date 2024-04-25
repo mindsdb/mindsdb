@@ -121,12 +121,12 @@ class TestMindsDBInference(unittest.TestCase):
 
         # Mock the models.list method of the OpenAI client (for the MindsDB Inference handler)
         # TODO: Figure out how to remove duplicate code in predict tests
-        mock_supported_models = [MagicMock(id='mistral-7b')]
+        mock_supported_models = [MagicMock(id='dummy_model_name')]
         mock_openai_mdb_inference_handler.return_value.models.list.return_value = mock_supported_models
 
         # Mock the json_get method of the model storage
         self.handler.model_storage.json_get.return_value = {
-            'model_name': 'mistral-7b',
+            'model_name': 'dummy_model_name',
             'prompt_template': 'Classify the sentiment of the following text as one of `positive`, `neutral` or `negative`: {{text}}',
             'target': 'sentiment',
             'mode': 'default',
@@ -164,12 +164,12 @@ class TestMindsDBInference(unittest.TestCase):
 
         # Mock the models.list method of the OpenAI client (for the MindsDB Inference handler)
         # TODO: Figure out how to remove duplicate code in predict tests
-        mock_supported_models = [MagicMock(id='mistral-7b')]
+        mock_supported_models = [MagicMock(id='dummy_model_name')]
         mock_openai_mdb_inference_handler.return_value.models.list.return_value = mock_supported_models
 
         # Mock the json_get method of the model storage
         self.handler.model_storage.json_get.return_value = {
-            'model_name': 'mistral-7b',
+            'model_name': 'dummy_model_name',
             'question_column': 'question',
             'target': 'answer',
             'mode': 'default',
@@ -197,6 +197,47 @@ class TestMindsDBInference(unittest.TestCase):
         self.assertTrue('answer' in result.columns)
 
         pandas.testing.assert_frame_equal(result, pandas.DataFrame({'answer': ['Sweden']}))
+
+    @patch('mindsdb.integrations.handlers.mindsdb_inference.mindsdb_inference_handler.openai.OpenAI')
+    @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
+    def test_predict_runs_no_errors_on_embeddings(self, mock_openai_openai_handler, mock_openai_mdb_inference_handler):
+        """
+        Test if model prediction returns the expected result for an embeddings task.
+        """
+
+        # Mock the models.list method of the OpenAI client (for the MindsDB Inference handler)
+        # TODO: Figure out how to remove duplicate code in predict tests
+        mock_supported_models = [MagicMock(id='dummy_model_name')]
+        mock_openai_mdb_inference_handler.return_value.models.list.return_value = mock_supported_models
+
+        # Mock the json_get method of the model storage
+        self.handler.model_storage.json_get.return_value = {
+            'model_name': 'dummy_model_name',
+            'question_column': 'text',
+            'target': 'embeddings',
+            'mode': 'embedding',
+            'api_base': 'https://llm.mdb.ai/'
+        }
+
+        # Mock the chat.completions.create method of the OpenAI client (for the OpenAI handler)
+        mock_openai_client = MagicMock()
+        mock_openai_client.embeddings.create.return_value = MagicMock(
+            data=[
+                MagicMock(
+                    embedding=[0, 1]
+                )
+            ]
+        )
+
+        mock_openai_openai_handler.return_value = mock_openai_client
+
+        df = pandas.DataFrame({'text': ['MindsDB']})
+        result = self.handler.predict(df, args={})
+
+        self.assertIsInstance(result, pandas.DataFrame)
+        self.assertTrue('embeddings' in result.columns)
+
+        pandas.testing.assert_frame_equal(result, pandas.DataFrame({'embeddings': [[0, 1]]}))
 
 
 if __name__ == '__main__':

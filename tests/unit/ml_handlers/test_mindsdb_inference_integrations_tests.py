@@ -131,6 +131,34 @@ class TestMindsDBInference(BaseMLAPITest):
         assert "stockholm" in result_df["answer"].iloc[0].lower()
         assert "venus" in result_df["answer"].iloc[1].lower()
 
+    def test_select_runs_no_errors_on_embeddings_completion_single(self):
+        """
+        Test for a valid answer to a question answering task (chat completion).
+        """
+
+        self.run_sql(
+            f"""
+            CREATE MODEL proj.test_mdb_inference_single_embeddings
+            PREDICT embeddings
+            USING
+                engine='mindsdb_inference_engine',
+                question_column='text',
+                mode='embedding',
+                mindsdb_inference_api_key='{self.get_api_key('MDB_TEST_MDB_INFERENCE_API_KEY')}';
+            """
+        )
+        self.wait_predictor("proj", "test_mdb_inference_single_embeddings")
+
+        result_df = self.run_sql(
+            """
+            SELECT embeddings
+            FROM proj.test_mdb_inference_single_embeddings
+            WHERE text = 'MindsDB';
+            """
+        )
+
+        assert isinstance(result_df["embeddings"].iloc[0], list)
+
 
 if __name__ == "__main__":
     pytest.main()

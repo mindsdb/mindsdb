@@ -17,3 +17,4 @@ SELECT * FROM my_table;
 ~~~~
 
 # git push origin Riyana/FinancialHandler
+# cd mindsdb/integrations/handlers/financial_modeling_prep_handler

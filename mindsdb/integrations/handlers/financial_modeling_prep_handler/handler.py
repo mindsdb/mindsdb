@@ -47,15 +47,16 @@ class FinancialModelingHandler(APIHandler):
             #include api_key in params for now
             def get_daily_chart(self, params: Dict = None) -> pd.DataFrame:  
                 url = ("https://financialmodelingprep.com/api/v3/historical-price-full/AAPL?apikey=GJvlw9YgVm5J4KIxdP1VPkvWzt747Q6j")
-
+                
                 if 'symbol' not in params:
                     raise ValueError('Missing "symbol" param')
-                
+                response = get_jsonparsed_data(url)
                 #take out symbol in dict
-                data = get_jsonparsed_data(url)
-                df = pd.DataFrame(data)
+                data = json.loads(response) #parses into python dict
 
-                return df
+                historical_data = data["historical"][:3] #first 3 elements
+
+                return historical_data
     
             def call_financial_modeling_api(self, endpoint_name: str = None, params: Dict = None) -> pd.DataFrame:
                 """Calls the financial modeling API method with the given params.

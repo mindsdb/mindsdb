@@ -15,4 +15,11 @@ def get_jsonparsed_data(url):
     return json.loads(data)
 
 url = ("https://financialmodelingprep.com/api/v3/historical-price-full/AAPL?apikey=GJvlw9YgVm5J4KIxdP1VPkvWzt747Q6j")
-print(get_jsonparsed_data(url))
+
+response = get_jsonparsed_data(url)
+#take out symbol in dict
+data = json.loads(response) #parses into python dict
+
+historical_data = data["historical"][:3] #first 3 elements
+
+print(historical_data)

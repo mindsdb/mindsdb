@@ -177,7 +177,14 @@ class ExecuteCommands:
         if type(statement) is CreateDatabase:
             return self.answer_create_database(statement)
         elif type(statement) is CreateMLEngine:
-            return self.answer_create_ml_engine(statement)
+            name = statement.name.parts[-1]
+
+            return self.answer_create_ml_engine(
+                name,
+                handler=statement.handler,
+                params=statement.params,
+                if_not_exists=getattr(statement, "if_not_exists", False)
+            )
         elif type(statement) is DropMLEngine:
             return self.answer_drop_ml_engine(statement)
         elif type(statement) is DropPredictor:
@@ -1105,34 +1112,34 @@ class ExecuteCommands:
             handler = self.session.integration_controller.get_data_handler(name)
             handler.handler_storage.import_files(storage)
 
-    def answer_create_ml_engine(self, statement: ASTNode):
-        name = statement.name.parts[-1]
+    def answer_create_ml_engine(self, name: str, handler: str, params: dict = None, if_not_exists=False):
+
         integrations = self.session.integration_controller.get_all()
         if name in integrations:
-            if not getattr(statement, "if_not_exists", False):
+            if not if_not_exists:
                 raise EntityExistsError('Integration already exists', name)
             else:
                 return ExecuteAnswer(ANSWER_TYPE.OK)
 
         handler_module_meta = (
             self.session.integration_controller.get_handlers_import_status().get(
-                statement.handler
+                handler
             )
         )
         if handler_module_meta is None:
-            raise ExecutorException(f"There is no engine '{statement.handler}'")
+            raise ExecutorException(f"There is no engine '{handler}'")
 
-        params = {}
-        if statement.params:
-            for key, value in statement.params.items():
+        params_out = {}
+        if params:
+            for key, value in params.items():
                 # convert ast types to string
                 if isinstance(value, (Constant, Identifier)):
                     value = value.to_string()
-                params[key] = value
+                params_out[key] = value
 
         try:
             self.session.integration_controller.add(
-                name=name, engine=statement.handler, connection_args=params
+                name=name, engine=handler, connection_args=params_out
             )
         except Exception as e:
             msg = str(e)
@@ -1146,7 +1153,7 @@ class ExecuteCommands:
                 is_cloud = self.session.config.get("cloud", False)
                 if is_cloud is False and "No module named" in handler_module_meta['import']['error_message']:
                     logger.info(get_handler_install_message(handler_module_meta['name']))
-            ast_drop = DropMLEngine(name=statement.name)
+            ast_drop = DropMLEngine(name=name)
             self.answer_drop_ml_engine(ast_drop)
             logger.info(msg)
             raise ExecutorException(msg)
@@ -1508,9 +1515,17 @@ class ExecuteCommands:
 
             ml_integration_name = statement.using.pop("engine", ml_integration_name)
 
-        ml_handler = self.session.integration_controller.get_ml_handler(
-            ml_integration_name
-        )
+        try:
+            ml_handler = self.session.integration_controller.get_ml_handler(
+                ml_integration_name
+            )
+        except EntityNotExistsError:
+            # not exist, try to create it with same name as handler
+            self.answer_create_ml_engine(ml_integration_name, handler=ml_integration_name)
+
+            ml_handler = self.session.integration_controller.get_ml_handler(
+                ml_integration_name
+            )
 
         if getattr(statement, "is_replace", False) is True:
             # try to delete

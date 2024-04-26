@@ -38,6 +38,7 @@ class SnowflakeHandler(DatabaseHandler):
         Establishes a connection to a Snowflake account.
 
         Raises:
+            ValueError: If the required connection parameters are not provided.
             snowflake.connector.errors.Error: If an error occurs while connecting to the Snowflake account.
 
         Returns:
@@ -70,13 +71,8 @@ class SnowflakeHandler(DatabaseHandler):
         if 'role' in self.connection_data:
             config['role'] = self.connection_data.get('role')
 
-        try:
-            self.connection = connector.connect(**config)
-            self.is_connected = True
-            return self.connection
-        except connector.errors.Error as e:
-            logger.error(f'Error connecting to Snowflake, {e}!')
-            raise
+        self.connection = connector.connect(**config)
+        return self.connection
 
     def disconnect(self):
         """
@@ -97,15 +93,17 @@ class SnowflakeHandler(DatabaseHandler):
         """
 
         response = StatusResponse(False)
-        need_to_close = self.is_connected is False
+        need_to_close = not self.is_connected
 
         try:
-            # Execute a simple query to test the connection
             connection = self.connect()
+            self.is_connected = True
+
+            # Execute a simple query to test the connection
             with connection.cursor() as cur:
                 cur.execute('select 1;')
             response.success = True
-        except connector.errors.Error as e:
+        except (connector.errors.Error, ValueError) as e:
             logger.error(f'Error connecting to Snowflake, {e}!')
             response.error_message = str(e)
 

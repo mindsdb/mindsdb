@@ -1,6 +1,6 @@
 supported_task = {
     "QueryTextModel": {
-       "model" : "<model>"
+        "model": "<model>"
     },
     "QueryVisionModel": {
         "model": "<model>"

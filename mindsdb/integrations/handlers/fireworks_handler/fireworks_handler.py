@@ -3,6 +3,7 @@ from typing import Dict, Optional
 import pandas as pd
 import fireworks.client
 
+
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities import log
 
@@ -43,7 +44,6 @@ class FireworksHandler(BaseMLEngine):
         if missing_keys:
             raise Exception(f"{task} requires {missing_keys} arguments")
 
-
     def create(
         self,
         target: str,
@@ -62,10 +62,9 @@ class FireworksHandler(BaseMLEngine):
             raise Exception(
                 f"Invalid operation mode. Please use one of {self.supported_task}"
             )
-        
+
         if "max_tokens" not in args["using"]:
             args["using"]["max_tokens"] = self.default_max_tokens
-        
 
         self.model_storage.json_set("args", args)
 
@@ -79,7 +78,6 @@ class FireworksHandler(BaseMLEngine):
 
         self.connection = fireworks.client
         self.connection.api_key = api_key
-
 
         input_column = args["using"]["column"]
 
@@ -108,7 +106,6 @@ class FireworksHandler(BaseMLEngine):
 
         args = self.model_storage.json_get("args")
 
-
         response = self.connection.ChatCompletion.create(
             model=f"accounts/fireworks/models/{args['using']['model']}",
             max_tokens=args["using"]["max_tokens"],
@@ -118,8 +115,7 @@ class FireworksHandler(BaseMLEngine):
         )
 
         return response.choices[0].message.content
-        
-    
+
     def predict_image_answer(self, image_url):
         """
         connects with fireworks api to predict the image description for the particular image url
@@ -128,23 +124,20 @@ class FireworksHandler(BaseMLEngine):
 
         args = self.model_storage.json_get("args")
 
-
         response = self.connection.ChatCompletion.create(
             model=f"accounts/fireworks/models/{args['using']['model']}",
-            messages = [{
+            messages=[{
                 "role": "user",
                 "content": [{
-                "type": "text",
-                "text": "Can you describe this image?",
+                    "type": "text",
+                    "text": "Can you describe this image?",
                 }, {
-                "type": "image_url",
-                "image_url": {
-                    "url": image_url
-                },
+                    "type": "image_url",
+                    "image_url": {
+                        "url": image_url
+                    },
                 }, ],
             }],
         )
 
         return response.choices[0].message.content
-
-

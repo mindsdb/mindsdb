@@ -116,14 +116,19 @@ class SnowflakeHandler(DatabaseHandler):
 
     def native_query(self, query: str) -> Response:
         """
-        Receive SQL query and runs it
-        :param query: The SQL query to run in Snowflake
-        :return: returns the records from the current recordset
+        Executes a SQL query on the Snowflake account and returns the result.
+
+        Args:
+            query (str): The SQL query to be executed.
+
+        Returns:
+            Response: A response object containing the result of the query or an error message.
         """
+
         need_to_close = self.is_connected is False
+
         connection = self.connect()
-        from snowflake.connector import DictCursor
-        with connection.cursor(DictCursor) as cur:
+        with connection.cursor(connector.DictCursor) as cur:
             try:
                 cur.execute(query)
                 result = cur.fetchall()
@@ -138,13 +143,16 @@ class SnowflakeHandler(DatabaseHandler):
                 else:
                     response = Response(RESPONSE_TYPE.OK)
             except Exception as e:
-                logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
+                logger.error(f'Error running query: {query} on Snowflake!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
+                    error_code=0,
                     error_message=str(e)
                 )
+
         if need_to_close is True:
             self.disconnect()
+
         return response
     
     def query(self, query: ASTNode) -> Response:

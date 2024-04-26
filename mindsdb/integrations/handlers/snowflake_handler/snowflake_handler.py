@@ -171,8 +171,15 @@ class SnowflakeHandler(DatabaseHandler):
         """
 
         query = "SHOW TABLES;"
-        result = self.native_query(query)
-        result.data_frame = result.data_frame.rename(columns={'name': 'table_name'})
+        result_tables = self.native_query(query)
+        result_tables.data_frame = result_tables.data_frame.rename(columns={'name': 'table_name'})
+
+        query = "SHOW VIEWS;"
+        result_views = self.native_query(query)
+        result_views.data_frame = result_views.data_frame.rename(columns={'name': 'table_name'})
+
+        result = Response(RESPONSE_TYPE.TABLE)
+        result.data_frame = result_tables.data_frame.append(result_views.data_frame, ignore_index=True)
         return result
 
     def get_columns(self, table_name) -> Response:

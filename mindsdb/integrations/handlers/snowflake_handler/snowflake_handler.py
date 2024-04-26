@@ -46,7 +46,7 @@ class SnowflakeHandler(DatabaseHandler):
 
         if self.is_connected is True:
             return self.connection
-        
+
         # Mandatory connection parameters
         if not all(key in self.connection_data for key in ['account', 'user', 'password']):
             raise ValueError('Required parameters (account, user, password) must be provided.')
@@ -69,7 +69,7 @@ class SnowflakeHandler(DatabaseHandler):
 
         if 'role' in self.connection_data:
             config['role'] = self.connection_data.get('role')
-        
+
         try:
             self.connection = connector.connect(**config)
             self.is_connected = True
@@ -98,6 +98,7 @@ class SnowflakeHandler(DatabaseHandler):
 
         response = StatusResponse(False)
         need_to_close = self.is_connected is False
+
         try:
             # Execute a simple query to test the connection
             connection = self.connect()
@@ -113,7 +114,7 @@ class SnowflakeHandler(DatabaseHandler):
 
         elif not response.success and self.is_connected:
             self.is_connected = False
-            
+
         return response
 
     def native_query(self, query: str) -> Response:
@@ -156,7 +157,7 @@ class SnowflakeHandler(DatabaseHandler):
             self.disconnect()
 
         return response
-    
+
     def query(self, query: ASTNode) -> Response:
         """
         Executes a SQL query represented by an ASTNode and retrieves the data.

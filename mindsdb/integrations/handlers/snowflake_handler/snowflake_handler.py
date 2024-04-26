@@ -59,17 +59,10 @@ class SnowflakeHandler(DatabaseHandler):
         }
 
         # Optional connection parameters
-        if 'database' in self.connection_data:
-            config['database'] = self.connection_data.get('database')
-
-        if 'schema' in self.connection_data:
-            config['schema'] = self.connection_data.get('schema')
-
-        if 'warehouse' in self.connection_data:
-            config['warehouse'] = self.connection_data.get('warehouse')
-
-        if 'role' in self.connection_data:
-            config['role'] = self.connection_data.get('role')
+        optional_params = ['database', 'schema', 'warehouse', 'role']
+        for param in optional_params:
+            if param in self.connection_data:
+                config[param] = self.connection_data[param]
 
         self.connection = connector.connect(**config)
         return self.connection

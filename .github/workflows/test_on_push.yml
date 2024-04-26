@@ -124,10 +124,10 @@ jobs:
         fi
     - name: Run Handlers tests and submit Coverage to coveralls
       run: |
-        files=("test_mysql" "test_postgresql" "test_mssql")
-        for file in "${files[@]}"
+        handlers=("mysql" "postgres" "mssql")
+        for handler in "${handlers[@]}"
         do
-          pytest --cov=mindsdb/integrations/handlers/${file}_handler tests/unit/handlers/${file}.py 
+          pytest --cov=mindsdb/integrations/handlers/${handler}_handler tests/unit/handlers/test_${handler}.py 
         done
         coveralls --service=github --basedir=mindsdb/integrations/handlers
       env:

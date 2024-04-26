@@ -35,7 +35,8 @@ from mindsdb_sql.parser.ast import (
     Union,
     Update,
     Use,
-    Variable
+    Variable,
+    Tuple,
 )
 
 # typed models
@@ -180,24 +181,21 @@ class ExecuteCommands:
         elif type(statement) is DropMLEngine:
             return self.answer_drop_ml_engine(statement)
         elif type(statement) is DropPredictor:
-            if len(statement.name.parts) > 1:
-                database_name = statement.name.parts[0].lower()
-            model_name = statement.name.parts[-1]
+            return self.answer_drop_model(statement, database_name)
 
-            try:
-                project = self.session.database_controller.get_project(database_name)
-                project.drop_model(model_name)
-            except Exception as e:
-                if not statement.if_exists:
-                    raise e
-            return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) is DropTables:
             return self.answer_drop_tables(statement, database_name)
         elif type(statement) is DropDatasource or type(statement) is DropDatabase:
             return self.answer_drop_database(statement)
         elif type(statement) is Describe:
             # NOTE in sql 'describe table' is same as 'show columns'
-            return self.answer_describe_predictor(statement, database_name)
+            obj_type = statement.type
+
+            if obj_type is None or obj_type.upper() in ('MODEL', 'PREDICTOR'):
+                return self.answer_describe_predictor(statement.value, database_name)
+            else:
+                return self.answer_describe_object(obj_type.upper(), statement.value, database_name)
+
         elif type(statement) is RetrainPredictor:
             return self.answer_retrain_predictor(statement, database_name)
         elif type(statement) is FinetunePredictor:
@@ -208,18 +206,7 @@ class ExecuteCommands:
                 if isinstance(statement.modes, list) is False:
                     statement.modes = []
                 statement.modes = [x.upper() for x in statement.modes]
-            if sql_category in ("predictors", "models"):
-
-                new_statement = Select(
-                    targets=[Star()],
-                    from_table=Identifier(parts=["information_schema", "models"]),
-                    where=_get_show_where(
-                        statement, from_name="project", like_name="name"
-                    ),
-                )
-                query = SQLQuery(new_statement, session=self.session, database=database_name)
-                return self.answer_select(query)
-            elif sql_category == "ml_engines":
+            if sql_category == "ml_engines":
                 new_statement = Select(
                     targets=[Star()],
                     from_table=Identifier(parts=["information_schema", "ml_engines"]),
@@ -281,53 +268,14 @@ class ExecuteCommands:
                 if statement.in_table is not None:
                     schema = statement.in_table.parts[-1]
                     statement.in_table = None
+
+                table_types = [Constant(t) for t in ['MODEL', 'BASE TABLE', 'SYSTEM VIEW', 'VIEW']]
                 where = BinaryOperation(
                     "and",
                     args=[
-                        BinaryOperation(
-                            "=", args=[Identifier("table_schema"), Constant(schema)]
-                        ),
-                        BinaryOperation(
-                            "or",
-                            args=[
-                                BinaryOperation(
-                                    "=",
-                                    args=[Identifier("table_type"), Constant("MODEL")],
-                                ),
-                                BinaryOperation(
-                                    "or",
-                                    args=[
-                                        BinaryOperation(
-                                            "=",
-                                            args=[
-                                                Identifier("table_type"),
-                                                Constant("BASE TABLE"),
-                                            ],
-                                        ),
-                                        BinaryOperation(
-                                            "or",
-                                            args=[
-                                                BinaryOperation(
-                                                    "=",
-                                                    args=[
-                                                        Identifier("table_type"),
-                                                        Constant("SYSTEM VIEW"),
-                                                    ],
-                                                ),
-                                                BinaryOperation(
-                                                    "=",
-                                                    args=[
-                                                        Identifier("table_type"),
-                                                        Constant("VIEW"),
-                                                    ],
-                                                ),
-                                            ],
-                                        ),
-                                    ],
-                                ),
-                            ],
-                        ),
-                    ],
+                        BinaryOperation("=", args=[Identifier("table_schema"), Constant(schema)]),
+                        BinaryOperation("in", args=[Identifier("table_type"), Tuple(table_types)])
+                    ]
                 )
 
                 new_statement = Select(
@@ -516,24 +464,42 @@ class ExecuteCommands:
                     is_full=is_full,
                     database_name=database_name,
                 )
-            elif sql_category == "knowledge_bases" or sql_category == "knowledge bases":
-                select_statement = Select(
-                    targets=[Star()],
-                    from_table=Identifier(
-                        parts=["information_schema", "knowledge_bases"]
-                    ),
-                    where=_get_show_where(statement, like_name="name"),
-                )
-                query = SQLQuery(select_statement, session=self.session, database=database_name)
-                return self.answer_select(query)
-            elif sql_category in ("agents", "jobs", "skills", "chatbots"):
+
+            elif sql_category in ("agents", "jobs", "skills", "chatbots", "triggers", "views",
+                                  "knowledge_bases", "knowledge bases", "predictors", "models"):
+
+                if sql_category == "knowledge bases":
+                    sql_category = "knowledge_bases"
+
+                if sql_category == "predictors":
+                    sql_category = "models"
+
+                db_name = database_name
+                if statement.from_table is not None:
+                    db_name = statement.from_table.parts[-1]
+
+                where = BinaryOperation(op='=', args=[Identifier('project'), Constant(db_name)])
+
                 select_statement = Select(
                     targets=[Star()],
                     from_table=Identifier(
                         parts=["information_schema", sql_category]
                     ),
-                    where=_get_show_where(statement, like_name="name"),
+                    where=_get_show_where(statement, like_name="name", initial=where),
                 )
+                query = SQLQuery(select_statement, session=self.session)
+                return self.answer_select(query)
+
+            elif sql_category == "projects":
+                where = BinaryOperation(op='=', args=[Identifier('type'), Constant('project')])
+                select_statement = Select(
+                    targets=[Identifier(parts=["NAME"], alias=Identifier('project'))],
+                    from_table=Identifier(
+                        parts=["information_schema", "DATABASES"]
+                    ),
+                    where=_get_show_where(statement, like_name="project", from_name="project", initial=where),
+                )
+
                 query = SQLQuery(select_statement, session=self.session)
                 return self.answer_select(query)
             else:
@@ -594,6 +560,9 @@ class ExecuteCommands:
                         ["character_set_results", self.charset],
                     ],
                 )
+            elif category == "active":
+                return self.answer_update_model_version(statement.value, database_name)
+
             else:
                 logger.warning(
                     f"SQL statement is not processable, return OK package: {sql}"
@@ -613,9 +582,6 @@ class ExecuteCommands:
         elif type(statement) is DropView:
             return self.answer_drop_view(statement, database_name)
         elif type(statement) is Delete:
-            if statement.table.parts[-1].lower() == "models_versions":
-                return self.answer_delete_model_version(statement, database_name)
-
             SQLQuery(statement, session=self.session, execute=True, database=database_name)
             return ExecuteAnswer(ANSWER_TYPE.OK)
 
@@ -623,10 +589,6 @@ class ExecuteCommands:
             SQLQuery(statement, session=self.session, execute=True, database=database_name)
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif type(statement) is Update:
-            if statement.from_select is None:
-                if statement.table.parts[-1].lower() == "models_versions":
-                    return self.answer_update_model_version(statement, database_name)
-
             SQLQuery(statement, session=self.session, execute=True, database=database_name)
             return ExecuteAnswer(ANSWER_TYPE.OK)
         elif (
@@ -860,8 +822,49 @@ class ExecuteCommands:
             data=[[metric_value]],
         )
 
-    def answer_describe_predictor(self, statement, database_name):
-        value = statement.value.parts.copy()
+    def answer_describe_object(self, obj_type: str, obj_name: Identifier, database_name: str):
+
+        project_objects = ("AGENTS", "JOBS", "SKILLS", "CHATBOTS", "TRIGGERS", "VIEWS",
+                           "KNOWLEDGE_BASES", "PREDICTORS", "MODELS")
+
+        global_objects = ("DATABASES", "PROJECTS", "HANDLERS", "ML_ENGINES")
+
+        all_objects = project_objects + global_objects
+
+        # is not plural?
+        if obj_type not in all_objects:
+            if obj_type + 'S' in all_objects:
+                obj_type = obj_type + 'S'
+            elif obj_type + 'ES' in all_objects:
+                obj_type = obj_type + 'ES'
+            else:
+                raise WrongArgumentError(f'Unknown describe type: {obj_type}')
+
+        name = obj_name.parts[-1]
+        where = BinaryOperation(op='=', args=[
+            Identifier('name'),
+            Constant(name)
+        ])
+
+        if obj_type in project_objects:
+            where = BinaryOperation(op='and', args=[
+                where,
+                BinaryOperation(op='=', args=[Identifier('project'), Constant(database_name)])
+            ])
+
+        select_statement = Select(
+            targets=[Star()],
+            from_table=Identifier(
+                parts=["information_schema", obj_type]
+            ),
+
+            where=where,
+        )
+        query = SQLQuery(select_statement, session=self.session)
+        return self.answer_select(query)
+
+    def answer_describe_predictor(self, obj_name, database_name):
+        value = obj_name.parts.copy()
         # project.model.version.?attrs
         parts = value[:3]
         attrs = value[3:]
@@ -878,7 +881,7 @@ class ExecuteCommands:
                 model_info = self._get_model_info(Identifier(parts=parts), except_absent=False, database_name=database_name)
 
         if model_info is None:
-            raise ExecutorException(f"Model not found: {statement.value}")
+            raise ExecutorException(f"Model not found: {obj_name}")
 
         if len(attrs) == 1:
             attrs = attrs[0]
@@ -2027,61 +2030,62 @@ class ExecuteCommands:
             data=data["result"],
         )
 
-    def answer_update_model_version(self, statement, database_name):
+    def answer_update_model_version(self, model_version, database_name):
+        if not isinstance(model_version, Identifier):
+            raise ExecutorException(f'Please define version: {model_version}')
 
-        # get project name
-        if len(statement.table.parts) > 1:
-            project_name = statement.table.parts[0]
+        model_parts = model_version.parts
+        version = model_parts[-1]
+        if version.isdigit():
+            version = int(version)
         else:
+            raise ExecutorException(f'Unknown version: {version}')
+
+        if len(model_parts) == 3:
+            project_name, model_name = model_parts[:2]
+        elif len(model_parts) == 2:
+            model_name = model_parts[0]
             project_name = database_name
+        else:
+            raise ExecutorException(f'Unknown model: {model_version}')
 
-        project_datanode = self.datahub.get(project_name)
-        if project_datanode is None:
-            raise Exception(f"Project not found: {project_name}")
-
-        # get list of model versions using filter
-        query = Select(
-            targets=[Identifier("version"), Identifier("name"), Identifier("project")],
-            from_table=Identifier("models_versions"),
-            where=statement.where,
-        )
-
-        data, columns_info = project_datanode.query(query=query, session=self.session)
-        col_names = [col['name'] for col in columns_info]
-        models = [dict(zip(col_names, item)) for item in data]
-
-        # get columns for update
-        kwargs = {}
-        for k, v in statement.update_columns.items():
-            if isinstance(v, Constant):
-                v = v.value
-            kwargs[k.lower()] = v
-        self.session.model_controller.update_model_version(models, **kwargs)
+        self.session.model_controller.set_model_active_version(project_name, model_name, version)
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
-    def answer_delete_model_version(self, statement, database_name):
-        # get project name
-        if len(statement.table.parts) > 1:
-            project_name = statement.table.parts[0]
-        else:
+    def answer_drop_model(self, statement, database_name):
+
+        model_parts = statement.name.parts
+        version = None
+
+        # with version?
+        if model_parts[-1].isdigit():
+            version = int(model_parts[-1])
+            model_parts = model_parts[:-1]
+
+        if len(model_parts) == 2:
+            project_name, model_name = model_parts
+        elif len(model_parts) == 1:
+            model_name = model_parts[0]
             project_name = database_name
+        else:
+            raise ExecutorException(f'Unknown model: {statement.name}')
 
-        project_datanode = self.datahub.get(project_name)
-        if project_datanode is None:
-            raise Exception(f"Project not found: {project_name}")
+        if version is not None:
+            # delete version
+            try:
+                self.session.model_controller.delete_model_version(project_name, model_name, version)
+            except EntityNotExistsError as e:
+                if not statement.if_exists:
+                    raise e
+        else:
+            # drop model
+            try:
+                project = self.session.database_controller.get_project(project_name)
+                project.drop_model(model_name)
+            except Exception as e:
+                if not statement.if_exists:
+                    raise e
 
-        # get list of model versions using filter
-        query = Select(
-            targets=[Identifier("version"), Identifier("name"), Identifier("project")],
-            from_table=Identifier("models_versions"),
-            where=statement.where,
-        )
-
-        data, columns_info = project_datanode.query(query=query, session=self.session)
-        col_names = [col['name'] for col in columns_info]
-        models = [dict(zip(col_names, item)) for item in data]
-
-        self.session.model_controller.delete_model_version(models)
         return ExecuteAnswer(ANSWER_TYPE.OK)
 
     def change_default_db(self, db_name):

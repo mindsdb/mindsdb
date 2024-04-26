@@ -26,6 +26,8 @@ class SnowflakeHandler(DatabaseHandler):
     def __init__(self, name, **kwargs):
         super().__init__(name)
         self.connection_data = kwargs.get('connection_data')
+        self.renderer = SqlalchemyRender(snowdialect.dialect)
+
         self.is_connected = False
         self.connection = None
 
@@ -144,6 +146,21 @@ class SnowflakeHandler(DatabaseHandler):
         if need_to_close is True:
             self.disconnect()
         return response
+    
+    def query(self, query: ASTNode) -> Response:
+        """
+        Executes a SQL query represented by an ASTNode and retrieves the data.
+
+        Args:
+            query (ASTNode): An ASTNode representing the SQL query to be executed.
+
+        Returns:
+            Response: The response from the `native_query` method, containing the result of the SQL query execution.
+        """
+
+        query_str = self.renderer.get_string(query, with_failback=True)
+        logger.debug(f"Executing SQL query: {query_str}")
+        return self.native_query(query_str)
 
     def get_tables(self) -> Response:
         """
@@ -178,10 +195,3 @@ class SnowflakeHandler(DatabaseHandler):
         result = self.native_query(query)
         return result
 
-    def query(self, query: ASTNode) -> Response:
-        """
-        Retrieve the data from the SQL statement.
-        """
-        renderer = SqlalchemyRender(snowdialect.dialect)
-        query_str = renderer.get_string(query, with_failback=True)
-        return self.native_query(query_str)

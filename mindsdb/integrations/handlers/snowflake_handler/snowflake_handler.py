@@ -147,20 +147,35 @@ class SnowflakeHandler(DatabaseHandler):
 
     def get_tables(self) -> Response:
         """
-        Get a list with all of the tabels in the current database or schema
-        that the user has acces to
+        Retrieves a list of all non-system tables and views in the current schema of the Snowflake account.
+
+        Returns:
+            Response: A response object containing the list of tables and views, formatted as per the `Response` class.
         """
-        q = "SHOW TABLES;"
-        result = self.native_query(q)
+
+        query = "SHOW TABLES;"
+        result = self.native_query(query)
         result.data_frame = result.data_frame.rename(columns={'name': 'table_name'})
         return result
 
     def get_columns(self, table_name) -> Response:
         """
-        List the columns in the tabels for which the user have access
+        Retrieves column details for a specified table in the Snowflake account.
+
+        Args:
+            table_name (str): The name of the table for which to retrieve column information.
+
+        Returns:
+            Response: A response object containing the column details, formatted as per the `Response` class.
+        Raises:
+            ValueError: If the 'table_name' is not a valid string.
         """
-        q = f"SHOW COLUMNS IN TABLE {table_name};"
-        result = self.native_query(q)
+
+        if not table_name or not isinstance(table_name, str):
+            raise ValueError("Invalid table name provided.")
+
+        query = f"SHOW COLUMNS IN TABLE {table_name};"
+        result = self.native_query(query)
         return result
 
     def query(self, query: ASTNode) -> Response:

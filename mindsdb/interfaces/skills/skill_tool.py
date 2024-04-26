@@ -11,7 +11,8 @@ _DEFAULT_TOP_K_SIMILARITY_SEARCH = 5
 
 
 class SkillType(enum.Enum):
-    TEXT2SQL = 'text2sql'
+    TEXT2SQL_LEGACY = 'text2sql'
+    TEXT2SQL = 'sql'
     KNOWLEDGE_BASE = 'knowledge_base'
     RETRIEVAL = 'retrieval'
 
@@ -141,7 +142,7 @@ class SkillToolController:
             raise NotImplementedError(
                 f'skill of type {skill.type} is not supported as a tool, supported types are: {list(SkillType._member_names_)}')
 
-        if skill_type == SkillType.TEXT2SQL:
+        if skill_type == SkillType.TEXT2SQL or skill_type == SkillType.TEXT2SQL_LEGACY:
             return self._make_text_to_sql_tools(skill)
         if skill_type == SkillType.KNOWLEDGE_BASE:
             return self._make_knowledge_base_tools(skill)

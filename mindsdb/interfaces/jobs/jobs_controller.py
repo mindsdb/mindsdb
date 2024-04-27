@@ -119,7 +119,8 @@ class JobsController:
         :param if_query: condition for job,
            if this query (or last from list of queries separated by ';') returns data and no error in queries:
               job will not be executed
-        :param schedule_str:
+        :param schedule_str: description how to repeat job
+            at the moment supports: 'every <number> <dimension>' or 'every <dimension>'
         :return: name of created job
         """
 

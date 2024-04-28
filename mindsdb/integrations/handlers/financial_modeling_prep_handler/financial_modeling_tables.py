@@ -13,9 +13,25 @@ import time
 
 class FinancialModelingTradesTable(APITable):
     def _get_daily_endpoint_params_from_conditions(self, conditions: List) -> Dict:
-
+        params = {}
+        for op, arg1, arg2 in conditions:
+            if arg1 == 'symbol':
+                if op != '=':
+                    raise NotImplementedError
+                params['symbol'] = arg2
+                
     def select(self, query: ast.Select) -> pd.DataFrame:
+        """Selects data from the FinancialModeling API and returns it as a pandas DataFrame.
+        
+        Returns dataframe representing the FinancialModeling API results.
+
+        Args:
+            query (ast.Select): Given SQL SELECT query
+        """
         conditions = extract_comparison_conditions(query.where)
         params = self._get_daily_endpoint_params_from_conditions(conditions)
+
+
+
 
     

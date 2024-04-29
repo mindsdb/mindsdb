@@ -8,11 +8,13 @@ Because GreptimeDB has built-in MySQL wire protocol support, this handler is sim
 
 from mindsdb.integrations.handlers.mysql_handler import Handler as MySQLHandler
 
+
 class GreptimeDBHandler(MySQLHandler):
     """
     This handler handles connection and execution of GreptimeDB statements.
     It's a subclass of default mysql handler
     """
+
     name = 'greptimedb'
 
     def __init__(self, name, **kwargs):

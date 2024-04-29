@@ -11,7 +11,7 @@ from mindsdb.api.executor.controllers.session_controller import SessionControlle
 from mindsdb.api.http.utils import http_error
 from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.integrations.handlers.web_handler.urlcrawl_helpers import get_all_websites
-from mindsdb.integrations.utilities.rag.splitters.file_splitter import FileSplitter
+from mindsdb.integrations.utilities.rag.splitters.file_splitter import FileSplitter, FileSplitterConfig
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.integrations.utilities.rag.loaders.file_loader import FileLoader
@@ -29,7 +29,7 @@ _DEFAULT_MARKDOWN_HEADERS_TO_SPLIT_ON = [
 
 def _insert_file_into_knowledge_base(table: KnowledgeBaseTable, file_name: str):
     file_controller = FileController()
-    splitter = FileSplitter()
+    splitter = FileSplitter(FileSplitterConfig())
     file_path = file_controller.get_file_path(file_name)
     loader = FileLoader(file_path)
     split_docs = []

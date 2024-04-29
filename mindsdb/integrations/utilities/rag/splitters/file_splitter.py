@@ -89,7 +89,11 @@ class FileSplitter:
         return split_documents
 
     def _semantic_chunker_fn(self) -> Callable:
-        return self.config.semantic_chunker.split_text
+        # Semantic chunker's split_text returns List[str].
+        def semantic_chunk(content: str) -> List[Document]:
+            chunked_content = self.config.semantic_chunker.split_text(content)
+            return [Document(page_content=c) for c in chunked_content]
+        return semantic_chunk
 
     def _markdown_splitter_fn(self) -> Callable:
         return self.config.markdown_splitter.split_text
@@ -98,7 +102,7 @@ class FileSplitter:
         return self.config.html_splitter.split_text
 
     def _recursive_splitter_fn(self) -> Callable:
-        # Recursive splitter is the only TextSplitter where split_text returns List[str].
+        # Recursive splitter is a TextSplitter where split_text returns List[str].
         def recursive_split(content: str) -> List[Document]:
             split_content = self.config.recursive_splitter.split_text(content)
             return [Document(page_content=c) for c in split_content]

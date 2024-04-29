@@ -52,7 +52,7 @@ The values vary between 0 and 1, where 1 indicates a perfect predictor, based on
 You can check accuracy values for models using the [`DESCRIBE`](/sql/api/describe) statement.
 </Note>
 
-## Parameters' Tuning
+## Tuning the Lightwood ML Engine
 
 ### Description
 
@@ -142,7 +142,7 @@ USING
                 ]};
 ```
 
-## Predictions' Explanation
+## Explainability
 
 With Lightwood, you can deploy the following types of models:
 
@@ -161,6 +161,10 @@ In the case of regression models, the `target_explain` column contains the follo
 {"predicted_value": 2951, "confidence": 0.99, "anomaly": null, "truth": null, "confidence_lower_bound": 2795, "confidence_upper_bound": 3107}
 ```
 
+<Note>
+The upper and lower bounds are determined via conformal prediction, and correspond to the reported confidence score (which can be modified by the user).
+</Note>
+
 Try it out following [this tutorial](/use-cases/in-database_ml/home-rentals).
 </Accordion>
 
@@ -172,7 +176,7 @@ In the case of classification models, the `target_explain` column contains the f
 ```
 
 <Note>
-The `confidence` score is produced by the conformal prediction module and is statistically valid. On the other hand, the `probability_class` comes directly from the model logits, which may be uncalibrated. Therefore, this `confidence` score is not right, on average - it may be optimistic or pessimistic, for instance.
+The `confidence` score is produced by the conformal prediction module and is well-calibrated. On the other hand, the `probability_class` comes directly from the model logits, which may be uncalibrated. Therefore, the `probability_class` score may be optimistic or pessimistic, i.e. coverage is not guaranteed to empirically match the reported score.
 </Note>
 
 Try it out following [this tutorial](/use-cases/in-database_ml/customer-churn).

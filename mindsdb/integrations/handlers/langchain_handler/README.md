@@ -10,8 +10,8 @@ The integration allows for the deployment of LangChain models within MindsDB, pr
 
 Before proceeding, ensure the following prerequisites are met:
 
-1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
-2. To use LangChain within MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
+2. To use LangChain within MindsDB, install the required dependencies following [this instruction](https://docs.mindsdb.com/setup/self-hosted/docker#install-dependencies).
 3. Obtain the API key for a selected model (provider) that you want to use through LangChain.
 
 <Info>
@@ -21,7 +21,8 @@ Available models include the following:
 - Anthropic ([how to get the API key](https://docs.anthropic.com/claude/docs/getting-access-to-claude))
 - OpenAI ([how to get the API key](https://help.openai.com/en/articles/4936850-where-do-i-find-my-openai-api-key))
 - Anyscale ([how to get the API key](https://docs.endpoints.anyscale.com/guides/authenticate/))
-- Ollama ([how to download Ollama](https://ollama.com/download))
+
+The LiteLLM model provider is available in MindsDB Cloud only. Use the MindsDB API key, which can be generated in the MindsDB Cloud editor at `cloud.mindsdb.com/account`.
 </Info>
 
 ## Setup
@@ -32,24 +33,25 @@ Create an AI engine from the [LangChain handler](https://github.com/mindsdb/mind
 CREATE ML_ENGINE langchain_engine
 FROM langchain
 [USING
-    -- Provide one of the below parameters here or during prediction.
-    anthropic_api_key = 'api-key-value',
-    anyscale_api_key = 'api-key-value',
-    litellm_api_key = 'api-key-value',
-    openai_api_key = 'api-key-value'];
+      serper_api_key = 'your-serper-api-key', -- it is an optional parameter (if provided, the model will use serper.dev search to enhance the output)
+
+      -- provide one of the below parameters
+      anthropic_api_key = 'api-key-value',
+      anyscale_api_key = 'api-key-value',
+      litellm_api_key = 'api-key-value',
+      openai_api_key = 'api-key-value'];
 ```
 
 Create a model using `langchain_engine` as an engine and one of OpenAI/Anthropic/Anyscale/LiteLLM as a model provider.
 
 ```sql
 CREATE MODEL langchain_model
-PREDICT answer
+PREDICT target_column
 USING
-      engine = 'langchain_engine', -- via CREATE ML_ENGINE
-      prompt_template = 'message to the model that may include some {{question}} columns as variables',
-      <provider>_api_key = 'api-key-value',  -- include if not provided in CREATE ML_ENGINE
-      provider = 'openai', -- optional, default to OpenAI
-      model_name = 'model-name' -- optional, default to latest gpt-4
+      engine = 'langchain_engine',           -- engine name as created via CREATE ML_ENGINE
+      <provider>_api_key = 'api-key-value',  -- if not provided in CREATE ML_ENGINE (replace <provider> with one of the available values)
+      model_name = 'model-name',             -- optional, model to be used (for example, 'gpt-4' if 'openai_api_key' provided)
+      prompt_template = 'message to the model that may include some {{input}} columns as variables';
 ```
 
 <Tip>
@@ -73,7 +75,6 @@ Create a conversational model using `langchain_engine` as an engine and one of O
 <AccordionGroup>
 
 <Accordion title="OpenAI">
-
 ```sql
 CREATE MODEL langchain_openai_model
 PREDICT answer
@@ -91,7 +92,6 @@ USING
 </Accordion>
 
 <Accordion title="Anthropic">
-
 ```sql
 CREATE MODEL langchain_openai_model
 PREDICT answer
@@ -109,7 +109,6 @@ USING
 </Accordion>
 
 <Accordion title="Anyscale">
-
 ```sql
 CREATE MODEL langchain_anyscale_model
 PREDICT answer 
@@ -128,7 +127,6 @@ USING
 </Accordion>
 
 <Accordion title="LiteLLM">
-
 ```sql
 CREATE MODEL langchain_litellm_model
 PREDICT answer 
@@ -148,7 +146,7 @@ USING
 
 <Accordion title="Mindsdb">
 
-Using mindsdb model in langchain: 
+Using mindsdb model in langchain:
 ```sql
 CREATE MODEL langchain_mindsdb_model
 PREDICT answer
@@ -163,7 +161,6 @@ USING
      prompt_template = 'Answer the user input in a helpful way';
 ```
 </Accordion>
-
 
 </AccordionGroup>
 
@@ -292,5 +289,5 @@ Consequently, it takes the query output and writes an answer.
 
 **Next Steps**
 
-Go to the [Use Cases](/use-cases/overview) section to see more examples.
+Go to the [Use Cases](https://docs.mindsdb.com/use-cases/overview) section to see more examples.
 </Tip>

@@ -1,3 +1,5 @@
+import time
+
 import duckdb
 from typing import Any
 
@@ -86,3 +88,10 @@ class DummyHandler(DatabaseHandler):
         """
         query = f'DESCRIBE {table_name};'
         return self.native_query(query)
+
+    def subscribe(self, stop_event, callback, table_name, columns=None, **kwargs):
+
+        while True:
+            if stop_event.is_set():
+                return
+            time.sleep(0.3)

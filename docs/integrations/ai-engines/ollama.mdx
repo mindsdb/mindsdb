@@ -10,8 +10,8 @@ The integration allows for the deployment of Ollama models within MindsDB, provi
 
 Before proceeding, ensure the following prerequisites are met:
 
-1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
-2. To use Ollama within MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
+2. To use Ollama within MindsDB, install the required dependencies following [this instruction](https://docs.mindsdb.com/setup/self-hosted/docker#install-dependencies).
 3. Follow [this instruction](https://github.com/ollama/ollama?tab=readme-ov-file#ollama) to download Ollama and run models locally.
 
 <Info>
@@ -108,5 +108,5 @@ Here is the output:
 <Tip>
 **Next Steps**
 
-Go to the [Use Cases](/use-cases/overview) section to see more examples.
+Go to the [Use Cases](https://docs.mindsdb.com/use-cases/overview) section to see more examples.
 </Tip>

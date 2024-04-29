@@ -28,25 +28,11 @@ We use the local MindsDB installation with the following parameters:
 * database: `mindsdb`
 * user: `mindsdb`
 
-Here are the commands that allow you to connect to either a local MindsDB installation or a MindsDB Cloud instance.
+Here is the command that allows you to connect to MindsDB.
 
-<CodeGroup>
-
-    ```bash Self-Hosted Local Deployment
-    psql -h 127.0.0.1 -p 47335 -d mindsdb -U mindsdb
-    ```
-
-    ```bash MindsDB Cloud
-    psql -h cloud.mindsdb.com -p 3306 -U [mindsdb_cloud_username] --password [mindsdb_cloud_password]
-    ```
-
-    ```bash MindsDB Pro
-    psql -h <dedicated instance ip> -p 3306 -U [mindsdb_cloud_username] --password [mindsdb_cloud_password]
-    ```
-
-</CodeGroup>
-
-<br></br>
+```bash
+psql -h 127.0.0.1 -p 47335 -d mindsdb -U mindsdb
+```
 
 <Note>
 Please see [this page](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/api/postgres) for implementation details.

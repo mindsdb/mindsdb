@@ -3,7 +3,6 @@ from typing import List
 
 from flask import request
 from flask_restx import Resource
-from langchain_text_splitters import MarkdownHeaderTextSplitter
 
 import pandas as pd
 
@@ -17,7 +16,9 @@ from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.integrations.utilities.rag.loaders.file_loader import FileLoader
 from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseTable
+from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
 
 _DEFAULT_MARKDOWN_HEADERS_TO_SPLIT_ON = [
     ("#", "Header 1"),
@@ -45,6 +46,13 @@ def _insert_file_into_knowledge_base(table: KnowledgeBaseTable, file_name: str):
 
 
 def _insert_web_pages_into_knowledge_base(table: KnowledgeBaseTable, urls: List[str]):
+    try:
+        # To prevent dependency on langchain_text_splitters unless needed.
+        from langchain_text_splitters import MarkdownHeaderTextSplitter
+    except ImportError as e:
+        logger.error(f'Error importing langchain_text_splitters to insert web page into knowledge base: {e}')
+        raise e
+        
     websites_df = get_all_websites(urls)
     # Text content is treated as markdown.
     markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=_DEFAULT_MARKDOWN_HEADERS_TO_SPLIT_ON)

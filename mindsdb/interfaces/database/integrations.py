@@ -381,7 +381,7 @@ class IntegrationController:
                 continue
             integration_dict[record.name] = self._get_integration_record_data(record, sensitive_info)
         return integration_dict
-    
+
     def check_connections(self):
         connections = {}
         for integration_name, integration_meta in self.get_all().items():

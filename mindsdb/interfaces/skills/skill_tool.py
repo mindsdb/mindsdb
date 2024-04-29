@@ -47,36 +47,44 @@ class SkillToolController:
             sample_rows_in_table_info,
         )
 
-    def _make_text_to_sql_tools(self, skill: db.Skills) -> dict:
+    def _make_text_to_sql_tools(self, skill: db.Skills, llm) -> dict:
         '''
            Uses SQLAgent to execute tool
         '''
-
+        # To prevent dependency on Langchain unless an actual tool uses it.
+        try:
+            from mindsdb.integrations.handlers.langchain_handler.mindsdb_database_agent import MindsDBSQL
+            from langchain_community.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
+            from langchain_community.tools.sql_database.tool import QuerySQLDataBaseTool
+        except ImportError:
+            raise ImportError('To use the text-to-SQL skill, please install langchain with `pip install mindsdb[langchain]`')
         database = skill.params['database']
         tables = skill.params['tables']
-
-        sql_agent = SQLAgent(
-            self.get_command_executor(),
-            database,
-            include_tables=tables
+        tables_to_include = [f'{database}.{table}' for table in tables]
+        db = MindsDBSQL(
+            engine=self.get_command_executor(),
+            metadata=self.get_command_executor().session.integration_controller,
+            include_tables=tables_to_include
         )
-
-        description = (
-            "Use the conversation context to decide which table to query. "
-            "Input to this tool is a detailed and correct SQL query, output is a result from the database. "
-            "If the query is not correct, an error message will be returned. "
-            "If an error is returned, rewrite the query, check the query, and try again. "
-            f"These are the available tables: {','.join(tables)}\n"
-        )
-        for table in tables:
-            description += f'Table name: "{table}", columns {sql_agent.get_table_columns(table)}\n'
-
-        return dict(
-            name='sql_db_query',
-            func=sql_agent.query_safe,
-            description=description,
-            type=skill.type
-        )
+        # Users probably don't need to configure this for now.
+        sql_database_tools = SQLDatabaseToolkit(db=db, llm=llm).get_tools()
+        description = skill.params.get('description', '')
+        tables_list = ','.join([f'{database}.{table}' for table in tables])
+        for i, tool in enumerate(sql_database_tools):
+            if isinstance(tool, QuerySQLDataBaseTool):
+                # Add our own custom description so our agent knows when to query this table.
+                tool.description = (
+                    f'Use this tool if you need data about {description}. '
+                    'Use the conversation context to decide which table to query. '
+                    f'These are the available tables: {tables_list}.\n'
+                    f'ALWAYS consider these special cases:\n'
+                    f'- Not all SQL functions are supported. Do NOT use the following functions: INTERVAL. \n'
+                    f'- For TIMESTAMP type columns, make sure you include the time portion in your query (e.g. WHERE date_column = "2020-01-01 12:00:00")'
+                    f'Here are the rest of the instructions:\n'
+                    f'{tool.description}'
+                )
+                sql_database_tools[i] = tool
+        return sql_database_tools
 
     def _make_retrieval_tools(self, skill: db.Skills) -> dict:
         """
@@ -126,7 +134,7 @@ class SkillToolController:
             type=skill.type
         )
 
-    def get_tool_from_skill(self, skill: db.Skills) -> dict:
+    def get_tools_from_skill(self, skill: db.Skills, llm) -> dict:
         """
             Creates function for skill and metadata (name, description)
         Args:
@@ -143,11 +151,11 @@ class SkillToolController:
                 f'skill of type {skill.type} is not supported as a tool, supported types are: {list(SkillType._member_names_)}')
 
         if skill_type == SkillType.TEXT2SQL or skill_type == SkillType.TEXT2SQL_LEGACY:
-            return self._make_text_to_sql_tools(skill)
+            return self._make_text_to_sql_tools(skill, llm)
         if skill_type == SkillType.KNOWLEDGE_BASE:
-            return self._make_knowledge_base_tools(skill)
+            return [self._make_knowledge_base_tools(skill)]
         if skill_type == SkillType.RETRIEVAL:
-            return self._make_retrieval_tools(skill)
+            return [self._make_retrieval_tools(skill)]
 
 
 skill_tool = SkillToolController()

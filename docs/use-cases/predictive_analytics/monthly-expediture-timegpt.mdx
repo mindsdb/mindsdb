@@ -11,9 +11,7 @@ In this tutorial, we introduce Nixtla’s TimeGPT integration which offers the f
 
 ### MindsDB Setup
 
-One way is to sign up for an account at [MindsDB Cloud](https://cloud.mindsdb.com/). It is a convenient option as it doesn’t require any installation procedures. You can find the details [here](/setup/cloud).
-
-Alternatively, visit our docs and follow the instructions to manually set up a local instance of MindsDB via [Docker](/setup/self-hosted/docker) or [pip](/setup/self-hosted/pip/source). You can also set up MindsDB on AWS following [this instruction set](https://aws.amazon.com/marketplace/pp/prodview-2nmhvskydmyrw).
+Install MindsDB locally via [Docker](/setup/self-hosted/docker) or [Docker Desktop](/setup/self-hosted/docker-desktop).
 
 ### Creating an ML Engine
 
@@ -29,8 +27,7 @@ If you see the TimeGPT engine on the list, you are ready to follow the tutorials
 CREATE ML_ENGINE timegpt FROM timegpt USING timegpt_api_key = '...'
 ```
 
-Notice that the `USING` clause is optional, but you must pass an API key eventually (either at model creation, engine creation, model usage, or in the mindsdb configuration file). The only exception to this is when using `cloud.mindsdb.com`. If you want your own token please register [here](https://www.nixtla.io/) (Submit Interest).
-
+Notice that the `USING` clause is optional, but you must pass an API key eventually (either at model creation, engine creation, model usage, or in the mindsdb configuration file).
 
 ## Tutorial
 
@@ -121,7 +118,7 @@ Here is the output data:
 Have fun while trying it out yourself!
 
 - Bookmark [MindsDB repository on GitHub](https://github.com/mindsdb/mindsdb).
-- Sign up for a free [MindsDB account](https://cloud.mindsdb.com/register).
+- Install MindsDB locally via [Docker](/setup/self-hosted/docker) or [Docker Desktop](/setup/self-hosted/docker-desktop).
 - Engage with the MindsDB community on
   [Slack](https://mindsdb.com/joincommunity) or
   [GitHub](https://github.com/mindsdb/mindsdb/discussions) to ask questions and

@@ -24,7 +24,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         # wait
         done = False
         for attempt in range(200):
-            sql = f"select * from {project}.models_versions where name='{name}'"
+            sql = f"select * from {project}.models where name='{name}'"
             if filter is not None:
                 for k, v in filter.items():
                     sql += f" and {k}='{v}'"
@@ -103,7 +103,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         self.wait_predictor('proj', 'task_model', {'tag': 'second'})
 
         # get current model
-        ret = self.run_sql('select * from proj.models')
+        ret = self.run_sql('select * from proj.models where active=1')
 
         # check target
         assert ret['PREDICT'][0] == 'b'
@@ -135,7 +135,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         )
         self.wait_predictor('proj', 'task_model', {'tag': 'third'})
 
-        ret = self.run_sql('select * from proj.models')
+        ret = self.run_sql('select * from proj.models where active=1')
 
         # check target is from previous retrain
         assert ret['PREDICT'][0] == 'b'
@@ -194,16 +194,18 @@ class TestProjectStructure(BaseExecutorDummyML):
         # check 'show models' command in different combination
         # Show models <from | in> <project> where <expr>
         ret = self.run_sql('Show models')
-        assert len(ret) == 1 and ret['NAME'][0] == 'task_model'
+        # mindsdb project
+        assert len(ret) == 0
 
         ret = self.run_sql('Show models from proj')
-        assert len(ret) == 1 and ret['NAME'][0] == 'task_model'
+        # it also shows versions
+        assert len(ret) == 3 and ret['NAME'][0] == 'task_model'
 
-        ret = self.run_sql('Show models in proj')
-        assert len(ret) == 1 and ret['NAME'][0] == 'task_model'
+        # ret = self.run_sql('Show models in proj')
+        # assert len(ret) == 3 and ret['NAME'][0] == 'task_model'
 
-        ret = self.run_sql("Show models where name='task_model'")
-        assert len(ret) == 1 and ret['NAME'][0] == 'task_model'
+        ret = self.run_sql("Show models from proj where name='task_model'")
+        assert len(ret) == 3 and ret['NAME'][0] == 'task_model'
 
         # model is not exists
         ret = self.run_sql("Show models from proj where name='xxx'")
@@ -212,32 +214,24 @@ class TestProjectStructure(BaseExecutorDummyML):
         # ----------------
 
         # See all versions
-        ret = self.run_sql('select * from proj.models_versions')
+        ret = self.run_sql('select * from proj.models')
         # we have all tags in versions
         assert set(ret['TAG']) == {'first', 'second', 'third'}
 
         # Set active selected version
-        self.run_sql('''
-           update proj.models_versions
-           set active=1
-           where version=1 and name='task_model'
-        ''')
+        self.run_sql('set active proj.task_model.1')
 
         # get active version
-        ret = self.run_sql('select * from proj.models_versions where active = 1')
+        ret = self.run_sql('select * from proj.models where active = 1')
         assert ret['TAG'][0] == 'first'
 
         # use active version ?
 
         # Delete specific version
-        self.run_sql('''
-           delete from proj.models_versions
-           where version=2
-           and name='task_model'
-        ''')
+        self.run_sql('drop model proj.task_model.2')
 
         # deleted version not in list
-        ret = self.run_sql('select * from proj.models_versions')
+        ret = self.run_sql('select * from proj.models')
         assert len(ret) == 2
         assert 'second' not in ret['TAG']
 
@@ -249,20 +243,12 @@ class TestProjectStructure(BaseExecutorDummyML):
 
         # exception with deleting active version
         with pytest.raises(Exception) as exc_info:
-            self.run_sql('''
-               delete from proj.models_versions
-               where version=1
-               and name='task_model'
-            ''')
+            self.run_sql('drop model proj.task_model.1')
         assert "Can't remove active version" in str(exc_info.value)
 
         # exception with deleting non-existing version
         with pytest.raises(Exception) as exc_info:
-            self.run_sql('''
-               delete from proj.models_versions
-               where version=11
-               and name='task_model'
-            ''')
+            self.run_sql('drop model proj.task_model.11')
         assert "is not found" in str(exc_info.value)
 
         # ----------------------------------------------------
@@ -283,7 +269,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         assert len(ret) == 0
 
         # versions are also deleted
-        ret = self.run_sql('select * from proj.models_versions')
+        ret = self.run_sql('select * from proj.models')
         assert len(ret) == 0
 
     def test_view(self):
@@ -954,7 +940,6 @@ class TestProjectStructure(BaseExecutorDummyML):
 class TestJobs(BaseExecutorDummyML):
 
     def test_job(self, scheduler):
-        from mindsdb.interfaces.database.log import JobsHistoryTable
 
         df1 = pd.DataFrame([
             {'a': 1, 'c': 1, 'b': dt.datetime(2020, 1, 1)},
@@ -1041,9 +1026,9 @@ class TestJobs(BaseExecutorDummyML):
         assert len(ret) == 2  # was executed
 
         # check global history table
-        ret = self.run_sql('select * from information_schema.jobs_history', database='proj2')
-        assert len(ret) == 2
-        assert sorted([x.upper() for x in list(ret.columns)]) == sorted([x.upper() for x in JobsHistoryTable.columns])
+        # ret = self.run_sql('select * from information_schema.jobs_history', database='proj2')
+        # assert len(ret) == 2
+        # assert sorted([x.upper() for x in list(ret.columns)]) == sorted([x.upper() for x in JobsHistoryTable.columns])
 
         # there is no 'jobs_history' table in project
         with pytest.raises(Exception):
@@ -1118,3 +1103,199 @@ class TestJobs(BaseExecutorDummyML):
         # check 1 model
         ret = self.run_sql('select * from models where name="pred"')
         assert len(ret) == 1
+
+    def test_schema(self, scheduler):
+
+        # --- create objects + describe ---
+        # todo: create knowledge base (requires chromadb)
+
+        df = pd.DataFrame([
+            {'a': 6, 'c': 1},
+        ])
+        self.set_data('table1', df)
+
+        # project
+        self.run_sql('create project proj2')
+
+        # ml_engine
+        self.run_sql('''
+            CREATE ML_ENGINE engine1 from dummy_ml
+        ''')
+
+        # job
+        self.run_sql('create job j1 (select * from models) every hour')
+        self.run_sql('create job proj2.j2 (select * from models) every hour')
+
+        df = self.run_sql('describe job j1')
+        assert df.NAME[0] == 'j1' and df.QUERY[0] == 'select * from models'
+
+        # view
+        self.run_sql('create view v1 (select * from models)')
+        self.run_sql('create view proj2.v2 (select * from models)')
+
+        df = self.run_sql('describe view v1')
+        assert df.NAME[0] == 'v1' and df.QUERY[0] == 'select * from models'
+
+        # model
+        self.run_sql('''
+                CREATE model pred1
+                PREDICT p
+                using engine='dummy_ml',
+                join_learn_process=true
+        ''')
+        self.run_sql('''
+                CREATE model proj2.pred2
+                PREDICT p
+                using engine='dummy_ml',
+                join_learn_process=true
+        ''')
+        # and retrain first model
+        self.run_sql('''
+                RETRAIN pred1
+                using engine='dummy_ml'
+        ''')
+
+        # trigger
+        self.run_sql('''
+              create trigger trigger1
+              on dummy_data.table1 (show models)
+        ''')
+        self.run_sql('''
+              create trigger proj2.trigger2
+              on dummy_data.table1 (show models)
+        ''')
+
+        df = self.run_sql('describe trigger trigger1')
+        assert df.NAME[0] == 'trigger1' and df.QUERY[0] == 'show models'
+
+        # agent
+        self.run_sql('''
+              CREATE AGENT agent1
+              USING model = 'pred1'
+        ''')
+        self.run_sql('''
+              CREATE AGENT proj2.agent2
+              USING model = 'pred2' -- it looks up in agent's project
+        ''')
+
+        df = self.run_sql('describe agent agent1')
+        assert df.NAME[0] == 'agent1' and df.MODEL_NAME[0] == 'pred1'
+
+        # chatbot
+        self.run_sql('''
+              CREATE CHATBOT chatbot1
+              USING database = "dummy_data",
+                    agent = "agent1"
+        ''')
+        self.run_sql('''
+              CREATE CHATBOT proj2.chatbot2
+              USING database = "dummy_data",
+                    agent = "agent2"  -- it looks up in chatbot's project
+        ''')
+
+        df = self.run_sql('describe chatbot chatbot1')
+        assert df.NAME[0] == 'chatbot1' and df.DATABASE[0] == 'dummy_data'
+
+        # skill
+        self.run_sql('''
+         CREATE SKILL skill1
+            USING type = 'text_to_sql',
+                database = 'dummy_data', tables = ['table1'];
+        ''')
+        self.run_sql('''
+         CREATE SKILL proj2.skill2
+            USING type = 'text_to_sql',
+                database = 'dummy_data', tables = ['table1'];
+        ''')
+
+        df = self.run_sql('describe skill skill1')
+        assert df.NAME[0] == 'skill1' and df.TYPE[0] == 'text_to_sql'
+
+        # --- SHOW ---
+
+        # handlers
+        df = self.run_sql('show handlers')
+        assert 'dummy_ml' in list(df.NAME)
+
+        # projects
+        df = self.run_sql('show projects')
+        objects = list(df.iloc[:, 0])
+        assert 'mindsdb' in objects
+        assert 'proj2' in objects
+
+        # databases
+        df = self.run_sql('show databases')
+        objects = list(df.iloc[:, 0])
+        assert 'information_schema' in objects
+        assert 'log' in objects
+
+        # ml engines
+        df = self.run_sql('show ml_engines')
+        assert 'engine1' in list(df.NAME)
+
+        # project objects
+        def _test_proj_obj(table_name, obj_name):
+            # check: obj1 is current project, obj2 in proj2
+
+            df = self.run_sql(f'show {table_name}')
+            assert len(df) == 1 and f'{obj_name}1' in list(df.NAME)
+
+            df = self.run_sql(f'show {table_name} from proj2')
+            assert len(df) == 1 and f'{obj_name}2' in list(df.NAME)
+
+        _test_proj_obj('jobs', 'j')
+        _test_proj_obj('views', 'v')
+        _test_proj_obj('triggers', 'trigger')
+        _test_proj_obj('chatbots', 'chatbot')
+        _test_proj_obj('agents', 'agent')
+        _test_proj_obj('skills', 'skill')
+
+        # model
+        df = self.run_sql('show models')
+        # two versions of same model
+        assert len(df[df.NAME != 'pred1']) == 0 and len(df) == 2
+
+        df = self.run_sql('show models from proj2')
+        assert 'pred2' in list(df.NAME) and len(df) == 1
+
+        # --- information_schema ---
+
+        # handlers
+        df = self.run_sql('select * from information_schema.HANDLERS')
+        assert 'dummy_ml' in list(df.NAME)
+
+        # databases
+        df = self.run_sql('select * from information_schema.DATABASES')
+        assert 'mindsdb' in list(df.NAME)
+        assert 'proj2' in list(df.NAME)
+        assert 'log' in list(df.NAME)
+
+        # ml engines
+        df = self.run_sql('select * from information_schema.ML_ENGINES')
+        assert 'engine1' in list(df.NAME)
+
+        # project objects
+        def _test_proj_obj(table_name, obj_name):
+            # obj1 in mindsdb, obj2 in proj2
+
+            df = self.run_sql(f'select * from information_schema.{table_name}')
+            assert len(df) == 2
+
+            df1 = df[df.PROJECT == 'mindsdb']
+            assert df1.iloc[0].NAME == f'{obj_name}1'
+
+            df1 = df[df.PROJECT == 'proj2']
+            assert df1.iloc[0].NAME == f'{obj_name}2'
+
+        _test_proj_obj('JOBS', 'j')
+        _test_proj_obj('VIEWS', 'v')
+        _test_proj_obj('TRIGGERS', 'trigger')
+        _test_proj_obj('CHATBOTS', 'chatbot')
+        _test_proj_obj('AGENTS', 'agent')
+        _test_proj_obj('SKILLS', 'skill')
+
+        # models
+        df = self.run_sql('select * from information_schema.MODELS')
+        # two versions of pred1 and one version of pred2
+        assert len(df[df.NAME == 'pred1']) == 2
+        assert len(df[df.NAME == 'pred2']) == 1

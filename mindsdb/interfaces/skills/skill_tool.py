@@ -48,7 +48,7 @@ class SkillToolController:
             sample_rows_in_table_info,
         )
 
-    def _make_text_to_sql_tools(self, skill: db.Skills) -> dict:
+    def _make_text_to_sql_tools(self, skill: db.Skills, llm) -> dict:
         '''
            Uses SQLAgent to execute tool
         '''
@@ -57,7 +57,6 @@ class SkillToolController:
             from mindsdb.integrations.handlers.langchain_handler.mindsdb_database_agent import MindsDBSQL
             from langchain_community.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
             from langchain_community.tools.sql_database.tool import QuerySQLDataBaseTool
-            from langchain_community.chat_models import ChatOpenAI
         except ImportError:
             raise ImportError('To use the text-to-SQL skill, please install langchain with `pip install mindsdb[langchain]`')
         database = skill.params['database']
@@ -69,7 +68,6 @@ class SkillToolController:
             include_tables=tables_to_include
         )
         # Users probably don't need to configure this for now.
-        llm = ChatOpenAI(model=_DEFAULT_SQL_LLM_MODEL, temperature=0)
         sql_database_tools = SQLDatabaseToolkit(db=db, llm=llm).get_tools()
         description = skill.params.get('description', '')
         tables_list = ','.join([f'{database}.{table}' for table in tables])
@@ -137,7 +135,7 @@ class SkillToolController:
             type=skill.type
         )
 
-    def get_tools_from_skill(self, skill: db.Skills) -> dict:
+    def get_tools_from_skill(self, skill: db.Skills, llm) -> dict:
         """
             Creates function for skill and metadata (name, description)
         Args:
@@ -154,7 +152,7 @@ class SkillToolController:
                 f'skill of type {skill.type} is not supported as a tool, supported types are: {list(SkillType._member_names_)}')
 
         if skill_type == SkillType.TEXT2SQL or skill_type == SkillType.TEXT2SQL_LEGACY:
-            return self._make_text_to_sql_tools(skill)
+            return self._make_text_to_sql_tools(skill, llm)
         if skill_type == SkillType.KNOWLEDGE_BASE:
             return [self._make_knowledge_base_tools(skill)]
         if skill_type == SkillType.RETRIEVAL:

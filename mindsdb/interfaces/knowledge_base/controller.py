@@ -430,8 +430,8 @@ class KnowledgeBaseController:
         model_name = f"{kb_name}_default_model"
         using_args = {}
         if engine == 'langchain_embedding':
-           # Use default embeddings.
-           using_args['class'] =  'openai'
+            # Use default embeddings.
+            using_args['class'] = 'openai'
         statement = CreatePredictor(
             name=Identifier(parts=[project_name, model_name]),
             using=using_args,

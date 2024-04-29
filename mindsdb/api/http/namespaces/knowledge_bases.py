@@ -53,7 +53,7 @@ def _insert_web_pages_into_knowledge_base(table: KnowledgeBaseTable, urls: List[
     except ImportError as e:
         logger.error(f'Error importing langchain_text_splitters to insert web page into knowledge base: {e}')
         raise e
-        
+
     websites_df = get_all_websites(urls)
     # Text content is treated as markdown.
     markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=_DEFAULT_MARKDOWN_HEADERS_TO_SPLIT_ON)
@@ -122,7 +122,6 @@ class KnowledgeBaseResource(Resource):
 
         # Use same embeddings as knowledge base if possible.
         embeddings_provider = existing_kb.embedding_model.learn_args.get('class', 'openai')
-
 
         # Load, split, & embed files into Knowledge Base.
         for file_name in files:

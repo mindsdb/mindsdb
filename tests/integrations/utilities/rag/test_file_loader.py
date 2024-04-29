@@ -28,7 +28,7 @@ def test_load_html():
 
 
 def test_load_md():
-    loader = FileLoader('./tests/integrations/utilities/rag/data/langchain_readme.md')
+    loader = FileLoader('./mindsdb/integrations/handlers/langchain_handler/README.md')
     docs = loader.load()
     assert len(docs) == 1
     assert 'This documentation describes the integration of MindsDB with LangChain' in docs[0].page_content

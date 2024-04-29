@@ -281,9 +281,9 @@ def _build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
     )
 
 
-def langchain_tools_from_skill(skill, pred_args):
+def langchain_tools_from_skill(skill, pred_args, llm):
     # Makes Langchain compatible tools from a skill
-    tools = skill_tool.get_tools_from_skill(skill)
+    tools = skill_tool.get_tools_from_skill(skill, llm)
 
     all_tools = []
     for tool in tools:
@@ -322,7 +322,7 @@ def setup_tools(llm, model_kwargs, pred_args, default_agent_tools):
     tools = []
     skills = get_skills(pred_args)
     for skill in skills:
-        tools += langchain_tools_from_skill(skill, pred_args)
+        tools += langchain_tools_from_skill(skill, pred_args, llm)
 
     if len(tools) == 0:
         tools = _setup_standard_tools(standard_tools, llm, model_kwargs)

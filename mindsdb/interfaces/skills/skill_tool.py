@@ -8,7 +8,6 @@ from mindsdb.interfaces.storage import db
 from .sql_agent import SQLAgent
 
 _DEFAULT_TOP_K_SIMILARITY_SEARCH = 5
-_DEFAULT_SQL_LLM_MODEL = 'gpt-3.5-turbo'
 
 
 class SkillType(enum.Enum):
@@ -48,7 +47,7 @@ class SkillToolController:
             sample_rows_in_table_info,
         )
 
-    def _make_text_to_sql_tools(self, skill: db.Skills) -> dict:
+    def _make_text_to_sql_tools(self, skill: db.Skills, llm) -> dict:
         '''
            Uses SQLAgent to execute tool
         '''
@@ -69,7 +68,6 @@ class SkillToolController:
             include_tables=tables_to_include
         )
         # Users probably don't need to configure this for now.
-        llm = ChatOpenAI(model=_DEFAULT_SQL_LLM_MODEL, temperature=0)
         sql_database_tools = SQLDatabaseToolkit(db=db, llm=llm).get_tools()
         description = skill.params.get('description', '')
         tables_list = ','.join([f'{database}.{table}' for table in tables])
@@ -137,7 +135,7 @@ class SkillToolController:
             type=skill.type
         )
 
-    def get_tools_from_skill(self, skill: db.Skills) -> dict:
+    def get_tools_from_skill(self, skill: db.Skills, llm) -> dict:
         """
             Creates function for skill and metadata (name, description)
         Args:
@@ -154,7 +152,7 @@ class SkillToolController:
                 f'skill of type {skill.type} is not supported as a tool, supported types are: {list(SkillType._member_names_)}')
 
         if skill_type == SkillType.TEXT2SQL or skill_type == SkillType.TEXT2SQL_LEGACY:
-            return self._make_text_to_sql_tools(skill)
+            return self._make_text_to_sql_tools(skill, llm)
         if skill_type == SkillType.KNOWLEDGE_BASE:
             return [self._make_knowledge_base_tools(skill)]
         if skill_type == SkillType.RETRIEVAL:

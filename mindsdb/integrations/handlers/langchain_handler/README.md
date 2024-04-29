@@ -21,6 +21,7 @@ Available models include the following:
 - Anthropic ([how to get the API key](https://docs.anthropic.com/claude/docs/getting-access-to-claude))
 - OpenAI ([how to get the API key](https://help.openai.com/en/articles/4936850-where-do-i-find-my-openai-api-key))
 - Anyscale ([how to get the API key](https://docs.endpoints.anyscale.com/guides/authenticate/))
+- Ollama ([how to download Ollama](https://ollama.com/download))
 
 The LiteLLM model provider is available in MindsDB Cloud only. Use the MindsDB API key, which can be generated in the MindsDB Cloud editor at `cloud.mindsdb.com/account`.
 </Info>
@@ -53,6 +54,15 @@ USING
       model_name = 'model-name',             -- optional, model to be used (for example, 'gpt-4' if 'openai_api_key' provided)
       prompt_template = 'message to the model that may include some {{input}} columns as variables';
 ```
+
+<Info>
+
+This handler supports [tracing features for LangChain via LangFuse](https://langfuse.com/docs/integrations/langchain/tracing). To use it, provide the following parameters in the `USING` clause:
+
+- `langfuse_host`,
+- `langfuse_public_key`,
+- `langfuse_secret_key`.
+</Info>
 
 <Tip>
 

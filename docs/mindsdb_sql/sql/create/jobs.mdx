@@ -71,7 +71,7 @@ SELECT * FROM log.jobs_history WHERE project = 'mindsdb' AND name = 'job_name';
 
 ### `LAST`
 
-MindsDB provides a custom `LAST` keyword that enables you to fetch data inserted/updated after the last time you queried for it. It is a convenient way to select only the newly added data rows when running a job.
+MindsDB provides a custom `LAST` keyword that enables you to fetch data inserted after the last time you queried for it. It is a convenient way to select only the newly added data rows when running a job.
 
 Imagine you have the `fruit_data` table that contains the following:
 
@@ -133,6 +133,8 @@ This query returns:
 ```
 
 From this point on, whenever you add new records into the `fruit_data` table, it'll be returned by the next run of the `SELECT` query with the `LAST` keyword. And, if you do not add any new records between the query runs, then the output will be null.
+
+If you want to clear context for the `LAST` keyword in the editor, then run `set context = 0` or `set context = null`.
 
 ## Examples
 

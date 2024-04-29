@@ -17,5 +17,7 @@ except Exception as e:
 title = "MindsDB Inference"
 name = "mindsdb_inference"
 type = HANDLER_TYPE.ML
-permanent = True
-__all__ = ["Handler", "version", "name", "type", "title", "description", "import_error"]
+icon_path = 'icon.svg'
+permanent = False
+
+__all__ = ["Handler", "version", "name", "type", "title", "description", "import_error", "icon_path"]

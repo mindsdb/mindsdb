@@ -34,49 +34,15 @@ To connect MindsDB in MySQL, use the `mysql` client program:
 mysql -h [hostname] --port [TCP/IP port number] -u [user] -p [password]
 ```
 
-Here are the commands that allow you to connect to either a local MindsDB
-installation or a MindsDB Cloud instance.
-
-<CodeGroup>
-
-    ```bash Self-Hosted Local Deployment
-    mysql -h 127.0.0.1 --port 47335 -u mindsdb
-    ```
-
-    ```bash MindsDB Cloud
-    mysql -h cloud.mindsdb.com --port 3306 -u [mindsdb_cloud_username] -p [mindsdb_cloud_password]
-    ```
-
-    ```bash MindsDB Pro
-    mysql -h <dedicated instance ip> --port 3306 -u [mindsdb_cloud_username] -p [mindsdb_cloud_password]
-    ```
-
-</CodeGroup>
-
-On execution, we get:
+Here is the command that allows you to connect to MindsDB.
 
 ```bash
-Welcome to the MariaDB monitor.  Commands end with ";" or "\g".
-Server version: 5.7.1-MindsDB-1.0 (MindsDB)
-
-Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
-
-MySQL [(none)]>
-```
-
-## Example
-
-In this example, we connect to the MindsDB Cloud instance, as below.
-
-```bash
-mysql -h cloud.mindsdb.com --port 3306 -u zoran@mindsdb.com -p
+mysql -h 127.0.0.1 --port 47335 -u mindsdb
 ```
 
 On execution, we get:
 
 ```bash
-Enter password:
-
 Welcome to the MariaDB monitor.  Commands end with ";" or "\g".
 Server version: 5.7.1-MindsDB-1.0 (MindsDB)
 

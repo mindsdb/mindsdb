@@ -2,7 +2,6 @@ openai == 1.6.1
 wikipedia==1.4.0
 tiktoken >= 0.3.0
 anthropic==0.3.5
-langchain-experimental  # Tools
 langfuse  # Tracing
 litellm==1.35.0
 -r mindsdb/integrations/handlers/openai_handler/requirements.txt

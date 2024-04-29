@@ -9,7 +9,7 @@ name = 'files'
 type = HANDLER_TYPE.DATA
 icon_path = "icon.svg"
 
-permanent = True
+permanent = False
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'icon_path'

@@ -430,30 +430,17 @@ class ModelController():
 
         return pd.DataFrame([record], columns=columns)
 
-    def update_model_version(self, models, active=None):
-        if active is None:
-            raise NotImplementedError('Update is not supported')
-
-        if active in ('0', 0, False):
-            active = False
-        else:
-            active = True
-
-        if active is False:
-            raise NotImplementedError('Only setting active version is possible')
-
-        if len(models) != 1:
-            raise Exception('Only one version can be updated')
-
-        # update
-        model = models[0]
+    def set_model_active_version(self, project_name, model_name, version):
 
         model_record = get_model_record(
-            name=model['NAME'],
-            project_name=model['PROJECT'],
-            version=model['VERSION'],
+            name=model_name,
+            project_name=project_name,
+            version=version,
             active=None
         )
+
+        if model_record is None:
+            raise EntityNotExistsError(f'Model {model_name} with version {version} is not found in {project_name}')
 
         model_record.active = True
 
@@ -470,26 +457,26 @@ class ModelController():
 
         db.session.commit()
 
-    def delete_model_version(self, models):
-        if len(models) == 0:
-            raise Exception("Version to delete is not found")
+    def delete_model_version(self, project_name, model_name, version):
 
-        for model in models:
-            model_record = get_model_record(
-                name=model['NAME'],
-                project_name=model['PROJECT'],
-                version=model['VERSION'],
-                active=None
-            )
-            if model_record.active:
-                raise Exception(f"Can't remove active version: {model['PROJECT']}.{model['NAME']}.{model['VERSION']}")
+        model_record = get_model_record(
+            name=model_name,
+            project_name=project_name,
+            version=version,
+            active=None
+        )
+        if model_record is None:
+            raise EntityNotExistsError(f'Model {model_name} with version {version} is not found in {project_name}')
 
-            is_cloud = self.config.get('cloud', False)
-            if is_cloud:
-                model_record.deleted_at = dt.datetime.now()
-            else:
-                db.session.delete(model_record)
-            modelStorage = ModelStorage(model_record.id)
-            modelStorage.delete()
+        if model_record.active:
+            raise Exception(f"Can't remove active version: {project_name}.{model_name}.{version}")
+
+        is_cloud = self.config.get('cloud', False)
+        if is_cloud:
+            model_record.deleted_at = dt.datetime.now()
+        else:
+            db.session.delete(model_record)
+        modelStorage = ModelStorage(model_record.id)
+        modelStorage.delete()
 
         db.session.commit()

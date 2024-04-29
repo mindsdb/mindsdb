@@ -4,7 +4,7 @@ mysql
 mariadb
 scylla
 cassandra
-# clickhouse
+clickhouse
 # snowflake
 slack
 sqlite
@@ -16,3 +16,4 @@ timegpt
 binance
 twitter
 web
+mindsdb_inference

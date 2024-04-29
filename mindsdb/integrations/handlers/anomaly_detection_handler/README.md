@@ -1,6 +1,5 @@
 # Anomaly Detection Handler
-The Anomaly Detection handler implements supervised, semi-supervised, and unsupervised anomaly detection algorithms using the pyod, catboost, xgboost, and sklearn libraries. The models were chosen based on the results in the following benchmark paper:
-https://www.andrew.cmu.edu/user/yuezhao2/papers/22-neurips-adbench.pdf 
+The Anomaly Detection handler implements supervised, semi-supervised, and unsupervised anomaly detection algorithms using the pyod, catboost, xgboost, and sklearn libraries. The models were chosen based on the results in the "ADBench" benchmark [paper](https://proceedings.neurips.cc/paper_files/paper/2022/hash/cf93972b116ca5268827d575f2cc226b-Abstract-Datasets_and_Benchmarks.html).
 
 # Additional information
 
@@ -10,7 +9,28 @@ https://www.andrew.cmu.edu/user/yuezhao2/papers/22-neurips-adbench.pdf
 
 - If multiple models are provided, then we create an ensemble and take use majority voting
 
-- See the anomaly detection proposal document for more information - https://docs.google.com/document/d/1Yd7ARZVg_67xlcY-JR2kuO7mak9Ia2YER1Jk0EdpEa0/edit#heading=h.mo4wxsae6t1d
+### Context about types of anomaly detection
+
+- Supervised: we have inlier/outlier labels, so we can train a classifier the normal way. This is very similar to a standard classification problem.
+
+- Semi-supervised: we have inlier/outlier labels and perform an unsupervised preprocessing step, and then a supervised classification algorithm.
+
+- Unsupervised: we don’t have inlier/outlier labels and cannot assume all training data are inliers. These methods construct inlier criteria that will classify some training data as outliers too based on distributional traits. New observations are classified against these criteria. However, it’s not possible to evaluate how well the model detects outliers without labels.
+
+### Default dispatch logic
+
+We propose the following logic to determine type of learning:
+- Use supervised learning if labels are available and the dataset contains at least 3000 samples.
+- Use semi-supervised learning if labels are available and number of samples in the dataset is less than 3000.
+- If the dataset is unlabelled, use unsupervised learning.
+
+We’ve chosen 3000 based on the results of the NeurIPS AD Benchmark paper (linked above). The authors report that semi-supervised learning outperforms supervised learning when the number of samples used is less than 5% of the size of the training dataset. The average size of the training datasets in their study is 60,000, therefore this 5% corresponds to 3000 samples on average.
+
+### Reasoning for default models on each type
+We refer to the NeurIPS AD Benchmark paper (linked above) to make these choices:
+- For supervised learning, use CatBoost. It often outperforms classic algorithms.
+- For semi-supervised, XGBod is a good default from PyOD.
+- There’s no clear winner for unsupervised methods, it depends on the use case. ECOD is a sensible default with a fast runtime. If we’re not concerned about runtime, we can use an ensemble.
 
 
 # Example usage
@@ -117,10 +137,8 @@ JOIN mindsdb.ad_ensemble as m;
 
 # Additional Media:
 
-### Demo 1:
-https://www.loom.com/share/0996e5faa3f7415bacd51a6e8e161d5e?sid=9bacd29a-975b-4a94-b081-de2255b93607
+### 1. [Demo 1](https://www.loom.com/share/0996e5faa3f7415bacd51a6e8e161d5e?sid=9bacd29a-975b-4a94-b081-de2255b93607)
 
-### Demo 2:
-https://www.loom.com/share/c22335d83cb04ac281e2ef080792f2dd
+### 2. [Demo 2](https://www.loom.com/share/c22335d83cb04ac281e2ef080792f2dd)
 
 

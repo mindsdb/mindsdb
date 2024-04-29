@@ -10,8 +10,8 @@ The integration allows for the deployment of Anyscale Endpoints models within Mi
 
 Before proceeding, ensure the following prerequisites are met:
 
-1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
-2. To use Anyscale Endpoints within MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
+2. To use Anyscale Endpoints within MindsDB, install the required dependencies following [this instruction](https://docs.mindsdb.com/setup/self-hosted/docker#install-dependencies).
 3. Obtain the Anyscale Endpoints API key required to deploy and use Anyscale Endpoints models within MindsDB. Follow the [instructions for obtaining the API key](https://docs.endpoints.anyscale.com/guides/authenticate/).
 
 ## Setup
@@ -94,5 +94,5 @@ Here is the output:
 
 **Next Steps**
 
-Follow [this tutorial](/finetune/anyscale) to see more use case examples.
+Follow [this tutorial](https://docs.mindsdb.com/finetune/anyscale) to see more use case examples.
 </Tip>

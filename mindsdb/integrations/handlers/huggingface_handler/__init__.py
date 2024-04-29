@@ -12,7 +12,7 @@ title = 'Hugging Face'
 name = 'huggingface'
 type = HANDLER_TYPE.ML
 icon_path = "icon.svg"
-permanent = True
+permanent = False
 execution_method = 'subprocess_keep'
 
 __all__ = [

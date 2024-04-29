@@ -56,7 +56,6 @@ class SkillToolController:
             from mindsdb.integrations.handlers.langchain_handler.mindsdb_database_agent import MindsDBSQL
             from langchain_community.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
             from langchain_community.tools.sql_database.tool import QuerySQLDataBaseTool
-            from langchain_community.chat_models import ChatOpenAI
         except ImportError:
             raise ImportError('To use the text-to-SQL skill, please install langchain with `pip install mindsdb[langchain]`')
         database = skill.params['database']

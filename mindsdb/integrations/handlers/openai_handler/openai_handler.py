@@ -66,11 +66,14 @@ class OpenAIHandler(BaseMLEngine):
         '''
         connection_args = {k.lower(): v for k, v in connection_args.items()}
         api_key = connection_args.get('openai_api_key')
-        if api_key is not None:
+        if api_key:
             org = connection_args.get('api_organization')
             api_base = connection_args.get('api_base') or os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
             client = self._get_client(api_key=api_key, base_url=api_base, org=org)
             OpenAIHandler._check_client_connection(client)
+
+        else:
+            raise Exception('Required parameter openai_api_key must be provided.')
 
     @staticmethod
     def _check_client_connection(client: OpenAI):

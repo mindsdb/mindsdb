@@ -16,7 +16,7 @@ Before proceeding, ensure the following prerequisites are met:
 
 ## Setup
 
-Create an AI engine from the [Cohere handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/cohere_handler).
+Create an AI engine from the [Cohere handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/cohere_handler).
 
 ```sql
 CREATE ML_ENGINE cohere_engine

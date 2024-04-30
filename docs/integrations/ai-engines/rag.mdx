@@ -7,7 +7,7 @@ This documentation describes the Retrieval Augmented Generation integration that
 
 It supports the following:
 
-* Large language models such as [OpenAI](https://docs.mindsdb.com/integrations/ai-engines/openai) and [Writer](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/writer_handler#readme).
+* Large language models such as [OpenAI](https://docs.mindsdb.com/integrations/ai-engines/openai) and [Writer](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/writer_handler#readme).
 * Vector databases such as [ChromaDB](https://docs.mindsdb.com/integrations/vector-db-integrations/chromadb) and FAISS.
 * Embedding models compatible with the [Hugging Face sentence_transformers library](https://huggingface.co/sentence-transformers).
 
@@ -21,8 +21,8 @@ Before proceeding, ensure the following prerequisites are met:
 
 ## Setup
 
-Create an AI engine from the [RAG handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/rag_handler).
-You can create a RAG engine using this command and providing either [OpenAI](https://docs.mindsdb.com/integrations/ai-engines/openai) or [Writer](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/writer_handler#readme) parameters:
+Create an AI engine from the [RAG handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/rag_handler).
+You can create a RAG engine using this command and providing either [OpenAI](https://docs.mindsdb.com/integrations/ai-engines/openai) or [Writer](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/writer_handler#readme) parameters:
 
 ```sql
 CREATE ML_ENGINE rag_engine

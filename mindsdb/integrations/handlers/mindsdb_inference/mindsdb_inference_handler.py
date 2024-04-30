@@ -28,7 +28,7 @@ class MindsDBInferenceHandler(OpenAIHandler):
         Validate CREATE ML_ENGINE statements on the the MindsDB Inference engine handler.
 
         Args:
-            connection_args (dict): Handler keyword arguments.
+            connection_args (dict): Connection arguments.
 
         Raises:
             ValueError: If the API key (mindsdb_inference_api_key) is not provided.
@@ -41,8 +41,8 @@ class MindsDBInferenceHandler(OpenAIHandler):
         if api_key:
             org = connection_args.get('api_organization')
             api_base = connection_args.get('api_base') or os.environ.get('MINDSDB_INFERENCE_BASE', mindsdb_inference_handler_config.BASE_URL)
-            client = self._get_client(api_key=api_key, base_url=api_base, org=org)
-            OpenAIHandler._check_client_connection(client)
+            
+            MindsDBInferenceHandler._validate_credentials(api_key, api_base, org)
 
         else:
             raise ValueError('Required parameter mindsdb_inference_api_key must be provided.')
@@ -75,8 +75,8 @@ class MindsDBInferenceHandler(OpenAIHandler):
         api_key = get_api_key('mindsdb_inference', args, engine_storage=engine_storage)
         api_base = connection_args.get('api_base') or args.get('api_base') or os.environ.get('MINDSDB_INFERENCE_BASE', mindsdb_inference_handler_config.BASE_URL)
         org = args.get('api_organization')
-        client = OpenAIHandler._get_client(api_key=api_key, base_url=api_base, org=org)
-        OpenAIHandler._check_client_connection(client)
+        
+        MindsDBInferenceHandler._validate_credentials(api_key, api_base, org)
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         """
@@ -109,3 +109,22 @@ class MindsDBInferenceHandler(OpenAIHandler):
         """
         client = openai.OpenAI(api_key=api_key, base_url=base_url, organization=org)
         return client.models.list()
+    
+    @staticmethod
+    def _validate_credentials(api_key, base_url, org=None):
+        """
+        Validate the MindsDB Inference engine credentials.
+
+        Args:
+            api_key (str): API key.
+            base_url (str): Base URL.
+            org (str): Organization name.
+
+        Raises:
+            AuthenticationError: If the handler is not properly configured.
+
+        Returns:
+            None
+        """
+        client = OpenAIHandler._get_client(api_key=api_key, base_url=base_url, org=org)
+        OpenAIHandler._check_client_connection(client)

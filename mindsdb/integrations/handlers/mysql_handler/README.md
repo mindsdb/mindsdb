@@ -15,7 +15,7 @@ Before proceeding, ensure the following prerequisites are met:
 
 ## Connection
 
-Establish a connection to MySQL from MindsDB by executing the following SQL command and providing its [handler name](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/mysql_handler) as an engine.
+Establish a connection to MySQL from MindsDB by executing the following SQL command and providing its [handler name](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/mysql_handler) as an engine.
 
 ```sql
 CREATE DATABASE mysql_conn

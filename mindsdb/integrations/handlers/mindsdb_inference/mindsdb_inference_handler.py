@@ -23,10 +23,34 @@ class MindsDBInferenceHandler(OpenAIHandler):
         self.default_model = 'gpt-3.5-turbo'
         self.default_mode = 'default'
 
+    def create_engine(self, connection_args):
+        """
+        Validate CREATE ML_ENGINE statements on the the MindsDB Inference engine handler.
+
+        Args:
+            connection_args (dict): Handler keyword arguments.
+
+        Raises:
+            ValueError: If the API key (mindsdb_inference_api_key) is not provided.
+
+        Returns:
+            None
+        """
+        connection_args = {k.lower(): v for k, v in connection_args.items()}
+        api_key = connection_args.get('mindsdb_inference_api_key')
+        if api_key:
+            org = connection_args.get('api_organization')
+            api_base = connection_args.get('api_base') or os.environ.get('MINDSDB_INFERENCE_BASE', mindsdb_inference_handler_config.BASE_URL)
+            client = self._get_client(api_key=api_key, base_url=api_base, org=org)
+            OpenAIHandler._check_client_connection(client)
+
+        else:
+            raise ValueError('Required parameter mindsdb_inference_api_key must be provided.')
+
     @staticmethod
     def create_validation(target, args=None, **kwargs):
         """
-        Validate the MindsDB Inference engine handler.
+        Validate CREATE MODEL statements on the MindsDB Inference engine handler.
 
         Args:
             target (str): Target column, not required for LLMs.

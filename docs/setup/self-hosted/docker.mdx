@@ -9,13 +9,13 @@ MindsDB provides Docker images that facilitate running MinsdDB in Docker contain
 As MindsDB integrates with numerous [data sources](/integrations/data-overview) and [AI frameworks](/integrations/ai-overview), each integration requires a set of dependencies. Hence, MindsDB provides multiple Docker images for different tasks, as outlined below.
 
 * `mindsdb/mindsdb:latest` (or `mindsdb/mindsdb`)
-It is the lightweight Docker image of MindsDB that comes with [these integrations preloaded](https://github.com/mindsdb/mindsdb/blob/staging/default_handlers.txt).
+It is the lightweight Docker image of MindsDB that comes with [these integrations preloaded](https://github.com/mindsdb/mindsdb/blob/main/default_handlers.txt).
 
 * `mindsdb/mindsdb:lightwood`
-It is the Docker image of MindsDB that comes with [these integrations](https://github.com/mindsdb/mindsdb/blob/staging/default_handlers.txt) and the Lightwood integration preloaded.
+It is the Docker image of MindsDB that comes with [these integrations](https://github.com/mindsdb/mindsdb/blob/main/default_handlers.txt) and the Lightwood integration preloaded.
 
 * `mindsdb/mindsdb:huggingface`
-It is the Docker image of MindsDB that comes with [these integrations](https://github.com/mindsdb/mindsdb/blob/staging/default_handlers.txt) and the Hugging Face integration preloaded.
+It is the Docker image of MindsDB that comes with [these integrations](https://github.com/mindsdb/mindsdb/blob/main/default_handlers.txt) and the Hugging Face integration preloaded.
 </Tip>
 
 ## Prerequisites
@@ -126,7 +126,7 @@ Install the dependencies:
 pip install mindsdb[handler_name]
 ```
 
-For example, run this command to install dependencies for the [OpenAI handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/openai_handler):
+For example, run this command to install dependencies for the [OpenAI handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/openai_handler):
 
 ```bash
 pip install mindsdb[openai]

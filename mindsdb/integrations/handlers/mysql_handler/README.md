@@ -10,12 +10,12 @@ The integration allows MindsDB to access data from MySQL and enhance MySQL with 
 
 Before proceeding, ensure the following prerequisites are met:
 
-1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
-2. To connect MySQL to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
+2. To connect MySQL to MindsDB, install the required dependencies following [this instruction](https://docs.mindsdb.com/setup/self-hosted/docker#install-dependencies).
 
 ## Connection
 
-Establish a connection to MySQL from MindsDB by executing the following SQL command and providing its [handler name](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/mysql_handler) as an engine.
+Establish a connection to MySQL from MindsDB by executing the following SQL command and providing its [handler name](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/mysql_handler) as an engine.
 
 ```sql
 CREATE DATABASE mysql_conn
@@ -74,7 +74,7 @@ LIMIT 10;
 <Tip>
 **Next Steps**
 
-Follow [this tutorial](/use-cases/data_enrichment/text-summarization-inside-mysql-with-openai) to see more use case examples.
+Follow [this tutorial](https://docs.mindsdb.com/use-cases/data_enrichment/text-summarization-inside-mysql-with-openai) to see more use case examples.
 </Tip>
 
 ## Troubleshooting

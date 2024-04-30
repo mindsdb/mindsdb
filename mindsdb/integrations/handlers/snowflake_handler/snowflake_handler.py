@@ -49,13 +49,14 @@ class SnowflakeHandler(DatabaseHandler):
             return self.connection
 
         # Mandatory connection parameters
-        if not all(key in self.connection_data for key in ['account', 'user', 'password']):
-            raise ValueError('Required parameters (account, user, password) must be provided.')
+        if not all(key in self.connection_data for key in ['account', 'user', 'password', 'database']):
+            raise ValueError('Required parameters (account, user, password, database) must be provided.')
 
         config = {
             'account': self.connection_data.get('account'),
             'user': self.connection_data.get('user'),
-            'password': self.connection_data.get('password')
+            'password': self.connection_data.get('password'),
+            'database': self.connection_data.get('database')
         }
 
         # Optional connection parameters

@@ -16,7 +16,7 @@ Before proceeding, ensure the following prerequisites are met:
 
 ## Setup
 
-Create an AI engine from the [Hugging Face Inference API handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/huggingface_api_handler).
+Create an AI engine from the [Hugging Face Inference API handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/huggingface_api_handler).
 
 ```sql
 CREATE ML_ENGINE huggingface_api_engine

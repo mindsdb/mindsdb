@@ -2,7 +2,7 @@ name: Test on Push
 
 on:
   pull_request:
-    branches: [stable, staging]
+    branches: [main]
     
 defaults:
   run:

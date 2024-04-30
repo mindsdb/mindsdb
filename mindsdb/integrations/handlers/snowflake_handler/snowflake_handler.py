@@ -142,7 +142,7 @@ class SnowflakeHandler(DatabaseHandler):
                 else:
                     response = Response(RESPONSE_TYPE.OK)
             except Exception as e:
-                logger.error(f'Error running query: {query} on Snowflake!')
+                logger.error(f"Error running query: {query} on {self.connection_data.get('database')}, {e}!")
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_code=0,

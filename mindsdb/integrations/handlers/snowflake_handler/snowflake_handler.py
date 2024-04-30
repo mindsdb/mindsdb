@@ -60,7 +60,7 @@ class SnowflakeHandler(DatabaseHandler):
         }
 
         # Optional connection parameters
-        optional_params = ['database', 'schema', 'warehouse', 'role']
+        optional_params = ['schema', 'warehouse', 'role']
         for param in optional_params:
             if param in self.connection_data:
                 config[param] = self.connection_data[param]

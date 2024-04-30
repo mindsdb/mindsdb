@@ -1,6 +1,6 @@
 import pandas as pd
 from typing import Dict
-
+from urllib.parse import urlencode
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -47,7 +47,18 @@ class FinancialModelingHandler(APIHandler):
             #include api_key in params for now
             def get_daily_chart(self, params: Dict = None) -> pd.DataFrame:  
                 url = ("https://financialmodelingprep.com/api/v3/historical-price-full/AAPL?apikey=GJvlw9YgVm5J4KIxdP1VPkvWzt747Q6j")
-                
+                base_url = "https://financialmodelingprep.com/api/v3/historical-price-full/"
+                symbol = "AAPL"
+                api_key = "GJvlw9YgVm5J4KIxdP1VPkvWzt747Q6j"
+                params = {
+                    "apikey": api_key,
+                    "from": "2023-10-10",
+                    "to": "2023-12-10",
+                    "serietype": "line"
+                }
+
+                url = f"{base_url}{symbol}?{urlencode(params)}"
+                print(url)
                 if 'symbol' not in params:
                     raise ValueError('Missing "symbol" param')
                 response = get_jsonparsed_data(url)
@@ -74,5 +85,21 @@ class FinancialModelingHandler(APIHandler):
             
             
 
-            
-            
+            import requests
+
+# base_url = "https://financialmodelingprep.com/api/v3/historical-price-full/"
+# symbol = "AAPL"
+# params = {
+#     "from": "2023-10-10",
+#     "to": "2023-12-10",
+#     "serietype": "line"
+# }
+
+# url = f"{base_url}{symbol}"
+# response = requests.get(url, params=params)
+
+# if response.status_code == 200:
+#     data = response.json()
+#     # Process the data here
+# else:
+#     print("Failed to retrieve data:", response.status_code)

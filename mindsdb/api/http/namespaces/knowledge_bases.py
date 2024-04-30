@@ -30,7 +30,7 @@ _DEFAULT_MARKDOWN_HEADERS_TO_SPLIT_ON = [
 def _insert_file_into_knowledge_base(table: KnowledgeBaseTable, file_name: str, embeddings_provider: str):
     # import here to prevent the need to set OPENAI_API_KEY
     from mindsdb.integrations.utilities.rag.splitters.file_splitter import FileSplitter, FileSplitterConfig
-    
+
     file_controller = FileController()
     splitter = FileSplitter(FileSplitterConfig(embeddings=construct_model_from_args({'class': embeddings_provider})))
     file_path = file_controller.get_file_path(file_name)

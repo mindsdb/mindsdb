@@ -64,8 +64,13 @@ class SnowflakeHandler(DatabaseHandler):
             if param in self.connection_data:
                 config[param] = self.connection_data[param]
 
-        self.connection = connector.connect(**config)
-        return self.connection
+        try:
+            self.connection = connector.connect(**config)
+            self.is_connected = True
+            return self.connection
+        except connector.errors.Error as e:
+            logger.error(f'Error connecting to Snowflake, {e}!')
+            raise
 
     def disconnect(self):
         """
@@ -90,7 +95,6 @@ class SnowflakeHandler(DatabaseHandler):
 
         try:
             connection = self.connect()
-            self.is_connected = True
 
             # Execute a simple query to test the connection
             with connection.cursor() as cur:

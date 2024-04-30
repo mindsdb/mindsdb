@@ -89,3 +89,29 @@ SELECT * FROM snowflake_datasource (
 <Note>
 The above examples utilize `snowflake_datasource` as the datasource name, which is defined in the `CREATE DATABASE` command.
 </Note>
+
+## Troubleshooting Guide
+
+<Warning>
+`Database Connection Error`
+
+* **Symptoms**: Failure to connect MindsDB with the Snowflake account.
+* **Checklist**:
+    1. Make sure the Snowflake is active.
+    2. Confirm that account, user, password and database are correct. Try a direct Snowflake connection using a client like DBeaver.
+    3. Ensure a stable network between MindsDB and Snowflake.
+</Warning>
+
+<Warning>
+`SQL statement cannot be parsed by mindsdb_sql`
+
+* **Symptoms**: SQL queries failing or not recognizing table names containing spaces or special characters.
+* **Checklist**:
+    1. Ensure table names with spaces or special characters are enclosed in backticks.
+    2. Examples:
+        * Incorrect: SELECT * FROM integration.travel data
+        * Incorrect: SELECT * FROM integration.'travel data'
+        * Correct: SELECT * FROM integration.\`travel data\`
+</Warning>
+
+This [troubleshooting guide](https://community.snowflake.com/s/article/Snowflake-Client-Connectivity-Troubleshooting) provided by Snowflake might also be helpful.

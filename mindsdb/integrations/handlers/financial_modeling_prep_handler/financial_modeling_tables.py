@@ -14,19 +14,19 @@ import time
 class FinancialModelingTradesTable(APITable):
     def _get_daily_endpoint_params_from_conditions(self, conditions: List) -> Dict:
         params = {}
-        for op, arg1, arg2, arg3, arg4, arg5, arg6 in conditions:
+        for op, arg1, arg2 in conditions: 
             if arg1 == 'symbol':
                 if op != '=':
                     raise NotImplementedError
                 params['symbol'] = arg2
-            if arg3 == "from":
+            if arg1 == "from":
                 if op != '=':
                     raise NotImplementedError
-                params['from'] = arg4
-            if arg5 == "to":
+                params['from'] = arg2
+            if arg1 == "to":
                 if op != '=':
                     raise NotImplementedError
-                params['to'] = arg6
+                params['to'] = arg2
 
         return params
 
@@ -41,7 +41,8 @@ class FinancialModelingTradesTable(APITable):
         conditions = extract_comparison_conditions(query.where)
         params = self._get_daily_endpoint_params_from_conditions(conditions)
 
-
+        
+        return daily_chart_table
 
 
     

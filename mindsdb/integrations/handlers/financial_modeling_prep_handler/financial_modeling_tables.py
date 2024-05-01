@@ -41,6 +41,10 @@ class FinancialModelingTradesTable(APITable):
         conditions = extract_comparison_conditions(query.where)
         params = self._get_daily_endpoint_params_from_conditions(conditions)
 
+        daily_chart_table = self.handler.call_financial_modeling_api(
+                method_name='daily_chart',
+                params=params
+        )
         
         return daily_chart_table
 

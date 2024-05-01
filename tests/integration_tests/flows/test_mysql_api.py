@@ -113,6 +113,10 @@ class BaseStuff:
             }
             res = requests.put(url, files=data)
             res.raise_for_status()
+            print(res.__dict__)
+            res = requests.get(f'{HTTP_API_ROOT}/tabs/?mode=new')
+            res.raise_for_status()
+            print(res.__dict__)
 
     def verify_file_ds(self, ds_name):
         timeout = 5

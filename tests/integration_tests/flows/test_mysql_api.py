@@ -116,7 +116,7 @@ class BaseStuff:
             print(res.__dict__)
             res = requests.get(f'{HTTP_API_ROOT}/tabs/?mode=new')
             res.raise_for_status()
-            print(res.__dict__)
+            print(res.json())
 
     def verify_file_ds(self, ds_name):
         timeout = 5

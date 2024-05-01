@@ -8,6 +8,9 @@ WITH
   ENGINE = 'FINANCIAL_MODELING'
   PARAMETERS = {
     "api_key": <api_key>,
+    "symbol": <symbol>,
+    "from": <from_date>,
+    "to": <to_date>
   };
 ~~~~
 

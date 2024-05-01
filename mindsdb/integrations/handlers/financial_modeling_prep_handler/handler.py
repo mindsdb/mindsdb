@@ -6,6 +6,8 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
 )
+from mindsdb.integrations.handlers.financial_modeling_prep_handler.financial_modeling_tables import FinancialModelingTradesTable
+
 from urllib.request import urlopen
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
@@ -31,6 +33,8 @@ class FinancialModelingHandler(APIHandler):
             self.client = None
             self.is_connected = False
 
+            daily_chart_table = FinancialModelingTradesTable(self) #table is instance of table class
+            self._register_table('daily_chart_table', daily_chart_table)
 
             def connect(self): 
                 self.is_connected = True
@@ -82,9 +86,6 @@ class FinancialModelingHandler(APIHandler):
                     return self.get_daily_chart(params)
                 raise NotImplementedError('Endpoint {} not supported by Financial Modeling API Handler'.format(endpoint_name))
             
-            
-            
-
             import requests
 
 # base_url = "https://financialmodelingprep.com/api/v3/historical-price-full/"

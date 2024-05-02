@@ -51,6 +51,10 @@ def seed_db():
 
 
 def check_valid_response(res):
+    """
+    Utility function to check if the response is valid.
+    """
+
     if res.resp_type == RESPONSE_TYPE.TABLE:
         assert res.data_frame is not None, "expected to have some data, but got None"
     assert (
@@ -62,6 +66,10 @@ def check_valid_response(res):
 
 
 def get_table_names(snowflake_handler):
+    """
+    Utility function to get the table names from the Snowflake account.
+    """
+
     res = snowflake_handler.get_tables()
     tables = res.data_frame
     assert tables is not None, "expected to have some tables in the db, but got None"
@@ -74,10 +82,18 @@ def get_table_names(snowflake_handler):
 @pytest.mark.usefixtures("snowflake_handler")
 class TestSnowflakeHandlerConnect:
     def test_connect(self, snowflake_handler):
+        """
+        Tests the `connect` method to ensure it connects to the Snowflake account.
+        """
+
         snowflake_handler.connect()
         assert snowflake_handler.is_connected, "the handler has failed to connect"
 
     def test_check_connection(self, snowflake_handler):
+        """
+        Tests the `check_connection` method to verify that it returns a StatusResponse object and accurately reflects the connection status.
+        """
+
         res = snowflake_handler.check_connection()
         assert res.success, res.error_message
 
@@ -87,6 +103,10 @@ class TestSnowflakeHandlerTables:
     table_for_creation = "TEST_MDB"
 
     def test_get_tables(self, snowflake_handler):
+        """
+        Tests the `get_tables` method to confirm it correctly calls `native_query` with the appropriate SQL commands.
+        """
+
         res = snowflake_handler.get_tables()
         tables = res.data_frame
         assert (
@@ -100,6 +120,10 @@ class TestSnowflakeHandlerTables:
         ), "expected to have 'test' in the response."
 
     def test_get_columns(self, snowflake_handler):
+        """
+        Tests if the `get_columns` method correctly constructs the SQL query and if it calls `native_query` with the correct query.
+        """
+
         response = snowflake_handler.get_columns("test")
         assert response.type == RESPONSE_TYPE.TABLE, "expected a TABLE"
         assert len(response.data_frame) > 0, "expected > O columns"
@@ -114,6 +138,11 @@ class TestSnowflakeHandlerTables:
         ), "response does not contain the expected columns"
 
     def test_create_table(self, snowflake_handler):
+        """
+        Tests a table creation query to ensure it creates a table in the Snowflake account.
+        
+        """
+
         query = f"""
             CREATE TABLE IF NOT EXISTS {self.table_for_creation} (
                 test_col INT
@@ -127,6 +156,10 @@ class TestSnowflakeHandlerTables:
         ), f"expected to have {self.table_for_creation} in database, but got: {tables}"
 
     def test_drop_table(self, snowflake_handler):
+        """
+        Tests a table drop query to ensure it drops a table in the Snowflake account.
+        """
+
         query = f"DROP TABLE IF EXISTS {self.table_for_creation}"
         res = snowflake_handler.native_query(query)
         check_valid_response(res)
@@ -137,6 +170,10 @@ class TestSnowflakeHandlerTables:
 @pytest.mark.usefixtures("snowflake_handler")
 class TestSnowflakeHandlerQuery:
     def test_select_native_query(self, snowflake_handler):
+        """
+        Tests the `native_query` method to ensure it executes a SQL query using a mock cursor and returns a Response object.
+        """
+
         query = "SELECT * FROM test"
         response = snowflake_handler.native_query(query)
         assert type(response) is Response
@@ -154,6 +191,10 @@ class TestSnowflakeHandlerQuery:
         ), "response does not contain the expected data"
 
     def test_select_query(self, snowflake_handler):
+        """
+        Tests the `query` method to ensure it executes a SQL query and returns a Response object.
+        """
+
         limit = 3
         query = "SELECT * FROM test"
         res = snowflake_handler.query(query)

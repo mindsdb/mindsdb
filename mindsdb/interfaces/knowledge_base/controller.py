@@ -428,10 +428,13 @@ class KnowledgeBaseController:
     def _create_default_embedding_model(self, project_name, kb_name, engine="langchain_embedding"):
         """create a default embedding model for knowledge base, if not specified"""
         model_name = f"{kb_name}_default_model"
-
+        using_args = {}
+        if engine == 'langchain_embedding':
+            # Use default embeddings.
+            using_args['class'] = 'openai'
         statement = CreatePredictor(
             name=Identifier(parts=[project_name, model_name]),
-            using={},
+            using=using_args,
             targets=[
                 Identifier(parts=[TableField.EMBEDDINGS.value])
             ]

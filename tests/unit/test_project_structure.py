@@ -808,6 +808,18 @@ class TestProjectStructure(BaseExecutorDummyML):
         assert 'a > 2' in sql
         assert "b = 'b'" in sql
 
+    def test_project_names_duplicate(self):
+        # create folder
+        self.run_sql('create project proj1')
+
+        self.run_sql("create database db1 using engine='dummy_data'")
+
+        with pytest.raises(Exception):
+            self.run_sql('create project db1')
+
+        with pytest.raises(Exception):
+            self.run_sql("create database proj1 using engine='dummy_data'")
+
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_duplicated_cols(self, data_handler):
         df1 = pd.DataFrame([

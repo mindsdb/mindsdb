@@ -9,7 +9,7 @@ In this section, you'll find how to add new integrations/databases to MindsDB.
 <Note>
     **Prerequisite**
 
-    You should have the latest staging version of the MindsDB repository installed locally. Follow [this guide](/contribute/install/) to learn how to install MindsDB for development.
+    You should have the latest version of the MindsDB repository installed locally. Follow [this guide](/contribute/install/) to learn how to install MindsDB for development.
 </Note>
 
 ## What are Database Handlers?
@@ -24,7 +24,7 @@ Database handlers act as a bridge to any database. You use database handlers to 
 
 ## Creating a Database Handler
 
-You can create your own database handler within MindsDB by inheriting from the [`DatabaseHandler`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base.py#L102) class.
+You can create your own database handler within MindsDB by inheriting from the [`DatabaseHandler`](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/integrations/libs/base.py#L102) class.
 
 By providing the implementation for some or all of the methods contained in the `DatabaseHandler` class, you can connect with the database of your choice.
 
@@ -51,12 +51,12 @@ Authors can opt for adding private methods, new files and folders, or any combin
 
     Under the `mindsdb.integrations.libs.utils` library, contributors can find various methods that may be useful while implementing new handlers.
 
-    Also, there are wrapper classes for the `DatabaseHandler` instances called [HandlerResponse](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/response.py#L7) and [HandlerStatusResponse](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/response.py#L32). You should use them to ensure proper output formatting.
+    Also, there are wrapper classes for the `DatabaseHandler` instances called [HandlerResponse](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/integrations/libs/response.py#L7) and [HandlerStatusResponse](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/integrations/libs/response.py#L32). You should use them to ensure proper output formatting.
 </Tip>
 
 ### Implementation
 
-Each database handler should inherit from the [`DatabaseHandler`](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/base.py#L102) class.
+Each database handler should inherit from the [`DatabaseHandler`](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/integrations/libs/base.py#L102) class.
 
 Here is a step-by-step guide:
 
@@ -192,7 +192,7 @@ Here is a step-by-step guide:
 
 The `connection_args` dictionary contains all of the arguments used to establish the connection along with their descriptions, types, labels, and whether they are required or not.
 
-Here is an example of the `connection_args` dictionary from the [MySQL handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/mysql_handler).
+Here is an example of the `connection_args` dictionary from the [MySQL handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/mysql_handler).
 
 ```py
 connection_args = OrderedDict(
@@ -257,7 +257,7 @@ connection_args = OrderedDict(
 
 The `connection_args_example` dictionary contains an example of all required arguments to establish the connection.
 
-Here is an example of the `connection_args_example` dictionary from the [MySQL handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/mysql_handler).
+Here is an example of the `connection_args_example` dictionary from the [MySQL handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/mysql_handler).
 
 ```py
 connection_args_example = OrderedDict(
@@ -286,7 +286,7 @@ The following should be exported in the `__init__.py` file of the handler:
 
 A few of these variables are defined in another file called `__about__.py`. This file is imported into the `__init__.py` file.
 
-Here is an example of the `__init__.py` file for the [MySQL handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/mysql_handler).
+Here is an example of the `__init__.py` file for the [MySQL handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/mysql_handler).
 
 ```py
 
@@ -313,7 +313,7 @@ __all__ = [
 ]
 ```
 
-The `__about__.py` file for the same [MySQL handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/mysql_handler) contains the following variables:
+The `__about__.py` file for the same [MySQL handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/mysql_handler) contains the following variables:
 
 ```py
 __title__ = 'MindsDB MySQL handler'
@@ -332,7 +332,7 @@ __copyright__ = 'Copyright 2022- mindsdb'
 
 To see some integration handlers that are currently in use, we encourage you to check out the following handlers inside the MindsDB repository:
 
-* [MySQL](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/mysql_handler)
-* [Postgres](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/postgres_handler)
+* [MySQL](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/mysql_handler)
+* [Postgres](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/postgres_handler)
 
-And here are [all the handlers available in the MindsDB repository](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers).
+And here are [all the handlers available in the MindsDB repository](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers).

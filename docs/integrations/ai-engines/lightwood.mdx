@@ -52,7 +52,7 @@ The values vary between 0 and 1, where 1 indicates a perfect predictor, based on
 You can check accuracy values for models using the [`DESCRIBE`](/sql/api/describe) statement.
 </Note>
 
-## Tuning the Lightwood ML Engine Features
+## Tuning the Lightwood ML Engine
 
 ### Description
 
@@ -141,6 +141,58 @@ USING
                     }
                 ]};
 ```
+
+## Explainability
+
+With Lightwood, you can deploy the following types of models:
+
+- regressions models,
+- classification models,
+- time-series models.
+
+Predictions made by each type of model come with an explanation column, as below.
+
+<AccordionGroup>
+
+<Accordion title="Regression">
+In the case of regression models, the `target_explain` column contains the following information:
+
+```
+{"predicted_value": 2951, "confidence": 0.99, "anomaly": null, "truth": null, "confidence_lower_bound": 2795, "confidence_upper_bound": 3107}
+```
+
+<Note>
+The upper and lower bounds are determined via conformal prediction, and correspond to the reported confidence score (which can be modified by the user).
+</Note>
+
+Try it out following [this tutorial](/use-cases/in-database_ml/home-rentals).
+</Accordion>
+
+<Accordion title="Classification">
+In the case of classification models, the `target_explain` column contains the following information:
+
+```
+{"predicted_value": "No", "confidence": 0.6629213483146067, "anomaly": null, "truth": null, "probability_class_No": 0.8561, "probability_class_Yes": 0.1439}
+```
+
+<Note>
+The `confidence` score is produced by the conformal prediction module and is well-calibrated. On the other hand, the `probability_class` comes directly from the model logits, which may be uncalibrated. Therefore, the `probability_class` score may be optimistic or pessimistic, i.e. coverage is not guaranteed to empirically match the reported score.
+</Note>
+
+Try it out following [this tutorial](/use-cases/in-database_ml/customer-churn).
+</Accordion>
+
+<Accordion title="Time-Series">
+In the case of time-series models, the `target_explain` column contains the following information:
+
+```
+{"predicted_value": 501618.3125, "confidence": 0.9991, "anomaly": false, "truth": null, "confidence_lower_bound": 500926.109375, "confidence_upper_bound": 502310.515625}
+```
+
+Try it out following [this tutorial](/use-cases/predictive_analytics/house-sales-forecasting).
+</Accordion>
+
+</AccordionGroup>
 
 <Note>
 You can visit the comprehensive [Lightwood docs here](https://mindsdb.github.io/lightwood/).

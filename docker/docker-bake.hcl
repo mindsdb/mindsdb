@@ -20,7 +20,7 @@ variable PLATFORM_LIST {
   default = split(",", PLATFORMS)
 }
 variable "BRANCH" {
-  default = "stable"
+  default = "main"
 }
 variable "ECR_REPO" {
   default = "454861456664.dkr.ecr.us-east-2.amazonaws.com"
@@ -37,8 +37,7 @@ function "get_cache_from" {
   result = flatten([for p in PLATFORM_LIST:
     split("\n", <<EOT
 type=registry,ref=${ECR_REPO}/${IMAGE}-cache:${replace("${BRANCH}", "/", "-")}-${image}-${replace("${p}", "linux/", "")}
-type=registry,ref=${ECR_REPO}/${IMAGE}-cache:staging-${image}-${replace("${p}", "linux/", "")}
-type=registry,ref=${ECR_REPO}/${IMAGE}-cache:stable-${image}-${replace("${p}", "linux/", "")}
+type=registry,ref=${ECR_REPO}/${IMAGE}-cache:main-${image}-${replace("${p}", "linux/", "")}
 EOT
     )
   ])
@@ -91,7 +90,7 @@ target "images" {
       },
       {
         name = "cloud"
-        extras = ".[lightwood,huggingface,statsforecast-extra,neuralforecast-extra,timegpt,surrealdb,mssql,youtube,ignite,gmail,pgvector,llama_index,writer,rag,github,snowflake,clickhouse,couchbase,twelve_labs,bigquery] darts datasetsforecast"
+        extras = ".[lightwood,huggingface,statsforecast-extra,neuralforecast-extra,timegpt,mssql,youtube,gmail,pgvector,llama_index,writer,rag,github,snowflake,clickhouse,twelve_labs,bigquery] darts datasetsforecast"
         target = ""
       },
     ]

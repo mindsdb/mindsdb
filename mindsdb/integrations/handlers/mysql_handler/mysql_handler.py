@@ -61,7 +61,7 @@ class MySQLHandler(DatabaseHandler):
         Returns:
             MySQLConnection: An active connection to the database.
         """
-        if self.is_connected:
+        if self.is_connected and self.connection.is_connected():
             return self.connection
         config = self._unpack_config()
         if 'conn_attrs' in self.connection_data:

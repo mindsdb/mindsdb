@@ -21,4 +21,3 @@ class Responce(Responder):
 
 
 responder = Responce()
-

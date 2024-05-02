@@ -60,14 +60,14 @@ Before proceeding, ensure the following prerequisites are met:
 
 ## Setup
 
-Create an AI engine from the [Anomaly Detection handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/anthropic_handler).
+Create an AI engine from the [Anomaly Detection handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/anomaly_detection_handler).
 
 ```sql
 CREATE ML_ENGINE anomaly_detection_engine
 FROM anomaly_detection;
 ```
 
-Create a model using `anthropic_engine` as an engine.
+Create a model using `anomaly_detection_engine` as an engine.
 
 ```sql
 CREATE ANOMALY DETECTION MODEL anomaly_detection_model

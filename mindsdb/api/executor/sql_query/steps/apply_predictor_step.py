@@ -125,6 +125,19 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
 
         params = step.params or {}
 
+        # handle columns mapping to model
+        if step.columns_map is not None:
+            # columns_map = {str: Identifier}
+            for model_col, table_col in step.columns_map.items():
+                if len(table_col.parts) != 2:
+                    continue
+                table_name, col_name = table_col.parts
+                data_cols = data.find_columns(col_name, table_alias=table_name)
+                if len(data_cols) == 0:
+                    continue
+                # rename first found column
+                data_cols[0].alias = model_col
+
         for table in data.get_tables()[:1]:  # add  __mindsdb_row_id only for first table
             row_id_col = Column(
                 name='__mindsdb_row_id',

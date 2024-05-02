@@ -239,7 +239,6 @@ class TestCompanyIndependent(HTTPHelperMixin):
                 tables, {
                     'jobs',
                     'models',
-                    'models_versions',
                     'mdb_triggers',
                     'chatbots',
                 }
@@ -301,7 +300,6 @@ class TestCompanyIndependent(HTTPHelperMixin):
                 tables, {
                     'jobs',
                     'models',
-                    'models_versions',
                     'mdb_triggers',
                     'chatbots',
                     f'test_view_{char}'
@@ -327,7 +325,6 @@ class TestCompanyIndependent(HTTPHelperMixin):
                 tables, {
                     'jobs',
                     'models',
-                    'models_versions',
                     'mdb_triggers',
                     'chatbots',
                 }
@@ -403,7 +400,6 @@ class TestCompanyIndependent(HTTPHelperMixin):
         self.assert_list(collections, {
             'jobs',
             'models',
-            'models_versions',
             'mdb_triggers',
             'chatbots',
             'test_mon_p_a',
@@ -413,7 +409,6 @@ class TestCompanyIndependent(HTTPHelperMixin):
         self.assert_list(collections, {
             'jobs',
             'models',
-            'models_versions',
             'mdb_triggers',
             'chatbots',
             'model_b'

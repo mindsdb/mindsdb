@@ -1,6 +1,6 @@
 from mindsdb.api.mongo.classes import Responder
 import mindsdb.api.mongo.functions as helpers
-from mindsdb_sql.parser.ast import Delete, Identifier, BinaryOperation, Constant
+from mindsdb_sql.parser.ast import Identifier
 from mindsdb_sql.parser.dialects.mindsdb import DropPredictor, DropJob, DropMLEngine
 from mindsdb.interfaces.jobs.jobs_controller import JobsController
 
@@ -32,7 +32,7 @@ class Responce(Responder):
 
         project_name = request_env['database']
 
-        allowed_tables = ('models_versions', 'models', 'jobs', 'ml_engines')
+        allowed_tables = ('models', 'jobs', 'ml_engines')
         if table not in allowed_tables:
             raise Exception(f"Only removing from this collections is supported: {', '.join(allowed_tables)}")
 
@@ -57,7 +57,7 @@ class Responce(Responder):
             raise Exception("Can't find object to delete, use filter by name or _id")
 
         if obj_name is None:
-            if table == 'models' or table == 'models_versions':
+            if table == 'models':
                 model_id = obj_id >> 20
                 if obj_name is None:
                     models = mindsdb_env['model_controller'].get_models(
@@ -65,7 +65,7 @@ class Responce(Responder):
                         project_name=project_name
                     )
                     for model in models:
-                        if model['id'] == model_id:
+                        if model['id'] == model_id and (version is None or model['version'] == version):
                             obj_name = model['name']
                             break
                     if obj_name is None:
@@ -80,21 +80,6 @@ class Responce(Responder):
         # delete model
         if table == 'models':
             ast_query = DropPredictor(Identifier(parts=[project_name, obj_name]))
-            run_sql_command(request_env, ast_query)
-
-        # delete model version
-        elif table == 'models_versions':
-            if version is None:
-                if obj_id is None:
-                    raise Exception("Can't find object version")
-
-                version = obj_id & (2**20 - 1)
-
-            ast_query = Delete(table=Identifier(parts=[project_name, 'models_versions']),
-                               where=BinaryOperation(op='and', args=[
-                                   BinaryOperation(op='=', args=[Identifier('name'), Constant(obj_name)]),
-                                   BinaryOperation(op='=', args=[Identifier('version'), Constant(version)])
-                               ]))
             run_sql_command(request_env, ast_query)
 
         elif table == 'jobs':

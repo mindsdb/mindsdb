@@ -1153,7 +1153,7 @@ class ExecuteCommands:
                 is_cloud = self.session.config.get("cloud", False)
                 if is_cloud is False and "No module named" in handler_module_meta['import']['error_message']:
                     logger.info(get_handler_install_message(handler_module_meta['name']))
-            ast_drop = DropMLEngine(name=name)
+            ast_drop = DropMLEngine(name=Identifier(name))
             self.answer_drop_ml_engine(ast_drop)
             logger.info(msg)
             raise ExecutorException(msg)

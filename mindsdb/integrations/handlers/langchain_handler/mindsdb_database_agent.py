@@ -2,7 +2,7 @@
     Wrapper around MindsDB's executor and integration controller following the implementation of the original
     langchain.sql_database.SQLDatabase class to partly replicate its behavior.
 """
-from typing import Iterable, List, Optional
+from typing import Any, Iterable, List, Optional
 
 from langchain.sql_database import SQLDatabase
 
@@ -18,7 +18,7 @@ class MindsDBSQL(SQLDatabase):
         self,
         engine=None,
         database: Optional[str] = 'mindsdb',
-        metadata: Optional = None,
+        metadata: Optional[Any] = None,
         ignore_tables: Optional[List[str]] = None,
         include_tables: Optional[List[str]] = None,
         sample_rows_in_table_info: int = 3,

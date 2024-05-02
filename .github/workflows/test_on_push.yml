@@ -2,7 +2,7 @@ name: Test on Push
 
 on:
   pull_request:
-    branches: [stable, staging]
+    branches: [main]
     
 defaults:
   run:
@@ -108,9 +108,10 @@ jobs:
       run: |
         pip install .
         pip install -r requirements/requirements-test.txt
-        pip install .[lightwood]  # TODO: for now some tests rely on lightwood
-        pip install .[mssql]
-        pip install .[snowflake]
+        pip install lightwood  # TODO: for now some tests rely on lightwood
+        pip install mindsdb[mssql]
+        pip install mindsdb[clickhouse]
+        pip install mindsdb[snowflake]
         pip freeze
     - name: Run unit tests
       run: |
@@ -125,7 +126,7 @@ jobs:
         fi
     - name: Run Handlers tests and submit Coverage to coveralls
       run: |
-        handlers=("mysql" "postgres" "mssql" "snowflake")
+        handlers=("mysql" "postgres" "mssql" "clickhouse" "snowflake")
         for handler in "${handlers[@]}"
         do
           pytest --cov=mindsdb/integrations/handlers/${handler}_handler tests/unit/handlers/test_${handler}.py 

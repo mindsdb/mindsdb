@@ -3,10 +3,8 @@ title: Connect
 sidebarTitle: Connect
 ---
 
-You can connect to your local MindsDB server, MindsDB Cloud server, or MindsDB Pro server.
+This documentation describes how you can connect to your MindsDB server from Python code.
 
-<Tabs>
-<Tab title="Local MindsDB">
 Here is how to connect to your local MindsDB server:
 
 ```
@@ -18,27 +16,3 @@ server = mindsdb_sdk.connect()
 # connects to the specified host and port
 server = mindsdb_sdk.connect('http://127.0.0.1:47334')
 ```
-</Tab>
-<Tab title="MindsDB Cloud">
-Here is how to connect to the MindsDB Cloud server:
-
-```
-import mindsdb_sdk
-
-# option 1
-server = mindsdb_sdk.connect(login='a@b.com', password='-')
-
-# option 2
-server = mindsdb_sdk.connect('https://cloud.mindsdb.com', login='a@b.com', password='-')
-```
-</Tab>
-<Tab title="MindsDB Pro">
-Here is how to connect to the MindsDB Pro server:
-
-```
-import mindsdb_sdk
-
-server = mindsdb_sdk.connect('http://<YOUR_INSTANCE_IP>', login='a@b.com', password='-', is_managed=True)
-```
-</Tab>
-</Tabs>

@@ -124,21 +124,6 @@ class Json(types.TypeDecorator):
         return json.loads(value) if value is not None else None
 
 
-class Semaphor(Base):
-    __tablename__ = "semaphor"
-
-    id = Column(Integer, primary_key=True)
-    updated_at = Column(
-        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
-    )
-    created_at = Column(DateTime, default=datetime.datetime.now)
-    entity_type = Column("entity_type", String)
-    entity_id = Column("entity_id", Integer)
-    action = Column(String)
-    company_id = Column(Integer)
-    __table_args__ = (UniqueConstraint("entity_type", "entity_id", name="uniq_const"),)
-
-
 class PREDICTOR_STATUS:
     __slots__ = ()
     COMPLETE = "complete"

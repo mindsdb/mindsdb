@@ -237,11 +237,7 @@ class TestCompanyIndependent(HTTPHelperMixin):
             tables = self.get_tables_in('mindsdb', cid)
             self.assert_list(
                 tables, {
-                    'jobs',
                     'models',
-                    'models_versions',
-                    'mdb_triggers',
-                    'chatbots',
                 }
             )
         # endregion
@@ -299,11 +295,7 @@ class TestCompanyIndependent(HTTPHelperMixin):
             tables = self.get_tables_in('mindsdb', cid)
             self.assert_list(
                 tables, {
-                    'jobs',
                     'models',
-                    'models_versions',
-                    'mdb_triggers',
-                    'chatbots',
                     f'test_view_{char}'
                 }
             )
@@ -325,11 +317,7 @@ class TestCompanyIndependent(HTTPHelperMixin):
             tables = self.get_tables_in('mindsdb', cid)
             self.assert_list(
                 tables, {
-                    'jobs',
                     'models',
-                    'models_versions',
-                    'mdb_triggers',
-                    'chatbots',
                 }
             )
 
@@ -401,20 +389,12 @@ class TestCompanyIndependent(HTTPHelperMixin):
 
         collections = client_a.mindsdb.list_collection_names()
         self.assert_list(collections, {
-            'jobs',
             'models',
-            'models_versions',
-            'mdb_triggers',
-            'chatbots',
             'test_mon_p_a',
             'model_a'
         })
         collections = client_b.mindsdb.list_collection_names()
         self.assert_list(collections, {
-            'jobs',
             'models',
-            'models_versions',
-            'mdb_triggers',
-            'chatbots',
             'model_b'
         })

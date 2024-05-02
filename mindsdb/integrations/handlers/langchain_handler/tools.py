@@ -17,8 +17,16 @@ from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 from langchain.chains import ReduceDocumentsChain, MapReduceDocumentsChain
 
 from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
-from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel
+from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel, VectorStoreType, DEFAULT_COLLECTION_NAME
 from mindsdb.interfaces.skills.skill_tool import skill_tool, SkillType
+from mindsdb.interfaces.storage import db
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
+from mindsdb.interfaces.storage.db import KnowledgeBase
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 # Individual tools
 # Note: all tools are defined in a closure to pass required args (apart from LLM input) through it, as custom tools don't allow custom field assignment.  # noqa
@@ -104,20 +112,21 @@ def _setup_standard_tools(tools, llm, model_kwargs):
 
     all_standard_tools = []
     langchain_tools = []
-    mdb_tool = Tool(
-        name="MindsDB",
-        func=get_exec_call_tool(llm, executor, model_kwargs),
-        description="useful to read from databases or tables connected to the mindsdb machine learning package. the action must be a valid simple SQL query, always ending with a semicolon. For example, you can do `show databases;` to list the available data sources, and `show tables;` to list the available tables within each data source."  # noqa
-    )
-
-    mdb_meta_tool = Tool(
-        name="MDB-Metadata",
-        func=get_exec_metadata_tool(llm, executor, model_kwargs),
-        description="useful to get column names from a mindsdb table or metadata from a mindsdb data source. the command should be either 1) a data source name, to list all available tables that it exposes, or 2) a string with the format `data_source_name.table_name` (for example, `files.my_table`), to get the table name, table type, column names, data types per column, and amount of rows of the specified table."  # noqa
-    )
-    all_standard_tools.append(mdb_tool)
-    all_standard_tools.append(mdb_meta_tool)
     for tool in tools:
+        if tool == 'mindsdb_read':
+            mdb_tool = Tool(
+                name="MindsDB",
+                func=get_exec_call_tool(llm, executor, model_kwargs),
+                description="useful to read from databases or tables connected to the mindsdb machine learning package. the action must be a valid simple SQL query, always ending with a semicolon. For example, you can do `show databases;` to list the available data sources, and `show tables;` to list the available tables within each data source."  # noqa
+            )
+
+            mdb_meta_tool = Tool(
+                name="MDB-Metadata",
+                func=get_exec_metadata_tool(llm, executor, model_kwargs),
+                description="useful to get column names from a mindsdb table or metadata from a mindsdb data source. the command should be either 1) a data source name, to list all available tables that it exposes, or 2) a string with the format `data_source_name.table_name` (for example, `files.my_table`), to get the table name, table type, column names, data types per column, and amount of rows of the specified table."  # noqa
+            )
+            all_standard_tools.append(mdb_tool)
+            all_standard_tools.append(mdb_meta_tool)
         if tool == 'mindsdb_write':
             mdb_write_tool = Tool(
                 name="MDB-Write",
@@ -142,8 +151,9 @@ def _setup_standard_tools(tools, llm, model_kwargs):
             langchain_tools.append(tool)
         else:
             raise ValueError(f"Unsupported tool: {tool}")
-    
-    all_standard_tools += load_tools(langchain_tools)
+
+    if langchain_tools:
+        all_standard_tools += load_tools(langchain_tools)
     return all_standard_tools
 
 
@@ -157,7 +167,62 @@ def _get_rag_params(pred_args: Dict) -> Dict:
     return rag_params
 
 
-def _build_retrieval_tool(tool: dict, pred_args: dict):
+def _create_conn_string(connection_args: dict) -> str:
+    """
+    Creates a PostgreSQL connection string from connection args.
+    """
+    user = connection_args.get('user')
+    host = connection_args.get('host')
+    port = connection_args.get('port')
+    password = connection_args.get('password')
+    dbname = connection_args.get('database')
+
+    if password:
+        return f"postgresql://{user}:{password}@{host}:{port}/{dbname}"
+    else:
+        return f"postgresql://{user}@{host}:{port}/{dbname}"
+
+
+def _get_knowledge_base(knowledge_base_name: str, project_id, executor) -> db.KnowledgeBase:
+
+    kb = executor.session.kb_controller.get(knowledge_base_name, project_id)
+
+    return kb
+
+
+def _build_vector_store_config_from_knowledge_base(rag_params: Dict, knowledge_base: KnowledgeBase, executor) -> Dict:
+    """
+    build vector store config from knowledge base
+    """
+
+    vector_store_config = rag_params['vector_store_config'].copy()
+
+    vector_store_type = knowledge_base.vector_database.engine
+    vector_store_config['vector_store_type'] = vector_store_type
+
+    if vector_store_type == VectorStoreType.CHROMA.value:
+        # For chromadb used, we get persist_directory
+        vector_store_folder_name = knowledge_base.vector_database.data['persist_directory']
+        integration_handler = executor.session.integration_controller.get_data_handler(
+            knowledge_base.vector_database.name
+        )
+        persist_dir = integration_handler.handler_storage.folder_get(vector_store_folder_name)
+        vector_store_config['persist_directory'] = persist_dir
+
+    elif vector_store_type == VectorStoreType.PGVECTOR.value:
+        # For pgvector, we get connection string
+        #todo requires further testing
+        connection_params = knowledge_base.vector_database.data
+        vector_store_config['connection_string'] = _create_conn_string(connection_params)
+
+    else:
+        raise ValueError(f"Invalid vector store type: {vector_store_type}. "
+                         f"Only {[v.name for v in VectorStoreType]} are currently supported.")
+
+    return vector_store_config
+
+
+def _build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
     """
     Builds a retrieval tool i.e RAG
     """
@@ -165,18 +230,45 @@ def _build_retrieval_tool(tool: dict, pred_args: dict):
 
     tools_config = tool['config']
 
-    mindsdb_path = pred_args['mindsdb_path']
-
     # we update the config with the pred_args to allow for custom config
     tools_config.update(pred_args)
 
     rag_params = _get_rag_params(tools_config)
 
     if 'vector_store_config' not in rag_params:
+        rag_params['vector_store_config'] = {}
+        logger.warning(f'No collection_name specified for the retrieval tool, '
+                       f"using default collection_name: '{DEFAULT_COLLECTION_NAME}'"
+                       f'\nWarning: If this collection does not exist, no data will be retrieved')
 
-        rag_params['vector_store_config'] = {'persist_directory': mindsdb_path('persisted_chroma')}
+    if 'source' in tool:
+        kb_name = tool['source']
+        executor = skill_tool.get_command_executor()
+        kb = _get_knowledge_base(kb_name, skill.project_id, executor)
 
-    rag_config = RAGPipelineModel(**rag_params)
+        if not kb:
+            raise ValueError(f"Knowledge base not found: {kb_name}")
+
+        rag_params['vector_store_config'] = _build_vector_store_config_from_knowledge_base(rag_params, kb, executor)
+
+    # Can run into weird validation errors when unpacking rag_params directly into constructor.
+    rag_config = RAGPipelineModel(
+        embeddings_model=rag_params['embeddings_model']
+    )
+    if 'documents' in rag_params:
+        rag_config.documents = rag_params['documents']
+    if 'vector_store_config' in rag_params:
+        rag_config.vector_store_config = rag_params['vector_store_config']
+    if 'db_connection_string' in rag_params:
+        rag_config.db_connection_string = rag_params['db_connection_string']
+    if 'table_name' in rag_params:
+        rag_config.table_name = rag_params['table_name']
+    if 'llm' in rag_params:
+        rag_config.llm = rag_params['llm']
+    if 'rag_prompt_template' in rag_params:
+        rag_config.rag_prompt_template = rag_params['rag_prompt_template']
+    if 'retriever_prompt_template' in rag_params:
+        rag_config.retriever_prompt_template = rag_params['retriever_prompt_template']
 
     # build retriever
     rag_pipeline = RAG(rag_config)
@@ -188,20 +280,26 @@ def _build_retrieval_tool(tool: dict, pred_args: dict):
         description=tool['description']
     )
 
-def langchain_tool_from_skill(skill, pred_args):
+
+def langchain_tools_from_skill(skill, pred_args, llm):
     # Makes Langchain compatible tools from a skill
-    tool = skill_tool.get_tool_from_skill(skill)
+    tools = skill_tool.get_tools_from_skill(skill, llm)
 
-    if tool['type'] == SkillType.RETRIEVAL.value:
-
-        return _build_retrieval_tool(tool, pred_args)
-
-    return Tool(
-        name=tool['name'],
-        func=tool['func'],
-        description=tool['description'],
-        return_direct=True
-    )
+    all_tools = []
+    for tool in tools:
+        if skill.type == SkillType.RETRIEVAL.value:
+            all_tools.append(_build_retrieval_tool(tool, pred_args, skill))
+            continue
+        if isinstance(tool, dict):
+            all_tools.append(Tool(
+                name=tool['name'],
+                func=tool['func'],
+                description=tool['description'],
+                return_direct=True
+            ))
+            continue
+        all_tools.append(tool)
+    return all_tools
 
 def get_skills(pred_args):
     return pred_args.get('skills', [])
@@ -224,7 +322,7 @@ def setup_tools(llm, model_kwargs, pred_args, default_agent_tools):
     tools = []
     skills = get_skills(pred_args)
     for skill in skills:
-        tools.append(langchain_tool_from_skill(skill, pred_args))
+        tools += langchain_tools_from_skill(skill, pred_args, llm)
 
     if len(tools) == 0:
         tools = _setup_standard_tools(standard_tools, llm, model_kwargs)

@@ -1,136 +1,96 @@
-# Microsoft SQL Server Handler
+---
+title: Microsoft SQL Server
+sidebarTitle: Microsoft SQL Server
+---
 
-This is the implementation of the Microsoft SQL Server data handler for MindsDB.
+This documentation describes the integration of MindsDB with Microsoft SQL Server, a relational database management system developed by Microsoft.
+The integration allows for advanced SQL functionalities, extending Microsoft SQL Server's capabilities with MindsDB's features.
 
-## Microsoft SQL Server
+## Prerequisites
 
-[Microsoft SQL Server](https://www.microsoft.com/en-us/sql-server) is a relational database management system developed by Microsoft. As a database server, it stores and retrieves data as requested by other software applications, which may run either on the same computer or on another computer across a network.
+Before proceeding, ensure the following prerequisites are met:
 
-## Implementation
+1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+2. To connect Microsoft SQL Server to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
 
-This handler is implemented using `pymssql`, the Python language extension module that provides access to Microsoft SQL Server from Python scripts.
+## Connection
 
-The required arguments to establish a connection are as follows:
-
-* `host` is the host name or IP address.
-* `port` is the port used to make TCP/IP connection.
-* `database` is the database name.
-* `user` is the database user.
-* `password` is the database password.
-
-
-## Installation
-
-To install this handler, run `pip install mindsdb[mssql]`. Or if you are dealing with the git repository, `pip install .[mssql]`.
-
-### Install on Apple Silicon
-
-Installation on Apple Silicon is more complicated and requires libraries for building the `pymssql` library. For Apple Silicon we'd recommend using one of our [docker containers](https://hub.docker.com/r/mindsdb/mindsdb). If you want to install via pip anyway, the following instructions may help:
-```
-brew install freetds openssl
-echo 'export LDFLAGS="-L/opt/homebrew/opt/freetds/lib -L/opt/homebrew/opt/openssl@3/lib"' >> ~/.zshrc
-echo 'export CFLAGS="-I/opt/homebrew/opt/freetds/include"' >> ~/.zshrc
-echo 'export CPPFLAGS="-I/opt/homebrew/opt/openssl@3/include"' >> ~/.zshrc
-source ~/.zshrc
-``` 
-
-We are going to first install Microsoft SQL Server locally using docker, please follow along:
-```
-sudo docker pull mcr.microsoft.com/mssql/server:2022-latest
-```
-
-With this, we will get the Microsoft SQL Server docker image. Now, to run this docker image, we will use:
-
-```
-sudo docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=admin5678@" \
-   -p 1433:1433 --name test --hostname mssql \
-   -d \
-   mcr.microsoft.com/mssql/server:2022-latest
-```
-
-Here we have given following values:
-- `password`: 'admin5678@'
-- `port`: '1433'
-- `username`: 'test'
-- `hostname`: 'mssql'
-
-We have our Microsoft SQL Server running, now open your terminal and give following commands:
-
-```
-sudo docker exec -it test "bash"
-```
-
-This command will let us get in the running container, from there we will login with our credentials and create DB Tables.
-
-We can login by passing the Server, Username, and Password:
-```
-/opt/mssql-tools/bin/sqlcmd -S mssql -U SA
-```
-
-It will then prompt for the password which you have created. If successful, you should get to a sqlcmd command prompt: 1>.
-
-We have successfully created the local running database server.
-
-Let's create a database and a table with few columns.
-```sql
-CREATE DATABASE TestDB
-```
+Establish a connection to your Microsoft SQL Server database from MindsDB by executing the following SQL command:
 
 ```sql
-USE TestDB;
+CREATE DATABASE mssql_datasource 
+WITH ENGINE = 'mssql', 
+PARAMETERS = {
+    "host": "127.0.0.1",
+    "port": 1433,
+    "user": "sa",
+    "password": "password",
+    "database": "master"
+};
 ```
 
-You won't see any output after writing these queries. Because, they don't run immediately. If you want to execute these, write `GO` in the next line to execute all the previous commands.
+Required connection parameters include the following:
 
-```sql
-CREATE TABLE Inventory (id INT, name NVARCHAR(50), quantity INT);
-```
+* `user`: The username for the Microsoft SQL Server.
+* `password`: The password for the Microsoft SQL Server.
+* `host` The hostname, IP address, or URL of the Microsoft SQL Server.
+* `database` The name of the Microsoft SQL Server database to connect to.
 
-```sql
-INSERT INTO Inventory VALUES (1, 'banana', 150); 
-INSERT INTO Inventory VALUES (2, 'orange', 154);
-```
+Optional connection parameters include the following:
 
-```sql
-SELECT * FROM Inventory;
-```
-
-```sql
-GO
-```
+* `port`: The port number for connecting to the Microsoft SQL Server. Default is 1433.
+* `server`: The server name to connect to. Typically only used with named instances or Azure SQL Database.
 
 ## Usage
 
-In order to make use of this handler with SQL Server running locally with MindsDB, we have to use `ngrok tunneling`, please follow this [guide](https://docs.mindsdb.com/sql/create/database#making-your-local-database-available-to-mindsdb) to achieve that:
-
-In our case we will write:
-```
-ngrok tcp 1433
-```
-
-Suppose the forwarding ports are:
-```
-tcp://0.tcp.ngrok.io:10985 -> localhost:1433
-```
-
-So, we can use this to create DATABASE using MindsDB
-
-```sql
-CREATE DATABASE mssql_datasource
-WITH
-    engine = 'mssql',
-    parameters = {
-      "host": "0.tcp.ngrok.io",
-      "port": 10985,
-      "database": "TestDB",
-      "user": "SA",
-      "password": "admin5678@"
-    };
-```
-
-You can use this established connection to query your table as follows:
+Retrieve data from a specified table by providing the integration name, schema, and table name:
 
 ```sql
 SELECT *
-FROM mssql_datasource.Inventory;
+FROM mssql_datasource.schema_name.table_name
+LIMIT 10;
 ```
+
+Run T-SQL queries directly on the connected Microsoft SQL Server database:
+
+```sql
+SELECT * FROM mssql_datasource (
+
+    --Native Query Goes Here
+    SELECT 
+      SUM(orderqty) total
+    FROM Product p JOIN SalesOrderDetail sd ON p.productid = sd.productid
+    JOIN SalesOrderHeader sh ON sd.salesorderid = sh.salesorderid
+    JOIN Customer c ON sh.customerid = c.customerid
+    WHERE (Name = 'Racing Socks, L') AND (companyname = 'Riding Cycles');
+
+);
+```
+
+<Note>
+The above examples utilize `mssql_datasource` as the datasource name, which is defined in the `CREATE DATABASE` command.
+</Note>
+
+## Troubleshooting Guide
+
+<Warning>
+`Database Connection Error`
+
+* **Symptoms**: Failure to connect MindsDB with the Microsoft SQL Server database.
+* **Checklist**:
+    1. Make sure the Microsoft SQL Server is active.
+    2. Confirm that host, port, user, and password are correct. Try a direct Microsoft SQL Server connection using a client like SQL Server Management Studio or DBeaver.
+    3. Ensure a stable network between MindsDB and Microsoft SQL Server.
+</Warning>
+
+<Warning>
+`SQL statement cannot be parsed by mindsdb_sql`
+
+* **Symptoms**: SQL queries failing or not recognizing table names containing spaces or special characters.
+* **Checklist**:
+    1. Ensure table names with spaces or special characters are enclosed in backticks.
+    2. Examples:
+        * Incorrect: SELECT * FROM integration.travel data
+        * Incorrect: SELECT * FROM integration.'travel data'
+        * Correct: SELECT * FROM integration.\`travel data\`
+</Warning>

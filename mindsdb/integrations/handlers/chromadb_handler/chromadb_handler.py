@@ -103,13 +103,16 @@ class ChromaDBHandler(VectorStoreHandler):
                 port=client_config["chroma_server_http_port"],
             )
 
+    def _sync(self):
+        # if handler storage is used: sync on every change write operation
+        if self.persist_directory:
+            self.handler_storage.folder_sync(self.persist_directory)
+
     def __del__(self):
         """Close the database connection."""
 
         if self.is_connected is True:
-            if self.persist_directory:
-                # sync folder to handler storage
-                self.handler_storage.folder_sync(self.persist_directory)
+            self._sync()
 
             self.disconnect()
 
@@ -341,6 +344,7 @@ class ChromaDBHandler(VectorStoreHandler):
             embeddings=data[TableField.EMBEDDINGS.value],
             metadatas=data.get(TableField.METADATA.value),
         )
+        self._sync()
 
     def upsert(self, table_name: str, data: pd.DataFrame):
         return self.insert(table_name, data)
@@ -368,6 +372,7 @@ class ChromaDBHandler(VectorStoreHandler):
             embeddings=data[TableField.EMBEDDINGS.value],
             metadatas=data.get(TableField.METADATA.value),
         )
+        self._sync()
 
     def delete(
         self, table_name: str, conditions: List[FilterCondition] = None
@@ -384,12 +389,14 @@ class ChromaDBHandler(VectorStoreHandler):
             raise Exception("Delete query must have at least one condition!")
         collection = self._client.get_collection(table_name)
         collection.delete(ids=id_filters, where=filters)
+        self._sync()
 
     def create_table(self, table_name: str, if_not_exists=True):
         """
         Create a collection with the given name in the ChromaDB database.
         """
         self._client.create_collection(table_name, get_or_create=if_not_exists)
+        self._sync()
 
     def drop_table(self, table_name: str, if_exists=True):
         """
@@ -397,6 +404,7 @@ class ChromaDBHandler(VectorStoreHandler):
         """
         try:
             self._client.delete_collection(table_name)
+            self._sync()
         except ValueError:
             if if_exists:
                 return

@@ -3,6 +3,7 @@ from urllib.parse import quote
 
 import pandas as pd
 from sqlalchemy import create_engine
+from sqlalchemy.exc import SQLAlchemyError
 from clickhouse_sqlalchemy.drivers.base import ClickHouseDialect
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
@@ -17,6 +18,7 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
 logger = log.getLogger(__name__)
+
 
 class ClickHouseHandler(DatabaseHandler):
     """
@@ -33,17 +35,21 @@ class ClickHouseHandler(DatabaseHandler):
         self.is_connected = False
         self.protocol = connection_data.get('protocol', 'native')
 
-        
-
     def __del__(self):
         if self.is_connected is True:
             self.disconnect()
 
     def connect(self):
         """
-        Handles the connection to a ClickHouse
+        Establishes a connection to a ClickHouse server using SQLAlchemy.
+
+        Raises:
+            SQLAlchemyError: If an error occurs while connecting to the database.
+
+        Returns:
+            Connection: A SQLAlchemy Connection object to the ClickHouse database.
         """
-        if self.is_connected is True:
+        if self.is_connected:
             return self.connection
 
         protocol = "clickhouse+native" if self.protocol == 'native' else "clickhouse+http"
@@ -53,22 +59,30 @@ class ClickHouseHandler(DatabaseHandler):
         password = quote(self.connection_data['password'])
         database = quote(self.connection_data['database'])
         url = f'{protocol}://{user}:{password}@{host}:{port}/{database}'
+        # This is not redundunt. Check https://clickhouse-sqlalchemy.readthedocs.io/en/latest/connection.html#http
         if self.protocol == 'https':
             url = url + "?protocol=https"
+        try:
+            engine = create_engine(url)
+            connection = engine.raw_connection()
+            self.is_connected = True
+            self.connection = connection
+        except SQLAlchemyError as e:
+            logger.error(f'Error connecting to ClickHouse {self.connection_data["database"]}, {e}!')
+            self.is_connected = False
+            raise
 
-        engine = create_engine(url)
-        connection = engine.raw_connection()
-        self.is_connected = True
-        self.connection = connection
         return self.connection
 
     def check_connection(self) -> StatusResponse:
         """
-        Check the connection of the ClickHouse database
-        :return: success status and error message if error occurs
+        Checks the status of the connection to the ClickHouse.
+
+        Returns:
+            StatusResponse: An object containing the success status and an error message if an error occurs.
         """
         response = StatusResponse(False)
-        need_to_close = self.is_connected is False
+        need_to_close = not self.is_connected
 
         try:
             connection = self.connect()
@@ -78,24 +92,26 @@ class ClickHouseHandler(DatabaseHandler):
             finally:
                 cur.close()
             response.success = True
-        except Exception as e:
+        except SQLAlchemyError as e:
             logger.error(f'Error connecting to ClickHouse {self.connection_data["database"]}, {e}!')
-            response.error_message = e
+            response.error_message = str(e)
+            self.is_connected = False
 
         if response.success is True and need_to_close:
             self.disconnect()
-        if response.success is False and self.is_connected is True:
-            self.is_connected = False
 
         return response
 
     def native_query(self, query: str) -> Response:
         """
-        Receive SQL query and runs it
-        :param query: The SQL query to run in ClickHouse
-        :return: returns the records from the current recordset
+        Executes a SQL query and returns the result.
+
+        Args:
+            query (str): The SQL query to be executed.
+
+        Returns:
+            Response: A response object containing the result of the query or an error message.
         """
-        need_to_close = self.is_connected is False
 
         connection = self.connect()
         cur = connection.cursor()
@@ -113,7 +129,7 @@ class ClickHouseHandler(DatabaseHandler):
             else:
                 response = Response(RESPONSE_TYPE.OK)
             connection.commit()
-        except Exception as e:
+        except SQLAlchemyError as e:
             logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
@@ -122,9 +138,6 @@ class ClickHouseHandler(DatabaseHandler):
             connection.rollback()
         finally:
             cur.close()
-
-        if need_to_close is True:
-            self.disconnect()
 
         return response
 
@@ -190,12 +203,11 @@ connection_args = OrderedDict(
         'description': 'The password to authenticate the user with the ClickHouse server.',
         'required': True,
         'label': 'Password'
-    },
-    
+    }
 )
 
 connection_args_example = OrderedDict(
-    protocol='clickhouse',
+    protocol='native',
     host='127.0.0.1',
     port=9000,
     user='root',

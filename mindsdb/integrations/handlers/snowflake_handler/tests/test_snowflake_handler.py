@@ -140,7 +140,6 @@ class TestSnowflakeHandlerTables:
     def test_create_table(self, snowflake_handler):
         """
         Tests a table creation query to ensure it creates a table in the Snowflake account.
-        
         """
 
         query = f"""

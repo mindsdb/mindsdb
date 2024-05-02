@@ -18,6 +18,7 @@ from mindsdb.integrations.handlers.langchain_handler.constants import (
     DEFAULT_AGENT_TIMEOUT_SECONDS,
     DEFAULT_AGENT_TOOLS,
     DEFAULT_AGENT_TYPE,
+    DEFAULT_EMBEDDINGS_MODEL_PROVIDER,
     DEFAULT_MAX_ITERATIONS,
     DEFAULT_MAX_TOKENS,
     DEFAULT_MODEL_NAME,
@@ -37,6 +38,8 @@ from mindsdb.interfaces.storage.model_fs import HandlerStorage, ModelStorage
 from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
 from mindsdb.utilities import log
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
+
+from .mindsdb_chat_model import ChatMindsdb
 
 _PARSING_ERROR_PREFIX = 'An output parsing error occured'
 
@@ -138,6 +141,8 @@ class LangChainHandler(BaseMLEngine):
             return ChatLiteLLM(**model_kwargs)
         if args['provider'] == 'ollama':
             return ChatOllama(**model_kwargs)
+        if args['provider'] == 'mindsdb':
+            return ChatMindsdb(**model_kwargs)
         raise ValueError(f'Unknown provider: {args["provider"]}')
 
     def _create_embeddings_model(self, args: Dict):
@@ -215,15 +220,12 @@ class LangChainHandler(BaseMLEngine):
 
             embeddings_args = args.pop('embedding_model_args', {})
 
-            # no embedding model args provided, use same provider as llm
+            # no embedding model args provided, use default provider.
             if not embeddings_args:
                 logger.warning("'embedding_model_args' not found in input params, "
-                               "Trying to use the same provider used for llm. "
-                               f"provider: {args['provider']}"
+                               f"Trying to use default provider: {DEFAULT_EMBEDDINGS_MODEL_PROVIDER}"
                                )
-
-                # get args for embeddings model
-                embeddings_args['class'] = args['provider']
+                embeddings_args['class'] = DEFAULT_EMBEDDINGS_MODEL_PROVIDER
 
             # create embeddings model
             pred_args['embeddings_model'] = self._create_embeddings_model(embeddings_args)

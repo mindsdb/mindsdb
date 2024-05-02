@@ -20,15 +20,22 @@ class DummyHandler(BaseMLEngine):
         df['predictor_id'] = self.model_storage.predictor_id
         df['row_id'] = self.model_storage.predictor_id * 100 + df.reset_index().index
 
+        output_columns = ['predicted', 'predictor_id', 'row_id', 'engine_args']
+
         if 'engine_args' in df.columns:
             # could exist from previous model
             df = df.drop('engine_args', axis=1)
             print(1)
         args = self.engine_storage.json_get('engine_args')
 
+        # check input
+        if 'input' in df.columns:
+            df['output'] = df['input']
+            output_columns.append('output')
+
         df.insert(len(df.columns), 'engine_args', [args] * len(df))
 
-        return df[['predicted', 'predictor_id', 'row_id', 'engine_args']]
+        return df[output_columns]
 
     def _get_model_verison(self):
         return self.model_storage._get_model_record(

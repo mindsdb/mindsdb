@@ -61,7 +61,7 @@ class MySQLHandler(DatabaseHandler):
         Returns:
             MySQLConnection: An active connection to the database.
         """
-        if self.is_connected:
+        if self.is_connected and self.connection.is_connected():
             return self.connection
         config = self._unpack_config()
         if 'conn_attrs' in self.connection_data:
@@ -112,8 +112,8 @@ class MySQLHandler(DatabaseHandler):
         need_to_close = not self.is_connected
 
         try:
-            with self.connect() as connection:
-                result.success = connection.is_connected()
+            connection = self.connect()
+            result.success = connection.is_connected()
         except mysql.connector.Error as e:
             logger.error(f'Error connecting to MySQL {self.connection_data["database"]}, {e}!')
             result.error_message = str(e)
@@ -138,20 +138,20 @@ class MySQLHandler(DatabaseHandler):
 
         need_to_close = not self.is_connected
         try:
-            with self.connect() as connection:
-                with connection.cursor(dictionary=True, buffered=True) as cur:
-                    cur.execute(query)
-                    if cur.with_rows:
-                        result = cur.fetchall()
-                        response = Response(
-                            RESPONSE_TYPE.TABLE,
-                            pd.DataFrame(
-                                result,
-                                columns=[x[0] for x in cur.description]
-                            )
+            connection = self.connect()
+            with connection.cursor(dictionary=True, buffered=True) as cur:
+                cur.execute(query)
+                if cur.with_rows:
+                    result = cur.fetchall()
+                    response = Response(
+                        RESPONSE_TYPE.TABLE,
+                        pd.DataFrame(
+                            result,
+                            columns=[x[0] for x in cur.description]
                         )
-                    else:
-                        response = Response(RESPONSE_TYPE.OK)
+                    )
+                else:
+                    response = Response(RESPONSE_TYPE.OK)
         except mysql.connector.Error as e:
             logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
             response = Response(

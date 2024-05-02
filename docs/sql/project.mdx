@@ -14,12 +14,10 @@ You can create projects to store your models, making the structure like this:
 ```
 project_alpha
 ├─ models
-├─ models_versions
 ├─ model_a
 ├─ model_b
 project_beta
 ├─ models
-├─ models_versions
 ├─ model_c
 ```
 
@@ -193,79 +191,6 @@ On execution, we get:
 Query OK, 0 rows affected (x.xxx sec)
 ```
 
-## Working with `MODELS_VERSION`
-
-There is a `models_versions` table for each project that stores all the versions of your models.
-
-Here is how to query for all model versions from all the projects:
-
-```sql
-SELECT * 
-FROM information_schema.models_versions;
-```
-
-On execution, we get:
-
-```sql
-+-------+-------------+------+-------+--------+--------+-------+-------------+---------------+------+------------------------+--------------------+
-|NAME   |PROJECT      |ACTIVE|VERSION|STATUS  |ACCURACY|PREDICT|UPDATE_STATUS|MINDSDB_VERSION|ERROR |SELECT_DATA_QUERY       |TRAINING_OPTIONS    |
-+-------+-------------+------+-------+--------+--------+-------+-------------+---------------+------+------------------------+--------------------+
-|model_a|project_alpha|true  |1      |complete|0.999   |target |up_to_date   |22.10.2.1      |[NULL]|SELECT * FROM table_name|{'target': 'target'}|
-|model_b|project_alpha|true  |1      |complete|0.999   |target |up_to_date   |22.10.2.1      |[NULL]|SELECT * FROM table_name|{'target': 'target'}|
-|model_c|project_beta |true  |1      |complete|0.999   |target |up_to_date   |22.10.2.1      |[NULL]|SELECT * FROM table_name|{'target': 'target'}|
-+-------+-------------+------+-------+--------+--------+-------+-------------+---------------+------+------------------------+--------------------+
-```
-
-<Note>
-   **Example**
-
-    If there is more training data available, you don't need to recreate your model. Instead, use the `RETRAIN` command.
-
-    ```sql
-    RETRAIN project_alpha.model_b;
-    ```
-
-    After the retraining process completes, here is what you get:
-
-    ```sql
-    SELECT * 
-    FROM information_schema.models_versions;
-    ```
-
-    On execution, we get:
-
-    ```sql
-    +-------+-------------+------+-------+--------+--------+-------+-------------+---------------+------+------------------------+--------------------+
-    |NAME   |PROJECT      |ACTIVE|VERSION|STATUS  |ACCURACY|PREDICT|UPDATE_STATUS|MINDSDB_VERSION|ERROR |SELECT_DATA_QUERY       |TRAINING_OPTIONS    |
-    +-------+-------------+------+-------+--------+--------+-------+-------------+---------------+------+------------------------+--------------------+
-    |model_a|project_alpha|true  |1      |complete|0.999   |target |up_to_date   |22.10.2.1      |[NULL]|SELECT * FROM table_name|{'target': 'target'}|
-    |model_b|project_alpha|false |1      |complete|0.999   |target |up_to_date   |22.10.2.1      |[NULL]|SELECT * FROM table_name|{'target': 'target'}|
-    |model_b|project_alpha|true  |2      |complete|0.999   |target |up_to_date   |22.10.2.1      |[NULL]|SELECT * FROM table_name|{'target': 'target'}|
-    |model_c|project_beta |true  |1      |complete|0.999   |target |up_to_date   |22.10.2.1      |[NULL]|SELECT * FROM table_name|{'target': 'target'}|
-    +-------+-------------+------+-------+--------+--------+-------+-------------+---------------+------+------------------------+--------------------+
-    ```
-
-    Now, the `model_b` model has two records storing its two versions, out of which one is active.
-</Note>
-
-You can also query for model versions of a project using this `SELECT` statement:
-
-```sql
-SELECT * FROM project_alpha.models_versions;
-```
-
-On execution, we get:
-
-```sql
-+-------+-------------+------+-------+--------+--------+-------+-------------+---------------+------+------------------------+--------------------+
-|NAME   |PROJECT      |ACTIVE|VERSION|STATUS  |ACCURACY|PREDICT|UPDATE_STATUS|MINDSDB_VERSION|ERROR |SELECT_DATA_QUERY       |TRAINING_OPTIONS    |
-+-------+-------------+------+-------+--------+--------+-------+-------------+---------------+------+------------------------+--------------------+
-|model_a|project_alpha|true  |1      |complete|0.999   |target |up_to_date   |22.10.2.1      |[NULL]|SELECT * FROM table_name|{'target': 'target'}|
-|model_b|project_alpha|false |1      |complete|0.999   |target |up_to_date   |22.10.2.1      |[NULL]|SELECT * FROM table_name|{'target': 'target'}|
-|model_b|project_alpha|true  |2      |complete|0.999   |target |up_to_date   |22.10.2.1      |[NULL]|SELECT * FROM table_name|{'target': 'target'}|
-+-------+-------------+------+-------+--------+--------+-------+-------------+---------------+------+------------------------+--------------------+
-```
-
 ## Working with `TABLES`
 
 The models that you create with the `CREATE MODEL` command are simple tables within a project. Therefore, you can use the `SHOW [FULL] TABLES` commands to query for them.
@@ -285,11 +210,8 @@ On execution, we get:
 |table_schema  |table_name      |table_type
 +--------------+----------------+------------+
 |mindsdb       |models          |BASE TABLE  |
-|mindsdb       |models_versions |BASE TABLE  |
 |project_alpha |models          |BASE TABLE  |
-|project_alpha |models_versions |BASE TABLE  |
 |project_beta  |models          |BASE TABLE  |
-|project_beta  |models_versions |BASE TABLE  |
 |project_alpha |model_a         |MODEL       |
 |project_alpha |model_b         |MODEL       |
 |project_beta  |model_c         |MODEL       |
@@ -299,7 +221,7 @@ On execution, we get:
 <Note>
    **Default Tables**
 
-    Please note that each project contains these tables by default: `models`, `models_versions`, and `jobs`.
+    Please note that each project contains these tables by default: `models`, and `jobs`.
 </Note>
 
 There are also shortcut commands to query for the tables:
@@ -317,7 +239,6 @@ There are also shortcut commands to query for the tables:
     |Tables_in_mindsdb    |
     +---------------------+
     |models               |
-    |models_versions      |
     +---------------------+
     ```
 
@@ -334,7 +255,6 @@ There are also shortcut commands to query for the tables:
     |Tables_in_mindsdb    |Table_type |
     +---------------------+-----------+
     |models               |BASE TABLE |
-    |models_versions      |BASE TABLE |
     +---------------------+-----------+
     ```
 
@@ -357,7 +277,6 @@ There are also shortcut commands to query for the tables:
     |Tables_in_project_alpha  |
     +-------------------------+
     |models                   |
-    |models_versions          |
     |model_a                  |
     |model_b                  |
     +-------------------------+
@@ -376,7 +295,6 @@ There are also shortcut commands to query for the tables:
     |Tables_in_project_alpha  |Table_type |
     +-------------------------+-----------+
     |models                   |BASE TABLE |
-    |models_versions          |BASE TABLE |
     |model_a                  |MODEL      |
     |model_b                  |MODEL      |
     +-------------------------+-----------+
@@ -444,7 +362,6 @@ On execution, we get:
 |Tables_in_my_project|
 +--------------------+
 |models              |
-|models_versions     |
 |my_model            |
 |my_view             |
 +--------------------+

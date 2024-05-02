@@ -133,6 +133,7 @@ class TestSnowflakeHandlerTables:
         tables = get_table_names(snowflake_handler)
         assert self.table_for_creation not in tables
 
+
 @pytest.mark.usefixtures("snowflake_handler")
 class TestSnowflakeHandlerQuery:
     def test_select_native_query(self, snowflake_handler):

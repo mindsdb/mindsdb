@@ -16,3 +16,4 @@ timegpt
 binance
 twitter
 mindsdb_inference
+web

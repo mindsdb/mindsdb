@@ -794,7 +794,8 @@
                       "sdks/python/refresh_job",
                       "sdks/python/get_history"
                   ]
-              }
+              },
+              "sdks/python/agents"
           ]
         },
         {

@@ -24,3 +24,26 @@ my_job = project.create_job(
     repeat_str = '1 hour'
 )
 ```
+
+Alternatively, you can create a job using this syntax:
+
+```bash
+with project.jobs.create(name='job_name', repeat_min=1) as job:
+      job.add_query(model.retrain())
+      job.add_query(model.predict(database.tables.tbl1))
+      job.add_query(kb.insert(database.tables.tbl1))
+      job.add_query('show models')
+```
+
+Where:
+
+- `name='job_name'` is the job name,
+- `repeat_min=1` indicates periodicity of the job in minutes,
+- `job.add_query(model.retrain())` adds a task to a job to retrain a model,
+- `job.add_query(model.predict(database.tables.tbl1))` adds a task to a job to make predictions,
+- `job.add_query(kb.insert(database.tables.tbl1))` adds a task to a job to insert data into a knowledge base,
+- `job.add_query('show models')` adds a task to a job to run the statement provided as string value.
+
+Note that the `add_query()` method adds tasks to a job and takes either String or Query as an argument.
+
+Note that this method enables a job to manipulate Knowledge Bases, Models, Tables, Views, and Queries, but not Databases, Handlers, Jobs, ML Engines, or Projects.

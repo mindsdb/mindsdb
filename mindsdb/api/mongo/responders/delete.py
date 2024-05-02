@@ -1,6 +1,6 @@
 from mindsdb.api.mongo.classes import Responder
 import mindsdb.api.mongo.functions as helpers
-from mindsdb_sql.parser.ast import Identifier
+from mindsdb_sql.parser.ast import Delete, Identifier, BinaryOperation, Constant
 from mindsdb_sql.parser.dialects.mindsdb import DropPredictor, DropJob, DropMLEngine
 from mindsdb.interfaces.jobs.jobs_controller import JobsController
 
@@ -78,8 +78,22 @@ class Responce(Responder):
                         break
 
         # delete model
-        if table == 'models':
+        if table == 'models' and version is None:
             ast_query = DropPredictor(Identifier(parts=[project_name, obj_name]))
+            run_sql_command(request_env, ast_query)
+
+        # delete model version
+        elif table == 'models':
+            if obj_id is None:
+                raise Exception("Can't find object version")
+
+            version = obj_id & (2**20 - 1)
+
+            ast_query = Delete(table=Identifier(parts=[project_name, 'models_versions']),
+                               where=BinaryOperation(op='and', args=[
+                                   BinaryOperation(op='=', args=[Identifier('name'), Constant(obj_name)]),
+                                   BinaryOperation(op='=', args=[Identifier('version'), Constant(version)])
+                               ]))
             run_sql_command(request_env, ast_query)
 
         elif table == 'jobs':

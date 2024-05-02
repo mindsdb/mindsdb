@@ -11,13 +11,13 @@ The `get_database()` and `create_database()` functions enable you to use the exi
 
 You can use the `get_database()` method to get an existing database:
 
-```bash
+```python
 mysql_demo_db = server.get_database('mysql_demo_db')
 ```
 
 Or, the `create_database()` method to connect a new data source to MindsDB:
 
-```bash
+```python
 mysql_demo_db = server.create_database(
     engine = "mysql",
     name = "mysql_demo_db",

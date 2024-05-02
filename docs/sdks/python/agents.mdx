@@ -21,7 +21,7 @@ Skills provide data resources to an agent, enabling it to answer questions about
 
 Here is how to create and work with skills:
 
-```bash
+```python
 # get a skill by name
 skill = skills.get('my_skill')
 
@@ -43,13 +43,13 @@ skills.delete('my_skill')
 
 To search data efficiently, use the text2sql skills that translate user's input into a query and fetch relevant data from defined datasets.
 
-```bash
+```python
 text_to_sql_skill = skills.create('text_to_sql', 'sql', { 'tables': ['my_table'], 'database': 'my_database' })
 ```
 
 This skill can be assigned to an agent at creation time:
 
-```bash
+```python
 agent = agents.create('my_agent', model_name, [text_to_sql_skill])
 ```
 
@@ -57,7 +57,7 @@ agent = agents.create('my_agent', model_name, [text_to_sql_skill])
 
 To feed an agent with data from different sources, use the knowledge_base skills.
 
-```bash
+```python
 # create a knowledge base
 my_kb = server.knowledge_bases.create('my_kb')
 
@@ -90,7 +90,7 @@ Model enables an agent to form a response based on the available resources.
 
 Here is how to create a model to be used by an agent:
 
-```bash
+```python
 # create a langchain engine
 langchain_engine = con.ml_engines.create('langchain', handler='langchain')
 
@@ -112,7 +112,7 @@ langchain_model = con.models.create(
 
 This model can be assigned to an agent at creation time:
 
-```bash
+```python
 agent = agents.create('my_agent', agent_model, [text_to_sql_skill])
 ```
 
@@ -120,7 +120,7 @@ agent = agents.create('my_agent', agent_model, [text_to_sql_skill])
 
 Here is how to create and work with AI agents:
 
-```bash
+```python
 # get an agent by name
 agent = agents.get('my_agent')
 

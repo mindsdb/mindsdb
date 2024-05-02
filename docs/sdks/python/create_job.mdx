@@ -11,13 +11,13 @@ The `get_job()` and `create_job()` functions let you save either an existing job
 
 Use the `get_job()` method to get an existing job:
 
-```bash
+```python
 my_job = project.get_job('my_job')
 ```
 
 Or, the `create_job()` method to create a job:
 
-```bash
+```python
 my_job = project.create_job(
     'job_name',
     'select * from models',
@@ -27,7 +27,7 @@ my_job = project.create_job(
 
 Alternatively, you can create a job using this syntax:
 
-```bash
+```python
 with project.jobs.create(name='job_name', repeat_min=1) as job:
       job.add_query(model.retrain())
       job.add_query(model.predict(database.tables.tbl1))

@@ -301,11 +301,10 @@ https://docs.mindsdb.com/sql/api/describe/
 
 How to call it from mongo
 ```
-db.sales_model.stats({'scale':'features'})
-db.sales_model.stats({'scale':'model'})
-db.sales_model.stats({'scale':'ensemble'})
+db.runCommand({describe: "sales_model.features"})
+db.runCommand({describe: "sales_model.ensemble"})
+db.runCommand({describe: "sales_model.model"})
 ```
-
 
 ## Delete models 
 ```

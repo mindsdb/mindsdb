@@ -111,6 +111,8 @@ class JobsController:
         """
         Create a new job
 
+        More info: https://docs.mindsdb.com/mindsdb_sql/sql/create/jobs#create-job
+
         :param name: name of the job
         :param project_name: project name
         :param query: sql query for job to execute, it could be several queries seperated by ';'

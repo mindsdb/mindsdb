@@ -19,5 +19,11 @@ Now, you can use this established connection to query your database as follows:
 SELECT * FROM my_table;
 ~~~~
 
+```
+SELECT *
+FROM my_table.daily_chart_table
+WHERE symbol = 'AAPL';
+```
+
 # git push origin Riyana/FinancialHandler
 # cd mindsdb/integrations/handlers/financial_modeling_prep_handler

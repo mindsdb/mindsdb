@@ -48,5 +48,12 @@ class FinancialModelingTradesTable(APITable):
         
         return daily_chart_table
 
+    def get_columns(self):
+        return [
+            'symbol',
+            'from',
+            'to',
+            'close_price'
+        ]
 
     

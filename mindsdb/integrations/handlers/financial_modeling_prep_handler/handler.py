@@ -52,14 +52,18 @@ class FinancialModelingHandler(APIHandler):
             def get_daily_chart(self, params: Dict = None) -> pd.DataFrame:  
                 url = ("https://financialmodelingprep.com/api/v3/historical-price-full/AAPL?apikey=GJvlw9YgVm5J4KIxdP1VPkvWzt747Q6j")
                 base_url = "https://financialmodelingprep.com/api/v3/historical-price-full/"
-                symbol = "AAPL"
-                api_key = "GJvlw9YgVm5J4KIxdP1VPkvWzt747Q6j"
-                params = {
-                    "apikey": api_key,
-                    "from": "2023-10-10",
-                    "to": "2023-12-10",
-                    "serietype": "line"
-                }
+                # symbol = "AAPL"
+                # api_key = "GJvlw9YgVm5J4KIxdP1VPkvWzt747Q6j"
+                # params = {
+                #     "apikey": api_key,
+                #     "from": "2023-10-10",
+                #     "to": "2023-12-10",
+                #     "serietype": "line"
+                # }
+
+                symbol = params['symbol']
+                from_date = params['from']
+                to_date = params['to']
 
                 url = f"{base_url}{symbol}?{urlencode(params)}"
                 print(url)

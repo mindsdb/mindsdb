@@ -1,12 +1,12 @@
-DROP DATABASE IF EXISTS mdb_db_handler_test;
-CREATE DATABASE mdb_db_handler_test;
+DROP DATABASE IF EXISTS MDB_DB_HANDLER_TEST;
+CREATE DATABASE MDB_DB_HANDLER_TEST;
 
-USE mdb_db_handler_test;
-
-
-CREATE TABLE test (col_one INT, col_two INT, col_three FLOAT, col_four VARCHAR(20));
+USE MDB_DB_HANDLER_TEST;
 
 
-INSERT INTO test (col_one, col_two, col_three, col_four) VALUES (1, -1, 0.1, 'A');
-INSERT INTO test (col_one, col_two, col_three, col_four) VALUES (2, -2, 0.2, 'B');
-INSERT INTO test (col_one, col_two, col_three, col_four) VALUES (3, -3, 0.3, 'C');
+CREATE TABLE TEST (COL_ONE INT, COL_TWO INT, COL_THREE FLOAT, COL_FOUR VARCHAR(20));
+
+
+INSERT INTO TEST (COL_ONE, COL_TWO, COL_THREE, COL_FOUR) VALUES (1, -1, 0.1, 'A');
+INSERT INTO TEST (COL_ONE, COL_TWO, COL_THREE, COL_FOUR) VALUES (2, -2, 0.2, 'B');
+INSERT INTO TEST (COL_ONE, COL_TWO, COL_THREE, COL_FOUR) VALUES (3, -3, 0.3, 'C');

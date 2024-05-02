@@ -1,6 +1,6 @@
 from mindsdb.api.mongo.classes import Responder
 import mindsdb.api.mongo.functions as helpers
-from mindsdb_sql.parser.ast import Delete, Identifier, BinaryOperation, Constant
+from mindsdb_sql.parser.ast import Identifier
 from mindsdb_sql.parser.dialects.mindsdb import DropPredictor, DropJob, DropMLEngine
 from mindsdb.interfaces.jobs.jobs_controller import JobsController
 

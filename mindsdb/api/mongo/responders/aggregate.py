@@ -68,9 +68,9 @@ class Responce(Responder):
             data = run_sql_command(request_env, ast_query)
 
         elif '$collStats' in first_step:
-            raise NotImplementedError(
+            raise ValueError(
                 "To describe model use:"
-                " db.runCommand( { collStats: 'model_name', scale: 'describe_type'})"
+                " db.runCommand({describe: 'model_name.attribute'})"
             )
 
         else:

@@ -220,7 +220,7 @@ class TestMongoDBServer(BaseUnitTest):
 
         ast = mock_executor.call_args[0][0]
 
-        expected_sql = "DELETE FROM myproj.models WHERE name = 'house_sales_model5' and version=112"
+        expected_sql = "DROP MODEL myproj.house_sales_model5.112"
         assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
 
     # ml engines

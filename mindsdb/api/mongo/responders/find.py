@@ -150,6 +150,8 @@ class Responce(Responder):
                 if model_id is not None:
                     obj_id = model_id << 20
 
+                    obj_id += row.get('VERSION', 0)
+
                     row['_id'] = helpers.int_to_objectid(obj_id)
         elif table_name == 'jobs':
             for row in data:

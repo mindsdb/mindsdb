@@ -59,17 +59,18 @@ class Responce(Responder):
         if obj_name is None:
             if table == 'models':
                 model_id = obj_id >> 20
+                version = obj_id & (2 ** 20 - 1)
+
+                models = mindsdb_env['model_controller'].get_models(
+                    ml_handler_name=None,
+                    project_name=project_name
+                )
+                for model in models:
+                    if model['id'] == model_id:
+                        obj_name = model['name']
+                        break
                 if obj_name is None:
-                    models = mindsdb_env['model_controller'].get_models(
-                        ml_handler_name=None,
-                        project_name=project_name
-                    )
-                    for model in models:
-                        if model['id'] == model_id and (version is None or model['version'] == version):
-                            obj_name = model['name']
-                            break
-                    if obj_name is None:
-                        raise Exception("Can't find model by _id")
+                    raise Exception("Can't find model by _id")
             elif table == 'jobs':
                 jobs_controller = JobsController()
                 for job in jobs_controller.get_list(project_name):
@@ -78,23 +79,14 @@ class Responce(Responder):
                         break
 
         # delete model
-        if table == 'models' and version is None:
-            ast_query = DropPredictor(Identifier(parts=[project_name, obj_name]))
-            run_sql_command(request_env, ast_query)
-
-        # delete model version
-        elif table == 'models':
-            if obj_id is None:
-                raise Exception("Can't find object version")
-
-            version = obj_id & (2**20 - 1)
-
-            ast_query = Delete(table=Identifier(parts=[project_name, 'models_versions']),
-                               where=BinaryOperation(op='and', args=[
-                                   BinaryOperation(op='=', args=[Identifier('name'), Constant(obj_name)]),
-                                   BinaryOperation(op='=', args=[Identifier('version'), Constant(version)])
-                               ]))
-            run_sql_command(request_env, ast_query)
+        if table == 'models':
+            if version is None:
+                ast_query = DropPredictor(Identifier(parts=[project_name, obj_name]))
+                run_sql_command(request_env, ast_query)
+            else:
+                # delete model version
+                ast_query = DropPredictor(Identifier(parts=[project_name, obj_name, str(version)]))
+                run_sql_command(request_env, ast_query)
 
         elif table == 'jobs':
             ast_query = DropJob(Identifier(parts=[project_name, obj_name]))

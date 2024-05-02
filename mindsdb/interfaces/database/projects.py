@@ -37,6 +37,13 @@ class Project:
         if existing_record is not None:
             raise EntityExistsError('Project already exists', name)
 
+        existing_record = db.Integration.query.filter(
+            sa.func.lower(db.Integration.name) == name,
+            db.Integration.company_id == ctx.company_id
+        ).first()
+        if existing_record is not None:
+            raise EntityExistsError('Database exists with this name ', name)
+
         record = db.Project(
             name=name,
             company_id=ctx.company_id

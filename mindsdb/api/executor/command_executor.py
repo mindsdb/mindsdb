@@ -1106,6 +1106,12 @@ class ExecuteCommands:
         integration = self.session.integration_controller.get(name)
         if integration is not None:
             raise EntityExistsError('Database already exists', name)
+        try:
+            integration = ProjectController().get(name=name)
+        except ValueError:
+            pass
+        if integration is not None:
+            raise EntityExistsError('Project exists with this name', name)
 
         self.session.integration_controller.add(name, engine, connection_args)
         if storage:
@@ -1153,7 +1159,7 @@ class ExecuteCommands:
                 is_cloud = self.session.config.get("cloud", False)
                 if is_cloud is False and "No module named" in handler_module_meta['import']['error_message']:
                     logger.info(get_handler_install_message(handler_module_meta['name']))
-            ast_drop = DropMLEngine(name=name)
+            ast_drop = DropMLEngine(name=Identifier(name))
             self.answer_drop_ml_engine(ast_drop)
             logger.info(msg)
             raise ExecutorException(msg)

@@ -179,11 +179,17 @@ class SnowflakeHandler(DatabaseHandler):
 
         query = "SHOW TABLES;"
         result_tables = self.native_query(query)
-        result_tables.data_frame = result_tables.data_frame.rename(columns={'name': 'table_name'})[['table_name']]
+        if result_tables.resp_type == RESPONSE_TYPE.TABLE:
+            result_tables.data_frame = result_tables.data_frame.rename(columns={'name': 'table_name'})[['table_name']]
+        elif result_tables.resp_type == RESPONSE_TYPE.OK:
+            result_tables.data_frame = DataFrame(columns=['table_name'])
 
         query = "SHOW VIEWS;"
         result_views = self.native_query(query)
-        result_views.data_frame = result_views.data_frame.rename(columns={'name': 'table_name'})[['table_name']]
+        if result_views.resp_type == RESPONSE_TYPE.TABLE:
+            result_views.data_frame = result_views.data_frame.rename(columns={'name': 'table_name'})[['table_name']]
+        elif result_views.resp_type == RESPONSE_TYPE.OK:
+            result_views.data_frame = DataFrame(columns=['table_name'])
 
         result = Response(RESPONSE_TYPE.TABLE)
         result.data_frame = concat([result_tables.data_frame, result_views.data_frame], ignore_index=True)

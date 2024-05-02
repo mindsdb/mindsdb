@@ -40,8 +40,7 @@ CREATE DATABASE snowflake_datasource
 WITH
     ENGINE = 'snowflake',
     PARAMETERS = {
-        "account": "uvwxyz123.us-west.gcp",
-        "user": "user",
+        "account": "tvuibdy-vm85921",
         "password": "password",
         "database": "test_db"
     };

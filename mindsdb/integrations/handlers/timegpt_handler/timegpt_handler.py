@@ -1,7 +1,7 @@
 from typing import Optional, Dict
 
 import pandas as pd
-from nixtlats import TimeGPT
+from nixtla import NixtlaClient
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.utilities.handler_utils import get_api_key
@@ -34,8 +34,8 @@ class TimeGPTHandler(BaseMLEngine):
             assert time_settings["is_timeseries"], "Specify time series settings in your query"
 
         timegpt_token =  get_api_key('timegpt', using_args, self.engine_storage, strict=True)
-        timegpt = TimeGPT(token=timegpt_token)
-        assert timegpt.validate_token(), "Invalid TimeGPT token provided."
+        timegpt = NixtlaClient(api_key=timegpt_token)
+        assert timegpt.validate_api_key(), "Invalid TimeGPT token provided."
 
         model_args = {
             'token': timegpt_token,

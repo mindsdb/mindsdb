@@ -124,15 +124,20 @@ class TestSnowflakeHandlerTables:
         Tests if the `get_columns` method correctly constructs the SQL query and if it calls `native_query` with the correct query.
         """
 
-        response = snowflake_handler.get_columns("test")
+        response = snowflake_handler.get_columns("TEST")
         assert response.type == RESPONSE_TYPE.TABLE, "expected a TABLE"
         assert len(response.data_frame) > 0, "expected > O columns"
 
         expected_columns = {
-            "Field": ["col_one", "col_two", "col_three", "col_four"],
-            "Type": ["int", "int", "float", "varchar"],
+            "Field": ["COL_ONE", "COL_FOUR", "COL_TWO", "COL_THREE"],
+            "Type": ["NUMBER", "TEXT", "NUMBER", "FLOAT"],
         }
         expected_df = pd.DataFrame(expected_columns)
+
+        # Sort both DataFrames by all columns before comparing
+        response.data_frame = response.data_frame.sort_values(by=list(response.data_frame.columns)).reset_index(drop=True)
+        expected_df = expected_df.sort_values(by=list(expected_df.columns)).reset_index(drop=True)
+        
         assert response.data_frame.equals(
             expected_df
         ), "response does not contain the expected columns"

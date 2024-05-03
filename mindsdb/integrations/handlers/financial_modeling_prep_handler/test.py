@@ -1,15 +1,18 @@
-#!/usr/bin/env python
-try:
-    # For Python 3.0 and later
-    from urllib.request import urlopen
-except ImportError:
-    # Fall back to Python 2's urllib2
-    from urllib2 import urlopen
+from mindsdb.integrations.handlers.financial_modeling_prep_handler.financial_modeling_handler import FinancialModelingHandler
 
-import certifi
-import json
-from urllib.parse import urlencode
-import requests
+
+#!/usr/bin/env python
+# try:
+#     # For Python 3.0 and later
+#     from urllib.request import urlopen
+# except ImportError:
+#     # Fall back to Python 2's urllib2
+#     from urllib2 import urlopen
+
+# import certifi
+# import json
+# from urllib.parse import urlencode
+# import requests
 # def get_jsonparsed_data(url):
 #     response = urlopen(url, cafile=certifi.where())
 #     data = response.read().decode("utf-8")
@@ -39,3 +42,17 @@ url = f"{base_url}{symbol}?{urlencode(params)}"
 r = requests.get('https://financialmodelingprep.com/api/v3/historical-price-full/AAPL?apikey=GJvlw9YgVm5J4KIxdP1VPkvWzt747Q6j&from=2023-10-10&to=2023-12-10&serietype=line')
 
 print(r.content)
+
+def main():
+    # Instantiate MyClass
+    params = {
+        "from": "2023-10-10",
+        "to": "2023-12-10",
+        "serietype": "line"
+    }
+    fmp = FinancialModelingHandler()
+    df = fmp.get_daily_chart()
+    
+
+if __name__ == "__main__":
+    main()

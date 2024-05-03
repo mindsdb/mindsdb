@@ -15,6 +15,11 @@ class CursorContextManager(Mock):
     def __exit__(self, *args):
         pass
 
+    description = [['a']]
+
+    def fetchall(self):
+        return [[1]]
+
 
 class TestMySQLHandler(unittest.TestCase):
 

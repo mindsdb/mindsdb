@@ -79,7 +79,7 @@ For an overview of the models supported, visit the [following docs](https://docs
 
 * **Symptoms**: Failure to authenticate to MindsDB Inference Endpoints.
 * **Checklist**:
-    1. Make sure the your MindsDB Inference Endpoints account is active.
+    1. Make sure that your MindsDB Inference Endpoints account is active.
     2. Confirm that your API key is correct.
     3. Ensure that your API key has not been revoked.
 </Warning>

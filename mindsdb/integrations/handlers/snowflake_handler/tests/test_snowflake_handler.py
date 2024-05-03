@@ -41,8 +41,8 @@ def seed_db():
     conn_info = HANDLER_KWARGS["connection_data"].copy()
     conn_info["database"] = "SNOWFLAKE"
     db = snowflake.connector.connect(**conn_info)
-    cursor = db.cursor()
 
+    cursor = db.cursor()
     with open("mindsdb/integrations/handlers/snowflake_handler/tests/seed.sql", "r") as f:
         for line in f.readlines():
             cursor.execute(line)
@@ -72,10 +72,12 @@ def get_table_names(snowflake_handler):
 
     res = snowflake_handler.get_tables()
     tables = res.data_frame
+
     assert tables is not None, "expected to have some tables in the db, but got None"
     assert (
         "table_name" in tables
     ), f"expected to get 'table_name' column in the response:\n{tables}"
+
     return list(tables["table_name"])
 
 
@@ -108,7 +110,11 @@ class TestSnowflakeHandlerTables:
         """
 
         res = snowflake_handler.get_tables()
+        assert res.type == RESPONSE_TYPE.TABLE, "expected a TABLE"
+        assert len(res.data_frame) > 0, "expected > O columns"
+
         tables = res.data_frame
+
         assert (
             tables is not None
         ), "expected to have some tables in the db, but got None"
@@ -124,9 +130,11 @@ class TestSnowflakeHandlerTables:
         Tests if the `get_columns` method correctly constructs the SQL query and if it calls `native_query` with the correct query.
         """
 
-        response = snowflake_handler.get_columns("TEST")
-        assert response.type == RESPONSE_TYPE.TABLE, "expected a TABLE"
-        assert len(response.data_frame) > 0, "expected > O columns"
+        res = snowflake_handler.get_columns("TEST")
+        assert res.type == RESPONSE_TYPE.TABLE, "expected a TABLE"
+        assert len(res.data_frame) > 0, "expected > O columns"
+
+        views = res.data_frame
 
         expected_columns = {
             "Field": ["COL_ONE", "COL_FOUR", "COL_TWO", "COL_THREE"],
@@ -135,10 +143,10 @@ class TestSnowflakeHandlerTables:
         expected_df = pd.DataFrame(expected_columns)
 
         # Sort both DataFrames by all columns before comparing
-        response.data_frame = response.data_frame.sort_values(by=list(response.data_frame.columns)).reset_index(drop=True)
+        views = views.sort_values(by=list(res.data_frame.columns)).reset_index(drop=True)
         expected_df = expected_df.sort_values(by=list(expected_df.columns)).reset_index(drop=True)
-        
-        assert response.data_frame.equals(
+
+        assert views.equals(
             expected_df
         ), "response does not contain the expected columns"
 
@@ -154,7 +162,9 @@ class TestSnowflakeHandlerTables:
         """
         res = snowflake_handler.native_query(query)
         check_valid_response(res)
+
         tables = get_table_names(snowflake_handler)
+
         assert (
             self.table_for_creation in tables
         ), f"expected to have {self.table_for_creation} in database, but got: {tables}"
@@ -167,7 +177,9 @@ class TestSnowflakeHandlerTables:
         query = f"DROP TABLE IF EXISTS {self.table_for_creation}"
         res = snowflake_handler.native_query(query)
         check_valid_response(res)
+
         tables = get_table_names(snowflake_handler)
+
         assert self.table_for_creation not in tables
 
 
@@ -179,9 +191,10 @@ class TestSnowflakeHandlerQuery:
         """
 
         query = "SELECT * FROM test"
-        response = snowflake_handler.native_query(query)
-        assert type(response) is Response
-        assert response.resp_type == RESPONSE_TYPE.TABLE
+        res = snowflake_handler.native_query(query)
+
+        assert type(res) is Response
+        assert res.resp_type == RESPONSE_TYPE.TABLE
 
         expected_data = {
             "COL_ONE": [1, 2, 3],
@@ -190,7 +203,8 @@ class TestSnowflakeHandlerQuery:
             "COL_FOUR": ["A", "B", "C"],
         }
         expected_df = pd.DataFrame(expected_data)
-        assert response.data_frame.equals(
+
+        assert res.data_frame.equals(
             expected_df
         ), "response does not contain the expected data"
 
@@ -203,8 +217,10 @@ class TestSnowflakeHandlerQuery:
         query = "SELECT * FROM test"
         res = snowflake_handler.query(query)
         check_valid_response(res)
+
         got_rows = res.data_frame.shape[0]
         want_rows = limit
+
         assert (
             got_rows == want_rows
         ), f"expected to have {want_rows} rows in response but got: {got_rows}"

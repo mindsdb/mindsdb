@@ -691,7 +691,7 @@ class ExecuteCommands:
         project_name = name.parts[-2] if len(name.parts) > 1 else database_name
 
         try:
-            jobs_controller.add(job_name, project_name, statement)
+            jobs_controller.create(job_name, project_name, statement)
         except EntityExistsError:
             if getattr(statement, "if_not_exists", False) is False:
                 raise

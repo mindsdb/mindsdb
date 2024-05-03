@@ -8,6 +8,13 @@ defaults:
   run:
     shell: bash
 
+# Cancel any existing runs of this workflow on the same branch/pr
+# We always want to build/deploy/test a new commit over an older one
+concurrency:
+  group: ${{ github.workflow_ref }}
+  cancel-in-progress: true
+
+
 jobs:
   # Run all of our static code checks here
   code_checking:

@@ -100,16 +100,22 @@ class TestSnowflakeHandler(unittest.TestCase):
         table_name = 'mock_table'
         self.handler.get_columns(table_name)
 
-        expected_query = f"""SHOW COLUMNS IN TABLE {table_name};"""
+        expected_query = f"""
+            SELECT COLUMN_NAME AS FIELD, DATA_TYPE AS TYPE
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_NAME = '{table_name}';
+        """
 
         self.handler.native_query.assert_called_once_with(expected_query)
 
-    def test_get_tables(self):
+    @patch('mindsdb.integrations.handlers.snowflake_handler.snowflake_handler.concat')
+    def test_get_tables(self, mock_concat):
         """
         Tests the `get_tables` method to confirm it correctly calls `native_query` with the appropriate SQL commands.
         """
 
         self.handler.native_query = MagicMock()
+        mock_concat.return_value = None
         self.handler.get_tables()
 
         expected_query_tables = "SHOW TABLES;"

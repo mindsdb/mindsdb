@@ -188,6 +188,7 @@ class JobsController:
 
         # delete context
         query_context_controller.drop_query_context('job', record.id)
+        query_context_controller.drop_query_context('job-if', record.id)
 
     def _delete_record(self, record):
         record.deleted_at = dt.datetime.now()
@@ -336,7 +337,6 @@ class JobsExecutor:
         if record.user_class is not None:
             ctx.user_class = record.user_class
 
-        query_context_controller.set_context('job', record.id)
         if history_id is None:
             history_record = db.JobsHistory(
                 job_id=record.id,
@@ -363,6 +363,7 @@ class JobsExecutor:
         command_executor = ExecuteCommands(sql_session)
 
         # job with condition?
+        query_context_controller.set_context('job-if', record.id)
         error = ''
         to_execute_query = True
         if record.if_query_str is not None:
@@ -390,7 +391,10 @@ class JobsExecutor:
             if error or data is None or len(data) == 0:
                 to_execute_query = False
 
+        query_context_controller.release_context('job-if', record.id)
         if to_execute_query:
+
+            query_context_controller.set_context('job', record.id)
             for sql in split_sql(record.query_str):
                 try:
                     #  fill template variables

@@ -85,7 +85,7 @@ class TimeGPTHandler(BaseMLEngine):
             freq=args.get("freq", model_args["freq"]),  # automatically infers correct frequency if not provided by user
             level=model_args["level"],
             finetune_steps=args.get('finetune_steps', model_args['finetune_steps']),
-            validate_token=args.get('validate_token', model_args['validate_token']),
+            validate_api_key=args.get('validate_token', model_args['validate_token']),
             date_features=args.get('date_features', model_args['date_features']),
             date_features_to_one_hot=args.get('date_features_to_one_hot', model_args['date_features_to_one_hot']),
             clean_ex_first=args.get('clean_ex_first', model_args['clean_ex_first']),

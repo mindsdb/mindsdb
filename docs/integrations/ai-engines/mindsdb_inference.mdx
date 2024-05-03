@@ -71,3 +71,27 @@ Here is the output:
 ## Supported Models
 
 For an overview of the models supported, visit the [following docs](https://docs.mdb.ai/). This list will help you quickly identify the right models for your needs.
+
+## Troubleshooting Guide
+
+<Warning>
+`Authentication Error`
+
+* **Symptoms**: Failure to authenticate to MindsDB Inference Endpoints.
+* **Checklist**:
+    1. Make sure the your MindsDB Inference Endpoints account is active.
+    2. Confirm that your API key is correct.
+    3. Ensure that your API key has not been revoked.
+</Warning>
+
+<Warning>
+`SQL statement cannot be parsed by mindsdb_sql`
+
+* **Symptoms**: SQL queries failing or not recognizing table and model names containing spaces or special characters.
+* **Checklist**:
+    1. Ensure table names with spaces or special characters are enclosed in backticks.
+    2. Examples:
+        * Incorrect: SELECT * FROM integration.travel data
+        * Incorrect: SELECT * FROM integration.'travel data'
+        * Correct: SELECT * FROM integration.\`travel data\`
+</Warning>

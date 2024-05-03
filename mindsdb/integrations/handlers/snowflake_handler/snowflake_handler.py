@@ -211,8 +211,14 @@ class SnowflakeHandler(DatabaseHandler):
         if not table_name or not isinstance(table_name, str):
             raise ValueError("Invalid table name provided.")
 
-        query = f"SHOW COLUMNS IN TABLE {table_name};"
+        query = f"""
+            SELECT COLUMN_NAME AS FIELD, DATA_TYPE AS TYPE
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_NAME = '{table_name}';
+        """
         result = self.native_query(query)
+        result.data_frame = result.data_frame.rename(columns={'FIELD': 'Field', 'TYPE': 'Type'})
+
         return result
 
 

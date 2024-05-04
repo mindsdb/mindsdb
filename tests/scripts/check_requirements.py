@@ -40,9 +40,9 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.to
 # and not explicitly imported in mindsdb.
 MAIN_RULE_IGNORES = {
     "DEP003": ["torch"],
-    # Ignore Langhchain since the requirements check will still fail even if it's conditionally imported for certain features.
     "DEP001": ["torch"],
-    "DEP002": ["psycopg2-binary", "lark"],
+    # bs4 & chromadb are used by Agents & Knowledge Bases (web & chroma handler).
+    "DEP002": ["psycopg2-binary", "lark", "bs4", "chromadb"],
 }
 
 # THe following packages need exceptions because they are optional deps of some other packages. e.g. langchain CAN use openai

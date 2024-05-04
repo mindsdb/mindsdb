@@ -2,9 +2,6 @@ from dataclasses import dataclass
 from typing import Callable, List, Union
 
 from langchain_core.documents import Document
-from langchain_core.embeddings import Embeddings
-from langchain_experimental.text_splitter import SemanticChunker
-from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import MarkdownHeaderTextSplitter, HTMLHeaderTextSplitter, RecursiveCharacterTextSplitter
 
 from mindsdb.utilities import log

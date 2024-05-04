@@ -10,7 +10,6 @@ from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.api.http.utils import http_error
 from mindsdb.metrics.metrics import api_endpoint_metrics
-from mindsdb.integrations.handlers.langchain_embedding_handler import construct_model_from_args
 from mindsdb.integrations.handlers.web_handler.urlcrawl_helpers import get_all_websites
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.file.file_controller import FileController

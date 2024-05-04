@@ -15,6 +15,7 @@ from mindsdb.integrations.handlers.web_handler.urlcrawl_helpers import get_all_w
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.integrations.utilities.rag.loaders.file_loader import FileLoader
+from mindsdb.integrations.utilities.rag.splitters.file_splitter import FileSplitter, FileSplitterConfig
 from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseTable
 from mindsdb.utilities import log
 
@@ -27,12 +28,9 @@ _DEFAULT_MARKDOWN_HEADERS_TO_SPLIT_ON = [
 ]
 
 
-def _insert_file_into_knowledge_base(table: KnowledgeBaseTable, file_name: str, embeddings_provider: str):
-    # import here to prevent the need to set OPENAI_API_KEY
-    from mindsdb.integrations.utilities.rag.splitters.file_splitter import FileSplitter, FileSplitterConfig
-
+def _insert_file_into_knowledge_base(table: KnowledgeBaseTable, file_name: str):
     file_controller = FileController()
-    splitter = FileSplitter(FileSplitterConfig(embeddings=construct_model_from_args({'class': embeddings_provider})))
+    splitter = FileSplitter(FileSplitterConfig())
     file_path = file_controller.get_file_path(file_name)
     loader = FileLoader(file_path)
     split_docs = []
@@ -108,7 +106,6 @@ class KnowledgeBaseResource(Resource):
                 f'Project with name {project_name} does not exist'
             )
         try:
-            existing_kb = session.kb_controller.get(knowledge_base_name, project.id)
             table = session.kb_controller.get_table(knowledge_base_name, project.id)
         except ValueError:
             # Knowledge Base must exist.
@@ -122,12 +119,9 @@ class KnowledgeBaseResource(Resource):
         files = kb.get('files', [])
         urls = kb.get('urls', [])
 
-        # Use same embeddings as knowledge base if possible.
-        embeddings_provider = existing_kb.embedding_model.learn_args.get('class', 'openai')
-
         # Load, split, & embed files into Knowledge Base.
         for file_name in files:
-            _insert_file_into_knowledge_base(table, file_name, embeddings_provider)
+            _insert_file_into_knowledge_base(table, file_name)
         # Crawl, split, & embed web pages into Knowledge Base.
         _insert_web_pages_into_knowledge_base(table, urls)
         return '', HTTPStatus.OK

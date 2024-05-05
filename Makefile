@@ -18,8 +18,6 @@ check:
 	python tests/scripts/check_version.py
 	python tests/scripts/check_print_statements.py
 
-i
-
 build_docker:
 	docker buildx build -t mdb --load -f docker/mindsdb.Dockerfile .
 

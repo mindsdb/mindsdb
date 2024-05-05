@@ -3,6 +3,9 @@ install_mindsdb:
 	pip install -r requirements/requirements-dev.txt
 	pre-commit install
 
+install_handler:
+	pip install -e .[$(HANDLER_NAME)]
+
 precommit:
 	pre-commit install
 	pre-commit run --files $$(git diff --cached --name-only)
@@ -14,6 +17,8 @@ check:
 	python tests/scripts/check_requirements.py
 	python tests/scripts/check_version.py
 	python tests/scripts/check_print_statements.py
+
+i
 
 build_docker:
 	docker buildx build -t mdb --load -f docker/mindsdb.Dockerfile .

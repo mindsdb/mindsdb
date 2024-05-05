@@ -13,6 +13,7 @@ docker/docker-compose.yml
 docker/*.Dockerfile
 docker/docker-compose*
 docker/README.md
+Makefile
 
 build
 docs

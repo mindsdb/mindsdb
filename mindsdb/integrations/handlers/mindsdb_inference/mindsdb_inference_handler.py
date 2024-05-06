@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import openai
+from openai import OpenAI, NotFoundError, AuthenticationError
 from typing import Dict, Optional
 from mindsdb.integrations.handlers.openai_handler import Handler as OpenAIHandler
 from mindsdb.integrations.utilities.handler_utils import get_api_key
@@ -22,6 +23,29 @@ class MindsDBInferenceHandler(OpenAIHandler):
         self.api_base = mindsdb_inference_handler_config.BASE_URL
         self.default_model = 'gpt-3.5-turbo'
         self.default_mode = 'default'
+
+    @staticmethod
+    def _check_client_connection(client: OpenAI):
+        """
+        Check the MindsDB Inference engine client connection by listing models.
+
+        Args:
+            client (OpenAI): OpenAI client configured with the MindsDB Inference API credentials.
+
+        Raises:
+            Exception: If the client connection (API key) is invalid.
+
+        Returns:
+            None
+        """
+        try:
+            client.models.list()
+        except NotFoundError:
+            pass
+        except AuthenticationError as e:
+            if e.body['code'] == 401:
+                raise Exception('Invalid api key')
+            raise Exception(f'Something went wrong: {e}')
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
@@ -52,7 +76,7 @@ class MindsDBInferenceHandler(OpenAIHandler):
         api_base = connection_args.get('api_base') or args.get('api_base') or os.environ.get('MINDSDB_INFERENCE_BASE', mindsdb_inference_handler_config.BASE_URL)
         org = args.get('api_organization')
         client = OpenAIHandler._get_client(api_key=api_key, base_url=api_base, org=org)
-        OpenAIHandler._check_client_connection(client)
+        MindsDBInferenceHandler._check_client_connection(client)
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         """

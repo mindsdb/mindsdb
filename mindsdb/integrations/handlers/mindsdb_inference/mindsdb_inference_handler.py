@@ -47,10 +47,31 @@ class MindsDBInferenceHandler(OpenAIHandler):
                 raise Exception('Invalid api key')
             raise Exception(f'Something went wrong: {e}')
 
+    def create_engine(self, connection_args):
+        """
+        Validate the MindsDB Inference API credentials on engine creation.
+
+        Args:
+            connection_args (dict): Connection arguments.
+
+        Raises:
+            Exception: If the handler is not configured with valid API credentials.
+
+        Returns:
+            None
+        """
+        connection_args = {k.lower(): v for k, v in connection_args.items()}
+        api_key = connection_args.get('mindsdb_inference_api_key')
+        if api_key is not None:
+            org = connection_args.get('api_organization')
+            api_base = connection_args.get('api_base') or os.environ.get('MINDSDB_INFERENCE_BASE', mindsdb_inference_handler_config.BASE_URL)
+            client = self._get_client(api_key=api_key, base_url=api_base, org=org)
+            MindsDBInferenceHandler._check_client_connection(client)
+
     @staticmethod
     def create_validation(target, args=None, **kwargs):
         """
-        Validate the MindsDB Inference engine handler.
+        Validate the MindsDB Inference API credentials on model creation.
 
         Args:
             target (str): Target column, not required for LLMs.
@@ -58,7 +79,7 @@ class MindsDBInferenceHandler(OpenAIHandler):
             kwargs (dict): Handler keyword arguments.
 
         Raises:
-            AuthenticationError: If the handler is not properly configured.
+            Exception: If the handler is not configured with valid API credentials.
 
         Returns:
             None

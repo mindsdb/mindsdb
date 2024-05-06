@@ -87,11 +87,26 @@ For an overview of the models supported, visit the [following docs](https://docs
 <Warning>
 `SQL statement cannot be parsed by mindsdb_sql`
 
-* **Symptoms**: SQL queries failing or not recognizing table and model names containing spaces or special characters.
+* **Symptoms**: SQL queries failing or not recognizing table names containing spaces or special characters.
 * **Checklist**:
     1. Ensure table names with spaces or special characters are enclosed in backticks.
-    2. Examples:
-        * Incorrect: SELECT * FROM integration.travel data
-        * Incorrect: SELECT * FROM integration.'travel data'
-        * Correct: SELECT * FROM integration.\`travel data\`
+    Examples:
+        * Incorrect:
+            ```sql
+            SELECT input.text, output.sentiment
+            FROM integration.travel data AS input
+            JOIN mindsdb_inference_model AS output
+            ```
+        * Incorrect: 
+            ```sql
+            SELECT input.text, output.sentiment
+            FROM integration.'travel data' AS input
+            JOIN mindsdb_inference_model AS output
+            ```
+        * Correct:  
+            ```sql 
+            SELECT input.text, output.sentiment
+            FROM integration.`travel data` AS input
+            JOIN mindsdb_inference_model AS output
+            ```
 </Warning>

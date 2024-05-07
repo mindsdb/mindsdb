@@ -63,7 +63,7 @@ If you followed one of the MindsDB tutorials before, you'll see that the syntax 
 Now, we'll fine-tune our model using a table that stores details about MindsDB's custom SQL syntax.
 
 <Info>
-Upload [this data file](https://github.com/mindsdb/mindsdb/blob/staging/docs/finetune/data.csv) to MindsDB and use it to finetune the model.
+Upload [this data file](https://github.com/mindsdb/mindsdb/blob/main/docs/use-cases/automated_finetuning/data.csv) to MindsDB and use it to finetune the model.
 </Info>
 
 This is how you can fine-tune an OpenAI model:
@@ -78,7 +78,7 @@ The [`FINETUNE`](/sql/api/finetune) command creates a new version of the `openai
 
 ```sql
 SELECT *
-FROM models_versions
+FROM models
 WHERE name = 'openai_davinci';
 ```
 

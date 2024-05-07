@@ -9,13 +9,13 @@ This documentation describes the integration of MindsDB with [MindsDB Inference 
 
 Before proceeding, ensure the following prerequisites are met:
 
-1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
-2. To use MindsDB Inference Endpoints within MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
+2. To use MindsDB Inference Endpoints within MindsDB, install the required dependencies following [this instruction](https://docs.mindsdb.com/setup/self-hosted/docker#install-dependencies).
 3. Obtain the MindsDB Inference API key required to deploy and use MindsDB Inference Endpoints models within MindsDB. Follow the [instructions for obtaining the API key](https://mindsdb-docs.hashnode.space/docs/authentication).
 
 ## Setup
 
-Create an AI engine from the [MindsDB Inference Endpoints handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/mindsdb_inference).
+Create an AI engine from the [MindsDB Inference Endpoints handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/mindsdb_inference_handler).
 
 ```sql
 CREATE ML_ENGINE mindsdb_serve
@@ -71,3 +71,42 @@ Here is the output:
 ## Supported Models
 
 For an overview of the models supported, visit the [following docs](https://docs.mdb.ai/). This list will help you quickly identify the right models for your needs.
+
+## Troubleshooting Guide
+
+<Warning>
+`Authentication Error`
+
+* **Symptoms**: Failure to authenticate to MindsDB Inference Endpoints.
+* **Checklist**:
+    1. Make sure that your MindsDB Inference Endpoints account is active.
+    2. Confirm that your API key is correct.
+    3. Ensure that your API key has not been revoked.
+</Warning>
+
+<Warning>
+`SQL statement cannot be parsed by mindsdb_sql`
+
+* **Symptoms**: SQL queries failing or not recognizing table names containing spaces or special characters.
+* **Checklist**:
+    1. Ensure table names with spaces or special characters are enclosed in backticks.
+    Examples:
+        * Incorrect:
+            ```sql
+            SELECT input.text, output.sentiment
+            FROM integration.travel data AS input
+            JOIN mindsdb_inference_model AS output
+            ```
+        * Incorrect: 
+            ```sql
+            SELECT input.text, output.sentiment
+            FROM integration.'travel data' AS input
+            JOIN mindsdb_inference_model AS output
+            ```
+        * Correct:  
+            ```sql 
+            SELECT input.text, output.sentiment
+            FROM integration.`travel data` AS input
+            JOIN mindsdb_inference_model AS output
+            ```
+</Warning>

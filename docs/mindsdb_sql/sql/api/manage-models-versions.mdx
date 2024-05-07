@@ -16,11 +16,11 @@ USING engine = 'lightwood',
       tag = 'my model';
 ```
 
-Now, your model has one version. You can verify by querying the `models_versions` table.
+Now, your model has one version. You can verify by querying the `models` table.
 
 ```sql
 SELECT *
-FROM mindsdb.models_versions
+FROM mindsdb.models
 WHERE name = 'home_rentals';
 ```
 
@@ -46,7 +46,7 @@ Let's query for the model versions again.
 
 ```sql
 SELECT *
-FROM mindsdb.models_versions
+FROM mindsdb.models
 WHERE name = 'home_rentals';
 ```
 
@@ -86,7 +86,7 @@ JOIN example_db.demo_data.home_rentals AS d;
 To set a specific model version as active, run the `UPDATE` statement:
 
 ```sql
-UPDATE mindsdb.models_versions
+UPDATE mindsdb.models
 SET active = 1
 WHERE version = 1
 AND name = 'home_rentals';
@@ -97,7 +97,7 @@ AND name = 'home_rentals';
 To delete a specific model version, run the `DELETE FROM` statement:
 
 ```sql
-DELETE FROM mindsdb.models_versions
+DELETE FROM mindsdb.models
 WHERE version = 2
 AND name = 'home_rentals';
 ```

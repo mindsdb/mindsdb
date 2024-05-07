@@ -1041,6 +1041,12 @@
           ]
         },
         {
+          "group": "Anomaly Detection",
+          "pages": [
+            "integrations/ai-engines/anomaly"
+          ]
+        },
+        {
           "group": "AutoML",
           "pages": [
             "integrations/ai-engines/lightwood",

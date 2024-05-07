@@ -162,7 +162,7 @@ def query_df(df, query, session=None):
 
     # workaround to prevent duckdb.TypeMismatchException
     if len(df) > 0:
-        if table_name.lower() in ('models', 'predictors', 'models_versions'):
+        if table_name.lower() in ('models', 'predictors'):
             if 'TRAINING_OPTIONS' in df.columns:
                 df = df.astype({'TRAINING_OPTIONS': 'string'})
         if table_name.lower() == 'ml_engines':

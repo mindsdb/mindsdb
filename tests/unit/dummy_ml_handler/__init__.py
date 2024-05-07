@@ -11,7 +11,7 @@ except Exception as e:
 title = ''
 name = 'dummy_ml'
 type = HANDLER_TYPE.ML
-permanent = True
+permanent = False
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'description', 'import_error'

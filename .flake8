@@ -17,7 +17,6 @@ per-file-ignores =
 exclude =
   __init__.py,
   build/*
-  mindsdb/microservices_grpc/*
   # TODO: clean up this code
   mindsdb/integrations/handlers/druid_handler/druid_handler.py
   mindsdb/integrations/handlers/dynamodb_handler/dynamodb_handler.py

@@ -144,7 +144,8 @@ class Integration(Resource):
             del params['test']
             handler_type = params.pop('type', None)
             params.pop('publish', None)
-            status = ca.integration_controller.check_connection(name, handler_type, params)
+            handler  = ca.integration_controller.create_tmp_handler(name, handler_type, params)
+            status = handler.check_connection()
             resp = status.to_json()
             return resp, 200
 

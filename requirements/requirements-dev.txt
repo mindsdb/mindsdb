@@ -7,3 +7,4 @@ setuptools
 wheel
 deptry==0.12.0
 twine
+lightwood @ git+https://github.com/mindsdb/lightwood@staging

@@ -91,7 +91,7 @@ class FinancialModelingHandler(APIHandler):
                     return self.get_daily_chart(params)
                 raise NotImplementedError('Endpoint {} not supported by Financial Modeling API Handler'.format(endpoint_name))
             
-            import requests
+
 
 # base_url = "https://financialmodelingprep.com/api/v3/historical-price-full/"
 # symbol = "AAPL"

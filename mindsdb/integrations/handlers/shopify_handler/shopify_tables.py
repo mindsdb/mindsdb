@@ -552,40 +552,6 @@ class OrdersTable(APITable):
 
         for order in order_data:
             # separate values by object
-            # order_data_trimmed = {}
-            # line_items_data = {}
-            # billing_address_data = {}
-            # shipping_address_data = {}
-            # discount_codes_data = {}
-            # tax_lines_data = {}
-            # note_attributes_data = {}
-            # shipping_lines_data = {}
-            # attributed_staffs_data = {}
-            # line_items_properties_data = {}
-
-            # for key, val in order.items():
-
-            #     if '_' not in key:
-            #         order_data_trimmed[key] = val
-            #     elif key[-3:] == '_li':
-            #         line_items_data[key[:-3]] = val
-            #     elif key[-3:] == '_ba':
-            #         billing_address_data[key[:-3]] = val
-            #     elif key[-3:] == '_sa':
-            #         shipping_address_data[key[:-3]] = val
-            #     elif key[-3:] == '_dc':
-            #         discount_codes_data[key[:-3]] = val
-            #     elif key[-3:] == '_tl':
-            #         tax_lines_data[key[:-3]] = val
-            #     elif key[-3:] == '_na':
-            #         note_attributes_data[key[:-3]] = val
-            #     elif key[-3:] == '_sl':
-            #         shipping_lines_data[key[:-3]] = val
-            #     elif key[-3:] == '_as':
-            #         attributed_staffs_data[key[:-3]] = val
-            #     elif key[-6:] == '_pr_li':
-            #         line_items_properties_data[key[:-6]] = val
-
             order_data_trimmed = {key: val for key, val in order.items()
                                 if key not in all_columns}
             line_items_data = OrdersTable._extract_data_helper(order, line_items_columns)
@@ -597,27 +563,6 @@ class OrdersTable(APITable):
             shipping_lines_data = OrdersTable._extract_data_helper(order, shipping_lines_columns)
             attributed_staffs_data = OrdersTable._extract_data_helper(order, attributed_staffs_columns)
             line_items_properties_data = OrdersTable._extract_data_helper(order, line_items_properties_columns)
-
-            # order_data_trimmed = {key: val for key, val in order.items()
-            #                     if key not in all_columns}
-            # line_items_data = {key[:-3]: val for key, val in order.items()
-            #                 if key in line_item_columns}
-            # billing_address_data = {key[:-3]: val for key, val in order.items()
-            #                         if key in billing_address_columns}
-            # shipping_address_data = {key[:-3]: val for key, val in order.items()
-            #                         if key in shipping_address_columns}
-            # discount_codes_data = {key[:-3]: val for key, val in order.items()
-            #                         if key in discount_codes_columns}
-            # tax_lines_data = {key[:-3]: val for key, val in order.items()
-            #                         if key in tax_lines_columns}
-            # note_attributes_data = {key[:-3]: val for key, val in order.items()
-            #                         if key in note_attributes_columns}
-            # shipping_lines_data = {key[:-3]: val for key, val in order.items()
-            #                         if key in shipping_lines_columns}
-            # attributed_staffs_data = {key[:-3]: val for key, val in order.items()
-            #                         if key in attributed_staffs_columns}
-            # line_items_properties_data = {key[:-3]: val for key, val in order.items()
-            #                         if key in line_items_properties_columns}
 
             # add sub-arrays to line item object
             line_items_data['attributed_staffs'] = [attributed_staffs_data]

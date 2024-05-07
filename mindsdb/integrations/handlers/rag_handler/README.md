@@ -7,22 +7,22 @@ This documentation describes the Retrieval Augmented Generation integration that
 
 It supports the following:
 
-* Large language models such as [OpenAI](/integrations/ai-engines/openai) and [Writer](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/writer_handler#readme).
-* Vector databases such as [ChromaDB](/integrations/vector-db-integrations/chromadb) and FAISS.
+* Large language models such as [OpenAI](https://docs.mindsdb.com/integrations/ai-engines/openai) and [Writer](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/writer_handler#readme).
+* Vector databases such as [ChromaDB](https://docs.mindsdb.com/integrations/vector-db-integrations/chromadb) and FAISS.
 * Embedding models compatible with the [Hugging Face sentence_transformers library](https://huggingface.co/sentence-transformers).
 
 ## Prerequisites
 
 Before proceeding, ensure the following prerequisites are met:
 
-1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
-2. To use RAG within MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
+2. To use RAG within MindsDB, install the required dependencies following [this instruction](https://docs.mindsdb.com/setup/self-hosted/docker#install-dependencies).
 3. Obtain the [OpenAI](https://help.openai.com/en/articles/4936850-where-do-i-find-my-openai-api-key) or [Writer](https://dev.writer.com/docs/quickstart#step-1-obtain-your-api-keys) API key. 
 
 ## Setup
 
-Create an AI engine from the [RAG handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/rag_handler).
-You can create a RAG engine using this command and providing either [OpenAI](/integrations/ai-engines/openai) or [Writer](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/writer_handler#readme) parameters:
+Create an AI engine from the [RAG handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/rag_handler).
+You can create a RAG engine using this command and providing either [OpenAI](https://docs.mindsdb.com/integrations/ai-engines/openai) or [Writer](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/writer_handler#readme) parameters:
 
 ```sql
 CREATE ML_ENGINE rag_engine
@@ -176,7 +176,7 @@ USING
     openai_api_key = 'sk-xxx';
 ```
 
-Upload a [file](mindsdb_sql/sql/create/file) using the GUI `Upload File` option. Create a model using this engine and include the FORM clause:
+Upload a [file](https://docs.mindsdb.com/mindsdb_sql/sql/create/file) using the GUI `Upload File` option. Create a model using this engine and include the FORM clause:
 
 ```sql
 CREATE MODEL rag_handler_files
@@ -203,4 +203,3 @@ On execution, we get:
 | answer                                                                                                                                                                                       | source_documents | question                                |
 |----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------|-----------------------------------------|
 |   ShopRite Arthritis Pain Acetaminophen is not specifically designed for treating a cold. It may help to temporarily relieve minor aches and pains associated with a cold, but it is not the best product for treating a cold. It is always best to consult with a doctor or pharmacist for the most appropriate medication for treating a cold. | `{"column":["full_ingredients","indications_and_usage","intended_purpose_of_product","active_ingredient"],"sources_content":["ShopRite Arthritis  ..."],"sources_document":["dataframe"],"sources_row":[1,1,1,1]}`   | what product is best for treating a cold? |
-

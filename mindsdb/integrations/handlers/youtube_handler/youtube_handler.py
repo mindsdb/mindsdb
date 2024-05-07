@@ -16,7 +16,7 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 
 from googleapiclient.discovery import build
 
-from mindsdb.integrations.handlers.utilities.auth_utilities import GoogleOAuth2Manager
+from mindsdb.integrations.handlers.utilities.auth_utilities import GoogleUserOAuth2Manager
 
 DEFAULT_SCOPES = [
 	'https://www.googleapis.com/auth/youtube',
@@ -86,7 +86,7 @@ class YoutubeHandler(APIHandler):
         if self.is_connected is True:
             return self.connection
         
-        google_oauth2_manager = GoogleOAuth2Manager(self.handler_storage, self.scopes, self.credentials_file, self.credentials_url, self.connection_data.get('code'))
+        google_oauth2_manager = GoogleUserOAuth2Manager(self.handler_storage, self.scopes, self.credentials_file, self.credentials_url, self.connection_data.get('code'))
         creds = google_oauth2_manager.get_oauth2_credentials()
 
         youtube = build(

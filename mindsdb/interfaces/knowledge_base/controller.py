@@ -17,6 +17,7 @@ from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor
 
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.libs.vectordatabase_handler import TableField
+from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
 
@@ -122,6 +123,8 @@ class KnowledgeBaseTable:
         if df.empty:
             return
 
+        df = self._adapt_column_names(df)
+
         # add embeddings
         df_emb = self._df_to_embeddings(df)
         df = pd.concat([df, df_emb], axis=1)
@@ -129,6 +132,111 @@ class KnowledgeBaseTable:
         # send to vector db
         db_handler = self._get_vector_db()
         db_handler.do_upsert(self._kb.vector_database_table, df)
+
+    def _adapt_column_names(self, df: pd.DataFrame) -> pd.DataFrame:
+
+        '''
+            convert input columns for vector db input
+            - id, content and metadata
+        '''
+
+        params = self._kb.params
+
+        columns = list(df.columns)
+
+        # -- prepare id --
+
+        # if id_column is defined:
+        #     use it as id
+        # elif 'id' column exists:
+        #     use it
+        # else:
+        #     use hash(content) -- it happens inside of vector handler
+
+        id_column = params.get('id_column')
+        if id_column is not None and id_column not in columns:
+            # wrong name
+            id_column = None
+
+        if id_column is None and TableField.ID.value in columns:
+            # default value
+            id_column = TableField.ID.value
+
+        if id_column is not None:
+            # remove from lookup list
+            columns.remove(id_column)
+
+        # -- prepare content and metadata --
+
+        # if content_columns is defined:
+        #     if len(content_columns) > 1:
+        #          make text from row (col: value\n col: value)
+        #     if metadata_columns is defined:
+        #          use them as metadata
+        #     else:
+        #          use all unused columns is metadata
+        #     elif metadata_columns is defined:
+        #          metadata_columns go to metadata
+        #          use all unused columns  as content (make text if columns>1)
+        # else:
+        #     no metadata
+        #     all unused columns go to content (make text if columns>1)
+
+        content_columns = params.get('content_columns')
+        metadata_columns = params.get('metadata_columns')
+
+        if content_columns is not None:
+            content_columns = list(set(content_columns).intersection(columns))
+            if len(content_columns) == 0:
+                raise ValueError(f'Content columns {params.get("content_columns")} not found in dataset: {columns}')
+
+            if metadata_columns is not None:
+                metadata_columns = list(set(metadata_columns).intersection(columns))
+            else:
+                # all the rest columns
+                metadata_columns = list(set(columns).difference(content_columns))
+
+        elif metadata_columns is not None:
+            metadata_columns = list(set(metadata_columns).intersection(columns))
+            # use all unused columns is content
+            content_columns = list(set(columns).difference(metadata_columns))
+        else:
+            # all columns go to content
+            content_columns = columns
+
+        if not content_columns:
+            raise ValueError("Can't find content columns")
+
+        def row_to_document(row: pd.Series) -> str:
+            """
+            Convert a row in the input dataframe into a document
+
+            Default implementation is to concatenate all the columns
+            in the form of
+            field1: value1\nfield2: value2\n...
+            """
+            fields = row.index.tolist()
+            values = row.values.tolist()
+            document = "\n".join(
+                [f"{field}: {value}" for field, value in zip(fields, values)]
+            )
+            return document
+
+        # create dataframe
+        if len(content_columns) == 1:
+            c_content = df[content_columns[0]]
+        else:
+            c_content = df[content_columns].apply(row_to_document, axis=1)
+        c_content.name = TableField.CONTENT.value
+        df_out = pd.DataFrame(c_content)
+
+        if id_column is not None:
+            df_out[TableField.ID.value] = df[id_column]
+
+        if metadata_columns and len(metadata_columns) > 0:
+            df_out[TableField.METADATA.value] = df[metadata_columns].apply(lambda row: str(dict(row)), axis=1)
+
+        return df_out
 
     def _replace_query_content(self, node, **kwargs):
         if isinstance(node, BinaryOperation):
@@ -144,7 +252,10 @@ class KnowledgeBaseTable:
         helper to get vector db handler
         """
         if self._vector_db is None:
-            database_name = db.Integration.query.get(self._kb.vector_database_id).name
+            database = db.Integration.query.get(self._kb.vector_database_id)
+            if database is None:
+                raise ValueError('Vector database not found. Is it deleted?')
+            database_name = database.name
             self._vector_db = self.session.integration_controller.get_data_handler(database_name)
         return self._vector_db
 
@@ -157,6 +268,9 @@ class KnowledgeBaseTable:
         :return: dataframe with embeddings
         """
 
+        if df.empty:
+            return pd.DataFrame([], columns=[TableField.EMBEDDINGS.value])
+
         model_id = self._kb.embedding_model_id
         # get the input columns
         model_rec = db.session.query(db.Predictor).filter_by(id=model_id).first()
@@ -166,26 +280,26 @@ class KnowledgeBaseTable:
 
         project_datanode = self.session.datahub.get(model_project.name)
 
-        # TODO adjust input
+        # keep only content
+        df = df[[TableField.CONTENT.value]]
+
         input_col = model_rec.learn_args.get('using', {}).get('question_column')
+
         if input_col is not None and input_col != TableField.CONTENT.value:
             df = df.rename(columns={TableField.CONTENT.value: input_col})
 
-        if df.empty:
-            df_out = pd.DataFrame([], columns=[TableField.EMBEDDINGS.value])
-        else:
-            data = df.to_dict('records')
+        data = df.to_dict('records')
 
-            df_out = project_datanode.predict(
-                model_name=model_rec.name,
-                data=data,
-            )
+        df_out = project_datanode.predict(
+            model_name=model_rec.name,
+            data=data,
+        )
 
-            target = model_rec.to_predict[0]
-            if target != TableField.EMBEDDINGS.value:
-                # adapt output for vectordb
-                df_out = df_out.rename(columns={target: TableField.EMBEDDINGS.value})
-            df_out = df_out[[TableField.EMBEDDINGS.value]]
+        target = model_rec.to_predict[0]
+        if target != TableField.EMBEDDINGS.value:
+            # adapt output for vectordb
+            df_out = df_out.rename(columns={target: TableField.EMBEDDINGS.value})
+        df_out = df_out[[TableField.EMBEDDINGS.value]]
 
         return df_out
 
@@ -311,27 +425,30 @@ class KnowledgeBaseController:
         self.session.integration_controller.add(vector_store_name, engine, connection_args)
         return vector_store_name
 
-    def _create_default_embedding_model(self, project_name, kb_name, engine="sentence_transformers"):
+    def _create_default_embedding_model(self, project_name, kb_name, engine="langchain_embedding"):
         """create a default embedding model for knowledge base, if not specified"""
         model_name = f"{kb_name}_default_model"
-
+        using_args = {}
+        if engine == 'langchain_embedding':
+            # Use default embeddings.
+            using_args['class'] = 'openai'
         statement = CreatePredictor(
             name=Identifier(parts=[project_name, model_name]),
-            using={},
+            using=using_args,
             targets=[
                 Identifier(parts=[TableField.EMBEDDINGS.value])
             ]
         )
         ml_handler = self.session.integration_controller.get_ml_handler(engine)
 
-        self.session.model_controller.create_model(
+        _ = self.session.model_controller.create_model(
             statement,
             ml_handler
         )
 
         return model_name
 
-    def delete(self, name: str, project_name: str, if_exists: bool = False) -> None:
+    def delete(self, name: str, project_name: int, if_exists: bool = False) -> None:
         """
         Delete a knowledge base from the database
         """
@@ -360,15 +477,21 @@ class KnowledgeBaseController:
 
         # drop objects if they were created automatically
         if 'vector_storage' in kb.params:
-            self.session.integration_controller.delete(kb.params['vector_storage'])
+            try:
+                self.session.integration_controller.delete(kb.params['vector_storage'])
+            except EntityNotExistsError:
+                pass
         if 'embedding_model' in kb.params:
-            self.session.model_controller.delete_model(kb.params['embedding_model'], project_name)
+            try:
+                self.session.model_controller.delete_model(kb.params['embedding_model'], project_name)
+            except EntityNotExistsError:
+                pass
 
         # kb exists
         db.session.delete(kb)
         db.session.commit()
 
-    def get(self, name: str, project_id: str) -> db.KnowledgeBase:
+    def get(self, name: str, project_id: int) -> db.KnowledgeBase:
         """
         Get a knowledge base from the database
         by name + project_id
@@ -383,7 +506,7 @@ class KnowledgeBaseController:
         )
         return kb
 
-    def get_table(self, name: str, project_id: str) -> KnowledgeBaseTable:
+    def get_table(self, name: str, project_id: int) -> KnowledgeBaseTable:
         """
         Returns kb table object
         :param name: table name
@@ -394,21 +517,45 @@ class KnowledgeBaseController:
         if kb is not None:
             return KnowledgeBaseTable(kb, self.session)
 
-    def list(self, project_id: str) -> List[db.KnowledgeBase]:
+    def list(self, project_name: str = None) -> List[dict]:
         """
         List all knowledge bases from the database
         belonging to a project
         """
-        kbs = (
-            db.session.query(db.KnowledgeBase)
-            .filter_by(
-                project_id=project_id,
-            )
-            .all()
-        )
-        return kbs
+        project_controller = ProjectController()
+        projects = project_controller.get_list()
+        if project_name is not None:
+            projects = [p for p in projects if p.name == project_name]
 
-    def update(self, name: str, project_id: str, **kwargs) -> db.KnowledgeBase:
+        query = (
+            db.session.query(db.KnowledgeBase)
+            .filter(db.KnowledgeBase.project_id.in_(list([p.id for p in projects])))
+        )
+
+        data = []
+        project_names = {
+            i.id: i.name
+            for i in project_controller.get_list()
+        }
+
+        for record in query:
+            vector_database = record.vector_database
+            embedding_model = record.embedding_model
+
+            data.append({
+                'id': record.id,
+                'name': record.name,
+                'project_id': record.project_id,
+                'project_name': project_names[record.project_id],
+                'embedding_model': embedding_model.name if embedding_model is not None else None,
+                'vector_database': None if vector_database is None else vector_database.name,
+                'vector_database_table': record.vector_database_table,
+                'params': record.params
+            })
+
+        return data
+
+    def update(self, name: str, project_id: int, **kwargs) -> db.KnowledgeBase:
         """
         Update a knowledge base record
         """

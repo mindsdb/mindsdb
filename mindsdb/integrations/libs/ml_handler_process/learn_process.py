@@ -82,6 +82,10 @@ def learn_process(data_integration_ref: dict, problem_definition: dict, fetch_da
 
             module = importlib.import_module(module_path)
 
+            # check if module is imported successfully and raise exception if not
+            if module.import_error is not None:
+                raise module.import_error
+
             handlerStorage = HandlerStorage(integration_id)
             modelStorage = ModelStorage(model_id)
             modelStorage.fileStorage.push()     # FIXME

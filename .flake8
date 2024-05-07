@@ -33,7 +33,6 @@ exclude =
   mindsdb/integrations/handlers/mlflow_handler/*
   mindsdb/integrations/handlers/monetdb_handler/*
   mindsdb/integrations/handlers/mongodb_handler/*
-  mindsdb/integrations/handlers/mssql_handler/*
   mindsdb/integrations/handlers/mysql_handler/tests/test_mysql_handler.py
   mindsdb/integrations/handlers/oracle_handler/oracle_handler.py
   mindsdb/integrations/handlers/pinot_handler/pinot_handler.py
@@ -136,7 +135,6 @@ exclude =
   mindsdb/integrations/handlers/tpot_handler/*
   mindsdb/integrations/handlers/derby_handler/*
   mindsdb/integrations/handlers/scylla_handler/*
-  mindsdb/integrations/handlers/clickhouse_handler/*
   mindsdb/integrations/handlers/phoenix_handler/*
   mindsdb/integrations/handlers/replicate_handler/*
   mindsdb/integrations/handlers/pgvector_handler/*
@@ -155,7 +153,6 @@ exclude =
   mindsdb/integrations/handlers/hsqldb_handler/*
   mindsdb/integrations/handlers/newsapi_handler/*
   mindsdb/integrations/handlers/monkeylearn_handler/*
-  mindsdb/integrations/handlers/mysql_handler/*
   mindsdb/integrations/handlers/google_search_handler/*
   mindsdb/integrations/handlers/ollama_handler/*
   mindsdb/integrations/handlers/aurora_handler/*

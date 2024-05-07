@@ -1,7 +1,8 @@
 from mindsdb.utilities import log
 from google.cloud import aiplatform
-from google.oauth2 import service_account
 import pandas as pd
+
+from mindsdb.integrations.handlers.utilities.auth_utilities import GoogleServiceAccountOAuth2Manager
 
 logger = log.getLogger(__name__)
 
@@ -9,8 +10,14 @@ logger = log.getLogger(__name__)
 class VertexClient:
     """A class to interact with Vertex AI"""
 
-    def __init__(self, credentials_info, args_json):
-        credentials = service_account.Credentials.from_service_account_info(credentials_info)
+    def __init__(self, args_json, credentials_url=None, credentials_file=None, credentials_json=None):
+        google_sa_oauth2_manager = GoogleServiceAccountOAuth2Manager(
+            credentials_url=credentials_url,
+            credentials_file=credentials_file,
+            credentials_json=credentials_json,
+        )
+        credentials = google_sa_oauth2_manager.get_oauth2_credentials()
+
         aiplatform.init(
             credentials=credentials,
             project=args_json["project_id"],

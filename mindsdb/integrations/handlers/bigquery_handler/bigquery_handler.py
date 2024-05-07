@@ -140,7 +140,7 @@ class BigQueryHandler(DatabaseHandler):
         """
         Show details about the table
         """
-        q = f"SELECT column_name, data_type, FROM \
+        q = f"SELECT column_name AS Field, data_type as Type, FROM \
             `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.COLUMNS` WHERE table_name = '{table_name}'"
         result = self.native_query(q)
         return result

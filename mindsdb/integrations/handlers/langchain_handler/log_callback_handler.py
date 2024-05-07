@@ -13,6 +13,7 @@ class LogCallbackHandler(BaseCallbackHandler):
     def __init__(self, logger: logging.Logger):
         logger.setLevel('DEBUG')
         self.logger = logger
+        self._num_running_chains = 0
 
     def on_llm_start(
         self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any
@@ -32,6 +33,10 @@ class LogCallbackHandler(BaseCallbackHandler):
         for message in messages:
             self.logger.debug(message.pretty_print())
 
+    def on_llm_new_token(self, token: str, **kwargs: Any) -> Any:
+        '''Run on new LLM token. Only available when streaming is enabled.'''
+        pass
+
     def on_llm_end(self, response: LLMResult, **kwargs: Any) -> Any:
         '''Run when LLM ends running.'''
         self.logger.debug('LLM ended with response:')
@@ -47,19 +52,46 @@ class LogCallbackHandler(BaseCallbackHandler):
         self, serialized: Dict[str, Any], inputs: Dict[str, Any], **kwargs: Any
     ) -> Any:
         '''Run when chain starts running.'''
-        self.logger.debug('Entering new LLM chain with inputs:')
-        self.logger.debug(str(inputs))
+        self._num_running_chains += 1
+        self.logger.info('Entering new LLM chain ({} total)'.format(
+            self._num_running_chains))
+        self.logger.debug('Inputs: {}'.format(inputs))
 
     def on_chain_end(self, outputs: Dict[str, Any], **kwargs: Any) -> Any:
         '''Run when chain ends running.'''
-        self.logger.debug('LLM chain ended with outputs:')
-        self.logger.debug(str(outputs))
+        self._num_running_chains -= 1
+        self.logger.info('Ended LLM chain ({} total)'.format(
+            self._num_running_chains))
+        self.logger.debug('Outputs: {}'.format(outputs))
 
     def on_chain_error(
         self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
     ) -> Any:
         '''Run when chain errors.'''
-        self.logger.debug(f'LLM chain encountered an error: {str(error)}')
+        self._num_running_chains -= 1
+        self.logger.error(
+            'LLM chain encountered an error ({} running): {}'.format(
+                self._num_running_chains, error))
+
+    def on_tool_start(
+        self, serialized: Dict[str, Any], input_str: str, **kwargs: Any
+    ) -> Any:
+        '''Run when tool starts running.'''
+        pass
+
+    def on_tool_end(self, output: str, **kwargs: Any) -> Any:
+        '''Run when tool ends running.'''
+        pass
+
+    def on_tool_error(
+        self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
+    ) -> Any:
+        '''Run when tool errors.'''
+        pass
+
+    def on_text(self, text: str, **kwargs: Any) -> Any:
+        '''Run on arbitrary text.'''
+        pass
 
     def on_agent_action(self, action: AgentAction, **kwargs: Any) -> Any:
         '''Run on agent action.'''

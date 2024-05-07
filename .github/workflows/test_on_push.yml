@@ -2,11 +2,18 @@ name: Test on Push
 
 on:
   pull_request:
-    branches: [stable, staging]
+    branches: [main]
     
 defaults:
   run:
     shell: bash
+
+# Cancel any existing runs of this workflow on the same branch/pr
+# We always want to build/deploy/test a new commit over an older one
+concurrency:
+  group: ${{ github.workflow_ref }}
+  cancel-in-progress: true
+
 
 jobs:
   # Run all of our static code checks here
@@ -14,9 +21,9 @@ jobs:
     name: Run static code checks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3.5.3
+      - uses: actions/checkout@v4
       - name: Set up Python
-        uses: actions/setup-python@v4.7.0
+        uses: actions/setup-python@v5.1.0
         with:
           python-version: ${{ vars.CI_PYTHON_VERSION }}
           cache: pip
@@ -57,9 +64,9 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v3.5.3
+      - uses: actions/checkout@v4
       - id: set-matrix
-        uses: JoshuaTheMiller/conditional-build-matrix@v1.0.1
+        uses: JoshuaTheMiller/conditional-build-matrix@v2.0.1
         with:
           filter: '[?runOnBranch==`${{ github.ref }}` || runOnBranch==`always`]'
     
@@ -71,9 +78,9 @@ jobs:
       matrix: ${{fromJson(needs.matrix_prep.outputs.matrix)}}
     runs-on: ${{ matrix.runs_on }}
     steps:
-    - uses: actions/checkout@v3.5.3
+    - uses: actions/checkout@v4
     - name: Set up Python
-      uses: actions/setup-python@v4.7.0
+      uses: actions/setup-python@v5.1.0
       with:
         python-version: ${{ matrix.python-version }}
         cache: pip
@@ -97,9 +104,9 @@ jobs:
     runs-on: ${{ matrix.runs_on }}
     if: github.ref_type == 'branch'
     steps:
-    - uses: actions/checkout@v3.5.3
+    - uses: actions/checkout@v4
     - name: Set up Python
-      uses: actions/setup-python@v4.7.0
+      uses: actions/setup-python@v5.1.0
       with:
         python-version: ${{ matrix.python-version }}
         cache: pip
@@ -108,32 +115,29 @@ jobs:
       run: |
         pip install .
         pip install -r requirements/requirements-test.txt
-        pip install .[lightwood]  # TODO: for now some tests rely on lightwood
+        pip install lightwood  # TODO: for now some tests rely on lightwood
+        pip install mindsdb[mssql]
+        pip install mindsdb[clickhouse]
         pip freeze
     - name: Run unit tests
       run: |
-
         if [ "$RUNNER_OS" == "Linux" ]; then
-
           env PYTHONPATH=./ pytest tests/unit/test_executor.py
-
           env PYTHONPATH=./ pytest tests/unit/test_project_structure.py
-
           env PYTHONPATH=./ pytest tests/unit/test_predictor_params.py
-
           env PYTHONPATH=./ pytest tests/unit/test_mongodb_handler.py
-
           env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
-
           env PYTHONPATH=./ pytest tests/unit/test_cache.py
-        
           env PYTHONPATH=./ pytest tests/unit/test_llm_utils.py
-
         fi
     - name: Run Handlers tests and submit Coverage to coveralls
       run: |
-        pytest --cov=tests/unit/handler tests/unit/handlers/test_postgresql.py && coveralls --service=github
+        handlers=("mysql" "postgres" "mssql" "clickhouse")
+        for handler in "${handlers[@]}"
+        do
+          pytest --cov=mindsdb/integrations/handlers/${handler}_handler tests/unit/handlers/test_${handler}.py 
+        done
+        coveralls --service=github --basedir=mindsdb/integrations/handlers
       env:
         COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
-        PROMETHEUS_MULTIPROC_DIR: ./prometheus_metrics
         github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}

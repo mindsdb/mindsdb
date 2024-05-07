@@ -130,7 +130,7 @@ class QueryContextController:
 
         self.__update_context_record(context_name, query_str, values)
 
-    def drop_query_context(self, object_type: str, object_id: int):
+    def drop_query_context(self, object_type: str, object_id: int = None):
         """
         Drop context for object
         :param object_type: type of the object
@@ -162,7 +162,19 @@ class QueryContextController:
             if len(data) == 0:
                 value = None
             else:
-                value = data[0][0]
+                row = data[0]
+
+                idx = None
+                for i, col in enumerate(columns_info):
+                    if col['name'].upper() == info['column_name'].upper():
+                        idx = i
+                        break
+
+                if idx is None or len(row) == 1:
+                    value = row[0]
+                else:
+                    value = row[idx]
+
             if value is not None:
                 last_values[info['table_name']] = {info['column_name']: value}
 

@@ -139,35 +139,17 @@ class Integration(Resource):
                 params[key] = str(file_path)
 
         is_test = params.get('test', False)
+        #TODO: Move this to new Endpoint
+        if is_test:            
+            del params['test']
+            handler_type = params.pop('type', None)
+            params.pop('publish', None)
+            status = ca.integration_controller.check_connection(name, handler_type, params)
+            resp = status.to_json()
+            return resp, 200
 
         config = Config()
         secret_key = config.get('secret_key', 'dummy-key')
-
-        if is_test:
-            del params['test']
-
-            handler_type = params.pop('type', None)
-            params.pop('publish', None)
-            handler = ca.integration_controller.create_tmp_handler(
-                handler_type=handler_type,
-                connection_data=params
-            )
-
-            status = handler.check_connection()
-            if temp_dir is not None:
-                shutil.rmtree(temp_dir)
-
-            resp = status.to_json()
-            if status.success and 'code' in params:
-                if hasattr(handler, 'handler_storage'):
-                    # attach storage if exists
-                    export = handler.handler_storage.export_files()
-                    if export:
-                        # encrypt with flask secret key
-                        encrypted = encrypt(export, secret_key)
-                        resp['storage'] = encrypted.decode()
-
-            return resp, 200
 
         integration = ca.integration_controller.get(name, sensitive_info=False)
         if integration is not None:

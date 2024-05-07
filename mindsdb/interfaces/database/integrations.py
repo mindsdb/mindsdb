@@ -26,7 +26,6 @@ from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE, HANDLER_TYPE
-from mindsdb.integrations.handlers_client.db_client_factory import DBClient
 from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities import log
@@ -381,7 +380,6 @@ class IntegrationController:
                 continue
             integration_dict[record.name] = self._get_integration_record_data(record, sensitive_info)
         return integration_dict
-
 
     def _make_handler_args(self, name: str, handler_type: str, connection_data: dict, integration_id: int = None,
                            file_storage: FileStorage = None, handler_storage: HandlerStorage = None):

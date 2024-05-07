@@ -431,7 +431,7 @@ class OrdersTable(APITable):
                                'amount_dc', 'code_dc', 'type_dc',
                                'gift_card_li', 'grams_li',  'price_li', 'quantity_li', 'title_li', 
                                'vendor_li', 'fulfillment_status_li', 'sku_li', 'variant_title_li', 
-                               'name_pr_li', 'value_pr_li',
+                               'name_li', 'value_li',
                                'price_tl', 'rate_tl', 'title_tl', 'channel_liable_tl',
                                'name_na', 'value_na',
                                'code_sl', 'price_sl', 'discounted_price_sl', 'source_sl', 
@@ -439,10 +439,9 @@ class OrdersTable(APITable):
                                'carrier_identifier_sl', 'requested_fulfillment_service_id_sl', 
                                'is_removed_sl',
                                'buyer_accepts_marketing', 'currency', 'email', 'financial_status', 
-                               'fulfillment_status', 'merchant_of_record_app_id', 'note',
-                               'phone', 'po_number', 'processed_at', 'referring_site', 
-                               'source_name', 'source_identifier', 'source_url', 'tags',
-                               'taxes_included', 'test', 'total_tax', 'total_weight'],
+                               'fulfillment_status', 'note', 'phone', 'po_number', 'processed_at', 
+                               'referring_site', 'source_name', 'source_identifier', 'source_url', 
+                               'tags', 'taxes_included', 'test', 'total_tax', 'total_weight'],
             mandatory_columns=['price_li', 'title_li'],
             all_mandatory=False
         )
@@ -564,14 +563,14 @@ class OrdersTable(APITable):
             attributed_staffs_data = OrdersTable._extract_data_helper(order, attributed_staffs_columns)
             line_items_properties_data = OrdersTable._extract_data_helper(order, line_items_properties_columns)
 
-            # add sub-arrays to line item object
+            # add sub-arrays to line items object
             line_items_data['attributed_staffs'] = [attributed_staffs_data]
             line_items_data['properties'] = [line_items_properties_data]
 
             # add JSON and array objects to dictionary
-            order_data_trimmed['line_items'] = json.loads(json.dumps([line_items_data]))
             order_data_trimmed['billing_address'] = json.loads(json.dumps(billing_address_data))
             order_data_trimmed['shipping_address'] = json.loads(json.dumps(shipping_address_data))
+            order_data_trimmed['line_items'] = json.loads(json.dumps([line_items_data]))
             order_data_trimmed['discount_codes'] = json.loads(json.dumps([discount_codes_data]))
             order_data_trimmed['tax_lines'] = json.loads(json.dumps([tax_lines_data]))
             order_data_trimmed['note_attributes'] = json.loads(json.dumps([note_attributes_data]))
@@ -588,9 +587,9 @@ class OrdersTable(APITable):
             logger.info(f'Order {created_order.to_dict()["id"]} created')
 
     @staticmethod
-    def _extract_data_helper(order_data: Dict, columns: Set, subscript_len: int = 3) -> Dict:
+    def _extract_data_helper(order: Dict, columns: Set, subscript_len: int = 3) -> Dict:
         strip_index = subscript_len * -1
-        return {key[:strip_index]: val for key, val in order_data.items() if key in columns}
+        return {key[:strip_index]: val for key, val in order.items() if key in columns}
 
     def delete_orders(self, order_ids: List[int]) -> None:
         api_session = self.handler.connect()

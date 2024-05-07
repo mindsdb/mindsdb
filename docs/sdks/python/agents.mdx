@@ -1,7 +1,9 @@
 ---
 title: AI Agents with LLMs and Skills
-sidebarTitle: AI Agents
+sidebarTitle: Agents
 ---
+
+## Description
 
 With MindsDB, you can create and deploy AI agents that comprise AI models and customizable skills such as knowledge bases and text-to-SQL.
 
@@ -9,132 +11,55 @@ With MindsDB, you can create and deploy AI agents that comprise AI models and cu
   <img src="/assets/agent_diagram.png" />
 </p>
 
-AI agents use a conversational model (like OpenAI) from LangChain utilizing [tools as skills](https://python.langchain.com/docs/modules/agents/tools/) to respond to user input. Users can customize AI agents with their own prompts to fit their use cases.
-
-## AI Agents' Components
-
 AI agents comprise of skills, such as text2sql and knowledge_base, and a conversational model.
 
-### Skills
+* Skills provide data resources to an agent, enabling it to answer questions about available data. Learn more about [skills here](/sdks/python/agents_skills). Learn more about [knowledge bases here](/sdks/python/agents_knowledge_bases).
 
-Skills provide data resources to an agent, enabling it to answer questions about available data.
+* A conversational model (like OpenAI) from LangChain utilizes [tools as skills](https://python.langchain.com/docs/modules/agents/tools/) to respond to user input. Users can customize these models with their own prompts to fit their use cases.
 
-Here is how to create and work with skills:
+## Syntax
+
+### Creating an agent
+
+When creating an agent, you can use the default conversational model:
 
 ```python
-# get a skill by name
-skill = skills.get('my_skill')
-
-# list all skills
-skills = skills.list()
-
-# create a new SQL skill
-text_to_sql_skill = skills.create('text_to_sql', 'sql', { 'tables': ['my_table'], 'database': 'my_database' })
-
-# update a skill
-skill.params = { 'tables': ['new_table'], 'database': 'new_database' }
-updated_skill = skills.update('my_skill', skill)
-
-# delete a skill by name
-skills.delete('my_skill')
+agent = server.agents.create(f'new_demo_agent')
 ```
 
-#### Text2SQL
-
-To search data efficiently, use the text2sql skills that translate user's input into a query and fetch relevant data from defined datasets.
+Or specify model parameters:
 
 ```python
-text_to_sql_skill = skills.create('text_to_sql', 'sql', { 'tables': ['my_table'], 'database': 'my_database' })
-```
-
-This skill can be assigned to an agent at creation time:
-
-```python
-agent = agents.create('my_agent', model_name, [text_to_sql_skill])
-```
-
-#### Knowledge Base
-
-To feed an agent with data from different sources, use the knowledge_base skills.
-
-```python
-# create a knowledge base
-my_kb = server.knowledge_bases.create('my_kb')
-
-# insert data into a knowledge base from a file
-my_kb.insert(pd.read_csv('file_name.csv'))
-
-# insert data into a knowledge base from a database
-my_kb.insert(server.databases.db_name.tables.table_name.filter(column_name='value'))
-
-# insert data into a knowledge base
-my_kb.insert({'column_name': 'value', 'column_name': 'value', ...})
-
-# query a knowledge base
-df = my_kb.find('keyword').fetch()
-
-# list all available knowledge bases
-kb_list = server.knowledge_bases.list()
-
-# get a knowledge base by name
-kb = server.knowledge_bases.get('my_kb')
-kb = server.knowledge_bases.my_kb
-
-# drop a knowledge base
-server.knowledge_bases.drop('my_kb')
-```
-
-### Model
-
-Model enables an agent to form a response based on the available resources.
-
-Here is how to create a model to be used by an agent:
-
-```python
-# create a langchain engine
-langchain_engine = con.ml_engines.create('langchain', handler='langchain')
-
-# create a langchain model
-langchain_model = con.models.create(
-    'agent_model',
-    predict='answer',
-    engine='langchain',
-    prompt_template='<here you can add a personality to an agent>; answer user's question: {{question}}',
-    model_name='gpt-4-0125-preview' # This is the underlying LLM. Can use OpenAI, Claude, local Ollama, etc
-    # Can optionally set LLM args here. For example:
-    # temperature=0.0,
-    # max_tokens=1000,
-    # top_p=1.0,
-    # top_k=0,
-    # ...
+agent = server.agents.create(
+    f'new_demo_agent',
+    model={
+        'model_name': 'gpt-4',
+        'openai_api_key': 'MY_OPENAI_API_KEY',
+        'prompt_template': 'Hello! Ask a question: {{question}}'
+        'temperature': 0.0,
+        'max_tokens': 1000,
+        'top_p': 1.0,
+        'top_k': 0,
+        ...
+    }
 )
 ```
 
-This model can be assigned to an agent at creation time:
+Or use an exasting model:
 
 ```python
-agent = agents.create('my_agent', agent_model, [text_to_sql_skill])
+model = server.models.get('existing_model')
+agent = server.agents.create('demo_agent', model)
 ```
 
-## AI Agent
-
-Here is how to create and work with AI agents:
+Furthermore, you can list all existing agents, get agents by name, update agents, and delete agents.
 
 ```python
-# get an agent by name
-agent = agents.get('my_agent')
-
-# query an agent
-completion = agent.completion([{'question': 'What is your name?', 'answer': None}])
-print(completion.content)
-
 # list all agents
 agents = agents.list()
 
-# create a new agent
-model = models.get('my_model') # Or use models.create(...)
-text_to_sql_skill = skills.create('text_to_sql', 'sql', { 'tables': ['my_table'], 'database': 'my_database' })
-agent = agents.create('my_agent', model, [text_to_sql_skill])
+# get an agent by name
+agent = agents.get('my_agent')
 
 # update an agent
 new_model = models.get('new_model')
@@ -145,4 +70,71 @@ updated_agent = agents.update('my_agent', agent)
 
 # delete an agent by name
 agents.delete('my_agent')
+```
+
+### Assigning skills to an agent
+
+You can add skills to an agent, providing it with data stored in databases, files, or webpages.
+
+The retrieval skill is similar to [knowledge bases](/sdks/python/agents_knowledge_bases).
+
+```python
+# add data from one or more files as skills
+agent.add_file('./file_name.txt', 'file content description')
+agent.add_files(['./file_name.pdf', './file_name.pdf', ...], 'files content description')
+
+# add data from one or more webpages as skills
+agent.add_webpages(['example1.com', 'example2.com', ...], 'webpages content description')
+```
+
+The text2SQL skill retrieves relevant information from databases.
+
+```python
+# add data from a database connected to mindsdb as skills
+db = server.databases.create('datasource_name', 'engine_name', {'database': 'db.db_name'})
+db = server.databases.get('datasource_name')
+agent.add_database(db.name, ['table_name'], 'data description')
+```
+
+<Tip>
+Learn more about [all data sources integrated with MindsDB](/integrations/data-overview).
+</Tip>
+
+### Querying an agent
+
+Once you created an agent and assigned it a set of skills, you can ask questions related to your data.
+
+```python
+question = 'ask a question'
+answer = agent.completion([{'question': question, 'answer': None}])
+print(answer.content)
+```
+
+## Example
+
+Here is a sample Python code to deploy an agent:
+
+```python
+import mindsdb_sdk
+con = mindsdb_sdk.connect()
+
+# IMPORTANT: This code requires to set OPENAI_API_KEY as env variable
+
+agent = con.agents.create(f'new_demo_agent')
+
+print('Adding Hooblyblob details...')
+agent.add_file('./hooblyblob.txt', 'Details about the company Hooblyblob')
+
+print('Adding rulebook details...')
+agent.add_files(['./codenames-rulebook.pdf'], 'Rulebooks for various board games')
+
+print('Adding MindsDB docs...')
+agent.add_webpages(['docs.mindsdb.com'], 'Documentation for MindsDB')
+
+print('Agent ready to use.')
+while True:
+    print('Ask a question: ')
+    question = input()
+    answer = agent.completion([{'question': question, 'answer': None}])
+    print(answer.content)
 ```

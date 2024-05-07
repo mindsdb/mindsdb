@@ -795,7 +795,14 @@
                       "sdks/python/get_history"
                   ]
               },
-              "sdks/python/agents"
+              {
+                "group": "AI Agents",
+                "pages": [
+                  "sdks/python/agents",
+                  "sdks/python/agents_skills",
+                  "sdks/python/agents_knowledge_bases"
+                ]
+              }
           ]
         },
         {

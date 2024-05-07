@@ -2,7 +2,7 @@ import json
 import shopify
 import requests
 import pandas as pd
-from typing import Text, List, Dict, Any
+from typing import Text, List, Dict, Any, Set
 
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APITable
@@ -431,7 +431,7 @@ class OrdersTable(APITable):
                                'amount_dc', 'code_dc', 'type_dc',
                                'gift_card_li', 'grams_li',  'price_li', 'quantity_li', 'title_li', 
                                'vendor_li', 'fulfillment_status_li', 'sku_li', 'variant_title_li', 
-                               'name_li', 'value_li',
+                               'name_pr_li', 'value_pr_li',
                                'price_tl', 'rate_tl', 'title_tl', 'channel_liable_tl',
                                'name_na', 'value_na',
                                'code_sl', 'price_sl', 'discounted_price_sl', 'source_sl', 
@@ -525,57 +525,99 @@ class OrdersTable(APITable):
     def create_orders(self, order_data: List[Dict[Text, Any]]) -> None:
         api_session = self.handler.connect()
         shopify.ShopifyResource.activate_session(api_session)
-        # build API objects
-        line_item_columns = {'gift_card_li', 'grams_li', 'price_li', 'quantity_li', 'title_li',
+        # separate columns by API object
+        line_items_columns = {'gift_card_li', 'grams_li', 'price_li', 'quantity_li', 'title_li',
                              'vendor_li', 'fulfillment_status_li', 'sku_li', 'variant_title_li'}
         billing_address_columns = {'address1_ba', 'address2_ba', 'city_ba', 'company_ba',
                                    'country_ba', 'country_code_ba', 'first_name_ba', 'last_name_ba', 
-                                   'latitude_ba', 'longitude_ba', 'name_ba', 'phone_ba', 'province_ba', 
-                                   'province_code_ba', 'zip_ba'}
+                                   'latitude_ba', 'longitude_ba', 'name_ba', 'phone_ba',
+                                   'province_ba', 'province_code_ba', 'zip_ba'}
         shipping_address_columns = {'address1_sa', 'address2_sa', 'city_sa', 'company_sa',
-                                   'country_sa', 'country_code_sa', 'first_name_sa', 'last_name_sa', 
-                                   'latitude_sa', 'longitude_sa', 'name_sa', 'phone_sa', 'province_sa', 
-                                   'province_code_sa', 'zip_sa'}
+                                   'country_sa', 'country_code_sa', 'first_name_sa', 'last_name_sa',
+                                   'latitude_sa', 'longitude_sa', 'name_sa', 'phone_sa',
+                                   'province_sa', 'province_code_sa', 'zip_sa'}
         discount_codes_columns = {'amount_dc', 'code_dc', 'type_dc'}
         tax_lines_columns = {'price_tl', 'rate_tl', 'title_tl', 'channel_liable_tl'}
         note_attributes_columns = {'name_na', 'value_na'}
         shipping_lines_columns = {'code_sl', 'price_sl', 'discounted_price_sl',
-                                  'source_sl', 'title_sl', 'carrier_identifier_sl', 
+                                  'source_sl', 'title_sl', 'carrier_identifier_sl',
                                   'requested_fulfillment_service_id_sl', 'is_removed_sl'}
         attributed_staffs_columns = {'id_as', 'quantity_as'}
         line_items_properties_columns = {'name_li', 'value_li'}
+        all_columns = (line_items_columns | billing_address_columns | shipping_address_columns |
+                       discount_codes_columns | tax_lines_columns | note_attributes_columns |
+                       shipping_lines_columns | attributed_staffs_columns |
+                       line_items_properties_columns)
         modified_order_data = []
 
         for order in order_data:
             # separate values by object
+            # order_data_trimmed = {}
+            # line_items_data = {}
+            # billing_address_data = {}
+            # shipping_address_data = {}
+            # discount_codes_data = {}
+            # tax_lines_data = {}
+            # note_attributes_data = {}
+            # shipping_lines_data = {}
+            # attributed_staffs_data = {}
+            # line_items_properties_data = {}
+
+            # for key, val in order.items():
+
+            #     if '_' not in key:
+            #         order_data_trimmed[key] = val
+            #     elif key[-3:] == '_li':
+            #         line_items_data[key[:-3]] = val
+            #     elif key[-3:] == '_ba':
+            #         billing_address_data[key[:-3]] = val
+            #     elif key[-3:] == '_sa':
+            #         shipping_address_data[key[:-3]] = val
+            #     elif key[-3:] == '_dc':
+            #         discount_codes_data[key[:-3]] = val
+            #     elif key[-3:] == '_tl':
+            #         tax_lines_data[key[:-3]] = val
+            #     elif key[-3:] == '_na':
+            #         note_attributes_data[key[:-3]] = val
+            #     elif key[-3:] == '_sl':
+            #         shipping_lines_data[key[:-3]] = val
+            #     elif key[-3:] == '_as':
+            #         attributed_staffs_data[key[:-3]] = val
+            #     elif key[-6:] == '_pr_li':
+            #         line_items_properties_data[key[:-6]] = val
+
             order_data_trimmed = {key: val for key, val in order.items()
-                                if key not in line_item_columns
-                                and key not in billing_address_columns
-                                and key not in shipping_address_columns
-                                and key not in discount_codes_columns
-                                and key not in tax_lines_columns
-                                and key not in note_attributes_columns
-                                and key not in shipping_lines_columns
-                                and key not in attributed_staffs_columns
-                                and key not in line_items_properties_columns}
-            line_items_data = {key[:-3]: val for key, val in order.items()
-                            if key in line_item_columns}
-            billing_address_data = {key[:-3]: val for key, val in order.items()
-                                    if key in billing_address_columns}
-            shipping_address_data = {key[:-3]: val for key, val in order.items()
-                                    if key in shipping_address_columns}
-            discount_codes_data = {key[:-3]: val for key, val in order.items()
-                                    if key in discount_codes_columns}
-            tax_lines_data = {key[:-3]: val for key, val in order.items()
-                                    if key in tax_lines_columns}
-            note_attributes_data = {key[:-3]: val for key, val in order.items()
-                                    if key in note_attributes_columns}
-            shipping_lines_data = {key[:-3]: val for key, val in order.items()
-                                    if key in shipping_lines_columns}
-            attributed_staffs_data = {key[:-3]: val for key, val in order.items()
-                                    if key in attributed_staffs_columns}
-            line_items_properties_data = {key[:-3]: val for key, val in order.items()
-                                    if key in line_items_properties_columns}
+                                if key not in all_columns}
+            line_items_data = OrdersTable._extract_data_helper(order, line_items_columns)
+            billing_address_data = OrdersTable._extract_data_helper(order, billing_address_columns)
+            shipping_address_data = OrdersTable._extract_data_helper(order, shipping_address_columns)
+            discount_codes_data = OrdersTable._extract_data_helper(order, discount_codes_columns)
+            tax_lines_data = OrdersTable._extract_data_helper(order, tax_lines_columns)
+            note_attributes_data = OrdersTable._extract_data_helper(order, note_attributes_columns)
+            shipping_lines_data = OrdersTable._extract_data_helper(order, shipping_lines_columns)
+            attributed_staffs_data = OrdersTable._extract_data_helper(order, attributed_staffs_columns)
+            line_items_properties_data = OrdersTable._extract_data_helper(order, line_items_properties_columns)
+
+            # order_data_trimmed = {key: val for key, val in order.items()
+            #                     if key not in all_columns}
+            # line_items_data = {key[:-3]: val for key, val in order.items()
+            #                 if key in line_item_columns}
+            # billing_address_data = {key[:-3]: val for key, val in order.items()
+            #                         if key in billing_address_columns}
+            # shipping_address_data = {key[:-3]: val for key, val in order.items()
+            #                         if key in shipping_address_columns}
+            # discount_codes_data = {key[:-3]: val for key, val in order.items()
+            #                         if key in discount_codes_columns}
+            # tax_lines_data = {key[:-3]: val for key, val in order.items()
+            #                         if key in tax_lines_columns}
+            # note_attributes_data = {key[:-3]: val for key, val in order.items()
+            #                         if key in note_attributes_columns}
+            # shipping_lines_data = {key[:-3]: val for key, val in order.items()
+            #                         if key in shipping_lines_columns}
+            # attributed_staffs_data = {key[:-3]: val for key, val in order.items()
+            #                         if key in attributed_staffs_columns}
+            # line_items_properties_data = {key[:-3]: val for key, val in order.items()
+            #                         if key in line_items_properties_columns}
 
             # add sub-arrays to line item object
             line_items_data['attributed_staffs'] = [attributed_staffs_data]
@@ -599,6 +641,11 @@ class OrdersTable(APITable):
                 raise Exception('Order creation failed')
 
             logger.info(f'Order {created_order.to_dict()["id"]} created')
+
+    @staticmethod
+    def _extract_data_helper(order_data: Dict, columns: Set, subscript_len: int = 3) -> Dict:
+        strip_index = subscript_len * -1
+        return {key[:strip_index]: val for key, val in order_data.items() if key in columns}
 
     def delete_orders(self, order_ids: List[int]) -> None:
         api_session = self.handler.connect()

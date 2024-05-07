@@ -419,15 +419,15 @@ class OrdersTable(APITable):
         """
         insert_statement_parser = INSERTQueryParser(
             query,
-            supported_columns=['id_as', 'quantity_as', 
-                               'address1_b', 'address2_b', 'city_b', 'company_b', 'country_b',
-                               'country_code_b', 'first_name_b', 'last_name_b', 'latitude_b', 
-                               'longitude_b', 'name_b', 'phone_b', 'province_b', 'province_code_b', 
-                               'zip_b', 
-                               'address1_s', 'address2_s', 'city_s', 'company_s',
-                               'country_s', 'country_code_s', 'first_name_s', 'last_name_s', 
-                               'latitude_s', 'longitude_s', 'name_s', 'phone_s', 'province_s', 
-                               'province_code_s', 'zip_s', 
+            supported_columns=['id_as', 'quantity_as',
+                               'address1_ba', 'address2_ba', 'city_ba', 'company_ba', 'country_ba',
+                               'country_code_ba', 'first_name_ba', 'last_name_ba', 'latitude_ba', 
+                               'longitude_ba', 'name_ba', 'phone_ba', 'province_ba', 'province_code_ba', 
+                               'zip_ba', 
+                               'address1_sa', 'address2_sa', 'city_sa', 'company_sa',
+                               'country_sa', 'country_code_sa', 'first_name_sa', 'last_name_sa', 
+                               'latitude_sa', 'longitude_sa', 'name_sa', 'phone_sa', 'province_sa', 
+                               'province_code_sa', 'zip_sa', 
                                'amount_dc', 'code_dc', 'type_dc',
                                'gift_card_li', 'grams_li',  'price_li', 'quantity_li', 'title_li', 
                                'vendor_li', 'fulfillment_status_li', 'sku_li', 'variant_title_li', 
@@ -528,14 +528,14 @@ class OrdersTable(APITable):
         # build API objects
         line_item_columns = {'gift_card_li', 'grams_li', 'price_li', 'quantity_li', 'title_li',
                              'vendor_li', 'fulfillment_status_li', 'sku_li', 'variant_title_li'}
-        billing_address_columns = {'address1_b', 'address2_b', 'city_b', 'company_b',
-                                   'country_b', 'country_code_b', 'first_name_b', 'last_name_b', 
-                                   'latitude_b', 'longitude_b', 'name_b', 'phone_b', 'province_b', 
-                                   'province_code_b', 'zip_b'}
-        shipping_address_columns = {'address1_s', 'address2_s', 'city_s', 'company_s',
-                                   'country_s', 'country_code_s', 'first_name_s', 'last_name_s', 
-                                   'latitude_s', 'longitude_s', 'name_s', 'phone_s', 'province_s', 
-                                   'province_code_s', 'zip_s'}
+        billing_address_columns = {'address1_ba', 'address2_ba', 'city_ba', 'company_ba',
+                                   'country_ba', 'country_code_ba', 'first_name_ba', 'last_name_ba', 
+                                   'latitude_ba', 'longitude_ba', 'name_ba', 'phone_ba', 'province_ba', 
+                                   'province_code_ba', 'zip_ba'}
+        shipping_address_columns = {'address1_sa', 'address2_sa', 'city_sa', 'company_sa',
+                                   'country_sa', 'country_code_sa', 'first_name_sa', 'last_name_sa', 
+                                   'latitude_sa', 'longitude_sa', 'name_sa', 'phone_sa', 'province_sa', 
+                                   'province_code_sa', 'zip_sa'}
         discount_codes_columns = {'amount_dc', 'code_dc', 'type_dc'}
         tax_lines_columns = {'price_tl', 'rate_tl', 'title_tl', 'channel_liable_tl'}
         note_attributes_columns = {'name_na', 'value_na'}
@@ -560,9 +560,9 @@ class OrdersTable(APITable):
                                 and key not in line_items_properties_columns}
             line_items_data = {key[:-3]: val for key, val in order.items()
                             if key in line_item_columns}
-            billing_address_data = {key[:-2]: val for key, val in order.items()
+            billing_address_data = {key[:-3]: val for key, val in order.items()
                                     if key in billing_address_columns}
-            shipping_address_data = {key[:-2]: val for key, val in order.items()
+            shipping_address_data = {key[:-3]: val for key, val in order.items()
                                     if key in shipping_address_columns}
             discount_codes_data = {key[:-3]: val for key, val in order.items()
                                     if key in discount_codes_columns}

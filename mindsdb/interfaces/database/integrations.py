@@ -415,7 +415,7 @@ class IntegrationController:
             name=name,
             handler_type=engine,
             connection_data=connection_args,
-            integration_id = int(time() * 10000)
+            integration_id=int(time() * 10000)
         )
         handler = HandlerClass(**handler_args)
         return handler

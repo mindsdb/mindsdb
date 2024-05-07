@@ -140,7 +140,7 @@ class Integration(Resource):
 
         is_test = params.get('test', False)
         # TODO: Move this to new Endpoint
-        if is_test:         
+        if is_test:
             del params['test']
             handler_type = params.pop('type', None)
             params.pop('publish', None)

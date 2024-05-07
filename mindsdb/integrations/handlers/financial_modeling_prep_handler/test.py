@@ -1,17 +1,17 @@
-from mindsdb.integrations.handlers.financial_modeling_prep_handler.financial_modeling_handler import FinancialModelingHandler
-
+#from financial_modeling_handler import FinancialModelingHandler
+import json
+import pandas as pd
 
 #!/usr/bin/env python
 # try:
 #     # For Python 3.0 and later
-#     from urllib.request import urlopen
+from urllib.request import urlopen
 # except ImportError:
 #     # Fall back to Python 2's urllib2
-#     from urllib2 import urlopen
-
-# import certifi
+#from urllib2 import urlopen
+import certifi
 # import json
-# from urllib.parse import urlencode
+from urllib.parse import urlencode
 # import requests
 # def get_jsonparsed_data(url):
 #     response = urlopen(url, cafile=certifi.where())
@@ -42,7 +42,39 @@ from mindsdb.integrations.handlers.financial_modeling_prep_handler.financial_mod
 # r = requests.get('https://financialmodelingprep.com/api/v3/historical-price-full/AAPL?apikey=GJvlw9YgVm5J4KIxdP1VPkvWzt747Q6j&from=2023-10-10&to=2023-12-10&serietype=line')
 
 # print(r.content)
+def get_jsonparsed_data(url):
+    response = urlopen(url, cafile=certifi.where())
+    data = response.read().decode("utf-8")
+    return json.loads(data)
 
+def get_daily_chart(self, params: dict = None) -> pd.DataFrame:  
+    url = ("https://financialmodelingprep.com/api/v3/historical-price-full/AAPL?apikey=GJvlw9YgVm5J4KIxdP1VPkvWzt747Q6j")
+    base_url = "https://financialmodelingprep.com/api/v3/historical-price-full/"
+    # symbol = "AAPL"
+    # api_key = "GJvlw9YgVm5J4KIxdP1VPkvWzt747Q6j"
+    # params = {
+    #     "apikey": api_key,
+    #     "from": "2023-10-10",
+    #     "to": "2023-12-10",
+    #     "serietype": "line"
+    # }
+
+    symbol = params['symbol']
+    from_date = params['from']
+    to_date = params['to']
+
+    url = f"{base_url}{symbol}?{urlencode(params)}"
+    print(url)
+    if 'symbol' not in params:
+        raise ValueError('Missing "symbol" param')
+    response = get_jsonparsed_data(url)
+    #take out symbol in dict
+    data = json.loads(response) #parses into python dict
+
+    historical_data = data["historical"][:3] #first 3 elements
+
+    return historical_data
+    
 def main():
     # Instantiate MyClass
     params = {
@@ -50,8 +82,9 @@ def main():
         "to": "2023-12-10",
         "serietype": "line"
     }
-    fmp = FinancialModelingHandler()
-    df = fmp.get_daily_chart()
+#    fmp = FinancialModelingHandler()
+# df = fmp.get_daily_chart()
+    df = get_daily_chart(params)
     
 
 if __name__ == "__main__":

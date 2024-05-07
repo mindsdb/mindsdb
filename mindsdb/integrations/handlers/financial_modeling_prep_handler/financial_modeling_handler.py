@@ -13,6 +13,7 @@ from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 import certifi
 import json
+import requests
 # https://site.financialmodelingprep.com/developer/docs/daily-chart-charts
 #To authorize your requests, add ?apikey= ----- at the end of every request.
 

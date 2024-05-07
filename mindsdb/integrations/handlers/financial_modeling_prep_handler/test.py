@@ -41,13 +41,15 @@ from urllib.parse import urlencode
 # url = f"{base_url}{symbol}?{urlencode(params)}"
 # r = requests.get('https://financialmodelingprep.com/api/v3/historical-price-full/AAPL?apikey=GJvlw9YgVm5J4KIxdP1VPkvWzt747Q6j&from=2023-10-10&to=2023-12-10&serietype=line')
 
+import requests
+
 # print(r.content)
 def get_jsonparsed_data(url):
     response = urlopen(url, cafile=certifi.where())
     data = response.read().decode("utf-8")
     return json.loads(data)
 
-def get_daily_chart(self, params: dict = None) -> pd.DataFrame:  
+def get_daily_chart(params: dict = None) -> pd.DataFrame:  
     url = ("https://financialmodelingprep.com/api/v3/historical-price-full/AAPL?apikey=GJvlw9YgVm5J4KIxdP1VPkvWzt747Q6j")
     base_url = "https://financialmodelingprep.com/api/v3/historical-price-full/"
     # symbol = "AAPL"
@@ -58,33 +60,36 @@ def get_daily_chart(self, params: dict = None) -> pd.DataFrame:
     #     "to": "2023-12-10",
     #     "serietype": "line"
     # }
-
-    symbol = params['symbol']
+    print(params)
+    #symbol = params['symbol']
     from_date = params['from']
     to_date = params['to']
 
-    url = f"{base_url}{symbol}?{urlencode(params)}"
-    print(url)
-    if 'symbol' not in params:
-        raise ValueError('Missing "symbol" param')
-    response = get_jsonparsed_data(url)
+    # url = f"{base_url}{symbol}?{urlencode(params)}"
+    # print(url)
+    # if 'symbol' not in params:
+    #     raise ValueError('Missing "symbol" param')
+    r = requests.get(url, params)
+    #print(r)
+    #response = get_jsonparsed_data(url)
     #take out symbol in dict
-    data = json.loads(response) #parses into python dict
+    # data = json.loads(r) #parses into python dict
 
-    historical_data = data["historical"][:3] #first 3 elements
+    # historical_data = data["historical"][:3] #first 3 elements
 
-    return historical_data
+    return r
     
 def main():
-    # Instantiate MyClass
+    # Define params
     params = {
         "from": "2023-10-10",
         "to": "2023-12-10",
         "serietype": "line"
     }
-#    fmp = FinancialModelingHandler()
-# df = fmp.get_daily_chart()
+    print(params)
+    # Call get_daily_chart method with params
     df = get_daily_chart(params)
+    print(df)
     
 
 if __name__ == "__main__":

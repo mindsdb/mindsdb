@@ -382,19 +382,10 @@ class IntegrationController:
             integration_dict[record.name] = self._get_integration_record_data(record, sensitive_info)
         return integration_dict
 
-    def check_connections(self):
-        connections = {}
-        for integration_name, integration_meta in self.get_all().items():
-            handler = self.create_tmp_handler(
-                handler_type=integration_meta['engine'],
-                connection_data=integration_meta['connection_data']
-            )
-            status = handler.check_connection()
-            connections[integration_name] = status.get('success', False)
 
     def _make_handler_args(self, name: str, handler_type: str, connection_data: dict, integration_id: int = None,
                            file_storage: FileStorage = None, handler_storage: HandlerStorage = None):
-        handler_ars = dict(
+        handler_args = dict(
             name=name,
             integration_id=integration_id,
             connection_data=connection_data,
@@ -403,12 +394,12 @@ class IntegrationController:
         )
 
         if handler_type == 'files':
-            handler_ars['file_controller'] = FileController()
+            handler_args['file_controller'] = FileController()
         elif self.handler_modules.get(handler_type, False).type == HANDLER_TYPE.ML:
-            handler_ars['handler_controller'] = self
-            handler_ars['company_id'] = ctx.company_id
+            handler_args['handler_controller'] = self
+            handler_args['company_id'] = ctx.company_id
 
-        return handler_ars
+        return handler_args
 
     def create_tmp_handler(self, handler_type: str, connection_data: dict) -> object:
         """ Returns temporary handler. That handler does not exist in database.
@@ -591,6 +582,25 @@ class IntegrationController:
             }
 
         self.handlers_import_status[handler_meta['name']] = handler_meta
+
+    def check_connection(self, name: str, engine: str, connection_args: dict) -> dict:
+        """Check connection to the handler
+
+        Args:
+            name (str): handler name
+
+        Returns:
+            HandlerStatusResponse: connection status
+        """
+        HandlerClass = self.handler_modules[engine].Handler
+        handler_args = self._make_handler_args(
+            name=name,
+            handler_type=engine,
+            connection_data=connection_args,
+            integration_id = int(time() * 10000)
+        )
+        handler = HandlerClass(**handler_args)
+        return handler.check_connection()
 
     def _read_dependencies(self, path):
         dependencies = []

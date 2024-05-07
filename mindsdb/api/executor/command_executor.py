@@ -1086,8 +1086,8 @@ class ExecuteCommands:
 
             handler = self.session.integration_controller.create_tmp_handler(
                 name=name,
-                handler_type=engine,
-                connection_data=connection_args
+                engine=engine,
+                connection_args=connection_args
             )
             status = handler.check_connection()
             if status.copy_storage:

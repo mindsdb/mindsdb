@@ -88,7 +88,7 @@ Follow [this instruction](/integrations/ai-engines/openai#setup) to set up the O
 Once the `insertOne` method has started execution, we can check the status of the creation process with the following query:
 
 ```bash
-mindsdb> db.getCollection('models').find({
+mindsdb> db.models.find({
             'name': 'text_summarization'
         })
 ```

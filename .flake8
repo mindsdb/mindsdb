@@ -42,7 +42,6 @@ exclude =
   mindsdb/integrations/handlers/redshift_handler/*
   mindsdb/integrations/handlers/s3_handler/s3_handler.py
   mindsdb/integrations/handlers/singlestore_handler/*
-  mindsdb/integrations/handlers/snowflake_handler/snowflake_handler.py
   mindsdb/integrations/handlers/sqlite_handler/sqlite_handler.py
   mindsdb/integrations/handlers/supabase_handler/tests/test_supabase_handler.py
   mindsdb/integrations/handlers/tidb_handler/*

@@ -41,7 +41,6 @@ WITH
     ENGINE = 'snowflake',
     PARAMETERS = {
         "account": "tvuibdy-vm85921",
-        "user": "user",
         "password": "password",
         "database": "test_db"
     };

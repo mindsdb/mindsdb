@@ -1092,7 +1092,9 @@ class ExecuteCommands:
                         connection_args[arg_name] = path
 
             handler = self.session.integration_controller.create_tmp_handler(
-                handler_type=engine, connection_data=connection_args
+                name=name,
+                engine=engine,
+                connection_args=connection_args
             )
             status = handler.check_connection()
             if status.copy_storage:

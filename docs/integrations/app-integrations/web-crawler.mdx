@@ -5,16 +5,14 @@ sidebarTitle: Web Crawler
 
 In this section, we present how to use a web crawler within MindsDB.
 
-A web crawler is a computer program or automated script that browses the internet and navigates through websites, web pages, and web content to gather data. Within the realm of MindsDB, a web crawler can be employed to harvest data, which can be used to train models, 
-domain specific chatbots or fine-tune LLMs.
+A web crawler is an automated script designed to systematically browse and index content on the internet. Within MindsDB, you can utilize a web crawler to efficiently collect data from various websites.
 
 ## Prerequisites
 
 Before proceeding, ensure the following prerequisites are met:
 
 1. Install MindsDB locally via [Docker](/setup/self-hosted/docker) or [Docker Desktop](/setup/self-hosted/docker-desktop).
-2. To connect Web Crawler to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
-3. Install or ensure access to Web Crawler.
+2. To use Web Crawler with MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
 
 ## Connection
 
@@ -26,12 +24,19 @@ Here is how to initialize a web crawler:
 CREATE DATABASE my_web 
 WITH ENGINE = 'web';
 ```
+<Tip>
+The above query creates a database called `my_web`. This database by default have a table called `crawler` that we can use to crawl data from a given url/urls.
+</Tip>
 
 ## Usage
 
+<Note>
+Specifying a query `LIMIT` is required. To crawl all pages on a site, consider setting the limit to a high value, such as 10,000, which exceeds the expected number of pages. Be aware that setting a higher limit may result in longer response times.
+</Note>
+
 ### Get Websites Content
 
-Here is how to get the content of `docs.mindsdb.com`:
+The following usage examples demonstrate how to retrieve content from `docs.mindsdb.com`:
 
 ```sql
 SELECT * 
@@ -40,7 +45,7 @@ WHERE url = 'docs.mindsdb.com'
 LIMIT 1;
 ```
 
-You can also get the content of internal pages. Here is how to fetch the content from 10 internal pages:
+You can also retrieve content from internal pages. The following query fetches the content from 10 internal pages:
 
 ```sql
 SELECT * 
@@ -49,7 +54,7 @@ WHERE url = 'docs.mindsdb.com'
 LIMIT 10;
 ```
 
-Another option is to get the content from multiple websites.
+Another option is to get the content from multiple websites by using the `IN ()` operator:
 
 ```sql
 SELECT * 
@@ -60,7 +65,7 @@ LIMIT 1;
 
 ### Get PDF Content
 
-MindsDB accepts [file uploads](/sql/create/file) of `csv`, `xlsx`, `xls`, `sheet`, `json`, and `parquet`. However, you can utilize the web crawler to fetch data from `pdf` files.
+MindsDB accepts [file uploads](/sql/create/file) of `csv`, `xlsx`, `xls`, `sheet`, `json`, and `parquet`. However, you can also configure the web crawler to fetch data from PDF files accessible via URLs.
 
 ```sql
 SELECT * 
@@ -69,4 +74,22 @@ WHERE url = '<link-to-pdf-file>'
 LIMIT 1;
 ```
 
-For example, you can provide a link to a `pdf` file stored in Amazon S3.
+## Troubleshooting
+
+<Warning>
+`Web crawler encounters character encoding issues`
+
+* **Symptoms**: Extracted text appears garbled or contains strange characters instead of the expected text.
+* **Checklist**:
+      1. Open a GitHub Issue: If you encounter a bug or a repeatable error with encoding, 
+      report it on the [MindsDB GitHub](https://github.com/mindsdb/mindsdb/issues) repository by opening an issue.
+</Warning>
+
+
+<Warning>
+`Web crawler times out while trying to fetch content`
+
+* **Symptoms**: The crawler fails to retrieve data from a website, resulting in timeout errors.
+* **Checklist**:
+      1. Check the network connection to ensure the target site is reachable.
+</Warning>

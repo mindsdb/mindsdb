@@ -89,11 +89,9 @@ exclude =
   mindsdb/integrations/handlers/quickbooks_handler/*
   mindsdb/integrations/handlers/strava_handler/*
   mindsdb/integrations/handlers/strava_handler/*
-  mindsdb/integrations/handlers/web_handler/*
   mindsdb/integrations/handlers/strava_handler/*
   mindsdb/integrations/handlers/github_handler/*
   mindsdb/integrations/handlers/vitess_handler/*
-  mindsdb/integrations/handlers/web_handler/*
   mindsdb/integrations/handlers/impala_handler/*
   mindsdb/integrations/handlers/tdengine_handler/*
   mindsdb/integrations/handlers/huggingface_api_handler/*

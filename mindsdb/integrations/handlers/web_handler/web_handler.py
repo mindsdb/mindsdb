@@ -13,7 +13,7 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.utilities.security import is_private_url
 from mindsdb.utilities.config import Config
 
-from .urlcrawl_helpers import get_df_from_query_str, get_all_websites
+from .urlcrawl_helpers import get_all_websites
 
 
 class CrawlerTable(APITable):
@@ -25,7 +25,7 @@ class CrawlerTable(APITable):
         for op, arg1, arg2 in conditions:
 
             if op == 'or':
-                raise NotImplementedError(f'OR is not supported')
+                raise NotImplementedError('OR is not supported')
 
             if arg1 == 'url':
                 url = arg2
@@ -38,20 +38,17 @@ class CrawlerTable(APITable):
                     else:
                         urls = url
                 else:
-                    raise NotImplementedError(
-                        f'url can be url = "someurl", you can also crawl multiple sites, as follows:'
-                        f' url IN ("url1", "url2", ..)'
-                    )
-
+                    raise NotImplementedError('Invalid URL format. Please provide a single URL like url = "example.com" or'
+                                              'multiple URLs using the format url IN ("url1", "url2", ...)')
             else:
                 pass
 
         if len(urls) == 0:
             raise NotImplementedError(
-                f'You must specify what url you want to crawl, for example: SELECT * FROM crawl WHERE url IN ("someurl", ..)')
+                'You must specify what url you want to crawl, for example: SELECT * FROM crawl WHERE url = "someurl"')
 
         if query.limit is None:
-            raise NotImplementedError(f'You must specify a LIMIT which defines the number of pages to crawl')
+            raise NotImplementedError('You must specify a LIMIT which defines the number of pages to crawl')
         limit = query.limit.value
 
         if limit < 0:
@@ -85,29 +82,9 @@ class WebHandler(APIHandler):
     """A class for handling crawling content from websites.
 
     Attributes:
-        
     """
 
     def __init__(self, name=None, **kwargs):
         super().__init__(name)
-
-        self.api = None
-        self.is_connected = True
         crawler = CrawlerTable(self)
         self._register_table('crawler', crawler)
-
-    def check_connection(self) -> StatusResponse:
-
-        response = StatusResponse(False)
-        response.success = True
-
-        return response
-
-    def native_query(self, query_string: str = None):
-
-        df = get_df_from_query_str(query_string)
-
-        return Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=df
-        )

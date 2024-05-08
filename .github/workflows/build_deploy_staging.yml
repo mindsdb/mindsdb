@@ -54,7 +54,7 @@ jobs:
     # We only want to run one deploy job for an env at a time
     # Don't cancel in progress jobs because it may be for a different PR
     concurrency:
-      group: deploy-${{ matrix.deploy-env }}
+      group: deploy-${{ matrix.environment }}
       cancel-in-progress: false
     steps:
       - uses: FranzDiebold/github-env-vars-action@v2

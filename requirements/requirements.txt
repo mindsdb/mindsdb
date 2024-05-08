@@ -40,8 +40,8 @@ msal
 langchain>=0.1.9
 langchain-core>=0.1.28
 langchain-community
-langchain-experimental
 langchain-openai
 langchain-text_splitters
+bs4 # For web crawler.
 lark
 prometheus-client==0.20.0

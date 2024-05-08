@@ -2,9 +2,6 @@ from dataclasses import dataclass
 from typing import Callable, List, Union
 
 from langchain_core.documents import Document
-from langchain_core.embeddings import Embeddings
-from langchain_experimental.text_splitter import SemanticChunker
-from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import MarkdownHeaderTextSplitter, HTMLHeaderTextSplitter, RecursiveCharacterTextSplitter
 
 from mindsdb.utilities import log
@@ -32,12 +29,8 @@ class FileSplitterConfig:
     chunk_size: int = DEFAULT_CHUNK_SIZE
     # How many characters each chunk should overlap. Not all splitters will adhere exactly to this (it's more of a guideline)
     chunk_overlap: int = DEFAULT_CHUNK_OVERLAP
-    # Embeddings to use for semantic chunking (default is OpenAI)
-    embeddings: Embeddings = OpenAIEmbeddings()
     # Default recursive splitter to use for text files, or unsupported files
     recursive_splitter: RecursiveCharacterTextSplitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-    # Semantic chunker to use for PDF splitting
-    semantic_chunker: SemanticChunker = SemanticChunker(embeddings)
     # Splitter to use for MD splitting
     markdown_splitter: MarkdownHeaderTextSplitter = MarkdownHeaderTextSplitter(headers_to_split_on=DEFAULT_MARKDOWN_HEADERS_TO_SPLIT_ON)
     # Splitter to use for HTML splitting
@@ -53,7 +46,7 @@ class FileSplitter:
         '''
         self.config = config
         self._extension_map = {
-            '.pdf': self._semantic_chunker_fn,
+            '.pdf': self._recursive_splitter_fn,
             '.md': self._markdown_splitter_fn,
             '.html': self._html_splitter_fn
         }
@@ -87,13 +80,6 @@ class FileSplitter:
                 split_func = self._split_func_by_extension(extension=None)
                 split_documents += split_func(document.page_content)
         return split_documents
-
-    def _semantic_chunker_fn(self) -> Callable:
-        # Semantic chunker's split_text returns List[str].
-        def semantic_chunk(content: str) -> List[Document]:
-            chunked_content = self.config.semantic_chunker.split_text(content)
-            return [Document(page_content=c) for c in chunked_content]
-        return semantic_chunk
 
     def _markdown_splitter_fn(self) -> Callable:
         return self.config.markdown_splitter.split_text

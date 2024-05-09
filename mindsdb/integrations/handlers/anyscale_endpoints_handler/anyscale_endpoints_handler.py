@@ -1,13 +1,10 @@
 import os
 import json
-import openai
-import contextlib
 from typing import Optional, Dict
 
 import pandas as pd
 
 from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler
-from mindsdb.integrations.handlers.openai_handler.constants import OPENAI_API_BASE
 from mindsdb.integrations.libs.llm.utils import ft_jsonl_validation, ft_formatter
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.utilities import log
@@ -154,4 +151,3 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
             return {**ft_params, **{'hyperparameters': hyperparameters}}
         else:
             return ft_params
-

@@ -49,9 +49,8 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         connection_args = engine_storage.get_connection_args()
         api_key = get_api_key('anyscale_endpoints', args, engine_storage=engine_storage)
         api_base = connection_args.get('api_base') or args.get('api_base') or os.environ.get('ANYSCALE_API_BASE', ANYSCALE_API_BASE)
-        org = args.get('api_organization')
 
-        client = OpenAIHandler._get_client(api_key=api_key, base_url=api_base, org=org)
+        client = OpenAIHandler._get_client(api_key=api_key, base_url=api_base)
         OpenAIHandler._check_client_connection(client)
 
     def create(self, target, args=None, **kwargs):

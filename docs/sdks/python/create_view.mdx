@@ -11,13 +11,13 @@ The `get_view()` and `create_view()` functions let you save either an existing v
 
 Use the `get_view()` method to get an existing view:
 
-```bash
+```python
 my_view = project.get_view('my_view')
 ```
 
 Or, the `create_view()` method to create a view:
 
-```bash
+```python
 my_view = project.create_view(
     'view_name',
     mysql_demo_db.query('SELECT * FROM my_table LIMIT 100')

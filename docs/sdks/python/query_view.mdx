@@ -14,3 +14,15 @@ Here is the syntax:
 ```sql
 project_name.query('SELECT * FROM my_project.my_view LIMIT 100')
 ```
+
+You can query for newly added data using the functionality introduced by the [`LAST` keyword](/mindsdb_sql/sql/create/jobs#last) as follows:
+
+```sql
+query = server.databases.my_data_source.views.view_name.filter(column_name='value').track('timestamp_column')
+
+# first call returns no records
+df = query.fetch()
+
+# second call returns rows with timestamp_column greater than the timestamp of a previous fetch
+df = query.fetch()
+```

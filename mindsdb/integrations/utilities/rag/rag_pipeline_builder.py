@@ -9,7 +9,9 @@ from mindsdb.integrations.utilities.rag.settings import (
     RAGPipelineModel
 )
 from mindsdb.integrations.utilities.rag.utils import documents_to_df
+from mindsdb.utilities.log import getLogger
 
+logger = getLogger(__name__)
 
 _retriever_strategies = {
     RetrieverType.VECTOR_STORE: lambda config: _create_pipeline_from_vector_store(config),
@@ -62,9 +64,14 @@ def get_pipeline_from_retriever(config: RAGPipelineModel) -> RunnableSerializabl
 
 
 class RAG:
-    def __init__(self, config: dict):
-        config = RAGPipelineModel(**config)
+    def __init__(self, config: RAGPipelineModel):
         self.pipeline = get_pipeline_from_retriever(config)
 
-    def __call__(self, question: str):
-        return self.pipeline.invoke(question)
+    def __call__(self, question: str) -> dict:
+        logger.info(f"Processing question using rag pipeline: {question}")
+        result = self.pipeline.invoke(question)
+
+        returned_sources = [docs.page_content for docs in result['context']]
+        logger.info(f"retrieved context used to answer question: {returned_sources}")
+
+        return result

@@ -1,4 +1,3 @@
-
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableParallel, RunnablePassthrough, RunnableSerializable
@@ -62,7 +61,8 @@ class LangChainRAGPipeline:
         vector_store_operator = VectorStoreOperator(
             vector_store=config.vector_store,
             documents=config.documents,
-            embeddings_model=config.embeddings_model
+            embeddings_model=config.embeddings_model,
+            vector_store_config=config.vector_store_config
         )
 
         return cls(vector_store_operator.vector_store.as_retriever(), config.rag_prompt_template, config.llm)

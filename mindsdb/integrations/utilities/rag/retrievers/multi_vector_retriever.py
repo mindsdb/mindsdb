@@ -5,7 +5,6 @@ from langchain.retrievers.multi_vector import MultiVectorRetriever as LangChainM
 from langchain_core.documents import Document
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnableSerializable
 from langchain_openai import ChatOpenAI
 
 from mindsdb.integrations.utilities.rag.retrievers.base import BaseRetriever
@@ -56,7 +55,7 @@ class MultiVectorRetriever(BaseRetriever):
         vstore_operator = VectorStoreOperator(
             vector_store=self.vectorstore,
             documents=docs,
-            embeddings_model=self.embeddings_model
+            embeddings_model=self.embeddings_model,
         )
         retriever = LangChainMultiVectorRetriever(
             vectorstore=vstore_operator.vector_store,
@@ -74,7 +73,7 @@ class MultiVectorRetriever(BaseRetriever):
         )
         return chain.batch(self.documents, {"max_concurrency": self.max_concurrency})
 
-    def as_runnable(self) -> RunnableSerializable:
+    def as_runnable(self) -> BaseRetriever:
         if self.mode in {MultiVectorRetrieverMode.SPLIT, MultiVectorRetrieverMode.BOTH}:
             split_docs, doc_ids = self._split_documents()
             retriever, vstore_operator = self._create_retriever_and_vs_operator(split_docs)

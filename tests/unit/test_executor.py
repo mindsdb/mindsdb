@@ -41,7 +41,7 @@ class Test(BaseExecutorMockPredictor):
 
         self.execute("RETRAIN proj.test_predictor;")
 
-        ret = self.execute("SELECT * FROM proj.models_versions order by version;")
+        ret = self.execute("SELECT * FROM proj.models order by version;")
         assert len(ret.data) == 2
 
         ret = self.execute("DESCRIBE test_predictor")

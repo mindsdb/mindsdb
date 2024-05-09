@@ -11,13 +11,13 @@ The `models.get()` and `models.create()` methods enable you to get an existing m
 
 Use the `models.get()` method to get an existing model:
 
-```bash
+```python
 my_model = project.models.get('my_model')
 ```
 
 Or, the `create()` method to create and train a new model:
 
-```bash
+```python
 my_model = project.models.create (
     name = 'my_model',
     predict = 'target',
@@ -27,7 +27,7 @@ my_model = project.models.create (
 
 Please note that in the case of LLM models, the parameters can be stored in `options`. Here is the syntax to create an OpenAI model:
 
-```bash
+```python
 sentiment_classifier = project.models.create (
       name='sentiment_classifier',
       engine='openai', # alternatively: engine=server.ml_engines.openai
@@ -41,7 +41,7 @@ sentiment_classifier = project.models.create (
 
 Alternatively, you can skip `options` and define parameters as arguments.
 
-```bash
+```python
 sentiment_classifier = project.models.create (
       name='sentiment_classifier',
       engine='openai', # alternatively: engine=server.ml_engines.openai

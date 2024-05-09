@@ -65,6 +65,14 @@ class Config():
             os.environ['MINDSDB_STORAGE_DIR'] = root_storage_dir
         # endregion
 
+        # region
+        is_storage_absent = os.environ.get('MINDSDB_STORAGE_BACKUP_DISABLED', '').lower() in ('1', 'true')
+        if is_storage_absent is True:
+            self._override_config['permanent_storage'] = {
+                'location': 'absent'
+            }
+        # endregion
+
         if os.path.isdir(root_storage_dir) is False:
             os.makedirs(root_storage_dir)
 

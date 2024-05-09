@@ -80,3 +80,8 @@ class OllamaConfig(BaseLLMConfig):
     repeat_penalty: Optional[float]
     stop: Optional[List[str]]
     template: Optional[str]
+
+
+class MindsdbConfig(BaseLLMConfig):
+    model_name: str
+    project_name: str

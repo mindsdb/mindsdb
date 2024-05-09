@@ -216,11 +216,11 @@ class TestMongoDBServer(BaseUnitTest):
 
     def t_delete_model_version(self, client_con, mock_executor):
 
-        client_con.myproj.models_versions.delete_one({'name': 'house_sales_model5', 'version': 112})
+        client_con.myproj.models.delete_one({'name': 'house_sales_model5', 'version': 112})
 
         ast = mock_executor.call_args[0][0]
 
-        expected_sql = "DELETE FROM myproj.models_versions WHERE name = 'house_sales_model5' and version=112"
+        expected_sql = "DROP MODEL myproj.house_sales_model5.112"
         assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
 
     # ml engines

@@ -44,10 +44,6 @@ class FinancialModelingHandler(APIHandler):
                 ast = parse_sql(query, dialect='mindsdb')
                 return self.query(ast)
             
-            def get_jsonparsed_data(url):
-                response = urlopen(url, cafile=certifi.where())
-                data = response.read().decode("utf-8")
-                return json.loads(data)
 
             #include api_key in params for now
             def get_daily_chart(self, params: Dict = None) -> pd.DataFrame:  
@@ -62,6 +58,7 @@ class FinancialModelingHandler(APIHandler):
                 #     "serietype": "line"
                 # }
 
+                #symbol in path???
                 symbol = params['symbol']
                 from_date = params['from']
                 to_date = params['to']

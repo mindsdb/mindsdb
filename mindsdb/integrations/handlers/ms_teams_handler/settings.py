@@ -1,5 +1,5 @@
 from typing import List
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 
 
 class MSTeamsHandlerConfig(BaseSettings):
@@ -150,7 +150,7 @@ class MSTeamsHandlerConfig(BaseSettings):
         "eventDetail_initiator_user_tenantId"
     ]
 
-    TEST_CHAT_DATA = {
+    TEST_CHAT_DATA: dict = {
         '@odata.context': 'test_context',
         'id': 'test_id',
         'topic': None,
@@ -183,9 +183,9 @@ class MSTeamsHandlerConfig(BaseSettings):
         }
     }
 
-    TEST_CHATS_DATA = [TEST_CHAT_DATA]
+    TEST_CHATS_DATA: List = [TEST_CHAT_DATA]
 
-    TEST_CHAT_MESSAGE_DATA = {
+    TEST_CHAT_MESSAGE_DATA: dict = {
         '@odata.context': 'test_context', 
         'id': 'test_id', 
         'replyToId': None, 
@@ -239,9 +239,9 @@ class MSTeamsHandlerConfig(BaseSettings):
         }
     }
 
-    TEST_CHAT_MESSAGES_DATA = [TEST_CHAT_MESSAGE_DATA]
+    TEST_CHAT_MESSAGES_DATA: List = [TEST_CHAT_MESSAGE_DATA]
 
-    TEST_CHANNEL_DATA = {
+    TEST_CHANNEL_DATA: dict = {
         '@odata.context': 'test_context', 
         'id': 'test_id', 
         'createdDateTime': '2023-11-17T22:54:33.055Z', 
@@ -255,9 +255,9 @@ class MSTeamsHandlerConfig(BaseSettings):
         'teamId': 'test_team_id'
     }
 
-    TEST_CHANNELS_DATA = [TEST_CHANNEL_DATA]
+    TEST_CHANNELS_DATA: List = [TEST_CHANNEL_DATA]
 
-    TEST_CHANNEL_MESSAGE_DATA = {
+    TEST_CHANNEL_MESSAGE_DATA: dict = {
         '@odata.context': 'test_context', 
         'id': 'test_id', 
         'replyToId': None, 
@@ -322,9 +322,9 @@ class MSTeamsHandlerConfig(BaseSettings):
         }
     }
 
-    TEST_CHANNEL_MESSAGES_DATA = [TEST_CHANNEL_MESSAGE_DATA]
+    TEST_CHANNEL_MESSAGES_DATA: List = [TEST_CHANNEL_MESSAGE_DATA]
 
-    TEST_GROUP_DATA = {
+    TEST_GROUP_DATA: dict = {
         '@odata.context': 'test_context', 
         'value': [
             {
@@ -334,7 +334,7 @@ class MSTeamsHandlerConfig(BaseSettings):
         ]
     }
 
-    TEST_CHANNEL_ID_DATA = {
+    TEST_CHANNEL_ID_DATA: dict = {
         '@odata.context': 'test_context', 
         '@odata.count': 1,
         'value': [

@@ -554,21 +554,19 @@ class ExecuteCommands:
                     value = statement.value.value
 
                 if param == "profiling":
-                    if value in (1, True):
+                    self.session.profiling = value in (1, True)
+                    if self.session.profiling is True:
                         profiler.enable()
-                        self.session.profiling = True
                     else:
                         profiler.disable()
-                        self.session.profiling = False
                 elif param == "predictor_cache":
-                    if value in (1, True):
-                        self.session.predictor_cache = True
-                    else:
-                        self.session.predictor_cache = False
+                    self.session.predictor_cache = value in (1, True)
                 elif param == "context":
                     if value in (0, False, None):
                         # drop context
                         query_context_controller.drop_query_context(None)
+                elif param == "show_secrets":
+                    self.session.show_secrets = value in (1, True)
 
                 return ExecuteAnswer(ANSWER_TYPE.OK)
             elif category == "autocommit":

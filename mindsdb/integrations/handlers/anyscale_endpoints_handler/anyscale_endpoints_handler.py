@@ -75,18 +75,12 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
 
     def create(self, target, args=None, **kwargs):
         # load base and fine-tuned models, then hand over
-        self._set_models(args.get('using', {}))
-        _args = self.model_storage.json_get('args')
-        base_models = self.chat_completion_models
-        self.chat_completion_models = _args.get('chat_completion_models', base_models) if _args else base_models
+        self._set_models_from_args(args)
         super().create(target, args, **kwargs)
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         # load base and fine-tuned models, then hand over
-        self._set_models(args.get('using', {}))
-        _args = self.model_storage.json_get('args')
-        base_models = self.chat_completion_models
-        self.chat_completion_models = _args.get('chat_completion_models', base_models) if _args else base_models
+        self._set_models_from_args(args)
         return super().predict(df, args)
 
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
@@ -124,6 +118,13 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         self.all_models = [m.id for m in client.models.list()]
         self.chat_completion_models = [m.id for m in client.models.list() if m.rayllm_metadata['engine_config']['model_type'] == 'text-generation']  # noqa
         self.supported_ft_models = self.chat_completion_models  # base models compatible with fine-tuning
+
+    def _set_models_from_args(self, args):
+        self._set_models(args.get('using', {}))
+
+        model_args = self.model_storage.json_get('args')
+        if model_args and 'chat_completion_models' in model_args:
+            self.chat_completion_models = model_args.get('chat_completion_models')
 
     @staticmethod
     def _prepare_ft_jsonl(df, temp_storage_path, temp_filename, _, test_size=0.2):

@@ -62,6 +62,7 @@ def pdf_to_markdown(response, gap_threshold=10):
 
     return "\n".join(markdown_lines)
 
+
 def is_valid(url) -> bool:
     """
     Check if a URL is valid.
@@ -199,6 +200,7 @@ def get_readable_text_from_soup(soup) -> str:
     html_converter.ignore_links = False
     return html_converter.handle(str(soup))
 
+
 def get_all_website_links_recursively(url, reviewed_urls, limit=None):
     """
     Recursively gathers all links from a given website up to a specified limit.
@@ -208,7 +210,7 @@ def get_all_website_links_recursively(url, reviewed_urls, limit=None):
         reviewed_urls (dict): A dictionary to keep track of reviewed URLs and associated data.
         limit (int, optional): The maximum number of URLs to process.
 
-    TODO: Refactor this function to use a iterative aproach instead of recursion 
+    TODO: Refactor this function to use a iterative aproach instead of recursion
     """
     if limit is not None:
         if len(reviewed_urls) >= limit:
@@ -266,6 +268,7 @@ def get_all_websites(urls, limit=1, html=False) -> pd.DataFrame:
         A DataFrame containing the results.
     """
     reviewed_urls = {}
+
     def fetch_url(url):
         # Allow URLs to be passed wrapped in quotation marks so they can be used
         # directly from the SQL editor.
@@ -295,10 +298,11 @@ def get_all_websites(urls, limit=1, html=False) -> pd.DataFrame:
         raise Exception(str(df.iloc[0].error))
     return df
 
+
 def dict_to_dataframe(dict_of_dicts, columns_to_ignore=None, index_name=None) -> pd.DataFrame:
     """
     Convert a dictionary of dictionaries to a DataFrame.
-    
+
     Args:
         dict_of_dicts (dict): a dictionary of dictionaries
         columns_to_ignore (list): a list of columns to ignore

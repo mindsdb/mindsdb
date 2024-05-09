@@ -47,33 +47,21 @@ class FinancialModelingHandler(APIHandler):
 
             #include api_key in params for now
             def get_daily_chart(self, params: Dict = None) -> pd.DataFrame:  
-                url = ("https://financialmodelingprep.com/api/v3/historical-price-full/AAPL?apikey=GJvlw9YgVm5J4KIxdP1VPkvWzt747Q6j")
                 base_url = "https://financialmodelingprep.com/api/v3/historical-price-full/"
-                # symbol = "AAPL"
-                # api_key = "GJvlw9YgVm5J4KIxdP1VPkvWzt747Q6j"
-                # params = {
-                #     "apikey": api_key,
-                #     "from": "2023-10-10",
-                #     "to": "2023-12-10",
-                #     "serietype": "line"
-                # }
 
-                #symbol in path???
-                symbol = params['symbol']
-                from_date = params['from']
-                to_date = params['to']
-
-                url = f"{base_url}{symbol}?{urlencode(params)}"
-                print(url)
                 if 'symbol' not in params:
                     raise ValueError('Missing "symbol" param')
-                response = get_jsonparsed_data(url)
-                #take out symbol in dict
-                data = json.loads(response) #parses into python dict
+                symbol = params['symbol']
+                params.pop('symbol')
 
-                historical_data = data["historical"][:3] #first 3 elements
+                url = f"{base_url}{symbol}" #https://financialmodelingprep.com/api/v3/historical-price-full/<symbol>
+                param = {'apikey': self.api_key, **params}
+
+                response = requests.get(url, param)
+                historical_data = response.json()
 
                 return historical_data
+    
     
             def call_financial_modeling_api(self, endpoint_name: str = None, params: Dict = None) -> pd.DataFrame:
                 """Calls the financial modeling API method with the given params.

@@ -95,7 +95,7 @@ def get_llm_config(provider: str, config: Dict) -> BaseLLMConfig:
     temperature = min(1.0, max(0.0, config.get('temperature', 0.0)))
     if provider == 'openai':
         return OpenAIConfig(
-            model_name=config.get('model_name', DEFAULT_OPENAI_MODEL),
+            llm_model_name=config.get('model_name', DEFAULT_OPENAI_MODEL),
             temperature=temperature,
             max_retries=config.get('max_retries', DEFAULT_OPENAI_MAX_RETRIES),
             max_tokens=config.get('max_tokens', DEFAULT_OPENAI_MAX_TOKENS),
@@ -117,7 +117,7 @@ def get_llm_config(provider: str, config: Dict) -> BaseLLMConfig:
         )
     if provider == 'anyscale':
         return AnyscaleConfig(
-            model_name=config.get('model_name', DEFAULT_ANYSCALE_MODEL),
+            llm_model_name=config.get('model_name', DEFAULT_ANYSCALE_MODEL),
             temperature=temperature,
             max_retries=config.get('max_retries', DEFAULT_OPENAI_MAX_RETRIES),
             max_tokens=config.get('max_tokens', DEFAULT_OPENAI_MAX_TOKENS),
@@ -136,7 +136,7 @@ def get_llm_config(provider: str, config: Dict) -> BaseLLMConfig:
             'logit_bias': config.get('logit_bias', None),
         }
         return LiteLLMConfig(
-            model_name=config.get('model_name', DEFAULT_LITELLM_MODEL),
+            llm_model_name=config.get('model_name', DEFAULT_LITELLM_MODEL),
             temperature=temperature,
             api_base=config.get('base_url', DEFAULT_LITELLM_BASE_URL),
             max_retries=config.get('max_retries', DEFAULT_OPENAI_MAX_RETRIES),
@@ -144,7 +144,7 @@ def get_llm_config(provider: str, config: Dict) -> BaseLLMConfig:
             top_p=config.get('top_p', None),
             top_k=config.get('top_k', None),
             custom_llm_provider=config.get('custom_llm_provider', DEFAULT_LITELLM_PROVIDER),
-            model_kwargs=model_kwargs
+            llm_model_kwargs=model_kwargs
         )
     if provider == 'ollama':
         return OllamaConfig(
@@ -165,7 +165,7 @@ def get_llm_config(provider: str, config: Dict) -> BaseLLMConfig:
         )
     if provider == 'mindsdb':
         return MindsdbConfig(
-            model_name=config['model_name'],
+            llm_model_name=config['model_name'],
             project_name=config.get('project_name', 'mindsdb'),
         )
     raise ValueError(f'Provider {provider} is not supported.')

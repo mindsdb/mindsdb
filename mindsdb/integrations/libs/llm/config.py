@@ -10,7 +10,7 @@ class BaseLLMConfig(BaseModel):
 # See https://api.python.langchain.com/en/latest/chat_models/langchain_community.chat_models.openai.ChatOpenAI.html#langchain_community.chat_models.openai.ChatOpenAI
 # This config does not have to be exclusively used with Langchain.
 class OpenAIConfig(BaseLLMConfig):
-    model_name: str
+    llm_model_name: str
     temperature: Optional[float]
     max_retries: Optional[int]
     max_tokens: Optional[int]
@@ -38,7 +38,7 @@ class AnthropicConfig(BaseLLMConfig):
 # See https://api.python.langchain.com/en/latest/chat_models/langchain_community.chat_models.anyscale.ChatAnyscale.html
 # This config does not have to be exclusively used with Langchain.
 class AnyscaleConfig(BaseLLMConfig):
-    model_name: str
+    llm_model_name: str
     temperature: Optional[float]
     max_retries: Optional[int]
     max_tokens: Optional[int]
@@ -52,7 +52,7 @@ class AnyscaleConfig(BaseLLMConfig):
 # See https://api.python.langchain.com/en/latest/chat_models/langchain_community.chat_models.litellm.ChatLiteLLM.html
 # This config does not have to be exclusively used with Langchain.
 class LiteLLMConfig(BaseLLMConfig):
-    model_name: str
+    llm_model_name: str
     api_base: Optional[str]
     max_retries: Optional[int]
     max_tokens: Optional[int]
@@ -60,7 +60,7 @@ class LiteLLMConfig(BaseLLMConfig):
     top_k: Optional[int]
     temperature: Optional[float]
     custom_llm_provider: Optional[str]
-    model_kwargs: Optional[Dict[str, Any]]
+    llm_model_kwargs: Optional[Dict[str, Any]]
 
 
 # See https://api.python.langchain.com/en/latest/chat_models/langchain_community.chat_models.ollama.ChatOllama.html
@@ -83,5 +83,5 @@ class OllamaConfig(BaseLLMConfig):
 
 
 class MindsdbConfig(BaseLLMConfig):
-    model_name: str
+    llm_model_name: str
     project_name: str

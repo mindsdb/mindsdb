@@ -8,12 +8,6 @@
  * permission of MindsDB Inc
  *******************************************************
 """
-
-import os
-from uuid import uuid4
-
-import requests
-
 from mindsdb.api.executor.datahub.datahub import init_datahub
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.agents.agents_controller import AgentsController
@@ -59,6 +53,7 @@ class SessionController:
         self.packet_sequence_number = 0
         self.profiling = False
         self.predictor_cache = True
+        self.show_secrets = False
 
     def inc_packet_sequence_number(self):
         self.packet_sequence_number = (self.packet_sequence_number + 1) % 256
@@ -88,34 +83,3 @@ class SessionController:
     def from_json(self, updated):
         for key in updated:
             setattr(self, key, updated[key])
-
-
-class ServerSessionContorller(SessionController):
-    """SessionController implementation for case of Executor service.
-    The difference with SessionController is that there is an id in this one.
-    The instance uses the id to synchronize its settings with the appropriate
-    ServiceSessionController instance on the Executor side."""
-
-    def __init__(self):
-        super().__init__()
-        self.id = f"session_{uuid4()}"
-        self.executor_url = os.environ.get("MINDSDB_EXECUTOR_URL", None)
-        self.executor_host = os.environ.get("MINDSDB_EXECUTOR_SERVICE_HOST", None)
-        self.executor_port = os.environ.get("MINDSDB_EXECUTOR_SERVICE_PORT", None)
-        if (self.executor_host is None or self.executor_port is None) and self.executor_url is None:
-            raise Exception(f"""{self.__class__.__name__} can be used only in modular mode of MindsDB.
-                            Use Executor as a service and specify MINDSDB_EXECUTOR_URL env variable""")
-        logger.info(
-            "%s.__init__: executor url - %s", self.__class__.__name__, self.executor_url
-        )
-
-    def __del__(self):
-        """Terminate the appropriate ServiceSessionController instance as well."""
-        if self.executor_url is not None:
-            url = self.executor_url + "/" + "session"
-            logger.info(
-                "%s.__del__: delete an appropriate ServiceSessionController with, id - %s on the Executor service side",
-                self.__class__.__name__,
-                self.id,
-            )
-            requests.delete(url, json={"id": self.id})

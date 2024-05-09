@@ -57,22 +57,21 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
-        api_key = AnyscaleEndpointsHandler._get_api_key(args, kwargs['handler_storage'])
-        args['using']['openai_api_key'] = api_key
+        if 'using' not in args:
+            raise Exception(
+                "Anyscale Endpoints engine requires a USING clause! Refer to its documentation for more details."
+            )
+        else:
+            args = args['using']
 
-        key = 'OPENAI_API_BASE'
-        old_base = os.environ.get(key, OPENAI_API_BASE)
-        os.environ[key] = ANYSCALE_API_BASE
-        try:
-            # remove original key for the validation check in `OpenAIHandler`
-            api_key_name = 'anyscale_endpoints_api_key'
-            if api_key_name in args['using']:
-                del args['using'][api_key_name]
-            if api_key_name in args:
-                del args[api_key_name]
-            OpenAIHandler.create_validation(target, args, **kwargs)
-        finally:
-            os.environ[key] = old_base
+        engine_storage = kwargs['handler_storage']
+        connection_args = engine_storage.get_connection_args()
+        api_key = get_api_key('anyscale_endpoints', args, engine_storage=engine_storage)
+        api_base = connection_args.get('api_base') or args.get('api_base') or os.environ.get('ANYSCALE_API_BASE', ANYSCALE_API_BASE)
+        org = args.get('api_organization')
+
+        client = OpenAIHandler._get_client(api_key=api_key, base_url=api_base, org=org)
+        OpenAIHandler._check_client_connection(client)
 
     def create(self, target, args=None, **kwargs):
         # load base and fine-tuned models, then hand over

@@ -169,7 +169,7 @@ VALUES
 ~~~~
 
 ~~~~sql
-INSERT INTO shopify_datasource.orders(title, price, quantity, test)
+INSERT INTO shopify_datasource.orders(title_li, price_li, quantity, test)
 VALUES 
 ("Product Name", 25.00, 3, true)
 ~~~~
@@ -180,7 +180,25 @@ The `products` table supports the following columns: 'title', 'body_html', 'vend
 
 The `customers` table supports the following columns: 'first_name', 'last_name', 'email', 'phone', 'tags' and 'currency'. Of these, either 'first_name', 'last_name', 'email' or 'phone' must be provided. 
 
-The `orders` table supports the following columns: 'buyer_accepts_marketing', 'currency', 'email', 'fulfillment_status', 'note', 'phone', 'processed_at', 'tags', 'test', and 'total_weight'. Additionally, the `orders` table supports the following value fields which are sub-components of the 'line_items' column: 'gift_card', 'grams', 'price', 'quantity', 'title', 'vendor'. Of these, 'price' and 'title' must be provided.
+The `orders` table supports the following columns: 'billing_address', 'discount_codes', 'buyer_accepts_marketing', 'currency', 'email', 'financial_status', 'fulfillment_status', 'line_items', 'note', 'note_attributes', 'phone', 'po_number', 'processed_at', 'referring_site', 'shipping_address', 'shipping_lines', 'source_name', 'source_identifier', 'source_url', 'tags', 'taxes_included', 'tax_lines', 'test', 'total_tax', 'total_weight'. 
+
+Of these columns, 'billing_address', 'discount_codes', 'line_items', 'note_attributes', 'shipping_address', 'shipping_lines', and 'tax_lines' are comprised of sub-components as follows:
+
+'billing_address': 'address1_ba', 'address2_ba', 'city_ba', 'company_ba', 'country_ba', 'country_code_ba', 'first_name_ba', 'last_name_ba', 'latitude_ba', 'longitude_ba', 'name_ba', 'phone_ba', 'province_ba', 'province_code_ba', 'zip_ba'
+
+'discount_codes': 'amount_dc', 'code_dc', 'type_dc'
+
+'line_items': 'gift_card_li', 'grams_li', 'price_li', 'quantity_li', 'title_li', 'vendor_li', 'fulfillment_status_li', 'sku_li', 'variant_title_li'
+
+'note_attributes': 'name_na', 'value_na'
+
+'shipping_address': 'address1_sa', 'address2_sa', 'city_sa', 'company_sa', 'country_sa', 'country_code_sa', 'first_name_sa', 'last_name_sa', 'latitude_sa', 'longitude_sa', 'name_sa', 'phone_sa', 'province_sa', 'province_code_sa', 'zip_sa'
+
+'shipping_lines': 'code_sl', 'price_sl', 'discounted_price_sl', 'source_sl', 'title_sl', 'carrier_identifier_sl', 'requested_fulfillment_service_id_sl', 'is_removed_sl'
+
+'tax_lines': 'price_tl', 'rate_tl', 'title_tl', 'channel_liable_tl'
+
+The value fields 'price_li' and 'title_li' must be provided.
 
 It is also possible to DELETE data from your Shopify store. At the moment, only the `customers`, `products`, and `orders` tables support DELETE:
 

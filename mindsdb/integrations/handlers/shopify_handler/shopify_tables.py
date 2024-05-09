@@ -419,8 +419,7 @@ class OrdersTable(APITable):
         """
         insert_statement_parser = INSERTQueryParser(
             query,
-            supported_columns=['id_as', 'quantity_as',
-                               'address1_ba', 'address2_ba', 'city_ba', 'company_ba', 'country_ba',
+            supported_columns=['address1_ba', 'address2_ba', 'city_ba', 'company_ba', 'country_ba',
                                'country_code_ba', 'first_name_ba', 'last_name_ba', 'latitude_ba', 
                                'longitude_ba', 'name_ba', 'phone_ba', 'province_ba', 'province_code_ba', 
                                'zip_ba', 
@@ -541,12 +540,10 @@ class OrdersTable(APITable):
         shipping_lines_columns = {'code_sl', 'price_sl', 'discounted_price_sl',
                                   'source_sl', 'title_sl', 'carrier_identifier_sl',
                                   'requested_fulfillment_service_id_sl', 'is_removed_sl'}
-        attributed_staffs_columns = {'id_as', 'quantity_as'}
         line_items_properties_columns = {'name_li', 'value_li'}
         all_columns = (line_items_columns | billing_address_columns | shipping_address_columns |
                        discount_codes_columns | tax_lines_columns | note_attributes_columns |
-                       shipping_lines_columns | attributed_staffs_columns |
-                       line_items_properties_columns)
+                       shipping_lines_columns | line_items_properties_columns)
         modified_order_data = []
 
         for order in order_data:
@@ -560,11 +557,9 @@ class OrdersTable(APITable):
             tax_lines_data = OrdersTable._extract_data_helper(order, tax_lines_columns)
             note_attributes_data = OrdersTable._extract_data_helper(order, note_attributes_columns)
             shipping_lines_data = OrdersTable._extract_data_helper(order, shipping_lines_columns)
-            attributed_staffs_data = OrdersTable._extract_data_helper(order, attributed_staffs_columns)
             line_items_properties_data = OrdersTable._extract_data_helper(order, line_items_properties_columns)
 
             # add sub-arrays to line items object
-            line_items_data['attributed_staffs'] = [attributed_staffs_data]
             line_items_data['properties'] = [line_items_properties_data]
 
             # add JSON and array objects to dictionary

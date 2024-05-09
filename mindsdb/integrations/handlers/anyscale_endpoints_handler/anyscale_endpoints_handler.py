@@ -29,7 +29,7 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         self.chat_completion_models = []
         self.supported_ft_models = []
         self.default_model = 'meta-llama/Llama-2-7b-chat-hf'
-        self.base_api = ANYSCALE_API_BASE
+        self.api_base = ANYSCALE_API_BASE
         self.default_mode = 'default'  # can also be 'conversational' or 'conversational-full'
         self.supported_modes = ['default', 'conversational', 'conversational-full']
         self.rate_limit = 25  # requests per minute

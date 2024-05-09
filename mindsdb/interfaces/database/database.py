@@ -40,7 +40,7 @@ class DatabaseController:
             'type': 'system',
             'id': None,
             'engine': None,
-            'visible': False,
+            'visible': True,
             'deletable': False
         }, {
             'name': 'log',
@@ -114,6 +114,8 @@ class DatabaseController:
         if name == 'log':
             return self.logs_db_controller
         elif name == 'information_schema':
-            raise Exception("Not implemented")
+            from mindsdb.api.executor.controllers.session_controller import SessionController
+            session = SessionController()
+            return session.datahub
         else:
             raise Exception(f"Database '{name}' does not exists")

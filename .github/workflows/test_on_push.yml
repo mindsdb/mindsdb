@@ -2,11 +2,18 @@ name: Test on Push
 
 on:
   pull_request:
-    branches: [stable, staging]
+    branches: [main]
     
 defaults:
   run:
     shell: bash
+
+# Cancel any existing runs of this workflow on the same branch/pr
+# We always want to build/deploy/test a new commit over an older one
+concurrency:
+  group: ${{ github.workflow_ref }}
+  cancel-in-progress: true
+
 
 jobs:
   # Run all of our static code checks here
@@ -108,8 +115,10 @@ jobs:
       run: |
         pip install .
         pip install -r requirements/requirements-test.txt
-        pip install .[lightwood]  # TODO: for now some tests rely on lightwood
-        pip install .[mssql]
+        pip install lightwood  # TODO: for now some tests rely on lightwood
+        pip install mindsdb[mssql]
+        pip install mindsdb[clickhouse]
+        pip install mindsdb[snowflake]
         pip freeze
     - name: Run unit tests
       run: |
@@ -124,10 +133,10 @@ jobs:
         fi
     - name: Run Handlers tests and submit Coverage to coveralls
       run: |
-        files=("test_mysql" "test_postgresql" "test_mssql")
-        for file in "${files[@]}"
+        handlers=("mysql" "postgres" "mssql" "clickhouse" "snowflake")
+        for handler in "${handlers[@]}"
         do
-          pytest --cov=mindsdb/integrations/handlers/${file}_handler tests/unit/handlers/${file}.py 
+          pytest --cov=mindsdb/integrations/handlers/${handler}_handler tests/unit/handlers/test_${handler}.py 
         done
         coveralls --service=github --basedir=mindsdb/integrations/handlers
       env:

@@ -1,13 +1,10 @@
 import os
 import json
-import openai
-import contextlib
 from typing import Optional, Dict
 
 import pandas as pd
 
 from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler
-from mindsdb.integrations.handlers.openai_handler.constants import OPENAI_API_BASE
 from mindsdb.integrations.libs.llm.utils import ft_jsonl_validation, ft_formatter
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.utilities import log
@@ -29,7 +26,7 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         self.chat_completion_models = []
         self.supported_ft_models = []
         self.default_model = 'meta-llama/Llama-2-7b-chat-hf'
-        self.base_api = ANYSCALE_API_BASE
+        self.api_base = ANYSCALE_API_BASE
         self.default_mode = 'default'  # can also be 'conversational' or 'conversational-full'
         self.supported_modes = ['default', 'conversational', 'conversational-full']
         self.rate_limit = 25  # requests per minute
@@ -37,70 +34,41 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         self.default_max_tokens = 100
 
     @staticmethod
-    def _get_api_key(args, engine_storage):
-        return get_api_key('anyscale_endpoints', args, engine_storage, strict=True)
-
-    @contextlib.contextmanager
-    def _anyscale_base_api(self, args: dict, key='OPENAI_API_BASE'):
-        """ Temporarily updates the API base env var to point towards the Anyscale URL. """
-        old_base = os.environ.get(key, OPENAI_API_BASE)
-        os.environ[key] = ANYSCALE_API_BASE
-        try:
-            if 'using' not in args:
-                args['using'] = {}
-            api_key = AnyscaleEndpointsHandler._get_api_key(args, self.engine_storage)
-            args['using']['openai_api_key'] = api_key  # add key as expected by OpenAIHandler
-            args['using']['api_key'] = api_key
-            yield  # enter
-        finally:  # exit
-            os.environ[key] = old_base
-
-    @staticmethod
     def create_validation(target, args=None, **kwargs):
-        api_key = AnyscaleEndpointsHandler._get_api_key(args, kwargs['handler_storage'])
-        args['using']['openai_api_key'] = api_key
+        if 'using' not in args:
+            raise Exception(
+                "Anyscale Endpoints engine requires a USING clause! Refer to its documentation for more details."
+            )
+        else:
+            args = args['using']
 
-        key = 'OPENAI_API_BASE'
-        old_base = os.environ.get(key, OPENAI_API_BASE)
-        os.environ[key] = ANYSCALE_API_BASE
-        try:
-            # remove original key for the validation check in `OpenAIHandler`
-            api_key_name = 'anyscale_endpoints_api_key'
-            if api_key_name in args['using']:
-                del args['using'][api_key_name]
-            if api_key_name in args:
-                del args[api_key_name]
-            OpenAIHandler.create_validation(target, args, **kwargs)
-        finally:
-            os.environ[key] = old_base
+        engine_storage = kwargs['handler_storage']
+        connection_args = engine_storage.get_connection_args()
+        api_key = get_api_key('anyscale_endpoints', args, engine_storage=engine_storage)
+        api_base = connection_args.get('api_base') or args.get('api_base') or os.environ.get('ANYSCALE_API_BASE', ANYSCALE_API_BASE)
+
+        client = OpenAIHandler._get_client(api_key=api_key, base_url=api_base)
+        OpenAIHandler._check_client_connection(client)
 
     def create(self, target, args=None, **kwargs):
-        with self._anyscale_base_api(args):
-            # load base and fine-tuned models, then hand over
-            self._set_models(args.get('using', {}))
-            _args = self.model_storage.json_get('args')
-            base_models = self.chat_completion_models
-            self.chat_completion_models = _args.get('chat_completion_models', base_models) if _args else base_models
-            super().create(target, args, **kwargs)
+        # load base and fine-tuned models, then hand over
+        self._set_models_from_args(args)
+        super().create(target, args, **kwargs)
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
-        with self._anyscale_base_api(args):
-            # load base and fine-tuned models, then hand over
-            self._set_models(args.get('using', {}))
-            _args = self.model_storage.json_get('args')
-            base_models = self.chat_completion_models
-            self.chat_completion_models = _args.get('chat_completion_models', base_models) if _args else base_models
-            return super().predict(df, args)
+        # load base and fine-tuned models, then hand over
+        self._set_models_from_args(args)
+        return super().predict(df, args)
 
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
-        with self._anyscale_base_api(args):
-            using_args = args.get('using', {})
-            self._set_models(using_args)
-            super().finetune(df, args)
-            # rewrite chat_completion_models to include the newly fine-tuned model
-            args = self.model_storage.json_get('args')
-            args['chat_completion_models'] = list(self.chat_completion_models) + [args['model_name']]
-            self.model_storage.json_set('args', args)
+        using_args = args.get('using', {})
+        self._set_models(using_args)
+        super().finetune(df, args)
+
+        # rewrite chat_completion_models to include the newly fine-tuned model
+        args = self.model_storage.json_get('args')
+        args['chat_completion_models'] = list(self.chat_completion_models) + [args['model_name']]
+        self.model_storage.json_set('args', args)
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
         args = self.model_storage.json_get('args')
@@ -123,10 +91,17 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
 
     def _set_models(self, args):
         api_key = get_api_key('anyscale_endpoints', args, self.engine_storage)
-        client = self._get_client(api_key)
+        client = OpenAIHandler._get_client(api_key=api_key, base_url=self.api_base)
         self.all_models = [m.id for m in client.models.list()]
         self.chat_completion_models = [m.id for m in client.models.list() if m.rayllm_metadata['engine_config']['model_type'] == 'text-generation']  # noqa
         self.supported_ft_models = self.chat_completion_models  # base models compatible with fine-tuning
+
+    def _set_models_from_args(self, args):
+        self._set_models(args.get('using', {}))
+
+        model_args = self.model_storage.json_get('args')
+        if model_args and 'chat_completion_models' in model_args:
+            self.chat_completion_models = model_args.get('chat_completion_models')
 
     @staticmethod
     def _prepare_ft_jsonl(df, temp_storage_path, temp_filename, _, test_size=0.2):
@@ -176,7 +151,3 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
             return {**ft_params, **{'hyperparameters': hyperparameters}}
         else:
             return ft_params
-
-    @staticmethod
-    def _get_client(api_key, base_url=ANYSCALE_API_BASE, org=None):
-        return openai.OpenAI(api_key=api_key, base_url=base_url, organization=org)

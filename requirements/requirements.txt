@@ -17,14 +17,14 @@ redis >=5.0.0, < 6.0.0
 walrus==0.9.3
 flask-compress >= 1.0.0
 appdirs >= 1.0.0
-mindsdb-sql ~= 0.12.0
-pydantic >= 1.8.2
+mindsdb-sql ~= 0.15.0
+pydantic >= 2.0.3
 mindsdb-evaluator >= 0.0.7, < 0.1.0
 checksumdir >= 1.2.0
 duckdb == 0.9.1
 requests >= 2.30.0
 pydateinfer==0.3.0
-dataprep_ml==0.0.22
+dataprep_ml==0.0.23
 dill == 0.3.6
 numpy
 pytz
@@ -41,5 +41,7 @@ langchain>=0.1.9
 langchain-core>=0.1.28
 langchain-community
 langchain-openai
+langchain-text_splitters
+bs4 # For web crawler.
 lark
 prometheus-client==0.20.0

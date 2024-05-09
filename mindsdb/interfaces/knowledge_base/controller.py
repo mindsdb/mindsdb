@@ -17,6 +17,7 @@ from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor
 
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.libs.vectordatabase_handler import TableField
+from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
 
@@ -353,7 +354,7 @@ class KnowledgeBaseController:
 
         if embedding_model is None:
             # create default embedding model
-            model_name = self._create_default_embedding_model(project.name, name)
+            model_name = self._create_default_embedding_model(project.name, name, params=params)
 
             # memorize to remove it later
             params['embedding_model'] = model_name
@@ -424,20 +425,25 @@ class KnowledgeBaseController:
         self.session.integration_controller.add(vector_store_name, engine, connection_args)
         return vector_store_name
 
-    def _create_default_embedding_model(self, project_name, kb_name, engine="sentence_transformers"):
+    def _create_default_embedding_model(self, project_name, kb_name, engine="langchain_embedding", params: dict = None):
         """create a default embedding model for knowledge base, if not specified"""
         model_name = f"{kb_name}_default_model"
-
+        using_args = {}
+        if engine == 'langchain_embedding':
+            # Use default embeddings.
+            using_args['class'] = 'openai'
+        # Include API key if provided.
+        using_args.update({k: v for k, v in params.items() if 'api_key' in k})
         statement = CreatePredictor(
             name=Identifier(parts=[project_name, model_name]),
-            using={},
+            using=using_args,
             targets=[
                 Identifier(parts=[TableField.EMBEDDINGS.value])
             ]
         )
         ml_handler = self.session.integration_controller.get_ml_handler(engine)
 
-        self.session.model_controller.create_model(
+        _ = self.session.model_controller.create_model(
             statement,
             ml_handler
         )
@@ -513,19 +519,43 @@ class KnowledgeBaseController:
         if kb is not None:
             return KnowledgeBaseTable(kb, self.session)
 
-    def list(self, project_id: int) -> List[db.KnowledgeBase]:
+    def list(self, project_name: str = None) -> List[dict]:
         """
         List all knowledge bases from the database
         belonging to a project
         """
-        kbs = (
+        project_controller = ProjectController()
+        projects = project_controller.get_list()
+        if project_name is not None:
+            projects = [p for p in projects if p.name == project_name]
+
+        query = (
             db.session.query(db.KnowledgeBase)
-            .filter_by(
-                project_id=project_id,
-            )
-            .all()
+            .filter(db.KnowledgeBase.project_id.in_(list([p.id for p in projects])))
         )
-        return kbs
+
+        data = []
+        project_names = {
+            i.id: i.name
+            for i in project_controller.get_list()
+        }
+
+        for record in query:
+            vector_database = record.vector_database
+            embedding_model = record.embedding_model
+
+            data.append({
+                'id': record.id,
+                'name': record.name,
+                'project_id': record.project_id,
+                'project_name': project_names[record.project_id],
+                'embedding_model': embedding_model.name if embedding_model is not None else None,
+                'vector_database': None if vector_database is None else vector_database.name,
+                'vector_database_table': record.vector_database_table,
+                'params': record.params
+            })
+
+        return data
 
     def update(self, name: str, project_id: int, **kwargs) -> db.KnowledgeBase:
         """

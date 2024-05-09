@@ -25,11 +25,11 @@ class SessionController:
     This class manages the server session
     """
 
-    def __init__(self) -> object:
+    def __init__(self, api_type='http') -> object:
         """
         Initialize the session
         """
-
+        self.api_type = api_type
         self.username = None
         self.auth = False
         self.logging = logger

@@ -15,7 +15,7 @@ from mindsdb.api.http.namespaces.configs.config import ns_conf
 from mindsdb.api.http.utils import http_error
 from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.utilities import log
-from mindsdb.utilities.functions import encrypt, decrypt
+from mindsdb.utilities.functions import decrypt
 from mindsdb.utilities.log_controller import get_logs
 from mindsdb.utilities.config import Config
 
@@ -139,37 +139,20 @@ class Integration(Resource):
                 params[key] = str(file_path)
 
         is_test = params.get('test', False)
+        # TODO: Move this to new Endpoint
+        if is_test:
+            del params['test']
+            handler_type = params.pop('type', None)
+            params.pop('publish', None)
+            handler = ca.integration_controller.create_tmp_handler(name, handler_type, params)
+            status = handler.check_connection()
+            resp = status.to_json()
+            return resp, 200
 
         config = Config()
         secret_key = config.get('secret_key', 'dummy-key')
 
-        if is_test:
-            del params['test']
-
-            handler_type = params.pop('type', None)
-            params.pop('publish', None)
-            handler = ca.integration_controller.create_tmp_handler(
-                handler_type=handler_type,
-                connection_data=params
-            )
-
-            status = handler.check_connection()
-            if temp_dir is not None:
-                shutil.rmtree(temp_dir)
-
-            resp = status.to_json()
-            if status.success and 'code' in params:
-                if hasattr(handler, 'handler_storage'):
-                    # attach storage if exists
-                    export = handler.handler_storage.export_files()
-                    if export:
-                        # encrypt with flask secret key
-                        encrypted = encrypt(export, secret_key)
-                        resp['storage'] = encrypted.decode()
-
-            return resp, 200
-
-        integration = ca.integration_controller.get(name, show_secrets=False)
+        integration = ca.integration_controller.get(name, sensitive_info=False)
         if integration is not None:
             abort(400, f"Integration with name '{name}' already exists")
 
@@ -233,18 +216,6 @@ class Integration(Resource):
             logger.error(str(e))
             abort(500, f"Error during integration modifycation: {str(e)}")
         return "", 200
-
-
-@ns_conf.route('/integrations/<name>/check')
-@ns_conf.param('name', 'Database integration checks')
-class Check(Resource):
-    @ns_conf.doc('check')
-    @api_endpoint_metrics('GET', '/config/integrations/integration/check')
-    def get(self, name):
-        if ca.integration_controller.get(name) is None:
-            abort(404, f'Can\'t find database integration: {name}')
-        connections = ca.integration_controller.check_connections()
-        return connections.get(name, False), 200
 
 
 @ns_conf.route('/vars')

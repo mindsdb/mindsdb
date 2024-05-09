@@ -1,17 +1,21 @@
 import re
 import datetime as dt
 from dateutil.relativedelta import relativedelta
+from typing import List
 
 import sqlalchemy as sa
 
 from mindsdb_sql import parse_sql, ParsingException
 from mindsdb_sql.parser.dialects.mindsdb import CreateJob
+from mindsdb_sql.parser.ast import Select, Star, Identifier, BinaryOperation, Constant
 
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.exception import EntityNotExistsError, EntityExistsError
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
+from mindsdb.interfaces.database.log import LogDBController
+
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -71,40 +75,72 @@ def calc_next_date(schedule_str, base_date: dt.datetime):
     return next_date
 
 
-class JobsController:
-    def add(self, name: str, project_name: str, query: CreateJob):
+def parse_job_date(date_str: str) -> dt.datetime:
+    """
+    Convert string used as job data to datetime object
+    :param date_str:
+    :return:
+    """
 
-        if project_name is None:
-            project_name = 'mindsdb'
+    if date_str.upper() == 'NOW':
+        return dt.datetime.now()
+
+    date_formats = ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d']
+    date = None
+    for date_format in date_formats:
+        try:
+            date = dt.datetime.strptime(date_str, date_format)
+        except ValueError:
+            pass
+    if date is None:
+        raise ValueError(f"Can't parse date: {date_str}")
+    return date
+
+
+class JobsController:
+    def add(
+        self,
+        name: str,
+        project_name: str,
+        query: str,
+        start_at: dt.datetime = None,
+        end_at: dt.datetime = None,
+        if_query: str = None,
+        schedule_str: str = None,
+    ) -> str:
+        """
+        Create a new job
+
+        More info: https://docs.mindsdb.com/mindsdb_sql/sql/create/jobs#create-job
+
+        :param name: name of the job
+        :param project_name: project name
+        :param query: sql query for job to execute, it could be several queries seperated by ';'
+        :param start_at: datetime of first execution of the job, optional
+        :param end_at: datetime after which job should not be executed anymore
+        :param if_query: condition for job,
+           if this query (or last from list of queries separated by ';') returns data and no error in queries:
+              job will not be executed
+        :param schedule_str: description how to repeat job
+            at the moment supports: 'every <number> <dimension>' or 'every <dimension>'
+        :return: name of created job
+        """
+
         project_controller = ProjectController()
         project = project_controller.get(name=project_name)
 
         # check if exists
-        record = db.session.query(db.Jobs).filter_by(
-            company_id=ctx.company_id,
-            name=name,
-            project_id=project.id,
-            deleted_at=sa.null()
-        ).first()
-        if record is not None:
-            raise EntityExistsError(f'Job already exists: {name}')
+        if self.get(name, project_name) is not None:
+            raise EntityExistsError('Job already exists', name)
 
-        if query.start_str is not None:
-            start_at = self._parse_date(query.start_str)
-            if start_at < dt.datetime.now():
-                start_at = dt.datetime.now()
-        else:
+        if start_at is None:
             start_at = dt.datetime.now()
 
-        end_at = None
-        if query.end_str is not None:
-            end_at = self._parse_date(query.end_str)
-
-            if end_at < start_at:
-                raise Exception(f'Wrong end date {start_at} > {end_at}')
+        if end_at is not None and end_at < start_at:
+            raise Exception(f'Wrong end date {start_at} > {end_at}')
 
         # check sql = try to parse it
-        for sql in split_sql(query.query_str):
+        for sql in split_sql(query):
             try:
                 # replace template variables with null
                 sql = re.sub(r'\{\{[\w\d]+}}', "", sql)
@@ -113,8 +149,8 @@ class JobsController:
             except ParsingException as e:
                 raise ParsingException(f'Unable to parse: {sql}: {e}')
 
-        if query.if_query_str is not None:
-            for sql in split_sql(query.if_query_str):
+        if if_query is not None:
+            for sql in split_sql(if_query):
                 try:
                     # replace template variables with null
                     sql = re.sub(r'\{\{[\w\d]+}}', "", sql)
@@ -126,15 +162,14 @@ class JobsController:
         # plan next run
         next_run_at = start_at
 
-        schedule_str = None
-        if query.repeat_str is not None:
-            schedule_str = 'every ' + query.repeat_str
-
+        if schedule_str is not None:
             # try to calculate schedule string
             calc_next_date(schedule_str, start_at)
         else:
             # no schedule for job end_at is meaningless
             end_at = None
+
+        name = name.lower()
 
         # create job record
         record = db.Jobs(
@@ -142,8 +177,8 @@ class JobsController:
             user_class=ctx.user_class,
             name=name,
             project_id=project.id,
-            query_str=query.query_str,
-            if_query_str=query.if_query_str,
+            query_str=query,
+            if_query_str=if_query,
             start_at=start_at,
             end_at=end_at,
             next_run_at=next_run_at,
@@ -152,21 +187,45 @@ class JobsController:
         db.session.add(record)
         db.session.commit()
 
-    def _parse_date(self, date_str):
+        return name
 
-        if date_str.upper() == 'NOW':
-            return dt.datetime.now()
+    def create(self, name: str, project_name: str, query: CreateJob) -> str:
+        """
+        Create job using AST query
+        :param name: name of the job
+        :param project_name: project name
+        :param query: AST query with job parameters
+        :return: name of created job
+        """
 
-        date_formats = ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d']
-        date = None
-        for date_format in date_formats:
-            try:
-                date = dt.datetime.strptime(date_str, date_format)
-            except ValueError:
-                pass
-        if date is None:
-            raise ValueError(f"Can't parse date: {date_str}")
-        return date
+        if project_name is None:
+            project_name = 'mindsdb'
+
+        start_at = None
+        if query.start_str is not None:
+            start_at = parse_job_date(query.start_str)
+            if start_at < dt.datetime.now():
+                start_at = dt.datetime.now()
+
+        end_at = None
+        if query.end_str is not None:
+            end_at = parse_job_date(query.end_str)
+
+        query_str = query.query_str
+        if_query_str = query.if_query_str
+
+        schedule_str = None
+        if query.repeat_str is not None:
+            schedule_str = 'every ' + query.repeat_str
+
+        return self.add(
+            name, project_name,
+            query=query_str,
+            start_at=start_at,
+            end_at=end_at,
+            if_query=if_query_str,
+            schedule_str=schedule_str,
+        )
 
     def delete(self, name, project_name):
 
@@ -223,6 +282,64 @@ class JobsController:
                 'variables': query_context_controller.get_context_vars('job', record.id)
             })
         return data
+
+    def get(self, name: str, project_name: str) -> dict:
+        """
+        Get info about job
+        :param name: name of the job
+        :param project_name: job's project
+        :return: dict with info about job
+        """
+
+        project_controller = ProjectController()
+        project = project_controller.get(name=project_name)
+
+        record = db.session.query(db.Jobs).filter_by(
+            company_id=ctx.company_id,
+            name=name,
+            project_id=project.id,
+            deleted_at=sa.null()
+        ).first()
+
+        if record is not None:
+            return {
+                'id': record.id,
+                'name': record.name,
+                'project': project_name,
+                'start_at': record.start_at,
+                'end_at': record.end_at,
+                'next_run_at': record.next_run_at,
+                'schedule_str': record.schedule_str,
+                'query': record.query_str,
+                'if_query': record.if_query_str,
+                'variables': query_context_controller.get_context_vars('job', record.id)
+            }
+
+    def get_history(self, name: str, project_name: str) -> List[dict]:
+        """
+        Get history of the job's calls
+        :param name: job name
+        :param project_name: project name
+        :return: List of job executions
+        """
+
+        logs_db_controller = LogDBController()
+
+        query = Select(
+            targets=[Star()],
+            from_table=Identifier('jobs_history'),
+            where=BinaryOperation(op='and', args=[
+                BinaryOperation(op='=', args=[Identifier('name'), Constant(name)]),
+                BinaryOperation(op='=', args=[Identifier('project'), Constant(project_name)])
+            ])
+        )
+        data, columns = logs_db_controller.query(query)
+
+        names = [i['name'] for i in columns]
+        records = []
+        for row in data:
+            records.append(dict(zip(names, row)))
+        return records
 
 
 class JobsExecutor:

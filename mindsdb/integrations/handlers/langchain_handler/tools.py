@@ -112,20 +112,21 @@ def _setup_standard_tools(tools, llm, model_kwargs):
 
     all_standard_tools = []
     langchain_tools = []
-    mdb_tool = Tool(
-        name="MindsDB",
-        func=get_exec_call_tool(llm, executor, model_kwargs),
-        description="useful to read from databases or tables connected to the mindsdb machine learning package. the action must be a valid simple SQL query, always ending with a semicolon. For example, you can do `show databases;` to list the available data sources, and `show tables;` to list the available tables within each data source."  # noqa
-    )
-
-    mdb_meta_tool = Tool(
-        name="MDB-Metadata",
-        func=get_exec_metadata_tool(llm, executor, model_kwargs),
-        description="useful to get column names from a mindsdb table or metadata from a mindsdb data source. the command should be either 1) a data source name, to list all available tables that it exposes, or 2) a string with the format `data_source_name.table_name` (for example, `files.my_table`), to get the table name, table type, column names, data types per column, and amount of rows of the specified table."  # noqa
-    )
-    all_standard_tools.append(mdb_tool)
-    all_standard_tools.append(mdb_meta_tool)
     for tool in tools:
+        if tool == 'mindsdb_read':
+            mdb_tool = Tool(
+                name="MindsDB",
+                func=get_exec_call_tool(llm, executor, model_kwargs),
+                description="useful to read from databases or tables connected to the mindsdb machine learning package. the action must be a valid simple SQL query, always ending with a semicolon. For example, you can do `show databases;` to list the available data sources, and `show tables;` to list the available tables within each data source."  # noqa
+            )
+
+            mdb_meta_tool = Tool(
+                name="MDB-Metadata",
+                func=get_exec_metadata_tool(llm, executor, model_kwargs),
+                description="useful to get column names from a mindsdb table or metadata from a mindsdb data source. the command should be either 1) a data source name, to list all available tables that it exposes, or 2) a string with the format `data_source_name.table_name` (for example, `files.my_table`), to get the table name, table type, column names, data types per column, and amount of rows of the specified table."  # noqa
+            )
+            all_standard_tools.append(mdb_tool)
+            all_standard_tools.append(mdb_meta_tool)
         if tool == 'mindsdb_write':
             mdb_write_tool = Tool(
                 name="MDB-Write",
@@ -280,20 +281,25 @@ def _build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
     )
 
 
-def langchain_tool_from_skill(skill, pred_args):
+def langchain_tools_from_skill(skill, pred_args, llm):
     # Makes Langchain compatible tools from a skill
-    tool = skill_tool.get_tool_from_skill(skill)
+    tools = skill_tool.get_tools_from_skill(skill, llm)
 
-    if tool['type'] == SkillType.RETRIEVAL.value:
-
-        return _build_retrieval_tool(tool, pred_args, skill)
-
-    return Tool(
-        name=tool['name'],
-        func=tool['func'],
-        description=tool['description'],
-        return_direct=True
-    )
+    all_tools = []
+    for tool in tools:
+        if skill.type == SkillType.RETRIEVAL.value:
+            all_tools.append(_build_retrieval_tool(tool, pred_args, skill))
+            continue
+        if isinstance(tool, dict):
+            all_tools.append(Tool(
+                name=tool['name'],
+                func=tool['func'],
+                description=tool['description'],
+                return_direct=True
+            ))
+            continue
+        all_tools.append(tool)
+    return all_tools
 
 def get_skills(pred_args):
     return pred_args.get('skills', [])
@@ -316,7 +322,7 @@ def setup_tools(llm, model_kwargs, pred_args, default_agent_tools):
     tools = []
     skills = get_skills(pred_args)
     for skill in skills:
-        tools.append(langchain_tool_from_skill(skill, pred_args))
+        tools += langchain_tools_from_skill(skill, pred_args, llm)
 
     if len(tools) == 0:
         tools = _setup_standard_tools(standard_tools, llm, model_kwargs)

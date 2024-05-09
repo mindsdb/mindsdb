@@ -18,6 +18,7 @@ from mindsdb.integrations.handlers.langchain_handler.constants import (
     DEFAULT_AGENT_TIMEOUT_SECONDS,
     DEFAULT_AGENT_TOOLS,
     DEFAULT_AGENT_TYPE,
+    DEFAULT_EMBEDDINGS_MODEL_PROVIDER,
     DEFAULT_MAX_ITERATIONS,
     DEFAULT_MAX_TOKENS,
     DEFAULT_MODEL_NAME,
@@ -216,18 +217,17 @@ class LangChainHandler(BaseMLEngine):
 
         # Set up embeddings model if needed.
         if args.get('mode') == 'retrieval':
-
             embeddings_args = args.pop('embedding_model_args', {})
 
-            # no embedding model args provided, use same provider as llm
+            # no embedding model args provided, use default provider.
             if not embeddings_args:
+                embeddings_provider = self._get_embedding_model_provider(args)
                 logger.warning("'embedding_model_args' not found in input params, "
-                               "Trying to use the same provider used for llm. "
-                               f"provider: {args['provider']}"
+                               f"Trying to use LLM provider: {embeddings_provider}"
                                )
-
-                # get args for embeddings model
-                embeddings_args['class'] = args['provider']
+                embeddings_args['class'] = embeddings_provider
+                # Include API keys if present.
+                embeddings_args.update({k: v for k, v in args.items() if 'api_key' in k})
 
             # create embeddings model
             pred_args['embeddings_model'] = self._create_embeddings_model(embeddings_args)

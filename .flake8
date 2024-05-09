@@ -17,7 +17,6 @@ per-file-ignores =
 exclude =
   __init__.py,
   build/*
-  mindsdb/microservices_grpc/*
   # TODO: clean up this code
   mindsdb/integrations/handlers/druid_handler/druid_handler.py
   mindsdb/integrations/handlers/dynamodb_handler/dynamodb_handler.py
@@ -42,7 +41,6 @@ exclude =
   mindsdb/integrations/handlers/redshift_handler/*
   mindsdb/integrations/handlers/s3_handler/s3_handler.py
   mindsdb/integrations/handlers/singlestore_handler/*
-  mindsdb/integrations/handlers/snowflake_handler/snowflake_handler.py
   mindsdb/integrations/handlers/sqlite_handler/sqlite_handler.py
   mindsdb/integrations/handlers/supabase_handler/tests/test_supabase_handler.py
   mindsdb/integrations/handlers/tidb_handler/*
@@ -136,7 +134,6 @@ exclude =
   mindsdb/integrations/handlers/tpot_handler/*
   mindsdb/integrations/handlers/derby_handler/*
   mindsdb/integrations/handlers/scylla_handler/*
-  mindsdb/integrations/handlers/clickhouse_handler/*
   mindsdb/integrations/handlers/phoenix_handler/*
   mindsdb/integrations/handlers/replicate_handler/*
   mindsdb/integrations/handlers/pgvector_handler/*

@@ -13,7 +13,8 @@
   },
   "feedback": {
     "suggestEdit": true,
-    "raiseIssue": true
+    "raiseIssue": true,
+    "thumbsRating": true
   },
   "openapi": "https://raw.githubusercontent.com/mindsdb/mindsdb/openapi-specs/mindsdb/api/http/openapi.yml",
   "api": {
@@ -1038,6 +1039,12 @@
             "integrations/ai-engines/byom",
             "integrations/ai-engines/mlflow",
             "integrations/ai-engines/ray-serve"
+          ]
+        },
+        {
+          "group": "Anomaly Detection",
+          "pages": [
+            "integrations/ai-engines/anomaly"
           ]
         },
         {

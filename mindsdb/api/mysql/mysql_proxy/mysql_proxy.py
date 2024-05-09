@@ -851,9 +851,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.session.profiling = context["profiling"]
         if "predictor_cache" in context:
             self.session.predictor_cache = context["predictor_cache"]
+        if "show_secrets" in context:
+            self.session.show_secrets = context["show_secrets"]
 
-    def get_context(self, context):
-        context = {}
+    def get_context(self):
+        context = {
+            "show_secrets": self.session.show_secrets
+        }
         if self.session.database is not None:
             context["db"] = self.session.database
         if self.session.profiling is True:

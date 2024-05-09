@@ -11,7 +11,7 @@ connection_args = OrderedDict(
     database={
         'type': ARG_TYPE.STR,
         'description': """
-            The database name to use when connecting with the Firebird server. NOTE: use double backslashes (\\) for the 
+            The database name to use when connecting with the Firebird server. NOTE: use double backslashes (\\) for the
             database path on a Windows machine.
         """
     },

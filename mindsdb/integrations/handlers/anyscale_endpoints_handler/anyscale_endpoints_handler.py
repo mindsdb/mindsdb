@@ -120,7 +120,7 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
 
     def _set_models(self, args):
         api_key = get_api_key('anyscale_endpoints', args, self.engine_storage)
-        client = self._get_client(api_key)
+        client = OpenAIHandler._get_client(api_key)
         self.all_models = [m.id for m in client.models.list()]
         self.chat_completion_models = [m.id for m in client.models.list() if m.rayllm_metadata['engine_config']['model_type'] == 'text-generation']  # noqa
         self.supported_ft_models = self.chat_completion_models  # base models compatible with fine-tuning
@@ -174,6 +174,3 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         else:
             return ft_params
 
-    @staticmethod
-    def _get_client(api_key, base_url=ANYSCALE_API_BASE, org=None):
-        return openai.OpenAI(api_key=api_key, base_url=base_url, organization=org)

@@ -1,11 +1,9 @@
 import sys
-from collections import OrderedDict
 from typing import List, Optional
 
 import pandas as pd
 
 from mindsdb.integrations.handlers.chromadb_handler.settings import ChromaHandlerConfig
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse
 from mindsdb.integrations.libs.response import HandlerResponse as Response
@@ -432,28 +430,3 @@ class ChromaDBHandler(VectorStoreHandler):
                 error_message=f"Table {table_name} does not exist!",
             )
         return super().get_columns(table_name)
-
-
-connection_args = OrderedDict(
-    host={
-        "type": ARG_TYPE.STR,
-        "description": "chromadb server host",
-        "required": False,
-    },
-    port={
-        "type": ARG_TYPE.STR,
-        "description": "chromadb server port",
-        "required": False,
-    },
-    persist_directory={
-        "type": ARG_TYPE.STR,
-        "description": "persistence directory for ChromaDB",
-        "required": False,
-    },
-)
-
-connection_args_example = OrderedDict(
-    host="localhost",
-    port="8000",
-    persist_directory="chromadb",
-)

@@ -130,6 +130,7 @@ jobs:
           env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
           env PYTHONPATH=./ pytest tests/unit/test_cache.py
           env PYTHONPATH=./ pytest tests/unit/test_llm_utils.py
+          env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_mindsdb_inference.py
         fi
     - name: Run Handlers tests and submit Coverage to coveralls
       run: |

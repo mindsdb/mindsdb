@@ -33,7 +33,7 @@ class CompletionParameters(BaseModel):
     base_url: Optional[str] = None  # Base URL of the API.
     api_version: Optional[str] = None  # Version of the API to be used.
     api_key: str  # API key for authentication.
-    model_list: Optional[List] = None  # List of models, API bases, keys, etc., for dynamic selection.
+    llm_model_list: Optional[List] = None  # List of models, API bases, keys, etc., for dynamic selection.
 
     class Config:
         extra = Extra.forbid

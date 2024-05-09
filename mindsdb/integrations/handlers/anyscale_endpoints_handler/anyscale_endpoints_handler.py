@@ -37,25 +37,6 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         self.default_max_tokens = 100
 
     @staticmethod
-    def _get_api_key(args, engine_storage):
-        return get_api_key('anyscale_endpoints', args, engine_storage, strict=True)
-
-    @contextlib.contextmanager
-    def _anyscale_base_api(self, args: dict, key='OPENAI_API_BASE'):
-        """ Temporarily updates the API base env var to point towards the Anyscale URL. """
-        old_base = os.environ.get(key, OPENAI_API_BASE)
-        os.environ[key] = ANYSCALE_API_BASE
-        try:
-            if 'using' not in args:
-                args['using'] = {}
-            api_key = AnyscaleEndpointsHandler._get_api_key(args, self.engine_storage)
-            args['using']['openai_api_key'] = api_key  # add key as expected by OpenAIHandler
-            args['using']['api_key'] = api_key
-            yield  # enter
-        finally:  # exit
-            os.environ[key] = old_base
-
-    @staticmethod
     def create_validation(target, args=None, **kwargs):
         if 'using' not in args:
             raise Exception(
@@ -87,7 +68,7 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         using_args = args.get('using', {})
         self._set_models(using_args)
         super().finetune(df, args)
-        
+
         # rewrite chat_completion_models to include the newly fine-tuned model
         args = self.model_storage.json_get('args')
         args['chat_completion_models'] = list(self.chat_completion_models) + [args['model_name']]

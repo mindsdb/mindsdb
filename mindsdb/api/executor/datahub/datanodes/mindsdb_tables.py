@@ -65,7 +65,7 @@ class ModelsTable(MdbTable):
     ]
 
     @classmethod
-    def get_data(cls, inf_schema=None, **kwargs):
+    def get_data(cls, inf_schema, **kwargs):
         data = []
         for project_name in inf_schema.get_projects_names():
             project = inf_schema.database_controller.get_project(name=project_name)
@@ -110,9 +110,9 @@ class DatabasesTable(MdbTable):
     columns = ["NAME", "TYPE", "ENGINE", "CONNECTION_DATA"]
 
     @classmethod
-    def get_data(cls, inf_schema=None, **kwargs):
+    def get_data(cls, session, inf_schema, **kwargs):
 
-        project = inf_schema.database_controller.get_list()
+        project = inf_schema.database_controller.get_list(with_secrets=session.show_secrets)
         data = [
             [x["name"], x["type"], x["engine"], to_json(x.get("connection_data"))]
             for x in project
@@ -129,9 +129,9 @@ class MLEnginesTable(MdbTable):
     ]
 
     @classmethod
-    def get_data(cls, inf_schema=None, **kwargs):
+    def get_data(cls, session, inf_schema, **kwargs):
 
-        integrations = inf_schema.integration_controller.get_all()
+        integrations = inf_schema.integration_controller.get_all(show_secrets=session.show_secrets)
         ml_integrations = {
             key: val for key, val in integrations.items() if val["type"] == "ml"
         }
@@ -158,7 +158,7 @@ class HandlersTable(MdbTable):
     ]
 
     @classmethod
-    def get_data(cls, inf_schema=None, **kwargs):
+    def get_data(cls, inf_schema, **kwargs):
 
         handlers = inf_schema.integration_controller.get_handlers_import_status()
 

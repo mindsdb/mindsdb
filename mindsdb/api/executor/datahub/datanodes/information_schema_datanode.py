@@ -479,7 +479,7 @@ class InformationSchemaDataNode(DataNode):
     def _get_ml_engines(self, query: ASTNode = None):
         columns = self.information_schema["ML_ENGINES"]
 
-        integrations = self.integration_controller.get_all()
+        integrations = self.integration_controller.get_all(show_secrets=self.session.show_secrets)
         ml_integrations = {
             key: val for key, val in integrations.items() if val["type"] == "ml"
         }

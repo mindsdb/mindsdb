@@ -1,1 +1,1 @@
-pymssql >= 2.1.4
+pymssql >= 2.2.0

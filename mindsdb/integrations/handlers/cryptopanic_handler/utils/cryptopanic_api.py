@@ -6,6 +6,8 @@ import time
 API_RATE_LIMIT_DELAY = .2  # All API methods are rate limited per IP at 5req/sec.
 
 # Function to retrieve JSON data for a single page from the API
+
+
 def get_single_page_json(url):
     """
     Retrieves JSON data for a single page from the CryptoPanic API.
@@ -19,9 +21,11 @@ def get_single_page_json(url):
     time.sleep(API_RATE_LIMIT_DELAY)  # Rate limiting to avoid exceeding 5 requests per second
     response = requests.get(url)
     data = response.json()
-    return data.get('results', []),  data.get('next')
+    return data.get('results', []), data.get('next')
 
 # Function to retrieve JSON data for multiple pages from the API
+
+
 def get_multiple_pages_json(url, num_pages=None):
     """
     Retrieves JSON data for multiple pages from the CryptoPanic API.
@@ -34,22 +38,23 @@ def get_multiple_pages_json(url, num_pages=None):
         list: List of JSON data for each page.
     """
     pages_list_json = []
-    while url and (num_pages is None or len(pages_list_json) < num_pages*20):
+    while url and (num_pages is None or len(pages_list_json) < num_pages * 20):
         page_data, url = get_single_page_json(url)
         if not page_data:
             break
         pages_list_json.extend(page_data)
     return pages_list_json
 
+
 def format_data(data):
     for entry in data:
-        entry['region']=entry['source']['region']
-        entry['source']=entry['source']['title']
+        entry['region'] = entry['source']['region']
+        entry['source'] = entry['source']['title']
         if 'currencies' in entry:
-            entry['currencies']=[currency['title'] for currency in entry['currencies'] ]
+            entry['currencies'] = [currency['title'] for currency in entry['currencies']]
 
-        entry['votes']=max(entry['votes'], key=entry['votes'].get)
-    
+        entry['votes'] = max(entry['votes'], key=entry['votes'].get)
+
         if 'metadata' in entry:
             del entry['metadata']
 

@@ -9,6 +9,7 @@ from mindsdb.integrations.handlers.cryptopanic_handler.utils.cryptopanic_api imp
 
 logger = log.getLogger(__name__)
 
+
 class CryptoPanicHandler(APIHandler):
     """
     A class for handling connections and interactions with the Crypto Panic API.
@@ -17,7 +18,7 @@ class CryptoPanicHandler(APIHandler):
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         super().__init__(name)
         self.api_token = connection_data["api_token"]
-        
+
         news = NewsTable(self)
         self._register_table('news', news)
 

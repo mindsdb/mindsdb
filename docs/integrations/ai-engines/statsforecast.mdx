@@ -233,7 +233,7 @@ The `engine` parameter in the `training_options` clause specifies the ML engine 
 We can check the training status with the following query:
 
 ```bash
-> db.getCollection('models').find({
+> db.models.find({
       name: 'quarterly_expenditure_forecaster'
   })
 ```
@@ -244,12 +244,12 @@ Once the model status is `complete`, the behavior is the same as with any other 
 
 ```bash
 > db.quarterly_expenditure_forecaster.find({
-      collection: 'mongo_demo_db.historical_expenditures', 
-      query:  { 
-          "$where": "this.month > latest and this.category = 'food'" 
-      }
+      "collection": "mongo_pred_01.historical_expenditures",
+      "query": {"category": "food"}
   }).limit(3)
 ```
+
+By default the forecasts are made for `month > LATEST`.
 
 Here is the output data:
 

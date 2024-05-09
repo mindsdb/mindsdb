@@ -1,27 +1,24 @@
 from unittest.mock import patch
 
 from langchain_core.documents import Document
-from langchain_experimental.text_splitter import SemanticChunker
 from langchain_text_splitters import MarkdownHeaderTextSplitter, HTMLHeaderTextSplitter, RecursiveCharacterTextSplitter
 from mindsdb.integrations.utilities.rag.splitters.file_splitter import FileSplitter, FileSplitterConfig
 
 
-@patch('mindsdb.integrations.utilities.rag.splitters.file_splitter.OpenAIEmbeddings')
-def test_split_documents_pdf(mock_embeddings):
+def test_split_documents_pdf():
     pdf_doc = Document(
         page_content='This is a test PDF file. Let us try to do some splitting!',
         metadata={'extension': '.pdf'}
     )
-    semantic_chunker = SemanticChunker(mock_embeddings)
-    file_splitter = FileSplitter(FileSplitterConfig(embeddings=mock_embeddings, semantic_chunker=semantic_chunker))
+    recursive_splitter = RecursiveCharacterTextSplitter()
+    file_splitter = FileSplitter(FileSplitterConfig(
+        recursive_splitter=recursive_splitter
+    ))
     split_pdf_docs = file_splitter.split_documents([pdf_doc])
-    assert mock_embeddings.embed_documents.called
-    assert len(mock_embeddings.embed_documents.call_args.args[0]) > 0
     assert len(split_pdf_docs) > 0
 
 
-@patch('mindsdb.integrations.utilities.rag.splitters.file_splitter.OpenAIEmbeddings')
-def test_split_documents_md(mock_embeddings):
+def test_split_documents_md():
     md_content = '''
     # Unit Testing for Dummies
     This MD document covers how to write basic unit tests.
@@ -40,7 +37,6 @@ def test_split_documents_md(mock_embeddings):
     ]
     md_text_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=headers_to_split_on)
     file_splitter = FileSplitter(FileSplitterConfig(
-        embeddings=mock_embeddings,
         markdown_splitter=md_text_splitter
     ))
     split_md_docs = file_splitter.split_documents([md_doc])
@@ -51,8 +47,7 @@ def test_split_documents_md(mock_embeddings):
     assert 'To be continued!' in split_md_docs[2].page_content
 
 
-@patch('mindsdb.integrations.utilities.rag.splitters.file_splitter.OpenAIEmbeddings')
-def test_split_documents_html(mock_embeddings):
+def test_split_documents_html():
     html_content = '''
 <!DOCTYPE html>
 <html>
@@ -85,7 +80,6 @@ def test_split_documents_html(mock_embeddings):
     ]
     html_text_splitter = HTMLHeaderTextSplitter(headers_to_split_on=headers_to_split_on)
     file_splitter = FileSplitter(FileSplitterConfig(
-        embeddings=mock_embeddings,
         html_splitter=html_text_splitter
     ))
     html_doc = Document(
@@ -105,11 +99,9 @@ def test_split_documents_html(mock_embeddings):
     assert 'Some concluding text about Foo' in split_html_docs[7].page_content
 
 
-@patch('mindsdb.integrations.utilities.rag.splitters.file_splitter.OpenAIEmbeddings')
-def test_split_documents_default(mock_embeddings):
+def test_split_documents_default():
     recursive_splitter = RecursiveCharacterTextSplitter()
     file_splitter = FileSplitter(FileSplitterConfig(
-        embeddings=mock_embeddings,
         recursive_splitter=recursive_splitter
     ))
     txt_doc = Document(
@@ -121,9 +113,8 @@ def test_split_documents_default(mock_embeddings):
     assert 'This is a text file!' in split_txt_docs[0].page_content
 
 
-@patch('mindsdb.integrations.utilities.rag.splitters.file_splitter.OpenAIEmbeddings')
 @patch('mindsdb.integrations.utilities.rag.splitters.file_splitter.MarkdownHeaderTextSplitter')
-def test_split_documents_failover(mock_embeddings, mock_md_splitter):
+def test_split_documents_failover(mock_md_splitter):
     md_content = '''
     # Unit Testing for Dummies
     This MD document covers how to write basic unit tests.
@@ -134,7 +125,6 @@ def test_split_documents_failover(mock_embeddings, mock_md_splitter):
 '''
     mock_md_splitter.split_text.side_effect = Exception('Something went wrong!')
     file_splitter = FileSplitter(FileSplitterConfig(
-        embeddings=mock_embeddings,
         markdown_splitter=mock_md_splitter
     ))
     md_doc = Document(
@@ -147,9 +137,8 @@ def test_split_documents_failover(mock_embeddings, mock_md_splitter):
     assert len(split_md_docs) > 0
 
 
-@patch('mindsdb.integrations.utilities.rag.splitters.file_splitter.OpenAIEmbeddings')
 @patch('mindsdb.integrations.utilities.rag.splitters.file_splitter.MarkdownHeaderTextSplitter')
-def test_split_documents_no_failover(mock_embeddings, mock_md_splitter):
+def test_split_documents_no_failover(mock_md_splitter):
     md_content = '''
     # Unit Testing for Dummies
     This MD document covers how to write basic unit tests.
@@ -160,7 +149,6 @@ def test_split_documents_no_failover(mock_embeddings, mock_md_splitter):
 '''
     mock_md_splitter.split_text.side_effect = Exception('Something went wrong!')
     file_splitter = FileSplitter(FileSplitterConfig(
-        embeddings=mock_embeddings,
         markdown_splitter=mock_md_splitter
     ))
     md_doc = Document(

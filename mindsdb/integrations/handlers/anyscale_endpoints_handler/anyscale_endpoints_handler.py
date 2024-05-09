@@ -75,22 +75,20 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
             os.environ[key] = old_base
 
     def create(self, target, args=None, **kwargs):
-        with self._anyscale_base_api(args):
-            # load base and fine-tuned models, then hand over
-            self._set_models(args.get('using', {}))
-            _args = self.model_storage.json_get('args')
-            base_models = self.chat_completion_models
-            self.chat_completion_models = _args.get('chat_completion_models', base_models) if _args else base_models
-            super().create(target, args, **kwargs)
+        # load base and fine-tuned models, then hand over
+        self._set_models(args.get('using', {}))
+        _args = self.model_storage.json_get('args')
+        base_models = self.chat_completion_models
+        self.chat_completion_models = _args.get('chat_completion_models', base_models) if _args else base_models
+        super().create(target, args, **kwargs)
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
-        with self._anyscale_base_api(args):
-            # load base and fine-tuned models, then hand over
-            self._set_models(args.get('using', {}))
-            _args = self.model_storage.json_get('args')
-            base_models = self.chat_completion_models
-            self.chat_completion_models = _args.get('chat_completion_models', base_models) if _args else base_models
-            return super().predict(df, args)
+        # load base and fine-tuned models, then hand over
+        self._set_models(args.get('using', {}))
+        _args = self.model_storage.json_get('args')
+        base_models = self.chat_completion_models
+        self.chat_completion_models = _args.get('chat_completion_models', base_models) if _args else base_models
+        return super().predict(df, args)
 
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         with self._anyscale_base_api(args):

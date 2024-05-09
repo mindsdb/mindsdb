@@ -733,7 +733,7 @@ class InformationSchemaDataNode(DataNode):
     def _get_databases(self, query: ASTNode = None):
         columns = self.information_schema["DATABASES"]
 
-        project = self.database_controller.get_list()
+        project = self.database_controller.get_list(with_secrets=self.session.show_secrets)
         data = [
             [x["name"], x["type"], x["engine"], to_json(x.get("connection_data"))]
             for x in project

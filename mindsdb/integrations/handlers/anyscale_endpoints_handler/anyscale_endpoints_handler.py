@@ -84,14 +84,14 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         return super().predict(df, args)
 
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
-        with self._anyscale_base_api(args):
-            using_args = args.get('using', {})
-            self._set_models(using_args)
-            super().finetune(df, args)
-            # rewrite chat_completion_models to include the newly fine-tuned model
-            args = self.model_storage.json_get('args')
-            args['chat_completion_models'] = list(self.chat_completion_models) + [args['model_name']]
-            self.model_storage.json_set('args', args)
+        using_args = args.get('using', {})
+        self._set_models(using_args)
+        super().finetune(df, args)
+        
+        # rewrite chat_completion_models to include the newly fine-tuned model
+        args = self.model_storage.json_get('args')
+        args['chat_completion_models'] = list(self.chat_completion_models) + [args['model_name']]
+        self.model_storage.json_set('args', args)
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
         args = self.model_storage.json_get('args')

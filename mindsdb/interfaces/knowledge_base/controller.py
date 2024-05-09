@@ -354,7 +354,7 @@ class KnowledgeBaseController:
 
         if embedding_model is None:
             # create default embedding model
-            model_name = self._create_default_embedding_model(project.name, name)
+            model_name = self._create_default_embedding_model(project.name, name, params=params)
 
             # memorize to remove it later
             params['embedding_model'] = model_name
@@ -425,13 +425,15 @@ class KnowledgeBaseController:
         self.session.integration_controller.add(vector_store_name, engine, connection_args)
         return vector_store_name
 
-    def _create_default_embedding_model(self, project_name, kb_name, engine="langchain_embedding"):
+    def _create_default_embedding_model(self, project_name, kb_name, engine="langchain_embedding", params: dict = None):
         """create a default embedding model for knowledge base, if not specified"""
         model_name = f"{kb_name}_default_model"
         using_args = {}
         if engine == 'langchain_embedding':
             # Use default embeddings.
             using_args['class'] = 'openai'
+        # Include API key if provided.
+        using_args.update({k: v for k, v in params.items() if 'api_key' in k})
         statement = CreatePredictor(
             name=Identifier(parts=[project_name, model_name]),
             using=using_args,

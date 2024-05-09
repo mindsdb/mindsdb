@@ -13,7 +13,8 @@
   },
   "feedback": {
     "suggestEdit": true,
-    "raiseIssue": true
+    "raiseIssue": true,
+    "thumbsRating": true
   },
   "openapi": "https://raw.githubusercontent.com/mindsdb/mindsdb/openapi-specs/mindsdb/api/http/openapi.yml",
   "api": {
@@ -794,14 +795,6 @@
                       "sdks/python/refresh_job",
                       "sdks/python/get_history"
                   ]
-              },
-              {
-                "group": "AI Agents",
-                "pages": [
-                  "sdks/python/agents",
-                  "sdks/python/agents_skills",
-                  "sdks/python/agents_knowledge_bases"
-                ]
               }
           ]
         },

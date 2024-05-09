@@ -22,18 +22,34 @@ class MSTeamsHandlerConfig(BaseSettings):
 
     CHANNEL_MESSAGES_TABLE_COLUMNS: List
         Columns for the channel messages table.
-
+    
     TEST_CHAT_DATA: Dict
         Test data for the chats table.
 
-    TEST_CHAT_MESSAGES_DATA: Dict
+    TEST_CHATS_DATA: List[Dict]
+        Test data for the chats table.
+
+    TEST_CHAT_MESSAGE_DATA: Dict
+        Test data for the chat messages table.
+
+    TEST_CHAT_MESSAGES_DATA: List[Dict]
         Test data for the chat messages table.
 
     TEST_CHANNEL_DATA: Dict
         Test data for the channels table.
 
-    TEST_CHANNEL_MESSAGES_DATA: Dict
-        Test data for the channel messages table.   
+    TEST_CHANNELS_DATA: List[Dict]
+        Test data for the channels table.
+
+    TEST_CHANNEL_MESSAGE_DATA: Dict
+        Test data for the channel messages table.  
+
+    TEST_CHANNEL_MESSAGES_DATA: List[Dict]
+        Test data for the channel messages table.
+    
+    TEST_GROUP_DATA: dict
+
+    TEST_CHANNEL_ID_DATA: dict
     """
 
     DEFAULT_SCOPES: List = [
@@ -183,7 +199,7 @@ class MSTeamsHandlerConfig(BaseSettings):
         }
     }
 
-    TEST_CHATS_DATA: List = [TEST_CHAT_DATA]
+    TEST_CHATS_DATA: List[dict] = [TEST_CHAT_DATA]
 
     TEST_CHAT_MESSAGE_DATA: dict = {
         '@odata.context': 'test_context', 
@@ -239,7 +255,7 @@ class MSTeamsHandlerConfig(BaseSettings):
         }
     }
 
-    TEST_CHAT_MESSAGES_DATA: List = [TEST_CHAT_MESSAGE_DATA]
+    TEST_CHAT_MESSAGES_DATA: List[dict] = [TEST_CHAT_MESSAGE_DATA]
 
     TEST_CHANNEL_DATA: dict = {
         '@odata.context': 'test_context', 
@@ -255,7 +271,7 @@ class MSTeamsHandlerConfig(BaseSettings):
         'teamId': 'test_team_id'
     }
 
-    TEST_CHANNELS_DATA: List = [TEST_CHANNEL_DATA]
+    TEST_CHANNELS_DATA: List[dict] = [TEST_CHANNEL_DATA]
 
     TEST_CHANNEL_MESSAGE_DATA: dict = {
         '@odata.context': 'test_context', 
@@ -322,7 +338,7 @@ class MSTeamsHandlerConfig(BaseSettings):
         }
     }
 
-    TEST_CHANNEL_MESSAGES_DATA: List = [TEST_CHANNEL_MESSAGE_DATA]
+    TEST_CHANNEL_MESSAGES_DATA: List[dict] = [TEST_CHANNEL_MESSAGE_DATA]
 
     TEST_GROUP_DATA: dict = {
         '@odata.context': 'test_context', 

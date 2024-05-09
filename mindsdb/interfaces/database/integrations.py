@@ -296,13 +296,17 @@ class IntegrationController:
 
         if show_secrets is False:
             connection_args = getattr(integration_module, 'connection_args', None)
-            if connection_args is not None:
+            if isinstance(connection_args, dict):
                 if integration_type == HANDLER_TYPE.DATA:
                     for key, value in connection_args.items():
                         if key in data and value.get('secret', False) is True:
                             data[key] = '******'
                 elif integration_type == HANDLER_TYPE.ML:
-                    pass
+                    creation_args = connection_args.get('creation_args')
+                    if isinstance(creation_args, dict):
+                        for key, value in creation_args.items():
+                            if key in data and value.get('secret', False) is True:
+                                data[key] = '******'
                 else:
                     raise ValueError(f'Unexpected handler type: {integration_type}')
             else:
@@ -610,7 +614,7 @@ class IntegrationController:
             handler_class = module.Handler
             try:
                 prediction_args = handler_class.prediction_args()
-                creation_args = handler_class.creation_args()
+                creation_args = getattr(module, 'creation_args', handler_class.creation_args())
                 connection_args = {
                     "prediction": prediction_args,
                     "creation_args": creation_args

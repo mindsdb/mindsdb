@@ -114,6 +114,7 @@ jobs:
         cache-dependency-path: '**/requirements*.txt'
     - name: Install dependencies
       run: |
+        pip debug -v
         pip install .
         pip install -r requirements/requirements-test.txt
         pip install lightwood  # TODO: for now some tests rely on lightwood

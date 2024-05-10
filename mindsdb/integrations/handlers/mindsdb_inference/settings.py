@@ -1,4 +1,4 @@
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 
 
 class MindsDBInferenceHandlerConfig(BaseSettings):
@@ -12,7 +12,7 @@ class MindsDBInferenceHandlerConfig(BaseSettings):
         Base URL for the MindsDB Inference Endpoints API.
     """
 
-    BASE_URL = "https://llm.mdb.ai/"
+    BASE_URL: str = "https://llm.mdb.ai/"
 
 
 mindsdb_inference_handler_config = MindsDBInferenceHandlerConfig()

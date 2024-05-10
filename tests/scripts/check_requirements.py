@@ -39,16 +39,16 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.to
 # and not explicitly imported in mindsdb.
 MAIN_RULE_IGNORES = {
     "DEP003": ["torch"],
-    # Ignore Langhchain since the requirements check will still fail even if it's conditionally imported for certain features.
     "DEP001": ["torch"],
-    "DEP002": ["psycopg2-binary", "lark"],
+    # bs4 is used by Agents & Knowledge Bases (web handler).
+    "DEP002": ["psycopg2-binary", "lark", "bs4"],
 }
 
 # THe following packages need exceptions because they are optional deps of some other packages. e.g. langchain CAN use openai
 # (pysqlite3 is imported in an unusual way in the chromadb handler and needs to be excluded too)
 # pypdf and openpyxl are optional deps of langchain, that are used for the file handler
 OPTIONAL_HANDLER_DEPS = ["pysqlite3", "torch", "openai", "tiktoken", "wikipedia", "anthropic", "pypdf", "openpyxl",
-                         "sentence-transformers", "faiss-cpu", "litellm"]
+                         "sentence-transformers", "faiss-cpu", "litellm", "chromadb"]
 
 # List of rules we can ignore for specific packages
 # Here we ignore any packages in the main requirements.txt for "listed but not used" errors, because they will be used for the core code but not necessarily in a given handler

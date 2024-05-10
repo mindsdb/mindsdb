@@ -15,7 +15,7 @@
     "runOnBranch": "always"
   },
   {
-    "runs_on": "macos-latest",
+    "runs_on": "macos-13",
     "python-version": "3.10",
     "runOnBranch": "always"
   }

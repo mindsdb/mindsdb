@@ -1,4 +1,4 @@
-TEST
+
 # Understanding the Diverse Licensing Structure of MindsDB's Repo
 
 1. MindsDB Core: The MindsDB Core component specifically uses the Elastic License 2.0. This is a distinct license that applies to this particular part of the project.

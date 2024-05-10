@@ -19,14 +19,15 @@ class FinancialModelingTradesTable(APITable):
                 if op != '=':
                     raise NotImplementedError
                 params['symbol'] = arg2
-            if arg1 == "from":
+            if arg1 == "from_date":
                 if op != '=':
                     raise NotImplementedError
                 params['from'] = arg2
-            if arg1 == "to":
+            if arg1 == "to_date":
                 if op != '=':
                     raise NotImplementedError
                 params['to'] = arg2
+            
 
         return params
 

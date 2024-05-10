@@ -36,6 +36,6 @@ To customize open_time(from), close_time(to):
 SELECT *
 FROM my_table.daily_chart_table
 WHERE symbol = 'AAPL';
-AND open_time > '2023-10-10'
-AND close_time < '2023-12-10'
+AND from_date = '2023-10-10'
+AND to_date = '2023-12-10'
 ```

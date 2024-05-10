@@ -4,7 +4,6 @@ from mindsdb.integrations.utilities.date_utils import interval_str_to_duration_m
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb_sql.parser import ast
 
-from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List
 
 import pandas as pd
@@ -48,13 +47,5 @@ class FinancialModelingTradesTable(APITable):
         )
         
         return daily_chart_table
-
-    def get_columns(self):
-        return [
-            'symbol',
-            'from',
-            'to',
-            'close_price'
-        ]
 
     

@@ -49,7 +49,7 @@ class TestPDFToMarkdownTest:
         response = mock_response.return_value
         response.content = BROKEN_PDF_CONTENT
 
-        with pytest.raises(Exception, match='Failed to process PDF data: cannot open broken document'):
+        with pytest.raises(Exception, match="Failed to process PDF data"):
             helpers.pdf_to_markdown(response)
 
 

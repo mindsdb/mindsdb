@@ -259,7 +259,7 @@ class TwelveLabsHandlerConfig(BaseSettings):
     """
 
     BASE_URL = "https://api.twelvelabs.io/v1.2"
-    DEFAULT_ENGINE = "marengo2.5"
+    DEFAULT_ENGINE = "marengo2.6"
     DEFAULT_WAIT_DURATION = 5
 
 

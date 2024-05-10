@@ -134,4 +134,4 @@ class RAGPipelineModel(BaseModel):
 
     @classmethod
     def get_field_names(cls):
-        return list(cls.__fields__.keys())
+        return list(cls.model_fields.keys())

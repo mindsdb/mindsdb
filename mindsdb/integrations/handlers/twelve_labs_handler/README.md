@@ -87,7 +87,7 @@ FROM mindsdb.twelve_labs_search
 WHERE query = 'search query';
 ```
 
-Here, the `query` column is the name of the column containing the search queries as specified in the `query_column` parameter of the `CREATE MODEL` statement.
+Here, the `query` column is the name of the column containing the search queries as specified in the `search_query_column` parameter of the `CREATE MODEL` statement.
 
 Note: At the moment, only a single query can be specified in the `WHERE` clause of the query. The `JOIN` clause for making multiple predictions will be added in a future release.
 

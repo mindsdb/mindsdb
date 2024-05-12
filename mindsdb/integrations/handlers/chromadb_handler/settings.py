@@ -17,7 +17,7 @@ class ChromaHandlerConfig(BaseModel):
     class Config:
         extra = "forbid"
 
-    @model_validator(pre=True, skip_on_failure=True)
+    @model_validator(mode="before", skip_on_failure=True)
     def check_param_typos(cls, values):
         """Check if there are any typos in the parameters."""
 

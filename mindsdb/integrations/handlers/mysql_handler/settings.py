@@ -11,7 +11,7 @@ class ConnectionConfig(BaseModel):
     password: str = None
     database: str = None
 
-    @model_validator(pre=True)
+    @model_validator(mode="before")
     def check_db_params(cls, values):
         """Ensures either URL is provided or all individual parameters are provided."""
         url = values.get('url')

@@ -82,7 +82,7 @@ class TwelveLabsHandlerModel(BaseModel):
     class Config:
         extra = "forbid"
 
-    @model_validator(pre=True, skip_on_failure=True)
+    @model_validator(mode="before", skip_on_failure=True)
     def check_param_typos(cls, values):
         """
         Root validator to check if there are any typos in the parameters.
@@ -102,7 +102,7 @@ class TwelveLabsHandlerModel(BaseModel):
 
         return values
 
-    @model_validator(pre=True, skip_on_failure=True)
+    @model_validator(mode="before", skip_on_failure=True)
     def check_for_valid_task(cls, values):
         """
         Root validator to check if the task provided is valid.
@@ -127,7 +127,7 @@ class TwelveLabsHandlerModel(BaseModel):
 
         return values
 
-    @model_validator(pre=True, skip_on_failure=True)
+    @model_validator(mode="before", skip_on_failure=True)
     def check_for_valid_engine_options(cls, values):
         """
         Root validator to check if the options specified for particular engines are valid.

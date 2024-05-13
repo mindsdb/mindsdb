@@ -15,7 +15,7 @@ class DELETEQueryParser(BaseQueryParser):
     """
     def __init__(self, query: ast.Delete):
         super().__init__(query)
-    
+
     def parse_query(self):
         """
         Parses a SQL DELETE statement into its components: WHERE.
@@ -23,7 +23,7 @@ class DELETEQueryParser(BaseQueryParser):
         where_conditions = self.parse_where_clause()
 
         return where_conditions
-    
+
 
 class DELETEQueryExecutor(BaseQueryExecutor):
     """
@@ -37,7 +37,7 @@ class DELETEQueryExecutor(BaseQueryExecutor):
         WHERE conditions of the query.
 
     NOTE: This class DOES NOT delete the relevant records of the entity for you, it will simply return the records that need to be deleted based on the WHERE conditions.
-    
+
           This class expects all of the entities to be passed in as a DataFrane and filters out the relevant records based on the WHERE conditions.
           Because all of the records need to be extracted to be passed in as a DataFrame, this class is not very computationally efficient.
           Therefore, DO NOT use this class if the API/SDK that you are using supports deleting records in bulk.

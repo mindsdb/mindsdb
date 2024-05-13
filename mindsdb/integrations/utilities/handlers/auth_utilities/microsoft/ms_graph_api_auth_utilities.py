@@ -42,7 +42,7 @@ class MSGraphAPIAuthManager:
                 response = self._refresh_access_token(creds.get('refresh_token'))
                 self.handler_storage.file_set('creds', json.dumps(response).encode('utf-8'))
                 access_token = response.get('access_token')
-            
+
             return access_token
         except Exception as e:
             logger.error(f'Error getting credentials from storage: {e}!')
@@ -52,7 +52,10 @@ class MSGraphAPIAuthManager:
             self.handler_storage.file_set('creds', json.dumps(response).encode('utf-8'))
             return response['access_token']
         else:
-            raise AuthException(f'Error getting access token: {response.get("error_description")}', auth_url=response.get('auth_url'))            
+            raise AuthException(
+                f'Error getting access token: {response.get("error_description")}',
+                auth_url=response.get('auth_url')
+            )
 
     def _get_msal_app(self):
         return msal.ConfidentialClientApplication(
@@ -60,11 +63,11 @@ class MSGraphAPIAuthManager:
             authority=f"https://login.microsoftonline.com/{self.tenant_id}",
             client_credential=self.client_secret,
         )
-    
+
     def _save_credentials_to_file(self, creds, creds_file):
         with open(creds_file, 'w') as f:
             f.write(json.dumps(creds))
-    
+
     def _execute_ms_graph_api_auth_flow(self):
         msal_app = self._get_msal_app()
 
@@ -83,7 +86,7 @@ class MSGraphAPIAuthManager:
             )
 
             raise AuthException(f'Authorisation required. Please follow the url: {auth_url}', auth_url=auth_url)
-        
+
     def _refresh_access_token(self, refresh_token: str):
         msal_app = self._get_msal_app()
 
@@ -93,7 +96,7 @@ class MSGraphAPIAuthManager:
         )
 
         return response
-    
+
     def _check_access_token_validity(self, access_token: str):
         msal_graph_api_client = MSGraphAPIBaseClient(access_token)
         try:

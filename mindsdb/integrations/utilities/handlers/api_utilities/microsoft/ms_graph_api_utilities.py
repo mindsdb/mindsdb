@@ -40,7 +40,7 @@ class MSGraphAPIBaseClient:
         else:
             raw_response = response.json()
         return raw_response
-    
+
     def _get_request_params(self, params: Optional[Dict] = None, pagination: bool = True) -> Dict:
         if self.PAGINATION_COUNT and pagination:
             params = params if params else {}
@@ -52,7 +52,7 @@ class MSGraphAPIBaseClient:
     def _get_response_value_unsafe(raw_response: Dict) -> List:
         value = raw_response["value"]
         return value
-    
+
     def _fetch_data(self, endpoint: str, params: Optional[Dict] = None, pagination: bool = True):
         api_url = self._get_api_url(endpoint)
         params = self._get_request_params(params, pagination)
@@ -61,13 +61,13 @@ class MSGraphAPIBaseClient:
             value = self._get_response_value_unsafe(raw_response)
             params = None
             api_url = raw_response.get("@odata.nextLink", "")
-            yield value    
+            yield value
 
     def get_user_profile(self):
         api_url = self._get_api_url("me")
         user_profile = self._make_request(api_url)
         return user_profile
-    
+
     def check_connection(self):
         try:
             self.get_user_profile()
@@ -75,4 +75,3 @@ class MSGraphAPIBaseClient:
         except Exception as e:
             logger.error(f'Error connecting to the Microsoft Graph API: {e}!')
             return False
-    

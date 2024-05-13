@@ -77,7 +77,7 @@ class GoogleUserOAuth2Manager:
             copyfile(self.credentials_file, secret_file)
             return True
         return False
-    
+
     def _execute_google_auth_flow(self, secret_file, scopes, code=None):
         flow = Flow.from_client_secrets_file(secret_file, scopes)
 
@@ -90,7 +90,7 @@ class GoogleUserOAuth2Manager:
         else:
             auth_url = flow.authorization_url()[0]
             raise AuthException(f'Authorisation required. Please follow the url: {auth_url}', auth_url=auth_url)
-    
+
     def _save_credentials_to_file(self, creds, file_path):
         with open(file_path, 'w') as token:
             data = self._convert_credentials_to_dict(creds)

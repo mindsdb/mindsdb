@@ -32,13 +32,12 @@ class GoogleServiceAccountOAuth2Manager:
             if self.credentials_file:
                 creds = service_account.Credentials.from_service_account_file(self.credentials_file)
                 return creds
-            
+
             if self.credentials_json:
                 creds = service_account.Credentials.from_service_account_info(self.credentials_json)
                 return creds
         except Exception as e:
             raise AuthException(f"Authentication failed: {e}")
-
 
     def _download_credentials_file(self):
         response = requests.get(self.credentials_url)

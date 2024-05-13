@@ -31,7 +31,7 @@ class BaseQueryParser(ABC):
         """
         where_conditions = extract_comparison_conditions(self.query.where)
         return where_conditions
-    
+
 
 class BaseQueryExecutor():
     """

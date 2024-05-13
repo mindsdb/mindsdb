@@ -1,9 +1,10 @@
+# Financial Modeling Prep API Handler
+
+This handler integrates with the [Financial Modeling Prep API](https://site.financialmodelingprep.com/developer/docs) to allow users to use ML for financial analysis and predictions.
+
 ### Connect to the Financial Modeling API
 We start by creating a database to connect to the Financial Modeling API. 
-Retrieve an api key from: 
-
-# git push origin Riyana/FinancialHandler
-# cd mindsdb/integrations/handlers/financial_modeling_prep_handler
+Retrieve an api key from: [text](https://site.financialmodelingprep.com/developer/docs)
 
 ~~~~sql
 CREATE DATABASE my_table
@@ -23,13 +24,12 @@ SELECT * FROM my_table;
 ```
 SELECT *
 FROM my_table.daily_chart_table
-WHERE symbol = 'AAPL';
+WHERE symbol = 'AAPL'
+LIMIT 10
 ```
 
 Response: 
 
-where:
-* symbol 
 
 To customize open_time(from), close_time(to): 
 ```

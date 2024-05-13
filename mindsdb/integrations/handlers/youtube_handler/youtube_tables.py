@@ -5,7 +5,7 @@ from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditio
 from mindsdb.utilities import log
 
 from mindsdb_sql.parser import ast
-from mindsdb.integrations.handlers.utilities.query_utilities import (
+from mindsdb.integrations.utilities.handlers.query_utilities import (
     SELECTQueryParser,
     SELECTQueryExecutor,
     INSERTQueryParser

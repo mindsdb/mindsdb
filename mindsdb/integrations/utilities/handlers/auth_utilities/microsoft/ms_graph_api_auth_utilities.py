@@ -4,7 +4,7 @@ from flask import request
 import msal
 from ..exceptions import AuthException
 
-from mindsdb.integrations.handlers.utilities.api_utilities import MSGraphAPIBaseClient
+from mindsdb.integrations.utilities.handlers.api_utilities import MSGraphAPIBaseClient
 
 from mindsdb.utilities import log
 

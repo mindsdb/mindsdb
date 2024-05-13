@@ -7,7 +7,7 @@ from mindsdb_sql import parse_sql
 from mindsdb_sql.parser import ast
 
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
-from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
+from mindsdb.integrations.utilities.handlers.query_utilities import SELECTQueryParser, SELECTQueryExecutor
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable
 from mindsdb.integrations.libs.response import HandlerResponse, HandlerStatusResponse
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions

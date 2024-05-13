@@ -1,7 +1,7 @@
 # This first stage produces a file structure with ONLY files required to run `pip install .`
 # We want to do this because we have a lot of dependencies which take a long time to install
 # So we avoid invalidating the cache of `pip install .` at all costs by ignoring every other file
-FROM python:3.10
+FROM python:3.10 as deps
 WORKDIR /mindsdb
 
 # Copy everything to begin with
@@ -31,7 +31,7 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     && apt-get install -y freetds-dev  # freetds required to build pymssql on arm64 for mssql_handler. Can be removed when we are on python3.11+
 
 # Copy the requirements files, setup.py etc from above
-COPY --from=0 /mindsdb .
+COPY --from=deps /mindsdb .
 # Install all requirements for mindsdb and all the default handlers
 RUN --mount=type=cache,target=/root/.cache/pip pip install "."
 # Install extras on top of the bare mindsdb

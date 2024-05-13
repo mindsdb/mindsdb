@@ -25,13 +25,20 @@ SELECT * FROM my_table;
 SELECT *
 FROM my_table.daily_chart_table
 WHERE symbol = 'AAPL'
-LIMIT 10
+LIMIT 5
 ```
 
-Response: 
+| Date       | Open   | High   | Low    | Close  | Adj Close | Volume   | Unadjusted Volume | Change | Change Percent | VWAP    | Label      | Change Over Time |
+|------------|--------|--------|--------|--------|-----------|----------|-------------------|--------|----------------|---------|------------|------------------|
+| 2024-05-13 | 185.435| 187.1  | 184.62 | 186.93 | 186.93    | 50931607 | 50931607          | 1.5    | 0.80621242     | 186.22  | May 13, 24 | 0.0080621242     |
+| 2024-05-10 | 184.9  | 185.09 | 182.13 | 183.05 | 183.05    | 50759496 | 50759496          | -1.85  | -1             | 183.7925| May 10, 24 | -0.01            |
+| 2024-05-09 | 182.56 | 184.66 | 182.11 | 184.57 | 184.32    | 48982972 | 48982972          | 2.01   | 1.1            | 183.475 | May 09, 24 | 0.011            |
+| 2024-05-08 | 182.85 | 183.07 | 181.45 | 182.74 | 182.49    | 45057087 | 45057087          | -0.11  | -0.0601586     | 182.5275| May 08, 24 | -0.000601586    |
+| 2024-05-07 | 183.45 | 184.9  | 181.32 | 182.4  | 182.15    | 77305771 | 77305771          | -1.05  | -0.57236       | 183.0175| May 07, 24 | -0.0057236      |
 
 
-To customize open_time(from), close_time(to): 
+
+To customize specified date range, (from_date, to_date): 
 ```
 SELECT *
 FROM my_table.daily_chart_table
@@ -40,7 +47,7 @@ AND from_date = '2023-10-10'
 AND to_date = '2023-12-10'
 ```
 
-# Response for AAPL Daily Chart Data
+### Response for AAPL Daily Chart Data
 
 Displays closing price of the company's stock for each day in a specified date range
 

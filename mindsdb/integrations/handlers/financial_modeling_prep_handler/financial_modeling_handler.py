@@ -34,7 +34,7 @@ class FinancialModelingHandler(APIHandler):
             self.client = None
             self.is_connected = False
 
-            daily_chart_table = FinancialModelingTradesTable(self) #table is instance of table class
+            daily_chart_table = FinancialModelingTradesTable(self) 
             self._register_table('daily_chart_table', daily_chart_table)
 
             def connect(self): 
@@ -45,7 +45,6 @@ class FinancialModelingHandler(APIHandler):
                 return self.query(ast)
             
 
-            #include api_key in params for now
             def get_daily_chart(self, params: Dict = None) -> pd.DataFrame:  
                 base_url = "https://financialmodelingprep.com/api/v3/historical-price-full/"
 

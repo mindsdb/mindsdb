@@ -258,9 +258,8 @@ class TwelveLabsHandlerConfig(BaseSettings):
     DEFAULT_WAIT_DURATION : int
         Default wait duration when polling video indexing tasks created via the Twelve Labs API.
     """
-
     BASE_URL: str = "https://api.twelvelabs.io/v1.2"
-    DEFAULT_ENGINE: str = "marengo2.5"
+    DEFAULT_ENGINE: str = "marengo2.6"
     DEFAULT_WAIT_DURATION: int = 5
 
 

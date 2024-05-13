@@ -133,7 +133,7 @@ class PalmHandler(BaseMLEngine):
                 f"Invalid operation mode. Please use one of {self.supported_modes}"
             )
 
-        self.model_storage.json_set("args", args_model.dict())
+        self.model_storage.json_set("args", args_model.model_dump())
 
     def predict(self, df, args=None):
         """

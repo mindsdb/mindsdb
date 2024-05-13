@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from pydantic import BaseModel, Extra, root_validator
+from pydantic import BaseModel, model_validator
 from pydantic_settings import BaseSettings
 
 from mindsdb.integrations.handlers.utilities.validation_utilities import ParameterValidationUtilities
@@ -80,9 +80,9 @@ class TwelveLabsHandlerModel(BaseModel):
     prompt: Optional[str] = None
 
     class Config:
-        extra = Extra.forbid
+        extra = "forbid"
 
-    @root_validator(pre=True, allow_reuse=True, skip_on_failure=True)
+    @model_validator(mode="before", skip_on_failure=True)
     def check_param_typos(cls, values):
         """
         Root validator to check if there are any typos in the parameters.
@@ -102,7 +102,7 @@ class TwelveLabsHandlerModel(BaseModel):
 
         return values
 
-    @root_validator(pre=True, allow_reuse=True, skip_on_failure=True)
+    @model_validator(mode="before", skip_on_failure=True)
     def check_for_valid_task(cls, values):
         """
         Root validator to check if the task provided is valid.
@@ -127,7 +127,7 @@ class TwelveLabsHandlerModel(BaseModel):
 
         return values
 
-    @root_validator(pre=True, allow_reuse=True, skip_on_failure=True)
+    @model_validator(mode="before", skip_on_failure=True)
     def check_for_valid_engine_options(cls, values):
         """
         Root validator to check if the options specified for particular engines are valid.
@@ -154,7 +154,7 @@ class TwelveLabsHandlerModel(BaseModel):
 
         return values
 
-    @root_validator(allow_reuse=True, skip_on_failure=True)
+    @model_validator(skip_on_failure=True)
     def check_for_video_urls_or_video_files(cls, values):
         """
         Root validator to check if video_urls or video_files have been provided.
@@ -183,7 +183,7 @@ class TwelveLabsHandlerModel(BaseModel):
 
         return values
 
-    @root_validator(allow_reuse=True, skip_on_failure=True)
+    @model_validator(skip_on_failure=True)
     def check_for_task_specific_parameters(cls, values):
         """
         Root validator to check if task has been provided along with the other relevant parameters for each task.

@@ -21,7 +21,7 @@ class EmailSearchOptions(BaseModel):
     since_email_id: str = None
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "mailbox": "INBOX",
                 "subject": "Test",
@@ -47,7 +47,7 @@ class EmailConnectionDetails(BaseModel):
     smtp_port: int = 587
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "email": "joe@bloggs.com",
                 "password": "password",

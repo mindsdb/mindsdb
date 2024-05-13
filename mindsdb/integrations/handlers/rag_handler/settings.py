@@ -219,7 +219,7 @@ class OpenAIParameters(LLMParameters):
     model_id: str = Field(default="gpt-3.5-turbo-instruct", title="model name")
     n: int = Field(default=1, title="number of responses to return")
 
-    @validator("model_id", allow_reuse=True)
+    @field_validator("model_id")
     def openai_model_must_be_supported(cls, v, values):
         supported_models = get_available_openai_model_ids(values)
         if v not in supported_models:
@@ -238,7 +238,7 @@ class WriterLLMParameters(LLMParameters):
     callbacks: List[StreamingStdOutCallbackHandler] = [StreamingStdOutCallbackHandler()]
     verbose: bool = False
 
-    @validator("model_id", allow_reuse=True)
+    @field_validator("model_id")
     def writer_model_must_be_supported(cls, v, values):
         supported_models = get_available_writer_model_ids(values)
         if v not in supported_models:
@@ -307,7 +307,7 @@ class RAGBaseParameters(BaseModel):
         arbitrary_types_allowed = True
         use_enum_values = True
 
-    @validator("prompt_template", allow_reuse=True)
+    @field_validator("prompt_template")
     def prompt_format_must_be_valid(cls, v):
         if "{context}" not in v or "{question}" not in v:
             raise InvalidPromptTemplate(
@@ -316,11 +316,11 @@ class RAGBaseParameters(BaseModel):
             )
         return v
 
-    @validator("vector_store_name", allow_reuse=True)
+    @field_validator("vector_store_name")
     def name_must_be_lower(cls, v):
         return v.lower()
 
-    @validator("vector_store_name", allow_reuse=True)
+    @field_validator("vector_store_name")
     def vector_store_must_be_supported(cls, v):
         if not is_valid_store(v):
             raise UnsupportedVectorStore(
@@ -335,7 +335,7 @@ class RAGHandlerParameters(RAGBaseParameters):
     llm_type: str
     llm_params: LLMParameters
 
-    @validator("llm_type", allow_reuse=True)
+    @field_validator("llm_type")
     def llm_type_must_be_supported(cls, v):
         if v not in SUPPORTED_LLMS:
             raise UnsupportedLLM(f"'llm_type' must be one of {SUPPORTED_LLMS}, got {v}")
@@ -437,7 +437,7 @@ def on_create_build_llm_params(
 
     llm_params = {"llm_name": args["llm_type"]}
 
-    for param in llm_config_class.__fields__.keys():
+    for param in llm_config_class.model_fields.keys():
         if param in args:
             llm_params[param] = args.pop(param)
 

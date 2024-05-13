@@ -32,6 +32,28 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         self.max_batch_size = anyscale_handler_config.MAX_BATCH_SIZE
         self.default_max_tokens = anyscale_handler_config.DEFAULT_MAX_TOKENS
 
+    def create_engine(self, connection_args: Dict) -> None:
+        """
+        Validate the Anyscale Endpoints credentials on engine creation.
+
+        Args:
+            connection_args (Dict): Connection arguments.
+
+        Raises:
+            Exception: If the handler is not configured with valid API credentials.
+
+        Returns:
+            None
+        """
+
+        connection_args = {k.lower(): v for k, v in connection_args.items()}
+        api_key = connection_args.get('anyscale_endpoints_api_key')
+        if api_key is not None:
+            org = connection_args.get('api_organization')
+            api_base = connection_args.get('api_base') or os.environ.get('ANYSCALE_API_BASE', anyscale_handler_config.ANYSCALE_API_BASE)
+            client = self._get_client(api_key=api_key, base_url=api_base, org=org)
+            OpenAIHandler._check_client_connection(client)
+
     @staticmethod
     def create_validation(target: Text, args: Optional[Dict] = None, **kwargs: Optional[Dict]) -> None:
         """
@@ -69,7 +91,6 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         Create a model via an engine.
 
         Args:
-
             target (Text): Target column.
             args (Dict): Model arguments.
             kwargs (Dict): Other arguments.

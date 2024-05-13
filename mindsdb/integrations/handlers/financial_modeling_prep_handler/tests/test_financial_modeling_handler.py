@@ -8,6 +8,6 @@ class FinancialModelingHandlerTest(unittest.TestCase):
         cls.handler = FinancialModelingHandler('test_financial_handler', connection_data)
     
     def test_0_select_query(self):
-        query = "SELECT * FROM my_table.daily_chart_table WHERE symbol = 'AAPL' "
+        query = "SELECT * FROM my_table.daily_chart_table WHERE symbol = 'AAPL'"
         result = self.handler.query(query)
         assert result.type is RESPONSE_TYPE.TABLE

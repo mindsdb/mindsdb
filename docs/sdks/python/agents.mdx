@@ -45,7 +45,7 @@ agent = server.agents.create(
 )
 ```
 
-Or use an exasting model:
+Or use an existing model:
 
 ```python
 model = server.models.get('existing_model')

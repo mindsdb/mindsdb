@@ -136,6 +136,30 @@ From this point on, whenever you add new records into the `fruit_data` table, it
 
 If you want to clear context for the `LAST` keyword in the editor, then run `set context = 0` or `set context = null`.
 
+### Conditional Jobs
+
+Here is how you can create a conditional job that will execute periodically only if there is new data available:
+
+```sql
+CREATE JOB conditional_job (
+
+    FINETUNE MODEL model_name
+    FROM (     
+        SELECT *
+        FROM datasource.table_name
+        WHERE incremental_column > LAST
+    )
+)
+EVERY 1 min
+IF (
+    SELECT *
+    FROM datasource.table_name
+    WHERE incremental_column > LAST
+);
+```
+
+The above job will be triggered every minute, but it will execute its task (i.e. finetuning the model) only if there is new data available.
+
 ## Examples
 
 ### Example 1: Retrain a Model

@@ -1,4 +1,4 @@
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 
 from mindsdb.integrations.handlers.openai_handler.constants import OPENAI_API_BASE
 
@@ -24,3 +24,6 @@ class AnyscaleHandlerConfig(BaseSettings):
     # TODO: Are these comments correct? Update the attribute definitions in the above docstring as well.
     MIN_FT_VAL_LEN = 20  # anyscale checks for at least 20 validation chats
     MIN_FT_DATASET_LEN = MIN_FT_VAL_LEN * 2  # we ask for 20 training chats as well
+
+
+anyscale_handler_config = AnyscaleHandlerConfig()

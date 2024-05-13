@@ -7,14 +7,10 @@ import pandas as pd
 from mindsdb.integrations.handlers.openai_handler.openai_handler import OpenAIHandler
 from mindsdb.integrations.libs.llm.utils import ft_jsonl_validation, ft_formatter
 from mindsdb.integrations.utilities.handler_utils import get_api_key
+from mindsdb.integrations.handlers.anyscale_endpoints_handler.settings import anyscale_handler_config
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
-
-
-ANYSCALE_API_BASE = 'https://api.endpoints.anyscale.com/v1'
-MIN_FT_VAL_LEN = 20  # anyscale checks for at least 20 validation chats
-MIN_FT_DATASET_LEN = MIN_FT_VAL_LEN * 2  # we ask for 20 training chats as well
 
 
 class AnyscaleEndpointsHandler(OpenAIHandler):
@@ -26,7 +22,7 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         self.chat_completion_models = []
         self.supported_ft_models = []
         self.default_model = 'meta-llama/Llama-2-7b-chat-hf'
-        self.api_base = ANYSCALE_API_BASE
+        self.api_base = anyscale_handler_config.ANYSCALE_API_BASE
         self.default_mode = 'default'  # can also be 'conversational' or 'conversational-full'
         self.supported_modes = ['default', 'conversational', 'conversational-full']
         self.rate_limit = 25  # requests per minute
@@ -45,7 +41,7 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         engine_storage = kwargs['handler_storage']
         connection_args = engine_storage.get_connection_args()
         api_key = get_api_key('anyscale_endpoints', args, engine_storage=engine_storage)
-        api_base = connection_args.get('api_base') or args.get('api_base') or os.environ.get('ANYSCALE_API_BASE', ANYSCALE_API_BASE)
+        api_base = connection_args.get('api_base') or args.get('api_base') or os.environ.get('ANYSCALE_API_BASE', anyscale_handler_config.ANYSCALE_API_BASE)
 
         client = OpenAIHandler._get_client(api_key=api_key, base_url=api_base)
         OpenAIHandler._check_client_connection(client)
@@ -110,9 +106,9 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
 
         # 2. split chats in training and validation subsets
         series = pd.Series(chats)
-        if len(series) < MIN_FT_DATASET_LEN:
-            raise Exception(f"Dataset is too small to finetune. Please include at least {MIN_FT_DATASET_LEN} samples (complete chats).")
-        val_size = max(MIN_FT_VAL_LEN, int(len(series) * test_size))  # at least as many samples as required by Anyscale
+        if len(series) < anyscale_handler_config.MIN_FT_DATASET_LEN:
+            raise Exception(f"Dataset is too small to finetune. Please include at least {anyscale_handler_config.MIN_FT_DATASET_LEN} samples (complete chats).")
+        val_size = max(anyscale_handler_config.MIN_FT_VAL_LEN, int(len(series) * test_size))  # at least as many samples as required by Anyscale
         train = series.iloc[:-val_size]
         val = series.iloc[-val_size:]
 

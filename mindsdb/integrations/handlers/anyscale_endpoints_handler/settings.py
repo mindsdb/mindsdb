@@ -1,7 +1,7 @@
 from typing import Text, List
 from pydantic_settings import BaseSettings
 
-from mindsdb.integrations.handlers.openai_handler.constants import OPENAI_API_BASE
+from mindsdb.integrations.handlers.openai_handler.constants import OPENAI_API_BASE as OPENAI_API_BASE_
 
 
 class AnyscaleHandlerConfig(BaseSettings):
@@ -43,7 +43,7 @@ class AnyscaleHandlerConfig(BaseSettings):
     """
 
     ANYSCALE_API_BASE: Text = 'https://api.endpoints.anyscale.com/v1'
-    OPENAI_API_BASE: Text = OPENAI_API_BASE
+    OPENAI_API_BASE: Text = OPENAI_API_BASE_
     MIN_FT_VAL_LEN: int = 20
     MIN_FT_DATASET_LEN: int = MIN_FT_VAL_LEN * 2
     DEFAULT_MODEL: Text = 'meta-llama/Llama-2-7b-chat-hf'

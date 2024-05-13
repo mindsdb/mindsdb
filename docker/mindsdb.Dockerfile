@@ -21,6 +21,7 @@ COPY mindsdb/__about__.py mindsdb/
 # This long-running step should be cached in most cases (unless a requirements file or setup.py etc is changed)
 FROM python:3.10 as build
 WORKDIR /mindsdb
+ARG EXTRAS
 
 # "rm ... docker-clean" stops docker from removing packages from our cache
 # https://github.com/moby/buildkit/blob/master/frontend/dockerfile/docs/reference.md#example-cache-apt-packages

@@ -24,13 +24,13 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
         self.all_models = []
         self.chat_completion_models = []
         self.supported_ft_models = []
-        self.default_model = 'meta-llama/Llama-2-7b-chat-hf'
+        self.default_model = anyscale_handler_config.DEFAULT_MODEL
         self.api_base = anyscale_handler_config.ANYSCALE_API_BASE
-        self.default_mode = 'default'  # can also be 'conversational' or 'conversational-full'
-        self.supported_modes = ['default', 'conversational', 'conversational-full']
-        self.rate_limit = 25  # requests per minute
-        self.max_batch_size = 20
-        self.default_max_tokens = 100
+        self.default_mode = anyscale_handler_config.DEFAULT_MODE
+        self.supported_modes = anyscale_handler_config.SUPPORTED_MODES
+        self.rate_limit = anyscale_handler_config.RATE_LIMIT
+        self.max_batch_size = anyscale_handler_config.MAX_BATCH_SIZE
+        self.default_max_tokens = anyscale_handler_config.DEFAULT_MAX_TOKENS
 
     @staticmethod
     def create_validation(target: Text, args: Optional[Dict] = None, **kwargs: Optional[Dict]) -> None:

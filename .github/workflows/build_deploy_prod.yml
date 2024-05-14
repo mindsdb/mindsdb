@@ -98,11 +98,6 @@ jobs:
     if: github.actor != 'mindsdbadmin'
     environment:
       name: prod
-    # We only want to run one deploy job for an env at a time
-    # Don't cancel in progress jobs because it may be for a different PR
-    concurrency:
-      group: deploy-prod
-      cancel-in-progress: false
     steps:
       - uses: FranzDiebold/github-env-vars-action@v2
       - uses: convictional/trigger-workflow-and-wait@v1.6.5

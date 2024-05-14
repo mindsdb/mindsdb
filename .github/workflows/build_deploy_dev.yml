@@ -67,11 +67,6 @@ jobs:
         deploy-env: ${{fromJson(needs.get-deploy-labels.outputs.deploy-envs)}}
     environment:
       name: dev
-    # We only want to run one deploy job for an env at a time
-    # Don't cancel in progress jobs because it may be for a different PR
-    concurrency:
-      group: deploy-${{ matrix.deploy-env }}
-      cancel-in-progress: false
     if: needs.get-deploy-labels.outputs.deploy-envs != '[]'
     steps:
       - uses: FranzDiebold/github-env-vars-action@v2

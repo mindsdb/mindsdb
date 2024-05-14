@@ -232,7 +232,6 @@ class BaseExecutorTest(BaseUnitTest):
                 raise Exception(f"Can not import: {str(handler_dir)}: {error}")
 
         if import_dummy_llm:
-
             test_handler_path = os.path.dirname(__file__)
             sys.path.append(test_handler_path)
 
@@ -279,7 +278,11 @@ class BaseExecutorTest(BaseUnitTest):
             self.db.session.delete(r)
 
         # create
-        r = self.db.Integration(name=name, data={}, engine=engine)
+        r = self.db.Integration(
+            name=name,
+            data={'password': 'secret'},
+            engine=engine
+        )
         self.db.session.add(r)
         self.db.session.commit()
 

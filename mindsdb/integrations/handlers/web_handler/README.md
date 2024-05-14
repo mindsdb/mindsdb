@@ -25,13 +25,13 @@ CREATE DATABASE my_web
 WITH ENGINE = 'web';
 ```
 <Tip>
-The above query creates a database called `my_web`. This database by default have a table called `crawler` that we can use to crawl data from a given url/urls.
+The above query creates a database called `my_web`. This database by default has a table called `crawler` that we can use to crawl data from a given url/urls.
 </Tip>
 
 ## Usage
 
 <Note>
-Specifying a query `LIMIT` is required. To crawl all pages on a site, consider setting the limit to a high value, such as 10,000, which exceeds the expected number of pages. Be aware that setting a higher limit may result in longer response times.
+Specifying a `LIMIT` clause is required. To crawl all pages on a site, consider setting the limit to a high value, such as 10,000, which exceeds the expected number of pages. Be aware that setting a higher limit may result in longer response times.
 </Note>
 
 ### Get Websites Content

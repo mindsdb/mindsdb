@@ -1,5 +1,6 @@
 import pandas as pd
 
+from mindsdb.integrations.libs.response import HandlerStatusResponse
 from mindsdb_sql.parser import ast
 
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable
@@ -82,3 +83,14 @@ class WebHandler(APIHandler):
         super().__init__(name)
         crawler = CrawlerTable(self)
         self._register_table('crawler', crawler)
+
+    def check_connection(self) -> HandlerStatusResponse:
+        """
+        Checks the connection to the web handler
+        @TODO: Implement a better check for the connection
+
+        Returns:
+            HandlerStatusResponse: Response containing the status of the connection. Hardcoded to True for now.
+        """
+        response = HandlerStatusResponse(True)
+        return response

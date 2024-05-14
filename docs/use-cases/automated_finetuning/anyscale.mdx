@@ -157,29 +157,26 @@ On execution, we get:
 <Tip>
 If you have dynamic data that gets updated regularly, you can set up an automated fine-tuning as below.
 
-Note that the data source must contain an incremental column, such as timestamp or integer, so MindsDB can pick up only the recently added data.
+Note that the data source must contain an incremental column, such as timestamp or integer, so MindsDB can pick up only the recently added data with the help of the [`LAST` keyword](/mindsdb_sql/sql/create/jobs#last).
 
-Create a view to store recently added data with the help of the [`LAST` keyword](/mindsdb_sql/sql/create/jobs#last):
-
-```sql
-CREATE VIEW recent_data (
-    SELECT *
-    FROM example_db.chat_llm_mindsdb_docs
-    WHERE timestamp > LAST
-);
-```
-
-Create a job to fine-tune the model periodically.
+Here is how to create and schedule a job to fine-tune the model periodically.
 
 ```sql
 CREATE JOB automated_finetuning (
 
     FINETUNE mymistral7b
     FROM mindsdb
-        (SELECT * FROM recent_data)
+        (SELECT *
+        FROM example_db.chat_llm_mindsdb_docs
+        WHERE timestamp > LAST)
 )
-EVERY 1 day;
+EVERY 1 day
+IF (
+    SELECT *
+    FROM example_db.chat_llm_mindsdb_docs
+    WHERE timestamp > LAST
+);
 ```
 
-Now your model will be fine-tuned with newly added data every day.
+Now your model will be fine-tuned with newly added data every day or every time there is new data available.
 </Tip>

@@ -17,8 +17,9 @@ connection_args = OrderedDict(
         'description': 'The user name used to authenticate with the Empress Embedded server.'
     },
     password={
-        'type': ARG_TYPE.STR,
-        'description': 'The password to authenticate the user with the Empress Embedded server.'
+        'type': ARG_TYPE.PWD,
+        'description': 'The password to authenticate the user with the Empress Embedded server.',
+        'secret': True
     },
     server={
         'type': ARG_TYPE.STR,

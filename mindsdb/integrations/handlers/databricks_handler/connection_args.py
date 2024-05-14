@@ -21,6 +21,7 @@ connection_args = OrderedDict(
         "description": "A Databricks personal access token for the workspace for the cluster or SQL warehouse.",
         "required": True,
         "label": "Access token",
+        'secret': True
     },
     session_configuration={
         "type": ARG_TYPE.STR,

@@ -8,19 +8,22 @@ connection_args = OrderedDict(
         'type': ARG_TYPE.STR,
         'description': 'API Key For Connecting to CoinBase API.',
         'required': True,
-        'label': 'API Key'
+        'label': 'API Key',
+        'secret': True
     },
     api_secret={
         'type': ARG_TYPE.PWD,
         'description': 'API Secret For Connecting to CoinBase API.',
         'required': True,
-        'label': 'API Secret'
+        'label': 'API Secret',
+        'secret': True
     },
     api_passphrase={
         'type': ARG_TYPE.PWD,
         'description': 'API Passphrase.',
         'required': True,
-        'label': 'API Passphrase'
+        'label': 'API Passphrase',
+        'secret': True
     },
 )
 

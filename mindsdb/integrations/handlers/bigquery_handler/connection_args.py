@@ -14,11 +14,13 @@ connection_args = OrderedDict(
     },
     service_account_keys={
         'type': ARG_TYPE.PATH,
-        'description': 'Full path or URL to the service account JSON file'
+        'description': 'Full path or URL to the service account JSON file',
+        'secret': True
     },
     service_account_json={
         'type': ARG_TYPE.DICT,
-        'description': 'Content of service account JSON file'
+        'description': 'Content of service account JSON file',
+        'secret': True
     },
 )
 

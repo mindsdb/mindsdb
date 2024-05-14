@@ -13,6 +13,7 @@ connection_args = OrderedDict(
         "type": ARG_TYPE.STR,
         "description": "weaviate API KEY",
         "required": False,
+        "secret": True
     },
     persistence_directory={
         "type": ARG_TYPE.STR,

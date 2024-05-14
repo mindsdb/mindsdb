@@ -14,7 +14,8 @@ connection_args = OrderedDict(
         'type': ARG_TYPE.PWD,
         'description': 'The password to authenticate the user with the Microsoft SQL Server.',
         'required': True,
-        'label': 'Password'
+        'label': 'Password',
+        'secret': True
     },
     database={
         'type': ARG_TYPE.STR,

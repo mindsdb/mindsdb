@@ -13,6 +13,7 @@ connection_args = OrderedDict(
         "type": ARG_TYPE.STR,
         "description": "personal Xata API key",
         "required": True,
+        "secret": True
     },
     dimension={
         "type": ARG_TYPE.INT,

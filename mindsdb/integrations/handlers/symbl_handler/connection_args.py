@@ -15,6 +15,7 @@ connection_args = OrderedDict(
         "description": "App Secret of symbl",
         "required": True,
         "label": "app_secret",
+        "secret": True
     }
 )
 

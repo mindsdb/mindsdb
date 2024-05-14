@@ -6,38 +6,38 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 connection_args = OrderedDict(
     url={
         'type': ARG_TYPE.STR,
-        'description': 'The URI-Like connection string to the MySQL server. If provided, it will override the other connection arguments.',
+        'description': 'The URI-Like connection string to the MariaDB server. If provided, it will override the other connection arguments.',
         'required': False,
         'label': 'URL'
     },
     user={
         'type': ARG_TYPE.STR,
-        'description': 'The user name used to authenticate with the MySQL server.',
+        'description': 'The user name used to authenticate with the MariaDB server.',
         'required': True,
         'label': 'User'
     },
     password={
         'type': ARG_TYPE.PWD,
-        'description': 'The password to authenticate the user with the MySQL server.',
+        'description': 'The password to authenticate the user with the MariaDB server.',
         'required': True,
         'label': 'Password',
         'secret': True
     },
     database={
         'type': ARG_TYPE.STR,
-        'description': 'The database name to use when connecting with the MySQL server.',
+        'description': 'The database name to use when connecting with the MariaDB server.',
         'required': True,
         'label': 'Database'
     },
     host={
         'type': ARG_TYPE.STR,
-        'description': 'The host name or IP address of the MySQL server. NOTE: use \'127.0.0.1\' instead of \'localhost\' to connect to local server.',
+        'description': 'The host name or IP address of the MariaDB server. NOTE: use \'127.0.0.1\' instead of \'localhost\' to connect to local server.',
         'required': True,
         'label': 'Host'
     },
     port={
         'type': ARG_TYPE.INT,
-        'description': 'The TCP/IP port of the MySQL server. Must be an integer.',
+        'description': 'The TCP/IP port of the MariaDB server. Must be an integer.',
         'required': True,
         'label': 'Port'
     },

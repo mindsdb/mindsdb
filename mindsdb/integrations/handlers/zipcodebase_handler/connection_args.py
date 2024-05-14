@@ -9,6 +9,7 @@ connection_args = OrderedDict(
         "description": "ZipCodeBase api key to use for authentication.",
         "required": True,
         "label": "Api key",
+        "secret": True
     }
 )
 

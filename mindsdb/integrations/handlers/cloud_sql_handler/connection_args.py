@@ -9,8 +9,9 @@ connection_args = OrderedDict(
         'description': 'The user name used to authenticate with the Google Cloud SQL instance.'
     },
     password={
-        'type': ARG_TYPE.STR,
-        'description': 'The password to authenticate the user with the Google Cloud SQL instance.'
+        'type': ARG_TYPE.PWD,
+        'description': 'The password to authenticate the user with the Google Cloud SQL instance.',
+        'secret': True
     },
     database={
         'type': ARG_TYPE.STR,

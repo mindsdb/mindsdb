@@ -14,7 +14,8 @@ connection_args = OrderedDict(
         'type': ARG_TYPE.PWD,
         'description': 'Password',
         'required': True,
-        'label': 'Password'
+        'label': 'Password',
+        'secret': True
     },
     protocol_version={
         'type': ARG_TYPE.INT,

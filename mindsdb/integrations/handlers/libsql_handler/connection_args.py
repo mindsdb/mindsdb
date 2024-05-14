@@ -15,6 +15,7 @@ connection_args = OrderedDict(
     auth_token={
         "type": ARG_TYPE.STR,
         "description": "The JWT auth token to authenticate with the sync database.",
+        "secret": True
     },
 )
 

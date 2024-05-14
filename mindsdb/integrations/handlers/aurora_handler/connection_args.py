@@ -9,8 +9,9 @@ connection_args = OrderedDict(
         'description': 'The user name used to authenticate with the Amazon Aurora DB cluster.'
     },
     password={
-        'type': ARG_TYPE.STR,
-        'description': 'The password to authenticate the user with the Amazon Aurora DB cluster.'
+        'type': ARG_TYPE.PWD,
+        'description': 'The password to authenticate the user with the Amazon Aurora DB cluster.',
+        'secret': True
     },
     database={
         'type': ARG_TYPE.STR,
@@ -34,7 +35,8 @@ connection_args = OrderedDict(
     },
     aws_secret_access_key={
         'type': ARG_TYPE.STR,
-        'description': "The secret key for the AWS account. This parameter is optional and is only required to be provided if the 'db_engine' parameter is not provided."
+        'description': "The secret key for the AWS account. This parameter is optional and is only required to be provided if the 'db_engine' parameter is not provided.",
+        'secret': True
     },
 )
 

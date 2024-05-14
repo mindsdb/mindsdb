@@ -39,9 +39,10 @@ connection_args = OrderedDict(
         "required": False,
     },
     api_key={
-        "type": ARG_TYPE.STR,
+        "type": ARG_TYPE.PWD,
         "description": "API key for authentication in Qdrant Cloud.",
         "required": False,
+        "secret": True
     },
     prefix={
         "type": ARG_TYPE.STR,

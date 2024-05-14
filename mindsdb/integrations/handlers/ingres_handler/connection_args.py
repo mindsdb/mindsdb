@@ -9,8 +9,9 @@ connection_args = OrderedDict(
         'description': 'The user name used to authenticate with the Ingres server.'
     },
     password={
-        'type': ARG_TYPE.STR,
-        'description': 'The password to authenticate the user with the Ingres server.'
+        'type': ARG_TYPE.PWD,
+        'description': 'The password to authenticate the user with the Ingres server.',
+        'secret': True
     },
     server={
         'type': ARG_TYPE.STR,

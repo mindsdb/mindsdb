@@ -24,6 +24,7 @@ connection_args = OrderedDict(
     credentials={
         'type': ARG_TYPE.STR,
         'description': 'The Google Cloud Platform service account key in the JSON format.',
+        'secret': True
     },
 )
 

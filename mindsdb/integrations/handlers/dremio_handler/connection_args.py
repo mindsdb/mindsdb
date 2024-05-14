@@ -17,8 +17,9 @@ connection_args = OrderedDict(
         'description': 'The username used to authenticate with the Dremio server.'
     },
     password={
-        'type': ARG_TYPE.STR,
-        'description': 'The password to authenticate the user with the Dremio server.'
+        'type': ARG_TYPE.PWD,
+        'description': 'The password to authenticate the user with the Dremio server.',
+        'secret': True
     }
 )
 

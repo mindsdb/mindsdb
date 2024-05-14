@@ -23,8 +23,9 @@ connection_args = OrderedDict(
         'description': 'The user name used to authenticate with the Apache Derby server. If specified this is also treated as the schema.'
     },
     password={
-        'type': ARG_TYPE.STR,
-        'description': 'The password to authenticate the user with the Apache Derby server.'
+        'type': ARG_TYPE.PWD,
+        'description': 'The password to authenticate the user with the Apache Derby server.',
+        'secret': True
     },
     jdbcClass={
         'type': ARG_TYPE.STR,

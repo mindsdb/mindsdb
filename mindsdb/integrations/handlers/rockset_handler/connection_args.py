@@ -9,8 +9,9 @@ connection_args = OrderedDict(
         'description': 'Rockset user name'
     },
     password = {
-        'type': ARG_TYPE.STR,
-        'description': 'Rockset password'
+        'type': ARG_TYPE.PWD,
+        'description': 'Rockset password',
+        'secret': True
     },
     api_key = {
         'type': ARG_TYPE.STR,

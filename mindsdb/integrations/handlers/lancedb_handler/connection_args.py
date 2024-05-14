@@ -13,6 +13,7 @@ connection_args = OrderedDict(
         "type": ARG_TYPE.STR,
         "description": "If presented, connect to LanceDB cloud. Otherwise, connect to a database on file system or cloud storage.",
         "required": False,
+        "secret": True
     },
     region={
         "type": ARG_TYPE.STR,

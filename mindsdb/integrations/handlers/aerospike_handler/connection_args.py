@@ -14,7 +14,8 @@ connection_args = OrderedDict(
         'type': ARG_TYPE.STR,
         'description': 'The password to authenticate the user with the Aerospike server.',
         'required': False,
-        'label': 'Password'
+        'label': 'Password',
+        'secret': True
     },
     host={
         'type': ARG_TYPE.STR,

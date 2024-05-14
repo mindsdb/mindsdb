@@ -10,7 +10,8 @@ connection_args = OrderedDict(
     },
     aws_secret_access_key={
         'type': ARG_TYPE.STR,
-        'description': 'The secret key for the AWS account.'
+        'description': 'The secret key for the AWS account.',
+        'secret': True
     },
     region_name={
         'type': ARG_TYPE.STR,

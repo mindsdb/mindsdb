@@ -25,9 +25,10 @@ connection_args = OrderedDict(
         "required": True,
     },
     password={
-        "type": ARG_TYPE.STR,
+        "type": ARG_TYPE.PWD,
         "description": "password of the username of the Milvus server",
         "required": True,
+        "secret": True
     },
     search_default_limit={
         "type": ARG_TYPE.INT,

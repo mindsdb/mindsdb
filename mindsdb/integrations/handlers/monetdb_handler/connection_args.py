@@ -19,8 +19,9 @@ connection_args = OrderedDict(
         'description': 'The user name used to authenticate with the MonetDB server.'
     },
     password={
-        'type': ARG_TYPE.STR,
-        'description': 'The password to authenticate the user with the MonetDB server.'
+        'type': ARG_TYPE.PWD,
+        'description': 'The password to authenticate the user with the MonetDB server.',
+        'secret': True
     },
     port={
         'type': ARG_TYPE.INT,

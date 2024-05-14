@@ -25,8 +25,9 @@ connection_args = OrderedDict(
         "description": "The user name used to authenticate against the Oracle DB.",
     },
     password={
-        "type": ARG_TYPE.STR,
+        "type": ARG_TYPE.PWD,
         "description": "The password to authenticate the user against Oracle DB.",
+        "secret": True
     },
     disable_oob={
         "type": ARG_TYPE.BOOL,

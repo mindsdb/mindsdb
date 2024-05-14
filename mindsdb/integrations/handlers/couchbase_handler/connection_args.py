@@ -9,8 +9,9 @@ connection_args = OrderedDict(
         "description": "The user name used to authenticate with the Couchbase server.",
     },
     password={
-        "type": ARG_TYPE.STR,
+        "type": ARG_TYPE.PWD,
         "description": "The password to authenticate the user with the Couchbase server.",
+        'secret': True
     },
     bucket={
         "type": ARG_TYPE.STR,

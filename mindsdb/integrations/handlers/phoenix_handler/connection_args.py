@@ -29,16 +29,18 @@ connection_args = OrderedDict(
         'description': 'The username for BASIC or DIGEST authentication. Use in conjunction with the authentication option.'
     },
     avatica_password={
-        'type': ARG_TYPE.STR,
-        'description': 'The password for BASIC or DIGEST authentication. Use in conjunction with the authentication option.'
+        'type': ARG_TYPE.PWD,
+        'description': 'The password for BASIC or DIGEST authentication. Use in conjunction with the authentication option.',
+        'secret': True
     },
     user={
         'type': ARG_TYPE.STR,
         'description': 'If authentication is BASIC or DIGEST then alias for avatica_user. If authentication is NONE or SPNEGO then alias for do_as'
     },
     password={
-        'type': ARG_TYPE.STR,
-        'description': 'If authentication is BASIC or DIGEST then alias for avatica_password.'
+        'type': ARG_TYPE.PWD,
+        'description': 'If authentication is BASIC or DIGEST then alias for avatica_password.',
+        'secret': True
     }
 )
 

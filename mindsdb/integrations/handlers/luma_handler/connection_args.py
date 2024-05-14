@@ -9,6 +9,7 @@ connection_args = OrderedDict(
         "description": "Luma API Key",
         "required": True,
         "label": "api_key",
+        "secret": True
     }
 )
 

@@ -9,8 +9,9 @@ connection_args = OrderedDict(
         'description': 'The user name used to authenticate with the Databend warehouse.'
     },
     password={
-        'type': ARG_TYPE.STR,
-        'description': 'The password to authenticate the user with the Databend warehouse.'
+        'type': ARG_TYPE.PWD,
+        'description': 'The password to authenticate the user with the Databend warehouse.',
+        'secret': True
     },
     database={
         'type': ARG_TYPE.STR,

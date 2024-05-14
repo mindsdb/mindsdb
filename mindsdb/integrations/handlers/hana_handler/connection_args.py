@@ -18,8 +18,9 @@ connection_args = OrderedDict(
         'description': 'Specifies the user name.'
     },
     password={
-        'type': ARG_TYPE.STR,
-        'description': 'Specifies the password for the user.'
+        'type': ARG_TYPE.PWD,
+        'description': 'Specifies the password for the user.',
+        'secret': True
     },
     schema={
         'type': ARG_TYPE.STR,

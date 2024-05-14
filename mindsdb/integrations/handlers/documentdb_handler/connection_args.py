@@ -15,6 +15,7 @@ connection_args = OrderedDict(
         'description': 'The password to authenticate the user with the DocumentDB server.',
         'required': True,
         'label': 'Password',
+        'secret': True
     },
     database={
         'type': ARG_TYPE.STR,

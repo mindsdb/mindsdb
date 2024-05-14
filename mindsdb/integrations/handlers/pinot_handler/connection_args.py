@@ -29,8 +29,9 @@ connection_args = OrderedDict(
         'description': 'The user name used to authenticate with the Apache Pinot cluster. This parameter is optional.'
     },
     password={
-        'type': ARG_TYPE.STR,
-        'description': 'The password used to authenticate with the Apache Pinot cluster. This parameter is optional.'
+        'type': ARG_TYPE.PWD,
+        'description': 'The password used to authenticate with the Apache Pinot cluster. This parameter is optional.',
+        'secret': True
     },
     verify_ssl={
         'type': ARG_TYPE.STR,

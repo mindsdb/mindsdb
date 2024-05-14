@@ -35,10 +35,11 @@ connection_args = OrderedDict(
         'label': 'User'
     },
     password={
-        'type': ARG_TYPE.STR,
+        'type': ARG_TYPE.PWD,
         'description': 'The password used to authenticate with Apache Druid. This parameter is optional.',
         'required': False,
-        'label': 'password'
+        'label': 'password',
+        'secret': True
     }
 )
 

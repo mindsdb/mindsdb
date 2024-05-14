@@ -9,7 +9,6 @@ connection_args = OrderedDict(
         'description': "The host name or IP address of the Apache Ignite cluster's node.",
         'required': True,
         'label': 'Host'
-        
     },
     port={
         'type': ARG_TYPE.INT,
@@ -27,7 +26,8 @@ connection_args = OrderedDict(
         'type': ARG_TYPE.PWD,
         'description': 'The password to authenticate the user with the Apache Ignite cluster. This parameter is optional. Default: None.',
         'required': True,
-        'label': 'Password'
+        'label': 'Password',
+        'secret': True
     },
     schema={
         'type': ARG_TYPE.STR,

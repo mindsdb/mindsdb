@@ -29,8 +29,9 @@ connection_args = OrderedDict(
         'description': 'The username to authenticate with the NuoDB server.'
     },
     password={
-        'type': ARG_TYPE.STR,
-        'description': 'The password to authenticate the user with the NuoDB server.'
+        'type': ARG_TYPE.PWD,
+        'description': 'The password to authenticate the user with the NuoDB server.',
+        'secret': True
     },
     is_direct={
         'type': ARG_TYPE.STR,

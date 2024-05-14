@@ -19,8 +19,9 @@ connection_args = OrderedDict(
         "description": "The user name used to authenticate with the DB2 server.",
     },
     password={
-        "type": ARG_TYPE.STR,
+        "type": ARG_TYPE.PWD,
         "description": "The password to authenticate the user with the DB2 server.",
+        'secret': True
     },
     port={
         "type": ARG_TYPE.INT,

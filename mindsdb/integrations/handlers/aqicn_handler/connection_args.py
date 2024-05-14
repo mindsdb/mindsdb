@@ -9,6 +9,7 @@ connection_args = OrderedDict(
         "description": "API key",
         "required": True,
         "label": "api_key",
+        "secret": True
     },
 )
 

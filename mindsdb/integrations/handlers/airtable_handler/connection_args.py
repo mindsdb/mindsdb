@@ -14,7 +14,8 @@ connection_args = OrderedDict(
     },
     api_key={
         'type': ARG_TYPE.STR,
-        'description': 'The API key for the Airtable API.'
+        'description': 'The API key for the Airtable API.',
+        'secret': True
     }
 )
 

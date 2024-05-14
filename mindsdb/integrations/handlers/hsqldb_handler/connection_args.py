@@ -23,8 +23,9 @@ connection_args = OrderedDict(
         'description': 'The user name used to authenticate.'
     },
     password={
-        'type': ARG_TYPE.STR,
-        'description': 'The password to authenticate.'
+        'type': ARG_TYPE.PWD,
+        'description': 'The password to authenticate.',
+        'secret': True
     },
     
 )

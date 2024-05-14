@@ -8,6 +8,7 @@ connection_args = OrderedDict(
         "type": ARG_TYPE.STR,
         "description": "The API key that can be found in your pinecone account",
         "required": True,
+        "secret": True
     },
     environment={
         "type": ARG_TYPE.STR,

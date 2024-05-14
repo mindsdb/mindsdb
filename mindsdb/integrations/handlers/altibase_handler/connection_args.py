@@ -18,7 +18,8 @@ connection_args = OrderedDict(
     },
     password = {
         'type': ARG_TYPE.STR,
-        'description': 'The password to authenticate the user with the Altibase server.'
+        'description': 'The password to authenticate the user with the Altibase server.',
+        'secret': True
     },
     database = {
         'type': ARG_TYPE.STR,

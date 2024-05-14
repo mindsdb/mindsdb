@@ -8,6 +8,7 @@ connection_args = OrderedDict(
         "type": ARG_TYPE.STR,
         "description": "faunadb secret",
         "required": True,
+        "secret": True
     },
     fauna_scheme={
         "type": ARG_TYPE.STR,

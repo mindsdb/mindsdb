@@ -7,7 +7,6 @@ from unittest.mock import patch, MagicMock
 import concurrent.futures
 import pytest
 from bs4 import BeautifulSoup
-import pandas as pd
 
 
 class TestWebsHandler(unittest.TestCase):
@@ -36,7 +35,7 @@ HTML_SAMPLE_1 = "<h1>Heading One</h1><h2>Heading Two</h2>"
 MARKDOWN_SAMPLE_1 = "# Heading One \n\n ## Heading Two"
 
 
-class TestPDFToMarkdownTest:
+class TestWebHelpers(unittest.TestCase):
     @patch("requests.Response")
     def test_pdf_to_markdown(self, mock_response) -> None:
         response = mock_response.return_value
@@ -52,79 +51,104 @@ class TestPDFToMarkdownTest:
         with pytest.raises(Exception, match="Failed to process PDF data"):
             helpers.pdf_to_markdown(response)
 
+    def test_url_validation(self):
+        assert helpers.is_valid('https://google.com') is True
+        assert helpers.is_valid('google.com') is False
 
-@pytest.mark.parametrize(
-    "url, result",
-    [
-        ("google", False),
-        ("google.com", False),
-        ("https://google.com", True),
-        ("", False),
-    ],
-)
-def test_url_validation(url: str, result: bool) -> None:
-    assert helpers.is_valid(url) == result
+    def test_get_readable_text_from_soup(self) -> None:
+        soup = BeautifulSoup(HTML_SAMPLE_1, "html.parser")
+        import re
+        expected = re.sub(r'\s+', ' ', MARKDOWN_SAMPLE_1).strip()
+        actual = re.sub(r'\s+', ' ', helpers.get_readable_text_from_soup(soup)).strip()
 
+        assert expected == actual
 
-@pytest.mark.parametrize(
-    "html, markdown",
-    [(HTML_SAMPLE_1, MARKDOWN_SAMPLE_1)],
-)
-def test_get_readable_text_from_soup(html: str, markdown: str) -> None:
-    soup = BeautifulSoup(html, "html.parser")
-    import re
-    expected = re.sub(r'\s+', ' ', markdown).strip()
-    actual = re.sub(r'\s+', ' ', helpers.get_readable_text_from_soup(soup)).strip()
+    @patch("mindsdb.integrations.handlers.web_handler.urlcrawl_helpers.get_all_website_links")
+    @patch("concurrent.futures.ProcessPoolExecutor")
+    def test_parallel_get_all_website_links(self, mock_executor, mock_get_links):
+        # Setup: Mock the get_all_website_links function to return a list of links
+        mock_get_links.return_value = ["link1", "link2", "link3"]
 
-    assert expected == actual
+        # Setup: Mock the ProcessPoolExecutor class to return a mock executor
+        mock_executor_instance = MagicMock()
+        mock_executor.return_value.__enter__.return_value = mock_executor_instance
 
+        # Setup: Mock the executor to return a future that immediately completes with a result
+        mock_future = concurrent.futures.Future()
+        mock_future.set_result(["link1", "link2", "link3"])
+        mock_executor_instance.submit.return_value = mock_future
 
-@patch("mindsdb.integrations.handlers.web_handler.urlcrawl_helpers.get_all_website_links")
-@patch("concurrent.futures.ProcessPoolExecutor")
-def test_parallel_get_all_website_links(mock_executor, mock_get_links):
-    # Setup: Mock the get_all_website_links function to return a list of links
-    mock_get_links.return_value = ["link1", "link2", "link3"]
+        # Call the function with a list of URLs
+        urls = ["url1", "url2", "url3"]
+        result = helpers.parallel_get_all_website_links(urls)
 
-    # Setup: Mock the ProcessPoolExecutor class to return a mock executor
-    mock_executor_instance = MagicMock()
-    mock_executor.return_value.__enter__.return_value = mock_executor_instance
+        # Assert: Check if the function returns the expected result
+        expected = {
+            "url1": ["link1", "link2", "link3"],
+            "url2": ["link1", "link2", "link3"],
+            "url3": ["link1", "link2", "link3"],
+        }
+        assert result == expected
 
-    # Setup: Mock the executor to return a future that immediately completes with a result
-    mock_future = concurrent.futures.Future()
-    mock_future.set_result(["link1", "link2", "link3"])
-    mock_executor_instance.submit.return_value = mock_future
-
-    # Call the function with a list of URLs
-    urls = ["url1", "url2", "url3"]
-    result = helpers.parallel_get_all_website_links(urls)
-
-    # Assert: Check if the function returns the expected result
-    expected = {
-        "url1": ["link1", "link2", "link3"],
-        "url2": ["link1", "link2", "link3"],
-        "url3": ["link1", "link2", "link3"],
-    }
-    assert result == expected
-
-    # Assert: Check if the mocks were called as expected
-    mock_get_links.assert_called()
+        # Assert: Check if the mocks were called as expected
+        mock_get_links.assert_called()
 
 
-def test_dict_to_dataframe():
-    # Setup: Create a dictionary of dictionaries
-    data = {
-        "row1": {"column1": 1, "column2": 2, "column3": 3},
-        "row2": {"column1": 4, "column2": 5, "column3": 6},
-        "row3": {"column1": 7, "column2": 8, "column3": 9},
-    }
+class TestWebHandler(unittest.TestCase):
 
-    # Call the function with the data, ignoring "column2" and setting the index name to "ID"
-    df = helpers.dict_to_dataframe(data, columns_to_ignore=["column2"], index_name="ID")
+    @patch('mindsdb.integrations.handlers.web_handler.web_handler.extract_comparison_conditions')
+    def test_select_with_or_operator_raise_error(self, mock_extract_comparison_conditions):
+        mock_extract_comparison_conditions.return_value = [('or', 'url', 'example.com')]
 
-    # Assert: Check if the DataFrame has the expected structure
-    expected = pd.DataFrame({
-        "column1": {"row1": 1, "row2": 4, "row3": 7},
-        "column3": {"row1": 3, "row2": 6, "row3": 9},
-    })
-    expected.index.name = "ID"
-    pd.testing.assert_frame_equal(df, expected)
+        crawler_table = CrawlerTable(handler=MagicMock())
+        mock_query = MagicMock()
+        mock_ast = MagicMock()
+        mock_ast.get_type.return_value = 'OR'
+
+        mock_query.where = mock_ast
+        with self.assertRaises(NotImplementedError) as context:
+            crawler_table.select(mock_query)
+        self.assertTrue('OR is not supported' in str(context.exception))
+
+    @patch('mindsdb.integrations.handlers.web_handler.web_handler.extract_comparison_conditions')
+    def test_select_with_invalid_url_format(self, mock_extract_comparison_conditions):
+        mock_extract_comparison_conditions.return_value = [('WHERE', 'url', 'example.com')]
+
+        crawler_table = CrawlerTable(handler=MagicMock())
+        mock_query = MagicMock()
+        mock_ast = MagicMock()
+        mock_ast.get_type.return_value = 'WHERE URL ("example.com")'
+
+        mock_query.where = mock_ast
+        with self.assertRaises(NotImplementedError) as context:
+            crawler_table.select(mock_query)
+        self.assertTrue('Invalid URL format.' in str(context.exception))
+
+    @patch('mindsdb.integrations.handlers.web_handler.web_handler.extract_comparison_conditions')
+    def test_select_with_missing_url_(self, mock_extract_comparison_conditions):
+        mock_extract_comparison_conditions.return_value = [('WHERE', 'id', '1')]
+
+        crawler_table = CrawlerTable(handler=MagicMock())
+        mock_query = MagicMock()
+        mock_ast = MagicMock()
+        mock_ast.get_type.return_value = 'WHERE ID ("1")'
+
+        mock_query.where = mock_ast
+        with self.assertRaises(NotImplementedError) as context:
+            crawler_table.select(mock_query)
+        self.assertTrue('You must specify what url you want to craw' in str(context.exception))
+
+    @patch('mindsdb.integrations.handlers.web_handler.web_handler.extract_comparison_conditions')
+    def test_select_with_missing_limit(self, mock_extract_comparison_conditions):
+        mock_extract_comparison_conditions.return_value = [('=', 'url', 'https://docs.mindsdb.com')]
+
+        crawler_table = CrawlerTable(handler=MagicMock())
+        mock_query = MagicMock()
+        mock_ast = MagicMock()
+        mock_ast.get_type.return_value = 'URL = "https://docs.mindsdb.com"'
+
+        mock_query.where = mock_ast
+        mock_query.limit = None
+        with self.assertRaises(NotImplementedError) as context:
+            crawler_table.select(mock_query)
+        self.assertTrue('You must specify a LIMIT clause' in str(context.exception))

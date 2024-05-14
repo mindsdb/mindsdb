@@ -4,7 +4,7 @@ import difflib
 class ParameterValidationUtilities:
     @staticmethod
     def validate_parameter_spelling(handler_cls, parameters):
-        expected_params = handler_cls.__fields__.keys()
+        expected_params = handler_cls.model_fields.keys()
         for key in parameters.keys():
             if key not in expected_params:
                 close_matches = difflib.get_close_matches(

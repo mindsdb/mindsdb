@@ -46,7 +46,7 @@ class MySQLHandler(DatabaseHandler):
         """
         try:
             config = ConnectionConfig(**self.connection_data)
-            return config.dict(exclude_unset=True)
+            return config.model_dump(exclude_unset=True)
         except ValueError as e:
             raise ValueError(str(e))
 

@@ -108,7 +108,7 @@ class LangChainHandler(BaseMLEngine):
             p: get_api_key(p, args, self.engine_storage, strict=False) for p in SUPPORTED_PROVIDERS
         }
         llm_config = get_llm_config(args.get('provider', self._get_llm_provider(args)), model_config)
-        config_dict = llm_config.dict()
+        config_dict = llm_config.model_dump()
         config_dict = {k: v for k, v in config_dict.items() if v is not None}
         return config_dict
 

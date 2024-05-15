@@ -203,7 +203,7 @@ class TestAnyscaleEndpoints(BaseMLAPITest):
         self.run_sql(
             """
             CREATE MODEL proj.test_anyscale_bulk_qa
-            PREDICT sentiment
+            PREDICT answer
             USING
                 engine='anyscale_endpoints_engine',
                 model_name = 'mistralai/Mistral-7B-Instruct-v0.1',
@@ -214,7 +214,7 @@ class TestAnyscaleEndpoints(BaseMLAPITest):
 
         result_df = self.run_sql(
             """
-            SELECT p.sentiment
+            SELECT p.answer
             FROM pg.df as t
             JOIN proj.test_anyscale_bulk_qa as p;
         """

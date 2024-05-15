@@ -161,6 +161,68 @@ class TestAnyscaleEndpoints(BaseMLAPITest):
         assert "positive" in result_df["sentiment"].iloc[0].lower()
         assert "negative" in result_df["sentiment"].iloc[1].lower()
 
+    def test_select_runs_no_errors_on_chat_completion_question_answering_single(self):
+        """
+        Test for a valid response to a question answering task (chat completion).
+        """
+
+        self.run_sql(
+            """
+            CREATE MODEL proj.test_anyscale_single_qa
+            PREDICT answer
+            USING
+                engine='anyscale_endpoints_engine',
+                model_name = 'mistralai/Mistral-7B-Instruct-v0.1',
+                question_column='question';
+            """
+        )
+        self.wait_predictor("proj", "test_anyscale_single_qa")
+
+        result_df = self.run_sql(
+            """
+            SELECT answer
+            FROM proj.test_anyscale_single_qa
+            WHERE question = 'What is the capital of Sweden?';
+            """
+        )
+
+        assert "stockholm" in result_df["answer"].iloc[0].lower()
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_select_runs_no_errors_on_chat_completion_question_answering_bulk(self, mock_postgres_handler):
+        """
+        Test for valid reponses to bulk questions in a question answering task (chat completion).
+        """
+
+        df = pd.DataFrame.from_dict({"question": [
+            "What is the capital of Sweden?",
+            "What is the second planet in the solar system?"
+        ]})
+        self.set_handler(mock_postgres_handler, name="pg", tables={"df": df})
+
+        self.run_sql(
+            """
+            CREATE MODEL proj.test_anyscale_bulk_qa
+            PREDICT sentiment
+            USING
+                engine='anyscale_endpoints_engine',
+                model_name = 'mistralai/Mistral-7B-Instruct-v0.1',
+                question_column='question';
+            """
+        )
+        self.wait_predictor("proj", "test_anyscale_bulk_qa")
+
+        result_df = self.run_sql(
+            """
+            SELECT p.sentiment
+            FROM pg.df as t
+            JOIN proj.test_anyscale_bulk_qa as p;
+        """
+        )
+
+        assert "stockholm" in result_df["answer"].iloc[0].lower()
+        assert "venus" in result_df["answer"].iloc[1].lower()
+
 
 if __name__ == '__main__':
     pytest.main([__file__])

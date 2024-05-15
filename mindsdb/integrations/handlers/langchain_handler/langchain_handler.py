@@ -10,9 +10,12 @@ from langchain_community.chat_models import ChatAnthropic, ChatOpenAI, ChatAnysc
 from langchain_core.prompts import PromptTemplate
 from langfuse.callback import CallbackHandler
 
+
 import numpy as np
 import pandas as pd
-import sqlite3
+from llm_controller import LLMDataController
+
+
 
 
 from dspy import ColBERTv2, configure, BootstrapFewShotWithRandomSearch
@@ -91,7 +94,7 @@ class LangChainHandler(BaseMLEngine):
         # if True, the target column name does not have to be specified at creation time.
         self.generative = True
         self.default_agent_tools = DEFAULT_AGENT_TOOLS
-        self.initialize_database()
+        self.llm_data_controller = LLMDataController()
         self.log_callback_handler = log_callback_handler
         self.langfuse_callback_handler = langfuse_callback_handler
         if self.log_callback_handler is None:
@@ -220,11 +223,12 @@ class LangChainHandler(BaseMLEngine):
         args['embedding_model_provider'] = args.get('embedding_model', self._get_embedding_model_provider(args))
 
         df = df.reset_index(drop=True)
-        agent = self.create_agent(df, args, pred_args)
-        # Use last message as prompt, remove other questions.
-        user_column = args.get('user_column', DEFAULT_USER_COLUMN)
-        df.iloc[:-1, df.columns.get_loc(user_column)] = None
-        return self.run_agent(df, agent, args, pred_args)
+        # agent = self.create_agent(df, args, pred_args)
+        # # Use last message as prompt, remove other questions.
+        # user_column = args.get('user_column', DEFAULT_USER_COLUMN)
+        # df.iloc[:-1, df.columns.get_loc(user_column)] = None
+        # return self.run_agent(df, agent, args, pred_args)
+        return predict_dspy(df, args)
 
     def create_agent(self, df: pd.DataFrame, args: Dict=None, pred_args: Dict=None) -> AgentExecutor:
         pred_args = pred_args if pred_args else {}
@@ -367,50 +371,16 @@ class LangChainHandler(BaseMLEngine):
 
         return pred_df
 
-    def initialize_database(self):
-        # Connect to an sqlite database
-        self.con = sqlite3.connect('llm_data.db')
-        cursor = self.con.cursor()
-        # Input of llm is a dataframe- this creates a place for both the input
-        # and the output to be saved
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS llm_io_data (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                input TEXT,
-                output TEXT
-            )''')
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS retrieval_data (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                question TEXT,
-                answer TEXT
-            )''')
-        self.con.commit()
-
-    def update_retrieval_index(self, input_data, output_data):
-        cursor = self.con.cursor()
-        cursor.execute('''
-            INSERT INTO retrieval_data (question, answer)
-            VALUES (?, ?)
-        ''', (input_data, output_data))
-        self.con.commit()
-
-    def fetch_context_from_db(self, question):
-        # Retrieve relevant past responses based on similarity
-        cursor = self.con.cursor()
-        cursor.execute("SELECT output FROM llm_io_data WHERE input LIKE ?", ('%' + question + '%',))
-        fetched_data = cursor.fetchall()
-        # Concatenate all past responses to form a context
-        context = " ".join([item[0] for item in fetched_data]) if fetched_data else ""
-        return context
-
     def store_llm_output(self, input_data, output_data, retrieval):
-        cursor = self.con.cursor()
-        # Store the input and output into the llm_io_data table
-        cursor.execute('INSERT INTO llm_io_data (input, output) VALUES (?, ?)', (input_data, output_data))
-        self.con.commit()
-        if retrevial:
-            update_retrieval_index(self.con, input_data, output_data)
+        return self.llm_data_controller.add_llm_data(input_data, output_data)
+    
+    # def fetch_context_from_db(self, question):
+    #     return self.llm_data_controller.get_llm_data_by_question(question)
+
+    # def update_retrieval_index(self, input_data, output_data):
+    #     llm_data_id = self.fetch_id_from_question(input_data) 
+    #     self.llm_data_controller.update_llm_data(llm_data_id, new_input_data=input_data, new_output_data=output_data)
+
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
         tables = ['info']
@@ -459,15 +429,20 @@ class LangChainHandler(BaseMLEngine):
         pred_args = args['predict_params'] if args else {}
         args = self.model_storage.json_get('args')
 
+        #prompts, empty_prompts = get_completed_prompts(args, df)
+
         if self.use_dspy:
             dspy_chain = self.create_dspy_chain()
             responses = []
             for index, row in df.iterrows():
                 question = row['question']
-                context = self.fetch_context_from_db(question)
+                context = row['context']
                 answer, context_used = self.generate_dspy_response(question, context)
                 responses.append({'answer': answer, 'context': context_used})
-                self.store_llm_output(question, answer, True)
+                self.llm_data_controller.add_llm_data(question, answer, True)
+                data = self.llm_data_controller.list_all_llm_data()
+                data_sampled = data.sample(fraction = 1)
+                self.optimize_with_dspy(dspy_chain, data_sampled.iloc[:int(len(data_sampled)*.8)], data_sampled.iloc[int(len(data_sampled)*.8):])
 
             return pd.DataFrame(responses)
 

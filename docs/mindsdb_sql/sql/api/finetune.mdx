@@ -19,8 +19,10 @@ Here is the syntax:
 
 ```sql
 FINETUNE [MODEL] project_name.model_name
-FROM integration_name
-    (SELECT column_name, ... FROM table_name)
+FROM [integration_name | project_name]
+    (SELECT column_name, ... 
+     FROM [integration_name. | project_name.]table_name
+     [WHERE incremental_column > LAST])
 [USING
     key = value,
     ...];
@@ -34,6 +36,7 @@ Where:
 | `model_name`                                | Name of the model to be retrained.                                                                                 |
 | `integration_name`                          | Name of the integration created using the [`CREATE DATABASE`](/sql/create/databases) statement or file upload.    |
 | `(SELECT column_name, ... FROM table_name)` | Selecting additional data to be used for retraining.                                                               |
+| `WHERE incremental_column > LAST`           | Selecting only newly added data to be used to finetune the model. Learn more about the [`LAST` keyword here](/mindsdb_sql/sql/create/jobs#last). |
 | `USING key = value`                         | Optional. The `USING` clause lets you pass multiple parameters to the `FINETUNE` statement.                          |
 
 <Info>

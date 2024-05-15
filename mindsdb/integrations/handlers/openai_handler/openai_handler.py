@@ -9,7 +9,7 @@ import subprocess
 import concurrent.futures
 from typing import Optional, Dict
 import openai
-from openai import OpenAI
+from openai import OpenAI, NotFoundError, AuthenticationError
 import numpy as np
 import pandas as pd
 
@@ -28,8 +28,8 @@ from mindsdb.integrations.handlers.openai_handler.constants import (
     FINETUNING_MODELS,
     OPENAI_API_BASE,
 )
+from mindsdb.integrations.libs.llm.utils import get_completed_prompts
 from mindsdb.integrations.utilities.handler_utils import get_api_key
-from mindsdb.integrations.libs.llm_utils import get_completed_prompts
 
 logger = log.getLogger(__name__)
 
@@ -57,6 +57,39 @@ class OpenAIHandler(BaseMLEngine):
         self.default_max_tokens = 100
         self.chat_completion_models = CHAT_MODELS
         self.supported_ft_models = FINETUNING_MODELS # base models compatible with finetuning
+        # For now this are only used for handlers that inherits OpenAIHandler and don't need to override base methods
+        self.api_key_name = getattr(self, 'api_key_name', self.name)
+        self.api_base = getattr(self, 'api_base', OPENAI_API_BASE)
+
+    def create_engine(self, connection_args):
+        '''check api key if provided
+        '''
+        connection_args = {k.lower(): v for k, v in connection_args.items()}
+        api_key = connection_args.get('openai_api_key')
+        if api_key is not None:
+            org = connection_args.get('api_organization')
+            api_base = connection_args.get('api_base') or os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
+            client = self._get_client(api_key=api_key, base_url=api_base, org=org)
+            OpenAIHandler._check_client_connection(client)
+
+    @staticmethod
+    def _check_client_connection(client: OpenAI):
+        '''try to connect to api
+
+        Args:
+            client (OpenAI):
+
+        Raises:
+            Exception: if there is AuthenticationError
+        '''
+        try:
+            client.models.retrieve('test')
+        except NotFoundError:
+            pass
+        except AuthenticationError as e:
+            if e.body['code'] == 'invalid_api_key':
+                raise Exception('Invalid api key')
+            raise Exception(f'Something went wrong: {e}')
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
@@ -132,28 +165,39 @@ class OpenAIHandler(BaseMLEngine):
                 f"Unknown arguments: {', '.join(unknown_args)}.\n Known arguments are: {', '.join(known_args)}"
             )
 
+        engine_storage = kwargs['handler_storage']
+        connection_args = engine_storage.get_connection_args()
+        api_key = get_api_key('openai', args, engine_storage=engine_storage)
+        api_base = connection_args.get('api_base') or args.get('api_base') or os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
+        org = args.get('api_organization')
+        client = OpenAIHandler._get_client(api_key=api_key, base_url=api_base, org=org)
+        OpenAIHandler._check_client_connection(client)
+
     def create(self, target, args=None, **kwargs):
         args = args['using']
         args['target'] = target
-        api_key = get_api_key('openai', args, self.engine_storage)
-        available_models = get_available_models(api_key)
+        try:
+            api_key = get_api_key(self.api_key_name, args, self.engine_storage)
+            connection_args = self.engine_storage.get_connection_args()
+            api_base = connection_args.get('api_base') or self.api_base or args.get('api_base') or os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
+            available_models = get_available_models(api_key, api_base)
 
-        if not args.get('mode'):
-            args['mode'] = self.default_mode
-        elif args['mode'] not in self.supported_modes:
-            raise Exception(
-                f"Invalid operation mode. Please use one of {self.supported_modes}"
-            )
+            if not args.get('mode'):
+                args['mode'] = self.default_mode
+            elif args['mode'] not in self.supported_modes:
+                raise Exception(
+                    f"Invalid operation mode. Please use one of {self.supported_modes}"
+                )
 
-        if not args.get('model_name'):
-            if args['mode'] == 'image':
-                args['model_name'] = self.default_image_model
-            else:
-                args['model_name'] = self.default_model
-        elif args['model_name'] not in available_models:
-            raise Exception(f"Invalid model name. Please use one of {available_models}")
-
-        self.model_storage.json_set('args', args)
+            if not args.get('model_name'):
+                if args['mode'] == 'image':
+                    args['model_name'] = self.default_image_model
+                else:
+                    args['model_name'] = self.default_model
+            elif args['model_name'] not in available_models:
+                raise Exception(f"Invalid model name. Please use one of {available_models}")
+        finally:
+            self.model_storage.json_set('args', args)
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         """
@@ -163,11 +207,13 @@ class OpenAIHandler(BaseMLEngine):
 
         pred_args = args['predict_params'] if args else {}
         args = self.model_storage.json_get('args')
-        args['api_base'] = pred_args.get(
-                    'api_base',
-                    args.get(
-                        'api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
-                    ))
+        connection_args = self.engine_storage.get_connection_args()
+
+        args['api_base'] = (pred_args.get('api_base') or
+                            self.api_base or
+                            connection_args.get('api_base') or
+                            args.get('api_base') or
+                            os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE))
         if pred_args.get('api_organization'):
             args['api_organization'] = pred_args['api_organization']
         df = df.reset_index(drop=True)
@@ -180,10 +226,12 @@ class OpenAIHandler(BaseMLEngine):
                     f"Invalid operation mode. Please use one of {self.supported_modes}."
                 )  # noqa
 
+        strict_prompt_template = True
         if pred_args.get('prompt_template', False):
             base_template = pred_args[
                 'prompt_template'
             ]  # override with predict-time template if available
+            strict_prompt_template = False
         elif args.get('prompt_template', False):
             base_template = args['prompt_template']
         else:
@@ -278,7 +326,7 @@ class OpenAIHandler(BaseMLEngine):
                 )  # noqa
 
             if args.get('prompt_template', False):
-                prompts, empty_prompt_ids = get_completed_prompts(base_template, df)
+                prompts, empty_prompt_ids = get_completed_prompts(base_template, df, strict=strict_prompt_template)
 
             elif args.get('context_column', False):
                 empty_prompt_ids = np.where(
@@ -344,7 +392,7 @@ class OpenAIHandler(BaseMLEngine):
         # remove prompts without signal from completion queue
         prompts = [j for i, j in enumerate(prompts) if i not in empty_prompt_ids]
 
-        api_key = get_api_key('openai', args, self.engine_storage)
+        api_key = get_api_key(self.api_key_name, args, self.engine_storage)
         api_args = {
             k: v for k, v in api_args.items() if v is not None
         }  # filter out non-specified api args
@@ -545,8 +593,6 @@ class OpenAIHandler(BaseMLEngine):
                 for p in prompts
             ]
             return _tidy(completions)
-        
-
         client = self._get_client(
             api_key=api_key,
             base_url=args.get('api_base'),
@@ -613,17 +659,20 @@ class OpenAIHandler(BaseMLEngine):
         # TODO: Update to use update() artifacts
 
         args = self.model_storage.json_get('args')
-        api_key = get_api_key('openai', args, self.engine_storage)
-        client= self._get_client(
-            api_key=api_key,
-            base_url=args.get('api_base'),
-            org=args.get('api_organization')
-            )
+        api_key = get_api_key(self.api_key_name, args, self.engine_storage)
         if attribute == 'args':
             return pd.DataFrame(args.items(), columns=['key', 'value'])
         elif attribute == 'metadata':
             model_name = args.get('model_name', self.default_model)
-            meta = client.models.retrieve(model_name)
+            try:
+                client= self._get_client(
+                    api_key=api_key,
+                    base_url=args.get('api_base'),
+                    org=args.get('api_organization')
+                )
+                meta = client.models.retrieve(model_name)
+            except Exception as e:
+                meta = {'error': str(e)}
             return pd.DataFrame(dict(meta).items(), columns=['key', 'value'])
         else:
             tables = ['args', 'metadata']
@@ -649,17 +698,14 @@ class OpenAIHandler(BaseMLEngine):
 
         args = args if args else {}
 
-        api_key = get_api_key('openai', args, self.engine_storage)
+        api_key = get_api_key(self.api_key_name, args, self.engine_storage)
 
         using_args = args.pop('using') if 'using' in args else {}
-        prompt_col = using_args.get('prompt_column', 'prompt')
-        completion_col = using_args.get('completion_column', 'completion')
         
         api_base = using_args.get('api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE))
         org = using_args.get('api_organization')
         client = self._get_client(api_key=api_key, base_url=api_base, org=org)
 
-        self._check_ft_cols(df, [prompt_col, completion_col])
 
         args = {**using_args, **args}
         prev_model_name = self.base_model_storage.json_get('args').get('model_name', '')
@@ -747,17 +793,6 @@ class OpenAIHandler(BaseMLEngine):
 
         self.model_storage.json_set('args', args)
         shutil.rmtree(temp_storage_path)
-
-    @staticmethod
-    def _check_ft_cols(df, cols):
-        # TODO: refactor into common util
-        if 'chat_json' not in df.columns:
-            prompt_col, completion_col = cols
-            for col in [prompt_col, completion_col]:
-                if col not in set(df.columns):
-                    raise Exception(
-                        f"To fine-tune this OpenAI model, please format your select data query to have a `{prompt_col}` column and a `{completion_col}` column first."
-                    )  # noqa
 
     @staticmethod
     def _prepare_ft_jsonl(df, _, temp_filename, temp_model_path):
@@ -850,5 +885,5 @@ class OpenAIHandler(BaseMLEngine):
         return ft_stats, result_file_id
     
     @staticmethod
-    def _get_client(api_key, base_url=OPENAI_API_BASE, org=None):
+    def _get_client(api_key, base_url, org=None):
         return OpenAI(api_key=api_key, base_url=base_url, organization=org)

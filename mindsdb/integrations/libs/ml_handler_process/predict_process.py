@@ -30,17 +30,6 @@ def predict_process(integration_id: int, predictor_record: db.Predictor, args: d
         args['dtype_dict'] = predictor_record.dtype_dict
         args['learn_args'] = predictor_record.learn_args
 
-    if ml_engine_name == 'langchain':
-        from mindsdb.api.executor.controllers import SessionController
-        from mindsdb.api.executor.command_executor import ExecuteCommands
-
-        sql_session = SessionController()
-        sql_session.database = 'mindsdb'
-
-        command_executor = ExecuteCommands(sql_session)
-
-        args['executor'] = command_executor
-
     predictions = ml_handler.predict(dataframe, args)
     ml_handler.close()
     return predictions

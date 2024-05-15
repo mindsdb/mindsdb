@@ -41,7 +41,7 @@ class Test(BaseExecutorMockPredictor):
 
         self.execute("RETRAIN proj.test_predictor;")
 
-        ret = self.execute("SELECT * FROM proj.models_versions order by version;")
+        ret = self.execute("SELECT * FROM proj.models order by version;")
         assert len(ret.data) == 2
 
         ret = self.execute("DESCRIBE test_predictor")
@@ -652,7 +652,7 @@ class TestComplexQueries(BaseExecutorMockPredictor):
         assert mock_handler().query.call_count == 3
 
         # second is update
-        assert mock_handler().query.call_args_list[1][0][0].to_string() == "update table2 set a1=1, c1='ccc' where (a1 = 1) AND (b1 = 'ccc')"
+        assert mock_handler().query.call_args_list[1][0][0].to_string() == "update table2 set a1=1, c1='ccc' where a1 = 1 AND b1 = 'ccc'"
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_update_in_integration(self, mock_handler):

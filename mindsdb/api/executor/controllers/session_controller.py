@@ -31,11 +31,11 @@ class SessionController:
     This class manages the server session
     """
 
-    def __init__(self) -> object:
+    def __init__(self, api_type='http') -> object:
         """
         Initialize the session
         """
-
+        self.api_type = api_type
         self.username = None
         self.auth = False
         self.logging = logger
@@ -47,13 +47,13 @@ class SessionController:
         self.integration_controller = integration_controller
         self.database_controller = DatabaseController()
         self.skills_controller = SkillsController()
-        self.agents_controller = AgentsController()
 
         # to prevent circular imports
         from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseController
         self.kb_controller = KnowledgeBaseController(self)
 
         self.datahub = init_datahub(self)
+        self.agents_controller = AgentsController(self.datahub)
 
         self.prepared_stmts = {}
         self.packet_sequence_number = 0

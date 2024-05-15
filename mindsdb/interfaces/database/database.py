@@ -39,19 +39,25 @@ class DatabaseController:
             'name': 'information_schema',
             'type': 'system',
             'id': None,
-            'engine': None
+            'engine': None,
+            'visible': True,
+            'deletable': False
         }, {
             'name': 'log',
             'type': 'system',
             'id': None,
-            'engine': None
+            'engine': None,
+            'visible': True,
+            'deletable': False
         }]
         for x in projects:
             result.append({
                 'name': x.name,
                 'type': 'project',
                 'id': x.id,
-                'engine': None
+                'engine': None,
+                'visible': True,
+                'deletable': x.name.lower() != 'mindsdb'
             })
         for key, value in integrations.items():
             db_type = value.get('type', 'data')
@@ -63,6 +69,8 @@ class DatabaseController:
                     'engine': value.get('engine'),
                     'class_type': value.get('class_type'),
                     'connection_data': value.get('connection_data'),
+                    'visible': True,
+                    'deletable': value.get('permanent', False) is False
                 })
 
         if filter_type is not None:
@@ -106,6 +114,8 @@ class DatabaseController:
         if name == 'log':
             return self.logs_db_controller
         elif name == 'information_schema':
-            raise Exception("Not implemented")
+            from mindsdb.api.executor.controllers.session_controller import SessionController
+            session = SessionController()
+            return session.datahub
         else:
             raise Exception(f"Database '{name}' does not exists")

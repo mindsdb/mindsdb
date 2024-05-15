@@ -7,6 +7,7 @@ from flask import request
 from flask_restx import Resource
 from flask import current_app as ca
 
+from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.api.http.namespaces.configs.util import ns_conf
 from mindsdb.utilities.telemetry import (
     enable_telemetry,
@@ -44,6 +45,7 @@ def get_active_tasks():
 @ns_conf.route('/ping')
 class Ping(Resource):
     @ns_conf.doc('get_ping')
+    @api_endpoint_metrics('GET', '/util/ping')
     def get(self):
         '''Checks server avaliable'''
         return {'status': 'ok'}
@@ -52,6 +54,7 @@ class Ping(Resource):
 @ns_conf.route('/ping/ml_task_queue')
 class PingMLTaskQueue(Resource):
     @ns_conf.doc('get_ping_ml_task_queue')
+    @api_endpoint_metrics('GET', '/util/ping/ml_task_queue')
     def get(self):
         '''Check if ML tasks queue process is alive'''
         processes_dir = Path(tempfile.gettempdir()).joinpath('mindsdb/processes/internal/')
@@ -72,6 +75,7 @@ class PingMLTaskQueue(Resource):
 @ns_conf.route('/readiness')
 class ReadinessProbe(Resource):
     @ns_conf.doc('get_ready')
+    @api_endpoint_metrics('GET', '/util/readiness')
     def get(self):
         '''Checks server is ready for work'''
 
@@ -86,6 +90,7 @@ class ReadinessProbe(Resource):
 @ns_conf.route('/ping_native')
 class PingNative(Resource):
     @ns_conf.doc('get_ping_native')
+    @api_endpoint_metrics('GET', '/util/ping_native')
     def get(self):
         ''' Checks server use native for learn or analyse.
             Will return right result only on Linux.
@@ -96,12 +101,14 @@ class PingNative(Resource):
 @ns_conf.route('/telemetry')
 class Telemetry(Resource):
     @ns_conf.doc('get_telemetry_status')
+    @api_endpoint_metrics('GET', '/util/telemetry')
     def get(self):
         storage_dir = ca.config_obj['storage_dir']
         status = "enabled" if telemetry_file_exists(storage_dir) else "disabled"
         return {"status": status}
 
     @ns_conf.doc('set_telemetry')
+    @api_endpoint_metrics('POST', '/util/telemetry')
     def post(self):
         data = request.json
         action = data['action']
@@ -115,6 +122,7 @@ class Telemetry(Resource):
 
 @ns_conf.route('/validate_json_ai')
 class ValidateJsonAI(Resource):
+    @api_endpoint_metrics('POST', '/util/validate_json_ai')
     def post(self):
         json_ai = request.json.get('json_ai')
         if json_ai is None:
@@ -130,6 +138,7 @@ class ValidateJsonAI(Resource):
 @ns_conf.route('/update-gui')
 class UpdateGui(Resource):
     @ns_conf.doc('get_update_gui')
+    @api_endpoint_metrics('GET', '/util/update-gui')
     def get(self):
         update_static()
         return '', 200

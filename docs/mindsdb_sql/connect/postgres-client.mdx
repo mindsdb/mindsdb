@@ -28,33 +28,19 @@ We use the local MindsDB installation with the following parameters:
 * database: `mindsdb`
 * user: `mindsdb`
 
-Here are the commands that allow you to connect to either a local MindsDB installation or a MindsDB Cloud instance.
+Here is the command that allows you to connect to MindsDB.
 
-<CodeGroup>
-
-    ```bash Self-Hosted Local Deployment
-    psql -h 127.0.0.1 -p 47335 -d mindsdb -U mindsdb
-    ```
-
-    ```bash MindsDB Cloud
-    psql -h cloud.mindsdb.com -p 3306 -U [mindsdb_cloud_username] --password [mindsdb_cloud_password]
-    ```
-
-    ```bash MindsDB Pro
-    psql -h <dedicated instance ip> -p 3306 -U [mindsdb_cloud_username] --password [mindsdb_cloud_password]
-    ```
-
-</CodeGroup>
-
-<br></br>
+```bash
+psql -h 127.0.0.1 -p 47335 -d mindsdb -U mindsdb
+```
 
 <Note>
-Please see [this page](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/api/postgres) for implementation details.
+Please see [this page](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/api/postgres) for implementation details.
 </Note>
 
 ## What's Next?
 
-Now that you are all set, we recommend you check out our **Use Cases** section, where you'll find various examples of regression, classification, time series, and NLP predictions with MindsDB.
+Now that you are all set, we recommend you check out our [Use Cases](/use-cases/overview) section, where you'll find various examples of regression, classification, time series, and NLP predictions with MindsDB.
 
 To learn more about MindsDB itself, follow the guide on [MindsDB database structure](/sql/table-structure/). Also, don't miss out on the remaining pages from the **MindsDB SQL** section, as they explain a common SQL syntax with examples.
 

@@ -19,8 +19,10 @@ Here is the syntax:
 
 ```sql
 FINETUNE [MODEL] project_name.model_name
-FROM integration_name
-    (SELECT column_name, ... FROM table_name)
+FROM [integration_name | project_name]
+    (SELECT column_name, ... 
+     FROM [integration_name. | project_name.]table_name
+     [WHERE incremental_column > LAST])
 [USING
     key = value,
     ...];
@@ -34,22 +36,28 @@ Where:
 | `model_name`                                | Name of the model to be retrained.                                                                                 |
 | `integration_name`                          | Name of the integration created using the [`CREATE DATABASE`](/sql/create/databases) statement or file upload.    |
 | `(SELECT column_name, ... FROM table_name)` | Selecting additional data to be used for retraining.                                                               |
+| `WHERE incremental_column > LAST`           | Selecting only newly added data to be used to finetune the model. Learn more about the [`LAST` keyword here](/mindsdb_sql/sql/create/jobs#last). |
 | `USING key = value`                         | Optional. The `USING` clause lets you pass multiple parameters to the `FINETUNE` statement.                          |
 
 <Info>
 **Model Versions**
 
-Every time the model is retrained/adjusted, its new version is created with an incremented version number. Unless overridden, the most recent version becomes active when training completes.
+Every time the model is finetuned or retrained, its new version is created with an incremented version number. Unless overridden, the most recent version becomes active when training completes.
 
 You can query for all model versions like this:
 
 ```sql
 SELECT *
-FROM project_name.models_versions;
+FROM project_name.models;
 ```
 
 For more information on managing model versions, check out our docs [here](/sql/api/manage-models-versions).
 </Info>
+
+<Warning>
+While the model is being generated and trained, it is not active. The model becomes active only after it completes generating and training.
+</Warning>
+
 ## Examples 
 ### Example 1: [OpenAI Model Fine-Tuning](/finetune/openai)
 ### Example 2: [Llama2 Model Fine-Tuning](/finetune/anyscale)

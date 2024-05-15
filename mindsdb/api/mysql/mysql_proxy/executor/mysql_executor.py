@@ -48,7 +48,7 @@ class Executor:
         self.sql = ""
         self.sql_lower = ""
 
-        context = {'connection_id', self.sqlserver.connection_id}
+        context = {'connection_id': self.sqlserver.connection_id}
         self.command_executor = ExecuteCommands(self.session, context)
 
     def change_default_db(self, new_db):

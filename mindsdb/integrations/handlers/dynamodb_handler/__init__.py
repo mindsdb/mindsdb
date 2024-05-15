@@ -12,10 +12,10 @@ except Exception as e:
     Handler = None
     import_error = e
 
-title = 'DynamoDb'
+title = 'Amazon DynamoDB'
 name = 'dynamodb'
 type = HANDLER_TYPE.DATA
-icon_path = 'icon.png'
+icon_path = 'icon.svg'
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'description',

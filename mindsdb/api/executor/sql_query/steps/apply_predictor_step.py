@@ -31,7 +31,32 @@ def get_preditor_alias(step, mindsdb_database):
     return (mindsdb_database, predictor_name, predictor_alias)
 
 
-class ApplyPredictorRowStepCall(BaseStepCall):
+class ApplyPredictorBaseCall(BaseStepCall):
+
+    def apply_predictor(self, project_name, predictor_name, data, version, params):
+        # is it an agent?
+        agent = self.session.agents_controller.get_agent(predictor_name, project_name)
+        if agent is not None:
+
+            predictions = self.session.agents_controller.get_completion(
+                agent,
+                messages=data,
+                project_name=project_name,
+            )
+
+        else:
+            project_datanode = self.session.datahub.get(project_name)
+
+            predictions = project_datanode.predict(
+                model_name=predictor_name,
+                data=data,
+                version=version,
+                params=params
+            )
+        return predictions
+
+
+class ApplyPredictorRowStepCall(ApplyPredictorBaseCall):
 
     bind = ApplyPredictorRowStep
 
@@ -57,12 +82,7 @@ class ApplyPredictorRowStepCall(BaseStepCall):
         if len(step.predictor.parts) > 1 and step.predictor.parts[-1].isdigit():
             version = int(step.predictor.parts[-1])
 
-        predictions = project_datanode.predict(
-            model_name=predictor_name,
-            data=where_data,
-            version=version,
-            params=step.params,
-        )
+        predictions = self.apply_predictor(project_name, predictor_name, where_data, version, step.params)
 
         columns_dtypes = dict(predictions.dtypes)
         predictions = predictions.to_dict(orient='records')
@@ -95,7 +115,7 @@ class ApplyPredictorRowStepCall(BaseStepCall):
         return result
 
 
-class ApplyPredictorStepCall(BaseStepCall):
+class ApplyPredictorStepCall(ApplyPredictorBaseCall):
 
     bind = ApplyPredictorStep
 
@@ -104,6 +124,19 @@ class ApplyPredictorStepCall(BaseStepCall):
         data = self.steps_data[step.dataframe.step_num]
 
         params = step.params or {}
+
+        # handle columns mapping to model
+        if step.columns_map is not None:
+            # columns_map = {str: Identifier}
+            for model_col, table_col in step.columns_map.items():
+                if len(table_col.parts) != 2:
+                    continue
+                table_name, col_name = table_col.parts
+                data_cols = data.find_columns(col_name, table_alias=table_name)
+                if len(data_cols) == 0:
+                    continue
+                # rename first found column
+                data_cols[0].alias = model_col
 
         for table in data.get_tables()[:1]:  # add  __mindsdb_row_id only for first table
             row_id_col = Column(
@@ -191,12 +224,8 @@ class ApplyPredictorStepCall(BaseStepCall):
                 version = None
                 if len(step.predictor.parts) > 1 and step.predictor.parts[-1].isdigit():
                     version = int(step.predictor.parts[-1])
-                predictions = project_datanode.predict(
-                    model_name=predictor_name,
-                    data=where_data,
-                    version=version,
-                    params=params
-                )
+                predictions = self.apply_predictor(project_name, predictor_name, where_data, version, params)
+
                 data = predictions.to_dict(orient='records')
                 columns_dtypes = dict(predictions.dtypes)
 

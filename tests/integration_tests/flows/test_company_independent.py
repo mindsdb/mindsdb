@@ -7,7 +7,7 @@ from pymongo import MongoClient
 
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from .conftest import CONFIG_PATH
-from .http_test_helpers import HTTPHelperMixin
+from tests.utils.http_test_helpers import HTTPHelperMixin
 
 # used by mindsdb_app fixture in conftest
 OVERRIDE_CONFIG = {
@@ -237,12 +237,7 @@ class TestCompanyIndependent(HTTPHelperMixin):
             tables = self.get_tables_in('mindsdb', cid)
             self.assert_list(
                 tables, {
-                    'jobs',
-                    'jobs_history',
                     'models',
-                    'models_versions',
-                    'mdb_triggers',
-                    'chatbots',
                 }
             )
         # endregion
@@ -300,12 +295,7 @@ class TestCompanyIndependent(HTTPHelperMixin):
             tables = self.get_tables_in('mindsdb', cid)
             self.assert_list(
                 tables, {
-                    'jobs',
-                    'jobs_history',
                     'models',
-                    'models_versions',
-                    'mdb_triggers',
-                    'chatbots',
                     f'test_view_{char}'
                 }
             )
@@ -327,12 +317,7 @@ class TestCompanyIndependent(HTTPHelperMixin):
             tables = self.get_tables_in('mindsdb', cid)
             self.assert_list(
                 tables, {
-                    'jobs',
-                    'jobs_history',
                     'models',
-                    'models_versions',
-                    'mdb_triggers',
-                    'chatbots',
                 }
             )
 
@@ -404,22 +389,12 @@ class TestCompanyIndependent(HTTPHelperMixin):
 
         collections = client_a.mindsdb.list_collection_names()
         self.assert_list(collections, {
-            'jobs',
-            'jobs_history',
             'models',
-            'models_versions',
-            'mdb_triggers',
-            'chatbots',
             'test_mon_p_a',
             'model_a'
         })
         collections = client_b.mindsdb.list_collection_names()
         self.assert_list(collections, {
-            'jobs',
-            'jobs_history',
             'models',
-            'models_versions',
-            'mdb_triggers',
-            'chatbots',
             'model_b'
         })

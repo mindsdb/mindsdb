@@ -1,29 +1,39 @@
 from typing import Dict, List
+
+from langchain_core.tools import BaseTool
+from sqlalchemy.orm.attributes import flag_modified
+import pandas as pd
+
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.interfaces.storage.db import Predictor
-
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.skills.skills_controller import SkillsController
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
-
 from mindsdb.utilities.context import context as ctx
-
 from mindsdb.utilities.config import Config
-
-from sqlalchemy.orm.attributes import flag_modified
 
 
 class AgentsController:
     '''Handles CRUD operations at the database level for Agents'''
 
-    def __init__(self, project_controller: ProjectController = None, skills_controller: SkillsController = None):
+    def __init__(
+        self,
+        datahub,
+        project_controller: ProjectController = None,
+        skills_controller: SkillsController = None,
+        model_controller: ModelController = None
+    ):
         if project_controller is None:
             project_controller = ProjectController()
         if skills_controller is None:
             skills_controller = SkillsController()
+        if model_controller is None:
+            model_controller = ModelController()
         self.project_controller = project_controller
         self.skills_controller = skills_controller
+        self.model_controller = model_controller
+        self.datahub = datahub
 
     def get_agent(self, agent_name: str, project_name: str = 'mindsdb') -> db.Agents:
         '''
@@ -66,7 +76,7 @@ class AgentsController:
         return agent
 
     def get_agents(self, project_name: str) -> List[dict]:
-        '''
+        """
         Gets all agents in a project.
 
         Parameters:
@@ -74,15 +84,18 @@ class AgentsController:
 
         Returns:
             all-agents (List[db.Agents]): List of database agent object
-        '''
-        if project_name is None:
-            project_name = 'mindsdb'
-        project = self.project_controller.get(name=project_name)
+        """
+
         all_agents = db.Agents.query.filter(
-            db.Agents.project_id == project.id,
             db.Agents.company_id == ctx.company_id
-        ).all()
-        return all_agents
+        )
+
+        if project_name is not None:
+            project = self.project_controller.get(name=project_name)
+
+            all_agents = all_agents.filter(db.Agents.project_id == project.id)
+
+        return all_agents.all()
 
     def add_agent(
             self,
@@ -125,10 +138,9 @@ class AgentsController:
             raise ValueError(f'Agent with name already exists: {name}')
 
         # Check if model exists.
-        model_controller = ModelController()
         model_name_no_version, model_version = Predictor.get_name_and_version(model_name)
         try:
-            model_controller.get_model(model_name_no_version, version=model_version, project_name=project_name)
+            self.model_controller.get_model(model_name_no_version, version=model_version, project_name=project_name)
         except PredictorRecordNotFound:
             raise ValueError(f'Model with name does not exist: {model_name}')
 
@@ -194,10 +206,9 @@ class AgentsController:
 
         # Check if model exists.
         if model_name is not None:
-            model_controller = ModelController()
             model_name_no_version, model_version = Predictor.get_name_and_version(model_name)
             try:
-                _ = model_controller.get_model(model_name_no_version, version=model_version, project_name=project_name)
+                _ = self.model_controller.get_model(model_name_no_version, version=model_version, project_name=project_name)
                 existing_agent.model_name = model_name
             except PredictorRecordNotFound:
                 return ValueError(f'Model with name does not exist: {model_name}')
@@ -249,3 +260,45 @@ class AgentsController:
             raise ValueError(f'Agent with name does not exist: {agent_name}')
         db.session.delete(agent)
         db.session.commit()
+
+    def get_completion(
+            self,
+            agent: db.Agents,
+            messages: List[Dict[str, str]],
+            project_name: str = 'mindsdb',
+            tools: List[BaseTool] = None) -> pd.DataFrame:
+        '''
+        Queries an agent to get a completion.
+
+        Parameters:
+            agent (db.Agents): Existing agent to get completion from
+            messages (List[Dict[str, str]]): Chat history to send to the agent
+            project_name (str): Project the agent belongs to (default mindsdb)
+            tools (List[BaseTool]): Tools to use while getting the completion
+
+        Returns:
+            pd.DataFrame (pd.DataFrame): Completion as a DataFrame
+
+        Raises:
+            ValueError: Agent's model does not exist.
+        '''
+        # Model needs to exist.
+        model_name_no_version, version = db.Predictor.get_name_and_version(agent.model_name)
+        try:
+            _ = self.model_controller.get_model(model_name_no_version, version=version, project_name=project_name)
+        except PredictorRecordNotFound:
+            return ValueError(f'Model with name {agent.model_name} not found')
+
+        if tools is None:
+            tools = []
+        predict_params = {
+            # Underlying handler (e.g. Langchain) will handle default tools like mdb_read, mdb_write, etc.
+            'tools': tools,
+            'skills': [s for s in agent.skills],
+        }
+        project_datanode = self.datahub.get(project_name)
+        return project_datanode.predict(
+            model_name=agent.model_name,
+            data=messages,
+            params=predict_params
+        )

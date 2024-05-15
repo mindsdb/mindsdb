@@ -5,14 +5,14 @@ sidebarTitle: Create a Job
 
 ## Description
 
-The `db.jobs.insert()` function creates and schedules a job.
+The `db.jobs.insertOne()` function creates and schedules a job.
 
 ## Syntax
 
 Here is the syntax:
 
 ```
-db.jobs.insert({
+db.jobs.insertOne({
     'name': 'job2',
     'query': "select * from models"
 })
@@ -21,7 +21,7 @@ db.jobs.insert({
 And here is a more complex example:
 
 ```
-db.jobs.insert({
+db.jobs.insertOne({
     'name': 'job1',
     'schedule_str': 'every day',
     'start_at': '2023-03-30',    

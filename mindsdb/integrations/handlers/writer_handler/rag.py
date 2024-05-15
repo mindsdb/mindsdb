@@ -1,4 +1,4 @@
-from langchain.llms import Writer
+from langchain_community.llms import Writer
 
 from mindsdb.integrations.handlers.rag_handler.rag import RAGQuestionAnswerer
 from mindsdb.integrations.handlers.writer_handler.settings import (
@@ -11,4 +11,4 @@ class QuestionAnswerer(RAGQuestionAnswerer):
 
         super().__init__(args)
 
-        self.llm = Writer(**args.llm_params.dict())
+        self.llm = Writer(**args.llm_params.model_dump())

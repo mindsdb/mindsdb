@@ -10,13 +10,13 @@ The integration allows for the deployment of Anyscale Endpoints models within Mi
 
 Before proceeding, ensure the following prerequisites are met:
 
-1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
-2. To use Anyscale Endpoints within MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
+2. To use Anyscale Endpoints within MindsDB, install the required dependencies following [this instruction](https://docs.mindsdb.com/setup/self-hosted/docker#install-dependencies).
 3. Obtain the Anyscale Endpoints API key required to deploy and use Anyscale Endpoints models within MindsDB. Follow the [instructions for obtaining the API key](https://docs.endpoints.anyscale.com/guides/authenticate/).
 
 ## Setup
 
-Create an AI engine from the [Anyscale Endpoints handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/anyscale_endpoints_handler).
+Create an AI engine from the [Anyscale Endpoints handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/anyscale_endpoints_handler).
 
 ```sql
 CREATE ML_ENGINE anyscale_endpoints_engine
@@ -39,6 +39,7 @@ USING
 ```
 
 <Note>
+
 The implementation is based on the engine for the OpenAI API, as Anyscale conforms to it. There are a few notable differences, though:
 
 1. All models supported by Anyscale Endpoints are open source. A full list can be found [here for inference-only under section *Supported models*](https://app.endpoints.anyscale.com/docs).
@@ -52,6 +53,7 @@ The implementation is based on the engine for the OpenAI API, as Anyscale confor
 </Note>
 
 <Info>
+
 The base URL for this API is `https://api.endpoints.anyscale.com/v1`.
 </Info>
 
@@ -89,7 +91,8 @@ Here is the output:
 ```
 
 <Tip>
+
 **Next Steps**
 
-Follow [this tutorial](/finetune/anyscale) to see more use case examples.
+Follow [this tutorial](https://docs.mindsdb.com/finetune/anyscale) to see more use case examples.
 </Tip>

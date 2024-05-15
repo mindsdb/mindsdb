@@ -22,8 +22,8 @@ class AnthropicHandler(BaseMLEngine):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.default_chat_model = "claude-2"
-        self.supported_chat_models = ["claude-1", "claude-2"]
+        self.default_chat_model = "claude-2.1"
+        self.supported_chat_models = ["claude-instant-1.2", "claude-2.1", "claude-3-opus-20240229", "claude-3-sonnet-20240229"]
         self.default_max_tokens = 100
         self.generative = True
         self.connection = None
@@ -78,16 +78,31 @@ class AnthropicHandler(BaseMLEngine):
 
     def predict_answer(self, text):
         """
-        connects with anthropic api to predict the answer for the particular question
+        connects with anthropic messages api to predict the answer for the particular question
 
         """
 
         args = self.model_storage.json_get("args")
 
-        completion = self.connection.completions.create(
+        message = self.connection.messages.create(
             model=args["using"]["model"],
-            max_tokens_to_sample=args["using"]["max_tokens"],
-            prompt=f"{HUMAN_PROMPT} {text} {AI_PROMPT}",
+            max_tokens=args["using"]["max_tokens"],
+            messages=[
+                {"role": "user", "content": text}
+            ]
         )
 
-        return completion.completion
+        content_blocks = message.content
+
+        # assuming that message.content contains one ContentBlock item
+        # returning text value if type==text and content_blocks value if type!=text
+        if isinstance(content_blocks, list) and len(content_blocks) > 0:
+            content_block = content_blocks[0]
+            if content_block.type == 'text':
+                return content_block.text
+            else:
+                return content_blocks
+        else:
+            raise Exception(
+                f"Invalid output: {content_blocks}"
+            )

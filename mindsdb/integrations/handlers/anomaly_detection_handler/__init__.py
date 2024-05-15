@@ -10,9 +10,10 @@ except Exception as e:
     Handler = None
     import_error = e
 
-title = "Anomaly_Detection"
+title = "Anomaly Detection"
 name = "anomaly_detection"
 type = HANDLER_TYPE.ML
-permanent = True
+icon_path = "icon.svg"
+permanent = False
 
 __all__ = ["Handler", "version", "name", "type", "title", "description", "import_error"]

@@ -88,14 +88,9 @@ class ProjectDataNode(DataNode):
             raise NotImplementedError(f"Can't delete object: {query_table}")
 
         elif isinstance(query, Select):
-            # region is it query to 'models' or 'models_versions'?
+            # region is it query to 'models'?
             query_table = query.from_table.parts[0].lower()
-            # region FIXME temporary fix to not broke queries to 'mindsdb.models'. Can be deleted it after 1.12.2022
-            if query_table == 'predictors':
-                query.from_table.parts[0] = 'models'
-                query_table = 'models'
-            # endregion
-            if query_table in ('models', 'models_versions', 'jobs', 'jobs_history', 'mdb_triggers', 'chatbots', 'skills', 'agents'):
+            if query_table in ('models', 'jobs', 'mdb_triggers', 'chatbots', 'skills', 'agents'):
                 new_query = deepcopy(query)
                 project_filter = BinaryOperation('=', args=[
                     Identifier('project'),
@@ -165,7 +160,7 @@ class ProjectDataNode(DataNode):
         else:
             raise NotImplementedError(f"Query not supported {query}")
 
-    def create_table(self, table_name: Identifier, result_set, is_replace=False, **kwargs):
+    def create_table(self, table_name: Identifier, result_set=None, is_replace=False, **kwargs):
         # is_create - create table
         # is_replace - drop table if exists
         # is_create==False and is_replace==False: just insert

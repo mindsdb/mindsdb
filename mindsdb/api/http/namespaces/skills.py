@@ -3,6 +3,7 @@ from http import HTTPStatus
 from flask import request
 from flask_restx import Resource
 
+from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.http.utils import http_error
 from mindsdb.interfaces.skills.skills_controller import SkillsController
@@ -45,6 +46,7 @@ def create_skill(project_name, skill):
 @ns_conf.route('/<project_name>/skills')
 class SkillsResource(Resource):
     @ns_conf.doc('list_skills')
+    @api_endpoint_metrics('GET', '/skills')
     def get(self, project_name):
         ''' List all skills'''
         skills_controller = SkillsController()
@@ -60,6 +62,7 @@ class SkillsResource(Resource):
         return [skill.as_dict() for skill in all_skills]
 
     @ns_conf.doc('create_skill')
+    @api_endpoint_metrics('POST', '/skills')
     def post(self, project_name):
         '''Create a skill'''
 
@@ -79,6 +82,7 @@ class SkillsResource(Resource):
 @ns_conf.param('skill_name', 'Name of the skill')
 class SkillResource(Resource):
     @ns_conf.doc('get_skill')
+    @api_endpoint_metrics('GET', '/skills/skill')
     def get(self, project_name, skill_name):
         '''Gets a skill by name'''
         skills_controller = SkillsController()
@@ -101,6 +105,7 @@ class SkillResource(Resource):
         return existing_skill.as_dict()
 
     @ns_conf.doc('update_skill')
+    @api_endpoint_metrics('PUT', '/skills/skill')
     def put(self, project_name, skill_name):
         '''Updates a skill by name, creating one if it doesn't exist'''
         skills_controller = SkillsController()
@@ -141,6 +146,7 @@ class SkillResource(Resource):
         return updated_skill.as_dict()
 
     @ns_conf.doc('delete_skill')
+    @api_endpoint_metrics('DELETE', '/skills/skill')
     def delete(self, project_name, skill_name):
         '''Deletes a skill by name'''
         skills_controller = SkillsController()

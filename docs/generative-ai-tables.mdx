@@ -1,9 +1,17 @@
 ---
 title: Generative AI Tables
-sidebarTitle: Generative AI Tables
+sidebarTitle: AI Tables
 ---
 
 MindsDB empowers organizations to harness the power of AI by abstracting AI models as Generative AI Tables. These tables are capable of learning from the input data and generating predictions from the underlying model upon being queried. This abstraction makes AI highly accessible, enabling development teams to use their existing SQL skills to build applications powered by AI.
+
+<Tip>
+MindsDB integrates with numerous AI frameworks. [Learn more here](/integrations/ai-overview).
+</Tip>
+
+<p align="center">
+  <img src="https://docs.google.com/drawings/d/e/2PACX-1vQDXTuCWl8IxTEO-2ntjN17B5XtCtJDJ_d_PDCeX0ch0GBzSJfuJmefGuM_FEyGOwlgrxnNSzmLaYGO/pub?w=951&h=460"/>
+</p>
 
 ## What are Generative AI Tables?
 
@@ -11,7 +19,7 @@ Generative AI is a subfield of artificial intelligence that trains AI models to 
 
 MindsDB revolutionizes machine learning within enterprise databases by introducing the concept of **Generative AI tables**. These essentially abstract AI models as virtual AI tables, capable of producing output when given certain input.
 
-## Working with Generative AI Tables
+## How to Use Generative AI Tables
 
 AI tables, introduced by MindsDB, abstract AI models as virtual tables so you can simply query AI models for predictions.
 
@@ -19,7 +27,7 @@ With MinsdDB, you can join multiple AI tables (that abstract AI models) with mul
 
 Let's look at some examples.
 
-### Deploying AI Models as AI Tables
+### Deploy AI Models as AI Tables
 
 You can deploy an AI model as a virtual AI table using the `CREATE MODEL` statement.
 
@@ -55,7 +63,7 @@ Follow [this doc page](/integrations/ai-engines/openai) to configure the OpenAI 
 
 Now let's look at the data tables that we'll use to provide input data to the AI tables.
 
-### Preparing Input Data
+### Prepare Input Data
 
 The `amazon_reviews` table stores the following columns:
 
@@ -85,7 +93,7 @@ The `products_sold` table stores the following columns:
 
 The `reponse_generator_model` requires the two tables to be joined to provide it with sufficient input data.
 
-### Making Predictions
+### Make Predictions
 
 You can query the AI tables directly or join AI tables with data tables to get the predictions.
 

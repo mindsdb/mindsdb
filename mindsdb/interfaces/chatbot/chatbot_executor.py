@@ -46,6 +46,11 @@ class BotExecutor:
         return skills
 
     def process(self):
+        # restart of the bot clear previous history
+        if self.chat_memory.get_mode() is None:
+            self.chat_memory.hide_history(left_count=1)
+            self.chat_memory.set_mode('main')
+
         functions = self._prepare_available_functions()
         skills = self._prepare_skills()
 

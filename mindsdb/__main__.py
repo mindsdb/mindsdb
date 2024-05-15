@@ -14,7 +14,6 @@ import asyncio
 import secrets
 import traceback
 import threading
-from textwrap import dedent
 from packaging import version
 
 from mindsdb.__about__ import __version__ as mindsdb_version
@@ -27,7 +26,7 @@ from mindsdb.utilities.ml_task_queue.consumer import start as start_ml_task_queu
 from mindsdb.interfaces.jobs.scheduler import start as start_scheduler
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
-from mindsdb.utilities.functions import args_parse, get_versions_where_predictors_become_obsolete
+from mindsdb.utilities.functions import args_parse, get_handler_install_message, get_versions_where_predictors_become_obsolete
 from mindsdb.interfaces.database.integrations import integration_controller
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.utilities.install import install_dependencies
@@ -209,12 +208,8 @@ if __name__ == '__main__':
         import_meta = handler_meta.get("import", {})
         if import_meta.get("success", False) is not True:
             logger.info(
-                dedent(
-                    """
-                Some handlers cannot be imported. You can check list of available handlers by execute command in sql editor:
-                    select * from information_schema.handlers;
-            """
-                )
+                """Some handlers cannot be imported. You can check list of available handlers by execute command in sql editor:
+select * from information_schema.handlers;"""
             )
             break
     # @TODO Backwards compatibility for tests, remove later
@@ -226,11 +221,9 @@ if __name__ == '__main__':
         dependencies = import_meta.get("dependencies")
         if import_meta.get("success", False) is not True:
             logger.debug(
-                f"Dependencies for the handler '{handler_name}' are not installed by default."
+                f"Dependencies for the handler '{handler_name}' are not installed."
             )
-            logger.debug(
-                f'If you want to use "{handler_name}" please "pip install mindsdb[{handler_name}]"'
-            )
+            logger.debug(get_handler_install_message(handler_name))
 
     # from mindsdb.utilities.fs import get_marked_processes_and_threads
     # marks = get_marked_processes_and_threads()

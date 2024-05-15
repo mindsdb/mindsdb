@@ -26,7 +26,6 @@ from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE, HANDLER_TYPE
-from mindsdb.integrations.handlers_client.db_client_factory import DBClient
 from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities import log
@@ -269,8 +268,6 @@ class IntegrationController:
         ):
             return None
         data = deepcopy(integration_record.data)
-        if data.get('password', None) is None:
-            data['password'] = ''
 
         bundle_path = data.get('secure_connect_bundle')
         mysql_ssl_ca = data.get('ssl_ca')
@@ -324,6 +321,7 @@ class IntegrationController:
             'type': integration_type,
             'class_type': class_type,
             'engine': integration_record.engine,
+            'permanent': getattr(integration_module, 'permanent', False),
             'date_last_update': deepcopy(integration_record.updated_at),
             'connection_data': data
         }
@@ -383,20 +381,9 @@ class IntegrationController:
             integration_dict[record.name] = self._get_integration_record_data(record, sensitive_info)
         return integration_dict
 
-    def check_connections(self):
-        connections = {}
-        for integration_name, integration_meta in self.get_all().items():
-            handler = self.create_tmp_handler(
-                handler_type=integration_meta['engine'],
-                connection_data=integration_meta['connection_data']
-            )
-            status = handler.check_connection()
-            connections[integration_name] = status.get('success', False)
-        return connections
-
     def _make_handler_args(self, name: str, handler_type: str, connection_data: dict, integration_id: int = None,
                            file_storage: FileStorage = None, handler_storage: HandlerStorage = None):
-        handler_ars = dict(
+        handler_args = dict(
             name=name,
             integration_id=integration_id,
             connection_data=connection_data,
@@ -405,47 +392,33 @@ class IntegrationController:
         )
 
         if handler_type == 'files':
-            handler_ars['file_controller'] = FileController()
+            handler_args['file_controller'] = FileController()
         elif self.handler_modules.get(handler_type, False).type == HANDLER_TYPE.ML:
-            handler_ars['handler_controller'] = self
-            handler_ars['company_id'] = ctx.company_id
+            handler_args['handler_controller'] = self
+            handler_args['company_id'] = ctx.company_id
 
-        return handler_ars
+        return handler_args
 
-    def create_tmp_handler(self, handler_type: str, connection_data: dict) -> object:
-        """ Returns temporary handler. That handler does not exist in database.
+    def create_tmp_handler(self, name: str, engine: str, connection_args: dict) -> dict:
+        """Create temporary handler, mostly for testing connections
 
-            Args:
-                handler_type (str)
-                connection_data (dict)
+        Args:
+            name (str): Integration  name
+            engine (str): Integration engine name
+            connection_args (dict): Connection arguments
 
-            Returns:
-                Handler object
+        Returns:
+            HandlerClass: Handler class instance
         """
-        handler_meta = self.handlers_import_status[handler_type]
-        if not handler_meta["import"]["success"]:
-            logger.info(f"to use {handler_type} please install 'pip install mindsdb[{handler_type}]'")
-
-        logger.debug("%s.create_tmp_handler: connection args - %s", self.__class__.__name__, connection_data)
-        integration_id = int(time() * 10000)
-        file_storage = FileStorage(
-            resource_group=RESOURCE_GROUP.INTEGRATION,
-            resource_id=integration_id,
-            root_dir='tmp',
-            sync=False
+        HandlerClass = self.handler_modules[engine].Handler
+        handler_args = self._make_handler_args(
+            name=name,
+            handler_type=engine,
+            connection_data=connection_args,
+            integration_id=int(time() * 10000)
         )
-        handler_storage = HandlerStorage(integration_id, root_dir='tmp', is_temporal=True)
-        handler_ars = self._make_handler_args(
-            name='tmp_handler',
-            handler_type=handler_type,
-            connection_data=connection_data,
-            integration_id=integration_id,
-            file_storage=file_storage,
-            handler_storage=handler_storage,
-        )
-
-        logger.debug("%s.create_tmp_handler: create a client to db of %s type", self.__class__.__name__, handler_type)
-        return DBClient(handler_type, self.handler_modules[handler_type].Handler, **handler_ars)
+        handler = HandlerClass(**handler_args)
+        return handler
 
     def copy_integration_storage(self, integration_id_from, integration_id_to):
         storage_from = HandlerStorage(integration_id_from)
@@ -650,17 +623,26 @@ class IntegrationController:
 
         # region icon
         if hasattr(module, 'icon_path'):
-            icon_path = handler_dir.joinpath(module.icon_path)
-            handler_meta['icon'] = {
-                'name': icon_path.name,
-                'type': icon_path.name[icon_path.name.rfind('.') + 1:].lower()
-            }
-            if handler_meta['icon']['type'] == 'svg':
-                with open(str(icon_path), 'rt') as f:
-                    handler_meta['icon']['data'] = f.read()
-            else:
-                with open(str(icon_path), 'rb') as f:
-                    handler_meta['icon']['data'] = base64.b64encode(f.read()).decode('utf-8')
+            try:
+                icon_path = handler_dir.joinpath(module.icon_path)
+                icon_type = icon_path.name[icon_path.name.rfind('.') + 1:].lower()
+
+                if icon_type == 'svg':
+                    with open(str(icon_path), 'rt') as f:
+                        handler_meta['icon'] = {
+                            'data': f.read()
+                        }
+                else:
+                    with open(str(icon_path), 'rb') as f:
+                        handler_meta['icon'] = {
+                            'data': base64.b64encode(f.read()).decode('utf-8')
+                        }
+
+                handler_meta['icon']['name'] = icon_path.name
+                handler_meta['icon']['type'] = icon_type
+            except Exception as e:
+                logger.error(f'Error reading icon for {handler_folder_name}, {e}!')
+
         # endregion
         if hasattr(module, 'permanent'):
             handler_meta['permanent'] = module.permanent

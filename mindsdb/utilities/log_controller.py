@@ -6,7 +6,7 @@ def fmt_log_record(log_record):
     return {
         'log_from': 'mindsdb',
         'level': log_record.log_type,
-        'context': 'unkown',
+        'context': 'unknown',
         'text': log_record.payload,
         'created_at': str(log_record.created_at).split('.')[0]
     }

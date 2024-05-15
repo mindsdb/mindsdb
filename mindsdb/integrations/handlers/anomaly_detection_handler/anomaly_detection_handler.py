@@ -14,6 +14,7 @@ from pyod.models.knn import KNN
 from pyod.models.pca import PCA
 from xgboost import XGBClassifier
 from sklearn.naive_bayes import GaussianNB
+from sklearn.preprocessing import StandardScaler
 import numpy as np
 import os
 
@@ -62,7 +63,6 @@ def choose_model(df, model_name=None, model_type=None, target=None, supervised_t
         model = None
     if model_type == "unsupervised":
         return train_unsupervised(training_df, model=model)
-
     X_train = training_df.drop(target, axis=1)
     y_train = training_df[target].astype(int)
 
@@ -97,7 +97,9 @@ def preprocess_data(df):
     df[categorical_columns] = df[categorical_columns].apply(lambda x: x.cat.codes)
     df = pd.get_dummies(df, columns=categorical_columns)
     numeric_columns = list(df.select_dtypes(include=["number"]).columns.values)
-    df[numeric_columns] = (df[numeric_columns] - df[numeric_columns].mean()) / df[numeric_columns].std()
+
+    scaler = StandardScaler()
+    df[numeric_columns] = scaler.fit_transform(df[numeric_columns])
     return df
 
 

@@ -1,12 +1,13 @@
-from contextlib import closing
-
 import pymssql
+from pymssql import OperationalError
 import pandas as pd
+from collections import OrderedDict
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.integrations.libs.base import DatabaseHandler
+from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.utilities import log
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.response import (
@@ -17,19 +18,20 @@ from mindsdb.integrations.libs.response import (
 
 logger = log.getLogger(__name__)
 
+
 class SqlServerHandler(DatabaseHandler):
     """
-    This handler handles connection and execution of the Microsoft SQL Server statements. 
+    This handler handles connection and execution of the Microsoft SQL Server statements.
     """
     name = 'mssql'
 
     def __init__(self, name, **kwargs):
         super().__init__(name)
         self.parser = parse_sql
-        self.connection_args = kwargs
-        self.connection_data = self.connection_args.get('connection_data')
+        self.connection_args = kwargs.get('connection_data')
         self.dialect = 'mssql'
-        self.database = self.connection_data.get('database')
+        self.database = self.connection_args.get('database')
+        self.renderer = SqlalchemyRender('mssql')
 
         self.connection = None
         self.is_connected = False
@@ -40,53 +42,102 @@ class SqlServerHandler(DatabaseHandler):
 
     def connect(self):
         """
-        Handles the connection to a SQL Server insance.
+        Establishes a connection to a Microsoft SQL Server database.
+
+        Raises:
+            pymssql._mssql.OperationalError: If an error occurs while connecting to the Microsoft SQL Server database.
+
+        Returns:
+            pymssql.Connection: A connection object to the Microsoft SQL Server database.
         """
+
         if self.is_connected is True:
             return self.connection
 
-        self.connection = pymssql.connect(**self.connection_data)
-        self.is_connected = True
+        # Mandatory connection parameters
+        if not all(key in self.connection_args for key in ['host', 'user', 'password', 'database']):
+            raise ValueError('Required parameters (host, user, password, database) must be provided.')
 
-        return self.connection
+        config = {
+            'host': self.connection_args.get('host'),
+            'user': self.connection_args.get('user'),
+            'password': self.connection_args.get('password'),
+            'database': self.connection_args.get('database')
+        }
+
+        # Optional connection parameters
+        if 'port' in self.connection_args:
+            config['port'] = self.connection_args.get('port')
+
+        if 'server' in self.connection_args:
+            config['server'] = self.connection_args.get('server')
+
+        try:
+            self.connection = pymssql.connect(**config)
+            self.is_connected = True
+            return self.connection
+        except OperationalError as e:
+            logger.error(f'Error connecting to Microsoft SQL Server {self.database}, {e}!')
+            self.is_connected = False
+            raise
+
+    def disconnect(self):
+        """
+        Closes the connection to the Microsoft SQL Server database if it's currently open.
+        """
+
+        if not self.is_connected:
+            return
+        self.connection.close()
+        self.is_connected = False
 
     def check_connection(self) -> StatusResponse:
         """
-        Check the connection of the SQL Server database
-        :return: success status and error message if error occurs
+        Checks the status of the connection to the Microsoft SQL Server database.
+
+        Returns:
+            StatusResponse: An object containing the success status and an error message if an error occurs.
         """
+
         response = StatusResponse(False)
         need_to_close = self.is_connected is False
 
         try:
-            self.connect()
+            connection = self.connect()
+            with connection.cursor() as cur:
+                # Execute a simple query to test the connection
+                cur.execute('select 1;')
             response.success = True
-        except Exception as e:
-            logger.error(f'Error connecting to SQL Server {self.database}, {e}!')
+        except OperationalError as e:
+            logger.error(f'Error connecting to Microsoft SQL Server {self.database}, {e}!')
             response.error_message = str(e)
-        finally:
-            if response.success is True and need_to_close:
-                self.disconnect()
-            if response.success is False and self.is_connected is True:
-                self.is_connected = False
+
+        if response.success and need_to_close:
+            self.disconnect()
+        elif not response.success and self.is_connected:
+            self.is_connected = False
 
         return response
 
     def native_query(self, query: str) -> Response:
         """
-        Receive SQL query and runs it
-        :param query: The SQL query to run in SQL Server
-        :return: returns the records from the current recordset
+        Executes a SQL query on the Microsoft SQL Server database and returns the result.
+
+        Args:
+            query (str): The SQL query to be executed.
+
+        Returns:
+            Response: A response object containing the result of the query or an error message.
         """
+
         need_to_close = self.is_connected is False
 
         connection = self.connect()
-        # with closing(connection) as con:
         with connection.cursor(as_dict=True) as cur:
             try:
                 cur.execute(query)
-                result = cur.fetchall()
-                if result:
+                if cur.description:
+                    result = cur.fetchall()
                     response = Response(
                         RESPONSE_TYPE.TABLE,
                         data_frame=pd.DataFrame(
@@ -98,9 +149,10 @@ class SqlServerHandler(DatabaseHandler):
                     response = Response(RESPONSE_TYPE.OK)
                 connection.commit()
             except Exception as e:
-                logger.error(f'Error running query: {query} on {self.database}!')
+                logger.error(f'Error running query: {query} on {self.database}, {e}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
+                    error_code=0,
                     error_message=str(e)
                 )
                 connection.rollback()
@@ -112,16 +164,27 @@ class SqlServerHandler(DatabaseHandler):
 
     def query(self, query: ASTNode) -> Response:
         """
-        Retrieve the data from the SQL statement.
+        Executes a SQL query represented by an ASTNode and retrieves the data.
+
+        Args:
+            query (ASTNode): An ASTNode representing the SQL query to be executed.
+
+        Returns:
+            Response: The response from the `native_query` method, containing the result of the SQL query execution.
         """
-        renderer = SqlalchemyRender('mssql')
-        query_str = renderer.get_string(query, with_failback=True)
+
+        query_str = self.renderer.get_string(query, with_failback=True)
+        logger.debug(f"Executing SQL query: {query_str}")
         return self.native_query(query_str)
 
     def get_tables(self) -> Response:
         """
-        Get a list with all of the tabels in MySQL
+        Retrieves a list of all non-system tables and views in the current schema of the Microsoft SQL Server database.
+
+        Returns:
+            Response: A response object containing the list of tables and views, formatted as per the `Response` class.
         """
+
         query = f"""
             SELECT
                 table_schema,
@@ -130,14 +193,22 @@ class SqlServerHandler(DatabaseHandler):
             FROM {self.database}.INFORMATION_SCHEMA.TABLES
             WHERE TABLE_TYPE in ('BASE TABLE', 'VIEW');
         """
-        result = self.native_query(query)
-        return result
+        return self.native_query(query)
 
     def get_columns(self, table_name) -> Response:
         """
-        Show details about the table
+        Retrieves column details for a specified table in the Microsoft SQL Server database.
+
+        Args:
+            table_name (str): The name of the table for which to retrieve column information.
+
+        Returns:
+            Response: A response object containing the column details, formatted as per the `Response` class.
+        Raises:
+            ValueError: If the 'table_name' is not a valid string.
         """
-        q = f"""
+
+        query = f"""
             SELECT
                 column_name as "Field",
                 data_type as "Type"
@@ -146,5 +217,52 @@ class SqlServerHandler(DatabaseHandler):
             WHERE
                 table_name = '{table_name}'
         """
-        result = self.native_query(q)
-        return result
+        return self.native_query(query)
+
+
+connection_args = OrderedDict(
+    user={
+        'type': ARG_TYPE.STR,
+        'description': 'The user name used to authenticate with the Microsoft SQL Server.',
+        'required': True,
+        'label': 'User'
+    },
+    password={
+        'type': ARG_TYPE.PWD,
+        'description': 'The password to authenticate the user with the Microsoft SQL Server.',
+        'required': True,
+        'label': 'Password'
+    },
+    database={
+        'type': ARG_TYPE.STR,
+        'description': 'The database name to use when connecting with the Microsoft SQL Server.',
+        'required': True,
+        'label': 'Database'
+    },
+    host={
+        'type': ARG_TYPE.STR,
+        'description': 'The host name or IP address of the Microsoft SQL Server.',
+        'required': True,
+        'label': 'Host'
+    },
+    port={
+        'type': ARG_TYPE.INT,
+        'description': 'The TCP/IP port of the Microsoft SQL Server. Must be an integer.',
+        'required': False,
+        'label': 'Port'
+    },
+    server={
+        'type': ARG_TYPE.STR,
+        'description': 'The server name of the Microsoft SQL Server. Typically only used with named instances or Azure SQL Database.',
+        'required': False,
+        'label': 'Server'
+    }
+)
+
+connection_args_example = OrderedDict(
+    host='127.0.0.1',
+    port=1433,
+    user='sa',
+    password='password',
+    database='master'
+)

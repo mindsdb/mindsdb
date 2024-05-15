@@ -16,7 +16,7 @@ except Exception as e:
 title = 'Google Content Shopping'
 name = 'google_content_shopping'
 type = HANDLER_TYPE.DATA
-icon_path = 'icon.png'
+icon_path = 'icon.svg'
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'description',

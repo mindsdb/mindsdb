@@ -1,20 +1,16 @@
 ---
-title: Data Sources
+title: Data Integrations
 sidebarTitle: Overview
 icon: "database"
 ---
 
-MindsDB allows querying hundreds of data sources, such as databases (both relational and non-relational), data warehouses, streams, and SaaS application data, <strong>using standard SQL</strong>. This capability stems from MindsDB's unique ability to translate SQL into real-time data requests.
+MindsDB integrates with numerous data sources, including databases, vector stores, and applications, making data available to AI models by connecting data sources to MindsDB.
 
-<Tip>
-MindsDB provides over 100 data handlers to connect the available data sources.
-
-If you don't find a data source of your interest, you can [request a feature here](https://github.com/mindsdb/mindsdb/issues/new?assignees=&labels=enhancement&projects=&template=feature_request_v2.yaml) or build a handler following [this instruction for data handlers](/contribute/data-handlers) and [this instruction for applications](/contribute/app-handlers).
-</Tip>
-
+<Info>
 This section contains instructions on how to connect data sources to MindsDB.
+</Info>
 
-### Application Data Sources
+### Applications
 
 <CardGroup cols={4}>
     <Card title="Binance" icon="diamond" href="/integrations/app-integrations/binance"></Card>
@@ -29,12 +25,14 @@ This section contains instructions on how to connect data sources to MindsDB.
     <Card title="Hacker News" icon="square-hacker-news" href="/integrations/app-integrations/hackernews"></Card>
     <Card title="Instatus" icon="signal" href="/integrations/app-integrations/instatus"></Card>
     <Card title="Intercom" icon="intercom" href="/integrations/app-integrations/intercom"></Card>
-    <Card title="Microsoft Teams" icon="people-group" href="/app-integrations/microsoft-teams"></Card>
     <Card title="MediaWiki" icon="certificate" href="/integrations/app-integrations/mediawiki"></Card>
+    <Card title="Microsoft Teams" icon="people-group" href="/app-integrations/microsoft-teams"></Card>
+    <Card title="News API" icon="people-group" href="/app-integrations/newsapi"></Card>
     <Card title="PayPal" icon="paypal" href="/integrations/app-integrations/paypal"></Card>
     <Card title="Plaid" icon="stroopwafel" href="/integrations/app-integrations/plaid"></Card>
     <Card title="PyPI" icon="cube" href="/integrations/app-integrations/pypi"></Card>
     <Card title="Reddit" icon="reddit" href="/integrations/app-integrations/reddit"></Card>
+    <Card title="Sendinblue" icon="link" href="/integrations/app-integrations/sendinblue"></Card>
     <Card title="Shopify" icon="shopify" href="/integrations/app-integrations/shopify"></Card>
     <Card title="Slack" icon="slack" href="/integrations/app-integrations/slack"></Card>
     <Card title="Strapi" icon="rocket" href="/integrations/app-integrations/strapi"></Card>
@@ -114,7 +112,7 @@ This section contains instructions on how to connect data sources to MindsDB.
 
 </CardGroup>
 
-### Vector Databases
+### Vector Stores
 
 <CardGroup cols={4}>
     <Card title="ChromaDB" icon="link" href="/integrations/vector-db-integrations/chromadb"></Card>
@@ -124,3 +122,41 @@ This section contains instructions on how to connect data sources to MindsDB.
 </CardGroup>
 
 <br></br>
+
+<Tip>
+If you don't find a data source of your interest, you can [request a feature here](https://github.com/mindsdb/mindsdb/issues/new?assignees=&labels=enhancement&projects=&template=feature_request_v2.yaml) or build a handler following [this instruction for data handlers](/contribute/data-handlers) and [this instruction for applications](/contribute/app-handlers).
+</Tip>
+
+<Info>
+**Metadata about data handlers and data sources**
+
+**Data handlers** represent a raw implementation of the integration between MindsDB and a data source.
+
+Here is how you can query for all the available data handlers used to connect data sources to MindsDB.
+
+  ```sql
+  SELECT *
+  FROM information_schema.handlers
+  WHERE type = 'data';
+  ```
+
+  Or, alternatively:
+
+  ```sql
+  SHOW HANDLERS
+  WHERE type = 'data';
+  ```
+
+And here is how you can query for all the created AI engines:
+
+  ```sql
+  SELECT *
+  FROM information_schema.databases;
+  ```
+
+  Or, alternatively:
+
+  ```sql
+  SHOW DATABASES;
+  ```
+</Info>

@@ -15,8 +15,9 @@ Here is the syntax:
 
 ```sql
 RETRAIN [MODEL] project_name.predictor_name
-[FROM integration_name
-    (SELECT column_name, ... FROM table_name)
+[FROM [integration_name | project_name]
+    (SELECT column_name, ...
+     FROM [integration_name. | project_name.]table_name)
 PREDICT target_name
 USING engine = 'engine_name',
       tag = 'tag_name',

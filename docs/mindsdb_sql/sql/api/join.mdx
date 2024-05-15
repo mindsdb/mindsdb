@@ -22,7 +22,8 @@ FROM integration_name.table_name_1 [AS] d1
 [JOIN ...]
 JOIN project_name.model_name_1 [AS] m1
 [JOIN project_name.model_name_2 [AS] m2]
-[JOIN ...];
+[JOIN ...]
+[ON d1.input_data = m1.expected_argument];
 ```
 
 Where:
@@ -33,6 +34,40 @@ Where:
 | `integration_name.table_name_2`     | Optionally, you can join arbitrary number of data source tables.              |
 | `project_name.model_name_1`         | Name of the model table used to make predictions.                             |
 | `project_name.model_name_2`         | Optionally, you can join arbitrary number of models.                          |
+
+### Mapping input data to model arguments
+
+If the input data contains a column named `question` and the model requires an argument named `input`, you can map these columns, as explained below.
+
+We have a model that expects to receive `input`:
+
+```sql
+CREATE MODEL model_name
+PREDICT answer
+USING
+       engine = 'openai',
+       prompt_template = 'provide answers to an input from a user: {{input}}';
+```
+
+We have an input data table that has the following columns:
+
+```sql
++----+-------------------------------------------+
+| id | question                                  |
++----+-------------------------------------------+
+| 1  | How many planets are in the solar system? |
+| 2  | How many stars are in the solar system?   |
++----+-------------------------------------------+
+```
+
+Now if you want to get answers to these questions using the model, you need to join the input data table with the model and map the `question` column onto the `input` argument.
+
+```sql
+SELECT *
+FROM input_table AS d
+JOIN model_name AS m
+ON d.question = m.input;
+```
 
 ## Example 1
 

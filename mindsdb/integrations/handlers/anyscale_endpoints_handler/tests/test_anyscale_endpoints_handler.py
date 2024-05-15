@@ -34,7 +34,7 @@ class TestAnyscaleEndpoints(BaseMLAPITest):
         """
 
         self.run_sql(
-            f"""
+            """
             CREATE ML_ENGINE anyscale_endpoints_invalid_api_key_engine
             FROM anyscale_endpoints
             USING
@@ -51,7 +51,7 @@ class TestAnyscaleEndpoints(BaseMLAPITest):
         """
 
         self.run_sql(
-            f"""
+            """
             CREATE MODEL proj.test_anyscale_invalid_parameter_model
             PREDICT answer
             USING
@@ -69,7 +69,7 @@ class TestAnyscaleEndpoints(BaseMLAPITest):
         """
 
         self.run_sql(
-            f"""
+            """
             CREATE MODEL proj.test_anyscale_unknown_argument_model
             PREDICT answer
             USING
@@ -87,7 +87,7 @@ class TestAnyscaleEndpoints(BaseMLAPITest):
         """
 
         self.run_sql(
-            f"""
+            """
             CREATE MODEL proj.test_anyscale_invalid_operation_mode
             PREDICT answer
             USING

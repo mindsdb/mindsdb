@@ -177,7 +177,7 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
             args (Dict): Model arguments.
 
         Returns:
-            None        
+            None
         """
 
         api_key = get_api_key('anyscale_endpoints', args, self.engine_storage)
@@ -195,7 +195,7 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
             args (Dict): Model arguments.
 
         Returns:
-            None        
+            None
         """
 
         self._set_models(args.get('using', {}))
@@ -276,7 +276,7 @@ class AnyscaleEndpointsHandler(OpenAIHandler):
             using_args (Dict): Model arguments.
 
         Returns:
-            Dict: Fine-tuning parameters with extra parameters.        
+            Dict: Fine-tuning parameters with extra parameters.
         """
 
         hyperparameters = {}

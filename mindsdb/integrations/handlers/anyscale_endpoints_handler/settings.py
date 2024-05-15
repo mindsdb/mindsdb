@@ -14,7 +14,7 @@ class AnyscaleHandlerConfig(BaseSettings):
 
     MIN_FT_VAL_LEN : int
         Minimum number of validation chats required for fine-tuning.
-    
+
     MIN_FT_DATASET_LEN : int
         Minimum number of training and validation chats required for fine-tuning.
 

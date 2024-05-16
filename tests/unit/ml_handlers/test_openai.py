@@ -138,6 +138,66 @@ class TestOpenAI(unittest.TestCase):
 
         self.handler.create('dummy_target', args={'using': {'prompt_template': 'dummy_prompt_template'}})
 
+    def test_predict_raises_exception_with_invalid_mode(self):
+        """
+        Test if model prediction raises an exception with an invalid mode.
+        """
+
+        # Create a dummy DataFrame
+        df = pandas.DataFrame()
+
+        with self.assertRaisesRegex(Exception, "^Invalid operation mode."):
+            self.handler.predict(df=df, args={'predict_params': {'mode': 'dummy_mode'}})
+
+    def test_predict_raises_exception_on_embedding_mode_without_question_column(self):
+        """
+        Test if model prediction raises an exception in embedding mode without a question column.
+        """
+
+        # Mock the json_get method of the model storage
+        self.handler.model_storage.json_get.return_value = {
+            'mode': 'embedding',
+        }
+
+        # Create a dummy DataFrame
+        df = pandas.DataFrame()
+
+        with self.assertRaisesRegex(Exception, "Embedding mode needs a question_column"):
+            self.handler.predict(df=df, args={'predict_params': {'mode': 'embedding'}})
+
+    def test_predict_raises_exception_on_image_mode_without_question_column_or_prompt_template(self):
+        """
+        Test if model prediction raises an exception in image mode without a question column or prompt template.
+        """
+
+        # Mock the json_get method of the model storage
+        self.handler.model_storage.json_get.return_value = {
+            'mode': 'image',
+        }
+
+        # Create a dummy DataFrame
+        df = pandas.DataFrame()
+
+        with self.assertRaisesRegex(Exception, "Image mode needs either `prompt_template` or `question_column`."):
+            self.handler.predict(df=df, args={'predict_params': {'mode': 'image'}})
+
+    def test_predict_raises_exception_on_default_mode_without_question_column_in_df(self):
+        """
+        Test if model prediction raises an exception in default mode without a question column in the DataFrame.
+        """
+
+        # Mock the json_get method of the model storage
+        self.handler.model_storage.json_get.return_value = {
+            'mode': 'default',
+            'question_column': 'question'
+        }
+
+        # Create a dummy DataFrame
+        df = pandas.DataFrame()
+
+        with self.assertRaisesRegex(Exception, "Question column not found in the DataFrame."):
+            self.handler.predict(df=df, args={'predict_params': {'mode': 'default'}})
+
 
 if __name__ == '__main__':
     unittest.main()

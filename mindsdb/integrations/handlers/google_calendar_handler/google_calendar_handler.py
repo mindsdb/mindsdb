@@ -1,5 +1,4 @@
 import os
-from collections import OrderedDict
 
 import pandas as pd
 from google.auth.transport.requests import Request
@@ -7,7 +6,6 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.api_handler import APIHandler, FuncParser
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -292,12 +290,3 @@ class GoogleCalendarHandler(APIHandler):
             return self.delete_event(params)
         else:
             raise NotImplementedError(f'Unknown method {method_name}')
-
-
-connection_args = OrderedDict(
-    credentials={
-        'type': ARG_TYPE.PATH,
-        'description': 'Service Account Keys',
-        'label': 'Upload Service Account Keys',
-    },
-)

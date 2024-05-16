@@ -9,7 +9,9 @@ class AltibaseHandlerTest(unittest.TestCase):
             "connection_data": {
                 "host": "127.0.0.1",
                 "port": 20300,
-                "database": "mydb",                
+                "database": "mydb",
+                "user": "sys",
+                "password": "manager"
             }
         }
         cls.handler = AltibaseHandler('test_altibase_handler', **cls.kwargs)
@@ -18,7 +20,8 @@ class AltibaseHandlerTest(unittest.TestCase):
         assert self.handler.connect()
     
     def test_1_drop_table(self):
-        res = self.handler.query("DROP TABLE IF EXISTS TEST_TABLE")
+        # Not supported 'IF EXISTS' syntax
+        res = self.handler.query("DROP TABLE TEST_TABLE")
         assert res.type is RESPONSE_TYPE.OK
 
     def test_2_create_table(self):

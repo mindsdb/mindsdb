@@ -1,6 +1,5 @@
 import os
 import urllib
-from collections import OrderedDict
 from typing import Any
 
 import pandas as pd
@@ -10,7 +9,6 @@ from newsapi import NewsApiClient
 
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse, HandlerStatusResponse
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb.utilities.config import Config
@@ -209,10 +207,3 @@ class NewsAPIHandler(APIHandler):
                 data.append(article)
 
         return pd.DataFrame(data=data)
-
-
-connection_args = OrderedDict(
-    api_key={"type": ARG_TYPE.STR, "description": "The API key for the newsAPI API."}
-)
-
-connection_args_example = OrderedDict(api_key="knlsndlknslk")

@@ -2,11 +2,18 @@ name: Test on Push
 
 on:
   pull_request:
-    branches: [stable, staging]
+    branches: [main]
     
 defaults:
   run:
     shell: bash
+
+# Cancel any existing runs of this workflow on the same branch/pr
+# We always want to build/deploy/test a new commit over an older one
+concurrency:
+  group: ${{ github.workflow_ref }}
+  cancel-in-progress: true
+
 
 jobs:
   # Run all of our static code checks here
@@ -108,8 +115,11 @@ jobs:
       run: |
         pip install .
         pip install -r requirements/requirements-test.txt
-        pip install .[lightwood]  # TODO: for now some tests rely on lightwood
-        pip install .[mssql]
+        pip install lightwood  # TODO: for now some tests rely on lightwood
+        pip install mindsdb[mssql]
+        pip install mindsdb[clickhouse]
+        pip install mindsdb[snowflake]
+        pip install mindsdb[web]
         pip freeze
     - name: Run unit tests
       run: |
@@ -121,10 +131,11 @@ jobs:
           env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
           env PYTHONPATH=./ pytest tests/unit/test_cache.py
           env PYTHONPATH=./ pytest tests/unit/test_llm_utils.py
+          env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_mindsdb_inference.py
         fi
     - name: Run Handlers tests and submit Coverage to coveralls
       run: |
-        handlers=("mysql" "postgres" "mssql")
+        handlers=("mysql" "postgres" "mssql" "clickhouse" "snowflake" "web")
         for handler in "${handlers[@]}"
         do
           pytest --cov=mindsdb/integrations/handlers/${handler}_handler tests/unit/handlers/test_${handler}.py 

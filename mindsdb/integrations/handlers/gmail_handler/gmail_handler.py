@@ -1,6 +1,5 @@
 import json
 from shutil import copyfile
-from collections import OrderedDict
 
 import requests
 
@@ -8,8 +7,6 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response
 )
-
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable
@@ -567,27 +564,3 @@ class GmailHandler(APIHandler):
         df = pd.DataFrame(data)
 
         return df
-
-
-connection_args = OrderedDict(
-    credentials_url={
-        'type': ARG_TYPE.STR,
-        'description': 'URL to Service Account Keys',
-        'label': 'URL to Service Account Keys',
-    },
-    credentials_file={
-        'type': ARG_TYPE.STR,
-        'description': 'Location of Service Account Keys',
-        'label': 'path of Service Account Keys',
-    },
-    credentials={
-        'type': ARG_TYPE.PATH,
-        'description': 'Service Account Keys',
-        'label': 'Upload Service Account Keys',
-    },
-    code={
-        'type': ARG_TYPE.STR,
-        'description': 'code after authorisation',
-        'label': 'code after authorisation',
-    },
-)

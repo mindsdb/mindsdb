@@ -65,38 +65,36 @@ class ModelsTable(MdbTable):
     ]
 
     @classmethod
-    def get_data(cls, inf_schema=None, **kwargs):
+    def get_data(cls, session, inf_schema, **kwargs):
         data = []
         for project_name in inf_schema.get_projects_names():
             project = inf_schema.database_controller.get_project(name=project_name)
-            project_models = project.get_models(active=None)
+            project_models = project.get_models(active=None, with_secrets=session.show_secrets)
             for row in project_models:
                 table_name = row["name"]
                 table_meta = row["metadata"]
 
-                data.append(
-                    [
-                        table_name,
-                        table_meta["engine"],
-                        project_name,
-                        table_meta["active"],
-                        table_meta["version"],
-                        table_meta["status"],
-                        table_meta["accuracy"],
-                        table_meta["predict"],
-                        table_meta["update_status"],
-                        table_meta["mindsdb_version"],
-                        table_meta["error"],
-                        table_meta["select_data_query"],
-                        to_json(table_meta["training_options"]),
-                        table_meta["current_training_phase"],
-                        table_meta["total_training_phases"],
-                        table_meta["training_phase_name"],
-                        table_meta["label"],
-                        row["created_at"],
-                        table_meta["training_time"],
-                    ]
-                )
+                data.append([
+                    table_name,
+                    table_meta["engine"],
+                    project_name,
+                    table_meta["active"],
+                    table_meta["version"],
+                    table_meta["status"],
+                    table_meta["accuracy"],
+                    table_meta["predict"],
+                    table_meta["update_status"],
+                    table_meta["mindsdb_version"],
+                    table_meta["error"],
+                    table_meta["select_data_query"],
+                    to_json(table_meta["training_options"]),
+                    table_meta["current_training_phase"],
+                    table_meta["total_training_phases"],
+                    table_meta["training_phase_name"],
+                    table_meta["label"],
+                    row["created_at"],
+                    table_meta["training_time"],
+                ])
             # TODO optimise here
             # if target_table is not None and target_table != project_name:
             #     continue
@@ -110,9 +108,9 @@ class DatabasesTable(MdbTable):
     columns = ["NAME", "TYPE", "ENGINE", "CONNECTION_DATA"]
 
     @classmethod
-    def get_data(cls, inf_schema=None, **kwargs):
+    def get_data(cls, session, inf_schema, **kwargs):
 
-        project = inf_schema.database_controller.get_list()
+        project = inf_schema.database_controller.get_list(with_secrets=session.show_secrets)
         data = [
             [x["name"], x["type"], x["engine"], to_json(x.get("connection_data"))]
             for x in project
@@ -129,9 +127,9 @@ class MLEnginesTable(MdbTable):
     ]
 
     @classmethod
-    def get_data(cls, inf_schema=None, **kwargs):
+    def get_data(cls, session, inf_schema, **kwargs):
 
-        integrations = inf_schema.integration_controller.get_all()
+        integrations = inf_schema.integration_controller.get_all(show_secrets=session.show_secrets)
         ml_integrations = {
             key: val for key, val in integrations.items() if val["type"] == "ml"
         }
@@ -158,7 +156,7 @@ class HandlersTable(MdbTable):
     ]
 
     @classmethod
-    def get_data(cls, inf_schema=None, **kwargs):
+    def get_data(cls, inf_schema, **kwargs):
 
         handlers = inf_schema.integration_controller.get_handlers_import_status()
 

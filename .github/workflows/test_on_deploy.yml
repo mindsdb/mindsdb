@@ -75,6 +75,7 @@ jobs:
         fi
       env:
         PROMETHEUS_MULTIPROC_DIR: ./prometheus_metrics
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         CHECK_FOR_UPDATES: False
 
     - name: Run Learning Hub Tests

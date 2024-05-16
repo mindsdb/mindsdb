@@ -39,7 +39,7 @@ class LightFMHandler(BaseMLEngine):
         model_parameters = ModelParameters(**args["model_params"])
 
         # store model parameters
-        args["model_params"] = model_parameters.dict()
+        args["model_params"] = model_parameters.model_dump()
 
         rec_preprocessor = RecommenderPreprocessor(
             interaction_data=df,

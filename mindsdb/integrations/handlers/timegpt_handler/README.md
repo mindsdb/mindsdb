@@ -1,5 +1,5 @@
 # Briefly describe what ML framework does this handler integrate to MindsDB, and how?
-TimeGPT is a zero-shot forecasting model developed by Nixtla, offered through their `nixtlats` Python package.
+TimeGPT is a zero-shot forecasting model developed by Nixtla, offered through their `nixtla` Python package.
 
 This handler provides a simple wrapper around TimeGPT, and provides easy ingestion of time series data from other MindsDB data sources into the TimeGPT API. User requires a Nixtla API key to use this handler.
 

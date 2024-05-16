@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 import pandas as pd
 import mysql.connector
 
@@ -14,7 +12,6 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.handlers.mysql_handler.settings import ConnectionConfig
 
 logger = log.getLogger(__name__)
@@ -35,10 +32,9 @@ class MySQLHandler(DatabaseHandler):
         self.database = self.connection_data.get('database')
 
         self.connection = None
-        self.is_connected = False
 
     def __del__(self):
-        if self.is_connected is True:
+        if self.is_connected:
             self.disconnect()
 
     def _unpack_config(self):
@@ -50,9 +46,23 @@ class MySQLHandler(DatabaseHandler):
         """
         try:
             config = ConnectionConfig(**self.connection_data)
-            return config.dict(exclude_unset=True)
+            return config.model_dump(exclude_unset=True)
         except ValueError as e:
             raise ValueError(str(e))
+
+    @property
+    def is_connected(self):
+        """
+        Checks if the handler is connected to the MySQL database.
+
+        Returns:
+            bool: True if the handler is connected, False otherwise.
+        """
+        return self.connection is not None and self.connection.is_connected()
+
+    @is_connected.setter
+    def is_connected(self, value):
+        pass
 
     def connect(self):
         """
@@ -61,7 +71,7 @@ class MySQLHandler(DatabaseHandler):
         Returns:
             MySQLConnection: An active connection to the database.
         """
-        if self.is_connected:
+        if self.is_connected and self.connection.is_connected():
             return self.connection
         config = self._unpack_config()
         if 'conn_attrs' in self.connection_data:
@@ -83,11 +93,9 @@ class MySQLHandler(DatabaseHandler):
             connection = mysql.connector.connect(**config)
             connection.autocommit = True
             self.connection = connection
-            self.is_connected = True
             return self.connection
         except mysql.connector.Error as e:
             logger.error(f"Error connecting to MySQL {self.database}, {e}!")
-            self.is_connected = False
             raise
 
     def disconnect(self):
@@ -97,7 +105,6 @@ class MySQLHandler(DatabaseHandler):
         if self.is_connected is False:
             return
         self.connection.close()
-        self.is_connected = False
         return
 
     def check_connection(self) -> StatusResponse:
@@ -112,16 +119,14 @@ class MySQLHandler(DatabaseHandler):
         need_to_close = not self.is_connected
 
         try:
-            with self.connect() as connection:
-                result.success = connection.is_connected()
+            connection = self.connect()
+            result.success = connection.is_connected()
         except mysql.connector.Error as e:
             logger.error(f'Error connecting to MySQL {self.connection_data["database"]}, {e}!')
             result.error_message = str(e)
 
         if result.success and need_to_close:
             self.disconnect()
-        if not result.success and self.is_connected:
-            self.is_connected = False
 
         return result
 
@@ -138,20 +143,20 @@ class MySQLHandler(DatabaseHandler):
 
         need_to_close = not self.is_connected
         try:
-            with self.connect() as connection:
-                with connection.cursor(dictionary=True, buffered=True) as cur:
-                    cur.execute(query)
-                    if cur.with_rows:
-                        result = cur.fetchall()
-                        response = Response(
-                            RESPONSE_TYPE.TABLE,
-                            pd.DataFrame(
-                                result,
-                                columns=[x[0] for x in cur.description]
-                            )
+            connection = self.connect()
+            with connection.cursor(dictionary=True, buffered=True) as cur:
+                cur.execute(query)
+                if cur.with_rows:
+                    result = cur.fetchall()
+                    response = Response(
+                        RESPONSE_TYPE.TABLE,
+                        pd.DataFrame(
+                            result,
+                            columns=[x[0] for x in cur.description]
                         )
-                    else:
-                        response = Response(RESPONSE_TYPE.OK)
+                    )
+                else:
+                    response = Response(RESPONSE_TYPE.OK)
         except mysql.connector.Error as e:
             logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
             response = Response(
@@ -201,75 +206,3 @@ class MySQLHandler(DatabaseHandler):
         q = f"DESCRIBE `{table_name}`;"
         result = self.native_query(q)
         return result
-
-
-connection_args = OrderedDict(
-    url={
-        'type': ARG_TYPE.STR,
-        'description': 'The URI-Like connection string to the MySQL server. If provided, it will override the other connection arguments.',
-        'required': False,
-        'label': 'URL'
-    },
-    user={
-        'type': ARG_TYPE.STR,
-        'description': 'The user name used to authenticate with the MySQL server.',
-        'required': True,
-        'label': 'User'
-    },
-    password={
-        'type': ARG_TYPE.PWD,
-        'description': 'The password to authenticate the user with the MySQL server.',
-        'required': True,
-        'label': 'Password'
-    },
-    database={
-        'type': ARG_TYPE.STR,
-        'description': 'The database name to use when connecting with the MySQL server.',
-        'required': True,
-        'label': 'Database'
-    },
-    host={
-        'type': ARG_TYPE.STR,
-        'description': 'The host name or IP address of the MySQL server. NOTE: use \'127.0.0.1\' instead of \'localhost\' to connect to local server.',
-        'required': True,
-        'label': 'Host'
-    },
-    port={
-        'type': ARG_TYPE.INT,
-        'description': 'The TCP/IP port of the MySQL server. Must be an integer.',
-        'required': True,
-        'label': 'Port'
-    },
-    ssl={
-        'type': ARG_TYPE.BOOL,
-        'description': 'Set it to True to enable ssl.',
-        'required': False,
-        'label': 'ssl'
-    },
-    ssl_ca={
-        'type': ARG_TYPE.PATH,
-        'description': 'Path or URL of the Certificate Authority (CA) certificate file',
-        'required': False,
-        'label': 'ssl_ca'
-    },
-    ssl_cert={
-        'type': ARG_TYPE.PATH,
-        'description': 'Path name or URL of the server public key certificate file',
-        'required': False,
-        'label': 'ssl_cert'
-    },
-    ssl_key={
-        'type': ARG_TYPE.PATH,
-        'description': 'The path name or URL of the server private key file',
-        'required': False,
-        'label': 'ssl_key',
-    }
-)
-
-connection_args_example = OrderedDict(
-    host='127.0.0.1',
-    port=3306,
-    user='root',
-    password='password',
-    database='database'
-)

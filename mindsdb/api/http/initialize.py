@@ -22,11 +22,13 @@ from mindsdb.api.http.namespaces.agents import ns_conf as agents_ns
 from mindsdb.api.http.namespaces.analysis import ns_conf as analysis_ns
 from mindsdb.api.http.namespaces.auth import ns_conf as auth_ns
 from mindsdb.api.http.namespaces.chatbots import ns_conf as chatbots_ns
+from mindsdb.api.http.namespaces.jobs import ns_conf as jobs_ns
 from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
 from mindsdb.api.http.namespaces.databases import ns_conf as databases_ns
 from mindsdb.api.http.namespaces.default import ns_conf as default_ns, check_auth
 from mindsdb.api.http.namespaces.file import ns_conf as file_ns
 from mindsdb.api.http.namespaces.handlers import ns_conf as handlers_ns
+from mindsdb.api.http.namespaces.knowledge_bases import ns_conf as knowledge_bases_ns
 from mindsdb.api.http.namespaces.models import ns_conf as models_ns
 from mindsdb.api.http.namespaces.projects import ns_conf as projects_ns
 from mindsdb.api.http.namespaces.skills import ns_conf as skills_ns
@@ -229,7 +231,9 @@ def initialize_app(config, no_studio):
         models_ns,
         chatbots_ns,
         skills_ns,
-        agents_ns
+        agents_ns,
+        jobs_ns,
+        knowledge_bases_ns
     ]
 
     for ns in protected_namespaces:

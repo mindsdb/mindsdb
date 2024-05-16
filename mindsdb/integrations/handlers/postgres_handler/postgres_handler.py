@@ -1,3 +1,5 @@
+import time
+import json
 from collections import OrderedDict
 
 import psycopg
@@ -20,6 +22,8 @@ from mindsdb.integrations.libs.response import (
 import mindsdb.utilities.profiler as profiler
 
 logger = log.getLogger(__name__)
+
+SUBSCRIBE_SLEEP_INTERVAL = 0.5
 
 
 class PostgresHandler(DatabaseHandler):
@@ -44,20 +48,7 @@ class PostgresHandler(DatabaseHandler):
         if self.is_connected:
             self.disconnect()
 
-    @profiler.profile()
-    def connect(self):
-        """
-        Establishes a connection to a PostgreSQL database.
-
-        Raises:
-            psycopg.Error: If an error occurs while connecting to the PostgreSQL database.
-
-        Returns:
-            psycopg.Connection: A connection object to the PostgreSQL database.
-        """
-        if self.is_connected:
-            return self.connection
-
+    def _make_connection_args(self):
         config = {
             'host': self.connection_args.get('host'),
             'port': self.connection_args.get('port'),
@@ -72,7 +63,23 @@ class PostgresHandler(DatabaseHandler):
         # If schema is not provided set public as default one
         if self.connection_args.get('schema'):
             config['options'] = f'-c search_path={self.connection_args.get("schema")},public'
+        return config
 
+    @profiler.profile()
+    def connect(self):
+        """
+        Establishes a connection to a PostgreSQL database.
+
+        Raises:
+            psycopg.Error: If an error occurs while connecting to the PostgreSQL database.
+
+        Returns:
+            psycopg.Connection: A connection object to the PostgreSQL database.
+        """
+        if self.is_connected:
+            return self.connection
+
+        config = self._make_connection_args()
         try:
             self.connection = psycopg.connect(**config, connect_timeout=10)
             self.is_connected = True
@@ -259,6 +266,98 @@ class PostgresHandler(DatabaseHandler):
                 table_name = '{table_name}'
         """
         return self.native_query(query)
+
+    def subscribe(self, stop_event, callback, table_name, columns=None, **kwargs):
+
+        # psycopg2 is used
+        import psycopg2
+
+        config = self._make_connection_args()
+        # config['database'] = config.pop('dbname')
+
+        conn = psycopg2.connect(**config, connect_timeout=10)
+        conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
+
+        cursor = conn.cursor()
+
+        # create db trigger
+        trigger_name = f'mdb_notify_{table_name}'
+
+        before, after = '', ''
+
+        if columns:
+            # check column exist
+            cursor.execute(f'select {",".join(columns)} from {table_name} limit 0')
+
+            columns = set(columns)
+            trigger_name += '_' + '_'.join(columns)
+
+            news, olds = [], []
+            for column in columns:
+                news.append(f'NEW.{column}')
+                olds.append(f'OLD.{column}')
+
+            before = f'IF ({", ".join(news)}) IS DISTINCT FROM ({", ".join(olds)}) then\n'
+            after = '\nEND IF;'
+        else:
+            columns = set()
+
+        func_code = f'''
+             CREATE OR REPLACE FUNCTION {trigger_name}()
+               RETURNS trigger AS $$
+             DECLARE
+             BEGIN
+               {before}
+               PERFORM pg_notify( '{trigger_name}', row_to_json(NEW)::text);
+               {after}
+               RETURN NEW;
+             END;
+             $$ LANGUAGE plpgsql;
+         '''
+        cursor.execute(func_code)
+
+        # for after update - new and old have the same values
+        cursor.execute(f'''
+             CREATE OR REPLACE TRIGGER {trigger_name}
+               BEFORE INSERT OR UPDATE ON {table_name}
+               FOR EACH ROW
+               EXECUTE PROCEDURE {trigger_name}();
+        ''')
+        conn.commit()
+
+        # start listen
+        cursor.execute(f"LISTEN {trigger_name};")
+
+        def process_event(event):
+            try:
+                row = json.loads(event.payload)
+            except json.JSONDecoder:
+                return
+
+            # check column in input data
+            if not columns or columns.intersection(row.keys()):
+                callback(row)
+
+        try:
+            while True:
+                if stop_event.is_set():
+                    # exit trigger
+                    return
+
+                conn.poll()
+
+                while conn.notifies:
+                    process_event(conn.notifies.pop())
+                    conn.poll()
+
+                time.sleep(SUBSCRIBE_SLEEP_INTERVAL)
+
+        finally:
+            cursor.execute(f'drop TRIGGER {trigger_name} on {table_name}')
+            cursor.execute(f'drop FUNCTION {trigger_name}')
+            conn.commit()
+
+            conn.close()
 
 
 connection_args = OrderedDict(

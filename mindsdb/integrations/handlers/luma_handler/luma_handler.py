@@ -1,4 +1,4 @@
-from collections import OrderedDict
+from mindsdb_sql import parse_sql
 
 from mindsdb.integrations.handlers.luma_handler.luma_tables import (
     LumaEventsTable
@@ -8,8 +8,6 @@ from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
-from mindsdb_sql import parse_sql
 
 
 class LumaHandler(APIHandler):
@@ -77,17 +75,3 @@ class LumaHandler(APIHandler):
         """
         ast = parse_sql(query, dialect="mindsdb")
         return self.query(ast)
-
-
-connection_args = OrderedDict(
-    api_key={
-        "type": ARG_TYPE.STR,
-        "description": "Luma API Key",
-        "required": True,
-        "label": "api_key",
-    }
-)
-
-connection_args_example = OrderedDict(
-    api_key="api_key"
-)

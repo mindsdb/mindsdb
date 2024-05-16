@@ -7,8 +7,8 @@ from mindsdb.integrations.libs.api_handler import APITable
 
 from mindsdb.integrations.handlers.ms_teams_handler.settings import ms_teams_handler_config
 
-from mindsdb.integrations.handlers.utilities.query_utilities.insert_query_utilities import INSERTQueryParser
-from mindsdb.integrations.handlers.utilities.query_utilities.select_query_utilities import SELECTQueryParser, SELECTQueryExecutor
+from mindsdb.integrations.utilities.handlers.query_utilities.insert_query_utilities import INSERTQueryParser
+from mindsdb.integrations.utilities.handlers.query_utilities.select_query_utilities import SELECTQueryParser, SELECTQueryExecutor
 
 logger = log.getLogger(__name__)
 

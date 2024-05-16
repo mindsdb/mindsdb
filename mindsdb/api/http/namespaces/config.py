@@ -87,7 +87,7 @@ class ListIntegration(Resource):
     @api_endpoint_metrics('GET', '/config/integrations')
     def get(self):
         return {
-            'integrations': [k for k in ca.integration_controller.get_all(sensitive_info=False)]
+            'integrations': [k for k in ca.integration_controller.get_all(show_secrets=False)]
         }
 
 
@@ -97,7 +97,7 @@ class AllIntegration(Resource):
     @ns_conf.doc('get_all_integrations')
     @api_endpoint_metrics('GET', '/config/all_integrations')
     def get(self):
-        integrations = ca.integration_controller.get_all(sensitive_info=False)
+        integrations = ca.integration_controller.get_all(show_secrets=False)
         return integrations
 
 
@@ -107,7 +107,7 @@ class Integration(Resource):
     @ns_conf.doc('get_integration')
     @api_endpoint_metrics('GET', '/config/integrations/integration')
     def get(self, name):
-        integration = ca.integration_controller.get(name, sensitive_info=False)
+        integration = ca.integration_controller.get(name, show_secrets=False)
         if integration is None:
             abort(404, f'Can\'t find database integration: {name}')
         integration = copy.deepcopy(integration)

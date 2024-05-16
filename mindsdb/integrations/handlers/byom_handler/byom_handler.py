@@ -21,20 +21,18 @@ from enum import Enum
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict, Union
-from collections import OrderedDict
 
 import pandas as pd
 from pandas.api import types as pd_types
 
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
+from mindsdb.utilities.fs import safe_extract
 from mindsdb.interfaces.storage import db
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.integrations.utilities.utils import format_exception_error
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 import mindsdb.utilities.profiler as profiler
-from mindsdb.utilities.fs import safe_extract
 
 
 from .proc_wrapper import (
@@ -641,15 +639,3 @@ class ModelWrapperSafe:
         enc_df = self._run_command(params)
         df = pd_decode(enc_df)
         return df
-
-
-connection_args = OrderedDict(
-    code={
-        'type': ARG_TYPE.PATH,
-        'description': 'The path to model code'
-    },
-    modules={
-        'type': ARG_TYPE.PATH,
-        'description': 'The path to model requirements'
-    }
-)

@@ -53,12 +53,23 @@ class FinancialModelingHandler(APIHandler):
                 symbol = params['symbol']
                 params.pop('symbol')
 
+                limitParam = False
+
+                if 'limit' in params:
+                    limit = params['limit']
+                    params.pop('limit')
+                    limitParam = True
+    
                 url = f"{base_url}{symbol}" #https://financialmodelingprep.com/api/v3/historical-price-full/<symbol>
                 param = {'apikey': self.api_key, **params}
 
                 response = requests.get(url, param)
                 historical_data = response.json()
 
+                if limitParam:
+                    return {date: historical_data[date] for date in list(historical_data.keys())[:5]}
+
+                
                 return historical_data
     
     

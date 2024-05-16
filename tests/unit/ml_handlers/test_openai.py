@@ -36,6 +36,38 @@ class TestOpenAI(unittest.TestCase):
         with self.assertRaisesRegex(Exception, "OpenAI engine requires a USING clause! Refer to its documentation for more details."):
             self.handler.create_validation('target', args={}, handler_storage=None)
 
+    def test_create_validation_raises_exception_without_required_parameters(self):
+        """
+        Test if model creation raises an exception without required parameters.
+        """
+
+        with self.assertRaisesRegex(Exception, "One of `question_column`, `prompt_template` or `json_struct` is required for this engine."):
+            self.handler.create_validation('target', args={"using": {}}, handler_storage=self.mock_engine_storage)
+
+    def test_create_validation_raises_exception_with_invalid_parameter_combinations(self):
+        """
+        Test if model creation raises an exception with invalid parameter combinations.
+        """
+
+        with self.assertRaisesRegex(Exception, "^Please provide one of"):
+            self.handler.create_validation('target', args={"using": {'prompt_template': 'dummy_prompt_template', 'question_column': 'question'}}, handler_storage=self.mock_engine_storage)
+
+    def test_create_validation_raises_exception_with_unknown_arguments(self):
+        """
+        Test if model creation raises an exception with unknown arguments.
+        """
+
+        with self.assertRaisesRegex(Exception, "^Unknown arguments:"):
+            self.handler.create_validation('target', args={"using": {'prompt_template': 'dummy_prompt_template', 'unknown_arg': 'unknown_arg'}}, handler_storage=self.mock_engine_storage)
+
+    def test_create_validation_raises_exception_with_invalid_api_key(self):
+        """
+        Test if model creation raises an exception with an invalid API key.
+        """
+
+        with self.assertRaisesRegex(Exception, "Invalid api key"):
+            self.handler.create_validation('target', args={"using": {'prompt_template': 'dummy_prompt_template'}}, handler_storage=self.mock_engine_storage)
+
 
 if __name__ == '__main__':
     unittest.main()

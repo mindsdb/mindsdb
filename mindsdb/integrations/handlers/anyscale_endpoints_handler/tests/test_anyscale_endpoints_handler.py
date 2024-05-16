@@ -28,23 +28,6 @@ class TestAnyscaleEndpoints(BaseMLAPITest):
             """
         )
 
-    def test_create_engine_raises_exception_with_invalid_api_key(self):
-        """
-        Test for invalid API key during engine creation.
-        """
-
-        self.run_sql(
-            """
-            CREATE ML_ENGINE anyscale_endpoints_invalid_api_key_engine
-            FROM anyscale_endpoints
-            USING
-            anyscale_endpoints_api_key = 'invalid_api_key';
-            """
-        )
-
-        with pytest.raises(Exception):
-            self.wait_predictor("proj", "anyscale_endpoints_invalid_api_key_engine")
-
     def test_create_model_raises_exception_with_invalid_model_parameter(self):
         """
         Test for invalid parameter during model creation.

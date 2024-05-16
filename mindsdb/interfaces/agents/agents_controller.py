@@ -295,6 +295,7 @@ class AgentsController:
             # Underlying handler (e.g. Langchain) will handle default tools like mdb_read, mdb_write, etc.
             'tools': tools,
             'skills': [s for s in agent.skills],
+            **(agent.params or {})
         }
         project_datanode = self.datahub.get(project_name)
         return project_datanode.predict(

@@ -68,6 +68,20 @@ class TestOpenAI(unittest.TestCase):
         with self.assertRaisesRegex(Exception, "Invalid api key"):
             self.handler.create_validation('target', args={"using": {'prompt_template': 'dummy_prompt_template'}}, handler_storage=self.mock_engine_storage)
 
+    @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
+    def test_create_validation_runs_no_errors_with_valid_arguments(self, mock_openai):
+        """
+        Test if model creation is validated correctly with valid arguments.
+        """
+
+        # Mock the models.retrieve method of the OpenAI client
+        mock_openai_client = MagicMock()
+        mock_openai_client.models.retrieve.return_value = MagicMock()
+
+        mock_openai.return_value = mock_openai_client
+
+        self.handler.create_validation('target', args={'using': {'model_name': 'dummy_model_name', 'prompt_template': 'dummy_prompt_template'}}, handler_storage=self.mock_engine_storage)
+
 
 if __name__ == '__main__':
     unittest.main()

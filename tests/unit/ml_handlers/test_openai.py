@@ -149,7 +149,7 @@ class TestOpenAI(unittest.TestCase):
         with self.assertRaisesRegex(Exception, "^Invalid operation mode."):
             self.handler.predict(df=df, args={'predict_params': {'mode': 'dummy_mode'}})
 
-    def test_predict_raises_exception_on_embedding_mode_without_question_column(self):
+    def test_predict_raises_exception_in_embedding_mode_without_question_column(self):
         """
         Test if model prediction raises an exception in embedding mode without a question column.
         """
@@ -165,7 +165,7 @@ class TestOpenAI(unittest.TestCase):
         with self.assertRaisesRegex(Exception, "Embedding mode needs a question_column"):
             self.handler.predict(df=df, args={'predict_params': {'mode': 'embedding'}})
 
-    def test_predict_raises_exception_on_image_mode_without_question_column_or_prompt_template(self):
+    def test_predict_raises_exception_in_image_mode_without_question_column_or_prompt_template(self):
         """
         Test if model prediction raises an exception in image mode without a question column or prompt template.
         """
@@ -181,7 +181,7 @@ class TestOpenAI(unittest.TestCase):
         with self.assertRaisesRegex(Exception, "Image mode needs either `prompt_template` or `question_column`."):
             self.handler.predict(df=df, args={'predict_params': {'mode': 'image'}})
 
-    def test_predict_raises_exception_on_default_mode_without_question_column_in_df(self):
+    def test_predict_raises_exception_in_default_mode_without_question_column_in_df(self):
         """
         Test if model prediction raises an exception in default mode without a question column in the DataFrame.
         """
@@ -195,8 +195,43 @@ class TestOpenAI(unittest.TestCase):
         # Create a dummy DataFrame
         df = pandas.DataFrame()
 
-        with self.assertRaisesRegex(Exception, "Question column not found in the DataFrame."):
+        with self.assertRaisesRegex(Exception, "This model expects a question to answer in the 'question' column."):
             self.handler.predict(df=df, args={'predict_params': {'mode': 'default'}})
+
+    def test_predict_raises_exception_in_default_mode_without_context_column_in_df(self):
+        """
+        Test if model prediction raises an exception in default mode without a context column in the DataFrame.
+        """
+
+        # Mock the json_get method of the model storage
+        self.handler.model_storage.json_get.return_value = {
+            'mode': 'default',
+            'question_column': 'question',
+            'context_column': 'context'
+        }
+
+        # Create a dummy DataFrame
+        df = pandas.DataFrame(columns=['question'])
+
+        with self.assertRaisesRegex(Exception, "This model expects context in the 'context' column."):
+            self.handler.predict(df=df, args={'predict_params': {'mode': 'default'}})
+
+    def test_predict_raises_exception_in_conversational_modes_with_unsupported_model(self):
+        """
+        Test if model prediction raises an exception in conversational modes with an unsupported model.
+        """
+
+        # Mock the json_get method of the model storage
+        self.handler.model_storage.json_get.return_value = {
+            'mode': 'conversational',
+            'model_name': 'dummy_unsupported_model_name'
+        }
+
+        # Create a dummy DataFrame
+        df = pandas.DataFrame()
+
+        with self.assertRaisesRegex(Exception, "^Conversational modes are only available for the following models:"):
+            self.handler.predict(df=df, args={'predict_params': {'mode': 'conversational'}})
 
 
 if __name__ == '__main__':

@@ -63,7 +63,7 @@ class TestProjectStructure(BaseExecutorDummyML):
         ret = self.run_sql(
             '''
                 CREATE model proj.task_model
-                from dummy_data (select * from tasks)
+                from proj (select * from dummy_data.tasks)
                 PREDICT a
                 using engine='dummy_ml',
                 tag = 'first',

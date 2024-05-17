@@ -226,7 +226,7 @@ class ModelController():
             # TODO improve here. Suppose that it is view
             if data_integration_meta['type'] == 'project':
                 data_integration_ref = {
-                    'type': 'view'
+                    'type': 'project'
                 }
             elif data_integration_meta['type'] == 'system':
                 data_integration_ref = {

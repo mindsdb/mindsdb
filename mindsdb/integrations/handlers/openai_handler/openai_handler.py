@@ -565,20 +565,9 @@ class OpenAIHandler(BaseMLEngine):
                 else:
                     # in "normal" conversational mode, we request completions only for the last row
                     last_completion_content = None
-                    if args.get('answer_column') in df.columns:
-                        # insert completion if provided, which saves redundant API calls
-                        completions.extend([df.iloc[pidx][args.get('answer_column')]])
-                    else:
-                        completions.extend([''])
+                    completions.extend([''])
 
-                if args.get('answer_column') in df.columns:
-                    kwargs['messages'].append(
-                        {
-                            'role': 'assistant',
-                            'content': df.iloc[pidx][args.get('answer_column')],
-                        }
-                    )
-                elif last_completion_content:
+                if last_completion_content:
                     # interleave assistant responses with user input
                     kwargs['messages'].append(
                         {'role': 'assistant', 'content': last_completion_content[0]}

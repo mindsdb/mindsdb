@@ -529,7 +529,12 @@ class OpenAIHandler(BaseMLEngine):
                     question = prompts[pidx]
                     if question:
                         kwargs['messages'].append({'role': 'user', 'content': question})
-                    answer = df.iloc[pidx][args.get('assistant_column')]
+
+                    assistant_column = args.get('assistant_column')
+                    if assistant_column in df.columns:
+                        answer = df.iloc[pidx][assistant_column]
+                    else:
+                        answer = None
                     if answer:
                         kwargs['messages'].append(
                             {'role': 'assistant', 'content': answer}

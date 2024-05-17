@@ -234,6 +234,78 @@ class TestOpenAI(unittest.TestCase):
             self.handler.predict(df=df, args={'predict_params': {'mode': 'conversational'}})
 
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
+    def test_predict_runs_no_errors_in_default_mode_using_question_column_with_valid_arguments_and_data(self, mock_openai_handler_openai_client):
+        """
+        Test if model prediction returns the expected result in default mode using a question column.
+        """
+
+        # Mock the json_get method of the model storage
+        self.handler.model_storage.json_get.return_value = {
+            'target': 'answer',
+            'mode': 'default',
+            'model_name': 'gpt-3.5-turbo',
+            'question_column': 'question'
+        }
+
+        # Mock the completions.create method of the OpenAI client
+        mock_openai_client = MagicMock()
+        mock_openai_client.chat.completions.create.return_value = MagicMock(
+            choices=[
+                MagicMock(
+                    message=MagicMock(
+                        content='Sweden'
+                    )
+                )
+            ]
+        )
+
+        mock_openai_handler_openai_client.return_value = mock_openai_client
+
+        df = pandas.DataFrame({'question': ['Where is Stockholm located?']})
+        result = self.handler.predict(df, args={})
+
+        self.assertIsInstance(result, pandas.DataFrame)
+        self.assertTrue('answer' in result.columns)
+
+        pandas.testing.assert_frame_equal(result, pandas.DataFrame({'answer': ['Sweden']}))
+
+    @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
+    def test_predict_runs_no_errors_in_default_mode_using_prompt_template_with_valid_arguments_and_data(self, mock_openai_handler_openai_client):
+        """
+        Test if model prediction returns the expected result in default mode using a prompt template.
+        """
+
+        # Mock the json_get method of the model storage
+        self.handler.model_storage.json_get.return_value = {
+            'target': 'answer',
+            'mode': 'default',
+            'model_name': 'gpt-3.5-turbo',
+            'prompt_template': 'Answer the question: {{question}}'
+        }
+
+        # Mock the completions.create method of the OpenAI client
+        mock_openai_client = MagicMock()
+        mock_openai_client.chat.completions.create.return_value = MagicMock(
+            choices=[
+                MagicMock(
+                    message=MagicMock(
+                        content='Sweden'
+                    )
+                )
+            ]
+        )
+
+        mock_openai_handler_openai_client.return_value = mock_openai_client
+
+        df = pandas.DataFrame({'question': ['Where is Stockholm located?']})
+        result = self.handler.predict(df, args={})
+
+        self.assertIsInstance(result, pandas.DataFrame)
+        self.assertTrue('answer' in result.columns)
+
+        pandas.testing.assert_frame_equal(result, pandas.DataFrame({'answer': ['Sweden']}))
+
+    @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
     def test_predict_runs_no_errors_in_embeddings_mode_with_valid_arguments_and_data(self, mock_openai_handler_openai_client):
         """
         Test if model prediction returns the expected result for an embeddings task.
@@ -247,7 +319,7 @@ class TestOpenAI(unittest.TestCase):
             'mode': 'embedding'
         }
 
-        # Mock the embeddings.completions.create method of the OpenAI client (for the OpenAI handler)
+        # Mock the embeddings.completions.create method of the OpenAI client
         mock_openai_client = MagicMock()
         mock_openai_client.embeddings.create.return_value = MagicMock(
             data=[
@@ -268,7 +340,7 @@ class TestOpenAI(unittest.TestCase):
         pandas.testing.assert_frame_equal(result, pandas.DataFrame({'embeddings': [[0, 1]]}))
 
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
-    def test_predict_runs_no_errors_in_image_mode_with_question_column_using_valid_arguments_and_data(self, mock_openai_handler_openai_client):
+    def test_predict_runs_no_errors_in_image_mode_using_question_column_with_valid_arguments_and_data(self, mock_openai_handler_openai_client):
         """
         Test if model prediction returns the expected result for an image task using a question column.
         """
@@ -280,7 +352,7 @@ class TestOpenAI(unittest.TestCase):
             'mode': 'image'
         }
 
-        # Mock the images.generate method of the OpenAI client (for the OpenAI handler)
+        # Mock the images.generate method of the OpenAI client
         mock_openai_client = MagicMock()
         mock_openai_client.images.generate.return_value = MagicMock(
             data=[             
@@ -301,7 +373,7 @@ class TestOpenAI(unittest.TestCase):
         pandas.testing.assert_frame_equal(result, pandas.DataFrame({'image': ['dummy_image_url']}))
 
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
-    def test_predict_runs_no_errors_in_image_mode_with_prompt_template_using_valid_arguments_and_data(self, mock_openai_handler_openai_client):
+    def test_predict_runs_no_errors_in_image_mode_using_prompt_template_with_valid_arguments_and_data(self, mock_openai_handler_openai_client):
         """
         Test if model prediction returns the expected result for an image task using a prompt template.
         """
@@ -313,7 +385,7 @@ class TestOpenAI(unittest.TestCase):
             'mode': 'image'
         }
 
-        # Mock the images.generate method of the OpenAI client (for the OpenAI handler)
+        # Mock the images.generate method of the OpenAI client
         mock_openai_client = MagicMock()
         mock_openai_client.images.generate.return_value = MagicMock(
             data=[             

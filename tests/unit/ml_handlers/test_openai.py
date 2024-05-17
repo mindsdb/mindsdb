@@ -268,9 +268,9 @@ class TestOpenAI(unittest.TestCase):
         pandas.testing.assert_frame_equal(result, pandas.DataFrame({'embeddings': [[0, 1]]}))
 
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
-    def test_predict_runs_no_errors_in_image_mode_with_valid_arguments_and_data(self, mock_openai_handler_openai_client):
+    def test_predict_runs_no_errors_in_image_mode_with_question_column_using_valid_arguments_and_data(self, mock_openai_handler_openai_client):
         """
-        Test if model prediction returns the expected result for an image task.
+        Test if model prediction returns the expected result for an image task using a question column.
         """
 
         # Mock the json_get method of the model storage
@@ -300,6 +300,38 @@ class TestOpenAI(unittest.TestCase):
 
         pandas.testing.assert_frame_equal(result, pandas.DataFrame({'image': ['dummy_image_url']}))
 
+    @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
+    def test_predict_runs_no_errors_in_image_mode_with_prompt_template_using_valid_arguments_and_data(self, mock_openai_handler_openai_client):
+        """
+        Test if model prediction returns the expected result for an image task using a prompt template.
+        """
+
+        # Mock the json_get method of the model storage
+        self.handler.model_storage.json_get.return_value = {
+            'prompt_template': 'Generate an image of {{text}}',
+            'target': 'image',
+            'mode': 'image'
+        }
+
+        # Mock the images.generate method of the OpenAI client (for the OpenAI handler)
+        mock_openai_client = MagicMock()
+        mock_openai_client.images.generate.return_value = MagicMock(
+            data=[             
+                MagicMock(
+                    url='dummy_image_url'
+                )
+            ]
+        )
+
+        mock_openai_handler_openai_client.return_value = mock_openai_client
+
+        df = pandas.DataFrame({'text': ['Leopard cubs playing']})
+        result = self.handler.predict(df, args={})
+
+        self.assertIsInstance(result, pandas.DataFrame)
+        self.assertTrue('image' in result.columns)
+
+        pandas.testing.assert_frame_equal(result, pandas.DataFrame({'image': ['dummy_image_url']}))
 
 
 if __name__ == '__main__':

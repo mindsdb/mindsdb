@@ -64,6 +64,7 @@ class SkillToolController:
         tables_to_include = [f'{database}.{table}' for table in tables]
         db = MindsDBSQL(
             engine=self.get_command_executor(),
+            database=database,
             metadata=self.get_command_executor().session.integration_controller,
             include_tables=tables_to_include
         )

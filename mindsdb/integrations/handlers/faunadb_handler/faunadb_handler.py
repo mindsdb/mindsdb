@@ -1,6 +1,5 @@
 import json
 import pandas as pd
-from collections import OrderedDict
 from typing import List
 
 from faunadb import query as q
@@ -9,7 +8,6 @@ from mindsdb_sql import Select, Insert, CreateTable, Delete
 from mindsdb_sql.parser.ast.select.star import Star
 from mindsdb_sql.parser.ast.base import ASTNode
 
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE,
     HandlerResponse as Response,
@@ -267,38 +265,3 @@ class FaunaDBHandler(DatabaseHandler):
                 resp_type=RESPONSE_TYPE.ERROR,
                 error_message=f"Error getting tables from FaunaDB: {e}",
             )
-
-
-connection_args = OrderedDict(
-    fauna_secret={
-        "type": ARG_TYPE.STR,
-        "description": "faunadb secret",
-        "required": True,
-    },
-    fauna_scheme={
-        "type": ARG_TYPE.STR,
-        "description": "faunadb scheme(http/https)",
-        "required": False,
-    },
-    fauna_domain={
-        "type": ARG_TYPE.STR,
-        "description": "faunadb instance domain",
-        "required": False,
-    },
-    fauna_port={
-        "type": ARG_TYPE.INT,
-        "description": "faunadb instance port",
-        "required": False,
-    },
-    fauna_endpoint={
-        "type": ARG_TYPE.STR,
-        "description": "faunadb instance endpoint",
-        "required": False,
-    },
-)
-
-connection_args_example = OrderedDict(
-    fauna_scheme="https",
-    fauna_domain="db.fauna.com",
-    fauna_port=443,
-)

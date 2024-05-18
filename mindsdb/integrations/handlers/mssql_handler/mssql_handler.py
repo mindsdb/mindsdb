@@ -1,13 +1,11 @@
 import pymssql
 from pymssql import OperationalError
 import pandas as pd
-from collections import OrderedDict
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.integrations.libs.base import DatabaseHandler
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.utilities import log
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.response import (
@@ -218,51 +216,3 @@ class SqlServerHandler(DatabaseHandler):
                 table_name = '{table_name}'
         """
         return self.native_query(query)
-
-
-connection_args = OrderedDict(
-    user={
-        'type': ARG_TYPE.STR,
-        'description': 'The user name used to authenticate with the Microsoft SQL Server.',
-        'required': True,
-        'label': 'User'
-    },
-    password={
-        'type': ARG_TYPE.PWD,
-        'description': 'The password to authenticate the user with the Microsoft SQL Server.',
-        'required': True,
-        'label': 'Password'
-    },
-    database={
-        'type': ARG_TYPE.STR,
-        'description': 'The database name to use when connecting with the Microsoft SQL Server.',
-        'required': True,
-        'label': 'Database'
-    },
-    host={
-        'type': ARG_TYPE.STR,
-        'description': 'The host name or IP address of the Microsoft SQL Server.',
-        'required': True,
-        'label': 'Host'
-    },
-    port={
-        'type': ARG_TYPE.INT,
-        'description': 'The TCP/IP port of the Microsoft SQL Server. Must be an integer.',
-        'required': False,
-        'label': 'Port'
-    },
-    server={
-        'type': ARG_TYPE.STR,
-        'description': 'The server name of the Microsoft SQL Server. Typically only used with named instances or Azure SQL Database.',
-        'required': False,
-        'label': 'Server'
-    }
-)
-
-connection_args_example = OrderedDict(
-    host='127.0.0.1',
-    port=1433,
-    user='sa',
-    password='password',
-    database='master'
-)

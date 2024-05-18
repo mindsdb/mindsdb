@@ -1,9 +1,31 @@
 ---
-title: MindsDB SQL
+title: SQL API
 sidebarTitle: Overview
-icon: "code"
+icon: "database"
 ---
 
 MindsDB enhances standard SQL by providing AI building blocks.
 
 This section introduces custom SQL syntax provided by MindsDB to bring data and AI together.
+
+Follow these steps to get started:
+
+<Steps>
+  <Step title="Connect a data source">
+    Use [CREATE DATABASE](/mindsdb_sql/sql/create/database) to connect your data source to MindsDB.<br></br>
+    Explore all available [data sources here](/integrations/data-overview).
+  </Step>
+  <Step title="Configure an AI engine">
+    Use [CREATE ML_ENGINE](/mindsdb_sql/sql/create/ml-engine) to configure an engine of your choice.<br></br>
+    Explore all available [AI engines here](/integrations/ai-overview).
+  </Step>
+  <Step title="Create and deploy an AI/ML model">
+    Use [CREATE MODEL](/mindsdb_sql/sql/create/model) to create, train, and deploy AI/ML models within MindsDB.
+  </Step>
+  <Step title="Query for predictions">
+    Query for a [single prediction](/mindsdb_sql/sql/get-single-prediction) or [batch predictions](/mindsdb_sql/sql/get-batch-predictions) by joining data with models.
+  </Step>
+  <Step title="Automate customized workflows">
+    Use [JOB](/mindsdb_sql/sql/create/jobs), [TRIGGER](/mindsdb_sql/sql/create/trigger), or [AGENT](/mindsdb_sql/agents/agent) to automate workflows.
+  </Step>
+</Steps>

@@ -32,9 +32,9 @@ class DatabaseController:
             raise Exception(f"Database with type '{db_type}' cannot be deleted")
 
     @profiler.profile()
-    def get_list(self, filter_type: Optional[str] = None):
+    def get_list(self, filter_type: Optional[str] = None, with_secrets: Optional[bool] = True):
         projects = self.project_controller.get_list()
-        integrations = self.integration_controller.get_all()
+        integrations = self.integration_controller.get_all(show_secrets=with_secrets)
         result = [{
             'name': 'information_schema',
             'type': 'system',

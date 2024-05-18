@@ -41,7 +41,7 @@ MAIN_RULE_IGNORES = {
     "DEP003": ["torch"],
     "DEP001": ["torch"],
     # bs4 is used by Agents & Knowledge Bases (web handler).
-    "DEP002": ["psycopg2-binary", "lark", "bs4"],
+    "DEP002": ["psycopg2-binary", "lark", "bs4", "sqlalchemy-solr"],
 }
 
 # THe following packages need exceptions because they are optional deps of some other packages. e.g. langchain CAN use openai
@@ -58,7 +58,7 @@ MAIN_REQUIREMENTS_DEPS = get_requirements_from_file(MAIN_REQS_PATH) + get_requir
 BYOM_HANLDER_DEPS = ["pyarrow"]
 
 HANDLER_RULE_IGNORES = {
-    "DEP002": OPTIONAL_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS + BYOM_HANLDER_DEPS,
+    "DEP002": OPTIONAL_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS + BYOM_HANLDER_DEPS + ["sqlalchemy-solr"],
     "DEP001": ["tests"]  # 'tests' is the mindsdb tests folder in the repo root
 }
 

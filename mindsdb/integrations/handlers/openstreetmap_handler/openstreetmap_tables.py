@@ -6,7 +6,7 @@ from mindsdb.integrations.libs.api_handler import APITable
 
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 
-from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
+from mindsdb.integrations.utilities.handlers.query_utilities import SELECTQueryParser, SELECTQueryExecutor
 
 
 class OpenStreetMapNodeTable(APITable):

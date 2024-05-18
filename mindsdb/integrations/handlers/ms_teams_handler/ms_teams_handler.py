@@ -2,7 +2,7 @@ from typing import Text, Dict
 
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
-from mindsdb.integrations.handlers.utilities.auth_utilities import MSGraphAPIAuthManager
+from mindsdb.integrations.utilities.handlers.auth_utilities import MSGraphAPIAuthManager
 from mindsdb.integrations.handlers.ms_teams_handler.settings import ms_teams_handler_config
 from mindsdb.integrations.handlers.ms_teams_handler.ms_graph_api_teams_client import MSGraphAPITeamsClient
 

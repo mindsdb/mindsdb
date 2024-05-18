@@ -11,7 +11,7 @@ from sib_api_v3_sdk.rest import ApiException
 from datetime import datetime
 
 
-from mindsdb.integrations.handlers.utilities.query_utilities import (
+from mindsdb.integrations.utilities.handlers.query_utilities import (
     SELECTQueryParser,
     SELECTQueryExecutor,
     UPDATEQueryExecutor,

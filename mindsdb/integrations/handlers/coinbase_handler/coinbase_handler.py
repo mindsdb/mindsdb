@@ -1,16 +1,15 @@
-import pandas as pd
-from typing import Dict
-import datetime
-import hmac
-import hashlib
 import time
-import requests
-from collections import OrderedDict
+import hmac
 import base64
+import hashlib
+import datetime
+from typing import Dict
+
+import pandas as pd
+import requests
 
 from mindsdb.integrations.handlers.coinbase_handler.coinbase_tables import CoinBaseAggregatedTradesTable
 from mindsdb.integrations.libs.api_handler import APIHandler
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -137,31 +136,3 @@ class CoinBaseHandler(APIHandler):
         if method_name == 'get_candle':
             return self._get_candle(params)
         raise NotImplementedError('Method name {} not supported by CoinBase API Handler'.format(method_name))
-
-
-connection_args = OrderedDict(
-    api_key={
-        'type': ARG_TYPE.STR,
-        'description': 'API Key For Connecting to CoinBase API.',
-        'required': True,
-        'label': 'API Key'
-    },
-    api_secret={
-        'type': ARG_TYPE.PWD,
-        'description': 'API Secret For Connecting to CoinBase API.',
-        'required': True,
-        'label': 'API Secret'
-    },
-    api_passphrase={
-        'type': ARG_TYPE.PWD,
-        'description': 'API Passphrase.',
-        'required': True,
-        'label': 'API Passphrase'
-    },
-)
-
-connection_args_example = OrderedDict(
-    api_key='public_key',
-    api_secret='secret_key',
-    api_passphrase='passphrase'
-)

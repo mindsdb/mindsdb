@@ -1,22 +1,20 @@
-from collections import OrderedDict
 from typing import Optional
+
+import pandas as pd
+import ibm_db_dbi as love
+from ibm_db_sa.ibm_db import DB2Dialect_ibm_db as DB2Dialect
+from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.utilities import log
-from mindsdb_sql import parse_sql
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE,
 )
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
-
-import pandas as pd
-import ibm_db_dbi as love
-
-from ibm_db_sa.ibm_db import DB2Dialect_ibm_db as DB2Dialect
 
 logger = log.getLogger(__name__)
 
@@ -228,39 +226,3 @@ class DB2Handler(DatabaseHandler):
             response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         return response
-
-
-connection_args = OrderedDict(
-    host={
-        "type": ARG_TYPE.STR,
-        "description": "The host name or IP address of the DB2 server/database.",
-    },
-    database={
-        "type": ARG_TYPE.STR,
-        "description": """
-            The database name to use when connecting with the DB2 server.
-        """,
-    },
-    user={
-        "type": ARG_TYPE.STR,
-        "description": "The user name used to authenticate with the DB2 server.",
-    },
-    password={
-        "type": ARG_TYPE.STR,
-        "description": "The password to authenticate the user with the DB2 server.",
-    },
-    port={
-        "type": ARG_TYPE.INT,
-        "description": "Specify port to connect DB2 through TCP/IP",
-    },
-    schemaName={"type": ARG_TYPE.STR, "description": "Specify the schema name "},
-)
-
-connection_args_example = OrderedDict(
-    host="127.0.0.1",
-    port="25000",
-    password="1234",
-    user="db2admin",
-    schemaName="db2admin",
-    database="BOOKS",
-)

@@ -251,7 +251,9 @@
     {"source": "/model-management","destination": "/features/model-management"},
     {"source": "/ai-integrations","destination": "/features/ai-integrations"},
     {"source": "/data-integrations","destination": "/features/data-integrations"},
-    {"source": "/automation","destination": "/features/automation"}
+    {"source": "/automation","destination": "/features/automation"},
+    {"source": "/features/ai-integrations","destination": "/integrations/ai-overview"},
+    {"source": "/features/data-integrations","destination": "/integrations/data-overview"}
   ],
   "navigation": [
     {
@@ -262,20 +264,8 @@
         {
           "group": "Installation",
           "pages": [
-            {
-              "group": "Local",
-              "pages": [
-                "setup/self-hosted/docker",
-                "setup/self-hosted/docker-desktop"
-              ]
-            },
-            {
-              "group": "Cloud",
-              "pages": [
-                "setup/aws",
-                "setup/gcp"
-              ]
-            },
+            "setup/self-hosted/docker",
+            "setup/self-hosted/docker-desktop",
             {
               "group": "Configuration",
               "pages": [
@@ -1037,6 +1027,12 @@
           "group": "Multi-Media Models",
           "pages": [
             {
+              "group": "Audio Models",
+              "pages": [
+                "integrations/ai-engines/replicate-audio"
+              ]
+            },
+            {
               "group": "Image Models",
               "pages": [
                 "integrations/ai-engines/replicate-text2img",
@@ -1044,16 +1040,10 @@
               ]
             },
             {
-              "group": "Large Video Models",
+              "group": "Video Models",
               "pages": [
                 "integrations/ai-engines/twelvelabs",
                 "integrations/ai-engines/replicate-text2video"
-              ]
-            },
-            {
-              "group": "Audio Models",
-              "pages": [
-                "integrations/ai-engines/replicate-audio"
               ]
             }
           ]

@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from datetime import datetime
 from typing import List, Optional
 
@@ -6,8 +5,6 @@ import weaviate
 from weaviate.embedded import EmbeddedOptions
 import pandas as pd
 
-
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse
 from mindsdb.integrations.libs.response import HandlerResponse as Response
@@ -664,28 +661,3 @@ class WeaviateDBHandler(VectorStoreHandler):
             data_object=data, class_name=table_name.capitalize() + "_metadata"
         )
         return metadata_id
-
-
-connection_args = OrderedDict(
-    weaviate_url={
-        "type": ARG_TYPE.STR,
-        "description": "weaviate url/ local endpoint",
-        "required": False,
-    },
-    weaviate_api_key={
-        "type": ARG_TYPE.STR,
-        "description": "weaviate API KEY",
-        "required": False,
-    },
-    persistence_directory={
-        "type": ARG_TYPE.STR,
-        "description": "persistence directory for weaviate",
-        "required": False,
-    },
-)
-
-connection_args_example = OrderedDict(
-    weaviate_url="http://localhost:8080",
-    weaviate_api_key="<api_key>",
-    persistence_directory="db_path",
-)

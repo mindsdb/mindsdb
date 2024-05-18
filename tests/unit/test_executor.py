@@ -2,6 +2,7 @@ from unittest.mock import patch
 import datetime as dt
 import tempfile
 import pytest
+import json
 
 import pandas as pd
 import numpy as np
@@ -1394,3 +1395,67 @@ class TestIfExistsIfNotExists(BaseExecutorMockPredictor):
 
         # drop again with if exists should not throw an error
         self.execute('DROP VIEW IF EXISTS test_view2')
+
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_hide_secrets(self, mock_handler):
+        HIDDEN_PASSWORD = '******'
+        df = pd.DataFrame([
+            {'a': 1, 'b': 'one'},
+            {'a': 2, 'b': 'two'},
+            {'a': 1, 'b': 'three'},
+        ])
+        self.set_handler(mock_handler, name='pg', tables={'tasks': df})
+
+        self.execute("""
+            create ml_engine ml_test from dummy_ml using api_key = '123456'
+        """)
+
+        # region Check that every secret is hidden
+        ret = self.execute("""
+            select * from information_schema.ml_engines where name = 'ml_test'
+        """)
+        connection_data = json.loads(ret.records[0]['CONNECTION_DATA'])
+        assert connection_data['api_key'] == HIDDEN_PASSWORD
+
+        ret = self.execute("""
+            select * from information_schema.databases where name = 'pg';
+        """)
+        connection_data = json.loads(ret.records[0]['CONNECTION_DATA'])
+        assert connection_data['password'] == HIDDEN_PASSWORD
+
+        self.execute("""
+            CREATE MODEL mindsdb.test_predictor
+            PREDICT target
+            USING
+                engine = 'dummy_ml',
+                api_key = '654321'
+        """)
+        ret = self.execute("""
+            show models where name = 'test_predictor';
+        """)
+        training_options = json.loads(ret.records[0]['TRAINING_OPTIONS'])
+        assert training_options['using']['api_key'] == HIDDEN_PASSWORD
+        # endregion
+
+        # region Set 'show secrets' and make sure that every secret is revealed
+        self.execute("""
+            set show_secrets=True;
+        """)
+        ret = self.execute("""
+            select * from information_schema.ml_engines where name = 'ml_test'
+        """)
+        connection_data = json.loads(ret.records[0]['CONNECTION_DATA'])
+        assert connection_data['api_key'] != HIDDEN_PASSWORD
+
+        ret = self.execute("""
+            select * from information_schema.databases where name = 'pg';
+        """)
+        connection_data = json.loads(ret.records[0]['CONNECTION_DATA'])
+        assert connection_data['password'] != HIDDEN_PASSWORD
+
+        ret = self.execute("""
+            show models where name = 'test_predictor';
+        """)
+        training_options = json.loads(ret.records[0]['TRAINING_OPTIONS'])
+        assert training_options['using']['api_key'] != HIDDEN_PASSWORD
+        # endregion

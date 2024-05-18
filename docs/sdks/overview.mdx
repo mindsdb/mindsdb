@@ -1,17 +1,36 @@
 ---
-title: Overview
+title: SDKs
 sidebarTitle: Overview
-icon: "code"
+icon: "rectangle-code"
 ---
 
-MindsDB enhances standard SQL with AI building blocks. So you can bridge the gap between data and AI using MindsDB SQL syntax, as detailed in the Documentation tab.
+MindsDB provides SDKs for MongoDB, Python, and JavaScript, enabling incorporation of AI building blocks into these development environments.
 
-Moreover, you can also integrate MindsDB into your application using Mongo-QL, Python, and JavaScript.
+This section introduces custom syntax provided by MindsDB to bring data and AI together inside MongoDB, Python, and JavaScript development environments.
 
-<CardGroup cols={3}>
+Follow these steps to get started:
 
-    <Card title="Mongo-QL" icon="link" href="/sdks/mongo/mindsdb-mongo-ql-overview"></Card>
-    <Card title="Python SDK" icon="link" href="/sdks/python/overview"></Card>
-    <Card title="JavaScript SDK" icon="link" href="/sdks/javascript/overview"></Card>
-
-</CardGroup>
+<Steps>
+  <Step title="Set up the development environment">
+    For MongoDB, use [MongoDB Compass](/sdks/mongo/connect/mongo-compass) or [MongoDB Shell](/sdks/mongo/connect/mongo-shell).<br></br>
+    For Python, [install the package](/sdks/python/installation).<br></br>
+    For JavaScript, [install the package](/sdks/javascript/installation).<br></br>
+  </Step>
+  <Step title="Connect a data source">
+    Connect a data source in [MongoDB](/sdks/mongo/databases/insertOne), [Python](/sdks/python/create_database), and [JavaScript](/sdks/javascript/create_database).<br></br>
+    Explore all available [data sources here](/integrations/data-overview).
+  </Step>
+  <Step title="Configure an AI engine">
+    Configure an AI engine in [MongoDB](/sdks/mongo/ml_engines/insertOne), [Python](/sdks/python/create_ml_engine), and [JavaScript](/sdks/javascript/create_ml_engine).<br></br>
+    Explore all available [AI engines here](/integrations/ai-overview).
+  </Step>
+  <Step title="Create and deploy an AI/ML model">
+    Create and deploy an AI/ML model in [MongoDB](/sdks/mongo/models/insertOne), [Python](/sdks/python/create_model), and [JavaScript](/sdks/javascript/create_model).
+  </Step>
+  <Step title="Query for predictions">
+    Query for predictions in [MongoDB](/sdks/mongo/models/get-batch-predictions), [Python](/sdks/python/get-batch-predictions), and [JavaScript](/sdks/javascript/batchQuery).
+  </Step>
+  <Step title="Automate customized workflows">
+    Automate tasks by scheduling docs in [MongoDB](/sdks/mongo/jobs/insertOne), [Python](/sdks/python/create_job), and [JavaScript](/sdks/javascript/create_job).
+  </Step>
+</Steps>

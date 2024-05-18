@@ -1,12 +1,8 @@
 from mindsdb.integrations.libs.const import HANDLER_TYPE
 
+from .connection_args import connection_args, connection_args_example
 try:
-    from .maxdb_handler import (
-        MaxDBHandler as Handler,
-        connection_args_example,
-        connection_args,
-    )
-
+    from .maxdb_handler import MaxDBHandler as Handler
     import_error = None
 except Exception as e:
     Handler = None

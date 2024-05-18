@@ -65,13 +65,31 @@ Here is the output:
 
 Let's create a model collection to answer all questions from the input dataset:
 
+<Note>
+Note that you need to create an OpenAI engine first before deploying the OpenAI model within MindsDB.
+
+Here is how to create this engine:
+
+```bash
+mongo_demo_db> use mindsdb
+mindsdb> db.ml_engines.insertOne(
+          {
+              "name": "openai_engine",
+              "handler": "openai",
+              "params": {
+                  "openai_api_key": "your-openai-api-key"
+                  }
+          })
+```
+</Note>
+
 ```bash
 mongo_demo_db> use mindsdb
 mindsdb> db.models.insertOne({
             name: 'question_answering',
             predict: 'answer',
             training_options: {
-                        engine: 'openai',
+                        engine: 'openai_engine',
                         prompt_template: 'answer the question of text:{{question}} about text:{{article_title}}'
                 }
         })
@@ -152,31 +170,6 @@ Here is the output data:
 
 The `questions` collection is used to make batch predictions. Upon joining the `question_answering` model with the `questions` collection, the model uses all values from the `article_title` and `question` fields.
 
-## Leverage the NLP Capabilities with MindsDB
-
-By integrating databases and OpenAI using MindsDB, developers can easily extract insights from text data with just a few SQL commands. These powerful natural language processing (NLP) models are capable of answering questions with or without context and completing general prompts.
-
-Furthermore, these models are powered by large pre-trained language models from OpenAI, so there is no need for manual development work. Ultimately, this provides developers with an easy way to incorporate powerful NLP capabilities into their applications while saving time and resources compared to traditional ML development pipelines and methods. All in all, MindsDB makes it possible for developers to harness the power of OpenAI efficiently!
-
-MindsDB is now the fastest-growing open-source applied machine-learning platform in the world. Its community continues to contribute to more than 70 data-source and ML-framework integrations. Stay tuned for the upcoming features - including more control over the interface parameters and fine-tuning models directly from MindsDB!
-
-Experiment with OpenAI models within MindsDB and unlock the ML capability over your data in minutes.
-
-Finally, if MindsDB's vision to democratize ML sounds exciting, head to our [community Slack](https://mindsdb.com/joincommunity), where you can get help and find people to chat about using other available data sources, ML frameworks, or writing a handler to bring your own!
-
-Follow our introduction to MindsDB's OpenAI integration [here](https://mindsdb.com/blog/extract-insights-from-text-inside-databases-using-openai-gpt3-and-mindsdb-integration). Also, we've got a variety of tutorials that use MySQL and MongoDB:
-
-- [Sentiment Analysis in MySQL](/nlp/sentiment-analysis-inside-mysql-with-openai)
-- [Question Answering in MySQL](/nlp/question-answering-inside-mysql-with-openai)
-- [Text Summarization in MySQL](/nlp/text-summarization-inside-mysql-with-openai)
-- [Sentiment Analysis in MongoDB](/nlp/sentiment-analysis-inside-mongodb-with-openai)
-- [Text Summarization in MongoDB](/nlp/text-summarization-inside-mongodb-with-openai)
-
-## What's Next?
-
-Have fun while trying it out yourself!
-
-- Bookmark [MindsDB repository on GitHub](https://github.com/mindsdb/mindsdb).
-- Engage with the MindsDB community on [Slack](https://mindsdb.com/joincommunity) or [GitHub](https://github.com/mindsdb/mindsdb/discussions) to ask questions and share your ideas and thoughts.
-
-If this tutorial was helpful, please give us a GitHub star [here](https://github.com/mindsdb/mindsdb).
+<Tip>
+Check out [this blog post on time series forecasting with Nixtla and MindsDB using MongoDB-QL](https://mindsdb.com/blog/time-series-forecasting-with-nixtla-and-mindsdb-using-mongodb-query-language).
+</Tip>

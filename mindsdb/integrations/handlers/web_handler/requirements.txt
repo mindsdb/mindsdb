@@ -1,1 +1,2 @@
 pymupdf
+html2text

@@ -1,5 +1,4 @@
 from typing import Optional
-from collections import OrderedDict
 
 import pandas as pd
 from databend_sqlalchemy import connector
@@ -7,7 +6,7 @@ from databend_sqlalchemy import connector
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.base import DatabaseHandler
-from databend_sqlalchemy.databend_dialect import DatabendDialect    
+from databend_sqlalchemy.databend_dialect import DatabendDialect
 
 from mindsdb_sql.parser.ast.base import ASTNode
 
@@ -17,7 +16,6 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
 logger = log.getLogger(__name__)
 
@@ -193,34 +191,3 @@ class DatabendHandler(DatabaseHandler):
         result.data_frame = df.rename(columns={'Field': 'column_name', 'Type': 'data_type', 'Null': 'is_nullable', 'Default': 'default_value', 'Extra': 'extra'})
 
         return result
-
-connection_args = OrderedDict(
-    user={
-        'type': ARG_TYPE.STR,
-        'description': 'The user name used to authenticate with the Databend warehouse.'
-    },
-    password={
-        'type': ARG_TYPE.STR,
-        'description': 'The password to authenticate the user with the Databend warehouse.'
-    },
-    database={
-        'type': ARG_TYPE.STR,
-        'description': 'The database name to use when connecting with the Databend warehouse.'
-    },
-    host={
-        'type': ARG_TYPE.STR,
-        'description': 'The host name or IP address of the Databend warehouse. NOTE: use \'127.0.0.1\' instead of \'localhost\' to connect to local server.'
-    },
-    port={
-        'type': ARG_TYPE.INT,
-        'description': 'The TCP/IP port of the ClickHouse server.'
-    }
-)
-
-connection_args_example = OrderedDict(
-    host='some-url.aws-us-east-2.default.databend.com',
-    port=443,
-    user='root',
-    password='password',
-    database='test_db'
-)

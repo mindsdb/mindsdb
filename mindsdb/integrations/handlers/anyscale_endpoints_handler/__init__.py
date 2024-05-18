@@ -1,6 +1,7 @@
 from mindsdb.integrations.libs.const import HANDLER_TYPE
 
 from .__about__ import __version__ as version, __description__ as description
+from .creation_args import creation_args
 try:
     from .anyscale_endpoints_handler import AnyscaleEndpointsHandler as Handler
     import_error = None
@@ -15,5 +16,5 @@ icon_path = 'icon.svg'
 permanent = False
 
 __all__ = [
-    'Handler', 'version', 'name', 'type', 'title', 'description', 'import_error', 'icon_path'
+    'Handler', 'version', 'name', 'type', 'title', 'description', 'import_error', 'icon_path', 'creation_args'
 ]

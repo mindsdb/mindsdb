@@ -138,7 +138,6 @@ class InformationSchemaDataNode(DataNode):
         return [x.lower() for x in projects]
 
     def get_tables(self):
-
         return {
             name: table
             for name, table in self.tables.items()
@@ -161,7 +160,7 @@ class InformationSchemaDataNode(DataNode):
         tbl = self.tables[table_name]
 
         if hasattr(tbl, 'get_data'):
-            dataframe = tbl.get_data(query=query, inf_schema=self)
+            dataframe = tbl.get_data(query=query, inf_schema=self, session=self.session)
         else:
             dataframe = self._get_empty_table(tbl)
         data = query_df(dataframe, query, session=self.session)

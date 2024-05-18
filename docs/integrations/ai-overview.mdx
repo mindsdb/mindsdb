@@ -1,70 +1,79 @@
 ---
-title: AI Engines & AI Tables
+title: AI Integrations
 sidebarTitle: Overview
 icon: "microchip-ai"
 ---
 
+MindsDB integrates with numerous AI frameworks, facilitating [deployment and management of AI models](/model-management).
+
 <p align="center">
-  <img src="https://docs.google.com/drawings/d/e/2PACX-1vQDXTuCWl8IxTEO-2ntjN17B5XtCtJDJ_d_PDCeX0ch0GBzSJfuJmefGuM_FEyGOwlgrxnNSzmLaYGO/pub?w=951&h=460"/>
-</p>  
+  <img src="/assets/ai-integrations.png" />
+</p>
 
-MindsDB offers a wide range of <strong>AI engines</strong> used to create models and incorporate them in the data landscape as virtual [AI-tables](/generative-ai-tables). MinsdDB abstracts AI models as virtual tables, or Generative AI Tables, that can generate data from the underlying model upon being queried.
+MindsDB offers a wide range of <strong>AI engines</strong> used to create models and incorporate them in the data landscape as virtual [AI tables](/generative-ai-tables). MinsdDB abstracts AI models as virtual tables, or Generative AI Tables, that can generate data from the underlying model upon being queried.
 
-<Tip>
-MindsDB provides over 20 AI/ML handlers to connect the available ML frameworks.
-
-If you don't find an ML framework of your interest, you can [request a feature here](https://github.com/mindsdb/mindsdb/issues/new?assignees=&labels=enhancement&projects=&template=feature_request_v2.yaml) or build an ML handler following [this instruction](/contribute/ml-handlers).
-</Tip>
-
-This section contains instructions on how to create models in MindsDB, utilizing different ML frameworks.
+<Info>
+This section contains instructions on how to create and deploy models within MindsDB, utilizing different AI/ML frameworks.
+</Info>
 
 ### Large Language Models
 
 <CardGroup cols={4}>
-    <Card title="Ollama" icon="link" href="/integrations/ai-engines/ollama"></Card>
-    <Card title="Anyscale Endpoints" icon="link" href="/integrations/ai-engines/anyscale"></Card>
-    <Card title="ReplicateLLM" icon="link" href="/integrations/ai-engines/replicate-llm"></Card>
-    <Card title="Vertex AI (Google)" icon="link" href="/integrations/ai-engines/vertex"></Card>
     <Card title="Anthropic" icon="link" href="/integrations/ai-engines/anthropic"></Card>
+    <Card title="Anyscale Endpoints" icon="link" href="/integrations/ai-engines/anyscale"></Card>
     <Card title="Cohere" icon="link" href="/integrations/ai-engines/cohere"></Card>
-    <Card title="OpenAI" icon="link" href="/integrations/ai-engines/openai"></Card>
     <Card title="Hugging Face" icon="link" href="/integrations/ai-engines/huggingface"></Card>
+    <Card title="Hugging Face Inference API" icon="link" href="/integrations/ai-engines/huggingface_inference_api"></Card>
     <Card title="LangChain" icon="link" href="/integrations/ai-engines/langchain"></Card>
     <Card title="LlamaIndex" icon="link" href="/integrations/ai-engines/llamaindex"></Card>
     <Card title="MonkeyLearn" icon="link" href="/integrations/ai-engines/monkeylearn"></Card>
+    <Card title="MindsDB Inference Endpoints" icon="link" href="/integrations/ai-engines/mindsdb_inference"></Card>
+    <Card title="Ollama" icon="link" href="/integrations/ai-engines/ollama"></Card>
+    <Card title="OpenAI" icon="link" href="/integrations/ai-engines/openai"></Card>
+    <Card title="Replicate (LLM)" icon="link" href="/integrations/ai-engines/replicate-llm"></Card>
     <Card title="RAG" icon="link" href="/integrations/ai-engines/rag"></Card>
+    <Card title="Vertex AI" icon="link" href="/integrations/ai-engines/vertex"></Card>
     
 </CardGroup>
 
 ### Bring Your Own Models
 
 <CardGroup cols={4}>
-
     <Card title="BYOM" icon="link" href="/integrations/ai-engines/byom"></Card>
-    <Card title="Ray Serve" icon="link" href="/integrations/ai-engines/ray-serve"></Card>
     <Card title="MLflow" icon="link" href="/integrations/ai-engines/mlflow"></Card>
+    <Card title="Ray Serve" icon="link" href="/integrations/ai-engines/ray-serve"></Card>
+    
+</CardGroup>
+
+### Anomaly Detection
+
+<CardGroup cols={4}>
+    <Card title="Anomaly Detection" icon="link" href="/integrations/ai-engines/anomaly"></Card>
 
 </CardGroup>
 
 ### AutoML
 
 <CardGroup cols={4}>
-
     <Card title="Lightwood" icon="link" href="/integrations/ai-engines/lightwood"></Card>
     <Card title="PyCaret" icon="link" href="/integrations/ai-engines/pycaret"></Card>
-    <Card title="Ludwig" icon="link" href="/integrations/ai-engines/ludwig"></Card>
-    <Card title="Autokeras" icon="link" href="/integrations/ai-engines/autokeras"></Card>
-    <Card title="Autosklearn" icon="link" href="/integrations/ai-engines/autosklearn"></Card>
 
 </CardGroup>
 
 ### Time Series Models
 
 <CardGroup cols={4}>
-
-    <Card title="StatsForecast" icon="link" href="/integrations/ai-engines/statsforecast"></Card>
     <Card title="NeuralForecast" icon="link" href="/integrations/ai-engines/neuralforecast"></Card>
+    <Card title="StatsForecast" icon="link" href="/integrations/ai-engines/statsforecast"></Card>
     <Card title="TimeGPT" icon="link" href="/integrations/ai-engines/timegpt"></Card>
+
+</CardGroup>
+
+### Recommender Models
+
+<CardGroup cols={4}>
+    <Card title="LightFM" icon="link" href="/integrations/ai-engines/lightfm"></Card>
+    <Card title="Popularity Recommender" icon="link" href="/integrations/ai-engines/popularity-recommender"></Card>
 
 </CardGroup>
 
@@ -81,20 +90,26 @@ This section contains instructions on how to create models in MindsDB, utilizing
     <Card title="Replicate (Img2Text)" icon="link" href="/integrations/ai-engines/replicate-img2txt"></Card>
 </CardGroup>
 
-### Large Video Models
+### Video Models
 
 <CardGroup cols={4}>
 
     <Card title="TweleveLabs (Video Semantic Search)" icon="link" href="/integrations/ai-engines/twelvelabs"></Card>
-    <Card title="Repliate (text2video)" icon="link" href="/integrations/ai-engines/replicate-text2video"></Card>
+    <Card title="Replicate (Text2Video)" icon="link" href="/integrations/ai-engines/replicate-text2video"></Card>
 </CardGroup>
 
 <br></br>
 
-## Metadata SQL Syntax
+<Tip>
+If you don't find an AI/ML framework of your interest, you can [request a feature here](https://github.com/mindsdb/mindsdb/issues/new?assignees=&labels=enhancement&projects=&template=feature_request_v2.yaml) or build an AI/ML handler following [this instruction](/contribute/ml-handlers).
+</Tip>
 
 <Info>
-Here is how you can query for all the available ML handlers used to create AI engines.
+**Metadata about AI handlers and AI engines**
+
+**AI handlers** represent a raw implementation of the integration between MindsDB and an AI/ML framework. These are used to create AI engines.
+
+Here is how you can query for all the available AI handlers used to create AI engines.
 
   ```sql
   SELECT *

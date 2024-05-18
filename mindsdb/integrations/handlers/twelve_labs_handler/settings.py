@@ -3,7 +3,7 @@ from typing import List, Optional
 from pydantic import BaseModel, model_validator
 from pydantic_settings import BaseSettings
 
-from mindsdb.integrations.handlers.utilities.validation_utilities import ParameterValidationUtilities
+from mindsdb.integrations.utilities.handlers.validation_utilities import ParameterValidationUtilities
 
 
 class TwelveLabsHandlerModel(BaseModel):

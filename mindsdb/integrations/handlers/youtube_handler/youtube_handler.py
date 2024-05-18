@@ -16,7 +16,7 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 
 from googleapiclient.discovery import build
 
-from mindsdb.integrations.handlers.utilities.auth_utilities import GoogleUserOAuth2Manager
+from mindsdb.integrations.utilities.handlers.auth_utilities import GoogleUserOAuth2Manager
 
 DEFAULT_SCOPES = [
 	'https://www.googleapis.com/auth/youtube',

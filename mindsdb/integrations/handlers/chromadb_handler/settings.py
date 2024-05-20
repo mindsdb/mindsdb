@@ -1,4 +1,5 @@
 import difflib
+from typing import Any
 
 from pydantic import BaseModel, model_validator
 
@@ -18,7 +19,8 @@ class ChromaHandlerConfig(BaseModel):
         extra = "forbid"
 
     @model_validator(mode="before")
-    def check_param_typos(cls, values):
+    @classmethod
+    def check_param_typos(cls, values: Any) -> Any:
         """Check if there are any typos in the parameters."""
 
         expected_params = cls.model_fields.keys()
@@ -36,7 +38,8 @@ class ChromaHandlerConfig(BaseModel):
         return values
 
     @model_validator(mode="before")
-    def check_config(cls, values):
+    @classmethod
+    def check_config(cls, values: Any) -> Any:
         """Check if config is valid."""
 
         vector_store = values.get("vector_store")

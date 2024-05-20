@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Any
 
 from pydantic import BaseModel, model_validator
 from pydantic_settings import BaseSettings
@@ -83,7 +83,8 @@ class TwelveLabsHandlerModel(BaseModel):
         extra = "forbid"
 
     @model_validator(mode="before")
-    def check_param_typos(cls, values):
+    @classmethod
+    def check_param_typos(cls, values: Any) -> Any:
         """
         Root validator to check if there are any typos in the parameters.
 
@@ -103,7 +104,8 @@ class TwelveLabsHandlerModel(BaseModel):
         return values
 
     @model_validator(mode="before")
-    def check_for_valid_task(cls, values):
+    @classmethod
+    def check_for_valid_task(cls, values: Any) -> Any:
         """
         Root validator to check if the task provided is valid.
 
@@ -128,7 +130,8 @@ class TwelveLabsHandlerModel(BaseModel):
         return values
 
     @model_validator(mode="before")
-    def check_for_valid_engine_options(cls, values):
+    @classmethod
+    def check_for_valid_engine_options(cls, values: Any) -> Any:
         """
         Root validator to check if the options specified for particular engines are valid.
 
@@ -155,7 +158,8 @@ class TwelveLabsHandlerModel(BaseModel):
         return values
 
     @model_validator(mode="before")
-    def check_for_video_urls_or_video_files(cls, values):
+    @classmethod
+    def check_for_video_urls_or_video_files(cls, values: Any) -> Any:
         """
         Root validator to check if video_urls or video_files have been provided.
 
@@ -184,7 +188,8 @@ class TwelveLabsHandlerModel(BaseModel):
         return values
 
     @model_validator(mode="before")
-    def check_for_task_specific_parameters(cls, values):
+    @classmethod
+    def check_for_task_specific_parameters(cls, values: Any) -> Any:
         """
         Root validator to check if task has been provided along with the other relevant parameters for each task.
 

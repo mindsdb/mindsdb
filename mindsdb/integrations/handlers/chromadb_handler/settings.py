@@ -17,7 +17,7 @@ class ChromaHandlerConfig(BaseModel):
     class Config:
         extra = "forbid"
 
-    @model_validator(mode="before", skip_on_failure=True)
+    @model_validator(mode="before")
     def check_param_typos(cls, values):
         """Check if there are any typos in the parameters."""
 
@@ -35,7 +35,7 @@ class ChromaHandlerConfig(BaseModel):
                     raise ValueError(f"Unexpected parameter '{key}'.")
         return values
 
-    @model_validator(skip_on_failure=True)
+    @model_validator(mode="before")
     def check_config(cls, values):
         """Check if config is valid."""
 

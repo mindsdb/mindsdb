@@ -10,7 +10,7 @@ class BaseLLMConfig(BaseModel):
 # See https://api.python.langchain.com/en/latest/chat_models/langchain_community.chat_models.openai.ChatOpenAI.html#langchain_community.chat_models.openai.ChatOpenAI
 # This config does not have to be exclusively used with Langchain.
 class OpenAIConfig(BaseLLMConfig):
-    llm_model_name: str
+    model_name: str
     temperature: Optional[float]
     max_retries: Optional[int]
     max_tokens: Optional[int]
@@ -38,7 +38,7 @@ class AnthropicConfig(BaseLLMConfig):
 # See https://api.python.langchain.com/en/latest/chat_models/langchain_community.chat_models.anyscale.ChatAnyscale.html
 # This config does not have to be exclusively used with Langchain.
 class AnyscaleConfig(BaseLLMConfig):
-    llm_model_name: str
+    model_name: str
     temperature: Optional[float]
     max_retries: Optional[int]
     max_tokens: Optional[int]
@@ -52,7 +52,7 @@ class AnyscaleConfig(BaseLLMConfig):
 # See https://api.python.langchain.com/en/latest/chat_models/langchain_community.chat_models.litellm.ChatLiteLLM.html
 # This config does not have to be exclusively used with Langchain.
 class LiteLLMConfig(BaseLLMConfig):
-    llm_model_name: str
+    model: str
     api_base: Optional[str]
     max_retries: Optional[int]
     max_tokens: Optional[int]

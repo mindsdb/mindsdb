@@ -3,7 +3,7 @@ version: "3.2"
 services:
 
   mindsdb:
-    image: mindsdb/mindsdb:dev
+    image: mindsdb/mindsdb:devel
     # If you want to build the image instead:
     # build:
     #   context: .

@@ -7,7 +7,7 @@ from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditio
 from mindsdb.utilities import log
 
 from mindsdb_sql.parser import ast
-from mindsdb.integrations.handlers.utilities.query_utilities.select_query_utilities import SELECTQueryParser, SELECTQueryExecutor
+from mindsdb.integrations.utilities.handlers.query_utilities.select_query_utilities import SELECTQueryParser
 
 
 logger = log.getLogger(__name__)

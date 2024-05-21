@@ -1,5 +1,5 @@
 packaging
-werkzeug==2.2.2
+werkzeug==2.3.8
 pandas >=2.0.0, <2.1.0
 flask-restx >= 1.0.1, < 2.0.0
 flask == 2.2.2
@@ -25,7 +25,7 @@ checksumdir >= 1.2.0
 duckdb == 0.9.1
 requests >= 2.30.0
 pydateinfer==0.3.0
-dataprep_ml==0.0.23
+dataprep_ml==24.5.1.2
 dill == 0.3.6
 numpy
 pytz

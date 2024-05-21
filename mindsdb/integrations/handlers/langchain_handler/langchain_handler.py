@@ -105,7 +105,7 @@ class LangChainHandler(BaseMLEngine):
         model_config.update(pred_args)
         # Include API keys.
         model_config['api_keys'] = {
-            p: get_api_key(p, args, self.engine_storage, strict=False) for p in SUPPORTED_PROVIDERS
+            p: get_api_key(p, model_config, self.engine_storage, strict=False) for p in SUPPORTED_PROVIDERS
         }
         llm_config = get_llm_config(args.get('provider', self._get_llm_provider(args)), model_config)
         config_dict = llm_config.model_dump()

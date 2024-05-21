@@ -260,7 +260,7 @@ class IntegrationController:
         db.session.delete(integration_record)
         db.session.commit()
 
-    def _get_integration_record_data(self, integration_record, sensitive_info=True):
+    def _get_integration_record_data(self, integration_record, show_secrets=True):
         if (
             integration_record is None
             or integration_record.data is None
@@ -291,20 +291,35 @@ class IntegrationController:
                 base_dir=integrations_dir
             )
 
-        if not sensitive_info:
-            if 'password' in data:
-                data['password'] = None
-            if (
-                data.get('type') == 'redis'
-                and isinstance(data.get('connection'), dict)
-                and 'password' in data['connection']
-            ):
-                data['connection'] = None
-
-        integration_type = None
         integration_module = self.handler_modules.get(integration_record.engine)
-        if hasattr(integration_module, 'type'):
-            integration_type = integration_module.type
+        integration_type = getattr(integration_module, 'type', None)
+
+        if show_secrets is False:
+            connection_args = getattr(integration_module, 'connection_args', None)
+            if isinstance(connection_args, dict):
+                if integration_type == HANDLER_TYPE.DATA:
+                    for key, value in connection_args.items():
+                        if key in data and value.get('secret', False) is True:
+                            data[key] = '******'
+                elif integration_type == HANDLER_TYPE.ML:
+                    creation_args = connection_args.get('creation_args')
+                    if isinstance(creation_args, dict):
+                        for key, value in creation_args.items():
+                            if key in data and value.get('secret', False) is True:
+                                data[key] = '******'
+                else:
+                    raise ValueError(f'Unexpected handler type: {integration_type}')
+            else:
+                # region obsolete, del in future
+                if 'password' in data:
+                    data['password'] = None
+                if (
+                    data.get('type') == 'redis'
+                    and isinstance(data.get('connection'), dict)
+                    and 'password' in data['connection']
+                ):
+                    data['connection'] = None
+                # endregion
 
         class_type = None
         if integration_module is not None and inspect.isclass(integration_module.Handler):
@@ -322,24 +337,24 @@ class IntegrationController:
             'class_type': class_type,
             'engine': integration_record.engine,
             'permanent': getattr(integration_module, 'permanent', False),
-            'date_last_update': deepcopy(integration_record.updated_at),
+            'date_last_update': deepcopy(integration_record.updated_at),  # to del ?
             'connection_data': data
         }
 
-    def get_by_id(self, integration_id, sensitive_info=True):
+    def get_by_id(self, integration_id, show_secrets=True):
         integration_record = (
             db.session.query(db.Integration)
             .filter_by(company_id=ctx.company_id, id=integration_id)
             .first()
         )
-        return self._get_integration_record_data(integration_record, sensitive_info)
+        return self._get_integration_record_data(integration_record, show_secrets)
 
-    def get(self, name, sensitive_info=True, case_sensitive=False):
+    def get(self, name, show_secrets=True, case_sensitive=False):
         try:
             integration_record = self._get_integration_record(name, case_sensitive)
         except EntityNotExistsError:
             return None
-        return self._get_integration_record_data(integration_record, sensitive_info)
+        return self._get_integration_record_data(integration_record, show_secrets)
 
     @staticmethod
     def _get_integration_record(name: str, case_sensitive: bool = False) -> db.Integration:
@@ -372,13 +387,13 @@ class IntegrationController:
 
         return integration_record
 
-    def get_all(self, sensitive_info=True):
+    def get_all(self, show_secrets=True):
         integration_records = db.session.query(db.Integration).filter_by(company_id=ctx.company_id).all()
         integration_dict = {}
         for record in integration_records:
             if record is None or record.data is None:
                 continue
-            integration_dict[record.name] = self._get_integration_record_data(record, sensitive_info)
+            integration_dict[record.name] = self._get_integration_record_data(record, show_secrets)
         return integration_dict
 
     def _make_handler_args(self, name: str, handler_type: str, connection_data: dict, integration_id: int = None,
@@ -599,7 +614,7 @@ class IntegrationController:
             handler_class = module.Handler
             try:
                 prediction_args = handler_class.prediction_args()
-                creation_args = handler_class.creation_args()
+                creation_args = getattr(module, 'creation_args', handler_class.creation_args())
                 connection_args = {
                     "prediction": prediction_args,
                     "creation_args": creation_args

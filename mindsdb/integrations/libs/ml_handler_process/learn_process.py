@@ -66,6 +66,9 @@ def learn_process(data_integration_ref: dict, problem_definition: dict, fetch_da
                     query_ast = parse_sql(fetch_data_query, dialect='mindsdb')
                     view_meta = project.query_view(query_ast)
                     sqlquery = SQLQuery(view_meta['query_ast'], session=sql_session)
+                elif data_integration_ref['type'] == 'project':
+                    query_ast = parse_sql(fetch_data_query, dialect='mindsdb')
+                    sqlquery = SQLQuery(query_ast, session=sql_session)
 
                 result = sqlquery.fetch(view='dataframe')
                 training_data_df = result['result']

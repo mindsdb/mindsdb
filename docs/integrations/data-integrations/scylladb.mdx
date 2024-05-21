@@ -20,15 +20,15 @@ Before proceeding, ensure the following prerequisites are met:
 The ScyllaDB handler for MindsDB was developed using the scylla-driver library for Python.
 The required arguments to establish a connection are as follows:
 
-* `host`: Host name or IP address of ScyllaDB.
-* `port`: Connection port.
-* `user`: Authentication username.
-* `password`: Authentication password.
-* `keyspace`: The specific keyspace (top-level container for tables) to connect to.
-* `protocol_version`: Optional. Defaults to 4.
-* `secure_connect_bundle`: Optional. Needed only for connections to DataStax Astra.
+- `host`: Host name or IP address of ScyllaDB.
+- `port`: Connection port.
+- `user`: Authentication username. Optional; required only if authentication is enabled.
+- `password`: Authentication password. Optional; required only if authentication is enabled.
+- `keyspace`: The specific keyspace (top-level container for tables) to connect to.
+- `protocol_version`: Optional. Defaults to 4.
+- `secure_connect_bundle`: Optional. Needed only for connections to DataStax Astra.
 
-## Usage 
+## Usage
 
 To set up a connection between MindsDB and a Scylla server, utilize the following SQL syntax:
 
@@ -44,8 +44,11 @@ WITH
     "keyspace": "test_data"
   };
 ```
+
 <Tip>
-The protocol version is set to 4 by default. Should you wish to modify it, simply include "protocol_version": 5 within the PARAMETERS dictionary in the query above.
+  The protocol version is set to 4 by default. Should you wish to modify it,
+  simply include "protocol_version": 5 within the PARAMETERS dictionary in the
+  query above.
 </Tip>
 
 With the connection established, you can execute queries on your keyspace as demonstrated below:

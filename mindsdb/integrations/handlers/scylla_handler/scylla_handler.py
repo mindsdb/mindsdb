@@ -71,9 +71,14 @@ class ScyllaHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.session
 
-        auth_provider = PlainTextAuthProvider(
-            username=self.connection_args['user'], password=self.connection_args['password']
-        )
+        auth_provider = None
+        if any(key in self.connection_args for key in ('user', 'password')):
+            if all(key in self.connection_args for key in ('user', 'password')):
+                auth_provider = PlainTextAuthProvider(
+                    username=self.connection_args['user'], password=self.connection_args['password']
+                )
+            else:
+                raise ValueError("If authentication is required, both 'user' and 'password' must be provided!") 
 
         connection_props = {
             'auth_provider': auth_provider

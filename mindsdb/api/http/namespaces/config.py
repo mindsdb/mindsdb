@@ -152,7 +152,7 @@ class Integration(Resource):
         config = Config()
         secret_key = config.get('secret_key', 'dummy-key')
 
-        integration = ca.integration_controller.get(name, sensitive_info=False)
+        integration = ca.integration_controller.get(name, show_secrets=False)
         if integration is not None:
             abort(400, f"Integration with name '{name}' already exists")
 

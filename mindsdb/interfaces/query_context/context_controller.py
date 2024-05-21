@@ -51,6 +51,9 @@ class QueryContextController:
             values = self.__get_init_last_values(l_query, dn, session)
             if rec is None:
                 self.__add_context_record(context_name, query_str, values)
+                if context_name.startswith('job-if-'):
+                    # add context for job also
+                    self.__add_context_record(context_name.replace('job-if', 'job'), query_str, values)
             else:
                 rec.values = values
         else:

@@ -115,11 +115,11 @@ jobs:
       run: |
         pip install .
         pip install -r requirements/requirements-test.txt
-        pip install lightwood  # TODO: for now some tests rely on lightwood
-        pip install mindsdb[mssql]
-        pip install mindsdb[clickhouse]
-        pip install mindsdb[snowflake]
-        pip install mindsdb[web]
+        pip install .[lightwood]  # TODO: for now some tests rely on lightwood
+        pip install .[mssql]
+        pip install .[clickhouse]
+        pip install .[snowflake]
+        pip install .[web]
         pip freeze
     - name: Run unit tests
       run: |

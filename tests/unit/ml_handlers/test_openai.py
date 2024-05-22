@@ -648,6 +648,25 @@ class TestOpenAI(unittest.TestCase):
             )
         )
 
+    def test_finetune_raises_exception_with_unsupported_model(self):
+        """
+        Test if model fine-tuning raises an exception with an unsupported model.
+        """
+
+        # Create a mock base model storage and assign it to the handler
+        mock_base_model_storage = MagicMock()
+        self.handler.base_model_storage = mock_base_model_storage
+
+        # Mock the json_get method of the base model storage
+        self.handler.base_model_storage.json_get.return_value = {
+            'model_name': 'dummy_model_name'
+        }
+
+        with self.assertRaisesRegex(Exception, "^This model cannot be finetuned."):
+            self.handler.finetune('dummy_target', args={'using': {'model_name': 'dummy_unsupported_model_name', 'prompt_template': 'dummy_prompt_template'}})
+
+    # TODO: Add more unit tests for the finetune method
+
 
 if __name__ == '__main__':
     unittest.main()

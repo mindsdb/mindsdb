@@ -1,10 +1,12 @@
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class BaseLLMConfig(BaseModel):
-    pass
+    # Remove 'model_' prefix from protected namespaces since Langchain constructor
+    # kwargs share the same prefix.
+    model_config = ConfigDict(protected_namespaces=())
 
 
 # See https://api.python.langchain.com/en/latest/chat_models/langchain_community.chat_models.openai.ChatOpenAI.html#langchain_community.chat_models.openai.ChatOpenAI

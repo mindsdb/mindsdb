@@ -525,7 +525,37 @@ class TestOpenAI(unittest.TestCase):
             'mode': 'conversational-full'
         }
 
-        pass
+        # Mock the chat.completions.create method of the OpenAI client
+        mock_openai_client = MagicMock()
+        mock_openai_client.chat.completions.create.side_effect = [
+            MagicMock(
+                choices=[
+                    MagicMock(
+                        message=MagicMock(
+                            content='Stockholm'
+                        )
+                    )
+                ]
+            ),
+            MagicMock(
+                choices=[
+                    MagicMock(
+                        message=MagicMock(
+                            content='Gamla Stan'
+                        )
+                    )
+                ]
+            )
+        ]
+
+        mock_openai_handler_openai_client.return_value = mock_openai_client
+
+        df = pandas.DataFrame({'text': ['What is the capital of Sweden?', 'What are some cool places to visit there?']})
+        result = self.handler.predict(df, args={})
+
+        self.assertIsInstance(result, pandas.DataFrame)
+
+        pandas.testing.assert_frame_equal(result, pandas.DataFrame({'answer': ['Stockholm', 'Gamla Stan']}))
 
     def test_describe_runs_no_errors(self):
         """

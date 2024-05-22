@@ -7,7 +7,7 @@ import datetime
 import textwrap
 import subprocess
 import concurrent.futures
-from typing import Optional, Dict
+from typing import Text, Dict, List, Optional, Any
 import openai
 from openai import OpenAI, NotFoundError, AuthenticationError
 import numpy as np
@@ -35,6 +35,10 @@ logger = log.getLogger(__name__)
 
 
 class OpenAIHandler(BaseMLEngine):
+    """
+    This handler handles connection and inference with the OpenAI API.
+    """
+
     name = 'openai'
 
     def __init__(self, *args, **kwargs):
@@ -61,9 +65,19 @@ class OpenAIHandler(BaseMLEngine):
         self.api_key_name = getattr(self, 'api_key_name', self.name)
         self.api_base = getattr(self, 'api_base', OPENAI_API_BASE)
 
-    def create_engine(self, connection_args):
-        '''check api key if provided
-        '''
+    def create_engine(self, connection_args: Dict) -> None:
+        """
+        Validate the OpenAI API credentials on engine creation.
+
+        Args:
+            connection_args (Dict): Parameters for the engine.
+
+        Raises:
+            Exception: If the handler is not configured with valid API credentials.
+
+        Returns:
+            None
+        """
         connection_args = {k.lower(): v for k, v in connection_args.items()}
         api_key = connection_args.get('openai_api_key')
         if api_key is not None:
@@ -73,15 +87,19 @@ class OpenAIHandler(BaseMLEngine):
             OpenAIHandler._check_client_connection(client)
 
     @staticmethod
-    def _check_client_connection(client: OpenAI):
-        '''try to connect to api
+    def _check_client_connection(client: OpenAI) -> None:
+        """
+        Check the OpenAI engine client connection by retrieving a model.
 
         Args:
-            client (OpenAI):
+            client (OpenAI): OpenAI client configured with the API credentials.
 
         Raises:
-            Exception: if there is AuthenticationError
-        '''
+            Exception: If the client connection (API key) is invalid or something else goes wrong.
+
+        Returns:
+            None
+        """
         try:
             client.models.retrieve('test')
         except NotFoundError:
@@ -92,7 +110,21 @@ class OpenAIHandler(BaseMLEngine):
             raise Exception(f'Something went wrong: {e}')
 
     @staticmethod
-    def create_validation(target, args=None, **kwargs):
+    def create_validation(target: Text, args: Dict = None, **kwargs: Any) -> None:
+        """
+        Validate the OpenAI API credentials on model creation.
+
+        Args:
+            target (Text): Target column name.
+            args (Dict): Parameters for the model.
+            kwargs (Any): Other keyword arguments.
+
+        Raises:
+            Exception: If the handler is not configured with valid API credentials.
+
+        Returns:
+            None
+        """
         if 'using' not in args:
             raise Exception(
                 "OpenAI engine requires a USING clause! Refer to its documentation for more details."
@@ -173,7 +205,21 @@ class OpenAIHandler(BaseMLEngine):
         client = OpenAIHandler._get_client(api_key=api_key, base_url=api_base, org=org)
         OpenAIHandler._check_client_connection(client)
 
-    def create(self, target, args=None, **kwargs):
+    def create(self, target, args: Dict = None, **kwargs: Any) -> None:
+        """
+        Create a model by connecting to the OpenAI API.
+
+        Args:
+            target (Text): Target column name.
+            args (Dict): Parameters for the model.
+            kwargs (Any): Other keyword arguments.
+
+        Raises:
+            Exception: If the model is not configured with valid parameters.
+
+        Returns:
+            None
+        """
         args = args['using']
         args['target'] = target
         try:
@@ -201,7 +247,17 @@ class OpenAIHandler(BaseMLEngine):
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         """
-        If there is a prompt template, we use it. Otherwise, we use the concatenation of `context_column` (optional) and `question_column` to ask for a completion.
+        Make predictions using a model connected to the OpenAI API.
+
+        Args:
+            df (pd.DataFrame): Input data to make predictions on.
+            args (Dict): Parameters passed when making predictions.
+
+        Raises:
+            Exception: If the model is not configured with valid parameters or if the input data is not in the expected format.
+
+        Returns:
+            pd.DataFrame: Input data with the predicted values in a new column.
         """  # noqa
         # TODO: support for edits, embeddings and moderation
 
@@ -237,7 +293,7 @@ class OpenAIHandler(BaseMLEngine):
         else:
             base_template = None
 
-        # Embedding Mode
+        # Embedding mode
         if args.get('mode', self.default_mode) == 'embedding':
             api_args = {
                 'question_column': pred_args.get('question_column', None),
@@ -253,7 +309,6 @@ class OpenAIHandler(BaseMLEngine):
                 raise Exception('Embedding mode needs a question_column')
 
         # Image mode
-
         elif args.get('mode', self.default_mode) == 'image':
             api_args = {
                 'n': pred_args.get('n', None),
@@ -295,7 +350,7 @@ class OpenAIHandler(BaseMLEngine):
                     f"This model expects context in the '{args['context_column']}' column."
                 )
 
-            # api argument validation
+            # API argument validation
             model_name = args.get('model_name', self.default_model)
             api_args = {
                 'max_tokens': pred_args.get(
@@ -424,7 +479,7 @@ class OpenAIHandler(BaseMLEngine):
         return pred_df
 
     def _completion(
-        self, model_name, prompts, api_key, api_args, args, df, parallel=True
+        self, model_name: Text, prompts: List[Text], api_key: Text, api_args: Dict, args: Dict, df: pd.DataFrame, parallel: bool = True
     ):
         """
         Handles completion for an arbitrary amount of rows.
@@ -435,10 +490,35 @@ class OpenAIHandler(BaseMLEngine):
 
         Additionally, single completion calls are done with exponential backoff to guarantee all prompts are processed,
         because even with previous checks the tokens-per-minute limit may apply.
+
+        Args:
+            model_name (Text): OpenAI Model name.
+            prompts (List[Text]): List of prompts.
+            api_key (Text): OpenAI API key.
+            api_args (Dict): OpenAI API arguments.
+            args (Dict): Parameters for the model.
+            df (pd.DataFrame): Input data to run completion on.
+            parallel (bool): Whether to use parallel processing.
+
+        Returns:
+            List[Text]: List of completions.
         """
 
         @retry_with_exponential_backoff()
-        def _submit_completion(model_name, prompts, api_args, args, df):
+        def _submit_completion(model_name: Text, prompts: List[Text], api_args: Dict, args: Dict, df: pd.DataFrame):
+            """
+            Submit completion to OpenAI API based on the type of task.
+
+            Args:
+                model_name (Text): OpenAI Model name.
+                prompts (List[Text]): List of prompts.
+                api_args (Dict): OpenAI API arguments.
+                args (Dict): Parameters for the model.
+                df (pd.DataFrame): Input data to run completion on.
+
+            Returns:
+                List[Text]: List of completions.            
+            """
             kwargs = {
                 'model': model_name,
             }
@@ -457,7 +537,17 @@ class OpenAIHandler(BaseMLEngine):
             else:
                 return _submit_normal_completion(kwargs, prompts, api_args)
 
-        def _log_api_call(params, response):
+        def _log_api_call(params: Dict, response: Any) -> None:
+            """
+            Log the API call to OpenAI.
+
+            Args:
+                params (Dict): Parameters for the API call.
+                response (Any): Response from the API.
+
+            Returns:
+                None            
+            """
             after_openai_query(params, response)
 
             params2 = params.copy()
@@ -466,6 +556,17 @@ class OpenAIHandler(BaseMLEngine):
             logger.debug(f'>>>openai call: {params2}:\n{response}')
 
         def _submit_normal_completion(kwargs, prompts, api_args):
+            """
+            Submit a request to the OpenAI API for a normal completion task.
+
+            Args:
+                kwargs (Dict): Model to use.
+                prompts (List[Text]): List of prompts.
+                api_args (Dict): Other OpenAI API arguments.
+
+            Returns:
+                List[Text]: List of text completions.
+            """
             def _tidy(comp):
                 tidy_comps = []
                 for c in comp.choices:
@@ -482,6 +583,17 @@ class OpenAIHandler(BaseMLEngine):
             return resp
 
         def _submit_embedding_completion(kwargs, prompts, api_args):
+            """
+            Submit a request to the OpenAI API for an embedding task.
+
+            Args:
+                kwargs (Dict): Model to use.
+                prompts (List[Text]): List of prompts.
+                api_args (Dict): Other OpenAI API arguments.
+
+            Returns:
+                List[Text]: List of embeddings.
+            """
             def _tidy(comp):
                 tidy_comps = []
                 for c in comp.data:

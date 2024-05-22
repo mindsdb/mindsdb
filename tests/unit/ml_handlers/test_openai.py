@@ -481,14 +481,34 @@ class TestOpenAI(unittest.TestCase):
 
         # Mock the json_get method of the model storage
         self.handler.model_storage.json_get.return_value = {
-            'user_column': 'text',
+            'user_column': 'question',
             'prompt': 'you are a helpful assistant',
             'assistant_column': 'answer',
             'target': 'answer',
             'mode': 'conversational'
         }
 
-        pass
+        # Mock the chat.completions.create method of the OpenAI client
+        mock_openai_client = MagicMock()
+        mock_openai_client.chat.completions.create.return_value = MagicMock(
+            choices=[
+                MagicMock(
+                    message=MagicMock(
+                        content='Gamla Stan'
+                    )
+                )
+            ]
+        )
+
+        mock_openai_handler_openai_client.return_value = mock_openai_client
+
+        df = pandas.DataFrame({'question': ['What is the capital of Sweden?', 'What are some cool places to visit there?']})
+        result = self.handler.predict(df, args={})
+
+        self.assertIsInstance(result, pandas.DataFrame)
+        self.assertTrue('answer' in result.columns)
+
+        pandas.testing.assert_frame_equal(result, pandas.DataFrame({'answer': ['', 'Gamla Stan']}))
 
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
     def test_predict_runs_no_errors_in_conversational_full_mode_with_valid_arguments_and_data(self, mock_openai_handler_openai_client):

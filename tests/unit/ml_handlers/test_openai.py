@@ -507,6 +507,97 @@ class TestOpenAI(unittest.TestCase):
 
         pass
 
+    def test_describe_runs_no_errors(self):
+        """
+        Test if model describe returns the expected result.
+        """
+
+        # Mock the json_get method of the model storage
+        self.handler.model_storage.json_get.return_value = {
+            'user_column': 'text',
+            'prompt': 'you are a helpful assistant',
+            'assistant_column': 'answer',
+            'target': 'answer',
+            'mode': 'conversational'
+        }
+
+        result = self.handler.describe()
+
+        self.assertIsInstance(result, pandas.DataFrame)
+        self.assertTrue('tables' in result.columns)
+
+        pandas.testing.assert_frame_equal(result, pandas.DataFrame({'tables': ['args', 'metadata']}))
+
+    def test_describe_args_runs_no_errors(self):
+        """
+        Test if model describe returns the expected result.
+        """
+
+        # Mock the json_get method of the model storage
+        self.handler.model_storage.json_get.return_value = {
+            'user_column': 'text',
+            'prompt': 'you are a helpful assistant',
+            'assistant_column': 'answer',
+            'target': 'answer',
+            'mode': 'conversational'
+        }
+
+        result = self.handler.describe('args')
+
+        self.assertIsInstance(result, pandas.DataFrame)
+        self.assertTrue('key' in result.columns)
+        self.assertTrue('value' in result.columns)
+
+        pandas.testing.assert_frame_equal(result, 
+            pandas.DataFrame(
+                {
+                    'key': ['user_column', 'prompt', 'assistant_column', 'target', 'mode'], 
+                    'value': ['text', 'you are a helpful assistant', 'answer', 'answer', 'conversational']
+                }
+            )
+        )
+
+    @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
+    def test_describe_metadata_runs_no_errors(self, mock_openai_handler_openai_client):
+        """
+        Test if model describe returns the expected result.
+        """
+
+        # Mock the json_get method of the model storage
+        self.handler.model_storage.json_get.return_value = {
+            'user_column': 'text',
+            'prompt': 'you are a helpful assistant',
+            'assistant_column': 'answer',
+            'target': 'answer',
+            'mode': 'conversational'
+        }
+
+        # Mock the models.retrieve method of the OpenAI client: return a dict directly because the result is converted to a dict later
+        mock_openai_client = MagicMock()
+        mock_openai_client.models.retrieve.return_value = {
+            'model': 'dummy_model_name',
+            'id': 'dummy_model_id',
+            'created_at': 'dummy_created_at',
+            'owner': 'dummy_owner'
+        }
+        
+        mock_openai_handler_openai_client.return_value = mock_openai_client
+
+        result = self.handler.describe('metadata')
+
+        self.assertIsInstance(result, pandas.DataFrame)
+        self.assertTrue('key' in result.columns)
+        self.assertTrue('value' in result.columns)
+
+        pandas.testing.assert_frame_equal(result, 
+            pandas.DataFrame(
+                {
+                    'key': ['model', 'id', 'created_at', 'owner'], 
+                    'value': ['dummy_model_name', 'dummy_model_id', 'dummy_created_at', 'dummy_owner']
+                }
+            )
+        )
+
 
 if __name__ == '__main__':
     unittest.main()

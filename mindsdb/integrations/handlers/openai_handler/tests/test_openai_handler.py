@@ -55,7 +55,7 @@ class TestOpenAI(BaseMLAPITest):
             CREATE MODEL proj.test_openai_single_full_flow_default_mode_question_column
             PREDICT answer
             USING
-                engine='openai_engine';
+                engine='openai_engine',
                 question_column='question';
             """
         )
@@ -98,7 +98,7 @@ class TestOpenAI(BaseMLAPITest):
             """
             SELECT p.answer
             FROM pg.df as t
-            JOIN proj.test_openai_full_flow_default_mode_question_column as p;
+            JOIN proj.test_openai_bulk_full_flow_default_mode_question_column as p;
             """
         )
         assert "stockholm" in result_df["answer"].iloc[0].lower()

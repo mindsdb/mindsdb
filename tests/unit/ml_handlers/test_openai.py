@@ -423,7 +423,7 @@ class TestOpenAI(unittest.TestCase):
         # Mock the images.generate method of the OpenAI client
         mock_openai_client = MagicMock()
         mock_openai_client.images.generate.return_value = MagicMock(
-            data=[             
+            data=[
                 MagicMock(
                     url='dummy_image_url'
                 )
@@ -456,7 +456,7 @@ class TestOpenAI(unittest.TestCase):
         # Mock the images.generate method of the OpenAI client
         mock_openai_client = MagicMock()
         mock_openai_client.images.generate.return_value = MagicMock(
-            data=[             
+            data=[
                 MagicMock(
                     url='dummy_image_url'
                 )
@@ -598,10 +598,11 @@ class TestOpenAI(unittest.TestCase):
         self.assertTrue('key' in result.columns)
         self.assertTrue('value' in result.columns)
 
-        pandas.testing.assert_frame_equal(result, 
+        pandas.testing.assert_frame_equal(
+            result,
             pandas.DataFrame(
                 {
-                    'key': ['user_column', 'prompt', 'assistant_column', 'target', 'mode'], 
+                    'key': ['user_column', 'prompt', 'assistant_column', 'target', 'mode'],
                     'value': ['text', 'you are a helpful assistant', 'answer', 'answer', 'conversational']
                 }
             )
@@ -630,7 +631,7 @@ class TestOpenAI(unittest.TestCase):
             'created_at': 'dummy_created_at',
             'owner': 'dummy_owner'
         }
-        
+
         mock_openai_handler_openai_client.return_value = mock_openai_client
 
         result = self.handler.describe('metadata')
@@ -639,10 +640,11 @@ class TestOpenAI(unittest.TestCase):
         self.assertTrue('key' in result.columns)
         self.assertTrue('value' in result.columns)
 
-        pandas.testing.assert_frame_equal(result, 
+        pandas.testing.assert_frame_equal(
+            result,
             pandas.DataFrame(
                 {
-                    'key': ['model', 'id', 'created_at', 'owner'], 
+                    'key': ['model', 'id', 'created_at', 'owner'],
                     'value': ['dummy_model_name', 'dummy_model_id', 'dummy_created_at', 'dummy_owner']
                 }
             )

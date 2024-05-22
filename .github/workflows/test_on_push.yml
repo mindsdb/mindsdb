@@ -3,7 +3,7 @@ name: Test on Push
 on:
   pull_request:
     branches: [main]
-    
+
 defaults:
   run:
     shell: bash
@@ -13,7 +13,6 @@ defaults:
 concurrency:
   group: ${{ github.workflow_ref }}
   cancel-in-progress: true
-
 
 jobs:
   # Run all of our static code checks here
@@ -27,8 +26,8 @@ jobs:
         with:
           python-version: ${{ vars.CI_PYTHON_VERSION }}
           cache: pip
-          cache-dependency-path: '**/requirements*.txt'
-      
+          cache-dependency-path: "**/requirements*.txt"
+
       # Checks the codebase for print() statements and fails if any are found
       # We should be using loggers instead
       - name: Check for print statements
@@ -46,7 +45,7 @@ jobs:
         uses: pre-commit/action@v3.0.0
         with:
           extra_args: --files ${{ steps.changed-files.outputs.all_changed_files }}
-      
+
       # Runs a few different checks against our many requirements files
       # to make sure they're in order
       - name: Check requirements files
@@ -68,8 +67,8 @@ jobs:
       - id: set-matrix
         uses: JoshuaTheMiller/conditional-build-matrix@v2.0.1
         with:
-          filter: '[?runOnBranch==`${{ github.ref }}` || runOnBranch==`always`]'
-    
+          filter: "[?runOnBranch==`${{ github.ref }}` || runOnBranch==`always`]"
+
   # Check that our pip package is able to be installed in all of our supported environments
   check_install:
     name: Check pip installation
@@ -78,23 +77,23 @@ jobs:
       matrix: ${{fromJson(needs.matrix_prep.outputs.matrix)}}
     runs-on: ${{ matrix.runs_on }}
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python
-      uses: actions/setup-python@v5.1.0
-      with:
-        python-version: ${{ matrix.python-version }}
-        cache: pip
-        cache-dependency-path: '**/requirements*.txt'
-    - name: Check requirements files are installable
-      run: |
-        # Install dev requirements and build our pip package
-        pip install -r requirements/requirements-dev.txt
-        python setup.py sdist
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5.1.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: "**/requirements*.txt"
+      - name: Check requirements files are installable
+        run: |
+          # Install dev requirements and build our pip package
+          pip install -r requirements/requirements-dev.txt
+          python setup.py sdist
 
-        # Install from the pip package
-        # If we install from source, we don't know if the pip package is installable.
-        cd dist
-        pip install --ignore-installed *.tar.gz
+          # Install from the pip package
+          # If we install from source, we don't know if the pip package is installable.
+          cd dist
+          pip install --ignore-installed *.tar.gz
 
   unit_tests:
     name: Run Unit Tests
@@ -104,43 +103,44 @@ jobs:
     runs-on: ${{ matrix.runs_on }}
     if: github.ref_type == 'branch'
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python
-      uses: actions/setup-python@v5.1.0
-      with:
-        python-version: ${{ matrix.python-version }}
-        cache: pip
-        cache-dependency-path: '**/requirements*.txt'
-    - name: Install dependencies
-      run: |
-        pip install .
-        pip install -r requirements/requirements-test.txt
-        pip install lightwood  # TODO: for now some tests rely on lightwood
-        pip install mindsdb[mssql]
-        pip install mindsdb[clickhouse]
-        pip install mindsdb[snowflake]
-        pip install mindsdb[web]
-        pip freeze
-    - name: Run unit tests
-      run: |
-        if [ "$RUNNER_OS" == "Linux" ]; then
-          env PYTHONPATH=./ pytest tests/unit/test_executor.py
-          env PYTHONPATH=./ pytest tests/unit/test_project_structure.py
-          env PYTHONPATH=./ pytest tests/unit/test_predictor_params.py
-          env PYTHONPATH=./ pytest tests/unit/test_mongodb_handler.py
-          env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
-          env PYTHONPATH=./ pytest tests/unit/test_cache.py
-          env PYTHONPATH=./ pytest tests/unit/test_llm_utils.py
-          env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_mindsdb_inference.py
-        fi
-    - name: Run Handlers tests and submit Coverage to coveralls
-      run: |
-        handlers=("mysql" "postgres" "mssql" "clickhouse" "snowflake" "web")
-        for handler in "${handlers[@]}"
-        do
-          pytest --cov=mindsdb/integrations/handlers/${handler}_handler tests/unit/handlers/test_${handler}.py 
-        done
-        coveralls --service=github --basedir=mindsdb/integrations/handlers
-      env:
-        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
-        github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5.1.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: "**/requirements*.txt"
+      - name: Install dependencies
+        run: |
+          pip install .
+          pip install -r requirements/requirements-test.txt
+          pip install lightwood  # TODO: for now some tests rely on lightwood
+          pip install mindsdb[mssql]
+          pip install mindsdb[clickhouse]
+          pip install mindsdb[snowflake]
+          pip install mindsdb[web]
+          pip freeze
+      - name: Run unit tests
+        run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            env PYTHONPATH=./ pytest tests/unit/test_executor.py
+            env PYTHONPATH=./ pytest tests/unit/test_project_structure.py
+            env PYTHONPATH=./ pytest tests/unit/test_predictor_params.py
+            env PYTHONPATH=./ pytest tests/unit/test_mongodb_handler.py
+            env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
+            env PYTHONPATH=./ pytest tests/unit/test_cache.py
+            env PYTHONPATH=./ pytest tests/unit/test_llm_utils.py
+            env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_mindsdb_inference.py
+            env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_openai.py
+          fi
+      - name: Run Handlers tests and submit Coverage to coveralls
+        run: |
+          handlers=("mysql" "postgres" "mssql" "clickhouse" "snowflake" "web")
+          for handler in "${handlers[@]}"
+          do
+            pytest --cov=mindsdb/integrations/handlers/${handler}_handler tests/unit/handlers/test_${handler}.py 
+          done
+          coveralls --service=github --basedir=mindsdb/integrations/handlers
+        env:
+          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+          github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}

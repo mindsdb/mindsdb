@@ -2,7 +2,7 @@ packaging
 werkzeug==2.3.8
 pandas >=2.0.0, <2.1.0
 flask-restx >= 1.0.1, < 2.0.0
-flask == 2.2.2
+flask == 2.2.5
 python-multipart >= 0.0.5
 pyparsing == 2.3.1
 cryptography>=35.0

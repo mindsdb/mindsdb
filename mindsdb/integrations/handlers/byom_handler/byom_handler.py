@@ -37,7 +37,7 @@ import mindsdb.utilities.profiler as profiler
 
 from .proc_wrapper import (
     pd_decode, pd_encode, encode, decode, BYOM_METHOD,
-    import_string, find_model_class
+    import_string, find_model_class, get_methods_info
 )
 from .__about__ import __version__
 
@@ -281,7 +281,9 @@ class BYOMHandler(BaseMLEngine):
 
         model_proxy = self._get_model_proxy()
         try:
-            model_proxy.check()
+            methods = model_proxy.check()
+            self.engine_storage.json_set('methods', methods)
+
         except Exception as e:
             model_proxy.remove_venv()
             raise e
@@ -332,10 +334,19 @@ class BYOMHandler(BaseMLEngine):
 
         model_proxy = self._get_model_proxy(new_version)
         try:
-            model_proxy.check()
+            methods = model_proxy.check()
+            self.engine_storage.json_set('methods', methods)
+
         except Exception as e:
             model_proxy.remove_venv()
             raise e
+
+    def function_list(self):
+        return self.engine_storage.json_get('methods')
+
+    def function_call(self, name, args):
+        mp = self._get_model_proxy()
+        return mp.func_call(name, args)
 
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         using_args = args.get('using', {})
@@ -432,8 +443,14 @@ class ModelWrapperUnsafe:
             return self.model_instance.describe(attribute)
         return pd.DataFrame()
 
+    def func_call(self, func_name, args):
+
+        func = getattr(self.model_instance, func_name)
+        return func(*args)
+
     def check(self):
-        pass
+        methods = get_methods_info(self.model_instance)
+        return methods
 
 
 class ModelWrapperSafe:
@@ -639,3 +656,13 @@ class ModelWrapperSafe:
         enc_df = self._run_command(params)
         df = pd_decode(enc_df)
         return df
+
+    def func_call(self, func_name, args):
+        params = {
+            'method': BYOM_METHOD.FUNC_CALL.value,
+            'code': self.code,
+            'func_name': func_name,
+            'args': args,
+        }
+        result = self._run_command(params)
+        return result

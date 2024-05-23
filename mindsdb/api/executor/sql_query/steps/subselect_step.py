@@ -51,7 +51,7 @@ class SubSelectStepCall(BaseStepCall):
                     result.add_column(Column(col_name))
 
         df = result.to_df()
-        res = query_df(df, query)
+        res = query_df(df, query, session=self.session)
 
         result2 = ResultSet()
         # get database from first column

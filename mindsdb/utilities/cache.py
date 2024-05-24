@@ -70,12 +70,13 @@ from mindsdb.utilities.context import context as ctx
 
 def dataframe_checksum(df: pd.DataFrame):
     # to speed up check tail and head
-    chunk_size = 10000
-    bytes = (df[:chunk_size].values.tobytes()
-             + df[-chunk_size:].values.tobytes()
-             + len(df).to_bytes(5, 'big'))
-    checksum = hashlib.sha256(bytes).hexdigest()
-    return checksum
+    max_size = 10000
+    if len(df) > max_size * 2:
+        data = df[:max_size].to_json(orient='values') + df[max_size:].to_json(orient='values')
+    else:
+        data = df.to_json(orient='values')
+
+    return str_checksum(data)
 
 
 def json_checksum(obj: t.Union[dict, list]):

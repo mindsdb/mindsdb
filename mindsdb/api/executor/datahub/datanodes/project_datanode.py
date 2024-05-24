@@ -54,7 +54,7 @@ class ProjectDataNode(DataNode):
     def get_table_columns(self, table_name):
         return self.project.get_columns(table_name)
 
-    def predict(self, model_name: str, data, version=None, params=None):
+    def predict(self, model_name: str, df, version=None, params=None):
         model_metadata = self.project.get_model(model_name)
         if model_metadata is None:
             raise Exception(f"Can't find model '{model_name}'")
@@ -62,7 +62,7 @@ class ProjectDataNode(DataNode):
         if model_metadata['update_status'] == 'available':
             raise Exception(f"model '{model_name}' is obsolete and needs to be updated. Run 'RETRAIN {model_name};'")
         ml_handler = self.integration_controller.get_ml_handler(model_metadata['engine_name'])
-        return ml_handler.predict(model_name, data, project_name=self.project.name, version=version, params=params)
+        return ml_handler.predict(model_name, df, project_name=self.project.name, version=version, params=params)
 
     def query(self, query=None, native_query=None, session=None):
         if query is None and native_query is not None:

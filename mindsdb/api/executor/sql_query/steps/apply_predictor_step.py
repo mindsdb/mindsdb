@@ -20,7 +20,7 @@ from mindsdb_sql.planner.steps import (
 )
 
 from mindsdb.api.executor.sql_query.result_set import ResultSet, Column
-from mindsdb.utilities.cache import get_cache, json_checksum
+from mindsdb.utilities.cache import get_cache, dataframe_checksum
 
 from .base import BaseStepCall
 
@@ -33,14 +33,15 @@ def get_preditor_alias(step, mindsdb_database):
 
 class ApplyPredictorBaseCall(BaseStepCall):
 
-    def apply_predictor(self, project_name, predictor_name, data, version, params):
+    def apply_predictor(self, project_name, predictor_name, df, version, params):
         # is it an agent?
         agent = self.session.agents_controller.get_agent(predictor_name, project_name)
         if agent is not None:
 
+            messages = df.to_dict('records')
             predictions = self.session.agents_controller.get_completion(
                 agent,
-                messages=data,
+                messages=messages,
                 project_name=project_name,
             )
 
@@ -49,7 +50,7 @@ class ApplyPredictorBaseCall(BaseStepCall):
 
             predictions = project_datanode.predict(
                 model_name=predictor_name,
-                data=data,
+                df=df,
                 version=version,
                 params=params
             )
@@ -82,7 +83,8 @@ class ApplyPredictorRowStepCall(ApplyPredictorBaseCall):
         if len(step.predictor.parts) > 1 and step.predictor.parts[-1].isdigit():
             version = int(step.predictor.parts[-1])
 
-        predictions = self.apply_predictor(project_name, predictor_name, where_data, version, step.params)
+        df = pd.DataFrame([where_data])
+        predictions = self.apply_predictor(project_name, predictor_name, df, version, step.params)
 
         # update predictions with input data
         for k, v in where_data.items():
@@ -144,20 +146,14 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
         project_name = step.namespace
         predictor_name = step.predictor.parts[0]
 
-        where_data = data.get_records()
-
         # add constants from where
-        row_dict = {}
         if step.row_dict is not None:
             for k, v in step.row_dict.items():
                 if isinstance(v, Result):
                     prev_result = self.steps_data[v.step_num]
                     # TODO we await only one value: model.param = (subselect)
                     v = prev_result.get_column_values(col_idx=0)[0]
-                row_dict[k] = v
-
-            for record in where_data:
-                record.update(row_dict)
+                data.set_column_values(k, v)
 
         predictor_metadata = {}
         for pm in self.context['predictor_metadata']:
@@ -177,21 +173,16 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
                 # normal mode -- emit a forecast ($HORIZON data points on each) for each provided timestamp
                 params['force_ts_infer'] = True
                 _mdb_forecast_offset = None
-            for row in where_data:
-                if '__mdb_forecast_offset' not in row:
-                    row['__mdb_forecast_offset'] = _mdb_forecast_offset
 
-        # for row in where_data:
-        #     for key in row:
-        #         if isinstance(row[key], datetime.date):
-        #             row[key] = str(row[key])
+            if data.find_columns('__mdb_forecast_offset') == 0:
+                data.set_column_values('__mdb_forecast_offset', _mdb_forecast_offset)
 
         table_name = get_preditor_alias(step, self.context['database'])
         result = ResultSet()
         result.is_prediction = True
 
         project_datanode = self.session.datahub.get(project_name)
-        if len(where_data) == 0:
+        if len(data) == 0:
             cols = project_datanode.get_table_columns(predictor_name) + ['__mindsdb_row_id']
             for col in cols:
                 result.add_column(Column(
@@ -202,7 +193,8 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
                 ))
         else:
             predictor_id = predictor_metadata['id']
-            key = f'{predictor_name}_{predictor_id}_{json_checksum(where_data)}'
+            table_df = data.to_df()
+            key = f'{predictor_name}_{predictor_id}_{dataframe_checksum(table_df)}'
 
             if self.session.predictor_cache is False:
                 predictions = None
@@ -214,7 +206,7 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
                 version = None
                 if len(step.predictor.parts) > 1 and step.predictor.parts[-1].isdigit():
                     version = int(step.predictor.parts[-1])
-                predictions = self.apply_predictor(project_name, predictor_name, where_data, version, params)
+                predictions = self.apply_predictor(project_name, predictor_name, table_df, version, params)
 
                 if predictions is not None and isinstance(predictions, pd.DataFrame) and self.session.predictor_cache is not False:
                     predictor_cache.set(key, predictions)
@@ -222,6 +214,7 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
             # apply filter
             if is_timeseries:
                 data = predictions.to_dict(orient='records')
+                where_data = data.get_records()
                 data = self.apply_ts_filter(data, where_data, step, predictor_metadata)
                 predictions = pd.DataFrame(data)
 

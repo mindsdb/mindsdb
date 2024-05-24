@@ -49,7 +49,7 @@ class ResultSet:
     def __repr__(self):
         col_names = ', '.join([col.name for col in self._columns])
 
-        return f'{self.__class__.__name__}({self.length()} rows, cols: {col_names})\n {self._df}'
+        return f'{self.__class__.__name__}({self.length()} rows, cols: {col_names})'
 
     def __len__(self) -> int:
         if self._df is None:
@@ -147,6 +147,7 @@ class ResultSet:
         col_idx = len(self._columns) - 1
         if self._df is not None:
             self._df[col_idx] = values
+        return col_idx
 
     def del_column(self, col):
         idx = self._locate_column(col)
@@ -220,6 +221,17 @@ class ResultSet:
         # get by column index
         df = self._get_df()
         return list(df[col_idx])
+
+    def set_column_values(self, col_name, values):
+        # values is one value or list of values
+        cols = self.find_columns(col_name)
+        if len(cols) == 0:
+            col_idx = self.add_column(Column(name=col_name))
+        else:
+            col_idx = self._locate_column(cols[0])
+
+        if self._df is not None:
+            self._df[col_idx] = values
 
     def add_from_result_set(self, rs):
 

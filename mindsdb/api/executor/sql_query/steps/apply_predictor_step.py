@@ -73,9 +73,9 @@ class ApplyPredictorRowStepCall(ApplyPredictorBaseCall):
                 rs = self.steps_data[value.value.step_num]
                 if rs.length() == 1:
                     # one value, don't do list
-                    value = rs.get_records_raw()[0][0]
+                    value = rs.get_column_values(col_idx=0)[0]
                 else:
-                    value = [i[0] for i in rs.get_records_raw()]
+                    value = rs.get_column_values(col_idx=0)
             where_data[key] = value
 
         version = None
@@ -84,33 +84,23 @@ class ApplyPredictorRowStepCall(ApplyPredictorBaseCall):
 
         predictions = self.apply_predictor(project_name, predictor_name, where_data, version, step.params)
 
-        columns_dtypes = dict(predictions.dtypes)
-        predictions = predictions.to_dict(orient='records')
-
         # update predictions with input data
-        for row in predictions:
-            for k, v in where_data.items():
-                if k not in row:
-                    row[k] = v
+        for k, v in where_data.items():
+            predictions[k] = v
 
         table_name = get_preditor_alias(step, self.context.get('database'))
 
         result = ResultSet()
         result.is_prediction = True
-        if len(predictions) > 0:
-            cols = list(predictions[0].keys())
-        else:
-            cols = project_datanode.get_table_columns(predictor_name)
+        if len(predictions) == 0:
+            predictions = pd.DataFrame([], columns=project_datanode.get_table_columns(predictor_name))
 
-        for col in cols:
-            result.add_column(Column(
-                name=col,
-                table_name=table_name[1],
-                table_alias=table_name[2],
-                database=table_name[0],
-                type=columns_dtypes.get(col)
-            ))
-        result.add_records(predictions)
+        result.from_df(
+            predictions,
+            database=table_name[0],
+            table_name=table_name[1],
+            table_alias=table_name[2]
+        )
 
         return result
 
@@ -163,7 +153,7 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
                 if isinstance(v, Result):
                     prev_result = self.steps_data[v.step_num]
                     # TODO we await only one value: model.param = (subselect)
-                    v = prev_result.get_records_raw()[0][0]
+                    v = prev_result.get_column_values(col_idx=0)[0]
                 row_dict[k] = v
 
             for record in where_data:
@@ -215,38 +205,32 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
             key = f'{predictor_name}_{predictor_id}_{json_checksum(where_data)}'
 
             if self.session.predictor_cache is False:
-                data = None
+                predictions = None
             else:
                 predictor_cache = get_cache('predict')
-                data = predictor_cache.get(key)
+                predictions = predictor_cache.get(key)
 
-            if data is None:
+            if predictions is None:
                 version = None
                 if len(step.predictor.parts) > 1 and step.predictor.parts[-1].isdigit():
                     version = int(step.predictor.parts[-1])
                 predictions = self.apply_predictor(project_name, predictor_name, where_data, version, params)
 
-                data = predictions.to_dict(orient='records')
-                columns_dtypes = dict(predictions.dtypes)
+                if predictions is not None and isinstance(predictions, pd.DataFrame) and self.session.predictor_cache is not False:
+                    predictor_cache.set(key, predictions)
 
-                if data is not None and isinstance(data, list) and self.session.predictor_cache is not False:
-                    predictor_cache.set(key, data)
-            else:
-                columns_dtypes = {}
-            if len(data) > 0:
-                cols = list(data[0].keys())
-                for col in cols:
-                    result.add_column(Column(
-                        name=col,
-                        table_name=table_name[1],
-                        table_alias=table_name[2],
-                        database=table_name[0],
-                        type=columns_dtypes.get(col)
-                    ))
             # apply filter
             if is_timeseries:
+                data = predictions.to_dict(orient='records')
                 data = self.apply_ts_filter(data, where_data, step, predictor_metadata)
-            result.add_records(data)
+                predictions = pd.DataFrame(data)
+
+            result.from_df(
+                predictions,
+                database=table_name[0],
+                table_name=table_name[1],
+                table_alias=table_name[2]
+            )
 
         return result
 

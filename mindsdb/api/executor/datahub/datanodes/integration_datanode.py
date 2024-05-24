@@ -13,6 +13,7 @@ from mindsdb_sql.parser.ast import Insert, Identifier, CreateTable, TableColumn,
 from mindsdb.api.executor.datahub.datanodes.datanode import DataNode
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.api.executor.datahub.classes.tables_row import TablesRow
+from mindsdb.api.executor.sql_query.result_set import ResultSet
 from mindsdb.integrations.utilities.utils import get_class_name
 from mindsdb.metrics import metrics
 from mindsdb.utilities import log
@@ -63,7 +64,7 @@ class IntegrationDataNode(DataNode):
         if result.type == RESPONSE_TYPE.ERROR:
             raise Exception(result.error_message)
 
-    def create_table(self, table_name: Identifier, result_set=None, columns=None,
+    def create_table(self, table_name: Identifier, result_set: ResultSet = None, columns=None,
                      is_replace=False, is_create=False):
         # is_create - create table
         # is_replace - drop table if exists
@@ -233,5 +234,5 @@ class IntegrationDataNode(DataNode):
             }
             for k, v in df.dtypes.items()
         ]
-        data = df.to_dict(orient='split')['data']
-        return data, columns_info
+
+        return df, columns_info

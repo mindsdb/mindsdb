@@ -1,7 +1,7 @@
 from typing import List, Union
 
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
-from pydantic import BaseModel, Extra, validator
+from pydantic import BaseModel, Extra, field_validator
 
 from mindsdb.integrations.handlers.rag_handler.settings import (
     DEFAULT_EMBEDDINGS_MODEL,

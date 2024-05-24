@@ -18,8 +18,8 @@ walrus==0.9.3
 flask-compress >= 1.0.0
 appdirs >= 1.0.0
 mindsdb-sql ~= 0.15.0
-pydantic >= 2.0.3
-pydantic-settings >= 2.0.3
+pydantic >= 2.7.0
+pydantic-settings >= 2.1.0
 mindsdb-evaluator >= 0.0.7, < 0.1.0
 checksumdir >= 1.2.0
 duckdb == 0.9.1

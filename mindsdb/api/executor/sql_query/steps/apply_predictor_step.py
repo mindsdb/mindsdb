@@ -213,10 +213,10 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
 
             # apply filter
             if is_timeseries:
-                data = predictions.to_dict(orient='records')
+                pred_data = predictions.to_dict(orient='records')
                 where_data = data.get_records()
-                data = self.apply_ts_filter(data, where_data, step, predictor_metadata)
-                predictions = pd.DataFrame(data)
+                pred_data = self.apply_ts_filter(pred_data, where_data, step, predictor_metadata)
+                predictions = pd.DataFrame(pred_data)
 
             result.from_df(
                 predictions,

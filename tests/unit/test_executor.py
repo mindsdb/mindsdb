@@ -1009,7 +1009,7 @@ class TestWithNativeQuery(BaseExecutorMockPredictor):
         # input = one row whit a==2
         data_in = self.mock_predict.call_args[0][1]
         assert len(data_in) == 1
-        assert data_in[0]['a'] == 2
+        assert data_in.iloc[0]['a'] == 2
 
         # check prediction
         assert ret.data[0][0] == predicted_value

@@ -50,7 +50,7 @@ WITH ENGINE = "mysql",
 PARAMETERS = {
     "user": "user",
     "password": "MindsDBUser123!",
-    "host": "db-demo-data.cwoyhfn6bzs0.us-east-1.rds.amazonaws.com",
+    "host": "samples.mindsdb.com",
     "port": "3306",
     "database": "public"
     };

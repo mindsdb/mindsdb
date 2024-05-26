@@ -10,7 +10,7 @@ from mindsdb.integrations.handlers.financial_modeling_prep_handler.financial_mod
 
 from urllib.request import urlopen
 from mindsdb.utilities import log
-from mindsdb_sql import parse_sql
+#from mindsdb_sql import parse_sql
 import certifi
 import json
 import requests
@@ -22,15 +22,16 @@ _FINANCIAL_MODELING_URL = 'https://financialmodelingprep.com/api/v3/'
 logger = log.getLogger(__name__)
 
 class FinancialModelingHandler(APIHandler):
-    def __init__(self, name=None, **kwargs):
+    def __init__(self, name, connection_data: dict,  **kwargs):
             super().__init__(name)
 
             self.api_key = None
-
-            args = kwargs.get('connection_data', {})
-            if 'api_key' in args:
-                self.api_key = args['api_key']
+            self.connection_data = connection_data
+            #args = kwargs.get('connection_data', {})
+            # if 'api_key' in args:
+            #     self.api_key = args['api_key']
             
+            self.api_key = connection_data['api_key']
             self.client = None
             self.is_connected = False
 
@@ -40,9 +41,9 @@ class FinancialModelingHandler(APIHandler):
             def connect(self): 
                 self.is_connected = True
 
-            def native_query(self, query: str = None) -> Response:
-                ast = parse_sql(query, dialect='mindsdb')
-                return self.query(ast)
+            # def native_query(self, query: str = None) -> Response:
+            #     ast = parse_sql(query, dialect='mindsdb')
+            #     return self.query(ast)
             
 
             def get_daily_chart(self, params: Dict = None) -> pd.DataFrame:  

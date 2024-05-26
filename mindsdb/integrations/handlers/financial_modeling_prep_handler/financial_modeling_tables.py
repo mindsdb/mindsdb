@@ -43,7 +43,7 @@ class FinancialModelingTradesTable(APITable):
 
         limit_value = query.limit.value
         params['limit'] = limit_value
-        
+
         daily_chart_table = self.handler.call_financial_modeling_api(
                 method_name='daily_chart',
                 params=params

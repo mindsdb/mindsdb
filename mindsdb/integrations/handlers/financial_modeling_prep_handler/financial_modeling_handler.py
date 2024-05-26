@@ -23,67 +23,67 @@ logger = log.getLogger(__name__)
 
 class FinancialModelingHandler(APIHandler):
     def __init__(self, name, connection_data: dict,  **kwargs):
-            super().__init__(name)
+        super().__init__(name)
 
-            self.api_key = None
-            self.connection_data = connection_data
-            #args = kwargs.get('connection_data', {})
-            # if 'api_key' in args:
-            #     self.api_key = args['api_key']
-            
-            self.api_key = connection_data['api_key']
-            self.client = None
-            self.is_connected = False
+        self.api_key = None
+        self.connection_data = connection_data
+        #args = kwargs.get('connection_data', {})
+        # if 'api_key' in args:
+        #     self.api_key = args['api_key']
+        
+        self.api_key = connection_data['api_key']
+        self.client = None
+        self.is_connected = False
 
-            daily_chart_table = FinancialModelingTradesTable(self) 
-            self._register_table('daily_chart_table', daily_chart_table)
+        daily_chart_table = FinancialModelingTradesTable(self) 
+        self._register_table('daily_chart_table', daily_chart_table)
 
-            def connect(self): 
-                self.is_connected = True
+    def connect(self): 
+        self.is_connected = True
 
-            # def native_query(self, query: str = None) -> Response:
-            #     ast = parse_sql(query, dialect='mindsdb')
-            #     return self.query(ast)
-            
-
-            def get_daily_chart(self, params: Dict = None) -> pd.DataFrame:  
-                base_url = "https://financialmodelingprep.com/api/v3/historical-price-full/"
-
-                if 'symbol' not in params:
-                    raise ValueError('Missing "symbol" param')
-                symbol = params['symbol']
-                params.pop('symbol')
-
-                limitParam = False
-
-                if 'limit' in params:
-                    limit = params['limit']
-                    params.pop('limit')
-                    limitParam = True
+    # def native_query(self, query: str = None) -> Response:
+    #     ast = parse_sql(query, dialect='mindsdb')
+    #     return self.query(ast)
     
-                url = f"{base_url}{symbol}" #https://financialmodelingprep.com/api/v3/historical-price-full/<symbol>
-                param = {'apikey': self.api_key, **params}
 
-                response = requests.get(url, param)
-                historical_data = response.json()
+    def get_daily_chart(self, params: Dict = None) -> pd.DataFrame:  
+        base_url = "https://financialmodelingprep.com/api/v3/historical-price-full/"
 
-                if limitParam:
-                    return {date: historical_data[date] for date in list(historical_data.keys())[:5]}
+        if 'symbol' not in params:
+            raise ValueError('Missing "symbol" param')
+        symbol = params['symbol']
+        params.pop('symbol')
 
-                
-                return historical_data
-    
-    
-            def call_financial_modeling_api(self, endpoint_name: str = None, params: Dict = None) -> pd.DataFrame:
-                """Calls the financial modeling API method with the given params.
+        limitParam = False
 
-                Returns results as a pandas DataFrame.
+        if 'limit' in params:
+            limit = params['limit']
+            params.pop('limit')
+            limitParam = True
 
-                Args:
-                    
-                    params (Dict): Params to pass to the API call
-                """
-                if endpoint_name == 'daily_chart':
-                    return self.get_daily_chart(params)
-                raise NotImplementedError('Endpoint {} not supported by Financial Modeling API Handler'.format(endpoint_name))
+        url = f"{base_url}{symbol}" #https://financialmodelingprep.com/api/v3/historical-price-full/<symbol>
+        param = {'apikey': self.api_key, **params}
+
+        response = requests.get(url, param)
+        historical_data = response.json()
+
+        if limitParam:
+            return {date: historical_data[date] for date in list(historical_data.keys())[:5]}
+
+        
+        return historical_data
+
+
+    def call_financial_modeling_api(self, endpoint_name: str = None, params: Dict = None) -> pd.DataFrame:
+        """Calls the financial modeling API method with the given params.
+
+        Returns results as a pandas DataFrame.
+
+        Args:
             
+            params (Dict): Params to pass to the API call
+        """
+        if endpoint_name == 'daily_chart':
+            return self.get_daily_chart(params)
+        raise NotImplementedError('Endpoint {} not supported by Financial Modeling API Handler'.format(endpoint_name))
+    

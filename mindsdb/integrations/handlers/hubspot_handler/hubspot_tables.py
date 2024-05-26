@@ -13,8 +13,7 @@ from hubspot.crm.objects import (
 )
 from mindsdb_sql.parser import ast
 
-
-from mindsdb.integrations.handlers.utilities.query_utilities import (
+from mindsdb.integrations.utilities.handlers.query_utilities import (
     INSERTQueryParser,
     SELECTQueryParser,
     UPDATEQueryParser,

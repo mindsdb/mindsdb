@@ -1,5 +1,4 @@
 import os
-from collections import OrderedDict
 from typing import Any
 
 import pandas as pd
@@ -8,9 +7,8 @@ from mindsdb_sql import parse_sql
 from mindsdb_sql.parser import ast
 
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
-from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
+from mindsdb.integrations.utilities.handlers.query_utilities import SELECTQueryParser, SELECTQueryExecutor
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse, HandlerStatusResponse
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb.utilities.config import Config
@@ -236,10 +234,3 @@ class PirateWeatherAPIHandler(APIHandler):
         df["localtime"] = pd.to_datetime(df["time"], utc=True, unit="s").dt.tz_convert(data["timezone"])
         df.drop(columns="time", inplace=True)
         return df
-
-
-connection_args = OrderedDict(
-    api_key={"type": ARG_TYPE.STR, "description": "Your PirateWeather API key."}
-)
-
-connection_args_example = OrderedDict(api_key="knlsndlknslk")

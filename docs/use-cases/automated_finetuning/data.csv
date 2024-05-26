@@ -1,0 +1,85 @@
+prompt,completion
+What is the SQL syntax to connect a database to MindsDB?,"CREATE DATABASE datasource_name
+[WITH] [ENGINE [=] engine_name] [,]
+[PARAMETERS [=] {
+  ""key"": ""value"",
+  ...
+}];
+"
+What is the SQL command to connect to the demo postgres database for MindsDB learning hub examples?,"CREATE DATABASE example_db
+WITH
+ENGINE = ""postgres"",
+PARAMETERS = {
+    ""user"": ""demo_user"",
+    ""password"": ""demo_password"",
+    ""host"": ""samples.mindsdb.com"",
+    ""port"": ""5432"",
+    ""database"": ""demo""
+};
+"
+What is the SQL command to create a home rentals MindsDB machine learning model?,"CREATE MODEL 
+  mindsdb.home_rentals_model
+FROM example_db
+  (SELECT * FROM demo_data.home_rentals)
+PREDICT rental_price;
+"
+What is the SQL syntax to create a MindsDB machine learning model?,"CREATE MODEL project_name.predictor_name
+
+[FROM integration_name
+    (SELECT [sequential_column,] [partition_column,] column_name, ...
+     FROM table_name)]
+
+PREDICT target_column
+
+[ORDER BY sequential_column]
+[GROUP BY partition_column]
+[WINDOW int]
+[HORIZON int]
+
+[USING engine = 'engine_name',
+       tag = 'tag_name'];
+"
+What is the SQL syntax to check status of a MindsDB machine learning model?,"SELECT *
+FROM mindsdb.models
+WHERE name=model_name;
+"
+What is the SQL command to predict rental price from synthetic home rentals data with a MindsDB machine learning model?,"SELECT rental_price, 
+       rental_price_explain 
+FROM mindsdb.home_rentals_model
+WHERE sqft = 823
+AND location='good'
+AND neighborhood='downtown'
+AND days_on_market=10;
+"
+What is the SQL syntax to predict from synthetic data with a MindsDB machine learning model?,"SELECT target_name, target_name_explain
+FROM mindsdb.predictor_name
+WHERE column_name = value 
+AND column_name = value;
+"
+What is the SQL syntax to join input data with predictions from a MindsDB machine learning model?,"SELECT t.column_name, p.column_name, ...
+FROM integration_name.table_name [AS] t
+JOIN project_name.model_name [AS] p;
+"
+What is the SQL command to join home rentals input data with rental price predictions from a MindsDB machine learning model?,"SELECT t.rental_price as real_price, 
+m.rental_price as predicted_price,
+t.number_of_rooms,  t.number_of_bathrooms, t.sqft, t.location, t.days_on_market 
+FROM example_db.demo_data.home_rentals as t 
+JOIN mindsdb.home_rentals_model as m limit 100;
+"
+What is the SQL syntax to retrain a MindsDB machine learning model?,"RETRAIN project_name.predictor_name
+[FROM integration_name
+    (SELECT column_name, ... FROM table_name)
+PREDICT target_name
+USING engine = 'engine_name',
+      tag = 'tag_name',
+      active = 0/1];
+"
+What is the SQL syntax to adjust a MindsDB machine learning model?,"ADJUST project_name.predictor_name
+[FROM integration_name
+    (SELECT column_name, ... FROM table_name)
+USING key = value];
+"
+What is the SQL command to check status of a MindsDB home rentals machine learning model?,"SELECT *
+FROM mindsdb.models
+WHERE name='home_rentals_model';
+"

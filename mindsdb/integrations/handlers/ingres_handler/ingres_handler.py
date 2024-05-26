@@ -1,6 +1,5 @@
 import pyodbc
 
-from collections import OrderedDict
 import pandas as pd
 from mindsdb_sql import parse_sql
 from ingres_sa_dialect.base import IngresDialect
@@ -14,7 +13,7 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+
 
 logger = log.getLogger(__name__)
 
@@ -209,35 +208,3 @@ class IngresHandler(DatabaseHandler):
         )
 
         return response
-
-
-connection_args = OrderedDict(
-    user={
-        'type': ARG_TYPE.STR,
-        'description': 'The user name used to authenticate with the Ingres server.'
-    },
-    password={
-        'type': ARG_TYPE.STR,
-        'description': 'The password to authenticate the user with the Ingres server.'
-    },
-    server={
-        'type': ARG_TYPE.STR,
-        'description': 'The server used to authenticate with the Ingres server.'
-    },
-    database={
-        'type': ARG_TYPE.STR,
-        'description': 'Specify database name to connect Ingres server'
-    },
-    servertype={
-        'type': ARG_TYPE.STR,
-        'description': 'Specify server type to connect Ingres server'
-    }
-)
-
-connection_args_example = OrderedDict(
-    user='admin',
-    password='password',
-    server='(local)',
-    database='test_db',
-    servertype='ingres'
-)

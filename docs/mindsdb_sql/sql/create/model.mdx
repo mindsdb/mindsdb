@@ -21,9 +21,10 @@ Here is the full syntax:
 ```sql
 CREATE [OR REPLACE] MODEL [IF NOT EXISTS] project_name.predictor_name
 
-[FROM integration_name
+[FROM [integration_name | project_name]
     (SELECT [sequential_column,] [partition_column,] column_name, ...
-     FROM table_name)]
+     FROM [integration_name. | project_name.]table_name
+     [JOIN model_name])]
 
 PREDICT target_column
 

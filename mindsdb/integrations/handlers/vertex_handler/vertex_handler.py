@@ -1,5 +1,4 @@
 import pandas as pd
-import json
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.handlers.vertex_handler.vertex_client import VertexClient
 from mindsdb.utilities import log
@@ -26,13 +25,14 @@ class VertexHandler(BaseMLEngine):
         model_name = args.pop("model_name")
         custom_model = args.pop("custom_model", False)
 
-        service_account_info = self.engine_storage.json_get('service_account')
+        # get credentials from engine
+        credentials_url, credentials_file, credentials_json = self._get_credentials_from_engine()
 
         # get vertex args from handler then update args from model
         vertex_args = self.engine_storage.json_get('args')
         vertex_args.update(args)
 
-        vertex = VertexClient(service_account_info, vertex_args)
+        vertex = VertexClient(vertex_args, credentials_url, credentials_file, credentials_json)
 
         model = vertex.get_model_by_display_name(model_name)
         if not model:
@@ -62,9 +62,11 @@ class VertexHandler(BaseMLEngine):
 
         predict_args = self.model_storage.json_get("predict_args")
         vertex_args = self.model_storage.json_get("vertex_args")
-        service_account_info = self.engine_storage.json_get('service_account')
 
-        vertex = VertexClient(service_account_info, vertex_args)
+        # get credentials from engine
+        credentials_url, credentials_file, credentials_json = self._get_credentials_from_engine()
+
+        vertex = VertexClient(vertex_args, credentials_url, credentials_file, credentials_json)
         results = vertex.predict_from_df(predict_args["endpoint_name"], df, custom_model=predict_args["custom_model"])
 
         if predict_args["custom_model"]:
@@ -73,15 +75,13 @@ class VertexHandler(BaseMLEngine):
             return pd.DataFrame(results.predictions)
 
     def create_engine(self, connection_args):
-        if 'service_account' not in connection_args:
-            raise KeyError('"service_account" parameter is required')
-        service_account = connection_args.pop('service_account')
-        if isinstance(service_account, str):
-            # convert to json
-            service_account = json.loads(service_account)
-        else:
-            # unescape new lines in private_key
-            service_account['private_key'] = service_account['private_key'].replace('\\n', '\n')
+        # check if one of credentials_url, credentials_file, or credentials_json is provided
+        if 'service_account_key_url' not in connection_args and 'service_account_key_file' not in connection_args and 'service_account_key_json' not in connection_args:
+            raise KeyError('Either service_account_key_url, service_account_key_file, or service_account_key_json must be provided')
 
         self.engine_storage.json_set('args', connection_args)
-        self.engine_storage.json_set('service_account', service_account)
+
+    def _get_credentials_from_engine(self):
+        engine_args = self.engine_storage.json_get('args')
+
+        return engine_args.get('service_account_key_url'), engine_args.get('service_account_key_file'), engine_args.get('service_account_key_json')

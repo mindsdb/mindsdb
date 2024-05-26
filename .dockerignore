@@ -13,6 +13,10 @@ docker/docker-compose.yml
 docker/*.Dockerfile
 docker/docker-compose*
 docker/README.md
+
+build
+docs
+helm
 var
 
 **/__pycache__

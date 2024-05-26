@@ -59,3 +59,5 @@ PGVector data integration Test Passed: https://github.com/maulanaakbardj/mindsdb
 </br>
 Apache druid data integration Test Passed: https://github.com/maarioos1308/mindsdb-Testing/tree/master/Apache_Druid
 </br>
+Zotero app Test Passed: https://github.com/ElinaKapetanaki/mindsdb-test/blob/main/Zotero_QA.MD
+</br>

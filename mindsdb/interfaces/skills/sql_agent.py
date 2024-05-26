@@ -15,7 +15,7 @@ class SQLAgent:
     def __init__(
             self,
             command_executor,
-            database: Optional[str] = 'mindsdb',
+            database: str,
             include_tables: Optional[List[str]] = None,
             ignore_tables: Optional[List[str]] = None,
             sample_rows_in_table_info: int = 3,
@@ -32,7 +32,7 @@ class SQLAgent:
         if not self._tables_to_include:
             # ignore_tables and include_tables should not be used together.
             # include_tables takes priority if it's set.
-            self._tables_to_ignore = ignore_tables
+            self._tables_to_ignore = ignore_tables or []
 
     def _call_engine(self, query: str, database=None):
         # switch database
@@ -67,11 +67,12 @@ class SQLAgent:
         dbs = [lst[0] for lst in ret.data if lst[0] != 'information_schema']
         usable_tables = []
         for db in dbs:
-            if db != 'mindsdb':
+            if db != 'mindsdb' and db == self._database:
                 try:
                     ret = self._call_engine('show tables', database=db)
                     tables = [lst[0] for lst in ret.data if lst[0] != 'information_schema']
                     for table in tables:
+                        # By default, include all tables in a database unless expilcitly ignored.
                         table_name = f'{db}.{table}'
                         if table_name not in self._tables_to_ignore:
                             usable_tables.append(table_name)

@@ -53,7 +53,7 @@ class TriggerTask(BaseTask):
             else:
                 columns = columns.split('|')
 
-        data_handler.subscribe(stop_event, self._callback, trigger.table_name, columns)
+        data_handler.subscribe(stop_event, self._callback, trigger.table_name, columns=columns)
 
     def _callback(self, row, key=None):
         logger.debug(f'trigger call: {row}, {key}')

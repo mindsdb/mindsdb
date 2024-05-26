@@ -1,12 +1,9 @@
 from mindsdb.integrations.libs.const import HANDLER_TYPE
 
 from .__about__ import __version__ as version, __description__ as description
+from .connection_args import connection_args, connection_args_example
 try:
-    from .planetscale_handler import (
-        PlanetScaleHandler as Handler,
-        connection_args_example,
-        connection_args
-    )
+    from .planetscale_handler import PlanetScaleHandler as Handler
     import_error = None
 except Exception as e:
     Handler = None

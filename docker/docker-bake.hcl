@@ -13,31 +13,34 @@ variable "IMAGE" {
 variable "VERSION" {
   default = "unknown"
 }
-variable "PLATFORM" {
-  default = "linux/amd64"
+variable "PLATFORMS" {
+  default = "linux/amd64,linux/arm64"
+}
+variable PLATFORM_LIST {
+  default = split(",", PLATFORMS)
 }
 variable "BRANCH" {
-  default = "stable"
+  default = "main"
 }
-
-function "get_platform_tag" {
-  params = []
-  result = replace("${equal(PLATFORM, "") ? "" : "-"}${PLATFORM}", "linux/", "")
+variable "ECR_REPO" {
+  default = "454861456664.dkr.ecr.us-east-2.amazonaws.com"
 }
 
 function "get_cache_to" {
-  params = [target]
-  result = [
-    "type=registry,image-manifest=true,oci-mediatypes=true,mode=max,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:${replace("${BRANCH}", "/", "-")}-${target}${get_platform_tag()}"
+  params = [image]
+  result = length(PLATFORM_LIST) > 1 ? [] : [
+    "type=registry,image-manifest=true,oci-mediatypes=true,mode=max,ref=${ECR_REPO}/${IMAGE}-cache:${replace("${BRANCH}", "/", "-")}-${image}-${replace("${PLATFORM_LIST[0]}", "linux/", "")}"
   ]
 }
 function "get_cache_from" {
-  params = [target]
-  result = [
-    "type=registry,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:${replace("${BRANCH}", "/", "-")}-${target}${get_platform_tag()}",
-    "type=registry,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:staging-${target}${get_platform_tag()}",
-    "type=registry,ref=454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}-cache:stable-${target}${get_platform_tag()}"
-  ]
+  params = [image]
+  result = flatten([for p in PLATFORM_LIST:
+    split("\n", <<EOT
+type=registry,ref=${ECR_REPO}/${IMAGE}-cache:${replace("${BRANCH}", "/", "-")}-${image}-${replace("${p}", "linux/", "")}
+type=registry,ref=${ECR_REPO}/${IMAGE}-cache:main-${image}-${replace("${p}", "linux/", "")}
+EOT
+    )
+  ])
 }
 
 # Generate the list of tags for a given image.
@@ -46,12 +49,12 @@ function "get_cache_from" {
 # - "mindsdb:v1.2.3-cloud" - For this specific version
 # The same tags are pushed to dockerhub as well if the PUSH_TO_DOCKERHUB variable is set.
 function "get_tags" {
-  params = [target]
+  params = [image]
   result = [
-    "454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}:${VERSION}${notequal(target, "bare") ? "-${target}" : ""}${get_platform_tag()}",
-    "454861456664.dkr.ecr.us-east-2.amazonaws.com/${IMAGE}:${notequal(target, "bare") ? target : "latest"}${get_platform_tag()}",
-    PUSH_TO_DOCKERHUB ? "mindsdb/${IMAGE}:${VERSION}${notequal(target, "bare") ? "-${target}" : ""}${get_platform_tag()}" : "",
-    PUSH_TO_DOCKERHUB ? "mindsdb/${IMAGE}:${notequal(target, "bare") ? target : "latest"}${get_platform_tag()}" : ""
+    "${ECR_REPO}/${IMAGE}:${VERSION}${notequal(image, "bare") ? "-${image}" : ""}",
+    "${ECR_REPO}/${IMAGE}:${notequal(image, "bare") ? image : "latest"}",
+    PUSH_TO_DOCKERHUB ? "mindsdb/${IMAGE}:${VERSION}${notequal(image, "bare") ? "-${image}" : ""}" : "",
+    PUSH_TO_DOCKERHUB ? "mindsdb/${IMAGE}:${notequal(image, "bare") ? image : "latest"}" : ""
   ]
 } 
 
@@ -61,8 +64,8 @@ function "get_tags" {
 
 target "images" {
   name = item.name
-  dockerfile = "docker/mindsdb.Dockerfile" # If you change this, also change it in target:builder
-  platforms = ["${PLATFORM}"]
+  dockerfile = "docker/mindsdb.Dockerfile"
+  platforms = PLATFORM_LIST
   matrix = {
     item = [
       {
@@ -87,7 +90,7 @@ target "images" {
       },
       {
         name = "cloud"
-        extras = ".[lightwood,huggingface,statsforecast-extra,neuralforecast-extra,timegpt,surrealdb,mssql,youtube,ignite,gmail,pgvector,llama_index,writer,rag,github,snowflake,clickhouse,couchbase,twelve_labs] darts datasetsforecast"
+        extras = ".[lightwood,huggingface,statsforecast-extra,neuralforecast-extra,timegpt,mssql,youtube,gmail,pgvector,llama_index,writer,rag,github,snowflake,clickhouse,twelve_labs,bigquery] darts datasetsforecast"
         target = ""
       },
     ]

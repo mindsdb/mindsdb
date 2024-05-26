@@ -26,8 +26,8 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
-DEFAULT_CHUNK_SIZE = 200
-DEFAULT_CHUNK_OVERLAP = 50
+DEFAULT_CHUNK_SIZE = 500
+DEFAULT_CHUNK_OVERLAP = 250
 
 
 def clean_cell(val):

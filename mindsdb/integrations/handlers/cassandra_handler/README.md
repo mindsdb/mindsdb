@@ -12,12 +12,12 @@ ScyllaDB is API-compatible with Apache Cassandra so this handler just extends th
 
 The required arguments to establish a connection are:
 
-* `host`: the host name or IP address of the Cassandra 
-* `port`: the port to use when connecting 
-* `user`: the user to authenticate 
-* `password`: the password to authenticate the user
-* `keyspace`: the keyspace to connect to(top level container for tables)
-* `protocol_version`: not required, default to 4
+- `host`: the host name or IP address of the Cassandra
+- `port`: the port to use when connecting
+- `user`: the user to authenticate. Optional; required only if authentication is enabled.
+- `password`: the password to authenticate the user. Optional; required only if authentication is enabled.
+- `keyspace`: the keyspace to connect to(top level container for tables)
+- `protocol_version`: not required, default to 4
 
 ## Usage
 

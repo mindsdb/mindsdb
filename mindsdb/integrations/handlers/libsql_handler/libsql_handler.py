@@ -1,5 +1,4 @@
 from typing import Optional
-from collections import OrderedDict
 
 import pandas as pd
 import libsql_experimental as libsql
@@ -15,7 +14,7 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE,
 )
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+
 
 logger = log.getLogger(__name__)
 
@@ -191,21 +190,3 @@ class LibSQLHandler(DatabaseHandler):
             columns={"name": "column_name", "type": "data_type"}
         )
         return result
-
-
-connection_args = OrderedDict(
-    database={
-        "type": ARG_TYPE.STR,
-        "description": "The database file where the data will be stored.",
-    },
-    sync_url={
-        "type": ARG_TYPE.STR,
-        "description": "The database URL where the data is synced with.",
-    },
-    auth_token={
-        "type": ARG_TYPE.STR,
-        "description": "The JWT auth token to authenticate with the sync database.",
-    },
-)
-
-connection_args_example = OrderedDict(database="chinook.db")

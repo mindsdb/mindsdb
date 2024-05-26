@@ -66,6 +66,9 @@ def learn_process(data_integration_ref: dict, problem_definition: dict, fetch_da
                     query_ast = parse_sql(fetch_data_query, dialect='mindsdb')
                     view_meta = project.query_view(query_ast)
                     sqlquery = SQLQuery(view_meta['query_ast'], session=sql_session)
+                elif data_integration_ref['type'] == 'project':
+                    query_ast = parse_sql(fetch_data_query, dialect='mindsdb')
+                    sqlquery = SQLQuery(query_ast, session=sql_session)
 
                 result = sqlquery.fetch(view='dataframe')
                 training_data_df = result['result']
@@ -82,6 +85,10 @@ def learn_process(data_integration_ref: dict, problem_definition: dict, fetch_da
 
             module = importlib.import_module(module_path)
 
+            # check if module is imported successfully and raise exception if not
+            if module.import_error is not None:
+                raise module.import_error
+
             handlerStorage = HandlerStorage(integration_id)
             modelStorage = ModelStorage(model_id)
             modelStorage.fileStorage.push()     # FIXME
@@ -90,7 +97,6 @@ def learn_process(data_integration_ref: dict, problem_definition: dict, fetch_da
             if base_model_id is not None:
                 kwargs['base_model_storage'] = ModelStorage(base_model_id)
                 kwargs['base_model_storage'].fileStorage.pull()
-
             ml_handler = module.Handler(
                 engine_storage=handlerStorage,
                 model_storage=modelStorage,

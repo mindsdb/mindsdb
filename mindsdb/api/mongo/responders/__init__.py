@@ -26,6 +26,7 @@ from .list_databases import responder as responder_list_databases
 from .find import responder as responder_find
 from .insert import responder as responder_insert
 from .delete import responder as responder_delete
+from .describe import responder as responder_describe
 
 from .sasl_start import responder as sasl_start
 from .sasl_continue import responder as sasl_continue
@@ -63,6 +64,7 @@ responders = [
     responder_find,
     responder_insert,
     responder_delete,
+    responder_describe,
     # auth
     sasl_start,
     sasl_continue,

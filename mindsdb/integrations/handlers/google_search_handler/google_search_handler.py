@@ -1,6 +1,5 @@
 import json
 import pandas as pd
-from collections import OrderedDict
 
 from pandas import DataFrame
 from google.auth.transport.requests import Request
@@ -13,7 +12,6 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
 )
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -205,15 +203,3 @@ class GoogleSearchConsoleHandler(APIHandler):
             return self.delete_sitemap(params)
         else:
             raise NotImplementedError(f'Unknown method {method_name}')
-
-
-connection_args = OrderedDict(
-    credentials={
-        'type': ARG_TYPE.PATH,
-        'description': 'The path to the credentials file. If not specified, the default credentials are used.'
-    }
-)
-
-connection_args_example = OrderedDict(
-    credentials='/path/to/credentials.json'
-)

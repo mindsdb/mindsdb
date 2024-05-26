@@ -11,22 +11,7 @@ For more information, visit [Metabase](https://www.metabase.com/).
 
 ### MindsDB
 
-Let's set up the MindsDB following one of the guides from the **Deployment**
-section. Please note that the MindsDB Cloud is not yet supported.
-
-<Warning>
-  **Currently, only local and on-premise installations are stable**
-</Warning>
-
-You can choose one of the following approaches to set up the MindsDB locally:
-
-- [Docker](/setup/self-hosted/docker)
-- [Windows via pip](/setup/self-hosted/pip/windows)
-- [Linux via pip](/setup/self-hosted/pip/linux)
-- [MacOS via pip](/setup/self-hosted/pip/macos)
-- [Sourcecode via pip](/setup/self-hosted/pip/source)
-
-Here, we use the [Docker](/setup/self-hosted/docker) setup for MindsDB.
+Install MindsDB locally via [Docker](/setup/self-hosted/docker) or [Docker Desktop](/setup/self-hosted/docker-desktop).
 
 ### Metabase
 
@@ -57,28 +42,6 @@ Follow the steps below to connect your MindsDB to Metabase.
       Database name: `mindsdb`
       Username: `mindsdb`
       Password: *leave it empty*
-      ```
-    </Tab>
-    <Tab title="MindsDB Cloud">
-      ```text
-      Database type: `MySQL`
-      Display name: `MindsDB`
-      Host: `cloud.mindsdb.com`
-      Port: `3306`
-      Database name: `mindsdb`
-      Username: `<your MindsDB Cloud username>`
-      Password: `<your MindsDB Cloud password>`
-      ```
-    </Tab>
-    <Tab title="MindsDB Pro">
-      ```text
-      Database type: `MySQL`
-      Display name: `MindsDB`
-      Host: `<dedicated instance ip>`
-      Port: 3306
-      Database name: `mindsdb`
-      Username: `<your MindsDB Cloud username>`
-      Password: `<your MindsDB Cloud password>`
       ```
     </Tab>
   </Tabs>
@@ -131,7 +94,7 @@ CREATE DATABASE example_db
     PARAMETERS = {
         "user": "demo_user",
         "password": "demo_password",
-        "host": "3.220.66.106",
+        "host": "samples.mindsdb.com",
         "port": "5432",
         "database": "demo"
 };

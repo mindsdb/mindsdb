@@ -5,7 +5,7 @@ openai==1.6.1
 pytest >= 7.3.0, < 8.0.0
 pytest-lazy-fixture~=0.6.3
 pytest-subtests
-lightwood==23.12.4.0  # This is required for tests/unit/test_executor.py. These tests need to be refactored.
+lightwood==24.5.2.0  # This is required for tests/unit/test_executor.py. These tests need to be refactored.
 responses
 pytest-cov 
 coveralls

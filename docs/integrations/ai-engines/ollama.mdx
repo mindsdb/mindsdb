@@ -3,82 +3,110 @@ title: Ollama
 sidebarTitle: Ollama
 ---
 
+This documentation describes the integration of MindsDB with [Ollama](https://ollama.com/), a tool that enables local deployment of large language models.
+The integration allows for the deployment of Ollama models within MindsDB, providing the models with access to data from various data sources.
 
-[Ollama](https://ollama.ai/) is a project that enables easy local deployment of Large Language Models (LLMs). 
+## Prerequisites
 
-All models supported by Ollama are available in MindsDB through this integration.
+Before proceeding, ensure the following prerequisites are met:
 
-<Warning>
-For now, this integration will only work in MacOS, with Linux and Windows to come later.
-</Warning>
+1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
+2. To use Ollama within MindsDB, install the required dependencies following [this instruction](https://docs.mindsdb.com/setup/self-hosted/docker#install-dependencies).
+3. Follow [this instruction](https://github.com/ollama/ollama?tab=readme-ov-file#ollama) to download Ollama and run models locally.
 
+<Info>
+Here are the recommended system specifications:
 
-Locally deployed LLMs can be desirable for a wide variety of reasons. In this case, data privacy, developer feedback-loop speed and inference cost reduction can be powerful reasons to opt for a local LLM.
-
-Ideal predictive use cases, as in other LLM-focused integrations (e.g. OpenAI, Anthropic, Cohere), will be anything involving language understanding and generation, including but not limited to:
-- zero-shot text classification
-- sentiment analysis
-- question answering
-- summarization
-- translation
-
+- A working Ollama installation, as in point 3.
+- For 7B models, at least 8GB RAM is recommended.
+- For 13B models, at least 16GB RAM is recommended.
+- For 70B models, at least 64GB RAM is recommended.
+</Info>
 
 ## Setup
 
-* A macOS machine, M1 chip or greater. 
-* A working Ollama installation. For instructions refer to their [webpage](https://ollama.ai). This step should be really simple.
-* For 7B models, at least 8GB RAM is recommended. 
-* For 13B models, at least 16GB RAM is recommended. 
-* For 70B models, at least 64GB RAM is recommended.
-
-More information [here](https://ollama.ai/library/llama2). Minimum specs can vary depending on the model.
-
-### AI Engine
-
-Before creating a model, it is required to create an AI engine based on the provided handler.
-
-
-You can create an Ollama engine using this command:
+Create an AI engine from the [Ollama handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/ollama_handler).
 
 ```sql
-CREATE ML_ENGINE ollama FROM ollama;
+CREATE ML_ENGINE ollama_engine
+FROM ollama;
 ```
 
-The name of the engine (here, `ollama`) should be used as a value for the `engine` parameter in the `USING` clause of the `CREATE MODEL` statement.
-
-### AI Model
-
-The [`CREATE MODEL`](/sql/create/model) statement is used to create, train, and deploy models within MindsDB.
+Create a model using `ollama_engine` as an engine.
 
 ```sql
-CREATE MODEL mindsdb.my_llama2
+CREATE MODEL ollama_model
 PREDICT completion
-USING 
-    engine = 'ollama',
-    model_name = 'llama2'
+USING
+   engine = 'ollama_engine',   -- engine name as created via CREATE ML_ENGINE
+   model_name = 'model-name',  -- model run with 'ollama run model-name'
+   ollama_serve_url = 'http://localhost:11434';
 ```
 
-Where:
+<Tip>
+If you run Ollama and MindsDB in separate Docker containers, use the `localhost` value of the container. For example, `ollama_serve_url = 'http://host.docker.internal:11434'`.
+</Tip>
 
-| Name              | Description                                                               |
-|-------------------|---------------------------------------------------------------------------|
-| `engine`          | It defines the Ollama engine.                                          |
-| `model_name`      | It is used to provide the name of the model to be used |
-
-Supported commands for describing Ollama models are:
-
-1. `DESCRIBE ollama_model;`
-2. `DESCRIBE ollama_model.model;`
-3. `DESCRIBE ollama_model.features;`
-
-
+You can find [available models here](https://github.com/ollama/ollama?tab=readme-ov-file#model-library).
 
 ## Usage
 
-Once you have connected to an Ollama model, you can use it to make predictions.
+The following usage examples utilize `ollama_engine` to create a model with the `CREATE MODEL` statement.
+
+Deploy and use the `llama2` model.
+
+First, [download Ollama](https://github.com/ollama/ollama?tab=readme-ov-file#ollama) and run the model locally by executing `ollama run llama2`.
+
+Now deploy this model within MindsDB.
+
+```sql
+CREATE MODEL llama2_model
+PREDICT completion
+USING
+   engine = 'ollama_engine',
+   model_name = 'llama2';
+```
+
+Query the model to get predictions.
 
 ```sql
 SELECT text, completion
-FROM my_llama2
-WHERE text = 'hi there!';
+FROM llama2_model
+WHERE text = 'Hello';
 ```
+
+Here is the output:
+
+```sql
++-------+------------+
+| text  | completion |
++-------+------------+
+| Hello | Hello!     |
++-------+------------+
+```
+
+You can override the prompt message as below:
+
+```sql
+SELECT text, completion
+FROM llama2_model
+WHERE text = 'Hello'
+USING 
+   prompt_template = 'Answer using exactly five words: {{text}}:';
+```
+
+Here is the output:
+
+```sql
++-------+------------------------------------+
+| text  | completion                         |
++-------+------------------------------------+
+| Hello | Hello! *smiles* How are you today? |
++-------+------------------------------------+
+```
+
+<Tip>
+**Next Steps**
+
+Go to the [Use Cases](https://docs.mindsdb.com/use-cases/overview) section to see more examples.
+</Tip>

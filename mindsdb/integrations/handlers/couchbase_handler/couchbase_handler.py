@@ -60,9 +60,12 @@ class CouchbaseHandler(DatabaseHandler):
 
         options = ClusterOptions(auth)
 
-        if 'cloud.couchbase.com' in self.connection_data.get("host"):
+        allowlist = [
+            "cloud.couchbase.com"
+        ]
+        host = self.connection_data.get("host")
+        if host in allowlist:
             options.apply_profile('wan_development')
-
             endpoint = f"couchbases://{self.connection_data.get('host')}"
         else:
             endpoint = f"couchbase://{self.connection_data.get('host')}"

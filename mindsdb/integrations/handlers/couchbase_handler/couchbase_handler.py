@@ -66,10 +66,7 @@ class CouchbaseHandler(DatabaseHandler):
         host = self.connection_data.get("host")
         if host in allowlist:
             options.apply_profile('wan_development')
-            endpoint = f"couchbases://{self.connection_data.get('host')}"
-        else:
-            endpoint = f"couchbase://{self.connection_data.get('host')}"
-
+        endpoint = f"couchbases://{host}"
         cluster = Cluster(
             endpoint,
             options,

@@ -577,8 +577,8 @@
           "group": "Files",
           "pages": [
             "rest/files/upload",
-            "rest/files/list",
-            "rest/files/delete"
+            "rest/files/delete",
+            "rest/files/list"
           ]
         },
         {

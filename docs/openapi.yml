@@ -2204,7 +2204,6 @@ paths:
                 type: object
                 items:
                   type: string
-  '/api/files/{fileName}':
     put:
       summary: Upload a new file.
       description: Upload a new file.

@@ -165,6 +165,68 @@ class TestOpenAI(BaseMLAPITest):
         assert "venus" in result_df["answer"].iloc[1].lower()
         assert "boom!" in result_df["answer"].iloc[1].lower()
 
+    def test_single_full_flow_in_conversational_mode_runs_no_errors(self):
+        """
+        Test the full flow in conversational mode for a single prediction.
+        """
+        self.run_sql(
+            f"""
+            CREATE MODEL proj.test_openai_single_full_flow_conversational_mode
+            PREDICT answer
+            USING
+                engine='openai_engine',
+                mode='conversational',
+                user_column='question',
+                prompt='you are a helpful assistant',
+                assistant_column='answer';
+            """
+        )
+
+        self.wait_predictor("proj", "test_openai_single_full_flow_conversational_mode")
+
+        result_df = self.run_sql(
+            """
+            SELECT answer
+            FROM proj.test_openai_single_full_flow_conversational_mode
+            WHERE question='What is the capital of Sweden?'
+            """
+        )
+        assert "stockholm" in result_df["answer"].iloc[0].lower()
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_bulk_full_flow_in_conversational_mode_runs_no_errors(self, mock_handler):
+        """
+        Test the full flow in conversational mode for bulk predictions.
+        """
+        df = pd.DataFrame.from_dict({"question": [
+            "What is the capital of Sweden?",
+            "What are some cool places to visit there?"
+        ]})
+        self.set_handler(mock_handler, name="pg", tables={"df": df})
+
+        self.run_sql(
+            f"""
+            CREATE MODEL proj.test_openai_bulk_full_flow_conversational_mode
+            PREDICT answer
+            USING
+                engine='openai_engine',
+                mode='conversational',
+                user_column='question',
+                prompt='you are a helpful assistant',
+                assistant_column='answer';
+            """
+        )
+
+        self.wait_predictor("proj", "test_openai_bulk_full_flow_conversational_mode")
+
+        result_df = self.run_sql(
+            """
+            SELECT p.answer
+            FROM pg.df as t
+            JOIN proj.test_openai_bulk_full_flow_conversational_mode as p;
+            """
+        )
+        assert "gamla stan" in result_df["answer"].iloc[1].lower()
 
 if __name__ == "__main__":
     pytest.main([__file__])

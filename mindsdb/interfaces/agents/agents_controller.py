@@ -120,9 +120,6 @@ class AgentsController:
         Raises:
             ValueError: Agent with given name already exists, or skill/model with given name does not exist.
         '''
-
-        config = Config()
-
         if project_name is None:
             project_name = 'mindsdb'
         project = self.project_controller.get(name=project_name)

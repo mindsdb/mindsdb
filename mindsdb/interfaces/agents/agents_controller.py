@@ -11,7 +11,6 @@ from mindsdb.interfaces.skills.skills_controller import SkillsController
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.utilities.context import context as ctx
-from mindsdb.utilities.config import Config
 
 
 class AgentsController:

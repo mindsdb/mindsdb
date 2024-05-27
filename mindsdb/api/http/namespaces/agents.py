@@ -64,13 +64,6 @@ def create_agent(project_name, name, agent):
             'Resource not found',
             str(e)
         )
-    except NotImplementedError as e:
-        # Free users trying to create agent.
-        return http_error(
-            HTTPStatus.UNAUTHORIZED,
-            'Unavailable to free users',
-            str(e)
-        )
 
 
 @ns_conf.route('/<project_name>/agents')

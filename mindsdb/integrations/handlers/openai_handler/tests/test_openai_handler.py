@@ -293,6 +293,91 @@ class TestOpenAI(BaseMLAPITest):
         assert "stockholm" in result_df["answer"].iloc[0].lower()
         assert "gamla stan" in result_df["answer"].iloc[1].lower()
 
+    # @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    # def test_full_flow_finetune_runs_no_errors(self, mock_handler):
+    #     """
+    #     Test the full flow for finetuning a model and making a prediction.
+    #     """
+    #     df = pd.DataFrame.from_dict(
+    #         {
+    #             "prompt": [
+    #                 "What is the SQL syntax to connect a database to MindsDB?",
+    #                 "What is the SQL command to connect to the demo postgres database for MindsDB learning hub examples?",
+    #                 "What is the SQL syntax to create a MindsDB machine learning model?",
+    #                 "What is the SQL syntax to join input data with predictions from a MindsDB machine learning model?"
+    #             ],
+    #             "completion": [
+    #                 """
+    #                 CREATE DATABASE datasource_name
+    #                 [WITH] [ENGINE [=] engine_name] [,]
+    #                 [PARAMETERS [=] {
+    #                 "key": "value",
+    #                 ...
+    #                 }];
+    #                 """,
+    #                 """
+    #                 CREATE DATABASE example_db
+    #                 WITH
+    #                 ENGINE = "postgres",
+    #                 PARAMETERS = {
+    #                     "user": "demo_user",
+    #                     "password": "demo_password",
+    #                     "host": "samples.mindsdb.com",
+    #                     "port": "5432",
+    #                     "database": "demo"
+    #                 };
+    #                 """,
+    #                 """
+    #                 CREATE MODEL 
+    #                 mindsdb.home_rentals_model
+    #                 FROM example_db
+    #                 (SELECT * FROM demo_data.home_rentals)
+    #                 PREDICT rental_price;
+    #                 """,
+    #                 """
+    #                 SELECT t.column_name, p.column_name, ...
+    #                 FROM integration_name.table_name [AS] t
+    #                 JOIN project_name.model_name [AS] p;
+    #                 """
+    #             ]
+                    
+    #         }
+    #     )
+    #     self.set_handler(mock_handler, name="pg", tables={"df": df})
+
+    #     self.run_sql(
+    #         f"""
+    #         CREATE MODEL proj.test_openai_full_flow_finetune
+    #         PREDICT completion
+    #         USING
+    #             engine = 'openai_engine',
+    #             model_name = 'davinci-002',
+    #             prompt_template = 'Return a valid SQL string for the following question about MindsDB in-database machine learning: {{{{prompt}}}}';
+    #         """
+    #     )
+
+    #     self.wait_predictor("proj", "test_openai_full_flow_finetune")
+
+    #     self.run_sql(
+    #         """
+    #         FINETUNE proj.test_openai_full_flow_finetune
+    #         FROM pg
+    #             (SELECT prompt, completion FROM df);
+    #         """
+    #     )
+
+    #     self.wait_predictor("proj", "test_openai_full_flow_finetune", finetune=True)
+
+    #     result_df = self.run_sql(
+    #         """
+    #         SELECT prompt, completion
+    #         FROM proj.test_openai_full_flow_finetune
+    #         WHERE prompt = 'What is the SQL syntax to join input data with predictions from a MindsDB machine learning model?'
+    #         USING max_tokens=400;
+    #         """
+    #     )
+    #     assert "SELECT t.column_name, p.column_name, ..." in result_df["completion"].iloc[0].lower()
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

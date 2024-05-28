@@ -397,7 +397,7 @@ class BaseExecutorDummyML(BaseExecutorTest):
                 col.alias if col.alias is not None else col.name
                 for col in ret.columns
             ]
-            return pd.DataFrame(ret.data, columns=columns)
+            return pd.DataFrame(ret.data).set_axis(columns, axis=1)
 
 
 class BaseExecutorDummyLLM(BaseExecutorTest):

@@ -28,7 +28,7 @@ class TestOpenAI(unittest.TestCase):
 
         self.handler = OpenAIHandler(mock_model_storage, mock_engine_storage, connection_data={'connection_data': self.dummy_connection_data})
 
-    def test_create_validation_raises_exception_without_using_clause(self):
+    def test_create_validation_without_using_clause_raises_exception(self):
         """
         Test if model creation raises an exception without a USING clause.
         """
@@ -36,7 +36,7 @@ class TestOpenAI(unittest.TestCase):
         with self.assertRaisesRegex(Exception, "OpenAI engine requires a USING clause! Refer to its documentation for more details."):
             self.handler.create_validation('target', args={}, handler_storage=None)
 
-    def test_create_validation_raises_exception_without_required_parameters(self):
+    def test_create_validation_without_required_parameters_raises_exception(self):
         """
         Test if model creation raises an exception without required parameters.
         """
@@ -44,7 +44,7 @@ class TestOpenAI(unittest.TestCase):
         with self.assertRaisesRegex(Exception, "One of `question_column`, `prompt_template` or `json_struct` is required for this engine."):
             self.handler.create_validation('target', args={"using": {}}, handler_storage=self.mock_engine_storage)
 
-    def test_create_validation_raises_exception_with_invalid_parameter_combinations(self):
+    def test_create_validation_with_invalid_parameter_combinations_raises_exception(self):
         """
         Test if model creation raises an exception with invalid parameter combinations.
         """
@@ -52,7 +52,7 @@ class TestOpenAI(unittest.TestCase):
         with self.assertRaisesRegex(Exception, "^Please provide one of"):
             self.handler.create_validation('target', args={"using": {'prompt_template': 'dummy_prompt_template', 'question_column': 'question'}}, handler_storage=self.mock_engine_storage)
 
-    def test_create_validation_raises_exception_with_unknown_arguments(self):
+    def test_create_validation_with_unknown_arguments_raises_exception(self):
         """
         Test if model creation raises an exception with unknown arguments.
         """
@@ -60,7 +60,7 @@ class TestOpenAI(unittest.TestCase):
         with self.assertRaisesRegex(Exception, "^Unknown arguments:"):
             self.handler.create_validation('target', args={"using": {'prompt_template': 'dummy_prompt_template', 'unknown_arg': 'unknown_arg'}}, handler_storage=self.mock_engine_storage)
 
-    def test_create_validation_raises_exception_with_invalid_api_key(self):
+    def test_create_validation_with_invalid_api_key_raises_exception(self):
         """
         Test if model creation raises an exception with an invalid API key.
         """
@@ -69,7 +69,7 @@ class TestOpenAI(unittest.TestCase):
             self.handler.create_validation('target', args={"using": {'prompt_template': 'dummy_prompt_template'}}, handler_storage=self.mock_engine_storage)
 
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
-    def test_create_validation_runs_no_errors_with_valid_arguments(self, mock_openai):
+    def test_create_validation_with_valid_arguments_runs_no_errors(self, mock_openai):
         """
         Test if model creation is validated correctly with valid arguments.
         """
@@ -84,7 +84,7 @@ class TestOpenAI(unittest.TestCase):
 
     @patch('mindsdb.integrations.handlers.openai_handler.helpers.OpenAI')
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
-    def test_create_raises_exception_with_invalid_mode(self, mock_openai_handler_openai_client, mock_openai_helpers_openai_client):
+    def test_create_with_invalid_mode_raises_exception(self, mock_openai_handler_openai_client, mock_openai_helpers_openai_client):
         """
         Test if model creation raises an exception with an invalid mode.
         """
@@ -103,7 +103,7 @@ class TestOpenAI(unittest.TestCase):
 
     @patch('mindsdb.integrations.handlers.openai_handler.helpers.OpenAI')
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
-    def test_create_raises_exception_with_unsupported_model(self, mock_openai_handler_openai_client, mock_openai_helpers_openai_client):
+    def test_create_with_unsupported_model_raises_exception(self, mock_openai_handler_openai_client, mock_openai_helpers_openai_client):
         """
         Test if model creation raises an exception with an invalid model name.
         """
@@ -122,7 +122,7 @@ class TestOpenAI(unittest.TestCase):
 
     @patch('mindsdb.integrations.handlers.openai_handler.helpers.OpenAI')
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
-    def test_create_runs_no_errors_with_valid_arguments(self, mock_openai_handler_openai_client, mock_openai_helpers_openai_client):
+    def test_create_with_valid_arguments_runs_no_errors(self, mock_openai_handler_openai_client, mock_openai_helpers_openai_client):
         """
         Test if model creation runs without errors with valid arguments.
         """
@@ -138,7 +138,7 @@ class TestOpenAI(unittest.TestCase):
 
         self.handler.create('dummy_target', args={'using': {'prompt_template': 'dummy_prompt_template'}})
 
-    def test_predict_raises_exception_with_invalid_mode(self):
+    def test_predict_with_invalid_mode_raises_exception(self):
         """
         Test if model prediction raises an exception with an invalid mode.
         """
@@ -149,7 +149,7 @@ class TestOpenAI(unittest.TestCase):
         with self.assertRaisesRegex(Exception, "^Invalid operation mode."):
             self.handler.predict(df=df, args={'predict_params': {'mode': 'dummy_mode'}})
 
-    def test_predict_raises_exception_in_embedding_mode_without_question_column(self):
+    def test_predict_in_embedding_mode_without_question_column_raises_exception(self):
         """
         Test if model prediction raises an exception in embedding mode without a question column.
         """
@@ -165,7 +165,7 @@ class TestOpenAI(unittest.TestCase):
         with self.assertRaisesRegex(Exception, "Embedding mode needs a question_column"):
             self.handler.predict(df=df, args={'predict_params': {'mode': 'embedding'}})
 
-    def test_predict_raises_exception_in_image_mode_without_question_column_or_prompt_template(self):
+    def test_predict_in_image_mode_without_question_column_or_prompt_template_raises_exception(self):
         """
         Test if model prediction raises an exception in image mode without a question column or prompt template.
         """
@@ -181,7 +181,7 @@ class TestOpenAI(unittest.TestCase):
         with self.assertRaisesRegex(Exception, "Image mode needs either `prompt_template` or `question_column`."):
             self.handler.predict(df=df, args={'predict_params': {'mode': 'image'}})
 
-    def test_predict_raises_exception_in_default_mode_without_question_column_in_data(self):
+    def test_predict_in_default_mode_without_question_column_in_data_raises_exception(self):
         """
         Test if model prediction raises an exception in default mode without a question column in the DataFrame.
         """
@@ -198,7 +198,7 @@ class TestOpenAI(unittest.TestCase):
         with self.assertRaisesRegex(Exception, "This model expects a question to answer in the 'question' column."):
             self.handler.predict(df=df, args={'predict_params': {'mode': 'default'}})
 
-    def test_predict_raises_exception_in_default_mode_without_context_column_in_data(self):
+    def test_predict_in_default_mode_without_context_column_in_data_raises_exception(self):
         """
         Test if model prediction raises an exception in default mode without a context column in the DataFrame.
         """
@@ -216,7 +216,7 @@ class TestOpenAI(unittest.TestCase):
         with self.assertRaisesRegex(Exception, "This model expects context in the 'context' column."):
             self.handler.predict(df=df, args={'predict_params': {'mode': 'default'}})
 
-    def test_predict_raises_exception_in_conversational_modes_with_unsupported_model(self):
+    def test_predict_in_conversational_modes_with_unsupported_model_raises_exception(self):
         """
         Test if model prediction raises an exception in conversational modes with an unsupported model.
         """
@@ -234,7 +234,7 @@ class TestOpenAI(unittest.TestCase):
             self.handler.predict(df=df, args={'predict_params': {'mode': 'conversational'}})
 
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
-    def test_predict_runs_no_errors_in_default_mode_using_question_column_with_valid_arguments_and_data(self, mock_openai_handler_openai_client):
+    def test_predict_in_default_mode_with_question_column_using_valid_arguments_and_data_runs_no_errors(self, mock_openai_handler_openai_client):
         """
         Test if model prediction returns the expected result in default mode using a question column.
         """
@@ -270,7 +270,7 @@ class TestOpenAI(unittest.TestCase):
         pandas.testing.assert_frame_equal(result, pandas.DataFrame({'answer': ['Sweden']}))
 
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
-    def test_predict_runs_no_errors_in_default_mode_using_prompt_template_with_valid_arguments_and_data(self, mock_openai_handler_openai_client):
+    def test_predict_in_default_mode_with_prompt_template_using_valid_arguments_and_data_runs_no_errors(self, mock_openai_handler_openai_client):
         """
         Test if model prediction returns the expected result in default mode using a prompt template.
         """
@@ -306,7 +306,7 @@ class TestOpenAI(unittest.TestCase):
         pandas.testing.assert_frame_equal(result, pandas.DataFrame({'answer': ['Sweden']}))
 
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
-    def test_predict_runs_no_errors_in_default_mode_using_question_column_and_completion_model_with_valid_arguments_and_data(self, mock_openai_handler_openai_client):
+    def test_predict_in_default_mode_with_question_column_and_completion_model_using_valid_arguments_and_data_runs_no_errors(self, mock_openai_handler_openai_client):
         """
         Test if model prediction returns the expected result in default mode using a question column and a completion model.
         """
@@ -340,7 +340,7 @@ class TestOpenAI(unittest.TestCase):
         pandas.testing.assert_frame_equal(result, pandas.DataFrame({'answer': ['Sweden']}))
 
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
-    def test_predict_runs_no_errors_in_default_mode_using_prompt_template_and_completion_model_with_valid_arguments_and_data(self, mock_openai_handler_openai_client):
+    def test_predict_in_default_mode_with_prompt_template_and_completion_model_using_valid_arguments_and_data_runs_no_errors(self, mock_openai_handler_openai_client):
         """
         Test if model prediction returns the expected result in default mode using a prompt template and a completion model.
         """
@@ -374,7 +374,7 @@ class TestOpenAI(unittest.TestCase):
         pandas.testing.assert_frame_equal(result, pandas.DataFrame({'answer': ['Sweden']}))
 
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
-    def test_predict_runs_no_errors_in_embeddings_mode_with_valid_arguments_and_data(self, mock_openai_handler_openai_client):
+    def test_predict_in_embeddings_mode_using_valid_arguments_and_data_runs_no_errors(self, mock_openai_handler_openai_client):
         """
         Test if model prediction returns the expected result for an embeddings task.
         """
@@ -408,7 +408,7 @@ class TestOpenAI(unittest.TestCase):
         pandas.testing.assert_frame_equal(result, pandas.DataFrame({'embeddings': [[0, 1]]}))
 
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
-    def test_predict_runs_no_errors_in_image_mode_using_question_column_with_valid_arguments_and_data(self, mock_openai_handler_openai_client):
+    def test_predict_in_image_mode_with_question_column_using_valid_arguments_and_data_runs_no_errors(self, mock_openai_handler_openai_client):
         """
         Test if model prediction returns the expected result for an image task using a question column.
         """
@@ -441,7 +441,7 @@ class TestOpenAI(unittest.TestCase):
         pandas.testing.assert_frame_equal(result, pandas.DataFrame({'image': ['dummy_image_url']}))
 
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
-    def test_predict_runs_no_errors_in_image_mode_using_prompt_template_with_valid_arguments_and_data(self, mock_openai_handler_openai_client):
+    def test_predict_in_image_mode_with_prompt_template_using_valid_arguments_and_data_runs_no_errors(self, mock_openai_handler_openai_client):
         """
         Test if model prediction returns the expected result for an image task using a prompt template.
         """
@@ -474,7 +474,7 @@ class TestOpenAI(unittest.TestCase):
         pandas.testing.assert_frame_equal(result, pandas.DataFrame({'image': ['dummy_image_url']}))
 
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
-    def test_predict_runs_no_errors_in_conversational_mode_with_valid_arguments_and_data(self, mock_openai_handler_openai_client):
+    def test_predict_in_conversational_mode_with_using_arguments_and_data_runs_no_errors(self, mock_openai_handler_openai_client):
         """
         Test if model prediction returns the expected result for a conversational task.
         """
@@ -511,7 +511,7 @@ class TestOpenAI(unittest.TestCase):
         pandas.testing.assert_frame_equal(result, pandas.DataFrame({'answer': ['', 'Gamla Stan']}))
 
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
-    def test_predict_runs_no_errors_in_conversational_full_mode_with_valid_arguments_and_data(self, mock_openai_handler_openai_client):
+    def test_predict_in_conversational_full_mode_using_valid_arguments_and_data_runs_no_errors(self, mock_openai_handler_openai_client):
         """
         Test if model prediction returns the expected result for a conversational-full task.
         """
@@ -650,7 +650,7 @@ class TestOpenAI(unittest.TestCase):
             )
         )
 
-    def test_finetune_raises_exception_with_unsupported_model(self):
+    def test_finetune_with_unsupported_model_raises_exception(self):
         """
         Test if model fine-tuning raises an exception with an unsupported model.
         """

@@ -596,7 +596,7 @@
       "pages": [
         "sdks/overview",
         {
-          "group": "MongoDB SDK",
+          "group": "MongoDB API",
           "pages": [
             "sdks/mongo/mindsdb-mongo-ql-overview",
               {

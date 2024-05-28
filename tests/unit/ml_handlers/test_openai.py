@@ -374,7 +374,7 @@ class TestOpenAI(unittest.TestCase):
         pandas.testing.assert_frame_equal(result, pandas.DataFrame({'answer': ['Sweden']}))
 
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
-    def test_predict_in_embeddings_mode_using_valid_arguments_and_data_runs_no_errors(self, mock_openai_handler_openai_client):
+    def test_predict_in_embedding_mode_using_valid_arguments_and_data_runs_no_errors(self, mock_openai_handler_openai_client):
         """
         Test if model prediction returns the expected result for an embeddings task.
         """

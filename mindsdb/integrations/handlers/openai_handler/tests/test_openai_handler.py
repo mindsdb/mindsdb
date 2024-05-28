@@ -165,6 +165,60 @@ class TestOpenAI(BaseMLAPITest):
         assert "venus" in result_df["answer"].iloc[1].lower()
         assert "boom!" in result_df["answer"].iloc[1].lower()
 
+    def test_full_flow_in_embedding_mode_for_single_prediction_runs_no_errors(self):
+        """
+        Test the full flow in embedding mode for a single prediction.
+        """
+        self.run_sql(
+            f"""
+            CREATE MODEL proj.test_openai_single_full_flow_embedding_mode
+            PREDICT answer
+            USING
+                engine='openai_engine',
+                mode='embedding',
+                model_name = 'text-embedding-ada-002',
+                question_column = 'text';
+            """
+        )
+
+        self.wait_predictor("proj", "test_openai_single_full_flow_embedding_mode")
+
+        result_df = self.run_sql(
+            """
+            SELECT answer
+            FROM proj.test_openai_single_full_flow_embedding_mode
+            WHERE text='Sweden'
+            """
+        )
+        assert type(result_df["answer"].iloc[0]) == list
+        assert type(result_df["answer"].iloc[0][0]) == float
+
+    def test_full_flow_in_image_mode_for_single_prediction_runs_no_errors(self):
+        """
+        Test the full flow in image mode for a single prediction.
+        """
+        self.run_sql(
+            f"""
+            CREATE MODEL proj.test_openai_single_full_flow_image_mode
+            PREDICT answer
+            USING
+                engine='openai_engine',
+                mode='image',
+                prompt_template='Generate an image for: {{{{text}}}}'
+            """
+        )
+
+        self.wait_predictor("proj", "test_openai_single_full_flow_image_mode")
+
+        result_df = self.run_sql(
+            """
+            SELECT answer
+            FROM proj.test_openai_single_full_flow_image_mode
+            WHERE text='Leopard clubs playing in the jungle'
+            """
+        )
+        assert type(result_df["answer"].iloc[0]) == str
+
     def test_full_flow_in_conversational_for_single_prediction_mode_runs_no_errors(self):
         """
         Test the full flow in conversational mode for a single prediction.

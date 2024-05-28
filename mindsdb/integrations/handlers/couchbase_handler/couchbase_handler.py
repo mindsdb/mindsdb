@@ -63,7 +63,7 @@ class CouchbaseHandler(DatabaseHandler):
 
         host = self.connection_data.get("host")
         domain = urlparse(host).hostname
-        if domain and domain.endswith("cloud.couchbase.com"):
+        if domain and domain.endswith(".couchbase.com"):
             options.apply_profile('wan_development')
         endpoint = f"couchbases://{host}"
         cluster = Cluster(

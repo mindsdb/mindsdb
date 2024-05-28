@@ -117,6 +117,14 @@ class IntegrationDataNode(DataNode):
             # it is just a 'create table'
             return
 
+        # native insert
+        if hasattr(self.integration_handler, 'insert'):
+            df = result_set.to_df()
+            result = self.integration_handler.insert(table_name.parts[-1], df)
+            if result.type == RESPONSE_TYPE.ERROR:
+                raise Exception(result.error_message)
+            return
+
         insert_columns = [Identifier(parts=[x.alias]) for x in result_set.columns]
         formatted_data = []
 

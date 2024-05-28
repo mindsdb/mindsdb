@@ -139,7 +139,7 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
             )
 
             row_id = self.context.get('row_id')
-            values = list(range(row_id, row_id + data.length()))
+            values = range(row_id, row_id + data.length())
             data.add_column(row_id_col, values)
             self.context['row_id'] += data.length()
 

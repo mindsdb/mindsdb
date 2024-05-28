@@ -194,13 +194,14 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
         else:
             predictor_id = predictor_metadata['id']
             table_df = data.to_df()
-            key = f'{predictor_name}_{predictor_id}_{dataframe_checksum(table_df)}'
 
-            if self.session.predictor_cache is False:
-                predictions = None
-            else:
+            if self.session.predictor_cache is not False:
+                key = f'{predictor_name}_{predictor_id}_{dataframe_checksum(table_df)}'
+
                 predictor_cache = get_cache('predict')
                 predictions = predictor_cache.get(key)
+            else:
+                predictions = None
 
             if predictions is None:
                 version = None
@@ -208,8 +209,9 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
                     version = int(step.predictor.parts[-1])
                 predictions = self.apply_predictor(project_name, predictor_name, table_df, version, params)
 
-                if predictions is not None and isinstance(predictions, pd.DataFrame) and self.session.predictor_cache is not False:
-                    predictor_cache.set(key, predictions)
+                if self.session.predictor_cache is not False:
+                    if predictions is not None and isinstance(predictions, pd.DataFrame):
+                        predictor_cache.set(key, predictions)
 
             # apply filter
             if is_timeseries:

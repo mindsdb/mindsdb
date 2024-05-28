@@ -1,49 +1,37 @@
-from locust import SequentialTaskSet, task, events
-from tests.utils.query_generator import QueryGenerator as query
-from tests.utils.config import get_value_from_json_env_var, generate_random_db_name
-
+from locust import between, HttpUser, TaskSet, task
+from tests.load.test_postgresql import PostgreSQLConnectionBehavior
+from tests.utils.config import get_value_from_json_env_var
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
+class PostgreSQLTaskSet(TaskSet):
+    @task
+    def postgresql_connection(self):
+        PostgreSQLConnectionBehavior().run(self)
 
-class BaseDBConnectionBehavior(SequentialTaskSet):
+class DBConnectionUser(HttpUser):
+    tasks = [PostgreSQLTaskSet]
+    wait_time = between(5, 15)
+    
+    config = get_value_from_json_env_var("INTEGRATIONS_CONFIG", "mindsdb_cloud")
+    
+    if 'host' not in config or 'user' not in config or 'password' not in config:
+        raise ValueError("Configuration must include 'host', 'user', and 'password'")
+    
+    host = config['host']
+
     def on_start(self):
-        """This method is called once for each user when they start."""
-        self.query_generator = query()
-        self.random_db_name = generate_random_db_name(f"{self.db_type}_datasource")
-        self.create_new_datasource()
-
-    def __post_query(self, query):
         try:
-            response = self.client.post('/api/sql/query', json={'query': query})
+            response = self.client.post('/cloud/login', json={
+                'email': self.config['user'],
+                'password': self.config['password']
+            })
             response.raise_for_status()
-            assert response.json()['type'] != 'error'
-            return response
         except Exception as e:
-            logger.error(f'Error running {query}: {e}')
-            events.request.fire(request_type="POST", name="/api/sql/query", response_time=0, response_length=0, exception=e)
-            self.interrupt(reschedule=True)
+            logger.error(f'Logging to MindsDB failed: {e}')
+            self.environment.runner.quit()  # Stops the Locust test
 
-    def create_new_datasource(self):
-        """This method creates a new data source."""
-        db_config = get_value_from_json_env_var("INTEGRATIONS_CONFIG", self.db_type)
-        query = self.query_generator.create_database_query(
-            self.random_db_name,
-            self.db_type,
-            db_config
-        )
-        self.__post_query(query)
-
-    @task
-    def select_integration_query(self):
-        """This task performs a SELECT query from integration."""
-        query = f'SELECT * FROM {self.random_db_name}.{self.table_name} LIMIT 10'
-        self.__post_query(query)
-
-    @task
-    def run_native_query(self):
-        """This task runs a native DB select query."""
-        for n_query in self.native_queries:
-            query = f'SELECT * FROM {self.random_db_name}( {n_query})'
-            self.__post_query(query)
+    def on_stop(self):
+        # Any cleanup logic if needed
+        pass

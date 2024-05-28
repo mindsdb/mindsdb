@@ -215,7 +215,7 @@ class ResultSet:
         # list of lists
         if self._df is None:
             return []
-        return self._df.to_dict('split')['data']
+        return self._df.to_records(index=False)
 
     def get_column_values(self, col_idx):
         # get by column index

@@ -193,6 +193,43 @@ class TestOpenAI(BaseMLAPITest):
         assert type(result_df["answer"].iloc[0]) == list
         assert type(result_df["answer"].iloc[0][0]) == float
 
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_full_flow_in_embedding_mode_for_bulk_predictions_runs_no_errors(self, mock_handler):
+        """
+        Test the full flow in embedding mode for bulk predictions.
+        """
+        df = pd.DataFrame.from_dict({"text": [
+            "Sweden",
+            "Venus"
+        ]})
+        self.set_handler(mock_handler, name="pg", tables={"df": df})
+
+        self.run_sql(
+            f"""
+            CREATE MODEL proj.test_openai_bulk_full_flow_embedding_mode
+            PREDICT answer
+            USING
+                engine='openai_engine',
+                mode='embedding',
+                model_name = 'text-embedding-ada-002',
+                question_column = 'text';
+            """
+        )
+
+        self.wait_predictor("proj", "test_openai_bulk_full_flow_embedding_mode")
+
+        result_df = self.run_sql(
+            """
+            SELECT p.answer
+            FROM pg.df as t
+            JOIN proj.test_openai_bulk_full_flow_embedding_mode as p;
+            """
+        )
+        assert type(result_df["answer"].iloc[0]) == list
+        assert type(result_df["answer"].iloc[0][0]) == float
+        assert type(result_df["answer"].iloc[1]) == list
+        assert type(result_df["answer"].iloc[1][0]) == float
+
     def test_full_flow_in_image_mode_for_single_prediction_runs_no_errors(self):
         """
         Test the full flow in image mode for a single prediction.
@@ -218,6 +255,40 @@ class TestOpenAI(BaseMLAPITest):
             """
         )
         assert type(result_df["answer"].iloc[0]) == str
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_full_flow_in_image_mode_for_bulk_predictions_runs_no_errors(self, mock_handler):
+        """
+        Test the full flow in image mode for bulk predictions.
+        """
+        df = pd.DataFrame.from_dict({"text": [
+            "Leopard clubs playing in the jungle",
+            "A beautiful sunset over the ocean"
+        ]})
+        self.set_handler(mock_handler, name="pg", tables={"df": df})
+
+        self.run_sql(
+            f"""
+            CREATE MODEL proj.test_openai_bulk_full_flow_image_mode
+            PREDICT answer
+            USING
+                engine='openai_engine',
+                mode='image',
+                prompt_template='Generate an image for: {{{{text}}}}'
+            """
+        )
+
+        self.wait_predictor("proj", "test_openai_bulk_full_flow_image_mode")
+
+        result_df = self.run_sql(
+            """
+            SELECT p.answer
+            FROM pg.df as t
+            JOIN proj.test_openai_bulk_full_flow_image_mode as p;
+            """
+        )
+        assert type(result_df["answer"].iloc[0]) == str
+        assert type(result_df["answer"].iloc[1]) == str
 
     def test_full_flow_in_conversational_for_single_prediction_mode_runs_no_errors(self):
         """

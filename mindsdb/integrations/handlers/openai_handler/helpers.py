@@ -1,4 +1,3 @@
-import os
 from typing import List
 import random
 import time
@@ -10,7 +9,6 @@ from openai import OpenAI
 import tiktoken
 
 import mindsdb.utilities.profiler as profiler
-from mindsdb.integrations.handlers.openai_handler.constants import OPENAI_API_BASE
 
 
 class PendingFT(openai.OpenAIError):

@@ -11,13 +11,12 @@ services:
       PGPORT: 15432
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres" ]
-      interval: 1s
-      timeout: 1s
-      retries: 15
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   migrations:
     command: bash -c "cd /mindsdb && python ./mindsdb/migrations/migrate.py"
-
     <<: &globalSettings
       depends_on:
         db:
@@ -32,15 +31,14 @@ services:
       environment:
         MINDSDB_STORAGE_DIR: "/mindsdb/var"
         MINDSDB_DB_CON: "postgresql://postgres:postgres@db:15432/mindsdb"
+  
   mindsdb:
-    # Copy global settings from migration above
     <<: *globalSettings
     restart: always
     ports:
       - '47334:47334'
       - '47335:47335'
       - '47336:47336'
-        # command: bash -c "cd /mindsdb && python -m mindsdb --api=http,mysql,mongodb"
     command: bash -c "cd /mindsdb && python -m mindsdb --api=http,mysql,mongodb --config=tests/integration_tests/flows/config/docker_config.json"
     environment:
       MINDSDB_EXECUTOR_SERVICE_HOST: "executor"
@@ -60,10 +58,10 @@ services:
       - mysql_db
       - maria_db
     healthcheck:
-      test:  ["CMD", "curl", "-f", "http://localhost:47334/api/util/ping"]
+      test: ["CMD", "curl", "-f", "http://localhost:47334/api/util/ping"]
       interval: 30s
-      timeout: 4s
-      retries: 100
+      timeout: 5s
+      retries: 5
 
   lightwood:
     build:
@@ -76,14 +74,12 @@ services:
         source: ../
         target: /mindsdb
     environment:
-      # have to share mindsdb database, because it doesn't work without it
       REGISTRY_URL: "http://handler_discovery:5000"
       PORT: 50051
       HOST: "lightwood"
       MINDSDB_SERVICE_TYPE: "lightwood"
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
       MINDSDB_DB_CON: "postgresql://postgres:postgres@db:15432/mindsdb"
-      REGISTRY_URL: "http://handler_discovery:5000"
       MINDSDB_DB_SERVICE_HOST: "db_service"
       MINDSDB_DB_SERVICE_PORT: "50050"
 
@@ -98,7 +94,6 @@ services:
         source: ../
         target: /mindsdb
     environment:
-      # have to share mindsdb database, because it doesn't work without it
       PORT: 50053
       HOST: "huggingface"
       MINDSDB_SERVICE_TYPE: "huggingface"
@@ -122,12 +117,11 @@ services:
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
       MINDSDB_DB_CON: "postgresql://postgres:postgres@db:15432/mindsdb"
       PORT: "50050"
-
     healthcheck:
-      test:  ["CMD", "curl", "-f", "http://localhost:5000"]
-      interval: 120s
-      timeout: 4s
-      retries: 100
+      test: ["CMD", "curl", "-f", "http://localhost:5000"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
 
   executor:
     build:
@@ -136,7 +130,6 @@ services:
     depends_on:
       - mindsdb
     environment:
-      # have to share mindsdb database, because it doesn't work without it
       PORT: 50052
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
       MINDSDB_DB_CON: "postgresql://postgres:postgres@db:15432/mindsdb"
@@ -148,10 +141,10 @@ services:
         source: ../
         target: /mindsdb
     healthcheck:
-      test:  ["CMD", "curl", "-f", "http://localhost:5000"]
-      interval: 120s
-      timeout: 4s
-      retries: 100
+      test: ["CMD", "curl", "-f", "http://localhost:5000"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
 
   handler_discovery:
     build:
@@ -165,20 +158,20 @@ services:
     environment:
       POSTGRES_PASSWORD: "supersecret"
     healthcheck:
-      test: ["CMD", "sh -c 'pg_isready -U root -d test'"]
+      test: ["CMD", "pg_isready -U root -d test"]
       interval: 10s
-      timeout: 3s
-      retries: 3
+      timeout: 5s
+      retries: 5
 
   maria_db:
     image: "mindsdb/mariadb-handler-test"
     environment:
       MARIADB_ROOT_PASSWORD: "supersecret"
     healthcheck:
-      test: ["CMD", 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'root', '-p$$MARIADB_ROOT_PASSWORD' ]
+      test: ["CMD", 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'root', '-p$$MARIADB_ROOT_PASSWORD']
       interval: 10s
-      timeout: 3s
-      retries: 3
+      timeout: 5s
+      retries: 5
 
   mysql_db:
     image: "mindsdb/mysql-handler-test"
@@ -187,7 +180,7 @@ services:
       MYSQL_ROOT_PASSWORD: "supersecret"
       MYSQL_TCP_PORT: 13306
     healthcheck:
-      test: ["CMD", 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'root', '-p$$MYSQL_ROOT_PASSWORD' ]
+      test: ["CMD", 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'root', '-p$$MYSQL_ROOT_PASSWORD']
       interval: 10s
-      timeout: 3s
-      retries: 3
+      timeout: 5s
+      retries: 5

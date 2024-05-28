@@ -83,15 +83,26 @@ class SnowflakeHandler(DatabaseHandler):
         self.is_connected = False
 
     def check_connection(self) -> StatusResponse:
-        """
-        Checks the status of the connection to the Snowflake account.
+    """
+    Checks the status of the connection to the Snowflake account.
 
-        Returns:
-            StatusResponse: An object containing the success status and an error message if an error occurs.
-        """
+    Returns:
+        StatusResponse: An object containing the success status and an error message if an error occurs.
+    """
+    response = StatusResponse(False)
+    should_connect = not self.is_connected
 
-        response = StatusResponse(False)
-        need_to_close = not self.is_connected
+    if should_connect:
+        try:
+            self.connect()  # Assuming self.connect() is a method to establish connection
+            response.success = True
+        except Exception as e:
+            response.error_message = str(e)
+    else:
+        response.success = True
+
+    return response
+
 
         try:
             connection = self.connect()

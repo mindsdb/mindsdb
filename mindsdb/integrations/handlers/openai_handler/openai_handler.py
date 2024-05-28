@@ -7,7 +7,7 @@ import datetime
 import textwrap
 import subprocess
 import concurrent.futures
-from typing import Text, Dict, List, Optional, Any
+from typing import Text, Tuple, Dict, List, Optional, Any
 import openai
 from openai import OpenAI, NotFoundError, AuthenticationError
 import numpy as np
@@ -92,7 +92,7 @@ class OpenAIHandler(BaseMLEngine):
         Check the OpenAI engine client connection by retrieving a model.
 
         Args:
-            client (OpenAI): OpenAI client configured with the API credentials.
+            client (openai.OpenAI): OpenAI client configured with the API credentials.
 
         Raises:
             Exception: If the client connection (API key) is invalid or something else goes wrong.
@@ -480,9 +480,17 @@ class OpenAIHandler(BaseMLEngine):
 
     def _completion(
         self, model_name: Text, prompts: List[Text], api_key: Text, api_args: Dict, args: Dict, df: pd.DataFrame, parallel: bool = True
-    ):
+    ) -> List[Any]:
         """
-        Handles completion for an arbitrary amount of rows.
+        Handles completion for an arbitrary amount of rows using a model connected to the OpenAI API.
+
+        This method consists of several inner methods:
+            - _submit_completion: Submit a request to the relevant completion endpoint of the OpenAI API based on the type of task.
+            - _submit_normal_completion: Submit a request to the completion endpoint of the OpenAI API.
+            - _submit_embedding_completion: Submit a request to the embeddings endpoint of the OpenAI API.
+            - _submit_chat_completion: Submit a request to the chat completion endpoint of the OpenAI API.
+            - _submit_image_completion: Submit a request to the image completion endpoint of the OpenAI API.
+            - _log_api_call: Log the API call made to the OpenAI API.
 
         There are a couple checks that should be done when calling OpenAI's API:
           - account max batch size, to maximize batch size first
@@ -501,13 +509,13 @@ class OpenAIHandler(BaseMLEngine):
             parallel (bool): Whether to use parallel processing.
 
         Returns:
-            List[Text]: List of completions.
+            List[Any]: List of completions. The type of completion depends on the task type.
         """
 
         @retry_with_exponential_backoff()
-        def _submit_completion(model_name: Text, prompts: List[Text], api_args: Dict, args: Dict, df: pd.DataFrame):
+        def _submit_completion(model_name: Text, prompts: List[Text], api_args: Dict, args: Dict, df: pd.DataFrame) -> List[Text]:
             """
-            Submit completion to OpenAI API based on the type of task.
+            Submit a request to the relevant completion endpoint of the OpenAI API based on the type of task.
 
             Args:
                 model_name (Text): OpenAI Model name.
@@ -539,7 +547,7 @@ class OpenAIHandler(BaseMLEngine):
 
         def _log_api_call(params: Dict, response: Any) -> None:
             """
-            Log the API call to OpenAI.
+            Log the API call made to the OpenAI API.
 
             Args:
                 params (Dict): Parameters for the API call.
@@ -555,19 +563,32 @@ class OpenAIHandler(BaseMLEngine):
             params2.pop('user', None)
             logger.debug(f'>>>openai call: {params2}:\n{response}')
 
-        def _submit_normal_completion(kwargs, prompts, api_args):
+        def _submit_normal_completion(kwargs: Dict, prompts: List[Text], api_args: Dict) -> List[Text]:
             """
-            Submit a request to the OpenAI API for a normal completion task.
+            Submit a request to the completion endpoint of the OpenAI API.
+
+            This method consists of an inner method:
+                - _tidy: Parse and tidy up the response from the completion endpoint of the OpenAI API.
 
             Args:
-                kwargs (Dict): Model to use.
+                kwargs (Dict): OpenAI API arguments, including the model to use.
                 prompts (List[Text]): List of prompts.
                 api_args (Dict): Other OpenAI API arguments.
 
             Returns:
                 List[Text]: List of text completions.
             """
-            def _tidy(comp):
+
+            def _tidy(comp: openai.types.completion.Completion) -> List[Text]:
+                """
+                Parse and tidy up the response from the completion endpoint of the OpenAI API.
+
+                Args:
+                    comp (openai.types.completion.Completion): Completion object.
+
+                Returns:
+                    List[Text]: List of completions as text.                
+                """
                 tidy_comps = []
                 for c in comp.choices:
                     if hasattr(c,'text'):
@@ -582,19 +603,32 @@ class OpenAIHandler(BaseMLEngine):
             _log_api_call(kwargs, resp)
             return resp
 
-        def _submit_embedding_completion(kwargs, prompts, api_args):
+        def _submit_embedding_completion(kwargs: Dict, prompts: List[Text], api_args: Dict) -> List[float]:
             """
-            Submit a request to the OpenAI API for an embedding task.
+            Submit a request to the embeddings endpoint of the OpenAI API.
+
+            This method consists of an inner method:
+                - _tidy: Parse and tidy up the response from the embeddings endpoint of the OpenAI API.
 
             Args:
-                kwargs (Dict): Model to use.
+                kwargs (Dict): OpenAI API arguments, including the model to use.
                 prompts (List[Text]): List of prompts.
                 api_args (Dict): Other OpenAI API arguments.
 
             Returns:
-                List[Text]: List of embeddings.
+                List[float]: List of embeddings as numbers.
             """
-            def _tidy(comp):
+
+            def _tidy(comp: openai.types.create_embedding_response.CreateEmbeddingResponse) -> List[float]:
+                """
+                Parse and tidy up the response from the embeddings endpoint of the OpenAI API.
+
+                Args:
+                    comp (openai.types.create_embedding_response.CreateEmbeddingResponse): Embedding object.
+                
+                Returns:
+                    List[float]: List of embeddings as numbers.
+                """
                 tidy_comps = []
                 for c in comp.data:
                     if hasattr(c,'embedding'):
@@ -609,10 +643,34 @@ class OpenAIHandler(BaseMLEngine):
             _log_api_call(kwargs, resp)
             return resp
 
-        def _submit_chat_completion(
-            kwargs, prompts, api_args, df, mode='conversational'
-        ):
-            def _tidy(comp):
+        def _submit_chat_completion(kwargs: Dict, prompts: List[Text], api_args: Dict, df: pd.DataFrame, mode: Text = 'conversational') -> List[Text]:
+            """
+            Submit a request to the chat completion endpoint of the OpenAI API.
+
+            This method consists of an inner method:
+                - _tidy: Parse and tidy up the response from the chat completion endpoint of the OpenAI API.
+
+            Args:
+                kwargs (Dict): OpenAI API arguments, including the model to use.
+                prompts (List[Text]): List of prompts.
+                api_args (Dict): Other OpenAI API arguments.
+                df (pd.DataFrame): Input data to run chat completion on.
+                mode (Text): Mode of operation.
+
+            Returns:
+                List[Text]: List of chat completions as text.
+            """
+
+            def _tidy(comp: openai.types.chat.chat_completion.ChatCompletion) -> List[Text]:
+                """
+                Parse and tidy up the response from the chat completion endpoint of the OpenAI API.
+
+                Args:
+                    comp (openai.types.chat.chat_completion.ChatCompletion): Chat completion object.
+
+                Returns:
+                    List[Text]: List of chat completions as text.
+                """
                 tidy_comps = []
                 for c in comp.choices:
                     if hasattr(c,'message'):
@@ -687,8 +745,35 @@ class OpenAIHandler(BaseMLEngine):
 
             return completions
 
-        def _submit_image_completion(kwargs, prompts, api_args):
-            def _tidy(comp):
+        def _submit_image_completion(kwargs: Dict, prompts: List[Text], api_args: Dict) -> List[Text]:
+            """
+            Submit a request to the image generation endpoint of the OpenAI API.
+
+            This method consists of an inner method:
+                - _tidy: Parse and tidy up the response from the image generation endpoint of the OpenAI API.
+
+            Args:
+                kwargs (Dict): OpenAI API arguments, including the model to use.
+                prompts (List[Text]): List of prompts.
+                api_args (Dict): Other OpenAI API arguments.
+
+            Raises:
+                Exception: If the maximum batch size is reached.
+
+            Returns:
+                List[Text]: List of image completions as URLs or base64 encoded images.
+            """
+
+            def _tidy(comp: List[openai.types.image.Image]) -> List[Text]:
+                """
+                Parse and tidy up the response from the image generation endpoint of the OpenAI API.
+
+                Args:
+                    comp (List[openai.types.image.Image]): Image completion objects.
+
+                Returns:
+                    List[Text]: List of image completions as URLs or base64 encoded images.
+                """
                 return [
                     c.url if hasattr(c,'url')  else c.b64_json
                     for c in comp
@@ -699,11 +784,13 @@ class OpenAIHandler(BaseMLEngine):
                 for p in prompts
             ]
             return _tidy(completions)
+        
         client = self._get_client(
             api_key=api_key,
             base_url=args.get('api_base'),
             org=args.pop('api_organization') if 'api_organization' in args else None,
             )
+        
         try:
             # check if simple completion works
             completion = _submit_completion(
@@ -761,7 +848,16 @@ class OpenAIHandler(BaseMLEngine):
 
         return completion
 
-    def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
+    def describe(self, attribute: Optional[Text] = None) -> pd.DataFrame:
+        """
+        Get the metadata or arguments of a model.
+
+        Args:
+            attribute (Optional[Text]): Attribute to describe. Can be 'args' or 'metadata'.
+
+        Returns:
+            pd.DataFrame: Model metadata or model arguments.        
+        """
         # TODO: Update to use update() artifacts
 
         args = self.model_storage.json_get('args')
@@ -784,11 +880,10 @@ class OpenAIHandler(BaseMLEngine):
             tables = ['args', 'metadata']
             return pd.DataFrame(tables, columns=['tables'])
 
-    def finetune(
-        self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None
-    ) -> None:
+    def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         """
-        Fine-tune OpenAI GPT models. Steps are roughly:
+        Fine-tune OpenAI GPT models via a MindsDB model connected to the OpenAI API.
+        Steps are roughly:
           - Analyze input data and modify it according to suggestions made by the OpenAI utility tool
           - Get a training and validation file
           - Determine base model to use
@@ -800,8 +895,17 @@ class OpenAIHandler(BaseMLEngine):
         Caveats:
           - As base fine-tuning models, OpenAI only supports the original GPT ones: `ada`, `babbage`, `curie`, `davinci`. This means if you fine-tune successively more than once, any fine-tuning other than the most recent one is lost.
           - A bunch of helper methods exist to be overridden in other handlers that follow the OpenAI API, e.g. Anyscale
-        """  # noqa
 
+        Args:
+            df (Optional[pd.DataFrame]): Input data to fine-tune on.
+            args (Optional[Dict]): Parameters for the fine-tuning process.
+
+        Raises:
+            Exception: If the model does not support fine-tuning.
+
+        Returns:
+            None
+        """  # noqa
         args = args if args else {}
 
         api_key = get_api_key(self.api_key_name, args, self.engine_storage)
@@ -901,7 +1005,18 @@ class OpenAIHandler(BaseMLEngine):
         shutil.rmtree(temp_storage_path)
 
     @staticmethod
-    def _prepare_ft_jsonl(df, _, temp_filename, temp_model_path):
+    def _prepare_ft_jsonl(df: pd.DataFrame, _, temp_filename: Text, temp_model_path: Text) -> Dict:
+        """
+        Prepare the input data for fine-tuning.
+
+        Args:
+            df (pd.DataFrame): Input data to fine-tune on.
+            temp_filename (Text): Temporary filename.
+            temp_model_path (Text): Temporary model path.
+
+        Returns:
+            Dict: File names for the fine-tuning process.        
+        """
         df.to_json(temp_model_path, orient='records', lines=True)
 
         # TODO avoid subprocess usage once OpenAI enables non-CLI access, or refactor to use our own LLM utils instead
@@ -927,14 +1042,33 @@ class OpenAIHandler(BaseMLEngine):
         }
         return file_names
 
-    def _get_ft_model_type(self, model_name: str):
+    def _get_ft_model_type(self, model_name: Text) -> Text:
+        """
+        Get the model to use for fine-tuning. If the model is not supported, the default model (babbage-002) is used.
+
+        Args:
+            model_name (Text): Model name.
+
+        Returns:
+            Text: Model to use for fine-tuning.        
+        """
         for model_type in self.supported_ft_models:
             if model_type in model_name.lower():
                 return model_type
         return 'babbage-002'
 
     @staticmethod
-    def _add_extra_ft_params(ft_params, using_args):
+    def _add_extra_ft_params(ft_params: Dict, using_args: Dict) -> Dict:
+        """
+        Add extra parameters to the fine-tuning process.
+
+        Args:
+            ft_params (Dict): Parameters for the fine-tuning process required by the OpenAI API.
+            using_args (Dict): Parameters passed when calling the fine-tuning process via a model.
+
+        Returns:
+            Dict: Fine-tuning parameters with extra parameters.        
+        """
         extra_params = {
             'n_epochs': using_args.get('n_epochs', None),
             'batch_size': using_args.get('batch_size', None),
@@ -955,11 +1089,25 @@ class OpenAIHandler(BaseMLEngine):
         }
         return {**ft_params, **extra_params}
 
-    def _ft_call(self, ft_params, client, hour_budget):
+    def _ft_call(self, ft_params: Dict, client: OpenAI, hour_budget: int) -> Tuple[openai.types.fine_tuning.FineTuningJob, Text]:
         """
-        Separate method to account for both legacy and new endpoints.
-        Currently, `OpenAIHandler` uses the legacy endpoint.
-        Others, like `AnyscaleEndpointsHandler`, use the new endpoint.
+        Submit a fine-tuning job via the OpenAI API.
+        This method handles requests to both the legacy and new endpoints.
+        Currently, `OpenAIHandler` uses the legacy endpoint. Others, like `AnyscaleEndpointsHandler`, use the new endpoint.
+
+        This method consists of an inner method:
+            - _check_ft_status: Check the status of a fine-tuning job via the OpenAI API.
+
+        Args:
+            ft_params (Dict): Fine-tuning parameters.
+            client (openai.OpenAI): OpenAI client.
+            hour_budget (int): Hour budget for the fine-tuning process.
+
+        Raises:
+            PendingFT: If the fine-tuning process is still pending.
+
+        Returns:
+            Tuple[openai.types.fine_tuning.FineTuningJob, Text]: Fine-tuning stats and result file ID.
         """
         ft_result = client.fine_tuning.jobs.create(
             **{k: v for k, v in ft_params.items() if v is not None}
@@ -968,8 +1116,20 @@ class OpenAIHandler(BaseMLEngine):
         @retry_with_exponential_backoff(
             hour_budget=hour_budget,
         )
-        def _check_ft_status(model_id):
-            ft_retrieved = client.fine_tuning.jobs.retrieve(fine_tuning_job_id=model_id)
+        def _check_ft_status(job_id: Text) -> openai.types.fine_tuning.FineTuningJob:
+            """
+            Check the status of a fine-tuning job via the OpenAI API.
+
+            Args:
+                job_id (Text): Fine-tuning job ID.
+
+            Raises:
+                PendingFT: If the fine-tuning process is still pending.
+
+            Returns:
+                openai.types.fine_tuning.FineTuningJob: Fine-tuning stats.            
+            """
+            ft_retrieved = client.fine_tuning.jobs.retrieve(fine_tuning_job_id=job_id)
             if ft_retrieved.status in ('succeeded', 'failed', 'cancelled'):
                 return ft_retrieved
             else:
@@ -991,5 +1151,16 @@ class OpenAIHandler(BaseMLEngine):
         return ft_stats, result_file_id
     
     @staticmethod
-    def _get_client(api_key, base_url, org=None):
+    def _get_client(api_key: Text, base_url: Text, org: Optional[Text] = None) -> OpenAI:
+        """
+        Get an OpenAI client with the given API key, base URL, and organization.
+
+        Args:
+            api_key (Text): OpenAI API key.
+            base_url (Text): OpenAI base URL.
+            org (Optional[Text]): OpenAI organization.
+
+        Returns:
+            openai.OpenAI: OpenAI client.        
+        """
         return OpenAI(api_key=api_key, base_url=base_url, organization=org)

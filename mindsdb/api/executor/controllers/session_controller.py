@@ -8,6 +8,7 @@
  * permission of MindsDB Inc
  *******************************************************
 """
+
 from mindsdb.api.executor.datahub.datahub import init_datahub
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.agents.agents_controller import AgentsController
@@ -22,12 +23,14 @@ logger = log.getLogger(__name__)
 
 class SessionController:
     """
-    This class manages the server session
+    This class manages the server session.
     """
 
-    def __init__(self, api_type='http') -> object:
+    def __init__(self, api_type: str = 'http'):
         """
-        Initialize the session
+        Initialize the session.
+
+        :param api_type: The type of API (default is 'http').
         """
         self.api_type = api_type
         self.username = None
@@ -42,7 +45,7 @@ class SessionController:
         self.database_controller = DatabaseController()
         self.skills_controller = SkillsController()
 
-        # to prevent circular imports
+        # To prevent circular imports
         from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseController
         self.kb_controller = KnowledgeBaseController(self)
 
@@ -55,31 +58,64 @@ class SessionController:
         self.predictor_cache = True
         self.show_secrets = False
 
-    def inc_packet_sequence_number(self):
+    def inc_packet_sequence_number(self) -> None:
+        """
+        Increment the packet sequence number, wrapping around at 256.
+        """
         self.packet_sequence_number = (self.packet_sequence_number + 1) % 256
 
-    def register_stmt(self, statement):
-        i = 1
-        while i in self.prepared_stmts and i < 100:
-            i = i + 1
-        if i == 100:
+    def register_stmt(self, statement: str) -> int:
+        """
+        Register a new statement.
+
+        :param statement: The SQL statement to register.
+        :return: The ID of the registered statement.
+        :raises Exception: If too many queries are registered.
+        """
+        if len(self.prepared_stmts) >= 100:
+            logger.error("Too many unclosed queries.")
             raise Exception("Too many unclosed queries")
 
-        self.prepared_stmts[i] = dict(type=None, statement=statement, fetched=0)
-        return i
+        # Find the first available ID
+        stmt_id = next(i for i in range(1, 101) if i not in self.prepared_stmts)
+        self.prepared_stmts[stmt_id] = {'type': None, 'statement': statement, 'fetched': 0}
+        logger.debug(f"Registered statement with ID {stmt_id}: {statement}")
+        return stmt_id
 
-    def unregister_stmt(self, stmt_id):
-        del self.prepared_stmts[stmt_id]
+    def unregister_stmt(self, stmt_id: int) -> None:
+        """
+        Unregister a statement by ID.
 
-    def to_json(self):
-        return {
+        :param stmt_id: The ID of the statement to unregister.
+        """
+        if stmt_id in self.prepared_stmts:
+            logger.debug(f"Unregistering statement with ID {stmt_id}")
+            del self.prepared_stmts[stmt_id]
+        else:
+            logger.warning(f"Tried to unregister non-existing statement ID {stmt_id}")
+
+    def to_json(self) -> dict:
+        """
+        Convert the session state to a JSON serializable dictionary.
+
+        :return: The session state as a dictionary.
+        """
+        state = {
             "username": self.username,
             "auth": self.auth,
             "database": self.database,
             "prepared_stmts": self.prepared_stmts,
             "packet_sequence_number": self.packet_sequence_number,
         }
+        logger.debug(f"Session state converted to JSON: {state}")
+        return state
 
-    def from_json(self, updated):
-        for key in updated:
-            setattr(self, key, updated[key])
+    def from_json(self, updated: dict) -> None:
+        """
+        Update the session state from a JSON dictionary.
+
+        :param updated: The updated state as a dictionary.
+        """
+        for key, value in updated.items():
+            setattr(self, key, value)
+            logger.debug(f"Updated session attribute {key} to {value}")

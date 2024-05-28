@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 from questdb.ingress import Sender
 
@@ -49,7 +50,15 @@ class QuestDBHandler(PostgresHandler):
 
         with self.qdb_connect() as sender:
             try:
-                sender.dataframe(df, table_name=table_name, at="timestamp")
+                # find datetime column
+                at_col = None
+                for col, dtype in df.dtypes.items():
+                    if np.issubdtype(dtype, np.datetime64):
+                        at_col = col
+                if at_col is None:
+                    raise Exception(f'Unable to find datetime column: {df.dtypes}')
+
+                sender.dataframe(df, table_name=table_name, at=at_col)
                 response = Response(RESPONSE_TYPE.OK)
 
             except Exception as e:

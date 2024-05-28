@@ -51,3 +51,4 @@ if __name__ == "__main__":
     MDBConfig()
     db.init()
     migrate_to_head()
+    

@@ -27,7 +27,7 @@ class TestOpenAI(BaseMLAPITest):
             """
         )
 
-    def test_create_model_raises_exception_with_unsupported_model(self):
+    def test_create_model_with_unsupported_model_raises_exception(self):
         """
         Test if CREATE MODEL raises an exception with an unsupported model.
         """
@@ -46,7 +46,7 @@ class TestOpenAI(BaseMLAPITest):
 
         assert "Invalid model name." in str(excinfo.value)
 
-    def test_single_full_flow_in_default_mode_runs_no_errors_with_question_column(self):
+    def test_full_flow_in_default_mode_with_question_column_for_single_prediction_runs_no_errors(self):
         """
         Test the full flow in default mode with a question column for a single prediction.
         """
@@ -72,7 +72,7 @@ class TestOpenAI(BaseMLAPITest):
         assert "stockholm" in result_df["answer"].iloc[0].lower()
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_bulk_full_flow_in_default_mode_runs_no_errors_with_question_column(self, mock_handler):
+    def test_full_flow_in_default_mode_with_question_column_for_bulk_predictions_runs_no_errors(self, mock_handler):
         """
         Test the full flow in default mode with a question column for bulk predictions.
         """
@@ -104,7 +104,7 @@ class TestOpenAI(BaseMLAPITest):
         assert "stockholm" in result_df["answer"].iloc[0].lower()
         assert "venus" in result_df["answer"].iloc[1].lower()
 
-    def test_single_full_flow_in_default_mode_runs_no_errors_with_prompt_template(self):
+    def test_full_flow_in_default_mode_with_prompt_template_for_single_prediction_runs_no_errors(self):
         """
         Test the full flow in default mode with a prompt template for a single prediction.
         """
@@ -131,7 +131,7 @@ class TestOpenAI(BaseMLAPITest):
         assert "boom!" in result_df["answer"].iloc[0].lower()
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_bulk_full_flow_in_default_mode_runs_no_errors_with_prompt_template(self, mock_handler):
+    def test_full_flow_in_default_mode_with_prompt_template_for_bulk_predictions_runs_no_errors(self, mock_handler):
         """
         Test the full flow in default mode with a prompt template for bulk predictions.
         """
@@ -165,7 +165,7 @@ class TestOpenAI(BaseMLAPITest):
         assert "venus" in result_df["answer"].iloc[1].lower()
         assert "boom!" in result_df["answer"].iloc[1].lower()
 
-    def test_single_full_flow_in_conversational_mode_runs_no_errors(self):
+    def test_full_flow_in_conversational_for_single_prediction_mode_runs_no_errors(self):
         """
         Test the full flow in conversational mode for a single prediction.
         """
@@ -194,7 +194,7 @@ class TestOpenAI(BaseMLAPITest):
         assert "stockholm" in result_df["answer"].iloc[0].lower()
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_bulk_full_flow_in_conversational_mode_runs_no_errors(self, mock_handler):
+    def test_full_flow_in_conversational_mode_for_bulk_predictions_runs_no_errors(self, mock_handler):
         """
         Test the full flow in conversational mode for bulk predictions.
         """
@@ -229,7 +229,7 @@ class TestOpenAI(BaseMLAPITest):
         assert result_df["answer"].iloc[0] == ""
         assert "gamla stan" in result_df["answer"].iloc[1].lower()
 
-    def test_single_full_flow_in_conversational_full_mode_runs_no_errors(self):
+    def test_full_flow_in_conversational_full_mode_for_single_prediction_runs_no_errors(self):
         """
         Test the full flow in conversational-full mode for a single prediction.
         """
@@ -258,7 +258,7 @@ class TestOpenAI(BaseMLAPITest):
         assert "stockholm" in result_df["answer"].iloc[0].lower()
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
-    def test_bulk_full_flow_in_conversational_full_mode_runs_no_errors(self, mock_handler):
+    def test_full_flow_in_conversational_full_mode_for_bulk_predictions_runs_no_errors(self, mock_handler):
         """
         Test the full flow in conversational-full mode for bulk predictions.
         """
@@ -292,6 +292,7 @@ class TestOpenAI(BaseMLAPITest):
         )
         assert "stockholm" in result_df["answer"].iloc[0].lower()
         assert "gamla stan" in result_df["answer"].iloc[1].lower()
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

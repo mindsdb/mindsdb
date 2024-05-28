@@ -17,6 +17,8 @@ class TestOpenAI(BaseMLAPITest):
         Setup test environment by creating a project and an OpenAI engine.
         """
         super().setup_method()
+        from mindsdb.integrations.libs.process_cache import process_cache
+        process_cache._ttl = 1
         self.run_sql("CREATE DATABASE proj")
         self.run_sql(
             f"""

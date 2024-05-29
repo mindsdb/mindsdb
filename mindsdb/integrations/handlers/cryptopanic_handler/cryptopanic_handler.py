@@ -1,7 +1,6 @@
 
 from mindsdb.utilities import log
 from typing import Optional
-from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse, HandlerResponse as Response, RESPONSE_TYPE
 from .cryptopanic_tables import NewsTable

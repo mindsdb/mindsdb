@@ -7,7 +7,6 @@
 .deployment
 
 docker/db_images
-docker/handler_discovery
 docker/docker-bake.hcl
 docker/docker-compose.yml
 docker/*.Dockerfile

@@ -11,7 +11,6 @@ from mindsdb.interfaces.skills.skills_controller import SkillsController
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.utilities.context import context as ctx
-from mindsdb.utilities.config import Config
 
 
 class AgentsController:
@@ -119,15 +118,7 @@ class AgentsController:
 
         Raises:
             ValueError: Agent with given name already exists, or skill/model with given name does not exist.
-            NotImplementedError: Free users try to create an agent.
         '''
-
-        config = Config()
-
-        is_cloud = config.get('cloud', False)
-        if is_cloud and ctx.user_class == 0:
-            raise NotImplementedError('Free users cannot create agents. Please subscribe to MindsDB Pro.')
-
         if project_name is None:
             project_name = 'mindsdb'
         project = self.project_controller.get(name=project_name)

@@ -1,10 +1,10 @@
 import concurrent.futures
 import io
-import re
 import traceback
 from threading import Lock
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin, urlparse, urlunparse
 
+import html2text
 import fitz  # PyMuPDF
 import pandas as pd
 import requests
@@ -13,22 +13,34 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
-def pdf_to_markdown(response):
-    # Download the PDF from the given URL
 
-    file_stream = io.BytesIO(response.content)
+def pdf_to_markdown(response, gap_threshold=10):
+    """
+    Convert a PDF document to Markdown text.
 
-    # Open the PDF from the in-memory file
-    document = fitz.open(stream=file_stream, filetype="pdf")
+    Args:
+        response: the response object containing the PDF data
+        gap_threshold (int): the vertical gap size that triggers a new line in the output (default 10)
 
-    markdown_text = ""
+    Returns:
+        A string containing the converted Markdown text.
+
+    Raises:
+        Exception -- if the PDF data cannot be processed.
+    """
+
+    try:
+        file_stream = io.BytesIO(response.content)
+        document = fitz.open(stream=file_stream, filetype="pdf")
+    except Exception as e:
+        raise Exception("Failed to process PDF data: " + str(e))
+
+    markdown_lines = []
     for page_num in range(len(document)):
         page = document.load_page(page_num)
 
-        # Get the blocks of text
         blocks = page.get_text("blocks")
 
-        # Sort the blocks by their vertical position on the page
         blocks.sort(key=lambda block: (block[1], block[0]))
 
         previous_block_bottom = 0
@@ -38,30 +50,46 @@ def pdf_to_markdown(response):
             block_text = block[4]
 
             # Check if there's a large vertical gap between this block and the previous one
-            if y0 - previous_block_bottom > 10:
-                markdown_text += "\n"
+            if y0 - previous_block_bottom > gap_threshold:
+                markdown_lines.append("")
 
-            markdown_text += block_text + "\n"
+            markdown_lines.append(block_text)
             previous_block_bottom = y1
 
-        markdown_text += "\n"
+        markdown_lines.append("")
 
-    # Close the document
     document.close()
 
-    return markdown_text
+    return "\n".join(markdown_lines)
 
 
-url_list_lock = Lock()
+def is_valid(url) -> bool:
+    """
+    Check if a URL is valid.
 
+    Args:
+        url: the URL to check
 
-def is_valid(url):
+    Returns:
+        bool: True if the URL is valid, False otherwise.
+    """
     parsed = urlparse(url)
     return bool(parsed.netloc) and bool(parsed.scheme)
 
 
-# this bad boy gets all the crawling done in parallel
-def parallel_get_all_website_links(urls):
+def parallel_get_all_website_links(urls) -> dict:
+    """
+    Fetch all website links from a list of URLs.
+
+    Args:
+        urls (list): a list of URLs to fetch links from
+
+    Returns:
+        A dictionary mapping each URL to a list of links found on that URL.
+
+    Raises:
+        Exception: if an error occurs while fetching links from a URL.
+    """
     url_contents = {}
 
     if len(urls) <= 10:
@@ -79,18 +107,26 @@ def parallel_get_all_website_links(urls):
                 url_contents[url] = future.result()
             except Exception as exc:
                 logger.error(f'{url} generated an exception: {exc}')
-   
+                # don't raise the exception, just log it, continue processing other urls
+
     return url_contents
 
 
-# this crawls one individual website
-def get_all_website_links(url):
-    logger.info("crawling: {url} ...".format(url=url))
+def get_all_website_links(url) -> dict:
+    """
+    Fetch all website links from a URL.
+
+    Args:
+        url (str): the URL to fetch links from
+
+    Returns:
+        A dictionary containing the URL, the extracted links, the HTML content, the text content, and any error that occurred.
+    """
+    logger.info("rawling: {url} ...".format(url=url))
     urls = set()
 
     domain_name = urlparse(url).netloc
     try:
-        # Create a session to handle cookies
         session = requests.Session()
 
         # Add headers to mimic a real browser request
@@ -98,9 +134,7 @@ def get_all_website_links(url):
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36"
         }
 
-        # Send GET request
         response = session.get(url, headers=headers)
-        # Accept cookies if necessary
         if "cookie" in response.request.headers:
             session.cookies.update(response.cookies)
 
@@ -121,10 +155,7 @@ def get_all_website_links(url):
                     continue
                 href = urljoin(url, href)
                 parsed_href = urlparse(href)
-
-                href = (
-                    parsed_href.scheme + "://" + parsed_href.netloc + parsed_href.path
-                )
+                href = urlunparse((parsed_href.scheme, parsed_href.netloc, parsed_href.path, '', '', ''))
                 if not is_valid(href):
                     continue
                 if href in urls:
@@ -155,48 +186,43 @@ def get_all_website_links(url):
     }
 
 
-def get_readable_text_from_soup(soup):
-    # Start formatting as Markdown
-    markdown_output = ""
+def get_readable_text_from_soup(soup) -> str:
+    """
+    Extract readable text from a BeautifulSoup object and convert it to Markdown.
 
-    # Iterate through headings and paragraphs
-    for tag in soup.find_all(
-        ["h1", "h2", "h3", "h4", "h5", "h6", "p", "a", "ul", "ol", "li"]
-    ):
-        if tag.name in ["h1", "h2", "h3", "h4", "h5", "h6"]:
-            markdown_output += (
-                "#" * int(tag.name[1]) + " " + tag.get_text().strip() + "\n\n"
-            )
-        elif tag.name == "p":
-            markdown_output += tag.get_text().strip() + "\n\n"
-        elif tag.name == "a":
-            markdown_output += f"[{tag.get_text().strip()}]({tag.get('href')})\n\n"
-        elif tag.name == "ul":
-            for li in tag.find_all("li"):
-                markdown_output += f"* {li.get_text().strip()}\n"
-            markdown_output += "\n"
-        elif tag.name == "ol":
-            for index, li in enumerate(tag.find_all("li")):
-                markdown_output += f"{index + 1}. {li.get_text().strip()}\n"
-            markdown_output += "\n"
+    Args:
+        soup (BeautifulSoup): a BeautifulSoup object
 
-    return markdown_output
+    Returns:
+        The extracted text in Markdown format.
+    """
+    html_converter = html2text.HTML2Text()
+    html_converter.ignore_links = False
+    return html_converter.handle(str(soup))
 
 
-# this bad girl does the recursive crawling of the websites
-def get_all_website_links_rec(url, reviewd_urls, limit=None):
+def get_all_website_links_recursively(url, reviewed_urls, limit=None):
+    """
+    Recursively gathers all links from a given website up to a specified limit.
+
+    Args:
+        url (str): The starting URL to fetch links from.
+        reviewed_urls (dict): A dictionary to keep track of reviewed URLs and associated data.
+        limit (int, optional): The maximum number of URLs to process.
+
+    TODO: Refactor this function to use a iterative aproach instead of recursion
+    """
     if limit is not None:
-        if len(reviewd_urls) >= limit:
-            return reviewd_urls
+        if len(reviewed_urls) >= limit:
+            return reviewed_urls
 
-    if url not in reviewd_urls:
-        # if something happens getting the website links for this url then log the error
+    if url not in reviewed_urls:
         try:
-            reviewd_urls[url] = get_all_website_links(url)
+            reviewed_urls[url] = get_all_website_links(url)
         except Exception as e:
             error_message = traceback.format_exc().splitlines()[-1]
             logger.error("An exception occurred: %s", str(e))
-            reviewd_urls[url] = {
+            reviewed_urls[url] = {
                 "url": url,
                 "urls": [],
                 "html_content": "",
@@ -207,44 +233,42 @@ def get_all_website_links_rec(url, reviewd_urls, limit=None):
     to_rev_url_list = []
 
     # create a list of new urls to review that don't exist in the already reviewed ones
-    for new_url in reviewd_urls[url]["urls"]:
+    for new_url in reviewed_urls[url]["urls"]:
         # if this is already in the urls, then no need to go and crawl for it
-        if new_url in reviewd_urls or new_url in to_rev_url_list:
+        if new_url in reviewed_urls or new_url in to_rev_url_list:
             continue
 
         # insert immediately to count limit between threads. fill later
+        url_list_lock = Lock()
         with url_list_lock:
-            if limit is None or len(reviewd_urls) < limit:
-                reviewd_urls[new_url] = {}
+            if limit is None or len(reviewed_urls) < limit:
+                reviewed_urls[new_url] = {}
                 to_rev_url_list.append(new_url)
             else:
                 break
 
-    # if there is something to fetch, go fetch
     if len(to_rev_url_list) > 0:
         new_revised_urls = parallel_get_all_website_links(to_rev_url_list)
 
-        reviewd_urls.update(new_revised_urls)
+        reviewed_urls.update(new_revised_urls)
 
         for new_url in new_revised_urls:
-            get_all_website_links_rec(new_url, reviewd_urls, limit)
+            get_all_website_links_recursively(new_url, reviewed_urls, limit)
 
 
-# this crawls the websites and returns it all as a dataframe, ready to be served
-def get_all_websites(urls, limit=1, html=False):
-    reviewd_urls = {}
+def get_all_websites(urls, limit=1, html=False) -> pd.DataFrame:
+    """
+    Crawl a list of websites and return a DataFrame containing the results.
 
-    # def fetch_url(url):
-    #     url = url.rstrip('/')
-    #     if urlparse(url).scheme == "":
-    #         # Try HTTPS first
-    #         url = "https://" + url
-    #     reviewd_urls_iter = {}
-    #     get_all_website_links_rec(url, reviewd_urls_iter, limit)
-    #     return reviewd_urls_iter
+    Args:
+        urls (list): a list of URLs to crawl
+        html (bool): a boolean indicating whether to include the HTML content in the results
 
-    # reviewd_urls = fetch_url(urls[0])
-    # Define a helper function that will be run in parallel.
+    Returns:
+        A DataFrame containing the results.
+    """
+    reviewed_urls = {}
+
     def fetch_url(url):
         # Allow URLs to be passed wrapped in quotation marks so they can be used
         # directly from the SQL editor.
@@ -254,7 +278,7 @@ def get_all_websites(urls, limit=1, html=False):
         if urlparse(url).scheme == "":
             # Try HTTPS first
             url = "https://" + url
-        get_all_website_links_rec(url, reviewd_urls, limit)
+        get_all_website_links_recursively(url, reviewed_urls, limit)
 
     # Use a ThreadPoolExecutor to run the helper function in parallel.
     with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -267,64 +291,32 @@ def get_all_websites(urls, limit=1, html=False):
     if html is False:
         columns_to_ignore += ["html_content"]
     df = dict_to_dataframe(
-        reviewd_urls, columns_to_ignore=columns_to_ignore, index_name="url"
+        reviewed_urls, columns_to_ignore=columns_to_ignore, index_name="url"
     )
 
     if not df.empty and df[df.error.isna()].empty:
-        # no real data - rise exception from first row
         raise Exception(str(df.iloc[0].error))
     return df
 
 
-# this can parse the native query
-def parse_urls_limit(input_str):
-    # Split the input string into 'url', 'limit' or 'html' parts
-    items = re.split(r",", input_str)
+def dict_to_dataframe(dict_of_dicts, columns_to_ignore=None, index_name=None) -> pd.DataFrame:
+    """
+    Convert a dictionary of dictionaries to a DataFrame.
 
-    # Initialize list for urls, limit and html
-    urls = []
-    limit = None
-    html = False
-
-    for item in items:
-        item = item.strip()  # Remove leading/trailing whitespace
-
-        # Check if item is a 'limit' or 'html' setting
-        if item.lower().startswith("limit"):
-            limit_match = re.search(r"\d+", item)
-            if limit_match:
-                limit = int(limit_match.group())  # Extract the number
-        elif item.lower().startswith("html"):
-            html_match = re.search(r"(true|false)", item, re.I)
-            if html_match:
-                html = (
-                    html_match.group().lower() == "true"
-                )  # Check if the value is 'true'
-        else:
-            urls.append(item)  # Add the item to the url list
-
-    return {"urls": urls, "limit": limit, "html": html}
-
-
-# run a query that goes and crawls urls
-# format url, url, ..., limit=n
-# you can pass one of many urls, limit is optional
-def get_df_from_query_str(query_str):
-    args = parse_urls_limit(query_str)
-    df = get_all_websites(args["urls"], args["limit"], args["html"])
-    return df
-
-
-# this flips a dictionary of dictionaries into a dataframe so we can use it in mindsdb
-def dict_to_dataframe(dict_of_dicts, columns_to_ignore=None, index_name=None):
-    # Convert dictionary of dictionaries into DataFrame
+    Args:
+        dict_of_dicts (dict): a dictionary of dictionaries
+        columns_to_ignore (list): a list of columns to ignore
+        index_name (str): the name of the index column
+    Returns:
+        A DataFrame containing the data.
+    """
     df = pd.DataFrame.from_dict(dict_of_dicts, orient="index")
 
-    # If columns_to_ignore is provided, drop these columns
     if columns_to_ignore:
-        df = df.drop(columns_to_ignore, axis=1, errors="ignore")
+        for column in columns_to_ignore:
+            if column in df.columns:
+                df = df.drop(column, axis=1)
 
-    # If index_name is provided, rename the index
     if index_name:
         df.index.name = index_name
 

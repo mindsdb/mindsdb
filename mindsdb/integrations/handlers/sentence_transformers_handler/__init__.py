@@ -15,7 +15,7 @@ title = "Sentence Transformers"
 name = "sentence_transformers"
 type = HANDLER_TYPE.ML
 icon_path = "icon.svg"
-permanent = True
+permanent = False
 execution_method = "subprocess_keep"
 
 __all__ = ["Handler", "version", "name", "type", "title", "description", "import_error", "icon_path"]

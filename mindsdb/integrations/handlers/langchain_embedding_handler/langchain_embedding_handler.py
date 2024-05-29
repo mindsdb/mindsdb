@@ -33,7 +33,7 @@ try:
 
 except ImportError:
     raise Exception(
-        "The langchain is not installed. Please install it with `pip install langchain`."
+        "The langchain is not installed. Please install it with `pip install langchain-community`."
     )
 
 

@@ -69,6 +69,37 @@ class ViewController:
 
         query_context_controller.drop_query_context('view', rec.id)
 
+    def list(self, project_name):
+        query = db.session.query(db.Project).filter_by(
+            company_id=ctx.company_id,
+            deleted_at=None
+        )
+        if project_name is not None:
+            query = query.filter_by(name=project_name)
+
+        project_names = {
+            i.id: i.name
+            for i in query
+        }
+
+        query = db.session.query(db.View).filter(
+            db.View.company_id == ctx.company_id,
+            db.View.project_id.in_(list(project_names.keys()))
+        )
+
+        data = []
+
+        for record in query:
+
+            data.append({
+                'id': record.id,
+                'name': record.name,
+                'project': project_names[record.project_id],
+                'query': record.query,
+            })
+
+        return data
+
     def _get_view_record_data(self, record):
         return {
             'id': record.id,

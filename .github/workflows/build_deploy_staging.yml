@@ -3,8 +3,13 @@ name: Build and deploy to staging
 on:
   push:
     branches:
-      - stable
-      - staging
+      - main
+
+# Cancel any existing runs of this workflow on the same branch/pr
+# We always want to build/deploy/test a new commit over an older one
+concurrency:
+  group: ${{ github.workflow_ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -46,6 +51,11 @@ jobs:
         environment: [staging, hackathon, dev, alpha-dev]
     environment:
       name: ${{ matrix.environment }}
+    # We only want to run one deploy job for an env at a time
+    # Don't cancel in progress jobs because it may be for a different PR
+    concurrency:
+      group: deploy-${{ matrix.environment }}
+      cancel-in-progress: false
     steps:
       - uses: FranzDiebold/github-env-vars-action@v2
       - uses: convictional/trigger-workflow-and-wait@v1.6.5

@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import Optional
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb.integrations.libs.base import DatabaseHandler
@@ -9,7 +8,6 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 import pandas as pd
 import jaydebeapi as jdbcconnector
 
@@ -200,50 +198,3 @@ class DerbyHandler(DatabaseHandler):
 
         query = f''' SELECT COLUMNNAME FROM SYS.SYSCOLUMNS INNER JOIN SYS.SYSTABLES ON SYS.SYSCOLUMNS.REFERENCEID=SYS.SYSTABLES.TABLEID WHERE TABLENAME='{table_name}' '''
         return self.native_query(query)
-    
-    
-    connection_args = OrderedDict(
-    host={
-        'type': ARG_TYPE.STR,
-        'description': 'The host name or IP address of the Apache Derby server/database.'
-    },
-    port={
-        'type': ARG_TYPE.INT,
-        'description': 'Specify port to connect to Apache Derby.'
-    },
-    database={
-        'type': ARG_TYPE.STR,
-        'description': """
-            The database name to use when connecting with the Apache Derby server.
-        """
-    },
-    user={
-        'type': ARG_TYPE.STR,
-        'description': 'The user name used to authenticate with the Apache Derby server. If specified this is also treated as the schema.'
-    },
-    password={
-        'type': ARG_TYPE.STR,
-        'description': 'The password to authenticate the user with the Apache Derby server.'
-    },
-    jdbcClass={
-        'type': ARG_TYPE.STR,
-        'description': 'The jdbc class which should be used to establish the connection, the default value is:  org.apache.derby.jdbc.ClientDriver.'
-    },
-    jdbcJarLocation={
-        'type': ARG_TYPE.STR,
-        'description': 'The location of the jar files which contain the JDBC class. This need not be specified if the required classes are already added to the CLASSPATH variable.'
-    }
-
-)
-
-
-connection_args_example = OrderedDict(
-    host='localhost',
-    port='1527',
-    user='test',
-    password='test',
-    database="testdb",
-    jdbcClass='org.apache.derby.jdbc.ClientDriver',
-    jdbcJarLocation='/opt/homebrew/Cellar/derby/10.16.1.1/libexec/lib/derby.jar,/opt/homebrew/Cellar/derby/10.16.1.1/libexec/lib/derbyclient.jar,/opt/homebrew/Cellar/derby/10.16.1.1/libexec/lib/derbynet.jar,/opt/homebrew/Cellar/derby/10.16.1.1/libexec/lib/derbyoptionaltools.jar,/opt/homebrew/Cellar/derby/10.16.1.1/libexec/lib/derbyrun.jar,/opt/homebrew/Cellar/derby/10.16.1.1/libexec/lib/derbyshared.jar,/opt/homebrew/Cellar/derby/10.16.1.1/libexec/lib/derbytools.jar',
-)
-

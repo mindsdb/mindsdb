@@ -27,3 +27,5 @@ class FinancialModelingHandlerTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+# python -m unittest discover -s mindsdb/integrations/handlers/financial_modeling_prep_handler/tests

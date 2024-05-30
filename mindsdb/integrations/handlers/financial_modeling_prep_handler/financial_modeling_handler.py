@@ -5,6 +5,7 @@ from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
+    RESPONSE_TYPE
 )
 from mindsdb.integrations.handlers.financial_modeling_prep_handler.financial_modeling_tables import FinancialModelingTradesTable
 
@@ -66,12 +67,24 @@ class FinancialModelingHandler(APIHandler):
 
         response = requests.get(url, param)
         historical_data = response.json()
-
-        if limitParam:
-            return {date: historical_data[date] for date in list(historical_data.keys())[:5]}
-
+        historical = historical_data.get("historical")
         
-        return historical_data
+        # if historical is not None:
+        #     return pd.DataFrame(historical)
+        # else:
+        #     return pd.DataFrame() 
+        
+        # if limitParam:
+        #     return {date: historical_data[date] for date in list(historical_data.keys())[:5]}
+        # # air table handler 
+
+        response = Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=pd.DataFrame(
+                historical
+            )
+        )
+        return response
 
 
     def call_financial_modeling_api(self, endpoint_name: str = None, params: Dict = None) -> pd.DataFrame:
@@ -83,6 +96,8 @@ class FinancialModelingHandler(APIHandler):
             
             params (Dict): Params to pass to the API call
         """
+        print("Params:", params) 
+        print(self.api_key)
         if endpoint_name == 'daily_chart':
             # return self.get_daily_chart(params)
             return None

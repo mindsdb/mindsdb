@@ -173,8 +173,7 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
                 params['force_ts_infer'] = True
                 _mdb_forecast_offset = None
 
-            if data.find_columns('__mdb_forecast_offset') == 0:
-                data.set_column_values('__mdb_forecast_offset', _mdb_forecast_offset)
+            data.add_column(Column('__mdb_forecast_offset'), _mdb_forecast_offset)
 
         table_name = get_preditor_alias(step, self.context['database'])
         result = ResultSet()

@@ -736,7 +736,6 @@ class TestComplexQueries(BaseExecutorMockPredictor):
 
         assert len(calls) == 3
 
-
     @patch('mindsdb.integrations.handlers.mysql_handler.Handler')
     def test_create_insert(self, mock_handler):
         self.set_handler(mock_handler, name='pg', tables={'tasks': self.df}, engine='mysql')

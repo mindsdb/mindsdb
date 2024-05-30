@@ -85,6 +85,17 @@ components:
         query:
           type: string
           description: SELECT query used to create the view
+    File:
+      type: object
+      properties:
+        columns:
+          type: array
+          items:
+            type: string
+        name:
+          type: string
+        row_count:
+          type: number
     Skill:
       type: object
       properties:
@@ -2114,6 +2125,126 @@ paths:
                   type: string
         '404':
           description: Chatbot not found
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+  '/api/files':
+    get:
+      summary: List all files uploaded to MindsDB.
+      description: Gets all files uploaded to MindsDB.
+      responses:
+        '200':
+          description: A JSON array of file names
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/File'
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+  '/api/files/{fileName}':
+    delete:
+      summary: Deletes an existing file.
+      description: Deletes an existing file.
+      parameters:
+        - name: fileName
+          in: path
+          description: File name to be deleted
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Succesfully deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+    put:
+      summary: Upload a new file.
+      description: Upload a new file.
+      parameters:
+        - name: fileName
+          in: path
+          description: The name of the file
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The file to upload
+                original_file_name:
+                  type: string
+                  description: The original name of the file (optional)
+      responses:
+        '200':
+          description: View was successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/File'
+        '400':
+          description: Bad request format
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '401':
+          description: Invalid API key error message
           content:
             application/json:
               schema:

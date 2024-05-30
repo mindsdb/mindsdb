@@ -16,6 +16,7 @@ class PendingFT(openai.OpenAIError):
     Custom exception to handle pending fine-tuning status.
     """
     message: str
+
     def __init__(self, message) -> None:
         super().__init__()
         self.message = message

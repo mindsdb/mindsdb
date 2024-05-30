@@ -60,7 +60,7 @@ class OpenAIHandler(BaseMLEngine):
         self.max_batch_size = 20
         self.default_max_tokens = 100
         self.chat_completion_models = CHAT_MODELS
-        self.supported_ft_models = FINETUNING_MODELS # base models compatible with finetuning
+        self.supported_ft_models = FINETUNING_MODELS  # base models compatible with finetuning
         # For now this are only used for handlers that inherits OpenAIHandler and don't need to override base methods
         self.api_key_name = getattr(self, 'api_key_name', self.name)
         self.api_base = getattr(self, 'api_base', OPENAI_API_BASE)
@@ -265,11 +265,11 @@ class OpenAIHandler(BaseMLEngine):
         args = self.model_storage.json_get('args')
         connection_args = self.engine_storage.get_connection_args()
 
-        args['api_base'] = (pred_args.get('api_base') or
-                            self.api_base or
-                            connection_args.get('api_base') or
-                            args.get('api_base') or
-                            os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE))
+        args['api_base'] = (pred_args.get('api_base')
+                            or self.api_base
+                            or connection_args.get('api_base')
+                            or args.get('api_base')
+                            or os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE))
         if pred_args.get('api_organization'):
             args['api_organization'] = pred_args['api_organization']
         df = df.reset_index(drop=True)
@@ -525,7 +525,7 @@ class OpenAIHandler(BaseMLEngine):
                 df (pd.DataFrame): Input data to run completion on.
 
             Returns:
-                List[Text]: List of completions.            
+                List[Text]: List of completions.
             """
             kwargs = {
                 'model': model_name,
@@ -554,7 +554,7 @@ class OpenAIHandler(BaseMLEngine):
                 response (Any): Response from the API.
 
             Returns:
-                None            
+                None
             """
             after_openai_query(params, response)
 
@@ -587,11 +587,11 @@ class OpenAIHandler(BaseMLEngine):
                     comp (openai.types.completion.Completion): Completion object.
 
                 Returns:
-                    List[Text]: List of completions as text.                
+                    List[Text]: List of completions as text.            
                 """
                 tidy_comps = []
                 for c in comp.choices:
-                    if hasattr(c,'text'):
+                    if hasattr(c, 'text'):
                         tidy_comps.append(c.text.strip('\n').strip(''))
                 return tidy_comps
 
@@ -625,13 +625,13 @@ class OpenAIHandler(BaseMLEngine):
 
                 Args:
                     comp (openai.types.create_embedding_response.CreateEmbeddingResponse): Embedding object.
-                
+
                 Returns:
                     List[float]: List of embeddings as numbers.
                 """
                 tidy_comps = []
                 for c in comp.data:
-                    if hasattr(c,'embedding'):
+                    if hasattr(c, 'embedding'):
                         tidy_comps.append([c.embedding])
                 return tidy_comps
 
@@ -673,7 +673,7 @@ class OpenAIHandler(BaseMLEngine):
                 """
                 tidy_comps = []
                 for c in comp.choices:
-                    if hasattr(c,'message'):
+                    if hasattr(c, 'message'):
                         tidy_comps.append(c.message.content.strip('\n').strip(''))
                 return tidy_comps
 
@@ -775,7 +775,7 @@ class OpenAIHandler(BaseMLEngine):
                     List[Text]: List of image completions as URLs or base64 encoded images.
                 """
                 return [
-                    c.url if hasattr(c,'url')  else c.b64_json
+                    c.url if hasattr(c, 'url') else c.b64_json
                     for c in comp
                 ]
 
@@ -784,13 +784,13 @@ class OpenAIHandler(BaseMLEngine):
                 for p in prompts
             ]
             return _tidy(completions)
-        
+
         client = self._get_client(
             api_key=api_key,
             base_url=args.get('api_base'),
             org=args.pop('api_organization') if 'api_organization' in args else None,
-            )
-        
+        )
+
         try:
             # check if simple completion works
             completion = _submit_completion(
@@ -801,7 +801,7 @@ class OpenAIHandler(BaseMLEngine):
             # else, we get the max batch size
             if 'you can currently request up to at most a total of' in str(e):
                 pattern = 'a total of'
-                max_batch_size = int(e[e.find(pattern) + len(pattern) :].split(').')[0])
+                max_batch_size = int(e[e.find(pattern) + len(pattern):].split(').')[0])
             else:
                 max_batch_size = (
                     self.max_batch_size
@@ -812,7 +812,7 @@ class OpenAIHandler(BaseMLEngine):
             for i in range(math.ceil(len(prompts) / max_batch_size)):
                 partial = _submit_completion(
                     model_name,
-                    prompts[i * max_batch_size : (i + 1) * max_batch_size],
+                    prompts[i * max_batch_size: (i + 1) * max_batch_size],
                     api_args,
                     args,
                     df,
@@ -833,7 +833,7 @@ class OpenAIHandler(BaseMLEngine):
                     future = executor.submit(
                         _submit_completion,
                         model_name,
-                        prompts[i * max_batch_size : (i + 1) * max_batch_size],
+                        prompts[i * max_batch_size: (i + 1) * max_batch_size],
                         api_args,
                         args,
                         df,
@@ -856,7 +856,7 @@ class OpenAIHandler(BaseMLEngine):
             attribute (Optional[Text]): Attribute to describe. Can be 'args' or 'metadata'.
 
         Returns:
-            pd.DataFrame: Model metadata or model arguments.        
+            pd.DataFrame: Model metadata or model arguments. 
         """
         # TODO: Update to use update() artifacts
 
@@ -867,7 +867,7 @@ class OpenAIHandler(BaseMLEngine):
         elif attribute == 'metadata':
             model_name = args.get('model_name', self.default_model)
             try:
-                client= self._get_client(
+                client = self._get_client(
                     api_key=api_key,
                     base_url=args.get('api_base'),
                     org=args.get('api_organization')
@@ -911,11 +911,10 @@ class OpenAIHandler(BaseMLEngine):
         api_key = get_api_key(self.api_key_name, args, self.engine_storage)
 
         using_args = args.pop('using') if 'using' in args else {}
-        
+
         api_base = using_args.get('api_base', os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE))
         org = using_args.get('api_organization')
         client = self._get_client(api_key=api_key, base_url=api_base, org=org)
-
 
         args = {**using_args, **args}
         prev_model_name = self.base_model_storage.json_get('args').get('model_name', '')
@@ -943,8 +942,10 @@ class OpenAIHandler(BaseMLEngine):
         jsons = {k: None for k in file_names.keys()}
         for split, file_name in file_names.items():
             if os.path.isfile(os.path.join(temp_storage_path, file_name)):
-                jsons[split] = client.files.create(file=open(f"{temp_storage_path}/{file_name}", "rb"),
-                purpose='fine-tune')
+                jsons[split] = client.files.create(
+                    file=open(f"{temp_storage_path}/{file_name}", "rb"),
+                    purpose='fine-tune'
+                )
 
         if type(jsons['train']) is openai.types.FileObject:
             train_file_id = jsons['train'].id
@@ -1015,7 +1016,7 @@ class OpenAIHandler(BaseMLEngine):
             temp_model_path (Text): Temporary model path.
 
         Returns:
-            Dict: File names for the fine-tuning process.        
+            Dict: File names for the fine-tuning process.
         """
         df.to_json(temp_model_path, orient='records', lines=True)
 
@@ -1050,7 +1051,7 @@ class OpenAIHandler(BaseMLEngine):
             model_name (Text): Model name.
 
         Returns:
-            Text: Model to use for fine-tuning.        
+            Text: Model to use for fine-tuning.
         """
         for model_type in self.supported_ft_models:
             if model_type in model_name.lower():
@@ -1067,7 +1068,7 @@ class OpenAIHandler(BaseMLEngine):
             using_args (Dict): Parameters passed when calling the fine-tuning process via a model.
 
         Returns:
-            Dict: Fine-tuning parameters with extra parameters.        
+            Dict: Fine-tuning parameters with extra parameters.
         """
         extra_params = {
             'n_epochs': using_args.get('n_epochs', None),
@@ -1127,7 +1128,7 @@ class OpenAIHandler(BaseMLEngine):
                 PendingFT: If the fine-tuning process is still pending.
 
             Returns:
-                openai.types.fine_tuning.FineTuningJob: Fine-tuning stats.            
+                openai.types.fine_tuning.FineTuningJob: Fine-tuning stats.
             """
             ft_retrieved = client.fine_tuning.jobs.retrieve(fine_tuning_job_id=job_id)
             if ft_retrieved.status in ('succeeded', 'failed', 'cancelled'):
@@ -1149,7 +1150,7 @@ class OpenAIHandler(BaseMLEngine):
             result_file_id = result_file_id.id  # legacy endpoint
 
         return ft_stats, result_file_id
-    
+
     @staticmethod
     def _get_client(api_key: Text, base_url: Text, org: Optional[Text] = None) -> OpenAI:
         """
@@ -1161,6 +1162,6 @@ class OpenAIHandler(BaseMLEngine):
             org (Optional[Text]): OpenAI organization.
 
         Returns:
-            openai.OpenAI: OpenAI client.        
+            openai.OpenAI: OpenAI client.
         """
         return OpenAI(api_key=api_key, base_url=base_url, organization=org)

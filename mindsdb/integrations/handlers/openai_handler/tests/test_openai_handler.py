@@ -32,7 +32,7 @@ class TestOpenAI(BaseMLAPITest):
         Test if CREATE MODEL raises an exception with an unsupported model.
         """
         self.run_sql(
-            f"""
+            """
             CREATE MODEL proj.test_openaai_unsupported_model_model
             PREDICT answer
             USING
@@ -51,7 +51,7 @@ class TestOpenAI(BaseMLAPITest):
         Test the full flow in default mode with a question column for a single prediction.
         """
         self.run_sql(
-            f"""
+            """
             CREATE MODEL proj.test_openai_single_full_flow_default_mode_question_column
             PREDICT answer
             USING
@@ -83,7 +83,7 @@ class TestOpenAI(BaseMLAPITest):
         self.set_handler(mock_handler, name="pg", tables={"df": df})
 
         self.run_sql(
-            f"""
+            """
             CREATE MODEL proj.test_openai_bulk_full_flow_default_mode_question_column
             PREDICT answer
             USING
@@ -109,7 +109,7 @@ class TestOpenAI(BaseMLAPITest):
         Test the full flow in default mode with a prompt template for a single prediction.
         """
         self.run_sql(
-            f"""
+            """
             CREATE MODEL proj.test_openai_single_full_flow_default_mode_prompt_template
             PREDICT answer
             USING
@@ -142,7 +142,7 @@ class TestOpenAI(BaseMLAPITest):
         self.set_handler(mock_handler, name="pg", tables={"df": df})
 
         self.run_sql(
-            f"""
+            """
             CREATE MODEL proj.test_openai_bulk_full_flow_default_mode_prompt_template
             PREDICT answer
             USING
@@ -170,7 +170,7 @@ class TestOpenAI(BaseMLAPITest):
         Test the full flow in embedding mode for a single prediction.
         """
         self.run_sql(
-            f"""
+            """
             CREATE MODEL proj.test_openai_single_full_flow_embedding_mode
             PREDICT answer
             USING
@@ -205,7 +205,7 @@ class TestOpenAI(BaseMLAPITest):
         self.set_handler(mock_handler, name="pg", tables={"df": df})
 
         self.run_sql(
-            f"""
+            """
             CREATE MODEL proj.test_openai_bulk_full_flow_embedding_mode
             PREDICT answer
             USING
@@ -235,7 +235,7 @@ class TestOpenAI(BaseMLAPITest):
         Test the full flow in image mode for a single prediction.
         """
         self.run_sql(
-            f"""
+            """
             CREATE MODEL proj.test_openai_single_full_flow_image_mode
             PREDICT answer
             USING
@@ -268,7 +268,7 @@ class TestOpenAI(BaseMLAPITest):
         self.set_handler(mock_handler, name="pg", tables={"df": df})
 
         self.run_sql(
-            f"""
+            """
             CREATE MODEL proj.test_openai_bulk_full_flow_image_mode
             PREDICT answer
             USING
@@ -295,7 +295,7 @@ class TestOpenAI(BaseMLAPITest):
         Test the full flow in conversational mode for a single prediction.
         """
         self.run_sql(
-            f"""
+            """
             CREATE MODEL proj.test_openai_single_full_flow_conversational_mode
             PREDICT answer
             USING
@@ -330,7 +330,7 @@ class TestOpenAI(BaseMLAPITest):
         self.set_handler(mock_handler, name="pg", tables={"df": df})
 
         self.run_sql(
-            f"""
+            """
             CREATE MODEL proj.test_openai_bulk_full_flow_conversational_mode
             PREDICT answer
             USING
@@ -359,7 +359,7 @@ class TestOpenAI(BaseMLAPITest):
         Test the full flow in conversational-full mode for a single prediction.
         """
         self.run_sql(
-            f"""
+            """
             CREATE MODEL proj.test_openai_single_full_flow_conversational_full_mode
             PREDICT answer
             USING
@@ -394,7 +394,7 @@ class TestOpenAI(BaseMLAPITest):
         self.set_handler(mock_handler, name="pg", tables={"df": df})
 
         self.run_sql(
-            f"""
+            """
             CREATE MODEL proj.test_openai_bulk_full_flow_conversational_full_mode
             PREDICT answer
             USING
@@ -454,7 +454,7 @@ class TestOpenAI(BaseMLAPITest):
     #                 };
     #                 """,
     #                 """
-    #                 CREATE MODEL 
+    #                 CREATE MODEL
     #                 mindsdb.home_rentals_model
     #                 FROM example_db
     #                 (SELECT * FROM demo_data.home_rentals)
@@ -466,7 +466,7 @@ class TestOpenAI(BaseMLAPITest):
     #                 JOIN project_name.model_name [AS] p;
     #                 """
     #             ]
-                    
+
     #         }
     #     )
     #     self.set_handler(mock_handler, name="pg", tables={"df": df})

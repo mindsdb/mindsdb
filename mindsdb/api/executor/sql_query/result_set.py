@@ -216,23 +216,26 @@ class ResultSet:
         df = pd.DataFrame(values)
         self.add_raw_df(df)
 
-    def get_raw_values(self):
-        # list of lists
-        if self._df is None:
-            return []
-        return self._df.to_records(index=False)
+    def to_lists(self, type_cast=False, type_safe=True):
+        """
+        :param type_cast: cast numpy types
+            array->list, datetime64->str
+        :param type_safe: use pandas to_dict, it converts to python types
+        :return: list of lists
+        """
+        if type_safe:
+            # slower but keep timestamp type
+            return self._df.to_dict('split')['data']
 
-    def to_list_safe(self):
-        # slower but keep timestamp type
-        return self._df.to_dict('split')['data']
-
-    def to_list(self):
         # output for APIs. simplify types
-        df = self._df.copy()
-        for name, dtype in df.dtypes.to_dict().items():
-            if pd.api.types.is_datetime64_any_dtype(dtype):
-                df[name] = df[name].dt.strftime("%Y-%m-%d %H:%M:%S.%f")
-        return df.to_records(index=False).tolist()
+        if type_cast:
+            df = self._get_df().copy()
+            for name, dtype in df.dtypes.to_dict().items():
+                if pd.api.types.is_datetime64_any_dtype(dtype):
+                    df[name] = df[name].dt.strftime("%Y-%m-%d %H:%M:%S.%f")
+            return df.to_records(index=False).tolist()
+
+        return self._get_df().to_records(index=False)
 
     def get_column_values(self, col_idx):
         # get by column index
@@ -273,7 +276,7 @@ class ResultSet:
         # !!! Attention: !!!
         # if resultSet contents duplicate column name: only one of them will be in output
         names = self.get_column_names()
-        for row in self.get_raw_values():
+        for row in self.to_lists():
             yield dict(zip(names, row))
 
     def length(self):

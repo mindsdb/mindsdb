@@ -143,7 +143,7 @@ class IntegrationDataNode(DataNode):
             except Exception:
                 pass
 
-        values = result_set.to_list()
+        values = result_set.to_lists()
 
         if len(values) == 0:
             # not need to insert

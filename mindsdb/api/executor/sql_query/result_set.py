@@ -189,6 +189,11 @@ class ResultSet:
         result_set2.add_column(col2, values)
         return col2
 
+    def set_col_type(self, col_idx, type_name):
+        self.columns[col_idx].type = type_name
+        if self._df is not None:
+            self._df[col_idx] = self._df[col_idx].astype(type_name)
+
     # --- records ---
 
     def get_raw_df(self):
@@ -217,10 +222,17 @@ class ResultSet:
             return []
         return self._df.to_records(index=False)
 
-    def to_list(self):
-
+    def to_list_safe(self):
+        # slower but keep timestamp type
         return self._df.to_dict('split')['data']
 
+    def to_list(self):
+        # output for APIs. simplify types
+        df = self._df.copy()
+        for name, dtype in df.dtypes.to_dict().items():
+            if pd.api.types.is_datetime64_any_dtype(dtype):
+                df[name] = df[name].dt.strftime("%Y-%m-%d %H:%M:%S.%f")
+        return df.to_records(index=False).tolist()
 
     def get_column_values(self, col_idx):
         # get by column index

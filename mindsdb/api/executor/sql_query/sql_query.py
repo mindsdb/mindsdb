@@ -200,7 +200,7 @@ class SQLQuery:
         if view == 'dataframe':
             result = data.to_df()
         else:
-            result = data.to_list()
+            result = data.to_list_safe()
 
         return {
             'success': True,
@@ -316,6 +316,7 @@ class SQLQuery:
         if handler is None:
             raise UnknownError(f"Unknown step: {cls_name}")
 
+        import time; print(f'{step.__class__.__name__} before', time.time())
         return handler(self).call(step)
 
 

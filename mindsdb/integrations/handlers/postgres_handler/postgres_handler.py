@@ -1,3 +1,4 @@
+import pandas as pd
 import psycopg
 from psycopg.postgres import types
 from psycopg.pq import ExecStatus
@@ -151,7 +152,7 @@ class PostgresHandler(DatabaseHandler):
                         logger.error(f'Error casting column {col.name} to {types_map[pg_type.name]}: {e}')
 
     @profiler.profile()
-    def native_query(self, query: str) -> Response:
+    def native_query(self, query: str, params=None) -> Response:
         """
         Executes a SQL query on the PostgreSQL database and returns the result.
 
@@ -166,8 +167,11 @@ class PostgresHandler(DatabaseHandler):
         connection = self.connect()
         with connection.cursor() as cur:
             try:
-                cur.execute(query)
-                if ExecStatus(cur.pgresult.status) == ExecStatus.COMMAND_OK:
+                if params is not None:
+                    cur.executemany(query, params)
+                else:
+                    cur.execute(query)
+                if cur.pgresult is None or ExecStatus(cur.pgresult.status) == ExecStatus.COMMAND_OK:
                     response = Response(RESPONSE_TYPE.OK)
                 else:
                     result = cur.fetchall()
@@ -232,9 +236,9 @@ class PostgresHandler(DatabaseHandler):
         Returns:
             Response: The response from the `native_query` method, containing the result of the SQL query execution.
         """
-        query_str = self.renderer.get_string(query, with_failback=True)
+        query_str, params = self.renderer.get_exec_params(query, with_failback=True)
         logger.debug(f"Executing SQL query: {query_str}")
-        return self.native_query(query_str)
+        return self.native_query(query_str, params)
 
     def get_tables(self) -> Response:
         """

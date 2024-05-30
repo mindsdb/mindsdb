@@ -587,7 +587,7 @@ class OpenAIHandler(BaseMLEngine):
                     comp (openai.types.completion.Completion): Completion object.
 
                 Returns:
-                    List[Text]: List of completions as text.            
+                    List[Text]: List of completions as text.
                 """
                 tidy_comps = []
                 for c in comp.choices:
@@ -856,7 +856,7 @@ class OpenAIHandler(BaseMLEngine):
             attribute (Optional[Text]): Attribute to describe. Can be 'args' or 'metadata'.
 
         Returns:
-            pd.DataFrame: Model metadata or model arguments. 
+            pd.DataFrame: Model metadata or model arguments.
         """
         # TODO: Update to use update() artifacts
 

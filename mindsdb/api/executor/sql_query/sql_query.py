@@ -316,7 +316,6 @@ class SQLQuery:
         if handler is None:
             raise UnknownError(f"Unknown step: {cls_name}")
 
-        import time; print(f'{step.__class__.__name__} before', time.time())
         return handler(self).call(step)
 
 

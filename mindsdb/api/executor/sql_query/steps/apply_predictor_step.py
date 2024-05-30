@@ -47,14 +47,12 @@ class ApplyPredictorBaseCall(BaseStepCall):
 
         else:
             project_datanode = self.session.datahub.get(project_name)
-            import time; print('model before', time.time())
             predictions = project_datanode.predict(
                 model_name=predictor_name,
                 df=df,
                 version=version,
                 params=params
             )
-            print('model after', time.time())
         return predictions
 
 

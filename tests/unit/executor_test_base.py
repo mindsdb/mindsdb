@@ -392,12 +392,9 @@ class BaseExecutorDummyML(BaseExecutorTest):
         )
         if throw_error:
             assert ret.error_code is None
+
         if ret.data is not None:
-            columns = [
-                col.alias if col.alias is not None else col.name
-                for col in ret.columns
-            ]
-            return pd.DataFrame(ret.data).set_axis(columns, axis=1)
+            return ret.data.to_df()
 
 
 class BaseExecutorDummyLLM(BaseExecutorTest):

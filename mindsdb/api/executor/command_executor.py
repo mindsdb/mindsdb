@@ -70,7 +70,7 @@ from mindsdb_sql.parser.dialects.mindsdb import (
 )
 
 import mindsdb.utilities.profiler as profiler
-from mindsdb.api.executor import Column, SQLQuery
+from mindsdb.api.executor import Column, SQLQuery, ResultSet
 from mindsdb.api.executor.data_types.answer import ANSWER_TYPE, ExecuteAnswer
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     CHARSET_NUMBERS,
@@ -335,39 +335,35 @@ class ExecuteCommands:
                         data[var_name] = var_data[0]
 
                 df = pd.DataFrame(data.items(), columns=["Variable_name", "Value"])
-                data = query_df(df, new_statement)
-                data = data.values.tolist()
-
-                columns = [
-                    Column(
-                        name="Variable_name", table_name="session_variables", type="str"
-                    ),
-                    Column(name="Value", table_name="session_variables", type="str"),
-                ]
+                df2 = query_df(df, new_statement)
 
                 return ExecuteAnswer(
-                    answer_type=ANSWER_TYPE.TABLE, columns=columns, data=data
+                    answer_type=ANSWER_TYPE.TABLE, data=ResultSet().from_df(df2, table_name="session_variables")
                 )
             elif sql_category == "search_path":
                 return ExecuteAnswer(
                     answer_type=ANSWER_TYPE.TABLE,
-                    columns=[
-                        Column(name="search_path", table_name="search_path", type="str")
-                    ],
-                    data=[['"$user", public']],
+                    data=ResultSet(
+                        columns=[
+                            Column(name="search_path", table_name="search_path", type="str")
+                        ],
+                        values=[['"$user", public']]
+                    )
                 )
             elif "show status like 'ssl_version'" in sql_lower:
                 return ExecuteAnswer(
                     answer_type=ANSWER_TYPE.TABLE,
-                    columns=[
-                        Column(
-                            name="Value", table_name="session_variables", type="str"
-                        ),
-                        Column(
-                            name="Value", table_name="session_variables", type="str"
-                        ),
-                    ],
-                    data=[["Ssl_version", "TLSv1.1"]],
+                    data=ResultSet(
+                        columns=[
+                            Column(
+                                name="Value", table_name="session_variables", type="str"
+                            ),
+                            Column(
+                                name="Value", table_name="session_variables", type="str"
+                            ),
+                        ],
+                        values=[["Ssl_version", "TLSv1.1"]],
+                    )
                 )
             elif sql_category in ("function status", "procedure status"):
                 # SHOW FUNCTION STATUS WHERE Db = 'MINDSDB';
@@ -823,8 +819,10 @@ class ExecuteCommands:
         )  # 3 decimals by default
         return ExecuteAnswer(
             answer_type=ANSWER_TYPE.TABLE,
-            columns=[Column(name=metric_name, table_name="", type="str")],
-            data=[[metric_value]],
+            data=ResultSet(
+                columns=[Column(name=metric_name, table_name="", type="str")],
+                values=[[metric_value]],
+            )
         )
 
     def answer_describe_object(self, obj_type: str, obj_name: Identifier, database_name: str):
@@ -901,13 +899,8 @@ class ExecuteCommands:
             version=model_info['model_record'].version
         )
 
-        df_dict = df.to_dict("split")
-
-        columns = [
-            Column(name=col, table_name="", type="str") for col in df_dict["columns"]
-        ]
         return ExecuteAnswer(
-            answer_type=ANSWER_TYPE.TABLE, columns=columns, data=df_dict["data"]
+            answer_type=ANSWER_TYPE.TABLE, data=ResultSet().from_df(df, table_name="")
         )
 
     def _get_model_info(self, identifier, except_absent=True, database_name=None):
@@ -1002,12 +995,8 @@ class ExecuteCommands:
         self._sync_predictor_check(phase_name="retrain")
         df = self.session.model_controller.retrain_model(statement, ml_handler)
 
-        resp_dict = df.to_dict(orient="split")
-
-        columns = [Column(col) for col in resp_dict["columns"]]
-
         return ExecuteAnswer(
-            answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict["data"]
+            answer_type=ANSWER_TYPE.TABLE, data=ResultSet().from_df(df)
         )
 
     @profiler.profile()
@@ -1036,12 +1025,8 @@ class ExecuteCommands:
         self._sync_predictor_check(phase_name="finetune")
         df = self.session.model_controller.finetune_model(statement, ml_handler)
 
-        resp_dict = df.to_dict(orient="split")
-
-        columns = [Column(col) for col in resp_dict["columns"]]
-
         return ExecuteAnswer(
-            answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict["data"]
+            answer_type=ANSWER_TYPE.TABLE, data=ResultSet().from_df(df)
         )
 
     def _create_integration(self, name: str, engine: str, connection_args: dict):
@@ -1556,14 +1541,8 @@ class ExecuteCommands:
 
         try:
             df = self.session.model_controller.create_model(statement, ml_handler)
-            resp_dict = df.to_dict(orient='split')
 
-            columns = [
-                Column(col)
-                for col in resp_dict['columns']
-            ]
-
-            return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict['data'])
+            return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, data=ResultSet().from_df(df))
         except EntityExistsError:
             if getattr(statement, "if_not_exists", False) is True:
                 return ExecuteAnswer(ANSWER_TYPE.OK)
@@ -1698,7 +1677,7 @@ class ExecuteCommands:
             data.append(result)
 
         return ExecuteAnswer(
-            answer_type=ANSWER_TYPE.TABLE, columns=columns, data=[data]
+            answer_type=ANSWER_TYPE.TABLE, data=ResultSet(columns=columns, values=[data])
         )
 
     def answer_show_create_table(self, table):
@@ -1710,8 +1689,10 @@ class ExecuteCommands:
         ]
         return ExecuteAnswer(
             answer_type=ANSWER_TYPE.TABLE,
-            columns=columns,
-            data=[[table, f"create table {table} ()"]],
+            data=ResultSet(
+                columns=columns,
+                values=[[table, f"create table {table} ()"]],
+            )
         )
 
     def answer_function_status(self):
@@ -1817,7 +1798,7 @@ class ExecuteCommands:
             ),
         ]
 
-        return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=[])
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, data=ResultSet(columns=columns))
 
     def answer_show_table_status(self, table_name):
         # NOTE at this moment parsed statement only like `SHOW TABLE STATUS LIKE 'table'`.
@@ -1991,7 +1972,7 @@ class ExecuteCommands:
                 "",  # Comment
             ]
         ]
-        return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=data)
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, data=ResultSet(columns=columns, values=data))
 
     def answer_show_warnings(self):
         columns = [
@@ -2021,7 +2002,7 @@ class ExecuteCommands:
             },
         ]
         columns = [Column(**d) for d in columns]
-        return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=[])
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, data=ResultSet(columns=columns))
 
     def answer_connection_id(self, alias: str = None):
         columns = [
@@ -2036,7 +2017,7 @@ class ExecuteCommands:
         ]
         columns = [Column(**d) for d in columns]
         data = [[self.context.get('connection_id')]]
-        return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=data)
+        return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, data=ResultSet(columns=columns, values=data))
 
     def answer_create_table(self, statement, database_name):
         SQLQuery(statement, session=self.session, execute=True, database=database_name)
@@ -2047,7 +2028,6 @@ class ExecuteCommands:
 
         return ExecuteAnswer(
             answer_type=ANSWER_TYPE.TABLE,
-            columns=query.columns_list,
             data=data["result"],
         )
 

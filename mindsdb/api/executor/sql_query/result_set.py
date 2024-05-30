@@ -1,3 +1,4 @@
+from typing import List
 import copy
 import pandas as pd
 
@@ -34,9 +35,16 @@ class Column:
 
 
 class ResultSet:
-    def __init__(self):
-        self._columns = []
-        self._df = None
+    def __init__(self, columns=None, values: List[List] = None):
+        if columns is None:
+            columns = []
+        self._columns = columns
+
+        if values is None:
+            df = None
+        else:
+            df = pd.DataFrame(values)
+        self._df = df
 
         self.is_prediction = False
 
@@ -218,9 +226,12 @@ class ResultSet:
         return self._df.to_records(index=False)
 
     def to_list(self):
-
-        return self._df.to_dict('split')['data']
-
+        # output for APIs. simplify types
+        df = self._df.copy()
+        for name, dtype in df.dtypes.to_dict().items():
+            if pd.api.types.is_datetime64_any_dtype(dtype):
+                df[name] = df[name].dt.strftime("%Y-%m-%d %H:%M:%S.%f")
+        return df.to_records(index=False).tolist()
 
     def get_column_values(self, col_idx):
         # get by column index

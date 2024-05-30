@@ -1,4 +1,5 @@
 from typing import List
+from mindsdb.api.executor import ResultSet
 
 
 class ANSWER_TYPE:
@@ -16,14 +17,12 @@ class ExecuteAnswer:
         self,
         # TODO remove, is not used
         answer_type: ANSWER_TYPE,
-        columns=None,
-        data: List[List] = None,
+        data: ResultSet = None,
         status: int = None,
         state_track: List[List] = None,
         error_code: int = None,
         error_message: str = None,
     ):
-        self.columns = columns
         self.data = data
         self.status = status
         self.state_track = state_track

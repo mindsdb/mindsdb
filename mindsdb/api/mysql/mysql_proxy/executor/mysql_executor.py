@@ -171,9 +171,9 @@ class Executor:
 
         self.is_executed = True
 
-        self.data = ret.data
+        self.data = ret.data.to_list()
         self.server_status = ret.status
-        if ret.columns is not None:
-            self.columns = ret.columns
+        if ret.data.columns is not None:
+            self.columns = ret.data.columns
 
         self.state_track = ret.state_track

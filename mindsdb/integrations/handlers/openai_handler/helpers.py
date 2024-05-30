@@ -1,5 +1,4 @@
-import os
-from typing import List
+from typing import Text, List, Dict
 import random
 import time
 import math
@@ -10,11 +9,14 @@ from openai import OpenAI
 import tiktoken
 
 import mindsdb.utilities.profiler as profiler
-from mindsdb.integrations.handlers.openai_handler.constants import OPENAI_API_BASE
 
 
 class PendingFT(openai.OpenAIError):
+    """
+    Custom exception to handle pending fine-tuning status.
+    """
     message: str
+
     def __init__(self, message) -> None:
         super().__init__()
         self.message = message
@@ -44,6 +46,18 @@ def retry_with_exponential_backoff(
 
         Slight changes in the implementation, but originally from:
         https://github.com/openai/openai-cookbook/blob/main/examples/How_to_handle_rate_limits.ipynb
+
+        Args:
+            func: Function to be wrapped
+            initial_delay: Initial delay in seconds
+            hour_budget: Hourly budget in seconds
+            jitter: Adds randomness to the delay
+            exponential_base: Base for the exponential backoff
+            wait_errors: Tuple of errors to retry on
+            status_errors: Tuple of status errors to raise
+
+        Returns:
+            Wrapper function with exponential backoff
         """  # noqa
 
         def wrapper(*args, **kwargs):
@@ -94,10 +108,22 @@ def retry_with_exponential_backoff(
     return _retry_with_exponential_backoff
 
 
-def truncate_msgs_for_token_limit(messages, model_name, max_tokens, truncate='first'):
+def truncate_msgs_for_token_limit(messages: List[Dict], model_name: Text, max_tokens: int, truncate: Text = 'first'):
     """
     Truncates message list to fit within the token limit.
-    Note: first message for chat completion models are general directives with the system role, which will ideally be kept at all times.
+    The first message for chat completion models are general directives with the system role, which will ideally be kept at all times.
+
+    Slight changes in the implementation, but originally from:
+    https://github.com/openai/openai-cookbook/blob/main/examples/How_to_count_tokens_with_tiktoken.ipynb
+
+    Args:
+        messages (List[Dict]): List of messages
+        model_name (Text): Model name
+        max_tokens (int): Maximum token limit
+        truncate (Text): Truncate strategy, either 'first' or 'last'
+
+    Returns:
+        List[Dict]: Truncated message list
     """  # noqa
     encoder = tiktoken.encoding_for_model(model_name)
     sys_priming = messages[0:1]
@@ -119,8 +145,15 @@ def truncate_msgs_for_token_limit(messages, model_name, max_tokens, truncate='fi
     return messages
 
 
-def count_tokens(messages, encoder, model_name='gpt-3.5-turbo-0301'):
-    """Original token count implementation can be found in the OpenAI cookbook."""
+def count_tokens(messages: List[Dict], encoder: tiktoken.core.Encoding, model_name: Text = 'gpt-3.5-turbo-0301'):
+    """
+    Counts the number of tokens in a list of messages.
+
+    Args:
+        messages: List of messages
+        encoder: Tokenizer
+        model_name: Model name
+    """
     if (
         "gpt-3.5-turbo" in model_name
     ):  # note: future models may deviate from this (only 0301 really complies)
@@ -141,9 +174,16 @@ def count_tokens(messages, encoder, model_name='gpt-3.5-turbo-0301'):
         )
 
 
-def get_available_models(api_key: str, api_base: str) -> List[str]:
+def get_available_models(api_key: Text, api_base: Text) -> List[Text]:
     """
     Returns a list of available openai models for the given API key.
+
+    Args:
+        api_key (Text): OpenAI API key
+        api_base (Text): OpenAI API base URL
+
+    Returns:
+        List[Text]: List of available models
     """
     res = OpenAI(api_key=api_key, base_url=api_base).models.list()
 

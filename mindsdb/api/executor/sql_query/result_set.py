@@ -58,7 +58,7 @@ class ResultSet:
 
     # --- converters ---
 
-    def from_df(self, df, database, table_name, table_alias=None):
+    def from_df(self, df, database=None, table_name=None, table_alias=None):
 
         columns_dtypes = dict(df.dtypes)
 
@@ -217,6 +217,11 @@ class ResultSet:
             return []
         return self._df.to_records(index=False)
 
+    def to_list(self):
+
+        return self._df.to_dict('split')['data']
+
+
     def get_column_values(self, col_idx):
         # get by column index
         df = self._get_df()
@@ -249,17 +254,15 @@ class ResultSet:
 
     @property
     def records(self):
-        return self.get_records()
+        return list(self.get_records())
 
     def get_records(self):
         # get records as dicts.
         # !!! Attention: !!!
         # if resultSet contents duplicate column name: only one of them will be in output
         names = self.get_column_names()
-        records = []
         for row in self.get_raw_values():
-            records.append(dict(zip(names, row)))
-        return records
+            yield dict(zip(names, row))
 
     def length(self):
         return len(self)

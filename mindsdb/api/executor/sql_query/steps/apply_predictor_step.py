@@ -47,13 +47,14 @@ class ApplyPredictorBaseCall(BaseStepCall):
 
         else:
             project_datanode = self.session.datahub.get(project_name)
-
+            import time; print('model before', time.time())
             predictions = project_datanode.predict(
                 model_name=predictor_name,
                 df=df,
                 version=version,
                 params=params
             )
+            print('model after', time.time())
         return predictions
 
 
@@ -216,7 +217,7 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
             # apply filter
             if is_timeseries:
                 pred_data = predictions.to_dict(orient='records')
-                where_data = data.get_records()
+                where_data = list(data.get_records())
                 pred_data = self.apply_ts_filter(pred_data, where_data, step, predictor_metadata)
                 predictions = pd.DataFrame(pred_data)
 

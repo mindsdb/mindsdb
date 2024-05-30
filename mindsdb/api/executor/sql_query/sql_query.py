@@ -200,7 +200,7 @@ class SQLQuery:
         if view == 'dataframe':
             result = data.to_df()
         else:
-            result = data.get_raw_values()
+            result = data.to_list()
 
         return {
             'success': True,

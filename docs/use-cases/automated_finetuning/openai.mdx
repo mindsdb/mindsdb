@@ -1,0 +1,133 @@
+---
+title: Fine-Tune the OpenAI Model
+sidebarTitle: OpenAI
+---
+
+In this example we are going to **teach an OpenAI model, how to write MindsDB AI SQL queries**
+
+All OpenAI models belong to the group of Large Language Models (LLMs). By definition, these are pre-trained on large amounts of data. However, it is possible to fine-tune these models with a task-specific dataset for a defined use case.
+
+<Tip>
+OpenAI supports fine-tuning of some of its models [listed here](https://platform.openai.com/docs/guides/fine-tuning). And with MindsDB, you can easily fine-tune an OpenAI model making it more applicable to your specific use case.
+</Tip>
+
+Let's create a model to answer questions about MindsDB's custom SQL syntax.
+
+First, create an OpenAI engine, passing your OpenAI API key:
+
+```sql
+CREATE ML_ENGINE openai_engine
+FROM openai
+USING
+    openai_api_key = 'your-openai-api-key';
+```
+
+Then, create a model using this engine:
+
+```sql
+CREATE MODEL openai_davinci
+PREDICT completion
+USING
+    engine = 'openai_engine',
+    model_name = 'davinci-002',
+    prompt_template = 'Return a valid SQL string for the following question about MindsDB in-database machine learning: {{prompt}}';
+```
+
+You can check model status with this command:
+
+```sql
+DESCRIBE openai_davinci;
+```
+
+Once the status is complete, we can query for predictions:
+
+```sql
+SELECT prompt, completion
+FROM openai_davinci as m
+WHERE prompt = 'What is the SQL syntax to join input data with predictions from a MindsDB machine learning model?'
+USING max_tokens=400;
+```
+
+On execution, we get:
+
+```sql
++---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
+| prompt                                                                                            | completion                                                                                           |
++---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
+| What is the SQL syntax to join input data with predictions from a MindsDB machine learning model? | The SQL syntax is: SELECT * FROM input_data INNER JOIN predictions ON input_data.id = predictions.id |
++---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
+```
+
+If you followed one of the MindsDB tutorials before, you'll see that the syntax provided by the model is not exactly as expected.
+
+Now, we'll fine-tune our model using a table that stores details about MindsDB's custom SQL syntax.
+
+<Info>
+Upload [this data file](https://github.com/mindsdb/mindsdb/blob/main/docs/use-cases/automated_finetuning/data.csv) to MindsDB and use it to finetune the model.
+</Info>
+
+This is how you can fine-tune an OpenAI model:
+
+```sql
+FINETUNE openai_davinci
+FROM files
+    (SELECT prompt, completion FROM openai_learninghub_ft);
+```
+
+The [`FINETUNE`](/sql/api/finetune) command creates a new version of the `openai_davinci` model. You can query all available versions as below:
+
+```sql
+SELECT *
+FROM models
+WHERE name = 'openai_davinci';
+```
+
+<Warning>
+While the model is being generated and trained, it is not active. The model becomes active only after it completes generating and training.
+</Warning>
+
+Once the new version status is complete and active, we can query the model again, expecting a more accurate output.
+
+```sql
+SELECT prompt, completion
+FROM openai_davinci as m
+WHERE prompt = 'What is the SQL syntax to join input data with predictions from a MindsDB machine learning model?'
+USING max_tokens=400;
+```
+
+On execution, we get:
+
+```sql
++---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
+| prompt                                                                                            | completion                                                                                           |
++---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
+| What is the SQL syntax to join input data with predictions from a MindsDB machine learning model? | SELECT * FROM mindsdb.models.my_model JOIN mindsdb.input_data_name;                                  |
++---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
+```
+
+<Tip>
+If you have dynamic data that gets updated regularly, you can set up an automated fine-tuning as below.
+
+Note that the data source must contain an incremental column, such as timestamp or integer, so MindsDB can pick up only the recently added data with the help of the [`LAST` keyword](/mindsdb_sql/sql/create/jobs#last).
+
+Here is how to create and schedule a job to fine-tune the model periodically.
+
+```sql
+CREATE JOB automated_finetuning (
+
+    FINETUNE openai_davinci
+    FROM mindsdb
+        (SELECT *
+        FROM files.openai_learninghub_ft
+        WHERE timestamp > LAST)
+)
+EVERY 1 day
+IF (
+    SELECT *
+    FROM files.openai_learninghub_ft
+    WHERE timestamp > LAST
+);
+```
+
+Now your model will be fine-tuned with newly added data every day or every time there is new data available.
+</Tip>

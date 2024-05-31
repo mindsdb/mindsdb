@@ -11,7 +11,7 @@ title = 'Ray Serve'
 name = 'ray_serve'
 type = HANDLER_TYPE.ML
 icon_path = 'icon.svg'
-permanent = True
+permanent = False
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'description', 'import_error', 'icon_path'

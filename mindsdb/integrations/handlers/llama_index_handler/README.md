@@ -81,7 +81,7 @@ USING
   index_class = 'VectorStoreIndex',
   owner = 'mindsdb',
   repo = 'mindsdb',
-  branch = 'staging',
+  branch = 'main',
   reader = 'GithubRepositoryReader',
   filter_type = 'include',
   filter_file_extensions = ['.py','.html','.md'],

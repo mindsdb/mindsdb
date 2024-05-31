@@ -1,0 +1,104 @@
+---
+title: Predict Home Rental Prices with MindsDB
+sidebarTitle: Home Rentals
+---
+
+In this tutorial, we'll use a regression model to predict home rental prices.
+
+<Note>
+This tutorial uses the Lightwood integration that requires the `mindsdb/mindsdb:lightwood` Docker image. [Learn more here](/setup/self-hosted/docker#install-mindsdb).
+</Note>
+
+## Connect a data source
+
+We will start by connecting a demo database to MindsDB using the `CREATE DATABASE` statement.
+
+```sql
+CREATE DATABASE example_db
+WITH ENGINE = "postgres",
+PARAMETERS = {
+"user": "demo_user",
+"password": "demo_password",
+"host": "samples.mindsdb.com",
+"port": "5432",
+"database": "demo",
+"schema": "demo_data"
+};
+```
+
+Let's preview the data that will be used to train the model.
+
+```sql
+SELECT *
+FROM example_db.home_rentals
+LIMIT 10;
+```
+
+## Deploy and train an ML model
+
+Let's create and train a machine learning model. For that we are going to use the `CREATE MODEL` statement, where we specify what query to train `FROM` and what we want to `PREDICT`.
+
+```sql
+CREATE MODEL mindsdb.home_rentals_model
+FROM example_db
+   (SELECT * FROM home_rentals)
+PREDICT rental_price;
+```
+
+It may take a couple of minutes for the training to complete. You can monitor the status of your model as below.
+
+```sql
+DESCRIBE home_rentals_model;
+```
+
+## Make predictions
+
+Once the model's status is complete, you can make predictions by querying the model.
+
+```sql
+SELECT rental_price, rental_price_explain
+FROM mindsdb.home_rentals_model
+WHERE sqft = 823
+AND location='good'
+AND neighborhood='downtown'
+AND days_on_market=10;
+```
+
+You can also make batch predictions by joining the data table with the model.
+
+```sql
+SELECT t.rental_price as real_price,
+       m.rental_price as predicted_price,
+       t.number_of_rooms,
+       t.number_of_bathrooms,
+       t.sqft,
+       t.location,
+       t.days_on_market
+FROM example_db.home_rentals as t
+JOIN mindsdb.home_rentals_model as m
+LIMIT 100;
+```
+
+## Automate continuous improvement of the model
+
+Now, we can take this even further. MindsDB includes powerful automation features called Jobs which allow us to automate queries in MindsDB. This is very handy for production AI/ML systems which all require automation logic to help them to work.
+
+We use the `CREATE JOB` statement to create a Job.
+
+Now, let's use a Job to retrain the model every two days, just like we might in production. You can retrain the model to improve predictions every time when either new data or new MindsDB version is available. And, if you want to retrain your model considering only new data, then go for finetuning it.
+
+```sql
+CREATE JOB improve_model (
+
+   RETRAIN mindsdb.home_rentals_model
+   FROM example_db
+      (SELECT * FROM home_rentals)
+)
+EVERY 2 days
+IF (SELECT * FROM example_db.home_rentals
+    WHERE created_at > LAST);
+```
+
+This job will execute every 2 days only if there is new data available in the `home_rentals` table. Learn more about the [`LAST` keyword](/mindsdb_sql/sql/create/jobs#last) here.
+
+And there you have it! You created an end-to-end automated production ML system in a few short minutes.

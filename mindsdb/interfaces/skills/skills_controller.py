@@ -47,12 +47,19 @@ class SkillsController:
         Raises:
             ValueError: If `project_name` does not exist
         '''
-        if project_name is None:
-            project_name = 'mindsdb'
-        project = self.project_controller.get(name=project_name)
-        return db.Skills.query.filter(
-            db.Skills.project_id == project.id
-        ).all()
+
+        project_controller = ProjectController()
+        projects = project_controller.get_list()
+        if project_name is not None:
+            projects = list([p for p in projects if p.name == project_name])
+        project_ids = list([p.id for p in projects])
+
+        query = (
+            db.session.query(db.Skills)
+            .filter(db.Skills.project_id.in_(project_ids))
+        )
+
+        return query.all()
 
     def add_skill(
             self,

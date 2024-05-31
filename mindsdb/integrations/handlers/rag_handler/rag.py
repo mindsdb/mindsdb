@@ -49,7 +49,7 @@ class RAGQuestionAnswerer:
 
         if isinstance(args, RAGHandlerParameters):
 
-            llm_config = {"llm_config": args.llm_params.dict()}
+            llm_config = {"llm_config": args.llm_params.model_dump()}
 
             llm_loader = LLMLoader(**llm_config)
 

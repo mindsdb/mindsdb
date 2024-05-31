@@ -260,7 +260,6 @@ class TestHTTP(HTTPHelperMixin):
         table_names = [x[0] for x in resp_1['data']]
         assert 'test_file' not in table_names
         assert 'models' in table_names
-        assert 'models_versions' in table_names
 
         resp = self.sql_via_http('use files', RESPONSE_TYPE.OK)
         assert resp['context']['db'] == 'files'
@@ -269,7 +268,6 @@ class TestHTTP(HTTPHelperMixin):
         table_names = [x[0] for x in resp_4['data']]
         assert 'test_file' in table_names
         assert 'models' not in table_names
-        assert 'models_versions' not in table_names
 
     def test_special_queries(self):
         # "show databases;",

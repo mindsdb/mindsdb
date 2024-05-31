@@ -1,6 +1,4 @@
-import os
 import tempfile
-from collections import OrderedDict
 
 import pandas as pd
 import requests
@@ -14,7 +12,6 @@ from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.parser import ast
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -74,9 +71,14 @@ class ScyllaHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.session
 
-        auth_provider = PlainTextAuthProvider(
-            username=self.connection_args['user'], password=self.connection_args['password']
-        )
+        auth_provider = None
+        if any(key in self.connection_args for key in ('user', 'password')):
+            if all(key in self.connection_args for key in ('user', 'password')):
+                auth_provider = PlainTextAuthProvider(
+                    username=self.connection_args['user'], password=self.connection_args['password']
+                )
+            else:
+                raise ValueError("If authentication is required, both 'user' and 'password' must be provided!") 
 
         connection_props = {
             'auth_provider': auth_provider
@@ -201,49 +203,3 @@ class ScyllaHandler(DatabaseHandler):
         q = f"DESCRIBE {table_name};"
         result = self.native_query(q)
         return result
-
-
-connection_args = OrderedDict(
-    user={
-        'type': ARG_TYPE.STR,
-        'description': 'User name',
-        'required': True,
-        'label': 'User'
-    },
-    password={
-        'type': ARG_TYPE.PWD,
-        'description': 'Password',
-        'required': True,
-        'label': 'Password'
-    },
-    protocol_version={
-        'type': ARG_TYPE.INT,
-        'description': 'is not required, and default to 4.',
-        'required': False,
-        'label': 'Protocol version'
-    },
-    host={
-        'type': ARG_TYPE.STR,
-        'description': ' is the host name or IP address of the ScyllaDB.',
-        'required': True,
-        'label': 'Host'
-    },
-    port={
-        'type': ARG_TYPE.INT,
-        'description': 'Server port',
-        'required': True,
-        'label': 'Port'
-    },
-    keyspace={
-        'type': ARG_TYPE.STR,
-        'description': 'is the keyspace to connect to. It is a top level container for tables.',
-        'required': True,
-        'label': 'Keyspace'
-    },
-    secure_connect_bundle={
-        'type': ARG_TYPE.STR,
-        'description': 'Path or URL to the secure connect bundle',
-        'required': True,
-        'label': 'Host'
-    }
-)

@@ -3,20 +3,20 @@ title: Hugging Face Inference API
 sidebarTitle: Hugging Face Inference API
 ---
 
-This documentation describes the integration of MindsDB with [Hugging Face Inference API](https://huggingface.co/inference-endpoints/serverless).
+This documentation describes the integration of MindsDB with [Hugging Face Inference API](https://huggingface.co/inference-api/serverless).
 The integration allows for the deployment of Hugging Face models through Inference API within MindsDB, providing the models with access to data from various data sources.
 
 ## Prerequisites
 
 Before proceeding, ensure the following prerequisites are met:
 
-1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
-2. To use Hugging Face Inference API within MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
+2. To use Hugging Face Inference API within MindsDB, install the required dependencies following [this instruction](https://docs.mindsdb.com/setup/self-hosted/docker#install-dependencies).
 3. Obtain the API key for Hugging Face Inference API required to deploy and use Hugging Face models through Inference API within MindsDB. Generate tokens in the `Settings -> Access Tokens` tab of the Hugging Face account.
 
 ## Setup
 
-Create an AI engine from the [Hugging Face Inference API handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/huggingface_api_handler).
+Create an AI engine from the [Hugging Face Inference API handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/huggingface_api_handler).
 
 ```sql
 CREATE ML_ENGINE huggingface_api_engine
@@ -223,5 +223,5 @@ USING
 
 **Next Steps**
 
-Follow [this link](/sql/tutorials/hugging-face-inference-api-examples) to see more use case examples.
+Follow [this link](https://docs.mindsdb.com/sql/tutorials/hugging-face-inference-api-examples) to see more use case examples.
 </Tip>

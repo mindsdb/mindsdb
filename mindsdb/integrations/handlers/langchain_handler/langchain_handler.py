@@ -18,6 +18,7 @@ from mindsdb.integrations.handlers.langchain_handler.constants import (
     DEFAULT_AGENT_TIMEOUT_SECONDS,
     DEFAULT_AGENT_TOOLS,
     DEFAULT_AGENT_TYPE,
+    DEFAULT_EMBEDDINGS_MODEL_PROVIDER,
     DEFAULT_MAX_ITERATIONS,
     DEFAULT_MAX_TOKENS,
     DEFAULT_MODEL_NAME,
@@ -37,6 +38,8 @@ from mindsdb.interfaces.storage.model_fs import HandlerStorage, ModelStorage
 from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
 from mindsdb.utilities import log
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
+
+from .mindsdb_chat_model import ChatMindsdb
 
 _PARSING_ERROR_PREFIX = 'An output parsing error occured'
 
@@ -102,10 +105,10 @@ class LangChainHandler(BaseMLEngine):
         model_config.update(pred_args)
         # Include API keys.
         model_config['api_keys'] = {
-            p: get_api_key(p, args, self.engine_storage, strict=False) for p in SUPPORTED_PROVIDERS
+            p: get_api_key(p, model_config, self.engine_storage, strict=False) for p in SUPPORTED_PROVIDERS
         }
         llm_config = get_llm_config(args.get('provider', self._get_llm_provider(args)), model_config)
-        config_dict = llm_config.dict()
+        config_dict = llm_config.model_dump()
         config_dict = {k: v for k, v in config_dict.items() if v is not None}
         return config_dict
 
@@ -138,6 +141,8 @@ class LangChainHandler(BaseMLEngine):
             return ChatLiteLLM(**model_kwargs)
         if args['provider'] == 'ollama':
             return ChatOllama(**model_kwargs)
+        if args['provider'] == 'mindsdb':
+            return ChatMindsdb(**model_kwargs)
         raise ValueError(f'Unknown provider: {args["provider"]}')
 
     def _create_embeddings_model(self, args: Dict):
@@ -212,12 +217,21 @@ class LangChainHandler(BaseMLEngine):
 
         # Set up embeddings model if needed.
         if args.get('mode') == 'retrieval':
-            # get args for embeddings model
             embeddings_args = args.pop('embedding_model_args', {})
+
+            # no embedding model args provided, use default provider.
+            if not embeddings_args:
+                embeddings_provider = self._get_embedding_model_provider(args)
+                logger.warning("'embedding_model_args' not found in input params, "
+                               f"Trying to use LLM provider: {embeddings_provider}"
+                               )
+                embeddings_args['class'] = embeddings_provider
+                # Include API keys if present.
+                embeddings_args.update({k: v for k, v in args.items() if 'api_key' in k})
+
             # create embeddings model
             pred_args['embeddings_model'] = self._create_embeddings_model(embeddings_args)
             pred_args['llm'] = llm
-            pred_args['mindsdb_path'] = self.engine_storage.folder_get
 
         tools = setup_tools(llm,
                             model_kwargs,
@@ -291,8 +305,13 @@ class LangChainHandler(BaseMLEngine):
         def _invoke_agent_executor_with_prompt(agent_executor, prompt):
             if not prompt:
                 return ''
-
-            answer = agent_executor.invoke(prompt)
+            try:
+                answer = agent_executor.invoke(prompt)
+            except Exception as e:
+                answer = str(e)
+                if not answer.startswith("Could not parse LLM output: `"):
+                    raise e
+                answer = {'output': answer.removeprefix("Could not parse LLM output: `").removesuffix("`")}
 
             if 'output' not in answer:
                 # This should never happen unless Langchain changes invoke output format, but just in case.

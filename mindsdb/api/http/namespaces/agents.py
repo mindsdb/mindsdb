@@ -57,19 +57,19 @@ def create_agent(project_name, name, agent):
             params=params
         )
         return created_agent.as_dict(), HTTPStatus.CREATED
-    except ValueError as e:
+    except ValueError:
         # Model or skill doesn't exist.
         return http_error(
             HTTPStatus.NOT_FOUND,
             'Resource not found',
-            str(e)
+            f'The {model_name} or skills "{skills}" do not exist. Please ensure that the names are correct and try again.'
         )
-    except NotImplementedError as e:
+    except NotImplementedError:
         # Free users trying to create agent.
         return http_error(
             HTTPStatus.UNAUTHORIZED,
             'Unavailable to free users',
-            str(e)
+            f'The {model_name} or skills "{skills}" do not exist. Please ensure that the names are correct and try again.'
         )
 
 

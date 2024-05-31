@@ -29,7 +29,7 @@ Optionally, you can connect using these parameters:
 * `password` is the password to authenticate your access.
 * `host` is the host name or IP address.
 * `port` is the port through which TCP/IP connection is to be made.
-* `database` is the database name to be connected. Note, this will be required if the connection string is missing the `authSource` param.
+* `database` is the database name to be connected. Note, this will be required if the connection string is missing the `/database` path.
 
 ## Usage
 
@@ -40,7 +40,7 @@ CREATE DATABASE mongo_datasource
 WITH
   ENGINE = 'mongodb',
   PARAMETERS = {
-    "host": "mongodb+srv://admin:admin@demo.mongodb.net?authSource=public"
+    "host": "mongodb+srv://admin:admin@demo.mongodb.net/public"
   };
 ```
 

@@ -15,17 +15,32 @@ connection_args = OrderedDict(
     },
     region_name={
         'type': ARG_TYPE.STR,
-        'description': 'The AWS region where the DynamoDB tables are created.'
+        'description': 'The AWS region where the Athena tables are created.'
     },
-    results_output_location={
+    database={
         'type': ARG_TYPE.STR,
-        'description': 'The location where the Athena query results are stored.'
+        'description': 'The name of the Athena database.'
+    },
+    workgroup={
+        'type': ARG_TYPE.STR,
+        'description': 'The Athena Workgroup'
+    },
+    catalog={
+        'type': ARG_TYPE.STR,
+        'description': 'The AWS Data Catalog'
+    },
+    result_output_location={
+        'type': ARG_TYPE.STR,
+        'description': 'The Athena Query Results Output Location s3://bucket-path/athena-query-results'
     }
 )
 
 connection_args_example = OrderedDict(
-    aws_access_key_id='PCAQ2LJDOSWLNSQKOCPW',
-    aws_secret_access_key='U/VjewPlNopsDmmwItl34r2neyC6WhZpUiip57i',
+    aws_access_key_id='<default>',
+    aws_secret_access_key='<default>',
     region_name='us-east-1',
-    results_output_location='s3://path/to/query/results/',
+    catalog='AwsDataCatalog',
+    database='default',
+    workgroup='primary',
+    result_output_location="s3://<bucket>/athena-query-results/"
 )

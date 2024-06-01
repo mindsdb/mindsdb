@@ -13,9 +13,7 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 
-
 logger = log.getLogger(__name__)
-
 
 class AthenaHandler(DatabaseHandler):
     """
@@ -49,31 +47,29 @@ class AthenaHandler(DatabaseHandler):
             HandlerStatusResponse
         """
 
-        if self.is_connected is True:
-            return self.connection
+        if self.is_connected:
+            return StatusResponse(self.name, True, 'Already connected')
 
-        self.connection = client(
-            'athena',
-            aws_access_key_id=self.connection_data['aws_access_key_id'],
-            aws_secret_access_key=self.connection_data['aws_secret_access_key'],
-            region_name=self.connection_data['region_name']
-        )
-
-        self.is_connected = True
-
-        return self.connection
+        try:
+            self.connection = client(
+                'athena',
+                aws_access_key_id=self.connection_data['aws_access_key_id'],
+                aws_secret_access_key=self.connection_data['aws_secret_access_key'],
+                region_name=self.connection_data['region_name'],
+            )
+            self.is_connected = True
+            return StatusResponse(self.name, True, 'Connected successfully')
+        except Exception as e:
+            logger.error(f'Failed to connect to Athena: {str(e)}')
+            return StatusResponse(self.name, False, str(e))
 
     def disconnect(self):
         """
         Close any existing connections.
         """
-
-        if self.is_connected is False:
-            return
-
-        self.connection.close()
-        self.is_connected = False
-        return self.is_connected
+        if self.is_connected:
+            self.connection = None
+            self.is_connected = False
 
     def check_connection(self) -> StatusResponse:
         """
@@ -81,23 +77,10 @@ class AthenaHandler(DatabaseHandler):
         Returns:
             HandlerStatusResponse
         """
-
-        response = StatusResponse(False)
-        need_to_close = self.is_connected is False
-
-        try:
-            self.connect()
-            response.success = True
-        except Exception as e:
-            logger.error(f'Error connecting to Athena, {e}!')
-            response.error_message = str(e)
-        finally:
-            if response.success is True and need_to_close:
-                self.disconnect()
-            if response.success is False and self.is_connected is True:
-                self.is_connected = False
-
-        return response
+        if self.is_connected:
+            return StatusResponse(self.name, True, 'Connection is alive')
+        else:
+            return self.connect()
 
     def native_query(self, query: str) -> StatusResponse:
         """
@@ -107,55 +90,35 @@ class AthenaHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-
-        need_to_close = self.is_connected is False
-
-        connection = self.connect()
-
+        need_to_close = not self.is_connected
+        self.connect()
+        
         try:
-            # Start the query execution
-            response = connection.start_query_execution(
+            response = self.connection.start_query_execution(
                 QueryString=query,
+                QueryExecutionContext={
+                    'Database': self.connection_data['database'],
+                },
                 ResultConfiguration={
-                    'OutputLocation': self.connection_data['results_output_location'],  # specify the S3 path where query results will be stored
-                }
+                    'OutputLocation': self.connection_data['result_output_location'],
+                },
+                WorkGroup=self.connection_data['workgroup'],
             )
-
-            # Get the query execution id
             query_execution_id = response['QueryExecutionId']
-
-            # Wait for the query to finish execution
-            while True:
-                response = connection.get_query_execution(QueryExecutionId=query_execution_id)
-
-                if response['QueryExecution']['Status']['State'] in ['SUCCEEDED', 'FAILED', 'CANCELLED']:
-                    break
-
-                time.sleep(5)  # wait for 5 seconds before checking the query status again
-
-            # If query completed successfully, fetch the results
-            if response['QueryExecution']['Status']['State'] == 'SUCCEEDED':
-                result = connection.get_query_results(QueryExecutionId=query_execution_id)
-
-                response = Response(
-                    RESPONSE_TYPE.TABLE,
-                    data_frame=pd.json_normalize(result['ResultSet']['Rows'])
+            status = self._wait_for_query_to_complete(query_execution_id)
+            if status == 'SUCCEEDED':
+                result = self.connection.get_query_results(
+                    QueryExecutionId=query_execution_id
                 )
+                df = self._parse_query_result(result)
+                response = Response(RESPONSE_TYPE.TABLE, data_frame=df)
             else:
-                logger.error(f'Error running query: {query} on Athena!')
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=response['QueryExecution']['Status']['StateChangeReason']
-                )
-
+                response = Response(RESPONSE_TYPE.ERROR, error_message='Query failed or was cancelled')
         except Exception as e:
-            logger.error(f'Error running query: {query} on Athena!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
-            )
+            logger.error(f'Error executing query in Athena: {str(e)}')
+            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
-        if need_to_close is True:
+        if need_to_close:
             self.disconnect()
 
         return response
@@ -165,50 +128,32 @@ class AthenaHandler(DatabaseHandler):
         Receive query as AST (abstract syntax tree) and act upon it somehow.
         Args:
             query (ASTNode): sql query represented as AST. May be any kind
-                of query: SELECT, INTSERT, DELETE, etc
+                of query: SELECT, INSERT, DELETE, etc
         Returns:
             HandlerResponse
         """
-
+        
         return self.native_query(query.to_string())
 
     def get_tables(self) -> StatusResponse:
         """
         Return list of entities that will be accessible as tables.
         Returns:
-            HandlerResponse
+            Response: A response object containing the list of tables and
         """
-
-        need_to_close = self.is_connected is False
-
-        connection = self.connect()
-
-        try:
-            # Get the list of tables in the specified database
-            response = connection.list_table_metadata(
-                Catalog=self.connection_data['catalog'],
-                DatabaseName=self.connection_data['database']
-            )
-
-            # Extract the table names from the response
-            table_names = [table['Name'] for table in response['TableMetadataList']]
-
-            response = Response(
-                RESPONSE_TYPE.TABLE,
-                data_frame=pd.DataFrame(table_names, columns=['Table Name'])
-            )
-
-        except Exception as e:
-            logger.error(f'Error getting tables from Athena!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
-            )
-
-        if need_to_close is True:
-            self.disconnect()
-
-        return response
+        
+        query = """
+            select
+                table_schema,
+                table_name,
+                table_type
+            from 
+                information_schema.tables
+            where
+                table_schema not in ('information_schema')
+            and table_type in ('BASE TABLE', 'VIEW')
+        """
+        return self.native_query(query)
 
     def get_columns(self, table_name: str) -> StatusResponse:
         """
@@ -216,37 +161,48 @@ class AthenaHandler(DatabaseHandler):
         Args:
             table_name (str): name of one of tables returned by self.get_tables()
         Returns:
-            HandlerResponse
+            Response: A response object containing the column details
+        Raises:
+            ValueError: If the 'table_name' is not a valid string.
         """
+        if not table_name or isinstance(table_name, str):
+            raise ValueError("Invalid value for table name provided.")
 
-        need_to_close = self.is_connected is False
+        query = f"""
+            select
+                column_name as "Field",
+                data_type as "Type"
+            from 
+                information_schema.columns
+            where
+                table_name = '{table_name}'
+        """
+        return self.native_query(query)
 
-        connection = self.connect()
+    def _wait_for_query_to_complete(self, query_execution_id: str) -> str:
+        """
+        Wait for the Athena query to complete.
+        Args:
+            query_execution_id (str): ID of the query to wait for
+        Returns:
+            str: Query execution status
+        """
+        while True:
+            response = self.connection.get_query_execution(QueryExecutionId=query_execution_id)
+            status = response['QueryExecution']['Status']['State']
+            if status in ['SUCCEEDED', 'FAILED', 'CANCELLED']:
+                return status
+            time.sleep(1)
 
-        try:
-            # Get the table metadata
-            response = connection.get_table_metadata(
-                Catalog=self.connection_data['catalog'],
-                DatabaseName=self.connection_data['database'],
-                TableName=table_name
-            )
-
-            # Extract the column names from the response
-            column_names = [column['Name'] for column in response['TableMetadata']['Columns']]
-
-            response = Response(
-                RESPONSE_TYPE.TABLE,
-                data_frame=pd.DataFrame(column_names, columns=['Column Name'])
-            )
-
-        except Exception as e:
-            logger.error(f'Error getting columns from table {table_name} in Athena!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
-            )
-
-        if need_to_close is True:
-            self.disconnect()
-
-        return response
+    def _parse_query_result(self, result) -> pd.DataFrame:
+        """
+        Parse the result of the Athena query into a DataFrame.
+        Args:
+            result: Result of the Athena query
+        Returns:
+            pd.DataFrame: Query result as a DataFrame
+        """
+        rows = result['ResultSet']['Rows']
+        headers = [col['VarCharValue'] for col in rows[0]['Data']]
+        data = [[col.get('VarCharValue') for col in row['Data']] for row in rows[1:]]
+        return pd.DataFrame(data, columns=headers)

@@ -182,17 +182,27 @@ class DremioHandler(DatabaseHandler):
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 
-    def get_tables(self) -> StatusResponse:
+    def get_tables(self) -> Response:
         """
         Return list of entities that will be accessible as tables.
         Returns:
             HandlerResponse
         """
 
-        query = 'SELECT * FROM INFORMATION_SCHEMA.\\"TABLES\\"'
-        result = self.native_query(query)
-        df = result.data_frame
-        result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
+        get_tables_query = 'SELECT TABLE_NAME FROM INFORMATION_SCHEMA."TABLES" WHERE TABLE_TYPE <> \'SYSTEM_TABLE\';'
+        tables_result = self.native_query(get_tables_query)
+        tables_df = tables_result.data_frame
+
+        get_views_query = 'SELECT TABLE_NAME FROM INFORMATION_SCHEMA."VIEWS";'
+        views_result = self.native_query(get_views_query)
+        views_df = views_result.data_frame
+
+        df = pd.concat([tables_df, views_df], ignore_index=True)
+        
+        result = Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=df
+        )
         return result
 
     def get_columns(self, table_name: str) -> StatusResponse:

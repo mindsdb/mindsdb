@@ -11,9 +11,11 @@ class PredictorRecordNotFound(Exception):
     def __init__(self, **kwargs):
         name = kwargs.get('name') or '-'
         predictor_id = kwargs.get('id') or '-'
-        super().__init__(
-            f"Predictor not found: name='{name}' id='{predictor_id}'"
-        )
+        message = f"Predictor not found: name='{name}' id='{predictor_id}'"
+        super().__init__(message)
+
+    def __str__(self):
+        return self.message
 
 
 class MultiplePredictorRecordsFound(Exception):

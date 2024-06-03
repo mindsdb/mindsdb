@@ -11,13 +11,13 @@ ScyllaDB is an open-source distributed NoSQL wide-column data store. It was purp
 The ScyllaDB handler for MindsDB was developed using the scylla-driver library for Python.
 Connection Parameters:
 
-* host: Host name or IP address of ScyllaDB.
-* port: Connection port.
-* user: Authentication username.
-* password: Authentication password.
-* keyspace: The specific keyspace (top-level container for tables) to connect to.
-* protocol_version: Optional. Defaults to 4.
-* secure_connect_bundle: Optional. Needed only for connections to DataStax Astra.
+- host: Host name or IP address of ScyllaDB.
+- port: Connection port
+- user: Authentication username. Optional; required only if authentication is enabled.
+- password: Authentication password. Optional; required only if authentication is enabled.
+- keyspace: The specific keyspace (top-level container for tables) to connect to.
+- protocol_version: Optional. Defaults to 4.
+- secure_connect_bundle: Optional. Needed only for connections to DataStax Astra.
 
 ## Usage Guide
 
@@ -31,10 +31,11 @@ PARAMETERS={
   "user":"user@mindsdb.com",
   "password": "pass",
   "host": "127.0.0.1",
-  "port": "9042",
+  "port": 9042,
   "keyspace": "test_data"
 };
 ```
+
 > ℹ️ Tip: The protocol version is set to 4 by default. Should you wish to modify it, simply include "protocol_version": 5 within the PARAMETERS dictionary in the query above.
 
 ## Querying the Keyspace:

@@ -1,7 +1,7 @@
 openai==1.6.1
 wikipedia==1.4.0
 tiktoken==0.5.2
-anthropic==0.3.5
+anthropic>=0.26.1
 langfuse==2.27.1  # Tracing
 litellm==1.35.0
 chromadb # Knowledge bases.

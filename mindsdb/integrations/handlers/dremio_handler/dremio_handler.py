@@ -137,6 +137,10 @@ class DremioHandler(DatabaseHandler):
                 'jobState']
 
             while job_status != 'COMPLETED':
+                if job_status == 'FAILED':
+                    logger.error('Job failed!')
+                    break
+
                 time.sleep(2)
                 job_status = requests.request("GET", self.base_url + "/api/v3/job/" + job_id, headers=auth_headers).json()[
                     'jobState']

@@ -1,84 +1,83 @@
+---
+title: MongoDB
+sidebarTitle: MongoDB
+---
 
-# MongoDBHandler 
+This is the implementation of the MongoDB data handler for MindsDB.
 
-### Components
+[MongoDB](https://www.mongodb.com/) is an open-source cross-platform document-oriented database program. It is classified as a NoSQL database.
 
-**MongoQuery**
+## Prerequisites
 
-The goal of this class is to store mongo query in structured format without using cumbersome dict.
+Before proceeding, ensure the following prerequisites are met:
 
-It contents name of collection and pipeline. 
-Pipeline contents list of methods and arguments to apply to collection. 
+1. Install MindsDB locally via [Docker](/setup/self-hosted/docker) or [Docker Desktop](/setup/self-hosted/docker-desktop).
+2. To connect MongoDB to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to MongoDB.
 
-Also has methods to convert query to mongo query string: 
+## Implementation
+
+This handler is implemented using `pymongo`, a Python library that contains tools for working with the MongoDB database.
+
+The required arguments to establish a connection are as follows:
+
+* `host` is the MongoDB connection string.
+
+Optionally, you can connect using these parameters:
+
+* `username` is the username associated with the database.
+* `password` is the password to authenticate your access.
+* `host` is the host name or IP address.
+* `port` is the port through which TCP/IP connection is to be made.
+* `database` is the database name to be connected. Note, this will be required if the connection string is missing the `/database` path.
+
+## Usage
+
+In order to make use of this handler and connect to the MongoDB database in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE mongo_datasource
+WITH
+  ENGINE = 'mongodb',
+  PARAMETERS = {
+    "host": "mongodb+srv://admin:admin@demo.mongodb.net/public"
+  };
 ```
-"db_test.fish.find({a:1}, {b:2}).sort({c:3})"
+
+You can use this established connection to query your table as follows:
+
+```sql
+SELECT *
+FROM mongo_datasource.demo;
 ```
 
-**MongodbParser**
+<Warning>
+**For this connection, we strongly suggest using the Mongo API instead of the SQL API.**
 
-Converts mongo query from string format to instance of MongoQuery. 
-Parsing is performed by using python ast parser with custom handlers for nodes.
+MindsDB has a dedicated [Mongo API](/sdks/mongo/mindsdb-mongo-ql-overview) that allows you to use the full power of the MindsDB platform.
+Using the Mongo API feels more natural for MongoDB users and allows you to use all the features of MindsDB.
 
-Parser can handle ISODate and ObjectId.
+You can find the instructions on how to connect MindsDB to [MongoDB Compass](/connect/mongo-compass) or [MongoDB Shell](/connect/mongo-shell) and proceed with the [Mongo API documentation](/sdks/mongo/mindsdb-mongo-ql-overview) for further details.
+</Warning>
 
-**MongodbRender**
+<Tip>
+Once you connected MindsDB to MongoDB Compass or MongoDB Shell, you can run this command to connect your database to MindsDB:
 
-Converts AST-query to MongoQuery
-
-Only "Select" is supported at the moment. 
-Select is converted to mongo "aggregate" method.
-
-This method can provide different capabilities to query from mongo:
-- simple select query
-- grouping
-- sorting
-- projection
-
-**MongoDBHandler**
-
-native_query method can take string and MongoQuery on input. 
-If input is string (for example in case of creating predictor)
-it will be parsed to MongoQuery using MongodbParser.
-
-MongoDBHandler has functionality to flatten record up to chosen level.
-
-For example
+```sql
+test> use mindsdb
+mindsdb> db.databases.insertOne({
+              name: "mongo_datasource",
+              engine: "mongodb",
+              connection_args: {
+                      "host": "mongodb+srv://user:pass@db.xxxyyy.mongodb.net/"
+              }
+          });
 ```
-{ 
-  'a': 1,
-  'b': {
-    'c': 2,
-    'e': {
-       'd': 3,
-       'f': {
-            'i': 4
-        }
-    }
-  }  
-}
-```
-with flatten_level=2 will be converted to:
-```
-{ 
-  'a': 1,
-  'b.c': 2,
-  'b.e.d': 3,
-  'b.e.f': {'i': 4}
-}
-```
-It can be useful to get more row from collection records 
-and use them in joins and predictions.
-To enable this function you need to pass flatten_level to connection parameters
 
-Limitations of MongoDBHandler
-- get_columns method gets columns from first record of collection.
-Because collections is not usual table and don't store information about columns  
+Then you can query your data, like this:
 
-### Testing
-
-To run tests:
-
+```sql
+mindsdb> use mongo_datasource
+mongo_datasource> db.demo.find({}).limit(3)
 ```
-env PYTHONPATH=./ pytest tests/unit/test_mongodb_handler.py
-```
+</Tip>

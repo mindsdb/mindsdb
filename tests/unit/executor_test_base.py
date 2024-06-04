@@ -392,10 +392,8 @@ class BaseExecutorDummyML(BaseExecutorTest):
         )
         if throw_error:
             assert ret.error_code is None
-
         if ret.data is not None:
             return ret.data.to_df()
-
 
 class BaseExecutorDummyLLM(BaseExecutorTest):
     """

@@ -36,7 +36,7 @@ class UnionStepCall(BaseStepCall):
 
         records_hashes = []
         results = []
-        for row in left_result.get_raw_values():
+        for row in left_result.to_lists():
             if step.unique:
                 checksum = hashlib.sha256(str(row).encode()).hexdigest()
                 if checksum in records_hashes:
@@ -44,7 +44,7 @@ class UnionStepCall(BaseStepCall):
                 records_hashes.append(checksum)
             results.append(list(row))
 
-        for row in right_result.get_raw_values():
+        for row in right_result.to_lists():
             if step.unique:
                 checksum = hashlib.sha256(str(row).encode()).hexdigest()
                 if checksum in records_hashes:

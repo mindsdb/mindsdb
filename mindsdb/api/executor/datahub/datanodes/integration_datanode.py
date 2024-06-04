@@ -120,41 +120,40 @@ class IntegrationDataNode(DataNode):
         # native insert
         if hasattr(self.integration_handler, 'insert'):
             df = result_set.to_df()
+
             result = self.integration_handler.insert(table_name.parts[-1], df)
             if result.type == RESPONSE_TYPE.ERROR:
                 raise Exception(result.error_message)
             return
 
         insert_columns = [Identifier(parts=[x.alias]) for x in result_set.columns]
-        formatted_data = []
 
-        for rec in result_set.get_records():
-            new_row = []
-            for col in result_set.columns:
-                value = rec[col.alias]
-                column_type = table_columns_meta[col.alias]
+        # adapt table types
+        for col_idx, col in enumerate(result_set.columns):
+            column_type = table_columns_meta[col.alias]
 
-                python_type = str
-                if column_type == Integer:
-                    python_type = int
-                elif column_type == Float:
-                    python_type = float
+            type_name = 'str'
+            if column_type == Integer:
+                type_name = 'int'
+            elif column_type == Float:
+                type_name = 'float'
 
-                try:
-                    value = python_type(value) if value is not None else value
-                except Exception:
-                    pass
-                new_row.append(value)
-            formatted_data.append(new_row)
+            try:
+                result_set.set_col_type(col_idx, type_name)
+            except Exception:
+                pass
 
-        if len(formatted_data) == 0:
+        values = result_set.to_lists()
+
+        if len(values) == 0:
             # not need to insert
             return
 
         insert_ast = Insert(
             table=table_name,
             columns=insert_columns,
-            values=formatted_data
+            values=values,
+            is_plain=True
         )
 
         try:

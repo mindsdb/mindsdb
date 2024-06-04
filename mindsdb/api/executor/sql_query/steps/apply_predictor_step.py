@@ -47,14 +47,12 @@ class ApplyPredictorBaseCall(BaseStepCall):
 
         else:
             project_datanode = self.session.datahub.get(project_name)
-            import time; print('model before', time.time())
             predictions = project_datanode.predict(
                 model_name=predictor_name,
                 df=df,
                 version=version,
                 params=params
             )
-            print('model after', time.time())
         return predictions
 
 
@@ -175,8 +173,7 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
                 params['force_ts_infer'] = True
                 _mdb_forecast_offset = None
 
-            if data.find_columns('__mdb_forecast_offset') == 0:
-                data.set_column_values('__mdb_forecast_offset', _mdb_forecast_offset)
+            data.add_column(Column('__mdb_forecast_offset'), _mdb_forecast_offset)
 
         table_name = get_preditor_alias(step, self.context['database'])
         result = ResultSet()

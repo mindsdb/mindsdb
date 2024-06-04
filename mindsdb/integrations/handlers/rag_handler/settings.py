@@ -15,7 +15,7 @@ from langchain.embeddings.huggingface import HuggingFaceEmbeddings
 from langchain_community.llms import Writer
 from langchain_community.document_loaders import DataFrameLoader
 from langchain_community.vectorstores import FAISS, Chroma, VectorStore
-from pydantic import BaseModel, Extra, Field, validator
+from pydantic import BaseModel, Extra, Field, field_validator
 
 from mindsdb.integrations.handlers.chromadb_handler.chromadb_handler import get_chromadb
 from mindsdb.integrations.handlers.rag_handler.exceptions import (

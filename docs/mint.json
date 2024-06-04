@@ -577,7 +577,8 @@
           "group": "Files",
           "pages": [
             "rest/files/upload",
-            "rest/files/delete"
+            "rest/files/delete",
+            "rest/files/list"
           ]
         },
         {
@@ -595,7 +596,7 @@
       "pages": [
         "sdks/overview",
         {
-          "group": "MongoDB SDK",
+          "group": "MongoDB API",
           "pages": [
             "sdks/mongo/mindsdb-mongo-ql-overview",
               {

@@ -197,7 +197,7 @@ class AthenaHandler(DatabaseHandler):
             if check_interval > 0:
                 time.sleep(check_interval)
 
-    def _parse_query_result(self, result) -> pd.DataFrame:
+    def _parse_query_result(self, result: dict) -> pd.DataFrame:
         """
         Parse the result of the Athena query into a DataFrame.
         Args:
@@ -205,6 +205,10 @@ class AthenaHandler(DatabaseHandler):
         Returns:
             pd.DataFrame: Query result as a DataFrame
         """
+        
+        if not result or 'ResultSet' not in result or 'Rows' not in result['ResultSet']:
+            return pd.DataFrame()
+
         rows = result['ResultSet']['Rows']
         headers = [col['VarCharValue'] for col in rows[0]['Data']]
         data = [[col.get('VarCharValue') for col in row['Data']] for row in rows[1:]]

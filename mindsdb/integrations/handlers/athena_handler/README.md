@@ -20,6 +20,7 @@ The required arguments to establish a connection are,
 * `database`: the Athena database name
 * `workgroup`: the Athena workgroup name
 * `results_output_location`: the S3 bucket location to store the query results
+* `check_interval`: the interval to check the query status
 
 ## Usage
 To use this handler, you need to have an AWS account and an S3 bucket to store the query results.
@@ -35,7 +36,8 @@ parameters={
     'catalog': 'AwsDataCatalog',
     'database': 'YOUR_ATHENA_DATABASE',
     'workgroup': 'primary',
-    'results_output_location': 's3://YOUR_S3_BUCKET_NAME/'
+    'results_output_location': 's3://YOUR_S3_BUCKET_NAME/',
+    "check_interval": '0'
 };
 ```
 

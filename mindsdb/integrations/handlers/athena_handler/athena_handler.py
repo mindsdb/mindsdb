@@ -192,7 +192,10 @@ class AthenaHandler(DatabaseHandler):
             status = response['QueryExecution']['Status']['State']
             if status in ['SUCCEEDED', 'FAILED', 'CANCELLED']:
                 return status
-            time.sleep(1)
+            
+            check_interval = self.connection_data.get('check_interval', 0)
+            if check_interval > 0:
+                time.sleep(check_interval)
 
     def _parse_query_result(self, result) -> pd.DataFrame:
         """

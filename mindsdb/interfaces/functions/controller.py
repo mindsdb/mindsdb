@@ -18,7 +18,7 @@ def python_to_duckdb_type(py_type):
         return typing.VARCHAR
 
 
-# duckdb don't like *args
+# duckdb doesn't like *args
 def function_maker(n_args, other_function):
     return [
         lambda: other_function(),

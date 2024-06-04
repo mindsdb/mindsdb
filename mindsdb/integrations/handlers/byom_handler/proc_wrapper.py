@@ -103,7 +103,7 @@ def get_methods_info(model):
         method = getattr(model, method_name)
         sig = inspect.signature(method)
         input_params = [
-            { 'name': name, 'type': param.annotation.__name__ }
+            {'name': name, 'type': param.annotation.__name__}
             for name, param in sig.parameters.items()
         ]
         methods[method_name] = {

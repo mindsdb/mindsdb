@@ -62,11 +62,6 @@ class MongoDBHandler(DatabaseHandler):
         if re.match(r'/?.*tls=false', self.host.lower()):
             kwargs['tls'] = False
 
-        if re.match(r'.*.mongodb.net', self.host.lower()) and kwargs.get('tls', None) is None:
-            kwargs['tlsCAFile'] = certifi.where()
-            if kwargs.get('tls', None) is None:
-                kwargs['tls'] = True
-
         connection = MongoClient(
             self.host,
             port=self.port,

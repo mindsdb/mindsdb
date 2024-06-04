@@ -23,7 +23,7 @@ pydantic-settings >= 2.1.0
 mindsdb-evaluator >= 0.0.7, < 0.1.0
 checksumdir >= 1.2.0
 duckdb == 0.9.1
-requests == 2.31.0
+requests == 2.32.3
 pydateinfer==0.3.0
 dataprep_ml==24.5.1.2
 dill == 0.3.6

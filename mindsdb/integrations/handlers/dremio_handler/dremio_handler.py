@@ -189,21 +189,18 @@ class DremioHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        get_tables_query = 'SELECT TABLE_NAME FROM INFORMATION_SCHEMA."TABLES" WHERE TABLE_TYPE <> \'SYSTEM_TABLE\';'
-        tables_result = self.native_query(get_tables_query)
-        tables_df = tables_result.data_frame
-
-        get_views_query = 'SELECT TABLE_NAME FROM INFORMATION_SCHEMA."VIEWS";'
-        views_result = self.native_query(get_views_query)
-        views_df = views_result.data_frame
-
-        df = pd.concat([tables_df, views_df], ignore_index=True)
-        
-        result = Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=df
-        )
-        return result
+        query = """
+            SELECT 
+                TABLE_NAME, 
+                TABLE_SCHEMA,
+                CASE 
+                    WHEN TABLE_TYPE = 'TABLE' THEN 'BASE TABLE'
+                    ELSE TABLE_TYPE
+                END AS TABLE_TYPE
+            FROM INFORMATION_SCHEMA."TABLES"
+            WHERE TABLE_TYPE <> 'SYSTEM_TABLE';
+        """
+        return self.native_query(query)
 
     def get_columns(self, table_name: str) -> StatusResponse:
         """

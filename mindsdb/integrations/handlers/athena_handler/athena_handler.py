@@ -100,7 +100,7 @@ class AthenaHandler(DatabaseHandler):
                     'Database': self.connection_data['database'],
                 },
                 ResultConfiguration={
-                    'OutputLocation': self.connection_data['result_output_location'],
+                    'OutputLocation': self.connection_data['results_output_location'],
                 },
                 WorkGroup=self.connection_data['workgroup'],
             )

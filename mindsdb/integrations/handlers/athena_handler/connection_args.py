@@ -29,7 +29,7 @@ connection_args = OrderedDict(
         'type': ARG_TYPE.STR,
         'description': 'The AWS Data Catalog'
     },
-    result_output_location={
+    results_output_location={
         'type': ARG_TYPE.STR,
         'description': 'The Athena Query Results Output Location s3://bucket-path/athena-query-results'
     }
@@ -42,5 +42,5 @@ connection_args_example = OrderedDict(
     catalog='AwsDataCatalog',
     database='default',
     workgroup='primary',
-    result_output_location="s3://<bucket>/athena-query-results/"
+    results_output_location="s3://<bucket>/athena-query-results/"
 )

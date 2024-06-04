@@ -17,5 +17,4 @@ build
 docs
 helm
 var
-
 **/__pycache__

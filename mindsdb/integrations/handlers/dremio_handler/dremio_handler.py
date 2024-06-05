@@ -194,10 +194,10 @@ class DremioHandler(DatabaseHandler):
         """
 
         query = """
-            SELECT 
-                TABLE_NAME, 
+            SELECT
+                TABLE_NAME,
                 TABLE_SCHEMA,
-                CASE 
+                CASE
                     WHEN TABLE_TYPE = 'TABLE' THEN 'BASE TABLE'
                     ELSE TABLE_TYPE
                 END AS TABLE_TYPE

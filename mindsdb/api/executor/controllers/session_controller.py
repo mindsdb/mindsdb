@@ -15,6 +15,8 @@ from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.interfaces.skills.skills_controller import SkillsController
+from mindsdb.interfaces.functions.controller import BYOMFunctionsController
+
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -41,6 +43,7 @@ class SessionController:
         self.integration_controller = integration_controller
         self.database_controller = DatabaseController()
         self.skills_controller = SkillsController()
+        self.function_controller = BYOMFunctionsController(self)
 
         # to prevent circular imports
         from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseController

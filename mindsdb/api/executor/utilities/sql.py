@@ -16,7 +16,6 @@ from mindsdb.utilities.functions import resolve_table_identifier, resolve_model_
 
 from mindsdb.utilities import log
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
-from mindsdb.interfaces.functions.controller import BYOMUserFunctions
 
 logger = log.getLogger(__name__)
 
@@ -118,7 +117,10 @@ def query_df(df, query, session=None):
 
     json_columns = set()
 
-    user_functions = BYOMUserFunctions(session)
+    if session is not None:
+        user_functions = session.function_controller.create_function_set()
+    else:
+        user_functions = None
 
     def adapt_query(node, is_table, **kwargs):
         if is_table:
@@ -143,7 +145,8 @@ def query_df(df, query, session=None):
             elif fnc_name == 'json_extract':
                 json_columns.add(node.args[0].parts[-1])
             else:
-                user_functions.check_function(node)
+                if user_functions is not None:
+                    user_functions.check_function(node)
 
     query_traversal(query_ast, adapt_query)
 

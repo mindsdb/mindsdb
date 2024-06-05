@@ -29,25 +29,29 @@ def function_maker(n_args, other_function):
     ][n_args]
 
 
-class BYOMUserFunctions:
+class BYOMFunctionsController:
     """
     User functions based on BYOM handler
     """
 
     def __init__(self, session):
         self.session = session
-        self.functions = {}
 
-        # get all byom engines
-        self.byom_engines = []
-        for name, info in session.integration_controller.get_all().items():
-            if info['type'] == 'ml' and info['engine'] == 'byom':
-                self.byom_engines.append(name)
-
+        self.byom_engines = None
         self.byom_methods = {}
         self.byom_handlers = {}
 
-    def get_byom_methods(self, engine):
+    def get_engines(self):
+        # get all byom engines
+        if self.byom_engines is None:
+            # first run
+            self.byom_engines = []
+            for name, info in self.session.integration_controller.get_all().items():
+                if info['type'] == 'ml' and info['engine'] == 'byom':
+                    self.byom_engines.append(name)
+        return self.byom_engines
+
+    def get_methods(self, engine):
         if engine not in self.byom_methods:
             ml_handler = self.session.integration_controller.get_ml_handler(engine)
 
@@ -58,12 +62,25 @@ class BYOMUserFunctions:
 
         return self.byom_methods[engine]
 
+    def method_call(self, engine, method_name, args):
+        return self.byom_handlers[engine].function_call(method_name, args)
+
+    def create_function_set(self):
+        return DuckDBFunctions(self)
+
+
+class DuckDBFunctions:
+    def __init__(self, controller):
+        self.controller = controller
+        self.functions = {}
+
     def check_function(self, node):
+
         engine = node.namespace
-        if engine not in self.byom_engines:
+        if engine not in self.controller.get_engines():
             return
 
-        methods = self.get_byom_methods(engine)
+        methods = self.controller.get_methods(engine)
 
         fnc_name = node.op.lower()
         if fnc_name not in methods:
@@ -71,10 +88,14 @@ class BYOMUserFunctions:
             return
 
         new_name = f'{node.namespace}_{fnc_name}'
+        if new_name in self.functions:
+            # already exists
+            return
+
         node.op = new_name
 
         def callback(*args):
-            return self.byom_handlers[engine].function_call(fnc_name, args)
+            return self.controller.method_call(engine, fnc_name, args)
 
         input_types = [
             python_to_duckdb_type(param['type'])

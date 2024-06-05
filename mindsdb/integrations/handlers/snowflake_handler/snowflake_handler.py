@@ -1,17 +1,15 @@
-from pandas import DataFrame, concat
 from snowflake import connector
 from snowflake.sqlalchemy import snowdialect
 
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.utilities import log
 from mindsdb_sql.parser.ast.base import ASTNode
-
 from mindsdb.integrations.libs.base import DatabaseHandler
+from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from mindsdb.utilities import log
 
 
 logger = log.getLogger(__name__)

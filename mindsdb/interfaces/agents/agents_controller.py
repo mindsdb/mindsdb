@@ -256,6 +256,8 @@ class AgentsController:
             self,
             agent: db.Agents,
             messages: List[Dict[str, str]],
+            trace_id: str = None,
+            observation_id: str = None,
             project_name: str = 'mindsdb',
             tools: List[BaseTool] = None) -> pd.DataFrame:
         '''
@@ -288,6 +290,10 @@ class AgentsController:
             'skills': [s for s in agent.skills],
             **(agent.params or {})
         }
+        if observation_id is not None:
+            predict_params['observation_id'] = observation_id
+        if trace_id is not None:
+            predict_params['trace_id'] = trace_id
         project_datanode = self.datahub.get(project_name)
         return project_datanode.predict(
             model_name=agent.model_name,

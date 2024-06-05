@@ -1,7 +1,9 @@
 from http import HTTPStatus
+import os
 
 from flask import request
 from flask_restx import Resource
+from langfuse import Langfuse
 
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
@@ -282,14 +284,35 @@ class AgentCompletions(Resource):
                 f'Model with name {existing_agent.model_name} not found'
             )
 
+        trace_id = None
+        observation_id = None
+        run_completion_span = None
+        # Trace Agent completions using Langfuse if configured.
+        if os.getenv('LANGFUSE_PUBLIC_KEY') is not None:
+            langfuse = Langfuse(
+                public_key=os.getenv('LANGFUSE_PUBLIC_KEY'),
+                secret_key=os.getenv('LANGFUSE_SECRET_KEY'),
+                host=os.getenv('LANGFUSE_HOST')
+            )
+            api_trace = langfuse.trace(name='api-completion')
+            run_completion_span = api_trace.span(name='run-completion')
+            trace_id = api_trace.id
+            observation_id = run_completion_span.id
+
         completion = session.agents_controller.get_completion(
             existing_agent,
             request.json['messages'],
+            trace_id=trace_id,
+            observation_id=observation_id,
             project_name=project_name,
             # Don't need to include backoffice_db related tools into this endpoint.
             # Underlying handler (e.g. Langchain) will handle default tools like mdb_read, mdb_write, etc.
             tools=[]
         )
+
+        if run_completion_span is not None:
+            run_completion_span.end()
+
         output_col = agent_model_record.to_predict[0]
         model_output = completion.iloc[-1][output_col]
         return {

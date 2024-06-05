@@ -218,5 +218,5 @@ class DremioHandler(DatabaseHandler):
         query = f"DESCRIBE {table_name}"
         result = self.native_query(query)
         df = result.data_frame
-        result.data_frame = df.rename(columns={'COLUMN_NAME': 'column_name', 'DATA_TYPE': 'data_type'})
+        result.data_frame = df.rename(columns={'COLUMN_NAME': 'Field', 'DATA_TYPE': 'Type'})
         return result

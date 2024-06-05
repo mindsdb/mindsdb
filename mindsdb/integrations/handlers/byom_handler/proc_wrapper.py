@@ -91,6 +91,7 @@ def find_model_class(module):
         ]
         if 'predict' in funcs and 'train' in funcs:
             return klass
+    raise RuntimeError('Unable to find model class (has to have `train` and `predict` methods)')
 
 
 def get_methods_info(model):

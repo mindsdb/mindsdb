@@ -176,23 +176,13 @@ class SnowflakeHandler(DatabaseHandler):
             Response: A response object containing the list of tables and views, formatted as per the `Response` class.
         """
 
-        query = "SHOW TABLES;"
-        result_tables = self.native_query(query)
-        if result_tables.resp_type == RESPONSE_TYPE.TABLE:
-            result_tables.data_frame = result_tables.data_frame.rename(columns={'name': 'table_name'})[['table_name']]
-        elif result_tables.resp_type == RESPONSE_TYPE.OK:
-            result_tables.data_frame = DataFrame(columns=['table_name'])
-
-        query = "SHOW VIEWS;"
-        result_views = self.native_query(query)
-        if result_views.resp_type == RESPONSE_TYPE.TABLE:
-            result_views.data_frame = result_views.data_frame.rename(columns={'name': 'table_name'})[['table_name']]
-        elif result_views.resp_type == RESPONSE_TYPE.OK:
-            result_views.data_frame = DataFrame(columns=['table_name'])
-
-        result = Response(RESPONSE_TYPE.TABLE)
-        result.data_frame = concat([result_tables.data_frame, result_views.data_frame], ignore_index=True)
-        return result
+        query = """
+            SELECT TABLE_NAME, TABLE_SCHEMA, TABLE_TYPE
+            FROM INFORMATION_SCHEMA.TABLES
+            WHERE TABLE_TYPE IN ('BASE TABLE', 'VIEW')
+            AND TABLE_SCHEMA <> 'INFORMATION_SCHEMA'
+        """
+        return self.native_query(query)
 
     def get_columns(self, table_name) -> Response:
         """

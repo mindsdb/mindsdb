@@ -1,3 +1,4 @@
+from pandas import DataFrame
 from snowflake import connector
 from snowflake.sqlalchemy import snowdialect
 

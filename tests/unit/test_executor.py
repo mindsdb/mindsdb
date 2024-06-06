@@ -696,9 +696,12 @@ class TestComplexQueries(BaseExecutorMockPredictor):
         # second is update
         assert mock_handler().query.call_args_list[0][0][0].to_string() == "DELETE FROM table2 WHERE b1 = 'b'"
 
-    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    @patch('mindsdb.integrations.handlers.mysql_handler.Handler')
     def test_create_table(self, mock_handler):
-        self.set_handler(mock_handler, name='pg', tables={'tasks': self.df})
+        self.set_handler(mock_handler, name='pg', tables={'tasks': self.df}, engine='mysql')
+
+        # prevent hasattr=true
+        del mock_handler().insert
 
         self.set_predictor(self.task_predictor)
         sql = '''
@@ -733,9 +736,12 @@ class TestComplexQueries(BaseExecutorMockPredictor):
 
         assert len(calls) == 3
 
-    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    @patch('mindsdb.integrations.handlers.mysql_handler.Handler')
     def test_create_insert(self, mock_handler):
-        self.set_handler(mock_handler, name='pg', tables={'tasks': self.df})
+        self.set_handler(mock_handler, name='pg', tables={'tasks': self.df}, engine='mysql')
+
+        # prevent hasattr=true
+        del mock_handler().insert
 
         self.set_predictor(self.task_predictor)
         sql = '''
@@ -1009,7 +1015,7 @@ class TestWithNativeQuery(BaseExecutorMockPredictor):
         # input = one row whit a==2
         data_in = self.mock_predict.call_args[0][1]
         assert len(data_in) == 1
-        assert data_in[0]['a'] == 2
+        assert data_in.iloc[0]['a'] == 2
 
         # check prediction
         assert ret.data[0][0] == predicted_value

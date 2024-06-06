@@ -9,6 +9,7 @@ from typing import (
     Optional,
 )
 
+import pandas as pd
 from langchain_core.callbacks import (
     CallbackManagerForLLMRun,
 )
@@ -94,7 +95,7 @@ class ChatMindsdb(BaseChatModel):
 
         predictions = self.project_datanode.predict(
             model_name=self.model_name,
-            data=[record],
+            df=pd.DataFrame([record]),
             params=params,
         )
 

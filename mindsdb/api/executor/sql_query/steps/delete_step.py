@@ -39,7 +39,7 @@ class DeleteStepCall(BaseStepCall):
         def fill_params(node, **kwargs):
             if isinstance(node, Parameter):
                 rs = self.steps_data[node.value.step_num]
-                items = [Constant(i[0]) for i in rs.get_records_raw()]
+                items = [Constant(i) for i in rs.get_column_values(col_idx=0)]
                 return Tuple(items)
 
         query_traversal(query.where, fill_params)

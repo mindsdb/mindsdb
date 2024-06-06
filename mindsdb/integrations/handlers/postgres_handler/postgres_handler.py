@@ -1,3 +1,4 @@
+import pandas as pd
 import psycopg
 from psycopg.postgres import types
 from psycopg.pq import ExecStatus
@@ -151,7 +152,7 @@ class PostgresHandler(DatabaseHandler):
                         logger.error(f'Error casting column {col.name} to {types_map[pg_type.name]}: {e}')
 
     @profiler.profile()
-    def native_query(self, query: str) -> Response:
+    def native_query(self, query: str, params=None) -> Response:
         """
         Executes a SQL query on the PostgreSQL database and returns the result.
 
@@ -166,8 +167,11 @@ class PostgresHandler(DatabaseHandler):
         connection = self.connect()
         with connection.cursor() as cur:
             try:
-                cur.execute(query)
-                if ExecStatus(cur.pgresult.status) == ExecStatus.COMMAND_OK:
+                if params is not None:
+                    cur.executemany(query, params)
+                else:
+                    cur.execute(query)
+                if cur.pgresult is None or ExecStatus(cur.pgresult.status) == ExecStatus.COMMAND_OK:
                     response = Response(RESPONSE_TYPE.OK)
                 else:
                     result = cur.fetchall()
@@ -192,6 +196,35 @@ class PostgresHandler(DatabaseHandler):
 
         if need_to_close:
             self.disconnect()
+
+        return response
+
+    def insert(self, table_name: str, df: pd.DataFrame):
+        need_to_close = not self.is_connected
+
+        connection = self.connect()
+
+        columns = [f'"{c}"' for c in df.columns]
+        with connection.cursor() as cur:
+            try:
+                with cur.copy(f'copy "{table_name}" ({",".join(columns)}) from STDIN  WITH CSV') as copy:
+                    df.to_csv(copy, index=False, header=False)
+
+                response = Response(RESPONSE_TYPE.OK)
+
+                connection.commit()
+            except Exception as e:
+                logger.error(f'Error running insert to {table_name} on {self.database}, {e}!')
+                response = Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_code=0,
+                    error_message=str(e)
+                )
+                connection.rollback()
+
+        if need_to_close:
+            self.disconnect()
+
         return response
 
     @profiler.profile()
@@ -205,9 +238,9 @@ class PostgresHandler(DatabaseHandler):
         Returns:
             Response: The response from the `native_query` method, containing the result of the SQL query execution.
         """
-        query_str = self.renderer.get_string(query, with_failback=True)
+        query_str, params = self.renderer.get_exec_params(query, with_failback=True)
         logger.debug(f"Executing SQL query: {query_str}")
-        return self.native_query(query_str)
+        return self.native_query(query_str, params)
 
     def get_tables(self) -> Response:
         """

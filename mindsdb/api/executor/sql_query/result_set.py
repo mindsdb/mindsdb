@@ -34,43 +34,46 @@ class Column:
 
 
 class ResultSet:
-    def __init__(self, length=0):
+    def __init__(self):
         self._columns = []
-        # records is list of lists with the same length as columns
-        self._records = []
-        for i in range(length):
-            self._records.append([])
+        self._df = None
 
         self.is_prediction = False
 
+    def _get_df(self):
+        if self._df is None:
+            names = range(len(self._columns))
+            return pd.DataFrame([], columns=names)
+        return self._df
+
     def __repr__(self):
         col_names = ', '.join([col.name for col in self._columns])
-        data = '\n'.join([str(rec) for rec in self._records[:20]])
 
-        if len(self._records) > 20:
-            data += '\n...'
-
-        return f'{self.__class__.__name__}({self.length()} rows, cols: {col_names})\n {data}'
+        return f'{self.__class__.__name__}({self.length()} rows, cols: {col_names})'
 
     def __len__(self) -> int:
-        return len(self._records)
+        if self._df is None:
+            return 0
+        return len(self._df)
 
     # --- converters ---
 
-    def from_df(self, df, database, table_name, table_alias=None):
+    def from_df(self, df, database=None, table_name=None, table_alias=None):
 
-        resp_dict = df.to_dict(orient='split')
+        columns_dtypes = dict(df.dtypes)
 
-        self._records = resp_dict['data']
-
-        for col in resp_dict['columns']:
+        for col in df.columns:
             self._columns.append(Column(
                 name=col,
                 table_name=table_name,
                 table_alias=table_alias,
                 database=database,
-                type=df.dtypes[col]
+                type=columns_dtypes.get(col)
             ))
+
+        # rename columns to indexes
+        self._df = df.set_axis(range(len(df.columns)), axis=1)
+
         return self
 
     def from_df_cols(self, df, col_names, strict=True):
@@ -80,11 +83,10 @@ class ResultSet:
             if col.alias is not None:
                 alias_idx[col.alias] = col
 
-        resp_dict = df.to_dict(orient='split')
+        # resp_dict = df.to_dict(orient='split')
+        # self._records = resp_dict['data']
 
-        self._records = resp_dict['data']
-
-        for col in resp_dict['columns']:
+        for col in df.columns:
             if col in col_names or strict:
                 column = col_names[col]
             elif col in alias_idx:
@@ -92,11 +94,14 @@ class ResultSet:
             else:
                 column = Column(col)
             self._columns.append(column)
+
+        self._df = df.set_axis(range(len(df.columns)), axis=1)
+
         return self
 
     def to_df(self):
         columns = self.get_column_names()
-        return pd.DataFrame(self._records, columns=columns)
+        return self._get_df().set_axis(columns, axis=1)
 
     def to_df_cols(self, prefix=''):
         # returns dataframe and dict of columns
@@ -109,7 +114,7 @@ class ResultSet:
             columns.append(name)
             col_names[name] = col
 
-        return pd.DataFrame(self._records, columns=columns), col_names
+        return self._get_df().set_axis(columns, axis=1), col_names
 
     # --- tables ---
 
@@ -139,22 +144,17 @@ class ResultSet:
     def add_column(self, col, values=None):
         self._columns.append(col)
 
-        if values is None:
-            values = []
-        # update records
-        if len(self._records) > 0:
-            for rec in self._records:
-                if len(values) > 0:
-                    value = values.pop(0)
-                else:
-                    value = None
-                rec.append(value)
+        col_idx = len(self._columns) - 1
+        if self._df is not None:
+            self._df[col_idx] = values
+        return col_idx
 
     def del_column(self, col):
         idx = self._locate_column(col)
         self._columns.pop(idx)
-        for row in self._records:
-            row.pop(idx)
+
+        self._df.drop(idx, axis=1, inplace=True)
+        self._df = self._df.set_axis(range(len(self._df.columns)), axis=1)
 
     @property
     def columns(self):
@@ -189,44 +189,95 @@ class ResultSet:
         result_set2.add_column(col2, values)
         return col2
 
+    def set_col_type(self, col_idx, type_name):
+        self.columns[col_idx].type = type_name
+        if self._df is not None:
+            self._df[col_idx] = self._df[col_idx].astype(type_name)
+
     # --- records ---
 
-    def add_records(self, data):
-        names = self.get_column_names()
-        for rec in data:
-            # if len(rec) != len(self._columns):
-            #     raise ErSqlWrongArguments(f'Record length mismatch columns length: {len(rec)} != {len(self._columns)}')
+    def get_raw_df(self):
 
-            record = [
-                rec[name]
-                for name in names
-            ]
-            self._records.append(record)
+        return self._df
 
-    def get_records_raw(self):
-        return self._records
+    def add_raw_df(self, df):
+        if len(df.columns) != len(self._columns):
+            raise WrongArgumentError(f'Record length mismatch columns length: {len(df.columns)} != {len(self.columns)}')
 
-    def add_record_raw(self, rec):
-        if len(rec) != len(self._columns):
-            raise WrongArgumentError(f'Record length mismatch columns length: {len(rec)} != {len(self.columns)}')
-        self._records.append(rec)
+        df = df.set_axis(range(len(df.columns)), axis=1)
+
+        if self._df is None:
+            self._df = df
+        else:
+            self._df = pd.concat([self._df, df])
+
+    def add_raw_values(self, values):
+
+        df = pd.DataFrame(values)
+        self.add_raw_df(df)
+
+    def to_lists(self, type_cast=False, type_safe=True):
+        """
+        :param type_cast: cast numpy types
+            array->list, datetime64->str
+        :param type_safe: use pandas to_dict, it converts to python types
+        :return: list of lists
+        """
+        if type_safe:
+            # slower but keep timestamp type
+            return self._df.to_dict('split')['data']
+
+        # output for APIs. simplify types
+        if type_cast:
+            df = self._get_df().copy()
+            for name, dtype in df.dtypes.to_dict().items():
+                if pd.api.types.is_datetime64_any_dtype(dtype):
+                    df[name] = df[name].dt.strftime("%Y-%m-%d %H:%M:%S.%f")
+            return df.to_records(index=False).tolist()
+
+        return self._get_df().to_records(index=False)
+
+    def get_column_values(self, col_idx):
+        # get by column index
+        df = self._get_df()
+        return list(df[col_idx])
+
+    def set_column_values(self, col_name, values):
+        # values is one value or list of values
+        cols = self.find_columns(col_name)
+        if len(cols) == 0:
+            col_idx = self.add_column(Column(name=col_name))
+        else:
+            col_idx = self._locate_column(cols[0])
+
+        if self._df is not None:
+            self._df[col_idx] = values
+
+    def add_from_result_set(self, rs):
+
+        source_names = rs.get_column_names()
+
+        col_sequence = []
+        for name in self.get_column_names():
+            col_sequence.append(
+                source_names.index(name)
+            )
+
+        raw_df = rs.get_raw_df()[col_sequence]
+
+        self.add_raw_df(raw_df)
 
     @property
     def records(self):
-        return self.get_records()
+        return list(self.get_records())
 
     def get_records(self):
         # get records as dicts.
         # !!! Attention: !!!
         # if resultSet contents duplicate column name: only one of them will be in output
         names = self.get_column_names()
-        records = []
-        for row in self._records:
-            records.append(dict(zip(names, row)))
-        return records
-
-    # def clear_records(self):
-    #     self._records = []
+        for row in self.to_lists():
+            yield dict(zip(names, row))
 
     def length(self):
-        return len(self._records)
+        return len(self)

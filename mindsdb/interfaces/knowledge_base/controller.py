@@ -288,11 +288,9 @@ class KnowledgeBaseTable:
         if input_col is not None and input_col != TableField.CONTENT.value:
             df = df.rename(columns={TableField.CONTENT.value: input_col})
 
-        data = df.to_dict('records')
-
         df_out = project_datanode.predict(
             model_name=model_rec.name,
-            data=data,
+            df=df,
         )
 
         target = model_rec.to_predict[0]

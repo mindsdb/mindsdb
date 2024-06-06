@@ -224,7 +224,7 @@ class LogDBController:
         ]
 
     def query(self, query: Select = None, native_query: str = None,
-              session=None, return_as: str = 'split') -> Union[pd.DataFrame, Tuple[list, list]]:
+              session=None, return_as: str = 'split') -> Union[pd.DataFrame, Tuple[pd.DataFrame, list]]:
         if native_query is not None:
             if query is not None:
                 raise Exception("'query' and 'native_query' arguments can not be used together")
@@ -294,4 +294,4 @@ class LogDBController:
             'type': v
         } for k, v in df.dtypes.items()]
 
-        return df.to_dict(orient='split')['data'], columns_info
+        return df, columns_info

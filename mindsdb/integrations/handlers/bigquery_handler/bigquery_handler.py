@@ -56,11 +56,11 @@ class BigQueryHandler(DatabaseHandler):
         Establishes a connection to a Google BigQuery warehouse.
 
         Raises:
-            ValueError: If the required connection parameters are not provided.
-            snowflake.connector.errors.Error: If an error occurs while connecting to the Snowflake account.
+            ValueError: If the required connection parameter 'project_id' is not provided or if the credentials cannot be parsed.
+            mindsdb.integrations.utilities.handlers.auth_utilities.exceptions.AuthException: If none of required forms of credentials are provided.
 
         Returns:
-            snowflake.connector.connection.SnowflakeConnection: A connection object to the Snowflake account.
+            google.cloud.bigquery.client.Client: The client object for the BigQuery connection.
         """
         if self.is_connected is True:
             return self.client

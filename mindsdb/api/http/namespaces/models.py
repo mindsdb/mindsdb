@@ -243,7 +243,7 @@ class ModelPredict(Resource):
 
         predictions = project_datanode.predict(
             model_name=name_no_version,
-            data=data,
+            df=data,
             version=version,
             params=params,
         )

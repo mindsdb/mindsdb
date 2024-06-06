@@ -141,7 +141,6 @@ exclude =
   mindsdb/integrations/handlers/ingres_handler/*
   mindsdb/integrations/handlers/palm_handler/*
   mindsdb/integrations/handlers/binance_handler/*
-  mindsdb/integrations/handlers/openai_handler/*
   mindsdb/integrations/handlers/mediawiki_handler/*
   mindsdb/integrations/handlers/mendeley_handler/*
   mindsdb/integrations/handlers/databend_handler/*

@@ -1,5 +1,6 @@
 from copy import deepcopy
 
+import pandas as pd
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import (
     BinaryOperation,
@@ -53,7 +54,7 @@ class ProjectDataNode(DataNode):
     def get_table_columns(self, table_name):
         return self.project.get_columns(table_name)
 
-    def predict(self, model_name: str, data, version=None, params=None):
+    def predict(self, model_name: str, df, version=None, params=None):
         model_metadata = self.project.get_model(model_name)
         if model_metadata is None:
             raise Exception(f"Can't find model '{model_name}'")
@@ -61,7 +62,7 @@ class ProjectDataNode(DataNode):
         if model_metadata['update_status'] == 'available':
             raise Exception(f"model '{model_name}' is obsolete and needs to be updated. Run 'RETRAIN {model_name};'")
         ml_handler = self.integration_controller.get_ml_handler(model_metadata['engine_name'])
-        return ml_handler.predict(model_name, data, project_name=self.project.name, version=version, params=params)
+        return ml_handler.predict(model_name, df, project_name=self.project.name, version=version, params=params)
 
     def query(self, query=None, native_query=None, session=None):
         if query is None and native_query is not None:
@@ -73,7 +74,7 @@ class ProjectDataNode(DataNode):
             if kb_table:
                 # this is the knowledge db
                 kb_table.update_query(query)
-                return [], []
+                return pd.DataFrame(), []
 
             raise NotImplementedError(f"Can't update object: {query_table}")
 
@@ -83,7 +84,7 @@ class ProjectDataNode(DataNode):
             if kb_table:
                 # this is the knowledge db
                 kb_table.delete_query(query)
-                return [], []
+                return pd.DataFrame(), []
 
             raise NotImplementedError(f"Can't delete object: {query_table}")
 
@@ -103,8 +104,8 @@ class ProjectDataNode(DataNode):
                         new_query.where,
                         project_filter
                     ])
-                data, columns_info = self.information_schema.query(new_query)
-                return data, columns_info
+                df, columns_info = self.information_schema.query(new_query)
+                return df, columns_info
             # endregion
 
             # other table from project
@@ -140,7 +141,7 @@ class ProjectDataNode(DataNode):
                     for k, v in df.dtypes.items()
                 ]
 
-                return df.to_dict(orient='split')['data'], columns_info
+                return df, columns_info
 
             kb_table = session.kb_controller.get_table(query_table, self.project.id)
             if kb_table:
@@ -154,7 +155,7 @@ class ProjectDataNode(DataNode):
                     for k, v in df.dtypes.items()
                 ]
 
-                return df.to_dict(orient='split')['data'], columns_info
+                return df, columns_info
 
             raise EntityNotExistsError(f"Can't select from {query_table} in project")
         else:

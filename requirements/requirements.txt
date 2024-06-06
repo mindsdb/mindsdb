@@ -1,8 +1,8 @@
 packaging
-werkzeug==2.2.2
+werkzeug==2.3.8
 pandas >=2.0.0, <2.1.0
 flask-restx >= 1.0.1, < 2.0.0
-flask == 2.2.2
+flask == 2.2.5
 python-multipart >= 0.0.5
 pyparsing == 2.3.1
 cryptography>=35.0
@@ -17,13 +17,13 @@ redis >=5.0.0, < 6.0.0
 walrus==0.9.3
 flask-compress >= 1.0.0
 appdirs >= 1.0.0
-mindsdb-sql ~= 0.15.0
-pydantic >= 2.0.3
-pydantic-settings >= 2.0.3
+mindsdb-sql ~= 0.16.0
+pydantic >= 2.7.0
+pydantic-settings >= 2.1.0
 mindsdb-evaluator >= 0.0.7, < 0.1.0
 checksumdir >= 1.2.0
 duckdb == 0.9.1
-requests >= 2.30.0
+requests == 2.32.3
 pydateinfer==0.3.0
 dataprep_ml==24.5.1.2
 dill == 0.3.6

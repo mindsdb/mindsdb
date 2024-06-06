@@ -23,7 +23,6 @@ def get_requirements_from_file(path):
 MAIN_REQS_PATH = "requirements/requirements.txt"
 DEV_REQS_PATH = "requirements/requirements-dev.txt"
 TEST_REQS_PATH = "requirements/requirements-test.txt"
-DOCKER_REQS_PATH = "docker/handler_discovery/requirements.txt"
 
 HANDLER_REQS_PATHS = list(
     set(glob.glob("**/requirements*.txt", recursive=True))
@@ -268,7 +267,7 @@ def check_requirements_imports():
 
     # Run against the main codebase
     errors = run_deptry(
-        ','.join([MAIN_REQS_PATH, DOCKER_REQS_PATH]),
+        ','.join([MAIN_REQS_PATH]),
         get_ignores_str(MAIN_RULE_IGNORES),
         ".",
         f"--extend-exclude \"{'|'.join(MAIN_EXCLUDE_PATHS)}\"",

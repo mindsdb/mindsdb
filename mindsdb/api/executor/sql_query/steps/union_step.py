@@ -30,17 +30,27 @@ class UnionStepCall(BaseStepCall):
         #         if type1 != type2:
         #             raise ErSqlWrongArguments(f'UNION types mismatch: {type1} != {type2}')
 
-        result = ResultSet()
+        data = ResultSet()
         for col in left_result.columns:
-            result.add_column(col)
+            data.add_column(col)
 
         records_hashes = []
-        for row in left_result.get_records_raw() + right_result.get_records_raw():
+        results = []
+        for row in left_result.to_lists():
             if step.unique:
                 checksum = hashlib.sha256(str(row).encode()).hexdigest()
                 if checksum in records_hashes:
                     continue
                 records_hashes.append(checksum)
-            result.add_record_raw(row)
+            results.append(list(row))
 
-        return result
+        for row in right_result.to_lists():
+            if step.unique:
+                checksum = hashlib.sha256(str(row).encode()).hexdigest()
+                if checksum in records_hashes:
+                    continue
+                records_hashes.append(checksum)
+            results.append(list(row))
+        data.add_raw_values(results)
+
+        return data

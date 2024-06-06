@@ -1,30 +1,31 @@
 import os
 import json
-
 from google.cloud import bigquery
+from typing import Text, Dict, Any
 from google.oauth2 import service_account
 from sqlalchemy_bigquery.base import BigQueryDialect
-from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
+from mindsdb.utilities import log
+from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb.integrations.libs.base import DatabaseHandler
+from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from mindsdb.utilities import log
+from mindsdb.integrations.utilities.handlers.auth_utilities.exceptions import AuthException
 
 logger = log.getLogger(__name__)
 
 
 class BigQueryHandler(DatabaseHandler):
     """
-    This handler handles connection and exectuin of Google BigQuery statements
+    This handler handles connection and execution of Google BigQuery statements.
     """
     name = "bigquery"
 
-    def __init__(self, name, connection_data, **kwargs):
+    def __init__(self, name: Text, connection_data: Dict, **kwargs: Any):
         super().__init__(name)
         self.connection_data = connection_data
         self.client = None
@@ -52,10 +53,21 @@ class BigQueryHandler(DatabaseHandler):
 
     def connect(self):
         """
-        Handles the connection to a BigQuery
+        Establishes a connection to a Google BigQuery warehouse.
+
+        Raises:
+            ValueError: If the required connection parameters are not provided.
+            snowflake.connector.errors.Error: If an error occurs while connecting to the Snowflake account.
+
+        Returns:
+            snowflake.connector.connection.SnowflakeConnection: A connection object to the Snowflake account.
         """
         if self.is_connected is True:
             return self.client
+        
+        # Mandatory connection parameter
+        if not 'project_id' in self.connection_data:
+            raise ValueError('Required parameter project_id must be provided.')
 
         info = self._get_account_keys()
         storage_credentials = service_account.Credentials.from_service_account_info(info)
@@ -78,8 +90,9 @@ class BigQueryHandler(DatabaseHandler):
             client = self.connect()
             client.query('SELECT 1;')
 
-            # check dataset exists
-            client.get_dataset(self.connection_data['dataset'])
+            # If a dataset is provided, check if it exists
+            if 'dataset' in self.connection_data:
+                client.get_dataset(self.connection_data['dataset'])
 
             response.success = True
         except Exception as e:
@@ -99,8 +112,11 @@ class BigQueryHandler(DatabaseHandler):
         """
         client = self.connect()
         try:
-            job_config = bigquery.QueryJobConfig(default_dataset=f"{self.connection_data['project_id']}.{self.connection_data['dataset']}")
-            query = client.query(query, job_config=job_config)
+            if 'dataset' in self.connection_data:
+                job_config = bigquery.QueryJobConfig(default_dataset=f"{self.connection_data['project_id']}.{self.connection_data['dataset']}")
+                query = client.query(query, job_config=job_config)
+            else:
+                query = client.query(query)
             result = query.to_dataframe()
             if not result.empty:
                 response = Response(

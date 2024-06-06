@@ -21,15 +21,14 @@ class LimitOffsetStepCall(BaseStepCall):
         for col in step_data.columns:
             step_data2.add_column(col)
 
-        records = step_data.get_records_raw()
+        df = step_data.get_raw_df()
 
         if isinstance(step.offset, int):
-            records = records[step.offset:]
+            df = df[step.offset:]
         if isinstance(step.limit, int):
-            records = records[:step.limit]
+            df = df[:step.limit]
 
-        for record in records:
-            step_data2.add_record_raw(record)
+        step_data2.add_raw_df(df)
 
         return step_data2
 

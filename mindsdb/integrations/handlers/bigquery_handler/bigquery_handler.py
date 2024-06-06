@@ -147,18 +147,34 @@ class BigQueryHandler(DatabaseHandler):
 
     def get_tables(self) -> Response:
         """
-        Get a list with all of the tabels in BigQuery
+        Retrieves a list of all non-system tables and views in the configured dataset of the BigQuery warehouse.
+
+        Returns:
+            Response: A response object containing the list of tables and views, formatted as per the `Response` class.
         """
-        q = f"SELECT table_name, table_type, FROM \
-             `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.TABLES`"
-        result = self.native_query(q)
+        query = f"""
+            SELECT table_name, table_schema, table_type, 
+            FROM `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.TABLES`
+            WHERE table_type IN ('BASE TABLE', 'VIEW')
+        """
+        result = self.native_query(query)
         return result
 
     def get_columns(self, table_name) -> Response:
         """
-        Show details about the table
+        Retrieves column details for a specified table in the configured dataset of the BigQuery warehouse.
+
+        Args:
+            table_name (str): The name of the table for which to retrieve column information.
+
+        Returns:
+            Response: A response object containing the column details, formatted as per the `Response` class.
+        Raises:
+            ValueError: If the 'table_name' is not a valid string.
         """
-        q = f"SELECT column_name AS Field, data_type as Type, FROM \
-            `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.COLUMNS` WHERE table_name = '{table_name}'"
-        result = self.native_query(q)
+        query = f"""
+            SELECT column_name AS Field, data_type as Type, 
+            FROM `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.COLUMNS` 
+            WHERE table_name = '{table_name}'"""
+        result = self.native_query(query)
         return result

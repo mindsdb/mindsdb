@@ -52,7 +52,7 @@ class SessionController:
         self.prepared_stmts = {}
         self.packet_sequence_number = 0
         self.profiling = False
-        self.predictor_cache = True
+        self.predictor_cache = False if self.config.get('cache')['type'] == 'none' else True
         self.show_secrets = False
 
     def inc_packet_sequence_number(self):

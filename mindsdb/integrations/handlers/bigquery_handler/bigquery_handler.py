@@ -1,5 +1,3 @@
-import os
-import json
 from google.cloud import bigquery
 from typing import Text, Dict, Any
 from google.oauth2 import service_account
@@ -37,7 +35,7 @@ class BigQueryHandler(DatabaseHandler):
 
     def connect(self):
         """
-        Establishes a connection to a Google BigQuery warehouse.
+        Establishes a connection to a BigQuery warehouse.
 
         Raises:
             ValueError: If the required connection parameter 'project_id' is not provided or if the credentials cannot be parsed.
@@ -67,6 +65,15 @@ class BigQueryHandler(DatabaseHandler):
         self.is_connected = True
         self.client = client
         return self.client
+    
+    def disconnect(self):
+        """
+        Closes the connection to the BigQuery warehouse if it's currently open.
+        """
+        if self.is_connected is False:
+            return
+        self.connection.close()
+        self.is_connected = False
 
     def check_connection(self) -> StatusResponse:
         """

@@ -53,7 +53,7 @@ from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 from .mindsdb_chat_model import ChatMindsdb
 
 _PARSING_ERROR_PREFIX = 'An output parsing error occured'
-os.environ['OPENAI_API_KEY'] = 'sk-proj-Qi1JNwfvQWb0vVYbkLgXT3BlbkFJLtYUEDlz1OG0sJfJ9WEO'
+os.environ['OPENAI_API_KEY'] = 'put key here'
 
 logger = log.getLogger(__name__)
 

@@ -1,6 +1,6 @@
 from google.cloud import bigquery
 from typing import Text, Dict, Any
-from google.oauth2 import service_account
+from google.api_core.exceptions import BadRequest
 from sqlalchemy_bigquery.base import BigQueryDialect
 
 from mindsdb.utilities import log
@@ -38,7 +38,7 @@ class BigQueryHandler(DatabaseHandler):
         Establishes a connection to a BigQuery warehouse.
 
         Raises:
-            ValueError: If the required connection parameter 'project_id' is not provided or if the credentials cannot be parsed.
+            ValueError: If the required connection parameters are not provided or if the credentials cannot be parsed.
             mindsdb.integrations.utilities.handlers.auth_utilities.exceptions.NoCredentialsException: If none of the required forms of credentials are provided.
             mindsdb.integrations.utilities.handlers.auth_utilities.exceptions.AuthException: If authentication fails.
 
@@ -48,9 +48,9 @@ class BigQueryHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.client
         
-        # Mandatory connection parameter
-        if not 'project_id' in self.connection_data:
-            raise ValueError('Required parameter project_id must be provided.')
+        # Mandatory connection parameters
+        if not all(key in self.connection_data for key in ['project_id', 'dataset']):
+            raise ValueError('Required parameters (project_id, dataset) must be provided.')
 
         google_sa_oauth2_manager = GoogleServiceAccountOAuth2Manager(
             credentials_url=self.connection_data.get('service_account_keys'),
@@ -77,8 +77,10 @@ class BigQueryHandler(DatabaseHandler):
 
     def check_connection(self) -> StatusResponse:
         """
-        Check the connection of the BigQuery
-        :return: success status and error message if error occurs
+        Checks the status of the connection to the BigQuery warehouse.
+
+        Returns:
+            StatusResponse: An object containing the success status and an error message if an error occurs.
         """
         response = StatusResponse(False)
 
@@ -86,12 +88,11 @@ class BigQueryHandler(DatabaseHandler):
             client = self.connect()
             client.query('SELECT 1;')
 
-            # If a dataset is provided, check if it exists
-            if 'dataset' in self.connection_data:
-                client.get_dataset(self.connection_data['dataset'])
+            # Check if the dataset exists
+            client.get_dataset(self.connection_data['dataset'])
 
             response.success = True
-        except Exception as e:
+        except BadRequest as e:
             logger.error(f'Error connecting to BigQuery {self.connection_data["project_id"]}, {e}!')
             response.error_message = e
 
@@ -102,17 +103,18 @@ class BigQueryHandler(DatabaseHandler):
 
     def native_query(self, query: str) -> Response:
         """
-        Receive SQL query and runs it
-        :param query: The SQL query to run in BigQuery
-        :return: returns the records from the current recordset
+        Executes a SQL query on the BigQuery warehouse and returns the result.
+
+        Args:
+            query (str): The SQL query to be executed.
+
+        Returns:
+            Response: A response object containing the result of the query or an error message.
         """
         client = self.connect()
         try:
-            if 'dataset' in self.connection_data:
-                job_config = bigquery.QueryJobConfig(default_dataset=f"{self.connection_data['project_id']}.{self.connection_data['dataset']}")
-                query = client.query(query, job_config=job_config)
-            else:
-                query = client.query(query)
+            job_config = bigquery.QueryJobConfig(default_dataset=f"{self.connection_data['project_id']}.{self.connection_data['dataset']}")
+            query = client.query(query, job_config=job_config)
             result = query.to_dataframe()
             if not result.empty:
                 response = Response(
@@ -131,7 +133,13 @@ class BigQueryHandler(DatabaseHandler):
 
     def query(self, query: ASTNode) -> Response:
         """
-        Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
+        Executes a SQL query represented by an ASTNode and retrieves the data.
+
+        Args:
+            query (ASTNode): An ASTNode representing the SQL query to be executed.
+
+        Returns:
+            Response: The response from the `native_query` method, containing the result of the SQL query execution.
         """
         renderer = SqlalchemyRender(BigQueryDialect)
         query_str = renderer.get_string(query, with_failback=True)

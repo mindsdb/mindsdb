@@ -300,16 +300,10 @@ class PostgresHandler(DatabaseHandler):
 
     def subscribe(self, stop_event, callback, table_name, columns=None, **kwargs):
 
-        # psycopg2 is used
-        import psycopg2
-
         config = self._make_connection_args()
-        # config['database'] = config.pop('dbname')
+        config['autocommit'] = True
 
-        conn = psycopg2.connect(**config, connect_timeout=10)
-        conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
-
-        cursor = conn.cursor()
+        conn = psycopg.connect(autocommit=True, connect_timeout=10, **config)
 
         # create db trigger
         trigger_name = f'mdb_notify_{table_name}'
@@ -318,7 +312,7 @@ class PostgresHandler(DatabaseHandler):
 
         if columns:
             # check column exist
-            cursor.execute(f'select {",".join(columns)} from {table_name} limit 0')
+            conn.execute(f'select {",".join(columns)} from {table_name} limit 0')
 
             columns = set(columns)
             trigger_name += '_' + '_'.join(columns)
@@ -345,10 +339,10 @@ class PostgresHandler(DatabaseHandler):
              END;
              $$ LANGUAGE plpgsql;
          '''
-        cursor.execute(func_code)
+        conn.execute(func_code)
 
         # for after update - new and old have the same values
-        cursor.execute(f'''
+        conn.execute(f'''
              CREATE OR REPLACE TRIGGER {trigger_name}
                BEFORE INSERT OR UPDATE ON {table_name}
                FOR EACH ROW
@@ -357,7 +351,7 @@ class PostgresHandler(DatabaseHandler):
         conn.commit()
 
         # start listen
-        cursor.execute(f"LISTEN {trigger_name};")
+        conn.execute(f"LISTEN {trigger_name};")
 
         def process_event(event):
             try:
@@ -375,17 +369,15 @@ class PostgresHandler(DatabaseHandler):
                     # exit trigger
                     return
 
-                conn.poll()
-
-                while conn.notifies:
-                    process_event(conn.notifies.pop())
-                    conn.poll()
+                conn.add_notify_handler(process_event)
+                # trigger getting updates
+                conn.execute("SELECT 1").fetchone()
 
                 time.sleep(SUBSCRIBE_SLEEP_INTERVAL)
 
         finally:
-            cursor.execute(f'drop TRIGGER {trigger_name} on {table_name}')
-            cursor.execute(f'drop FUNCTION {trigger_name}')
+            conn.execute(f'drop TRIGGER {trigger_name} on {table_name}')
+            conn.execute(f'drop FUNCTION {trigger_name}')
             conn.commit()
 
             conn.close()

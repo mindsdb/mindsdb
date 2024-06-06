@@ -22,7 +22,7 @@ import mindsdb.utilities.profiler as profiler
 
 logger = log.getLogger(__name__)
 
-SUBSCRIBE_SLEEP_INTERVAL = 0.5
+SUBSCRIBE_SLEEP_INTERVAL = 1
 
 
 class PostgresHandler(DatabaseHandler):
@@ -303,7 +303,7 @@ class PostgresHandler(DatabaseHandler):
         config = self._make_connection_args()
         config['autocommit'] = True
 
-        conn = psycopg.connect(autocommit=True, connect_timeout=10, **config)
+        conn = psycopg.connect(connect_timeout=10, **config)
 
         # create db trigger
         trigger_name = f'mdb_notify_{table_name}'
@@ -364,13 +364,15 @@ class PostgresHandler(DatabaseHandler):
                 callback(row)
 
         try:
+            conn.add_notify_handler(process_event)
+
             while True:
                 if stop_event.is_set():
                     # exit trigger
                     return
 
-                conn.add_notify_handler(process_event)
                 # trigger getting updates
+                # https://www.psycopg.org/psycopg3/docs/advanced/async.html#asynchronous-notifications
                 conn.execute("SELECT 1").fetchone()
 
                 time.sleep(SUBSCRIBE_SLEEP_INTERVAL)

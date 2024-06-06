@@ -10,6 +10,17 @@ from langchain_community.chat_models import ChatAnthropic, ChatOpenAI, ChatAnysc
 from langchain_core.prompts import PromptTemplate
 from langfuse.callback import CallbackHandler
 
+import dspy
+import os
+from dspy import ColBERTv2, configure
+from dspy.teleprompt import BootstrapFewShotWithRandomSearch
+from dspy.predict.langchain import LangChainPredict, LangChainModule
+from langchain_community.llms import OpenAI as LangChainOpenAI
+from langchain.chains import LLMChain
+from langchain_core.prompts import PromptTemplate
+
+from mindsdb.interfaces.llm.llm_controller import LLMDataController
+
 import numpy as np
 import pandas as pd
 
@@ -42,8 +53,37 @@ from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 from .mindsdb_chat_model import ChatMindsdb
 
 _PARSING_ERROR_PREFIX = 'An output parsing error occured'
+os.environ['OPENAI_API_KEY'] = 'sk-proj-Qi1JNwfvQWb0vVYbkLgXT3BlbkFJLtYUEDlz1OG0sJfJ9WEO'
 
 logger = log.getLogger(__name__)
+
+class LLMChainWrapper:
+    def __init__(self, chain):
+        self.chain = chain
+
+    def predict(self, inputs):
+        if not isinstance(inputs, dict):
+            raise ValueError("Inputs must be a dictionary.")
+
+        # Extract context and question from inputs
+        context = inputs.get("context")
+        question = inputs.get("question")
+
+        # Ensure both context and question are provided
+        if context is None or question is None:
+            raise ValueError("Both 'context' and 'question' are required inputs.")
+
+        # Call the LLMChain's predict method
+        return self.chain({"context": context, "question": question})
+
+    def get_graph(self):
+        return self.chain.get_graph()
+
+    def __call__(self, inputs):
+        return self.predict(inputs)
+
+    def invoke(self, input_dict):
+        return self.predict(input_dict)
 
 
 class LangChainHandler(BaseMLEngine):
@@ -77,6 +117,10 @@ class LangChainHandler(BaseMLEngine):
         self.default_agent_tools = DEFAULT_AGENT_TOOLS
         self.log_callback_handler = log_callback_handler
         self.langfuse_callback_handler = langfuse_callback_handler
+        self.llm_data_controller = LLMDataController()
+        self.use_dspy = True
+        if self.use_dspy:
+            self.setup_dspy()
         if self.log_callback_handler is None:
             self.log_callback_handler = LogCallbackHandler(logger)
 
@@ -347,3 +391,62 @@ class LangChainHandler(BaseMLEngine):
 
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         raise NotImplementedError('Fine-tuning is not supported for LangChain models')
+    
+    def setup_dspy(self):
+        # This is the default language model and retrieval model in DSPy
+        colbertv2 = ColBERTv2(url='http://20.102.90.50:2017/wiki17_abstracts')
+        dspy.configure(rm=colbertv2)
+    
+    def create_dspy_chain(self):
+        retriever = lambda x: dspy.Retrieve(k=5)(x["question"]).passages
+
+        # Initialize the LLM with the API key
+        llm = LangChainOpenAI(api_key=os.getenv('OPENAI_API_KEY'), model_name="gpt-3.5-turbo-instruct")
+
+        prompt_template = PromptTemplate(input_variables=["context", "question"], template="Given {context}, answer the question `{question}`.")
+        chain = LLMChain(prompt=prompt_template, llm=llm)
+
+        # Convert to DSPy Module
+        langchain_predict = LLMChainWrapper(chain)
+        return langchain_predict
+    
+    def generate_dspy_response(self, question, context):
+
+        # input for the DSPy module
+        input_dict = {
+            "context": context,
+            "question": question
+        }
+
+        if True:
+            dspy_chain = self.create_dspy_chain()
+            response = dspy_chain.invoke(input_dict)
+            return response['text'], context
+
+    def predict_dspy(self, df: pd.DataFrame) -> pd.DataFrame:
+
+
+        if self.use_dspy:
+            responses = []
+            for index, row in df.iterrows():
+                question = row['question']
+                context = question
+                answer, context_used = self.generate_dspy_response(question, context)
+                responses.append({'answer': answer, 'context': context_used})
+                self.llm_data_controller.add_llm_data(question, answer, True)
+                data = self.llm_data_controller.list_all_llm_data()
+                #data_sampled = data.sample(fraction = 1)
+                #self.optimize_with_dspy(dspy_chain, data_sampled.iloc[:int(len(data_sampled)*.8)], data_sampled.iloc[int(len(data_sampled)*.8):])
+
+
+            return pd.DataFrame(responses)
+
+        return df
+
+    def optimize_with_dspy(chain, trainset, valset):
+        # Currently response_metric does not exist, we have to create some metric to optimize
+        optimizer = BootstrapFewShotWithRandomSearch(metric=response_metric, max_bootstrapped_demos=3, num_candidate_programs=3)
+        if valset is None:
+            valset = trainset
+        optimized_chain = optimizer.compile(chain, trainset=trainset, valset=valset)
+        return optimized_chain

@@ -9,12 +9,12 @@ from mindsdb.utilities import log
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.integrations.utilities.handlers.auth_utilities import GoogleServiceAccountOAuth2Manager
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from mindsdb.integrations.utilities.handlers.auth_utilities.exceptions import AuthException
 
 logger = log.getLogger(__name__)
 
@@ -35,29 +35,14 @@ class BigQueryHandler(DatabaseHandler):
         if self.is_connected is True:
             self.disconnect()
 
-    def _get_account_keys(self):
-        if 'service_account_keys' in self.connection_data:
-            if os.path.isfile(self.connection_data['service_account_keys']) is False:
-                raise Exception("Service account keys' must be path to the file")
-            with open(self.connection_data["service_account_keys"]) as source:
-                info = json.load(source)
-            return info
-        elif 'service_account_json' in self.connection_data:
-            info = self.connection_data['service_account_json']
-            if not isinstance(info, dict):
-                raise Exception("service_account_json has to be dict")
-            info['private_key'] = info['private_key'].replace('\\n', '\n')
-            return info
-        else:
-            raise Exception('Connection args have to content ether service_account_json or service_account_keys')
-
     def connect(self):
         """
         Establishes a connection to a Google BigQuery warehouse.
 
         Raises:
             ValueError: If the required connection parameter 'project_id' is not provided or if the credentials cannot be parsed.
-            mindsdb.integrations.utilities.handlers.auth_utilities.exceptions.AuthException: If none of required forms of credentials are provided.
+            mindsdb.integrations.utilities.handlers.auth_utilities.exceptions.NoCredentialsException: If none of the required forms of credentials are provided.
+            mindsdb.integrations.utilities.handlers.auth_utilities.exceptions.AuthException: If authentication fails.
 
         Returns:
             google.cloud.bigquery.client.Client: The client object for the BigQuery connection.
@@ -69,11 +54,15 @@ class BigQueryHandler(DatabaseHandler):
         if not 'project_id' in self.connection_data:
             raise ValueError('Required parameter project_id must be provided.')
 
-        info = self._get_account_keys()
-        storage_credentials = service_account.Credentials.from_service_account_info(info)
+        google_sa_oauth2_manager = GoogleServiceAccountOAuth2Manager(
+            credentials_url=self.connection_data.get('service_account_keys'),
+            credentials_json=self.connection_data.get('service_account_json')
+        )
+        credentials = google_sa_oauth2_manager.get_oauth2_credentials()
+
         client = bigquery.Client(
             project=self.connection_data["project_id"],
-            credentials=storage_credentials
+            credentials=credentials
         )
         self.is_connected = True
         self.client = client

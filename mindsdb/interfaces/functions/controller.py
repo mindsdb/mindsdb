@@ -1,21 +1,21 @@
-from duckdb import typing
+from duckdb.typing import BIGINT, DOUBLE, VARCHAR, BLOB, BOOLEAN
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
 
 
 def python_to_duckdb_type(py_type):
     if py_type == 'int':
-        return typing.BIGINT
+        return BIGINT
     elif py_type == 'float':
-        return typing.DOUBLE
+        return DOUBLE
     elif py_type == 'str':
-        return typing.VARCHAR
+        return VARCHAR
     elif py_type == 'bool':
-        return typing.BOOLEAN
+        return BOOLEAN
     elif py_type == 'bytes':
-        return typing.BLOB
+        return BLOB
     else:
         # Unknown
-        return typing.VARCHAR
+        return VARCHAR
 
 
 # duckdb doesn't like *args

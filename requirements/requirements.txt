@@ -43,6 +43,7 @@ langchain-core>=0.1.28
 langchain-community
 langchain-openai
 langchain-text_splitters
+langfuse==2.35.0
 bs4 # For web crawler.
 lark
 prometheus-client==0.20.0

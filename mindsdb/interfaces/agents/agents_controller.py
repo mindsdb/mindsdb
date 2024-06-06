@@ -291,6 +291,6 @@ class AgentsController:
         project_datanode = self.datahub.get(project_name)
         return project_datanode.predict(
             model_name=agent.model_name,
-            data=messages,
+            df=pd.DataFrame(messages),
             params=predict_params
         )

@@ -63,8 +63,8 @@ class QueryContextController:
 
         query_out = l_query.apply_values(values)
 
-        def callback(data, columns_info):
-            self._result_callback(l_query, context_name, query_str, data, columns_info)
+        def callback(df, columns_info):
+            self._result_callback(l_query, context_name, query_str, df, columns_info)
 
         return query_out, callback
 
@@ -83,7 +83,7 @@ class QueryContextController:
 
     def _result_callback(self, l_query: LastQuery,
                          context_name: str, query_str: str,
-                         data: List[dict], columns_info: list):
+                         df: pd.DataFrame, columns_info: list):
         """
         This function handlers result from executed query and updates context variables with new values
 
@@ -97,10 +97,9 @@ class QueryContextController:
           - columns_info: list
 
         """
-        if len(data) == 0:
+        if len(df) == 0:
             return
 
-        df = pd.DataFrame(data, columns=[col['name'] for col in columns_info])
         values = {}
         # get max values
         for info in l_query.get_last_columns():
@@ -165,7 +164,7 @@ class QueryContextController:
             if len(data) == 0:
                 value = None
             else:
-                row = data[0]
+                row = list(data.iloc[0])
 
                 idx = None
                 for i, col in enumerate(columns_info):

@@ -176,12 +176,10 @@ class BaseMLEngineExec:
 
     @profiler.profile()
     @mark_process(name='predict')
-    def predict(self, model_name: str, data: list, pred_format: str = 'dict',
+    def predict(self, model_name: str, df: pd.DataFrame, pred_format: str = 'dict',
                 project_name: str = None, version=None, params: dict = None):
         """ Generates predictions with some model and input data. """
-        if isinstance(data, dict):
-            data = [data]
-        df = pd.DataFrame(data)
+
         kwargs = {
             'name': model_name,
             'ml_handler_name': self.name,

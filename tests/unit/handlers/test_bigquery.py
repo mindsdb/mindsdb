@@ -86,7 +86,6 @@ class TestBigQueryHandler(unittest.TestCase):
         """
         self.handler.native_query = MagicMock()
 
-        table_name = 'mock_table'
         self.handler.get_tables()
 
         expected_query = f"""

@@ -2021,8 +2021,7 @@ class ExecuteCommands:
     def answer_select(self, query):
         data = query.fetch()
 
-        return ExecuteAnswer(           data=data["result"],
-        )
+        return ExecuteAnswer(data=data["result"])
 
     def answer_update_model_version(self, model_version, database_name):
         if not isinstance(model_version, Identifier):

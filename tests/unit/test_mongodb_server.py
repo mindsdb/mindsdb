@@ -78,8 +78,6 @@ class TestMongoDBServer(BaseUnitTest):
 
     def t_single_row(self, client_con, mock_executor):
         # ==== test single row ===
-        ExecuteAnswer(data=ResultSet(columns=[Column('a')], values=[['test']]))
-
         mock_executor.side_effect = lambda x: ExecuteAnswer(data=ResultSet(columns=[Column('a')], values=[['test']]))
 
         res = client_con.mindsdb.fish_model1.find(

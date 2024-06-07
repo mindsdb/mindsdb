@@ -135,7 +135,7 @@ jobs:
           github_token: ${{ secrets.DD_EXT_REPO_DISPATCH_PAT_TOKEN }}
           workflow_file_name: bump-mindsdb-version.yml
           ref: main
-          client_payload: '{"version": "${{ env.CI_REF_NAME }}"}'
+          client_payload: '{"version": "${{ env.CI_REF_NAME_SLUG }}"}'
 
   run_tests:
     name: Run Post-Deploy Tests

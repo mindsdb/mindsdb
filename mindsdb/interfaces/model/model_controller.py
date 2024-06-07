@@ -123,6 +123,13 @@ class ModelController():
         return ml_handler_base.describe(model_record.id, attribute)
 
     def get_model(self, name, version=None, ml_handler_name=None, project_name=None):
+        print('\n\nget_model')
+
+        print(f'name: {name}')
+        print(f'version: {version}')
+        print(f'ml_handler_name: {ml_handler_name}')
+        print(f'project_name: {project_name}')
+
         show_active = True if version is None else None
         model_record = get_model_record(
             active=show_active,

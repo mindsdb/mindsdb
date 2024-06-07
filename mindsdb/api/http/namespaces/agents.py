@@ -64,14 +64,14 @@ def create_agent(project_name, name, agent):
         return http_error(
             HTTPStatus.NOT_FOUND,
             'Resource not found',
-            f'The {model_name} or skills "{skills}" do not exist. Please ensure that the names are correct and try again.'
+            f'ValueError The {model_name} or skills "{skills}" do not exist. Please ensure that the names are correct and try again.'
         )
     except NotImplementedError:
         # Free users trying to create agent.
         return http_error(
             HTTPStatus.UNAUTHORIZED,
             'Unavailable to free users',
-            f'The {model_name} or skills "{skills}" do not exist. Please ensure that the names are correct and try again.'
+            f'NotImplementedError The {model_name} or skills "{skills}" do not exist. Please ensure that the names are correct and try again.'
         )
 
 
@@ -81,9 +81,11 @@ class AgentsResource(Resource):
     @api_endpoint_metrics('GET', '/agents')
     def get(self, project_name):
         ''' List all agents '''
+        print("get agents")
         session = SessionController()
         try:
             all_agents = session.agents_controller.get_agents(project_name)
+            print("all_agents: ", all_agents)
         except ValueError:
             # Project needs to exist.
             return http_error(

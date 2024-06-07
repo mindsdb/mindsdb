@@ -116,6 +116,11 @@ def get_model_record(except_absent=False, ml_handler_name: Optional[str] = None,
                      project_name: Optional[str] = None, active: bool = True,
                      deleted_at=null(), version: Optional[int] = None, **kwargs):
     kwargs['company_id'] = ctx.company_id
+
+    print("kwargs: ", kwargs)
+    print("company_id: ", kwargs['company_id'])
+
+
     if kwargs['company_id'] is None:
         kwargs['company_id'] = null()
 

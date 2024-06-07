@@ -84,6 +84,8 @@ class AgentsController:
         Returns:
             all-agents (List[db.Agents]): List of database agent object
         """
+        print("\n\nget_agents")
+        print(" ctx.company_id",  ctx.company_id)
 
         all_agents = db.Agents.query.filter(
             db.Agents.company_id == ctx.company_id
@@ -119,15 +121,27 @@ class AgentsController:
         Raises:
             ValueError: Agent with given name already exists, or skill/model with given name does not exist.
         '''
+
+        print("\n\nadd_agent")
+        print(" ctx.company_id",  ctx.company_id)
+        print("name", name)
+        print("project_name", project_name)
+        print("model_name", model_name)
+        print("skills", skills)
+        print("params", params)
+
         if project_name is None:
             project_name = 'mindsdb'
         project = self.project_controller.get(name=project_name)
+
+        print("project", project)
 
         agent = self.get_agent(name, project_name)
 
         if agent is not None:
             raise ValueError(f'Agent with name already exists: {name}')
 
+        print("before model_controller.get_model")
         # Check if model exists.
         model_name_no_version, model_version = Predictor.get_name_and_version(model_name)
         try:
@@ -143,6 +157,10 @@ class AgentsController:
             model_name=model_name,
             params=params,
         )
+
+        print("agent", agent)
+        print(agent.__dict__)
+
         skills_to_add = []
         # Check if given skills exist.
         for skill in skills:

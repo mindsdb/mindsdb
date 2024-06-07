@@ -1,6 +1,5 @@
 import importlib
 import os
-import pandas as pd
 import pytest
 from mindsdb_sql import parse_sql
 

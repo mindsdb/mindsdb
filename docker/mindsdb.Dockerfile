@@ -90,6 +90,7 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
 
 COPY --link --from=build /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
+COPY . .
 
 ENV PYTHONUNBUFFERED 1
 ENV MINDSDB_DOCKER_ENV 1

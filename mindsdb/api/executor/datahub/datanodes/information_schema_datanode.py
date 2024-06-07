@@ -167,7 +167,7 @@ class InformationSchemaDataNode(DataNode):
 
         columns_info = [{"name": k, "type": v} for k, v in data.dtypes.items()]
 
-        return data.to_dict(orient="split")['data'], columns_info
+        return data, columns_info
 
     def _get_empty_table(self, table):
         columns = table.columns

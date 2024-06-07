@@ -56,7 +56,7 @@ def join_query_data(target, source):
     if len(target.columns) == 0:
         target = source
     else:
-        target.add_records(source.get_records())
+        target.add_from_result_set(source)
     return target
 
 
@@ -91,7 +91,7 @@ class MapReduceStepCall(BaseStepCall):
                 for column in sub_data.columns:
                     data.add_column(column)
 
-                data.add_records(sub_data.get_records())
+                data.add_from_result_set(sub_data)
 
             for var_group in vars:
                 markQueryVar(query.where)
@@ -101,7 +101,7 @@ class MapReduceStepCall(BaseStepCall):
                 if len(data.columns) == 0:
                     data = sub_data
                 else:
-                    data.add_records(sub_data.get_records())
+                    data.add_from_result_set(sub_data)
 
                 unmarkQueryVar(query.where)
         elif type(substep) is MultipleSteps:

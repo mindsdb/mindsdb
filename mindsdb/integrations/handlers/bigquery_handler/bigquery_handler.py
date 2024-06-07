@@ -92,7 +92,7 @@ class BigQueryHandler(DatabaseHandler):
             connection.get_dataset(self.connection_data['dataset'])
 
             response.success = True
-        except BadRequest as e:
+        except (BadRequest, ValueError) as e:
             logger.error(f'Error connecting to BigQuery {self.connection_data["project_id"]}, {e}!')
             response.error_message = e
 
@@ -173,8 +173,9 @@ class BigQueryHandler(DatabaseHandler):
             ValueError: If the 'table_name' is not a valid string.
         """
         query = f"""
-            SELECT column_name AS Field, data_type as Type, 
-            FROM `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.COLUMNS` 
-            WHERE table_name = '{table_name}'"""
+            SELECT column_name AS Field, data_type as Type
+            FROM `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.COLUMNS`
+            WHERE table_name = '{table_name}'
+        """
         result = self.native_query(query)
         return result

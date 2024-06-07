@@ -1,7 +1,7 @@
 import json
 from dataclasses import dataclass
 from functools import lru_cache, partial
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Union, Optional
 
 import html2text
 import openai
@@ -11,11 +11,12 @@ import writer
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.docstore.document import Document
 from langchain.embeddings.base import Embeddings
-from langchain.embeddings.huggingface import HuggingFaceEmbeddings
+from langchain_community.embeddings.huggingface import HuggingFaceEmbeddings
 from langchain_community.llms import Writer
 from langchain_community.document_loaders import DataFrameLoader
 from langchain_community.vectorstores import FAISS, Chroma, VectorStore
-from pydantic import BaseModel, Extra, Field, field_validator
+from pydantic import BaseModel, Extra, Field, field_validator, ValidationInfo
+
 
 from mindsdb.integrations.handlers.chromadb_handler.chromadb_handler import get_chromadb
 from mindsdb.integrations.handlers.rag_handler.exceptions import (
@@ -88,8 +89,10 @@ def get_chroma_client(persist_directory: str) -> chromadb.PersistentClient:
     return chromadb.PersistentClient(path=persist_directory)
 
 
-def get_available_writer_model_ids(args: dict) -> list:
+def get_available_writer_model_ids(args: ValidationInfo) -> list:
     """Get available writer LLM model ids"""
+
+    args = args.data
 
     writer_client = writer.Writer(
         api_key=args["writer_api_key"],
@@ -103,10 +106,12 @@ def get_available_writer_model_ids(args: dict) -> list:
     return [model["id"] for model in available_models_dict["models"]]
 
 
-def get_available_openai_model_ids(args: dict) -> list:
+def get_available_openai_model_ids(args: ValidationInfo) -> list:
     """Get available openai LLM model ids"""
 
-    models = openai.OpenAI(api_key=args["openai_api_key"], base_url=args["base_url"]).models.list().data
+    args = args.data
+
+    models = openai.OpenAI(api_key=args["openai_api_key"], base_url=args.get("base_url")).models.list().data
 
     return [models.id for models in models]
 
@@ -201,15 +206,16 @@ class LLMParameters(BaseModel):
     llm_name: str = Field(default_factory=str, title="LLM API name")
     max_tokens: int = Field(default=100, title="max tokens in response")
     temperature: float = Field(default=0.0, title="temperature")
-    base_url: str = None
+    base_url: Optional[str] = None
     top_p: float = 1
     best_of: int = 5
-    stop: List[str] = None
+    stop: Optional[List[str]] = None
 
     class Config:
         extra = Extra.forbid
         arbitrary_types_allowed = True
         use_enum_values = True
+        protected_namespaces = ()
 
 
 class OpenAIParameters(LLMParameters):
@@ -219,7 +225,7 @@ class OpenAIParameters(LLMParameters):
     model_id: str = Field(default="gpt-3.5-turbo-instruct", title="model name")
     n: int = Field(default=1, title="number of responses to return")
 
-    @field_validator("model_id")
+    @field_validator("model_id", mode="after")
     def openai_model_must_be_supported(cls, v, values):
         supported_models = get_available_openai_model_ids(values)
         if v not in supported_models:
@@ -233,7 +239,7 @@ class WriterLLMParameters(LLMParameters):
     """Model parameters for the Writer LLM API interface"""
 
     writer_api_key: str
-    writer_org_id: str = None
+    writer_org_id: Optional[str] = None
     model_id: str = "palmyra-x"
     callbacks: List[StreamingStdOutCallbackHandler] = [StreamingStdOutCallbackHandler()]
     verbose: bool = False
@@ -286,19 +292,19 @@ class RAGBaseParameters(BaseModel):
     prompt_template: str = DEFAULT_QA_PROMPT_TEMPLATE
     chunk_size: int = DEFAULT_CHUNK_SIZE
     chunk_overlap: int = DEFAULT_CHUNK_OVERLAP
-    url: Union[str, List[str]] = None
-    url_column_name: str = None
-    run_embeddings: bool = True
+    url: Optional[Union[str, List[str]]] = None
+    url_column_name: Optional[str] = None
+    run_embeddings: Optional[bool] = True
     top_k: int = 4
-    embeddings_model: Embeddings = None
+    embeddings_model: Optional[Embeddings] = None
     embeddings_model_name: str = DEFAULT_EMBEDDINGS_MODEL
-    context_columns: Union[List[str], str] = None
+    context_columns: Optional[Union[List[str], str]] = None
     vector_store_name: str = DEFAULT_VECTOR_STORE_NAME
-    vector_store: VectorStore = None
+    vector_store: Optional[VectorStore] = None
     collection_name: str = DEFAULT_VECTOR_STORE_COLLECTION_NAME
     summarize_context: bool = True
     summarization_prompt_template: str = DEFAULT_SUMMARIZATION_PROMPT_TEMPLATE
-    vector_store_storage_path: str = Field(
+    vector_store_storage_path: Optional[str] = Field(
         default=None, title="don't use this field, it's for internal use only"
     )
 

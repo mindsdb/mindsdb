@@ -123,13 +123,13 @@ docker exec -it mindsdb_container sh
 Install the dependencies:
 
 ```bash
-pip install mindsdb[handler_name]
+pip install .[handler_name]
 ```
 
 For example, run this command to install dependencies for the [OpenAI handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/openai_handler):
 
 ```bash
-pip install mindsdb[openai]
+pip install .[openai]
 ```
 
 Exit the interactive shell:

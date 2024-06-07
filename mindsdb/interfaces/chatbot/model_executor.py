@@ -1,4 +1,5 @@
 import datetime as dt
+import pandas as pd
 
 from mindsdb.interfaces.storage import db
 
@@ -57,14 +58,14 @@ class ModelExecutor:
 
             predictions = self.chat_task.project_datanode.predict(
                 model_name=model_info['model_name'],
-                data=messages,
+                df=pd.DataFrame(messages),
                 params=params
             )
 
         elif model_info['engine'] == 'llama_index':
             predictions = self.chat_task.project_datanode.predict(
                 model_name=model_info['model_name'],
-                data=messages,
+                df=pd.DataFrame(messages),
                 params={'prompt': self.prompt}
             )
 

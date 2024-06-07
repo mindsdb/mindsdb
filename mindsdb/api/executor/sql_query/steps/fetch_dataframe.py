@@ -10,7 +10,7 @@ from mindsdb_sql.parser.ast import (
 from mindsdb_sql.planner.steps import FetchDataframeStep
 from mindsdb_sql.planner.utils import query_traversal
 
-from mindsdb.api.executor.sql_query.result_set import ResultSet, Column
+from mindsdb.api.executor.sql_query.result_set import ResultSet
 from mindsdb.api.executor.exceptions import UnknownError
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
 
@@ -50,7 +50,7 @@ def get_fill_param_fnc(steps_data):
         if isinstance(node, BinaryOperation):
             if isinstance(node.args[1], Parameter):
                 rs = steps_data[node.args[1].value.step_num]
-                items = [Constant(i[0]) for i in rs.get_records_raw()]
+                items = [Constant(i) for i in rs.get_column_values(col_idx=0)]
                 if node.op == '=' and len(items) == 1:
                     # extract one value for option 'col=(subselect)'
                     node.args[1] = items[0]
@@ -60,7 +60,7 @@ def get_fill_param_fnc(steps_data):
 
         if isinstance(node, Parameter):
             rs = steps_data[node.value.step_num]
-            items = [Constant(i[0]) for i in rs.get_records_raw()]
+            items = [Constant(i) for i in rs.get_column_values(col_idx=0)]
             return Tuple(items)
     return fill_params
 
@@ -81,7 +81,7 @@ class FetchDataframeStepCall(BaseStepCall):
             table_alias = (self.context.get('database'), 'result', 'result')
 
             # fetch raw_query
-            data, columns_info = dn.query(
+            df, columns_info = dn.query(
                 native_query=step.raw_query,
                 session=self.session
             )
@@ -96,24 +96,21 @@ class FetchDataframeStepCall(BaseStepCall):
 
             query, context_callback = query_context_controller.handle_db_context_vars(query, dn, self.session)
 
-            data, columns_info = dn.query(
+            df, columns_info = dn.query(
                 query=query,
                 session=self.session
             )
 
             if context_callback:
-                context_callback(data, columns_info)
+                context_callback(df, columns_info)
 
         result = ResultSet()
-        for column in columns_info:
-            result.add_column(Column(
-                name=column['name'],
-                type=column.get('type'),
-                table_name=table_alias[1],
-                table_alias=table_alias[2],
-                database=table_alias[0]
-            ))
-        for record in data:
-            result.add_record_raw(record)
+
+        result.from_df(
+            df,
+            table_name=table_alias[1],
+            table_alias=table_alias[2],
+            database=table_alias[0]
+        )
 
         return result

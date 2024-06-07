@@ -46,7 +46,7 @@ class BigQueryHandler(DatabaseHandler):
             google.cloud.bigquery.client.Client: The client object for the BigQuery connection.
         """
         if self.is_connected is True:
-            return self.client
+            return self.connection
         
         # Mandatory connection parameters
         if not all(key in self.connection_data for key in ['project_id', 'dataset']):

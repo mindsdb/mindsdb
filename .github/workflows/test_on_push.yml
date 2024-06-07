@@ -119,6 +119,7 @@ jobs:
           pip install .[clickhouse]
           pip install .[snowflake]
           pip install .[web]
+          pip install .[bigquery]
           pip freeze
       - name: Run unit tests
         run: |

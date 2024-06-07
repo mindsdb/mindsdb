@@ -53,7 +53,7 @@ class BigQueryHandler(DatabaseHandler):
             raise ValueError('Required parameters (project_id, dataset) must be provided.')
 
         google_sa_oauth2_manager = GoogleServiceAccountOAuth2Manager(
-            credentials_url=self.connection_data.get('service_account_keys'),
+            credentials_file=self.connection_data.get('service_account_keys'),
             credentials_json=self.connection_data.get('service_account_json')
         )
         credentials = google_sa_oauth2_manager.get_oauth2_credentials()

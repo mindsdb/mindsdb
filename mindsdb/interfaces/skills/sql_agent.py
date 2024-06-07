@@ -64,13 +64,13 @@ class SQLAgent:
             return self._tables_to_include
 
         ret = self._call_engine('show databases;')
-        dbs = [lst[0] for lst in ret.data.to_list() if lst[0] != 'information_schema']
+        dbs = [lst[0] for lst in ret.data.to_lists() if lst[0] != 'information_schema']
         usable_tables = []
         for db in dbs:
             if db != 'mindsdb' and db == self._database:
                 try:
                     ret = self._call_engine('show tables', database=db)
-                    tables = [lst[0] for lst in ret.data.to_list() if lst[0] != 'information_schema']
+                    tables = [lst[0] for lst in ret.data.to_lists() if lst[0] != 'information_schema']
                     for table in tables:
                         # By default, include all tables in a database unless expilcitly ignored.
                         table_name = f'{db}.{table}'
@@ -126,7 +126,7 @@ class SQLAgent:
         command = f"select {','.join(fields)} from {table} limit {self._sample_rows_in_table_info};"
         try:
             ret = self._call_engine(command)
-            sample_rows = ret.data.to_list()
+            sample_rows = ret.data.to_lists()
             sample_rows = list(
                 map(lambda ls: [str(i) if len(str(i)) < 100 else str[:100] + '...' for i in ls], sample_rows))
             sample_rows_str = "\n" + "\n".join(["\t".join(row) for row in sample_rows])
@@ -150,7 +150,7 @@ class SQLAgent:
             columns_str = ', '.join([repr(col.name) for col in ret.columns])
             res = f'Output columns: {columns_str}\n'
 
-            data = ret.to_list()
+            data = ret.to_lists()
             if len(data) > limit_rows:
                 df = pd.DataFrame(data, columns=[col.name for col in ret.columns])
 
@@ -168,7 +168,7 @@ class SQLAgent:
         if fetch == "all":
             result = _repr_result(ret.data)
         elif fetch == "one":
-            result = _tidy(ret.data.to_list()[0])
+            result = _tidy(ret.data.to_lists()[0])
         else:
             raise ValueError("Fetch parameter must be either 'one' or 'all'")
         return str(result)

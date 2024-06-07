@@ -89,8 +89,8 @@ class Executor:
 
         self.is_executed = True
 
-        self.data = ret.data.to_list()
-        self.server_status = ret.status
+        self.data = ret.data.to_lists()
+        # self.server_status = ret.status
         if ret.data.columns is not None:
             self.columns = ret.data.columns
 

@@ -11,7 +11,7 @@ def run_sql_command(request_env, ast_query):
     if ret.error_code is not None:
         raise Exception(ret.error_message)
 
-    if ret.data.columns is None:
+    if ret.data is None:
         # return no data
         return []
 

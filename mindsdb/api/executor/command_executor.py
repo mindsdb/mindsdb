@@ -788,8 +788,8 @@ class ExecuteCommands:
             raise Exception(
                 f'Nested query failed to execute with error: "{e}", please check and try again.'
             )
-        result = sqlquery.fetch(self.session.datahub)
-        df = pd.DataFrame.from_dict(result["result"])
+        result = sqlquery.fetch('dataframe')
+        df = result["result"]
         df.columns = [
             str(t.alias) if hasattr(t, "alias") else str(t.parts[-1])
             for t in statement.data.targets

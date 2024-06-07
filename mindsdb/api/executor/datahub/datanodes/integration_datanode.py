@@ -215,7 +215,7 @@ class IntegrationDataNode(DataNode):
         if result.type == RESPONSE_TYPE.ERROR:
             raise Exception(f'Error in {self.integration_name}: {result.error_message}')
         if result.type == RESPONSE_TYPE.OK:
-            return [], []
+            return pd.DataFrame(), []
 
         df = result.data_frame
         # region clearing df from NaN values

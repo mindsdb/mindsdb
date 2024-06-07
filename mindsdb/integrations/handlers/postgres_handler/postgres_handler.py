@@ -207,7 +207,7 @@ class PostgresHandler(DatabaseHandler):
         columns = [f'"{c}"' for c in df.columns]
         with connection.cursor() as cur:
             try:
-                with cur.copy(f'copy {table_name} ({",".join(columns)}) from STDIN  WITH CSV') as copy:
+                with cur.copy(f'copy "{table_name}" ({",".join(columns)}) from STDIN  WITH CSV') as copy:
                     df.to_csv(copy, index=False, header=False)
 
                 response = Response(RESPONSE_TYPE.OK)

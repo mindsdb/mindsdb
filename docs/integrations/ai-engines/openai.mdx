@@ -3,495 +3,195 @@ title: OpenAI
 sidebarTitle: OpenAI
 ---
 
-In this section, we present how to bring OpenAI models to MindsDB.
+This documentation describes the integration of MindsDB with [OpenAI](https://openai.com/), an AI research organization known for developing AI models like GPT-3 and GPT-4.
+The integration allows for the deployment of OpenAI models within MindsDB, providing the models with access to data from various data sources.
 
-[OpenAI](https://openai.com/) is an AI research organization and company, known for developing AI models like GPT-3 and GPT-4. Their mission is to advance AI for the betterment of humanity, emphasizing transparency, safety, and ethics in AI development.
+## Prerequisites
 
-Read on to find out how to use OpenAI models within MinsdDB.
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
+2. To use OpenAI within MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Obtain the OpenAI API key required to deploy and use OpenAI models within MindsDB. Follow the [instructions for obtaining the API key](https://help.openai.com/en/articles/4936850-where-do-i-find-my-secret-api-key).
 
 ## Setup
 
-MindsDB provides the [OpenAI handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/openai_handler) that enables you to create OpenAI models within MindsDB.
-
-### AI Engine
-
-Before creating a model, it is required to create an AI engine based on the provided handler.
-
-<Tip>
-If you installed MindsDB locally, make sure to install all OpenAI dependencies by running `pip install .[openai]` or from the [requirements.txt](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/integrations/handlers/openai_handler/requirements.txt) file.
-</Tip>
-
-You can create an OpenAI engine using this command:
+Create an AI engine from the [OpenAI handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/openai_handler).
 
 ```sql
 CREATE ML_ENGINE openai_engine
 FROM openai
 USING
-    openai_api_key = 'your-openai-api-key';
+      openai_api_key = 'api-key-value';
 ```
 
-<Tip>
-Please note that you need to provide your OpenAI API key. See OpenAI’s [help center](https://help.openai.com/en/articles/4936850-where-do-i-find-my-secret-api-key) or alternatively, watch [this video](https://www.youtube.com/watch?v=EQQjdwdVQ-M).
-</Tip>
-
-The name of the engine (here, `openai_engine`) should be used as a value for the `engine` parameter in the `USING` clause of the `CREATE MODEL` statement.
-
-### AI Model
-
-The [`CREATE MODEL`](/sql/create/model) statement is used to create, train, and deploy models within MindsDB.
-
-```sql
-CREATE MODEL model_name
-PREDICT column_to_be_predicted
-USING
-    engine = 'openai',
-    model_name = 'openai_model_name'
-    openai_api_key = 'YOUR_OPENAI_API_KEY',
-    ...;
-```
-
-<Info>
-**Default Model**
-When you create an OpenAI model in MindsDB, it uses the `gpt-3.5-turbo` model by default. But you can use the `gpt-4` model as well by passing it to the `model-name` parameter in the `USING` clause of the `CREATE MODEL` statement.
-
-**Supported Models**
-To see all supported models, including chat models, embedding models, and more, click [here](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/integrations/handlers/openai_handler/constants.py).
-</Info>
-The `USING` clause takes more parameters depending on the operation mode. Follow the next section to learn about available operation modes.
-
-## Operation Modes
-
-Let's go through the available operation modes.
-
-<Tip>
-Please note that the examples presented here use SQL. To see how to create OpenAI models in Mongo database using MQL, check out [this example on sentiment classification](/nlp/nlp-mindsdb-openai#example-using-mql).
-</Tip>
-
-### Answering Questions without Context
-
-Here is how to create a model that answers questions without context:
+Create a model using `openai_engine` as an engine.
 
 ```sql
 CREATE MODEL openai_model
-PREDICT answer
-USING
-    engine = 'openai',
-    question_column = 'question',
-    model_name = 'model_name'
-    openai_api_key = 'YOUR_OPENAI_API_KEY';
-```
-
-Where:
-
-| Expression                   | Description                                                                                                                                                            |
-|------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `openai_model`    | The model name is `openai_model` and it resides inside the `mindsdb` project by default. Learn more about [MindsDB projects here](/sql/project/).                              |
-| `answer`                     | It is the value to be predicted.                                                                                                                                       |
-| `engine`                     | The `openai` engine is used.                                                                                                                                           |
-| `question_column`            | It is the column that stores input data.                                                                                                                               |
-| `model_name`                 | Optional. By default, the `text-davinci-002` model is used. If you prefer to use a cheaper model or a model that was fine-tuned outside of MindsDB, use this parameter.|
-| `openai_api_key`             | Your OpenAI API key.                                     |
-
-Let's look at an example.
-
-```sql
-CREATE MODEL openai_model
-PREDICT answer
-USING
-    engine = 'openai',
-    question_column = 'question';
-```
-
-On execution, we get:
-
-```sql
-Query successfully completed
-```
-
-Now we can query for answers.
-
-```sql
-SELECT question, answer
-FROM openai_model
-WHERE question = 'Where is Stockholm located?';
-```
-
-On execution, we get:
-
-```sql
-+---------------------------+-------------------------------+
-|question                   |answer                         |
-+---------------------------+-------------------------------+
-|Where is Stockholm located?|Stockholm is located in Sweden.|
-+---------------------------+-------------------------------+
-```
-
-### Answering Questions with Context
-
-Here is how to create a model that answers questions with context:
-
-```sql
-CREATE MODEL openai_model
-PREDICT answer
-USING
-    engine = 'openai',
-    question_column = 'question',
-    context_column = 'context',
-    openai_api_key = 'YOUR_OPENAI_API_KEY';
-```
-
-Where:
-
-| Expression                   | Description                                                                                                                          |
-|------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|
-| `openai_model`    | The model name is `openai_model` and it resides inside the `mindsdb` project by default.                                                     |
-| `answer`                     | It is the value to be predicted.                                                                                                     |
-| `engine`                     | The `openai` engine is used.                                                                                                         |
-| `question_column`            | It is the column that stores input data being a question.                                                                            |
-| `context_column`             | It is the column that stores input data being a context.                                                                             |
-| `openai_api_key`             | Your OpenAI API key.   |
-
-Let's look at an example.
-
-```sql
-CREATE MODEL openai_model
-PREDICT answer
-USING
-    engine = 'openai',
-    question_column = 'question',
-    context_column = 'context';
-```
-
-On execution, we get:
-
-```sql
-Query successfully completed
-```
-
-Now we can query for answers.
-
-```sql
-SELECT context, question, answer
-FROM openai_model
-WHERE context = 'Answer with a joke'
-AND question = 'How to cook soup?';
-```
-
-On execution, we get:
-
-```sql
-+-------------------+------------------+---------------------------------------------------------+
-|context            |question          |answer                                                   |
-+-------------------+------------------+---------------------------------------------------------+
-|Answer with a joke |How to cook soup? |How do you cook soup? You put it in a pot and heat it up!|
-+-------------------+------------------+---------------------------------------------------------+
-```
-
-### Prompt Completion
-
-Here is how to create a model that offers the most flexible mode of operation. It answers any query provided in the `prompt_template` parameter.
-
-<Tip>
-Good prompts are the key to getting great completions out of large language models like the ones that OpenAI offers. For best performance, we recommend you read their [prompting guide](https://beta.openai.com/docs/guides/completion/prompt-design) before trying your hand at prompt templating.
-</Tip>
-
-```sql
-CREATE MODEL openai_model
-PREDICT answer
-USING
-    engine = 'openai',
-    prompt_template = 'input your query here',
-    max_tokens = 100,
-    temperature = 0.3,
-    openai_api_key = 'YOUR_OPENAI_API_KEY';
-```
-
-Where:
-
-| Expression                   | Description                                                                                                                          |
-|------------------------------|--------------------------------------------------------------------------------------------------------------------------------------|
-| `openai_model`    | The model name is `openai_model` and it resides inside the `mindsdb` project by default.                                                     |
-| `answer`                     | It is the value to be predicted.                                                                                                     |
-| `engine`                     | The `openai` engine is used.                                                                                                         |
-| `prompt_template`            | It is the column that stores a query to be answered. *Please note that this parameter can be overridden at prediction time.*            |
-| `max_tokens`                 | It defines the maximum token cost of the prediction. *Please note that this parameter can be overridden at prediction time.*            |
-| `temperature`                | It defines how *risky* the answers are. The value of `0` marks a well-defined answer, and the value of `0.9` marks a more creative answer. *Please note that this parameter can be overridden at prediction time.*|
-| `openai_api_key`             | Your OpenAI API key.   |
-
-Let's create a model:
-
-```sql
-CREATE MODEL openai_model
-PREDICT answer
-USING
-    engine = 'openai',
-    prompt_template = 'Context: {{context}}. Question: {{question}}. Answer:',
-    max_tokens = 100,
-    temperature = 0.3;
-```
-
-Let's look at an example that uses parameters provided at model creation time.
-
-```sql
-SELECT context, question, answer
-FROM openai_model
-WHERE context = 'Answer accurately'
-AND question = 'How many planets exist in the solar system?';
-```
-
-On execution, we get:
-
-```sql
-+-------------------+-------------------------------------------+----------------------------------------------+
-|context            |question                                   |answer                                        |
-+-------------------+-------------------------------------------+----------------------------------------------+
-|Answer accurately  |How many planets exist in the solar system?| There are eight planets in the solar system. |
-+-------------------+-------------------------------------------+----------------------------------------------+
-```
-
-Now let's look at an example that overrides parameters at prediction time.
-
-```sql
-SELECT instruction, answer
-FROM openai_model
-WHERE instruction = 'Speculate extensively'
-USING
-    prompt_template = '{{instruction}}. What does Tom Hanks like?',
-    max_tokens = 100,
-    temperature = 0.5;
-```
-
-On execution, we get:
-
-```sql
-+----------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-|instruction           |answer                                                                                                                                                                                                                         |
-+----------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-|Speculate extensively |Some people speculate that Tom Hanks likes to play golf, while others believe that he enjoys acting and directing. It is also speculated that he likes to spend time with his family and friends, and that he enjoys traveling.|
-+----------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-```
-
-## Model Modes
-
-You can define a mode for OpenAI models using the `mode` parameter in the `USING` clause.
-
-```sql
-CREATE MODEL model_name
 PREDICT target_column
 USING
-   engine = 'openai',
-   mode = 'mode_name',
-   prompt_template = 'message to the model';
+      engine = 'openai_engine',  -- engine name as created via CREATE ML_ENGINE
+      mode = 'mode_name', -- optional, ...
+      model_name = 'openai_model_name',  -- optional with default value of gpt-3.5-turbo
+      question_column = 'question',  -- optional, column name that stores user input
+      context_column = 'context',  -- optional, column that stores context of the user input
+      prompt_template = 'input your query here', -- optional, user provides instructions to the model here
+      max_tokens = 100, -- optional, token limit for answer
+      temperature = 0.3, -- temp
+
 ```
 
-The available modes include `default`, `conversational`, `conversational-full`, `image`, and `embedding`.
+The following parameters are available to use when creating an OpenAI model:
 
-- The `default` mode is used by default. The model replies to the `prompt_template` message.
-- The `conversational` mode enables the model to read and reply to multiple messages.
-- The `conversational-full` mode enables the model to read and reply to multiple messages, one reply per message.
-- The `image` mode is used to create an image instead of a text reply.
-- The `embedding` mode enables the model to return output in the form of embeddings.
+<AccordionGroup>
 
-## Examples
+  <Accordion title="engine">
+    This is the engine name as created with the [`CREATE ML_ENGINE`](https://docs.mindsdb.com/mindsdb_sql/sql/create/ml-engine) statement.
+  </Accordion>
 
-### Sentiment Analysis
+  <Accordion title="mode">
+    This parameter is optional.
 
-Let's go through a sentiment classification example to understand better how to bring OpenAI models to MindsDB as AI tables.
+    The available modes include `default`, `conversational`, `conversational-full`, `image`, and `embedding`.
 
-```sql
-CREATE MODEL mindsdb.sentiment_classifier                           
-PREDICT sentiment
-USING
-  engine = 'openai_engine',              
-  prompt_template = 'predict the sentiment of the text:{{review}} exactly as either positive or negative or neutral';
-```
+    - The `default` mode is used by default. The model replies to the `prompt_template` message.
+    - The `conversational` mode enables the model to read and reply to multiple messages.
+    - The `conversational-full` mode enables the model to read and reply to multiple messages, one reply per message.
+    - The `image` mode is used to create an image instead of a text reply.
+    - The `embedding` mode enables the model to return output in the form of embeddings.
 
-On execution, we get:
+    You can find [all models supported by each mode here](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/integrations/handlers/openai_handler/constants.py).
+  </Accordion>
 
-```sql
-Query successfully completed
-```
+  <Accordion title="model_name">
+    This parameter is optional. By default, the `gpt-3.5-turbo` model is used.
 
-Where:
+    You can find [all available models here](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/integrations/handlers/openai_handler/constants.py).
+  </Accordion>
 
-| Expressions      | Values                                                                                               |
-| ---------------- | ---------------------------------------------------------------------------------------------------- |
-| `project_name`   | `mindsdb`                                                                                            |
-| `predictor_name` | `sentiment_classifier`                                                                               |
-| `target_column`  | `sentiment`                                                                                          |
-| `engine`         | `openai`                                                                                             |
-| `prompt_template`| `predict the sentiment of the text:{{review}} exactly as either positive or negative or neutral`     |
+  <Accordion title="question_column">
+    This parameter is optional. It contains the column name that stores user input.
+  </Accordion>
 
-<Note>
-In the `prompt_template` parameter, we use a placeholder for a text value that comes from the `review` column, that is, `text:{{review}}`.
-</Note>
+  <Accordion title="context_column">
+    This parameter is optional. It contains the column name that stores context for the user input.
+  </Accordion>
 
-Before querying for predictions, we should verify the status of the `sentiment_classifier` model.
+  <Accordion title="prompt_template">
+    This parameter is optional if you use `question_column`. It stores the message or instructions to the model. *Please note that this parameter can be overridden at prediction time.*
+  </Accordion>
 
-```sql
-DESCRIBE sentiment_classifier;
-```
+  <Accordion title="max_tokens">
+    This parameter is optional. It defines the maximum token cost of the prediction. *Please note that this parameter can be overridden at prediction time.*
+  </Accordion>
 
-On execution, we get:
+  <Accordion title="temperature">
+    This parameter is optional. It defines how *risky* the answers are. The value of `0` marks a well-defined answer, and the value of `0.9` marks a more creative answer. *Please note that this parameter can be overridden at prediction time.*
+  </Accordion>
+</AccordionGroup>
 
-```sql
-+--------------------+------+-------+-------+--------+--------+---------+-------------+---------------+------+-----------------+-------------------------------------------------------------------------------------------------------------------------------------------------------+-------+
-|NAME                |ENGINE|PROJECT|VERSION|STATUS  |ACCURACY|PREDICT  |UPDATE_STATUS|MINDSDB_VERSION|ERROR |SELECT_DATA_QUERY|TRAINING_OPTIONS                                                                                                                                       |TAG    |
-+--------------------+------+-------+-------+--------+--------+---------+-------------+---------------+------+-----------------+-------------------------------------------------------------------------------------------------------------------------------------------------------+-------+
-|sentiment_classifier|openai|mindsdb|1      |complete|[NULL]  |sentiment|up_to_date   |22.12.4.3      |[NULL]|[NULL]           |{'target': 'sentiment', 'using': {'prompt_template': 'predict the sentiment of the text:{{review}} exactly as either positive or negative or neutral'}}|[NULL] |
-+--------------------+------+-------+-------+--------+--------+---------+-------------+---------------+------+-----------------+-------------------------------------------------------------------------------------------------------------------------------------------------------+-------+
-```
+## Usage
 
-Once the status is `complete`, we can query for predictions.
+The following usage examples utilize `openai_engine` to create a model with the `CREATE MODEL` statement.
 
-```sql
-SELECT output.sentiment, input.review
-FROM example_db.demo_data.amazon_reviews AS input
-JOIN mindsdb.sentiment_classifier AS output
-LIMIT 3;
-```
+<AccordionGroup>
 
-<Note>
-    Don't forget to create the `example_db` database before using one of its tables, like in the query above.
+  <Accordion title="Answering questions without context">
+    Here is how to create a model that answers questions without context.
 
     ```sql
-    CREATE DATABASE example_db
-    WITH ENGINE = "postgres",
-    PARAMETERS = {
-        "user": "demo_user",
-        "password": "demo_password",
-        "host": "samples.mindsdb.com",
-        "port": "5432",
-        "database": "demo"
-        };
+    CREATE MODEL openai_model
+    PREDICT answer
+    USING
+        engine = 'openai',
+        question_column = 'question';
     ```
-</Note>
 
-On execution, we get:
+    Query the model to get predictions.
 
-```sql
-+----------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| sentiment                              | review                                                                                                                                                                                                                                                                                                                                                                            |
-+----------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| positive                               | Late gift for my grandson. He is very happy with it. Easy for him (9yo ).                                                                                                                                                                                                                                                                                                         |
-| The sentiment of the text is positive. | I'm not super thrilled with the proprietary OS on this unit, but it does work okay and does what I need it to do. Appearance is very nice, price is very good and I can't complain too much - just wish it were easier (or at least more obvious) to port new apps onto it. For now, it helps me see things that are too small on my phone while I'm traveling. I'm a happy buyer.|
-| positive                               | I purchased this Kindle Fire HD 8 was purchased for use by 5 and 8 yer old grandchildren. They basically use it to play Amazon games that you download.                                                                                                                                                                                                                           |
-+----------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-```
+    ```sql
+    SELECT question, answer
+    FROM openai_model
+    WHERE question = 'Where is Stockholm located?';
+    ```
 
-### Fine-Tuning of OpenAI Models
+    Here is the output:
 
-All OpenAI models belong to the group of Large Language Models (LLMs). By definition, these are pre-trained on large amounts of data. However, it is possible to fine-tune these models with a task-specific dataset for a defined use case.
+    ```sql
+    +---------------------------+-------------------------------+
+    |question                   |answer                         |
+    +---------------------------+-------------------------------+
+    |Where is Stockholm located?|Stockholm is located in Sweden.|
+    +---------------------------+-------------------------------+
+    ```
+  </Accordion>
+
+  <Accordion title="Answering questions with context">
+    Here is how to create a model that answers questions with context.
+
+    ```sql
+    CREATE MODEL openai_model
+    PREDICT answer
+    USING
+        engine = 'openai',
+        question_column = 'question',
+        context_column = 'context';
+    ```
+
+    Query the model to get predictions.
+
+    ```sql
+    SELECT context, question, answer
+    FROM openai_model
+    WHERE context = 'Answer accurately'
+    AND question = 'How many planets exist in the solar system?';
+    ```
+
+    On execution, we get:
+
+    ```sql
+    +-------------------+-------------------------------------------+----------------------------------------------+
+    |context            |question                                   |answer                                        |
+    +-------------------+-------------------------------------------+----------------------------------------------+
+    |Answer accurately  |How many planets exist in the solar system?| There are eight planets in the solar system. |
+    +-------------------+-------------------------------------------+----------------------------------------------+
+    ```
+  </Accordion>
+
+  <Accordion title="Prompt completion">
+    Here is how to create a model that offers the most flexible mode of operation. It answers any query provided in the `prompt_template` parameter.
+
+    <Tip>
+    Good prompts are the key to getting great completions out of large language models like the ones that OpenAI offers. For best performance, we recommend you read their [prompting guide](https://beta.openai.com/docs/guides/completion/prompt-design) before trying your hand at prompt templating.
+    </Tip>
+
+    Let's look at an example that reuses the `openai_model` model created earlier and overrides parameters at prediction time.
+
+    ```sql
+    SELECT instruction, answer
+    FROM openai_model
+    WHERE instruction = 'Speculate extensively'
+    USING
+        prompt_template = '{{instruction}}. What does Tom Hanks like?',
+        max_tokens = 100,
+        temperature = 0.5;
+    ```
+
+    On execution, we get:
+
+    ```sql
+    +----------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    |instruction           |answer                                                                                                                                                                                                                         |
+    +----------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    |Speculate extensively |Some people speculate that Tom Hanks likes to play golf, while others believe that he enjoys acting and directing. It is also speculated that he likes to spend time with his family and friends, and that he enjoys traveling.|
+    +----------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+    ```
+  </Accordion>
+</AccordionGroup>
 
 <Tip>
-OpenAI supports fine-tuning of some of its models [listed here](https://platform.openai.com/docs/guides/fine-tuning). And with MindsDB, you can easily fine-tune an OpenAI model making it more applicable to your specific use case.
+**Next Steps**
+
+Follow [this tutorial on sentiment analysis](/use-cases/data_enrichment/sentiment-analysis-inside-mysql-with-openai) and [this tutorial on finetuning OpenAI models](/use-cases/automated_finetuning/openai) to see more use case examples.
 </Tip>
-
-Let's create a model to answer questions about MindsDB's custom SQL syntax.
-
-```sql
-CREATE MODEL openai_davinci
-PREDICT completion
-USING
-    engine = 'openai',
-    model_name = 'davinci-002',
-    prompt_template = 'Return a valid SQL string for the following question about MindsDB in-database machine learning: {{prompt}}';
-```
-
-You can check model status with this command:
-
-```sql
-DESCRIBE openai_davinci;
-```
-
-Once the status is complete, we can query for predictions:
-
-```sql
-SELECT prompt, completion
-FROM openai_davinci as m
-WHERE prompt = 'What is the SQL syntax to join input data with predictions from a MindsDB machine learning model?'
-USING max_tokens=400;
-```
-
-On execution, we get:
-
-```sql
-+---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
-| prompt                                                                                            | completion                                                                                           |
-+---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
-| What is the SQL syntax to join input data with predictions from a MindsDB machine learning model? | The SQL syntax is: SELECT * FROM input_data INNER JOIN predictions ON input_data.id = predictions.id |
-+---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
-```
-
-If you followed one of the MindsDB tutorials before, you'll see that the syntax provided by the model is not exactly as expected.
-
-Now, we'll fine-tune our model using a table that stores details about MindsDB's custom SQL syntax.
-
-<Info>
-Here is a table we'll use to fine-tune our model:
-
-```sql
-SELECT prompt, completion
-FROM files.openai_learninghub_ft;
-```
-
-And here is its content:
-
-```sql
-+---------------------------------------------------------------------------------------------------+------------------------------------------+
-| prompt                                                                                            | completion                               |
-+---------------------------------------------------------------------------------------------------+------------------------------------------+
-| What is the SQL syntax to connect a database to MindsDB?                                          | CREATE DATABASE datasource_name          |
-|                                                                                                   | [WITH] [ENGINE [=] engine_name] [,]      |
-|                                                                                                   | [PARAMETERS [=] {                        |
-|                                                                                                   |    "key": "value",                       |
-|                                                                                                   |    ...                                   |
-|                                                                                                   |    }];                                   |
-|                                                                                                   |                                          |
-| What is the SQL command to create a home rentals MindsDB machine learning model?                  | CREATE MODEL                             |
-|                                                                                                   |   mindsdb.home_rentals_model             |
-|                                                                                                   | FROM example_db                          |
-|                                                                                                   |   (SELECT * FROM demo_data.home_rentals) |
-|                                                                                                   | PREDICT rental_price;                    |
-|                                                                                                   |                                          |
-| What is the SQL syntax to join input data with predictions from a MindsDB machine learning model? | SELECT t.column_name, p.column_name, ... |
-|                                                                                                   | FROM integration_name.table_name [AS] t  |
-|                                                                                                   | JOIN project_name.model_name [AS] p;     |
-+---------------------------------------------------------------------------------------------------+------------------------------------------+
-```
-</Info>
-
-This is how you can fine-tune an OpenAI model:
-
-```sql
-FINETUNE openai_davinci
-FROM files
-    (SELECT prompt, completion FROM openai_learninghub_ft);
-```
-
-The [`FINETUNE`](/sql/api/finetune) command creates a new version of the `openai_davinci` model. You can query all available versions as below:
-
-```sql
-SELECT *
-FROM models
-WHERE name = 'openai_davinci';
-```
-
-Once the new version status is complete and active, we can query the model again, expecting a more accurate output.
-
-```sql
-SELECT prompt, completion
-FROM openai_davinci as m
-WHERE prompt = 'What is the SQL syntax to join input data with predictions from a MindsDB machine learning model?'
-USING max_tokens=400;
-```
-
-On execution, we get:
-
-```sql
-+---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
-| prompt                                                                                            | completion                                                                                           |
-+---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
-| What is the SQL syntax to join input data with predictions from a MindsDB machine learning model? | SELECT * FROM mindsdb.models.my_model JOIN mindsdb.input_data_name;                                  |
-+---------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------+
-```

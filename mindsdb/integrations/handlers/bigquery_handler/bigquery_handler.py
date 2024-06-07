@@ -47,7 +47,7 @@ class BigQueryHandler(DatabaseHandler):
         """
         if self.is_connected is True:
             return self.connection
-        
+
         # Mandatory connection parameters
         if not all(key in self.connection_data for key in ['project_id', 'dataset']):
             raise ValueError('Required parameters (project_id, dataset) must be provided.')
@@ -65,7 +65,7 @@ class BigQueryHandler(DatabaseHandler):
         self.is_connected = True
         self.connection = client
         return self.connection
-    
+
     def disconnect(self):
         """
         Closes the connection to the BigQuery warehouse if it's currently open.
@@ -153,7 +153,7 @@ class BigQueryHandler(DatabaseHandler):
             Response: A response object containing the list of tables and views, formatted as per the `Response` class.
         """
         query = f"""
-            SELECT table_name, table_schema, table_type, 
+            SELECT table_name, table_schema, table_type,
             FROM `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.TABLES`
             WHERE table_type IN ('BASE TABLE', 'VIEW')
         """

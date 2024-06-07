@@ -63,8 +63,8 @@ class BigQueryHandler(DatabaseHandler):
             credentials=credentials
         )
         self.is_connected = True
-        self.client = client
-        return self.client
+        self.connection = client
+        return self.connection
     
     def disconnect(self):
         """
@@ -85,11 +85,11 @@ class BigQueryHandler(DatabaseHandler):
         response = StatusResponse(False)
 
         try:
-            client = self.connect()
-            client.query('SELECT 1;')
+            connection = self.connect()
+            connection.query('SELECT 1;')
 
             # Check if the dataset exists
-            client.get_dataset(self.connection_data['dataset'])
+            connection.get_dataset(self.connection_data['dataset'])
 
             response.success = True
         except BadRequest as e:
@@ -111,10 +111,10 @@ class BigQueryHandler(DatabaseHandler):
         Returns:
             Response: A response object containing the result of the query or an error message.
         """
-        client = self.connect()
+        connection = self.connect()
         try:
             job_config = bigquery.QueryJobConfig(default_dataset=f"{self.connection_data['project_id']}.{self.connection_data['dataset']}")
-            query = client.query(query, job_config=job_config)
+            query = connection.query(query, job_config=job_config)
             result = query.to_dataframe()
             if not result.empty:
                 response = Response(

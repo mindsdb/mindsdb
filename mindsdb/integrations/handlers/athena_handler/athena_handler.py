@@ -165,7 +165,7 @@ class AthenaHandler(DatabaseHandler):
         Raises:
             ValueError: If the 'table_name' is not a valid string.
         """
-        if not table_name or isinstance(table_name, str):
+        if not table_name or not isinstance(table_name, str):
             raise ValueError("Invalid value for table name provided.")
 
         query = f"""

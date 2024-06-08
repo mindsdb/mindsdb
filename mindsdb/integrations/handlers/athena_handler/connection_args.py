@@ -32,10 +32,10 @@ connection_args = OrderedDict(
     results_output_location={
         'type': ARG_TYPE.STR,
         'description': 'The Athena Query Results Output Location s3://bucket-path/athena-query-results'
-    }
+    },
     check_interval={
-        type: ARG_TYPE.INT,
-        description: 'The interval in seconds to check Athena for query results. Default is 0 seconds.'
+        'type': ARG_TYPE.INT,
+        'description': 'The interval in seconds to check Athena for query results. Default is 0 seconds.'
     }
 )
 
@@ -46,6 +46,6 @@ connection_args_example = OrderedDict(
     catalog='AwsDataCatalog',
     database='default',
     workgroup='primary',
-    results_output_location="s3://<bucket>/athena-query-results/",
+    results_output_location='s3://<bucket>/athena-query-results/',
     check_interval=0
 )

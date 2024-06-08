@@ -5,7 +5,7 @@ import json
 from flask import request
 from flask_restx import Resource
 from sqlalchemy.exc import NoResultFound
-
+import pandas as pd
 
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.http.utils import http_error
@@ -243,7 +243,7 @@ class ModelPredict(Resource):
 
         predictions = project_datanode.predict(
             model_name=name_no_version,
-            data=data,
+            df=pd.DataFrame(data),
             version=version,
             params=params,
         )

@@ -448,10 +448,9 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
         self.db.session.add(r)
         self.db.session.commit()
 
-        def predict_f(_model_name, data, pred_format="dict", *args, **kargs):
+        def predict_f(_model_name, df, pred_format="dict", *args, **kargs):
             explain_arr = []
-            if isinstance(data, dict):
-                data = [data]
+            data = df.to_dict('records')
 
             predicted_value = predictor["predicted_value"]
             target = predictor["predict"]

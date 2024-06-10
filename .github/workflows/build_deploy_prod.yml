@@ -121,18 +121,13 @@ jobs:
     if: github.actor != 'mindsdbadmin'
     environment:
       name: prod
-    # We only want to run one deploy job for an env at a time
-    # Don't cancel in progress jobs because it may be for a different PR
-    concurrency:
-      group: deploy-prod
-      cancel-in-progress: false
     steps:
       - uses: FranzDiebold/github-env-vars-action@v2
       - uses: convictional/trigger-workflow-and-wait@v1.6.5
         with:
           owner: mindsdb
           repo: mindsdb-docker-extension
-          github_token: ${{ secrets.DD_EXT_REPO_DISPATCH_PAT_TOKEN }}
+          github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}
           workflow_file_name: bump-mindsdb-version.yml
           ref: main
           client_payload: '{"version": "${{ env.CI_REF_NAME_SLUG }}"}'

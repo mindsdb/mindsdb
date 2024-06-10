@@ -55,7 +55,6 @@ def check_valid_response(res):
     """
     Utility function to check if the response is valid.
     """
-
     if res.resp_type == RESPONSE_TYPE.TABLE:
         assert res.data_frame is not None, "expected to have some data, but got None"
     assert (
@@ -70,7 +69,6 @@ def get_table_names(snowflake_handler):
     """
     Utility function to get the table names from the Snowflake account.
     """
-
     res = snowflake_handler.get_tables()
     tables = res.data_frame
 
@@ -151,7 +149,6 @@ class TestBigQueryHandlerTables:
         """
         Tests a table creation query to ensure it creates a table in the Snowflake account.
         """
-
         query = f"""
             CREATE TABLE IF NOT EXISTS {self.table_for_creation} (
                 test_col INT
@@ -170,7 +167,6 @@ class TestBigQueryHandlerTables:
         """
         Tests a table drop query to ensure it drops a table in the Snowflake account.
         """
-
         query = f"DROP TABLE IF EXISTS {self.table_for_creation}"
         res = bigquery_handler.native_query(query)
         check_valid_response(res)
@@ -186,8 +182,7 @@ class TestBigQueryHandlerQuery:
         """
         Tests the `native_query` method to ensure it executes a SQL query using a mock cursor and returns a Response object.
         """
-
-        query = "SELECT * FROM test"
+        query = "SELECT * FROM TEST"
         res = bigquery_handler.native_query(query)
 
         assert type(res) is Response
@@ -209,9 +204,8 @@ class TestBigQueryHandlerQuery:
         """
         Tests the `query` method to ensure it executes a SQL query and returns a Response object.
         """
-
         limit = 3
-        query = "SELECT * FROM test"
+        query = "SELECT * FROM TEST"
         res = bigquery_handler.query(query)
         check_valid_response(res)
 

@@ -62,14 +62,12 @@ The following parameters are available to use when creating an OpenAI model:
     - The `embedding` mode enables the model to return output in the form of embeddings.
 
     You can find [all models supported by each mode here](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/integrations/handlers/openai_handler/constants.py).
-
   </Accordion>
 
   <Accordion title="model_name">
     This parameter is optional. By default, the `gpt-3.5-turbo` model is used.
 
     You can find [all available models here](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/integrations/handlers/openai_handler/constants.py).
-
   </Accordion>
 
   <Accordion title="question_column">
@@ -127,7 +125,6 @@ The following usage examples utilize `openai_engine` to create a model with the 
     |Where is Stockholm located?|Stockholm is located in Sweden.|
     +---------------------------+-------------------------------+
     ```
-
   </Accordion>
 
   <Accordion title="Answering questions with context">
@@ -160,7 +157,6 @@ The following usage examples utilize `openai_engine` to create a model with the 
     |Answer accurately  |How many planets exist in the solar system?| There are eight planets in the solar system. |
     +-------------------+-------------------------------------------+----------------------------------------------+
     ```
-
   </Accordion>
 
   <Accordion title="Prompt completion">
@@ -191,7 +187,6 @@ The following usage examples utilize `openai_engine` to create a model with the 
     |Speculate extensively |Some people speculate that Tom Hanks likes to play golf, while others believe that he enjoys acting and directing. It is also speculated that he likes to spend time with his family and friends, and that he enjoys traveling.|
     +----------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
     ```
-
   </Accordion>
 </AccordionGroup>
 
@@ -206,31 +201,37 @@ Follow [this tutorial on sentiment analysis](/use-cases/data_enrichment/sentimen
 <Warning>
 `Authentication Error`
 
-- **Symptoms**: Failure to authenticate to the OpenAI API.
-- **Checklist**: 1. Make sure that your OpenAI account is active. 2. Confirm that your API key is correct. 3. Ensure that your API key has not been revoked. 4. Ensure that you have not exceeded the API usage or rate limit.
+* **Symptoms**: Failure to authenticate to the OpenAI API.
+* **Checklist**:
+    1. Make sure that your OpenAI account is active.
+    2. Confirm that your API key is correct.
+    3. Ensure that your API key has not been revoked.
+    4. Ensure that you have not exceeded the API usage or rate limit.
 </Warning>
 
 <Warning>
 `SQL statement cannot be parsed by mindsdb_sql`
 
-- **Symptoms**: SQL queries failing or not recognizing table and model names containing spaces or special characters.
-- **Checklist**: 1. Ensure table names with spaces or special characters are enclosed in backticks.
-  Examples:
-  _ Incorrect:
-  `sql
+* **Symptoms**: SQL queries failing or not recognizing table and model names containing spaces or special characters.
+* **Checklist**:
+    1. Ensure table names with spaces or special characters are enclosed in backticks.
+    Examples:
+        * Incorrect:
+            ```sql
             SELECT input.text, output.sentiment
             FROM integration.travel data AS input
             JOIN openai_engine AS output
-            `
-  _ Incorrect:
-  `sql
+            ```
+        * Incorrect: 
+            ```sql
             SELECT input.text, output.sentiment
             FROM integration.'travel data' AS input
             JOIN openai_engine AS output
-            ` \* Correct:  
-   `` sql 
+            ```
+        * Correct:  
+            ```sql 
             SELECT input.text, output.sentiment
             FROM integration.`travel data` AS input
             JOIN openai_engine AS output
-             ``
+            ```
 </Warning>

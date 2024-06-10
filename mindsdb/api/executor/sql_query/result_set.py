@@ -131,7 +131,13 @@ class ResultSet:
 
     # --- columns ---
 
-    def _locate_column(self, col):
+    def get_col_index(self, col):
+        """
+        Get column index
+        :param col: column object
+        :return: index of column
+        """
+
         col_idx = None
         for i, col0 in enumerate(self._columns):
             if col0 is col:
@@ -150,7 +156,7 @@ class ResultSet:
         return col_idx
 
     def del_column(self, col):
-        idx = self._locate_column(col)
+        idx = self.get_col_index(col)
         self._columns.pop(idx)
 
         self._df.drop(idx, axis=1, inplace=True)
@@ -180,7 +186,7 @@ class ResultSet:
 
     def copy_column_to(self, col, result_set2):
         # copy with values
-        idx = self._locate_column(col)
+        idx = self.get_col_index(col)
 
         values = [row[idx] for row in self._records]
 
@@ -248,7 +254,7 @@ class ResultSet:
         if len(cols) == 0:
             col_idx = self.add_column(Column(name=col_name))
         else:
-            col_idx = self._locate_column(cols[0])
+            col_idx = self.get_col_index(cols[0])
 
         if self._df is not None:
             self._df[col_idx] = values

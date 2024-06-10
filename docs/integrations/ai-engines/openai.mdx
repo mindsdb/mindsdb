@@ -104,7 +104,7 @@ The following usage examples utilize `openai_engine` to create a model with the 
     CREATE MODEL openai_model
     PREDICT answer
     USING
-        engine = 'openai',
+        engine = 'openai_engine',
         question_column = 'question';
     ```
 
@@ -134,7 +134,7 @@ The following usage examples utilize `openai_engine` to create a model with the 
     CREATE MODEL openai_model
     PREDICT answer
     USING
-        engine = 'openai',
+        engine = 'openai_engine',
         question_column = 'question',
         context_column = 'context';
     ```

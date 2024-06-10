@@ -185,7 +185,7 @@ CREATE MODEL tool_based_agent
 PREDICT completion
 USING
     engine = 'langchain_engine',
-    prompt_template = 'Answer the users input in a helpful way: {{input}}';
+    prompt_template = 'Answer the users input in a helpful way: {{question}}';
 ```
 
 Here, we create the `tool_based_agent` model using the LangChain engine, as defined in the `engine` parameter. This model answers users' questions in a helpful way, as defined in the `prompt_template` parameter, which specifies `input` as the input column when calling the model.
@@ -195,9 +195,9 @@ Here, we create the `tool_based_agent` model using the LangChain engine, as defi
 Query the model to describe data.
 
 ```sql
-SELECT input, completion
+SELECT question, completion
 FROM tool_based_agent
-WHERE input = 'Could you describe the `mysql_demo_db.house_sales` table please?'
+WHERE question = 'Could you describe the `mysql_demo_db.house_sales` table please?'
 USING
     verbose = True,
     tools = [],
@@ -221,9 +221,9 @@ To get information about the `mysql_demo_db.house_sales` table, the agent uses t
 Query the model to analyze data.
 
 ```sql
-SELECT input, completion
+SELECT question, completion
 FROM tool_based_agent
-WHERE input = 'I want to know the average number of rooms in the downtown neighborhood as per the `mysql_demo_db.home_rentals` table'
+WHERE question = 'I want to know the average number of rooms in the downtown neighborhood as per the `mysql_demo_db.home_rentals` table'
 USING
     verbose = True,
     tools = [],
@@ -251,9 +251,9 @@ This query returns the value of 1.6, which is then used to write an answer.
 Query the model to retrieve data.
 
 ```sql
-SELECT input, completion
+SELECT question, completion
 FROM tool_based_agent
-WHERE input = 'There is a property in the south_side neighborhood with an initial price of 2543 the `mysql_demo_db.home_rentals` table. What are some other details of this listing?'
+WHERE question = 'There is a property in the south_side neighborhood with an initial price of 2543 the `mysql_demo_db.home_rentals` table. What are some other details of this listing?'
 USING
     verbose = True,
     tools = [],

@@ -3,6 +3,7 @@ name: Test on Push
 on:
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 defaults:
   run:

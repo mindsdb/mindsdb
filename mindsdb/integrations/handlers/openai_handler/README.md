@@ -44,157 +44,121 @@ USING
 
 The following parameters are available to use when creating an OpenAI model:
 
-<AccordionGroup>
-
-  <Accordion title="engine">
-    This is the engine name as created with the [`CREATE ML_ENGINE`](https://docs.mindsdb.com/mindsdb_sql/sql/create/ml-engine) statement.
-  </Accordion>
-
-  <Accordion title="mode">
-    This parameter is optional.
-
-    The available modes include `default`, `conversational`, `conversational-full`, `image`, and `embedding`.
-
+* `engine`: This is the engine name as created with the [`CREATE ML_ENGINE`](https://docs.mindsdb.com/mindsdb_sql/sql/create/ml-engine) statement.
+* `mode`: This parameter is optional. The available modes include `default`, `conversational`, `conversational-full`, `image`, and `embedding`.
     - The `default` mode is used by default. The model replies to the `prompt_template` message.
     - The `conversational` mode enables the model to read and reply to multiple messages.
     - The `conversational-full` mode enables the model to read and reply to multiple messages, one reply per message.
     - The `image` mode is used to create an image instead of a text reply.
     - The `embedding` mode enables the model to return output in the form of embeddings.
+> You can find [all models supported by each mode here](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/integrations/handlers/openai_handler/constants.py).
 
-    You can find [all models supported by each mode here](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/integrations/handlers/openai_handler/constants.py).
-  </Accordion>
+* `model_name`: This parameter is optional. By default, the `gpt-3.5-turbo` model is used.
+> You can find [all available models here](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/integrations/handlers/openai_handler/constants.py).
 
-  <Accordion title="model_name">
-    This parameter is optional. By default, the `gpt-3.5-turbo` model is used.
-
-    You can find [all available models here](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/integrations/handlers/openai_handler/constants.py).
-  </Accordion>
-
-  <Accordion title="question_column">
-    This parameter is optional. It contains the column name that stores user input.
-  </Accordion>
-
-  <Accordion title="context_column">
-    This parameter is optional. It contains the column name that stores context for the user input.
-  </Accordion>
-
-  <Accordion title="prompt_template">
-    This parameter is optional if you use `question_column`. It stores the message or instructions to the model. *Please note that this parameter can be overridden at prediction time.*
-  </Accordion>
-
-  <Accordion title="max_tokens">
-    This parameter is optional. It defines the maximum token cost of the prediction. *Please note that this parameter can be overridden at prediction time.*
-  </Accordion>
-
-  <Accordion title="temperature">
-    This parameter is optional. It defines how *risky* the answers are. The value of `0` marks a well-defined answer, and the value of `0.9` marks a more creative answer. *Please note that this parameter can be overridden at prediction time.*
-  </Accordion>
-</AccordionGroup>
+* `question_column`: This parameter is optional. It contains the column name that stores user input.
+* `context_column`: This parameter is optional. It contains the column name that stores context for the user input.
+* `prompt_template`: This parameter is optional if you use `question_column`. It stores the message or instructions to the model. *Please note that this parameter can be overridden at prediction time.*
+* `max_tokens`: This parameter is optional. It defines the maximum token cost of the prediction. *Please note that this parameter can be overridden at prediction time.*
+* `temperature`: This parameter is optional. It defines how *risky* the answers are. The value of `0` marks a well-defined answer, and the value of `0.9` marks a more creative answer. *Please note that this parameter can be overridden at prediction time.*
 
 ## Usage
 
 The following usage examples utilize `openai_engine` to create a model with the `CREATE MODEL` statement.
 
-<AccordionGroup>
+### Answering questions without context
 
-  <Accordion title="Answering questions without context">
-    Here is how to create a model that answers questions without context.
+Here is how to create a model that answers questions without context.
 
-    ```sql
-    CREATE MODEL openai_model
-    PREDICT answer
-    USING
-        engine = 'openai_engine',
-        question_column = 'question';
-    ```
+```sql
+CREATE MODEL openai_model
+PREDICT answer
+USING
+    engine = 'openai_engine',
+    question_column = 'question';
+```
 
-    Query the model to get predictions.
+Query the model to get predictions.
 
-    ```sql
-    SELECT question, answer
-    FROM openai_model
-    WHERE question = 'Where is Stockholm located?';
-    ```
+```sql
+SELECT question, answer
+FROM openai_model
+WHERE question = 'Where is Stockholm located?';
+```
 
-    Here is the output:
+Here is the output:
 
-    ```sql
-    +---------------------------+-------------------------------+
-    |question                   |answer                         |
-    +---------------------------+-------------------------------+
-    |Where is Stockholm located?|Stockholm is located in Sweden.|
-    +---------------------------+-------------------------------+
-    ```
-  </Accordion>
+```sql
++---------------------------+-------------------------------+
+|question                   |answer                         |
++---------------------------+-------------------------------+
+|Where is Stockholm located?|Stockholm is located in Sweden.|
++---------------------------+-------------------------------+
+```
 
-  <Accordion title="Answering questions with context">
-    Here is how to create a model that answers questions with context.
+### Answering questions with context
 
-    ```sql
-    CREATE MODEL openai_model
-    PREDICT answer
-    USING
-        engine = 'openai_engine',
-        question_column = 'question',
-        context_column = 'context';
-    ```
+```sql
+CREATE MODEL openai_model
+PREDICT answer
+USING
+    engine = 'openai_engine',
+    question_column = 'question',
+    context_column = 'context';
+```
 
-    Query the model to get predictions.
+Query the model to get predictions.
 
-    ```sql
-    SELECT context, question, answer
-    FROM openai_model
-    WHERE context = 'Answer accurately'
-    AND question = 'How many planets exist in the solar system?';
-    ```
+```sql
+SELECT context, question, answer
+FROM openai_model
+WHERE context = 'Answer accurately'
+AND question = 'How many planets exist in the solar system?';
+```
 
-    On execution, we get:
+On execution, we get:
 
-    ```sql
-    +-------------------+-------------------------------------------+----------------------------------------------+
-    |context            |question                                   |answer                                        |
-    +-------------------+-------------------------------------------+----------------------------------------------+
-    |Answer accurately  |How many planets exist in the solar system?| There are eight planets in the solar system. |
-    +-------------------+-------------------------------------------+----------------------------------------------+
-    ```
-  </Accordion>
+```sql
++-------------------+-------------------------------------------+----------------------------------------------+
+|context            |question                                   |answer                                        |
++-------------------+-------------------------------------------+----------------------------------------------+
+|Answer accurately  |How many planets exist in the solar system?| There are eight planets in the solar system. |
++-------------------+-------------------------------------------+----------------------------------------------+
+```
 
-  <Accordion title="Prompt completion">
-    Here is how to create a model that offers the most flexible mode of operation. It answers any query provided in the `prompt_template` parameter.
+### Prompt completion
 
-    <Tip>
-    Good prompts are the key to getting great completions out of large language models like the ones that OpenAI offers. For best performance, we recommend you read their [prompting guide](https://beta.openai.com/docs/guides/completion/prompt-design) before trying your hand at prompt templating.
-    </Tip>
-
-    Let's look at an example that reuses the `openai_model` model created earlier and overrides parameters at prediction time.
-
-    ```sql
-    SELECT instruction, answer
-    FROM openai_model
-    WHERE instruction = 'Speculate extensively'
-    USING
-        prompt_template = '{{instruction}}. What does Tom Hanks like?',
-        max_tokens = 100,
-        temperature = 0.5;
-    ```
-
-    On execution, we get:
-
-    ```sql
-    +----------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-    |instruction           |answer                                                                                                                                                                                                                         |
-    +----------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-    |Speculate extensively |Some people speculate that Tom Hanks likes to play golf, while others believe that he enjoys acting and directing. It is also speculated that he likes to spend time with his family and friends, and that he enjoys traveling.|
-    +----------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-    ```
-  </Accordion>
-</AccordionGroup>
+Here is how to create a model that offers the most flexible mode of operation. It answers any query provided in the `prompt_template` parameter.
 
 <Tip>
-**Next Steps**
+Good prompts are the key to getting great completions out of large language models like the ones that OpenAI offers. For best performance, we recommend you read their [prompting guide](https://beta.openai.com/docs/guides/completion/prompt-design) before trying your hand at prompt templating.
+</Tip>
+
+Let's look at an example that reuses the `openai_model` model created earlier and overrides parameters at prediction time.
+
+```sql
+SELECT instruction, answer
+FROM openai_model
+WHERE instruction = 'Speculate extensively'
+USING
+    prompt_template = '{{instruction}}. What does Tom Hanks like?',
+    max_tokens = 100,
+    temperature = 0.5;
+```
+
+On execution, we get:
+
+```sql
++----------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|instruction           |answer                                                                                                                                                                                                                         |
++----------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|Speculate extensively |Some people speculate that Tom Hanks likes to play golf, while others believe that he enjoys acting and directing. It is also speculated that he likes to spend time with his family and friends, and that he enjoys traveling.|
++----------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+## Next Steps
 
 Follow [this tutorial on sentiment analysis](/use-cases/data_enrichment/sentiment-analysis-inside-mysql-with-openai) and [this tutorial on finetuning OpenAI models](/use-cases/automated_finetuning/openai) to see more use case examples.
-</Tip>
 
 ## Troubleshooting Guide
 

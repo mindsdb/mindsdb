@@ -288,6 +288,8 @@
         {
           "group": "Learn more",
           "pages": [
+            "sql/table-structure",
+            "sql/project",
             "generative-ai-tables",
             {
               "group": "Data Preparation",
@@ -297,10 +299,8 @@
                 "sql/feature-importance"
               ] 
             },
-            "sql/project",
             "mindsdb-gui",
             "model-types",
-            "sql/table-structure",
             "mindsdb-handlers"
           ]
         }

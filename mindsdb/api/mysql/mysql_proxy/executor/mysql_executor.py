@@ -142,7 +142,6 @@ class Executor:
         else:
             json_types = False
         self.data = ret.data.to_lists(json_types=json_types)
-        # self.server_status = ret.status
         if ret.data.columns is not None:
             self.columns = ret.data.columns
 

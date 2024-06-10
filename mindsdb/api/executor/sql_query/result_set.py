@@ -220,26 +220,23 @@ class ResultSet:
         df = pd.DataFrame(values)
         self.add_raw_df(df)
 
-    def to_lists(self, type_cast=False, type_safe=True):
+    def to_lists(self, json_types=False):
         """
         :param type_cast: cast numpy types
             array->list, datetime64->str
-        :param type_safe: use pandas to_dict, it converts to python types
         :return: list of lists
         """
-        if type_safe:
-            # slower but keep timestamp type
-            return self._df.to_dict('split')['data']
 
         # output for APIs. simplify types
-        if type_cast:
+        if json_types:
             df = self.get_raw_df().copy()
             for name, dtype in df.dtypes.to_dict().items():
                 if pd.api.types.is_datetime64_any_dtype(dtype):
                     df[name] = df[name].dt.strftime("%Y-%m-%d %H:%M:%S.%f")
             return df.to_records(index=False).tolist()
 
-        return self.get_raw_df().to_records(index=False)
+        # slower but keep timestamp type
+        return self._df.to_dict('split')['data']
 
     def get_column_values(self, col_idx):
         # get by column index

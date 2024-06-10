@@ -137,7 +137,11 @@ class Executor:
 
         self.is_executed = True
 
-        self.data = ret.data.to_lists()
+        if self.sqlserver.session.api_type == 'http':
+            json_types = True
+        else:
+            json_types = False
+        self.data = ret.data.to_lists(json_types=json_types)
         # self.server_status = ret.status
         if ret.data.columns is not None:
             self.columns = ret.data.columns

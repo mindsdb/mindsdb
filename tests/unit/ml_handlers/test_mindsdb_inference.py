@@ -3,7 +3,7 @@ import unittest
 from collections import OrderedDict
 from unittest.mock import patch, MagicMock
 
-from mindsdb.integrations.handlers.mindsdb_inference.mindsdb_inference_handler import MindsDBInferenceHandler
+from mindsdb.integrations.handlers.minds_endpoint.mindsdb_inference_handler import MindsDBInferenceHandler
 
 
 class TestMindsDBInference(unittest.TestCase):

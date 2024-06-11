@@ -272,8 +272,8 @@ class AgentCompletions(Resource):
                 f'Project with name {project_name} does not exist'
             )
 
-        if os.getenv('OPENAI_API_KEY') is not None:
-            existing_agent.params['openai_api_key'] = os.getenv('OPENAI_API_KEY')
+        # Add OpenAI API key to agent params if not already present.
+        existing_agent.params['openai_api_key'] = existing_agent.params.get('openai_api_key', os.getenv('OPENAI_API_KEY'))
 
         # Model needs to exist.
         model_name_no_version, version = db.Predictor.get_name_and_version(existing_agent.model_name)

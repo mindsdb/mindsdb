@@ -253,7 +253,8 @@
     {"source": "/data-integrations","destination": "/features/data-integrations"},
     {"source": "/automation","destination": "/features/automation"},
     {"source": "/features/ai-integrations","destination": "/integrations/ai-overview"},
-    {"source": "/features/data-integrations","destination": "/integrations/data-overview"}
+    {"source": "/features/data-integrations","destination": "/integrations/data-overview"},
+    {"source": "/integrations/ai-engines/mindsdb_inference","destination": "/integrations/ai-engines/minds_endpoint"}
   ],
   "navigation": [
     {
@@ -980,7 +981,7 @@
             "integrations/ai-engines/langchain",
             "integrations/ai-engines/llamaindex",
             "integrations/ai-engines/monkeylearn",
-            "integrations/ai-engines/mindsdb_inference",
+            "integrations/ai-engines/minds_endpoint",
             "integrations/ai-engines/ollama",
             "integrations/ai-engines/openai",
             "integrations/ai-engines/replicate-llm",

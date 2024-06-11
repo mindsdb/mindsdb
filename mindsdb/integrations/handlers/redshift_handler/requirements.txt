@@ -1,2 +1,2 @@
 redshift_connector
-sqlalchemy-redshift
+sqlalchemy-redshift @ git+https://github.com/aquarium-ai/sqlalchemy-redshift

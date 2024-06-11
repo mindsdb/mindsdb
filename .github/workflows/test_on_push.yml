@@ -131,7 +131,7 @@ jobs:
             env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
             env PYTHONPATH=./ pytest tests/unit/test_cache.py
             env PYTHONPATH=./ pytest tests/unit/test_llm_utils.py
-            env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_mindsdb_inference.py
+            env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_minds_endpoint.py
             env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_openai.py
             env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_anyscale_endpoints.py
           fi

@@ -33,6 +33,7 @@ class BYOM_METHOD(Enum):
     PREDICT = 3
     FINETUNE = 4
     DESCRIBE = 5
+    FUNC_CALL = 6
 
 
 def pd_encode(df):
@@ -90,6 +91,27 @@ def find_model_class(module):
         ]
         if 'predict' in funcs and 'train' in funcs:
             return klass
+    raise RuntimeError('Unable to find model class (has to have `train` and `predict` methods)')
+
+
+def get_methods_info(model):
+    # get all methods and their types
+    methods = {}
+    for method_name in dir(model):
+        if method_name.startswith('__'):
+            continue
+
+        method = getattr(model, method_name)
+        sig = inspect.signature(method)
+        input_params = [
+            {'name': name, 'type': param.annotation.__name__}
+            for name, param in sig.parameters.items()
+        ]
+        methods[method_name] = {
+            'input_params': input_params,
+            'output_type': sig.return_annotation.__name__
+        }
+    return methods
 
 
 def main():
@@ -108,13 +130,15 @@ def main():
     if method == BYOM_METHOD.CHECK:
         model = model_class()
 
-        if not hasattr(model, 'train'):
+        methods = get_methods_info(model)
+
+        if 'train' not in methods:
             raise RuntimeError('Model class has to have "train" method')
 
-        if not hasattr(model, 'predict'):
+        if 'predict' not in methods:
             raise RuntimeError('Model class has to have "predict" method')
 
-        return_output(True)
+        return_output(methods)
 
     if method == BYOM_METHOD.TRAIN:
         df = pd_decode(params['df'])
@@ -175,6 +199,14 @@ def main():
         except Exception:
             return_output(pd_encode(pd.DataFrame()))
         return_output(pd_encode(df))
+
+    elif method == BYOM_METHOD.FUNC_CALL:
+        model = model_class()
+        func_name = params['func_name']
+        args = params['args']
+
+        func = getattr(model, func_name)
+        return return_output(func(*args))
 
     raise NotImplementedError(method)
 

@@ -4,8 +4,8 @@ on:
   release:
     types: [published]
     paths-ignore:
-      - 'docs/**'
-      - 'README.md'
+      - "docs/**"
+      - "README.md"
 
 # Cancel any existing runs of this workflow on the same branch/pr
 # We always want to build/deploy/test a new commit over an older one
@@ -18,38 +18,38 @@ jobs:
     runs-on: mdb-dev
     if: github.actor != 'mindsdbadmin'
     steps:
-    - uses: actions/checkout@v4
-    # Get clean environment variables via https://github.com/marketplace/actions/github-environment-variables-action
-    - uses: FranzDiebold/github-env-vars-action@v2
-    - name: Set up Python
-      uses: actions/setup-python@v5.1.0
-      with:
-        python-version: ${{ vars.CI_PYTHON_VERSION }}
-    - name: Check Version
-      run: |
-        PYTHONPATH=./ python tests/scripts/check_version.py ${{ env.CI_REF_NAME }} ${{ github.event.release.prerelease }}
+      - uses: actions/checkout@v4
+      # Get clean environment variables via https://github.com/marketplace/actions/github-environment-variables-action
+      - uses: FranzDiebold/github-env-vars-action@v2
+      - name: Set up Python
+        uses: actions/setup-python@v5.1.0
+        with:
+          python-version: ${{ vars.CI_PYTHON_VERSION }}
+      - name: Check Version
+        run: |
+          PYTHONPATH=./ python tests/scripts/check_version.py ${{ env.CI_REF_NAME }} ${{ github.event.release.prerelease }}
 
   deploy_to_pypi:
     runs-on: mdb-dev
     needs: check-version
     if: github.actor != 'mindsdbadmin'
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python
-      uses: actions/setup-python@v5.1.0
-      with:
-        python-version: ${{ vars.CI_PYTHON_VERSION }}
-    - name: Install dependencies
-      run: |
-        pip install -r requirements/requirements-dev.txt
-    - name: Build and publish
-      env:
-        TWINE_USERNAME:  __token__
-        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-      run: |
-        # This uses the version string from __about__.py, which we checked matches the git tag above
-        python setup.py sdist
-        twine upload dist/*
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5.1.0
+        with:
+          python-version: ${{ vars.CI_PYTHON_VERSION }}
+      - name: Install dependencies
+        run: |
+          pip install -r requirements/requirements-dev.txt
+      - name: Build and publish
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        run: |
+          # This uses the version string from __about__.py, which we checked matches the git tag above
+          python setup.py sdist
+          twine upload dist/*
 
   docker_build:
     # Build our docker images based on our bake file
@@ -114,6 +114,23 @@ jobs:
           ref: main
           client_payload: '{"image-tag-prefix": "${{ env.CI_REF_NAME }}", "deploy-env": "prod"}'
 
+  trigger_dd_extension_release:
+    # Trigger private repo to deploy to prod env
+    runs-on: mdb-dev
+    needs: docker_build
+    if: github.actor != 'mindsdbadmin'
+    environment:
+      name: prod
+    steps:
+      - uses: FranzDiebold/github-env-vars-action@v2
+      - uses: convictional/trigger-workflow-and-wait@v1.6.5
+        with:
+          owner: mindsdb
+          repo: mindsdb-docker-extension
+          github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}
+          workflow_file_name: bump-mindsdb-version.yml
+          ref: main
+          client_payload: '{"version": "${{ env.CI_REF_NAME_SLUG }}"}'
 
   run_tests:
     name: Run Post-Deploy Tests

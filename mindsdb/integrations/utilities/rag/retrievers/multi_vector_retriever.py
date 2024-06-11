@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 import uuid
 
 from langchain.retrievers.multi_vector import MultiVectorRetriever as LangChainMultiVectorRetriever
@@ -28,7 +28,7 @@ class MultiVectorRetriever(BaseRetriever):
         self.max_concurrency = config.max_concurrency
         self.mode = config.multi_retriever_mode
 
-    def _generate_id_and_split_document(self, doc: Document) -> tuple[str, list[Document]]:
+    def _generate_id_and_split_document(self, doc: Document) -> Tuple[str, List[Document]]:
         """
         Generate a unique id for the document and split it into sub-documents.
         :param doc:
@@ -40,7 +40,7 @@ class MultiVectorRetriever(BaseRetriever):
             sub_doc.metadata[self.id_key] = doc_id
         return doc_id, sub_docs
 
-    def _split_documents(self) -> tuple[list[Document], list[str]]:
+    def _split_documents(self) -> Tuple[List[Document], List[str]]:
         """
         Split the documents into sub-documents and generate unique ids for each document.
         :return:
@@ -51,7 +51,7 @@ class MultiVectorRetriever(BaseRetriever):
         return split_docs, list(doc_ids)
 
     def _create_retriever_and_vs_operator(self, docs: List[Document]) \
-            -> tuple[LangChainMultiVectorRetriever, VectorStoreOperator]:
+            -> Tuple[LangChainMultiVectorRetriever, VectorStoreOperator]:
         vstore_operator = VectorStoreOperator(
             vector_store=self.vectorstore,
             documents=docs,

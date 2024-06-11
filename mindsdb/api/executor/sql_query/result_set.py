@@ -227,6 +227,8 @@ class ResultSet:
         :return: list of lists
         """
 
+        if len(self.get_raw_df()) == 0:
+            return []
         # output for APIs. simplify types
         if json_types:
             df = self.get_raw_df().copy()

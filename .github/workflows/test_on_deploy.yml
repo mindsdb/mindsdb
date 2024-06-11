@@ -5,6 +5,7 @@ on:
     secrets:
       OPENAI_API_KEY:
         required: true
+  workflow_dispatch:
 
 defaults:
   run:

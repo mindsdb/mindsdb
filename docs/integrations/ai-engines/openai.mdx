@@ -104,7 +104,7 @@ The following usage examples utilize `openai_engine` to create a model with the 
     CREATE MODEL openai_model
     PREDICT answer
     USING
-        engine = 'openai',
+        engine = 'openai_engine',
         question_column = 'question';
     ```
 
@@ -134,7 +134,7 @@ The following usage examples utilize `openai_engine` to create a model with the 
     CREATE MODEL openai_model
     PREDICT answer
     USING
-        engine = 'openai',
+        engine = 'openai_engine',
         question_column = 'question',
         context_column = 'context';
     ```
@@ -195,3 +195,43 @@ The following usage examples utilize `openai_engine` to create a model with the 
 
 Follow [this tutorial on sentiment analysis](/use-cases/data_enrichment/sentiment-analysis-inside-mysql-with-openai) and [this tutorial on finetuning OpenAI models](/use-cases/automated_finetuning/openai) to see more use case examples.
 </Tip>
+
+## Troubleshooting Guide
+
+<Warning>
+`Authentication Error`
+
+* **Symptoms**: Failure to authenticate to the OpenAI API.
+* **Checklist**:
+    1. Make sure that your OpenAI account is active.
+    2. Confirm that your API key is correct.
+    3. Ensure that your API key has not been revoked.
+    4. Ensure that you have not exceeded the API usage or rate limit.
+</Warning>
+
+<Warning>
+`SQL statement cannot be parsed by mindsdb_sql`
+
+* **Symptoms**: SQL queries failing or not recognizing table and model names containing spaces or special characters.
+* **Checklist**:
+    1. Ensure table names with spaces or special characters are enclosed in backticks.
+    Examples:
+        * Incorrect:
+            ```sql
+            SELECT input.text, output.sentiment
+            FROM integration.travel data AS input
+            JOIN openai_engine AS output
+            ```
+        * Incorrect: 
+            ```sql
+            SELECT input.text, output.sentiment
+            FROM integration.'travel data' AS input
+            JOIN openai_engine AS output
+            ```
+        * Correct:  
+            ```sql 
+            SELECT input.text, output.sentiment
+            FROM integration.`travel data` AS input
+            JOIN openai_engine AS output
+            ```
+</Warning>

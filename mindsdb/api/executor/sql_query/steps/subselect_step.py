@@ -51,7 +51,7 @@ class SubSelectStepCall(BaseStepCall):
                     result.add_column(Column(col_name))
 
         df = result.to_df()
-        res = query_df(df, query)
+        res = query_df(df, query, session=self.session)
 
         result2 = ResultSet()
         # get database from first column
@@ -124,7 +124,7 @@ class QueryStepCall(BaseStepCall):
         query.where = query_context_controller.remove_lasts(query.where)
 
         query.from_table = Identifier('df_table')
-        res = query_df(df, query)
+        res = query_df(df, query, session=self.session)
 
         data = ResultSet().from_df_cols(res, col_names, strict=False)
 

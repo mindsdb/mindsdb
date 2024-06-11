@@ -42,7 +42,10 @@ class TriggersController:
             raise Exception(f'Handler {db_integration["engine"]} does''t support subscription')
 
         df = db_handler.get_tables().data_frame
-        tables = list(df[df.columns[0]])
+        column = 'table_name'
+        if column not in df.columns:
+            column = df.columns[0]
+        tables = list(df[column])
 
         # check only if tables are visible
         if len(tables) > 0 and table_name not in tables:

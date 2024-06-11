@@ -1,41 +1,82 @@
-# Redshift Handler
+---
+title: Amazon Redshift
+sidebarTitle: Amazon Redshift
+---
 
-This is the implementation of the Redshift handler for MindsDB.
+This documentation describes the integration of MindsDB with [Amazon Redshift](https://docs.aws.amazon.com/redshift/latest/mgmt/welcome.html), a fully managed, petabyte-scale data warehouse service in the cloud. You can start with just a few hundred gigabytes of data and scale to a petabyte or more, enabling you to use your data to acquire new insights for your business and customers.
 
-## Redshift
-Amazon Redshift is a fully managed, petabyte-scale data warehouse service in the cloud. You can start with just a few hundred gigabytes of data and scale to a petabyte or more. This enables you to use your data to acquire new insights for your business and customers.
-https://docs.aws.amazon.com/redshift/latest/mgmt/welcome.html
+## Prerequisites
 
-## Implementation
-This handler was implemented using the `redshift_connector` library that is provided by Amazon Web Services.
+Before proceeding, ensure the following prerequisites are met:
 
-The required arguments to establish a connection are,
-* `host`: the host name or IP address of the Redshift cluster
-* `port`: the port to use when connecting with the Redshift cluster
-* `database`: the database name to use when connecting with the Redshift cluster
-* `user`: the user to authenticate the user with the Redshift cluster
-* `password`: the password to authenticate the user with the Redshift cluster
+1. Install MindsDB locally via [Docker](/setup/self-hosted/docker) or [Docker Desktop](/setup/self-hosted/docker-desktop).
+2. To connect Redshift to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
 
-## Usage
-Before attempting to connect to a Redshift cluster using MindsDB, ensure that it accepts incoming connections. The following can be used as a guideline to accomplish this,
-<br>
-https://aws.amazon.com/premiumsupport/knowledge-center/cannot-connect-redshift-cluster/
+<Tip>
+Please note that, if you are using Docker to run MindsDB, before installing the dependencies for this integration as per the instructions given above, it is currently necessary to install Git in the container. To do this, run the following commands:
 
-In order to make use of this handler and connect to a Redshift cluster in MindsDB, the following syntax can be used,
-~~~~sql
+Start an interactive shell in the container:
+```bash
+docker exec -it mindsdb_container sh
+```
+If you haven't specified a name when spinning up the MindsDB container with `docker run`, you can find it by running `docker ps`.
+
+Install Git:
+```bash
+apt-get -y update
+apt-get -y install git
+``` 
+
+The need to perform this step will be removed in future versions of MindsDB.
+</Tip>
+
+## Connection
+
+Establish a connection to your Redshift database from MindsDB by executing the following SQL command:
+
+```sql
 CREATE DATABASE redshift_datasource
 WITH
-engine='redshift',
-parameters={
+  engine = 'redshift',
+  parameters = {
     "host": "examplecluster.abc123xyz789.us-west-1.redshift.amazonaws.com",
     "port": 5439,
     "database": "example_db",
     "user": "awsuser",
     "password": "my_password"
-};
-~~~~
+  };
+```
 
-Now, you can use this established connection to query your database as follows,
-~~~~sql
-SELECT * FROM redshift_datasource.example_tbl
-~~~~
+Required connection parameters include the following:
+
+* `host`: The host name or IP address of the Redshift cluster.
+* `port`: The port to use when connecting with the Redshift cluster.
+* `database`: The database name to use when connecting with the Redshift cluster.
+* `user`: The username to authenticate the user with the Redshift cluster.
+* `password`: The password to authenticate the user with the Redshift cluster.
+
+## Usage
+
+Retrieve data from a specified table by providing the integration name, schema, and table name:
+
+```sql
+SELECT *
+FROM redshift_datasource.schema_name.table_name
+LIMIT 10;
+```
+
+Run Amazon Redshift SQL queries directly on the connected Redshift database:
+
+```sql
+SELECT * FROM redshift_datasource (
+
+    --Native Query Goes Here
+    WITH VENUECOPY AS (SELECT * FROM VENUE)
+      SELECT * FROM VENUECOPY ORDER BY 1 LIMIT 10;
+
+);
+```
+
+<Note>
+The above examples utilize `redshift_datasource` as the datasource name, which is defined in the `CREATE DATABASE` command.
+</Note>

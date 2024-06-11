@@ -21,6 +21,7 @@ JOIN ...
 JOIN mindsdb.model_name1 AS m1
 JOIN mindsdb.model_name2 AS m2
 JOIN ...
+[ON t1.input_data = m1.expected_argument]
 WHERE m1.parameter = 'value'
 AND m2.parameter = 'value';
 ```

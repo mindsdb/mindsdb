@@ -101,6 +101,12 @@ Where:
 | `predictor_name`   | Name of the model to be retrained.                           |
 | `update_status`    | Column informing whether the model needs to be retrained.    |
 
+Alternatively, use the `DESCRIBE` command as below:
+
+```sql
+DESCRIBE MODEL predictor_name;
+```
+
 ## Example
 
 Let's look at an example using the `home_rentals_model` model.
@@ -121,6 +127,12 @@ On execution, we get:
 +--------------------+---------------+
 | home_rentals_model | available     |
 +--------------------+---------------+
+```
+
+Alternatively, use the `DESCRIBE` command as below:
+
+```sql
+DESCRIBE MODEL home_rentals_model;
 ```
 
 The `available` value of the `update_status` column informs us that we should retrain the model.

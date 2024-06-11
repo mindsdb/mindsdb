@@ -3,7 +3,8 @@ from unittest.mock import Mock, patch
 import pandas as pd
 from mindsdb_sql.parser import ast
 from mindsdb_sql import parse_sql
-from mindsdb.integrations.handlers.zotero_handler.zotero_handler import ZoteroHandler, AnnotationsTable
+from mindsdb.integrations.handlers.zotero_handler.zotero_handler import ZoteroHandler
+from mindsdb.integrations.handlers.zotero_handler.zotero_tables import AnnotationsTable
 
 
 class AnnotationsTableTest(unittest.TestCase):
@@ -19,8 +20,9 @@ class AnnotationsTableTest(unittest.TestCase):
         ]
         self.assertListEqual(self.annotations_table.get_columns(), expected_columns)
 
-    def test_select_returns_all_columns(self):
-        self.api_handler.call_find_annotations_zotero_api.return_value = pd.DataFrame([
+    @patch.object(AnnotationsTable, '_get_items')
+    def test_select_returns_all_columns(self, mock_get_items):
+        mock_get_items.return_value = pd.DataFrame([
             {
                 'annotationColor': 'red',
                 'annotationComment': 'comment',
@@ -59,8 +61,9 @@ class AnnotationsTableTest(unittest.TestCase):
         self.assertEqual(first_row['tags'], [])
         self.assertEqual(first_row['version'], 1)
 
-    def test_select_with_conditions(self):
-        self.api_handler.call_find_annotations_zotero_api.return_value = pd.DataFrame([
+    @patch.object(AnnotationsTable, '_get_item')
+    def test_select_with_conditions_item_id(self, mock_get_item):
+        mock_get_item.return_value = pd.DataFrame([
             {
                 'annotationColor': 'blue',
                 'annotationComment': 'another comment',
@@ -95,6 +98,44 @@ class AnnotationsTableTest(unittest.TestCase):
         self.assertEqual(first_row['relations'], {})
         self.assertEqual(first_row['tags'], [])
         self.assertEqual(first_row['version'], 2)
+
+    @patch.object(AnnotationsTable, '_get_item_children')
+    def test_select_with_conditions_parent_item_id(self, mock_get_item_children):
+        mock_get_item_children.return_value = pd.DataFrame([
+            {
+                'annotationColor': 'green',
+                'annotationComment': 'yet another comment',
+                'annotationPageLabel': 'page3',
+                'annotationText': 'yet another text',
+                'annotationType': 'strikeout',
+                'dateAdded': '2023-05-01',
+                'dateModified': '2023-05-02',
+                'key': '98765',
+                'parentItem': '43210',
+                'relations': {},
+                'tags': [],
+                'version': 3
+            }
+        ])
+
+        select_query = parse_sql('SELECT * FROM annotations WHERE parent_item_id = "67890"')
+
+        result = self.annotations_table.select(select_query)
+        first_row = result.iloc[0]
+
+        self.assertEqual(result.shape[1], 12)
+        self.assertEqual(first_row['annotationColor'], 'green')
+        self.assertEqual(first_row['annotationComment'], 'yet another comment')
+        self.assertEqual(first_row['annotationPageLabel'], 'page3')
+        self.assertEqual(first_row['annotationText'], 'yet another text')
+        self.assertEqual(first_row['annotationType'], 'strikeout')
+        self.assertEqual(first_row['dateAdded'], '2023-05-01')
+        self.assertEqual(first_row['dateModified'], '2023-05-02')
+        self.assertEqual(first_row['key'], '98765')
+        self.assertEqual(first_row['parentItem'], '43210')
+        self.assertEqual(first_row['relations'], {})
+        self.assertEqual(first_row['tags'], [])
+        self.assertEqual(first_row['version'], 3)
 
 
 class ZoteroHandlerTest(unittest.TestCase):

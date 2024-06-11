@@ -108,22 +108,23 @@ class TestSnowflakeHandler(unittest.TestCase):
 
         self.handler.native_query.assert_called_once_with(expected_query)
 
-    @patch('mindsdb.integrations.handlers.snowflake_handler.snowflake_handler.concat')
-    def test_get_tables(self, mock_concat):
+    def test_get_tables(self):
         """
         Tests the `get_tables` method to confirm it correctly calls `native_query` with the appropriate SQL commands.
         """
 
         self.handler.native_query = MagicMock()
-        mock_concat.return_value = None
+
         self.handler.get_tables()
 
-        expected_query_tables = "SHOW TABLES;"
-        expected_query_views = "SHOW VIEWS;"
+        expected_query = """
+            SELECT TABLE_NAME, TABLE_SCHEMA, TABLE_TYPE
+            FROM INFORMATION_SCHEMA.TABLES
+            WHERE TABLE_TYPE IN ('BASE TABLE', 'VIEW')
+            AND TABLE_SCHEMA <> 'INFORMATION_SCHEMA'
+        """
 
-        assert self.handler.native_query.call_count == 2
-        self.handler.native_query.assert_any_call(expected_query_tables)
-        self.handler.native_query.assert_any_call(expected_query_views)
+        self.handler.native_query.assert_called_once_with(expected_query)
 
 
 if __name__ == '__main__':

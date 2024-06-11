@@ -19,9 +19,7 @@ USING engine = 'lightwood',
 Now, your model has one version. You can verify by querying the `models` table.
 
 ```sql
-SELECT *
-FROM mindsdb.models
-WHERE name = 'home_rentals';
+DESCRIBE MODEL home_rentals;
 ```
 
 On execution, we get:
@@ -45,9 +43,7 @@ RETRAIN mindsdb.home_rentals;
 Let's query for the model versions again.
 
 ```sql
-SELECT *
-FROM mindsdb.models
-WHERE name = 'home_rentals';
+DESCRIBE MODEL home_rentals;
 ```
 
 On execution, we get:

@@ -19,19 +19,17 @@ USING engine = 'lightwood',
 Now, your model has one version. You can verify by querying the `models` table.
 
 ```sql
-SELECT *
-FROM mindsdb.models
-WHERE name = 'home_rentals';
+DESCRIBE MODEL home_rentals;
 ```
 
 On execution, we get:
 
 ```sql
-+------------+-------+------+-------+--------+--------+------------+-------------+---------------+------+------------------------------------+---------------------------------------+--------+
-|NAME        |PROJECT|ACTIVE|VERSION|STATUS  |ACCURACY|PREDICT     |UPDATE_STATUS|MINDSDB_VERSION|ERROR |SELECT_DATA_QUERY                   |TRAINING_OPTIONS                       |TAG     |
-+------------+-------+------+-------+--------+--------+------------+-------------+---------------+------+------------------------------------+---------------------------------------+--------+
-|home_rentals|mindsdb|true  |1      |complete|0.999   |rental_price|up_to_date   |22.11.3.2      |[NULL]|SELECT * FROM demo_data.home_rentals|{'target': 'rental_price', 'using': {}}|my model|
-+------------+-------+------+-------+--------+--------+------------+-------------+---------------+------+------------------------------------+---------------------------------------+--------+
++------------+---------+-------+------+-------+--------+--------+------------+-------------+---------------+------+------------------------------------+---------------------------------------+----------------------+---------------------+------+--------------------------+-------------+
+|NAME        |ENGINE   |PROJECT|ACTIVE|VERSION|STATUS  |ACCURACY|PREDICT     |UPDATE_STATUS|MINDSDB_VERSION|ERROR |SELECT_DATA_QUERY                   |TRAINING_OPTIONS                       |CURRENT_TRAINING_PHASE|TOTAL_TRAINING_PHASES|TAG   |CREATED_AT                |TRAINING_TIME|
++------------+---------+-------+------+-------+--------+--------+------------+-------------+---------------+------+------------------------------------+---------------------------------------+----------------------+---------------------+------+--------------------------+-------------+
+|home_rentals|lightwood|mindsdb|true  |1      |complete|0.999   |rental_price|up_to_date   |22.11.3.2      |[NULL]|SELECT * FROM demo_data.home_rentals|{'target': 'rental_price', 'using': {}}|5                     |5                    |[NULL]|2024-02-07 16:01:04.990958|19.946       |
++------------+---------+-------+------+-------+--------+--------+------------+-------------+---------------+------+------------------------------------+---------------------------------------+----------------------+---------------------+------+--------------------------+-------------+
 ```
 
 ## Retraining a Model
@@ -45,20 +43,18 @@ RETRAIN mindsdb.home_rentals;
 Let's query for the model versions again.
 
 ```sql
-SELECT *
-FROM mindsdb.models
-WHERE name = 'home_rentals';
+DESCRIBE MODEL home_rentals;
 ```
 
 On execution, we get:
 
 ```sql
-+------------+-------+------+-------+--------+--------+------------+-------------+---------------+------+------------------------------------+---------------------------------------+--------+
-|NAME        |PROJECT|ACTIVE|VERSION|STATUS  |ACCURACY|PREDICT     |UPDATE_STATUS|MINDSDB_VERSION|ERROR |SELECT_DATA_QUERY                   |TRAINING_OPTIONS                       |TAG     |
-+------------+-------+------+-------+--------+--------+------------+-------------+---------------+------+------------------------------------+---------------------------------------+--------+
-|home_rentals|mindsdb|false |1      |complete|0.999   |rental_price|up_to_date   |22.11.3.2      |[NULL]|SELECT * FROM demo_data.home_rentals|{'target': 'rental_price', 'using': {}}|my model|
-|home_rentals|mindsdb|true  |2      |complete|0.999   |rental_price|up_to_date   |22.11.3.2      |[NULL]|SELECT * FROM demo_data.home_rentals|{'target': 'rental_price', 'using': {}}|my model|
-+------------+-------+------+-------+--------+--------+------------+-------------+---------------+------+------------------------------------+---------------------------------------+--------+
++------------+---------+-------+------+-------+--------+--------+------------+-------------+---------------+------+------------------------------------+---------------------------------------+----------------------+---------------------+------+--------------------------+-------------+
+|NAME        |ENGINE   |PROJECT|ACTIVE|VERSION|STATUS  |ACCURACY|PREDICT     |UPDATE_STATUS|MINDSDB_VERSION|ERROR |SELECT_DATA_QUERY                   |TRAINING_OPTIONS                       |CURRENT_TRAINING_PHASE|TOTAL_TRAINING_PHASES|TAG   |CREATED_AT                |TRAINING_TIME|
++------------+---------+-------+------+-------+--------+--------+------------+-------------+---------------+------+------------------------------------+---------------------------------------+----------------------+---------------------+------+--------------------------+-------------+
+|home_rentals|lightwood|mindsdb|true  |1      |complete|0.999   |rental_price|up_to_date   |22.11.3.2      |[NULL]|SELECT * FROM demo_data.home_rentals|{'target': 'rental_price', 'using': {}}|5                     |5                    |[NULL]|2024-02-07 16:01:04.990958|19.946       |
+|home_rentals|lightwood|mindsdb|true  |2      |complete|0.999   |rental_price|up_to_date   |22.11.3.2      |[NULL]|SELECT * FROM demo_data.home_rentals|{'target': 'rental_price', 'using': {}}|5                     |5                    |[NULL]|2024-02-07 17:01:04.990958|21.923       |
++------------+---------+-------+------+-------+--------+--------+------------+-------------+---------------+------+------------------------------------+---------------------------------------+----------------------+---------------------+------+--------------------------+-------------+
 ```
 
 ## Using Active Model Version
@@ -83,23 +79,18 @@ JOIN example_db.demo_data.home_rentals AS d;
 
 ## Setting Model Version as Active
 
-To set a specific model version as active, run the `UPDATE` statement:
+To set a specific model version as active, run the below statement:
 
 ```sql
-UPDATE mindsdb.models
-SET active = 1
-WHERE version = 1
-AND name = 'home_rentals';
+SET model_active = home_rentals.1;
 ```
 
 ## Deleting Specific Model Version
 
-To delete a specific model version, run the `DELETE FROM` statement:
+To delete a specific model version, run the below statement:
 
 ```sql
-DELETE FROM mindsdb.models
-WHERE version = 2
-AND name = 'home_rentals';
+DROP MODEL home_rentals.2
 ```
 
 Please note that you cannot delete the version that is active.

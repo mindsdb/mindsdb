@@ -56,7 +56,6 @@ from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 from .mindsdb_chat_model import ChatMindsdb
 
 _PARSING_ERROR_PREFIX = 'An output parsing error occured'
-os.environ['OPENAI_API_KEY'] = 'put key here'
 
 logger = log.getLogger(__name__)
 
@@ -154,6 +153,7 @@ class LangChainHandler(BaseMLEngine):
         model_config['api_keys'] = {
             p: get_api_key(p, model_config, self.engine_storage, strict=False) for p in SUPPORTED_PROVIDERS
         }
+            
         llm_config = get_llm_config(args.get('provider', self._get_llm_provider(args)), model_config)
         config_dict = llm_config.model_dump()
         config_dict = {k: v for k, v in config_dict.items() if v is not None}
@@ -252,6 +252,8 @@ class LangChainHandler(BaseMLEngine):
         """
         pred_args = args['predict_params'] if args else {}
         args = self.model_storage.json_get('args')
+        print("THESE ARE THE ARGUMENTS")
+        print(args)
         if 'prompt_template' not in args and 'prompt_template' not in pred_args:
             raise ValueError(f"This model expects a `prompt_template`, please provide one.")
         # Back compatibility for old models
@@ -259,11 +261,12 @@ class LangChainHandler(BaseMLEngine):
         args['embedding_model_provider'] = args.get('embedding_model', self._get_embedding_model_provider(args))
 
         df = df.reset_index(drop=True)
-        agent = self.create_agent(df, args, pred_args)
-        # Use last message as prompt, remove other questions.
-        user_column = args.get('user_column', DEFAULT_USER_COLUMN)
-        df.iloc[:-1, df.columns.get_loc(user_column)] = None
-        return self.run_agent(df, agent, args, pred_args)
+        # agent = self.create_agent(df, args, pred_args)
+        # # Use last message as prompt, remove other questions.
+        # user_column = args.get('user_column', DEFAULT_USER_COLUMN)
+        # df.iloc[:-1, df.columns.get_loc(user_column)] = None
+        # return self.run_agent(df, agent, args, pred_args)
+        return self.predict_dspy(df, args)
 
     def create_agent(self, df: pd.DataFrame, args: Dict=None, pred_args: Dict=None) -> AgentExecutor:
         pred_args = pred_args if pred_args else {}
@@ -412,11 +415,13 @@ class LangChainHandler(BaseMLEngine):
         colbertv2 = ColBERTv2(url='http://20.102.90.50:2017/wiki17_abstracts')
         dspy.configure(rm=colbertv2)
     
-    def create_dspy_chain(self):
+    def create_dspy_chain(self, args):
         retriever = lambda x: dspy.Retrieve(k=5)(x["question"]).passages
 
         # Initialize the LLM with the API key
-        llm = LangChainOpenAI(api_key=os.getenv('OPENAI_API_KEY'), model_name="gpt-3.5-turbo-instruct")
+        model = args.get('model_name')
+        api_key = get_api_key('openai', args, self.engine_storage, strict=False)
+        llm = LangChainOpenAI(api_key=api_key, model_name=model)
 
         prompt_template = PromptTemplate(input_variables=["context", "question"], template="Given {context}, answer the question `{question}`.")
         chain = LLMChain(prompt=prompt_template, llm=llm)
@@ -425,7 +430,7 @@ class LangChainHandler(BaseMLEngine):
         langchain_predict = LLMChainWrapper(chain)
         return langchain_predict
     
-    def generate_dspy_response(self, question, context):
+    def generate_dspy_response(self, question, context, args):
 
         # input for the DSPy module
         input_dict = {
@@ -433,30 +438,28 @@ class LangChainHandler(BaseMLEngine):
             "question": question
         }
 
-        if True:
-            dspy_chain = self.create_dspy_chain()
-            response = dspy_chain.invoke(input_dict)
-            return response['text'], context
 
-    def predict_dspy(self, df: pd.DataFrame) -> pd.DataFrame:
+        dspy_chain = self.create_dspy_chain(args)
+        response = dspy_chain.invoke(input_dict)
+        return response['text'], context
 
-
-        if self.use_dspy:
-            responses = []
-            for index, row in df.iterrows():
-                question = row['question']
-                context = question
-                answer, context_used = self.generate_dspy_response(question, context)
-                responses.append({'answer': answer, 'context': context_used})
-                self.llm_data_controller.add_llm_data(question, answer, True)
-                data = self.llm_data_controller.list_all_llm_data()
-                #data_sampled = data.sample(fraction = 1)
-                #self.optimize_with_dspy(dspy_chain, data_sampled.iloc[:int(len(data_sampled)*.8)], data_sampled.iloc[int(len(data_sampled)*.8):])
+    def predict_dspy(self, df: pd.DataFrame, args) -> pd.DataFrame:
 
 
-            return pd.DataFrame(responses)
+        responses = []
+        for index, row in df.iterrows():
+            question = row['question']
+            context = question
+            answer, context_used = self.generate_dspy_response(question, context, args)
+            responses.append({'answer': answer, 'context': context_used})
+            self.llm_data_controller.add_llm_data(question, answer)
+            data = self.llm_data_controller.list_all_llm_data()
+            #data_sampled = data.sample(fraction = 1)
+            #self.optimize_with_dspy(dspy_chain, data_sampled.iloc[:int(len(data_sampled)*.8)], data_sampled.iloc[int(len(data_sampled)*.8):])
 
-        return df
+
+        return pd.DataFrame(responses)
+
 
     def optimize_with_dspy(chain, trainset, valset):
         # Currently response_metric does not exist, we have to create some metric to optimize

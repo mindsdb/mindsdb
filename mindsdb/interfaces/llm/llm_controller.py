@@ -26,42 +26,9 @@ class LLMDataController:
             input=input_data,
             output=output_data
         )
-        self.session.add(new_llm_data)
-        self.session.commit()
+        db.session.add(new_llm_data)
+        db.session.commit()
         return new_llm_data
-
-    # def get_llm_data(self) -> db.LLMData:
-    #     '''
-    #     Retrieves LLM data by ID.
-
-    #     Parameters:
-    #         llm_data_id (int): The ID of the LLM data entry.
-
-    #     Returns:
-    #         LLMData: The LLMData object from the database.
-    #     '''
-    #     return self.session.query(db.LLMData).all() # check on this
-
-    # def update_llm_data(self, llm_data_id: int, new_input_data: str = None, new_output_data: str = None):
-    #     '''
-    #     Updates LLM data in the database.
-
-    #     Parameters:
-    #         llm_data_id (int): The ID of the LLM data to update.
-    #         new_input_data (str): The new input to the LLM, if any.
-    #         new_output_data (str): The new output from the LLM, if any.
-    #     '''
-    #     llm_data = self.get_llm_data(llm_data_id)
-    #     if llm_data is None:
-    #         raise ValueError("LLM Data not found")
-
-    #     if new_input_data is not None:
-    #         llm_data.input = new_input_data
-
-    #     if new_output_data is not None:
-    #         llm_data.output = new_output_data
-
-    #     self.session.commit()
 
     def delete_llm_data(self, llm_data_id: int):
         '''
@@ -73,8 +40,8 @@ class LLMDataController:
         if llm_data is None:
             raise ValueError("LLM Data not found")
 
-        self.session.delete(llm_data)
-        self.session.commit()
+        db.session.delete(llm_data)
+        db.session.commit()
 
     def list_all_llm_data(self):
         '''
@@ -82,4 +49,4 @@ class LLMDataController:
         Returns:
             List[LLMData]: A list of all LLMData objects in the database.
         '''
-        return self.session.query(db.LLMData).all()
+        return db.session.query(db.LLMData).all()

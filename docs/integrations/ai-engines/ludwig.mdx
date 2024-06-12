@@ -34,7 +34,7 @@ engine='ludwig';
 3. Check the status of the predictor. It may take a while to finish training:
 
 ```sql
-SELECT * FROM mindsdb.models where name='home_rentals_ludwig_model';
+DESCRIBE MODEL home_rentals_ludwig_model;
 ```
 
 3. Make a prediction. Note that for the time being Ludwig requires all input columns to be specified, an error will trigger if data for any of them is missing:

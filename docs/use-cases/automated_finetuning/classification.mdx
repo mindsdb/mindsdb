@@ -25,9 +25,7 @@ Query successfully completed
 We can check its status using this command:
 
 ```sql
-SELECT *
-FROM mindsdb.models
-WHERE name = 'adjust_customer_churn_model';
+DESCRIBE MODEL adjust_customer_churn_model;
 ```
 
 Once the status is complete, we can query for predictions.
@@ -85,6 +83,12 @@ On execution, we get:
 | adjust_customer_churn_model | lightwood | mindsdb | false  | 1       | complete |
 | adjust_customer_churn_model | lightwood | mindsdb | true   | 2       | complete |
 +-----------------------------+-----------+---------+--------+---------+----------+
+```
+
+Alternatively, use the `DESCRIBE` command as below:
+
+```sql
+DESCRIBE MODEL adjust_customer_churn_model;
 ```
 
 Let’s query for a prediction again.

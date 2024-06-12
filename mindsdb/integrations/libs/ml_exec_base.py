@@ -174,14 +174,31 @@ class BaseMLEngineExec:
             result = task.result()
         return result
 
+    def function_call(self, func_name, args):
+        with self._catch_exception():
+            task = self.base_ml_executor.apply_async(
+                task_type=ML_TASK_TYPE.FUNC_CALL,
+                model_id=0,     # can not be None
+                payload={
+                    'context': ctx.dump(),
+                    'name': func_name,
+                    'args': args,
+                    'handler_meta': {
+                        'module_path': self.handler_module.__package__,
+                        'engine': self.engine,
+                        'integration_id': self.integration_id
+                    },
+                }
+            )
+            result = task.result()
+        return result
+
     @profiler.profile()
     @mark_process(name='predict')
-    def predict(self, model_name: str, data: list, pred_format: str = 'dict',
+    def predict(self, model_name: str, df: pd.DataFrame, pred_format: str = 'dict',
                 project_name: str = None, version=None, params: dict = None):
         """ Generates predictions with some model and input data. """
-        if isinstance(data, dict):
-            data = [data]
-        df = pd.DataFrame(data)
+
         kwargs = {
             'name': model_name,
             'ml_handler_name': self.name,

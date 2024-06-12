@@ -15,6 +15,7 @@ class ML_TASK_TYPE(Enum):
     CREATE_ENGINE = b'create_engine'
     UPDATE_ENGINE = b'update_engine'
     UPDATE = b'update'
+    FUNC_CALL = b'func_call'
 
 
 class ML_TASK_STATUS(Enum):

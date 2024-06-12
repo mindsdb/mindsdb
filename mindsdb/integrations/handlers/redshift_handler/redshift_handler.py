@@ -1,6 +1,15 @@
 import os
+import numpy as np
+import pandas as pd
+
+from mindsdb.utilities import log
+from mindsdb.integrations.libs.response import (
+    HandlerResponse as Response,
+    RESPONSE_TYPE
+)
 from mindsdb.integrations.handlers.postgres_handler.postgres_handler import PostgresHandler
 
+logger = log.getLogger(__name__)
 os.environ["PGCLIENTENCODING"] = "utf-8"
 
 
@@ -20,3 +29,32 @@ class RedshiftHandler(PostgresHandler):
         """
         super().__init__(name,**kwargs)
 
+    def insert(self, table_name: str, df: pd.DataFrame):
+        need_to_close = not self.is_connected
+
+        connection = self.connect()
+
+        df = df.replace({np.nan: None})
+
+        columns = ', '.join([f'"{col}"' if ' ' in col else col for col in df.columns])
+        values = ', '.join(['%s' for _ in range(len(df.columns))])
+        query = f'INSERT INTO {table_name} ({columns}) VALUES ({values})'
+
+        with connection.cursor() as cur:
+            try:
+                cur.executemany(query, df.values.tolist())
+                response = Response(RESPONSE_TYPE.OK)
+
+                connection.commit()
+            except Exception as e:
+                logger.error(f"Error inserting data into {table_name}, {e}!")
+                response = Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_code=0,
+                    error_message=str(e)
+                )
+
+        if need_to_close:
+            self.disconnect()
+
+        return response

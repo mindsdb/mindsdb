@@ -7,15 +7,15 @@ from .__about__ import __description__ as description
 from .__about__ import __version__ as version
 
 try:
-    from .mindsdb_inference_handler import MindsDBInferenceHandler as Handler
+    from .minds_endpoint_handler import MindsEndpointHandler as Handler
 
     import_error = None
 except Exception as e:
     Handler = None
     import_error = e
 
-title = "MindsDB Inference"
-name = "mindsdb_inference"
+title = "Minds Endpoint"
+name = "minds_endpoint"
 type = HANDLER_TYPE.ML
 icon_path = 'icon.svg'
 permanent = False

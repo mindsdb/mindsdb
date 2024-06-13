@@ -118,7 +118,7 @@ class AgentResource(Resource):
     @ns_conf.doc('get_agent')
     @api_endpoint_metrics('GET', '/agents/agent')
     def get(self, project_name, agent_name):
-        '''Gets a agent by name'''
+        '''Gets an agent by name'''
         session = SessionController()
         try:
             existing_agent = session.agents_controller.get_agent(agent_name, project_name=project_name)
@@ -140,7 +140,7 @@ class AgentResource(Resource):
     @ns_conf.doc('update_agent')
     @api_endpoint_metrics('PUT', '/agents/agent')
     def put(self, project_name, agent_name):
-        '''Updates a agent by name, creating one if it doesn't exist'''
+        '''Updates an agent by name, creating one if it doesn't exist'''
 
         # Check for required parameters.
         if 'agent' not in request.json:
@@ -271,6 +271,9 @@ class AgentCompletions(Resource):
                 'Project not found',
                 f'Project with name {project_name} does not exist'
             )
+
+        # Add OpenAI API key to agent params if not already present.
+        existing_agent.params['openai_api_key'] = existing_agent.params.get('openai_api_key', os.getenv('OPENAI_API_KEY'))
 
         # Model needs to exist.
         model_name_no_version, version = db.Predictor.get_name_and_version(existing_agent.model_name)

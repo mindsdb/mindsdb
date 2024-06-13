@@ -3,16 +3,16 @@ import unittest
 from collections import OrderedDict
 from unittest.mock import patch, MagicMock
 
-from mindsdb.integrations.handlers.mindsdb_inference.mindsdb_inference_handler import MindsDBInferenceHandler
+from mindsdb.integrations.handlers.minds_endpoint.minds_endpoint_handler import MindsEndpointHandler
 
 
-class TestMindsDBInference(unittest.TestCase):
+class TestMindsEndpoint(unittest.TestCase):
     """
-    Unit tests for the MindsDB Inference handler.
+    Unit tests for the Minds Endpoint handler.
     """
 
     dummy_connection_data = OrderedDict(
-        mindsdb_inference_api_key='dummy_api_key',
+        minds_endpoint_api_key='dummy_api_key',
     )
 
     def setUp(self):
@@ -26,14 +26,14 @@ class TestMindsDBInference(unittest.TestCase):
         # Assign mock engine storage to instance variable for create validation tests
         self.mock_engine_storage = mock_engine_storage
 
-        self.handler = MindsDBInferenceHandler(mock_model_storage, mock_engine_storage, connection_data={'connection_data': self.dummy_connection_data})
+        self.handler = MindsEndpointHandler(mock_model_storage, mock_engine_storage, connection_data={'connection_data': self.dummy_connection_data})
 
     def test_create_validation_raises_exception_without_using_clause(self):
         """
         Test if model creation raises an exception without a USING clause.
         """
 
-        with self.assertRaisesRegex(Exception, "MindsDB Inference engine requires a USING clause! Refer to its documentation for more details."):
+        with self.assertRaisesRegex(Exception, "Minds Endpoint engine requires a USING clause! Refer to its documentation for more details."):
             self.handler.create_validation('target', args={}, handler_storage=None)
 
     def test_create_validation_raises_exception_with_invalid_api_key(self):
@@ -111,17 +111,17 @@ class TestMindsDBInference(unittest.TestCase):
 
         self.handler.create('dummy_target', args={'using': {'model_name': 'dummy_model_name', 'prompt_template': 'dummy_prompt_template'}})
 
-    @patch('mindsdb.integrations.handlers.mindsdb_inference.mindsdb_inference_handler.openai.OpenAI')
+    @patch('mindsdb.integrations.handlers.minds_endpoint.minds_endpoint_handler.openai.OpenAI')
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
-    def test_predict_runs_no_errors_on_chat_completion_prompt_completion(self, mock_openai_openai_handler, mock_openai_mdb_inference_handler):
+    def test_predict_runs_no_errors_on_chat_completion_prompt_completion(self, mock_openai_openai_handler, mock_openai_minds_endpoint_handler):
         """
         Test if model prediction returns the expected result for a sentiment analysis task.
         """
 
-        # Mock the models.list method of the OpenAI client (for the MindsDB Inference handler)
+        # Mock the models.list method of the OpenAI client (for the Minds Endpoint handler)
         # TODO: Figure out how to remove duplicate code in predict tests
         mock_supported_models = [MagicMock(id='dummy_model_name')]
-        mock_openai_mdb_inference_handler.return_value.models.list.return_value = mock_supported_models
+        mock_openai_minds_endpoint_handler.return_value.models.list.return_value = mock_supported_models
 
         # Mock the json_get method of the model storage
         self.handler.model_storage.json_get.return_value = {
@@ -154,17 +154,17 @@ class TestMindsDBInference(unittest.TestCase):
 
         pandas.testing.assert_frame_equal(result, pandas.DataFrame({'sentiment': ['Positive']}))
 
-    @patch('mindsdb.integrations.handlers.mindsdb_inference.mindsdb_inference_handler.openai.OpenAI')
+    @patch('mindsdb.integrations.handlers.minds_endpoint.minds_endpoint_handler.openai.OpenAI')
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
-    def test_predict_runs_no_errors_on_chat_completion_question_answering(self, mock_openai_openai_handler, mock_openai_mdb_inference_handler):
+    def test_predict_runs_no_errors_on_chat_completion_question_answering(self, mock_openai_openai_handler, mock_openai_minds_endpoint_handler):
         """
         Test if model prediction returns the expected result for a question answering task.
         """
 
-        # Mock the models.list method of the OpenAI client (for the MindsDB Inference handler)
+        # Mock the models.list method of the OpenAI client (for the Minds Endpoint handler)
         # TODO: Figure out how to remove duplicate code in predict tests
         mock_supported_models = [MagicMock(id='dummy_model_name')]
-        mock_openai_mdb_inference_handler.return_value.models.list.return_value = mock_supported_models
+        mock_openai_minds_endpoint_handler.return_value.models.list.return_value = mock_supported_models
 
         # Mock the json_get method of the model storage
         self.handler.model_storage.json_get.return_value = {
@@ -197,17 +197,17 @@ class TestMindsDBInference(unittest.TestCase):
 
         pandas.testing.assert_frame_equal(result, pandas.DataFrame({'answer': ['Sweden']}))
 
-    @patch('mindsdb.integrations.handlers.mindsdb_inference.mindsdb_inference_handler.openai.OpenAI')
+    @patch('mindsdb.integrations.handlers.minds_endpoint.minds_endpoint_handler.openai.OpenAI')
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
-    def test_predict_runs_no_errors_on_embeddings_completion(self, mock_openai_openai_handler, mock_openai_mdb_inference_handler):
+    def test_predict_runs_no_errors_on_embeddings_completion(self, mock_openai_openai_handler, mock_openai_minds_endpoint_handler):
         """
         Test if model prediction returns the expected result for an embeddings task.
         """
 
-        # Mock the models.list method of the OpenAI client (for the MindsDB Inference handler)
+        # Mock the models.list method of the OpenAI client (for the Minds Endpoint handler)
         # TODO: Figure out how to remove duplicate code in predict tests
         mock_supported_models = [MagicMock(id='dummy_model_name')]
-        mock_openai_mdb_inference_handler.return_value.models.list.return_value = mock_supported_models
+        mock_openai_minds_endpoint_handler.return_value.models.list.return_value = mock_supported_models
 
         # Mock the json_get method of the model storage
         self.handler.model_storage.json_get.return_value = {

@@ -142,7 +142,7 @@ class TestRedshiftHandlerDisconnect(TestPostgresDisconnect):
         Tests the `disconnect` method to ensure it disconnects from the Redshift warehouse and sets the `is_connected` flag to False.
         """
         super().test_disconnect(handler)
-    
+
     def test_check_connection(self, handler):
         """
         Tests the `check_connection` method to verify that it returns a StatusResponse object and accurately reflects the connection status.

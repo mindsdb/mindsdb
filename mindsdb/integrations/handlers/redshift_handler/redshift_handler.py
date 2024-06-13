@@ -27,7 +27,7 @@ class RedshiftHandler(PostgresHandler):
             name (str): name of particular handler instance.
             **kwargs: arbitrary keyword arguments.
         """
-        super().__init__(name,**kwargs)
+        super().__init__(name, **kwargs)
 
     def insert(self, table_name: str, df: pd.DataFrame):
         """
@@ -35,7 +35,7 @@ class RedshiftHandler(PostgresHandler):
 
         Args:
             table_name (str): name of the table to insert the data into.
-            df (pd.DataFrame): data to be inserted into the table.        
+            df (pd.DataFrame): data to be inserted into the table.
         """
         need_to_close = not self.is_connected
 

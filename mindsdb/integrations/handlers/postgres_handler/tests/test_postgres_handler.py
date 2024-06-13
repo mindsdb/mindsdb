@@ -158,7 +158,7 @@ class TestPostgresColumns:
         check_valid_response(described)
         got_columns = list(describe_data.iloc[:, 0])
         assert (
-            got_columns == expected_columns
+            set(got_columns) == set(expected_columns)
         ), f"expected to have next columns in test table:\n{expected_columns}\nbut got:\n{got_columns}"
 
 

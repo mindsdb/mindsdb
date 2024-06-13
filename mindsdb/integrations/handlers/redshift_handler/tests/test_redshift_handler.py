@@ -36,7 +36,7 @@ def seed_db():
     """
     Seed the test DB by running the queries in the seed.sql file.
     """
-    # Connect to the sample database to run seed queries
+    # Connect to the dev (default) database to run seed queries
     conn_info = HANDLER_KWARGS["connection_data"].copy()
     del conn_info["database"]
     conn_info["dbname"] = "dev"
@@ -45,11 +45,14 @@ def seed_db():
 
     cursor = db.cursor()
 
-    # Check if the database exists, if not create it
+    # Check if the database exists
     cursor.execute(f"SELECT 1 FROM pg_database WHERE datname = '{HANDLER_KWARGS['connection_data']['database']}'")
     result = cursor.fetchone()
-    if not result:
-        cursor.execute(f"CREATE DATABASE {HANDLER_KWARGS['connection_data']['database']}")
+    # If the database exists, drop it
+    if result:
+        cursor.execute(f"DROP DATABASE {HANDLER_KWARGS['connection_data']['database']}")
+    # Create the test database
+    cursor.execute(f"CREATE DATABASE {HANDLER_KWARGS['connection_data']['database']}")
 
     # Reconnect to the new database
     conn_info["dbname"] = HANDLER_KWARGS['connection_data']['database']

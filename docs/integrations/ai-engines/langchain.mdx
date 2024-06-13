@@ -33,14 +33,14 @@ Create an AI engine from the [LangChain handler](https://github.com/mindsdb/mind
 ```sql
 CREATE ML_ENGINE langchain_engine
 FROM langchain
-[USING
+USING
       serper_api_key = 'your-serper-api-key', -- it is an optional parameter (if provided, the model will use serper.dev search to enhance the output)
 
       -- provide one of the below parameters
       anthropic_api_key = 'api-key-value',
       anyscale_api_key = 'api-key-value',
       litellm_api_key = 'api-key-value',
-      openai_api_key = 'api-key-value'];
+      openai_api_key = 'api-key-value';
 ```
 
 Create a model using `langchain_engine` as an engine and one of OpenAI/Anthropic/Anyscale/LiteLLM as a model provider.

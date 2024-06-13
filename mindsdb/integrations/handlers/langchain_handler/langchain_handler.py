@@ -13,18 +13,18 @@ from langfuse import Langfuse
 from langfuse.callback import CallbackHandler
 
 import dspy
-import os
-from dspy import ColBERTv2, configure
-from dspy.teleprompt import BootstrapFewShotWithRandomSearch
-from dspy.predict.langchain import LangChainPredict, LangChainModule
-from langchain_community.llms import OpenAI as LangChainOpenAI
+from dspy import ColBERTv2
+from dspy.teleprompt import BootstrapFewShot, LabeledFewShot
 from langchain.chains import LLMChain
 from langchain_core.prompts import PromptTemplate
+from dspy.evaluate import Evaluate
 
 from mindsdb.interfaces.llm.llm_controller import LLMDataController
 
 import numpy as np
 import pandas as pd
+
+from dspy.datasets.gsm8k import GSM8K, gsm8k_metric
 
 from mindsdb.integrations.handlers.langchain_handler.constants import (
     ANTHROPIC_CHAT_MODELS,
@@ -58,6 +58,7 @@ from .mindsdb_chat_model import ChatMindsdb
 _PARSING_ERROR_PREFIX = 'An output parsing error occured'
 
 logger = log.getLogger(__name__)
+
 
 class LLMChainWrapper:
     def __init__(self, chain):
@@ -252,8 +253,6 @@ class LangChainHandler(BaseMLEngine):
         """
         pred_args = args['predict_params'] if args else {}
         args = self.model_storage.json_get('args')
-        print("THESE ARE THE ARGUMENTS")
-        print(args)
         if 'prompt_template' not in args and 'prompt_template' not in pred_args:
             raise ValueError(f"This model expects a `prompt_template`, please provide one.")
         # Back compatibility for old models
@@ -261,12 +260,14 @@ class LangChainHandler(BaseMLEngine):
         args['embedding_model_provider'] = args.get('embedding_model', self._get_embedding_model_provider(args))
 
         df = df.reset_index(drop=True)
-        # agent = self.create_agent(df, args, pred_args)
-        # # Use last message as prompt, remove other questions.
-        # user_column = args.get('user_column', DEFAULT_USER_COLUMN)
-        # df.iloc[:-1, df.columns.get_loc(user_column)] = None
-        # return self.run_agent(df, agent, args, pred_args)
-        return self.predict_dspy(df, args)
+        if self.use_dspy:
+            return self.predict_dspy(df, args)
+        else:
+            agent = self.create_agent(df, args, pred_args)
+            # Use last message as prompt, remove other questions.
+            user_column = args.get('user_column', DEFAULT_USER_COLUMN)
+            df.iloc[:-1, df.columns.get_loc(user_column)] = None
+            return self.run_agent(df, agent, args, pred_args)
 
     def create_agent(self, df: pd.DataFrame, args: Dict=None, pred_args: Dict=None) -> AgentExecutor:
         pred_args = pred_args if pred_args else {}
@@ -421,7 +422,7 @@ class LangChainHandler(BaseMLEngine):
         # Initialize the LLM with the API key
         model = args.get('model_name')
         api_key = get_api_key('openai', args, self.engine_storage, strict=False)
-        llm = LangChainOpenAI(api_key=api_key, model_name=model)
+        llm = ChatOpenAI(api_key=api_key, model_name=model)
 
         prompt_template = PromptTemplate(input_variables=["context", "question"], template="Given {context}, answer the question `{question}`.")
         chain = LLMChain(prompt=prompt_template, llm=llm)
@@ -453,18 +454,46 @@ class LangChainHandler(BaseMLEngine):
             answer, context_used = self.generate_dspy_response(question, context, args)
             responses.append({'answer': answer, 'context': context_used})
             self.llm_data_controller.add_llm_data(question, answer)
-            data = self.llm_data_controller.list_all_llm_data()
-            #data_sampled = data.sample(fraction = 1)
-            #self.optimize_with_dspy(dspy_chain, data_sampled.iloc[:int(len(data_sampled)*.8)], data_sampled.iloc[int(len(data_sampled)*.8):])
+
+        data = pd.DataFrame(self.llm_data_controller.list_all_llm_data())
+        # data_sampled = data.sample(fraction = 1)
+        train_data = data.iloc[:int(len(data)*.8)]
+        test_data = data.iloc[int(len(data)*.8):]
+        trainset = list(zip(train_data['input'].tolist(), train_data['output'].tolist()))
+        testset = list(zip(test_data['input'].tolist(), test_data['output'].tolist()))
+        optimize = False
+        if optimize:
+
+            turbo = dspy.OpenAI(model='gpt-3.5-turbo-instruct', max_tokens=250)
+            dspy.settings.configure(lm=turbo)
+
+            # Load math questions from the GSM8K dataset
+            gsm8k = GSM8K()
+            gsm8k_trainset, gsm8k_devset = gsm8k.train[:10], gsm8k.dev[:10]
+            config = dict(max_bootstrapped_demos=4, max_labeled_demos=4)
+
+
+            # Optimize! Use the `gsm8k_metric` here. In general, the metric is going to tell the optimizer how well it's doing.
+            teleprompter = BootstrapFewShot(metric=gsm8k_metric, **config)
+            optimized_cot = teleprompter.compile(CoT(), trainset=gsm8k_trainset)
+
+            # Set up the evaluator, which can be used multiple times.
+            evaluate = Evaluate(devset=gsm8k_devset, metric=gsm8k_metric, num_threads=4, display_progress=True, display_table=0)
+
+            # Evaluate our `optimized_cot` program.
+            print(evaluate(optimized_cot))
+            print('done')
+        
+
 
 
         return pd.DataFrame(responses)
 
 
-    def optimize_with_dspy(chain, trainset, valset):
-        # Currently response_metric does not exist, we have to create some metric to optimize
-        optimizer = BootstrapFewShotWithRandomSearch(metric=response_metric, max_bootstrapped_demos=3, num_candidate_programs=3)
-        if valset is None:
-            valset = trainset
-        optimized_chain = optimizer.compile(chain, trainset=trainset, valset=valset)
-        return optimized_chain
+    # def optimize_with_dspy(chain, trainset, valset):
+    #     # Currently response_metric does not exist, we have to create some metric to optimize
+    #     optimizer = BootstrapFewShotWithRandomSearch(metric=response_metric, max_bootstrapped_demos=3, num_candidate_programs=3)
+    #     if valset is None:
+    #         valset = trainset
+    #     optimized_chain = optimizer.compile(chain, trainset=trainset, valset=valset)
+    #     return optimized_chain

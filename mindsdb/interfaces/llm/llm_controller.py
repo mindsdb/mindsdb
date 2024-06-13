@@ -49,4 +49,6 @@ class LLMDataController:
         Returns:
             List[LLMData]: A list of all LLMData objects in the database.
         '''
-        return db.session.query(db.LLMData).all()
+        # return db.session.query(db.LLMData).all()
+        llm_data_objects = db.session.query(db.LLMData).all()
+        return [{'input': llm_data.input, 'output': llm_data.output} for llm_data in llm_data_objects]

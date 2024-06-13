@@ -142,7 +142,11 @@ jobs:
           do
             pytest --cov=mindsdb/integrations/handlers/${handler}_handler tests/unit/handlers/test_${handler}.py 
           done
-          coveralls --service=github --basedir=mindsdb/integrations/handlers
+
+          # Dont run coveralls for PRs from forks
+          if [ ${{ github.event.pull_request.head.repo.full_name == github.repository }} ]; then
+            coveralls --service=github --basedir=mindsdb/integrations/handlers
+          fi
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
           github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}

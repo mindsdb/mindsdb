@@ -70,15 +70,24 @@ def seed_db():
 @pytest.mark.redshift
 class TestRedshiftHandlerConnection(TestPostgresConnection):
     def test_connect(self, handler):
+        """
+        Tests the `connect` method to ensure it connects to the Redshift warehouse and sets the `is_connected` flag to True.
+        """
         super().test_connect(handler)
 
     def test_check_connection(self, handler):
+        """
+        Tests the `check_connection` method to verify that it returns a StatusResponse object and accurately reflects the connection status.
+        """
         super().test_check_connection(handler)
 
 
 @pytest.mark.redshift
 class TestRedshiftHandlerQuery(TestPostgresQuery):
     def test_native_query_show_dbs(self, handler):
+        """
+        Tests the `native_query` method to ensure it returns a list of databases in the Redshift warehouse.
+        """
         dbs = handler.native_query("SELECT datname FROM pg_database")
         dbs = dbs.data_frame
         assert dbs is not None, "expected to get some data, but got None"
@@ -90,33 +99,54 @@ class TestRedshiftHandlerQuery(TestPostgresQuery):
         ), f"expected to have {expected_db} db in response: {dbs}"
 
     def test_select_query(self, handler):
+        """
+        Tests the `query` method with SELECT query to ensure it returns the expected data from the Redshift warehouse.
+        """
         super().test_select_query(handler)
 
 
 @pytest.mark.redshift
 class TestRedshiftHandlerTables(TestPostgresTables):
     def test_get_tables(self, handler):
+        """
+        Tests the `get_tables` method to confirm it returns a list of tables in the Redshift warehouse.
+        """
         super().test_get_tables(handler)
 
     def test_create_table(self, handler):
+        """
+        Tests a table creation query to ensure it creates a table in the Redshift warehouse.
+        """
         super().test_create_table(handler)
 
     def test_drop_table(self, handler):
+        """
+        Tests a table drop query to ensure it drops a table in the Redshift warehouse.
+        """
         super().test_drop_table(handler)
 
 
 @pytest.mark.redshift
 class TestRedshiftHandlerColumns(TestPostgresColumns):
     def test_get_columns(self, handler):
+        """
+        Tests the `get_columns` method to confirm it returns a list of columns of the test table created in the Redshift warehouse.
+        """
         super().test_get_columns(handler)
 
 
 @pytest.mark.redshift
 class TestRedshiftHandlerDisconnect(TestPostgresDisconnect):
     def test_disconnect(self, handler):
+        """
+        Tests the `disconnect` method to ensure it disconnects from the Redshift warehouse and sets the `is_connected` flag to False.
+        """
         super().test_disconnect(handler)
     
     def test_check_connection(self, handler):
+        """
+        Tests the `check_connection` method to verify that it returns a StatusResponse object and accurately reflects the connection status.
+        """
         super().test_check_connection(handler)
 
 

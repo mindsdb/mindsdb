@@ -81,6 +81,6 @@ class ProjectStepCall(BaseStepCall):
                 targets.append(target)
         query.targets = targets
 
-        res = query_df(df, query)
+        res = query_df(df, query, session=self.session)
 
         return ResultSet().from_df_cols(res, col_names, strict=False)

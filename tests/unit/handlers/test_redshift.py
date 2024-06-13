@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from unittest.mock import MagicMock, Mock
 
-from tests.unit.handlers.test_postgres import TestPostgresHandler
+from test_postgres import TestPostgresHandler
 
 from mindsdb.integrations.handlers.redshift_handler.redshift_handler import RedshiftHandler
 from mindsdb.integrations.libs.response import (

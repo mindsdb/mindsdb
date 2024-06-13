@@ -1,11 +1,8 @@
 import unittest
 from unittest.mock import patch, MagicMock, Mock
 from collections import OrderedDict
-from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.integrations.handlers.athena_handler.athena_handler import AthenaHandler
-from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response
-)
+
 
 class CursorContextManager(Mock):
     def __enter__(self):
@@ -18,6 +15,7 @@ class CursorContextManager(Mock):
 
     def fetchall(self):
         return [[1]]
+
 
 class AthenaHandlerTest(unittest.TestCase):
     dummy_connection_data = OrderedDict(
@@ -44,7 +42,7 @@ class AthenaHandlerTest(unittest.TestCase):
         connection = self.handler.connect()
         self.assertIsNotNone(connection)
         self.assertTrue(self.handler.is_connected)
-   
+
     def test_get_columns(self):
         self.handler.native_query = MagicMock()
 
@@ -55,12 +53,12 @@ class AthenaHandlerTest(unittest.TestCase):
             select
                 column_name as "Field",
                 data_type as "Type"
-            from 
+            from
                 information_schema.columns
             where
                 table_name = '{table_name}'
         """
-        
+
         self.handler.native_query.assert_called_once_with(expected_query)
 
     def test_get_tables(self):
@@ -73,14 +71,15 @@ class AthenaHandlerTest(unittest.TestCase):
                 table_schema,
                 table_name,
                 table_type
-            from 
+            from
                 information_schema.tables
             where
                 table_schema not in ('information_schema')
             and table_type in ('BASE TABLE', 'VIEW')
         """
-        
+
         self.handler.native_query.assert_called_once_with(expected_query)
+
 
 if __name__ == '__main__':
     unittest.main()

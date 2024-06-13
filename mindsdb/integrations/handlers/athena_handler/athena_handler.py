@@ -15,6 +15,7 @@ from mindsdb.integrations.libs.response import (
 
 logger = log.getLogger(__name__)
 
+
 class AthenaHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the Athena statements.
@@ -92,7 +93,7 @@ class AthenaHandler(DatabaseHandler):
         """
         need_to_close = not self.is_connected
         self.connect()
-        
+
         try:
             response = self.connection.start_query_execution(
                 QueryString=query,
@@ -132,7 +133,7 @@ class AthenaHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-        
+
         return self.native_query(query.to_string())
 
     def get_tables(self) -> StatusResponse:
@@ -141,13 +142,13 @@ class AthenaHandler(DatabaseHandler):
         Returns:
             Response: A response object containing the list of tables and
         """
-        
+
         query = """
             select
                 table_schema,
                 table_name,
                 table_type
-            from 
+            from
                 information_schema.tables
             where
                 table_schema not in ('information_schema')
@@ -172,7 +173,7 @@ class AthenaHandler(DatabaseHandler):
             select
                 column_name as "Field",
                 data_type as "Type"
-            from 
+            from
                 information_schema.columns
             where
                 table_name = '{table_name}'
@@ -192,7 +193,7 @@ class AthenaHandler(DatabaseHandler):
             status = response['QueryExecution']['Status']['State']
             if status in ['SUCCEEDED', 'FAILED', 'CANCELLED']:
                 return status
-            
+
             check_interval = self.connection_data.get('check_interval', 0)
             if check_interval > 0:
                 time.sleep(check_interval)
@@ -205,7 +206,7 @@ class AthenaHandler(DatabaseHandler):
         Returns:
             pd.DataFrame: Query result as a DataFrame
         """
-        
+
         if not result or 'ResultSet' not in result or 'Rows' not in result['ResultSet']:
             return pd.DataFrame()
 

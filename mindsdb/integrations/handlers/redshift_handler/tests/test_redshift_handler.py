@@ -68,10 +68,54 @@ def seed_db():
 
 
 @pytest.mark.redshift
-class TestRedshiftConnection(TestPostgresConnection):
+class TestRedshiftHandlerConnection(TestPostgresConnection):
     def test_connect(self, handler):
         super().test_connect(handler)
 
+    def test_check_connection(self, handler):
+        super().test_check_connection(handler)
+
+
+@pytest.mark.redshift
+class TestRedshiftHandlerQuery(TestPostgresQuery):
+    def test_native_query_show_dbs(self, handler):
+        dbs = handler.native_query("SELECT datname FROM pg_database")
+        dbs = dbs.data_frame
+        assert dbs is not None, "expected to get some data, but got None"
+        assert "datname" in dbs, f"Expected to get 'datname' column in response:\n{dbs}"
+        dbs = list(dbs["datname"])
+        expected_db = HANDLER_KWARGS["connection_data"]["database"]
+        assert (
+            expected_db in dbs
+        ), f"expected to have {expected_db} db in response: {dbs}"
+
+    def test_select_query(self, handler):
+        super().test_select_query(handler)
+
+
+@pytest.mark.redshift
+class TestRedshiftHandlerTables(TestPostgresTables):
+    def test_get_tables(self, handler):
+        super().test_get_tables(handler)
+
+    def test_create_table(self, handler):
+        super().test_create_table(handler)
+
+    def test_drop_table(self, handler):
+        super().test_drop_table(handler)
+
+
+@pytest.mark.redshift
+class TestRedshiftHandlerColumns(TestPostgresColumns):
+    def test_get_columns(self, handler):
+        super().test_get_columns(handler)
+
+
+@pytest.mark.redshift
+class TestRedshiftHandlerDisconnect(TestPostgresDisconnect):
+    def test_disconnect(self, handler):
+        super().test_disconnect(handler)
+    
     def test_check_connection(self, handler):
         super().test_check_connection(handler)
 

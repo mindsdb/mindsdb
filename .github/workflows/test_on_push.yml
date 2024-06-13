@@ -145,7 +145,7 @@ jobs:
           done
 
           # Dont run coveralls for PRs from forks
-          if [ ${{ github.repository == 'mindsdb/mindsdb' }} ]; then
+          if [ ${{ github.event.pull_request.head.repo.full_name }} == ${{ github.repository }} ]; then
             coveralls --service=github --basedir=mindsdb/integrations/handlers
           fi
         env:

@@ -158,14 +158,12 @@ class BaseUnitTest:
         ret = self.command_executor.execute_command(parse_sql(sql, dialect="mindsdb"))
         assert ret.error_code is None, f"SQL execution failed with error: {ret.error_code}"
         if ret.data is not None:
-            columns = [col.alias if col.alias else col.name for col in ret.columns]
-            return pd.DataFrame(ret.data, columns=columns)
+            return ret.data.to_df()
 
     @staticmethod
     def ret_to_df(ret):
         # converts executor response to dataframe
-        columns = [col.alias if col.alias is not None else col.name for col in ret.columns]
-        return pd.DataFrame(ret.data, columns=columns)
+        return ret.data.to_df()
 
     def reset_prom_collectors(self) -> None:
         """Resets collectors in the default Prometheus registry.
@@ -393,11 +391,7 @@ class BaseExecutorDummyML(BaseExecutorTest):
         if throw_error:
             assert ret.error_code is None
         if ret.data is not None:
-            columns = [
-                col.alias if col.alias is not None else col.name
-                for col in ret.columns
-            ]
-            return pd.DataFrame(ret.data, columns=columns)
+            return ret.data.to_df()
 
 
 class BaseExecutorDummyLLM(BaseExecutorTest):
@@ -518,6 +512,6 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
         )
         if ret.error_code is not None:
             raise Exception()
-        if isinstance(ret.data, list):
-            ret.records = self.ret_to_df(ret).to_dict('records')
+        if ret.data is not None:
+            ret.records = ret.data.records
         return ret

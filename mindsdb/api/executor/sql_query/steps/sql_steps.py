@@ -17,11 +17,9 @@ class LimitOffsetStepCall(BaseStepCall):
     def call(self, step):
         step_data = self.steps_data[step.dataframe.step_num]
 
-        step_data2 = ResultSet()
-        for col in step_data.columns:
-            step_data2.add_column(col)
-
         df = step_data.get_raw_df()
+
+        step_data2 = ResultSet(columns=list(step_data.columns))
 
         if isinstance(step.offset, int):
             df = df[step.offset:]

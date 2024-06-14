@@ -70,8 +70,8 @@ from mindsdb_sql.parser.dialects.mindsdb import (
 )
 
 import mindsdb.utilities.profiler as profiler
-from mindsdb.api.executor import Column, SQLQuery
-from mindsdb.api.executor.data_types.answer import ANSWER_TYPE, ExecuteAnswer
+from mindsdb.api.executor import Column, SQLQuery, ResultSet
+from mindsdb.api.executor.data_types.answer import ExecuteAnswer
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     CHARSET_NUMBERS,
     SERVER_VARIABLES,
@@ -335,39 +335,33 @@ class ExecuteCommands:
                         data[var_name] = var_data[0]
 
                 df = pd.DataFrame(data.items(), columns=["Variable_name", "Value"])
-                data = query_df(df, new_statement)
-                data = data.values.tolist()
-
-                columns = [
-                    Column(
-                        name="Variable_name", table_name="session_variables", type="str"
-                    ),
-                    Column(name="Value", table_name="session_variables", type="str"),
-                ]
+                df2 = query_df(df, new_statement)
 
                 return ExecuteAnswer(
-                    answer_type=ANSWER_TYPE.TABLE, columns=columns, data=data
+                    data=ResultSet().from_df(df2, table_name="session_variables")
                 )
             elif sql_category == "search_path":
                 return ExecuteAnswer(
-                    answer_type=ANSWER_TYPE.TABLE,
-                    columns=[
-                        Column(name="search_path", table_name="search_path", type="str")
-                    ],
-                    data=[['"$user", public']],
+                    data=ResultSet(
+                        columns=[
+                            Column(name="search_path", table_name="search_path", type="str")
+                        ],
+                        values=[['"$user", public']]
+                    )
                 )
             elif "show status like 'ssl_version'" in sql_lower:
                 return ExecuteAnswer(
-                    answer_type=ANSWER_TYPE.TABLE,
-                    columns=[
-                        Column(
-                            name="Value", table_name="session_variables", type="str"
-                        ),
-                        Column(
-                            name="Value", table_name="session_variables", type="str"
-                        ),
-                    ],
-                    data=[["Ssl_version", "TLSv1.1"]],
+                    data=ResultSet(
+                        columns=[
+                            Column(
+                                name="Value", table_name="session_variables", type="str"
+                            ),
+                            Column(
+                                name="Value", table_name="session_variables", type="str"
+                            ),
+                        ],
+                        values=[["Ssl_version", "TLSv1.1"]],
+                    )
                 )
             elif sql_category in ("function status", "procedure status"):
                 # SHOW FUNCTION STATUS WHERE Db = 'MINDSDB';
@@ -516,7 +510,7 @@ class ExecuteCommands:
             CommitTransaction,
             RollbackTransaction,
         ):
-            return ExecuteAnswer(ANSWER_TYPE.OK)
+            return ExecuteAnswer()
         elif type(statement) is Set:
             category = (statement.category or "").lower()
             if category == "" and isinstance(statement.name, Identifier):
@@ -541,9 +535,9 @@ class ExecuteCommands:
                 elif param == "show_secrets":
                     self.session.show_secrets = value in (1, True)
 
-                return ExecuteAnswer(ANSWER_TYPE.OK)
+                return ExecuteAnswer()
             elif category == "autocommit":
-                return ExecuteAnswer(ANSWER_TYPE.OK)
+                return ExecuteAnswer()
             elif category == "names":
                 # set names utf8;
                 charsets = {
@@ -558,7 +552,6 @@ class ExecuteCommands:
                     )
                     self.charset_text_type = CHARSET_NUMBERS["utf8_general_ci"]
                 return ExecuteAnswer(
-                    ANSWER_TYPE.OK,
                     state_track=[
                         ["character_set_client", self.charset],
                         ["character_set_connection", self.charset],
@@ -572,11 +565,11 @@ class ExecuteCommands:
                 logger.warning(
                     f"SQL statement is not processable, return OK package: {sql}"
                 )
-                return ExecuteAnswer(ANSWER_TYPE.OK)
+                return ExecuteAnswer()
         elif type(statement) is Use:
             db_name = statement.value.parts[-1]
             self.change_default_db(db_name)
-            return ExecuteAnswer(ANSWER_TYPE.OK)
+            return ExecuteAnswer()
         elif type(statement) in (
             CreatePredictor,
             CreateAnomalyDetectionModel,  # we may want to specialize these in the future
@@ -588,20 +581,20 @@ class ExecuteCommands:
             return self.answer_drop_view(statement, database_name)
         elif type(statement) is Delete:
             SQLQuery(statement, session=self.session, execute=True, database=database_name)
-            return ExecuteAnswer(ANSWER_TYPE.OK)
+            return ExecuteAnswer()
 
         elif type(statement) is Insert:
             SQLQuery(statement, session=self.session, execute=True, database=database_name)
-            return ExecuteAnswer(ANSWER_TYPE.OK)
+            return ExecuteAnswer()
         elif type(statement) is Update:
             SQLQuery(statement, session=self.session, execute=True, database=database_name)
-            return ExecuteAnswer(ANSWER_TYPE.OK)
+            return ExecuteAnswer()
         elif (
             type(statement) is Alter
             and ("disable keys" in sql_lower)
             or ("enable keys" in sql_lower)
         ):
-            return ExecuteAnswer(ANSWER_TYPE.OK)
+            return ExecuteAnswer()
         elif type(statement) is Select:
             if statement.from_table is None:
                 return self.answer_single_row_select(statement, database_name)
@@ -668,7 +661,7 @@ class ExecuteCommands:
             statement.query_str,
             statement.columns,
         )
-        return ExecuteAnswer(ANSWER_TYPE.OK)
+        return ExecuteAnswer()
 
     def answer_drop_trigger(self, statement, database_name):
         triggers_controller = TriggersController()
@@ -679,7 +672,7 @@ class ExecuteCommands:
 
         triggers_controller.delete(trigger_name, project_name)
 
-        return ExecuteAnswer(ANSWER_TYPE.OK)
+        return ExecuteAnswer()
 
     def answer_create_job(self, statement: CreateJob, database_name):
         jobs_controller = JobsController()
@@ -694,7 +687,7 @@ class ExecuteCommands:
             if getattr(statement, "if_not_exists", False) is False:
                 raise
 
-        return ExecuteAnswer(ANSWER_TYPE.OK)
+        return ExecuteAnswer()
 
     def answer_drop_job(self, statement, database_name):
         jobs_controller = JobsController()
@@ -710,7 +703,7 @@ class ExecuteCommands:
         except Exception as e:
             raise e
 
-        return ExecuteAnswer(ANSWER_TYPE.OK)
+        return ExecuteAnswer()
 
     def answer_create_chatbot(self, statement, database_name):
         chatbot_controller = ChatBotController()
@@ -742,7 +735,7 @@ class ExecuteCommands:
             is_running=is_running,
             params=statement.params,
         )
-        return ExecuteAnswer(ANSWER_TYPE.OK)
+        return ExecuteAnswer()
 
     def answer_update_chatbot(self, statement, database_name):
         chatbot_controller = ChatBotController()
@@ -777,7 +770,7 @@ class ExecuteCommands:
         )
         if updated_chatbot is None:
             raise ExecutorException(f"Chatbot with name {name_no_project} not found")
-        return ExecuteAnswer(ANSWER_TYPE.OK)
+        return ExecuteAnswer()
 
     def answer_drop_chatbot(self, statement, database_name):
         chatbot_controller = ChatBotController()
@@ -786,7 +779,7 @@ class ExecuteCommands:
         project_name = name.parts[-2] if len(name.parts) > 1 else database_name
 
         chatbot_controller.delete_chatbot(name.parts[-1], project_name=project_name)
-        return ExecuteAnswer(ANSWER_TYPE.OK)
+        return ExecuteAnswer()
 
     def answer_evaluate_metric(self, statement, database_name):
         try:
@@ -795,8 +788,8 @@ class ExecuteCommands:
             raise Exception(
                 f'Nested query failed to execute with error: "{e}", please check and try again.'
             )
-        result = sqlquery.fetch(self.session.datahub)
-        df = pd.DataFrame.from_dict(result["result"])
+        result = sqlquery.fetch('dataframe')
+        df = result["result"]
         df.columns = [
             str(t.alias) if hasattr(t, "alias") else str(t.parts[-1])
             for t in statement.data.targets
@@ -822,9 +815,10 @@ class ExecuteCommands:
             n_decimals=using_clause.get("n_decimals", 3),
         )  # 3 decimals by default
         return ExecuteAnswer(
-            answer_type=ANSWER_TYPE.TABLE,
-            columns=[Column(name=metric_name, table_name="", type="str")],
-            data=[[metric_value]],
+            data=ResultSet(
+                columns=[Column(name=metric_name, table_name="", type="str")],
+                values=[[metric_value]],
+            )
         )
 
     def answer_describe_object(self, obj_type: str, obj_name: Identifier, database_name: str):
@@ -901,13 +895,8 @@ class ExecuteCommands:
             version=model_info['model_record'].version
         )
 
-        df_dict = df.to_dict("split")
-
-        columns = [
-            Column(name=col, table_name="", type="str") for col in df_dict["columns"]
-        ]
         return ExecuteAnswer(
-            answer_type=ANSWER_TYPE.TABLE, columns=columns, data=df_dict["data"]
+            data=ResultSet().from_df(df, table_name="")
         )
 
     def _get_model_info(self, identifier, except_absent=True, database_name=None):
@@ -1002,12 +991,8 @@ class ExecuteCommands:
         self._sync_predictor_check(phase_name="retrain")
         df = self.session.model_controller.retrain_model(statement, ml_handler)
 
-        resp_dict = df.to_dict(orient="split")
-
-        columns = [Column(col) for col in resp_dict["columns"]]
-
         return ExecuteAnswer(
-            answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict["data"]
+            data=ResultSet().from_df(df)
         )
 
     @profiler.profile()
@@ -1036,12 +1021,8 @@ class ExecuteCommands:
         self._sync_predictor_check(phase_name="finetune")
         df = self.session.model_controller.finetune_model(statement, ml_handler)
 
-        resp_dict = df.to_dict(orient="split")
-
-        columns = [Column(col) for col in resp_dict["columns"]]
-
         return ExecuteAnswer(
-            answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict["data"]
+            data=ResultSet().from_df(df)
         )
 
     def _create_integration(self, name: str, engine: str, connection_args: dict):
@@ -1132,7 +1113,7 @@ class ExecuteCommands:
             if not if_not_exists:
                 raise EntityExistsError('Integration already exists', name)
             else:
-                return ExecuteAnswer(ANSWER_TYPE.OK)
+                return ExecuteAnswer()
 
         handler_module_meta = (
             self.session.integration_controller.get_handlers_import_status().get(
@@ -1171,7 +1152,7 @@ class ExecuteCommands:
             logger.info(msg)
             raise ExecutorException(msg)
 
-        return ExecuteAnswer(ANSWER_TYPE.OK)
+        return ExecuteAnswer()
 
     def answer_drop_ml_engine(self, statement: ASTNode):
         name = statement.name.parts[-1]
@@ -1180,9 +1161,9 @@ class ExecuteCommands:
             if not statement.if_exists:
                 raise EntityNotExistsError('Integration does not exists', name)
             else:
-                return ExecuteAnswer(ANSWER_TYPE.OK)
+                return ExecuteAnswer()
         self.session.integration_controller.delete(name)
-        return ExecuteAnswer(ANSWER_TYPE.OK)
+        return ExecuteAnswer()
 
     def answer_create_database(self, statement: ASTNode):
         """create new handler (datasource/integration in old terms)
@@ -1213,7 +1194,7 @@ class ExecuteCommands:
                 if getattr(statement, "if_not_exists", False) is False:
                     raise
 
-        return ExecuteAnswer(ANSWER_TYPE.OK)
+        return ExecuteAnswer()
 
     def answer_drop_database(self, statement):
         if len(statement.name.parts) != 1:
@@ -1224,7 +1205,7 @@ class ExecuteCommands:
         except EntityNotExistsError:
             if statement.if_exists is not True:
                 raise
-        return ExecuteAnswer(ANSWER_TYPE.OK)
+        return ExecuteAnswer()
 
     def answer_drop_tables(self, statement, database_name):
         """answer on 'drop table [if exists] {name}'
@@ -1267,7 +1248,7 @@ class ExecuteCommands:
                     f"Cannot delete a table from database '{db_name}'"
                 )
 
-        return ExecuteAnswer(ANSWER_TYPE.OK)
+        return ExecuteAnswer()
 
     def answer_create_view(self, statement, database_name):
         project_name = database_name
@@ -1315,7 +1296,7 @@ class ExecuteCommands:
         except EntityExistsError:
             if getattr(statement, "if_not_exists", False) is False:
                 raise
-        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+        return ExecuteAnswer()
 
     def answer_drop_view(self, statement, database_name):
         names = statement.names
@@ -1334,7 +1315,7 @@ class ExecuteCommands:
                 if statement.if_exists is not True:
                     raise
 
-        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+        return ExecuteAnswer()
 
     def answer_create_kb(self, statement: CreateKnowledgeBase, database_name: str):
         project_name = (
@@ -1368,7 +1349,7 @@ class ExecuteCommands:
             if_not_exists=statement.if_not_exists,
         )
 
-        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+        return ExecuteAnswer()
 
     def anwser_drop_kb(self, statement: DropKnowledgeBase, database_name: str):
         name = statement.name.parts[-1]
@@ -1385,7 +1366,7 @@ class ExecuteCommands:
             if_exists=statement.if_exists,
         )
 
-        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+        return ExecuteAnswer()
 
     def answer_create_skill(self, statement, database_name):
         name = statement.name.parts[-1]
@@ -1406,7 +1387,7 @@ class ExecuteCommands:
             # Project does not exist or skill already exists.
             raise ExecutorException(str(e))
 
-        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+        return ExecuteAnswer()
 
     def answer_drop_skill(self, statement, database_name):
         name = statement.name.parts[-1]
@@ -1422,7 +1403,7 @@ class ExecuteCommands:
             # Project does not exist or skill does not exist.
             raise ExecutorException(str(e))
 
-        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+        return ExecuteAnswer()
 
     def answer_update_skill(self, statement, database_name):
         name = statement.name.parts[-1]
@@ -1444,7 +1425,7 @@ class ExecuteCommands:
             # Project does not exist or skill does not exist.
             raise ExecutorException(str(e))
 
-        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+        return ExecuteAnswer()
 
     def answer_create_agent(self, statement, database_name):
         name = statement.name.parts[-1]
@@ -1467,7 +1448,7 @@ class ExecuteCommands:
             # Project does not exist or agent already exists.
             raise ExecutorException(str(e))
 
-        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+        return ExecuteAnswer()
 
     def answer_drop_agent(self, statement, database_name):
         name = statement.name.parts[-1]
@@ -1483,7 +1464,7 @@ class ExecuteCommands:
             # Project does not exist or agent does not exist.
             raise ExecutorException(str(e))
 
-        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+        return ExecuteAnswer()
 
     def answer_update_agent(self, statement, database_name):
         name = statement.name.parts[-1]
@@ -1509,7 +1490,7 @@ class ExecuteCommands:
             # Project does not exist or agent does not exist.
             raise ExecutorException(str(e))
 
-        return ExecuteAnswer(answer_type=ANSWER_TYPE.OK)
+        return ExecuteAnswer()
 
     @mark_process("learn")
     def answer_create_predictor(self, statement: CreatePredictor, database_name):
@@ -1556,17 +1537,11 @@ class ExecuteCommands:
 
         try:
             df = self.session.model_controller.create_model(statement, ml_handler)
-            resp_dict = df.to_dict(orient='split')
 
-            columns = [
-                Column(col)
-                for col in resp_dict['columns']
-            ]
-
-            return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=resp_dict['data'])
+            return ExecuteAnswer(data=ResultSet().from_df(df))
         except EntityExistsError:
             if getattr(statement, "if_not_exists", False) is True:
-                return ExecuteAnswer(ANSWER_TYPE.OK)
+                return ExecuteAnswer()
             raise
 
     def answer_show_columns(
@@ -1698,7 +1673,7 @@ class ExecuteCommands:
             data.append(result)
 
         return ExecuteAnswer(
-            answer_type=ANSWER_TYPE.TABLE, columns=columns, data=[data]
+            data=ResultSet(columns=columns, values=[data])
         )
 
     def answer_show_create_table(self, table):
@@ -1709,9 +1684,10 @@ class ExecuteCommands:
             ),
         ]
         return ExecuteAnswer(
-            answer_type=ANSWER_TYPE.TABLE,
-            columns=columns,
-            data=[[table, f"create table {table} ()"]],
+            data=ResultSet(
+                columns=columns,
+                values=[[table, f"create table {table} ()"]],
+            )
         )
 
     def answer_function_status(self):
@@ -1817,7 +1793,7 @@ class ExecuteCommands:
             ),
         ]
 
-        return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=[])
+        return ExecuteAnswer(data=ResultSet(columns=columns))
 
     def answer_show_table_status(self, table_name):
         # NOTE at this moment parsed statement only like `SHOW TABLE STATUS LIKE 'table'`.
@@ -1991,7 +1967,7 @@ class ExecuteCommands:
                 "",  # Comment
             ]
         ]
-        return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=data)
+        return ExecuteAnswer(data=ResultSet(columns=columns, values=data))
 
     def answer_show_warnings(self):
         columns = [
@@ -2021,7 +1997,7 @@ class ExecuteCommands:
             },
         ]
         columns = [Column(**d) for d in columns]
-        return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=[])
+        return ExecuteAnswer(data=ResultSet(columns=columns))
 
     def answer_connection_id(self, alias: str = None):
         columns = [
@@ -2036,20 +2012,16 @@ class ExecuteCommands:
         ]
         columns = [Column(**d) for d in columns]
         data = [[self.context.get('connection_id')]]
-        return ExecuteAnswer(answer_type=ANSWER_TYPE.TABLE, columns=columns, data=data)
+        return ExecuteAnswer(data=ResultSet(columns=columns, values=data))
 
     def answer_create_table(self, statement, database_name):
         SQLQuery(statement, session=self.session, execute=True, database=database_name)
-        return ExecuteAnswer(ANSWER_TYPE.OK)
+        return ExecuteAnswer()
 
     def answer_select(self, query):
         data = query.fetch()
 
-        return ExecuteAnswer(
-            answer_type=ANSWER_TYPE.TABLE,
-            columns=query.columns_list,
-            data=data["result"],
-        )
+        return ExecuteAnswer(data=data["result"])
 
     def answer_update_model_version(self, model_version, database_name):
         if not isinstance(model_version, Identifier):
@@ -2071,7 +2043,7 @@ class ExecuteCommands:
             raise ExecutorException(f'Unknown model: {model_version}')
 
         self.session.model_controller.set_model_active_version(project_name, model_name, version)
-        return ExecuteAnswer(ANSWER_TYPE.OK)
+        return ExecuteAnswer()
 
     def answer_drop_model(self, statement, database_name):
 
@@ -2107,7 +2079,7 @@ class ExecuteCommands:
                 if not statement.if_exists:
                     raise e
 
-        return ExecuteAnswer(ANSWER_TYPE.OK)
+        return ExecuteAnswer()
 
     def change_default_db(self, db_name):
         # That fix for bug in mssql: it keeps connection for a long time, but after some time mssql can

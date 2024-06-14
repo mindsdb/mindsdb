@@ -1,3 +1,4 @@
+from typing import List
 import copy
 import pandas as pd
 
@@ -34,17 +35,18 @@ class Column:
 
 
 class ResultSet:
-    def __init__(self):
-        self._columns = []
-        self._df = None
+    def __init__(self, columns=None, values: List[List] = None):
+        if columns is None:
+            columns = []
+        self._columns = columns
+
+        if values is None:
+            df = None
+        else:
+            df = pd.DataFrame(values)
+        self._df = df
 
         self.is_prediction = False
-
-    def _get_df(self):
-        if self._df is None:
-            names = range(len(self._columns))
-            return pd.DataFrame([], columns=names)
-        return self._df
 
     def __repr__(self):
         col_names = ', '.join([col.name for col in self._columns])
@@ -101,7 +103,7 @@ class ResultSet:
 
     def to_df(self):
         columns = self.get_column_names()
-        return self._get_df().set_axis(columns, axis=1)
+        return self.get_raw_df().set_axis(columns, axis=1)
 
     def to_df_cols(self, prefix=''):
         # returns dataframe and dict of columns
@@ -114,7 +116,7 @@ class ResultSet:
             columns.append(name)
             col_names[name] = col
 
-        return self._get_df().set_axis(columns, axis=1), col_names
+        return self.get_raw_df().set_axis(columns, axis=1), col_names
 
     # --- tables ---
 
@@ -197,7 +199,9 @@ class ResultSet:
     # --- records ---
 
     def get_raw_df(self):
-
+        if self._df is None:
+            names = range(len(self._columns))
+            return pd.DataFrame([], columns=names)
         return self._df
 
     def add_raw_df(self, df):
@@ -216,30 +220,29 @@ class ResultSet:
         df = pd.DataFrame(values)
         self.add_raw_df(df)
 
-    def to_lists(self, type_cast=False, type_safe=True):
+    def to_lists(self, json_types=False):
         """
         :param type_cast: cast numpy types
             array->list, datetime64->str
-        :param type_safe: use pandas to_dict, it converts to python types
         :return: list of lists
         """
-        if type_safe:
-            # slower but keep timestamp type
-            return self._df.to_dict('split')['data']
 
+        if len(self.get_raw_df()) == 0:
+            return []
         # output for APIs. simplify types
-        if type_cast:
-            df = self._get_df().copy()
+        if json_types:
+            df = self.get_raw_df().copy()
             for name, dtype in df.dtypes.to_dict().items():
                 if pd.api.types.is_datetime64_any_dtype(dtype):
                     df[name] = df[name].dt.strftime("%Y-%m-%d %H:%M:%S.%f")
             return df.to_records(index=False).tolist()
 
-        return self._get_df().to_records(index=False)
+        # slower but keep timestamp type
+        return self._df.to_dict('split')['data']
 
     def get_column_values(self, col_idx):
         # get by column index
-        df = self._get_df()
+        df = self.get_raw_df()
         return list(df[col_idx])
 
     def set_column_values(self, col_name, values):

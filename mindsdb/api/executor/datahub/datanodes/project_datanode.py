@@ -131,7 +131,7 @@ class ProjectDataNode(DataNode):
                     raise Exception(f"Cant execute view query: {view_meta['query_ast']}")
                 df = result['result']
 
-                df = query_df(df, query)
+                df = query_df(df, query, session=session)
 
                 columns_info = [
                     {

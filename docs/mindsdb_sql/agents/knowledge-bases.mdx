@@ -3,20 +3,28 @@ title: Knowledge Base
 sidebarTitle: Knowledge Base
 ---
 
-A knowledge base is a batteries included RAG system that you can create and insert data into, as well as query as if it was a table.
+A knowledge base is a batteries-included RAG system that you can create and insert data into, as well as query as if it was a table.
 
 ```sql
--- Create a knowledge base using the OpenAI embedding model & Chroma world news index
+-- Create a knowledge base that
+-- By default, it uses the OpenAI embedding model and the ChromaDB vector store
 CREATE KNOWLEDGE_BASE world_news_kb;
 
 -- Add data into the knowledge base
-INSERT INTO world_news_kb (SELECT id, text as content FROM web_news);
+INSERT INTO world_news_kb (
+  SELECT id, text as content FROM web_news
+);
 
--- You can query the knowledge base as virtual table
-SELECT * FROM world_news_kb WHERE content = "Best AI Startups in SF?" LIMIT 10;
+-- Query the knowledge base
+SELECT *
+FROM world_news_kb
+WHERE content = "Best AI Startups in SF?"
+LIMIT 10;
 ```
 
-Internally, it uses a vector store and an embedding model, by default it uses chroma and it will pick a suitable embedding model for the task, however, you can specify each of these if you want.
+Internally, it uses a vector store and an embedding model. By default, it uses the ChromaDB vector store and the OpenAI embedding model. However, you can define a vector store and an embedding model as you see fit.
+
+## Syntax
 
 Here is a general syntax for creating a knowledge base:
 
@@ -24,39 +32,36 @@ Here is a general syntax for creating a knowledge base:
 CREATE KNOWLEDGE_BASE my_kb
 [USING
    [model = embedding_model,]
-   [storage = vector_database.storage_table;]]
+   [storage = vector_database.storage_table,]
+   [metadata_columns = ['date', 'creator'],]
+   [content_columns = ['review'],]
+   [id_column='index'];]
 ```
 
-### Managing input columns
+Where the following parameters are optional:
 
-Knowledge base can accept optional columns parameters to define where id, content and metadata columns are located:
-```sql
-CREATE KNOWLEDGE_BASE my_kb
-USING
-   metadata_columns = ['date', 'creator'],  -- optional, if not set: no metadata columns
-   content_columns = ['review'],  -- optional, if not set: all columns is content
-   id_column='index'   -- optional, default: id
-```
+- `model` can store an embedding model.
+- `storage` can store a table from a vector database.
+- `metadata_columns` can list columns to store metadata (if not set, there are no metadata columns).
+- `content_columns` can list columns to store content (if not set, all columns are content).
+- `id_column` can list a column to store a unique identitifier, which is `id` by default.
 
+## Example
 
-## Step by step guide
-
+Let's look at an step-by-step example of how to define a knowledge base.
 
 <p align="center">
   <img src="https://docs.google.com/drawings/d/e/2PACX-1vTVmUqhoFXLF3ncL0NWwgdPjI7Hj19f-5xU8ED31ntYvlsTM3poM9zZKwcrEwzvxJrOhl2raIFKWlsp/pub?w=1342&h=681" />
 </p>
 
+Here is how you build a knowledge base specifying the embedding model and the vector store.
 
-Here is how you build a KNOWLEDGE BASE and specifying the embedding model and the vector store you want:
-
-### Create the embedding model
-
-```sql
--- Set up embedding model that uses OpenAI
-CREATE ML_ENGINE embedding FROM langchain_embedding;
-```
+Create an embedding model for the knowledge base using [OpenAI](/integrations/ai-engines/openai) or [LangChain](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/langchain_embedding_handler) as an engine.
 
 ```sql
+CREATE ML_ENGINE embedding
+FROM langchain_embedding;
+
 CREATE MODEL embedding_model
 PREDICT embeddings
 USING
@@ -66,10 +71,9 @@ USING
 	input_columns = ["content"];
 ```
 
-### Connect the vector store
+Create a connection to the vector store.
 
 ```sql
--- Connect to Chroma
 CREATE DATABASE chroma_dev_local
 WITH ENGINE = "chromadb",
 PARAMETERS = {
@@ -77,13 +81,9 @@ PARAMETERS = {
 };
 ```
 
-In this example, there is a table called world_news_with_ids that contains columns (id, content)
+This example uses the `world_news_with_ids` table that contains the `id` and `content` columns.
 
-```sql
-SELECT * FROM world_news_with_ids;
-```
-
-Now, we can create an index in the vector store, and insert one example point:
+Create an index in the vector store and insert one example point.
 
 ```sql
 CREATE TABLE chroma_dev_local.world_news_index (
@@ -92,45 +92,50 @@ CREATE TABLE chroma_dev_local.world_news_index (
 );
 ```
 
-Let's see what we have in the vector store:
+Query the vector store:
 
 ```sql
 SELECT * FROM chroma_dev_local.world_news_index;
 ```
 
-### Glue it all together 
-
-Now, we can connect the embedding model and the vector index into one knowledge base:
+Create a knowledge base using all components defined above.
 
 ```sql
--- Create a knowledge base using the OpenAI embedding model & Chroma world news index
 CREATE KNOWLEDGE_BASE world_news_kb
 USING
 	model = embedding_model,
 	storage = chroma_dev_local.world_news_index;
 ```
 
-This is how we add content into the vector store every few seconds if there is new data:
+Here is how you can automate adding content to this knowledge base every time new data becomes available:
 
 ```sql
--- Insert world news data into Knowledge Base every second, if there is new data
 CREATE JOB keep_knowledge_base_up_to_date AS (
 
     INSERT INTO world_news_kb (
-        SELECT id, text as content FROM world_news_with_ids WHERE id > LAST
+        SELECT id, text AS content
+        FROM world_news_with_ids
+        WHERE id > LAST
     );
 
-) every second;
+) EVERY second;
 ```
 
-<strong> Note: </strong> the query has a id > LAST. This allows the job, to only select new data every time it runs.
+<Note>
+The `LAST` keyword enables the quey to select only the newly added data. Learn more about the [`LAST` keyword here](/mindsdb_sql/sql/create/jobs#last).
+</Note>
 
-### Query the knowledge base
-
+Query the knowledge base as below.
 
 ```sql
--- Do a similarity search over the knowledge base
-SELECT * FROM world_news_kb;
-SELECT * FROM world_news_kb WHERE content = "YouTube" LIMIT 1;
-SELECT * FROM world_news_kb WHERE content = "Canada and Google" LIMIT 1;
+SELECT *
+FROM world_news_kb;
+
+SELECT *
+FROM world_news_kb
+WHERE content = "YouTube" LIMIT 1;
+
+SELECT *
+FROM world_news_kb
+WHERE content = "Canada and Google" LIMIT 1;
 ```

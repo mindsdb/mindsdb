@@ -1151,6 +1151,13 @@ class TestJobs(BaseExecutorDummyML):
         ''')
         assert ret['output'][0] == 30
 
+        # get mapped column
+        ret = self.run_sql('''
+            select t.a from dummy_data.tbl t
+            join pred m on m.input = t.a
+        ''')
+        assert ret['a'][0] == 10
+
     def test_schema(self, scheduler):
 
         # --- create objects + describe ---

@@ -50,7 +50,7 @@ class TestMLFlow(BaseExecutorTest):
            WHERE text="The tsunami is coming, seek high ground";
         ''')
         assert ret.error_code is None
-        assert ret.c == '0'
+        assert ret.c == '0'  # what is it?
 
 
 if __name__ == '__main__':

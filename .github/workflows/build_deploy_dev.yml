@@ -11,6 +11,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  test:
+    name: Testing stuff
+    runs-on: mdb-dev
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          echo "labels:"
+          echo ${{ github.event.pull_request.labels.*.name }}
+
   # Looks for labels like "deploy-to-<env>" attached to a PR so we can deploy to those envs
   get-deploy-labels:
     runs-on: mdb-dev

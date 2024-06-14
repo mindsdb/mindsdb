@@ -191,7 +191,8 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
             if predictions is None:
                 # handle columns mapping to model
                 if step.columns_map is not None:
-                    # columns_map = {str: Identifier}
+                    # step.columns_map is {str: Identifier}
+
                     cols_to_rename = {}
                     for model_col, table_col in step.columns_map.items():
                         if len(table_col.parts) != 2:

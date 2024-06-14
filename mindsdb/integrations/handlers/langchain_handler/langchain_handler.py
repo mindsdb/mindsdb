@@ -2,6 +2,7 @@ from concurrent.futures import as_completed, TimeoutError
 from typing import Optional, Dict, List
 import os
 import re
+import dill
 
 from langchain.agents import AgentExecutor
 from langchain.agents.initialize import initialize_agent
@@ -15,6 +16,7 @@ from langfuse.callback import CallbackHandler
 import dspy
 from dspy import ColBERTv2
 from dspy.teleprompt import BootstrapFewShot, LabeledFewShot
+from dspy.predict.langchain import LangChainPredict, LangChainModule
 from langchain.chains import LLMChain
 from langchain_core.prompts import PromptTemplate
 from dspy.evaluate import Evaluate
@@ -60,24 +62,28 @@ _PARSING_ERROR_PREFIX = 'An output parsing error occured'
 logger = log.getLogger(__name__)
 
 
+class CoT(dspy.Module):
+    def __init__(self):
+        super().__init__()
+        self.prog = dspy.ChainOfThought("input -> output")  # TODO: match to dataset
+
+    def forward(self, question):
+        return self.prog(question=question)
+
+
 class LLMChainWrapper:
     def __init__(self, chain):
         self.chain = chain
 
-    def predict(self, inputs):
+    def predict(self, inputs):  # TODO: change to arbitrary columns
         if not isinstance(inputs, dict):
             raise ValueError("Inputs must be a dictionary.")
 
         # Extract context and question from inputs
-        context = inputs.get("context")
-        question = inputs.get("question")
-
-        # Ensure both context and question are provided
-        if context is None or question is None:
-            raise ValueError("Both 'context' and 'question' are required inputs.")
+        input = inputs.get("input")
 
         # Call the LLMChain's predict method
-        return self.chain({"context": context, "question": question})
+        return self.chain({"input": input})
 
     def get_graph(self):
         return self.chain.get_graph()
@@ -122,8 +128,6 @@ class LangChainHandler(BaseMLEngine):
         self.langfuse_callback_handler = langfuse_callback_handler
         self.llm_data_controller = LLMDataController()
         self.use_dspy = True
-        if self.use_dspy:
-            self.setup_dspy()
         if self.log_callback_handler is None:
             self.log_callback_handler = LogCallbackHandler(logger)
 
@@ -221,7 +225,7 @@ class LangChainHandler(BaseMLEngine):
                 response = response_output[-2]
             return response
 
-    def create(self, target: str, args: Dict = None, **kwargs):
+    def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Dict = None, **kwargs):
         self.default_agent_tools = args.get('tools', self.default_agent_tools)
 
         args = args['using']
@@ -235,6 +239,9 @@ class LangChainHandler(BaseMLEngine):
                 args["prompt_template"] = DEFAULT_RAG_PROMPT_TEMPLATE
 
         self.model_storage.json_set('args', args)
+        if self.use_dspy:
+            chain = self.setup_dspy(df, args)
+            self.model_storage.file_set("optimized_dspy_program", dill.dumps(chain))  # TODO: ensure this works fine
 
     @staticmethod
     def create_validation(_, args: Dict=None, **kwargs):
@@ -411,25 +418,42 @@ class LangChainHandler(BaseMLEngine):
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         raise NotImplementedError('Fine-tuning is not supported for LangChain models')
     
-    def setup_dspy(self):
+    def setup_dspy(self, df, args):
         # This is the default language model and retrieval model in DSPy
         colbertv2 = ColBERTv2(url='http://20.102.90.50:2017/wiki17_abstracts')
         dspy.configure(rm=colbertv2)
+        dspy_chain = self.create_dspy_chain(df, args)
+        return dspy_chain
     
-    def create_dspy_chain(self, args):
-        retriever = lambda x: dspy.Retrieve(k=5)(x["question"]).passages
-
+    def create_dspy_chain(self, df, args):
         # Initialize the LLM with the API key
         model = args.get('model_name')
         api_key = get_api_key('openai', args, self.engine_storage, strict=False)
-        llm = ChatOpenAI(api_key=api_key, model_name=model)
+        llm = dspy.OpenAI(model=model, api_key=api_key)
 
-        prompt_template = PromptTemplate(input_variables=["context", "question"], template="Given {context}, answer the question `{question}`.")
-        chain = LLMChain(prompt=prompt_template, llm=llm)
+        # TODO: change to match prompt template inside `args`
+        # prompt_template = PromptTemplate(input_variables=['input'], template="Be helpful: {input}")
+        # chain = LLMChain(prompt=prompt_template, llm=llm)
 
         # Convert to DSPy Module
-        langchain_predict = LLMChainWrapper(chain)
-        return langchain_predict
+        # dspy_module = LLMChainWrapper(chain)  # LLM
+        with dspy.context(lm=llm):
+            dspy_module = dspy.ReAct('question -> answer')
+
+        # create a list of DSPy examples
+        dspy_examples = []
+
+        for i, row in df.iterrows():
+            example = dspy.Example(question=row['input'], answer=row['output']).with_inputs("question")  # TODO: generalize to user input
+            dspy_examples.append(example)
+
+        # TODO: add the optimizer, maybe the metric
+        config = dict(max_bootstrapped_demos=4, max_labeled_demos=4)
+        metric = dspy.evaluate.metrics.answer_exact_match  # TODO: passage match requires context from prediction... we probably modify the signature of ReAct
+        teleprompter = BootstrapFewShot(metric=metric, **config)
+        with dspy.context(lm=llm):
+            optimized = teleprompter.compile(dspy_module, trainset=dspy_examples)  # TODO: check columns have the right name
+        return optimized
     
     def generate_dspy_response(self, question, context, args):
 
@@ -439,8 +463,6 @@ class LangChainHandler(BaseMLEngine):
             "question": question
         }
 
-
-        dspy_chain = self.create_dspy_chain(args)
         response = dspy_chain.invoke(input_dict)
         return response['text'], context
 
@@ -455,45 +477,30 @@ class LangChainHandler(BaseMLEngine):
             responses.append({'answer': answer, 'context': context_used})
             self.llm_data_controller.add_llm_data(question, answer)
 
-        data = pd.DataFrame(self.llm_data_controller.list_all_llm_data())
+        data = pd.DataFrame(self.llm_data_controller.list_all_llm_data())  # TODO: Self-improvement data
         # data_sampled = data.sample(fraction = 1)
-        train_data = data.iloc[:int(len(data)*.8)]
-        test_data = data.iloc[int(len(data)*.8):]
-        trainset = list(zip(train_data['input'].tolist(), train_data['output'].tolist()))
-        testset = list(zip(test_data['input'].tolist(), test_data['output'].tolist()))
-        optimize = False
-        if optimize:
+        # train_data = data.iloc[:int(len(data)*.8)]
+        # test_data = data.iloc[int(len(data)*.8):]
+        # trainset = list(zip(train_data['input'].tolist(), train_data['output'].tolist()))
+        # testset = list(zip(test_data['input'].tolist(), test_data['output'].tolist()))
 
-            turbo = dspy.OpenAI(model='gpt-3.5-turbo-instruct', max_tokens=250)
-            dspy.settings.configure(lm=turbo)
+        # turbo = dspy.OpenAI(model='gpt-3.5-turbo-instruct', max_tokens=250)
+        # dspy.settings.configure(lm=turbo)
 
-            # Load math questions from the GSM8K dataset
-            gsm8k = GSM8K()
-            gsm8k_trainset, gsm8k_devset = gsm8k.train[:10], gsm8k.dev[:10]
-            config = dict(max_bootstrapped_demos=4, max_labeled_demos=4)
+        # Load math questions from the GSM8K dataset
+        # gsm8k = GSM8K()
+        # gsm8k_trainset, gsm8k_devset = gsm8k.train[:10], gsm8k.dev[:10]
 
 
-            # Optimize! Use the `gsm8k_metric` here. In general, the metric is going to tell the optimizer how well it's doing.
-            teleprompter = BootstrapFewShot(metric=gsm8k_metric, **config)
-            optimized_cot = teleprompter.compile(CoT(), trainset=gsm8k_trainset)
-
-            # Set up the evaluator, which can be used multiple times.
-            evaluate = Evaluate(devset=gsm8k_devset, metric=gsm8k_metric, num_threads=4, display_progress=True, display_table=0)
-
-            # Evaluate our `optimized_cot` program.
-            print(evaluate(optimized_cot))
-            print('done')
-        
+        # Optimize! Use the `gsm8k_metric` here. In general, the metric is going to tell the optimizer how well it's doing.
 
 
+        # Set up the evaluator, which can be used multiple times.
+        # TODO: use this in the EVALUATE command
+        # evaluate = Evaluate(devset=gsm8k_devset, metric=gsm8k_metric, num_threads=4, display_progress=True, display_table=0)
+
+        # Evaluate our `optimized_cot` program.
+        # print(evaluate(optimized_cot))
+        # print('done')
 
         return pd.DataFrame(responses)
-
-
-    # def optimize_with_dspy(chain, trainset, valset):
-    #     # Currently response_metric does not exist, we have to create some metric to optimize
-    #     optimizer = BootstrapFewShotWithRandomSearch(metric=response_metric, max_bootstrapped_demos=3, num_candidate_programs=3)
-    #     if valset is None:
-    #         valset = trainset
-    #     optimized_chain = optimizer.compile(chain, trainset=trainset, valset=valset)
-    #     return optimized_chain

@@ -116,19 +116,6 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
 
         params = step.params or {}
 
-        # handle columns mapping to model
-        if step.columns_map is not None:
-            # columns_map = {str: Identifier}
-            for model_col, table_col in step.columns_map.items():
-                if len(table_col.parts) != 2:
-                    continue
-                table_name, col_name = table_col.parts
-                data_cols = data.find_columns(col_name, table_alias=table_name)
-                if len(data_cols) == 0:
-                    continue
-                # rename first found column
-                data_cols[0].alias = model_col
-
         for table in data.get_tables()[:1]:  # add  __mindsdb_row_id only for first table
             row_id_col = Column(
                 name='__mindsdb_row_id',
@@ -202,6 +189,27 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
                 predictions = None
 
             if predictions is None:
+                # handle columns mapping to model
+                if step.columns_map is not None:
+                    # step.columns_map is {str: Identifier}
+
+                    cols_to_rename = {}
+                    for model_col, table_col in step.columns_map.items():
+                        if len(table_col.parts) != 2:
+                            continue
+                        tbl_name, col_name = table_col.parts
+                        data_cols = data.find_columns(col_name, table_alias=tbl_name)
+                        if len(data_cols) == 0:
+                            continue
+                        # add first found column to rename list
+                        cols_to_rename[data.get_col_index(data_cols[0])] = model_col
+                    # update input data
+                    if cols_to_rename:
+                        columns = list(table_df.columns)
+                        for col_idx, name in cols_to_rename.items():
+                            columns[col_idx] = name
+                        table_df = table_df.set_axis(columns, axis=1)
+
                 version = None
                 if len(step.predictor.parts) > 1 and step.predictor.parts[-1].isdigit():
                     version = int(step.predictor.parts[-1])

@@ -29,8 +29,7 @@ class TestNeuralForecast(BaseExecutorTest):
         ret = self.command_executor.execute_command(parse_sql(sql, dialect="mindsdb"))
         assert ret.error_code is None
         if ret.data is not None:
-            columns = [col.alias if col.alias is not None else col.name for col in ret.columns]
-            return pd.DataFrame(ret.data, columns=columns)
+            return ret.data.to_df()
 
     @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
     def test_grouped(self, mock_handler):

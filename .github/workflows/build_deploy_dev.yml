@@ -19,7 +19,8 @@ jobs:
       - name: Install dependencies
         run: |
           echo "labels:"
-          echo ${{ github.event.pull_request.labels.*.name }}
+          echo ${{ toJson(github.event.pull_request.labels.*.name) }}
+          echo ${{ toJson(github.event.pull_request.labels.*.name) }} == '[]'
 
   # Looks for labels like "deploy-to-<env>" attached to a PR so we can deploy to those envs
   get-deploy-labels:

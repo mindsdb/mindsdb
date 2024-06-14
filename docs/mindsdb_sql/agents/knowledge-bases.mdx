@@ -6,7 +6,8 @@ sidebarTitle: Knowledge Base
 A knowledge base is a batteries-included RAG system that you can create and insert data into, as well as query as if it was a table.
 
 ```sql
--- Create a knowledge base that by default uses the OpenAI embedding model and ChromaDB vector store
+-- Create a knowledge base that
+-- By default, it uses the OpenAI embedding model and the ChromaDB vector store
 CREATE KNOWLEDGE_BASE world_news_kb;
 
 -- Add data into the knowledge base
@@ -73,7 +74,6 @@ USING
 Create a connection to the vector store.
 
 ```sql
--- Connect to Chroma
 CREATE DATABASE chroma_dev_local
 WITH ENGINE = "chromadb",
 PARAMETERS = {

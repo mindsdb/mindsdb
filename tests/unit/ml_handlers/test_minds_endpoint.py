@@ -3,7 +3,7 @@ import unittest
 from collections import OrderedDict
 from unittest.mock import patch, MagicMock
 
-from mindsdb.integrations.handlers.minds_endpoint.minds_endpoint_handler import MindsEndpointHandler
+from mindsdb.integrations.handlers.minds_endpoint_handler.minds_endpoint_handler import MindsEndpointHandler
 
 
 class TestMindsEndpoint(unittest.TestCase):
@@ -111,7 +111,7 @@ class TestMindsEndpoint(unittest.TestCase):
 
         self.handler.create('dummy_target', args={'using': {'model_name': 'dummy_model_name', 'prompt_template': 'dummy_prompt_template'}})
 
-    @patch('mindsdb.integrations.handlers.minds_endpoint.minds_endpoint_handler.openai.OpenAI')
+    @patch('mindsdb.integrations.handlers.minds_endpoint_handler.minds_endpoint_handler.openai.OpenAI')
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
     def test_predict_runs_no_errors_on_chat_completion_prompt_completion(self, mock_openai_openai_handler, mock_openai_minds_endpoint_handler):
         """
@@ -154,7 +154,7 @@ class TestMindsEndpoint(unittest.TestCase):
 
         pandas.testing.assert_frame_equal(result, pandas.DataFrame({'sentiment': ['Positive']}))
 
-    @patch('mindsdb.integrations.handlers.minds_endpoint.minds_endpoint_handler.openai.OpenAI')
+    @patch('mindsdb.integrations.handlers.minds_endpoint_handler.minds_endpoint_handler.openai.OpenAI')
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
     def test_predict_runs_no_errors_on_chat_completion_question_answering(self, mock_openai_openai_handler, mock_openai_minds_endpoint_handler):
         """
@@ -197,7 +197,7 @@ class TestMindsEndpoint(unittest.TestCase):
 
         pandas.testing.assert_frame_equal(result, pandas.DataFrame({'answer': ['Sweden']}))
 
-    @patch('mindsdb.integrations.handlers.minds_endpoint.minds_endpoint_handler.openai.OpenAI')
+    @patch('mindsdb.integrations.handlers.minds_endpoint_handler.minds_endpoint_handler.openai.OpenAI')
     @patch('mindsdb.integrations.handlers.openai_handler.openai_handler.OpenAI')
     def test_predict_runs_no_errors_on_embeddings_completion(self, mock_openai_openai_handler, mock_openai_minds_endpoint_handler):
         """

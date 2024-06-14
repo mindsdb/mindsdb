@@ -11,65 +11,53 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: Testing stuff
+  # Looks for labels like "deploy-to-<env>" attached to a PR so we can deploy to those envs
+  get-deploy-labels:
+    name: Get Deploy Labels
     runs-on: mdb-dev
+    outputs:
+      deploy-envs: ${{ steps.get-labels.outputs.deploy-envs }}
     steps:
       - uses: actions/checkout@v4
-      - name: Test
+      - id: get-labels
+        name: Get PR Labels
         run: |
-          echo "labels:"
           # Get a json list of labels for this PR, and discard anything not starting with "deploy-to-"
           DEPLOY_ENVS=`echo '${{ toJson(github.event.pull_request.labels.*.name) }}' | jq -c 'map(select(test("^deploy-to-")))'`
-          echo $DEPLOY_ENVS
+          echo "deploy-envs=$DEPLOY_ENVS" >> "$GITHUB_OUTPUT"
 
-          
-  # Looks for labels like "deploy-to-<env>" attached to a PR so we can deploy to those envs
-  # get-deploy-labels:
-  #   runs-on: mdb-dev
-  #   outputs:
-  #     deploy-envs: ${{ steps.get-labels.outputs.deploy-envs }}
-  #   steps:
-  #     - name: Pull MindsDB Github Actions
-  #       uses: actions/checkout@v4
-  #       with:
-  #         repository: mindsdb/github-actions
-  #         path: github-actions
-  #         ssh-key: ${{ secrets.GH_ACTIONS_PULL_SSH }}
-  #     - id: get-labels
-  #       uses: ./github-actions/get-deploy-labels
 
-  # build:
-  #   # Build our docker images based on our bake file
-  #   runs-on: mdb-dev
-  #   needs: [get-deploy-labels]
-  #   if: needs.get-deploy-labels.outputs.deploy-envs != '[]'
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Pull MindsDB Github Actions
-  #       uses: actions/checkout@v4
-  #       with:
-  #         repository: mindsdb/github-actions
-  #         path: github-actions
-  #         ssh-key: ${{ secrets.GH_ACTIONS_PULL_SSH }}
-  #     # Build the bakefile and push
-  #     - uses: ./github-actions/docker-bake
+  build:
+    # Build our docker images based on our bake file
+    runs-on: mdb-dev
+    needs: [get-deploy-labels]
+    if: needs.get-deploy-labels.outputs.deploy-envs != '[]'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pull MindsDB Github Actions
+        uses: actions/checkout@v4
+        with:
+          repository: mindsdb/github-actions
+          path: github-actions
+          ssh-key: ${{ secrets.GH_ACTIONS_PULL_SSH }}
+      # Build the bakefile and push
+      - uses: ./github-actions/docker-bake
   
-  # build_cache:
-  #   # Build our docker images based on our bake file
-  #   # This job only pushes the layers to the cache repo
-  #   # It's done separately so other jobs can run without waiting for this one
-  #   runs-on: mdb-dev
-  #   needs: [build]
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Pull MindsDB Github Actions
-  #       uses: actions/checkout@v4
-  #       with:
-  #         repository: mindsdb/github-actions
-  #         path: github-actions
-  #         ssh-key: ${{ secrets.GH_ACTIONS_PULL_SSH }}
-  #     - uses: ./github-actions/docker-bake-cache
+  build_cache:
+    # Build our docker images based on our bake file
+    # This job only pushes the layers to the cache repo
+    # It's done separately so other jobs can run without waiting for this one
+    runs-on: mdb-dev
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pull MindsDB Github Actions
+        uses: actions/checkout@v4
+        with:
+          repository: mindsdb/github-actions
+          path: github-actions
+          ssh-key: ${{ secrets.GH_ACTIONS_PULL_SSH }}
+      - uses: ./github-actions/docker-bake-cache
 
   # trigger_deploy:
   #   # Trigger private repo to deploy to dev envs

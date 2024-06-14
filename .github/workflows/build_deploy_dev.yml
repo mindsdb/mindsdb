@@ -23,6 +23,7 @@ jobs:
           DEPLOY_ENVS=`echo '${{ toJson(github.event.pull_request.labels.*.name) }}' | jq -c 'map(select(test("^deploy-to-")))'`
           echo $DEPLOY_ENVS
 
+          
   # Looks for labels like "deploy-to-<env>" attached to a PR so we can deploy to those envs
   # get-deploy-labels:
   #   runs-on: mdb-dev

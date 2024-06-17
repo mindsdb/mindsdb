@@ -67,3 +67,30 @@ SELECT * FROM redshift_datasource (
 <Note>
 The above examples utilize `redshift_datasource` as the datasource name, which is defined in the `CREATE DATABASE` command.
 </Note>
+
+## Troubleshooting Guide
+
+<Warning>
+`Database Connection Error`
+
+* **Symptoms**: Failure to connect MindsDB with the Amazon Redshift cluster.
+* **Checklist**:
+    1. Make sure the Redshift cluster is active.
+    2. Confirm that host, port, user, password and database are correct. Try a direct Redshift connection using a client like DBeaver.
+    3. Ensure that the security settings of the Redshift cluster allow connections from MindsDB.
+    4. Ensure a stable network between MindsDB and Redshift.
+</Warning>
+
+<Warning>
+`SQL statement cannot be parsed by mindsdb_sql`
+
+* **Symptoms**: SQL queries failing or not recognizing table names containing spaces or special characters.
+* **Checklist**:
+    1. Ensure table names with spaces or special characters are enclosed in backticks.
+    2. Examples:
+        * Incorrect: SELECT * FROM integration.travel data
+        * Incorrect: SELECT * FROM integration.'travel data'
+        * Correct: SELECT * FROM integration.\`travel data\`
+</Warning>
+
+This [troubleshooting guide](https://docs.aws.amazon.com/redshift/latest/mgmt/troubleshooting-connections.html) provided by AWS might also be helpful.

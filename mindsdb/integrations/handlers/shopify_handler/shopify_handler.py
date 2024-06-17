@@ -1,7 +1,7 @@
 import shopify
 import requests
 
-from mindsdb.integrations.handlers.shopify_handler.shopify_tables import ProductsTable, CustomersTable, OrdersTable, InventoryLevelTable, LocationTable, CustomerReviews, CarrierServiceTable, ShippingZoneTable, SalesChannelTable
+from mindsdb.integrations.handlers.shopify_handler.shopify_tables import *
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -66,6 +66,62 @@ class ShopifyHandler(APIHandler):
         sales_channel_data = SalesChannelTable(self)
         self._register_table("sales_channel", sales_channel_data)
 
+        smart_collections_data = SmartCollectionsTable(self)
+        self._register_table("smart_collections", smart_collections_data)
+        
+        custom_collections_data = CustomCollectionsTable(self)
+        self._register_table("custom_collections", custom_collections_data)
+        
+        draft_orders_data = DraftOrdersTable(self)
+        self._register_table("draft_orders", draft_orders_data)
+        
+        checkouts_data = CheckoutTable(self)
+        self._register_table("checkouts", checkouts_data)
+        
+        price_rule_data = PriceRuleTable(self)
+        self._register_table("price_rules", price_rule_data)
+        
+        refund_data = RefundsTable(self)
+        self._register_table("refunds", refund_data)
+        
+        discount_data = DiscountCodesTable(self)
+        self._register_table("discounts", discount_data)
+        
+        marketing_event_data = MarketingEventTable(self)
+        self._register_table("marketing_events", marketing_event_data)
+        
+        blog_data = BlogTable(self)
+        self._register_table("blogs", blog_data)
+        
+        theme_data = ThemeTable(self)
+        self._register_table("themes", theme_data)
+        
+        article_data = ArticleTable(self)
+        self._register_table("articles", article_data)
+        
+        comment_data = CommentTable(self)
+        self._register_table("comments", comment_data)
+        
+        page_data = PageTable(self)
+        self._register_table("pages", page_data)
+        
+        redirect_data = redirectTable(self)
+        self._register_table("redirects", redirect_data)
+        
+        tender_transaction_data = TenderTransactionTable(self)
+        self._register_table("tender_transactions", tender_transaction_data)
+        
+        policy_data = PolicyTable(self)
+        self._register_table("policies", policy_data)
+        
+        shop_data = ShopTable(self)
+        self._register_table("shop", shop_data)
+        
+        # user_data = UserTable(self)
+        # self._register_table("user", user_data)
+        
+        # gift_card_data = GiftCardTable(self)
+        # self._register_table("gift_cards", gift_card_data)
     def connect(self):
         """
         Set up the connection required by the handler.
@@ -80,7 +136,7 @@ class ShopifyHandler(APIHandler):
         if self.kwargs.get("connection_data") is None:
             raise MissingConnectionParams(f"Incomplete parameters passed to Shopify Handler")
 
-        api_session = shopify.Session(self.connection_data['shop_url'], '2021-10', self.connection_data['access_token'])
+        api_session = shopify.Session(self.connection_data['shop_url'], '2024-04', self.connection_data['access_token'])
 
         self.yotpo_app_key = self.connection_data['yotpo_app_key'] if 'yotpo_app_key' in self.connection_data else None
         self.yotpo_access_token = self.connection_data['yotpo_access_token'] if 'yotpo_access_token' in self.connection_data else None

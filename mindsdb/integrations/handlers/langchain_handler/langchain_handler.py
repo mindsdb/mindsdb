@@ -240,8 +240,11 @@ class LangChainHandler(BaseMLEngine):
 
         self.model_storage.json_set('args', args)
         if self.use_dspy:
-            chain = self.setup_dspy(df, args)
-            self.model_storage.file_set("optimized_dspy_program", dill.dumps(chain))  # TODO: ensure this works fine
+            self.model_storage.file_set("optimization_df", dill.dumps(df.to_dict()))
+            # TODO: temporal workaround: serialize df and args, instead. And recreate chain (with training) every inference call.
+            # ideally, we serialize the chain itself to avoid duplicate training.
+            # chain = self.setup_dspy(df, args)
+            # self.model_storage.file_set("optimized_dspy_program", dill.dumps(chain))  # TODO: ensure this works fine
 
     @staticmethod
     def create_validation(_, args: Dict=None, **kwargs):
@@ -266,9 +269,16 @@ class LangChainHandler(BaseMLEngine):
         args['provider'] = args.get('provider', self._get_llm_provider(args))
         args['embedding_model_provider'] = args.get('embedding_model', self._get_embedding_model_provider(args))
 
+        # retrives llm and pass it around as context
+        model = args.get('model_name')
+        api_key = get_api_key('openai', args, self.engine_storage, strict=False)
+        llm = dspy.OpenAI(model=model, api_key=api_key)
+
         df = df.reset_index(drop=True)
         if self.use_dspy:
-            return self.predict_dspy(df, args)
+            optimization_df = pd.DataFrame(dill.loads(self.model_storage.file_get("optimization_df")))  # .T
+            chain = self.setup_dspy(optimization_df, args)
+            return self.predict_dspy(df, args, chain, llm)
         else:
             agent = self.create_agent(df, args, pred_args)
             # Use last message as prompt, remove other questions.
@@ -455,26 +465,25 @@ class LangChainHandler(BaseMLEngine):
             optimized = teleprompter.compile(dspy_module, trainset=dspy_examples)  # TODO: check columns have the right name
         return optimized
     
-    def generate_dspy_response(self, question, context, args):
+    def generate_dspy_response(self, question, chain, llm):
+        input_dict = {"question": question}
+        with dspy.context(lm=llm):
+            response = chain(question=input_dict['question'])
+        return response.answer
 
-        # input for the DSPy module
-        input_dict = {
-            "context": context,
-            "question": question
-        }
-
-        response = dspy_chain.invoke(input_dict)
-        return response['text'], context
-
-    def predict_dspy(self, df: pd.DataFrame, args) -> pd.DataFrame:
-
+    def predict_dspy(self,
+                     df: pd.DataFrame,
+                     args: Dict,
+                     chain,  # TODO: specify actual type
+                     llm,
+            ) -> pd.DataFrame:
 
         responses = []
         for index, row in df.iterrows():
             question = row['question']
-            context = question
-            answer, context_used = self.generate_dspy_response(question, context, args)
-            responses.append({'answer': answer, 'context': context_used})
+
+            answer = self.generate_dspy_response(question, chain, llm)
+            responses.append({'answer': answer, 'question': question})
             self.llm_data_controller.add_llm_data(question, answer)
 
         data = pd.DataFrame(self.llm_data_controller.list_all_llm_data())  # TODO: Self-improvement data

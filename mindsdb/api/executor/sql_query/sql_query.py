@@ -194,13 +194,13 @@ class SQLQuery:
             default_namespace=database,
         )
 
-    def fetch(self, view='list'):
+    def fetch(self, view='result_set'):
         data = self.fetched_data
 
         if view == 'dataframe':
             result = data.to_df()
         else:
-            result = data.to_lists()
+            result = data
 
         return {
             'success': True,

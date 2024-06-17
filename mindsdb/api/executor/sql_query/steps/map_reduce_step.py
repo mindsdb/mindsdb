@@ -52,7 +52,7 @@ class MapReduceStepCall(BaseStepCall):
 
     bind = MapReduceStep
 
-    def call(self, step):
+    def call(self, step: MultipleSteps):
         if step.reduce != 'union':
             raise LogicError(f'Unknown MapReduceStep type: {step.reduce}')
 

@@ -122,6 +122,13 @@ class ShopifyHandler(APIHandler):
         
         # gift_card_data = GiftCardTable(self)
         # self._register_table("gift_cards", gift_card_data)
+        
+        
+        resource_feedback_data = ResourceFeedbackTable(self)
+        self._register_table("resource_feedbacks", resource_feedback_data)
+        
+        order_risk_data = OrderRiskTable(self)
+        self._register_table("order_risks", order_risk_data)
     def connect(self):
         """
         Set up the connection required by the handler.

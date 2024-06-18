@@ -448,18 +448,21 @@ class LangChainHandler(BaseMLEngine):
         # Convert to DSPy Module
         # dspy_module = LLMChainWrapper(chain)  # LLM
         with dspy.context(lm=llm):
-            dspy_module = dspy.ReAct('question -> answer')
+            dspy_module = dspy.ReAct(f'{args["user_column"]} -> {args["target"]}')
 
         # create a list of DSPy examples
         dspy_examples = []
 
         for i, row in df.iterrows():
-            example = dspy.Example(question=row['input'], answer=row['output']).with_inputs("question")  # TODO: generalize to user input
+            example = dspy.Example(
+                question=row[args["user_column"]],
+                answer=row[args["target"]]
+            ).with_inputs(args["user_column"])
             dspy_examples.append(example)
 
         # TODO: add the optimizer, maybe the metric
         config = dict(max_bootstrapped_demos=4, max_labeled_demos=4)
-        metric = dspy.evaluate.metrics.answer_exact_match  # TODO: passage match requires context from prediction... we probably modify the signature of ReAct
+        metric = dspy.evaluate.metrics.answer_exact_match  # TODO: passage match requires context from prediction... we'll probably modify the signature of ReAct
         teleprompter = BootstrapFewShot(metric=metric, **config)
         with dspy.context(lm=llm):
             optimized = teleprompter.compile(dspy_module, trainset=dspy_examples)  # TODO: check columns have the right name

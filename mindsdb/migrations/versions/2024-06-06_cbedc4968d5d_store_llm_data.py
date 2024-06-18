@@ -10,7 +10,6 @@ import sqlalchemy as sa
 import mindsdb.interfaces.storage.db  # noqa
 
 
-
 # revision identifiers, used by Alembic.
 revision = 'cbedc4968d5d'
 down_revision = '2958416fbe75'
@@ -27,7 +26,7 @@ def upgrade():
         sa.Column('created_at', sa.DateTime(), server_default=sa.func.now()),
         sa.Column('updated_at', sa.DateTime(), server_default=sa.func.now(), onupdate=sa.func.now()),
         sa.PrimaryKeyConstraint('id')
-        )
+    )
 
 
 def downgrade():

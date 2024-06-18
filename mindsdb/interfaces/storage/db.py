@@ -552,6 +552,7 @@ class LLMLog(Base):
     total_tokens: int = Column(Integer, nullable=True)
     success: bool = Column(Boolean, nullable=False, default=True)
 
+
 class LLMData(Base):
     __tablename__ = "llm_data"
     id: int = Column(Integer, primary_key=True)

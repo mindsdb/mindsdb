@@ -1,7 +1,3 @@
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.orm.session import Session
-
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.config import Config
 

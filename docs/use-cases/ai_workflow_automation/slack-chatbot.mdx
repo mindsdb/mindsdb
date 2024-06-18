@@ -220,7 +220,8 @@ CREATE JOB mindsdb.gpt4_slack_job AS (
     JOIN mindsdb.whizfizz_model as r
     WHERE t.channel = "<channel-name>"
     AND t.created_at > LAST
-
+    AND t.user = 'user_id' -- to avoid the bot replying to its own messages, include users to which bot should reply
+    --AND t.user != 'bot_id' -- alternatively, to avoid the bot replying to its own messages, exclude the user id of the bot
 )
 EVERY hour;
 ```

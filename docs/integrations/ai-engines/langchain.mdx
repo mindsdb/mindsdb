@@ -33,14 +33,14 @@ Create an AI engine from the [LangChain handler](https://github.com/mindsdb/mind
 ```sql
 CREATE ML_ENGINE langchain_engine
 FROM langchain
-[USING
+USING
       serper_api_key = 'your-serper-api-key', -- it is an optional parameter (if provided, the model will use serper.dev search to enhance the output)
 
       -- provide one of the below parameters
       anthropic_api_key = 'api-key-value',
       anyscale_api_key = 'api-key-value',
       litellm_api_key = 'api-key-value',
-      openai_api_key = 'api-key-value'];
+      openai_api_key = 'api-key-value';
 ```
 
 Create a model using `langchain_engine` as an engine and one of OpenAI/Anthropic/Anyscale/LiteLLM as a model provider.
@@ -97,7 +97,7 @@ USING
      user_column = 'question',          -- column name that stores input from the user
      assistant_column = 'answer',       -- column name that stores output of the model (see PREDICT column)
      verbose = True,
-     prompt_template = 'Answer the user input in a helpful way';
+     prompt_template = 'Answer the users input in a helpful way: {{question}}';
 ```
 </Accordion>
 
@@ -114,7 +114,7 @@ USING
      user_column = 'question',             -- column name that stores input from the user
      assistant_column = 'answer',          -- column name that stores output of the model (see PREDICT column)
      verbose = True,
-     prompt_template = 'Answer the user input in a helpful way';
+     prompt_template = 'Answer the users input in a helpful way: {{question}}';
 ```
 </Accordion>
 
@@ -132,7 +132,7 @@ USING
      assistant_column = 'answer',       -- column name that stores output of the model (see PREDICT column) 
      base_url = 'https://api.endpoints.anyscale.com/v1',
      verbose = True,
-     prompt_template = 'Answer the user input in a helpful way';
+     prompt_template = 'Answer the users input in a helpful way: {{question}}';
 ```
 </Accordion>
 
@@ -150,7 +150,7 @@ USING
      assistant_column = 'answer',            -- column name that stores output of the model (see PREDICT column)
      base_url = 'https://ai.dev.mindsdb.com',
      verbose = True,
-     prompt_template = 'Answer the user input in a helpful way';
+     prompt_template = 'Answer the users input in a helpful way: {{question}}';
 ```
 </Accordion>
 
@@ -168,7 +168,7 @@ USING
      user_column = 'question',          -- column name that stores input from the user
      assistant_column = 'answer',       -- column name that stores output of the model (see PREDICT column)
      verbose = True,
-     prompt_template = 'Answer the user input in a helpful way';
+     prompt_template = 'Answer the users input in a helpful way: {{question}}';
 ```
 </Accordion>
 

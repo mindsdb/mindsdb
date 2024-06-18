@@ -22,6 +22,7 @@ class LLMDataController:
         Returns:
             LLMData: The created LLMData object.
         '''
+        # TODO: check the hash to avoid adding duplicate records (SQLAlchemy-based)
         new_llm_data = db.LLMData(
             input=input_data,
             output=output_data

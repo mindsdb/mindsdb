@@ -13,12 +13,10 @@ from langchain_core.prompts import PromptTemplate
 from langfuse import Langfuse
 from langfuse.callback import CallbackHandler
 
+# Note: we should probably move the logic over to a DSPy handler that focuses on prompt self-improvement
 import dspy
 from dspy import ColBERTv2
-from dspy.teleprompt import BootstrapFewShot, LabeledFewShot
-from dspy.predict.langchain import LangChainPredict, LangChainModule
-from langchain.chains import LLMChain
-from langchain_core.prompts import PromptTemplate
+from dspy.teleprompt import BootstrapFewShot
 from dspy.evaluate import Evaluate
 
 from mindsdb.interfaces.llm.llm_controller import LLMDataController
@@ -26,14 +24,12 @@ from mindsdb.interfaces.llm.llm_controller import LLMDataController
 import numpy as np
 import pandas as pd
 
-from dspy.datasets.gsm8k import GSM8K, gsm8k_metric
 
 from mindsdb.integrations.handlers.langchain_handler.constants import (
     ANTHROPIC_CHAT_MODELS,
     DEFAULT_AGENT_TIMEOUT_SECONDS,
     DEFAULT_AGENT_TOOLS,
     DEFAULT_AGENT_TYPE,
-    DEFAULT_EMBEDDINGS_MODEL_PROVIDER,
     DEFAULT_MAX_ITERATIONS,
     DEFAULT_MAX_TOKENS,
     DEFAULT_MODEL_NAME,
@@ -60,39 +56,6 @@ from .mindsdb_chat_model import ChatMindsdb
 _PARSING_ERROR_PREFIX = 'An output parsing error occured'
 
 logger = log.getLogger(__name__)
-
-
-class CoT(dspy.Module):
-    def __init__(self):
-        super().__init__()
-        self.prog = dspy.ChainOfThought("input -> output")  # TODO: match to dataset
-
-    def forward(self, question):
-        return self.prog(question=question)
-
-
-class LLMChainWrapper:
-    def __init__(self, chain):
-        self.chain = chain
-
-    def predict(self, inputs):  # TODO: change to arbitrary columns
-        if not isinstance(inputs, dict):
-            raise ValueError("Inputs must be a dictionary.")
-
-        # Extract context and question from inputs
-        input = inputs.get("input")
-
-        # Call the LLMChain's predict method
-        return self.chain({"input": input})
-
-    def get_graph(self):
-        return self.chain.get_graph()
-
-    def __call__(self, inputs):
-        return self.predict(inputs)
-
-    def invoke(self, input_dict):
-        return self.predict(input_dict)
 
 
 class LangChainHandler(BaseMLEngine):
@@ -240,7 +203,7 @@ class LangChainHandler(BaseMLEngine):
 
         self.model_storage.json_set('args', args)
         if self.use_dspy:
-            self.model_storage.file_set("optimization_df", dill.dumps(df.to_dict()))
+            self.model_storage.file_set("cold_start_df", dill.dumps(df.to_dict()))
             # TODO: temporal workaround: serialize df and args, instead. And recreate chain (with training) every inference call.
             # ideally, we serialize the chain itself to avoid duplicate training.
             # chain = self.setup_dspy(df, args)
@@ -276,9 +239,21 @@ class LangChainHandler(BaseMLEngine):
 
         df = df.reset_index(drop=True)
         if self.use_dspy:
-            optimization_df = pd.DataFrame(dill.loads(self.model_storage.file_get("optimization_df")))  # .T
-            chain = self.setup_dspy(optimization_df, args)
-            return self.predict_dspy(df, args, chain, llm)
+            cold_start_df = pd.DataFrame(dill.loads(self.model_storage.file_get("cold_start_df")))  # fixed in "training"  # noqa
+
+            # gets larger as agent is used more
+            self_improvement_df = pd.DataFrame(self.llm_data_controller.list_all_llm_data())
+            self_improvement_df = self_improvement_df.rename(columns={
+                'output': args['target'],
+                'input': args['user_column']
+            })
+
+            # add cold start DF
+            self_improvement_df = pd.concat([cold_start_df, self_improvement_df]).reset_index(drop=True)
+
+            chain = self.setup_dspy(self_improvement_df, args)
+            output = self.predict_dspy(df, args, chain, llm)  # this stores new traces for self-improvement
+            return output
         else:
             agent = self.create_agent(df, args, pred_args)
             # Use last message as prompt, remove other questions.
@@ -441,18 +416,14 @@ class LangChainHandler(BaseMLEngine):
         api_key = get_api_key('openai', args, self.engine_storage, strict=False)
         llm = dspy.OpenAI(model=model, api_key=api_key)
 
-        # TODO: change to match prompt template inside `args`
-        # prompt_template = PromptTemplate(input_variables=['input'], template="Be helpful: {input}")
-        # chain = LLMChain(prompt=prompt_template, llm=llm)
-
         # Convert to DSPy Module
-        # dspy_module = LLMChainWrapper(chain)  # LLM
         with dspy.context(lm=llm):
             dspy_module = dspy.ReAct(f'{args["user_column"]} -> {args["target"]}')
 
         # create a list of DSPy examples
         dspy_examples = []
 
+        # TODO: maybe random choose a fixed set of rows
         for i, row in df.iterrows():
             example = dspy.Example(
                 question=row[args["user_column"]],
@@ -463,7 +434,7 @@ class LangChainHandler(BaseMLEngine):
         # TODO: add the optimizer, maybe the metric
         config = dict(max_bootstrapped_demos=4, max_labeled_demos=4)
         metric = dspy.evaluate.metrics.answer_exact_match  # TODO: passage match requires context from prediction... we'll probably modify the signature of ReAct
-        teleprompter = BootstrapFewShot(metric=metric, **config)
+        teleprompter = BootstrapFewShot(metric=metric, **config)  # TODO: maybe it's better to have this persisted so that the internal state does a better job at optimizing RAG
         with dspy.context(lm=llm):
             optimized = teleprompter.compile(dspy_module, trainset=dspy_examples)  # TODO: check columns have the right name
         return optimized
@@ -480,32 +451,13 @@ class LangChainHandler(BaseMLEngine):
                      chain,  # TODO: specify actual type
                      llm,
             ) -> pd.DataFrame:
-
         responses = []
         for index, row in df.iterrows():
-            question = row['question']
-
+            question = row[args['user_column']]
             answer = self.generate_dspy_response(question, chain, llm)
-            responses.append({'answer': answer, 'question': question})
-            self.llm_data_controller.add_llm_data(question, answer)
-
-        data = pd.DataFrame(self.llm_data_controller.list_all_llm_data())  # TODO: Self-improvement data
-        # data_sampled = data.sample(fraction = 1)
-        # train_data = data.iloc[:int(len(data)*.8)]
-        # test_data = data.iloc[int(len(data)*.8):]
-        # trainset = list(zip(train_data['input'].tolist(), train_data['output'].tolist()))
-        # testset = list(zip(test_data['input'].tolist(), test_data['output'].tolist()))
-
-        # turbo = dspy.OpenAI(model='gpt-3.5-turbo-instruct', max_tokens=250)
-        # dspy.settings.configure(lm=turbo)
-
-        # Load math questions from the GSM8K dataset
-        # gsm8k = GSM8K()
-        # gsm8k_trainset, gsm8k_devset = gsm8k.train[:10], gsm8k.dev[:10]
-
-
-        # Optimize! Use the `gsm8k_metric` here. In general, the metric is going to tell the optimizer how well it's doing.
-
+            responses.append({'answer': answer, 'question': question})  # TODO: check that columns are right here
+            # TODO: check this only adds new incoming rows
+            self.llm_data_controller.add_llm_data(question, answer)  # stores new traces for use in new calls
 
         # Set up the evaluator, which can be used multiple times.
         # TODO: use this in the EVALUATE command
@@ -513,6 +465,5 @@ class LangChainHandler(BaseMLEngine):
 
         # Evaluate our `optimized_cot` program.
         # print(evaluate(optimized_cot))
-        # print('done')
 
         return pd.DataFrame(responses)

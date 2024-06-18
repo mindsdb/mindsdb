@@ -1,70 +1,105 @@
-# BigQuery Handler
+---
+title: Google BigQuery
+sidebarTitle: Google BigQuery
+---
 
-This is the implementation of the BigQuery handler for MindsDB.
+This documentation describes the integration of MindsDB with [Google BigQuery](https://cloud.google.com/bigquery?hl=en), a fully managed, AI-ready data analytics platform that helps you maximize value from your data.
+The integration allows MindsDB to access data stored in the BigQuery warehouse and enhance it with AI capabilities.
 
-## Google BigQuery
+## Prerequisites
 
-BigQuery is a fully-managed, serverless data warehouse that enables scalable analysis over petabytes of data. It is a Platform as a Service that supports querying using ANSI SQL. For more info check https://cloud.google.com/bigquery/.
+Before proceeding, ensure the following prerequisites are met:
 
-## Implementation
+1. Install MindsDB locally via [Docker](/setup/self-hosted/docker) or [Docker Desktop](/setup/self-hosted/docker-desktop).
+2. To connect BigQuery to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
 
-This handler was implemented using the python `google-cloud-bigquery` library.
+## Connection
 
-The required arguments to establish a connection are:
+Establish a connection to your BigQuery warehouse from MindsDB by executing the following SQL command:
 
-* `project_id`: required, a globally unique identifier for your project
-* `dataset`: required, selected dataset in for your project
-* `service_account_keys`: optional, full path to the service account key file
-* `service_account_json`: optional, service account key content as json
-One of service_account_keys or service_account_json has to be chosen.
+```sql
+CREATE DATABASE bigquery_datasource
+WITH
+   engine = "bigquery",
+   parameters = {
+      "project_id": "bgtest-1111",
+      "dataset": "mydataset",
+      "service_account_keys": "/tmp/keys.json"
+   };
+```
 
-For more info about creating and managing the service account key visit  https://cloud.google.com/iam/docs/creating-managing-service-account-keys.
+Required connection parameters include the following:
+
+- `project_id`: The globally unique identifier for your project in Google Cloud where BigQuery is located.
+- `dataset`: The default dataset to connect to.
+
+Optional connection parameters include the following:
+
+- `service_account_keys`: The full path to the service account key file.
+- `service_account_json`: The content of a JSON file defined by the `service_account_keys` parameter.
+
+<Note>
+  One of `service_account_keys` or `service_account_json` has to be provided to
+  establish a connection to BigQuery.
+</Note>
 
 ## Usage
 
-In order to make use of this handler and connect to a BigQuery use the following syntax:
+Retrieve data from a specified table in the default dataset by providing the integration name and table name:
 
 ```sql
-CREATE DATABASE bqdataset
-WITH ENGINE = "bigquery",
-PARAMETERS = {
-   "project_id": "tough-future-332513",
-   "dataset": "mydataset",
-   "service_account_keys": "/home/user/MyProjects/tough-future-332513.json"
-   }
+SELECT *
+FROM bigquery_datasource.table_name
+LIMIT 10;
 ```
 
-Or using service_account_json
-```sql
-CREATE DATABASE bqdataset
-WITH ENGINE = "bigquery",
-PARAMETERS = {
-   "project_id": "tough-future-332513",
-   "dataset": "mydataset",
-   "service_account_json": {
-        "type": "service_account",
-        "project_id": "bgtest-1111",
-        "private_key_id": "aaaaaaaaaa",
-        "private_key": "---------BIG STRING WITH KEY-------\n",
-        "client_email": "testbigquery@bgtest-11111.iam.gserviceaccount.com",
-        "client_id": "1111111111111",
-        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-        "token_uri": "https://oauth2.googleapis.com/token",
-        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-        "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/testbigquery%40bgtest-11111.iam.gserviceaccount.com"
-        }
-   }
-```
-
-
-Now, you can use this established connection to query your dataset as follows:
+Retrieve data from a specified table in a different dataset by providing the integration name, dataset name and table name:
 
 ```sql
-SELECT * FROM bgdataset.table LIMIT 10;
+SELECT *
+FROM bigquery_datasource.dataset_name.table_name
+LIMIT 10;
 ```
 
-Or selecting from other dataset in the same project:
+Run SQL in any supported BigQuery dialect directly on the connected BigQuery database:
 
 ```sql
-SELECT * FROM bgdataset.dataset.table LIMIT 10;
+SELECT * FROM bigquery_datasource (
+
+   --Native Query Goes Here
+   SELECT *
+   FROM t1
+   WHERE t1.a IN (SELECT t2.a
+                  FROM t2 FOR SYSTEM_TIME AS OF t1.timestamp_column);
+
+);
 ```
+
+<Note>
+  The above examples utilize `bigquery_datasource` as the datasource name, which
+  is defined in the `CREATE DATABASE` command.
+</Note>
+
+## Troubleshooting Guide
+
+<Warning>
+`Database Connection Error`
+
+- **Symptoms**: Failure to connect MindsDB with the BigQuery warehouse.
+- **Checklist**:
+  1. Make sure that the Google Cloud account is active and the Google BigQuery service is enabled.
+  2. Confirm that the project ID, dataset and service account credentials are correct. Try a direct BigQuery connection using a client like DBeaver.
+  3. Ensure a stable network between MindsDB and Google BigQuery.
+     </Warning>
+
+<Warning>
+`SQL statement cannot be parsed by mindsdb_sql`
+
+- **Symptoms**: SQL queries failing or not recognizing table names containing spaces or special characters.
+- **Checklist**:
+  1. Ensure table names with spaces or special characters are enclosed in backticks.
+     Examples:
+     _ Incorrect: SELECT _ FROM integration.travel data
+     _ Incorrect: SELECT _ FROM integration.'travel data'
+     _ Correct: SELECT _ FROM integration.\`travel data\`
+     </Warning>

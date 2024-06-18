@@ -64,13 +64,13 @@ class SQLAgent:
             return self._tables_to_include
 
         ret = self._call_engine('show databases;')
-        dbs = [lst[0] for lst in ret.data if lst[0] != 'information_schema']
+        dbs = [lst[0] for lst in ret.data.to_lists() if lst[0] != 'information_schema']
         usable_tables = []
         for db in dbs:
             if db != 'mindsdb' and db == self._database:
                 try:
                     ret = self._call_engine('show tables', database=db)
-                    tables = [lst[0] for lst in ret.data if lst[0] != 'information_schema']
+                    tables = [lst[0] for lst in ret.data.to_lists() if lst[0] != 'information_schema']
                     for table in tables:
                         # By default, include all tables in a database unless expilcitly ignored.
                         table_name = f'{db}.{table}'
@@ -126,7 +126,7 @@ class SQLAgent:
         command = f"select {','.join(fields)} from {table} limit {self._sample_rows_in_table_info};"
         try:
             ret = self._call_engine(command)
-            sample_rows = ret.data
+            sample_rows = ret.data.to_lists()
             sample_rows = list(
                 map(lambda ls: [str(i) if len(str(i)) < 100 else str[:100] + '...' for i in ls], sample_rows))
             sample_rows_str = "\n" + "\n".join(["\t".join(row) for row in sample_rows])
@@ -150,24 +150,25 @@ class SQLAgent:
             columns_str = ', '.join([repr(col.name) for col in ret.columns])
             res = f'Output columns: {columns_str}\n'
 
-            if len(ret.data) > limit_rows:
-                df = pd.DataFrame(ret.data, columns=[col.name for col in ret.columns])
+            data = ret.to_lists()
+            if len(data) > limit_rows:
+                df = pd.DataFrame(data, columns=[col.name for col in ret.columns])
 
-                res += f'Result has {len(ret.data)} rows. Description of data:\n'
+                res += f'Result has {len(data)} rows. Description of data:\n'
                 res += str(df.describe(include='all')) + '\n\n'
                 res += f'First {limit_rows} rows:\n'
 
             else:
                 res += 'Result:\n'
 
-            res += _tidy(ret.data[:limit_rows])
+            res += _tidy(data[:limit_rows])
             return res
 
         ret = self._call_engine(command)
         if fetch == "all":
-            result = _repr_result(ret)
+            result = _repr_result(ret.data)
         elif fetch == "one":
-            result = _tidy(ret.data[0])
+            result = _tidy(ret.data.to_lists()[0])
         else:
             raise ValueError("Fetch parameter must be either 'one' or 'all'")
         return str(result)

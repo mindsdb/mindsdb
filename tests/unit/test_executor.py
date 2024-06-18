@@ -89,7 +89,7 @@ class Test(BaseExecutorMockPredictor):
         self.set_handler(mock_handler, name='pg', tables={'tasks': df})
 
         ret = self.execute('select * from pg.tasks')
-        assert ret.data == data
+        assert ret.data.to_lists() == data
 
         # check sql in query method
         assert mock_handler().query.call_args[0][0].to_string() == 'SELECT * FROM tasks'
@@ -148,7 +148,7 @@ class Test(BaseExecutorMockPredictor):
         """)
         assert len(ret.data) == 2
         # is last datetime value of a = 1
-        assert ret.data[0][1].isoformat() == dt.datetime(2020, 1, 3).isoformat()
+        assert ret.data.to_lists()[0][1].isoformat() == dt.datetime(2020, 1, 3).isoformat()
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_ts_predictor(self, mock_handler):
@@ -826,7 +826,7 @@ class TestTableau(BaseExecutorMockPredictor):
         """)
 
         # second column is having last value of 'b'
-        assert ret.data[0][1] == 'three'
+        assert ret.data.to_lists()[0][1] == 'three'
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_predictor_tableau_header(self, mock_handler):
@@ -861,7 +861,7 @@ class TestTableau(BaseExecutorMockPredictor):
 
         # second column is having last value of 'b'
         # 3: count rows, 4: sum of 'a', 5 max of prediction
-        assert ret.data[0] == [3, 4, 5]
+        assert ret.data.to_lists()[0] == [3, 4, 5]
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_predictor_tableau_header_alias(self, mock_handler):
@@ -895,7 +895,7 @@ class TestTableau(BaseExecutorMockPredictor):
 
         # second column is having last value of 'b'
         # 3: count rows, 4: sum of 'a', 5 max of prediction
-        assert ret.data[0] == [2, 1]
+        assert ret.data.to_lists()[0] == [2, 1]
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_integration_subselect_no_alias(self, mock_handler):
@@ -910,7 +910,7 @@ class TestTableau(BaseExecutorMockPredictor):
 
         # second column is having last value of 'b'
         # 3: count rows, 4: sum of 'a', 5 max of prediction
-        assert ret.data[0] == [2]
+        assert ret.data.to_lists()[0] == [2]
 
 
 class TestWithNativeQuery(BaseExecutorMockPredictor):
@@ -925,7 +925,7 @@ class TestWithNativeQuery(BaseExecutorMockPredictor):
 
         # native query was called
         assert mock_handler().native_query.call_args[0][0] == 'select * from tasks'
-        assert ret.data[0][0] == 3
+        assert ret.data.to_lists()[0][0] == 3
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_view_native_query(self, mock_handler):
@@ -939,7 +939,7 @@ class TestWithNativeQuery(BaseExecutorMockPredictor):
         # --- select from view ---
         ret = self.execute('select * from mindsdb.vtasks')
         # view response equals data from integration
-        assert ret.data == data
+        assert ret.data.to_lists() == data
 
         # --- create predictor ---
         mock_handler.reset_mock()
@@ -1018,7 +1018,7 @@ class TestWithNativeQuery(BaseExecutorMockPredictor):
         assert data_in.iloc[0]['a'] == 2
 
         # check prediction
-        assert ret.data[0][0] == predicted_value
+        assert ret.data.to_lists()[0][0] == predicted_value
         assert len(ret.data) == 1
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')

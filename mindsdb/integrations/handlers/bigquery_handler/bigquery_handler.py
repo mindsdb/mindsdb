@@ -153,7 +153,7 @@ class BigQueryHandler(DatabaseHandler):
             Response: A response object containing the list of tables and views, formatted as per the `Response` class.
         """
         query = f"""
-            SELECT table_name, table_schema, table_type,
+            SELECT table_name, table_schema, table_type
             FROM `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.TABLES`
             WHERE table_type IN ('BASE TABLE', 'VIEW')
         """

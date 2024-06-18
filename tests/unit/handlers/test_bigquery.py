@@ -89,7 +89,7 @@ class TestBigQueryHandler(unittest.TestCase):
         self.handler.get_tables()
 
         expected_query = f"""
-            SELECT table_name, table_schema, table_type,
+            SELECT table_name, table_schema, table_type
             FROM `{self.dummy_connection_data['project_id']}.{self.dummy_connection_data['dataset']}.INFORMATION_SCHEMA.TABLES`
             WHERE table_type IN ('BASE TABLE', 'VIEW')
         """

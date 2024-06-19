@@ -56,6 +56,55 @@ class MapReduceStepCall(BaseStepCall):
         if step.reduce != 'union':
             raise LogicError(f'Unknown MapReduceStep type: {step.reduce}')
 
+        partition = getattr(step, 'partition', None)
+
+        if partition is not None:
+            data = self._steps_reduce_partition(step, partition)
+
+        else:
+            data = self._steps_reduce_vars(step)
+
+        return data
+
+    def _steps_reduce_partition(self, step, partition):
+        if not isinstance(partition, int):
+            raise NotImplementedError('Only integers are supported in partition definition.')
+
+        result_idx = step.values.step_num
+        step_data = self.steps_data[result_idx]
+
+        substeps = step.step
+        data = ResultSet()
+
+        df = step_data.get_raw_df()
+
+        chunk = 0
+        while chunk * partition < len(step_data):
+            # create results with partition
+            df1 = df[chunk * partition: (chunk + 1) * partition]
+            chunk += 1
+
+            step_data2 = ResultSet(columns=list(step_data.columns))
+            step_data2.add_raw_df(df1)
+
+            steps_data2 = self.steps_data.copy()
+            steps_data2[result_idx] = step_data2
+
+            # execute with modified steps
+            if not isinstance(substeps, list):
+                substeps = [substeps]
+
+            sub_data = None
+            for substep in substeps:
+                sub_data = self.sql_query.execute_step(substep, steps_data=steps_data2)
+                steps_data2[substep.step_num] = sub_data
+
+            if sub_data:
+                data = join_query_data(data, sub_data)
+
+        return data
+
+    def _steps_reduce_vars(self, step):
         # extract vars
         step_data = self.steps_data[step.values.step_num]
         vars = []
@@ -67,16 +116,11 @@ class MapReduceStepCall(BaseStepCall):
                     var_group[name] = value
 
         substep = step.step
-        data = self._steps_reduce(substep, vars)
-
-        return data
-
-    def _steps_reduce(self, step, vars):
 
         data = ResultSet()
 
         for var_group in vars:
-            steps2 = copy.deepcopy(step)
+            steps2 = copy.deepcopy(substep)
 
             self._fill_vars(steps2, var_group)
 

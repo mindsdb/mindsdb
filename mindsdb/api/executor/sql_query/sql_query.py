@@ -310,13 +310,13 @@ class SQLQuery:
         except Exception as e:
             raise UnknownError("error in column list step") from e
 
-    def execute_step(self, step):
+    def execute_step(self, step, steps_data=None):
         cls_name = step.__class__.__name__
         handler = self.step_handlers.get(cls_name)
         if handler is None:
             raise UnknownError(f"Unknown step: {cls_name}")
 
-        return handler(self).call(step)
+        return handler(self, steps_data=steps_data).call(step)
 
 
 SQLQuery.register_steps()

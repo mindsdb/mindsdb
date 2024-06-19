@@ -267,6 +267,7 @@
           "pages": [
             "setup/self-hosted/docker",
             "setup/self-hosted/docker-desktop",
+            "setup/cloud/aws-marketplace",
             {
               "group": "Configuration",
               "pages": [

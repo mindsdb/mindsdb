@@ -120,6 +120,8 @@ jobs:
           pip install .[clickhouse]
           pip install .[snowflake]
           pip install .[web]
+          pip install .[redshift]
+          pip install .[bigquery]
           pip freeze
       - name: Run unit tests
         run: |
@@ -137,14 +139,14 @@ jobs:
           fi
       - name: Run Handlers tests and submit Coverage to coveralls
         run: |
-          handlers=("mysql" "postgres" "mssql" "clickhouse" "snowflake" "web")
+          handlers=("mysql" "postgres" "mssql" "clickhouse" "snowflake" "web" "redshift" "bigquery")
           for handler in "${handlers[@]}"
           do
             pytest --cov=mindsdb/integrations/handlers/${handler}_handler tests/unit/handlers/test_${handler}.py 
           done
 
           # Dont run coveralls for PRs from forks
-          if [ ${{ github.event.pull_request.head.repo.full_name == github.repository }} ]; then
+          if [ ${{ github.event.pull_request.head.repo.full_name }} == ${{ github.repository }} ]; then
             coveralls --service=github --basedir=mindsdb/integrations/handlers
           fi
         env:

@@ -1,30 +1,29 @@
-import os
-import json
-
 from google.cloud import bigquery
-from google.oauth2 import service_account
+from typing import Text, Dict, Any
+from google.api_core.exceptions import BadRequest
 from sqlalchemy_bigquery.base import BigQueryDialect
-from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
+from mindsdb.utilities import log
+from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb.integrations.libs.base import DatabaseHandler
+from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.integrations.utilities.handlers.auth_utilities import GoogleServiceAccountOAuth2Manager
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
 
 class BigQueryHandler(DatabaseHandler):
     """
-    This handler handles connection and exectuin of Google BigQuery statements
+    This handler handles connection and execution of Google BigQuery statements.
     """
     name = "bigquery"
 
-    def __init__(self, name, connection_data, **kwargs):
+    def __init__(self, name: Text, connection_data: Dict, **kwargs: Any):
         super().__init__(name)
         self.connection_data = connection_data
         self.client = None
@@ -34,55 +33,66 @@ class BigQueryHandler(DatabaseHandler):
         if self.is_connected is True:
             self.disconnect()
 
-    def _get_account_keys(self):
-        if 'service_account_keys' in self.connection_data:
-            if os.path.isfile(self.connection_data['service_account_keys']) is False:
-                raise Exception("Service account keys' must be path to the file")
-            with open(self.connection_data["service_account_keys"]) as source:
-                info = json.load(source)
-            return info
-        elif 'service_account_json' in self.connection_data:
-            info = self.connection_data['service_account_json']
-            if not isinstance(info, dict):
-                raise Exception("service_account_json has to be dict")
-            info['private_key'] = info['private_key'].replace('\\n', '\n')
-            return info
-        else:
-            raise Exception('Connection args have to content ether service_account_json or service_account_keys')
-
     def connect(self):
         """
-        Handles the connection to a BigQuery
+        Establishes a connection to a BigQuery warehouse.
+
+        Raises:
+            ValueError: If the required connection parameters are not provided or if the credentials cannot be parsed.
+            mindsdb.integrations.utilities.handlers.auth_utilities.exceptions.NoCredentialsException: If none of the required forms of credentials are provided.
+            mindsdb.integrations.utilities.handlers.auth_utilities.exceptions.AuthException: If authentication fails.
+
+        Returns:
+            google.cloud.bigquery.client.Client: The client object for the BigQuery connection.
         """
         if self.is_connected is True:
-            return self.client
+            return self.connection
 
-        info = self._get_account_keys()
-        storage_credentials = service_account.Credentials.from_service_account_info(info)
+        # Mandatory connection parameters
+        if not all(key in self.connection_data for key in ['project_id', 'dataset']):
+            raise ValueError('Required parameters (project_id, dataset) must be provided.')
+
+        google_sa_oauth2_manager = GoogleServiceAccountOAuth2Manager(
+            credentials_file=self.connection_data.get('service_account_keys'),
+            credentials_json=self.connection_data.get('service_account_json')
+        )
+        credentials = google_sa_oauth2_manager.get_oauth2_credentials()
+
         client = bigquery.Client(
             project=self.connection_data["project_id"],
-            credentials=storage_credentials
+            credentials=credentials
         )
         self.is_connected = True
-        self.client = client
-        return self.client
+        self.connection = client
+        return self.connection
+
+    def disconnect(self):
+        """
+        Closes the connection to the BigQuery warehouse if it's currently open.
+        """
+        if self.is_connected is False:
+            return
+        self.connection.close()
+        self.is_connected = False
 
     def check_connection(self) -> StatusResponse:
         """
-        Check the connection of the BigQuery
-        :return: success status and error message if error occurs
+        Checks the status of the connection to the BigQuery warehouse.
+
+        Returns:
+            StatusResponse: An object containing the success status and an error message if an error occurs.
         """
         response = StatusResponse(False)
 
         try:
-            client = self.connect()
-            client.query('SELECT 1;')
+            connection = self.connect()
+            connection.query('SELECT 1;')
 
-            # check dataset exists
-            client.get_dataset(self.connection_data['dataset'])
+            # Check if the dataset exists
+            connection.get_dataset(self.connection_data['dataset'])
 
             response.success = True
-        except Exception as e:
+        except (BadRequest, ValueError) as e:
             logger.error(f'Error connecting to BigQuery {self.connection_data["project_id"]}, {e}!')
             response.error_message = e
 
@@ -93,14 +103,18 @@ class BigQueryHandler(DatabaseHandler):
 
     def native_query(self, query: str) -> Response:
         """
-        Receive SQL query and runs it
-        :param query: The SQL query to run in BigQuery
-        :return: returns the records from the current recordset
+        Executes a SQL query on the BigQuery warehouse and returns the result.
+
+        Args:
+            query (str): The SQL query to be executed.
+
+        Returns:
+            Response: A response object containing the result of the query or an error message.
         """
-        client = self.connect()
+        connection = self.connect()
         try:
             job_config = bigquery.QueryJobConfig(default_dataset=f"{self.connection_data['project_id']}.{self.connection_data['dataset']}")
-            query = client.query(query, job_config=job_config)
+            query = connection.query(query, job_config=job_config)
             result = query.to_dataframe()
             if not result.empty:
                 response = Response(
@@ -119,7 +133,13 @@ class BigQueryHandler(DatabaseHandler):
 
     def query(self, query: ASTNode) -> Response:
         """
-        Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
+        Executes a SQL query represented by an ASTNode and retrieves the data.
+
+        Args:
+            query (ASTNode): An ASTNode representing the SQL query to be executed.
+
+        Returns:
+            Response: The response from the `native_query` method, containing the result of the SQL query execution.
         """
         renderer = SqlalchemyRender(BigQueryDialect)
         query_str = renderer.get_string(query, with_failback=True)
@@ -127,18 +147,35 @@ class BigQueryHandler(DatabaseHandler):
 
     def get_tables(self) -> Response:
         """
-        Get a list with all of the tabels in BigQuery
+        Retrieves a list of all non-system tables and views in the configured dataset of the BigQuery warehouse.
+
+        Returns:
+            Response: A response object containing the list of tables and views, formatted as per the `Response` class.
         """
-        q = f"SELECT table_name, table_type, FROM \
-             `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.TABLES`"
-        result = self.native_query(q)
+        query = f"""
+            SELECT table_name, table_schema, table_type
+            FROM `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.TABLES`
+            WHERE table_type IN ('BASE TABLE', 'VIEW')
+        """
+        result = self.native_query(query)
         return result
 
     def get_columns(self, table_name) -> Response:
         """
-        Show details about the table
+        Retrieves column details for a specified table in the configured dataset of the BigQuery warehouse.
+
+        Args:
+            table_name (str): The name of the table for which to retrieve column information.
+
+        Returns:
+            Response: A response object containing the column details, formatted as per the `Response` class.
+        Raises:
+            ValueError: If the 'table_name' is not a valid string.
         """
-        q = f"SELECT column_name AS Field, data_type as Type, FROM \
-            `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.COLUMNS` WHERE table_name = '{table_name}'"
-        result = self.native_query(q)
+        query = f"""
+            SELECT column_name AS Field, data_type as Type
+            FROM `{self.connection_data['project_id']}.{self.connection_data['dataset']}.INFORMATION_SCHEMA.COLUMNS`
+            WHERE table_name = '{table_name}'
+        """
+        result = self.native_query(query)
         return result

@@ -40,7 +40,7 @@ MAIN_RULE_IGNORES = {
     "DEP003": ["torch"],
     "DEP001": ["torch"],
     # bs4 is used by Agents & Knowledge Bases (web handler).
-    "DEP002": ["psycopg2-binary", "lark", "bs4", "sqlalchemy-solr"],
+    "DEP002": ["psycopg2-binary", "lark", "bs4", "sqlalchemy-solr", "pydantic-settings"],
 }
 
 # THe following packages need exceptions because they are optional deps of some other packages. e.g. langchain CAN use openai

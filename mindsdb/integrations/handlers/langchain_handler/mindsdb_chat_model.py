@@ -90,7 +90,11 @@ class ChatMindsdb(BaseChatModel):
         if model_info.get('mode') == 'conversational':
             user_column = model_info['user_column']
             record[user_column] = content
+        elif 'column' in model_info:
+            # input defined as 'column' param
+            record[model_info['column']] = content
         else:
+            # failback, maybe handler supports template injection
             params['prompt_template'] = content
 
         predictions = self.project_datanode.predict(

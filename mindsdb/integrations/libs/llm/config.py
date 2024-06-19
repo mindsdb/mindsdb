@@ -85,5 +85,5 @@ class OllamaConfig(BaseLLMConfig):
 
 
 class MindsdbConfig(BaseLLMConfig):
-    llm_model_name: str
+    model_name: str
     project_name: str

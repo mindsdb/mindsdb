@@ -117,19 +117,20 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
         params = step.params or {}
 
         # adding __mindsdb_row_id, use first table if exists
-        table = data.get_tables()[0] if len(data.get_tables()) > 0 else None
+        if len(data.find_columns('__mindsdb_row_id')) == 0:
+            table = data.get_tables()[0] if len(data.get_tables()) > 0 else None
 
-        row_id_col = Column(
-            name='__mindsdb_row_id',
-            database=table['database'] if table is not None else None,
-            table_name=table['table_name'] if table is not None else None,
-            table_alias=table['table_alias'] if table is not None else None
-        )
+            row_id_col = Column(
+                name='__mindsdb_row_id',
+                database=table['database'] if table is not None else None,
+                table_name=table['table_name'] if table is not None else None,
+                table_alias=table['table_alias'] if table is not None else None
+            )
 
-        row_id = self.context.get('row_id')
-        values = range(row_id, row_id + data.length())
-        data.add_column(row_id_col, values)
-        self.context['row_id'] += data.length()
+            row_id = self.context.get('row_id')
+            values = range(row_id, row_id + data.length())
+            data.add_column(row_id_col, values)
+            self.context['row_id'] += data.length()
 
         project_name = step.namespace
         predictor_name = step.predictor.parts[0]

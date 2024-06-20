@@ -5,7 +5,7 @@ from openai import OpenAI, NotFoundError, AuthenticationError
 from typing import Dict, Optional
 from mindsdb.integrations.handlers.openai_handler import Handler as OpenAIHandler
 from mindsdb.integrations.utilities.handler_utils import get_api_key
-from mindsdb.integrations.handlers.minds_endpoint.settings import minds_endpoint_handler_config
+from mindsdb.integrations.handlers.minds_endpoint_handler.settings import minds_endpoint_handler_config
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)

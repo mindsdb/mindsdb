@@ -267,6 +267,7 @@
           "pages": [
             "setup/self-hosted/docker",
             "setup/self-hosted/docker-desktop",
+            "setup/cloud/aws-marketplace",
             {
               "group": "Configuration",
               "pages": [
@@ -976,6 +977,7 @@
             "integrations/ai-engines/anthropic",
             "integrations/ai-engines/anyscale",
             "integrations/ai-engines/cohere",
+            "integrations/ai-engines/google_gemini",
             "integrations/ai-engines/huggingface",
             "integrations/ai-engines/huggingface_inference_api",
             "integrations/ai-engines/langchain",

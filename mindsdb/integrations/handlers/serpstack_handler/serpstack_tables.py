@@ -29,7 +29,6 @@ class BaseResultsTable(APITable):
         
         api_response = requests.get(self.handler.base_url, params=params)
         api_result = api_response.json()
-        print(api_result, '\n')
         results = api_result.get(self.results_key, [])
 
         processed_results = [self.extract_data(result) for result in results]

@@ -114,65 +114,7 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name="views", data={}, engine="views")
         db.session.add(r)
-        r = db.Integration(name="autokeras", data={}, engine="autokeras")
-        db.session.add(r)
-        r = db.Integration(name="autogluon", data={}, engine="autogluon")
-        db.session.add(r)
-        r = db.Integration(name="huggingface", data={}, engine="huggingface")
-        db.session.add(r)
-        r = db.Integration(name="merlion", data={}, engine="merlion")
-        db.session.add(r)
-        r = db.Integration(name="monkeylearn", data={}, engine="monkeylearn")
-        db.session.add(r)
-        r = db.Integration(name="statsforecast", data={}, engine="statsforecast")
-        db.session.add(r)
-        r = db.Integration(name="dummy_ml", data={}, engine="dummy_ml")
-        db.session.add(r)
-        r = db.Integration(name="neuralforecast", data={}, engine="neuralforecast")
-        db.session.add(r)
-        r = db.Integration(name="popularity_recommender", data={}, engine="popularity_recommender")
-        db.session.add(r)
-        r = db.Integration(name="lightfm", data={}, engine="lightfm")
-        db.session.add(r)
-        r = db.Integration(name="openai", data={}, engine="openai")
-        db.session.add(r)
-        r = db.Integration(name="anomaly_detection", data={}, engine="anomaly_detection")
-        db.session.add(r)
-        r = db.Integration(
-            name="anyscale_endpoints", data={}, engine="anyscale_endpoints"
-        )
-        db.session.add(r)
-        r = db.Integration(
-            name="langchain", data={}, engine="langchain"
-        )
-        db.session.add(r)
-        r = db.Integration(
-            name="langchain_embedding", data={}, engine="langchain_embedding"
-        )
-        db.session.add(r)
-        r = db.Integration(name="writer", data={}, engine="writer")
-        db.session.add(r)
-        r = db.Integration(name="rag", data={}, engine="rag")
-        db.session.add(r)
-        r = db.Integration(name="dummy_llm", data={}, engine="dummy_llm")
-        db.session.add(r)
         r = db.Integration(name="dummy_data", data={'db_path': self._dummy_db_path}, engine="dummy_data")
-        db.session.add(r)
-        r = db.Integration(name="litellm", data={}, engine="litellm")
-        db.session.add(r)
-        r = db.Integration(name="sentence_transformers", data={}, engine="sentence_transformers")
-        db.session.add(r)
-
-        r = db.Integration(name="pycaret", data={}, engine="pycaret")
-        db.session.add(r)
-
-        r = db.Integration(name="vertex", data={}, engine="vertex")
-        db.session.add(r)
-
-        r = db.Integration(name="google_gemini", data={}, engine="google_gemini")
-        db.session.add(r)
-
-        r = db.Integration(name="leonardo_ai", data={}, engine="leonardo_ai")
         db.session.add(r)
 
         # Lightwood should always be last (else tests break, why?)
@@ -216,14 +158,12 @@ class BaseUnitTest:
         ret = self.command_executor.execute_command(parse_sql(sql, dialect="mindsdb"))
         assert ret.error_code is None, f"SQL execution failed with error: {ret.error_code}"
         if ret.data is not None:
-            columns = [col.alias if col.alias else col.name for col in ret.columns]
-            return pd.DataFrame(ret.data, columns=columns)
+            return ret.data.to_df()
 
     @staticmethod
     def ret_to_df(ret):
         # converts executor response to dataframe
-        columns = [col.alias if col.alias is not None else col.name for col in ret.columns]
-        return pd.DataFrame(ret.data, columns=columns)
+        return ret.data.to_df()
 
     def reset_prom_collectors(self) -> None:
         """Resets collectors in the default Prometheus registry.
@@ -290,7 +230,6 @@ class BaseExecutorTest(BaseUnitTest):
                 raise Exception(f"Can not import: {str(handler_dir)}: {error}")
 
         if import_dummy_llm:
-
             test_handler_path = os.path.dirname(__file__)
             sys.path.append(test_handler_path)
 
@@ -337,7 +276,11 @@ class BaseExecutorTest(BaseUnitTest):
             self.db.session.delete(r)
 
         # create
-        r = self.db.Integration(name=name, data={}, engine=engine)
+        r = self.db.Integration(
+            name=name,
+            data={'password': 'secret'},
+            engine=engine
+        )
         self.db.session.add(r)
         self.db.session.commit()
 
@@ -448,11 +391,7 @@ class BaseExecutorDummyML(BaseExecutorTest):
         if throw_error:
             assert ret.error_code is None
         if ret.data is not None:
-            columns = [
-                col.alias if col.alias is not None else col.name
-                for col in ret.columns
-            ]
-            return pd.DataFrame(ret.data, columns=columns)
+            return ret.data.to_df()
 
 
 class BaseExecutorDummyLLM(BaseExecutorTest):
@@ -503,10 +442,9 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
         self.db.session.add(r)
         self.db.session.commit()
 
-        def predict_f(_model_name, data, pred_format="dict", *args, **kargs):
+        def predict_f(_model_name, df, pred_format="dict", *args, **kargs):
             explain_arr = []
-            if isinstance(data, dict):
-                data = [data]
+            data = df.to_dict('records')
 
             predicted_value = predictor["predicted_value"]
             target = predictor["predict"]
@@ -574,6 +512,6 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
         )
         if ret.error_code is not None:
             raise Exception()
-        if isinstance(ret.data, list):
-            ret.records = self.ret_to_df(ret).to_dict('records')
+        if ret.data is not None:
+            ret.records = ret.data.records
         return ret

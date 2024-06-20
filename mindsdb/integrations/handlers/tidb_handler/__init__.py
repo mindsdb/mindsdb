@@ -1,16 +1,13 @@
 from mindsdb.integrations.libs.const import HANDLER_TYPE
 
+from .__about__ import __version__ as version, __description__ as description
+from .connection_args import connection_args, connection_args_example
 try:
-    from .tidb_handler import (
-        TiDBHandler as Handler,
-        connection_args_example,
-        connection_args
-    )
+    from .tidb_handler import TiDBHandler as Handler
     import_error = None
 except Exception as e:
     Handler = None
     import_error = e
-from .__about__ import __version__ as version, __description__ as description
 
 
 title = 'TiDB'

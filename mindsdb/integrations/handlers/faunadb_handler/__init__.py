@@ -2,10 +2,9 @@ from mindsdb.integrations.libs.const import HANDLER_TYPE
 
 from .__about__ import __description__ as description
 from .__about__ import __version__ as version
-
+from .connection_args import connection_args, connection_args_example
 try:
     from .faunadb_handler import FaunaDBHandler as Handler
-    from .faunadb_handler import connection_args, connection_args_example
 
     import_error = None
 except Exception as e:

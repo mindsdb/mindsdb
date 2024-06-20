@@ -76,10 +76,11 @@ class EmailIngestor:
         df = pd.DataFrame(all_email_data)
 
         # Replace "(UTC)" with empty string over a pandas DataFrame column
-        df['datetime'] = df['datetime'].str.replace(' (UTC)', '')
+        if 'datetime' in df.columns:
+            df['datetime'] = df['datetime'].str.replace(' (UTC)', '')
 
-        # Convert datetime string to datetime object, and normalize timezone to UTC.
-        df['datetime'] = pd.to_datetime(df['datetime'], utc=True, format="%a, %d %b %Y %H:%M:%S %z", errors='coerce')
+            # Convert datetime string to datetime object, and normalize timezone to UTC.
+            df['datetime'] = pd.to_datetime(df['datetime'], utc=True, format="%a, %d %b %Y %H:%M:%S %z", errors='coerce')
 
         return df
 

@@ -1,8 +1,9 @@
-from typing import List, Optional
+from typing import List, Optional, Any
 
-from pydantic import BaseModel, BaseSettings, Extra, root_validator
+from pydantic import BaseModel, model_validator
+from pydantic_settings import BaseSettings
 
-from mindsdb.integrations.handlers.utilities.validation_utilities import ParameterValidationUtilities
+from mindsdb.integrations.utilities.handlers.validation_utilities import ParameterValidationUtilities
 
 
 class TwelveLabsHandlerModel(BaseModel):
@@ -79,10 +80,11 @@ class TwelveLabsHandlerModel(BaseModel):
     prompt: Optional[str] = None
 
     class Config:
-        extra = Extra.forbid
+        extra = "forbid"
 
-    @root_validator(pre=True, allow_reuse=True, skip_on_failure=True)
-    def check_param_typos(cls, values):
+    @model_validator(mode="before")
+    @classmethod
+    def check_param_typos(cls, values: Any) -> Any:
         """
         Root validator to check if there are any typos in the parameters.
 
@@ -101,8 +103,9 @@ class TwelveLabsHandlerModel(BaseModel):
 
         return values
 
-    @root_validator(pre=True, allow_reuse=True, skip_on_failure=True)
-    def check_for_valid_task(cls, values):
+    @model_validator(mode="before")
+    @classmethod
+    def check_for_valid_task(cls, values: Any) -> Any:
         """
         Root validator to check if the task provided is valid.
 
@@ -126,8 +129,9 @@ class TwelveLabsHandlerModel(BaseModel):
 
         return values
 
-    @root_validator(pre=True, allow_reuse=True, skip_on_failure=True)
-    def check_for_valid_engine_options(cls, values):
+    @model_validator(mode="before")
+    @classmethod
+    def check_for_valid_engine_options(cls, values: Any) -> Any:
         """
         Root validator to check if the options specified for particular engines are valid.
 
@@ -153,8 +157,9 @@ class TwelveLabsHandlerModel(BaseModel):
 
         return values
 
-    @root_validator(allow_reuse=True, skip_on_failure=True)
-    def check_for_video_urls_or_video_files(cls, values):
+    @model_validator(mode="before")
+    @classmethod
+    def check_for_video_urls_or_video_files(cls, values: Any) -> Any:
         """
         Root validator to check if video_urls or video_files have been provided.
 
@@ -182,8 +187,9 @@ class TwelveLabsHandlerModel(BaseModel):
 
         return values
 
-    @root_validator(allow_reuse=True, skip_on_failure=True)
-    def check_for_task_specific_parameters(cls, values):
+    @model_validator(mode="before")
+    @classmethod
+    def check_for_task_specific_parameters(cls, values: Any) -> Any:
         """
         Root validator to check if task has been provided along with the other relevant parameters for each task.
 
@@ -257,10 +263,9 @@ class TwelveLabsHandlerConfig(BaseSettings):
     DEFAULT_WAIT_DURATION : int
         Default wait duration when polling video indexing tasks created via the Twelve Labs API.
     """
-
-    BASE_URL = "https://api.twelvelabs.io/v1.2"
-    DEFAULT_ENGINE = "marengo2.5"
-    DEFAULT_WAIT_DURATION = 5
+    BASE_URL: str = "https://api.twelvelabs.io/v1.2"
+    DEFAULT_ENGINE: str = "marengo2.6"
+    DEFAULT_WAIT_DURATION: int = 5
 
 
 twelve_labs_handler_config = TwelveLabsHandlerConfig()

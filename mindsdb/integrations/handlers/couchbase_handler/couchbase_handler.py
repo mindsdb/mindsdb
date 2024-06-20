@@ -1,21 +1,21 @@
 from datetime import timedelta
-from collections import OrderedDict
-from mindsdb.integrations.libs.base import DatabaseHandler
-from mindsdb.utilities import log
-from mindsdb_sql.parser.ast.base import ASTNode
-import pandas as pd
 
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
-from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse,
-    HandlerResponse as Response,
-    RESPONSE_TYPE,
-)
+import pandas as pd
+from urllib.parse import urlparse
 from couchbase.auth import PasswordAuthenticator
 from couchbase.cluster import Cluster
 from couchbase.exceptions import UnAmbiguousTimeoutException
 from couchbase.options import ClusterOptions
 from couchbase.exceptions import KeyspaceNotFoundException, CouchbaseException
+
+from mindsdb.integrations.libs.base import DatabaseHandler
+from mindsdb.utilities import log
+from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb.integrations.libs.response import (
+    HandlerStatusResponse as StatusResponse,
+    HandlerResponse as Response,
+    RESPONSE_TYPE,
+)
 
 
 logger = log.getLogger(__name__)
@@ -61,13 +61,11 @@ class CouchbaseHandler(DatabaseHandler):
 
         options = ClusterOptions(auth)
 
-        if 'cloud.couchbase.com' in self.connection_data.get("host"):
+        host = self.connection_data.get("host")
+        domain = urlparse(host).hostname
+        if domain and domain.endswith(".couchbase.com"):
             options.apply_profile('wan_development')
-
-            endpoint = f"couchbases://{self.connection_data.get('host')}"
-        else:
-            endpoint = f"couchbase://{self.connection_data.get('host')}"
-
+        endpoint = f"couchbases://{host}"
         cluster = Cluster(
             endpoint,
             options,
@@ -210,30 +208,3 @@ class CouchbaseHandler(DatabaseHandler):
             )
 
         return response
-
-
-connection_args = OrderedDict(
-    user={
-        "type": ARG_TYPE.STR,
-        "description": "The user name used to authenticate with the Couchbase server.",
-    },
-    password={
-        "type": ARG_TYPE.STR,
-        "description": "The password to authenticate the user with the Couchbase server.",
-    },
-    bucket={
-        "type": ARG_TYPE.STR,
-        "description": "The database/bucket name to use when connecting with the Couchbase server.",
-    },
-    host={
-        "type": ARG_TYPE.STR,
-        "description": "--your-instance--.dp.cloud.couchbase.com or IP address of the Couchbase server.",
-    },
-    scope={
-        "type": ARG_TYPE.STR,
-        "description": 'The scope use in the query context in Couchbase server. If blank, scope will be "_default".',
-    },
-)
-connection_args_example = OrderedDict(
-    host="127.0.0.1", user="root", password="password", bucket="bucket"
-)

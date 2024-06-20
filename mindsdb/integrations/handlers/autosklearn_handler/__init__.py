@@ -12,7 +12,7 @@ title = 'Auto-Sklearn'
 name = 'autosklearn'
 type = HANDLER_TYPE.ML
 icon_path = 'icon.png'
-permanent = True
+permanent = False
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'description', 'import_error', 'icon_path'

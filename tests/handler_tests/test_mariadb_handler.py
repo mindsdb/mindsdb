@@ -6,7 +6,7 @@ import tarfile
 import pytest
 import docker
 
-from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
+from mindsdb.integrations.handlers.mariadb_handler.mariadb_handler import MariaDBHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.utilities.fs import safe_extract
 
@@ -85,7 +85,7 @@ def handler(request):
 
     if with_ssl:
         get_certificates(container)
-    handler = MySQLHandler('test_mysql_handler', **HANDLER_KWARGS)
+    handler = MariaDBHandler('test_mariadb_handler', **HANDLER_KWARGS)
     yield handler
 
     # normal teardown

@@ -7,10 +7,11 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
 from langchain_core.vectorstores import VectorStore
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_core.stores import BaseStore
 from langchain.text_splitter import TextSplitter
 from pydantic import BaseModel
+
+DEFAULT_COLLECTION_NAME = 'default_collection'
 
 # Multi retriever specific
 DEFAULT_ID_KEY = "doc_id"
@@ -24,8 +25,6 @@ DEFAULT_LLM_MODEL = "gpt-3.5-turbo"
 DEFAULT_CONTENT_COLUMN_NAME = "body"
 DEFAULT_DATASET_DESCRIPTION = "email inbox"
 DEFAULT_TEST_TABLE_NAME = "test_email"
-DEFAULT_LLM = ChatOpenAI(model_name=DEFAULT_LLM_MODEL, temperature=0)
-DEFAULT_EMBEDDINGS = OpenAIEmbeddings()
 DEFAULT_VECTOR_STORE = Chroma
 DEFAULT_AUTO_META_PROMPT_TEMPLATE = """
 Below is a json representation of a table with information about {description}.
@@ -72,7 +71,7 @@ class MultiVectorRetrieverMode(Enum):
 
 
 class VectorStoreType(Enum):
-    CHROMA = 'chroma'
+    CHROMA = 'chromadb'
     PGVECTOR = 'pgvector'
 
 
@@ -91,7 +90,7 @@ class RetrieverType(Enum):
 class VectorStoreConfig(BaseModel):
     vector_store_type: VectorStoreType = VectorStoreType.CHROMA
     persist_directory: str = None
-    collection_name: str = 'default'
+    collection_name: str = DEFAULT_COLLECTION_NAME
     connection_string: str = None
 
     class Config:
@@ -135,4 +134,4 @@ class RAGPipelineModel(BaseModel):
 
     @classmethod
     def get_field_names(cls):
-        return list(cls.__fields__.keys())
+        return list(cls.model_fields.keys())

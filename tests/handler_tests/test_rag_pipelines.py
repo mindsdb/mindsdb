@@ -1,10 +1,15 @@
 import pytest
 import yaml
 from langchain_core.documents import Document
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+
 from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
 from pathlib import Path
 
-from mindsdb.integrations.utilities.rag.settings import DEFAULT_LLM, DEFAULT_EMBEDDINGS
+from mindsdb.integrations.utilities.rag.settings import DEFAULT_LLM_MODEL, RAGPipelineModel
+
+DEFAULT_LLM = ChatOpenAI(model_name=DEFAULT_LLM_MODEL, temperature=0)
+DEFAULT_EMBEDDINGS = OpenAIEmbeddings()
 
 path = Path(__file__).parent
 config_path = path / "data" / "rag_pipelines"
@@ -36,7 +41,7 @@ def config(request):
     config['llm'] = DEFAULT_LLM
     config['embeddings_model'] = DEFAULT_EMBEDDINGS
 
-    return config
+    return RAGPipelineModel(**config)
 
 
 def test_rag_pipeline_creation(config):

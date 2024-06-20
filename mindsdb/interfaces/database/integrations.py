@@ -26,7 +26,6 @@ from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE, HANDLER_TYPE
-from mindsdb.integrations.handlers_client.db_client_factory import DBClient
 from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities import log
@@ -261,7 +260,7 @@ class IntegrationController:
         db.session.delete(integration_record)
         db.session.commit()
 
-    def _get_integration_record_data(self, integration_record, sensitive_info=True):
+    def _get_integration_record_data(self, integration_record, show_secrets=True):
         if (
             integration_record is None
             or integration_record.data is None
@@ -292,20 +291,35 @@ class IntegrationController:
                 base_dir=integrations_dir
             )
 
-        if not sensitive_info:
-            if 'password' in data:
-                data['password'] = None
-            if (
-                data.get('type') == 'redis'
-                and isinstance(data.get('connection'), dict)
-                and 'password' in data['connection']
-            ):
-                data['connection'] = None
-
-        integration_type = None
         integration_module = self.handler_modules.get(integration_record.engine)
-        if hasattr(integration_module, 'type'):
-            integration_type = integration_module.type
+        integration_type = getattr(integration_module, 'type', None)
+
+        if show_secrets is False:
+            connection_args = getattr(integration_module, 'connection_args', None)
+            if isinstance(connection_args, dict):
+                if integration_type == HANDLER_TYPE.DATA:
+                    for key, value in connection_args.items():
+                        if key in data and value.get('secret', False) is True:
+                            data[key] = '******'
+                elif integration_type == HANDLER_TYPE.ML:
+                    creation_args = connection_args.get('creation_args')
+                    if isinstance(creation_args, dict):
+                        for key, value in creation_args.items():
+                            if key in data and value.get('secret', False) is True:
+                                data[key] = '******'
+                else:
+                    raise ValueError(f'Unexpected handler type: {integration_type}')
+            else:
+                # region obsolete, del in future
+                if 'password' in data:
+                    data['password'] = None
+                if (
+                    data.get('type') == 'redis'
+                    and isinstance(data.get('connection'), dict)
+                    and 'password' in data['connection']
+                ):
+                    data['connection'] = None
+                # endregion
 
         class_type = None
         if integration_module is not None and inspect.isclass(integration_module.Handler):
@@ -323,24 +337,24 @@ class IntegrationController:
             'class_type': class_type,
             'engine': integration_record.engine,
             'permanent': getattr(integration_module, 'permanent', False),
-            'date_last_update': deepcopy(integration_record.updated_at),
+            'date_last_update': deepcopy(integration_record.updated_at),  # to del ?
             'connection_data': data
         }
 
-    def get_by_id(self, integration_id, sensitive_info=True):
+    def get_by_id(self, integration_id, show_secrets=True):
         integration_record = (
             db.session.query(db.Integration)
             .filter_by(company_id=ctx.company_id, id=integration_id)
             .first()
         )
-        return self._get_integration_record_data(integration_record, sensitive_info)
+        return self._get_integration_record_data(integration_record, show_secrets)
 
-    def get(self, name, sensitive_info=True, case_sensitive=False):
+    def get(self, name, show_secrets=True, case_sensitive=False):
         try:
             integration_record = self._get_integration_record(name, case_sensitive)
         except EntityNotExistsError:
             return None
-        return self._get_integration_record_data(integration_record, sensitive_info)
+        return self._get_integration_record_data(integration_record, show_secrets)
 
     @staticmethod
     def _get_integration_record(name: str, case_sensitive: bool = False) -> db.Integration:
@@ -373,29 +387,18 @@ class IntegrationController:
 
         return integration_record
 
-    def get_all(self, sensitive_info=True):
+    def get_all(self, show_secrets=True):
         integration_records = db.session.query(db.Integration).filter_by(company_id=ctx.company_id).all()
         integration_dict = {}
         for record in integration_records:
             if record is None or record.data is None:
                 continue
-            integration_dict[record.name] = self._get_integration_record_data(record, sensitive_info)
+            integration_dict[record.name] = self._get_integration_record_data(record, show_secrets)
         return integration_dict
-
-    def check_connections(self):
-        connections = {}
-        for integration_name, integration_meta in self.get_all().items():
-            handler = self.create_tmp_handler(
-                handler_type=integration_meta['engine'],
-                connection_data=integration_meta['connection_data']
-            )
-            status = handler.check_connection()
-            connections[integration_name] = status.get('success', False)
-        return connections
 
     def _make_handler_args(self, name: str, handler_type: str, connection_data: dict, integration_id: int = None,
                            file_storage: FileStorage = None, handler_storage: HandlerStorage = None):
-        handler_ars = dict(
+        handler_args = dict(
             name=name,
             integration_id=integration_id,
             connection_data=connection_data,
@@ -404,29 +407,26 @@ class IntegrationController:
         )
 
         if handler_type == 'files':
-            handler_ars['file_controller'] = FileController()
+            handler_args['file_controller'] = FileController()
         elif self.handler_modules.get(handler_type, False).type == HANDLER_TYPE.ML:
-            handler_ars['handler_controller'] = self
-            handler_ars['company_id'] = ctx.company_id
+            handler_args['handler_controller'] = self
+            handler_args['company_id'] = ctx.company_id
 
-        return handler_ars
+        return handler_args
 
-    def create_tmp_handler(self, handler_type: str, connection_data: dict) -> object:
-        """ Returns temporary handler. That handler does not exist in database.
+    def create_tmp_handler(self, name: str, engine: str, connection_args: dict) -> dict:
+        """Create temporary handler, mostly for testing connections
 
-            Args:
-                handler_type (str)
-                connection_data (dict)
+        Args:
+            name (str): Integration  name
+            engine (str): Integration engine name
+            connection_args (dict): Connection arguments
 
-            Returns:
-                Handler object
+        Returns:
+            HandlerClass: Handler class instance
         """
-        handler_meta = self.handlers_import_status[handler_type]
-        if not handler_meta["import"]["success"]:
-            logger.info(f"to use {handler_type} please install 'pip install mindsdb[{handler_type}]'")
-
-        logger.debug("%s.create_tmp_handler: connection args - %s", self.__class__.__name__, connection_data)
         integration_id = int(time() * 10000)
+
         file_storage = FileStorage(
             resource_group=RESOURCE_GROUP.INTEGRATION,
             resource_id=integration_id,
@@ -434,17 +434,18 @@ class IntegrationController:
             sync=False
         )
         handler_storage = HandlerStorage(integration_id, root_dir='tmp', is_temporal=True)
-        handler_ars = self._make_handler_args(
-            name='tmp_handler',
-            handler_type=handler_type,
-            connection_data=connection_data,
+
+        HandlerClass = self.handler_modules[engine].Handler
+        handler_args = self._make_handler_args(
+            name=name,
+            handler_type=engine,
+            connection_data=connection_args,
             integration_id=integration_id,
             file_storage=file_storage,
             handler_storage=handler_storage,
         )
-
-        logger.debug("%s.create_tmp_handler: create a client to db of %s type", self.__class__.__name__, handler_type)
-        return DBClient(handler_type, self.handler_modules[handler_type].Handler, **handler_ars)
+        handler = HandlerClass(**handler_args)
+        return handler
 
     def copy_integration_storage(self, integration_id_from, integration_id_to):
         storage_from = HandlerStorage(integration_id_from)
@@ -625,7 +626,7 @@ class IntegrationController:
             handler_class = module.Handler
             try:
                 prediction_args = handler_class.prediction_args()
-                creation_args = handler_class.creation_args()
+                creation_args = getattr(module, 'creation_args', handler_class.creation_args())
                 connection_args = {
                     "prediction": prediction_args,
                     "creation_args": creation_args

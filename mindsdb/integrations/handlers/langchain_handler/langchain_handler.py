@@ -1,5 +1,6 @@
 from concurrent.futures import as_completed, TimeoutError
 from typing import Optional, Dict, List
+import os
 import re
 
 from langchain.agents import AgentExecutor
@@ -8,6 +9,7 @@ from langchain.chains.conversation.memory import ConversationSummaryBufferMemory
 from langchain.schema import SystemMessage
 from langchain_community.chat_models import ChatAnthropic, ChatOpenAI, ChatAnyscale, ChatLiteLLM, ChatOllama
 from langchain_core.prompts import PromptTemplate
+from langfuse import Langfuse
 from langfuse.callback import CallbackHandler
 
 import numpy as np
@@ -18,6 +20,7 @@ from mindsdb.integrations.handlers.langchain_handler.constants import (
     DEFAULT_AGENT_TIMEOUT_SECONDS,
     DEFAULT_AGENT_TOOLS,
     DEFAULT_AGENT_TYPE,
+    DEFAULT_EMBEDDINGS_MODEL_PROVIDER,
     DEFAULT_MAX_ITERATIONS,
     DEFAULT_MAX_TOKENS,
     DEFAULT_MODEL_NAME,
@@ -27,6 +30,7 @@ from mindsdb.integrations.handlers.langchain_handler.constants import (
     DEFAULT_ASSISTANT_COLUMN
 )
 from mindsdb.integrations.handlers.langchain_handler.log_callback_handler import LogCallbackHandler
+from mindsdb.integrations.handlers.langchain_handler.langfuse_callback_handler import LangfuseCallbackHandler
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
 from mindsdb.integrations.handlers.langchain_handler.tools import setup_tools
 from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS as OPEN_AI_CHAT_MODELS
@@ -37,6 +41,8 @@ from mindsdb.interfaces.storage.model_fs import HandlerStorage, ModelStorage
 from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
 from mindsdb.utilities import log
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
+
+from .mindsdb_chat_model import ChatMindsdb
 
 _PARSING_ERROR_PREFIX = 'An output parsing error occured'
 
@@ -102,10 +108,10 @@ class LangChainHandler(BaseMLEngine):
         model_config.update(pred_args)
         # Include API keys.
         model_config['api_keys'] = {
-            p: get_api_key(p, args, self.engine_storage, strict=False) for p in SUPPORTED_PROVIDERS
+            p: get_api_key(p, model_config, self.engine_storage, strict=False) for p in SUPPORTED_PROVIDERS
         }
         llm_config = get_llm_config(args.get('provider', self._get_llm_provider(args)), model_config)
-        config_dict = llm_config.dict()
+        config_dict = llm_config.model_dump()
         config_dict = {k: v for k, v in config_dict.items() if v is not None}
         return config_dict
 
@@ -123,6 +129,16 @@ class LangChainHandler(BaseMLEngine):
                 logger.error(f'Incorrect Langfuse credentials provided to Langchain handler. Full args: {args}')
         if self.langfuse_callback_handler is not None:
             all_callbacks.append(self.langfuse_callback_handler)
+        if 'trace_id' not in args or 'observation_id' not in args:
+            return all_callbacks
+        # Trace LLM chains & tools using Langfuse.
+        langfuse = Langfuse(
+            public_key=os.getenv('LANGFUSE_PUBLIC_KEY'),
+            secret_key=os.getenv('LANGFUSE_SECRET_KEY'),
+            host=os.getenv('LANGFUSE_HOST')
+        )
+        langfuse_cb_handler = LangfuseCallbackHandler(langfuse, args['trace_id'], args['observation_id'])
+        all_callbacks.append(langfuse_cb_handler)
         return all_callbacks
 
     def _create_chat_model(self, args: Dict, pred_args: Dict):
@@ -138,6 +154,8 @@ class LangChainHandler(BaseMLEngine):
             return ChatLiteLLM(**model_kwargs)
         if args['provider'] == 'ollama':
             return ChatOllama(**model_kwargs)
+        if args['provider'] == 'mindsdb':
+            return ChatMindsdb(**model_kwargs)
         raise ValueError(f'Unknown provider: {args["provider"]}')
 
     def _create_embeddings_model(self, args: Dict):
@@ -212,12 +230,21 @@ class LangChainHandler(BaseMLEngine):
 
         # Set up embeddings model if needed.
         if args.get('mode') == 'retrieval':
-            # get args for embeddings model
             embeddings_args = args.pop('embedding_model_args', {})
+
+            # no embedding model args provided, use default provider.
+            if not embeddings_args:
+                embeddings_provider = self._get_embedding_model_provider(args)
+                logger.warning("'embedding_model_args' not found in input params, "
+                               f"Trying to use LLM provider: {embeddings_provider}"
+                               )
+                embeddings_args['class'] = embeddings_provider
+                # Include API keys if present.
+                embeddings_args.update({k: v for k, v in args.items() if 'api_key' in k})
+
             # create embeddings model
             pred_args['embeddings_model'] = self._create_embeddings_model(embeddings_args)
             pred_args['llm'] = llm
-            pred_args['mindsdb_path'] = self.engine_storage.folder_get
 
         tools = setup_tools(llm,
                             model_kwargs,
@@ -250,7 +277,6 @@ class LangChainHandler(BaseMLEngine):
             tools,
             llm,
             agent=agent_type,
-            callbacks=self._get_agent_callbacks(args),
             # Calls the agent’s LLM Chain one final time to generate a final answer based on the previous steps
             early_stopping_method='generate',
             handle_parsing_errors=self._handle_parsing_errors,
@@ -291,8 +317,16 @@ class LangChainHandler(BaseMLEngine):
         def _invoke_agent_executor_with_prompt(agent_executor, prompt):
             if not prompt:
                 return ''
-
-            answer = agent_executor.invoke(prompt)
+            try:
+                # Handle callbacks per run.
+                all_args = args.copy()
+                all_args.update(pred_args)
+                answer = agent_executor.invoke(prompt, config={ 'callbacks': self._get_agent_callbacks(all_args) })
+            except Exception as e:
+                answer = str(e)
+                if not answer.startswith("Could not parse LLM output: `"):
+                    raise e
+                answer = {'output': answer.removeprefix("Could not parse LLM output: `").removesuffix("`")}
 
             if 'output' not in answer:
                 # This should never happen unless Langchain changes invoke output format, but just in case.

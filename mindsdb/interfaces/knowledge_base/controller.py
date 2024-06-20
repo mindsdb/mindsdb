@@ -17,6 +17,7 @@ from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor
 
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.libs.vectordatabase_handler import TableField
+from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
 
@@ -251,7 +252,10 @@ class KnowledgeBaseTable:
         helper to get vector db handler
         """
         if self._vector_db is None:
-            database_name = db.Integration.query.get(self._kb.vector_database_id).name
+            database = db.Integration.query.get(self._kb.vector_database_id)
+            if database is None:
+                raise ValueError('Vector database not found. Is it deleted?')
+            database_name = database.name
             self._vector_db = self.session.integration_controller.get_data_handler(database_name)
         return self._vector_db
 
@@ -276,16 +280,17 @@ class KnowledgeBaseTable:
 
         project_datanode = self.session.datahub.get(model_project.name)
 
-        # TODO adjust input
+        # keep only content
+        df = df[[TableField.CONTENT.value]]
+
         input_col = model_rec.learn_args.get('using', {}).get('question_column')
+
         if input_col is not None and input_col != TableField.CONTENT.value:
             df = df.rename(columns={TableField.CONTENT.value: input_col})
 
-        data = df[[TableField.CONTENT.value]].to_dict('records')
-
         df_out = project_datanode.predict(
             model_name=model_rec.name,
-            data=data,
+            df=df,
         )
 
         target = model_rec.to_predict[0]
@@ -347,7 +352,7 @@ class KnowledgeBaseController:
 
         if embedding_model is None:
             # create default embedding model
-            model_name = self._create_default_embedding_model(project.name, name)
+            model_name = self._create_default_embedding_model(project.name, name, params=params)
 
             # memorize to remove it later
             params['embedding_model'] = model_name
@@ -418,27 +423,32 @@ class KnowledgeBaseController:
         self.session.integration_controller.add(vector_store_name, engine, connection_args)
         return vector_store_name
 
-    def _create_default_embedding_model(self, project_name, kb_name, engine="sentence_transformers"):
+    def _create_default_embedding_model(self, project_name, kb_name, engine="langchain_embedding", params: dict = None):
         """create a default embedding model for knowledge base, if not specified"""
         model_name = f"{kb_name}_default_model"
-
+        using_args = {}
+        if engine == 'langchain_embedding':
+            # Use default embeddings.
+            using_args['class'] = 'openai'
+        # Include API key if provided.
+        using_args.update({k: v for k, v in params.items() if 'api_key' in k})
         statement = CreatePredictor(
             name=Identifier(parts=[project_name, model_name]),
-            using={},
+            using=using_args,
             targets=[
                 Identifier(parts=[TableField.EMBEDDINGS.value])
             ]
         )
         ml_handler = self.session.integration_controller.get_ml_handler(engine)
 
-        self.session.model_controller.create_model(
+        _ = self.session.model_controller.create_model(
             statement,
             ml_handler
         )
 
         return model_name
 
-    def delete(self, name: str, project_name: str, if_exists: bool = False) -> None:
+    def delete(self, name: str, project_name: int, if_exists: bool = False) -> None:
         """
         Delete a knowledge base from the database
         """
@@ -467,15 +477,21 @@ class KnowledgeBaseController:
 
         # drop objects if they were created automatically
         if 'vector_storage' in kb.params:
-            self.session.integration_controller.delete(kb.params['vector_storage'])
+            try:
+                self.session.integration_controller.delete(kb.params['vector_storage'])
+            except EntityNotExistsError:
+                pass
         if 'embedding_model' in kb.params:
-            self.session.model_controller.delete_model(kb.params['embedding_model'], project_name)
+            try:
+                self.session.model_controller.delete_model(kb.params['embedding_model'], project_name)
+            except EntityNotExistsError:
+                pass
 
         # kb exists
         db.session.delete(kb)
         db.session.commit()
 
-    def get(self, name: str, project_id: str) -> db.KnowledgeBase:
+    def get(self, name: str, project_id: int) -> db.KnowledgeBase:
         """
         Get a knowledge base from the database
         by name + project_id
@@ -490,7 +506,7 @@ class KnowledgeBaseController:
         )
         return kb
 
-    def get_table(self, name: str, project_id: str) -> KnowledgeBaseTable:
+    def get_table(self, name: str, project_id: int) -> KnowledgeBaseTable:
         """
         Returns kb table object
         :param name: table name
@@ -501,21 +517,45 @@ class KnowledgeBaseController:
         if kb is not None:
             return KnowledgeBaseTable(kb, self.session)
 
-    def list(self, project_id: str) -> List[db.KnowledgeBase]:
+    def list(self, project_name: str = None) -> List[dict]:
         """
         List all knowledge bases from the database
         belonging to a project
         """
-        kbs = (
-            db.session.query(db.KnowledgeBase)
-            .filter_by(
-                project_id=project_id,
-            )
-            .all()
-        )
-        return kbs
+        project_controller = ProjectController()
+        projects = project_controller.get_list()
+        if project_name is not None:
+            projects = [p for p in projects if p.name == project_name]
 
-    def update(self, name: str, project_id: str, **kwargs) -> db.KnowledgeBase:
+        query = (
+            db.session.query(db.KnowledgeBase)
+            .filter(db.KnowledgeBase.project_id.in_(list([p.id for p in projects])))
+        )
+
+        data = []
+        project_names = {
+            i.id: i.name
+            for i in project_controller.get_list()
+        }
+
+        for record in query:
+            vector_database = record.vector_database
+            embedding_model = record.embedding_model
+
+            data.append({
+                'id': record.id,
+                'name': record.name,
+                'project_id': record.project_id,
+                'project_name': project_names[record.project_id],
+                'embedding_model': embedding_model.name if embedding_model is not None else None,
+                'vector_database': None if vector_database is None else vector_database.name,
+                'vector_database_table': record.vector_database_table,
+                'params': record.params
+            })
+
+        return data
+
+    def update(self, name: str, project_id: int, **kwargs) -> db.KnowledgeBase:
         """
         Update a knowledge base record
         """

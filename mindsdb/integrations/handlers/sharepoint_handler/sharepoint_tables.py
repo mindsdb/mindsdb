@@ -4,21 +4,21 @@ from typing import Text, List, Dict, Any
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APITable
 
-from mindsdb.integrations.handlers.utilities.query_utilities.select_query_utilities import (
+from mindsdb.integrations.utilities.handlers.query_utilities.select_query_utilities import (
     SELECTQueryParser,
     SELECTQueryExecutor,
 )
-from mindsdb.integrations.handlers.utilities.query_utilities.delete_query_utilities import (
+from mindsdb.integrations.utilities.handlers.query_utilities.delete_query_utilities import (
     DELETEQueryParser,
     DELETEQueryExecutor,
 )
 
-from mindsdb.integrations.handlers.utilities.query_utilities.update_query_utilities import (
+from mindsdb.integrations.utilities.handlers.query_utilities.update_query_utilities import (
     UPDATEQueryParser,
     UPDATEQueryExecutor,
 )
 
-from mindsdb.integrations.handlers.utilities.query_utilities import INSERTQueryParser
+from mindsdb.integrations.utilities.handlers.query_utilities import INSERTQueryParser
 
 
 class SitesTable(APITable):

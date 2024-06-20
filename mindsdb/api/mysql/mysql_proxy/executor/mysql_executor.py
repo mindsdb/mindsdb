@@ -43,8 +43,6 @@ class Executor:
         self.error_message = None
         self.error_code = None
 
-        # self.predictor_metadata = {}
-
         self.sql = ""
         self.sql_lower = ""
 
@@ -55,12 +53,6 @@ class Executor:
         self.command_executor.change_default_db(new_db)
 
     def stmt_prepare(self, sql):
-
-        # resp = self.execute_external(sql)
-        # if resp is not None:
-        #     # is already executed
-        #     self.is_executed = True
-        #     return
 
         self.parse(sql)
 
@@ -105,35 +97,9 @@ class Executor:
     @profiler.profile()
     def query_execute(self, sql):
         logger.info("%s.query_execute: sql - %s", self.__class__.__name__, sql)
-        # resp = self.execute_external(sql)
-        # if resp is not None:
-        #     # is already executed
-        #     self.is_executed = True
-        #     return
 
         self.parse(sql)
         self.do_execute()
-
-    # for awesome Mongo API only
-    # def binary_query_execute(self, sql):
-    #     self.sql = sql.to_string()
-    #     self.sql_lower = self.sql.lower()
-    #
-    #     ret = self.command_executor.execute_command(sql)
-    #     self.error_code = ret.error_code
-    #     self.error_message = ret.error_message
-    #
-    #     self.data = ret.data
-    #     self.server_status = ret.status
-    #     if ret.columns is not None:
-    #         self.columns = ret.columns
-    #
-    #     self.state_track = ret.state_track
-
-    # def execute_external(self, sql):
-    #
-    #     # not exec directly in integration
-    #     return None
 
     @profiler.profile()
     def parse(self, sql):
@@ -171,9 +137,12 @@ class Executor:
 
         self.is_executed = True
 
-        self.data = ret.data
-        self.server_status = ret.status
-        if ret.columns is not None:
-            self.columns = ret.columns
+        if self.sqlserver.session.api_type == 'http':
+            json_types = True
+        else:
+            json_types = False
+        if ret.data is not None:
+            self.data = ret.data.to_lists(json_types=json_types)
+            self.columns = ret.data.columns
 
         self.state_track = ret.state_track

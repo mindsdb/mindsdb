@@ -23,6 +23,7 @@ def upgrade():
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('input', sa.String(), nullable=False),
         sa.Column('output', sa.String(), nullable=False),
+        sa.Column('model_id', sa.String(), nullable = False),
         sa.Column('created_at', sa.DateTime(), server_default=sa.func.now()),
         sa.Column('updated_at', sa.DateTime(), server_default=sa.func.now(), onupdate=sa.func.now()),
         sa.PrimaryKeyConstraint('id')

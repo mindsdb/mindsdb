@@ -90,7 +90,7 @@ class LangChainHandler(BaseMLEngine):
         self.log_callback_handler = log_callback_handler
         self.langfuse_callback_handler = langfuse_callback_handler
         self.llm_data_controller = LLMDataController()
-        self.use_dspy = True
+        self.use_dspy = False
         if self.log_callback_handler is None:
             self.log_callback_handler = LogCallbackHandler(logger)
 
@@ -242,11 +242,12 @@ class LangChainHandler(BaseMLEngine):
             cold_start_df = pd.DataFrame(dill.loads(self.model_storage.file_get("cold_start_df")))  # fixed in "training"  # noqa
 
             # gets larger as agent is used more
-            self_improvement_df = pd.DataFrame(self.llm_data_controller.list_all_llm_data())
+            self_improvement_df = pd.DataFrame(self.llm_data_controller.list_all_llm_data(0))
             self_improvement_df = self_improvement_df.rename(columns={
                 'output': args['target'],
                 'input': args['user_column']
             })
+            self_improvement_df = self_improvement_df.tail(25)
 
             # add cold start DF
             self_improvement_df = pd.concat([cold_start_df, self_improvement_df]).reset_index(drop=True)
@@ -457,7 +458,7 @@ class LangChainHandler(BaseMLEngine):
             answer = self.generate_dspy_response(question, chain, llm)
             responses.append({'answer': answer, 'question': question})  # TODO: check that columns are right here
             # TODO: check this only adds new incoming rows
-            self.llm_data_controller.add_llm_data(question, answer)  # stores new traces for use in new calls
+            self.llm_data_controller.add_llm_data(question, answer, 0)  # stores new traces for use in new calls
 
         # Set up the evaluator, which can be used multiple times.
         # TODO: use this in the EVALUATE command

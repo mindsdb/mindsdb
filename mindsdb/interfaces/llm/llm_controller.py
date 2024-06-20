@@ -9,7 +9,7 @@ class LLMDataController:
         '''Initializes the LLMDataController with configuration settings.'''
         self.config = Config()
 
-    def add_llm_data(self, input_data: str, output_data: str) -> db.LLMData:
+    def add_llm_data(self, input_data: str, output_data: str, model_id: int) -> db.LLMData:
         '''
         Adds LLM input and output data to the database.
         Parameters:
@@ -21,7 +21,8 @@ class LLMDataController:
         # TODO: check the hash to avoid adding duplicate records (SQLAlchemy-based)
         new_llm_data = db.LLMData(
             input=input_data,
-            output=output_data
+            output=output_data,
+            model_id = model_id
         )
         db.session.add(new_llm_data)
         db.session.commit()
@@ -40,12 +41,23 @@ class LLMDataController:
         db.session.delete(llm_data)
         db.session.commit()
 
-    def list_all_llm_data(self):
+    def list_all_llm_data(self, model_id: int):
         '''
-        Lists all LLM data entries.
+        Lists all LLM data entries for a specific model.
+        Parameters:
+            model_id (int): The ID of the model/agent to filter the data.
         Returns:
-            List[LLMData]: A list of all LLMData objects in the database.
+            List[Dict]: A list of all LLMData objects in the database for the specified model.
         '''
-        # return db.session.query(db.LLMData).all()
-        llm_data_objects = db.session.query(db.LLMData).all()
+        llm_data_objects = db.session.query(db.LLMData).filter_by(model_id=model_id).all()
         return [{'input': llm_data.input, 'output': llm_data.output} for llm_data in llm_data_objects]
+    
+    def get_llm_data(self, llm_data_id: int) -> db.LLMData:
+        '''
+        Retrieves a specific LLM data entry by ID.
+        Parameters:
+            llm_data_id (int): The ID of the LLM data to retrieve.
+        Returns:
+            LLMData: The LLMData object, or None if not found.
+        '''
+        return db.session.query(db.LLMData).filter_by(model_id=llm_data_id).first()

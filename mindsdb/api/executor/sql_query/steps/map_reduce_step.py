@@ -59,52 +59,59 @@ class MapReduceStepCall(BaseStepCall):
         partition = getattr(step, 'partition', None)
 
         if partition is not None:
-            data = self._steps_reduce_partition(step, partition)
+            data = self._reduce_partition(step, partition)
 
         else:
-            data = self._steps_reduce_vars(step)
+            data = self._reduce_vars(step)
 
         return data
 
-    def _steps_reduce_partition(self, step, partition):
+    def _reduce_partition(self, step, partition):
         if not isinstance(partition, int):
             raise NotImplementedError('Only integers are supported in partition definition.')
 
-        result_idx = step.values.step_num
-        step_data = self.steps_data[result_idx]
+        input_idx = step.values.step_num
+        input_data = self.steps_data[input_idx]
+        input_columns = list(input_data.columns)
 
         substeps = step.step
+        if not isinstance(substeps, list):
+            substeps = [substeps]
+
         data = ResultSet()
 
-        df = step_data.get_raw_df()
+        df = input_data.get_raw_df()
 
         chunk = 0
-        while chunk * partition < len(step_data):
+        while chunk * partition < len(input_data):
             # create results with partition
             df1 = df[chunk * partition: (chunk + 1) * partition]
             chunk += 1
 
-            step_data2 = ResultSet(columns=list(step_data.columns))
-            step_data2.add_raw_df(df1)
-
-            steps_data2 = self.steps_data.copy()
-            steps_data2[result_idx] = step_data2
-
-            # execute with modified steps
-            if not isinstance(substeps, list):
-                substeps = [substeps]
-
-            sub_data = None
-            for substep in substeps:
-                sub_data = self.sql_query.execute_step(substep, steps_data=steps_data2)
-                steps_data2[substep.step_num] = sub_data
+            sub_data = self._exec_partition(df1, substeps, input_idx, input_columns)
 
             if sub_data:
                 data = join_query_data(data, sub_data)
 
         return data
 
-    def _steps_reduce_vars(self, step):
+    def _exec_partition(self, df, substeps, input_idx, input_columns):
+
+        input_data2 = ResultSet(columns=input_columns.copy())
+        input_data2.add_raw_df(df)
+
+        # execute with modified previous results
+        steps_data2 = self.steps_data.copy()
+        steps_data2[input_idx] = input_data2
+
+        sub_data = None
+        for substep in substeps:
+            sub_data = self.sql_query.execute_step(substep, steps_data=steps_data2)
+            steps_data2[substep.step_num] = sub_data
+
+        return sub_data
+
+    def _reduce_vars(self, step):
         # extract vars
         step_data = self.steps_data[step.values.step_num]
         vars = []

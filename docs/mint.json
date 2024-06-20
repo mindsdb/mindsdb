@@ -261,7 +261,17 @@
           "pages": [
             "setup/self-hosted/docker",
             "setup/self-hosted/docker-desktop",
+            {
+              "group": "PIP",
+              "pages": [
+                "setup/self-hosted/pip/linux",
+                "setup/self-hosted/pip/macos",
+                "setup/self-hosted/pip/source",
+                "setup/self-hosted/pip/windows"
+              ]
+            },
             "setup/cloud/aws-marketplace",
+            "setup/community-deploys-mindsdb",
             {
               "group": "Configuration",
               "pages": [

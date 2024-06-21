@@ -34,21 +34,20 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.to
 # Torch.multiprocessing is imported in a 'try'. Falls back to multiprocessing so we dont NEED it.
 # Psycopg2 is needed in core codebase for sqlalchemy.
 # Hierarchicalforecast is an optional dep of neural/statsforecast
-
+# lark is required for auto retrieval (RAG utilities). It is used by langchain
+# and not explicitly imported in mindsdb.
 MAIN_RULE_IGNORES = {
     "DEP003": ["torch"],
     "DEP001": ["torch"],
-    "DEP002": ["psycopg2-binary"],
+    "DEP002": ["psycopg2-binary", "lark"],
 }
 
 # THe following packages need exceptions because they are optional deps of some other packages. e.g. langchain CAN use openai
 # (pysqlite3 is imported in an unusual way in the chromadb handler and needs to be excluded too)
 # pypdf and openpyxl are optional deps of langchain, that are used for the file handler
 # sqlalchemy-solr is an optional sqlalchemy depend that is used in the solr handler
-# lark is required for auto retrieval (RAG utilities). It is used by langchain
-# and not explicitly imported in mindsdb.
 OPTIONAL_HANDLER_DEPS = ["pysqlite3", "torch", "openai", "tiktoken", "wikipedia", "anthropic", "pypdf", "openpyxl",
-                         "sentence-transformers", "faiss-cpu", "litellm", "chromadb", "sqlalchemy-solr", "lark"]
+                         "sentence-transformers", "faiss-cpu", "litellm", "chromadb", "sqlalchemy-solr"]
 
 # List of rules we can ignore for specific packages
 # Here we ignore any packages in the main requirements.txt for "listed but not used" errors, because they will be used for the core code but not necessarily in a given handler

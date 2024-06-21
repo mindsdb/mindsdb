@@ -62,15 +62,15 @@ class ResultSet:
 
     def from_df(self, df, database=None, table_name=None, table_alias=None):
 
-        columns_dtypes = dict(df.dtypes)
+        columns_dtypes = list(df.dtypes)
 
-        for col in df.columns:
+        for i, col in enumerate(df.columns):
             self._columns.append(Column(
                 name=col,
                 table_name=table_name,
                 table_alias=table_alias,
                 database=database,
-                type=columns_dtypes.get(col)
+                type=columns_dtypes[i]
             ))
 
         # rename columns to indexes

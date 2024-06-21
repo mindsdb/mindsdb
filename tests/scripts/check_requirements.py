@@ -93,6 +93,7 @@ PACKAGE_NAME_MAP = {
     "writerai": ["writer"],
     "rocketchat_API": ["rocketchat_API"],
     "ShopifyAPI": ["shopify"],
+    "woocommerce": ["woocommerce"],
     "solace-pubsubplus": ["solace"],
     "taospy": ["taosrest"],
     "weaviate-client": ["weaviate"],

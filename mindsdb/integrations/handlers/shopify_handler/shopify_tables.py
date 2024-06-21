@@ -2722,7 +2722,7 @@ class ArticleTable(APITable):
             )
             article_list = article_list + articles
         if len(article_list) == 0:
-            logger.info("articles query returned 0 results")
+            raise Exception("articles query returned 0 results")
         return [article.to_dict() for article in article_list]
 
     def update_articles(

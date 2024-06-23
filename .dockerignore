@@ -1,3 +1,4 @@
+.dockerignore
 .git
 .gitignore
 .github
@@ -5,6 +6,15 @@
 .pytest_cahce
 .deployment
 
-var
+docker/db_images
+docker/docker-bake.hcl
+docker/docker-compose.yml
+docker/*.Dockerfile
+docker/docker-compose*
+docker/README.md
 
+build
+docs
+helm
+var
 **/__pycache__

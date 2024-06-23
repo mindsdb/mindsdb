@@ -59,6 +59,12 @@ WITH
 
 Please change the `slack-bot-token` with the token mentioned in `Bot User OAuth Access Token`.
 
+List of channels:
+
+~~~~sql
+SELECT * FROM mindsdb_slack.channel_lists;
+~~~~
+
 Retrieve the Conversation from a specific Slack channel
 
 ~~~~sql

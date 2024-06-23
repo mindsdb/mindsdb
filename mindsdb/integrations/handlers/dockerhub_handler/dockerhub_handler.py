@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 from mindsdb.integrations.handlers.dockerhub_handler.dockerhub_tables import (
     DockerHubRepoImagesSummaryTable,
     DockerHubRepoImagesTable,
@@ -12,7 +10,6 @@ from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
@@ -113,24 +110,3 @@ class DockerHubHandler(APIHandler):
         """
         ast = parse_sql(query, dialect="mindsdb")
         return self.query(ast)
-
-
-connection_args = OrderedDict(
-    username={
-        "type": ARG_TYPE.STR,
-        "description": "DockerHub username",
-        "required": True,
-        "label": "username",
-    },
-    password={
-        "type": ARG_TYPE.PWD,
-        "description": "DockerHub password",
-        "required": True,
-        "label": "Api key",
-    }
-)
-
-connection_args_example = OrderedDict(
-    username="username",
-    password="password"
-)

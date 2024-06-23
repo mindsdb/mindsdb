@@ -3,12 +3,12 @@ title: Describe a Model
 sidebarTitle: Describe a Model
 ---
 
-The `stats()` method is used to display the attributes of an existing model. It accepts the `{scale: "attribute"}` object as an argument.
+The `describe` command is used to display the attributes of an existing model. It accepts the name of the model and describe attribute separated by '.' as an argument.
 
-Here is how to call the `stats()` method:
+Here is how to call the `describe` command:
 
-```sql
-db.predictor_name.stats({scale: "attribute"});
+```javascript
+db.runCommand({describe: "predictor_name.attribute"})
 ```
 
 Where:
@@ -16,21 +16,21 @@ Where:
 | Name                   | Description                                                                                                                                   |
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | `predictor_name`       | The name of the predictor whose statistics you want to see.                                                                                   |
-| `{scale: "attribute"}` | The argument of the `stats()` method defines the type of statistics (`{scale: "features"}`, or `{scale: "model"}`, or `{scale: "ensemble"}`). |
+| `attribute` | The argument of the `describe` command defines the type of statistics (`features`, or `model`, or `ensemble`). |
 
-## The `stats()` Method with the `{scale: "features"}` Parameter
+## The `describe` Command with the `features` Parameter
 
 ### Description
 
-The `db.predictor_name.stats({scale: "features"})` method is used to display the
+The `db.runCommand({describe: "predictor_name.features"})` command is used to display the
 way the model encoded the data before training.
 
 ### Syntax
 
 Here is the syntax:
 
-```sql
-db.predictor_name.stats({scale: "features"});
+```javascript
+db.runCommand({describe: "predictor_name.features"})
 ```
 
 On execution, we get:
@@ -61,8 +61,8 @@ Where:
 
 Let's describe the `home_rentals_model` model.
 
-```sql
-db.home_rentals_model.stats({scale: "features"});
+```javascript
+db.runCommand({describe: "home_rentals_model.features"})
 ```
 
 On execution, we get:
@@ -123,11 +123,11 @@ On execution, we get:
 }
 ```
 
-## The `stats()` Method with the `{scale: "model"}` Parameter
+## The `describe` Command with the `model` Parameter
 
 ### Description
 
-The `db.predictor_name.stats({scale: "model"})` method is used to display the
+The `db.runCommand({describe: "predictor_name.model"})` method is used to display the
 performance of the candidate models.
 
 ### Syntax
@@ -135,7 +135,7 @@ performance of the candidate models.
 Here is the syntax:
 
 ```sql
-db.predictor_name.stats({scale: "model"});
+db.runCommand({describe: "predictor_name.model"})
 ```
 
 On execution, we get:
@@ -166,8 +166,8 @@ Where:
 
 Let's see the output for the `home_rentals_model` model.
 
-```sql
-db.home_rentals_model.stats({scale: "model"});
+```javascript
+db.runCommand({describe: "home_rentals_model.model"})
 ```
 
 On execution, we get:
@@ -198,11 +198,11 @@ On execution, we get:
 }
 ```
 
-## The `stats()` Method with the `{scale: "ensemble"}` Parameter
+## The `describe` Command with the `ensemble` Parameter
 
 ### Description
 
-The `db.predictor_name.stats({scale: "ensemble"})` method is used to display the
+The `db.runCommand({describe: "predictor_name.ensemble"})` command is used to display the
 parameters used to select the best candidate model.
 
 ### Syntax
@@ -210,7 +210,7 @@ parameters used to select the best candidate model.
 Here is the syntax:
 
 ```sql
-db.predictor_name.stats({scale: "ensemble"});
+db.runCommand({describe: "predictor_name.ensemble"})
 ```
 
 On execution, we get:

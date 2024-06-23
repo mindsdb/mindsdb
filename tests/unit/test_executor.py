@@ -2,6 +2,7 @@ from unittest.mock import patch
 import datetime as dt
 import tempfile
 import pytest
+import json
 
 import pandas as pd
 import numpy as np
@@ -41,7 +42,7 @@ class Test(BaseExecutorMockPredictor):
 
         self.execute("RETRAIN proj.test_predictor;")
 
-        ret = self.execute("SELECT * FROM proj.models_versions order by version;")
+        ret = self.execute("SELECT * FROM proj.models order by version;")
         assert len(ret.data) == 2
 
         ret = self.execute("DESCRIBE test_predictor")
@@ -88,7 +89,7 @@ class Test(BaseExecutorMockPredictor):
         self.set_handler(mock_handler, name='pg', tables={'tasks': df})
 
         ret = self.execute('select * from pg.tasks')
-        assert ret.data == data
+        assert ret.data.to_lists() == data
 
         # check sql in query method
         assert mock_handler().query.call_args[0][0].to_string() == 'SELECT * FROM tasks'
@@ -147,7 +148,7 @@ class Test(BaseExecutorMockPredictor):
         """)
         assert len(ret.data) == 2
         # is last datetime value of a = 1
-        assert ret.data[0][1].isoformat() == dt.datetime(2020, 1, 3).isoformat()
+        assert ret.data.to_lists()[0][1].isoformat() == dt.datetime(2020, 1, 3).isoformat()
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_ts_predictor(self, mock_handler):
@@ -652,7 +653,7 @@ class TestComplexQueries(BaseExecutorMockPredictor):
         assert mock_handler().query.call_count == 3
 
         # second is update
-        assert mock_handler().query.call_args_list[1][0][0].to_string() == "update table2 set a1=1, c1='ccc' where (a1 = 1) AND (b1 = 'ccc')"
+        assert mock_handler().query.call_args_list[1][0][0].to_string() == "update table2 set a1=1, c1='ccc' where a1 = 1 AND b1 = 'ccc'"
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_update_in_integration(self, mock_handler):
@@ -695,9 +696,12 @@ class TestComplexQueries(BaseExecutorMockPredictor):
         # second is update
         assert mock_handler().query.call_args_list[0][0][0].to_string() == "DELETE FROM table2 WHERE b1 = 'b'"
 
-    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    @patch('mindsdb.integrations.handlers.mysql_handler.Handler')
     def test_create_table(self, mock_handler):
-        self.set_handler(mock_handler, name='pg', tables={'tasks': self.df})
+        self.set_handler(mock_handler, name='pg', tables={'tasks': self.df}, engine='mysql')
+
+        # prevent hasattr=true
+        del mock_handler().insert
 
         self.set_predictor(self.task_predictor)
         sql = '''
@@ -732,9 +736,12 @@ class TestComplexQueries(BaseExecutorMockPredictor):
 
         assert len(calls) == 3
 
-    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    @patch('mindsdb.integrations.handlers.mysql_handler.Handler')
     def test_create_insert(self, mock_handler):
-        self.set_handler(mock_handler, name='pg', tables={'tasks': self.df})
+        self.set_handler(mock_handler, name='pg', tables={'tasks': self.df}, engine='mysql')
+
+        # prevent hasattr=true
+        del mock_handler().insert
 
         self.set_predictor(self.task_predictor)
         sql = '''
@@ -819,7 +826,7 @@ class TestTableau(BaseExecutorMockPredictor):
         """)
 
         # second column is having last value of 'b'
-        assert ret.data[0][1] == 'three'
+        assert ret.data.to_lists()[0][1] == 'three'
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_predictor_tableau_header(self, mock_handler):
@@ -854,7 +861,7 @@ class TestTableau(BaseExecutorMockPredictor):
 
         # second column is having last value of 'b'
         # 3: count rows, 4: sum of 'a', 5 max of prediction
-        assert ret.data[0] == [3, 4, 5]
+        assert ret.data.to_lists()[0] == [3, 4, 5]
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_predictor_tableau_header_alias(self, mock_handler):
@@ -888,7 +895,7 @@ class TestTableau(BaseExecutorMockPredictor):
 
         # second column is having last value of 'b'
         # 3: count rows, 4: sum of 'a', 5 max of prediction
-        assert ret.data[0] == [2, 1]
+        assert ret.data.to_lists()[0] == [2, 1]
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_integration_subselect_no_alias(self, mock_handler):
@@ -903,7 +910,7 @@ class TestTableau(BaseExecutorMockPredictor):
 
         # second column is having last value of 'b'
         # 3: count rows, 4: sum of 'a', 5 max of prediction
-        assert ret.data[0] == [2]
+        assert ret.data.to_lists()[0] == [2]
 
 
 class TestWithNativeQuery(BaseExecutorMockPredictor):
@@ -918,7 +925,7 @@ class TestWithNativeQuery(BaseExecutorMockPredictor):
 
         # native query was called
         assert mock_handler().native_query.call_args[0][0] == 'select * from tasks'
-        assert ret.data[0][0] == 3
+        assert ret.data.to_lists()[0][0] == 3
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_view_native_query(self, mock_handler):
@@ -932,7 +939,7 @@ class TestWithNativeQuery(BaseExecutorMockPredictor):
         # --- select from view ---
         ret = self.execute('select * from mindsdb.vtasks')
         # view response equals data from integration
-        assert ret.data == data
+        assert ret.data.to_lists() == data
 
         # --- create predictor ---
         mock_handler.reset_mock()
@@ -1008,10 +1015,10 @@ class TestWithNativeQuery(BaseExecutorMockPredictor):
         # input = one row whit a==2
         data_in = self.mock_predict.call_args[0][1]
         assert len(data_in) == 1
-        assert data_in[0]['a'] == 2
+        assert data_in.iloc[0]['a'] == 2
 
         # check prediction
-        assert ret.data[0][0] == predicted_value
+        assert ret.data.to_lists()[0][0] == predicted_value
         assert len(ret.data) == 1
 
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
@@ -1394,3 +1401,67 @@ class TestIfExistsIfNotExists(BaseExecutorMockPredictor):
 
         # drop again with if exists should not throw an error
         self.execute('DROP VIEW IF EXISTS test_view2')
+
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_hide_secrets(self, mock_handler):
+        HIDDEN_PASSWORD = '******'
+        df = pd.DataFrame([
+            {'a': 1, 'b': 'one'},
+            {'a': 2, 'b': 'two'},
+            {'a': 1, 'b': 'three'},
+        ])
+        self.set_handler(mock_handler, name='pg', tables={'tasks': df})
+
+        self.execute("""
+            create ml_engine ml_test from dummy_ml using api_key = '123456'
+        """)
+
+        # region Check that every secret is hidden
+        ret = self.execute("""
+            select * from information_schema.ml_engines where name = 'ml_test'
+        """)
+        connection_data = json.loads(ret.records[0]['CONNECTION_DATA'])
+        assert connection_data['api_key'] == HIDDEN_PASSWORD
+
+        ret = self.execute("""
+            select * from information_schema.databases where name = 'pg';
+        """)
+        connection_data = json.loads(ret.records[0]['CONNECTION_DATA'])
+        assert connection_data['password'] == HIDDEN_PASSWORD
+
+        self.execute("""
+            CREATE MODEL mindsdb.test_predictor
+            PREDICT target
+            USING
+                engine = 'dummy_ml',
+                api_key = '654321'
+        """)
+        ret = self.execute("""
+            show models where name = 'test_predictor';
+        """)
+        training_options = json.loads(ret.records[0]['TRAINING_OPTIONS'])
+        assert training_options['using']['api_key'] == HIDDEN_PASSWORD
+        # endregion
+
+        # region Set 'show secrets' and make sure that every secret is revealed
+        self.execute("""
+            set show_secrets=True;
+        """)
+        ret = self.execute("""
+            select * from information_schema.ml_engines where name = 'ml_test'
+        """)
+        connection_data = json.loads(ret.records[0]['CONNECTION_DATA'])
+        assert connection_data['api_key'] != HIDDEN_PASSWORD
+
+        ret = self.execute("""
+            select * from information_schema.databases where name = 'pg';
+        """)
+        connection_data = json.loads(ret.records[0]['CONNECTION_DATA'])
+        assert connection_data['password'] != HIDDEN_PASSWORD
+
+        ret = self.execute("""
+            show models where name = 'test_predictor';
+        """)
+        training_options = json.loads(ret.records[0]['TRAINING_OPTIONS'])
+        assert training_options['using']['api_key'] != HIDDEN_PASSWORD
+        # endregion

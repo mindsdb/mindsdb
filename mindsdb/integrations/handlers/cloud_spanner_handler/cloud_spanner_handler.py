@@ -1,9 +1,7 @@
 import json
-from collections import OrderedDict
 
 from google.oauth2 import service_account
-from google.cloud import spanner_dbapi
-from google.cloud.spanner_dbapi import Connection
+from google.cloud.spanner_dbapi.connection import connect, Connection
 from google.cloud.sqlalchemy_spanner import SpannerDialect
 
 import pandas as pd
@@ -13,9 +11,6 @@ from mindsdb_sql.parser.ast import CreateTable, Function
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
 from mindsdb.integrations.libs.base import DatabaseHandler
-from mindsdb.integrations.libs.const import (
-    HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE,
-)
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse as Response
 from mindsdb.integrations.libs.response import (
@@ -68,7 +63,7 @@ class CloudSpannerHandler(DatabaseHandler):
         args['credentials'] = service_account.Credentials.from_service_account_info(
             json.loads(args['credentials'])
         )
-        self.connection = spanner_dbapi.connect(**args)
+        self.connection = connect(**args)
         self.is_connected = True
 
         return self.connection
@@ -218,32 +213,3 @@ class CloudSpannerHandler(DatabaseHandler):
               t.table_name = '{table_name}'
         '''
         return self.native_query(query)
-
-
-connection_args = OrderedDict(
-    instance_id={
-        'type': ARG_TYPE.STR,
-        'description': 'The Cloud Spanner instance identifier.',
-    },
-    database_id={
-        'type': ARG_TYPE.STR,
-        'description': 'The Cloud Spanner database indentifier.',
-    },
-    project={
-        'type': ARG_TYPE.STR,
-        'description': 'The Cloud Spanner project indentifier.',
-    },
-    dialect={
-        'type': ARG_TYPE.STR,
-        'description': 'Dialect of the database',
-        "required": False,
-    },
-    credentials={
-        'type': ARG_TYPE.STR,
-        'description': 'The Google Cloud Platform service account key in the JSON format.',
-    },
-)
-
-connection_args_example = OrderedDict(
-    instance_id='test-instance', datbase_id='example-db', project='your-project-id'
-)

@@ -1,13 +1,13 @@
-from collections import OrderedDict
 from typing import Any, Optional
 
 import jaydebeapi as jdbcconnector
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
 import pandas as pd
+import pyodbc
+import numpy as np
 
 from mindsdb.integrations.libs.base import DatabaseHandler
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -25,7 +25,7 @@ class AltibaseHandler(DatabaseHandler):
 
     name = 'altibase'
 
-    def __init__(self, name: str, connection_data: Optional[dict]):
+    def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         """ constructor
         Args:
             name (str): name of particular handler instance
@@ -39,7 +39,10 @@ class AltibaseHandler(DatabaseHandler):
         self.database = self.connection_args.get('database')
         self.host = self.connection_args.get('host')
         self.port = self.connection_args.get('port')
-        
+        self.user = self.connection_args.get('user')
+        self.password = self.connection_args.get('password')
+        self.dsn = self.connection_args.get('dsn')
+
         self.connection = None
         self.is_connected = False
 
@@ -52,19 +55,57 @@ class AltibaseHandler(DatabaseHandler):
         """
         if self.is_connected is True:
             return self.connection
-                
-        user = self.connection_args.get('user')
-        password = self.connection_args.get('password')
+
+        if self.dsn:
+            return self.connect_with_odbc()
+        else:
+            return self.connect_with_jdbc()
+
+    def connect_with_odbc(self):
+        """ Set up any connections required by the handler
+        Should return output of check_connection() method after attempting connection.
+        Should switch self.is_connected.
+        Returns:
+            connection
+        """
+        conn_str = [f"DSN={self.dsn}"]
+
+        if self.host:
+            conn_str.append(f"Server={self.host}")
+        if self.port:
+            conn_str.append(f"Port={self.port}")
+        if self.user:
+            conn_str.append(f"User={self.user}")
+        if self.password:
+            conn_str.append(f"Password={self.password}")
+
+        conn_str = ';'.join(conn_str)
+
+        try:
+            self.connection = pyodbc.connect(conn_str, timeout=10)
+            self.is_connected = True
+        except Exception as e:
+            logger.error(f"Error while connecting to {self.database}, {e}")
+        
+        return self.connection
+
+    def connect_with_jdbc(self):
+        """ Set up any connections required by the handler
+        Should return output of check_connection() method after attempting connection.
+        Should switch self.is_connected.
+        Returns:
+            connection
+        """
         jar_location = self.connection_args.get('jdbcJarLocation')
 
         jdbc_class = self.connection_args.get('jdbcClass', 'Altibase.jdbc.driver.AltibaseDriver')
         jdbc_url = f"jdbc:Altibase://{self.host}:{self.port}/{self.database}"
 
         try:
-            if user and password and jar_location: 
-                connection = jdbcconnector.connect(jclassname=jdbc_class, url=jdbc_url, driver_args=[user, password], jars=jar_location.split(","))
-            elif user and password: 
-                connection = jdbcconnector.connect(jclassname=jdbc_class, url=jdbc_url, driver_args=[user, password])
+            if self.user and self.password and jar_location: 
+                connection = jdbcconnector.connect(jclassname=jdbc_class, url=jdbc_url, driver_args=[self.user, self.password], jars=jar_location.split(","))
+            elif self.user and self.password: 
+                connection = jdbcconnector.connect(jclassname=jdbc_class, url=jdbc_url, driver_args=[self.user, self.password])
             elif jar_location: 
                 connection = jdbcconnector.connect(jclassname=jdbc_class, url=jdbc_url, jars=jar_location.split(","))
             else:
@@ -126,6 +167,11 @@ class AltibaseHandler(DatabaseHandler):
                 cur.execute(query)
                 if cur.description:
                     result = cur.fetchall() 
+
+                    if self.dsn:
+                        if len(result) > 0:
+                            result = np.array(result)
+
                     response = Response(
                         RESPONSE_TYPE.TABLE,
                         data_frame=pd.DataFrame(
@@ -179,7 +225,7 @@ class AltibaseHandler(DatabaseHandler):
             WHERE 
                 user_id = USER_ID();
             '''
-    
+
         return self.native_query(query)
 
     def get_columns(self, table_name: str) -> Response:
@@ -203,44 +249,3 @@ class AltibaseHandler(DatabaseHandler):
             """
         
         return self.native_query(query)
-    
-connection_args = OrderedDict(
-    host = {
-        'type': ARG_TYPE.STR,
-        'description': 'The host name or IP address of the Altibase server. NOTE: use \'127.0.0.1\' instead of \'localhost\' to connect to local server.'
-    },
-    port = {
-        'type': ARG_TYPE.INT,
-        'description': 'The TCP/IP port of the Altibase server. Must be an integer.'
-    },
-    user = {
-        'type': ARG_TYPE.STR,
-        'description': 'The user name used to authenticate with the Altibase server.'
-    },
-    password = {
-        'type': ARG_TYPE.STR,
-        'description': 'The password to authenticate the user with the Altibase server.'
-    },
-    database = {
-        'type': ARG_TYPE.STR,
-        'description': 'The database name to use when connecting with the Altibase server.'
-    },
-    jdbcClass = {
-        'type': ARG_TYPE.STR,
-        'description': 'The driver class of the Altibase JDBC driver'
-    },
-    jdbcJarLocation = {
-        'type': ARG_TYPE.PATH,
-        'description': 'The location of the Altibase JDBC driver jar file'
-    },
-)
-
-connection_args_example = OrderedDict(
-    host = '127.0.0.1',
-    port = 20300,
-    user = 'sys',
-    password = 'manager',
-    database = 'mydb',
-    jdbcClass='Altibase.jdbc.driver.AltibaseDriver',
-    jdbcJarLocation='/data/altibase_home/lib/Altibase.jar'
-)

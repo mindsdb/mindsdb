@@ -19,6 +19,6 @@ class MultipleStepsCall(BaseStepCall):
             if data is None:
                 data = subdata
             else:
-                data.add_records(subdata.get_records())
+                data.add_from_result_set(subdata)
 
         return data

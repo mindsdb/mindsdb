@@ -27,50 +27,6 @@ Before performing any operations, you must connect to MindsDB. By default, all o
   }
   ```
   </Tab>
-  <Tab title="MindsDB Cloud">
-  Here is how to connect to the MindsDB Cloud server:
-
-  ```
-  import MindsDB from 'mindsdb-js-sdk';
-  // const MindsDB = require("mindsdb-js-sdk").default; // alternative for CommonJS syntax
-
-  try {
-
-    await MindsDB.connect({
-      user: 'user@email.com',
-      password: 'password'
-    });
-    console.log('connected');
-
-  } catch(error) {
-    // Failed to authenticate
-    console.log(error);
-  }
-  ```
-  </Tab>
-  <Tab title="MindsDB Pro">
-  Here is how to connect to the MindsDB Pro server:
-
-  ```
-  import MindsDB from 'mindsdb-js-sdk';
-  // const MindsDB = require("mindsdb-js-sdk").default; // alternative for CommonJS syntax
-
-  try {
-
-    await MindsDB.connect({
-      host: 'http://<YOUR_INSTANCE_IP>',
-      user: 'mindsdbuser@gmail.com',
-      password: 'mypassword',
-      managed: true
-    });
-    console.log('connected');
-
-  } catch(error) {
-    // Failed to authenticate
-    console.log(error);
-  }
-  ```
-  </Tab>
   <Tab title="Own Axios Instance">
   Here is how to connect using your own Axios instance (see [details on the default instance](https://github.com/mindsdb/mindsdb-js-sdk/blob/main/src/util/http.ts)):
 

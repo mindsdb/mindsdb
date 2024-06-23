@@ -1,6 +1,5 @@
 import sys
 import time
-import pickle
 import threading
 from typing import Optional, Callable
 from concurrent.futures import ProcessPoolExecutor, Future
@@ -18,7 +17,8 @@ from mindsdb.integrations.libs.ml_handler_process import (
     describe_process,
     create_engine_process,
     update_engine_process,
-    create_validation_process
+    create_validation_process,
+    func_call_process
 )
 
 
@@ -49,11 +49,11 @@ class MLProcessException(Exception):
 
     def __init__(self, base_exception: Exception, message: str = None) -> None:
         super().__init__(message)
-        self.base_exception_bytes = pickle.dumps(base_exception)
+        self.message = f'{base_exception.__class__.__name__}: {base_exception}'
 
     @property
     def base_exception(self) -> Exception:
-        return pickle.loads(self.base_exception_bytes)
+        return RuntimeError(self.message)
 
 
 class WarmProcess:
@@ -322,6 +322,14 @@ class ProcessCache:
                 'args': payload['args'],
                 'integration_id': integration_id,
                 'model_id': model_id,
+                'module_path': handler_module_path
+            }
+        elif task_type == ML_TASK_TYPE.FUNC_CALL:
+            func = func_call_process
+            kwargs = {
+                'name': payload['name'],
+                'args': payload['args'],
+                'integration_id': integration_id,
                 'module_path': handler_module_path
             }
         else:

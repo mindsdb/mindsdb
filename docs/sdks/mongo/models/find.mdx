@@ -5,14 +5,14 @@ sidebarTitle: List Models
 
 ## Description
 
-The `db.predictors.find()` function lists all models.
+The `db.models.find()` function lists all models.
 
 ## Syntax
 
-We can list all the available predictors using the `db.predictors.find()` method.
+We can list all the available predictors using the `db.models.find()` method.
 
 ```sql
-db.predictors.find({});
+db.models.find({});
 ```
 
 On execution, we get:
@@ -40,11 +40,4 @@ On execution, we get:
     "select_data_query": "",
     "training_options": ""
 }
-```
-
-Alternatively, you can query the `models` and `models_versions` tables.
-
-```sql
-> db.models.find()
-> db.models_versions.find()
 ```

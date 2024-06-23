@@ -51,6 +51,9 @@ class QueryContextController:
             values = self.__get_init_last_values(l_query, dn, session)
             if rec is None:
                 self.__add_context_record(context_name, query_str, values)
+                if context_name.startswith('job-if-'):
+                    # add context for job also
+                    self.__add_context_record(context_name.replace('job-if', 'job'), query_str, values)
             else:
                 rec.values = values
         else:
@@ -60,8 +63,8 @@ class QueryContextController:
 
         query_out = l_query.apply_values(values)
 
-        def callback(data, columns_info):
-            self._result_callback(l_query, context_name, query_str, data, columns_info)
+        def callback(df, columns_info):
+            self._result_callback(l_query, context_name, query_str, df, columns_info)
 
         return query_out, callback
 
@@ -71,15 +74,16 @@ class QueryContextController:
             # find last in where
             if isinstance(node, BinaryOperation):
                 if isinstance(node.args[0], Identifier) and isinstance(node.args[1], Last):
-                    # memorize node
-                    return BinaryOperation(op='=', args=[Constant(0), Constant(0)])
+                    node.args = [Constant(0), Constant(0)]
+                    node.op = '='
 
         # find lasts
         query_traversal(query, replace_lasts)
+        return query
 
     def _result_callback(self, l_query: LastQuery,
                          context_name: str, query_str: str,
-                         data: List[dict], columns_info: list):
+                         df: pd.DataFrame, columns_info: list):
         """
         This function handlers result from executed query and updates context variables with new values
 
@@ -93,10 +97,9 @@ class QueryContextController:
           - columns_info: list
 
         """
-        if len(data) == 0:
+        if len(df) == 0:
             return
 
-        df = pd.DataFrame(data, columns=[col['name'] for col in columns_info])
         values = {}
         # get max values
         for info in l_query.get_last_columns():
@@ -129,7 +132,7 @@ class QueryContextController:
 
         self.__update_context_record(context_name, query_str, values)
 
-    def drop_query_context(self, object_type: str, object_id: int):
+    def drop_query_context(self, object_type: str, object_id: int = None):
         """
         Drop context for object
         :param object_type: type of the object
@@ -161,7 +164,19 @@ class QueryContextController:
             if len(data) == 0:
                 value = None
             else:
-                value = data[0][0]
+                row = list(data.iloc[0])
+
+                idx = None
+                for i, col in enumerate(columns_info):
+                    if col['name'].upper() == info['column_name'].upper():
+                        idx = i
+                        break
+
+                if idx is None or len(row) == 1:
+                    value = row[0]
+                else:
+                    value = row[idx]
+
             if value is not None:
                 last_values[info['table_name']] = {info['column_name']: value}
 

@@ -1,12 +1,9 @@
 from mindsdb.integrations.libs.const import HANDLER_TYPE
 
 from .__about__ import __version__ as version, __description__ as description
+from .connection_args import connection_args_example, connection_args
 try:
-    from .access_handler import (
-        AccessHandler as Handler,
-        connection_args_example,
-        connection_args
-    )
+    from .access_handler import AccessHandler as Handler
     import_error = None
 except Exception as e:
     Handler = None
@@ -15,7 +12,7 @@ except Exception as e:
 title = 'Microsoft Access'
 name = 'access'
 type = HANDLER_TYPE.DATA
-icon_path = 'icon.png'
+icon_path = 'icon.svg'
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'description',

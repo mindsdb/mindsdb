@@ -1,0 +1,147 @@
+---
+title: Fine-Tune the Regression Model
+sidebarTitle: Regression
+---
+
+In this example, we use our sample PostgreSQL database. You can connect to it like this:
+
+```sql
+CREATE DATABASE example_db
+WITH ENGINE = "postgres",
+PARAMETERS = {
+    "user": "demo_user",
+    "password": "demo_password",
+    "host": "samples.mindsdb.com",
+    "port": "5432",
+    "database": "demo"
+    };
+```
+
+First, we create and train the model using a subset of the `home_rentals` data, considering properties that have been on the market less than 10 days.
+
+```sql
+CREATE MODEL mindsdb.adjust_home_rentals_model
+FROM example_db
+    (SELECT * 
+    FROM demo_data.home_rentals 
+    WHERE days_on_market < 10)
+PREDICT rental_price;
+```
+
+On execution, we get:
+
+```sql
+Query successfully completed
+```
+
+We can check its status using this command:
+
+```sql
+DESCRIBE MODEL adjust_home_rentals_model;
+```
+
+Once the status is complete, we can query for predictions.
+
+```sql
+SELECT rental_price, rental_price_explain 
+FROM mindsdb.adjust_home_rentals_model
+WHERE sqft = 1000
+AND location = 'great'
+AND neighborhood = 'berkeley_hills'
+AND number_of_rooms = 2
+AND number_of_bathrooms = 1
+AND days_on_market = 40;
+```
+
+On execution, we get:
+
+```sql
++---------------+-----------------------------------------------------------------------------------------------------------------------------------------------+
+| rental_price  | rental_price_explain                                                                                                                          |
++---------------+-----------------------------------------------------------------------------------------------------------------------------------------------+
+| 2621          | {"predicted_value": 2621, "confidence": 0.99, "anomaly": null, "truth": null, "confidence_lower_bound": 2523, "confidence_upper_bound": 2719} |
++---------------+-----------------------------------------------------------------------------------------------------------------------------------------------+
+```
+ 
+Let’s adjust this model with more training data. Now we consider properties that have been on the market for 10 or more days.
+
+```sql
+FINETUNE mindsdb.adjust_home_rentals_model
+FROM example_db
+    (SELECT * 
+    FROM demo_data.home_rentals 
+    WHERE days_on_market >= 10);
+```
+
+<Warning>
+While the model is being generated and trained, it is not active. The model becomes active only after it completes generating and training.
+</Warning>
+
+To check the status and versions of the model, run this command:
+
+```sql
+SELECT name, engine, project, active, version, status
+FROM mindsdb.models
+WHERE name = 'adjust_home_rentals_model';
+```
+
+On execution, we get:
+
+```sql
++---------------------------+-----------+---------+--------+---------+----------+
+| name                      | engine    | project | active | version | status   |
++---------------------------+-----------+---------+--------+---------+----------+
+| adjust_home_rentals_model | lightwood | mindsdb | false  | 1       | complete |
+| adjust_home_rentals_model | lightwood | mindsdb | true   | 2       | complete |
++---------------------------+-----------+---------+--------+---------+----------+
+```
+
+Please note that the longer the property is on the market, the lower its rental price. Hence, we can expect the `rental_price` prediction to be lower.
+
+```sql
+SELECT rental_price, rental_price_explain 
+FROM mindsdb.adjust_home_rentals_model
+WHERE sqft = 1000
+AND location = 'great'
+AND neighborhood = 'berkeley_hills'
+AND number_of_rooms = 2
+AND number_of_bathrooms = 1
+AND days_on_market = 40;
+```
+
+On execution, we get:
+
+```sql
++---------------+-----------------------------------------------------------------------------------------------------------------------------------------------+
+| rental_price  | rental_price_explain                                                                                                                          |
++---------------+-----------------------------------------------------------------------------------------------------------------------------------------------+
+| 2055          | {"predicted_value": 2055, "confidence": 0.99, "anomaly": null, "truth": null, "confidence_lower_bound": 1957, "confidence_upper_bound": 2153} |
++---------------+-----------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+<Tip>
+If you have dynamic data that gets updated regularly, you can set up an automated fine-tuning as below.
+
+Note that the data source must contain an incremental column, such as timestamp or integer, so MindsDB can pick up only the recently added data with the help of the [`LAST` keyword](/mindsdb_sql/sql/create/jobs#last).
+
+Here is how to create and schedule a job to fine-tune the model periodically.
+
+```sql
+CREATE JOB automated_finetuning (
+
+    FINETUNE adjust_home_rentals_model
+    FROM mindsdb
+        (SELECT *
+        FROM example_db.home_rentals
+        WHERE timestamp > LAST)
+)
+EVERY 1 day
+IF (
+    SELECT *
+    FROM example_db.home_rentals
+    WHERE timestamp > LAST
+);
+```
+
+Now your model will be fine-tuned with newly added data every day or every time there is new data available.
+</Tip>

@@ -5,7 +5,7 @@ import pytest
 
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from .conftest import CONFIG_PATH
-from .http_test_helpers import HTTPHelperMixin
+from tests.utils.http_test_helpers import HTTPHelperMixin
 
 
 # used by mindsdb_app fixture in conftest
@@ -24,7 +24,7 @@ class QueryStorage:
                     PARAMETERS = {
                         "user": "user",
                         "password": "MindsDBUser123!",
-                        "host": "db-demo-data.cwoyhfn6bzs0.us-east-1.rds.amazonaws.com",
+                        "host": "samples.mindsdb.com",
                         "port": "3306",
                         "database": "public"
                         };

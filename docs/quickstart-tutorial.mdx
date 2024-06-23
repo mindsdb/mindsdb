@@ -1,0 +1,160 @@
+---
+title: Tutorial to Get Started with MindsDB
+sidebarTitle: Quickstart
+icon: "play"
+---
+
+Before we start, install MindsDB locally via [Docker](/setup/self-hosted/docker) or [Docker Desktop](/setup/self-hosted/docker-desktop).
+
+Get started with MindsDB in a few simple steps:
+
+<Steps>
+  <Step title="Connect a data source">
+    Explore all available [data sources here](/integrations/data-overview).
+  </Step>
+  <Step title="Configure an AI engine">
+    Explore all available [AI engines here](/integrations/ai-overview).
+  </Step>
+  <Step title="Create and deploy an AI model">
+    MindsDB abstracts AI Models as [AI Tables](/generative-ai-tables). This step uses the configured AI engine.
+  </Step>
+  <Step title="Query for predictions">
+    Join the data table with the AI table to get predictions.
+  </Step>
+  <Step title="Automate customized workflows">
+    Use [Jobs](/mindsdb_sql/sql/create/jobs) or [Triggers](/mindsdb_sql/sql/create/trigger) to automate workflows.
+  </Step>
+</Steps>
+
+### Step 1. Connect a data source
+
+Use the [`CREATE DATABASE`]() statement to connect a data source to MindsDB.
+
+```sql
+CREATE DATABASE mysql_demo_db
+WITH ENGINE = 'mysql',
+PARAMETERS = {
+    "user": "user",
+    "password": "MindsDBUser123!",
+    "host": "samples.mindsdb.com",
+    "port": "3306",
+    "database": "public"
+};
+```
+
+This is the input data used in the following steps:
+
+```sql
+SELECT *
+FROM mysql_demo_db.questions
+LIMIT 3;
+```
+
+Here is the output:
+
+```
++------------------+--------------------------------------------------------+-------------+
+| article_title    | question                                               | true_answer |
++------------------+--------------------------------------------------------+-------------+
+| Alessandro_Volta | Was Volta an Italian physicist?                        | yes         |
+| Alessandro_Volta | Is Volta buried in the city of Pittsburgh?             | no          |
+| Alessandro_Volta | Did Volta have a passion for the study of electricity? | yes         |
++------------------+--------------------------------------------------------+-------------+
+```
+
+### Step 2. Configure an AI engine
+
+Use the [`CREATE ML_ENGINE`]() command to configure an AI engine. Here we use the OpenAI engine.
+
+```sql
+CREATE ML_ENGINE openai_engine
+FROM openai
+USING
+	openai_api_key = 'your-openai-api-key';
+```
+
+### Step 3. Create and deploy an AI model
+
+Use the [`CREATE MODEL`]() statement to create, train, and deploy an AI model based on the AI engine created in step 2.
+
+```sql
+CREATE MODEL question_answering_model
+PREDICT answer
+USING
+    engine = 'openai_engine',
+    prompt_template = 'answer the question of text:{{question}} about text:{{article_title}}';
+```
+
+This model expects `{{question}}` and `{{article_title}}` as input, and generates `answer` as output.
+
+### Step 4. Query for predictions
+
+Query for predictions by joining the AI Table (from step 3) with the data table (from step 1).
+
+```sql
+SELECT input.article_title, input.question, output.answer
+FROM mysql_demo_db.questions AS input
+JOIN question_answering_model AS output
+LIMIT 3;
+```
+
+Here is the output data:
+
+```
++------------------+--------------------------------------------------------+--------------------------------------------------------+
+| article_title    | question                                               | answer                                                 |
++------------------+--------------------------------------------------------+--------------------------------------------------------+
+| Alessandro_Volta | Was Volta an Italian physicist?                        | Yes, Volta was an Italian physicist.                   |
+| Alessandro_Volta | Is Volta buried in the city of Pittsburgh?             | No, Volta is not buried in the city of Pittsburgh.     |
+| Alessandro_Volta | Did Volta have a passion for the study of electricity? | Yes, Volta had a passion for the study of electricity. |
++------------------+--------------------------------------------------------+--------------------------------------------------------+
+```
+
+### Step 5. Automate customized workflows
+
+With MindsDB, you can create custom automation workflows. Let's set up a workflow that uses [Jobs](/mindsdb_sql/sql/create/jobs) and (re)creates a table with predicted answers to all questions.
+
+```sql
+CREATE JOB answer_questions (
+
+    CREATE OR REPLACE TABLE data_source.questions_answers (
+        SELECT input.article_title, input.question, output.answer
+        FROM mysql_demo_db.questions AS input
+        JOIN question_answering_model AS output
+    )
+)
+EVERY 1 day;
+```
+
+The `data_source` connection should be made using the `CREATE DATABASE` statement to a data source with a user that has the write access.
+
+This job creates the `questions_answers` table inside the connected data source. This table is filled with questions from the input data table and answers generated by the AI table. Considering that new questions are added daily to the input data table, this job executes once a day.
+
+Alternatively, you could use the `LAST` keyword to fetch only the newly added questions to the input data table. That would enable you to insert new question-answer pairs into the `questions_answers` table instead of recreating it. But to do that, the input data table must provide either a date/time or integer/float column that would be used in the condition like `datetime > LAST`. Learn more about the [`LAST` keyword here](/mindsdb_sql/sql/create/jobs#last).
+
+<Tip>
+**Next Steps**
+
+Follow the links below to explore MindsDB.
+
+<CardGroup cols={3}>
+  <Card title="Connect data sources" icon="square-1" href="/mindsdb_sql/sql/create/database">
+  </Card>
+  <Card title="Configure AI engines" icon="square-2" href="/mindsdb_sql/sql/create/ml-engine">
+  </Card>
+  <Card title="Deploy models" icon="square-3" href="/mindsdb_sql/sql/create/model">
+  </Card>
+  <Card title="Get predictions" icon="square-4" href="/mindsdb_sql/sql/get-batch-predictions">
+  </Card>
+  <Card title="Finetune models" icon="square-5" href="/mindsdb_sql/api/finetune">
+  </Card>
+  <Card title="Automate with jobs" icon="square-6" href="/mindsdb_sql/sql/create/jobs">
+  </Card>
+  <Card title="Automate with triggers" icon="square-7" href="/mindsdb_sql/sql/create/trigger">
+  </Card>
+  <Card title="Create knowledge bases" icon="square-8" href="/mindsdb_sql/agents/knowledge-bases">
+  </Card>
+  <Card title="Create chatbots" icon="square-9" href="/mindsdb_sql/agents/chatbot">
+  </Card>
+</CardGroup>
+</Tip>

@@ -4,21 +4,21 @@ from typing import Text, List, Dict, Any
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APITable
 
-from mindsdb.integrations.handlers.utilities.query_utilities.select_query_utilities import (
+from mindsdb.integrations.utilities.handlers.query_utilities.select_query_utilities import (
     SELECTQueryParser,
     SELECTQueryExecutor,
 )
-from mindsdb.integrations.handlers.utilities.query_utilities.delete_query_utilities import (
+from mindsdb.integrations.utilities.handlers.query_utilities.delete_query_utilities import (
     DELETEQueryParser,
     DELETEQueryExecutor,
 )
 
-from mindsdb.integrations.handlers.utilities.query_utilities.update_query_utilities import (
+from mindsdb.integrations.utilities.handlers.query_utilities.update_query_utilities import (
     UPDATEQueryParser,
     UPDATEQueryExecutor,
 )
 
-from mindsdb.integrations.handlers.utilities.query_utilities import INSERTQueryParser
+from mindsdb.integrations.utilities.handlers.query_utilities import INSERTQueryParser
 
 
 class SitesTable(APITable):
@@ -97,7 +97,7 @@ class SitesTable(APITable):
         site_data = client.get_all_sites(**kwargs)
         return site_data
 
-    def update_sites(self, site_ids: list[dict], values_to_update: dict) -> None:
+    def update_sites(self, site_ids: List[dict], values_to_update: dict) -> None:
         if not self.handler.connection.check_bearer_token_validity():
             self.handler.connect()
         client = self.handler.connection
@@ -233,13 +233,13 @@ class ListsTable(APITable):
         lists_data = client.get_all_lists(**kwargs)
         return lists_data
 
-    def delete_lists(self, list_ids: list[dict]) -> None:
+    def delete_lists(self, list_ids: List[dict]) -> None:
         if not self.handler.connection.check_bearer_token_validity():
             self.handler.connect()
         client = self.handler.connection
         client.delete_lists(list_ids)
 
-    def update_lists(self, list_ids: list[dict], values_to_update: dict) -> None:
+    def update_lists(self, list_ids: List[dict], values_to_update: dict) -> None:
         if not self.handler.connection.check_bearer_token_validity():
             self.handler.connect()
         client = self.handler.connection
@@ -396,14 +396,14 @@ class SiteColumnsTable(APITable):
         site_columns_data = client.get_all_site_columns(**kwargs)
         return site_columns_data
 
-    def delete_site_columns(self, sharepoint_column_ids: list[dict]) -> None:
+    def delete_site_columns(self, sharepoint_column_ids: List[dict]) -> None:
         if not self.handler.connection.check_bearer_token_validity():
             self.handler.connect()
         client = self.handler.connection
         client.delete_site_columns(sharepoint_column_ids)
 
     def update_site_columns(
-        self, sharepoint_column_ids: list[dict], values_to_update: dict
+        self, sharepoint_column_ids: List[dict], values_to_update: dict
     ) -> None:
         if not self.handler.connection.check_bearer_token_validity():
             self.handler.connect()
@@ -557,14 +557,14 @@ class ListItemsTable(APITable):
         list_items_data = client.get_all_items(**kwargs)
         return list_items_data
 
-    def delete_list_items(self, list_item_ids: list[dict]) -> None:
+    def delete_list_items(self, list_item_ids: List[dict]) -> None:
         if not self.handler.connnection.check_connection():
             self.handler.connect()
         client = self.handler.connection
         client.delete_items(list_item_ids)
 
     def update_list_items(
-        self, list_items_ids: list[dict], values_to_update: dict
+        self, list_items_ids: List[dict], values_to_update: dict
     ) -> None:
         if not self.handler.connection.check_bearer_token_validity():
             self.handler.connect()

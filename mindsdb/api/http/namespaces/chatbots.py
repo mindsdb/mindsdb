@@ -6,7 +6,7 @@ from flask_restx import Resource
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.api.http.utils import http_error
-from mindsdb.interfaces.agents.agents_controller import AgentsController
+from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.interfaces.chatbot.chatbot_controller import ChatBotController
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.interfaces.storage.db import Predictor
@@ -77,9 +77,8 @@ def create_chatbot(project_name, name, chatbot):
         )
 
     # Model and agent need to exist.
-    agents_controller = AgentsController()
     if agent_name is not None:
-        agent = agents_controller.get_agent(agent_name, project_name)
+        agent = session_controller.agents_controller.get_agent(agent_name, project_name)
         if agent is None:
             return http_error(
                 HTTPStatus.NOT_FOUND,
@@ -112,6 +111,7 @@ def create_chatbot(project_name, name, chatbot):
 @ns_conf.route('/<project_name>/chatbots')
 class ChatBotsResource(Resource):
     @ns_conf.doc('list_chatbots')
+    @api_endpoint_metrics('GET', '/chatbots')
     def get(self, project_name):
         ''' List all chatbots '''
         chatbot_controller = ChatBotController()
@@ -126,6 +126,7 @@ class ChatBotsResource(Resource):
         return all_bots
 
     @ns_conf.doc('create_chatbot')
+    @api_endpoint_metrics('POST', '/chatbots')
     def post(self, project_name):
         '''Create a chatbot'''
 
@@ -148,6 +149,7 @@ class ChatBotsResource(Resource):
 @ns_conf.param('chatbot_name', 'Name of the chatbot')
 class ChatBotResource(Resource):
     @ns_conf.doc('get_chatbot')
+    @api_endpoint_metrics('GET', '/chatbots/chatbot')
     def get(self, project_name, chatbot_name):
         '''Gets a chatbot by name'''
         chatbot_controller = ChatBotController()
@@ -169,6 +171,7 @@ class ChatBotResource(Resource):
             )
 
     @ns_conf.doc('update_chatbot')
+    @api_endpoint_metrics('PUT', '/chatbots/chatbot')
     def put(self, project_name, chatbot_name):
         '''Updates a chatbot by name, creating one if it doesn't exist'''
 
@@ -200,11 +203,11 @@ class ChatBotResource(Resource):
         params = chatbot.get('params', None)
 
         # Model needs to exist.
+        session = SessionController()
         if model_name is not None:
-            session_controller = SessionController()
             model_name_no_version, version = Predictor.get_name_and_version(model_name)
             try:
-                session_controller.model_controller.get_model(model_name_no_version, version=version, project_name=project_name)
+                session.model_controller.get_model(model_name_no_version, version=version, project_name=project_name)
             except PredictorRecordNotFound:
                 return http_error(
                     HTTPStatus.NOT_FOUND,
@@ -213,8 +216,7 @@ class ChatBotResource(Resource):
 
         # Agent needs to exist.
         if agent_name is not None:
-            agents_controller = AgentsController()
-            agent = agents_controller.get_agent(agent_name, project_name)
+            agent = session.agents_controller.get_agent(agent_name, project_name)
             if agent is None:
                 return http_error(
                     HTTPStatus.NOT_FOUND,
@@ -262,6 +264,7 @@ class ChatBotResource(Resource):
         return updated_chatbot.as_dict()
 
     @ns_conf.doc('delete_chatbot')
+    @api_endpoint_metrics('DELETE', '/chatbots/chatbot')
     def delete(self, project_name, chatbot_name):
         '''Deletes a chatbot by name'''
         chatbot_controller = ChatBotController()

@@ -5,11 +5,12 @@ sidebarTitle: Query Jobs
 
 ## Querying Jobs
 
-Here is how we can view all jobs in the current project:
+Here is how we can view all jobs in a project:
 
 ```sql
-SELECT *
-FROM jobs;
+SHOW JOBS WHERE project = 'project-name';
+
+SELECT * FROM project-name.jobs;
 ```
 
 On execution, we get:
@@ -24,16 +25,11 @@ On execution, we get:
 +------------------------------------+---------+----------------------------+----------------------------+----------------------------+---------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 
-We can also view jobs from a defined project:
-
-```sql
-SELECT *
-FROM my_project.jobs;
-```
-
 Or from all projects at once:
 
 ```sql
+SHOW JOBS;
+
 SELECT *
 FROM information_schema.jobs;
 ```
@@ -46,7 +42,8 @@ Here is how we can view all jobs history in the current project:
 
 ```sql
 SELECT *
-FROM jobs_history;
+FROM log.jobs_history
+WHERE project = 'mindsdb';
 ```
 
 On execution, we get:
@@ -61,17 +58,3 @@ On execution, we get:
 ```
 
 Please note that the `drop_model` job is not in the `jobs_history` table because it didn't start yet.
-
-We can also view jobs history from a defined project:
-
-```sql
-SELECT *
-FROM my_project.jobs_history;
-```
-
-Or from all projects at once:
-
-```sql
-SELECT *
-FROM information_schema.jobs_history;
-```

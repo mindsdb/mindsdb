@@ -16,7 +16,6 @@ from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import DropTables, Select
 from mindsdb_sql.parser.ast.base import ASTNode
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.document_loaders import TextLoader
 
 from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.integrations.libs.base import DatabaseHandler
@@ -27,8 +26,8 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
-DEFAULT_CHUNK_SIZE = 200
-DEFAULT_CHUNK_OVERLAP = 50
+DEFAULT_CHUNK_SIZE = 500
+DEFAULT_CHUNK_OVERLAP = 250
 
 
 def clean_cell(val):
@@ -71,7 +70,7 @@ class FileHandler(DatabaseHandler):
         return StatusResponse(True)
 
     def query(self, query: ASTNode) -> Response:
-        if type(query) == DropTables:
+        if type(query) is DropTables:
             for table_identifier in query.tables:
                 if (
                     len(table_identifier.parts) == 2
@@ -90,7 +89,7 @@ class FileHandler(DatabaseHandler):
                         error_message=f"Can't delete table '{table_name}': {e}",
                     )
             return Response(RESPONSE_TYPE.OK)
-        elif type(query) == Select:
+        elif type(query) is Select:
             table_name = query.from_table.parts[-1]
             file_path = self.file_controller.get_file_path(table_name)
             df, _columns = self._handle_source(
@@ -152,6 +151,13 @@ class FileHandler(DatabaseHandler):
             )
 
             if fmt == "txt":
+                try:
+                    from langchain_community.document_loaders import TextLoader
+                except ImportError:
+                    raise ImportError(
+                        "To import TXT document please install 'langchain-community':\n"
+                        "    pip install langchain-community"
+                    )
                 loader = TextLoader(file_path, encoding="utf8")
                 docs = text_splitter.split_documents(loader.load())
                 df = pd.DataFrame(

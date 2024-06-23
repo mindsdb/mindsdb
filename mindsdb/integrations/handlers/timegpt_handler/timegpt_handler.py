@@ -1,7 +1,7 @@
 from typing import Optional, Dict
 
 import pandas as pd
-from nixtlats import TimeGPT
+from nixtla import NixtlaClient
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.utilities.handler_utils import get_api_key
@@ -33,8 +33,12 @@ class TimeGPTHandler(BaseMLEngine):
         if mode == 'forecasting':
             assert time_settings["is_timeseries"], "Specify time series settings in your query"
 
+        timegpt_token =  get_api_key('timegpt', using_args, self.engine_storage, strict=True)
+        timegpt = NixtlaClient(api_key=timegpt_token)
+        assert timegpt.validate_api_key(), "Invalid TimeGPT token provided."
+
         model_args = {
-            'token': get_api_key('timegpt', using_args, self.engine_storage, strict=True),
+            'token': timegpt_token,
             "target": target,
             "freq": using_args.get("frequency", None),
             "finetune_steps": using_args.get("finetune_steps", 0),
@@ -69,7 +73,9 @@ class TimeGPTHandler(BaseMLEngine):
         model_args = self.model_storage.json_get("model_args")
         args = args['predict_params']
         prediction_df = self._transform_to_nixtla_df(df, model_args)
-        timegpt = TimeGPT(token=model_args['token'])
+        
+        timegpt = NixtlaClient(api_key=model_args['token'])
+        assert timegpt.validate_api_key(), "Invalid TimeGPT token provided."
 
         forecast_df = timegpt.forecast(
             prediction_df,
@@ -79,7 +85,7 @@ class TimeGPTHandler(BaseMLEngine):
             freq=args.get("freq", model_args["freq"]),  # automatically infers correct frequency if not provided by user
             level=model_args["level"],
             finetune_steps=args.get('finetune_steps', model_args['finetune_steps']),
-            validate_token=args.get('validate_token', model_args['validate_token']),
+            validate_api_key=args.get('validate_token', model_args['validate_token']),
             date_features=args.get('date_features', model_args['date_features']),
             date_features_to_one_hot=args.get('date_features_to_one_hot', model_args['date_features_to_one_hot']),
             clean_ex_first=args.get('clean_ex_first', model_args['clean_ex_first']),
@@ -90,7 +96,6 @@ class TimeGPTHandler(BaseMLEngine):
             # TODO: enable this post-refactor (#6861)
             # X_df=None,  # exogenous variables
         )
-
         if model_args['mode'] == 'forecasting':
             results_df = forecast_df[['unique_id', 'ds', 'TimeGPT']]
             results_df = get_results_from_nixtla_df(results_df, model_args)

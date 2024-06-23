@@ -32,15 +32,15 @@ class DatabaseController:
             raise Exception(f"Database with type '{db_type}' cannot be deleted")
 
     @profiler.profile()
-    def get_list(self, filter_type: Optional[str] = None):
+    def get_list(self, filter_type: Optional[str] = None, with_secrets: Optional[bool] = True):
         projects = self.project_controller.get_list()
-        integrations = self.integration_controller.get_all()
+        integrations = self.integration_controller.get_all(show_secrets=with_secrets)
         result = [{
             'name': 'information_schema',
             'type': 'system',
             'id': None,
             'engine': None,
-            'visible': False,
+            'visible': True,
             'deletable': False
         }, {
             'name': 'log',
@@ -57,7 +57,7 @@ class DatabaseController:
                 'id': x.id,
                 'engine': None,
                 'visible': True,
-                'deletable': True
+                'deletable': x.name.lower() != 'mindsdb'
             })
         for key, value in integrations.items():
             db_type = value.get('type', 'data')
@@ -70,7 +70,7 @@ class DatabaseController:
                     'class_type': value.get('class_type'),
                     'connection_data': value.get('connection_data'),
                     'visible': True,
-                    'deletable': True
+                    'deletable': value.get('permanent', False) is False
                 })
 
         if filter_type is not None:
@@ -114,6 +114,8 @@ class DatabaseController:
         if name == 'log':
             return self.logs_db_controller
         elif name == 'information_schema':
-            raise Exception("Not implemented")
+            from mindsdb.api.executor.controllers.session_controller import SessionController
+            session = SessionController()
+            return session.datahub
         else:
             raise Exception(f"Database '{name}' does not exists")

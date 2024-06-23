@@ -1,10 +1,9 @@
 from mindsdb.integrations.libs.const import HANDLER_TYPE
 
 from .__about__ import __version__ as version, __description__ as description
+from .connection_args import connection_args
 try:
-    from .gmail_handler import (
-        GmailHandler as Handler, connection_args
-    )
+    from .gmail_handler import GmailHandler as Handler
     import_error = None
 except Exception as e:
     Handler = None

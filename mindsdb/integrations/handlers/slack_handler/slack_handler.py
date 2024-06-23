@@ -1,14 +1,16 @@
 import os
-from datetime import datetime as datetime
+import datetime as dt
 from typing import List
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from slack_sdk.socket_mode import SocketModeClient
 from slack_sdk.socket_mode.request import SocketModeRequest
 from slack_sdk.socket_mode.response import SocketModeResponse
+
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.integrations.libs.api_handler import APIChatHandler, FuncParser
+
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -17,6 +19,7 @@ from mindsdb.integrations.libs.response import (
 from .slack_tables import SlackChannelsTable, SlackThreadsTable
 
 logger = log.getLogger(__name__)
+
 
 
 class SlackHandler(APIChatHandler):
@@ -49,6 +52,9 @@ class SlackHandler(APIChatHandler):
         threads = SlackThreadsTable(self)
         self._register_table('channels', channels)
         self._register_table('threads', threads)
+
+        channel_lists = SlackChannelListsTable(self)
+        self._register_table('channel_lists', channel_lists)
 
         self._socket_mode_client = None
 
@@ -228,7 +234,7 @@ class SlackHandler(APIChatHandler):
             new_channel = {
                 'id': channel['id'],
                 'name': channel['name'],
-                'created': datetime.fromtimestamp(float(channel['created']))
+                'created': dt.datetime.fromtimestamp(float(channel['created']))
             }
             new_channels.append(new_channel)
         return new_channels

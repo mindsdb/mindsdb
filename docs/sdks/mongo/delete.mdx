@@ -3,18 +3,18 @@ title: Deleting a Predictor
 sidebarTitle: Delete()
 ---
 
-## The `db.predictors.deleteOne()` Method
+## The `db.models.deleteOne()` Method
 
 ## Description
 
-The `db.predictors.deleteOne()` method deletes an ML model specified in its argument.
+The `db.models.deleteOne()` method deletes an ML model specified in its argument.
 
 ## Syntax
 
 Here is the syntax:
 
 ```sql
-db.predictors.deleteOne({name: "predictor_name"});
+db.models.deleteOne({name: "predictor_name"});
 ```
 
 On execution, we get:
@@ -37,10 +37,10 @@ Where:
 ### Listing All the Predictors
 
 Before deleting a predictor, let's list all the available predictors using the
-`db.predictors.find()` method.
+`db.models.find()` method.
 
 ```sql
-db.predictors.find({});
+db.models.find({});
 ```
 
 On execution, we get:
@@ -72,11 +72,11 @@ On execution, we get:
 
 ### Dropping a Predictor
 
-The `db.predictors.deleteOne()` method drops the model collection called
+The `db.models.deleteOne()` method drops the model collection called
 `home_rentals_model`.
 
 ```sql
-db.predictors.deleteOne({name: "home_rentals_model"});
+db.models.deleteOne({name: "home_rentals_model"});
 ```
 
 On execution, we get:
@@ -93,7 +93,7 @@ On execution, we get:
 You can validate that the model was removed by listing all the predictors.
 
 ```sql
-db.predictors.find({});
+db.models.find({});
 ```
 
 On execution, we get:

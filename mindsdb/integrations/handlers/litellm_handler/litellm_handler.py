@@ -51,7 +51,7 @@ class LiteLLMHandler(BaseMLEngine):
         input_args.update({k: v for k, v in ml_engine_args.items()})
 
         # validate args
-        export_args = CompletionParameters(**input_args).dict()
+        export_args = CompletionParameters(**input_args).model_dump()
 
         # store args
         self.model_storage.json_set("args", export_args)
@@ -64,7 +64,7 @@ class LiteLLMHandler(BaseMLEngine):
         input_args = self.model_storage.json_get("args")
 
         # validate args
-        args = CompletionParameters(**input_args).dict()
+        args = CompletionParameters(**input_args).model_dump()
 
         # build messages
         self._build_messages(args, df)

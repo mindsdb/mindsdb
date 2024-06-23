@@ -13,18 +13,13 @@
   },
   "feedback": {
     "suggestEdit": true,
-    "raiseIssue": true
+    "raiseIssue": true,
+    "thumbsRating": true
   },
   "openapi": "https://raw.githubusercontent.com/mindsdb/mindsdb/openapi-specs/mindsdb/api/http/openapi.yml",
   "api": {
     "baseUrl": "http://127.0.0.1:47334"
   },
-  "topbarLinks": [
-    {
-      "name": "Login",
-      "url": "https://cloud.mindsdb.com/login"
-    }
-  ],
   "topbarCtaButton": {
     "name": "Get Started",
     "url": "https://github.com/mindsdb/mindsdb"
@@ -39,9 +34,18 @@
       "name": "GitHub",
       "icon": "github",
       "url": "https://github.com/mindsdb/mindsdb"
+    },
+    {
+      "name": "Website",
+      "icon": "link",
+      "url": "https://mindsdb.com/"
     }
   ],
   "tabs": [
+    {
+      "name": "Use Cases",
+      "url": "use-cases"
+    },
     {
       "name": "SQL API",
       "url": "mindsdb_sql"
@@ -208,27 +212,56 @@
     {"source": "/sql/query-triggers","destination": "/mindsdb_sql/sql/query-triggers"},
     {"source": "/agents/agent","destination": "/mindsdb_sql/agents/agent"},
     {"source": "/agents/chatbot","destination": "/mindsdb_sql/agents/chatbot"},
-    {"source": "/agents/knowledge-bases","destination": "/mindsdb_sql/agents/knowledge-bases"}
+    {"source": "/agents/knowledge-bases","destination": "/mindsdb_sql/agents/knowledge-bases"},
+    {"source": "/finetune/anyscale","destination": "/use-cases/automated_finetuning/anyscale"},
+    {"source": "/finetune/openai","destination": "/use-cases/automated_finetuning/openai"},
+    {"source": "/finetune/classification","destination": "/use-cases/automated_finetuning/classification"},
+    {"source": "/finetune/regression","destination": "/use-cases/automated_finetuning/regression"},
+    {"source": "/sql/tutorials/chatbots_agents","destination": "/use-cases/ai_agents/chatbots_agents"},
+    {"source": "/sql/tutorials/create-chatbot","destination": "/use-cases/ai_agents/create-chatbot"},
+    {"source": "/sql/tutorials/create-chatbot-kb","destination": "/use-cases/ai_agents/create-chatbot-kb"},
+    {"source": "/sql/tutorials/recommenders","destination": "/use-cases/ai-powered_data_retrieval/recommenders"},
+    {"source": "/sql/tutorials/image-generator","destination": "/use-cases/data_enrichment/image-generator"},
+    {"source": "/nlp/json-from-text","destination": "/use-cases/data_enrichment/json-from-text"},
+    {"source": "/nlp/text-summarization-inside-mysql-with-openai","destination": "/use-cases/data_enrichment/text-summarization-inside-mysql-with-openai"},
+    {"source": "/nlp/text-summarization-inside-mongodb-with-openai","destination": "/use-cases/data_enrichment/text-summarization-inside-mongodb-with-openai"},
+    {"source": "/nlp/sentiment-analysis-inside-mysql-with-openai","destination": "/use-cases/data_enrichment/sentiment-analysis-inside-mysql-with-openai"},
+    {"source": "/nlp/sentiment-analysis-inside-mongodb-with-openai","destination": "/use-cases/data_enrichment/sentiment-analysis-inside-mongodb-with-openai"},
+    {"source": "/nlp/question-answering-inside-mysql-with-openai","destination": "/use-cases/data_enrichment/question-answering-inside-mysql-with-openai"},
+    {"source": "/nlp/question-answering-inside-mongodb-with-openai","destination": "/use-cases/data_enrichment/question-answering-inside-mongodb-with-openai"},
+    {"source": "/sql/tutorials/text-sentiment-hf","destination": "/use-cases/data_enrichment/text-sentiment-hf"},
+    {"source": "/sql/tutorials/hugging-face-examples","destination": "/use-cases/data_enrichment/hugging-face-examples"},
+    {"source": "/sql/tutorials/hugging-face-inference-api-examples","destination": "/use-cases/data_enrichment/hugging-face-inference-api-examples"},
+    {"source": "/sql/tutorials/house-sales-forecasting","destination": "/use-cases/predictive_analytics/house-sales-forecasting"},
+    {"source": "/sql/tutorials/expenditures-statsforecast","destination": "/use-cases/predictive_analytics/expenditures-statsforecast"},
+    {"source": "/sql/tutorials/eeg-forecasting","destination": "/use-cases/predictive_analytics/eeg-forecasting"},
+    {"source": "/sql/tutorials/customer-churn","destination": "/use-cases/in-database_ml/customer-churn"},
+    {"source": "/sql/tutorials/home-rentals","destination": "/use-cases/in-database_ml/home-rentals"},
+    {"source": "/sql/tutorials/slack-chatbot","destination": "/use-cases/ai_workflow_automation/slack-chatbot"},
+    {"source": "/sql/tutorials/twitter-chatbot","destination": "/use-cases/ai_workflow_automation/twitter-chatbot"},
+    {"source": "/sql/tutorials/twilio-chatbot","destination": "/use-cases/ai_workflow_automation/twilio-chatbot"},
+    {"source": "/sql/tutorials/customer-reviews-notifications","destination": "/use-cases/ai_workflow_automation/customer-reviews-notifications"},
+    {"source": "/sql/tutorials/real-time-trading-forecasts","destination": "/use-cases/ai_workflow_automation/real-time-trading-forecasts"},
+    {"source": "/model-management","destination": "/features/model-management"},
+    {"source": "/ai-integrations","destination": "/features/ai-integrations"},
+    {"source": "/data-integrations","destination": "/features/data-integrations"},
+    {"source": "/automation","destination": "/features/automation"},
+    {"source": "/features/ai-integrations","destination": "/integrations/ai-overview"},
+    {"source": "/features/data-integrations","destination": "/integrations/data-overview"},
+    {"source": "/integrations/ai-engines/mindsdb_inference","destination": "/integrations/ai-engines/minds_endpoint"}
   ],
   "navigation": [
     {
-      "group": "Overview",
+      "group": "Get Started",
       "pages": [
         "what-is-mindsdb",
-        
+        "quickstart-tutorial",
         {
-          "group": "Setup/Install",
+          "group": "Installation",
           "pages": [
             "setup/self-hosted/docker",
             "setup/self-hosted/docker-desktop",
-            {
-              "group": "Cloud",
-              "pages": [
-                "setup/aws",
-                "setup/gcp",
-                "setup/community-deploys-mindsdb"
-              ]
-            },
+            "setup/cloud/aws-marketplace",
             {
               "group": "Configuration",
               "pages": [
@@ -237,51 +270,34 @@
               ]
             }
           ]
-        },
-        {
-          "group": "Quickstart",
-          "pages": [
-            "mindsdb-gui",
-            "connect/postgres-client",
-            "sql/table-structure"
-            
-          ]
         }
       ]
     },
+    
     {
-      "group": "Concepts",
-      "pages": [   
+      "group": "Features",
+      "pages": [
+        "features/model-management",
+        "features/ai-integrations",
+        "features/data-integrations",
+        "features/automation",
         {
-          "group": "AI Tables",
-          "pages":[
-            "ai-engines/overview",
-            "generative-ai-tables"
-          ] 
-        },  
-        {
-          "group": "Data Sources",
+          "group": "Learn more",
           "pages": [
-            "datasources/overview",
-            "sql/create/database",
+            "sql/table-structure",
             "sql/project",
-            "sql/create/view",
-            "sql/create/file",
+            "generative-ai-tables",
             {
               "group": "Data Preparation",
               "pages": [
                 "sql/feature-eng",
                 "sql/data-insights",
-                "sql/feature-importance" 
-              ]
-            }
-          ] 
-        },
-        {
-          "group": "Automation",
-          "pages": [
-            "sql/create/jobs",
-            "sql/create/trigger"
+                "sql/feature-importance"
+              ] 
+            },
+            "mindsdb-gui",
+            "model-types",
+            "mindsdb-handlers"
           ]
         }
       ]
@@ -289,101 +305,79 @@
     {
       "group": "Use Cases",
       "pages": [
+        "use-cases/overview",
         {
-          "group": "Fine-Tuning",
+          "group": "Automated Fine-Tuning",
           "pages": [
-            "finetune/anyscale",
-            "finetune/openai",
-            "finetune/classification",
-            "finetune/regression"
+            "use-cases/automated_finetuning/overview",
+            "use-cases/automated_finetuning/anyscale",
+            "use-cases/automated_finetuning/openai",
+            "use-cases/automated_finetuning/classification",
+            "use-cases/automated_finetuning/regression"
           ]
         },
         {
-          "group": "Chatbots with Agents",
+          "group": "AI Agents",
           "pages": [
-            "sql/tutorials/chatbots_agents",
-            "sql/tutorials/create-chatbot"
+            "use-cases/ai_agents/overview",
+            "use-cases/ai_agents/chatbots_agents",
+            "use-cases/ai_agents/create-chatbot",
+            "use-cases/ai_agents/create-chatbot-kb"
           ]
         },
         {
-          "group": "Chatbots with Jobs",
+          "group": "AI-Powered Data Retrieval",
           "pages": [
-            "sql/tutorials/slack-chatbot",
-            "sql/tutorials/twitterbot-mariadb-enterprise-server-skysql",
-            "sql/tutorials/twilio-chatbot"
+            "use-cases/ai-powered_data_retrieval/overview",
+            "use-cases/ai-powered_data_retrieval/semantic_search",
+            "use-cases/ai-powered_data_retrieval/recommenders"
           ]
         },
         {
-          "group": "Content Generation",
+          "group": "Data Enrichment",
           "pages": [
-            "sql/tutorials/image-generator",
-            "nlp/json-from-text"
+            "use-cases/data_enrichment/overview",
+            "use-cases/data_enrichment/image-generator",
+            "use-cases/data_enrichment/json-from-text",
+            "use-cases/data_enrichment/text-summarization-inside-mysql-with-openai",
+            "use-cases/data_enrichment/text-summarization-inside-mongodb-with-openai",
+            "use-cases/data_enrichment/sentiment-analysis-inside-mysql-with-openai",
+            "use-cases/data_enrichment/sentiment-analysis-inside-mongodb-with-openai",
+            "use-cases/data_enrichment/question-answering-inside-mysql-with-openai",
+            "use-cases/data_enrichment/question-answering-inside-mongodb-with-openai",
+            "use-cases/data_enrichment/text-sentiment-hf",
+            "use-cases/data_enrichment/hugging-face-examples",
+            "use-cases/data_enrichment/hugging-face-inference-api-examples"
           ]
         },
         {
-          "group": "Semantic Search",
+          "group": "Predictive Analytics",
           "pages": [
-            "sql/tutorials/rag"
+            "use-cases/predictive_analytics/overview",
+            "use-cases/predictive_analytics/house-sales-forecasting",
+            "use-cases/predictive_analytics/expenditures-statsforecast",
+            "use-cases/predictive_analytics/eeg-forecasting"
           ]
         },
         {
-          "group": "Recommenders",
+          "group": "In-Database Machine Learning",
           "pages": [
-            "sql/tutorials/recommenders"
+            "use-cases/in-database_ml/overview",
+            "use-cases/in-database_ml/customer-churn",
+            "use-cases/in-database_ml/home-rentals"
           ]
         },
         {
-          "group": "Question Answering",
+          "group": "AI Workflow Automation",
           "pages": [
-            "nlp/question-answering-inside-mysql-with-openai",
-            "nlp/question-answering-inside-mongodb-with-openai"
+            "use-cases/ai_workflow_automation/overview",
+            "use-cases/ai_workflow_automation/slack-chatbot",
+            "use-cases/ai_workflow_automation/twitter-chatbot",
+            "use-cases/ai_workflow_automation/twilio-chatbot",
+            "use-cases/ai_workflow_automation/customer-reviews-notifications",
+            "use-cases/ai_workflow_automation/real-time-trading-forecasts"
           ]
-        },
-        {
-          "group": "Sentiment Analysis",
-          "pages": [
-            "nlp/sentiment-analysis-inside-mysql-with-openai",
-            "nlp/sentiment-analysis-inside-mongodb-with-openai"
-          ]
-        },
-        {
-          "group": "Text Summarization",
-          "pages": [
-            "nlp/text-summarization-inside-mysql-with-openai",
-            "nlp/text-summarization-inside-mongodb-with-openai"
-          ]
-        },
-        {
-          "group": "Forecasting",
-          "pages": [
-            "sql/tutorials/house-sales-forecasting",
-            "sql/tutorials/house-sales-statsforecast",
-            "sql/tutorials/eeg-forecasting",
-            "sql/tutorials/time-series-community"
-          ]
-        },
-        {
-          "group": "Classification",
-          "pages": [
-            "sql/tutorials/customer-churn",
-            "sql/tutorials/classification-community"
-          ]
-        },
-        {
-          "group": "Regression",
-          "pages": [
-            "sql/tutorials/home-rentals",
-            "sql/tutorials/regression-community"
-          ]
-        },
-        {
-          "group": "Natural Language Processing",
-          "pages": [
-            "sql/tutorials/hugging-face-examples",
-            "sql/tutorials/hugging-face-inference-api-examples"
-          ]
-        },
-        "tutorials"
+        }
       ]
     },
     {
@@ -521,7 +515,7 @@
           ]
         },
         {
-          "group": "ML Engines",
+          "group": "AI Engines",
           "pages": [
             "rest/ml_engines/create",
             "rest/ml_engines/delete",
@@ -579,7 +573,8 @@
           "group": "Files",
           "pages": [
             "rest/files/upload",
-            "rest/files/delete"
+            "rest/files/delete",
+            "rest/files/list"
           ]
         },
         {
@@ -589,13 +584,6 @@
             "rest/jobs/delete",
             "rest/jobs/query"
           ]
-        },
-        {
-          "group": "Agents",
-          "pages": [
-            "rest/agents/agent",
-            "rest/agents/chatbot"
-          ]
         }
       ]
     },
@@ -604,12 +592,12 @@
       "pages": [
         "sdks/overview",
         {
-          "group": "Mongo-QL",
+          "group": "MongoDB API",
           "pages": [
+            "sdks/mongo/mindsdb-mongo-ql-overview",
               {
                   "group": "Connect",
                   "pages": [
-                      "sdks/mongo/mindsdb-mongo-ql-overview",
                       "sdks/mongo/connect/mongo-compass",
                       "sdks/mongo/connect/mongo-shell"
                   ]
@@ -673,10 +661,10 @@
         {
           "group": "Python SDK",
           "pages": [
+            "sdks/python/overview",
               {
                   "group": "Connect",
                   "pages": [
-                      "sdks/python/overview",
                       "sdks/python/installation",
                       "sdks/python/connect"
                   ]
@@ -758,16 +746,24 @@
                       "sdks/python/refresh_job",
                       "sdks/python/get_history"
                   ]
-              }
+              },
+              {
+                "group": "AI Agents",
+                "pages": [
+                    "sdks/python/agents",
+                    "sdks/python/agents_skills",
+                    "sdks/python/agents_knowledge_bases"
+                ]
+            }
           ]
         },
         {
           "group": "JavaScript SDK",
           "pages": [
+            "sdks/javascript/overview",
               {
                   "group": "Connect",
                   "pages": [
-                      "sdks/javascript/overview",
                       "sdks/javascript/installation",
                       "sdks/javascript/connect"
                   ]
@@ -860,6 +856,7 @@
     {
       "group": "Data Sources",
       "pages": [
+        "integrations/data-overview",
         {
           "group": "Applications",
           "pages": [
@@ -962,7 +959,7 @@
           ]
         },
         {
-          "group": "Vector Databases",
+          "group": "Vector Stores",
           "pages": [
             "integrations/vector-db-integrations/chromadb",
             "integrations/vector-db-integrations/pgvector",
@@ -975,17 +972,20 @@
     {
       "group": "AI Engines",
       "pages": [
+        "integrations/ai-overview",
         {
           "group": "Large Language Models",
           "pages": [
             "integrations/ai-engines/anthropic",
             "integrations/ai-engines/anyscale",
             "integrations/ai-engines/cohere",
+            "integrations/ai-engines/google_gemini",
             "integrations/ai-engines/huggingface",
             "integrations/ai-engines/huggingface_inference_api",
             "integrations/ai-engines/langchain",
             "integrations/ai-engines/llamaindex",
             "integrations/ai-engines/monkeylearn",
+            "integrations/ai-engines/minds_endpoint",
             "integrations/ai-engines/ollama",
             "integrations/ai-engines/openai",
             "integrations/ai-engines/replicate-llm",
@@ -999,6 +999,12 @@
             "integrations/ai-engines/byom",
             "integrations/ai-engines/mlflow",
             "integrations/ai-engines/ray-serve"
+          ]
+        },
+        {
+          "group": "Anomaly Detection",
+          "pages": [
+            "integrations/ai-engines/anomaly"
           ]
         },
         {
@@ -1024,23 +1030,28 @@
           ]
         },
         {
-          "group": "Image Models",
+          "group": "Multi-Media Models",
           "pages": [
-            "integrations/ai-engines/replicate-text2img",
-            "integrations/ai-engines/replicate-img2text"
-          ]
-        },
-        {
-          "group": "Large Video Models",
-          "pages": [
-            "integrations/ai-engines/twelvelabs",
-            "integrations/ai-engines/replicate-text2video"
-          ]
-        },
-        {
-          "group": "Audio Models",
-          "pages": [
-            "integrations/ai-engines/replicate-audio"
+            {
+              "group": "Audio Models",
+              "pages": [
+                "integrations/ai-engines/replicate-audio"
+              ]
+            },
+            {
+              "group": "Image Models",
+              "pages": [
+                "integrations/ai-engines/replicate-text2img",
+                "integrations/ai-engines/replicate-img2text"
+              ]
+            },
+            {
+              "group": "Video Models",
+              "pages": [
+                "integrations/ai-engines/twelvelabs",
+                "integrations/ai-engines/replicate-text2video"
+              ]
+            }
           ]
         }
       ]
@@ -1056,8 +1067,8 @@
         "contribute/data-handlers",
         "contribute/ml-handlers",
         "contribute/app-handlers",
-        "contribute/integrations-readme",
         "contribute/tests",
+        "contribute/integrations-readme",
         "contribute/tutorials",
         "contribute/docs",
         "contribute/docs-rules",
@@ -1067,10 +1078,11 @@
     {
       "group": "FAQs",
       "pages": [
+        "faqs/benefits",
         "faqs/whitelist-ips",
         "faqs/persist-predictions",
         "faqs/mindsdb-with-php",
-        "faqs/benefits"
+        "faqs/disposable-email-doman-and-openai"
       ]
     }
   ],

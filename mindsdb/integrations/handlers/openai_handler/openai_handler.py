@@ -135,19 +135,18 @@ class OpenAIHandler(BaseMLEngine):
         if (
             len(
                 set(args.keys())
-                & {'question_column', 'prompt_template', 'json_struct', 'prompt'}
+                & {'question_column', 'prompt_template', 'prompt'}
             )
             == 0
         ):
             raise Exception(
-                'One of `question_column`, `prompt_template` or `json_struct` is required for this engine.'
+                'One of `question_column`, `prompt_template` or `prompt` is required for this engine.'
             )
 
         keys_collection = [
             ['prompt_template'],
             ['question_column', 'context_column'],
             ['prompt', 'user_column', 'assistant_column'],
-            ['json_struct'],
         ]
         for keys in keys_collection:
             if keys[0] in args and any(
@@ -159,8 +158,7 @@ class OpenAIHandler(BaseMLEngine):
                     Please provide one of
                         1) a `prompt_template`
                         2) a `question_column` and an optional `context_column`
-                        3) a `json_struct`
-                        4) a `prompt' and 'user_column' and 'assistant_column`
+                        3) a `prompt', 'user_column' and 'assistant_column`
                 '''
                     )
                 )
@@ -178,7 +176,7 @@ class OpenAIHandler(BaseMLEngine):
                 "model_name",
                 "mode",
                 "predict_params",
-                "input_text",
+                "json_struct",
                 "ft_api_info",
                 "ft_result_stats",
                 "runtime",
@@ -397,44 +395,6 @@ class OpenAIHandler(BaseMLEngine):
                     for c, q in zip(contexts, questions)
                 ]
 
-            elif args.get('json_struct', False):
-                empty_prompt_ids = np.where(
-                    df[[args['input_text']]].isna().all(axis=1).values
-                )[0]
-                prompts = []
-                for i in df.index:
-                    if 'json_struct' in df.columns:
-                        if isinstance(df['json_struct'][i], str):
-                            df['json_struct'][i] = json.loads(df['json_struct'][i])
-                        json_struct = ''
-                        for ind, val in enumerate(df['json_struct'][i].values()):
-                            json_struct = json_struct + f'{ind}. {val}\n'
-                    else:
-                        json_struct = ''
-                        for ind, val in enumerate(args['json_struct'].values()):
-                            json_struct = json_struct + f'{ind + 1}. {val}\n'
-
-                    p = textwrap.dedent(
-                        f'''\
-                        Using text starting after 'The text is:', give exactly {len(args['json_struct'])} answers to the questions:
-                        {{{{json_struct}}}}
-
-                        Answers should be in the same order as the questions.
-                        Each answer should start with a question number.
-                        Each answer must end with new line.
-                        If there is no answer to the question in the text, put a -.
-                        Answers should be as short as possible, ideally 1-2 words (unless otherwise specified).
-
-                        The text is:
-                        {{{{{args['input_text']}}}}}
-                    '''
-                    )
-                    p = p.replace('{{json_struct}}', json_struct)
-                    for column in df.columns:
-                        if column == 'json_struct':
-                            continue
-                        p = p.replace(f'{{{{{column}}}}}', str(df[column][i]))
-                    prompts.append(p)
             elif 'prompt' in args:
                 empty_prompt_ids = []
                 prompts = list(df[args['user_column']])
@@ -443,6 +403,53 @@ class OpenAIHandler(BaseMLEngine):
                     df[[args['question_column']]].isna().all(axis=1).values
                 )[0]
                 prompts = list(df[args['question_column']].apply(lambda x: str(x)))
+
+            # add json struct if available
+            if args.get('json_struct', False):
+                for i, prompt in enumerate(prompts):
+                    json_struct = ''
+                    if 'json_struct' in df.columns and i not in empty_prompt_ids:
+                        # if row has a specific json, we try to use it instead of the base prompt template
+                        try:
+                            if isinstance(df['json_struct'][i], str):
+                                df['json_struct'][i] = json.loads(df['json_struct'][i])
+                            for ind, val in enumerate(df['json_struct'][i].values()):
+                                json_struct = json_struct + f'{ind}. {val}\n'
+                        except Exception:
+                            pass  # if the row's json is invalid, we use the prompt template instead
+
+                    if json_struct == '':
+                        for ind, val in enumerate(args['json_struct'].values()):
+                            json_struct = json_struct + f'{ind + 1}. {val}\n'
+
+                    p = textwrap.dedent(
+                        f'''\
+                            Based on the text following 'The reference text is:', assign values to the following {len(args['json_struct'])} JSON attributes:
+                            {{{{json_struct}}}}
+
+                            Values should follow the same order as the attributes above.
+                            Each line in the answer should start with a dotted number, and should not repeat the name of the attribute, just the value.
+                            Each answer must end with new line.
+                            If there is no valid value to a given attribute in the text, answer with a - character.
+                            Values should be as short as possible, ideally 1-2 words (unless otherwise specified).
+
+                            Here is an example input of 3 attributes:
+                                1. rental price
+                                2. location
+                                3. number of bathrooms
+
+                            Here is an example output for the input:
+                                1. 3000
+                                2. Manhattan
+                                3. 2
+
+                            Now for the real task. The reference text is:
+                            {prompt}
+                        '''
+                    )
+
+                    p = p.replace('{{json_struct}}', json_struct)
+                    prompts[i] = p
 
         # remove prompts without signal from completion queue
         prompts = [j for i, j in enumerate(prompts) if i not in empty_prompt_ids]

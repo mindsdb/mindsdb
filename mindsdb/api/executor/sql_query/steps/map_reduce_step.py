@@ -99,8 +99,11 @@ class MapReduceStepCall(BaseStepCall):
         # workers count
         is_cloud = Config().get('cloud', False)
         if is_cloud:
-            # TODO get it from env variable?
-            max_threads = 10
+            max_threads = os.getenv('MAX_QUERY_PARTITIONS')
+            if max_threads is not None:
+                max_threads = int(max_threads)
+            else:
+                max_threads = 10
         else:
             max_threads = os.cpu_count() - 2
 

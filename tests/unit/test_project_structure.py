@@ -960,9 +960,9 @@ class TestProjectStructure(BaseExecutorDummyML):
             {'a': 1, 'b': dt.datetime(2020, 1, 1)},
             {'a': 2, 'b': dt.datetime(2020, 1, 2)},
             {'a': 3, 'b': dt.datetime(2020, 1, 3)},
-            {'a': 4, 'b': dt.datetime(2020, 1, 5) },
-            {'a': 5, 'b': dt.datetime(2020, 1, 6) },
-            {'a': 6, 'b': dt.datetime(2020, 1, 7) },
+            {'a': 4, 'b': dt.datetime(2020, 1, 5)},
+            {'a': 5, 'b': dt.datetime(2020, 1, 6)},
+            {'a': 6, 'b': dt.datetime(2020, 1, 7)},
         ])
         self.save_file('tasks', df)
 

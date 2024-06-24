@@ -1,3 +1,4 @@
+import os
 import copy
 
 from mindsdb_sql.parser.ast import (
@@ -13,6 +14,8 @@ from mindsdb_sql.planner.steps import (
 
 from mindsdb.api.executor.sql_query.result_set import ResultSet
 from mindsdb.api.executor.exceptions import LogicError
+from mindsdb.utilities.config import Config
+from mindsdb.utilities.context_executor import execute_in_threads
 
 from .base import BaseStepCall
 
@@ -82,16 +85,44 @@ class MapReduceStepCall(BaseStepCall):
 
         df = input_data.get_raw_df()
 
-        chunk = 0
-        while chunk * partition < len(input_data):
-            # create results with partition
-            df1 = df[chunk * partition: (chunk + 1) * partition]
-            chunk += 1
+        # tasks
+        def split_data_f(df):
+            chunk = 0
+            while chunk * partition < len(df):
+                # create results with partition
+                df1 = df[chunk * partition: (chunk + 1) * partition]
+                chunk += 1
+                yield df1, substeps, input_idx, input_columns
 
-            sub_data = self._exec_partition(df1, substeps, input_idx, input_columns)
+        tasks = split_data_f(df)
 
-            if sub_data:
-                data = join_query_data(data, sub_data)
+        # workers count
+        is_cloud = Config().get('cloud', False)
+        if is_cloud:
+            # TODO get it from env variable?
+            max_threads = 10
+        else:
+            max_threads = os.cpu_count() - 2
+
+        # don't exceed chunk_count
+        chunk_count = int(len(df) / partition)
+        max_threads = min(max_threads, chunk_count)
+
+        if max_threads < 1:
+            max_threads = 1
+
+        if max_threads == 1:
+            # don't spawn threads
+
+            for task in tasks:
+                sub_data = self._exec_partition(*task)
+                if sub_data:
+                    data = join_query_data(data, sub_data)
+
+        else:
+            for sub_data in execute_in_threads(self._exec_partition, tasks, thread_count=max_threads):
+                if sub_data:
+                    data = join_query_data(data, sub_data)
 
         return data
 

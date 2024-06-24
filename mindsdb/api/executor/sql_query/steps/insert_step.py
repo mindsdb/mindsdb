@@ -37,9 +37,12 @@ class InsertToTableCall(BaseStepCall):
             for col in step.query.columns:
                 data.add_column(Column(col.name))
 
+            records = []
             for row in step.query.values:
                 record = [v.value for v in row]
-                data.add_record_raw(record)
+                records.append(record)
+
+            data.add_raw_values(records)
         else:
             raise LogicError(f'Data not found for insert: {step}')
 

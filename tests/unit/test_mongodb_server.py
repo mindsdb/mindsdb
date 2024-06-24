@@ -9,8 +9,8 @@ import os
 from pymongo import MongoClient
 from mindsdb_sql import parse_sql
 
-from mindsdb.api.executor.data_types.answer import ExecuteAnswer, ANSWER_TYPE
-from mindsdb.api.executor import Column
+from mindsdb.api.executor.data_types.answer import ExecuteAnswer
+from mindsdb.api.executor import Column, ResultSet
 
 # How to run:
 #  env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
@@ -62,7 +62,7 @@ class TestMongoDBServer(BaseUnitTest):
                 for test_name, test_method in inspect.getmembers(self, predicate=inspect.ismethod):
                     if test_name.startswith('t_'):
                         mock_executor.reset_mock()
-                        mock_executor.side_effect = lambda x: ExecuteAnswer(ANSWER_TYPE.OK)
+                        mock_executor.side_effect = lambda x: ExecuteAnswer()
 
                         test_method(client_con, mock_executor)
 
@@ -78,11 +78,7 @@ class TestMongoDBServer(BaseUnitTest):
 
     def t_single_row(self, client_con, mock_executor):
         # ==== test single row ===
-        mock_executor.side_effect = lambda x: ExecuteAnswer(
-            ANSWER_TYPE.TABLE,
-            columns=[Column('a')],
-            data=[['test']]
-        )
+        mock_executor.side_effect = lambda x: ExecuteAnswer(data=ResultSet(columns=[Column('a')], values=[['test']]))
 
         res = client_con.mindsdb.fish_model1.find(
             {'length1': 10, 'type': 'a'}

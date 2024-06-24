@@ -6,10 +6,10 @@ from unittest.mock import patch
 from tests.unit.ml_handlers.base_ml_test import BaseMLAPITest
 
 
-@pytest.mark.skipif(os.environ.get('MDB_TEST_MDB_INFERENCE_API_KEY') is None, reason='Missing API key!')
-class TestMindsDBInference(BaseMLAPITest):
+@pytest.mark.skipif(os.environ.get('MDB_TEST_MINDS_ENDPOINT_API_KEY') is None, reason='Missing API key!')
+class TestMindsEndpoint(BaseMLAPITest):
     """
-    Integration tests for MindsDB Inference engine.
+    Integration tests for Minds Endpoint engine.
     """
 
     # TODO: Should random names be generated for the project, model etc.?
@@ -17,17 +17,17 @@ class TestMindsDBInference(BaseMLAPITest):
 
     def setup_method(self):
         """
-        Setup test environment by creating a project and a MindsDB Inference engine.
+        Setup test environment by creating a project and a Minds Endpoint engine.
         """
 
         super().setup_method()
         self.run_sql("CREATE DATABASE proj")
         self.run_sql(
             f"""
-            CREATE ML_ENGINE mindsdb_inference_engine
-            FROM mindsdb_inference
+            CREATE ML_ENGINE minds_endpoint_engine
+            FROM minds_endpoint
             USING
-            mindsdb_inference_api_key = '{self.get_api_key('MDB_TEST_MDB_INFERENCE_API_KEY')}';
+            minds_endpoint_api_key = '{self.get_api_key('MDB_TEST_MINDS_ENDPOINT_API_KEY')}';
             """
         )
 
@@ -38,17 +38,17 @@ class TestMindsDBInference(BaseMLAPITest):
 
         self.run_sql(
             f"""
-            CREATE MODEL proj.test_mdb_inference_invalid_parameter_model
+            CREATE MODEL proj.test_minds_endpoint_invalid_parameter_model
             PREDICT answer
             USING
-                engine='mindsdb_inference_engine',
+                engine='minds_endpoint_engine',
                 model_name='this-model-does-not-exist',
                 prompt_template='dummy_prompt_template',
-                mindsdb_inference_api_key='{self.get_api_key('MDB_TEST_MDB_INFERENCE_API_KEY')}';
+                minds_endpoint_api_key='{self.get_api_key('MDB_TEST_MINDS_ENDPOINT_API_KEY')}';
             """
         )
         with pytest.raises(Exception):
-            self.wait_predictor("proj", "test_mdb_inference_invalid_model")
+            self.wait_predictor("proj", "test_minds_endpoint_invalid_model")
 
     def test_create_model_raises_exception_with_unknown_model_argument(self):
         """
@@ -57,17 +57,17 @@ class TestMindsDBInference(BaseMLAPITest):
 
         self.run_sql(
             f"""
-            CREATE MODEL proj.test_mdb_inference_unknown_argument_model
+            CREATE MODEL proj.test_minds_endpoint_unknown_argument_model
             PREDICT answer
             USING
-                engine='mindsdb_inference_engine',
+                engine='minds_endpoint_engine',
                 prompt_template='dummy_prompt_template',
-                mindsdb_inference_api_key='{self.get_api_key('MDB_TEST_MDB_INFERENCE_API_KEY')}',
+                minds_endpoint_api_key='{self.get_api_key('MDB_TEST_MINDS_ENDPOINT_API_KEY')}',
                 evidently_wrong_argument='wrong value';
             """
         )
         with pytest.raises(Exception):
-            self.wait_predictor("proj", "test_mdb_inference_unknown_argument_model")
+            self.wait_predictor("proj", "test_minds_endpoint_unknown_argument_model")
 
     def test_select_runs_no_errors_on_chat_completion_question_answering_single(self):
         """
@@ -76,20 +76,20 @@ class TestMindsDBInference(BaseMLAPITest):
 
         self.run_sql(
             f"""
-            CREATE MODEL proj.test_mdb_inference_single_qa
+            CREATE MODEL proj.test_minds_endpoint_single_qa
             PREDICT answer
             USING
-                engine='mindsdb_inference_engine',
+                engine='minds_endpoint_engine',
                 question_column='question',
-                mindsdb_inference_api_key='{self.get_api_key('MDB_TEST_MDB_INFERENCE_API_KEY')}';
+                minds_endpoint_api_key='{self.get_api_key('MDB_TEST_MINDS_ENDPOINT_API_KEY')}';
             """
         )
-        self.wait_predictor("proj", "test_mdb_inference_single_qa")
+        self.wait_predictor("proj", "test_minds_endpoint_single_qa")
 
         result_df = self.run_sql(
             """
             SELECT answer
-            FROM proj.test_mdb_inference_single_qa
+            FROM proj.test_minds_endpoint_single_qa
             WHERE question = 'What is the capital of Sweden?';
             """
         )
@@ -110,21 +110,21 @@ class TestMindsDBInference(BaseMLAPITest):
 
         self.run_sql(
             f"""
-            CREATE MODEL proj.test_mdb_inference_bulk_qa
+            CREATE MODEL proj.test_minds_endpoint_bulk_qa
             PREDICT answer
             USING
-                engine='mindsdb_inference_engine',
+                engine='minds_endpoint_engine',
                 question_column='question',
-                mindsdb_inference_api_key='{self.get_api_key('MDB_TEST_MDB_INFERENCE_API_KEY')}';
+                minds_endpoint_api_key='{self.get_api_key('MDB_TEST_MINDS_ENDPOINT_API_KEY')}';
             """
         )
-        self.wait_predictor("proj", "test_mdb_inference_bulk_qa")
+        self.wait_predictor("proj", "test_minds_endpoint_bulk_qa")
 
         result_df = self.run_sql(
             """
             SELECT p.answer
             FROM pg.df as t
-            JOIN proj.test_mdb_inference_bulk_qa as p;
+            JOIN proj.test_minds_endpoint_bulk_qa as p;
         """
         )
 
@@ -138,21 +138,21 @@ class TestMindsDBInference(BaseMLAPITest):
 
         self.run_sql(
             f"""
-            CREATE MODEL proj.test_mdb_inference_single_embeddings
+            CREATE MODEL proj.test_minds_endpoint_single_embeddings
             PREDICT embeddings
             USING
-                engine='mindsdb_inference_engine',
+                engine='minds_endpoint_engine',
                 question_column='text',
                 mode='embedding',
-                mindsdb_inference_api_key='{self.get_api_key('MDB_TEST_MDB_INFERENCE_API_KEY')}';
+                minds_endpoint_api_key='{self.get_api_key('MDB_TEST_MINDS_ENDPOINT_API_KEY')}';
             """
         )
-        self.wait_predictor("proj", "test_mdb_inference_single_embeddings")
+        self.wait_predictor("proj", "test_minds_endpoint_single_embeddings")
 
         result_df = self.run_sql(
             """
             SELECT embeddings
-            FROM proj.test_mdb_inference_single_embeddings
+            FROM proj.test_minds_endpoint_single_embeddings
             WHERE text = 'MindsDB';
             """
         )

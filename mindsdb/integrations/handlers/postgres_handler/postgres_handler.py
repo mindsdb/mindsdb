@@ -1,3 +1,7 @@
+import time
+import json
+
+import pandas as pd
 import psycopg
 from psycopg.postgres import types
 from psycopg.pq import ExecStatus
@@ -17,6 +21,8 @@ from mindsdb.integrations.libs.response import (
 import mindsdb.utilities.profiler as profiler
 
 logger = log.getLogger(__name__)
+
+SUBSCRIBE_SLEEP_INTERVAL = 1
 
 
 class PostgresHandler(DatabaseHandler):
@@ -41,20 +47,7 @@ class PostgresHandler(DatabaseHandler):
         if self.is_connected:
             self.disconnect()
 
-    @profiler.profile()
-    def connect(self):
-        """
-        Establishes a connection to a PostgreSQL database.
-
-        Raises:
-            psycopg.Error: If an error occurs while connecting to the PostgreSQL database.
-
-        Returns:
-            psycopg.Connection: A connection object to the PostgreSQL database.
-        """
-        if self.is_connected:
-            return self.connection
-
+    def _make_connection_args(self):
         config = {
             'host': self.connection_args.get('host'),
             'port': self.connection_args.get('port'),
@@ -69,7 +62,23 @@ class PostgresHandler(DatabaseHandler):
         # If schema is not provided set public as default one
         if self.connection_args.get('schema'):
             config['options'] = f'-c search_path={self.connection_args.get("schema")},public'
+        return config
 
+    @profiler.profile()
+    def connect(self):
+        """
+        Establishes a connection to a PostgreSQL database.
+
+        Raises:
+            psycopg.Error: If an error occurs while connecting to the PostgreSQL database.
+
+        Returns:
+            psycopg.Connection: A connection object to the PostgreSQL database.
+        """
+        if self.is_connected:
+            return self.connection
+
+        config = self._make_connection_args()
         try:
             self.connection = psycopg.connect(**config, connect_timeout=10)
             self.is_connected = True
@@ -151,7 +160,7 @@ class PostgresHandler(DatabaseHandler):
                         logger.error(f'Error casting column {col.name} to {types_map[pg_type.name]}: {e}')
 
     @profiler.profile()
-    def native_query(self, query: str) -> Response:
+    def native_query(self, query: str, params=None) -> Response:
         """
         Executes a SQL query on the PostgreSQL database and returns the result.
 
@@ -166,8 +175,11 @@ class PostgresHandler(DatabaseHandler):
         connection = self.connect()
         with connection.cursor() as cur:
             try:
-                cur.execute(query)
-                if ExecStatus(cur.pgresult.status) == ExecStatus.COMMAND_OK:
+                if params is not None:
+                    cur.executemany(query, params)
+                else:
+                    cur.execute(query)
+                if cur.pgresult is None or ExecStatus(cur.pgresult.status) == ExecStatus.COMMAND_OK:
                     response = Response(RESPONSE_TYPE.OK)
                 else:
                     result = cur.fetchall()
@@ -192,6 +204,35 @@ class PostgresHandler(DatabaseHandler):
 
         if need_to_close:
             self.disconnect()
+
+        return response
+
+    def insert(self, table_name: str, df: pd.DataFrame):
+        need_to_close = not self.is_connected
+
+        connection = self.connect()
+
+        columns = [f'"{c}"' for c in df.columns]
+        with connection.cursor() as cur:
+            try:
+                with cur.copy(f'copy "{table_name}" ({",".join(columns)}) from STDIN  WITH CSV') as copy:
+                    df.to_csv(copy, index=False, header=False)
+
+                response = Response(RESPONSE_TYPE.OK)
+
+                connection.commit()
+            except Exception as e:
+                logger.error(f'Error running insert to {table_name} on {self.database}, {e}!')
+                response = Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_code=0,
+                    error_message=str(e)
+                )
+                connection.rollback()
+
+        if need_to_close:
+            self.disconnect()
+
         return response
 
     @profiler.profile()
@@ -205,9 +246,9 @@ class PostgresHandler(DatabaseHandler):
         Returns:
             Response: The response from the `native_query` method, containing the result of the SQL query execution.
         """
-        query_str = self.renderer.get_string(query, with_failback=True)
+        query_str, params = self.renderer.get_exec_params(query, with_failback=True)
         logger.debug(f"Executing SQL query: {query_str}")
-        return self.native_query(query_str)
+        return self.native_query(query_str, params)
 
     def get_tables(self) -> Response:
         """
@@ -256,3 +297,89 @@ class PostgresHandler(DatabaseHandler):
                 table_name = '{table_name}'
         """
         return self.native_query(query)
+
+    def subscribe(self, stop_event, callback, table_name, columns=None, **kwargs):
+
+        config = self._make_connection_args()
+        config['autocommit'] = True
+
+        conn = psycopg.connect(connect_timeout=10, **config)
+
+        # create db trigger
+        trigger_name = f'mdb_notify_{table_name}'
+
+        before, after = '', ''
+
+        if columns:
+            # check column exist
+            conn.execute(f'select {",".join(columns)} from {table_name} limit 0')
+
+            columns = set(columns)
+            trigger_name += '_' + '_'.join(columns)
+
+            news, olds = [], []
+            for column in columns:
+                news.append(f'NEW.{column}')
+                olds.append(f'OLD.{column}')
+
+            before = f'IF ({", ".join(news)}) IS DISTINCT FROM ({", ".join(olds)}) then\n'
+            after = '\nEND IF;'
+        else:
+            columns = set()
+
+        func_code = f'''
+             CREATE OR REPLACE FUNCTION {trigger_name}()
+               RETURNS trigger AS $$
+             DECLARE
+             BEGIN
+               {before}
+               PERFORM pg_notify( '{trigger_name}', row_to_json(NEW)::text);
+               {after}
+               RETURN NEW;
+             END;
+             $$ LANGUAGE plpgsql;
+         '''
+        conn.execute(func_code)
+
+        # for after update - new and old have the same values
+        conn.execute(f'''
+             CREATE OR REPLACE TRIGGER {trigger_name}
+               BEFORE INSERT OR UPDATE ON {table_name}
+               FOR EACH ROW
+               EXECUTE PROCEDURE {trigger_name}();
+        ''')
+        conn.commit()
+
+        # start listen
+        conn.execute(f"LISTEN {trigger_name};")
+
+        def process_event(event):
+            try:
+                row = json.loads(event.payload)
+            except json.JSONDecoder:
+                return
+
+            # check column in input data
+            if not columns or columns.intersection(row.keys()):
+                callback(row)
+
+        try:
+            conn.add_notify_handler(process_event)
+
+            while True:
+                if stop_event.is_set():
+                    # exit trigger
+                    return
+
+                # trigger getting updates
+                # https://www.psycopg.org/psycopg3/docs/advanced/async.html#asynchronous-notifications
+                conn.execute("SELECT 1").fetchone()
+
+                time.sleep(SUBSCRIBE_SLEEP_INTERVAL)
+
+        finally:
+            conn.execute(f'drop TRIGGER {trigger_name} on {table_name}')
+            conn.execute(f'drop FUNCTION {trigger_name}')
+            conn.commit()
+
+            conn.close()

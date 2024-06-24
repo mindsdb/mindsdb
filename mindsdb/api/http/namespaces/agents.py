@@ -1,7 +1,9 @@
 from http import HTTPStatus
+import os
 
 from flask import request
 from flask_restx import Resource
+from langfuse import Langfuse
 
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
@@ -57,19 +59,19 @@ def create_agent(project_name, name, agent):
             params=params
         )
         return created_agent.as_dict(), HTTPStatus.CREATED
-    except ValueError as e:
+    except ValueError:
         # Model or skill doesn't exist.
         return http_error(
             HTTPStatus.NOT_FOUND,
             'Resource not found',
-            str(e)
+            f'The {model_name} or skills "{skills}" do not exist. Please ensure that the names are correct and try again.'
         )
-    except NotImplementedError as e:
+    except NotImplementedError:
         # Free users trying to create agent.
         return http_error(
             HTTPStatus.UNAUTHORIZED,
             'Unavailable to free users',
-            str(e)
+            f'The {model_name} or skills "{skills}" do not exist. Please ensure that the names are correct and try again.'
         )
 
 
@@ -116,7 +118,7 @@ class AgentResource(Resource):
     @ns_conf.doc('get_agent')
     @api_endpoint_metrics('GET', '/agents/agent')
     def get(self, project_name, agent_name):
-        '''Gets a agent by name'''
+        '''Gets an agent by name'''
         session = SessionController()
         try:
             existing_agent = session.agents_controller.get_agent(agent_name, project_name=project_name)
@@ -138,7 +140,7 @@ class AgentResource(Resource):
     @ns_conf.doc('update_agent')
     @api_endpoint_metrics('PUT', '/agents/agent')
     def put(self, project_name, agent_name):
-        '''Updates a agent by name, creating one if it doesn't exist'''
+        '''Updates an agent by name, creating one if it doesn't exist'''
 
         # Check for required parameters.
         if 'agent' not in request.json:
@@ -270,6 +272,9 @@ class AgentCompletions(Resource):
                 f'Project with name {project_name} does not exist'
             )
 
+        # Add OpenAI API key to agent params if not already present.
+        existing_agent.params['openai_api_key'] = existing_agent.params.get('openai_api_key', os.getenv('OPENAI_API_KEY'))
+
         # Model needs to exist.
         model_name_no_version, version = db.Predictor.get_name_and_version(existing_agent.model_name)
         try:
@@ -282,16 +287,43 @@ class AgentCompletions(Resource):
                 f'Model with name {existing_agent.model_name} not found'
             )
 
+        trace_id = None
+        observation_id = None
+        api_trace = None
+        run_completion_span = None
+        messages = request.json['messages']
+        # Trace Agent completions using Langfuse if configured.
+        if os.getenv('LANGFUSE_PUBLIC_KEY') is not None:
+            langfuse = Langfuse(
+                public_key=os.getenv('LANGFUSE_PUBLIC_KEY'),
+                secret_key=os.getenv('LANGFUSE_SECRET_KEY'),
+                host=os.getenv('LANGFUSE_HOST')
+            )
+            api_trace = langfuse.trace(
+                name='api-completion',
+                input=messages,
+                tags=[os.getenv('FLASK_ENV', 'unknown')]
+            )
+            run_completion_span = api_trace.span(name='run-completion', input=messages)
+            trace_id = api_trace.id
+            observation_id = run_completion_span.id
+
         completion = session.agents_controller.get_completion(
             existing_agent,
-            request.json['messages'],
+            messages,
+            trace_id=trace_id,
+            observation_id=observation_id,
             project_name=project_name,
             # Don't need to include backoffice_db related tools into this endpoint.
             # Underlying handler (e.g. Langchain) will handle default tools like mdb_read, mdb_write, etc.
             tools=[]
         )
+
         output_col = agent_model_record.to_predict[0]
         model_output = completion.iloc[-1][output_col]
+        if run_completion_span is not None and api_trace is not None:
+            run_completion_span.end(output=model_output)
+            api_trace.update(output=model_output)
         return {
             'message': {
                 'content': model_output,

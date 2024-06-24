@@ -1,4 +1,5 @@
 import difflib
+from typing import Any
 
 from pydantic import BaseModel, model_validator
 
@@ -17,8 +18,9 @@ class ChromaHandlerConfig(BaseModel):
     class Config:
         extra = "forbid"
 
-    @model_validator(mode="before", skip_on_failure=True)
-    def check_param_typos(cls, values):
+    @model_validator(mode="before")
+    @classmethod
+    def check_param_typos(cls, values: Any) -> Any:
         """Check if there are any typos in the parameters."""
 
         expected_params = cls.model_fields.keys()
@@ -35,8 +37,9 @@ class ChromaHandlerConfig(BaseModel):
                     raise ValueError(f"Unexpected parameter '{key}'.")
         return values
 
-    @model_validator(skip_on_failure=True)
-    def check_config(cls, values):
+    @model_validator(mode="before")
+    @classmethod
+    def check_config(cls, values: Any) -> Any:
         """Check if config is valid."""
 
         vector_store = values.get("vector_store")

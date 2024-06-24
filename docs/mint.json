@@ -20,12 +20,6 @@
   "api": {
     "baseUrl": "http://127.0.0.1:47334"
   },
-  "topbarLinks": [
-    {
-      "name": "Login",
-      "url": "https://cloud.mindsdb.com/login"
-    }
-  ],
   "topbarCtaButton": {
     "name": "Get Started",
     "url": "https://github.com/mindsdb/mindsdb"
@@ -253,7 +247,8 @@
     {"source": "/data-integrations","destination": "/features/data-integrations"},
     {"source": "/automation","destination": "/features/automation"},
     {"source": "/features/ai-integrations","destination": "/integrations/ai-overview"},
-    {"source": "/features/data-integrations","destination": "/integrations/data-overview"}
+    {"source": "/features/data-integrations","destination": "/integrations/data-overview"},
+    {"source": "/integrations/ai-engines/mindsdb_inference","destination": "/integrations/ai-engines/minds_endpoint"}
   ],
   "navigation": [
     {
@@ -266,6 +261,7 @@
           "pages": [
             "setup/self-hosted/docker",
             "setup/self-hosted/docker-desktop",
+            "setup/cloud/aws-marketplace",
             {
               "group": "Configuration",
               "pages": [
@@ -288,6 +284,8 @@
         {
           "group": "Learn more",
           "pages": [
+            "sql/table-structure",
+            "sql/project",
             "generative-ai-tables",
             {
               "group": "Data Preparation",
@@ -297,10 +295,8 @@
                 "sql/feature-importance"
               ] 
             },
-            "sql/project",
             "mindsdb-gui",
             "model-types",
-            "sql/table-structure",
             "mindsdb-handlers"
           ]
         }
@@ -577,7 +573,8 @@
           "group": "Files",
           "pages": [
             "rest/files/upload",
-            "rest/files/delete"
+            "rest/files/delete",
+            "rest/files/list"
           ]
         },
         {
@@ -595,7 +592,7 @@
       "pages": [
         "sdks/overview",
         {
-          "group": "MongoDB SDK",
+          "group": "MongoDB API",
           "pages": [
             "sdks/mongo/mindsdb-mongo-ql-overview",
               {
@@ -749,7 +746,15 @@
                       "sdks/python/refresh_job",
                       "sdks/python/get_history"
                   ]
-              }
+              },
+              {
+                "group": "AI Agents",
+                "pages": [
+                    "sdks/python/agents",
+                    "sdks/python/agents_skills",
+                    "sdks/python/agents_knowledge_bases"
+                ]
+            }
           ]
         },
         {
@@ -974,12 +979,13 @@
             "integrations/ai-engines/anthropic",
             "integrations/ai-engines/anyscale",
             "integrations/ai-engines/cohere",
+            "integrations/ai-engines/google_gemini",
             "integrations/ai-engines/huggingface",
             "integrations/ai-engines/huggingface_inference_api",
             "integrations/ai-engines/langchain",
             "integrations/ai-engines/llamaindex",
             "integrations/ai-engines/monkeylearn",
-            "integrations/ai-engines/mindsdb_inference",
+            "integrations/ai-engines/minds_endpoint",
             "integrations/ai-engines/ollama",
             "integrations/ai-engines/openai",
             "integrations/ai-engines/replicate-llm",

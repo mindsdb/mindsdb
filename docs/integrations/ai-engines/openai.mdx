@@ -36,11 +36,22 @@ USING
       model_name = 'openai_model_name',  -- optional with default value of gpt-3.5-turbo
       question_column = 'question',  -- optional, column name that stores user input
       context_column = 'context',  -- optional, column that stores context of the user input
-      prompt_template = 'input your query here', -- optional, user provides instructions to the model here
+      prompt_template = 'input message to the model here', -- optional, user provides instructions to the model here
       max_tokens = 100, -- optional, token limit for answer
       temperature = 0.3, -- temp
 
 ```
+
+<Tip>
+If you want to update the `prompt_template` parameter, you do not have to recreate the model. Instead, you can override the `prompt_template` parameter at prediction time like this:
+
+```sql
+SELECT question, answer
+FROM openai_model
+WHERE question = 'input question here'
+USING prompt_template = 'input new message to the model here';
+```
+</Tip>
 
 The following parameters are available to use when creating an OpenAI model:
 

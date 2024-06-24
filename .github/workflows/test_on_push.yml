@@ -122,6 +122,7 @@ jobs:
           pip install .[web]
           pip install .[redshift]
           pip install .[bigquery]
+          pip install .[minds_endpoint]
           pip freeze
       - name: Run unit tests
         run: |

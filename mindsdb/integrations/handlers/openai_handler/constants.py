@@ -11,7 +11,7 @@ CHAT_MODELS = (
     'gpt-4o'
 )
 COMPLETION_MODELS = ('babbage-002', 'davinci-002')
-FINETUNING_MODELS = ('gpt-3.5-turbo', 'babbage-002', 'davinci-002','gpt-4')
+FINETUNING_MODELS = ('gpt-3.5-turbo', 'babbage-002', 'davinci-002', 'gpt-4')
 COMPLETION_LEGACY_BASE_MODELS = ('davinci', 'curie', 'babbage', 'ada')
 
 FINETUNING_LEGACY_MODELS = FINETUNING_MODELS

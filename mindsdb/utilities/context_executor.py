@@ -57,4 +57,3 @@ def execute_in_threads(func, tasks, thread_count=3, queue_size_k=1.5):
 
         time.sleep(0.1)
     executor.shutdown(wait=False)
-

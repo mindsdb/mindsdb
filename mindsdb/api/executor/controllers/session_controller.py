@@ -13,7 +13,6 @@ from mindsdb.utilities.config import Config
 from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.database import DatabaseController
-from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.interfaces.skills.skills_controller import SkillsController
 from mindsdb.interfaces.functions.controller import BYOMFunctionsController
 
@@ -40,7 +39,11 @@ class SessionController:
         self.config = Config()
 
         self.model_controller = ModelController()
+
+        # to prevent circular imports
+        from mindsdb.interfaces.database.integrations import integration_controller
         self.integration_controller = integration_controller
+
         self.database_controller = DatabaseController()
         self.skills_controller = SkillsController()
         self.function_controller = BYOMFunctionsController(self)

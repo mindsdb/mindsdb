@@ -115,6 +115,7 @@ PACKAGE_NAME_MAP = {
     "clickhouse-sqlalchemy": ["clickhouse_sqlalchemy"],
     "pillow": ["PIL"],
     "auto-ts": ["auto_ts"],
+    "nebula3-python": ["nebula3"],
 }
 
 # We use this to exit with a non-zero status code if any check fails

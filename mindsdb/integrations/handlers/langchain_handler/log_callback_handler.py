@@ -24,14 +24,15 @@ class LogCallbackHandler(BaseCallbackHandler):
             self.logger.debug(prompt[:50])
 
     def on_chat_model_start(
-        self,
-        serialized: Dict[str, Any],
-        messages: List[List[BaseMessage]], **kwargs: Any
+            self,
+            serialized: Dict[str, Any],
+            messages: List[List[BaseMessage]], **kwargs: Any
     ) -> Any:
         '''Run when Chat Model starts running.'''
         self.logger.debug('Chat model started with messages:')
-        for message in messages:
-            self.logger.debug(message.pretty_print())
+        for message_list in messages:
+            for message in message_list:
+                self.logger.debug(message.pretty_print())
 
     def on_llm_new_token(self, token: str, **kwargs: Any) -> Any:
         '''Run on new LLM token. Only available when streaming is enabled.'''

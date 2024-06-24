@@ -81,7 +81,7 @@ Let's create an OpenAI model.
             'location': 'location',
             'nob': 'number of bathrooms'
         },
-        input_text = 'sentence';
+        prompt_template = '{{sentence}}';
     ```
     </Tab>
 
@@ -96,7 +96,7 @@ Let's create an OpenAI model.
         predict: 'json',
         training_options: {
             engine: 'openai',
-            input_text: 'sentence',
+            prompt_template: '{{sentence}}',
             json_struct: {
                 'rental_price': 'rental price',
                 'location': 'location',
@@ -112,7 +112,7 @@ We pass three parameters as follows:
 
 1. The `engine` parameter ensures we use the OpenAI engine.
 2. The `json_struct` parameter stores a predefined JSON structure used for the output.
-3. The `input_text` parameter contains the name of the column that stores input text.
+3. The `prompt_template` parameter contains the instruction passed to the model that may include variables such as `{{sentence}}`.
 
 Now we can query the model, passing the input text stored in the `sentence` column.
 

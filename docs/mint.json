@@ -20,12 +20,6 @@
   "api": {
     "baseUrl": "http://127.0.0.1:47334"
   },
-  "topbarLinks": [
-    {
-      "name": "Login",
-      "url": "https://cloud.mindsdb.com/login"
-    }
-  ],
   "topbarCtaButton": {
     "name": "Get Started",
     "url": "https://github.com/mindsdb/mindsdb"
@@ -752,7 +746,15 @@
                       "sdks/python/refresh_job",
                       "sdks/python/get_history"
                   ]
-              }
+              },
+              {
+                "group": "AI Agents",
+                "pages": [
+                    "sdks/python/agents",
+                    "sdks/python/agents_skills",
+                    "sdks/python/agents_knowledge_bases"
+                ]
+            }
           ]
         },
         {
@@ -977,6 +979,7 @@
             "integrations/ai-engines/anthropic",
             "integrations/ai-engines/anyscale",
             "integrations/ai-engines/cohere",
+            "integrations/ai-engines/google_gemini",
             "integrations/ai-engines/huggingface",
             "integrations/ai-engines/huggingface_inference_api",
             "integrations/ai-engines/langchain",

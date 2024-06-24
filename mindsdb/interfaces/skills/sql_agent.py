@@ -130,7 +130,8 @@ class SQLAgent:
             sample_rows = list(
                 map(lambda ls: [str(i) if len(str(i)) < 100 else str[:100] + '...' for i in ls], sample_rows))
             sample_rows_str = "\n" + "\n".join(["\t".join(row) for row in sample_rows])
-        except Exception:
+        except Exception as e:
+            logger.warning(e)
             sample_rows_str = "\n" + "\t [error] Couldn't retrieve sample rows!"
 
         return sample_rows_str

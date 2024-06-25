@@ -1417,8 +1417,10 @@ class TestUDF(BaseExecutorDummyML):
         assert ret['y'][0] == '34'
         assert ret['z'][0] == 7
 
+
 class TestAgents(BaseExecutorDummyML):
     def test_mindsdb_provider(self):
+
         # model
         self.run_sql(
             '''
@@ -1426,9 +1428,12 @@ class TestAgents(BaseExecutorDummyML):
                 PREDICT answer
                 using 
                   column='input',
+                  engine='dummy_ml',
                   join_learn_process=true
             '''
         )
+
+        self.run_sql('CREATE ML_ENGINE langchain FROM langchain')
 
         # langchain model
         self.run_sql('''
@@ -1448,9 +1453,7 @@ class TestAgents(BaseExecutorDummyML):
             USING
               model = 'lang_model'
         ''')
-        ret = self.run_sql('''
-            select * from my_agent where question = 'hi'
-        ''')
+        ret = self.run_sql("select * from my_agent where question = 'hi'")
 
         raise 'TEST is unfinished'
 

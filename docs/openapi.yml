@@ -155,9 +155,11 @@ components:
           description: Optional. Condition to be fulfilled before the job executes
         start_at:
           type: string
+          format: date-time
           description: Optional. Start date/time of the job
         end_at:
           type: string
+          format: date-time
           description: Optional. End date/time of the job
         schedule_str:
           type: string
@@ -2308,9 +2310,11 @@ paths:
                   description: Optional. Condition to be fulfilled before the job executes
                 start_at:
                   type: string
+                  format: date-time
                   description: Optional. Start date/time of the job
                 end_at:
                   type: string
+                  format: date-time
                   description: Optional. End date/time of the job
                 schedule_str:
                   type: string

@@ -1,10 +1,78 @@
 ---
 title: Get Batch Predictions
+openapi: "POST /api/projects/{projectName}/models/{modelName}/predict"
 sidebarTitle: Get Batch Predictions
 ---
 
 <Info>
-Query the model joined with data tables to get batch predictions.
+There are two ways to get batch predictions:
 
-Use the [query endpoint](/rest/sql) to query for batch predictions.
+1. Join the model with data tables and use the [query endpoint](/rest/sql) to query for batch predictions.
+2. **Query the model using this endpoint and provide data to be used by the model in the request.**
 </Info>
+
+<ResponseExample>
+
+```python Request
+import requests
+url = 'http://127.0.0.1:47334/api/projects/mindsdb/models/home_rentals_model/predict'
+
+data = [{'number_of_rooms': 2,
+  'number_of_bathrooms': 1,
+  'sqft': 917,
+  'location': 'great',
+  'days_on_market': 13,
+  'neighborhood': 'berkeley_hills',
+  'rental_price': 3901,
+  'created_at': '2024-02-24 02:28:21.746167'},
+ {'number_of_rooms': 0,
+  'number_of_bathrooms': 1,
+  'sqft': 194,
+  'location': 'great',
+  'days_on_market': 10,
+  'neighborhood': 'berkeley_hills',
+  'rental_price': 2042,
+  'created_at': '2024-02-19 06:10:59.693052'},
+ {'number_of_rooms': 1,
+  'number_of_bathrooms': 1,
+  'sqft': 543,
+  'location': 'poor',
+  'days_on_market': 18,
+  'neighborhood': 'westbrae',
+  'rental_price': 1871,
+  'created_at': '2024-02-12 07:53:45.914146'}]
+
+r = requests.post(url, json={'data': data})
+print(r.json())
+```
+
+```json Response
+[
+    {
+        "__mindsdb_row_id": null,
+        "days_on_market": null,
+        "location": null,
+        "neighborhood": null,
+        "number_of_bathrooms": null,
+        "number_of_rooms": null,
+        "rental_price": 2847,
+        "rental_price_anomaly": null,
+        "rental_price_confidence": 0.99,
+        "rental_price_explain": "{\"predicted_value\": 2847, \"confidence\": 0.99, \"anomaly\": null, \"truth\": null, \"confidence_lower_bound\": 2730, \"confidence_upper_bound\": 2964}",
+        "rental_price_max": 2964,
+        "rental_price_min": 2730,
+        "rental_price_original": null,
+        "select_data_query": null,
+        "sqft": 823,
+        "when_data": null
+    }
+]
+```
+
+</ResponseExample>
+
+<Note>
+
+The REST API endpoints can be used with MindsDB running locally at http://127.0.0.1:47334/api. 
+
+</Note>

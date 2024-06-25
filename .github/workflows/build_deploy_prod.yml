@@ -42,6 +42,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements/requirements-dev.txt
+          pip install importlib_metadata==7.2.1
       - name: Build and publish
         env:
           TWINE_USERNAME: __token__

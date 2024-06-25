@@ -34,20 +34,20 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.to
 # Torch.multiprocessing is imported in a 'try'. Falls back to multiprocessing so we dont NEED it.
 # Psycopg2 is needed in core codebase for sqlalchemy.
 # Hierarchicalforecast is an optional dep of neural/statsforecast
-# lark is an optional dep, it is required for auto retrieval (RAG utilities). It is used by langchain
+# lark is required for auto retrieval (RAG utilities). It is used by langchain
 # and not explicitly imported in mindsdb.
 MAIN_RULE_IGNORES = {
     "DEP003": ["torch"],
     "DEP001": ["torch"],
-    # bs4 is used by Agents & Knowledge Bases (web handler).
-    "DEP002": ["psycopg2-binary", "lark", "bs4", "sqlalchemy-solr", "pydantic-settings"],
+    "DEP002": ["psycopg2-binary", "lark"],
 }
 
 # THe following packages need exceptions because they are optional deps of some other packages. e.g. langchain CAN use openai
 # (pysqlite3 is imported in an unusual way in the chromadb handler and needs to be excluded too)
 # pypdf and openpyxl are optional deps of langchain, that are used for the file handler
+# sqlalchemy-solr is an optional sqlalchemy depend that is used in the solr handler
 OPTIONAL_HANDLER_DEPS = ["pysqlite3", "torch", "openai", "tiktoken", "wikipedia", "anthropic", "pypdf", "openpyxl",
-                         "sentence-transformers", "faiss-cpu", "litellm", "chromadb"]
+                         "sentence-transformers", "faiss-cpu", "litellm", "chromadb", "sqlalchemy-solr"]
 
 # List of rules we can ignore for specific packages
 # Here we ignore any packages in the main requirements.txt for "listed but not used" errors, because they will be used for the core code but not necessarily in a given handler
@@ -57,7 +57,7 @@ MAIN_REQUIREMENTS_DEPS = get_requirements_from_file(MAIN_REQS_PATH) + get_requir
 BYOM_HANLDER_DEPS = ["pyarrow"]
 
 HANDLER_RULE_IGNORES = {
-    "DEP002": OPTIONAL_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS + BYOM_HANLDER_DEPS + ["sqlalchemy-solr"],
+    "DEP002": OPTIONAL_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS + BYOM_HANLDER_DEPS,
     "DEP001": ["tests"]  # 'tests' is the mindsdb tests folder in the repo root
 }
 
@@ -114,7 +114,7 @@ PACKAGE_NAME_MAP = {
     "python-magic": ["magic"],
     "clickhouse-sqlalchemy": ["clickhouse_sqlalchemy"],
     "pillow": ["PIL"],
-    "auto-ts": ["auto_ts"],
+    "auto-ts": ["auto_ts"]
 }
 
 # We use this to exit with a non-zero status code if any check fails

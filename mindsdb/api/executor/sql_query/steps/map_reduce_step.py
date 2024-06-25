@@ -71,7 +71,9 @@ class MapReduceStepCall(BaseStepCall):
 
     def _reduce_partition(self, step, partition):
         if not isinstance(partition, int):
-            raise NotImplementedError('Only integers are supported in partition definition.')
+            raise ValueError('Only integers are supported in partition definition.')
+        if partition <= 0:
+            raise ValueError('Partition must be a positive number')
 
         input_idx = step.values.step_num
         input_data = self.steps_data[input_idx]

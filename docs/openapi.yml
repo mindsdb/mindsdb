@@ -154,10 +154,10 @@ components:
           type: string
           description: Optional. Condition to be fulfilled before the job executes
         start_at:
-          type: datetime
+          type: string
           description: Optional. Start date/time of the job
         end_at:
-          type: datetime
+          type: string
           description: Optional. End date/time of the job
         schedule_str:
           type: string
@@ -2299,7 +2299,7 @@ paths:
               properties:
                 name:
                   type: string
-                  decription: Name of the job
+                  description: Name of the job
                 query:
                   type: string
                   description: Tasks to be executed by the job
@@ -2307,10 +2307,10 @@ paths:
                   type: string
                   description: Optional. Condition to be fulfilled before the job executes
                 start_at:
-                  type: datetime
+                  type: string
                   description: Optional. Start date/time of the job
                 end_at:
-                  type: datetime
+                  type: string
                   description: Optional. End date/time of the job
                 schedule_str:
                   type: string

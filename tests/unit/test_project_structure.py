@@ -955,6 +955,16 @@ class TestProjectStructure(BaseExecutorDummyML):
 
         self.run_sql('delete from tbl1 where a=1', database='dummy_data')
 
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_select_columns(self, data_handler):
+        df = pd.DataFrame([[1, 'x'], [2, 'y']], columns=['aa', 'bb'])
+
+        self.set_handler(data_handler, name='pg', tables={'tbl1': df})
+
+        ret = self.run_sql("SELECT * FROM information_schema.columns WHERE table_schema='pg'")
+
+        assert list(ret['COLUMN_NAME']) == ['aa', 'bb']
+
 
 class TestJobs(BaseExecutorDummyML):
 

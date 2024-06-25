@@ -73,7 +73,7 @@ class FinancialModelingHandler(APIHandler):
         #     return pd.DataFrame(historical)
         # else:
         #     return pd.DataFrame() 
-        
+
         # if limitParam:
         #     return {date: historical_data[date] for date in list(historical_data.keys())[:5]}
         # # air table handler 
@@ -84,7 +84,9 @@ class FinancialModelingHandler(APIHandler):
                 historical
             )
         )
-        return response
+
+        return pd.DataFrame(historical)
+        #return response
 
 
     def call_financial_modeling_api(self, endpoint_name: str = None, params: Dict = None) -> pd.DataFrame:
@@ -99,7 +101,7 @@ class FinancialModelingHandler(APIHandler):
         print("Params:", params) 
         print(self.api_key)
         if endpoint_name == 'daily_chart':
-            # return self.get_daily_chart(params)
-            return None
+            return self.get_daily_chart(params)
+            #return None
         raise NotImplementedError('Endpoint {} not supported by Financial Modeling API Handler'.format(endpoint_name))
     

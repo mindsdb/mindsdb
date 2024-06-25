@@ -1,23 +1,27 @@
+from mindsdb_sql import parse_sql
 from woocommerce import API
 
 from mindsdb.integrations.handlers.woocommerce_handler.woocommerce_tables import *
 from mindsdb.integrations.libs.api_handler import APIHandler
+from mindsdb.integrations.libs.api_handler_exceptions import (
+    ConnectionFailed,
+    InvalidNativeQuery,
+    MissingConnectionParams,
+)
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
-
 from mindsdb.utilities import log
-from mindsdb_sql import parse_sql
-from mindsdb.integrations.libs.api_handler_exceptions import InvalidNativeQuery, ConnectionFailed, MissingConnectionParams
 
 logger = log.getLogger(__name__)
+
 
 class WoocommerceHandler(APIHandler):
     """
     The woocommerce handler implementation.
     """
 
-    name = 'woocommerce'
+    name = "woocommerce"
 
     def __init__(self, name: str, **kwargs):
         """
@@ -29,7 +33,9 @@ class WoocommerceHandler(APIHandler):
         super().__init__(name)
 
         if kwargs.get("connection_data") is None:
-            raise MissingConnectionParams(f"Incomplete parameters passed to woocommerce Handler")
+            raise MissingConnectionParams(
+                f"Incomplete parameters passed to woocommerce Handler"
+            )
 
         connection_data = kwargs.get("connection_data", {})
         self.connection_data = connection_data
@@ -67,68 +73,67 @@ class WoocommerceHandler(APIHandler):
 
         report_top_seller_data = ReportTopSellersTable(self)
         self._register_table("report_top_sellers", report_top_seller_data)
-        
+
         setting_option_data = SettingOptionTable(self)
         self._register_table("setting_options", setting_option_data)
-        
-        # draft_orders_data = DraftOrdersTable(self)
-        # self._register_table("draft_orders", draft_orders_data)
-        
-        # checkouts_data = CheckoutTable(self)
-        # self._register_table("checkouts", checkouts_data)
-        
-        # price_rule_data = PriceRuleTable(self)
-        # self._register_table("price_rules", price_rule_data)
-        
+
+        orders_note_data = OrderNotesTable(self)
+        self._register_table("order_notes", orders_note_data)
+
+        product_review_data = ProductReviewTable(self)
+        self._register_table("product_reviews", product_review_data)
+
+        shipping_zones_method_data = ShippingZoneMethodTable(self)
+        self._register_table("shipping_zone_methods", shipping_zones_method_data)
+
         refund_data = RefundsTable(self)
         self._register_table("refunds", refund_data)
-        
+
         # discount_data = DiscountCodesTable(self)
         # self._register_table("discounts", discount_data)
-        
+
         # marketing_event_data = MarketingEventTable(self)
         # self._register_table("marketing_events", marketing_event_data)
-        
+
         # blog_data = BlogTable(self)
         # self._register_table("blogs", blog_data)
-        
+
         # theme_data = ThemeTable(self)
         # self._register_table("themes", theme_data)
-        
+
         # article_data = ArticleTable(self)
         # self._register_table("articles", article_data)
-        
+
         # comment_data = CommentTable(self)
         # self._register_table("comments", comment_data)
-        
+
         # page_data = PageTable(self)
         # self._register_table("pages", page_data)
-        
+
         # redirect_data = redirectTable(self)
         # self._register_table("redirects", redirect_data)
-        
+
         # tender_transaction_data = TenderTransactionTable(self)
         # self._register_table("tender_transactions", tender_transaction_data)
-        
+
         # policy_data = PolicyTable(self)
         # self._register_table("policies", policy_data)
-        
+
         # shop_data = ShopTable(self)
         # self._register_table("shop", shop_data)
-        
+
         # user_data = UserTable(self)
         # self._register_table("user", user_data)
-        
+
         # gift_card_data = GiftCardTable(self)
         # self._register_table("gift_cards", gift_card_data)
-        
-        
+
         # resource_feedback_data = ResourceFeedbackTable(self)
         # self._register_table("resource_feedbacks", resource_feedback_data)
-        
+
         # order_risk_data = OrderRiskTable(self)
         # self._register_table("order_risks", order_risk_data)
-        
+
     def connect(self):
         """
         Set up the connection required by the handler.
@@ -141,9 +146,15 @@ class WoocommerceHandler(APIHandler):
             return self.connection
 
         if self.kwargs.get("connection_data") is None:
-            raise MissingConnectionParams(f"Incomplete parameters passed to woocommerce Handler")
+            raise MissingConnectionParams(
+                f"Incomplete parameters passed to woocommerce Handler"
+            )
 
-        wcapi = API(self.connection_data['url'], self.connection_data['consumer_key'], self.connection_data['consumer_secret'])
+        wcapi = API(
+            self.connection_data["url"],
+            self.connection_data["consumer_key"],
+            self.connection_data["consumer_secret"],
+        )
 
         self.connection = wcapi
         self.is_connected = True
@@ -157,20 +168,19 @@ class WoocommerceHandler(APIHandler):
             HandlerStatusResponse
         """
         response = StatusResponse(False)
-        
+
         wcapi = self.connect()
-        
-        res = wcapi.get('products')
+
+        res = wcapi.get("products")
         logger.info(res.status_code)
         if res.status_code == 200:
             response.success = True
         else:
             response.success = False
-            logger.error(f'Error connecting to Woocommerce!')
+            logger.error(f"Error connecting to Woocommerce!")
             raise ConnectionFailed(f"Conenction to Woocommerce failed.")
             response.error_message = res.text
-            
-            
+
         self.is_connected = response.success
         return response
 

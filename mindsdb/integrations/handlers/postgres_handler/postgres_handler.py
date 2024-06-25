@@ -294,7 +294,8 @@ class PostgresHandler(DatabaseHandler):
                 information_schema.columns
             WHERE
                 table_name = '{table_name}'
-                and table_schema = current_schema()
+            AND
+                table_schema = current_schema()
         """
         return self.native_query(query)
 

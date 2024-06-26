@@ -52,7 +52,7 @@ MindsDB is the platform for customizing AI from enterprise data.
 With MindsDB, you can deploy, serve, and fine-tune models in real-time, utilizing data from databases, vector stores, or applications, to build AI-powered apps - using universal tools developers already know.
 
 <p align="center">
-  <img src="/docs/assets/diagram.png"/>
+  <img src="/docs/assets/mindsdb_homepage_diagram.png"/>
 </p>
 
 MindsDB integrates with numerous [data sources](https://docs.mindsdb.com/integrations/data-overview?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo), including databases, vector stores, and applications, and popular [AI/ML frameworks](https://docs.mindsdb.com/integrations/ai-overview?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo), including AutoML and LLMs. MindsDB connects data sources with AI/ML frameworks and automates routine workflows between them. By doing so, we bring data and AI together, enabling the intuitive implementation of customized AI systems.

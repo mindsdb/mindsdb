@@ -408,6 +408,8 @@ class SlackHandler(APIChatHandler):
             row = {
                 'text': payload_event['text'],
                 'user': payload_event['user'],
+                'channel': payload_event['channel'],
+                'created_at': dt.datetime.fromtimestamp(float(payload_event['ts'])).strftime('%Y-%m-%d %H:%M:%S')
             }
 
             # Acknowledge the request

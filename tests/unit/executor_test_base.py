@@ -158,14 +158,12 @@ class BaseUnitTest:
         ret = self.command_executor.execute_command(parse_sql(sql, dialect="mindsdb"))
         assert ret.error_code is None, f"SQL execution failed with error: {ret.error_code}"
         if ret.data is not None:
-            columns = [col.alias if col.alias else col.name for col in ret.columns]
-            return pd.DataFrame(ret.data, columns=columns)
+            return ret.data.to_df()
 
     @staticmethod
     def ret_to_df(ret):
         # converts executor response to dataframe
-        columns = [col.alias if col.alias is not None else col.name for col in ret.columns]
-        return pd.DataFrame(ret.data, columns=columns)
+        return ret.data.to_df()
 
     def reset_prom_collectors(self) -> None:
         """Resets collectors in the default Prometheus registry.
@@ -232,7 +230,6 @@ class BaseExecutorTest(BaseUnitTest):
                 raise Exception(f"Can not import: {str(handler_dir)}: {error}")
 
         if import_dummy_llm:
-
             test_handler_path = os.path.dirname(__file__)
             sys.path.append(test_handler_path)
 
@@ -279,7 +276,11 @@ class BaseExecutorTest(BaseUnitTest):
             self.db.session.delete(r)
 
         # create
-        r = self.db.Integration(name=name, data={}, engine=engine)
+        r = self.db.Integration(
+            name=name,
+            data={'password': 'secret'},
+            engine=engine
+        )
         self.db.session.add(r)
         self.db.session.commit()
 
@@ -302,15 +303,7 @@ class BaseExecutorTest(BaseUnitTest):
                 )
 
             return handler_response(
-                pd.DataFrame(
-                    [
-                        {
-                            "table_schema": "public",
-                            "table_name": "table1",
-                            "table_type": "BASE TABLE",
-                        }
-                    ]
-                )
+                pd.DataFrame(tables_ar)
             )
 
         mock_handler().get_tables.side_effect = get_tables_f
@@ -390,11 +383,7 @@ class BaseExecutorDummyML(BaseExecutorTest):
         if throw_error:
             assert ret.error_code is None
         if ret.data is not None:
-            columns = [
-                col.alias if col.alias is not None else col.name
-                for col in ret.columns
-            ]
-            return pd.DataFrame(ret.data, columns=columns)
+            return ret.data.to_df()
 
 
 class BaseExecutorDummyLLM(BaseExecutorTest):
@@ -445,10 +434,9 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
         self.db.session.add(r)
         self.db.session.commit()
 
-        def predict_f(_model_name, data, pred_format="dict", *args, **kargs):
+        def predict_f(_model_name, df, pred_format="dict", *args, **kargs):
             explain_arr = []
-            if isinstance(data, dict):
-                data = [data]
+            data = df.to_dict('records')
 
             predicted_value = predictor["predicted_value"]
             target = predictor["predict"]
@@ -516,6 +504,6 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
         )
         if ret.error_code is not None:
             raise Exception()
-        if isinstance(ret.data, list):
-            ret.records = self.ret_to_df(ret).to_dict('records')
+        if ret.data is not None:
+            ret.records = ret.data.records
         return ret

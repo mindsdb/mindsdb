@@ -21,25 +21,23 @@ from enum import Enum
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict, Union
-from collections import OrderedDict
 
 import pandas as pd
 from pandas.api import types as pd_types
 
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
+from mindsdb.utilities.fs import safe_extract
 from mindsdb.interfaces.storage import db
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.integrations.utilities.utils import format_exception_error
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 import mindsdb.utilities.profiler as profiler
-from mindsdb.utilities.fs import safe_extract
 
 
 from .proc_wrapper import (
     pd_decode, pd_encode, encode, decode, BYOM_METHOD,
-    import_string, find_model_class
+    import_string, find_model_class, get_methods_info
 )
 from .__about__ import __version__
 
@@ -283,7 +281,9 @@ class BYOMHandler(BaseMLEngine):
 
         model_proxy = self._get_model_proxy()
         try:
-            model_proxy.check()
+            methods = model_proxy.check()
+            self.engine_storage.json_set('methods', methods)
+
         except Exception as e:
             model_proxy.remove_venv()
             raise e
@@ -334,10 +334,19 @@ class BYOMHandler(BaseMLEngine):
 
         model_proxy = self._get_model_proxy(new_version)
         try:
-            model_proxy.check()
+            methods = model_proxy.check()
+            self.engine_storage.json_set('methods', methods)
+
         except Exception as e:
             model_proxy.remove_venv()
             raise e
+
+    def function_list(self):
+        return self.engine_storage.json_get('methods')
+
+    def function_call(self, name, args):
+        mp = self._get_model_proxy()
+        return mp.func_call(name, args)
 
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         using_args = args.get('using', {})
@@ -434,8 +443,14 @@ class ModelWrapperUnsafe:
             return self.model_instance.describe(attribute)
         return pd.DataFrame()
 
+    def func_call(self, func_name, args):
+
+        func = getattr(self.model_instance, func_name)
+        return func(*args)
+
     def check(self):
-        pass
+        methods = get_methods_info(self.model_instance)
+        return methods
 
 
 class ModelWrapperSafe:
@@ -642,14 +657,12 @@ class ModelWrapperSafe:
         df = pd_decode(enc_df)
         return df
 
-
-connection_args = OrderedDict(
-    code={
-        'type': ARG_TYPE.PATH,
-        'description': 'The path to model code'
-    },
-    modules={
-        'type': ARG_TYPE.PATH,
-        'description': 'The path to model requirements'
-    }
-)
+    def func_call(self, func_name, args):
+        params = {
+            'method': BYOM_METHOD.FUNC_CALL.value,
+            'code': self.code,
+            'func_name': func_name,
+            'args': args,
+        }
+        result = self._run_command(params)
+        return result

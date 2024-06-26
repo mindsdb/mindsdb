@@ -91,7 +91,7 @@ class Query(Resource):
                 error_code = query_response.get("error_code")
                 error_text = query_response.get("error_message")
 
-            context = mysql_proxy.get_context(context)
+            context = mysql_proxy.get_context()
 
             query_response["context"] = context
 

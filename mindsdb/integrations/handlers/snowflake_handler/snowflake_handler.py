@@ -1,19 +1,17 @@
-from pandas import DataFrame, concat
+from pandas import DataFrame
 from snowflake import connector
-from collections import OrderedDict
 from snowflake.sqlalchemy import snowdialect
 
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.utilities import log
 from mindsdb_sql.parser.ast.base import ASTNode
-
 from mindsdb.integrations.libs.base import DatabaseHandler
+from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from mindsdb.utilities import log
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+
 
 logger = log.getLogger(__name__)
 
@@ -177,23 +175,13 @@ class SnowflakeHandler(DatabaseHandler):
             Response: A response object containing the list of tables and views, formatted as per the `Response` class.
         """
 
-        query = "SHOW TABLES;"
-        result_tables = self.native_query(query)
-        if result_tables.resp_type == RESPONSE_TYPE.TABLE:
-            result_tables.data_frame = result_tables.data_frame.rename(columns={'name': 'table_name'})[['table_name']]
-        elif result_tables.resp_type == RESPONSE_TYPE.OK:
-            result_tables.data_frame = DataFrame(columns=['table_name'])
-
-        query = "SHOW VIEWS;"
-        result_views = self.native_query(query)
-        if result_views.resp_type == RESPONSE_TYPE.TABLE:
-            result_views.data_frame = result_views.data_frame.rename(columns={'name': 'table_name'})[['table_name']]
-        elif result_views.resp_type == RESPONSE_TYPE.OK:
-            result_views.data_frame = DataFrame(columns=['table_name'])
-
-        result = Response(RESPONSE_TYPE.TABLE)
-        result.data_frame = concat([result_tables.data_frame, result_views.data_frame], ignore_index=True)
-        return result
+        query = """
+            SELECT TABLE_NAME, TABLE_SCHEMA, TABLE_TYPE
+            FROM INFORMATION_SCHEMA.TABLES
+            WHERE TABLE_TYPE IN ('BASE TABLE', 'VIEW')
+            AND TABLE_SCHEMA <> 'INFORMATION_SCHEMA'
+        """
+        return self.native_query(query)
 
     def get_columns(self, table_name) -> Response:
         """
@@ -220,56 +208,3 @@ class SnowflakeHandler(DatabaseHandler):
         result.data_frame = result.data_frame.rename(columns={'FIELD': 'Field', 'TYPE': 'Type'})
 
         return result
-
-
-connection_args = OrderedDict(
-    account={
-        'type': ARG_TYPE.STR,
-        'description': 'The Snowflake account name.',
-        'required': False,
-        'label': 'Server'
-    },
-    user={
-        'type': ARG_TYPE.STR,
-        'description': 'The user name used to authenticate with the Snowflake account.',
-        'required': True,
-        'label': 'User'
-    },
-    password={
-        'type': ARG_TYPE.PWD,
-        'description': 'The password to authenticate the user with the Snowflake account.',
-        'required': True,
-        'label': 'Password'
-    },
-    database={
-        'type': ARG_TYPE.STR,
-        'description': 'The database to use when connecting to the Snowflake account.',
-        'required': True,
-        'label': 'Database'
-    },
-    schema={
-        'type': ARG_TYPE.STR,
-        'description': 'The schema to use when connecting to the Snowflake account.',
-        'required': False,
-        'label': 'Schema'
-    },
-    warehouse={
-        'type': ARG_TYPE.STR,
-        'description': 'The warehouse to use when executing queries on the Snowflake account.',
-        'required': False,
-        'label': 'Warehouse'
-    },
-    role={
-        'type': ARG_TYPE.STR,
-        'description': 'The role to use when executing queries on the Snowflake account.',
-        'required': False,
-        'label': 'Role'
-    }
-)
-
-connection_args_example = OrderedDict(
-    account='abcxyz-1234567',
-    user='user',
-    password='password',
-    database='test'
-)

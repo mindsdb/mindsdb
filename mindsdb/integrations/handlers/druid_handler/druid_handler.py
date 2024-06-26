@@ -1,5 +1,4 @@
 from typing import Optional
-from collections import OrderedDict
 
 import pandas as pd
 from pydruid.db import connect
@@ -17,7 +16,6 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
 logger = log.getLogger(__name__)
 
@@ -214,50 +212,3 @@ class DruidHandler(DatabaseHandler):
         result.data_frame = df.rename(columns={'COLUMN_NAME': 'column_name', 'DATA_TYPE': 'data_type'})
 
         return result
-
-
-connection_args = OrderedDict(
-    host={
-        'type': ARG_TYPE.STR,
-        'description': 'The host name or IP address of Apache Druid.',
-        'required': True,
-        'label': 'Host'
-    },
-    port={
-        'type': ARG_TYPE.INT,
-        'description': 'The port that Apache Druid is running on.',
-        'required': True,
-        'label': 'Port'
-    },
-    path={
-        'type': ARG_TYPE.STR,
-        'description': 'The query path.',
-        'required': True,
-        'label': 'path'
-    },
-    scheme={
-        'type': ARG_TYPE.STR,
-        'description': 'The URI schema. This parameter is optional and the default will be http.',
-        'required': False,
-        'label': 'Scheme'
-    },
-    user={
-        'type': ARG_TYPE.STR,
-        'description': 'The user name used to authenticate with Apache Druid. This parameter is optional.',
-        'required': False,
-        'label': 'User'
-    },
-    password={
-        'type': ARG_TYPE.STR,
-        'description': 'The password used to authenticate with Apache Druid. This parameter is optional.',
-        'required': False,
-        'label': 'password'
-    }
-)
-
-connection_args_example = OrderedDict(
-    host='localhost',
-    port=8888,
-    path='/druid/v2/sql/',
-    scheme='http'
-)

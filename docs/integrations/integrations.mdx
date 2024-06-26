@@ -4,14 +4,20 @@ sidebarTitle: Overview
 icon: "link"
 ---
 
+MindsDB integrates with numerous data sources and popular AI/ML frameworks to seamlessly bring data and AI together.
+
 <p align="center">
   <img src="/assets/diagram.png"/>
 </p>
 
-There are two types of integrations to MindsDB.
+[Data sources](/integrations/data-overview) are all the data sources that you can conect to MindsDB, including traditional databases and data that is behind APIs. It is important that MindsDB does no ETL pipelines. When you query a data source MindsDB forwards this query in real-time to the original data source. MindsDB is very good at translating SQL to any other query dialect.
 
- - <strong> [Data Sources](/integrations/data-overview) </strong> These are all the data sources that you can plug to MindsDB, including traditional databases and data that is behind APIs. It is important that MindsDB does no ETL pipelines. When you query a data source MindsDB forwards this query in real-time to the original data source. MindsDB is very good at translating SQL to any other query dialect.
- - <strong> [AI Engines](/integrations/ai-overview) </strong> These are all the possibilities you have for AI/ML Modeling, from Generative AI to traditional ML and Auto-ML.
+[AI/ML frameworks](/integrations/ai-overview) are all the possibilities you have for AI/ML modeling, from Generative AI to traditional ML and AutoML. You can create, train, and deploy AI/ML models within MindsDB ecosystem and provide it with data frmo connected data sources.
+
+<CardGroup cols={2}>
+    <Card title="Data sources" icon="database" href="/integrations/data-overview" color="#00A587"></Card>
+    <Card title="AI/ML frameworks" icon="microchip-ai" href="/integrations/ai-overview" color="#00A587"></Card>
+</CardGroup>
 
 <Tip>
 If you want to use a specific integration with MindsDB (either data or AI/ML integration), you need to ensure that the required dependencies are installed.
@@ -24,17 +30,3 @@ SHOW HANDLERS WHERE name = 'integration_name';
 
 The output includes the `IMPORT_SUCCESS` column. If this column reads `true`, then you can go ahead and use this integration. But, if it reads `false`, then you need to install all required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
 </Tip>
-
-<Info>
-**Next Steps**
-
-Below are the links to help you explore further.
-
-<CardGroup cols={3}>
-
-    <Card title="Connect Data Sources" icon="link" href="/integrations/data-overview"></Card>
-    <Card title="Connect AI Engines" icon="link" href="/integrations/ai-overview"></Card>
-
-</CardGroup>
-
-</Info>

@@ -38,7 +38,6 @@ exclude =
   mindsdb/integrations/handlers/pinot_handler/pinot_handler.py
   mindsdb/integrations/handlers/postgres_handler/tests/test_postgres_handler.py
   mindsdb/integrations/handlers/questdb_handler/*
-  mindsdb/integrations/handlers/redshift_handler/*
   mindsdb/integrations/handlers/s3_handler/s3_handler.py
   mindsdb/integrations/handlers/singlestore_handler/*
   mindsdb/integrations/handlers/sqlite_handler/sqlite_handler.py
@@ -89,11 +88,9 @@ exclude =
   mindsdb/integrations/handlers/quickbooks_handler/*
   mindsdb/integrations/handlers/strava_handler/*
   mindsdb/integrations/handlers/strava_handler/*
-  mindsdb/integrations/handlers/web_handler/*
   mindsdb/integrations/handlers/strava_handler/*
   mindsdb/integrations/handlers/github_handler/*
   mindsdb/integrations/handlers/vitess_handler/*
-  mindsdb/integrations/handlers/web_handler/*
   mindsdb/integrations/handlers/impala_handler/*
   mindsdb/integrations/handlers/tdengine_handler/*
   mindsdb/integrations/handlers/huggingface_api_handler/*
@@ -143,7 +140,6 @@ exclude =
   mindsdb/integrations/handlers/ingres_handler/*
   mindsdb/integrations/handlers/palm_handler/*
   mindsdb/integrations/handlers/binance_handler/*
-  mindsdb/integrations/handlers/openai_handler/*
   mindsdb/integrations/handlers/mediawiki_handler/*
   mindsdb/integrations/handlers/mendeley_handler/*
   mindsdb/integrations/handlers/databend_handler/*

@@ -1,6 +1,7 @@
 import enum
 from typing import List, Optional
 
+from mindsdb.api.executor.controllers import SessionController
 from mindsdb_sql.parser.ast import Select, BinaryOperation, Identifier, Constant, Star
 
 from mindsdb.integrations.libs.vectordatabase_handler import TableField
@@ -24,7 +25,6 @@ class SkillToolController:
 
     def get_command_executor(self):
         if self.command_executor is None:
-            from mindsdb.api.executor.controllers import SessionController
             from mindsdb.api.executor.command_executor import ExecuteCommands
 
             sql_session = SessionController()
@@ -64,6 +64,7 @@ class SkillToolController:
         tables_to_include = [f'{database}.{table}' for table in tables]
         db = MindsDBSQL(
             engine=self.get_command_executor(),
+            database=database,
             metadata=self.get_command_executor().session.integration_controller,
             include_tables=tables_to_include
         )

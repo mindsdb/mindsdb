@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 from mindsdb.integrations.handlers.oilpriceapi_handler.oilpriceapi_tables import (
     OilPriceLatestTable,
     OilPricePastDayPriceTable
@@ -9,7 +7,6 @@ from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
@@ -101,17 +98,3 @@ class OilPriceAPIHandler(APIHandler):
         """
         ast = parse_sql(query, dialect="mindsdb")
         return self.query(ast)
-
-
-connection_args = OrderedDict(
-    api_key={
-        "type": ARG_TYPE.PWD,
-        "description": "OilPriceAPI key to use for authentication.",
-        "required": True,
-        "label": "Api key",
-    }
-)
-
-connection_args_example = OrderedDict(
-    api_key=""
-)

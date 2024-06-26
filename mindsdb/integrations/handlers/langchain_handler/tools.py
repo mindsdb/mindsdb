@@ -37,7 +37,7 @@ def get_exec_call_tool(llm, executor, model_kwargs) -> Callable:
             ret = executor.execute_command(ast_query)
             if ret.data is None and ret.error_code is None:
                 return ''
-            data = ret.data  # list of lists
+            data = ret.data.to_lists()  # list of lists
             data = '\n'.join([  # rows
                 '\t'.join(      # columns
                     str(row) if isinstance(row, str) else [str(value) for value in row]

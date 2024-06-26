@@ -38,10 +38,12 @@ DSPy was created to optimize prompts to improve the performance of LLMs. You can
 </Tip>
 
 
-Create a conversational model using `dspy_engine` as an engine and OpenAI as a model provider.  To get started, download and upload this file to the SQL editor: (https://drive.google.com/file/d/1fztGxsIHTGWx6bgDShnFrzdcdagmeJp9/view?usp=sharing) as dspy_train_dataset.  This will serve as a cold start dataset for DSPy to improve on.
+Create a conversational model using `dspy_engine` as an engine and OpenAI as a model provider.  To get started, download and upload this file to the SQL editor: (https://drive.google.com/file/d/1fztGxsIHTGWx6bgDShnFrzdcdagmeJp9/view?usp=sharing).  In order to upload the file, in the SQL editor click add and directly upload as a CSV and name it `dspy_train_dataset`.  This will serve as a cold start dataset for DSPy to improve on.
 
 
-<Accordion title="OpenAI">
+<Tip>
+OpenAI:
+
 ```sql
 CREATE MODEL dspy_openai_model
 FROM files (SELECT input as question, output as answer FROM dspy_train_dataset)
@@ -57,12 +59,11 @@ USING
      verbose = True,
      prompt_template = 'Answer the user input in a helpful way: {{question}}';
 ```
+<Tip>
 
 ## Usage
 
 The following usage example utilizes `dspy_engine` to create a model with the `CREATE MODEL` statement.
-
-Create a model that will be used to describe, analyze, and retrieve.
 
 ```sql
 SELECT question, answer

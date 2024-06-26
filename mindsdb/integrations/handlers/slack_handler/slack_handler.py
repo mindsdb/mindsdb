@@ -396,9 +396,7 @@ class SlackHandler(APIChatHandler):
             if 'subtype' in payload_event:
                 # Don't respond to message_changed, message_deleted, etc.
                 return
-            if payload_event['channel_type'] != 'im':
-                # Only support IMs currently.
-                return
+
             if 'bot_id' in payload_event:
                 # A bot sent this message.
                 return

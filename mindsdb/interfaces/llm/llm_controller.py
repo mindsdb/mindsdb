@@ -60,4 +60,4 @@ class LLMDataController:
         Returns:
             LLMData: The LLMData object, or None if not found.
         '''
-        return db.session.query(db.LLMData).filter_by(model_id=llm_data_id).first()
+        return db.session.query(db.LLMData).filter_by(model_id=llm_data_id).all()

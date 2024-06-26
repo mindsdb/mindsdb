@@ -2,6 +2,7 @@
 import pandas as pd
 from mindsdb_sql.parser.ast import BinaryOperation, Constant, Identifier, Select
 from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 
 from mindsdb.api.executor.datahub.classes.tables_row import (
     TABLES_ROW_TYPE,
@@ -178,7 +179,7 @@ class ColumnsTable(Table):
     ]
 
     @classmethod
-    def get_data(cls, inf_schema=None, **kwargs):
+    def get_data(cls, inf_schema=None, query: ASTNode = None, **kwargs):
 
         # NOTE there is a lot of types in mysql, but listed below should be enough for our purposes
         row_templates = {
@@ -278,38 +279,43 @@ class ColumnsTable(Table):
 
         result = []
 
-        for table_name, table in inf_schema.tables.items():
-            table_columns = table.columns
-            for i, column_name in enumerate(table_columns):
-                result_row = row_templates["text"].copy()
-                result_row[1] = "information_schema"
-                result_row[2] = table_name
-                result_row[3] = column_name
-                result_row[4] = i
-                result.append(result_row)
+        databases = None
+        conditions = extract_comparison_conditions(query.where)
+        for op, arg1, arg2 in conditions:
+            if arg1.lower() == 'table_schema':
+                if op == '=':
+                    databases = [arg2]
+                elif op == 'in':
+                    if not isinstance(arg2, list):
+                        arg2 = [arg2]
+                    databases = arg2
 
-        mindsdb_dn = inf_schema.get("MINDSDB")
-        for table_row in mindsdb_dn.get_tables():
-            table_name = table_row.TABLE_NAME
-            table_columns = mindsdb_dn.get_table_columns(table_name)
-            for i, column_name in enumerate(table_columns):
-                result_row = row_templates["text"].copy()
-                result_row[1] = "mindsdb"
-                result_row[2] = table_name
-                result_row[3] = column_name
-                result_row[4] = i
-                result.append(result_row)
+        if databases is None:
+            databases = ['information_schema', 'mindsdb', 'files']
 
-        files_dn = inf_schema.get("FILES")
-        for table_name in files_dn.get_tables():
-            table_columns = files_dn.get_table_columns(table_name)
-            for i, column_name in enumerate(table_columns):
-                result_row = row_templates["text"].copy()
-                result_row[1] = "files"
-                result_row[2] = table_name
-                result_row[3] = column_name
-                result_row[4] = i
-                result.append(result_row)
+        for db_name in databases:
+            if db_name == 'information_schema':
+                tables = {
+                    table_name: table.columns
+                    for table_name, table in inf_schema.tables.items()
+                }
+            else:
+                dn = inf_schema.get(db_name)
+                if dn is None:
+                    continue
+                tables = {
+                    table_row.TABLE_NAME: dn.get_table_columns(table_row.TABLE_NAME)
+                    for table_row in dn.get_tables()
+                }
+
+            for table_name, table_columns in tables.items():
+                for i, column_name in enumerate(table_columns):
+                    result_row = row_templates["text"].copy()
+                    result_row[1] = db_name
+                    result_row[2] = table_name
+                    result_row[3] = column_name
+                    result_row[4] = i
+                    result.append(result_row)
 
         df = pd.DataFrame(result, columns=cls.columns)
         return df

@@ -89,7 +89,6 @@ class UpdateToTableCall(BaseStepCall):
                 return data
             result_data = self.steps_data[result_step.result.step_num]
 
-
             # link nodes with parameters for fast replacing with values
             input_table_alias = step.update_command.from_select_alias
             if input_table_alias is None:

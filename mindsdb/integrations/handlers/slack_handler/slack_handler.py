@@ -52,6 +52,24 @@ class SlackChannelListsTable(APIResource):
         ]
 
 
+class SlackUsersTable(APIResource):
+
+    def list(self, **kwargs) -> pd.DataFrame:
+
+        client = self.handler.connect()
+
+        users = client.users_list().data['members']
+
+        return pd.DataFrame(users, columns=self.get_columns())
+
+    def get_columns(self) -> List[str]:
+        return [
+            'id',
+            'name',
+            'real_name'
+        ]
+
+
 class SlackChannelsTable(APIResource):
 
     def list(self,
@@ -325,6 +343,9 @@ class SlackHandler(APIChatHandler):
 
         channel_lists = SlackChannelListsTable(self)
         self._register_table('channel_lists', channel_lists)
+
+        users = SlackUsersTable(self)
+        self._register_table('users', users)
 
         self._socket_mode_client = None
 

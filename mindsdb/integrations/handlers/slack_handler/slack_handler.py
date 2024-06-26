@@ -383,11 +383,12 @@ class SlackHandler(APIChatHandler):
         )
 
         def _process_websocket_message(client: SocketModeClient, request: SocketModeRequest):
-            # Acknowledge the request
-            response = SocketModeResponse(envelope_id=request.envelope_id)
-            client.send_socket_mode_response(response)
 
             if request.type != 'events_api':
+                return
+
+            # ignore duplicated requests
+            if request.retry_attempt is not None and request.retry_attempt > 0:
                 return
 
             payload_event = request.payload['event']
@@ -409,6 +410,9 @@ class SlackHandler(APIChatHandler):
                 'user': payload_event['user'],
             }
 
+            # Acknowledge the request
+            response = SocketModeResponse(envelope_id=request.envelope_id)
+            client.send_socket_mode_response(response)
             callback(row, key)
 
         self._socket_mode_client.socket_mode_request_listeners.append(_process_websocket_message)

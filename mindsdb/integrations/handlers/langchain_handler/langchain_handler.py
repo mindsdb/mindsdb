@@ -2,7 +2,6 @@ from concurrent.futures import as_completed, TimeoutError
 from typing import Optional, Dict, List
 import os
 import re
-import dill
 
 from langchain.agents import AgentExecutor
 from langchain.agents.initialize import initialize_agent
@@ -13,23 +12,15 @@ from langchain_core.prompts import PromptTemplate
 from langfuse import Langfuse
 from langfuse.callback import CallbackHandler
 
-# Note: we should probably move the logic over to a DSPy handler that focuses on prompt self-improvement
-import dspy
-from dspy import ColBERTv2
-from dspy.teleprompt import BootstrapFewShot
-from dspy.evaluate import Evaluate
-
-from mindsdb.interfaces.llm.llm_controller import LLMDataController
-
 import numpy as np
 import pandas as pd
-
 
 from mindsdb.integrations.handlers.langchain_handler.constants import (
     ANTHROPIC_CHAT_MODELS,
     DEFAULT_AGENT_TIMEOUT_SECONDS,
     DEFAULT_AGENT_TOOLS,
     DEFAULT_AGENT_TYPE,
+    DEFAULT_EMBEDDINGS_MODEL_PROVIDER,
     DEFAULT_MAX_ITERATIONS,
     DEFAULT_MAX_TOKENS,
     DEFAULT_MODEL_NAME,
@@ -89,8 +80,6 @@ class LangChainHandler(BaseMLEngine):
         self.default_agent_tools = DEFAULT_AGENT_TOOLS
         self.log_callback_handler = log_callback_handler
         self.langfuse_callback_handler = langfuse_callback_handler
-        self.llm_data_controller = LLMDataController()
-        self.use_dspy = False
         if self.log_callback_handler is None:
             self.log_callback_handler = LogCallbackHandler(logger)
 
@@ -121,7 +110,6 @@ class LangChainHandler(BaseMLEngine):
         model_config['api_keys'] = {
             p: get_api_key(p, model_config, self.engine_storage, strict=False) for p in SUPPORTED_PROVIDERS
         }
-            
         llm_config = get_llm_config(args.get('provider', self._get_llm_provider(args)), model_config)
         config_dict = llm_config.model_dump()
         config_dict = {k: v for k, v in config_dict.items() if v is not None}
@@ -188,7 +176,7 @@ class LangChainHandler(BaseMLEngine):
                 response = response_output[-2]
             return response
 
-    def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Dict = None, **kwargs):
+    def create(self, target: str, args: Dict = None, **kwargs):
         self.default_agent_tools = args.get('tools', self.default_agent_tools)
 
         args = args['using']
@@ -202,12 +190,6 @@ class LangChainHandler(BaseMLEngine):
                 args["prompt_template"] = DEFAULT_RAG_PROMPT_TEMPLATE
 
         self.model_storage.json_set('args', args)
-        if self.use_dspy:
-            self.model_storage.file_set("cold_start_df", dill.dumps(df.to_dict()))
-            # TODO: temporal workaround: serialize df and args, instead. And recreate chain (with training) every inference call.
-            # ideally, we serialize the chain itself to avoid duplicate training.
-            # chain = self.setup_dspy(df, args)
-            # self.model_storage.file_set("optimized_dspy_program", dill.dumps(chain))  # TODO: ensure this works fine
 
     @staticmethod
     def create_validation(_, args: Dict=None, **kwargs):
@@ -232,35 +214,12 @@ class LangChainHandler(BaseMLEngine):
         args['provider'] = args.get('provider', self._get_llm_provider(args))
         args['embedding_model_provider'] = args.get('embedding_model', self._get_embedding_model_provider(args))
 
-        # retrives llm and pass it around as context
-        model = args.get('model_name')
-        api_key = get_api_key('openai', args, self.engine_storage, strict=False)
-        llm = dspy.OpenAI(model=model, api_key=api_key)
-
         df = df.reset_index(drop=True)
-        if self.use_dspy:
-            cold_start_df = pd.DataFrame(dill.loads(self.model_storage.file_get("cold_start_df")))  # fixed in "training"  # noqa
-
-            # gets larger as agent is used more
-            self_improvement_df = pd.DataFrame(self.llm_data_controller.list_all_llm_data(0))
-            self_improvement_df = self_improvement_df.rename(columns={
-                'output': args['target'],
-                'input': args['user_column']
-            })
-            self_improvement_df = self_improvement_df.tail(25)
-
-            # add cold start DF
-            self_improvement_df = pd.concat([cold_start_df, self_improvement_df]).reset_index(drop=True)
-
-            chain = self.setup_dspy(self_improvement_df, args)
-            output = self.predict_dspy(df, args, chain, llm)  # this stores new traces for self-improvement
-            return output
-        else:
-            agent = self.create_agent(df, args, pred_args)
-            # Use last message as prompt, remove other questions.
-            user_column = args.get('user_column', DEFAULT_USER_COLUMN)
-            df.iloc[:-1, df.columns.get_loc(user_column)] = None
-            return self.run_agent(df, agent, args, pred_args)
+        agent = self.create_agent(df, args, pred_args)
+        # Use last message as prompt, remove other questions.
+        user_column = args.get('user_column', DEFAULT_USER_COLUMN)
+        df.iloc[:-1, df.columns.get_loc(user_column)] = None
+        return self.run_agent(df, agent, args, pred_args)
 
     def create_agent(self, df: pd.DataFrame, args: Dict=None, pred_args: Dict=None) -> AgentExecutor:
         pred_args = pred_args if pred_args else {}
@@ -403,68 +362,3 @@ class LangChainHandler(BaseMLEngine):
 
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         raise NotImplementedError('Fine-tuning is not supported for LangChain models')
-    
-    def setup_dspy(self, df, args):
-        # This is the default language model and retrieval model in DSPy
-        colbertv2 = ColBERTv2(url='http://20.102.90.50:2017/wiki17_abstracts')
-        dspy.configure(rm=colbertv2)
-        dspy_chain = self.create_dspy_chain(df, args)
-        return dspy_chain
-    
-    def create_dspy_chain(self, df, args):
-        # Initialize the LLM with the API key
-        model = args.get('model_name')
-        api_key = get_api_key('openai', args, self.engine_storage, strict=False)
-        llm = dspy.OpenAI(model=model, api_key=api_key)
-
-        # Convert to DSPy Module
-        with dspy.context(lm=llm):
-            dspy_module = dspy.ReAct(f'{args["user_column"]} -> {args["target"]}')
-
-        # create a list of DSPy examples
-        dspy_examples = []
-
-        # TODO: maybe random choose a fixed set of rows
-        for i, row in df.iterrows():
-            example = dspy.Example(
-                question=row[args["user_column"]],
-                answer=row[args["target"]]
-            ).with_inputs(args["user_column"])
-            dspy_examples.append(example)
-
-        # TODO: add the optimizer, maybe the metric
-        config = dict(max_bootstrapped_demos=4, max_labeled_demos=4)
-        metric = dspy.evaluate.metrics.answer_exact_match  # TODO: passage match requires context from prediction... we'll probably modify the signature of ReAct
-        teleprompter = BootstrapFewShot(metric=metric, **config)  # TODO: maybe it's better to have this persisted so that the internal state does a better job at optimizing RAG
-        with dspy.context(lm=llm):
-            optimized = teleprompter.compile(dspy_module, trainset=dspy_examples)  # TODO: check columns have the right name
-        return optimized
-    
-    def generate_dspy_response(self, question, chain, llm):
-        input_dict = {"question": question}
-        with dspy.context(lm=llm):
-            response = chain(question=input_dict['question'])
-        return response.answer
-
-    def predict_dspy(self,
-                     df: pd.DataFrame,
-                     args: Dict,
-                     chain,  # TODO: specify actual type
-                     llm,
-            ) -> pd.DataFrame:
-        responses = []
-        for index, row in df.iterrows():
-            question = row[args['user_column']]
-            answer = self.generate_dspy_response(question, chain, llm)
-            responses.append({'answer': answer, 'question': question})  # TODO: check that columns are right here
-            # TODO: check this only adds new incoming rows
-            self.llm_data_controller.add_llm_data(question, answer, 0)  # stores new traces for use in new calls
-
-        # Set up the evaluator, which can be used multiple times.
-        # TODO: use this in the EVALUATE command
-        # evaluate = Evaluate(devset=gsm8k_devset, metric=gsm8k_metric, num_threads=4, display_progress=True, display_table=0)
-
-        # Evaluate our `optimized_cot` program.
-        # evaluate(optimized_cot)
-
-        return pd.DataFrame(responses)

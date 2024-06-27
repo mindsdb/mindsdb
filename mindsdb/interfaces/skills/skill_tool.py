@@ -6,6 +6,7 @@ from mindsdb_sql.parser.ast import Select, BinaryOperation, Identifier, Constant
 
 from mindsdb.integrations.libs.vectordatabase_handler import TableField
 from mindsdb.interfaces.storage import db
+from .custom.text2sql.mindsdb_sql_toolkit import MindsDBSQLToolkit
 from .sql_agent import SQLAgent
 
 _DEFAULT_TOP_K_SIMILARITY_SEARCH = 5
@@ -48,7 +49,7 @@ class SkillToolController:
             sample_rows_in_table_info,
         )
 
-    def _make_text_to_sql_tools(self, skill: db.Skills, llm) -> dict:
+    def _make_text_to_sql_tools(self, skill: db.Skills, llm) -> list:
         '''
            Uses SQLAgent to execute tool
         '''
@@ -69,7 +70,7 @@ class SkillToolController:
             include_tables=tables_to_include
         )
         # Users probably don't need to configure this for now.
-        sql_database_tools = SQLDatabaseToolkit(db=db, llm=llm).get_tools()
+        sql_database_tools = MindsDBSQLToolkit(db=db, llm=llm).get_tools()
         description = skill.params.get('description', '')
         tables_list = ','.join([f'{database}.{table}' for table in tables])
         for i, tool in enumerate(sql_database_tools):

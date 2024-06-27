@@ -11,34 +11,7 @@ def install_dependencies(dependencies):
         'error_message': None
     }
 
-    # get the path to this script
-    script_path = os.path.dirname(os.path.realpath(__file__))
-    split_dependencies = []
-    for dependency in dependencies:
-        # ignore standalone comments
-        if dependency.startswith('#'):
-            continue
-
-        # remove inline comments
-        if '#' in dependency:
-            dependency = dependency.split('#')[0].strip()
-
-        # check if the dependency is a path to a requirements file
-        if dependency.startswith('-r'):
-            # split the string into '-r' and the path
-            r_flag, req_path = dependency.split(' ')
-            # create the absolute path to the requirements file
-            abs_req_path = os.path.abspath(os.path.join(script_path, req_path.replace('mindsdb/integrations', '..')))
-
-            # check if the file exists
-            if os.path.exists(abs_req_path):
-                split_dependencies.append(r_flag)
-                split_dependencies.append(abs_req_path)
-            else:
-                raise FileNotFoundError(f"Requirements file not found: {req_path}")
-
-        else:
-            split_dependencies.append(dependency)
+    split_dependencies = parse_dependencies(dependencies)
 
     try:
         sp = subprocess.Popen(
@@ -64,3 +37,47 @@ def install_dependencies(dependencies):
         result['success'] = True
 
     return result
+
+def parse_dependencies(dependencies):
+    # get the path to this script
+    script_path = os.path.dirname(os.path.realpath(__file__))
+
+    split_dependencies = []
+    for dependency in dependencies:
+        # ignore standalone comments
+        if dependency.startswith('#'):
+            continue
+
+        # remove inline comments
+        if '#' in dependency:
+            dependency = dependency.split('#')[0].strip()
+
+        # check if the dependency is a path to a requirements file
+        if dependency.startswith('-r'):
+            # get the path to the requirements file
+            req_path = dependency.split(' ')[1]
+            # create the absolute path to the requirements file
+            abs_req_path = os.path.abspath(os.path.join(script_path, req_path.replace('mindsdb/integrations', '..')))
+            # check if the file exists
+            if os.path.exists(abs_req_path):
+                # read the dependencies from the file
+                inner_dependencies = read_dependencies(abs_req_path)
+                # recursively split the dependencies
+                inner_split_dependencies = parse_dependencies(inner_dependencies)
+                # add the inner dependencies to the split dependencies
+                split_dependencies.extend(inner_split_dependencies)
+            else:
+                raise FileNotFoundError(f"Requirements file not found: {req_path}")
+
+        else:
+            split_dependencies.append(dependency)
+
+    return split_dependencies
+
+def read_dependencies(path):
+    dependencies = []
+    # read the dependencies from the file
+    with open(str(path), 'rt') as f:
+        dependencies = [x.strip(' \t\n') for x in f.readlines()]
+        dependencies = [x for x in dependencies if len(x) > 0]
+    return dependencies

@@ -56,7 +56,7 @@ class FinancialModelingHandler(APIHandler):
         params.pop('symbol')
 
         limitParam = False
-
+        limit = 0
         if 'limit' in params:
             limit = params['limit']
             params.pop('limit')
@@ -78,6 +78,9 @@ class FinancialModelingHandler(APIHandler):
         #     return {date: historical_data[date] for date in list(historical_data.keys())[:5]}
         # # air table handler 
 
+        if limitParam:
+            return pd.DataFrame(historical).head(limit)
+        
         response = Response(
             RESPONSE_TYPE.TABLE,
             data_frame=pd.DataFrame(
@@ -86,7 +89,6 @@ class FinancialModelingHandler(APIHandler):
         )
 
         return pd.DataFrame(historical)
-        #return response
 
 
     def call_financial_modeling_api(self, endpoint_name: str = None, params: Dict = None) -> pd.DataFrame:

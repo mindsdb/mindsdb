@@ -18,14 +18,16 @@ class FinancialModelingHandlerTest(unittest.TestCase):
         assert result.type is RESPONSE_TYPE.TABLE
         #assert result.type is RESPONSE_TYPE.OK
         # self.assertEqual(result, "call api")
-        
-    # def test_1_select_limit_query(self):
-    #     query = parse_sql("SELECT * FROM my_table.daily_chart_table WHERE symbol = 'AAPL' LIMIT 5")
-    #     result = self.handler.query(query)
-    #     assert result.shape[0] == 5 
+
+    def test_1_select_limit_query(self):
+        query = parse_sql("SELECT * FROM my_table.daily_chart_table WHERE symbol = 'AAPL' LIMIT 5")
+        result = self.handler.query(query)
+        print(result)
+        assert result.data_frame.shape[0] == 5 
 
 
 if __name__ == '__main__':
     unittest.main()
 
+# source mindsdb/bin/activate
 # python -m unittest discover -s mindsdb/integrations/handlers/financial_modeling_prep_handler/tests

@@ -42,7 +42,7 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
             "If the query is not correct, an error message will be returned."
             "In this case, rewrite the query, check the query, and try again."
             "If query is correct, the query will be parsed and returned."
-            "The query can now be executed with"
+            "This tool should ALWAYS be run before executing a query with the tool  "
             f"{query_sql_database_tool.name}!"
             ""
         )
@@ -53,8 +53,8 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
 
         query_sql_checker_tool_description = (
             "Use this tool to double check if your query is correct before executing it. "
-            "After checking the query with this tool "
-            f"Always use {mindsdb_sql_parser_tool.name} before progressing further!"
+            "This tool should ALWAYS be run before executing a query "
+            f"with the tool {query_sql_database_tool.name}!"
         )
         query_sql_checker_tool = QuerySQLCheckerTool(
             db=self.db, llm=self.llm, description=query_sql_checker_tool_description

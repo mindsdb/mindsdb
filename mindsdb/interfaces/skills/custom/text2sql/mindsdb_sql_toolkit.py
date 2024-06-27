@@ -49,6 +49,8 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
             "Use this tool to ensure that a SQL query passes the MindsDB SQL parser."
             "Always use this tool before running additional SQL query checks with "
             f"{query_sql_checker_tool.name}!"
+            "if it is not valid, an error message will be returned. If an error is returned, "
+            "rewrite the query, check the query, and try again."
         )
 
         mindsdb_sql_parser_tool = MindsDBSQLParserTool(

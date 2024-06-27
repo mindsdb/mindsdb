@@ -395,7 +395,7 @@ class SlackHandler(APIChatHandler):
                 return
 
             payload_event = request.payload['event']
-            if payload_event['type'] != 'message':
+            if payload_event['type'] not in ('message', 'app_mention'):
                 return
             if 'subtype' in payload_event:
                 # Don't respond to message_changed, message_deleted, etc.

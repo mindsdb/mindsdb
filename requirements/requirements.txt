@@ -40,7 +40,7 @@ msal
 langchain==0.1.11
 langchain-core==0.1.44
 langchain-community==0.0.27
-langchain-openai==0.1.3
+langchain-openai==0.1.6
 langchain-text_splitters==0.0.1
 langfuse==2.35.0
 lark

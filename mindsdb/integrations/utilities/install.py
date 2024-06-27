@@ -60,6 +60,7 @@ def parse_dependencies(dependencies):
             abs_req_path = os.path.abspath(os.path.join(script_path, req_path.replace('mindsdb/integrations', '..')))
             # check if the file exists
             if os.path.exists(abs_req_path):
+                inner_dependencies, inner_split_dependencies = [], []
                 # read the dependencies from the file
                 inner_dependencies = read_dependencies(abs_req_path)
                 # recursively split the dependencies

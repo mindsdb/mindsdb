@@ -293,11 +293,9 @@ class APIHandler(BaseHandler):
 
         if isinstance(query, Select):
             table = self._get_table(query.from_table)
-            print("hi hi")
             if not hasattr(table, 'list'):
                 # for back compatibility, targets wasn't passed in previous version
                 query.targets = [Star()]
-            print(query.from_table)
             result = self._get_table(query.from_table).select(query)
             print(result)
         elif isinstance(query, Update):

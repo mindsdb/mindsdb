@@ -173,7 +173,17 @@ We would appreciate your feedback regarding usage & feature roadmap for the abov
 
         1. Create a new directory in `mindsdb/integrations/handlers/`. You must name the new directory `{HandlerName}_handler/`.
         
-        2. Copy all the `.py` files from the [StatsForecast](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/statsforecast_handler) handler folder. These are: `__about__.py`, `__init__.py`, `setup.py`, and `statsforecast_handler.py`.
+        2. Copy the `.py` files from the [OpenAI handler folder](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/openai_handler), including: `__about__.py`, `__init__.py`, `openai_handler.py`, `creation_args.py`, and `model_using_args.py`.
+
+        <Note>
+        Note that the arguments used at model creation time (stored in `creation_args.py`) and the arguments used at prediction time (stored in `model_using_args.py`) should be stored in separate files in order to be able to hide sensitive information such as API keys.
+
+        By default, when querying for `connection_data` from the `information_schema.ml_engines` table or `training_options` from the `information_schema.models` table, all sensitive information is hidden. To unhide it, use this command:
+
+        ```sql
+        set show_secrets=true;
+        ```
+        </Note>
 
         3. Change the contents of `.py` files to match your new handler. Also, change the name of the `statsforecast_handler.py` file to match your handler.
 

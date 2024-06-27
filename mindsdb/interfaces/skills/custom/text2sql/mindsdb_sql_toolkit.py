@@ -36,25 +36,28 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
         query_sql_database_tool = QuerySQLDataBaseTool(
             db=self.db, description=query_sql_database_tool_description
         )
-        query_sql_checker_tool_description = (
-            "Use this tool to double check if your query is correct before executing "
-            "it. Always use this tool before executing a query with "
-            f"{query_sql_database_tool.name}!"
-        )
-        query_sql_checker_tool = QuerySQLCheckerTool(
-            db=self.db, llm=self.llm, description=query_sql_checker_tool_description
-        )
 
         mindsdb_sql_parser_tool_description = (
             "Use this tool to ensure that a SQL query passes the MindsDB SQL parser."
-            "Always use this tool before running additional SQL query checks with "
-            f"{query_sql_checker_tool.name}!"
-            "if it is not valid, an error message will be returned. If an error is returned, "
-            "rewrite the query, check the query, and try again."
+            "If the query is not correct, an error message will be returned."
+            "In this case, rewrite the query, check the query, and try again."
+            "If query is correct, the query will be parsed and returned."
+            "The query can now be executed with"
+            f"{query_sql_database_tool.name}!"
+            ""
         )
 
         mindsdb_sql_parser_tool = MindsDBSQLParserTool(
             description=mindsdb_sql_parser_tool_description
+        )
+
+        query_sql_checker_tool_description = (
+            "Use this tool to double check if your query is correct before executing it. "
+            "After checking the query with this tool "
+            f"Always use {mindsdb_sql_parser_tool.name} before progressing further!"
+        )
+        query_sql_checker_tool = QuerySQLCheckerTool(
+            db=self.db, llm=self.llm, description=query_sql_checker_tool_description
         )
 
         return [

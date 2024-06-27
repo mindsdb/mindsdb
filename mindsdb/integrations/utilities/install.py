@@ -38,6 +38,7 @@ def install_dependencies(dependencies):
 
     return result
 
+
 def parse_dependencies(dependencies):
     # get the path to this script
     script_path = os.path.dirname(os.path.realpath(__file__))
@@ -74,6 +75,7 @@ def parse_dependencies(dependencies):
             split_dependencies.append(dependency)
 
     return split_dependencies
+
 
 def read_dependencies(path):
     dependencies = []

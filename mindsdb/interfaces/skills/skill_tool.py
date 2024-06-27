@@ -6,7 +6,6 @@ from mindsdb_sql.parser.ast import Select, BinaryOperation, Identifier, Constant
 
 from mindsdb.integrations.libs.vectordatabase_handler import TableField
 from mindsdb.interfaces.storage import db
-from .custom.text2sql.mindsdb_sql_toolkit import MindsDBSQLToolkit
 from .sql_agent import SQLAgent
 
 _DEFAULT_TOP_K_SIMILARITY_SEARCH = 5
@@ -56,7 +55,7 @@ class SkillToolController:
         # To prevent dependency on Langchain unless an actual tool uses it.
         try:
             from mindsdb.integrations.handlers.langchain_handler.mindsdb_database_agent import MindsDBSQL
-            from langchain_community.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
+            from mindsdb.interfaces.skills.custom.text2sql.mindsdb_sql_toolkit import MindsDBSQLToolkit
             from langchain_community.tools.sql_database.tool import QuerySQLDataBaseTool
         except ImportError:
             raise ImportError('To use the text-to-SQL skill, please install langchain with `pip install mindsdb[langchain]`')

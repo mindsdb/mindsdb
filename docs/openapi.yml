@@ -63,7 +63,7 @@ components:
           description: How long training this model took in HH:MM:SS format (trained models only)
         update:
           type: string
-          description: Set to "available" when a new version of MindsDB is available that makes the model obsolete, or when new data is available in the data that was used to train the model (trained models only).        
+          description: Set to "available" when a new version of MindsDB is available that makes the model obsolete, or when new data is available in the data that was used to train the model (trained models only).
     Project:
       type: object
       properties:
@@ -142,6 +142,28 @@ components:
         agent:
           type: string
           description: Agent object created beforehand
+    Job:
+      type: object
+      properties:
+        name:
+          type: string
+        query:
+          type: string
+          description: Tasks to be executed by the job
+        if_query:
+          type: string
+          description: Optional. Condition to be fulfilled before the job executes
+        start_at:
+          type: string
+          format: date-time
+          description: Optional. Start date/time of the job
+        end_at:
+          type: string
+          format: date-time
+          description: Optional. End date/time of the job
+        schedule_str:
+          type: string
+          description: Periodicity of the job (e.g. every 1 minute)
 paths:
   '/api/databases':
     get:
@@ -2245,6 +2267,221 @@ paths:
                   type: string
         '401':
           description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+  '/api/projects/{projectName}/jobs':
+    post:
+      summary: This endpoint creates a new Job.
+      description: Create a job to automate tasks.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Name of the job
+                query:
+                  type: string
+                  description: Tasks to be executed by the job
+                if_query:
+                  type: string
+                  description: Optional. Condition to be fulfilled before the job executes
+                start_at:
+                  type: string
+                  format: date-time
+                  description: Optional. Start date/time of the job
+                end_at:
+                  type: string
+                  format: date-time
+                  description: Optional. End date/time of the job
+                schedule_str:
+                  type: string
+                  description: Periodicity of the job (e.g. every 1 minute)
+      responses:
+        '200':
+          description: Job created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+    get:
+      summary: Returns a list of jobs.
+      description: Gets info about all jobs in the project.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A JSON array of job names
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Job'
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+  '/api/projects/{projectName}/jobs/{jobName}':
+    get:
+      summary: Gets info about specific job.
+      description: Gets info for a specific job in the project.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project
+          required: true
+          schema:
+            type: string
+        - name: jobName
+          in: path
+          description: The name of the job
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Job information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '404':
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+    delete:
+      summary: Deletes an existing job.
+      description: Deletes a job in the project.
+      parameters:
+        - name: projectName
+          in: path
+          description: The name of the project
+          required: true
+          schema:
+            type: string
+        - name: jobName
+          in: path
+          description: The name of the job
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Empty response if delete is successful
+          content:
+            application/json:
+              schema:
+                type: string
+        '401':
+          description: Invalid API key error message
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
+        '404':
+          description: Project or job not found
           content:
             application/json:
               schema:

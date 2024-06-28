@@ -110,7 +110,10 @@ class TestPostgresHandler(unittest.TestCase):
                 information_schema.columns
             WHERE
                 table_name = '{table_name}'
+            AND
+                table_schema = current_schema()
         """
+
         self.handler.native_query.assert_called_once_with(expected_query)
 
     def test_get_tables(self):

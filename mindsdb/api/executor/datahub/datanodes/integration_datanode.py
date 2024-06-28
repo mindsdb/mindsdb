@@ -53,6 +53,21 @@ class IntegrationDataNode(DataNode):
         return True
 
     def get_table_columns(self, tableName):
+        response = self.integration_handler.get_columns(tableName)
+        if response.type == RESPONSE_TYPE.TABLE:
+            df = response.data_frame
+            col_name = None
+            # looking for specific column names
+            for col in ('Field', 'column_name', 'column'):
+                if col in df.columns:
+                    col_name = col
+                    break
+            # if not found - pick first one
+            if col_name is None:
+                col_name = df.columns[0]
+
+            return list(df[col_name])
+
         return []
 
     def drop_table(self, name: Identifier, if_exists=False):

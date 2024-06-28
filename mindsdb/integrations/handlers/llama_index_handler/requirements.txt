@@ -1,3 +1,5 @@
 llama-index==0.9.23
 llama-hub==0.0.67
 openai == 1.6.1
+llama-index-readers-web
+llama-index-embeddings-openai

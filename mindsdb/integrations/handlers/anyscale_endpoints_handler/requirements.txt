@@ -1,2 +1,3 @@
 openai == 1.6.1
+pydantic-settings >= 2.1.0
 -r mindsdb/integrations/handlers/openai_handler/requirements.txt

@@ -19,7 +19,6 @@ flask-compress >= 1.0.0
 appdirs >= 1.0.0
 mindsdb-sql ~= 0.16.0
 pydantic >= 2.7.0
-pydantic-settings >= 2.1.0
 mindsdb-evaluator >= 0.0.7, < 0.1.0
 checksumdir >= 1.2.0
 duckdb == 0.9.1
@@ -44,6 +43,5 @@ langchain-community
 langchain-openai
 langchain-text_splitters
 langfuse==2.35.0
-bs4 # For web crawler.
 lark
 prometheus-client==0.20.0

@@ -286,7 +286,6 @@ class PostgresHandler(DatabaseHandler):
 
         if not table_name or not isinstance(table_name, str):
             raise ValueError("Invalid table name provided.")
-
         query = f"""
             SELECT
                 column_name as "Field",
@@ -295,6 +294,8 @@ class PostgresHandler(DatabaseHandler):
                 information_schema.columns
             WHERE
                 table_name = '{table_name}'
+            AND
+                table_schema = current_schema()
         """
         return self.native_query(query)
 

@@ -303,15 +303,7 @@ class BaseExecutorTest(BaseUnitTest):
                 )
 
             return handler_response(
-                pd.DataFrame(
-                    [
-                        {
-                            "table_schema": "public",
-                            "table_name": "table1",
-                            "table_type": "BASE TABLE",
-                        }
-                    ]
-                )
+                pd.DataFrame(tables_ar)
             )
 
         mock_handler().get_tables.side_effect = get_tables_f

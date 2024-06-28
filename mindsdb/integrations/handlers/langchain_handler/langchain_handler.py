@@ -145,8 +145,6 @@ class LangChainHandler(BaseMLEngine):
     def _get_tiktoken_model_name(self, model: str) -> str:
         if model.startswith('gpt-4'):
             return 'gpt-4'
-        if model.startswith('gpt-3.5'):
-            return 'gpt-3.5'
         return model
 
     def _create_chat_model(self, args: Dict, pred_args: Dict):

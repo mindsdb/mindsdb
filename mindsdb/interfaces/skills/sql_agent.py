@@ -81,6 +81,11 @@ class SQLAgent:
 
         return usable_tables
 
+    def _clean_table_name(self, table_name: str) -> str:
+        # Some LLMs (e.g. gpt-4o) may include backticks when invoking tools.
+        new_name = table_name.replace('`', '')
+        return new_name.rstrip()
+
     def get_table_info(self, table_names: Optional[List[str]] = None) -> str:
         """ Get information about specified tables.
         Follows best practices as specified in: Rajkumar et al, 2022 (https://arxiv.org/abs/2204.00498)
@@ -89,7 +94,9 @@ class SQLAgent:
         """
         all_table_names = self.get_usable_table_names()
         if table_names is not None:
-            missing_tables = set(table_names).difference(all_table_names)
+            # Clean table names since they're coming direclty from an LLM.
+            cleaned_table_names = [self._clean_table_name(n) for n in table_names]
+            missing_tables = set(cleaned_table_names).difference(all_table_names)
             if missing_tables:
                 raise ValueError(f"table_names {missing_tables} not found in database")
             all_table_names = table_names

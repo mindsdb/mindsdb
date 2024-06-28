@@ -92,7 +92,7 @@ class MapReduceStepCall(BaseStepCall):
             chunk = 0
             while chunk * partition < len(df):
                 # create results with partition
-                df1 = df[chunk * partition: (chunk + 1) * partition]
+                df1 = df.iloc[chunk * partition: (chunk + 1) * partition]
                 chunk += 1
                 yield df1, substeps, input_idx, input_columns
 
@@ -101,11 +101,7 @@ class MapReduceStepCall(BaseStepCall):
         # workers count
         is_cloud = Config().get('cloud', False)
         if is_cloud:
-            max_threads = os.getenv('MAX_QUERY_PARTITIONS')
-            if max_threads is not None:
-                max_threads = int(max_threads)
-            else:
-                max_threads = 10
+            max_threads = int(os.getenv('MAX_QUERY_PARTITIONS', 10))
         else:
             max_threads = os.cpu_count() - 2
 

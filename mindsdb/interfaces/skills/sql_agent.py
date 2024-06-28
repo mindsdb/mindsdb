@@ -80,7 +80,7 @@ class SQLAgent:
                     logger.warning('Unable to get tables for %s: %s', db, str(e))
 
         return usable_tables
-    
+
     def _clean_table_name(self, table_name: str) -> str:
         # Some LLMs (e.g. gpt-4o) may include backticks when invoking tools.
         new_name = table_name.replace('`', '')

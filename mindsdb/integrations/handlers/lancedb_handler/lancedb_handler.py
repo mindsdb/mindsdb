@@ -28,7 +28,7 @@ class LanceDBHandler(VectorStoreHandler):
     name = "lancedb"
 
     def __init__(self, name: str, **kwargs):
-        super().__init__(name, **kwargs)
+        super().__init__(name)
         self._connection_data = kwargs.get("connection_data")
 
         self._client_config = {
@@ -108,8 +108,8 @@ class LanceDBHandler(VectorStoreHandler):
             FilterOperator.LESS_THAN_OR_EQUAL: "<=",
             FilterOperator.GREATER_THAN: ">",
             FilterOperator.GREATER_THAN_OR_EQUAL: ">=",
-            # FilterOperator.IN: "in",
-            # FilterOperator.NOT_IN: "not in",
+            FilterOperator.IN: "in",
+            FilterOperator.NOT_IN: "not in",
             FilterOperator.LIKE: "like",
             FilterOperator.NOT_LIKE: "not like",
             FilterOperator.IS_NULL: "is null",
@@ -160,8 +160,16 @@ class LanceDBHandler(VectorStoreHandler):
             if isinstance(condition.value, str):
                 condition.value = f"'{condition.value}'"
             condition_key = condition.column.split(".")[-1]
+
+            value = condition.value
+            if condition.op in (FilterOperator.IN, FilterOperator.NOT_IN):
+                if not isinstance(condition.value, list):
+                    value = [value]
+                value = '({})'.format(', '.join([repr(i) for i in value]))
+            else:
+                value = str(value)
             lancedb_conditions.append(
-                ' '.join([condition_key, self._get_lancedb_operator(condition.op), str(condition.value)])
+                ' '.join([condition_key, self._get_lancedb_operator(condition.op), value])
             )
         # Combine all conditions into a single string and return
         return " and ".join(lancedb_conditions) if lancedb_conditions else None
@@ -173,15 +181,10 @@ class LanceDBHandler(VectorStoreHandler):
         conditions: List[FilterCondition] = None,
         offset: int = None,
         limit: int = None,
-    ) -> HandlerResponse:
-        try:
-            # Load collection table
-            collection = self._client.open_table(table_name)
-        except Exception as e:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Error loading collection {table_name}: {e}",
-            )
+    ) -> pd.DataFrame:
+
+        collection = self._client.open_table(table_name)
+
         filters = self._translate_condition(conditions)
         # check if embedding vector filter is present
         vector_filter = (
@@ -222,20 +225,27 @@ class LanceDBHandler(VectorStoreHandler):
             sql = f"""select {col_str} from result {where_str}"""
 
         data_df = duckdb.query(sql).to_df()
-        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=data_df)
+        return data_df
 
     def insert(
         self, table_name: str, data: pd.DataFrame, columns: List[str] = None
-    ) -> HandlerResponse:
+    ):
         """
         Insert data into the LanceDB database.
         In case of create table statements the there is a mismatch between the column types of the `data` pandas dataframe filled with data
         and the empty base table column types which raises a pa.lib.ArrowNotImplementedError, in that case the base table is deleted (doesn't matter as it is empty)
         and recreated with the right datatypes
         """
+
+        if TableField.METADATA.value not in data.columns:
+            data[TableField.METADATA.value] = None
+
+        df = data[
+            [TableField.ID.value, TableField.CONTENT.value, TableField.METADATA.value, TableField.EMBEDDINGS.value]
+        ]
+
         try:
             collection = self._client.open_table(table_name)
-            df = data[[TableField.ID.value, TableField.CONTENT.value, TableField.METADATA.value, TableField.EMBEDDINGS.value]]
             pa_data = pa.Table.from_pandas(df, preserve_index=False)
             vec_data = vec_to_table(df[TableField.EMBEDDINGS.value].values.tolist())
             new_pa_data = pa_data.append_column("vector", vec_data["vector"])
@@ -251,16 +261,10 @@ class LanceDBHandler(VectorStoreHandler):
             new_pa_data = pa_data.append_column("vector", vec_data["vector"])
             self.drop_table(table_name)
             self._client.create_table(table_name, new_pa_data)
-        except Exception as e:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Unable to insert data into collection `{table_name}`: {e}"
-            )
-        return Response(resp_type=RESPONSE_TYPE.OK)
 
     def update(
         self, table_name: str, data: pd.DataFrame, columns: List[str] = None
-    ) -> HandlerResponse:
+    ):
         """
         Update data in the LanceDB database.
         TODO: not implemented yet
@@ -269,41 +273,28 @@ class LanceDBHandler(VectorStoreHandler):
 
     def delete(
         self, table_name: str, conditions: List[FilterCondition] = None
-    ) -> HandlerResponse:
-        try:
-            filters = self._translate_condition(conditions)
-            if filters is None:
-                raise Exception("Delete query must have at least one condition!")
-            collection = self._client.open_table(table_name)
-            collection.delete(filters)
-        except Exception as e:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Error deleting from collection `{table_name}`: {e}",
-            )
-        return Response(resp_type=RESPONSE_TYPE.OK)
+    ):
+        filters = self._translate_condition(conditions)
+        if filters is None:
+            raise Exception("Delete query must have at least one condition!")
+        collection = self._client.open_table(table_name)
+        collection.delete(filters)
 
-    def create_table(self, table_name: str, if_not_exists=True) -> HandlerResponse:
+    def create_table(self, table_name: str, if_not_exists=True):
         """
         Create a collection with the given name in the LanceDB database.
         """
-        try:
-            data = {
-                TableField.ID.value: str,
-                TableField.CONTENT.value: str,
-                TableField.METADATA.value: object,
-                TableField.EMBEDDINGS.value: object,
-            }
-            df = pd.DataFrame(columns=data.keys()).astype(data)
-            self._client.create_table(table_name, df)
-        except Exception as e:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Unable to create collection `{table_name}`: {e}"
-            )
-        return Response(resp_type=RESPONSE_TYPE.OK)
 
-    def drop_table(self, table_name: str, if_exists=True) -> HandlerResponse:
+        data = {
+            TableField.ID.value: str,
+            TableField.CONTENT.value: str,
+            TableField.METADATA.value: object,
+            TableField.EMBEDDINGS.value: object,
+        }
+        df = pd.DataFrame(columns=data.keys()).astype(data)
+        self._client.create_table(table_name, df)
+
+    def drop_table(self, table_name: str, if_exists=True):
         """
         Delete a collection from the LanceDB database.
         """
@@ -317,7 +308,6 @@ class LanceDBHandler(VectorStoreHandler):
                     resp_type=RESPONSE_TYPE.ERROR,
                     error_message=f"Table {table_name} does not exist!",
                 )
-        return Response(resp_type=RESPONSE_TYPE.OK)
 
     def get_tables(self) -> HandlerResponse:
         """

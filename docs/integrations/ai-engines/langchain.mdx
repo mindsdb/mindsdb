@@ -136,6 +136,23 @@ USING
 ```
 </Accordion>
 
+<Accordion title="Ollama">
+```sql
+CREATE MODEL langchain_ollama_model
+PREDICT answer 
+USING
+     engine = 'langchain_engine',       -- engine name as created via CREATE ML_ENGINE
+     provider = 'ollama',               -- one of the available providers
+     model_name = 'llama2',             -- choose one of the models available from Ollama
+     mode = 'conversational',           -- conversational mode
+     user_column = 'question',          -- column name that stores input from the user
+     assistant_column = 'answer',       -- column name that stores output of the model (see PREDICT column) 
+     verbose = True,
+     prompt_template = 'Answer the users input in a helpful way: {{question}}';
+```
+Ensure to have Ollama set up locally by following this guide on [how to download Ollama](https://ollama.com/download).
+</Accordion>
+
 <Accordion title="LiteLLM">
 ```sql
 CREATE MODEL langchain_litellm_model

@@ -43,11 +43,12 @@ class TestHuggingface(BaseExecutorTest):
             ret = self.run_sql(
                 f"select status from mindsdb.models where name='{model_name}'"
             )
-            if len(ret.data) > 0:
-                if ret.data[0][0] == "complete":
+            data = ret.data.to_lists()
+            if len(data) > 0:
+                if data[0][0] == "complete":
                     done = True
                     break
-                elif ret.data[0][0] == "error":
+                elif data[0][0] == "error":
                     break
             time.sleep(0.5)
         if not done:

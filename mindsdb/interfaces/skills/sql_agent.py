@@ -64,13 +64,13 @@ class SQLAgent:
             return self._tables_to_include
 
         ret = self._call_engine('show databases;')
-        dbs = [lst[0] for lst in ret.data if lst[0] != 'information_schema']
+        dbs = [lst[0] for lst in ret.data.to_lists() if lst[0] != 'information_schema']
         usable_tables = []
         for db in dbs:
             if db != 'mindsdb' and db == self._database:
                 try:
                     ret = self._call_engine('show tables', database=db)
-                    tables = [lst[0] for lst in ret.data if lst[0] != 'information_schema']
+                    tables = [lst[0] for lst in ret.data.to_lists() if lst[0] != 'information_schema']
                     for table in tables:
                         # By default, include all tables in a database unless expilcitly ignored.
                         table_name = f'{db}.{table}'
@@ -81,6 +81,11 @@ class SQLAgent:
 
         return usable_tables
 
+    def _clean_table_name(self, table_name: str) -> str:
+        # Some LLMs (e.g. gpt-4o) may include backticks when invoking tools.
+        new_name = table_name.replace('`', '')
+        return new_name.rstrip()
+
     def get_table_info(self, table_names: Optional[List[str]] = None) -> str:
         """ Get information about specified tables.
         Follows best practices as specified in: Rajkumar et al, 2022 (https://arxiv.org/abs/2204.00498)
@@ -89,7 +94,9 @@ class SQLAgent:
         """
         all_table_names = self.get_usable_table_names()
         if table_names is not None:
-            missing_tables = set(table_names).difference(all_table_names)
+            # Clean table names since they're coming direclty from an LLM.
+            cleaned_table_names = [self._clean_table_name(n) for n in table_names]
+            missing_tables = set(cleaned_table_names).difference(all_table_names)
             if missing_tables:
                 raise ValueError(f"table_names {missing_tables} not found in database")
             all_table_names = table_names
@@ -126,11 +133,12 @@ class SQLAgent:
         command = f"select {','.join(fields)} from {table} limit {self._sample_rows_in_table_info};"
         try:
             ret = self._call_engine(command)
-            sample_rows = ret.data
+            sample_rows = ret.data.to_lists()
             sample_rows = list(
                 map(lambda ls: [str(i) if len(str(i)) < 100 else str[:100] + '...' for i in ls], sample_rows))
             sample_rows_str = "\n" + "\n".join(["\t".join(row) for row in sample_rows])
-        except Exception:
+        except Exception as e:
+            logger.warning(e)
             sample_rows_str = "\n" + "\t [error] Couldn't retrieve sample rows!"
 
         return sample_rows_str
@@ -150,24 +158,25 @@ class SQLAgent:
             columns_str = ', '.join([repr(col.name) for col in ret.columns])
             res = f'Output columns: {columns_str}\n'
 
-            if len(ret.data) > limit_rows:
-                df = pd.DataFrame(ret.data, columns=[col.name for col in ret.columns])
+            data = ret.to_lists()
+            if len(data) > limit_rows:
+                df = pd.DataFrame(data, columns=[col.name for col in ret.columns])
 
-                res += f'Result has {len(ret.data)} rows. Description of data:\n'
+                res += f'Result has {len(data)} rows. Description of data:\n'
                 res += str(df.describe(include='all')) + '\n\n'
                 res += f'First {limit_rows} rows:\n'
 
             else:
                 res += 'Result:\n'
 
-            res += _tidy(ret.data[:limit_rows])
+            res += _tidy(data[:limit_rows])
             return res
 
         ret = self._call_engine(command)
         if fetch == "all":
-            result = _repr_result(ret)
+            result = _repr_result(ret.data)
         elif fetch == "one":
-            result = _tidy(ret.data[0])
+            result = _tidy(ret.data.to_lists()[0])
         else:
             raise ValueError("Fetch parameter must be either 'one' or 'all'")
         return str(result)

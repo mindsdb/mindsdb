@@ -64,7 +64,8 @@ Start by setting up the skills. Here is how you can create and manage skills usi
     USING
         type = 'text2sql',
         database = 'example_db', -- this must be created with CREATE DATABASE
-        tables = ['sales_data']; -- this is a list of tables passed to this skill
+        tables = ['sales_data'], -- this is a list of tables passed to this skill
+        description = "this is sales data";
 
     UPDATE SKILL text_to_sql_skill
     SET
@@ -176,7 +177,8 @@ CREATE SKILL text_to_sql_skill
 USING
     type = 'text2sql',
     database = 'example_db',
-    tables = ['car_sales'];
+    tables = ['car_sales'],
+    description = "this is car sales data";
 ```
 
 Now that we have a model and a skill, let's create an agent.
@@ -204,7 +206,7 @@ Learn about [chatbots here](/agents/chatbot).
 
 ### Agents with Knowledge Bases as Skills
 
-In this example, let's create an embedding model (you can choose one from OpenAI, Hugging Face, or LangChain) for the knowledge base. Note that this step is optional, as knowledge bases provide default embedding model.
+In this example, let's create an embedding model (using [OpenAI](/integrations/ai-engines/openai) or [LangChain](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/langchain_embedding_handler) as an engine) for the knowledge base. Note that this step is optional, as knowledge bases provide default embedding model.
 
 ```sql
 CREATE ML_ENGINE openai_engine

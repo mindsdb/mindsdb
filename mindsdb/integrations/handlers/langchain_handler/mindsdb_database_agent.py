@@ -40,6 +40,11 @@ class MindsDBSQL(SQLDatabase):
     def dialect(self) -> str:
         return 'mindsdb'
 
+    @property
+    def table_info(self) -> str:
+        """Information about all tables in the database."""
+        return self._sql_agent.get_table_info()
+
     def get_usable_table_names(self) -> Iterable[str]:
         return self._sql_agent.get_usable_table_names()
 

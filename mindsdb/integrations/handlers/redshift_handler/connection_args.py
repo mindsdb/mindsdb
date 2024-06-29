@@ -34,6 +34,18 @@ connection_args = OrderedDict(
         'required': True,
         'label': 'Password',
         'secret': True
+    },
+    schema={
+        'type': ARG_TYPE.STR,
+        'description': 'The schema in which objects are searched first.',
+        'required': False,
+        'label': 'Schema'
+    },
+    sslmode={
+        'type': ARG_TYPE.STR,
+        'description': 'The SSL mode that will be used for connection.',
+        'required': False,
+        'label': 'sslmode'
     }
 )
 

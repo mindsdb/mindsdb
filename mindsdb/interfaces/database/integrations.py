@@ -425,12 +425,24 @@ class IntegrationController:
         Returns:
             HandlerClass: Handler class instance
         """
+        integration_id = int(time() * 10000)
+
+        file_storage = FileStorage(
+            resource_group=RESOURCE_GROUP.INTEGRATION,
+            resource_id=integration_id,
+            root_dir='tmp',
+            sync=False
+        )
+        handler_storage = HandlerStorage(integration_id, root_dir='tmp', is_temporal=True)
+
         HandlerClass = self.handler_modules[engine].Handler
         handler_args = self._make_handler_args(
             name=name,
             handler_type=engine,
             connection_data=connection_args,
-            integration_id=int(time() * 10000)
+            integration_id=integration_id,
+            file_storage=file_storage,
+            handler_storage=handler_storage,
         )
         handler = HandlerClass(**handler_args)
         return handler

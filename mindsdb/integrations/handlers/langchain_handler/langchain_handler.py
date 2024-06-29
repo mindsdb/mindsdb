@@ -1,5 +1,7 @@
 from concurrent.futures import as_completed, TimeoutError
 from typing import Optional, Dict, List
+import json
+import os
 import re
 
 from langchain.agents import AgentExecutor
@@ -8,6 +10,7 @@ from langchain.chains.conversation.memory import ConversationSummaryBufferMemory
 from langchain.schema import SystemMessage
 from langchain_community.chat_models import ChatAnthropic, ChatOpenAI, ChatAnyscale, ChatLiteLLM, ChatOllama
 from langchain_core.prompts import PromptTemplate
+from langfuse import Langfuse
 from langfuse.callback import CallbackHandler
 
 import numpy as np
@@ -28,6 +31,7 @@ from mindsdb.integrations.handlers.langchain_handler.constants import (
     DEFAULT_ASSISTANT_COLUMN
 )
 from mindsdb.integrations.handlers.langchain_handler.log_callback_handler import LogCallbackHandler
+from mindsdb.integrations.handlers.langchain_handler.langfuse_callback_handler import LangfuseCallbackHandler
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
 from mindsdb.integrations.handlers.langchain_handler.tools import setup_tools
 from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS as OPEN_AI_CHAT_MODELS
@@ -41,7 +45,7 @@ from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 
 from .mindsdb_chat_model import ChatMindsdb
 
-_PARSING_ERROR_PREFIX = 'An output parsing error occured'
+_PARSING_ERROR_PREFIXES = ['An output parsing error occured', 'Could not parse LLM output']
 
 logger = log.getLogger(__name__)
 
@@ -126,7 +130,22 @@ class LangChainHandler(BaseMLEngine):
                 logger.error(f'Incorrect Langfuse credentials provided to Langchain handler. Full args: {args}')
         if self.langfuse_callback_handler is not None:
             all_callbacks.append(self.langfuse_callback_handler)
+        if 'trace_id' not in args or 'observation_id' not in args:
+            return all_callbacks
+        # Trace LLM chains & tools using Langfuse.
+        langfuse = Langfuse(
+            public_key=os.getenv('LANGFUSE_PUBLIC_KEY'),
+            secret_key=os.getenv('LANGFUSE_SECRET_KEY'),
+            host=os.getenv('LANGFUSE_HOST')
+        )
+        langfuse_cb_handler = LangfuseCallbackHandler(langfuse, args['trace_id'], args['observation_id'])
+        all_callbacks.append(langfuse_cb_handler)
         return all_callbacks
+    
+    def _get_tiktoken_model_name(self, model: str) -> str:
+        if model.startswith('gpt-4'):
+            return 'gpt-4'
+        return model
 
     def _create_chat_model(self, args: Dict, pred_args: Dict):
         model_kwargs = self._get_chat_model_params(args, pred_args)
@@ -134,6 +153,9 @@ class LangChainHandler(BaseMLEngine):
         if args['provider'] == 'anthropic':
             return ChatAnthropic(**model_kwargs)
         if args['provider'] == 'openai':
+            # Some newer GPT models (e.g. gpt-4o when released) don't have token counting support yet.
+            # By setting this manually in ChatOpenAI, we count tokens like compatible GPT models.
+            model_kwargs['tiktoken_model_name'] = self._get_tiktoken_model_name(model_kwargs.get('model_name'))
             return ChatOpenAI(**model_kwargs)
         if args['provider'] == 'anyscale':
             return ChatAnyscale(**model_kwargs)
@@ -150,18 +172,25 @@ class LangChainHandler(BaseMLEngine):
 
     def _handle_parsing_errors(self, error: Exception) -> str:
         response = str(error)
-        if not response.startswith(_PARSING_ERROR_PREFIX):
-            return f'Agent failed with error:\n{str(error)}...'
-        else:
-            # As a somewhat dirty workaround, we accept the output formatted incorrectly and use it as a response.
-            #
-            # Ideally, in the future, we would write a parser that is more robust and flexible than the one Langchain uses.
-            # Response is wrapped in ``
-            logger.info('Handling parsing error, salvaging response...')
-            response_output = response.split('`')
-            if len(response_output) >= 2:
-                response = response_output[-2]
-            return response
+        for p in _PARSING_ERROR_PREFIXES:
+            if response.startswith(p):
+                # As a somewhat dirty workaround, we accept the output formatted incorrectly and use it as a response.
+                #
+                # Ideally, in the future, we would write a parser that is more robust and flexible than the one Langchain uses.
+                # Response is wrapped in ``
+                logger.info('Handling parsing error, salvaging response...')
+                response_output = response.split('`')
+                if len(response_output) >= 2:
+                    response = response_output[-2]
+
+                # Wrap response in Langchain conversational react format.
+                langchain_react_formatted_response = f'''Do I need to use a tool? No
+AI: {response}'''
+                response_obj = {
+                    'text': langchain_react_formatted_response
+                }
+                return json.dumps(response_obj)
+        return f'Agent failed with error:\n{str(error)}...'
 
     def create(self, target: str, args: Dict = None, **kwargs):
         self.default_agent_tools = args.get('tools', self.default_agent_tools)
@@ -264,7 +293,6 @@ class LangChainHandler(BaseMLEngine):
             tools,
             llm,
             agent=agent_type,
-            callbacks=self._get_agent_callbacks(args),
             # Calls the agent’s LLM Chain one final time to generate a final answer based on the previous steps
             early_stopping_method='generate',
             handle_parsing_errors=self._handle_parsing_errors,
@@ -306,7 +334,10 @@ class LangChainHandler(BaseMLEngine):
             if not prompt:
                 return ''
             try:
-                answer = agent_executor.invoke(prompt)
+                # Handle callbacks per run.
+                all_args = args.copy()
+                all_args.update(pred_args)
+                answer = agent_executor.invoke(prompt, config={ 'callbacks': self._get_agent_callbacks(all_args) })
             except Exception as e:
                 answer = str(e)
                 if not answer.startswith("Could not parse LLM output: `"):

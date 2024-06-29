@@ -55,6 +55,13 @@ class SlackChannelListsTable(APIResource):
 class SlackUsersTable(APIResource):
 
     def list(self, **kwargs) -> pd.DataFrame:
+        """
+        Retrieves list of users
+
+        The "users.list" call is used in slack api
+
+        :return: pd.DataFrame
+        """
 
         client = self.handler.connect()
 

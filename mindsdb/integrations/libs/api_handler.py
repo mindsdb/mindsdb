@@ -297,7 +297,6 @@ class APIHandler(BaseHandler):
                 # for back compatibility, targets wasn't passed in previous version
                 query.targets = [Star()]
             result = self._get_table(query.from_table).select(query)
-            print(result)
         elif isinstance(query, Update):
             result = self._get_table(query.table).update(query)
         elif isinstance(query, Insert):

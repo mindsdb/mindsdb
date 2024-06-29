@@ -119,14 +119,6 @@ class SlackChannelsTable(APIResource):
                 else:
                     raise ValueError(f"Channel '{value}' not found")
 
-            # Is this used?
-            # elif condition.column == 'limit':
-            #     if op == FilterOperator.EQUAL:
-            #         params['limit'] = int(value)
-            #         condition.applied = True
-            #     else:
-            #         raise NotImplementedError(f'Unknown op: {op}')
-
             elif condition.column == 'created_at' and value is not None:
                 date = parse_utc_date(value)
                 if op == FilterOperator.GREATER_THAN:

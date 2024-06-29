@@ -137,6 +137,10 @@ class DremioHandler(DatabaseHandler):
                 'jobState']
 
             while job_status != 'COMPLETED':
+                if job_status == 'FAILED':
+                    logger.error('Job failed!')
+                    break
+
                 time.sleep(2)
                 job_status = requests.request("GET", self.base_url + "/api/v3/job/" + job_id, headers=auth_headers).json()[
                     'jobState']
@@ -182,18 +186,25 @@ class DremioHandler(DatabaseHandler):
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 
-    def get_tables(self) -> StatusResponse:
+    def get_tables(self) -> Response:
         """
         Return list of entities that will be accessible as tables.
         Returns:
             HandlerResponse
         """
 
-        query = 'SELECT * FROM INFORMATION_SCHEMA.\\"TABLES\\"'
-        result = self.native_query(query)
-        df = result.data_frame
-        result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
-        return result
+        query = """
+            SELECT
+                TABLE_NAME,
+                TABLE_SCHEMA,
+                CASE
+                    WHEN TABLE_TYPE = 'TABLE' THEN 'BASE TABLE'
+                    ELSE TABLE_TYPE
+                END AS TABLE_TYPE
+            FROM INFORMATION_SCHEMA."TABLES"
+            WHERE TABLE_TYPE <> 'SYSTEM_TABLE';
+        """
+        return self.native_query(query)
 
     def get_columns(self, table_name: str) -> StatusResponse:
         """
@@ -207,5 +218,5 @@ class DremioHandler(DatabaseHandler):
         query = f"DESCRIBE {table_name}"
         result = self.native_query(query)
         df = result.data_frame
-        result.data_frame = df.rename(columns={'COLUMN_NAME': 'column_name', 'DATA_TYPE': 'data_type'})
+        result.data_frame = df.rename(columns={'COLUMN_NAME': 'Field', 'DATA_TYPE': 'Type'})
         return result

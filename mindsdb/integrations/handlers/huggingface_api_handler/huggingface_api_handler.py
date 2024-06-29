@@ -108,7 +108,7 @@ class HuggingFaceInferenceAPIHandler(BaseMLEngine):
 
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         args = self.model_storage.json_get('args')
-        api_key = get_api_key('huggingface_api', args["using"], self.engine_storage, strict=False)
+        api_key = get_api_key('huggingface_api', args, self.engine_storage, strict=False)
 
         input_column = args['input_column']
         model_name = args['model_name']

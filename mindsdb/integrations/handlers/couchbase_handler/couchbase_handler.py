@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 import pandas as pd
+from urllib.parse import urlparse
 from couchbase.auth import PasswordAuthenticator
 from couchbase.cluster import Cluster
 from couchbase.exceptions import UnAmbiguousTimeoutException
@@ -60,13 +61,11 @@ class CouchbaseHandler(DatabaseHandler):
 
         options = ClusterOptions(auth)
 
-        if 'cloud.couchbase.com' in self.connection_data.get("host"):
+        host = self.connection_data.get("host")
+        domain = urlparse(host).hostname
+        if domain and domain.endswith(".couchbase.com"):
             options.apply_profile('wan_development')
-
-            endpoint = f"couchbases://{self.connection_data.get('host')}"
-        else:
-            endpoint = f"couchbase://{self.connection_data.get('host')}"
-
+        endpoint = f"couchbases://{host}"
         cluster = Cluster(
             endpoint,
             options,

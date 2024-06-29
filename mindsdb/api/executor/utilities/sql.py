@@ -52,7 +52,7 @@ def get_query_models(query: ASTNode, default_database: str = None) -> List[tuple
     return _get_query_tables(query, resolve_model_identifier, default_database)
 
 
-def query_df_with_type_infer_fallback(query_str: str, dataframes: dict):
+def query_df_with_type_infer_fallback(query_str: str, dataframes: dict, user_functions=None):
     ''' Duckdb need to infer column types if column.dtype == object. By default it take 1000 rows,
         but that may be not sufficient for some cases. This func try to run query multiple times
         increasing butch size for type infer
@@ -60,6 +60,7 @@ def query_df_with_type_infer_fallback(query_str: str, dataframes: dict):
         Args:
             query_str (str): query to execute
             dataframes (dict): dataframes
+            user_functions: functions controller which register new functions in connection
 
         Returns:
             pandas.DataFrame
@@ -70,6 +71,9 @@ def query_df_with_type_infer_fallback(query_str: str, dataframes: dict):
         locals()[name] = value
 
     con = duckdb.connect(database=':memory:')
+    if user_functions:
+        user_functions.register(con)
+
     for sample_size in [1000, 10000, 1000000]:
         try:
             con.execute(f'set global pandas_analyze_sample={sample_size};')
@@ -113,6 +117,11 @@ def query_df(df, query, session=None):
 
     json_columns = set()
 
+    if session is not None:
+        user_functions = session.function_controller.create_function_set()
+    else:
+        user_functions = None
+
     def adapt_query(node, is_table, **kwargs):
         if is_table:
             return
@@ -128,13 +137,16 @@ def query_df(df, query, session=None):
                 else:
                     cur_db = None
                 return Constant(cur_db)
-            if fnc_name == 'truncate':
+            elif fnc_name == 'truncate':
                 # replace mysql 'truncate' function to duckdb 'round'
                 node.op = 'round'
                 if len(node.args) == 1:
                     node.args.append(0)
-            if fnc_name == 'json_extract':
+            elif fnc_name == 'json_extract':
                 json_columns.add(node.args[0].parts[-1])
+            else:
+                if user_functions is not None:
+                    user_functions.check_function(node)
 
     query_traversal(query_ast, adapt_query)
 
@@ -169,7 +181,7 @@ def query_df(df, query, session=None):
             if 'CONNECTION_DATA' in df.columns:
                 df = df.astype({'CONNECTION_DATA': 'string'})
 
-    result_df, description = query_df_with_type_infer_fallback(query_str, {'df': df})
+    result_df, description = query_df_with_type_infer_fallback(query_str, {'df': df}, user_functions=user_functions)
     result_df = result_df.replace({np.nan: None})
 
     new_column_names = {}

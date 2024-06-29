@@ -192,10 +192,11 @@ class TestMerlion(BaseExecutorTest):
                 f"select status from mindsdb.predictors where name='{model_name}'"
             )
             if len(ret.data) > 0:
-                if ret.data[0][0] == 'complete':
+                data = ret.data.to_lists()
+                if data[0][0] == 'complete':
                     done = True
                     break
-                elif ret.data[0][0] == 'error':
+                elif data[0][0] == 'error':
                     break
             time.sleep(0.5)
         if not done:

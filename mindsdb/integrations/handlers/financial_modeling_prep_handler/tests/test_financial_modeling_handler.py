@@ -16,8 +16,6 @@ class FinancialModelingHandlerTest(unittest.TestCase):
         query = parse_sql("SELECT * FROM my_table.daily_chart_table WHERE symbol = 'AAPL'")
         result = self.handler.query(query)
         assert result.type is RESPONSE_TYPE.TABLE
-        #assert result.type is RESPONSE_TYPE.OK
-        # self.assertEqual(result, "call api")
 
     def test_1_select_limit_query(self):
         query = parse_sql("SELECT * FROM my_table.daily_chart_table WHERE symbol = 'AAPL' LIMIT 5")

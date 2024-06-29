@@ -74,10 +74,6 @@ class FinancialModelingHandler(APIHandler):
         # else:
         #     return pd.DataFrame() 
 
-        # if limitParam:
-        #     return {date: historical_data[date] for date in list(historical_data.keys())[:5]}
-        # # air table handler 
-
         if limitParam:
             return pd.DataFrame(historical).head(limit)
         

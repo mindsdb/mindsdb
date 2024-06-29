@@ -54,3 +54,6 @@ xgboost
 
 # Docs
 node_modules
+
+# Venv
+.venv/

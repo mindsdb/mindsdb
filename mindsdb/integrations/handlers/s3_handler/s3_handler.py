@@ -1,26 +1,17 @@
+import boto3
 from typing import Optional
 
-import pandas as pd
-import boto3
-import io
-import ast
-
-from mindsdb_sql import parse_sql
-from mindsdb.integrations.libs.base import DatabaseHandler
-
-from mindsdb_sql.parser.ast.base import ASTNode
-
 from mindsdb.utilities import log
-from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse,
-    HandlerResponse as Response,
-    RESPONSE_TYPE
-)
+
+from mindsdb.integrations.libs.api_handler import APIHandler
+from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
+
+from mindsdb.integrations.handlers.s3_handler.s3_tables import S3BucketsTable, S3ObjectsTable
 
 
 logger = log.getLogger(__name__)
 
-class S3Handler(DatabaseHandler):
+class S3Handler(APIHandler):
     """
     This handler handles connection and execution of the S3 statements.
     """
@@ -36,13 +27,14 @@ class S3Handler(DatabaseHandler):
             **kwargs: arbitrary keyword arguments.
         """
         super().__init__(name)
-        self.parser = parse_sql
-        self.dialect = 's3'
         self.connection_data = connection_data
         self.kwargs = kwargs
 
         self.connection = None
         self.is_connected = False
+
+        self._register_table("buckets", S3BucketsTable(self))
+        self._register_table("objects", S3ObjectsTable(self))
 
     def __del__(self):
         if self.is_connected is True:
@@ -100,108 +92,3 @@ class S3Handler(DatabaseHandler):
 
         return response
 
-    def native_query(self, query: str) -> StatusResponse:
-        """
-        Receive raw query and act upon it somehow.
-        Args:
-            query (str): query in native format
-        Returns:
-            HandlerResponse
-        """
-
-        need_to_close = self.is_connected is False
-
-        connection = self.connect()
-
-        try:
-            result = connection.select_object_content(
-                Bucket=self.connection_data['bucket'],
-                Key=self.connection_data['key'],
-                ExpressionType='SQL',
-                Expression=query,
-                InputSerialization=ast.literal_eval(self.connection_data['input_serialization']),
-                OutputSerialization={"CSV": {}}
-            )
-
-            records = []
-            for event in result['Payload']:
-                if 'Records' in event:
-                    records.append(event['Records']['Payload'])
-                elif 'Stats' in event:
-                    stats = event['Stats']['Details']
-
-            file_str = ''.join(r.decode('utf-8') for r in records)
-
-            df = pd.read_csv(io.StringIO(file_str))
-
-            response = Response(
-                RESPONSE_TYPE.TABLE,
-                data_frame=df
-            )
-        except Exception as e:
-            logger.error(f'Error running query: {query} on {self.connection_data["key"]} in {self.connection_data["bucket"]}!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
-            )
-
-        if need_to_close is True:
-            self.disconnect()
-
-        return response
-
-    def query(self, query: ASTNode) -> StatusResponse:
-        """
-        Receive query as AST (abstract syntax tree) and act upon it somehow.
-        Args:
-            query (ASTNode): sql query represented as AST. May be any kind
-                of query: SELECT, INTSERT, DELETE, etc
-        Returns:
-            HandlerResponse
-        """
-
-        return self.native_query(query.to_string())
-
-    def get_tables(self) -> StatusResponse:
-        """
-        Return list of entities that will be accessible as tables.
-        Returns:
-            HandlerResponse
-        """
-
-        connection = self.connect()
-        objects = [obj['Key'] for obj in connection.list_objects(Bucket=self.connection_data["bucket"])['Contents']]
-
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=pd.DataFrame(
-                objects,
-                columns=['table_name']
-            )
-        )
-
-        return response
-
-    def get_columns(self) -> StatusResponse:
-        """
-        Returns a list of entity columns.
-        Args:
-            table_name (str): name of one of tables returned by self.get_tables()
-        Returns:
-            HandlerResponse
-        """
-
-        query = "SELECT * FROM S3Object LIMIT 5"
-        result = self.native_query(query)
-
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=pd.DataFrame(
-                {
-                    'column_name': result.data_frame.columns,
-                    'data_type': result.data_frame.dtypes
-                }
-            )
-        )
-
-        return response

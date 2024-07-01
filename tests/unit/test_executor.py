@@ -307,6 +307,17 @@ class Test(BaseExecutorMockPredictor):
         assert ret_df.shape[0] == 1
         assert ret_df.t.min() == dt.datetime(2020, 1, 2)
 
+        # ----- empty data ------
+
+        ret = self.execute('''
+            select p.* from pg.tasks t
+            join mindsdb.task_model p
+            where t.t > LATEST and t.g = 'wrong'
+        ''')
+
+        ret_df = self.ret_to_df(ret)
+        assert ret_df.shape[0] == 0
+
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_ts_predictor_no_group(self, mock_handler):
         # set integration data

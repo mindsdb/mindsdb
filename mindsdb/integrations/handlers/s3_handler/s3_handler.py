@@ -51,15 +51,18 @@ class S3Handler(APIHandler):
         if self.is_connected is True:
             return self.connection
 
-        self.connection = boto3.client(
-            's3',
-            aws_access_key_id=self.connection_data['aws_access_key_id'],
-            aws_secret_access_key=self.connection_data['aws_secret_access_key'],
-            region_name=self.connection_data['region_name']
-        )
-        self.is_connected = True
-
-        return self.connection
+        try:
+            self.connection = boto3.client(
+                's3',
+                aws_access_key_id=self.connection_data['aws_access_key_id'],
+                aws_secret_access_key=self.connection_data['aws_secret_access_key'],
+                region_name=self.connection_data['region_name']
+            )
+            self.is_connected = True
+            return self.connection
+        except KeyError as e:
+            logger.error(f'Error connecting to AWS, {e}!')
+            raise
 
     def disconnect(self):
         """ Close any existing connections

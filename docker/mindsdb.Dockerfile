@@ -34,14 +34,14 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
 # Copy the requirements files, setup.py etc from above
 COPY --from=deps /mindsdb .
 # Install all requirements for mindsdb and all the default handlers
-RUN --mount=type=cache,target=/root/.cache/pip pip install "."
+RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked pip install "."
 # Install extras on top of the bare mindsdb
-RUN --mount=type=cache,target=/root/.cache/pip if [ -n "$EXTRAS" ]; then pip install $EXTRAS; fi
+RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked if [ -n "$EXTRAS" ]; then pip install $EXTRAS; fi
 
 # Copy all of the mindsdb code over finally
 COPY . .
 # Install the "mindsdb" package now that we have the code for it
-RUN --mount=type=cache,target=/root/.cache/pip pip install "."
+RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked pip install "."
 
 
 
@@ -58,7 +58,7 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
     apt update && apt-get upgrade -y \
     && apt-get install -y libmagic1 libpq5 freetds-bin curl
-RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements/requirements-dev.txt
+RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked pip install -r requirements/requirements-dev.txt
 
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 

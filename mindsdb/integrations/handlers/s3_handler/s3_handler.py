@@ -1,5 +1,6 @@
 import boto3
 from typing import Optional
+from botocore.exceptions import ClientError
 
 from mindsdb.utilities import log
 
@@ -79,16 +80,17 @@ class S3Handler(APIHandler):
 
         try:
             connection = self.connect()
-            connection.head_object(Bucket=self.connection_data['bucket'], Key=self.connection_data['key'])
+            connection.list_buckets()
             response.success = True
-        except Exception as e:
-            logger.error(f'Error connecting to AWS with the given credentials, {e}!')
+        except ClientError as e:
+            logger.error(f'Error connecting to AWS, {e}!')
             response.error_message = str(e)
-        finally:
-            if response.success is True and need_to_close:
-                self.disconnect()
-            if response.success is False and self.is_connected is True:
-                self.is_connected = False
+
+        if response.success and need_to_close:
+            self.disconnect()
+
+        elif not response.success and self.is_connected:
+            self.is_connected = False
 
         return response
 

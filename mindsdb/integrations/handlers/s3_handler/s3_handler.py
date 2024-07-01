@@ -1,5 +1,6 @@
 import boto3
-from typing import Optional
+from botocore.client import BaseClient
+from typing import Text, Dict, Optional
 from botocore.exceptions import ClientError
 
 from mindsdb.utilities import log
@@ -19,13 +20,14 @@ class S3Handler(APIHandler):
 
     name = 's3'
 
-    def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
+    def __init__(self, name: Text, connection_data: Optional[Dict] = None, **kwargs: Dict) -> None:
         """
-        Initialize the handler.
+        Initialize the handler and register API tables.
+
         Args:
-            name (str): name of particular handler instance
-            connection_data (dict): parameters for connecting to the database
-            **kwargs: arbitrary keyword arguments.
+            name (Text): The name of the handler instance.
+            connection_data (Dict): The connection data required to connect to the AWS (S3) account.
+            kwargs: Arbitrary keyword arguments.
         """
         super().__init__(name)
         self.connection_data = connection_data
@@ -41,13 +43,16 @@ class S3Handler(APIHandler):
         if self.is_connected is True:
             self.disconnect()
 
-    def connect(self) -> StatusResponse:
+    def connect(self) -> BaseClient:
         """
-        Set up the connection required by the handler.
-        Returns:
-            HandlerStatusResponse
-        """
+        Establishes a connection to the AWS (S3) account.
 
+        Raises:
+            KeyError: If the required connection parameters are not provided.
+
+        Returns:
+            botocore.client.BaseClient: A client object to the AWS (S3) account.
+        """
         if self.is_connected is True:
             return self.connection
 
@@ -64,20 +69,20 @@ class S3Handler(APIHandler):
             logger.error(f'Error connecting to AWS, {e}!')
             raise
 
-    def disconnect(self):
-        """ Close any existing connections
-        Should switch self.is_connected.
+    def disconnect(self) -> None:
+        """
+        Closes the connection to the AWS (S3) account if it's currently open.
         """
         self.is_connected = False
         return
 
     def check_connection(self) -> StatusResponse:
         """
-        Check connection to the handler.
-        Returns:
-            HandlerStatusResponse
-        """
+        Checks the status of the connection to the AWS (S3) account.
 
+        Returns:
+            StatusResponse: An object containing the success status and an error message if an error occurs.
+        """
         response = StatusResponse(False)
         need_to_close = self.is_connected is False
 

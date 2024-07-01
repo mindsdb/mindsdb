@@ -1,5 +1,6 @@
 from typing import List
 import copy
+import numpy as np
 import pandas as pd
 
 from mindsdb.api.executor.exceptions import WrongArgumentError
@@ -241,6 +242,7 @@ class ResultSet:
             for name, dtype in df.dtypes.to_dict().items():
                 if pd.api.types.is_datetime64_any_dtype(dtype):
                     df[name] = df[name].dt.strftime("%Y-%m-%d %H:%M:%S.%f")
+            df = df.replace({np.nan: None})
             return df.to_records(index=False).tolist()
 
         # slower but keep timestamp type

@@ -28,9 +28,6 @@ class FinancialModelingHandler(APIHandler):
 
         self.api_key = None
         self.connection_data = connection_data
-        #args = kwargs.get('connection_data', {})
-        # if 'api_key' in args:
-        #     self.api_key = args['api_key']
         
         self.api_key = connection_data['api_key']
         self.client = None
@@ -41,11 +38,6 @@ class FinancialModelingHandler(APIHandler):
 
     def connect(self): 
         self.is_connected = True
-
-    # def native_query(self, query: str = None) -> Response:
-    #     ast = parse_sql(query, dialect='mindsdb')
-    #     return self.query(ast)
-    
 
     def get_daily_chart(self, params: Dict = None) -> pd.DataFrame:  
         base_url = "https://financialmodelingprep.com/api/v3/historical-price-full/"
@@ -69,10 +61,6 @@ class FinancialModelingHandler(APIHandler):
         historical_data = response.json()
         historical = historical_data.get("historical")
         
-        # if historical is not None:
-        #     return pd.DataFrame(historical)
-        # else:
-        #     return pd.DataFrame() 
 
         if limitParam:
             return pd.DataFrame(historical).head(limit)
@@ -84,7 +72,10 @@ class FinancialModelingHandler(APIHandler):
             )
         )
 
-        return pd.DataFrame(historical)
+        if historical:
+            return pd.DataFrame(historical)
+        else:
+            return pd.DataFrame() 
 
 
     def call_financial_modeling_api(self, endpoint_name: str = None, params: Dict = None) -> pd.DataFrame:

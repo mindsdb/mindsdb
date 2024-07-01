@@ -116,12 +116,15 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
 
         params = step.params or {}
 
-        for table in data.get_tables()[:1]:  # add  __mindsdb_row_id only for first table
+        # adding __mindsdb_row_id, use first table if exists
+        if len(data.find_columns('__mindsdb_row_id')) == 0:
+            table = data.get_tables()[0] if len(data.get_tables()) > 0 else None
+
             row_id_col = Column(
                 name='__mindsdb_row_id',
-                database=table['database'],
-                table_name=table['table_name'],
-                table_alias=table['table_alias']
+                database=table['database'] if table is not None else None,
+                table_name=table['table_name'] if table is not None else None,
+                table_alias=table['table_alias'] if table is not None else None
             )
 
             row_id = self.context.get('row_id')

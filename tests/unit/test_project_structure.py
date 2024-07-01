@@ -955,6 +955,43 @@ class TestProjectStructure(BaseExecutorDummyML):
 
         self.run_sql('delete from tbl1 where a=1', database='dummy_data')
 
+    def test_partition(self):
+        df = pd.DataFrame([
+            {'a': 1, 'b': dt.datetime(2020, 1, 1)},
+            {'a': 2, 'b': dt.datetime(2020, 1, 2)},
+            {'a': 3, 'b': dt.datetime(2020, 1, 3)},
+            {'a': 4, 'b': dt.datetime(2020, 1, 5)},
+            {'a': 5, 'b': dt.datetime(2020, 1, 6)},
+            {'a': 6, 'b': dt.datetime(2020, 1, 7)},
+        ])
+        self.save_file('tasks', df)
+
+        # -- create model --
+        self.run_sql(
+            '''
+                CREATE model mindsdb.task_model
+                from files (select * from tasks)
+                PREDICT a
+                using engine='dummy_ml',
+                join_learn_process=true
+            '''
+        )
+
+        # use model
+        ret = self.run_sql('''
+             SELECT *
+               FROM files.tasks as t
+               JOIN mindsdb.task_model as m
+               using partition_size=2
+        ''')
+
+        # the same rows in output
+        assert len(ret) == 6
+        assert set(df['a']) == set(ret['a'])
+
+        # all predicted
+        assert list(ret.predicted.unique()) == [42]
+
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_select_columns(self, data_handler):
         df = pd.DataFrame([[1, 'x'], [2, 'y']], columns=['aa', 'bb'])

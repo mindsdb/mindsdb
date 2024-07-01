@@ -142,6 +142,7 @@ class MySQLHandler(DatabaseHandler):
         """
 
         need_to_close = not self.is_connected
+        connection = None
         try:
             connection = self.connect()
             with connection.cursor(dictionary=True, buffered=True) as cur:
@@ -163,7 +164,7 @@ class MySQLHandler(DatabaseHandler):
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)
             )
-            if connection.is_connected():
+            if connection is not None and connection.is_connected():
                 connection.rollback()
 
         if need_to_close:

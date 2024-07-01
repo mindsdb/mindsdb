@@ -305,7 +305,17 @@ class VectorStoreHandler(BaseHandler):
         df_insert = df[~df[id_col].isin(existed_ids)]
 
         if not df_update.empty:
-            self.update(table_name, df_update, [id_col])
+            try:
+                self.update(table_name, df_update, [id_col])
+            except NotImplementedError:
+                # not implemented? do it with delete and insert
+                conditions = [FilterCondition(
+                    column=id_col,
+                    op=FilterOperator.IN,
+                    value=list(df[id_col])
+                )]
+                self.delete(table_name, conditions)
+                self.insert(table_name, df_update)
         if not df_insert.empty:
             self.insert(table_name, df_insert)
 

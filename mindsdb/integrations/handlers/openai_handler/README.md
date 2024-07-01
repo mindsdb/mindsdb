@@ -11,7 +11,7 @@ The integration allows for the deployment of OpenAI models within MindsDB, provi
 Before proceeding, ensure the following prerequisites are met:
 
 1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
-2. To use OpenAI within MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+2. To use OpenAI within MindsDB, install the required dependencies following [this instruction](https://docs.mindsdb.com/setup/self-hosted/docker#install-dependencies).
 3. Obtain the OpenAI API key required to deploy and use OpenAI models within MindsDB. Follow the [instructions for obtaining the API key](https://help.openai.com/en/articles/4936850-where-do-i-find-my-secret-api-key).
 
 ## Setup
@@ -158,7 +158,7 @@ On execution, we get:
 
 ## Next Steps
 
-Follow [this tutorial on sentiment analysis](/use-cases/data_enrichment/sentiment-analysis-inside-mysql-with-openai) and [this tutorial on finetuning OpenAI models](/use-cases/automated_finetuning/openai) to see more use case examples.
+Follow [this tutorial on sentiment analysis](https://docs.mindsdb.com/use-cases/data_enrichment/sentiment-analysis-inside-mysql-with-openai) and [this tutorial on finetuning OpenAI models](https://docs.mindsdb.com/use-cases/automated_finetuning/openai) to see more use case examples.
 
 ## Troubleshooting Guide
 

@@ -2,7 +2,6 @@
 
 This handler integrates with the [Financial Modeling Prep API](https://site.financialmodelingprep.com/developer/docs) to allow users to use ML for financial analysis and predictions.
 
-# source mindsdb/bin/activate
 ### Connect to the Financial Modeling API
 We start by creating a database to connect to the Financial Modeling API. 
 Retrieve an api key from: (https://site.financialmodelingprep.com/developer/docs)

@@ -273,6 +273,8 @@ class AgentCompletions(Resource):
             )
 
         # Add OpenAI API key to agent params if not already present.
+        if not existing_agent.params:
+            existing_agent.params = {}
         existing_agent.params['openai_api_key'] = existing_agent.params.get('openai_api_key', os.getenv('OPENAI_API_KEY'))
 
         # Model needs to exist.

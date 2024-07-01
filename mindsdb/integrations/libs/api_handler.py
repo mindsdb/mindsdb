@@ -2,6 +2,7 @@ from typing import Any, List
 import ast as py_ast
 
 import pandas as pd
+from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import ASTNode, Select, Insert, Update, Delete, Star
 from mindsdb_sql.parser.ast.select.identifier import Identifier
 
@@ -313,6 +314,19 @@ class APIHandler(BaseHandler):
             return Response(RESPONSE_TYPE.TABLE, result)
         else:
             raise NotImplementedError
+        
+    def native_query(self, query: str) -> Response:
+        """
+        Parses the query and executes it.
+
+        Args:
+            query (str): The SQL query to be executed.
+
+        Returns:
+            Response: A response object containing the result of the query or an error message.
+        """
+        ast = parse_sql(query, dialect="mindsdb")
+        return self.query(ast)
 
     def get_columns(self, table_name: str) -> Response:
         """

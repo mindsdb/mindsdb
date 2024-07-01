@@ -22,7 +22,7 @@ class S3Handler(APIHandler):
 
     def __init__(self, name: Text, connection_data: Optional[Dict] = None, **kwargs: Dict) -> None:
         """
-        Initialize the handler and register API tables.
+        Initializes the handler and registers API tables.
 
         Args:
             name (Text): The name of the handler instance.
@@ -101,4 +101,3 @@ class S3Handler(APIHandler):
             self.is_connected = False
 
         return response
-

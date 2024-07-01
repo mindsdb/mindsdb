@@ -1,5 +1,5 @@
 from typing import List, Optional
-from pydantic import field_validator, BaseModel
+from pydantic import BaseModel, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
 class LlamaIndexConfig(BaseSettings):
@@ -41,18 +41,25 @@ class LlamaIndexModel(BaseModel):
     assistant_column: Optional[str] = None
 
     @field_validator('reader')
+    @classmethod
     def validate_reader(cls, value):
         if value not in llama_index_config.SUPPORTED_READERS:
             raise ValueError(f"Reader {value} is not supported.")
+        
+        return value
 
     @field_validator('index_class')
+    @classmethod
     def validate_index_class(cls, value):
         if value not in llama_index_config.SUPPORTED_INDEXES:
             raise ValueError(f"Index class {value} is not supported.")
+        
+        return value
     
-    @field_validator('mode')
-    def validate_mode_class(cls, value, values):
-        if value == "conversational" and all([values.get('user_column'), values.get('assistant_column')]):
+    @model_validator(mode='after')
+    def validate_mode(self):
+        if self.mode == "conversational" and not all([self.user_column, self.assistant_column]):
             raise ValueError(f"Conversational mode requires user_column and assistant_column parameter")
+        
+        return self
 
-   

@@ -22,7 +22,6 @@ class SQLAgent:
     ):
         self._database = database
         self._command_executor = command_executor
-        self._integration_controller = command_executor.session.integration_controller
 
         self._sample_rows_in_table_info = int(sample_rows_in_table_info)
 
@@ -110,11 +109,14 @@ class SQLAgent:
         return final_str
 
     def _get_single_table_info(self, table_str: str) -> str:
-        controller = self._integration_controller
         integration, table_name = table_str.split('.')
-        cols_df = controller.get_data_handler(integration).get_columns(table_name).data_frame
-        fields = cols_df['Field'].to_list()
-        dtypes = cols_df['Type'].to_list()
+
+        dn = self._command_executor.session.datahub.get(integration)
+
+        fields, dtypes = [], []
+        for column in dn.get_table_columns(table_name):
+            fields.append(column['name'])
+            dtypes.append(column.get('type', ''))
 
         info = f'Table named `{table_name}`\n'
         info += f"\n/* Sample with first {self._sample_rows_in_table_info} rows from table `{table_str}`:\n"

@@ -48,7 +48,7 @@ USING
   index_class = 'VectorStoreIndex',
   reader = 'SimpleWebPageReader',
   source_url_link = 'https://mindsdb.com/about',
-  input_column = 'question',
+  input_column = 'question';
 ```
 
 Query the model to get answer:

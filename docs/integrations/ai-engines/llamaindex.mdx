@@ -30,13 +30,14 @@ USING
 Create a model using `llama_index` as an engine and  OpenAI as a model provider.
 
 ```sql
-CREATE MODEL qa_model
+CREATE MODEL chatbot_model
 PREDICT answer
 USING
   engine = 'llama_index',  -- engine name as created via CREATE ML_ENGINE
-  reader = 'SimpleWebPageReader', -- optional: Used for reading pages from web
-  source_url_link = 'https://mindsdb.com/about',
-  input_column -- defines prompt to the model
+  input_column = 'question',
+  mode = 'conversational', -- optional
+  user_column = 'question', -- optional: used only for conversational mode
+  assistant_column = 'answer'; -- optional: used only for conversational mode
 ```
 
 
@@ -51,7 +52,7 @@ USING
   engine = 'llama_index', 
   reader = 'SimpleWebPageReader',
   source_url_link = 'https://mindsdb.com/about',
-  input_column = 'question',
+  input_column = 'question';
 ```
 
 Query the model to get answer:

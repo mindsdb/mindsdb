@@ -1,9 +1,19 @@
 import os
 import sys
 import subprocess
+from typing import Text, List
 
 
-def install_dependencies(dependencies):
+def install_dependencies(dependencies: List[Text]) -> dict:
+    """
+    Installs the dependencies for a handler by calling the `pip install` command via subprocess.
+
+    Args:
+        dependencies (List[Text]): List of dependencies for the handler.
+
+    Returns:
+        dict: A dictionary containing the success status and an error message if an error occurs.
+    """
     outs = b''
     errs = b''
     result = {
@@ -11,8 +21,10 @@ def install_dependencies(dependencies):
         'error_message': None
     }
 
+    # split the dependencies by parsing the contents of the requirements.txt file
     split_dependencies = parse_dependencies(dependencies)
 
+    # run the pip install command
     try:
         sp = subprocess.Popen(
             [sys.executable, '-m', 'pip', 'install', *split_dependencies],
@@ -24,6 +36,7 @@ def install_dependencies(dependencies):
     except Exception as e:
         result['error_message'] = str(e)
 
+    # return the result of the installation
     if code != 0:
         output = ''
         if isinstance(outs, bytes) and len(outs) > 0:
@@ -39,7 +52,20 @@ def install_dependencies(dependencies):
     return result
 
 
-def parse_dependencies(dependencies):
+def parse_dependencies(dependencies: List[Text]) -> List[Text]:
+    """
+    Recursively parses dependencies from a list of dependencies given in a requirements.txt file for a handler.
+    This function will perform the following:
+    1. Ignore standalone comments.
+    2. Remove inline comments.
+    3. Check if the dependency is a path to a requirements file and recursively parse the dependencies from that file.
+
+    Args:
+        dependencies (List[Text]): List of dependencies for a handler as read from the requirements.txt file.
+
+    Returns:
+        List[Text]: List of parsed dependencies for the handler.
+    """
     # get the path to this script
     script_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -77,7 +103,16 @@ def parse_dependencies(dependencies):
     return split_dependencies
 
 
-def read_dependencies(path):
+def read_dependencies(path: Text) -> List[Text]:
+    """
+    Reads the dependencies for a handler from the relevant requirements.txt file and returns them as a list.
+
+    Args:
+        path (Text): Path to the requirements.txt file for the handler.
+
+    Returns:
+        List[Text]: List of dependencies for the handler.
+    """
     dependencies = []
     # read the dependencies from the file
     with open(str(path), 'rt') as f:

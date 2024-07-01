@@ -109,11 +109,6 @@ class SQLAgent:
         final_str = "\n\n".join(tables)
         return final_str
 
-    def get_table_columns(self, table_name: str) -> List[str]:
-        controller = self._integration_controller
-        cols_df = controller.get_data_handler(self._database).get_columns(table_name).data_frame
-        return cols_df['Field'].to_list()
-
     def _get_single_table_info(self, table_str: str) -> str:
         controller = self._integration_controller
         integration, table_name = table_str.split('.')

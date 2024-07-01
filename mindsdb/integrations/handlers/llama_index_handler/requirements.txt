@@ -1,5 +1,5 @@
 llama-index==0.10.3
-llama-hub==0.0.67
 openai == 1.6.1
+pydantic-settings >= 2.1.0
 llama-index-readers-web
 llama-index-embeddings-openai

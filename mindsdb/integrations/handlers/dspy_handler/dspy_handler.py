@@ -116,12 +116,14 @@ class DSPyHandler(BaseMLEngine):
         llm = dspy.OpenAI(model=model, api_key=api_key)
 
         df = df.reset_index(drop=True)
+        if len(self.llm_data_controller.list_all_llm_data(1) > 50):
+            for i in range(15):
+                self.llm_data_controller.delete_llm_data(1)
 
-        # self.llm_data_controller.delete_llm_data(0)
         cold_start_df = pd.DataFrame(dill.loads(self.model_storage.file_get("cold_start_df")))  # fixed in "training"  # noqa
 
         # gets larger as agent is used more
-        self_improvement_df = pd.DataFrame(self.llm_data_controller.list_all_llm_data(2))
+        self_improvement_df = pd.DataFrame(self.llm_data_controller.list_all_llm_data(1))
         self_improvement_df = self_improvement_df.rename(columns={
             'output': args['target'],
             'input': args['user_column']
@@ -197,7 +199,7 @@ class DSPyHandler(BaseMLEngine):
             answer = self.generate_dspy_response(question, chain, llm)
             responses.append({'answer': answer, 'question': question})  # TODO: check that columns are right here
             # TODO: check this only adds new incoming rows
-            self.llm_data_controller.add_llm_data(question, answer, 2)  # stores new traces for use in new calls
+            self.llm_data_controller.add_llm_data(question, answer, 1)  # stores new traces for use in new calls
 
         # Set up the evaluator, which can be used multiple times.
         # TODO: use this in the EVALUATE command

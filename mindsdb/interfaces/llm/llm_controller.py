@@ -30,7 +30,7 @@ class LLMDataController:
 
     def delete_llm_data(self, llm_data_id: int):
         '''
-        Deletes LLM data from the database.
+        Deletes LLM an entry of data from the database with a specific id.
         Parameters:
             llm_data_id (int): The ID of the LLM data to delete.
         '''
@@ -60,4 +60,4 @@ class LLMDataController:
         Returns:
             LLMData: The LLMData object, or None if not found.
         '''
-        return db.session.query(db.LLMData).filter_by(model_id=llm_data_id).all()
+        return db.session.query(db.LLMData).filter_by(model_id=llm_data_id).first()

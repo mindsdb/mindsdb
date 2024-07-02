@@ -1,3 +1,4 @@
+import pandas as pd
 from typing import List
 from mindsdb.integrations.libs.api_handler import APIResource
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, SortColumn
@@ -20,7 +21,11 @@ class S3BucketsTable(APIResource):
         Returns:
             List: The list of S3 buckets based on the specified conditions.
         """
-        pass
+        connection = self.handler.connect()
+        buckets = connection.list_buckets()
+
+        return pd.DataFrame(buckets['Buckets'] if 'Buckets' in buckets else [])
+
 
     def get_columns(self) -> List:
         """
@@ -29,7 +34,7 @@ class S3BucketsTable(APIResource):
         Returns:
             List: The list of columns for the S3 buckets table.        
         """
-        pass
+        return ['Name', 'CreationDate']
 
 
 class S3ObjectsTable(APIResource):

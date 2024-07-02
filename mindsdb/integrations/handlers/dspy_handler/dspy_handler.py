@@ -116,7 +116,7 @@ class DSPyHandler(BaseMLEngine):
         llm = dspy.OpenAI(model=model, api_key=api_key)
 
         df = df.reset_index(drop=True)
-        if len(self.llm_data_controller.list_all_llm_data(1) > 50):
+        if len(self.llm_data_controller.list_all_llm_data(1)) > 100:
             for i in range(15):
                 self.llm_data_controller.delete_llm_data(1)
 

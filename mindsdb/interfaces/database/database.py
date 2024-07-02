@@ -81,7 +81,7 @@ class DatabaseController:
     def get_dict(self, filter_type: Optional[str] = None):
         return OrderedDict(
             (
-                x['name'],
+                x['name'].lower(),
                 {
                     'type': x['type'],
                     'engine': x['engine'],

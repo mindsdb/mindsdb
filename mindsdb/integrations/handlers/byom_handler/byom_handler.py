@@ -568,7 +568,7 @@ class ModelWrapperSafe:
             modules.append('pandas >=2.0.0, <2.1.0')
 
         # for dataframe serialization
-        modules.append('pyarrow==11.0.0')
+        modules.append('pyarrow==14.0.1')
         return modules
 
     def install_modules(self, modules, pip_cmd):

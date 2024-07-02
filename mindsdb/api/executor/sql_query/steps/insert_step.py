@@ -31,7 +31,7 @@ class InsertToTableCall(BaseStepCall):
                 is_replace = True
 
         if step.dataframe is not None:
-            data = step.dataframe.result_data
+            data = self.steps_data[step.dataframe.result.step_num]
         elif step.query is not None:
             data = ResultSet()
             for col in step.query.columns:

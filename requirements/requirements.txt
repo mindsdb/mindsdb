@@ -37,11 +37,11 @@ protobuf==3.20.3
 hierarchicalforecast~=0.4.0
 google-auth-oauthlib
 msal
-langchain>=0.1.9
-langchain-core>=0.1.28
-langchain-community
-langchain-openai
-langchain-text_splitters
+langchain==0.1.11
+langchain-core==0.1.46
+langchain-community==0.0.27
+langchain-openai==0.1.6
+langchain-text_splitters==0.0.1
 langfuse==2.35.0
 lark
 prometheus-client==0.20.0

@@ -127,6 +127,7 @@ exclude =
   mindsdb/integrations/handlers/rockset_handler/*
   mindsdb/integrations/handlers/solr_handler/*
   mindsdb/integrations/handlers/shopify_handler/*
+  mindsdb/integrations/handlers/magento_handler/*
   mindsdb/integrations/handlers/anthropic_handler/*
   mindsdb/integrations/handlers/tpot_handler/*
   mindsdb/integrations/handlers/derby_handler/*

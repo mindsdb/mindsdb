@@ -175,7 +175,9 @@ def filter_dataframe(df: pd.DataFrame, conditions: list):
     # assumes that list was got from extract_comparison_conditions
     where_query = None
     for op, arg1, arg2 in conditions:
-
+        
+        if isinstance(arg2, (tuple, list)):
+                arg2 = ast.Tuple(arg2)
         item = ast.BinaryOperation(op=op, args=[ast.Identifier(arg1), ast.Constant(arg2)])
         if where_query is None:
             where_query = item

@@ -18,6 +18,7 @@ class DatabaseController:
 
     def delete(self, name: str):
         databases = self.get_dict()
+        name = name.lower()
         if name not in databases:
             raise EntityNotExistsError('Database does not exists', name)
         db_type = databases[name]['type']

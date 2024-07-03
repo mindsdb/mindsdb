@@ -44,6 +44,7 @@ class IntegrationDataNode(DataNode):
             result_dict = response.data_frame.to_dict(orient='records')
             result = []
             for row in result_dict:
+
                 result.append(TablesRow.from_dict(row))
             return result
         else:
@@ -56,17 +57,35 @@ class IntegrationDataNode(DataNode):
         response = self.integration_handler.get_columns(tableName)
         if response.type == RESPONSE_TYPE.TABLE:
             df = response.data_frame
+            # case independent
+            columns = [str(c).lower() for c in df.columns]
+
             col_name = None
             # looking for specific column names
-            for col in ('Field', 'column_name', 'column'):
-                if col in df.columns:
-                    col_name = col
+            for col in ('field', 'column_name', 'column', 'name'):
+                if col in columns:
+                    col_name = columns.index(col)
                     break
             # if not found - pick first one
             if col_name is None:
-                col_name = df.columns[0]
+                col_name = 0
 
-            return list(df[col_name])
+            names = df[df.columns[col_name]]
+
+            # type
+            if 'type' in columns:
+                types = df[df.columns[columns.index('type')]]
+            else:
+                types = [None] * len(columns)
+
+            ret = []
+            for i, name in enumerate(names):
+                ret.append({
+                    'name': name,
+                    'type': types[i]
+                })
+
+            return ret
 
         return []
 

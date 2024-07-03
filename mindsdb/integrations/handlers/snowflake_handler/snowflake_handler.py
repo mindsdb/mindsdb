@@ -179,7 +179,7 @@ class SnowflakeHandler(DatabaseHandler):
             SELECT TABLE_NAME, TABLE_SCHEMA, TABLE_TYPE
             FROM INFORMATION_SCHEMA.TABLES
             WHERE TABLE_TYPE IN ('BASE TABLE', 'VIEW')
-            AND TABLE_SCHEMA <> 'INFORMATION_SCHEMA'
+              AND TABLE_SCHEMA = current_schema()
         """
         return self.native_query(query)
 
@@ -202,7 +202,8 @@ class SnowflakeHandler(DatabaseHandler):
         query = f"""
             SELECT COLUMN_NAME AS FIELD, DATA_TYPE AS TYPE
             FROM INFORMATION_SCHEMA.COLUMNS
-            WHERE TABLE_NAME = '{table_name}';
+            WHERE TABLE_NAME = '{table_name}'
+              AND TABLE_SCHEMA = current_schema()
         """
         result = self.native_query(query)
         result.data_frame = result.data_frame.rename(columns={'FIELD': 'Field', 'TYPE': 'Type'})

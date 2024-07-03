@@ -1,3 +1,4 @@
+import os
 from typing import Optional
 
 import pandas as pd
@@ -85,6 +86,8 @@ class SQLiteHandler(DatabaseHandler):
         need_to_close = self.is_connected is False
 
         try:
+            if not os.path.isfile(self.connection_data['db_file']):
+                raise FileNotFoundError(f"File '{self.connection_data['db_file']}' not found. Use ':memory:' to create an in-memory database if you don't have a file.")
             self.connect()
             response.success = True
         except Exception as e:

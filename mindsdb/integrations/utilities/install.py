@@ -20,12 +20,13 @@ def install_dependencies(dependencies: List[Text]) -> dict:
         'success': False,
         'error_message': None
     }
+    code = None
 
-    # split the dependencies by parsing the contents of the requirements.txt file
-    split_dependencies = parse_dependencies(dependencies)
-
-    # run the pip install command
     try:
+        # split the dependencies by parsing the contents of the requirements.txt file
+        split_dependencies = parse_dependencies(dependencies)
+
+        # run the pip install command
         sp = subprocess.Popen(
             [sys.executable, '-m', 'pip', 'install', *split_dependencies],
             stdout=subprocess.PIPE,

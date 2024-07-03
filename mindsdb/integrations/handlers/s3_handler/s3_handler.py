@@ -8,7 +8,7 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 
-from mindsdb.integrations.handlers.s3_handler.s3_tables import S3BucketsTable, S3ObjectsTable
+from mindsdb.integrations.handlers.s3_handler.s3_tables import S3BucketsTable, S3ObjectsTable, S3ObjectContentsTable
 
 
 logger = log.getLogger(__name__)
@@ -38,6 +38,7 @@ class S3Handler(APIHandler):
 
         self._register_table("buckets", S3BucketsTable(self))
         self._register_table("objects", S3ObjectsTable(self))
+        self._register_table("object_contents", S3ObjectContentsTable(self))
 
     def __del__(self):
         if self.is_connected is True:

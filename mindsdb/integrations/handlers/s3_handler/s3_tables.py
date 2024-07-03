@@ -1,7 +1,7 @@
 import pandas as pd
 from typing import List
 from mindsdb.integrations.libs.api_handler import APIResource
-from mindsdb.integrations.utilities.sql_utils import FilterCondition, SortColumn
+from mindsdb.integrations.utilities.sql_utils import FilterOperator, FilterCondition, SortColumn
 
 
 class S3BucketsTable(APIResource):
@@ -54,7 +54,33 @@ class S3ObjectsTable(APIResource):
         Returns:
             List: The list of S3 objects based on the specified conditions.
         """
-        pass
+        connection = self.handler.connect()
+
+        # Apply the WHERE clause.
+        # Extract parameters that are supported by the list_objects_v2 method.
+        if not conditions:
+            raise ValueError('A Bucket name should be provided in the WHERE clause.')
+        else:
+            filters = {}
+            for condition in conditions:
+                if condition.column == 'Bucket':
+                    if condition.op != FilterOperator.EQUAL:
+                        raise ValueError("Only the '=' operator is supported for the Bucket column.")
+                    
+                    filters['Bucket'] = condition.value
+                    condition.applied = True
+                    
+        # Apply the LIMIT clause.
+        if limit:
+            filters['MaxKeys'] = limit
+
+        objects = connection.list_objects_v2(**filters)
+
+        # Convert the data to a DataFrame and add the Bucket column.
+        buckets_df = pd.DataFrame(objects['Contents'] if 'Contents' in objects else [])
+        buckets_df['Bucket'] = filters['Bucket']
+
+        return pd.DataFrame(objects['Contents'] if 'Contents' in objects else [])
 
     def get_columns(self) -> List:
         """
@@ -63,4 +89,4 @@ class S3ObjectsTable(APIResource):
         Returns:
             List: The list of columns for the S3 objects table.
         """
-        pass
+        return ['Key', 'LastModified', 'ETag', 'Size', 'StorageClass', 'Bucket']

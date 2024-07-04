@@ -50,6 +50,11 @@ class TablesRow:
 
         del_keys = []
         data = {k.upper(): v for k, v in data.items()}
+
+        # table is different column
+        if 'TABLE_NAME' not in data and 'NAME' in data:
+            data['TABLE_NAME'] = data['NAME']
+
         for key in data:
             if key not in TablesRow.__dataclass_fields__:
                 del_keys.append(key)

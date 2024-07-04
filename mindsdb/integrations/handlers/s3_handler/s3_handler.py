@@ -8,6 +8,7 @@ import ast
 
 from mindsdb.integrations.libs.base import DatabaseHandler
 
+from mindsdb_sql.parser.ast import Select
 from mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.utilities import log
@@ -172,6 +173,12 @@ class S3Handler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
+
+        if not isinstance(query, Select):
+            raise ValueError('Only SELECT queries are supported.')
+        
+        self.table_name = query.from_table
+        query.formatter = 'S3Object'
 
         return self.native_query(query.to_string())
 

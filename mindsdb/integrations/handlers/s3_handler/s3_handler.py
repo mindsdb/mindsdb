@@ -6,7 +6,6 @@ from botocore.exceptions import ClientError
 import io
 import ast
 
-from mindsdb_sql import parse_sql
 from mindsdb.integrations.libs.base import DatabaseHandler
 
 from mindsdb_sql.parser.ast.base import ASTNode
@@ -37,10 +36,9 @@ class S3Handler(DatabaseHandler):
             **kwargs: arbitrary keyword arguments.
         """
         super().__init__(name)
-        self.parser = parse_sql
-        self.dialect = 's3'
         self.connection_data = connection_data
         self.kwargs = kwargs
+        self.table_name = None
 
         self.connection = None
         self.is_connected = False

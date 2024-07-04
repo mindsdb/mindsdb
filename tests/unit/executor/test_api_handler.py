@@ -75,7 +75,6 @@ class TestApiHandler(BaseExecutorDummyML):
         kwargs = get_issues.call_args_list[0][1]
         assert kwargs['state'] == 'open'
 
-        return
         # between was used outside of handler, output is only one row with number=125
         assert len(ret) == 1
-        assert ret['number'][0] == 127
+        assert ret['number'][0] == 125

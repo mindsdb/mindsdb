@@ -81,7 +81,6 @@ class SQLAgent:
 
         return usable_tables
 
-
     def _resolve_table_names(self, table_names: List[str], all_tables: List[Identifier]) -> List[Identifier]:
         """
         Tries to find table (which comes directly from an LLM) by its name
@@ -169,7 +168,7 @@ class SQLAgent:
 
         return sample_rows_str
 
-    def _clean_query(self, query: str) ->str:
+    def _clean_query(self, query: str) -> str:
         # Sometimes LLM can input markdown into query tools.
         cmd = re.sub(r'```(sql)?', '', query)
         return cmd

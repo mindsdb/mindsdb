@@ -15,7 +15,7 @@ class MindsDBSQLParserTool(BaseTool):
     description: str = "Parse a SQL query to check it is valid MindsDB SQL."
     args_schema: Type[BaseModel] = _MindsDBSQLParserToolInput
 
-    def _clean_query(self, query: str) ->str:
+    def _clean_query(self, query: str) -> str:
         # Sometimes LLM can input markdown into query tools.
         cmd = re.sub(r'```(sql)?', '', query)
         return cmd

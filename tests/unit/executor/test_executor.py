@@ -551,10 +551,14 @@ class Test(BaseExecutorMockPredictor):
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_drop_database(self, mock_handler):
         from mindsdb.utilities.exception import EntityNotExistsError
-        self.set_handler(mock_handler, name='pg', tables={})
 
-        # remove existing
+        # remove existing (check different cases)
+        self.set_handler(mock_handler, name='pg', tables={})
         self.execute("drop database pg")
+        self.set_handler(mock_handler, name='PG', tables={})
+        self.execute("drop database pg")
+        self.set_handler(mock_handler, name='pg', tables={})
+        self.execute("drop database Pg")
 
         # try one more time
         with pytest.raises(EntityNotExistsError):
@@ -1263,6 +1267,10 @@ class TestIfExistsIfNotExists(BaseExecutorMockPredictor):
 
         # create the same project with if not exists doesn't throw an error
         self.execute('CREATE PROJECT IF NOT EXISTS another_test_project')
+
+        self.execute('DROP PROJECT another_test_project')
+        self.execute('CREATE PROJECT ANOTHER_test_project')
+        self.execute('DROP PROJECT another_TEST_project')
 
     def test_database_integration(self):
         from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError

@@ -1,6 +1,3 @@
-import json
-from pathlib import Path
-
 import mysql.connector
 import pytest
 
@@ -22,7 +19,6 @@ class TestMySqlBinApi(TestMySqlApi):
         1. Do some preconditions
         2. Specify SQL query needs to be executed
         3. Send the query to a Mindsdb app in binary mode and execute the query"""
-
 
     def query(self, _query, encoding='utf-8'):
 
@@ -71,7 +67,7 @@ class TestMySqlBinApi(TestMySqlApi):
                   max(`Custom SQL Query`.`x1`) AS `sum_height_ok`,
                   max(`Custom SQL Query`.`y`) AS `sum_length1_ok`
                 FROM (
-                  SELECT res.x1, res.y 
+                  SELECT res.x1, res.y
                    FROM files.{test_ds_name} as source
                    JOIN mindsdb.{predictor_name} as res
                 ) `Custom SQL Query`

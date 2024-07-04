@@ -114,9 +114,9 @@ def extract_comparison_conditions(binary_op: ASTNode):
         if isinstance(node, ast.BetweenOperation):
             var, up, down = node.args
             if not (
-                isinstance(var, ast.Identifier) and
-                isinstance(up, ast.Constant) and
-                isinstance(down, ast.Constant)
+                isinstance(var, ast.Identifier)
+                and isinstance(up, ast.Constant)
+                and isinstance(down, ast.Constant)
             ):
                 raise NotImplementedError(f'Not implemented: {node}')
 

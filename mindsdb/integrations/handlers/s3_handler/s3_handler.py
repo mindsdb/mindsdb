@@ -185,12 +185,17 @@ class S3Handler(DatabaseHandler):
         """
 
         connection = self.connect()
-        objects = [obj['Key'] for obj in connection.list_objects(Bucket=self.connection_data["bucket"])['Contents']]
+        objects = connection.list_objects(Bucket=self.connection_data["bucket"])['Contents']
+
+        # Get only CSV, JSON, and Parquet files.
+        # Only these formats are supported select_object_content.
+        # Replace the period with an underscore to allow them to be used as table names.
+        supported_objects = [obj['Key'].replace('.', '_') for obj in objects if obj['Key'].split('.')[-1] in ['csv', 'json', 'parquet']]
 
         response = Response(
             RESPONSE_TYPE.TABLE,
             data_frame=pd.DataFrame(
-                objects,
+                supported_objects,
                 columns=['table_name']
             )
         )

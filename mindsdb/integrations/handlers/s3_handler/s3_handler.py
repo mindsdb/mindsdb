@@ -49,7 +49,7 @@ class S3Handler(DatabaseHandler):
         if self.is_connected is True:
             self.disconnect()
 
-    def connect(self) -> StatusResponse:
+    def connect(self) -> boto3.client:
         """
         Set up the connection required by the handler.
         Returns:
@@ -82,7 +82,7 @@ class S3Handler(DatabaseHandler):
 
         return self.connection
 
-    def disconnect(self):
+    def disconnect(self) -> None:
         """ Close any existing connections
         Should switch self.is_connected.
         """
@@ -115,7 +115,7 @@ class S3Handler(DatabaseHandler):
 
         return response
 
-    def native_query(self, query: str) -> StatusResponse:
+    def native_query(self, query: str) -> Response:
         """
         Receive raw query and act upon it somehow.
         Args:
@@ -165,7 +165,7 @@ class S3Handler(DatabaseHandler):
 
         return response
 
-    def query(self, query: ASTNode) -> StatusResponse:
+    def query(self, query: ASTNode) -> Response:
         """
         Receive query as AST (abstract syntax tree) and act upon it somehow.
         Args:
@@ -177,7 +177,7 @@ class S3Handler(DatabaseHandler):
 
         return self.native_query(query.to_string())
 
-    def get_tables(self) -> StatusResponse:
+    def get_tables(self) -> Response:
         """
         Return list of entities that will be accessible as tables.
         Returns:

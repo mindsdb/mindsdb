@@ -114,7 +114,9 @@ PACKAGE_NAME_MAP = {
     "python-magic": ["magic"],
     "clickhouse-sqlalchemy": ["clickhouse_sqlalchemy"],
     "pillow": ["PIL"],
-    "auto-ts": ["auto_ts"]
+    "auto-ts": ["auto_ts"],
+    "llama-index-readers-web": ["llama_index"],
+    "llama-index-embeddings-openai": ["llama_index"],
 }
 
 # We use this to exit with a non-zero status code if any check fails

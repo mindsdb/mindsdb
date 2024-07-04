@@ -1,9 +1,9 @@
 from typing import Iterable, List, Optional
 
 import pandas as pd
-from mindsdb_sql import parse_sql, Identifier
+from mindsdb_sql import parse_sql
+from mindsdb_sql.parser.ast import Identifier
 from mindsdb_sql.planner.utils import query_traversal
-
 
 from mindsdb.utilities import log
 
@@ -22,7 +22,6 @@ class SQLAgent:
     ):
         self._database = database
         self._command_executor = command_executor
-        self._integration_controller = command_executor.session.integration_controller
 
         self._sample_rows_in_table_info = int(sample_rows_in_table_info)
 
@@ -81,10 +80,35 @@ class SQLAgent:
 
         return usable_tables
 
-    def _clean_table_name(self, table_name: str) -> str:
-        # Some LLMs (e.g. gpt-4o) may include backticks when invoking tools.
-        new_name = table_name.replace('`', '')
-        return new_name.rstrip()
+    def _resolve_table_names(self, table_names: List[str], all_tables: List[Identifier]) -> List[Identifier]:
+        """
+        Tries to find table (which comes directly from an LLM) by its name
+        Handles backticks (`) and tables without databases
+        """
+
+        # index to lookup table
+        tables_idx = {}
+        for table in all_tables:
+            # by name
+            tables_idx[(table.parts[-1],)] = table
+            # by path
+            tables_idx[tuple(table.parts)] = table
+
+        tables = []
+        for table_name in table_names:
+
+            # Some LLMs (e.g. gpt-4o) may include backticks when invoking tools.
+            table_name = table_name.strip()
+            table = Identifier(table_name)
+
+            # resolved table
+            table2 = tables_idx.get(tuple(table.parts))
+
+            if table2 is None:
+                raise ValueError(f"Table {table} not found in database")
+            tables.append(table2)
+
+        return tables
 
     def get_table_info(self, table_names: Optional[List[str]] = None) -> str:
         """ Get information about specified tables.
@@ -92,37 +116,34 @@ class SQLAgent:
         If `sample_rows_in_table_info`, the specified number of sample rows will be
         appended to each table description. This can increase performance as demonstrated in the paper.
         """
-        all_table_names = self.get_usable_table_names()
+        all_tables = [Identifier(name) for name in self.get_usable_table_names()]
+
         if table_names is not None:
-            # Clean table names since they're coming direclty from an LLM.
-            cleaned_table_names = [self._clean_table_name(n) for n in table_names]
-            missing_tables = set(cleaned_table_names).difference(all_table_names)
-            if missing_tables:
-                raise ValueError(f"table_names {missing_tables} not found in database")
-            all_table_names = table_names
+            all_tables = self._resolve_table_names(table_names, all_tables)
 
         tables = []
-        for table in all_table_names:
+        for table in all_tables:
             table_info = self._get_single_table_info(table)
             tables.append(table_info)
 
         final_str = "\n\n".join(tables)
         return final_str
 
-    def get_table_columns(self, table_name: str) -> List[str]:
-        controller = self._integration_controller
-        cols_df = controller.get_data_handler(self._database).get_columns(table_name).data_frame
-        return cols_df['Field'].to_list()
+    def _get_single_table_info(self, table: Identifier) -> str:
+        if len(table.parts) < 2:
+            raise ValueError(f"Database is required for table: {table}")
+        integration, table_name = table.parts[-2:]
+        table_str = str(table)
 
-    def _get_single_table_info(self, table_str: str) -> str:
-        controller = self._integration_controller
-        integration, table_name = table_str.split('.')
-        cols_df = controller.get_data_handler(integration).get_columns(table_name).data_frame
-        fields = cols_df['Field'].to_list()
-        dtypes = cols_df['Type'].to_list()
+        dn = self._command_executor.session.datahub.get(integration)
+
+        fields, dtypes = [], []
+        for column in dn.get_table_columns(table_name):
+            fields.append(column['name'])
+            dtypes.append(column.get('type', ''))
 
         info = f'Table named `{table_name}`\n'
-        info += f"\n/* Sample with first {self._sample_rows_in_table_info} rows from table `{table_str}`:\n"
+        info += f"\n/* Sample with first {self._sample_rows_in_table_info} rows from table {table_str}:\n"
         info += "\t".join([field for field in fields])
         info += self._get_sample_rows(table_str, fields) + "\n*/"
         info += '\nColumn data types: ' + ",\t".join(

@@ -2,6 +2,7 @@ from typing import Optional
 
 import pandas as pd
 import boto3
+from botocore.exceptions import ClientError
 import io
 import ast
 
@@ -65,7 +66,6 @@ class S3Handler(DatabaseHandler):
         config = {
             'aws_access_key_id': self.connection_data.get('aws_access_key_id'),
             'aws_secret_access_key': self.connection_data.get('aws_secret_access_key'),
-            'bucket': self.connection_data.get('bucket')
         }
 
         # Optional connection parameters.
@@ -101,16 +101,17 @@ class S3Handler(DatabaseHandler):
 
         try:
             connection = self.connect()
-            connection.head_object(Bucket=self.connection_data['bucket'], Key=self.connection_data['key'])
+            connection.head_bucket(Bucket=self.connection_data['bucket'])
             response.success = True
-        except Exception as e:
+        except ClientError as e:
             logger.error(f'Error connecting to AWS with the given credentials, {e}!')
             response.error_message = str(e)
-        finally:
-            if response.success is True and need_to_close:
-                self.disconnect()
-            if response.success is False and self.is_connected is True:
-                self.is_connected = False
+
+        if response.success and need_to_close:
+            self.disconnect()
+
+        elif not response.success and self.is_connected:
+            self.is_connected = False
 
         return response
 

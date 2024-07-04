@@ -202,7 +202,7 @@ class S3Handler(DatabaseHandler):
 
         return response
 
-    def get_columns(self) -> StatusResponse:
+    def get_columns(self, table_name) -> Response:
         """
         Returns a list of entity columns.
         Args:
@@ -211,7 +211,7 @@ class S3Handler(DatabaseHandler):
             HandlerResponse
         """
 
-        query = "SELECT * FROM S3Object LIMIT 5"
+        query = f"SELECT * FROM {table_name} LIMIT 5"
         result = self.native_query(query)
 
         response = Response(

@@ -82,7 +82,7 @@ class InstallDependencies(Resource):
             return '', 200
         return http_error(
             500,
-            'Failed to install dependency',
+            f'Failed to install dependencies for {handler_meta.get("title", handler_name)}',
             result.get('error_message', 'unknown error')
         )
 

@@ -1,4 +1,5 @@
 from typing import Iterable, List, Optional
+import re
 
 import pandas as pd
 from mindsdb_sql import parse_sql
@@ -98,7 +99,10 @@ class SQLAgent:
         tables = []
         for table_name in table_names:
 
-            # Some LLMs (e.g. gpt-4o) may include backticks when invoking tools.
+            # Some LLMs (e.g. gpt-4o) may include backticks or quotes when invoking tools.
+            table_name = table_name.strip('`')
+            table_name = table_name.strip('"')
+            table_name = table_name.strip("'")
             table_name = table_name.strip()
             table = Identifier(table_name)
 
@@ -165,6 +169,11 @@ class SQLAgent:
 
         return sample_rows_str
 
+    def _clean_query(self, query: str) ->str:
+        # Sometimes LLM can input markdown into query tools.
+        cmd = re.sub(r'```(sql)?', '', query)
+        return cmd
+
     def query(self, command: str, fetch: str = "all") -> str:
         """Execute a SQL command and return a string representing the results.
         If the statement returns rows, a string of the results is returned.
@@ -194,7 +203,7 @@ class SQLAgent:
             res += _tidy(data[:limit_rows])
             return res
 
-        ret = self._call_engine(command)
+        ret = self._call_engine(self._clean_query(command))
         if fetch == "all":
             result = _repr_result(ret.data)
         elif fetch == "one":

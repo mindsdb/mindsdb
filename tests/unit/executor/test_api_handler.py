@@ -24,13 +24,6 @@ try:
 except ImportError:
     sys.modules['chardet'] = types.ModuleType('')
 
-try:
-    import bs4  # noqa
-except ImportError:
-    sys.modules['bs4'] = types.ModuleType('bs4')
-    sys.modules['bs4.BeautifulSoup'] = types.ModuleType('')
-    sys.modules['bs4.element'] = types.ModuleType('')
-
 
 class TestApiHandler(BaseExecutorDummyML):
 

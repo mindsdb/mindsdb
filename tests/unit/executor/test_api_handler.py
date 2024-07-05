@@ -22,6 +22,9 @@ class TestApiHandler(BaseExecutorDummyML):
 
     @patch('github.Github')
     def test_github(self, Github):
+        """
+        Test for APIResource
+        """
 
         # create
         self.run_sql('''
@@ -78,3 +81,15 @@ class TestApiHandler(BaseExecutorDummyML):
         # between was used outside of handler, output is only one row with number=125
         assert len(ret) == 1
         assert ret['number'][0] == 125
+
+        # insert
+        self.run_sql('''
+            insert into gh.issues (title, body)
+             values ('feature', 'do better')
+        ''')
+        create_issue = Github().get_repo().create_issue
+        args = create_issue.call_args_list[0][0]
+        kwargs = create_issue.call_args_list[0][1]
+
+        assert args[0] == 'feature'
+        assert kwargs['body'] == 'do better'

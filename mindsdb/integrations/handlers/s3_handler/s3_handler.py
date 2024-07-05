@@ -3,7 +3,7 @@ from typing import Optional
 import pandas as pd
 import boto3
 from botocore.exceptions import ClientError
-import io
+import json
 
 from mindsdb.integrations.libs.base import DatabaseHandler
 
@@ -39,7 +39,6 @@ class S3Handler(DatabaseHandler):
         self.connection_data = connection_data
         self.kwargs = kwargs
         self.table_name = None
-        self.column_names = []
 
         self.connection = None
         self.is_connected = False
@@ -134,7 +133,7 @@ class S3Handler(DatabaseHandler):
         if key.endswith('.csv'):
             input_serialization = {
                 'CSV': {
-                    'FileHeaderInfo': 'USE' if self.column_names else 'NONE',
+                    'FileHeaderInfo': 'USE'
                 }
             }
         elif key.endswith('.json'):
@@ -151,20 +150,18 @@ class S3Handler(DatabaseHandler):
                 ExpressionType='SQL',
                 Expression=query,
                 InputSerialization=input_serialization,
-                OutputSerialization={"CSV": {}}
+                OutputSerialization={"JSON": {}}
             )
 
-            records = []
+            all_records = []
             for event in result['Payload']:
                 if 'Records' in event:
-                    records.append(event['Records']['Payload'])
+                    records = event['Records']['Payload'].decode('utf-8')
+                    for record in records.strip().split('\n'):
+                        if record:
+                            all_records.append(json.loads(record))
 
-            file_str = ''.join(r.decode('utf-8') for r in records)
-
-            df = pd.read_csv(
-                io.StringIO(file_str),
-                names=self.column_names if self.column_names else None
-            )
+            df = pd.DataFrame(all_records)
 
             response = Response(
                 RESPONSE_TYPE.TABLE,
@@ -201,20 +198,11 @@ class S3Handler(DatabaseHandler):
         self.table_name = from_table.parts[0]
 
         # Replace the value of the FROM clause with 'S3Object'.
-        # If an alias has been used in the FROM clause, add it here, otherwise introduce an alias.
         # This is what the select_object_content method expects for all queries.
         query.from_table = Identifier(
             parts=['S3Object'],
-            alias=Identifier(from_table.alias.get_string() if from_table.alias else 's')
+            alias=from_table.alias
         )
-
-        if not isinstance(query.targets[0], Star):
-            for target in query.targets:
-                if len(target.parts) == 1:
-                    self.column_names.append(target.alias.get_string() or target.parts[0])
-                    target.parts.insert(0, 's')
-                else:
-                    self.column_names.append(target.alias.get_string() or target.parts[-1])
 
         return self.native_query(query.to_string())
 

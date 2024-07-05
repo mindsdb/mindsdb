@@ -15,7 +15,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
 # How to run:
 #  env PYTHONPATH=./ pytest tests/unit/test_executor.py
 
-from .executor_test_base import BaseExecutorMockPredictor
+from tests.unit.executor_test_base import BaseExecutorMockPredictor
 
 
 class Test(BaseExecutorMockPredictor):

@@ -3,6 +3,7 @@ import unittest
 from mindsdb.utilities.config import Config
 from mindsdb.integrations.libs.storage_handler import RedisStorageHandler, SqliteStorageHandler
 
+
 class StorageHandlerTest(unittest.TestCase):
     def test_1_redis_storage(self):
         store = RedisStorageHandler({'test_1_redis_storage': 'value'}, config={'host': 'localhost', 'port': '6379'})

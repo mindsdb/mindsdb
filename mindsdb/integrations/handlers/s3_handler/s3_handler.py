@@ -187,8 +187,24 @@ class S3Handler(DatabaseHandler):
         if not isinstance(query, Select):
             raise ValueError('Only SELECT queries are supported.')
         
-        self.table_name = query.from_table.get_string()
-        query.from_table = Identifier('S3Object')
+        # Set the table name by getting the key (file) from the FROM clause of the query.
+        # This will be passed as the Key parameter to the select_object_content method.
+        from_table = query.from_table.get_string()
+        # Check if an alias is used in the FROM clause and get only the key.
+        from_table_alias = None
+        if 'as' in from_table.lower():
+            self.table_name = from_table.split(' ')[0]
+            from_table_alias = from_table.split(' ')[-1]
+        else:
+            self.table_name = from_table
+
+        # Replace the value of the FROM clause with 'S3Object'.
+        # If an alias has been used in the FROM clause, add it here, otherwise use introduce an alias.
+        # This is what the select_object_content method expects for all queries.
+        query.from_table = Identifier(
+            parts=['S3Object'],
+            alias=Identifier(from_table_alias or 's')
+        )
 
         return self.native_query(query.to_string())
 

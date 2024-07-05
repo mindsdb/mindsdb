@@ -111,7 +111,7 @@ class TestApiHandler(BaseExecutorDummyML):
     @patch("mindsdb.integrations.handlers.email_handler.email_handler.EmailClient")
     def test_email(self, EmailClient):
         """
-        Test for APIResource
+        Test for APITable
         """
 
         # --- create ---

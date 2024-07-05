@@ -141,7 +141,11 @@ class S3Handler(DatabaseHandler):
                 }
             }
         elif key.endswith('.json'):
-            input_serialization = {'JSON': {}}
+            input_serialization = {
+                'JSON': {
+                    'Type': 'Document'
+                }
+            }
         elif key.endswith('.parquet'):
             input_serialization = {'Parquet': {}}
         else:
@@ -175,7 +179,7 @@ class S3Handler(DatabaseHandler):
 
         return response
     
-    def _parse_json_response(self, response: Dict) -> pd.DataFrame:
+    def _parse_json_response_for_csv_and_parquet_input(self, response: Dict) -> pd.DataFrame:
         """
         Parse the JSON response from the select_object_content method.
 
@@ -192,6 +196,32 @@ class S3Handler(DatabaseHandler):
                 for record in records.strip().split('\n'):
                     if record:
                         all_records.append(json.loads(record))
+
+        return pd.DataFrame(all_records)
+    
+    def _parse_response_for_json_input(self, response: Dict) -> pd.DataFrame:
+        """
+        Parse the JSON response from the select_object_content method for JSON input serialization.
+
+        Args:
+            response (Dict): JSON response from the select_object_content method
+
+        Returns:
+            pd.DataFrame: DataFrame containing the parsed response
+        """
+        all_records = []
+        for event in response['Payload']:
+            if 'Records' in event:
+                records = event['Records']['Payload'].decode('utf-8')
+                record = records.strip()
+                if record:
+                    json_record = json.loads(record)
+                    parsed_json_record = {key: value.values() for key, value in json_record.items()}
+                    all_records.append(parsed_json_record)
+
+        for record in all_records:
+            temp_df = pd.DataFrame(record)
+            df = pd.concat([df, temp_df], ignore_index=True)
 
         return pd.DataFrame(all_records)
 

@@ -11,13 +11,25 @@ from tests.unit.executor_test_base import BaseExecutorDummyML
 from dataclasses import dataclass
 
 
-# import module virtually if it is not installed
+# import modules virtually if it is not installed
 try:
     import github  # noqa
 except ImportError:
-    module = types.ModuleType('github')
+    module = types.ModuleType('')
     exec('Github=None', module.__dict__)
     sys.modules['github'] = module
+
+try:
+    import chardet  # noqa
+except ImportError:
+    sys.modules['chardet'] = types.ModuleType('')
+
+try:
+    import bs4  # noqa
+except ImportError:
+    sys.modules['bs4'] = types.ModuleType('bs4')
+    sys.modules['bs4.BeautifulSoup'] = types.ModuleType('')
+    sys.modules['bs4.element'] = types.ModuleType('')
 
 
 class TestApiHandler(BaseExecutorDummyML):

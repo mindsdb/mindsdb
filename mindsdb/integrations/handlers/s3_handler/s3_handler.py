@@ -4,11 +4,10 @@ import pandas as pd
 import boto3
 from botocore.exceptions import ClientError
 import io
-import ast
 
 from mindsdb.integrations.libs.base import DatabaseHandler
 
-from mindsdb_sql.parser.ast import Select
+from mindsdb_sql.parser.ast import Select, Identifier
 from mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.utilities import log
@@ -127,13 +126,26 @@ class S3Handler(DatabaseHandler):
 
         connection = self.connect()
 
+        # Replace the underscore with a period to get the actual object name.
+        key = self.table_name.replace('_', '.')
+
+        # Validate the key extension and set the input serialization accordingly.
+        if key.endswith('.csv'):
+            input_serialization = {'CSV': {}}
+        elif key.endswith('.json'):
+            input_serialization = {'JSON': {}}
+        elif key.endswith('.parquet'):
+            input_serialization = {'Parquet': {}}
+        else:
+            raise ValueError('The Key should have one of the following extensions: .csv, .json, .parquet')
+
         try:
             result = connection.select_object_content(
                 Bucket=self.connection_data['bucket'],
-                Key=self.connection_data['key'],
+                Key=key,
                 ExpressionType='SQL',
                 Expression=query,
-                InputSerialization=ast.literal_eval(self.connection_data['input_serialization']),
+                InputSerialization=input_serialization,
                 OutputSerialization={"CSV": {}}
             )
 
@@ -141,8 +153,6 @@ class S3Handler(DatabaseHandler):
             for event in result['Payload']:
                 if 'Records' in event:
                     records.append(event['Records']['Payload'])
-                elif 'Stats' in event:
-                    stats = event['Stats']['Details']
 
             file_str = ''.join(r.decode('utf-8') for r in records)
 
@@ -153,7 +163,7 @@ class S3Handler(DatabaseHandler):
                 data_frame=df
             )
         except Exception as e:
-            logger.error(f'Error running query: {query} on {self.connection_data["key"]} in {self.connection_data["bucket"]}!')
+            logger.error(f'Error running query: {query} on {self.table_name} in {self.connection_data["bucket"]}!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)
@@ -177,8 +187,8 @@ class S3Handler(DatabaseHandler):
         if not isinstance(query, Select):
             raise ValueError('Only SELECT queries are supported.')
         
-        self.table_name = query.from_table
-        query.formatter = 'S3Object'
+        self.table_name = query.from_table.get_string()
+        query.from_table = Identifier('S3Object')
 
         return self.native_query(query.to_string())
 

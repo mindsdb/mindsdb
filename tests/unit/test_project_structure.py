@@ -1415,6 +1415,7 @@ class TestUDF(BaseExecutorDummyML):
         os.environ['MINDSDB_BYOM_DEFAULT_TYPE'] = 'inhouse'
 
         code = dedent("""
+            from datetime import datetime 
             class MyBYOM():
                 def fibo(self, num: int) -> int:
                     if num < 2:
@@ -1428,10 +1429,6 @@ class TestUDF(BaseExecutorDummyML):
                 # annotated
                 def add2(self, a: int, b: int) -> int:
                     return a + b
-
-                # required for byom
-                def predict(self): pass
-                def train(self): pass
         """)
 
         # add model

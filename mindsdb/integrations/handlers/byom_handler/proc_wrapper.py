@@ -84,14 +84,25 @@ def import_string(code, module_name='model'):
 
 def find_model_class(module):
     # find the first class that contents predict and train methods
-    for _, klass in inspect.getmembers(module, inspect.isclass):
+    cls_list = []
+    for _, cls in inspect.getmembers(module, inspect.isclass):
+        if inspect.getmodule(cls) is not None:
+            # is imported class
+            continue
+
         funcs = [
             name
-            for name, _ in inspect.getmembers(klass, inspect.isfunction)
+            for name, _ in inspect.getmembers(cls, inspect.isfunction)
         ]
         if 'predict' in funcs and 'train' in funcs:
-            return klass
-    raise RuntimeError('Unable to find model class (has to have `train` and `predict` methods)')
+            # found
+            return cls
+        cls_list.append(cls)
+    if len(cls_list) == 1:
+        # only one class in file
+        return cls_list[0]
+
+    raise RuntimeError('Unable to find model class (it has to have `train` and `predict` methods)')
 
 
 def get_methods_info(model):

@@ -160,19 +160,28 @@ class S3Handler(DatabaseHandler):
                 InputSerialization=input_serialization,
                 OutputSerialization={"JSON": {}}
             )
+
+            if key.endswith('.csv') or key.endswith('.parquet'):
+                df = self._parse_json_response_for_csv_and_parquet_input(result)
+            elif key.endswith('.json'):
+                df = self._parse_response_for_json_input(result)
+
+            response = Response(
+                RESPONSE_TYPE.TABLE,
+                data_frame=df
+            )
         except ClientError as e:
             logger.error(f'Error running query: {query} on {self.table_name} in {self.connection_data["bucket"]}!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)
             )
-
-        df = self._parse_json_response(result)
-
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=df
-        )
+        except Exception as e:
+            logger.error(f'An unexpected error occurred while parsing the response: {e}!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(e)
+            )
 
         if need_to_close is True:
             self.disconnect()
@@ -216,14 +225,15 @@ class S3Handler(DatabaseHandler):
                 record = records.strip()
                 if record:
                     json_record = json.loads(record)
-                    parsed_json_record = {key: value.values() for key, value in json_record.items()}
+                    parsed_json_record = {key: list(value.values()) for key, value in json_record.items()}
                     all_records.append(parsed_json_record)
 
+        df = pd.DataFrame()
         for record in all_records:
             temp_df = pd.DataFrame(record)
             df = pd.concat([df, temp_df], ignore_index=True)
 
-        return pd.DataFrame(all_records)
+        return df
 
     def query(self, query: ASTNode) -> Response:
         """

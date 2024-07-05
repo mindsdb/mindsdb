@@ -1415,7 +1415,7 @@ class TestUDF(BaseExecutorDummyML):
         os.environ['MINDSDB_BYOM_DEFAULT_TYPE'] = 'inhouse'
 
         code = dedent("""
-            from datetime import datetime 
+            from datetime import datetime
             class MyBYOM():
                 def fibo(self, num: int) -> int:
                     if num < 2:

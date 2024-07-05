@@ -152,32 +152,43 @@ class S3Handler(DatabaseHandler):
                 InputSerialization=input_serialization,
                 OutputSerialization={"JSON": {}}
             )
-
-            all_records = []
-            for event in result['Payload']:
-                if 'Records' in event:
-                    records = event['Records']['Payload'].decode('utf-8')
-                    for record in records.strip().split('\n'):
-                        if record:
-                            all_records.append(json.loads(record))
-
-            df = pd.DataFrame(all_records)
-
-            response = Response(
-                RESPONSE_TYPE.TABLE,
-                data_frame=df
-            )
-        except Exception as e:
+        except ClientError as e:
             logger.error(f'Error running query: {query} on {self.table_name} in {self.connection_data["bucket"]}!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)
             )
 
+        df = self._parse_json_response(result)
+
+        response = Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=df
+        )
+
         if need_to_close is True:
             self.disconnect()
 
         return response
+    
+    def _parse_json_response(self, response: dict) -> pd.DataFrame:
+        """
+        Parse the JSON response from the select_object_content method.
+        Args:
+            response (dict): JSON response from the select_object_content method
+        Returns:
+            pd.DataFrame: DataFrame containing the parsed response
+        """
+
+        all_records = []
+        for event in response['Payload']:
+            if 'Records' in event:
+                records = event['Records']['Payload'].decode('utf-8')
+                for record in records.strip().split('\n'):
+                    if record:
+                        all_records.append(json.loads(record))
+
+        return pd.DataFrame(all_records)
 
     def query(self, query: ASTNode) -> Response:
         """
@@ -254,3 +265,4 @@ class S3Handler(DatabaseHandler):
         )
 
         return response
+

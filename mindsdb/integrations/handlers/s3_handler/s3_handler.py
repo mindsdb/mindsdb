@@ -1,21 +1,20 @@
-from typing import Optional
-
-import pandas as pd
-import boto3
-from botocore.exceptions import ClientError
 import json
-
-from mindsdb.integrations.libs.base import DatabaseHandler
-
-from mindsdb_sql.parser.ast import Select, Identifier, Star
-from mindsdb_sql.parser.ast.base import ASTNode
+import boto3
+import pandas as pd
+from typing import Text, Dict, Optional
+from botocore.exceptions import ClientError
 
 from mindsdb.utilities import log
+
+from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql.parser.ast import Select, Identifier
+
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
+from mindsdb.integrations.libs.base import DatabaseHandler
 
 
 logger = log.getLogger(__name__)
@@ -29,11 +28,12 @@ class S3Handler(DatabaseHandler):
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         """
-        Initialize the handler.
+        Initializes the handler.
+
         Args:
-            name (str): name of particular handler instance
-            connection_data (dict): parameters for connecting to the database
-            **kwargs: arbitrary keyword arguments.
+            name (Text): The name of the handler instance.
+            connection_data (Dict): The connection data required to connect to the AWS (S3) account.
+            kwargs: Arbitrary keyword arguments.
         """
         super().__init__(name)
         self.connection_data = connection_data
@@ -49,11 +49,14 @@ class S3Handler(DatabaseHandler):
 
     def connect(self) -> boto3.client:
         """
-        Set up the connection required by the handler.
-        Returns:
-            HandlerStatusResponse
-        """
+        Establishes a connection to the AWS (S3) account.
 
+        Raises:
+            KeyError: If the required connection parameters are not provided.
+            
+        Returns:
+            boto3.client: A client object to the AWS (S3) account.
+        """
         if self.is_connected is True:
             return self.connection
         
@@ -81,19 +84,19 @@ class S3Handler(DatabaseHandler):
         return self.connection
 
     def disconnect(self) -> None:
-        """ Close any existing connections
-        Should switch self.is_connected.
+        """
+        Closes the connection to the AWS (S3) account if it's currently open.
         """
         self.is_connected = False
         return
 
     def check_connection(self) -> StatusResponse:
         """
-        Check connection to the handler.
-        Returns:
-            HandlerStatusResponse
-        """
+        Checks the status of the connection to the S3 bucket.
 
+        Returns:
+            StatusResponse: An object containing the success status and an error message if an error occurs.
+        """
         response = StatusResponse(False)
         need_to_close = self.is_connected is False
 
@@ -113,15 +116,16 @@ class S3Handler(DatabaseHandler):
 
         return response
 
-    def native_query(self, query: str) -> Response:
+    def native_query(self, query: Text) -> Response:
         """
-        Receive raw query and act upon it somehow.
-        Args:
-            query (str): query in native format
-        Returns:
-            HandlerResponse
-        """
+        Executes a SQL query on the specified table (object) in the S3 bucket.
 
+        Args:
+            query (Text): The SQL query to be executed.
+
+        Returns:
+            Response: A response object containing the result of the query or an error message.
+        """
         need_to_close = self.is_connected is False
 
         connection = self.connect()
@@ -171,15 +175,16 @@ class S3Handler(DatabaseHandler):
 
         return response
     
-    def _parse_json_response(self, response: dict) -> pd.DataFrame:
+    def _parse_json_response(self, response: Dict) -> pd.DataFrame:
         """
         Parse the JSON response from the select_object_content method.
+
         Args:
-            response (dict): JSON response from the select_object_content method
+            response (Dict): JSON response from the select_object_content method
+
         Returns:
             pd.DataFrame: DataFrame containing the parsed response
         """
-
         all_records = []
         for event in response['Payload']:
             if 'Records' in event:
@@ -192,14 +197,14 @@ class S3Handler(DatabaseHandler):
 
     def query(self, query: ASTNode) -> Response:
         """
-        Receive query as AST (abstract syntax tree) and act upon it somehow.
-        Args:
-            query (ASTNode): sql query represented as AST. May be any kind
-                of query: SELECT, INTSERT, DELETE, etc
-        Returns:
-            HandlerResponse
-        """
+        Executes a SQL query represented by an ASTNode and retrieves the data.
 
+        Args:
+            query (ASTNode): An ASTNode representing the SQL query to be executed.
+
+        Returns:
+            Response: The response from the `native_query` method, containing the result of the SQL query execution.
+        """
         if not isinstance(query, Select):
             raise ValueError('Only SELECT queries are supported.')
         
@@ -219,11 +224,13 @@ class S3Handler(DatabaseHandler):
 
     def get_tables(self) -> Response:
         """
-        Return list of entities that will be accessible as tables.
-        Returns:
-            HandlerResponse
-        """
+        Retrieves a list of tables (objects) in the S3 bucket.
+        Each object is considered a table. Only CSV, JSON, and Parquet files are supported.
+        The period in the object name is replaced with an underscore to allow them to be used as table names in SQL queries.
 
+        Returns:
+            Response: A response object containing the list of tables and views, formatted as per the `Response` class.
+        """
         connection = self.connect()
         objects = connection.list_objects(Bucket=self.connection_data["bucket"])['Contents']
 
@@ -242,14 +249,20 @@ class S3Handler(DatabaseHandler):
 
         return response
 
-    def get_columns(self, table_name) -> Response:
+    def get_columns(self, table_name: Text) -> Response:
         """
-        Returns a list of entity columns.
+        Retrieves column details for a specified table (object) in the S3 bucket.
+
         Args:
-            table_name (str): name of one of tables returned by self.get_tables()
+            table_name (Text): The name of the table for which to retrieve column information.
+
         Returns:
-            HandlerResponse
+            Response: A response object containing the column details, formatted as per the `Response` class.
+        Raises:
+            ValueError: If the 'table_name' is not a valid string.
         """
+        if not table_name or not isinstance(table_name, str):
+            raise ValueError("Invalid table name provided.")
 
         query = f"SELECT * FROM {table_name} LIMIT 5"
         result = self.native_query(query)
@@ -265,4 +278,3 @@ class S3Handler(DatabaseHandler):
         )
 
         return response
-

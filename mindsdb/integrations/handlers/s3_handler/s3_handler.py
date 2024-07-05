@@ -7,7 +7,7 @@ import io
 
 from mindsdb.integrations.libs.base import DatabaseHandler
 
-from mindsdb_sql.parser.ast import Select, Identifier
+from mindsdb_sql.parser.ast import Select, Identifier, Star
 from mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.utilities import log
@@ -39,6 +39,7 @@ class S3Handler(DatabaseHandler):
         self.connection_data = connection_data
         self.kwargs = kwargs
         self.table_name = None
+        self.column_names = []
 
         self.connection = None
         self.is_connected = False
@@ -133,7 +134,7 @@ class S3Handler(DatabaseHandler):
         if key.endswith('.csv'):
             input_serialization = {
                 'CSV': {
-                    'FileHeaderInfo': 'USE'
+                    'FileHeaderInfo': 'USE' if self.column_names else 'NONE',
                 }
             }
         elif key.endswith('.json'):
@@ -160,7 +161,10 @@ class S3Handler(DatabaseHandler):
 
             file_str = ''.join(r.decode('utf-8') for r in records)
 
-            df = pd.read_csv(io.StringIO(file_str))
+            df = pd.read_csv(
+                io.StringIO(file_str),
+                names=self.column_names if self.column_names else None
+            )
 
             response = Response(
                 RESPONSE_TYPE.TABLE,
@@ -203,6 +207,14 @@ class S3Handler(DatabaseHandler):
             parts=['S3Object'],
             alias=Identifier(from_table.alias.get_string() if from_table.alias else 's')
         )
+
+        if not isinstance(query.targets[0], Star):
+            for target in query.targets:
+                if len(target.parts) == 1:
+                    self.column_names.append(target.alias.get_string() or target.parts[0])
+                    target.parts.insert(0, 's')
+                else:
+                    self.column_names.append(target.alias.get_string() or target.parts[-1])
 
         return self.native_query(query.to_string())
 

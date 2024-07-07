@@ -41,7 +41,7 @@ class TestOpenAI(unittest.TestCase):
         Test if model creation raises an exception without required parameters.
         """
 
-        with self.assertRaisesRegex(Exception, "One of `question_column`, `prompt_template` or `json_struct` is required for this engine."):
+        with self.assertRaisesRegex(Exception, "One of `question_column`, `prompt_template` or `prompt` is required for this engine."):
             self.handler.create_validation('target', args={"using": {}}, handler_storage=self.mock_engine_storage)
 
     def test_create_validation_with_invalid_parameter_combinations_raises_exception(self):

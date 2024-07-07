@@ -246,6 +246,22 @@ To stop the sheduled job, we can use the following:
 DROP JOB gpt4_slack_job;
 ```
 
+<Note>
+Alternatively, you can create a trigger on Slack, instead of scheduling a job. This way, every time new messages are posted, the trigger executes.
+
+```sql
+CREATE TRIGGER slack_trigger ON mindsdb_slack.channels (
+
+    INSERT INTO mindsdb_slack.channels(channel, text)
+      SELECT t.channel as channel, a.sentiment as text, 
+      FROM data_table t              
+      JOIN model_table as a
+      WHERE t.channel = 'channel_name' 
+      AND t.user != 'bot_id'  -- exclude bot
+);
+```
+</Note>
+
 <Tip>
 **What's next?**
 

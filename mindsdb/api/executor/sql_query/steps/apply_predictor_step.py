@@ -94,7 +94,8 @@ class ApplyPredictorRowStepCall(ApplyPredictorBaseCall):
         result = ResultSet()
         result.is_prediction = True
         if len(predictions) == 0:
-            predictions = pd.DataFrame([], columns=project_datanode.get_table_columns(predictor_name))
+            columns = [col['name'] for col in project_datanode.get_table_columns(predictor_name)]
+            predictions = pd.DataFrame([], columns=columns)
 
         result.from_df(
             predictions,
@@ -116,12 +117,15 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
 
         params = step.params or {}
 
-        for table in data.get_tables()[:1]:  # add  __mindsdb_row_id only for first table
+        # adding __mindsdb_row_id, use first table if exists
+        if len(data.find_columns('__mindsdb_row_id')) == 0:
+            table = data.get_tables()[0] if len(data.get_tables()) > 0 else None
+
             row_id_col = Column(
                 name='__mindsdb_row_id',
-                database=table['database'],
-                table_name=table['table_name'],
-                table_alias=table['table_alias']
+                database=table['database'] if table is not None else None,
+                table_name=table['table_name'] if table is not None else None,
+                table_alias=table['table_alias'] if table is not None else None
             )
 
             row_id = self.context.get('row_id')
@@ -168,7 +172,7 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
 
         project_datanode = self.session.datahub.get(project_name)
         if len(data) == 0:
-            cols = project_datanode.get_table_columns(predictor_name) + ['__mindsdb_row_id']
+            cols = [col['name'] for col in project_datanode.get_table_columns(predictor_name)] + ['__mindsdb_row_id']
             for col in cols:
                 result.add_column(Column(
                     name=col,

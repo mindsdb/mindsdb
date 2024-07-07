@@ -1,7 +1,7 @@
-from google.cloud import bigquery
 from typing import Text, Dict, Any
 from google.api_core.exceptions import BadRequest
 from sqlalchemy_bigquery.base import BigQueryDialect
+from google.cloud.bigquery import Client, QueryJobConfig
 
 from mindsdb.utilities import log
 from mindsdb_sql.parser.ast.base import ASTNode
@@ -58,7 +58,7 @@ class BigQueryHandler(DatabaseHandler):
         )
         credentials = google_sa_oauth2_manager.get_oauth2_credentials()
 
-        client = bigquery.Client(
+        client = Client(
             project=self.connection_data["project_id"],
             credentials=credentials
         )
@@ -113,7 +113,7 @@ class BigQueryHandler(DatabaseHandler):
         """
         connection = self.connect()
         try:
-            job_config = bigquery.QueryJobConfig(default_dataset=f"{self.connection_data['project_id']}.{self.connection_data['dataset']}")
+            job_config = QueryJobConfig(default_dataset=f"{self.connection_data['project_id']}.{self.connection_data['dataset']}")
             query = connection.query(query, job_config=job_config)
             result = query.to_dataframe()
             if not result.empty:

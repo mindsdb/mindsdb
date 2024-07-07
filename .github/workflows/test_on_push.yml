@@ -122,16 +122,12 @@ jobs:
           pip install .[web]
           pip install .[redshift]
           pip install .[bigquery]
+          pip install .[minds_endpoint]
           pip freeze
       - name: Run unit tests
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
-            env PYTHONPATH=./ pytest tests/unit/test_executor.py
-            env PYTHONPATH=./ pytest tests/unit/test_project_structure.py
-            env PYTHONPATH=./ pytest tests/unit/test_predictor_params.py
-            env PYTHONPATH=./ pytest tests/unit/test_mongodb_handler.py
-            env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
-            env PYTHONPATH=./ pytest tests/unit/test_cache.py
+            env PYTHONPATH=./ pytest tests/unit/executor/ -x
             env PYTHONPATH=./ pytest tests/unit/test_llm_utils.py
             env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_minds_endpoint.py
             env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_openai.py

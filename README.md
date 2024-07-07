@@ -1,8 +1,4 @@
 <a name="readme-top"></a>
-<h1 align="center">
-	<img width="300" src="https://github.com/mindsdb/mindsdb_native/blob/main/assets/MindsDBColorPurp@3x.png?raw=true" alt="MindsDB">
-	<br>
-</h1>
 
 <div align="center">
 	<a href="https://pypi.org/project/MindsDB/" target="_blank"><img src="https://badge.fury.io/py/MindsDB.svg" alt="MindsDB Release"></a>
@@ -30,18 +26,6 @@
 
 ----------------------------------------
 
-> [!CAUTION]
-> ## We have renamed the default branch of this repository from `staging` to `main`!
-> You can do the same in your local copy of the repo by running the following git commands:
-> ```
-> git branch -m staging main
-> git fetch origin
-> git branch -u origin/main main
-> git remote set-head origin -a
-> ```
-> 
-> The `stable` branch is also being deleted. `main` will serve the purpose of both `staging` and `stable`.
-
 [MindsDB](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) is the platform for customizing AI from enterprise data. You can create, serve, and fine-tune models in real-time from your database, vector store, and application data.
  [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=The%platform%20for%customizing%20AI,%20from%20enterprise%20data&url=https://github.com/mindsdb/mindsdb&via=mindsdb&hashtags=ai,opensource)
 
@@ -52,7 +36,7 @@ MindsDB is the platform for customizing AI from enterprise data.
 With MindsDB, you can deploy, serve, and fine-tune models in real-time, utilizing data from databases, vector stores, or applications, to build AI-powered apps - using universal tools developers already know.
 
 <p align="center">
-  <img src="/docs/assets/diagram.png"/>
+  <img src="/docs/assets/mindsdb_homepage_diagram.png"/>
 </p>
 
 MindsDB integrates with numerous [data sources](https://docs.mindsdb.com/integrations/data-overview?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo), including databases, vector stores, and applications, and popular [AI/ML frameworks](https://docs.mindsdb.com/integrations/ai-overview?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo), including AutoML and LLMs. MindsDB connects data sources with AI/ML frameworks and automates routine workflows between them. By doing so, we bring data and AI together, enabling the intuitive implementation of customized AI systems.

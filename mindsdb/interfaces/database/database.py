@@ -18,6 +18,7 @@ class DatabaseController:
 
     def delete(self, name: str):
         databases = self.get_dict()
+        name = name.lower()
         if name not in databases:
             raise EntityNotExistsError('Database does not exists', name)
         db_type = databases[name]['type']
@@ -81,7 +82,7 @@ class DatabaseController:
     def get_dict(self, filter_type: Optional[str] = None):
         return OrderedDict(
             (
-                x['name'],
+                x['name'].lower(),
                 {
                     'type': x['type'],
                     'engine': x['engine'],

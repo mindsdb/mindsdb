@@ -1,5 +1,6 @@
 from concurrent.futures import as_completed, TimeoutError
 from typing import Optional, Dict, List
+import json
 import os
 import re
 
@@ -44,7 +45,7 @@ from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 
 from .mindsdb_chat_model import ChatMindsdb
 
-_PARSING_ERROR_PREFIX = 'An output parsing error occured'
+_PARSING_ERROR_PREFIXES = ['An output parsing error occured', 'Could not parse LLM output']
 
 logger = log.getLogger(__name__)
 
@@ -140,6 +141,11 @@ class LangChainHandler(BaseMLEngine):
         langfuse_cb_handler = LangfuseCallbackHandler(langfuse, args['trace_id'], args['observation_id'])
         all_callbacks.append(langfuse_cb_handler)
         return all_callbacks
+    
+    def _get_tiktoken_model_name(self, model: str) -> str:
+        if model.startswith('gpt-4'):
+            return 'gpt-4'
+        return model
 
     def _create_chat_model(self, args: Dict, pred_args: Dict):
         model_kwargs = self._get_chat_model_params(args, pred_args)
@@ -147,6 +153,9 @@ class LangChainHandler(BaseMLEngine):
         if args['provider'] == 'anthropic':
             return ChatAnthropic(**model_kwargs)
         if args['provider'] == 'openai':
+            # Some newer GPT models (e.g. gpt-4o when released) don't have token counting support yet.
+            # By setting this manually in ChatOpenAI, we count tokens like compatible GPT models.
+            model_kwargs['tiktoken_model_name'] = self._get_tiktoken_model_name(model_kwargs.get('model_name'))
             return ChatOpenAI(**model_kwargs)
         if args['provider'] == 'anyscale':
             return ChatAnyscale(**model_kwargs)
@@ -163,18 +172,25 @@ class LangChainHandler(BaseMLEngine):
 
     def _handle_parsing_errors(self, error: Exception) -> str:
         response = str(error)
-        if not response.startswith(_PARSING_ERROR_PREFIX):
-            return f'Agent failed with error:\n{str(error)}...'
-        else:
-            # As a somewhat dirty workaround, we accept the output formatted incorrectly and use it as a response.
-            #
-            # Ideally, in the future, we would write a parser that is more robust and flexible than the one Langchain uses.
-            # Response is wrapped in ``
-            logger.info('Handling parsing error, salvaging response...')
-            response_output = response.split('`')
-            if len(response_output) >= 2:
-                response = response_output[-2]
-            return response
+        for p in _PARSING_ERROR_PREFIXES:
+            if response.startswith(p):
+                # As a somewhat dirty workaround, we accept the output formatted incorrectly and use it as a response.
+                #
+                # Ideally, in the future, we would write a parser that is more robust and flexible than the one Langchain uses.
+                # Response is wrapped in ``
+                logger.info('Handling parsing error, salvaging response...')
+                response_output = response.split('`')
+                if len(response_output) >= 2:
+                    response = response_output[-2]
+
+                # Wrap response in Langchain conversational react format.
+                langchain_react_formatted_response = f'''Do I need to use a tool? No
+AI: {response}'''
+                response_obj = {
+                    'text': langchain_react_formatted_response
+                }
+                return json.dumps(response_obj)
+        return f'Agent failed with error:\n{str(error)}...'
 
     def create(self, target: str, args: Dict = None, **kwargs):
         self.default_agent_tools = args.get('tools', self.default_agent_tools)

@@ -3,26 +3,27 @@ import requests
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 
-from mindsdb.integrations.libs.api_handler import APIHandler, APITable
+from mindsdb.integrations.libs.api_handler import APIHandler
 
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response
 )
 
-from .serpstack_tables import (OrganicResultsTable, ImageResultsTable, 
-    VideoResultsTable, NewsResultsTable, ShoppingResultsTable)
+from .serpstack_tables import (
+    OrganicResultsTable, ImageResultsTable,
+    VideoResultsTable, NewsResultsTable, ShoppingResultsTable
+)
 
 
 logger = log.getLogger(__name__)
 
+
 class SerpstackHandler(APIHandler):
     """A class for handling connections and interactions with the Serpstack API.
-    
     Attributes:
         api_key (str): API access key for the Serpstack API.
         is_connected (bool): Whether or not the API client is connected to Serpstack.
-    
     """
 
     name = 'serpstack'
@@ -67,12 +68,10 @@ class SerpstackHandler(APIHandler):
             logger.error(response.error_message)
             response.success = False
             return response
-        
         try:
             url = f"https://api.serpstack.com/search?access_key={self.access_key}"
             api_request = requests.get(url)
             api_response = api_request.json()
-            
             # error 105 means that user is on a free plan
             if api_response['error']['code'] == 105:
                 self.base_url = "http://api.serpstack.com/search"
@@ -90,7 +89,6 @@ class SerpstackHandler(APIHandler):
 
             self.is_connected = True
             response.success = True
-            
         except Exception as e:
             response.error_message = (
                 f"Failed to connect to Serpstack API: {str(e)}"
@@ -116,7 +114,6 @@ class SerpstackHandler(APIHandler):
 
         if response.success is False:
             self.is_connected = False
-        
         return response
 
     def native_query(self, query: str = None) -> Response:

@@ -4,6 +4,7 @@ from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 
+
 class BaseResultsTable(APITable):
     def select(self, query: ast.Select) -> pd.DataFrame:
         """
@@ -23,10 +24,8 @@ class BaseResultsTable(APITable):
 
         if 'query' not in params:
             raise ValueError('Query is missing in the SQL query')
-        
         if 'type' not in params and hasattr(self, 'default_type'):
             params['type'] = self.default_type
-        
         api_response = requests.get(self.handler.base_url, params=params)
         api_result = api_response.json()
         results = api_result.get(self.results_key, [])
@@ -83,6 +82,7 @@ class BaseResultsTable(APITable):
 
         return result
 
+
 class OrganicResultsTable(BaseResultsTable):
     results_key = 'organic_results'
 
@@ -133,6 +133,7 @@ class OrganicResultsTable(BaseResultsTable):
             'rich_snippet'
         ]
 
+
 class ImageResultsTable(BaseResultsTable):
     results_key = 'image_results'
     default_type = 'images'
@@ -161,6 +162,7 @@ class ImageResultsTable(BaseResultsTable):
             'source'
         ]
 
+
 class VideoResultsTable(BaseResultsTable):
     results_key = 'video_results'
     default_type = 'videos'
@@ -186,6 +188,7 @@ class VideoResultsTable(BaseResultsTable):
             'snippet',
             'length'
         ]
+
 
 class NewsResultsTable(BaseResultsTable):
     results_key = 'news_results'
@@ -214,6 +217,7 @@ class NewsResultsTable(BaseResultsTable):
             'snippet',
             'thumbnail_url'
         ]
+
 
 class ShoppingResultsTable(BaseResultsTable):
     results_key = 'shopping_results'

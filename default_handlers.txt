@@ -15,6 +15,6 @@ statsforecast
 timegpt
 binance
 twitter
-mindsdb_inference
+minds_endpoint
 web
 langchain            # For agents & completions

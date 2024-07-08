@@ -67,7 +67,7 @@ class EmailClient:
             logger.error(
                 f'Exception occurred while logging out from SMTP server: {str(e)}')
 
-    def send_email(self, to_addr, subject, body):
+    def send_email(self, to_addr: str, subject: str, body: str):
         '''
         Sends an email to the given address.
         
@@ -80,13 +80,13 @@ class EmailClient:
         msg = MIMEMultipart()
         msg['From'] = self.email
         msg['To'] = to_addr
-        msg['Subject'] = subject.value
-        msg.attach(MIMEText(body.value, 'plain'))
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'plain'))
 
         self.smtp_server.starttls()
         self.smtp_server.login(self.email, self.password)
         self.smtp_server.send_message(msg)
-        logger.info(f'Email sent to {to_addr} with subject: {subject.value}')
+        logger.info(f'Email sent to {to_addr} with subject: {subject}')
 
     def search_email(self, options: EmailSearchOptions) -> pd.DataFrame:
         '''Searches emails based on the given options and returns a DataFrame.

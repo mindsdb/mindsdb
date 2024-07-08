@@ -18,7 +18,7 @@ class EmailSearchOptions(BaseModel):
     since_date: datetime.date = None
     until_date: datetime.date = None
     # Search for all emails after this ID.
-    since_email_id: str = None
+    since_email_id: int = None
 
     class Config:
         json_schema_extra = {

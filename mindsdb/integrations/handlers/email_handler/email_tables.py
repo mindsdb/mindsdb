@@ -132,7 +132,7 @@ class EmailsTable(APITable):
 
         for email in email_data:
             connection = self.handler.connect()
-            to_addr = email['to_field'].value
+            to_addr = email['to_field']
             del email['to_field']
             connection.send_email(to_addr, **email)
 

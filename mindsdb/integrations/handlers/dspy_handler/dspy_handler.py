@@ -3,7 +3,6 @@ import dill
 import dspy
 
 
-# from langchain_community.chat_models import ChatAnthropic, ChatOpenAI, ChatAnyscale, ChatLiteLLM, ChatOllama
 from dspy import ColBERTv2
 from dspy.teleprompt import BootstrapFewShot
 from dspy.evaluate import Evaluate
@@ -12,12 +11,10 @@ from mindsdb.interfaces.llm.llm_controller import LLMDataController
 import pandas as pd
 
 
-from mindsdb.integrations.handlers.dspy_handler.constants import (
-    ANTHROPIC_CHAT_MODELS,
-    DEFAULT_MODEL_NAME,
-    OLLAMA_CHAT_MODELS,
+from mindsdb.integrations.handlers.langchain_handler.constants import (
+    DEFAULT_MODEL_NAME
 )
-from mindsdb.integrations.handlers.dspy_handler.log_callback_handler import LogCallbackHandler
+from mindsdb.integrations.handlers.langchain_handler.log_callback_handler import LogCallbackHandler
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
 from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS as OPEN_AI_CHAT_MODELS
 from mindsdb.integrations.libs.base import BaseMLEngine
@@ -25,12 +22,15 @@ from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.interfaces.storage.model_fs import HandlerStorage, ModelStorage
 from mindsdb.utilities import log
 
-# from .mindsdb_chat_model import ChatMindsdb
 
 _PARSING_ERROR_PREFIX = 'An output parsing error occured'
 
 logger = log.getLogger(__name__)
 
+START_URL = 'http://20.102.90.50:2017/wiki17_abstracts'
+DEMOS = 4
+DF_EXAMPLES = 25
+MODEL_ID = 1
 
 class DSPyHandler(BaseMLEngine):
     """
@@ -63,12 +63,8 @@ class DSPyHandler(BaseMLEngine):
     def _get_llm_provider(self, args: Dict) -> str:
         if 'provider' in args:
             return args['provider']
-        if args['model_name'] in ANTHROPIC_CHAT_MODELS:
-            return 'anthropic'
         if args['model_name'] in OPEN_AI_CHAT_MODELS:
             return 'openai'
-        if args['model_name'] in OLLAMA_CHAT_MODELS:
-            return 'ollama'
         raise ValueError(f"Invalid model name. Please define provider")
 
     def _get_embedding_model_provider(self, args: Dict) -> str:
@@ -80,6 +76,17 @@ class DSPyHandler(BaseMLEngine):
         raise ValueError(f"Invalid model name. Please define provider")
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Dict = None, **kwargs):
+        """
+        Create a model by initializing the parameters and setting up a DSPy chain with cold start data
+
+        Args:
+            target (str): Type of engine
+            df (DataFrame): cold start df for DSPy
+            args (Dict): Parameters for the model
+
+        Returns:
+            None
+        """
 
         args = args['using']
         args['target'] = target
@@ -92,14 +99,20 @@ class DSPyHandler(BaseMLEngine):
                 args["prompt_template"] = DEFAULT_RAG_PROMPT_TEMPLATE
 
         self.model_storage.json_set('args', args)
-        self.model_storage.file_set("cold_start_df", dill.dumps(df.to_dict()))
-            # TODO: temporal workaround: serialize df and args, instead. And recreate chain (with training) every inference call.
-            # ideally, we serialize the chain itself to avoid duplicate training.
+        self.model_storage.file_set('cold_start_df', dill.dumps(df.to_dict()))
+        # TODO: temporal workaround: serialize df and args, instead. And recreate chain (with training) every inference call.
+        # ideally, we serialize the chain itself to avoid duplicate training.
 
     def predict(self, df: pd.DataFrame, args: Dict=None) -> pd.DataFrame:
         """
-        Dispatch is performed depending on the underlying model type. Currently, only the default text completion
-        is supported.
+        Predicts a response using DSPy
+
+        Args:
+            df (DataFrame): input for the model
+            args (Dict): Parameters for the model
+
+        Returns:
+            df (DataFrame): response from the model
         """
         pred_args = args['predict_params'] if args else {}
         args = self.model_storage.json_get('args')
@@ -109,26 +122,22 @@ class DSPyHandler(BaseMLEngine):
         args['provider'] = args.get('provider', self._get_llm_provider(args))
         args['embedding_model_provider'] = args.get('embedding_model', self._get_embedding_model_provider(args))
 
-        # retrives llm and pass it around as context
+        # retrieves llm and pass it around as context
         model = args.get('model_name')
         api_key = get_api_key('openai', args, self.engine_storage, strict=False)
-        # llm = dspy.OpenAI(model=model, api_key=api_key, api_base = 'https://llm.mdb.ai')
         llm = dspy.OpenAI(model=model, api_key=api_key)
 
         df = df.reset_index(drop=True)
-        if len(self.llm_data_controller.list_all_llm_data(1)) > 100:
-            for i in range(15):
-                self.llm_data_controller.delete_llm_data(1)
 
         cold_start_df = pd.DataFrame(dill.loads(self.model_storage.file_get("cold_start_df")))  # fixed in "training"  # noqa
 
         # gets larger as agent is used more
-        self_improvement_df = pd.DataFrame(self.llm_data_controller.list_all_llm_data(1))
+        self_improvement_df = pd.DataFrame(self.llm_data_controller.list_all_llm_data(MODEL_ID))
         self_improvement_df = self_improvement_df.rename(columns={
             'output': args['target'],
             'input': args['user_column']
         })
-        self_improvement_df = self_improvement_df.tail(25)
+        self_improvement_df = self_improvement_df.tail(DF_EXAMPLES)
 
         # add cold start DF
         self_improvement_df = pd.concat([cold_start_df, self_improvement_df]).reset_index(drop=True)
@@ -145,17 +154,37 @@ class DSPyHandler(BaseMLEngine):
         raise NotImplementedError('Fine-tuning is not supported for LangChain models')
     
     def setup_dspy(self, df, args):
+        """
+        Use the default DSPy parameters to set up the chain
+
+        Args:
+            df (DataFrame): input to th emodel
+            args (Dict): Parameters for the model
+
+        Returns:
+            DSPy chain
+        """
         # This is the default language model and retrieval model in DSPy
-        colbertv2 = ColBERTv2(url='http://20.102.90.50:2017/wiki17_abstracts')
+        colbertv2 = ColBERTv2(url=START_URL)
         dspy.configure(rm=colbertv2)
         dspy_chain = self.create_dspy_chain(df, args)
         return dspy_chain
     
     def create_dspy_chain(self, df, args):
+        """
+        Iniialize chain with the llm, add the cold start examples and bootstrap some examples
+
+        Args:
+            df (DataFrame): input to th emodel
+            args (Dict): Parameters for the model
+
+        Returns:
+            Optimized DSPy chain
+        """
+        
         # Initialize the LLM with the API key
         model = args.get('model_name')
         api_key = get_api_key(model, args, self.engine_storage, strict=False)
-        # llm = dspy.OpenAI(model=model, api_key=api_key, api_base = 'https://llm.mdb.ai')
         llm = dspy.OpenAI(model=model, api_key=api_key)
 
         # Convert to DSPy Module
@@ -174,7 +203,7 @@ class DSPyHandler(BaseMLEngine):
             dspy_examples.append(example)
 
         # TODO: add the optimizer, maybe the metric
-        config = dict(max_bootstrapped_demos=4, max_labeled_demos=4)
+        config = dict(max_bootstrapped_demos=DEMOS, max_labeled_demos=DEMOS)
         metric = dspy.evaluate.metrics.answer_exact_match  # TODO: passage match requires context from prediction... we'll probably modify the signature of ReAct
         teleprompter = BootstrapFewShot(metric=metric, **config)  # TODO: maybe it's better to have this persisted so that the internal state does a better job at optimizing RAG
         with dspy.context(lm=llm):
@@ -182,6 +211,17 @@ class DSPyHandler(BaseMLEngine):
         return optimized
     
     def generate_dspy_response(self, question, chain, llm):
+        """
+        Generate response using DSPy
+
+        Args:
+            question (str): question asked as input to the model
+            chain: DSPy chain created
+            llm: OpenAI model
+
+        Returns:
+            Answer to the prompt
+        """
         input_dict = {"question": question}
         with dspy.context(lm=llm):
             response = chain(question=input_dict['question'])
@@ -193,19 +233,28 @@ class DSPyHandler(BaseMLEngine):
                      chain,  # TODO: specify actual type
                      llm,
             ) -> pd.DataFrame:
+        """
+        Generate response using DSPy
+
+        Args:
+            df (DataFrame): contains the input to the model
+            args (Dict): parameters of the model
+            chain: DSPy chain created
+            llm: OpenAI model
+
+        Returns:
+            df (DataFrame): Dataframe of responses
+        """
         responses = []
         for index, row in df.iterrows():
             question = row[args['user_column']]
             answer = self.generate_dspy_response(question, chain, llm)
             responses.append({'answer': answer, 'question': question})  # TODO: check that columns are right here
             # TODO: check this only adds new incoming rows
-            self.llm_data_controller.add_llm_data(question, answer, 1)  # stores new traces for use in new calls
+            self.llm_data_controller.add_llm_data(question, answer, MODEL_ID)  # stores new traces for use in new calls
 
         # Set up the evaluator, which can be used multiple times.
         # TODO: use this in the EVALUATE command
         # evaluate = Evaluate(devset=gsm8k_devset, metric=gsm8k_metric, num_threads=4, display_progress=True, display_table=0)
-
-        # Evaluate our `optimized_cot` program.
-        # evaluate(optimized_cot)
 
         return pd.DataFrame(responses)

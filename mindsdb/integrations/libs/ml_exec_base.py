@@ -21,7 +21,6 @@ import contextlib
 import datetime as dt
 from types import ModuleType
 from typing import Optional, Union
-import traceback
 
 import pandas as pd
 from sqlalchemy import func, null

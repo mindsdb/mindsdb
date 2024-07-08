@@ -4,7 +4,7 @@ tiktoken==0.5.2
 anthropic>=0.26.1
 litellm==1.35.0
 chromadb # Knowledge bases.
-langchain-experimental
+langchain-experimental==0.0.58
 dspy-ai
 dspy
 -r mindsdb/integrations/handlers/openai_handler/requirements.txt

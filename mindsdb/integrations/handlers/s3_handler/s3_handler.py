@@ -186,8 +186,10 @@ class S3Handler(DatabaseHandler):
 
             if key.endswith('.tsv'):
                 input_serialization['CSV']['FieldDelimiter'] = '\t'
+
         elif key.endswith('.parquet'):
             input_serialization = {'Parquet': {}}
+
         else:
             raise ValueError('The Key should have one of the following extensions: .csv, .tsv, .parquet')
 
@@ -236,6 +238,7 @@ class S3Handler(DatabaseHandler):
             connection = self.connect()
             connection.head_object(Bucket=self.connection_data['bucket'], Key=self.key)
         except ClientError as e:
+            logger.error(f'The file {self.key} does not exist in the bucket {self.connection_data["bucket"]}: {e}!')
             raise ValueError(f'The file {self.key} does not exist in the bucket {self.connection_data["bucket"]}!')
 
         # Replace the value of the FROM clause with 'S3Object'.

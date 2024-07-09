@@ -6,7 +6,7 @@ from mindsdb_sql import parse_sql
 
 from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
 
-from .executor_test_base import BaseExecutorMockPredictor
+from tests.unit.executor_test_base import BaseExecutorMockPredictor
 
 
 class Test(BaseExecutorMockPredictor):
@@ -54,10 +54,10 @@ class Test(BaseExecutorMockPredictor):
         # --- inline prediction ---
         self.mock_predict.reset_mock()
 
-        ret = self.command_executor.execute_command(parse_sql(f'''
+        ret = self.command_executor.execute_command(parse_sql('''
             select * from mindsdb.task_model where a = 2
-            using p1=1, p2=[1,2] 
+            using p1=1, p2=[1,2]
         ''', dialect='mindsdb'))
 
         predict_args = self.mock_predict.call_args[1]['params']
-        assert predict_args == {'p1': 1, 'p2': [1,2]}
+        assert predict_args == {'p1': 1, 'p2': [1, 2]}

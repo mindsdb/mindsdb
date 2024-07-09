@@ -111,6 +111,17 @@ def extract_comparison_conditions(binary_op: ASTNode):
                 raise NotImplementedError(f'Not implemented arg2: {node.args[1]}')
 
             conditions.append([op, node.args[0].parts[-1], value])
+        if isinstance(node, ast.BetweenOperation):
+            var, up, down = node.args
+            if not (
+                isinstance(var, ast.Identifier)
+                and isinstance(up, ast.Constant)
+                and isinstance(down, ast.Constant)
+            ):
+                raise NotImplementedError(f'Not implemented: {node}')
+
+            op = node.op.lower()
+            conditions.append([op, var.parts[-1], (up.value, down.value)])
 
     query_traversal(binary_op, _extract_comparison_conditions)
     return conditions
@@ -175,10 +186,15 @@ def filter_dataframe(df: pd.DataFrame, conditions: list):
     # assumes that list was got from extract_comparison_conditions
     where_query = None
     for op, arg1, arg2 in conditions:
+        op = op.lower()
 
-        if isinstance(arg2, (tuple, list)):
-            arg2 = ast.Tuple(arg2)
-        item = ast.BinaryOperation(op=op, args=[ast.Identifier(arg1), ast.Constant(arg2)])
+        if op == 'between':
+            item = ast.BetweenOperation(args=[ast.Identifier(arg1), ast.Constant(arg2[0]), ast.Constant(arg2[1])])
+        else:
+            if isinstance(arg2, (tuple, list)):
+                arg2 = ast.Tuple(arg2)
+
+            item = ast.BinaryOperation(op=op, args=[ast.Identifier(arg1), ast.Constant(arg2)])
         if where_query is None:
             where_query = item
         else:

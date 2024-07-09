@@ -1,7 +1,6 @@
 from concurrent.futures import as_completed, TimeoutError
-from typing import Optional, Dict, List
+from typing import Optional, Dict
 import json
-import os
 import re
 
 from langchain.agents import AgentExecutor
@@ -10,8 +9,7 @@ from langchain.chains.conversation.memory import ConversationSummaryBufferMemory
 from langchain.schema import SystemMessage
 from langchain_community.chat_models import ChatAnthropic, ChatOpenAI, ChatAnyscale, ChatLiteLLM, ChatOllama
 from langchain_core.prompts import PromptTemplate
-from langfuse import Langfuse
-from langfuse.callback import CallbackHandler
+
 
 import numpy as np
 import pandas as pd
@@ -21,7 +19,6 @@ from mindsdb.integrations.handlers.langchain_handler.constants import (
     DEFAULT_AGENT_TIMEOUT_SECONDS,
     DEFAULT_AGENT_TOOLS,
     DEFAULT_AGENT_TYPE,
-    DEFAULT_EMBEDDINGS_MODEL_PROVIDER,
     DEFAULT_MAX_ITERATIONS,
     DEFAULT_MAX_TOKENS,
     DEFAULT_MODEL_NAME,
@@ -30,8 +27,6 @@ from mindsdb.integrations.handlers.langchain_handler.constants import (
     DEFAULT_USER_COLUMN,
     DEFAULT_ASSISTANT_COLUMN
 )
-from mindsdb.integrations.handlers.langchain_handler.log_callback_handler import LogCallbackHandler
-from mindsdb.integrations.handlers.langchain_handler.langfuse_callback_handler import LangfuseCallbackHandler
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
 from mindsdb.integrations.handlers.langchain_handler.tools import setup_tools
 from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS as OPEN_AI_CHAT_MODELS
@@ -43,11 +38,30 @@ from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embeddi
 from mindsdb.utilities import log
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 
-from .mindsdb_chat_model import ChatMindsdb
-
 _PARSING_ERROR_PREFIXES = ['An output parsing error occured', 'Could not parse LLM output']
 
 logger = log.getLogger(__name__)
+
+
+def get_llm_provider(args: Dict) -> str:
+    if 'provider' in args:
+        return args['provider']
+    if args['model_name'] in ANTHROPIC_CHAT_MODELS:
+        return 'anthropic'
+    if args['model_name'] in OPEN_AI_CHAT_MODELS:
+        return 'openai'
+    if args['model_name'] in OLLAMA_CHAT_MODELS:
+        return 'ollama'
+    raise ValueError(f"Invalid model name. Please define provider")
+
+
+def get_embedding_model_provider(args: Dict) -> str:
+    if 'embedding_model_provider' in args:
+        return args['embedding_model_provider']
+    if 'embedding_model_provider' not in args:
+        logger.warning('No embedding model provider specified. trying to use llm provider.')
+        return args.get('embedding_model_provider', get_llm_provider(args))
+    raise ValueError(f"Invalid model name. Please define provider")
 
 
 class LangChainHandler(BaseMLEngine):
@@ -72,36 +86,11 @@ class LangChainHandler(BaseMLEngine):
             self,
             model_storage: ModelStorage,
             engine_storage: HandlerStorage,
-            log_callback_handler: LogCallbackHandler = None,
-            langfuse_callback_handler: CallbackHandler = None,
             **kwargs):
         super().__init__(model_storage, engine_storage, **kwargs)
         # if True, the target column name does not have to be specified at creation time.
         self.generative = True
         self.default_agent_tools = DEFAULT_AGENT_TOOLS
-        self.log_callback_handler = log_callback_handler
-        self.langfuse_callback_handler = langfuse_callback_handler
-        if self.log_callback_handler is None:
-            self.log_callback_handler = LogCallbackHandler(logger)
-
-    def _get_llm_provider(self, args: Dict) -> str:
-        if 'provider' in args:
-            return args['provider']
-        if args['model_name'] in ANTHROPIC_CHAT_MODELS:
-            return 'anthropic'
-        if args['model_name'] in OPEN_AI_CHAT_MODELS:
-            return 'openai'
-        if args['model_name'] in OLLAMA_CHAT_MODELS:
-            return 'ollama'
-        raise ValueError(f"Invalid model name. Please define provider")
-
-    def _get_embedding_model_provider(self, args: Dict) -> str:
-        if 'embedding_model_provider' in args:
-            return args['embedding_model_provider']
-        if 'embedding_model_provider' not in args:
-            logger.warning('No embedding model provider specified. trying to use llm provider.')
-            return args.get('embedding_model_provider', self._get_llm_provider(args))
-        raise ValueError(f"Invalid model name. Please define provider")
 
     def _get_chat_model_params(self, args: Dict, pred_args: Dict) -> Dict:
         model_config = args.copy()
@@ -111,37 +100,11 @@ class LangChainHandler(BaseMLEngine):
         model_config['api_keys'] = {
             p: get_api_key(p, model_config, self.engine_storage, strict=False) for p in SUPPORTED_PROVIDERS
         }
-        llm_config = get_llm_config(args.get('provider', self._get_llm_provider(args)), model_config)
+        llm_config = get_llm_config(args.get('provider', get_llm_provider(args)), model_config)
         config_dict = llm_config.model_dump()
         config_dict = {k: v for k, v in config_dict.items() if v is not None}
         return config_dict
 
-    def _get_agent_callbacks(self, args: Dict) -> List:
-        all_callbacks = [self.log_callback_handler]
-        are_langfuse_args_present = 'langfuse_public_key' in args and 'langfuse_secret_key' in args and 'langfuse_host' in args
-        if self.langfuse_callback_handler is None and are_langfuse_args_present:
-            self.langfuse_callback_handler = CallbackHandler(
-                args['langfuse_public_key'],
-                args['langfuse_secret_key'],
-                host=args['langfuse_host']
-            )
-            # Check credentials.
-            if not self.langfuse_callback_handler.auth_check():
-                logger.error(f'Incorrect Langfuse credentials provided to Langchain handler. Full args: {args}')
-        if self.langfuse_callback_handler is not None:
-            all_callbacks.append(self.langfuse_callback_handler)
-        if 'trace_id' not in args or 'observation_id' not in args:
-            return all_callbacks
-        # Trace LLM chains & tools using Langfuse.
-        langfuse = Langfuse(
-            public_key=os.getenv('LANGFUSE_PUBLIC_KEY'),
-            secret_key=os.getenv('LANGFUSE_SECRET_KEY'),
-            host=os.getenv('LANGFUSE_HOST')
-        )
-        langfuse_cb_handler = LangfuseCallbackHandler(langfuse, args['trace_id'], args['observation_id'])
-        all_callbacks.append(langfuse_cb_handler)
-        return all_callbacks
-    
     def _get_tiktoken_model_name(self, model: str) -> str:
         if model.startswith('gpt-4'):
             return 'gpt-4'
@@ -163,8 +126,6 @@ class LangChainHandler(BaseMLEngine):
             return ChatLiteLLM(**model_kwargs)
         if args['provider'] == 'ollama':
             return ChatOllama(**model_kwargs)
-        if args['provider'] == 'mindsdb':
-            return ChatMindsdb(**model_kwargs)
         raise ValueError(f'Unknown provider: {args["provider"]}')
 
     def _create_embeddings_model(self, args: Dict):
@@ -198,8 +159,8 @@ AI: {response}'''
         args = args['using']
         args['target'] = target
         args['model_name'] = args.get('model_name', DEFAULT_MODEL_NAME)
-        args['provider'] = args.get('provider', self._get_llm_provider(args))
-        args['embedding_model_provider'] = args.get('embedding_model', self._get_embedding_model_provider(args))
+        args['provider'] = args.get('provider', get_llm_provider(args))
+        args['embedding_model_provider'] = args.get('embedding_model', get_embedding_model_provider(args))
         if args.get('mode') == 'retrieval':
             # use default prompt template for retrieval i.e. RAG if not provided
             if "prompt_template" not in args:
@@ -227,15 +188,31 @@ AI: {response}'''
         if 'prompt_template' not in args and 'prompt_template' not in pred_args:
             raise ValueError(f"This model expects a `prompt_template`, please provide one.")
         # Back compatibility for old models
-        args['provider'] = args.get('provider', self._get_llm_provider(args))
-        args['embedding_model_provider'] = args.get('embedding_model', self._get_embedding_model_provider(args))
+        args['provider'] = args.get('provider', get_llm_provider(args))
+        args['embedding_model_provider'] = args.get('embedding_model', get_embedding_model_provider(args))
 
         df = df.reset_index(drop=True)
+
+        if pred_args.get('mode') == 'chat_model':
+            return self.call_llm(df, args, pred_args)
+
         agent = self.create_agent(df, args, pred_args)
         # Use last message as prompt, remove other questions.
         user_column = args.get('user_column', DEFAULT_USER_COLUMN)
         df.iloc[:-1, df.columns.get_loc(user_column)] = None
         return self.run_agent(df, agent, args, pred_args)
+
+    def call_llm(self, df, args=None, pred_args=None):
+        llm = self._create_chat_model(args, pred_args)
+
+        user_column = args.get('user_column', DEFAULT_USER_COLUMN)
+        assistant_column = args.get('assistant_column', DEFAULT_ASSISTANT_COLUMN)
+
+        question = df[user_column].iloc[-1]
+        resp = llm([SystemMessage(question)])
+
+        return pd.DataFrame([resp.content], columns=[assistant_column])
+
 
     def create_agent(self, df: pd.DataFrame, args: Dict=None, pred_args: Dict=None) -> AgentExecutor:
         pred_args = pred_args if pred_args else {}
@@ -243,24 +220,6 @@ AI: {response}'''
         # Set up tools.
         model_kwargs = self._get_chat_model_params(args, pred_args)
         llm = self._create_chat_model(args, pred_args)
-
-        # Set up embeddings model if needed.
-        if args.get('mode') == 'retrieval':
-            embeddings_args = args.pop('embedding_model_args', {})
-
-            # no embedding model args provided, use default provider.
-            if not embeddings_args:
-                embeddings_provider = self._get_embedding_model_provider(args)
-                logger.warning("'embedding_model_args' not found in input params, "
-                               f"Trying to use LLM provider: {embeddings_provider}"
-                               )
-                embeddings_args['class'] = embeddings_provider
-                # Include API keys if present.
-                embeddings_args.update({k: v for k, v in args.items() if 'api_key' in k})
-
-            # create embeddings model
-            pred_args['embeddings_model'] = self._create_embeddings_model(embeddings_args)
-            pred_args['llm'] = llm
 
         tools = setup_tools(llm,
                             model_kwargs,
@@ -304,7 +263,7 @@ AI: {response}'''
         )
         return agent_executor
 
-    def run_agent(self, df: pd.DataFrame, agent: AgentExecutor, args: Dict, pred_args: Dict) -> str:
+    def run_agent(self, df: pd.DataFrame, agent: AgentExecutor, args: Dict, pred_args: Dict) -> pd.DataFrame:
         # Prefer prediction time prompt template, if available.
         base_template = pred_args.get('prompt_template', args['prompt_template'])
 
@@ -337,7 +296,7 @@ AI: {response}'''
                 # Handle callbacks per run.
                 all_args = args.copy()
                 all_args.update(pred_args)
-                answer = agent_executor.invoke(prompt, config={ 'callbacks': self._get_agent_callbacks(all_args) })
+                answer = agent_executor.invoke(prompt)
             except Exception as e:
                 answer = str(e)
                 if not answer.startswith("Could not parse LLM output: `"):

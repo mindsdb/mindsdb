@@ -87,8 +87,7 @@ class FinancialModelingHandler(APIHandler):
             
             params (Dict): Params to pass to the API call
         """
-        print("Params:", params) 
-        print(self.api_key)
+        
         if endpoint_name == 'daily_chart':
             return self.get_daily_chart(params)
             #return None

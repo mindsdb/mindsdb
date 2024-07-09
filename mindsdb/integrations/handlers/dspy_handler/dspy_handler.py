@@ -30,6 +30,7 @@ logger = log.getLogger(__name__)
 START_URL = 'http://20.102.90.50:2017/wiki17_abstracts'
 DEMOS = 4
 DF_EXAMPLES = 25
+PRIME_MULTIPLIER = 31
 
 class DSPyHandler(BaseMLEngine):
     """
@@ -81,8 +82,7 @@ class DSPyHandler(BaseMLEngine):
         '''
         length_of_string = len(model_name)
         sum_chars = sum(ord(char) for char in model_name)
-        prime_multiplier = 31
-        unique_id = (length_of_string * prime_multiplier) + sum_chars
+        unique_id = (length_of_string * PRIME_MULTIPLIER) + sum_chars
         return unique_id
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Dict = None, **kwargs):

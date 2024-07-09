@@ -68,16 +68,6 @@ def cast_row_types(row, field_types):
                 pass
 
 
-def is_notebook():
-    try:
-        if 'IPKernelApp' in get_ipython().config:
-            return True
-        else:
-            return False
-    except NameError:
-        return False      # Probably standard Python interpreter
-
-
 def mark_process(name: str, custom_mark: str = None) -> Callable:
     def mark_process_wrapper(func: Callable) -> Callable:
         @wraps(func)

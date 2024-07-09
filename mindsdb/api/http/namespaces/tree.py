@@ -31,6 +31,7 @@ class GetLeaf(Resource):
     @ns_conf.doc('get_tree_leaf')
     @api_endpoint_metrics('GET', '/tree/database')
     def get(self, db_name):
+        db_name = db_name.lower()
         databases = ca.database_controller.get_dict()
         if db_name not in databases:
             return http_error(

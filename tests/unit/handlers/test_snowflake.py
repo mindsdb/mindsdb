@@ -103,7 +103,8 @@ class TestSnowflakeHandler(unittest.TestCase):
         expected_query = f"""
             SELECT COLUMN_NAME AS FIELD, DATA_TYPE AS TYPE
             FROM INFORMATION_SCHEMA.COLUMNS
-            WHERE TABLE_NAME = '{table_name}';
+            WHERE TABLE_NAME = '{table_name}'
+              AND TABLE_SCHEMA = current_schema()
         """
 
         self.handler.native_query.assert_called_once_with(expected_query)
@@ -121,7 +122,7 @@ class TestSnowflakeHandler(unittest.TestCase):
             SELECT TABLE_NAME, TABLE_SCHEMA, TABLE_TYPE
             FROM INFORMATION_SCHEMA.TABLES
             WHERE TABLE_TYPE IN ('BASE TABLE', 'VIEW')
-            AND TABLE_SCHEMA <> 'INFORMATION_SCHEMA'
+              AND TABLE_SCHEMA = current_schema()
         """
 
         self.handler.native_query.assert_called_once_with(expected_query)

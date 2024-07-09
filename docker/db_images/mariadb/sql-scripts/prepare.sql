@@ -7,7 +7,8 @@ days_on_market INT,
 initial_price FLOAT,
 neighborhood varchar(25),
 rental_price FLOAT
-);
+)
+ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 LOAD DATA INFILE '/home_rentals.csv' INTO TABLE rentals COLUMNS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"' ESCAPED BY '"' LINES TERMINATED BY '\n' IGNORE 1 LINES;
 

@@ -48,14 +48,14 @@ class SkillToolController:
             sample_rows_in_table_info,
         )
 
-    def _make_text_to_sql_tools(self, skill: db.Skills, llm) -> dict:
+    def _make_text_to_sql_tools(self, skill: db.Skills, llm) -> list:
         '''
            Uses SQLAgent to execute tool
         '''
         # To prevent dependency on Langchain unless an actual tool uses it.
         try:
             from mindsdb.integrations.handlers.langchain_handler.mindsdb_database_agent import MindsDBSQL
-            from langchain_community.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
+            from mindsdb.interfaces.skills.custom.text2sql.mindsdb_sql_toolkit import MindsDBSQLToolkit
             from langchain_community.tools.sql_database.tool import QuerySQLDataBaseTool
         except ImportError:
             raise ImportError('To use the text-to-SQL skill, please install langchain with `pip install mindsdb[langchain]`')
@@ -69,7 +69,7 @@ class SkillToolController:
             include_tables=tables_to_include
         )
         # Users probably don't need to configure this for now.
-        sql_database_tools = SQLDatabaseToolkit(db=db, llm=llm).get_tools()
+        sql_database_tools = MindsDBSQLToolkit(db=db, llm=llm).get_tools()
         description = skill.params.get('description', '')
         tables_list = ','.join([f'{database}.{table}' for table in tables])
         for i, tool in enumerate(sql_database_tools):

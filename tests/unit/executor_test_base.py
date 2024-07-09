@@ -137,13 +137,17 @@ class BaseUnitTest:
         con.execute('DROP TABLE IF EXISTS {}'.format(table))
         con.execute('CREATE TABLE {} AS SELECT * FROM data'.format(table))
 
-    def wait_predictor(self, project, name, timeout=100):
+    def wait_predictor(self, project, name, timeout=100, filters=None):
         """
         Wait for the predictor to be created,
         raising an exception if predictor creation fails or exceeds timeout
         """
         for attempt in range(timeout):
-            ret = self.run_sql(f"select * from {project}.models where name='{name}'")
+            sql = f"select * from {project}.models where name='{name}'"
+            if filters is not None:
+                for k, v in filters.items():
+                    sql += f" and {k}='{v}'"
+            ret = self.run_sql(sql)
             if not ret.empty:
                 status = ret["STATUS"][0]
                 if status == "complete":
@@ -184,9 +188,9 @@ class BaseExecutorTest(BaseUnitTest):
     Set up executor: mock data handler
     """
 
-    def setup_method(self):
+    def setup_method(self, import_dummy_ml=False):
         super().setup_method()
-        self.set_executor()
+        self.set_executor(import_dummy_ml=import_dummy_ml)
 
     def set_executor(
         self,
@@ -372,8 +376,7 @@ class BaseExecutorDummyML(BaseExecutorTest):
     """
 
     def setup_method(self):
-        super().setup_method()
-        self.set_executor(import_dummy_ml=True)
+        super().setup_method(import_dummy_ml=True)
 
     def run_sql(self, sql, throw_error=True, database='mindsdb'):
         self.command_executor.session.database = database
@@ -384,6 +387,12 @@ class BaseExecutorDummyML(BaseExecutorTest):
             assert ret.error_code is None
         if ret.data is not None:
             return ret.data.to_df()
+
+    def get_models(self):
+        models = {}
+        for p in self.db.Predictor.query.all():
+            models[p.id] = p
+        return models
 
 
 class BaseExecutorDummyLLM(BaseExecutorTest):

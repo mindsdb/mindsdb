@@ -134,25 +134,7 @@ class S3Handler(DatabaseHandler):
         key = self.table_name.replace('_', '.')
 
         # Validate the key extension and set the input serialization accordingly.
-        if key.endswith('.csv') or key.endswith('.tsv'):
-            input_serialization = {
-                'CSV': {
-                    'FileHeaderInfo': 'USE'
-                }
-            }
-
-            if key.endswith('.tsv'):
-                input_serialization['CSV']['FieldDelimiter'] = '\t'
-        elif key.endswith('.json'):
-            input_serialization = {
-                'JSON': {
-                    'Type': 'Document'
-                }
-            }
-        elif key.endswith('.parquet'):
-            input_serialization = {'Parquet': {}}
-        else:
-            raise ValueError('The Key should have one of the following extensions: .csv, .json, .parquet')
+        input_serialization = self._generate_input_serialization(key)
 
         try:
             result = connection.select_object_content(
@@ -165,7 +147,7 @@ class S3Handler(DatabaseHandler):
             )
 
             if key.endswith('.csv') or key.endswith('.tsv') or key.endswith('.parquet'):
-                df = self._parse_json_response_for_csv_and_parquet_input(result)
+                df = self._parse_json_response_for_csv_tsv_or_parquet_inputs(result)
             elif key.endswith('.json'):
                 df = self._parse_response_for_json_input(result)
 
@@ -191,7 +173,39 @@ class S3Handler(DatabaseHandler):
 
         return response
     
-    def _parse_json_response_for_csv_and_parquet_input(self, response: Dict) -> pd.DataFrame:
+    def _generate_input_serialization(self, key: Text) -> Dict:
+        """
+        Generates the input serialization based on the file extension of the object.
+
+        Args:
+            key (Text): The object name (key) in the S3 bucket.
+
+        Returns:
+            Dict: The input serialization based on the file extension.
+        """
+        if key.endswith('.csv') or key.endswith('.tsv'):
+            input_serialization = {
+                'CSV': {
+                    'FileHeaderInfo': 'USE'
+                }
+            }
+
+            if key.endswith('.tsv'):
+                input_serialization['CSV']['FieldDelimiter'] = '\t'
+        elif key.endswith('.json'):
+            input_serialization = {
+                'JSON': {
+                    'Type': 'Document'
+                }
+            }
+        elif key.endswith('.parquet'):
+            input_serialization = {'Parquet': {}}
+        else:
+            raise ValueError('The Key should have one of the following extensions: .csv, .tsv, .json, .parquet')
+
+        return input_serialization
+    
+    def _parse_json_response_for_csv_tsv_or_parquet_inputs(self, response: Dict) -> pd.DataFrame:
         """
         Parse the JSON response from the select_object_content method.
 

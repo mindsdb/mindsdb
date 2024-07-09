@@ -249,6 +249,29 @@ class S3Handler(DatabaseHandler):
         )
 
         return self.native_query(query.to_string())
+    
+    def insert(self, table_name: str, df: pd.DataFrame):
+        need_to_close = not self.is_connected
+
+        connection = self.connect()
+
+        try:
+            # Insert the data into the object in the S3 bucket.
+
+
+            response = Response(RESPONSE_TYPE.OK)
+        except Exception as e:
+            logger.error(f'Error running query on {self.key} in {self.connection_data["bucket"]}!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_code=0,
+                error_message=str(e)
+            )
+
+        if need_to_close:
+            self.disconnect()
+
+        return response
 
     def get_tables(self) -> Response:
         """

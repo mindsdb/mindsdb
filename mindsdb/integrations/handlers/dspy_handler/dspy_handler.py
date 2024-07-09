@@ -80,9 +80,10 @@ class DSPyHandler(BaseMLEngine):
         Based on the model name calculate a unique number to be used as model_id
         '''
         length_of_string = len(model_name)
-        sum_of_digits = sum(int(char) for char in model_name if char.isdigit())
-        unique_id = length_of_string + sum_of_digits
-        return int(unique_id)
+        sum_chars = sum(ord(char) for char in model_name)
+        prime_multiplier = 31
+        unique_id = (length_of_string * prime_multiplier) + sum_chars
+        return unique_id
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Dict = None, **kwargs):
         """

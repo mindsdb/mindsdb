@@ -6,6 +6,22 @@ sidebarTitle: Get a Single Prediction
 
 <ResponseExample>
 
+```json Request
+curl --request POST \
+  --url http://127.0.0.1:47334/api/projects/mindsdb/models/home_rentals_model/predict \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "data": [
+      {
+        "sqft": "823",
+        "location": "good",
+        "neighborhood": "downtown",
+        "days_on_market": "10"
+      }
+    ]
+  }'
+```
+
 ```json Response
 [
     {

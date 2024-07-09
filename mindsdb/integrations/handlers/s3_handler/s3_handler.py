@@ -134,12 +134,15 @@ class S3Handler(DatabaseHandler):
         key = self.table_name.replace('_', '.')
 
         # Validate the key extension and set the input serialization accordingly.
-        if key.endswith('.csv'):
+        if key.endswith('.csv') or key.endswith('.tsv'):
             input_serialization = {
                 'CSV': {
                     'FileHeaderInfo': 'USE'
                 }
             }
+
+            if key.endswith('.tsv'):
+                input_serialization['CSV']['FieldDelimiter'] = '\t'
         elif key.endswith('.json'):
             input_serialization = {
                 'JSON': {
@@ -161,7 +164,7 @@ class S3Handler(DatabaseHandler):
                 OutputSerialization={"JSON": {}}
             )
 
-            if key.endswith('.csv') or key.endswith('.parquet'):
+            if key.endswith('.csv') or key.endswith('.tsv') or key.endswith('.parquet'):
                 df = self._parse_json_response_for_csv_and_parquet_input(result)
             elif key.endswith('.json'):
                 df = self._parse_response_for_json_input(result)

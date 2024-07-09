@@ -1,0 +1,114 @@
+---
+title: Upload Custom Functions
+sidebarTitle: Custom Functions
+---
+
+Custom functions provide advanced means of manipulating data. Users can upload custom functions written in Python to MindsDB and apply them to data.
+
+## How It Works
+
+You can upload your custom functions via the MindsDB editor by clicking `Add` and `Upload custom functions`, like this:
+
+<p align="center">
+  <img src="/assets/upload_custom_function.png" />
+</p>
+
+Here is the form that needs to be filled out in order to bring your custom functions to MindsDB:
+
+<p align="center">
+  <img src="/assets/upload_custom_function_empty_form.png" />
+</p>
+
+Let's briefly go over the files that need to be uploaded:
+
+* The Python file stores an implementation of your custom functions. Here is the sample format:
+
+    ```py
+    class CustomFunctions():
+
+        def function_name_1(self, a, b):
+            <implementation goes here>
+            return x
+
+        def function_name_2(self, a, b, c):
+            <implementation goes here>
+            return x
+    ```
+
+<Accordion title="Example">
+    ```py
+    class CustomFunctions():
+
+        def add_integers(self, a:int, b:int) -> int:
+            return a+b
+
+        def add_variables(self, a, b):
+            return a+b
+    ```
+</Accordion>
+
+* The requirements file, or `requirements.txt`, stores all dependencies along with their versions. Here is the sample format:
+
+    ```sql
+    dependency_package_1 == version
+    dependency_package_2 >= version
+    dependency_package_3 >= verion, < version
+    ...
+    ```
+
+<Accordion title="Example">
+    ```sql
+    pandas
+    scikit-learn
+    ```
+</Accordion>
+
+Once you upload the above files, please provide the name for a storage collection.
+
+Let's look at an example.
+
+## Example
+
+We upload the custom functions, as below:
+
+<p align="center">
+  <img src="/assets/upload_custom_function2.png" />
+</p>
+
+Here we upload the `custom_functions.py` file that stores an implementation of the functions and the `requirements.txt` file that stores all the dependencies. We named the storage collection as `functions`.
+
+Now we can use the functions as below:
+
+```sql
+SELECT functions.add_integers(sqft, 1) AS added_one, sqft
+FROM example_db.home_rentals
+LIMIT 1;
+```
+
+Here is the output:
+
+```sql
++-----------+------+
+| added_one | sqft |
++-----------+------+
+| 918       | 917  |
++-----------+------+
+```
+
+And:
+
+```sql
+SELECT functions.add_variables(sqft, 1) AS added_one, sqft
+FROM example_db.home_rentals
+LIMIT 1;
+```
+
+Here is the output:
+
+```sql
++-----------+------+
+| added_one | sqft |
++-----------+------+
+| 9171      | 917  |
++-----------+------+
+```

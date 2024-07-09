@@ -30,7 +30,6 @@ logger = log.getLogger(__name__)
 START_URL = 'http://20.102.90.50:2017/wiki17_abstracts'
 DEMOS = 4
 DF_EXAMPLES = 25
-MODEL_ID = 1
 
 class DSPyHandler(BaseMLEngine):
     """
@@ -57,6 +56,7 @@ class DSPyHandler(BaseMLEngine):
         self.generative = True
         self.log_callback_handler = log_callback_handler
         self.llm_data_controller = LLMDataController()
+        self.model_id = 0
         if self.log_callback_handler is None:
             self.log_callback_handler = LogCallbackHandler(logger)
 
@@ -74,6 +74,15 @@ class DSPyHandler(BaseMLEngine):
             logger.warning('No embedding model provider specified. trying to use llm provider.')
             return args.get('embedding_model_provider', self._get_llm_provider(args))
         raise ValueError(f"Invalid model name. Please define provider")
+
+    def calculate_model_id(self, model_name):
+        '''
+        Based on the model name calculate a unique number to be used as model_id
+        '''
+        length_of_string = len(model_name)
+        sum_of_digits = sum(int(char) for char in model_name if char.isdigit())
+        unique_id = length_of_string + sum_of_digits
+        return int(unique_id)
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Dict = None, **kwargs):
         """
@@ -124,6 +133,7 @@ class DSPyHandler(BaseMLEngine):
 
         # retrieves llm and pass it around as context
         model = args.get('model_name')
+        self.model_id = self.calculate_model_id(model)
         api_key = get_api_key('openai', args, self.engine_storage, strict=False)
         llm = dspy.OpenAI(model=model, api_key=api_key)
 
@@ -132,7 +142,7 @@ class DSPyHandler(BaseMLEngine):
         cold_start_df = pd.DataFrame(dill.loads(self.model_storage.file_get("cold_start_df")))  # fixed in "training"  # noqa
 
         # gets larger as agent is used more
-        self_improvement_df = pd.DataFrame(self.llm_data_controller.list_all_llm_data(MODEL_ID))
+        self_improvement_df = pd.DataFrame(self.llm_data_controller.list_all_llm_data(self.model_id))
         self_improvement_df = self_improvement_df.rename(columns={
             'output': args['target'],
             'input': args['user_column']
@@ -251,7 +261,7 @@ class DSPyHandler(BaseMLEngine):
             answer = self.generate_dspy_response(question, chain, llm)
             responses.append({'answer': answer, 'question': question})
             # TODO: check this only adds new incoming rows
-            self.llm_data_controller.add_llm_data(question, answer, MODEL_ID)  # stores new traces for use in new calls
+            self.llm_data_controller.add_llm_data(question, answer, self.model_id)  # stores new traces for use in new calls
 
         # Set up the evaluator, which can be used multiple times.
         # TODO: use this in the EVALUATE command

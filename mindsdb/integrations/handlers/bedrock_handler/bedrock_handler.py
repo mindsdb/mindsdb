@@ -10,10 +10,10 @@ logger = log.getLogger(__name__)
 
 class AmazonBedrockHandler(BaseMLEngine):
     """
-    Twelve Labs API handler implementation.
+    This handler handles connection and inference with the Amazon Bedrock API.
     """
 
-    name = 'twelve_labs'
+    name = 'bedrock'
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

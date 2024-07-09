@@ -143,10 +143,7 @@ class S3Handler(DatabaseHandler):
                 OutputSerialization={"JSON": {}}
             )
 
-            if self.key.endswith('.csv') or self.key.endswith('.tsv') or self.key.endswith('.parquet'):
-                df = self._parse_json_response_for_csv_tsv_or_parquet_inputs(result)
-            elif self.key.endswith('.json'):
-                df = self._parse_response_for_json_input(result)
+            df = self._parse_json_response(result)
 
             response = Response(
                 RESPONSE_TYPE.TABLE,
@@ -189,28 +186,22 @@ class S3Handler(DatabaseHandler):
 
             if key.endswith('.tsv'):
                 input_serialization['CSV']['FieldDelimiter'] = '\t'
-        elif key.endswith('.json'):
-            input_serialization = {
-                'JSON': {
-                    'Type': 'Document'
-                }
-            }
         elif key.endswith('.parquet'):
             input_serialization = {'Parquet': {}}
         else:
-            raise ValueError('The Key should have one of the following extensions: .csv, .tsv, .json, .parquet')
+            raise ValueError('The Key should have one of the following extensions: .csv, .tsv, .parquet')
 
         return input_serialization
     
-    def _parse_json_response_for_csv_tsv_or_parquet_inputs(self, response: Dict) -> pd.DataFrame:
+    def _parse_json_response(self, response: Dict) -> pd.DataFrame:
         """
         Parse the JSON response from the select_object_content method.
 
         Args:
-            response (Dict): JSON response from the select_object_content method
+            response (Dict): JSON response from the select_object_content method.
 
         Returns:
-            pd.DataFrame: DataFrame containing the parsed response
+            pd.DataFrame: DataFrame containing the parsed response.
         """
         all_records = []
         for event in response['Payload']:
@@ -221,33 +212,6 @@ class S3Handler(DatabaseHandler):
                         all_records.append(json.loads(record))
 
         return pd.DataFrame(all_records)
-    
-    def _parse_response_for_json_input(self, response: Dict) -> pd.DataFrame:
-        """
-        Parse the JSON response from the select_object_content method for JSON input serialization.
-
-        Args:
-            response (Dict): JSON response from the select_object_content method
-
-        Returns:
-            pd.DataFrame: DataFrame containing the parsed response
-        """
-        all_records = []
-        for event in response['Payload']:
-            if 'Records' in event:
-                records = event['Records']['Payload'].decode('utf-8')
-                record = records.strip()
-                if record:
-                    json_record = json.loads(record)
-                    parsed_json_record = {key: list(value.values()) for key, value in json_record.items()}
-                    all_records.append(parsed_json_record)
-
-        df = pd.DataFrame()
-        for record in all_records:
-            temp_df = pd.DataFrame(record)
-            df = pd.concat([df, temp_df], ignore_index=True)
-
-        return df
 
     def query(self, query: ASTNode) -> Response:
         """
@@ -286,7 +250,7 @@ class S3Handler(DatabaseHandler):
     def get_tables(self) -> Response:
         """
         Retrieves a list of tables (objects) in the S3 bucket.
-        Each object is considered a table. Only CSV, JSON, and Parquet files are supported.
+        Each object is considered a table. Only CSV, TSV and Parquet files are supported.
         The period in the object name is replaced with an underscore to allow them to be used as table names in SQL queries.
 
         Returns:
@@ -295,10 +259,10 @@ class S3Handler(DatabaseHandler):
         connection = self.connect()
         objects = connection.list_objects(Bucket=self.connection_data["bucket"])['Contents']
 
-        # Get only CSV, JSON, and Parquet files.
+        # Get only CSV, TSV, and Parquet files.
         # Only these formats are supported select_object_content.
         # Sorround the object names with backticks to prevent SQL syntax errors.
-        supported_objects = [f"`{obj['Key']}`" for obj in objects if obj['Key'].split('.')[-1] in ['csv', 'tsv', 'json', 'parquet']]
+        supported_objects = [f"`{obj['Key']}`" for obj in objects if obj['Key'].split('.')[-1] in ['csv', 'tsv', 'parquet']]
 
         response = Response(
             RESPONSE_TYPE.TABLE,

@@ -52,3 +52,9 @@ curl --request POST \
 The REST API endpoints can be used with MindsDB running locally at http://127.0.0.1:47334/api. 
 
 </Note>
+
+<Tip>
+
+Note that `data` sent in the request is specific to the model. For instance, the `home_rentals_model` has been trained on data that includes details of rental properties, and we want to predict the `rental_price` value for a specific property that matches `data` passed in the request.
+
+</Tip>

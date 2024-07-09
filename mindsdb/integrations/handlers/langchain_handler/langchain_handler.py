@@ -8,7 +8,8 @@ from langchain.agents import AgentExecutor
 from langchain.agents.initialize import initialize_agent
 from langchain.chains.conversation.memory import ConversationSummaryBufferMemory
 from langchain.schema import SystemMessage
-from langchain_community.chat_models import ChatAnthropic, ChatOpenAI, ChatAnyscale, ChatLiteLLM, ChatOllama
+from langchain_openai import ChatOpenAI
+from langchain_community.chat_models import ChatAnthropic, ChatAnyscale, ChatLiteLLM, ChatOllama
 from langchain_core.prompts import PromptTemplate
 from langfuse import Langfuse
 from langfuse.callback import CallbackHandler

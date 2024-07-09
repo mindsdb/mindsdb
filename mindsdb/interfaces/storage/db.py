@@ -554,10 +554,15 @@ class LLMLog(Base):
 
 
 class LLMData(Base):
+    '''
+    Stores the question/answer pairs of an LLM call so examples can be used
+    for self improvement by DSPy
+    '''
     __tablename__ = "llm_data"
     id: int = Column(Integer, primary_key=True)
     input: str = Column(String, nullable=False)
     output: str = Column(String, nullable=False)
     model_id: int = Column(Integer, nullable = False)
+    model_name: str = Column(String, nullable=False)
     created_at: datetime = Column(DateTime, default=datetime.datetime.now)
     updated_at: datetime = Column(DateTime, onupdate=datetime.datetime.now)

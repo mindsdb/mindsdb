@@ -18,15 +18,28 @@ class TestDSPy(BaseExecutorTest):
 
     @pytest.mark.skipif(OPENAI_API_KEY is None, reason='Missing OpenAI API key (OPENAI_API_KEY env variable)')
     def test_mdb_read(self):
+
         self.run_sql(
             f"""
-           create model proj.test_mdb_model
-           predict answer
-           using
-             engine='dspy',
-             prompt_template='Answer the user in a useful way: {{{{question}}}}',
-             openai_api_key='{OPENAI_API_KEY}';
-        """
+            CREATE ML_ENGINE dspy_engine
+            FROM dspy
+            USING  
+                openai_api_key = '{OPENAI_API_KEY}';
+            """
+        )
+        self.run_sql(
+            f"""
+            CREATE MODEL proj.test_mdb_model
+            PREDICT answer
+            USING
+                engine='dspy_engine',
+                provider='openai',
+                model_name='gpt-3.5-turbo',
+                mode='conversational',
+                user_column='question',
+                assistant_column='answer',
+                prompt_template='Answer the user input in a helpful way: {{question}}';
+            """
         )
         self.wait_predictor("proj", "test_mdb_model")
 
@@ -35,7 +48,7 @@ class TestDSPy(BaseExecutorTest):
             SELECT answer
             FROM proj.test_mdb_model
             WHERE question='Can you get a list of all available MindsDB models?'
-        """
+            """
         )
         assert "test_mdb_model" in result_df['answer'].iloc[0].lower()
 
@@ -43,13 +56,18 @@ class TestDSPy(BaseExecutorTest):
     def test_default_provider(self):
         self.run_sql(
             f"""
-           create model proj.test_conversational_model
-           predict answer
-           using
-             engine='dspy',
-             prompt_template='Answer the user in a useful way: {{{{question}}}}',
-             openai_api_key='{OPENAI_API_KEY}';
-        """
+            CREATE MODEL proj.test_conversational_model
+            PREDICT answer
+            USING
+                engine='dspy',
+                provider='openai',
+                model_name='gpt-3.5-turbo',
+                mode='conversational',
+                user_column='question',
+                assistant_column='answer',
+                prompt_template='Answer the user input in a helpful way: {{question}}',
+                openai_api_key='{OPENAI_API_KEY}';
+            """
         )
         self.wait_predictor("proj", "test_conversational_model")
 
@@ -58,7 +76,7 @@ class TestDSPy(BaseExecutorTest):
             SELECT answer
             FROM proj.test_conversational_model
             WHERE question='What is the capital of Sweden?'
-        """
+            """
         )
         assert "stockholm" in result_df['answer'].iloc[0].lower()
 

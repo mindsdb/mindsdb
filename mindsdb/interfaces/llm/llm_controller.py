@@ -15,10 +15,10 @@ class LLMDataController:
         Parameters:
             input_data (str): The input to the LLM.
             output_data (str): The output from the LLM.
+            model_id (int): The ID of the model/agent to filter the data.
         Returns:
             LLMData: The created LLMData object.
         '''
-        # TODO: check the hash to avoid adding duplicate records (SQLAlchemy-based)
         new_llm_data = db.LLMData(
             input=input_data,
             output=output_data,
@@ -41,7 +41,7 @@ class LLMDataController:
         db.session.delete(llm_data)
         db.session.commit()
 
-    def list_all_llm_data(self, model_id: int):
+    def list_all_llm_data(self, model_id: int) -> list:
         '''
         Lists all LLM data entries for a specific model.
         Parameters:

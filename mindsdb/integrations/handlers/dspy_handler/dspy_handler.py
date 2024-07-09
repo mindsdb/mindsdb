@@ -249,7 +249,7 @@ class DSPyHandler(BaseMLEngine):
         for index, row in df.iterrows():
             question = row[args['user_column']]
             answer = self.generate_dspy_response(question, chain, llm)
-            responses.append({'answer': answer, 'question': question})  # TODO: check that columns are right here
+            responses.append({'answer': answer, 'question': question})
             # TODO: check this only adds new incoming rows
             self.llm_data_controller.add_llm_data(question, answer, MODEL_ID)  # stores new traces for use in new calls
 

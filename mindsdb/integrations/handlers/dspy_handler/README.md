@@ -38,7 +38,7 @@ DSPy was created to optimize prompts to improve the performance of LLMs. You can
 </Tip>
 
 
-Create a conversational model using `dspy_engine` as an engine and OpenAI as a model provider.  To get started, download and upload this file to the SQL editor: [download dspy_train](https://drive.google.com/file/d/1fztGxsIHTGWx6bgDShnFrzdcdagmeJp9/view?usp=sharing).  In order to upload the file, in the SQL editor click add and directly upload as a CSV and name it `dspy_train_dataset`.  This will serve as a cold start dataset for DSPy to improve on.
+Create a conversational model using `dspy_engine` as an engine and OpenAI as a model provider.  To get started, download and upload this file to the SQL editor: [download dspy_train](https://drive.google.com/file/d/1fztGxsIHTGWx6bgDShnFrzdcdagmeJp9/view?usp=sharing).  This dataset contains a prompt template filled with some examples from the Spyder dataset.  The prompt template is used to perform a text to SQL question and answer format query.  In order to upload the file, in the SQL editor click add and directly upload as a CSV and name it `dspy_train_dataset`.  This will serve as a warm start dataset for DSPy to improve on.
 
 
 <Tip>

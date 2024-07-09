@@ -403,7 +403,7 @@ class ProcessCache:
                         )
 
     def remove_processes_for_handler(self, handler_name: str) -> None:
-        """ 
+        """
             Remove all warm processes for a given handler.
             This is useful when the previous processes use an outdated instance of the handler.
             A good example is when the dependencies for a handler are installed after attempting to use the handler.

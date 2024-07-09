@@ -232,6 +232,8 @@ AI: {response}'''
         agent = self.create_agent(df, args, pred_args)
         # Use last message as prompt, remove other questions.
         user_column = args.get('user_column', DEFAULT_USER_COLUMN)
+        if user_column not in df.columns:
+            raise Exception(f"Expected user input in column `{user_column}`, which is not found in the input data. Either provide the column, or redefine the expected column at model creation (`USING user_column = 'value'`)")  # noqa
         df.iloc[:-1, df.columns.get_loc(user_column)] = None
         return self.run_agent(df, agent, args, pred_args)
 

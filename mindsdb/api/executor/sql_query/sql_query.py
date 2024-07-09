@@ -126,17 +126,11 @@ class SQLQuery:
                 except ValueError:
                     continue
                 if agent is not None:
-                    model = self.session.model_controller.get_model(
-                        agent.model_name,
-                        project_name=project_name
-                    )
-
                     predictor = {
                         'name': table_name,
                         'integration_name': project_name,  # integration_name,
                         'timeseries': False,
-                        'id': model['id'],
-                        'to_predict': model['predict'],
+                        'to_predict': 'answer',
                     }
                     predictor_metadata.append(predictor)
 
@@ -161,7 +155,6 @@ class SQLQuery:
                 'name': table_name,
                 'integration_name': project_name,   # integration_name,
                 'timeseries': False,
-                'id': model_record.id,
                 'to_predict': model_record.to_predict,
             }
             if ts_settings.get('is_timeseries') is True:

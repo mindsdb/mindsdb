@@ -461,7 +461,7 @@ class Agents(Base):
     name = Column(String, nullable=False)
     project_id = Column(Integer, nullable=False)
 
-    model_name = Column(String, nullable=False)
+    model_name = Column(String, nullable=True)
     params = Column(JSON)
 
     updated_at = Column(

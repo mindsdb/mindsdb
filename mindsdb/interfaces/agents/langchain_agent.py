@@ -300,6 +300,6 @@ AI: {response}'''
         for i in sorted(empty_prompt_ids)[:-1]:
             completions.insert(i, None)
 
-        pred_df = pd.DataFrame(completions, columns=[args['target']])
+        pred_df = pd.DataFrame(completions, columns=[DEFAULT_ASSISTANT_COLUMN])
 
         return pred_df

@@ -9,6 +9,8 @@ from langchain.chains.conversation.memory import ConversationSummaryBufferMemory
 from langchain.schema import SystemMessage
 from langchain_community.chat_models import ChatAnthropic, ChatOpenAI, ChatAnyscale, ChatLiteLLM, ChatOllama
 from langchain_core.prompts import PromptTemplate
+from langchain_core.messages import HumanMessage
+
 
 
 import numpy as np
@@ -209,7 +211,7 @@ AI: {response}'''
         assistant_column = args.get('assistant_column', DEFAULT_ASSISTANT_COLUMN)
 
         question = df[user_column].iloc[-1]
-        resp = llm([SystemMessage(question)])
+        resp = llm([HumanMessage(question)], stop=['\nObservation:', '\n\tObservation:'])
 
         return pd.DataFrame([resp.content], columns=[assistant_column])
 

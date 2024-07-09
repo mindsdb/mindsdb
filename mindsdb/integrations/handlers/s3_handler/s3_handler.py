@@ -38,7 +38,7 @@ class S3Handler(DatabaseHandler):
         super().__init__(name)
         self.connection_data = connection_data
         self.kwargs = kwargs
-        self.table_name = None
+        self.key = None
 
         self.connection = None
         self.is_connected = False
@@ -130,25 +130,22 @@ class S3Handler(DatabaseHandler):
 
         connection = self.connect()
 
-        # Replace the underscore with a period to get the actual object name.
-        key = self.table_name.replace('_', '.')
-
         # Validate the key extension and set the input serialization accordingly.
-        input_serialization = self._generate_input_serialization(key)
+        input_serialization = self._generate_input_serialization(self.key)
 
         try:
             result = connection.select_object_content(
                 Bucket=self.connection_data['bucket'],
-                Key=key,
+                Key=self.key,
                 ExpressionType='SQL',
                 Expression=query,
                 InputSerialization=input_serialization,
                 OutputSerialization={"JSON": {}}
             )
 
-            if key.endswith('.csv') or key.endswith('.tsv') or key.endswith('.parquet'):
+            if self.key.endswith('.csv') or self.key.endswith('.tsv') or self.key.endswith('.parquet'):
                 df = self._parse_json_response_for_csv_tsv_or_parquet_inputs(result)
-            elif key.endswith('.json'):
+            elif self.key.endswith('.json'):
                 df = self._parse_response_for_json_input(result)
 
             response = Response(
@@ -156,7 +153,7 @@ class S3Handler(DatabaseHandler):
                 data_frame=df
             )
         except ClientError as e:
-            logger.error(f'Error running query: {query} on {self.table_name} in {self.connection_data["bucket"]}!')
+            logger.error(f'Error running query: {query} on {self.key} in {self.connection_data["bucket"]}!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)
@@ -265,10 +262,17 @@ class S3Handler(DatabaseHandler):
         if not isinstance(query, Select):
             raise ValueError('Only SELECT queries are supported.')
         
-        # Set the table name by getting the key (file) from the FROM clause of the query.
+        # Set the key (file) by getting it from the FROM clause of the query.
         # This will be passed as the Key parameter to the select_object_content method.
         from_table = query.from_table
-        self.table_name = from_table.parts[0]
+        self.key = from_table.get_string().replace('`', '')
+
+        # Check if the file exists in the S3 bucket.
+        try:
+            connection = self.connect()
+            connection.head_object(Bucket=self.connection_data['bucket'], Key=self.key)
+        except ClientError as e:
+            raise ValueError(f'The file {self.key} does not exist in the bucket {self.connection_data["bucket"]}!')
 
         # Replace the value of the FROM clause with 'S3Object'.
         # This is what the select_object_content method expects for all queries.
@@ -293,8 +297,8 @@ class S3Handler(DatabaseHandler):
 
         # Get only CSV, JSON, and Parquet files.
         # Only these formats are supported select_object_content.
-        # Replace the period with an underscore to allow them to be used as table names.
-        supported_objects = [obj['Key'].replace('.', '_') for obj in objects if obj['Key'].split('.')[-1] in ['csv', 'json', 'parquet']]
+        # Sorround the object names with backticks to prevent SQL syntax errors.
+        supported_objects = [f"`{obj['Key']}`" for obj in objects if obj['Key'].split('.')[-1] in ['csv', 'tsv', 'json', 'parquet']]
 
         response = Response(
             RESPONSE_TYPE.TABLE,

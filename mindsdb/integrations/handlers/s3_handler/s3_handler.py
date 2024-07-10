@@ -317,16 +317,23 @@ class S3Handler(DatabaseHandler):
 
         return response
 
-    def get_columns(self) -> StatusResponse:
+    def get_columns(self, table_name: Text) -> Response:
         """
-        Returns a list of entity columns.
-        Args:
-            table_name (str): name of one of tables returned by self.get_tables()
-        Returns:
-            HandlerResponse
-        """
+        Retrieves column details for a specified table (object) in the S3 bucket.
 
-        query = "SELECT * FROM S3Object LIMIT 5"
+        Args:
+            table_name (Text): The name of the table for which to retrieve column information.
+
+        Raises:
+            ValueError: If the 'table_name' is not a valid string.
+
+        Returns:
+            Response: A response object containing the column details, formatted as per the `Response` class.
+        """
+        if not table_name or not isinstance(table_name, str):
+            raise ValueError("Invalid table name provided.")
+
+        query = f"SELECT * FROM {table_name} LIMIT 5"
         result = self.native_query(query)
 
         response = Response(

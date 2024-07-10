@@ -47,6 +47,8 @@ class S3Handler(DatabaseHandler):
         self.is_select_query = False
         self.key = None
         self.table_name = 's3_table'
+        # TODO: Check if other file formats are supported.
+        self.supported_file_formats = ['csv', 'tsv', 'parquet']
 
     def __del__(self):
         if self.is_connected is True:
@@ -246,6 +248,9 @@ class S3Handler(DatabaseHandler):
         Args:
             query (ASTNode): An ASTNode representing the SQL query to be executed.
 
+        Raises:
+            ValueError: If the file format is not supported or the file does not exist in the S3 bucket.
+
         Returns:
             Response: The response from the `native_query` method, containing the result of the SQL query execution.
         """
@@ -270,6 +275,11 @@ class S3Handler(DatabaseHandler):
             )
 
         self.key = table.get_string().replace('`', '')
+
+        # Check if the file format is supported.
+        if self.key.split('.')[-1] not in self.supported_file_formats:
+            logger.error(f'The file format {self.key.split(".")[-1]} is not supported!')
+            raise ValueError(f'The file format {self.key.split(".")[-1]} is not supported!')
 
         # Check if the file exists in the S3 bucket.
         try:

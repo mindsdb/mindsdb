@@ -46,6 +46,7 @@ class S3Handler(DatabaseHandler):
 
         self.is_select_query = False
         self.key = None
+        # TODO: Should these be defined in the __init__ method?
         self.table_name = 's3_table'
         # TODO: Check if other file formats are supported.
         self.supported_file_formats = ['csv', 'tsv', 'parquet']
@@ -183,6 +184,7 @@ class S3Handler(DatabaseHandler):
         cursor = connection.cursor()
 
         try:
+            # TODO: Is it possilbe to avoid creating a table for each query?
             self._create_table_from_file()
 
             cursor.execute(query)
@@ -199,6 +201,7 @@ class S3Handler(DatabaseHandler):
 
             else:
                 connection.commit()
+                # TODO: Is it possilbe to avoid writing the table to a file after each query?
                 self._write_table_to_file()
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:

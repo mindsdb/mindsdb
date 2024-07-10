@@ -110,8 +110,10 @@ class S3Handler(DatabaseHandler):
         """ Close any existing connections
         Should switch self.is_connected.
         """
+        if not self.is_connected:
+            return
+        self.connection.close()
         self.is_connected = False
-        return
 
     def check_connection(self) -> StatusResponse:
         """

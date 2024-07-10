@@ -254,8 +254,8 @@ class S3Handler(DatabaseHandler):
         Returns:
             Response: The response from the `native_query` method, containing the result of the SQL query execution.
         """
-        # Set the key (file) by getting it from the query.
-        # This will be used to create a table from the file in the S3 bucket.
+        # Set the key by getting it from the query.
+        # This will be used to create a table from the object in the S3 bucket.
         # Replace the key with the name of the table to be created.
         if isinstance(query, Select):
             self.is_select_query = True
@@ -291,20 +291,26 @@ class S3Handler(DatabaseHandler):
 
         return self.native_query(query.to_string())
 
-    def get_tables(self) -> StatusResponse:
+    def get_tables(self) -> Response:
         """
-        Return list of entities that will be accessible as tables.
-        Returns:
-            HandlerResponse
-        """
+        Retrieves a list of tables (objects) in the S3 bucket.
 
-        connection = self.connect()
-        objects = [obj['Key'] for obj in connection.list_objects(Bucket=self.connection_data["bucket"])['Contents']]
+        Each object is considered a table. Only the supported file formats are considered as tables.
+
+        Returns:
+            Response: A response object containing the list of tables and views, formatted as per the `Response` class.
+        """
+        boto3_conn = self._connect_boto3()
+        objects = boto3_conn.list_objects(Bucket=self.connection_data["bucket"])['Contents']
+
+        # Get only the supported file formats.
+        # Sorround the object names with backticks to prevent SQL syntax errors.
+        supported_objects = [f"`{obj['Key']}`" for obj in objects if obj['Key'].split('.')[-1] in self.supported_file_formats]
 
         response = Response(
             RESPONSE_TYPE.TABLE,
             data_frame=pd.DataFrame(
-                objects,
+                supported_objects,
                 columns=['table_name']
             )
         )

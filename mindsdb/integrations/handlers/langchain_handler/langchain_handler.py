@@ -32,6 +32,8 @@ from mindsdb.integrations.handlers.langchain_handler.tools import setup_tools
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.interfaces.storage.model_fs import HandlerStorage, ModelStorage
 from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
+from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS  # noqa, for dependency checker
+
 from mindsdb.utilities import log
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 

@@ -107,8 +107,8 @@ class S3Handler(DatabaseHandler):
         if 'aws_session_token' in self.connection_data:
             config['aws_session_token'] = self.connection_data['aws_session_token']
 
-        if 'region_name' in self.connection_data:
-            config['region_name'] = self.connection_data['region']
+        # DuckDB considers us-east-1 to be the default region.
+        config['region_name'] = self.connection_data['region'] if 'region' in self.connection_data else 'us-east-1'
 
         return boto3.client('s3', **config)
 
@@ -134,9 +134,13 @@ class S3Handler(DatabaseHandler):
         # Check connection via boto3.
         try:
             boto3_conn = self._connect_boto3()
-            boto3_conn.head_bucket(Bucket=self.connection_data['bucket'])
+            result = boto3_conn.head_bucket(Bucket=self.connection_data['bucket'])
+
+            # Check if the bucket is in the same region as specified: the DuckDB connection will fail otherwise.
+            if result['ResponseMetadata']['HTTPHeaders']['x-amz-bucket-region'] != boto3_conn.meta.region_name:
+                raise ValueError('The bucket is not in the expected region.')
             response.success = True
-        except ClientError as e:
+        except (ClientError, ValueError) as e:
             logger.error(f'Error connecting to S3 with the given credentials, {e}!')
             response.error_message = str(e)
 

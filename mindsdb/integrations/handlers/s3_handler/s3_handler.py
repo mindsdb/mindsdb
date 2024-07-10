@@ -64,23 +64,46 @@ class S3Handler(DatabaseHandler):
             raise ValueError('Required parameters (aws_access_key_id, aws_secret_access_key, bucket) must be provided.')
 
         # Connect to S3 via DuckDB and configure mandatory credentials.
-        conn = duckdb.connect()
-        conn.execute("INSTALL httpfs")
-        conn.execute("LOAD httpfs")
-
-        conn.execute(f"SET s3_access_key_id='{self.connection_data['aws_access_key_id']}'")
-        conn.execute(f"SET s3_secret_access_key='{self.connection_data['aws_secret_access_key']}'")
-
-        # Configure optional parameters.
-        if 'aws_session_token' in self.connection_data:
-            conn.execute(f"SET s3_session_token='{self.connection_data['aws_session_token']}'")
-
-        if 'region_name' in self.connection_data:
-            conn.execute(f"SET s3_region='{self.connection_data['region']}'")
+        self.connection = self._connect_duckdb()
 
         self.is_connected = True
 
         return self.connection
+    
+    def _connect_duckdb(self):
+        # Connect to S3 via DuckDB.
+        duckdb_conn = duckdb.connect()
+        duckdb_conn.execute("INSTALL httpfs")
+        duckdb_conn.execute("LOAD httpfs")
+
+        # Configure mandatory credentials.
+        duckdb_conn.execute(f"SET s3_access_key_id='{self.connection_data['aws_access_key_id']}'")
+        duckdb_conn.execute(f"SET s3_secret_access_key='{self.connection_data['aws_secret_access_key']}'")
+
+        # Configure optional parameters.
+        if 'aws_session_token' in self.connection_data:
+            duckdb_conn.execute(f"SET s3_session_token='{self.connection_data['aws_session_token']}'")
+
+        if 'region_name' in self.connection_data:
+            duckdb_conn.execute(f"SET s3_region='{self.connection_data['region']}'")
+
+        return duckdb_conn
+    
+    def _connect_boto3(self):
+        # Configure mandatory credentials.
+        config = {
+            'aws_access_key_id': self.connection_data['aws_access_key_id'],
+            'aws_secret_access_key': self.connection_data['aws_secret_access_key']
+        }
+
+        # Configure optional parameters.
+        if 'aws_session_token' in self.connection_data:
+            config['aws_session_token'] = self.connection_data['aws_session_token']
+
+        if 'region_name' in self.connection_data:
+            config['region_name'] = self.connection_data['region']
+
+        return boto3.client('s3', **config)
 
     def disconnect(self):
         """ Close any existing connections

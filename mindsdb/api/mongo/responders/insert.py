@@ -47,7 +47,9 @@ class Responce(Responder):
             status = HandlerStatusResponse(success=False)
             try:
                 handler = mindsdb_env["integration_controller"].create_tmp_handler(
-                    handler_type=doc["engine"], connection_data=doc["connection_args"]
+                    name=doc['name'],
+                    engine=doc["engine"],
+                    connection_args=doc["connection_args"]
                 )
                 status = handler.check_connection()
             except Exception as e:

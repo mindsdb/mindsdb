@@ -48,21 +48,26 @@ class EmailClient:
         logger.info(f'Selected mailbox {mailbox}')
 
     def logout(self):
-        '''Shuts down the connection to the IMAP server.'''
+        '''Shuts down the connection to the IMAP and SMTP server.'''
+
         try:
             ok, resp = self.imap_server.logout()
-
             if ok != 'BYE':
                 logger.error(
                     f'Unable to logout of IMAP client: {str(resp)}')
-
             logger.info('Logged out of IMAP server')
-
         except Exception as e:
             logger.error(
                 f'Exception occurred while logging out from IMAP server: {str(e)}')
 
-    def send_email(self, to_addr, subject, body):
+        try:
+            self.smtp_server.quit()
+            logger.info('Logged out of SMTP server')
+        except Exception as e:
+            logger.error(
+                f'Exception occurred while logging out from SMTP server: {str(e)}')
+
+    def send_email(self, to_addr: str, subject: str, body: str):
         '''
         Sends an email to the given address.
         
@@ -75,14 +80,13 @@ class EmailClient:
         msg = MIMEMultipart()
         msg['From'] = self.email
         msg['To'] = to_addr
-        msg['Subject'] = subject.value
-        msg.attach(MIMEText(body.value, 'plain'))
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'plain'))
 
         self.smtp_server.starttls()
         self.smtp_server.login(self.email, self.password)
         self.smtp_server.send_message(msg)
-        logger.info(f'Email sent to {to_addr} with subject: {subject.value}')
-        self.smtp_server.quit()
+        logger.info(f'Email sent to {to_addr} with subject: {subject}')
 
     def search_email(self, options: EmailSearchOptions) -> pd.DataFrame:
         '''Searches emails based on the given options and returns a DataFrame.
@@ -157,8 +161,5 @@ class EmailClient:
                 ret.append(email_line)
         except Exception as e:
             raise Exception('Error searching email') from e
-
-        finally:
-            self.logout()
 
         return pd.DataFrame(ret)

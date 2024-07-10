@@ -193,7 +193,8 @@ class TwelveLabsHandler(BaseMLEngine):
             video_ids = df['video_id'].tolist()
             data = twelve_labs_api_client.summarize_videos(
                 video_ids=video_ids,
-                summarization_type=args['summarization_type']
+                summarization_type=args['summarization_type'],
+                prompt=args['prompt']
             )
 
             if args['summarization_type'] in ('chapter', 'highlight'):

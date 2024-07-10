@@ -1,6 +1,7 @@
 ---
 title: MindsDB Installation for Development
-sidebarTitle: MindsDB Installation for Development
+sidebarTitle: Installation for Development
+icon: "gears"
 ---
 
 If you want to contribute to the development of MindsDB, you need to install from source.
@@ -85,6 +86,15 @@ mindsdb: http API: started on 47334
 
 You can access the MindsDB Editor at `localhost:47334`.
 
+<Tip>
+If you get the `ImportError: failed to find libmagic` error, you should install the `libmagic` manually by running one of the commands below:
+
+```bash
+pip install python-magic-bin # for linux and windows
+brew install libmagic # for macOS
+```
+</Tip>
+
 ## Install dependencies
 
 The dependencies for many of the data or ML integrations are not installed by default.
@@ -96,11 +106,11 @@ pip install .[handler_name]
 ```
 
 <Tip>
-You can find all available [handlers here](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers).
+You can find all available [handlers here](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers).
 </Tip>
 
 ## What's Next?
 
 Now that you installed and started MindsDB locally, go ahead and find out how to create and train a model using the [`CREATE MODEL`](/sql/create/model) statement.
 
-Check out the **Use Cases** section to follow tutorials that cover Large Language Models, Chatbots, Time Series, Classification, and Regression models, Semantic Search, and more.
+Check out the [Use Cases](/use-cases/overview) section to follow tutorials that cover Large Language Models, Chatbots, Time Series, Classification, and Regression models, Semantic Search, and more.

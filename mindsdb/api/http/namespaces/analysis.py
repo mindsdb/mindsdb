@@ -15,6 +15,7 @@ from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProx
 from mindsdb.api.executor.data_types.response_type import (
     RESPONSE_TYPE as SQL_RESPONSE_TYPE,
 )
+from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -42,6 +43,7 @@ def analyze_df(df: DataFrame) -> dict:
 @ns_conf.route("/query")
 class QueryAnalysis(Resource):
     @ns_conf.doc("post_query_to_analyze")
+    @api_endpoint_metrics('POST', '/analysis/query')
     def post(self):
         data = request.json
         query = data.get("query")
@@ -95,6 +97,7 @@ class QueryAnalysis(Resource):
 @ns_conf.route("/data")
 class DataAnalysis(Resource):
     @ns_conf.doc("post_data_to_analyze")
+    @api_endpoint_metrics('POST', '/analysis/data')
     def post(self):
         payload = request.json
         column_names = payload.get("column_names")

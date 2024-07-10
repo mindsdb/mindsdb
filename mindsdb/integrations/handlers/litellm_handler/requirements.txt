@@ -1,2 +1,1 @@
-litellm
-pydantic
+litellm==1.35.0

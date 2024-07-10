@@ -26,7 +26,7 @@ class SentenceTransformersHandler(BaseMLEngine):
         args = args["using"]
 
         valid_args = Parameters(**args)
-        self.model_storage.json_set("args", valid_args.dict())
+        self.model_storage.json_set("args", valid_args.model_dump())
 
     def predict(self, df, args=None):
         """loads persisted embeddings model and gets embeddings on input text column(s)"""

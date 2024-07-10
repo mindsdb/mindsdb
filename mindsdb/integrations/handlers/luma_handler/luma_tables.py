@@ -1,6 +1,6 @@
 import pandas as pd
 from mindsdb.integrations.libs.api_handler import APITable
-from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor, INSERTQueryParser
+from mindsdb.integrations.utilities.handlers.query_utilities import SELECTQueryParser, SELECTQueryExecutor, INSERTQueryParser
 from mindsdb_sql.parser import ast
 
 

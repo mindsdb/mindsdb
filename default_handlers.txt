@@ -1,0 +1,20 @@
+file                 # Required by the core codebase
+postgres
+mysql
+mariadb
+scylla
+cassandra
+clickhouse
+# snowflake
+slack
+sqlite
+mongodb
+openai
+byom
+statsforecast
+timegpt
+binance
+twitter
+minds_endpoint
+web
+langchain            # For agents & completions

@@ -10,8 +10,9 @@ except Exception as e:
 title = 'MLFlow'
 name = 'mlflow'
 type = HANDLER_TYPE.ML
-permanent = True
+icon_path = "icon.svg"
+permanent = False
 
 __all__ = [
-    'Handler', 'version', 'name', 'type', 'title', 'description', 'import_error'
+    'Handler', 'version', 'name', 'type', 'title', 'description', 'import_error', 'icon_path'
 ]

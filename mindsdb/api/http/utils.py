@@ -1,10 +1,9 @@
 import json
-import os
 
 from flask import Response
 
 
-def http_error(status_code, title, detail=''):
+def http_error(status_code, title, detail=None):
     ''' Wrapper for error responce acoording with RFC 7807 (https://tools.ietf.org/html/rfc7807)
 
         :param status_code: int - http status code for response
@@ -13,6 +12,14 @@ def http_error(status_code, title, detail=''):
 
         :return: flask Response object
     '''
+    if detail is None:
+        if 400 <= status_code < 500:
+            detail = "A client error occurred. Please check your request and try again."
+        elif 500 <= status_code < 600:
+            detail = "A server error occurred. Please try again later."
+        else:
+            detail = "An error occurred while processing the request. Please try again later."
+
     return Response(
         response=json.dumps({
             'title': title,
@@ -23,18 +30,3 @@ def http_error(status_code, title, detail=''):
             'Content-Type': 'application/problem+json'
         }
     )
-
-
-def __is_within_directory(directory, target):
-    abs_directory = os.path.abspath(directory)
-    abs_target = os.path.abspath(target)
-    prefix = os.path.commonprefix([abs_directory, abs_target])
-    return prefix == abs_directory
-
-
-def safe_extract(tar, path=".", members=None, *, numeric_owner=False):
-    for member in tar.getmembers():
-        member_path = os.path.join(path, member.name)
-        if not __is_within_directory(path, member_path):
-            raise Exception("Attempted Path Traversal in Tar File")
-    tar.extractall(path, members, numeric_owner)

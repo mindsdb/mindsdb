@@ -13,7 +13,7 @@ from mindsdb.utilities.config import Config
 
 from mindsdb_sql.parser import ast
 from mindsdb_sql.parser.ast import ASTNode
-from mindsdb.integrations.libs.api_handler import APIChatHandler, APITable, FuncParser
+from mindsdb.integrations.libs.api_handler import APIChatHandler, APIResource, FuncParser
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
 
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
@@ -29,7 +29,7 @@ logger = log.getLogger(__name__)
 DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 
-class SlackChannelListsTable(APITable):
+class SlackChannelListsTable(APIResource):
 
     def list(self, **kwargs) -> pd.DataFrame:
 
@@ -52,7 +52,32 @@ class SlackChannelListsTable(APITable):
         ]
 
 
-class SlackChannelsTable(APITable):
+class SlackUsersTable(APIResource):
+
+    def list(self, **kwargs) -> pd.DataFrame:
+        """
+        Retrieves list of users
+
+        The "users.list" call is used in slack api
+
+        :return: pd.DataFrame
+        """
+
+        client = self.handler.connect()
+
+        users = client.users_list().data['members']
+
+        return pd.DataFrame(users, columns=self.get_columns())
+
+    def get_columns(self) -> List[str]:
+        return [
+            'id',
+            'name',
+            'real_name'
+        ]
+
+
+class SlackChannelsTable(APIResource):
 
     def list(self,
              conditions: List[FilterCondition] = None,
@@ -93,14 +118,6 @@ class SlackChannelsTable(APITable):
                     condition.applied = True
                 else:
                     raise ValueError(f"Channel '{value}' not found")
-
-            # Is this used?
-            # elif condition.column == 'limit':
-            #     if op == FilterOperator.EQUAL:
-            #         params['limit'] = int(value)
-            #         condition.applied = True
-            #     else:
-            #         raise NotImplementedError(f'Unknown op: {op}')
 
             elif condition.column == 'created_at' and value is not None:
                 date = parse_utc_date(value)
@@ -293,6 +310,7 @@ class SlackChannelsTable(APITable):
         except SlackApiError as e:
             raise Exception(f"Error deleting message from Slack channel '{params['channel']}' with timestamp '{params['ts']}': {e.response['error']}")
 
+
 class SlackHandler(APIChatHandler):
     """
     A class for handling connections and interactions with Slack API.
@@ -324,6 +342,9 @@ class SlackHandler(APIChatHandler):
 
         channel_lists = SlackChannelListsTable(self)
         self._register_table('channel_lists', channel_lists)
+
+        users = SlackUsersTable(self)
+        self._register_table('users', users)
 
         self._socket_mode_client = None
 
@@ -368,15 +389,17 @@ class SlackHandler(APIChatHandler):
             if request.type != 'events_api':
                 return
 
+            # ignore duplicated requests
+            if request.retry_attempt is not None and request.retry_attempt > 0:
+                return
+
             payload_event = request.payload['event']
-            if payload_event['type'] != 'message':
+            if payload_event['type'] not in ('message', 'app_mention'):
                 return
             if 'subtype' in payload_event:
                 # Don't respond to message_changed, message_deleted, etc.
                 return
-            if payload_event['channel_type'] != 'im':
-                # Only support IMs currently.
-                return
+
             if 'bot_id' in payload_event:
                 # A bot sent this message.
                 return
@@ -387,6 +410,8 @@ class SlackHandler(APIChatHandler):
             row = {
                 'text': payload_event['text'],
                 'user': payload_event['user'],
+                'channel': payload_event['channel'],
+                'created_at': dt.datetime.fromtimestamp(float(payload_event['ts'])).strftime('%Y-%m-%d %H:%M:%S')
             }
 
             callback(row, key)

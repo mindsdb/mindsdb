@@ -1,5 +1,5 @@
 from typing import Text, List, Dict, Optional
-from mindsdb.integrations.handlers.utilities.api_utilities.microsoft.ms_graph_api_utilities import MSGraphAPIBaseClient
+from mindsdb.integrations.utilities.handlers.api_utilities.microsoft.ms_graph_api_utilities import MSGraphAPIBaseClient
 
 
 class MSGraphAPITeamsClient(MSGraphAPIBaseClient): 

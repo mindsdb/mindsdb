@@ -171,7 +171,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.server.connection_id = 0
         self.server.connection_id += 1
         self.connection_id = self.server.connection_id
-        self.session = SessionController()
+        self.session = SessionController(api_type='sql')
 
         if hasattr(self.server, "salt") and isinstance(self.server.salt, str):
             self.salt = self.server.salt
@@ -851,9 +851,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.session.profiling = context["profiling"]
         if "predictor_cache" in context:
             self.session.predictor_cache = context["predictor_cache"]
+        if "show_secrets" in context:
+            self.session.show_secrets = context["show_secrets"]
 
-    def get_context(self, context):
-        context = {}
+    def get_context(self):
+        context = {
+            "show_secrets": self.session.show_secrets
+        }
         if self.session.database is not None:
             context["db"] = self.session.database
         if self.session.profiling is True:

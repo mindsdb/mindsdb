@@ -1,5 +1,5 @@
 from typing import List
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 
 
 class MSTeamsHandlerConfig(BaseSettings):
@@ -22,18 +22,34 @@ class MSTeamsHandlerConfig(BaseSettings):
 
     CHANNEL_MESSAGES_TABLE_COLUMNS: List
         Columns for the channel messages table.
-
+    
     TEST_CHAT_DATA: Dict
         Test data for the chats table.
 
-    TEST_CHAT_MESSAGES_DATA: Dict
+    TEST_CHATS_DATA: List[Dict]
+        Test data for the chats table.
+
+    TEST_CHAT_MESSAGE_DATA: Dict
+        Test data for the chat messages table.
+
+    TEST_CHAT_MESSAGES_DATA: List[Dict]
         Test data for the chat messages table.
 
     TEST_CHANNEL_DATA: Dict
         Test data for the channels table.
 
-    TEST_CHANNEL_MESSAGES_DATA: Dict
-        Test data for the channel messages table.   
+    TEST_CHANNELS_DATA: List[Dict]
+        Test data for the channels table.
+
+    TEST_CHANNEL_MESSAGE_DATA: Dict
+        Test data for the channel messages table.  
+
+    TEST_CHANNEL_MESSAGES_DATA: List[Dict]
+        Test data for the channel messages table.
+    
+    TEST_GROUP_DATA: dict
+
+    TEST_CHANNEL_ID_DATA: dict
     """
 
     DEFAULT_SCOPES: List = [
@@ -87,17 +103,7 @@ class MSTeamsHandlerConfig(BaseSettings):
         "from_user_userIdentityType",
         "from_user_tenantId",
         "body_contentType",
-        "body_content",
-        "eventDetail_@odata.type",
-        "eventDetail_visibleHistoryStartDateTime",
-        "eventDetail_members",
-        "eventDetail_initiator_application",
-        "eventDetail_initiator_device",
-        "eventDetail_initiator_user_@odata.type",
-        "eventDetail_initiator_user_id",
-        "eventDetail_initiator_user_displayName",
-        "eventDetail_initiator_user_userIdentityType",
-        "eventDetail_initiator_user_tenantId",
+        "body_content"
     ]
 
     CHANNELS_TABLE_COLUMNS: List = [
@@ -160,7 +166,7 @@ class MSTeamsHandlerConfig(BaseSettings):
         "eventDetail_initiator_user_tenantId"
     ]
 
-    TEST_CHAT_DATA = {
+    TEST_CHAT_DATA: dict = {
         '@odata.context': 'test_context',
         'id': 'test_id',
         'topic': None,
@@ -193,9 +199,9 @@ class MSTeamsHandlerConfig(BaseSettings):
         }
     }
 
-    TEST_CHATS_DATA = [TEST_CHAT_DATA]
+    TEST_CHATS_DATA: List[dict] = [TEST_CHAT_DATA]
 
-    TEST_CHAT_MESSAGE_DATA = {
+    TEST_CHAT_MESSAGE_DATA: dict = {
         '@odata.context': 'test_context', 
         'id': 'test_id', 
         'replyToId': None, 
@@ -249,9 +255,9 @@ class MSTeamsHandlerConfig(BaseSettings):
         }
     }
 
-    TEST_CHAT_MESSAGES_DATA = [TEST_CHAT_MESSAGE_DATA]
+    TEST_CHAT_MESSAGES_DATA: List[dict] = [TEST_CHAT_MESSAGE_DATA]
 
-    TEST_CHANNEL_DATA = {
+    TEST_CHANNEL_DATA: dict = {
         '@odata.context': 'test_context', 
         'id': 'test_id', 
         'createdDateTime': '2023-11-17T22:54:33.055Z', 
@@ -265,9 +271,9 @@ class MSTeamsHandlerConfig(BaseSettings):
         'teamId': 'test_team_id'
     }
 
-    TEST_CHANNELS_DATA = [TEST_CHANNEL_DATA]
+    TEST_CHANNELS_DATA: List[dict] = [TEST_CHANNEL_DATA]
 
-    TEST_CHANNEL_MESSAGE_DATA = {
+    TEST_CHANNEL_MESSAGE_DATA: dict = {
         '@odata.context': 'test_context', 
         'id': 'test_id', 
         'replyToId': None, 
@@ -332,9 +338,9 @@ class MSTeamsHandlerConfig(BaseSettings):
         }
     }
 
-    TEST_CHANNEL_MESSAGES_DATA = [TEST_CHANNEL_MESSAGE_DATA]
+    TEST_CHANNEL_MESSAGES_DATA: List[dict] = [TEST_CHANNEL_MESSAGE_DATA]
 
-    TEST_GROUP_DATA = {
+    TEST_GROUP_DATA: dict = {
         '@odata.context': 'test_context', 
         'value': [
             {
@@ -344,7 +350,7 @@ class MSTeamsHandlerConfig(BaseSettings):
         ]
     }
 
-    TEST_CHANNEL_ID_DATA = {
+    TEST_CHANNEL_ID_DATA: dict = {
         '@odata.context': 'test_context', 
         '@odata.count': 1,
         'value': [

@@ -23,8 +23,6 @@ def get_requirements_from_file(path):
 MAIN_REQS_PATH = "requirements/requirements.txt"
 DEV_REQS_PATH = "requirements/requirements-dev.txt"
 TEST_REQS_PATH = "requirements/requirements-test.txt"
-GRPC_REQS_PATH = "requirements/requirements-grpc.txt"
-DOCKER_REQS_PATH = "docker/handler_discovery/requirements.txt"
 
 HANDLER_REQS_PATHS = list(
     set(glob.glob("**/requirements*.txt", recursive=True))
@@ -36,23 +34,25 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.to
 # Torch.multiprocessing is imported in a 'try'. Falls back to multiprocessing so we dont NEED it.
 # Psycopg2 is needed in core codebase for sqlalchemy.
 # Hierarchicalforecast is an optional dep of neural/statsforecast
+# lark is required for auto retrieval (RAG utilities). It is used by langchain
+# and not explicitly imported in mindsdb.
 MAIN_RULE_IGNORES = {
     "DEP003": ["torch"],
-    # Ignore Langhchain since the requirements check will still fail even if it's conditionally imported for certain features.
     "DEP001": ["torch"],
-    "DEP002": ["psycopg2-binary"],
+    "DEP002": ["psycopg2-binary", "lark"],
 }
 
 # THe following packages need exceptions because they are optional deps of some other packages. e.g. langchain CAN use openai
 # (pysqlite3 is imported in an unusual way in the chromadb handler and needs to be excluded too)
 # pypdf and openpyxl are optional deps of langchain, that are used for the file handler
+# sqlalchemy-solr is an optional sqlalchemy depend that is used in the solr handler
 OPTIONAL_HANDLER_DEPS = ["pysqlite3", "torch", "openai", "tiktoken", "wikipedia", "anthropic", "pypdf", "openpyxl",
-                         "sentence-transformers", "faiss-cpu", "litellm"]
+                         "sentence-transformers", "faiss-cpu", "litellm", "chromadb", "sqlalchemy-solr"]
 
 # List of rules we can ignore for specific packages
 # Here we ignore any packages in the main requirements.txt for "listed but not used" errors, because they will be used for the core code but not necessarily in a given handler
 MAIN_REQUIREMENTS_DEPS = get_requirements_from_file(MAIN_REQS_PATH) + get_requirements_from_file(
-    TEST_REQS_PATH) + get_requirements_from_file(GRPC_REQS_PATH)
+    TEST_REQS_PATH)
 
 BYOM_HANLDER_DEPS = ["pyarrow"]
 
@@ -99,10 +99,8 @@ PACKAGE_NAME_MAP = {
     "pymupdf": ["fitz"],
     "ibm-db": ["ibm_db_dbi"],
     "python-dateutil": ["dateutil"],
-    "grpcio": ["grpc"],
     "sqlalchemy-redshift": ["redshift_sqlalchemy"],
     "sqlalchemy-vertica-python": ["sqla_vertica_python"],
-    "grpcio-tools": ["grpc"],
     "psycopg2-binary": ["psycopg2"],
     "psycopg-binary": ["psycopg"],
     "pymongo": ["pymongo", "bson"],
@@ -117,6 +115,8 @@ PACKAGE_NAME_MAP = {
     "clickhouse-sqlalchemy": ["clickhouse_sqlalchemy"],
     "pillow": ["PIL"],
     "auto-ts": ["auto_ts"],
+    "llama-index-readers-web": ["llama_index"],
+    "llama-index-embeddings-openai": ["llama_index"],
 }
 
 # We use this to exit with a non-zero status code if any check fails
@@ -269,7 +269,7 @@ def check_requirements_imports():
 
     # Run against the main codebase
     errors = run_deptry(
-        ','.join([MAIN_REQS_PATH, GRPC_REQS_PATH, DOCKER_REQS_PATH]),
+        ','.join([MAIN_REQS_PATH]),
         get_ignores_str(MAIN_RULE_IGNORES),
         ".",
         f"--extend-exclude \"{'|'.join(MAIN_EXCLUDE_PATHS)}\"",

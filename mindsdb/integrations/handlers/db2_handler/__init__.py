@@ -1,12 +1,8 @@
 from mindsdb.integrations.libs.const import HANDLER_TYPE
 
+from .connection_args import connection_args, connection_args_example
 try:
-    from .db2_handler import (
-        DB2Handler as Handler,
-        connection_args,
-        connection_args_example,
-    )
-
+    from .db2_handler import DB2Handler as Handler
     import_error = None
 except Exception as e:
     Handler = None
@@ -17,7 +13,7 @@ from .__about__ import __version__ as version, __description__ as description
 title = "IBM DB2"
 name = "db2"
 type = HANDLER_TYPE.DATA
-icon_path = "icon.png"
+icon_path = "icon.svg"
 
 __all__ = [
     "Handler",

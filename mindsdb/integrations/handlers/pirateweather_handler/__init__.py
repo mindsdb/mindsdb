@@ -2,17 +2,15 @@ from mindsdb.integrations.libs.const import HANDLER_TYPE
 
 from .__about__ import __description__ as description
 from .__about__ import __version__ as version
-
+from .connection_args import connection_args, connection_args_example
 try:
     from .pirateweather_handler import PirateWeatherAPIHandler as Handler
-    from .pirateweather_handler import connection_args, connection_args_example
-
     import_error = None
 except Exception as e:
     Handler = None
     import_error = e
 
-title = "pirateweather"
+title = "Pirate Weather"
 name = "pirateweather"
 type = HANDLER_TYPE.DATA
 icon_path = "icon.png"

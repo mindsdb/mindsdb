@@ -17,7 +17,8 @@ from mindsdb.integrations.libs.ml_handler_process import (
     describe_process,
     create_engine_process,
     update_engine_process,
-    create_validation_process
+    create_validation_process,
+    func_call_process
 )
 
 
@@ -321,6 +322,14 @@ class ProcessCache:
                 'args': payload['args'],
                 'integration_id': integration_id,
                 'model_id': model_id,
+                'module_path': handler_module_path
+            }
+        elif task_type == ML_TASK_TYPE.FUNC_CALL:
+            func = func_call_process
+            kwargs = {
+                'name': payload['name'],
+                'args': payload['args'],
+                'integration_id': integration_id,
                 'module_path': handler_module_path
             }
         else:

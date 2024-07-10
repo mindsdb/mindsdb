@@ -13,8 +13,18 @@ except Exception as e:
     Handler = None
     import_error = e
 
-title = "google_gemini"
+title = "Google Gemini"
 name = "google_gemini"
 type = HANDLER_TYPE.ML
-permanent = True
-__all__ = ['Handler', 'version', 'name', 'type', 'title', 'description', 'import_error']
+icon_path = "icon.svg"
+permanent = False
+__all__ = [
+    "Handler",
+    "version",
+    "name",
+    "type",
+    "title",
+    "description",
+    "import_error",
+    "icon_path",
+]

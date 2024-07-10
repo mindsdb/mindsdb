@@ -1,6 +1,7 @@
 from typing import Optional
 
 import duckdb
+from duckdb import CatalogException
 import pandas as pd
 import boto3
 from botocore.exceptions import ClientError
@@ -11,6 +12,7 @@ from mindsdb_sql import parse_sql
 from mindsdb.integrations.libs.base import DatabaseHandler
 
 from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql.parser.ast import Select, Identifier
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
@@ -45,6 +47,10 @@ class S3Handler(DatabaseHandler):
 
         self.connection = None
         self.is_connected = False
+
+        self.is_select_query = False
+        self.key = None
+        self.table_name = 's3_table'
 
     def __del__(self):
         if self.is_connected is True:
@@ -85,7 +91,7 @@ class S3Handler(DatabaseHandler):
         if 'aws_session_token' in self.connection_data:
             duckdb_conn.execute(f"SET s3_session_token='{self.connection_data['aws_session_token']}'")
 
-        if 'region_name' in self.connection_data:
+        if 'region' in self.connection_data:
             duckdb_conn.execute(f"SET s3_region='{self.connection_data['region']}'")
 
         return duckdb_conn
@@ -153,37 +159,32 @@ class S3Handler(DatabaseHandler):
             HandlerResponse
         """
 
-        need_to_close = self.is_connected is False
+        need_to_close = not self.is_connected
 
         connection = self.connect()
+        cursor = connection.cursor()
 
         try:
-            result = connection.select_object_content(
-                Bucket=self.connection_data['bucket'],
-                Key=self.connection_data['key'],
-                ExpressionType='SQL',
-                Expression=query,
-                InputSerialization=ast.literal_eval(self.connection_data['input_serialization']),
-                OutputSerialization={"CSV": {}}
-            )
+            self._create_table_from_file()
 
-            records = []
-            for event in result['Payload']:
-                if 'Records' in event:
-                    records.append(event['Records']['Payload'])
-                elif 'Stats' in event:
-                    stats = event['Stats']['Details']
+            cursor.execute(query)
+            if self.is_select_query:
+                result = cursor.fetchall()
+                if result:
+                    response = Response(
+                        RESPONSE_TYPE.TABLE,
+                        data_frame=pd.DataFrame(
+                            result,
+                            columns=[x[0] for x in cursor.description]
+                        )
+                    )
 
-            file_str = ''.join(r.decode('utf-8') for r in records)
-
-            df = pd.read_csv(io.StringIO(file_str))
-
-            response = Response(
-                RESPONSE_TYPE.TABLE,
-                data_frame=df
-            )
+            else:
+                connection.commit()
+                self._write_table_to_file()
+                response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
-            logger.error(f'Error running query: {query} on {self.connection_data["key"]} in {self.connection_data["bucket"]}!')
+            logger.error(f'Error running query: {query} on {self.connection_data["bucket"]}, {e}!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)
@@ -193,6 +194,22 @@ class S3Handler(DatabaseHandler):
             self.disconnect()
 
         return response
+    
+    def _create_table_from_file(self):
+        connection = self.connect()
+        try:
+            connection.execute(f"CREATE TABLE {self.table_name} AS SELECT * FROM 's3://{self.connection_data['bucket']}/{self.key}'")
+        except CatalogException as e:
+            logger.error(f'Error creating table {self.table_name} from file {self.key} in {self.connection_data["bucket"]}, {e}!')
+            raise e
+
+    def _write_table_to_file(self):
+        try:
+            connection = self.connect()
+            connection.execute(f"COPY {self.table_name} to 's3://{self.connection_data['bucket']}/{self.key}'")
+        except CatalogException as e:
+            logger.error(f'Error writing table {self.table_name} to file {self.key} in {self.connection_data["bucket"]}, {e}!')
+            raise e
 
     def query(self, query: ASTNode) -> StatusResponse:
         """
@@ -203,6 +220,24 @@ class S3Handler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
+        if isinstance(query, Select):
+            self.is_select_query = True
+            table = query.from_table
+
+            query.from_table = Identifier(
+                parts=[self.table_name],
+                alias=table.alias
+            )
+
+        else:
+            table = query.table
+
+            query.table = Identifier(
+                parts=[self.table_name],
+                alias=table.alias
+            )
+
+        self.key = table.get_string().replace('`', '')
 
         return self.native_query(query.to_string())
 

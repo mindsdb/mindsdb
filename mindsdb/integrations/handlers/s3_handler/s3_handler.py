@@ -3,6 +3,7 @@ from typing import Optional
 import duckdb
 import pandas as pd
 import boto3
+from botocore.exceptions import ClientError
 import io
 import ast
 
@@ -122,18 +123,22 @@ class S3Handler(DatabaseHandler):
         response = StatusResponse(False)
         need_to_close = self.is_connected is False
 
+        # Check connection via boto3.
         try:
-            connection = self.connect()
-            connection.head_object(Bucket=self.connection_data['bucket'], Key=self.connection_data['key'])
+            boto3_conn = self._connect_boto3()
+            boto3_conn.head_bucket(Bucket=self.connection_data['bucket'])
             response.success = True
-        except Exception as e:
-            logger.error(f'Error connecting to AWS with the given credentials, {e}!')
+        except ClientError as e:
+            logger.error(f'Error connecting to S3 with the given credentials, {e}!')
             response.error_message = str(e)
-        finally:
-            if response.success is True and need_to_close:
-                self.disconnect()
-            if response.success is False and self.is_connected is True:
-                self.is_connected = False
+
+        # TODO: Check connection via DuckDB?
+
+        if response.success and need_to_close:
+            self.disconnect()
+
+        elif not response.success and self.is_connected:
+            self.is_connected = False
 
         return response
 

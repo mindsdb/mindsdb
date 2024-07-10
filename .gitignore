@@ -58,3 +58,4 @@ node_modules
 # Venv
 .venv/
 mindsdb/integrations/handlers/financial_modeling_prep_handler/commands.txt
+mindsdb/share/man/man1/isympy.1

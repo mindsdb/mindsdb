@@ -23,6 +23,9 @@ _FINANCIAL_MODELING_URL = 'https://financialmodelingprep.com/api/v3/'
 logger = log.getLogger(__name__)
 
 class FinancialModelingHandler(APIHandler):
+
+    name = "FINANCIAL_MODELING"
+
     def __init__(self, name, connection_data: dict,  **kwargs):
         super().__init__(name)
 

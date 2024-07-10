@@ -141,6 +141,22 @@ Please note that you don't need to define the `FROM` clause here. Instead, the `
 
 It allows you to bring an external model, for example, from the Hugging Face model hub, and use it within MindsDB.
 
+### Large Language Models (LLM)
+
+MindsDB integrates with [numerous LLM providers listed here](/integrations/ai-overview#large-language-models).
+
+Commonly, LLMs support the `prompt_template` parameter that stores the message/instruction to the model.
+
+```sql
+CREATE MODEL project_name.model_name
+PREDICT answer
+USING
+  engine = 'llm_engine_name',
+  prompt_template = 'answer users questions in a helpful way: {{questions}}';
+```
+
+The `prompt_template` parameter instructs the model what output should be generated. It can include variables enclosed in double curly braces, which will be replaced with data values upon joining the model with the input data.
+
 ## Example
 
 ### Regression Models
@@ -229,6 +245,20 @@ On execution, we get:
 ```sql
 Query OK, 0 rows affected (x.xxx sec)
 ```
+
+### Large Language Models (LLM)
+
+Here is an example using the OpenAI engine:
+
+```sql
+CREATE MODEL sentiment_classifier
+PREDICT sentiment
+USING
+  engine = 'openai_engine',
+  prompt_template = 'analyze customer reviews and assign sentiment as positive or negative or neutral: {{review}}';
+```
+
+Note that the `prompt_template` parameter stores instructions that the model will follow to generate output.
 
 Visit our [page no how to bring Hugging Face models into MindsDB](/custom-model/huggingface/) for more details.
 

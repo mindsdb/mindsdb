@@ -25,8 +25,22 @@ def upgrade():
             nullable=True
         )
 
+    with op.batch_alter_table('chat_bots', schema=None) as batch_op:
+        batch_op.alter_column(
+            'model_name',
+            existing_type=sa.VARCHAR(),
+            nullable=True
+        )
+
 
 def downgrade():
+
+    with op.batch_alter_table('chat_bots', schema=None) as batch_op:
+        batch_op.alter_column(
+            'model_name',
+            existing_type=sa.VARCHAR(),
+            nullable=False
+        )
 
     with op.batch_alter_table('agents', schema=None) as batch_op:
         batch_op.alter_column(

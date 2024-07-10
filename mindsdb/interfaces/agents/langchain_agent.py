@@ -16,14 +16,14 @@ from langfuse.callback import CallbackHandler
 import numpy as np
 import pandas as pd
 
-from mindsdb.integrations.handlers.langchain_handler.constants import (
+from .constants import (
     DEFAULT_AGENT_TIMEOUT_SECONDS,
     DEFAULT_AGENT_TYPE,
     DEFAULT_MAX_ITERATIONS,
     DEFAULT_MAX_TOKENS,
     SUPPORTED_PROVIDERS,
-    DEFAULT_USER_COLUMN,
-    DEFAULT_ASSISTANT_COLUMN
+    USER_COLUMN,
+    ASSISTANT_COLUMN
 )
 
 from mindsdb.integrations.libs.llm.utils import get_llm_config
@@ -86,7 +86,7 @@ class LangchainAgent:
         df = df.reset_index(drop=True)
         agent = self.create_agent(df, args)
         # Use last message as prompt, remove other questions.
-        user_column = args.get('user_column', DEFAULT_USER_COLUMN)
+        user_column = args.get('user_column', USER_COLUMN)
         df.iloc[:-1, df.columns.get_loc(user_column)] = None
         return self.run_agent(df, agent, args)
 
@@ -164,8 +164,8 @@ class LangchainAgent:
                                                  memory_key='chat_history')
         memory.chat_memory.messages.insert(0, SystemMessage(content=prompt_template))
         # User - Assistant conversation. All except the last message.
-        user_column = args.get('user_column', DEFAULT_USER_COLUMN)
-        assistant_column = args.get('assistant_column', DEFAULT_ASSISTANT_COLUMN)
+        user_column = args.get('user_column', USER_COLUMN)
+        assistant_column = args.get('assistant_column', ASSISTANT_COLUMN)
         for row in df[:-1].to_dict('records'):
             question = row[user_column]
             answer = row[assistant_column]
@@ -252,7 +252,7 @@ AI: {response}'''
         base_template = base_template.replace('{{', '{').replace('}}', '}')
         prompts = []
 
-        user_column = args.get('user_column', DEFAULT_USER_COLUMN)
+        user_column = args.get('user_column', USER_COLUMN)
         for i, row in df.iterrows():
             if i not in empty_prompt_ids:
                 prompt = PromptTemplate(input_variables=input_variables, template=base_template)
@@ -300,6 +300,6 @@ AI: {response}'''
         for i in sorted(empty_prompt_ids)[:-1]:
             completions.insert(i, None)
 
-        pred_df = pd.DataFrame(completions, columns=[DEFAULT_ASSISTANT_COLUMN])
+        pred_df = pd.DataFrame(completions, columns=[ASSISTANT_COLUMN])
 
         return pred_df

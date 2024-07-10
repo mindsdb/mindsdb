@@ -1,6 +1,5 @@
 from concurrent.futures import as_completed, TimeoutError
 from typing import Dict, List
-import json
 import os
 import re
 
@@ -16,16 +15,7 @@ from langfuse.callback import CallbackHandler
 import numpy as np
 import pandas as pd
 
-from .constants import (
-    DEFAULT_AGENT_TIMEOUT_SECONDS,
-    DEFAULT_AGENT_TYPE,
-    DEFAULT_MAX_ITERATIONS,
-    DEFAULT_MAX_TOKENS,
-    SUPPORTED_PROVIDERS,
-    USER_COLUMN,
-    ASSISTANT_COLUMN
-)
-
+from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS as OPEN_AI_CHAT_MODELS
 from mindsdb.integrations.libs.llm.utils import get_llm_config
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
@@ -33,18 +23,86 @@ from mindsdb.utilities import log
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 from mindsdb.interfaces.storage import db
 
-from mindsdb.integrations.handlers.langchain_handler.langchain_handler import (
-    get_llm_provider, get_embedding_model_provider
-)
-
 from .mindsdb_chat_model import ChatMindsdb
 from .log_callback_handler import LogCallbackHandler
 from .langfuse_callback_handler import LangfuseCallbackHandler
 from .tools import langchain_tools_from_skill
+from .safe_output_parser import SafeOutputParser
+
+from .constants import (
+    DEFAULT_AGENT_TIMEOUT_SECONDS,
+    DEFAULT_AGENT_TYPE,
+    DEFAULT_MAX_ITERATIONS,
+    DEFAULT_MAX_TOKENS,
+    SUPPORTED_PROVIDERS,
+    ANTHROPIC_CHAT_MODELS,
+    OLLAMA_CHAT_MODELS,
+    USER_COLUMN,
+    ASSISTANT_COLUMN
+)
 
 _PARSING_ERROR_PREFIXES = ['An output parsing error occured', 'Could not parse LLM output']
 
 logger = log.getLogger(__name__)
+
+
+def get_llm_provider(args: Dict) -> str:
+    if 'provider' in args:
+        return args['provider']
+    if args['model_name'] in ANTHROPIC_CHAT_MODELS:
+        return 'anthropic'
+    if args['model_name'] in OPEN_AI_CHAT_MODELS:
+        return 'openai'
+    if args['model_name'] in OLLAMA_CHAT_MODELS:
+        return 'ollama'
+    raise ValueError("Invalid model name. Please define provider")
+
+
+def get_embedding_model_provider(args: Dict) -> str:
+    if 'embedding_model_provider' in args:
+        return args['embedding_model_provider']
+    if 'embedding_model_provider' not in args:
+        logger.warning('No embedding model provider specified. trying to use llm provider.')
+        return args.get('embedding_model_provider', get_llm_provider(args))
+    raise ValueError("Invalid model name. Please define provider")
+
+
+def get_chat_model_params(args: Dict) -> Dict:
+    model_config = args.copy()
+    # Include API keys.
+    model_config['api_keys'] = {
+        p: get_api_key(p, model_config, None, strict=False) for p in SUPPORTED_PROVIDERS
+    }
+    llm_config = get_llm_config(args.get('provider', get_llm_provider(args)), model_config)
+    config_dict = llm_config.model_dump()
+    config_dict = {k: v for k, v in config_dict.items() if v is not None}
+    return config_dict
+
+
+def create_chat_model(args: Dict):
+    model_kwargs = get_chat_model_params(args)
+
+    def _get_tiktoken_model_name(model: str) -> str:
+        if model.startswith('gpt-4'):
+            return 'gpt-4'
+        return model
+
+    if args['provider'] == 'anthropic':
+        return ChatAnthropic(**model_kwargs)
+    if args['provider'] == 'openai':
+        # Some newer GPT models (e.g. gpt-4o when released) don't have token counting support yet.
+        # By setting this manually in ChatOpenAI, we count tokens like compatible GPT models.
+        model_kwargs['tiktoken_model_name'] = _get_tiktoken_model_name(model_kwargs.get('model_name'))
+        return ChatOpenAI(**model_kwargs)
+    if args['provider'] == 'anyscale':
+        return ChatAnyscale(**model_kwargs)
+    if args['provider'] == 'litellm':
+        return ChatLiteLLM(**model_kwargs)
+    if args['provider'] == 'ollama':
+        return ChatOllama(**model_kwargs)
+    if args['provider'] == 'mindsdb':
+        return ChatMindsdb(**model_kwargs)
+    raise ValueError(f'Unknown provider: {args["provider"]}')
 
 
 class LangchainAgent:
@@ -90,47 +148,10 @@ class LangchainAgent:
         df.iloc[:-1, df.columns.get_loc(user_column)] = None
         return self.run_agent(df, agent, args)
 
-    def _get_chat_model_params(self, args: Dict) -> Dict:
-        model_config = args.copy()
-        # Include API keys.
-        model_config['api_keys'] = {
-            p: get_api_key(p, model_config, None, strict=False) for p in SUPPORTED_PROVIDERS
-        }
-        llm_config = get_llm_config(args.get('provider', get_llm_provider(args)), model_config)
-        config_dict = llm_config.model_dump()
-        config_dict = {k: v for k, v in config_dict.items() if v is not None}
-        return config_dict
-
-    def _get_tiktoken_model_name(self, model: str) -> str:
-        if model.startswith('gpt-4'):
-            return 'gpt-4'
-        return model
-
-    def _create_chat_model(self, args: Dict):
-        model_kwargs = self._get_chat_model_params(args)
-
-        if args['provider'] == 'anthropic':
-            return ChatAnthropic(**model_kwargs)
-        if args['provider'] == 'openai':
-            # Some newer GPT models (e.g. gpt-4o when released) don't have token counting support yet.
-            # By setting this manually in ChatOpenAI, we count tokens like compatible GPT models.
-            model_kwargs['tiktoken_model_name'] = self._get_tiktoken_model_name(model_kwargs.get('model_name'))
-            return ChatOpenAI(**model_kwargs)
-        if args['provider'] == 'anyscale':
-            return ChatAnyscale(**model_kwargs)
-        if args['provider'] == 'litellm':
-            return ChatLiteLLM(**model_kwargs)
-        if args['provider'] == 'ollama':
-            return ChatOllama(**model_kwargs)
-        if args['provider'] == 'mindsdb':
-            return ChatMindsdb(**model_kwargs)
-        raise ValueError(f'Unknown provider: {args["provider"]}')
-
     def create_agent(self, df: pd.DataFrame, args: Dict = None) -> AgentExecutor:
 
         # Set up tools.
-        # model_kwargs = self._get_chat_model_params(args, pred_args)
-        llm = self._create_chat_model(args)
+        llm = create_chat_model(args)
 
         # Set up embeddings model if needed.
         if args.get('mode') == 'retrieval':
@@ -179,6 +200,8 @@ class LangchainAgent:
             tools,
             llm,
             agent=agent_type,
+            # Use custom output parser to handle flaky LLMs that don't ALWAYS conform to output format.
+            agent_kwargs={'output_parser': SafeOutputParser()},
             # Calls the agent’s LLM Chain one final time to generate a final answer based on the previous steps
             early_stopping_method='generate',
             handle_parsing_errors=self._handle_parsing_errors,
@@ -230,12 +253,9 @@ class LangchainAgent:
                     response = response_output[-2]
 
                 # Wrap response in Langchain conversational react format.
-                langchain_react_formatted_response = f'''Do I need to use a tool? No
+                langchain_react_formatted_response = f'''Thought: Do I need to use a tool? No
 AI: {response}'''
-                response_obj = {
-                    'text': langchain_react_formatted_response
-                }
-                return json.dumps(response_obj)
+                return langchain_react_formatted_response
         return f'Agent failed with error:\n{str(error)}...'
 
     def run_agent(self, df: pd.DataFrame, agent: AgentExecutor, args: Dict) -> pd.DataFrame():

@@ -1,41 +1,35 @@
 from concurrent.futures import as_completed, TimeoutError
 from typing import Optional, Dict
-import json
 import re
 
 from langchain.agents import AgentExecutor
 from langchain.agents.initialize import initialize_agent
 from langchain.chains.conversation.memory import ConversationSummaryBufferMemory
 from langchain.schema import SystemMessage
-from langchain_community.chat_models import ChatAnthropic, ChatOpenAI, ChatAnyscale, ChatLiteLLM, ChatOllama
 from langchain_core.prompts import PromptTemplate
 from langchain_core.messages import HumanMessage
-
-
 
 import numpy as np
 import pandas as pd
 
-from mindsdb.integrations.handlers.langchain_handler.constants import (
-    ANTHROPIC_CHAT_MODELS,
+from mindsdb.interfaces.agents.safe_output_parser import SafeOutputParser
+from mindsdb.interfaces.agents.langchain_agent import (
+    get_llm_provider, get_embedding_model_provider, create_chat_model, get_chat_model_params
+)
+
+from mindsdb.interfaces.agents.constants import (
     DEFAULT_AGENT_TIMEOUT_SECONDS,
     DEFAULT_AGENT_TOOLS,
     DEFAULT_AGENT_TYPE,
     DEFAULT_MAX_ITERATIONS,
     DEFAULT_MAX_TOKENS,
     DEFAULT_MODEL_NAME,
-    OLLAMA_CHAT_MODELS,
-    SUPPORTED_PROVIDERS,
-    DEFAULT_USER_COLUMN,
-    DEFAULT_ASSISTANT_COLUMN
+    USER_COLUMN,
+    ASSISTANT_COLUMN
 )
-from mindsdb.integrations.handlers.langchain_handler.safe_output_parser import SafeOutputParser
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
 from mindsdb.integrations.handlers.langchain_handler.tools import setup_tools
-from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS as OPEN_AI_CHAT_MODELS
 from mindsdb.integrations.libs.base import BaseMLEngine
-from mindsdb.integrations.libs.llm.utils import get_llm_config
-from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.interfaces.storage.model_fs import HandlerStorage, ModelStorage
 from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
 from mindsdb.utilities import log
@@ -44,27 +38,6 @@ from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 _PARSING_ERROR_PREFIXES = ['An output parsing error occured', 'Could not parse LLM output']
 
 logger = log.getLogger(__name__)
-
-
-def get_llm_provider(args: Dict) -> str:
-    if 'provider' in args:
-        return args['provider']
-    if args['model_name'] in ANTHROPIC_CHAT_MODELS:
-        return 'anthropic'
-    if args['model_name'] in OPEN_AI_CHAT_MODELS:
-        return 'openai'
-    if args['model_name'] in OLLAMA_CHAT_MODELS:
-        return 'ollama'
-    raise ValueError(f"Invalid model name. Please define provider")
-
-
-def get_embedding_model_provider(args: Dict) -> str:
-    if 'embedding_model_provider' in args:
-        return args['embedding_model_provider']
-    if 'embedding_model_provider' not in args:
-        logger.warning('No embedding model provider specified. trying to use llm provider.')
-        return args.get('embedding_model_provider', get_llm_provider(args))
-    raise ValueError(f"Invalid model name. Please define provider")
 
 
 class LangChainHandler(BaseMLEngine):
@@ -94,42 +67,6 @@ class LangChainHandler(BaseMLEngine):
         # if True, the target column name does not have to be specified at creation time.
         self.generative = True
         self.default_agent_tools = DEFAULT_AGENT_TOOLS
-
-    def _get_chat_model_params(self, args: Dict, pred_args: Dict) -> Dict:
-        model_config = args.copy()
-        # Override with prediction args.
-        model_config.update(pred_args)
-        # Include API keys.
-        model_config['api_keys'] = {
-            p: get_api_key(p, model_config, self.engine_storage, strict=False) for p in SUPPORTED_PROVIDERS
-        }
-        llm_config = get_llm_config(args.get('provider', get_llm_provider(args)), model_config)
-        config_dict = llm_config.model_dump()
-        config_dict = {k: v for k, v in config_dict.items() if v is not None}
-        return config_dict
-
-    def _get_tiktoken_model_name(self, model: str) -> str:
-        if model.startswith('gpt-4'):
-            return 'gpt-4'
-        return model
-
-    def _create_chat_model(self, args: Dict, pred_args: Dict):
-        model_kwargs = self._get_chat_model_params(args, pred_args)
-
-        if args['provider'] == 'anthropic':
-            return ChatAnthropic(**model_kwargs)
-        if args['provider'] == 'openai':
-            # Some newer GPT models (e.g. gpt-4o when released) don't have token counting support yet.
-            # By setting this manually in ChatOpenAI, we count tokens like compatible GPT models.
-            model_kwargs['tiktoken_model_name'] = self._get_tiktoken_model_name(model_kwargs.get('model_name'))
-            return ChatOpenAI(**model_kwargs)
-        if args['provider'] == 'anyscale':
-            return ChatAnyscale(**model_kwargs)
-        if args['provider'] == 'litellm':
-            return ChatLiteLLM(**model_kwargs)
-        if args['provider'] == 'ollama':
-            return ChatOllama(**model_kwargs)
-        raise ValueError(f'Unknown provider: {args["provider"]}')
 
     def _create_embeddings_model(self, args: Dict):
         return construct_model_from_args(args)
@@ -198,28 +135,27 @@ AI: {response}'''
 
         agent = self.create_agent(df, args, pred_args)
         # Use last message as prompt, remove other questions.
-        user_column = args.get('user_column', DEFAULT_USER_COLUMN)
+        user_column = args.get('user_column', USER_COLUMN)
         df.iloc[:-1, df.columns.get_loc(user_column)] = None
         return self.run_agent(df, agent, args, pred_args)
 
     def call_llm(self, df, args=None, pred_args=None):
-        llm = self._create_chat_model(args, pred_args)
+        llm = create_chat_model({**args, **pred_args})
 
-        user_column = args.get('user_column', DEFAULT_USER_COLUMN)
-        assistant_column = args.get('assistant_column', DEFAULT_ASSISTANT_COLUMN)
+        user_column = args.get('user_column', USER_COLUMN)
+        assistant_column = args.get('assistant_column', ASSISTANT_COLUMN)
 
         question = df[user_column].iloc[-1]
         resp = llm([HumanMessage(question)], stop=['\nObservation:', '\n\tObservation:'])
 
         return pd.DataFrame([resp.content], columns=[assistant_column])
 
-
     def create_agent(self, df: pd.DataFrame, args: Dict=None, pred_args: Dict=None) -> AgentExecutor:
         pred_args = pred_args if pred_args else {}
 
         # Set up tools.
-        model_kwargs = self._get_chat_model_params(args, pred_args)
-        llm = self._create_chat_model(args, pred_args)
+        model_kwargs = get_chat_model_params({**args, **pred_args})
+        llm = create_chat_model({**args, **pred_args})
 
         tools = setup_tools(llm,
                             model_kwargs,
@@ -237,8 +173,8 @@ AI: {response}'''
                                                  memory_key='chat_history')
         memory.chat_memory.messages.insert(0, SystemMessage(content=prompt_template))
         # User - Assistant conversation. All except the last message.
-        user_column = args.get('user_column', DEFAULT_USER_COLUMN)
-        assistant_column = args.get('assistant_column', DEFAULT_ASSISTANT_COLUMN)
+        user_column = args.get('user_column', USER_COLUMN)
+        assistant_column = args.get('assistant_column', ASSISTANT_COLUMN)
         for row in df[:-1].to_dict('records'):
             question = row[user_column]
             answer = row[assistant_column]
@@ -279,7 +215,7 @@ AI: {response}'''
         base_template = base_template.replace('{{', '{').replace('}}', '}')
         prompts = []
 
-        user_column = args.get('user_column', DEFAULT_USER_COLUMN)
+        user_column = args.get('user_column', USER_COLUMN)
         for i, row in df.iterrows():
             if i not in empty_prompt_ids:
                 prompt = PromptTemplate(input_variables=input_variables, template=base_template)
@@ -295,9 +231,6 @@ AI: {response}'''
             if not prompt:
                 return ''
             try:
-                # Handle callbacks per run.
-                all_args = args.copy()
-                all_args.update(pred_args)
                 answer = agent_executor.invoke(prompt)
             except Exception as e:
                 answer = str(e)

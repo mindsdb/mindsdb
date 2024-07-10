@@ -53,43 +53,43 @@ You can find [available models here](https://github.com/ollama/ollama?tab=readme
 
 The following usage examples utilize `ollama_engine` to create a model with the `CREATE MODEL` statement.
 
-Deploy and use the `llama2` model.
+Deploy and use the `llama3` model.
 
-First, [download Ollama](https://github.com/ollama/ollama?tab=readme-ov-file#ollama) and run the model locally by executing `ollama run llama2`.
+First, [download Ollama](https://github.com/ollama/ollama?tab=readme-ov-file#ollama) and run the model locally by executing `ollama pull llama3`.
 
 Now deploy this model within MindsDB.
 
 ```sql
-CREATE MODEL llama2_model
+CREATE MODEL llama3_model
 PREDICT completion
 USING
    engine = 'ollama_engine',
-   model_name = 'llama2';
+   model_name = 'llama3';
 ```
 
 Query the model to get predictions.
 
 ```sql
 SELECT text, completion
-FROM llama2_model
+FROM llama3_model
 WHERE text = 'Hello';
 ```
 
 Here is the output:
 
 ```sql
-+-------+------------+
-| text  | completion |
-+-------+------------+
-| Hello | Hello!     |
-+-------+------------+
++-------+--------------------------------------------------------------------------------------+
+| text  | completion                                                                           |
++-------+--------------------------------------------------------------------------------------+
+| Hello | Hello back to you! Is there something I can help you with or would you like to chat? |
++-------+--------------------------------------------------------------------------------------+
 ```
 
 You can override the prompt message as below:
 
 ```sql
 SELECT text, completion
-FROM llama2_model
+FROM llama3_model
 WHERE text = 'Hello'
 USING 
    prompt_template = 'Answer using exactly five words: {{text}}:';
@@ -98,11 +98,11 @@ USING
 Here is the output:
 
 ```sql
-+-------+------------------------------------+
-| text  | completion                         |
-+-------+------------------------------------+
-| Hello | Hello! *smiles* How are you today? |
-+-------+------------------------------------+
++-------+------------------------------+
+| text  | completion                   |
++-------+------------------------------+
+| Hello | Warmly welcome to our space. |
++-------+------------------------------+
 ```
 
 <Tip>

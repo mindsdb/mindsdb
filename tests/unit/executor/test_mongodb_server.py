@@ -15,7 +15,7 @@ from mindsdb.api.executor import Column, ResultSet
 # How to run:
 #  env PYTHONPATH=./ pytest tests/unit/test_mongodb_server.py
 
-from .executor_test_base import BaseUnitTest
+from tests.unit.executor_test_base import BaseUnitTest
 
 
 class TestMongoDBServer(BaseUnitTest):
@@ -107,7 +107,7 @@ class TestMongoDBServer(BaseUnitTest):
         ast = mock_executor.call_args[0][0]
 
         expected_sql = '''
-          SELECT * FROM 
+          SELECT * FROM
              (SELECT * FROM mongo.fish WHERE Species = 'Pike') as fish
              JOIN mindsdb.fish_model1
         '''
@@ -135,7 +135,7 @@ class TestMongoDBServer(BaseUnitTest):
         ast = mock_executor.call_args[0][0]
 
         expected_sql = '''
-          SELECT house_sales_model_h1w4.saledate as date, house_sales_model_h1w4.ma as forecast  FROM 
+          SELECT house_sales_model_h1w4.saledate as date, house_sales_model_h1w4.ma as forecast  FROM
              (
                SELECT * FROM example_mongo.house_sales2
                 WHERE saledate > latest
@@ -160,7 +160,7 @@ class TestMongoDBServer(BaseUnitTest):
         assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()
 
     def t_create_predictor(self, client_con, mock_executor):
-        res = client_con.myproj.predictors.insert_one(
+        client_con.myproj.predictors.insert_one(
             {
                 "name": "house_sales_model5",
                 "predict": "ma",
@@ -180,15 +180,15 @@ class TestMongoDBServer(BaseUnitTest):
         ast = mock_executor.call_args[0][0]
 
         expected_sql = '''
-           CREATE PREDICTOR myproj.house_sales_model5 
+           CREATE PREDICTOR myproj.house_sales_model5
            FROM mongo (
                 db.house_sales.find({})
-           ) 
-           PREDICT ma 
-           ORDER BY saledate 
-           GROUP BY bedrooms, type 
-           WINDOW 4 
-           HORIZON 4 
+           )
+           PREDICT ma
+           ORDER BY saledate
+           GROUP BY bedrooms, type
+           WINDOW 4
+           HORIZON 4
            USING encoders.location.module="CategoricalAutoEncoder"
         '''
         assert parse_sql(expected_sql, 'mindsdb').to_string() == ast.to_string()

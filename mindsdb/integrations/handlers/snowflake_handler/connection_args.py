@@ -4,6 +4,12 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 
 
 connection_args = OrderedDict(
+    host={
+        'type': ARG_TYPE.STR,
+        'description': 'The Snowflake host.',
+        'required': True,
+        'label': 'Host'
+    },
     account={
         'type': ARG_TYPE.STR,
         'description': 'The Snowflake account name.',

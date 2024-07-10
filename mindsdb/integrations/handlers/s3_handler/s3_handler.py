@@ -1,5 +1,6 @@
 from typing import Optional
 
+import duckdb
 import pandas as pd
 import boto3
 import io
@@ -58,12 +59,25 @@ class S3Handler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
-        self.connection = boto3.client(
-            's3',
-            aws_access_key_id=self.connection_data['aws_access_key_id'],
-            aws_secret_access_key=self.connection_data['aws_secret_access_key'],
-            region_name=self.connection_data['region_name']
-        )
+        # Validate mandatory parameters.
+        if not all(key in self.connection_data for key in ['aws_access_key_id', 'aws_secret_access_key', 'bucket']):
+            raise ValueError('Required parameters (aws_access_key_id, aws_secret_access_key, bucket) must be provided.')
+
+        # Connect to S3 via DuckDB and configure mandatory credentials.
+        conn = duckdb.connect()
+        conn.execute("INSTALL httpfs")
+        conn.execute("LOAD httpfs")
+
+        conn.execute(f"SET s3_access_key_id='{self.connection_data['aws_access_key_id']}'")
+        conn.execute(f"SET s3_secret_access_key='{self.connection_data['aws_secret_access_key']}'")
+
+        # Configure optional parameters.
+        if 'aws_session_token' in self.connection_data:
+            conn.execute(f"SET s3_session_token='{self.connection_data['aws_session_token']}'")
+
+        if 'region_name' in self.connection_data:
+            conn.execute(f"SET s3_region='{self.connection_data['region']}'")
+
         self.is_connected = True
 
         return self.connection

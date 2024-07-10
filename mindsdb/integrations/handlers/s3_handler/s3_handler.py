@@ -249,6 +249,9 @@ class S3Handler(DatabaseHandler):
         Returns:
             Response: The response from the `native_query` method, containing the result of the SQL query execution.
         """
+        # Set the key (file) by getting it from the query.
+        # This will be used to create a table from the file in the S3 bucket.
+        # Replace the key with the name of the table to be created.
         if isinstance(query, Select):
             self.is_select_query = True
             table = query.from_table
@@ -267,6 +270,14 @@ class S3Handler(DatabaseHandler):
             )
 
         self.key = table.get_string().replace('`', '')
+
+        # Check if the file exists in the S3 bucket.
+        try:
+            boto3_conn = self._connect_boto3()
+            boto3_conn.head_object(Bucket=self.connection_data['bucket'], Key=self.key)
+        except ClientError as e:
+            logger.error(f'The file {self.key} does not exist in the bucket {self.connection_data["bucket"]}: {e}!')
+            raise ValueError(f'The file {self.key} does not exist in the bucket {self.connection_data["bucket"]}!')
 
         return self.native_query(query.to_string())
 

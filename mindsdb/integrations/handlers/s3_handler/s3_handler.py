@@ -28,7 +28,7 @@ class S3Handler(DatabaseHandler):
     name = 's3'
     table_name = 's3_table'
     # TODO: Check if other file formats are supported.
-    supported_file_formats = ['csv', 'tsv', 'parquet']
+    supported_file_formats = ['csv', 'tsv', 'json', 'parquet']
 
     def __init__(self, name: Text, connection_data: Optional[Dict], **kwargs):
         """

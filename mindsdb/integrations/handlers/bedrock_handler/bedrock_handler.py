@@ -2,13 +2,13 @@ import pandas as pd
 from typing import Optional, Dict
 
 from mindsdb.utilities import log
-from mindsdb.integrations.libs.base import BaseMLEngine
 
-from mindsdb.integrations.handlers.bedrock_handler.settings import AmazonBedrockEngineConfig
+from mindsdb.integrations.libs.base import BaseMLEngine
+from mindsdb.integrations.libs.api_handler_exceptions import MissingConnectionParams
+from mindsdb.integrations.handlers.bedrock_handler.settings import AmazonBedrockEngineConfig, AmazonBedrockModelConfig
 
 
 logger = log.getLogger(__name__)
-
 
 class AmazonBedrockHandler(BaseMLEngine):
     """
@@ -30,16 +30,17 @@ class AmazonBedrockHandler(BaseMLEngine):
 
         Raises:
             Exception: If the handler is not configured with valid API credentials.
-
-        Returns:
-            None
         """
         connection_args = {k.lower(): v for k, v in connection_args.items()}
         AmazonBedrockEngineConfig(**connection_args)
 
     @staticmethod
     def create_validation(target: str, args: Dict = None, **kwargs: Dict) -> None:
-        pass
+        if 'using' not in args:
+            raise MissingConnectionParams("Twelve Labs engine requires a USING clause! Refer to its documentation for more details.")
+        else:
+            args = args['using']
+            AmazonBedrockModelConfig(**args)
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         pass

@@ -211,7 +211,6 @@ class DSPyHandler(BaseMLEngine):
 
         # TODO: maybe random choose a fixed set of rows
         for i, row in df.iterrows():
-            print('GETTING HERE')
             example = dspy.Example(
                 question=row[args["user_column"]],
                 answer=row[args["target"]]
@@ -223,8 +222,6 @@ class DSPyHandler(BaseMLEngine):
         metric = dspy.evaluate.metrics.answer_exact_match  # TODO: passage match requires context from prediction... we'll probably modify the signature of ReAct
         teleprompter = BootstrapFewShot(metric=metric, **config)  # TODO: maybe it's better to have this persisted so that the internal state does a better job at optimizing RAG
         with dspy.context(lm=llm):
-            print('8')
-            print(dspy_examples)
             optimized = teleprompter.compile(dspy_module, trainset=dspy_examples)  # TODO: check columns have the right name
         return optimized
     

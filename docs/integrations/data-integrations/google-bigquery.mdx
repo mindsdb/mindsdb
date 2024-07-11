@@ -90,7 +90,7 @@ SELECT * FROM bigquery_datasource (
   1. Make sure that the Google Cloud account is active and the Google BigQuery service is enabled.
   2. Confirm that the project ID, dataset and service account credentials are correct. Try a direct BigQuery connection using a client like DBeaver.
   3. Ensure a stable network between MindsDB and Google BigQuery.
-     </Warning>
+</Warning>
 
 <Warning>
 `SQL statement cannot be parsed by mindsdb_sql`
@@ -102,4 +102,4 @@ SELECT * FROM bigquery_datasource (
      _ Incorrect: SELECT _ FROM integration.travel data
      _ Incorrect: SELECT _ FROM integration.'travel data'
      _ Correct: SELECT _ FROM integration.\`travel data\`
-     </Warning>
+</Warning>

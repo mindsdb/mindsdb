@@ -109,7 +109,10 @@ class DSPyHandler(BaseMLEngine):
                 args["prompt_template"] = DEFAULT_RAG_PROMPT_TEMPLATE
 
         self.model_storage.json_set('args', args)
-        self.model_storage.file_set('cold_start_df', dill.dumps(df.to_dict()))
+        if df:
+            self.model_storage.file_set('cold_start_df', dill.dumps(df.to_dict()))
+        else:
+            self.model_storage.file_set('cold_start_df', dill.dumps({}))
         # TODO: temporal workaround: serialize df and args, instead. And recreate chain (with training) every inference call.
         # ideally, we serialize the chain itself to avoid duplicate training.
 
@@ -141,9 +144,11 @@ class DSPyHandler(BaseMLEngine):
         df = df.reset_index(drop=True)
 
         cold_start_df = pd.DataFrame(dill.loads(self.model_storage.file_get("cold_start_df")))  # fixed in "training"  # noqa
-
         # gets larger as agent is used more
         self_improvement_df = pd.DataFrame(self.llm_data_controller.list_all_llm_data(self.model_id))
+        if self_improvement_df.empty:
+            self_improvement_df = pd.DataFrame([{'input': 'dummy_input', 'output': 'dummy_output'}])
+        
         self_improvement_df = self_improvement_df.rename(columns={
             'output': args['target'],
             'input': args['user_column']
@@ -152,7 +157,6 @@ class DSPyHandler(BaseMLEngine):
 
         # add cold start DF
         self_improvement_df = pd.concat([cold_start_df, self_improvement_df]).reset_index(drop=True)
-
         chain = self.setup_dspy(self_improvement_df, args)
         output = self.predict_dspy(df, args, chain, llm)  # this stores new traces for self-improvement
         return output
@@ -169,7 +173,7 @@ class DSPyHandler(BaseMLEngine):
         Use the default DSPy parameters to set up the chain
 
         Args:
-            df (DataFrame): input to th emodel
+            df (DataFrame): input to the model
             args (Dict): Parameters for the model
 
         Returns:
@@ -207,6 +211,7 @@ class DSPyHandler(BaseMLEngine):
 
         # TODO: maybe random choose a fixed set of rows
         for i, row in df.iterrows():
+            print('GETTING HERE')
             example = dspy.Example(
                 question=row[args["user_column"]],
                 answer=row[args["target"]]
@@ -218,6 +223,8 @@ class DSPyHandler(BaseMLEngine):
         metric = dspy.evaluate.metrics.answer_exact_match  # TODO: passage match requires context from prediction... we'll probably modify the signature of ReAct
         teleprompter = BootstrapFewShot(metric=metric, **config)  # TODO: maybe it's better to have this persisted so that the internal state does a better job at optimizing RAG
         with dspy.context(lm=llm):
+            print('8')
+            print(dspy_examples)
             optimized = teleprompter.compile(dspy_module, trainset=dspy_examples)  # TODO: check columns have the right name
         return optimized
     

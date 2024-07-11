@@ -26,6 +26,9 @@ class S3Handler(DatabaseHandler):
     """
 
     name = 's3'
+    table_name = 's3_table'
+    # TODO: Check if other file formats are supported.
+    supported_file_formats = ['csv', 'tsv', 'parquet']
 
     def __init__(self, name: Text, connection_data: Optional[Dict], **kwargs):
         """
@@ -46,10 +49,6 @@ class S3Handler(DatabaseHandler):
 
         self.is_select_query = False
         self.key = None
-        # TODO: Should these be defined in the __init__ method?
-        self.table_name = 's3_table'
-        # TODO: Check if other file formats are supported.
-        self.supported_file_formats = ['csv', 'tsv', 'parquet']
 
     def __del__(self):
         if self.is_connected is True:
@@ -289,8 +288,8 @@ class S3Handler(DatabaseHandler):
             boto3_conn = self._connect_boto3()
             boto3_conn.head_object(Bucket=self.connection_data['bucket'], Key=self.key)
         except ClientError as e:
-            logger.error(f'The file {self.key} does not exist in the bucket {self.connection_data["bucket"]}: {e}!')
-            raise ValueError(f'The file {self.key} does not exist in the bucket {self.connection_data["bucket"]}!')
+            logger.error(f'Error querying the file {self.key} in the bucket {self.connection_data["bucket"]}, {e}!')
+            raise e
 
         return self.native_query(query.to_string())
 

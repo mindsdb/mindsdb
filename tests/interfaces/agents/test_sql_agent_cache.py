@@ -22,7 +22,7 @@ def test_get_table_info_cache_miss(sql_agent_setup):
 
 def test_get_table_info_cache_hit(sql_agent_setup):
     sql_agent, cache_mock = sql_agent_setup
-    cache_mock.get.return_value = {'test_table':'table_info'}
+    cache_mock.get.return_value = {'test_table': 'table_info'}
     with patch.object(SQLAgent, '_fetch_table_info') as mock_fetch_table_info:
         sql_agent.get_table_info(['test_table'])
         assert not mock_fetch_table_info.called

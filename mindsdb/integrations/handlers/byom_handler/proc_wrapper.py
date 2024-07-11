@@ -83,8 +83,7 @@ def import_string(code, module_name='model'):
 
 
 def find_model_class(module):
-    # find the first class that contents predict and train methods
-    cls_list = []
+    # find the first class that contains predict and train methods
     for _, cls in inspect.getmembers(module, inspect.isclass):
         if inspect.getmodule(cls) is not None:
             # is imported class
@@ -97,22 +96,13 @@ def find_model_class(module):
         if 'predict' in funcs and 'train' in funcs:
             # found
             return cls
-        cls_list.append(cls)
-    if len(cls_list) == 1:
-        # only one class in file
-        return cls_list[0]
-
-    raise RuntimeError('Unable to find model class (it has to have `train` and `predict` methods)')
 
 
-def get_methods_info(model):
+def get_methods_info(module):
     # get all methods and their types
     methods = {}
-    for method_name in dir(model):
-        if method_name.startswith('__'):
-            continue
+    for method_name, method in inspect.getmembers(module, inspect.isfunction):
 
-        method = getattr(model, method_name)
         sig = inspect.signature(method)
         input_params = [
             {'name': name, 'type': param.annotation.__name__}
@@ -123,6 +113,24 @@ def get_methods_info(model):
             'output_type': sig.return_annotation.__name__
         }
     return methods
+
+
+def check_module(module, mode):
+    # checks module and returns info
+
+    methods = {}
+    if mode == 'custom_function':
+        methods = get_methods_info(module)
+
+    else:
+        # is BYOM, check it.
+        model_class = find_model_class(module)
+        if model_class is None:
+            raise RuntimeError('Unable to find model class (it has to have `train` and `predict` methods)')
+
+        # try to initialize
+        model_class()
+    return {'methods': methods}
 
 
 def main():
@@ -136,20 +144,21 @@ def main():
 
     module = import_string(code)
 
-    model_class = find_model_class(module)
+    if method == BYOM_METHOD.FUNC_CALL:
+        func_name = params['func_name']
+        args = params['args']
+
+        func = getattr(module, func_name)
+        return return_output(func(*args))
 
     if method == BYOM_METHOD.CHECK:
-        model = model_class()
 
-        methods = get_methods_info(model)
+        mode = params['mode']
+        info = check_module(module, mode)
 
-        if 'train' not in methods:
-            raise RuntimeError('Model class has to have "train" method')
+        return return_output(info)
 
-        if 'predict' not in methods:
-            raise RuntimeError('Model class has to have "predict" method')
-
-        return_output(methods)
+    model_class = find_model_class(module)
 
     if method == BYOM_METHOD.TRAIN:
         df = pd_decode(params['df'])
@@ -210,14 +219,6 @@ def main():
         except Exception:
             return_output(pd_encode(pd.DataFrame()))
         return_output(pd_encode(df))
-
-    elif method == BYOM_METHOD.FUNC_CALL:
-        model = model_class()
-        func_name = params['func_name']
-        args = params['args']
-
-        func = getattr(model, func_name)
-        return return_output(func(*args))
 
     raise NotImplementedError(method)
 

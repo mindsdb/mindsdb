@@ -23,7 +23,7 @@ class AmazonBedrockHandler(BaseMLEngine):
 
     def create_engine(self, connection_args: Dict) -> None:
         """
-        Validate the OpenAI API credentials on engine creation.
+        Validates the AWS credentials provided on engine creation.
 
         Args:
             connection_args (Dict): Parameters for the engine.
@@ -36,6 +36,18 @@ class AmazonBedrockHandler(BaseMLEngine):
 
     @staticmethod
     def create_validation(target: str, args: Dict = None, **kwargs: Dict) -> None:
+        """
+        Validates the arguments provided on model creation.
+
+        Args:
+            target (str): Target column.
+            args (Dict): Parameters for the model.
+
+        Raises:
+            MissingConnectionParams: If a USING clause is not provided.
+
+            ValueError: If the parameters provided in the USING clause are invalid.
+        """
         if 'using' not in args:
             raise MissingConnectionParams("Twelve Labs engine requires a USING clause! Refer to its documentation for more details.")
         else:

@@ -40,15 +40,11 @@ class AmazonBedrockEngineConfig(BaseModel):
         """
         Root validator to check if there are any typos in the parameters.
 
-        Parameters
-        ----------
-        values : Dict
-            Dictionary containing the attributes of the model.
+        Args:
+            values (Any): Engine configuration.
 
-        Raises
-        ------
-        ValueError
-            If there are any typos in the parameters.
+        Raises:
+            ValueError: If there are any typos in the parameters.
         """
         ParameterValidationUtilities.validate_parameter_spelling(cls, values)
 
@@ -60,15 +56,11 @@ class AmazonBedrockEngineConfig(BaseModel):
         """
         Root validator to check if the Amazon Bedrock credentials are valid and Amazon Bedrock is accessible.
 
-        Parameters
-        ----------
-        model : BaseModel
-            Model containing the attributes of the engine.
+        Args:
+            model (BaseModel): Engine configuration.
 
-        Raises
-        ------
-        ValueError
-            If the Amazon Bedrock credentials are invalid.
+        Raises:
+            ValueError: If the AWS credentials are invalid or do not have access to Amazon Bedrock.
         """
         bedrock_client = create_amazon_bedrock_client(
             model.aws_access_key_id,
@@ -109,15 +101,11 @@ class AmazonBedrockModelConfig(BaseModel):
         """
         Root validator to check if there are any typos in the parameters.
 
-        Parameters
-        ----------
-        values : Dict
-            Dictionary containing the attributes of the model.
+        Args:
+            values (Any): Model configuration.
 
-        Raises
-        ------
-        ValueError
-            If there are any typos in the parameters.
+        Raises:
+            ValueError: If there are any typos in the parameters.
         """
         ParameterValidationUtilities.validate_parameter_spelling(cls, values)
 
@@ -125,19 +113,15 @@ class AmazonBedrockModelConfig(BaseModel):
     
     @model_validator(mode="before")
     @classmethod
-    def check_for_valid_model_id(cls, values: Any) -> Any):
+    def check_for_valid_model_id(cls, values: Any) -> Any:
         """
         Root validator to check if the model ID provided is valid.
 
-        Parameters
-        ----------
-        values : Dict
-            Dictionary containing the attributes of the model.
+        Args:
+            values (Any): Model configuration.
 
-        Raises
-        ------
-        ValueError
-            If the model ID provided is not valid.
+        Raises:
+            ValueError: If the model ID is invalid.
         """
         connection_args = values["engine"].get_connection_args()
 

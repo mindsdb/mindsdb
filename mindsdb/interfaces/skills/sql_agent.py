@@ -10,6 +10,7 @@ from mindsdb_sql.parser.ast import Identifier
 from mindsdb_sql.planner.utils import query_traversal
 
 from mindsdb.utilities import log
+from mindsdb.utilities.context import context as ctx
 
 logger = log.getLogger(__name__)
 
@@ -66,7 +67,7 @@ class SQLAgent:
 
     def get_usable_table_names(self) -> Iterable[str]:
 
-        cache_key = f'{self._command_executor.session.username}_{self._database}_tables'
+        cache_key = f'{ctx.company_id}_{self._database}_tables'
 
         # first check cache and return if found
         if self._cache:
@@ -148,7 +149,7 @@ class SQLAgent:
 
     def _generate_cache_key(self, table_names: Optional[List[str]]) -> str:
         # Base part of the cache key
-        base_key = f"{self._command_executor.session.username}_{self._database}_table_info"
+        base_key = f"{ctx.company_id}_{self._database}_table_info"
 
         # If table names are provided, sort and concatenate them
         if table_names:

@@ -28,9 +28,9 @@ class TestMongoDBConverters(unittest.TestCase):
             {"$match": {"$or": [
                 {"$and": [{"$and": [
                      {"x": {"$ne": 1}},
-                     {"c": 2}]}, 
-                     {"d": {"$gt": 4}}]}, 
-                {"e": {"$ne": null}}]}}, 
+                     {"c": 2}]},
+                     {"d": {"$gt": 4}}]},
+                {"e": {"$ne": null}}]}},
             {"$sort": {"d": -1, "e": -1}}
           ])
         '''.replace('\n', '')
@@ -43,10 +43,9 @@ class TestMongoDBConverters(unittest.TestCase):
         print(mql_str)
         assert MongodbParser().from_string(mql_str).to_string() == mql_str
 
-
         sql = '''
            select distinct a.b, a.c  from tbl1
-           where x=1 
+           where x=1
            limit 2
            offset 3
         '''
@@ -56,14 +55,14 @@ class TestMongoDBConverters(unittest.TestCase):
 
         expected_mql = '''
             db.tbl1.aggregate([
-               {"$match": {"x": 1}}, 
+               {"$match": {"x": 1}},
                {"$group": {
-                   "_id": {"b": "$b", "c": "$c"}, 
-                   "b": {"$first": "$b"}, 
+                   "_id": {"b": "$b", "c": "$c"},
+                   "b": {"$first": "$b"},
                    "c": {"$first": "$c"}
                }},
-               {"$project": {"_id": 0, "b": "$b", "c": "$c"}}, 
-               {"$skip": 3}, 
+               {"$project": {"_id": 0, "b": "$b", "c": "$c"}},
+               {"$skip": 3},
                {"$limit": 2}
             ])
         '''.replace('\n', '')
@@ -95,4 +94,3 @@ class TestMongoDBHandler(unittest.TestCase):
         #   test mysql query
         #   test mongo query
         pass
-

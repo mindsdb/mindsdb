@@ -58,7 +58,7 @@ class SQLQuery:
         }
 
         self.columns_list = None
-        self.steps_data = []
+        self.steps_data = {}
 
         self.planner = None
         self.parameters = []
@@ -214,7 +214,7 @@ class SQLQuery:
                 for step in self.planner.prepare_steps(self.query):
                     data = self.execute_step(step)
                     step.set_result(data)
-                    self.steps_data.append(data)
+                    self.steps_data[step.step_num] = data
             except PlanningException as e:
                 raise LogicError(e)
 
@@ -247,6 +247,7 @@ class SQLQuery:
             # no need to execute
             return
 
+        step_result = None
         process_mark = None
         try:
             steps = list(self.planner.execute_steps(params))
@@ -256,9 +257,8 @@ class SQLQuery:
                 process_mark = create_process_mark('predict')
             for step in steps:
                 with profiler.Context(f'step: {step.__class__.__name__}'):
-                    data = self.execute_step(step)
-                step.set_result(data)
-                self.steps_data.append(data)
+                    step_result = self.execute_step(step)
+                self.steps_data[step.step_num] = step_result
         except PlanningException as e:
             raise LogicError(e)
         except Exception as e:
@@ -280,7 +280,7 @@ class SQLQuery:
                 # +++
                 # ???
 
-                result = self.steps_data[-1]
+                result = step_result
                 df = result.to_df()
 
                 df2 = query_df(df, self.outer_query)
@@ -291,7 +291,7 @@ class SQLQuery:
                 self.fetched_data = result2
 
             else:
-                result = self.steps_data[-1]
+                result = step_result
                 self.fetched_data = result
         except Exception as e:
             raise UnknownError("error in preparing result query step") from e
@@ -310,13 +310,13 @@ class SQLQuery:
         except Exception as e:
             raise UnknownError("error in column list step") from e
 
-    def execute_step(self, step):
+    def execute_step(self, step, steps_data=None):
         cls_name = step.__class__.__name__
         handler = self.step_handlers.get(cls_name)
         if handler is None:
             raise UnknownError(f"Unknown step: {cls_name}")
 
-        return handler(self).call(step)
+        return handler(self, steps_data=steps_data).call(step)
 
 
 SQLQuery.register_steps()

@@ -15,7 +15,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
 # How to run:
 #  env PYTHONPATH=./ pytest tests/unit/test_executor.py
 
-from .executor_test_base import BaseExecutorMockPredictor
+from tests.unit.executor_test_base import BaseExecutorMockPredictor
 
 
 class Test(BaseExecutorMockPredictor):
@@ -307,6 +307,17 @@ class Test(BaseExecutorMockPredictor):
         assert ret_df.shape[0] == 1
         assert ret_df.t.min() == dt.datetime(2020, 1, 2)
 
+        # ----- empty data ------
+
+        ret = self.execute('''
+            select p.* from pg.tasks t
+            join mindsdb.task_model p
+            where t.t > LATEST and t.g = 'wrong'
+        ''')
+
+        ret_df = self.ret_to_df(ret)
+        assert ret_df.shape[0] == 0
+
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_ts_predictor_no_group(self, mock_handler):
         # set integration data
@@ -540,10 +551,14 @@ class Test(BaseExecutorMockPredictor):
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_drop_database(self, mock_handler):
         from mindsdb.utilities.exception import EntityNotExistsError
-        self.set_handler(mock_handler, name='pg', tables={})
 
-        # remove existing
+        # remove existing (check different cases)
+        self.set_handler(mock_handler, name='pg', tables={})
         self.execute("drop database pg")
+        self.set_handler(mock_handler, name='PG', tables={})
+        self.execute("drop database pg")
+        self.set_handler(mock_handler, name='pg', tables={})
+        self.execute("drop database Pg")
 
         # try one more time
         with pytest.raises(EntityNotExistsError):
@@ -1252,6 +1267,10 @@ class TestIfExistsIfNotExists(BaseExecutorMockPredictor):
 
         # create the same project with if not exists doesn't throw an error
         self.execute('CREATE PROJECT IF NOT EXISTS another_test_project')
+
+        self.execute('DROP PROJECT another_test_project')
+        self.execute('CREATE PROJECT ANOTHER_test_project')
+        self.execute('DROP PROJECT another_TEST_project')
 
     def test_database_integration(self):
         from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError

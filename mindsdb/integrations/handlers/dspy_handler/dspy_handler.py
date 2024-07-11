@@ -109,7 +109,7 @@ class DSPyHandler(BaseMLEngine):
                 args["prompt_template"] = DEFAULT_RAG_PROMPT_TEMPLATE
 
         self.model_storage.json_set('args', args)
-        if df:
+        if not isinstance(df, type(None)):
             self.model_storage.file_set('cold_start_df', dill.dumps(df.to_dict()))
         else:
             # no cold start df if data not provided

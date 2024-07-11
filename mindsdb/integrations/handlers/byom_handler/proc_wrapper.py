@@ -161,7 +161,9 @@ def main():
     model_class = find_model_class(module)
 
     if method == BYOM_METHOD.TRAIN:
-        df = pd_decode(params['df'])
+        df = params['df']
+        if df is not None:
+            df = pd_decode(df)
         to_predict = params['to_predict']
         args = params['args']
         model = model_class()

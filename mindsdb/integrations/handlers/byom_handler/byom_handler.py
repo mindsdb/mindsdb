@@ -621,10 +621,12 @@ class ModelWrapperSafe:
         params = {
             'method': BYOM_METHOD.TRAIN.value,
             'code': self.code,
-            'df': pd_encode(df),
+            'df': None,
             'to_predict': target,
             'args': args,
         }
+        if df is not None:
+            params['df'] = pd_encode(df)
 
         model_state = self._run_command(params)
         return model_state

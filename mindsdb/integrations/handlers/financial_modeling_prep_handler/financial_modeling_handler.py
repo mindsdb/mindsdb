@@ -24,7 +24,7 @@ logger = log.getLogger(__name__)
 
 class FinancialModelingHandler(APIHandler):
 
-    name = "FINANCIAL_MODELING"
+    name = "financial_modeling"
 
     def __init__(self, name, connection_data: dict,  **kwargs):
         super().__init__(name)

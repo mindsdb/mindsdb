@@ -864,7 +864,8 @@
     {
       "group": "Integrations",
       "pages": [
-        "integrations/integrations"
+        "integrations/integrations",
+        "integrations/support"
       ]
     },
     {

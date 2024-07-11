@@ -112,6 +112,7 @@ class DSPyHandler(BaseMLEngine):
         if df:
             self.model_storage.file_set('cold_start_df', dill.dumps(df.to_dict()))
         else:
+            # no cold start df if data not provided
             self.model_storage.file_set('cold_start_df', dill.dumps({}))
         # TODO: temporal workaround: serialize df and args, instead. And recreate chain (with training) every inference call.
         # ideally, we serialize the chain itself to avoid duplicate training.

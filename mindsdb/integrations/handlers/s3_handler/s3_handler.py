@@ -191,14 +191,13 @@ class S3Handler(DatabaseHandler):
             cursor.execute(query)
             if self.is_select_query:
                 result = cursor.fetchall()
-                if result:
-                    response = Response(
-                        RESPONSE_TYPE.TABLE,
-                        data_frame=pd.DataFrame(
-                            result,
-                            columns=[x[0] for x in cursor.description]
-                        )
+                response = Response(
+                    RESPONSE_TYPE.TABLE,
+                    data_frame=pd.DataFrame(
+                        result,
+                        columns=[x[0] for x in cursor.description]
                     )
+                )
 
             else:
                 connection.commit()

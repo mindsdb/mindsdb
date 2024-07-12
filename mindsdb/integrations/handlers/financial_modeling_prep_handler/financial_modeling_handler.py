@@ -39,15 +39,16 @@ class FinancialModelingHandler(APIHandler):
         daily_chart_table = FinancialModelingTradesTable(self) 
         self._register_table('daily_chart_table', daily_chart_table)
 
-    def connect(self): 
+    def connect(self) -> StatusResponse: 
         self.is_connected = True
+        return StatusResponse(success = True)
     
     def check_connection(self) -> StatusResponse:
         """ Check connection to the handler
         Returns:
             HandlerStatusResponse
         """
-        return StatusResponse(True)
+        return StatusResponse(success = True)
 
     def get_daily_chart(self, params: Dict = None) -> pd.DataFrame:  
         base_url = "https://financialmodelingprep.com/api/v3/historical-price-full/"

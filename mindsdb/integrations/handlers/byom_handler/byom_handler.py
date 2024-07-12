@@ -569,8 +569,8 @@ class ModelWrapperSafe:
 
         is_pandas = any([m.lower().startswith('pandas') for m in modules])
         if not is_pandas:
-            modules.append('numpy < 2.0.0')
-            modules.append('pandas >=2.0.0, <2.1.0')
+            modules.append('pandas>=2.0.0,<2.1.0')
+            modules.append('numpy<2.0.0')
 
         # for dataframe serialization
         modules.append('pyarrow==14.0.1')

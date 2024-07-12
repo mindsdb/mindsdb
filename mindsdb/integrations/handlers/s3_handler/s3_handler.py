@@ -27,7 +27,7 @@ class S3Handler(DatabaseHandler):
 
     name = 's3'
     table_name = 's3_table'
-    # TODO: Check if other file formats are supported.
+    # TODO: Can other file formats be supported?
     supported_file_formats = ['csv', 'tsv', 'json', 'parquet']
 
     def __init__(self, name: Text, connection_data: Optional[Dict], **kwargs):
@@ -98,8 +98,8 @@ class S3Handler(DatabaseHandler):
         if 'aws_session_token' in self.connection_data:
             duckdb_conn.execute(f"SET s3_session_token='{self.connection_data['aws_session_token']}'")
 
-        if 'region' in self.connection_data:
-            duckdb_conn.execute(f"SET s3_region='{self.connection_data['region']}'")
+        if 'region_name' in self.connection_data:
+            duckdb_conn.execute(f"SET s3_region='{self.connection_data['region_name']}'")
 
         return duckdb_conn
     
@@ -121,7 +121,7 @@ class S3Handler(DatabaseHandler):
             config['aws_session_token'] = self.connection_data['aws_session_token']
 
         # DuckDB considers us-east-1 to be the default region.
-        config['region_name'] = self.connection_data['region'] if 'region' in self.connection_data else 'us-east-1'
+        config['region_name'] = self.connection_data['region_name'] if 'region_name' in self.connection_data else 'us-east-1'
 
         return boto3.client('s3', **config)
 
@@ -183,7 +183,9 @@ class S3Handler(DatabaseHandler):
         cursor = connection.cursor()
 
         try:
-            # TODO: Is it possilbe to avoid creating a table for each query?
+            # TODO: Is it possilbe to avoid creating a table for each query? 
+            # Re-using the same table across queries will require the connection to be left open.
+            # Using a view is another option?
             self._create_table_from_file()
 
             cursor.execute(query)

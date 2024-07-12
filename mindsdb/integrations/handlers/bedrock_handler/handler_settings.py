@@ -1,10 +1,11 @@
 from pydantic_settings import BaseSettings
 from botocore.exceptions import ClientError
 from typing import Text, List, Optional, Any
-from pydantic import BaseModel, model_validator, field_validator
+from pydantic import BaseModel, Field, model_validator, field_validator
 
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
 
+from mindsdb.integrations.handlers.bedrock_handler.model_settings import get_config_for_model
 from mindsdb.integrations.handlers.bedrock_handler.utilities import create_amazon_bedrock_client
 from mindsdb.integrations.utilities.handlers.validation_utilities import ParameterValidationUtilities
 
@@ -22,6 +23,7 @@ class AmazonBedrockEngineSettings(BaseSettings):
     SUPPORTED_MODES : List
         List of supported modes for the handler.
     """
+    # TODO: Add other modes.
     DEFAULT_MODE: Text = 'default'
     SUPPORTED_MODES: List = ['default']
 
@@ -105,13 +107,25 @@ class AmazonBedrockModelConfig(BaseModel):
         
     engine: HandlerStorage
         The handler storage from the engine of the model. This is not provided by the user. It is used for validating the model ID.
-    """
-    model_id: Text
-    mode: Optional[Text] = AmazonBedrockEngineSettings.DEFAULT_MODE
-    prompt_template: Optional[Text]
-    question_column: Optional[Text]
 
-    engine: HandlerStorage
+    model_config: BaseModel
+        The configuration model for the specified provider and output modalities. This is not provided by the user. It is used for validating the chosen model.
+    """
+    # User-provided Handler Prameters: These are parameters specific to the MindsDB handler for Amazon Bedrock provided by the user.
+    model_id: Text = Field(..., handler_param=True)
+    mode: Optional[Text] = Field(AmazonBedrockEngineSettings.DEFAULT_MODE, handler_param=True)
+    prompt_template: Optional[Text] = Field(None, handler_param=True)
+    question_column: Optional[Text] = Field(None, handler_param=True)
+
+    # Amazon Bedrock Model Parameters: These are parameters specific to the models in Amazon Bedrock. They are provided by the user.
+    temperature: Optional[float] = Field(None, handler_param=False)
+    top_p: Optional[float] = Field(None, handler_param=False)
+    max_tokens: Optional[int] = Field(None, handler_param=False)
+    stop: Optional[List[Text]] = Field(None, handler_param=False)
+
+    # System-provided Handler Parameters: These are parameters specific to the MindsDB handler for Amazon Bedrock provided by the system.
+    engine: HandlerStorage = Field(None, handler_param=True)
+    model_config = BaseModel = Field(None, handler_param=True)
 
     class Config:
         extra = "forbid"
@@ -154,10 +168,30 @@ class AmazonBedrockModelConfig(BaseModel):
         )
 
         try:
-            bedrock_client.get_foundational_model(values["model_id"])
+            model = bedrock_client.get_foundational_model(values["model_id"])
+
+            values["model_config"] = get_config_for_model(model.provider, model.output_modalities)
         except ClientError as e:
             raise ValueError(f"Invalid Amazon Bedrock model ID: {e}!")
         
+        return values
+    
+    @model_validator(mode="before")
+    @classmethod
+    def check_model_params_valid(cls, values: Any) -> Any:
+        """
+        Validator to check if the parameters provided for the chosen model are valid.
+
+        Args:
+            values (Any): Model configuration.
+
+        Raises:
+            ValueError: If the parameters provided are invalid for the chosen model.
+        """
+        # Pass only the model parameters to the model configuration.
+        model_params = [key for key, val in cls.model_json_schema["properties"].items() if not val.handler_param]
+        values["model_config"](**{key: values[key] for key in model_params})
+
         return values
     
     @field_validator("mode", pre=True)
@@ -179,7 +213,7 @@ class AmazonBedrockModelConfig(BaseModel):
     
     @model_validator(mode="before")
     @classmethod
-    def check_params_for_mode_provided(cls, values: Any) -> Any:
+    def check_mode_params_provided(cls, values: Any) -> Any:
         """
         Validator to check if the parameters required for the chosen mode provided are valid.
 

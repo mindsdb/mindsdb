@@ -4,9 +4,9 @@ from pydantic import BaseModel
 from typing import Text, List, Optional, ClassVar
 
 
-def find_config_for_model(provider: Text, output_modalities: List[Text]):
+def get_config_for_model(provider: Text, output_modalities: List[Text]):
     """
-    Find the configuration model for the specified provider and output modalities.
+    Get the configuration model for the specified provider and output modalities.
 
     Args:
         provider (Text): The provider of the model.

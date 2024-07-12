@@ -90,7 +90,7 @@ class AmazonBedrockEngineConfig(BaseModel):
         try:
             bedrock_client.list_foundational_models()
         except ClientError as e:
-            raise ValueError(f"Invalid Amazon Bedrock credentials: {e}")
+            raise ValueError(f"Invalid Amazon Bedrock credentials: {e}!")
         
 
 class AmazonBedrockModelConfig(BaseModel):
@@ -107,7 +107,9 @@ class AmazonBedrockModelConfig(BaseModel):
         The handler storage from the engine of the model. This is not provided by the user. It is used for validating the model ID.
     """
     model_id: Text
-    mode: Optional[Text] = 'default'
+    mode: Optional[Text] = AmazonBedrockEngineSettings.DEFAULT_MODE
+    prompt_template: Optional[Text]
+    question_column: Optional[Text]
 
     engine: HandlerStorage
 
@@ -154,7 +156,7 @@ class AmazonBedrockModelConfig(BaseModel):
         try:
             bedrock_client.get_foundational_model(values["model_id"])
         except ClientError as e:
-            raise ValueError(f"Invalid Amazon Bedrock model ID: {e}")
+            raise ValueError(f"Invalid Amazon Bedrock model ID: {e}!")
         
         return values
     
@@ -162,7 +164,7 @@ class AmazonBedrockModelConfig(BaseModel):
     @classmethod
     def check_mode_is_supported(cls, mode: Text) -> Text:
         """
-        Field validator to check if the mode provided is supported.
+        Validator to check if the mode provided is supported.
 
         Args:
             mode (Text): Mode.
@@ -171,7 +173,31 @@ class AmazonBedrockModelConfig(BaseModel):
             ValueError: If the mode provided is not supported.
         """
         if mode not in AmazonBedrockEngineSettings.SUPPORTED_MODES:
-            raise ValueError(f"Mode {mode} is not supported. The supported modes are {" ".join(AmazonBedrockEngineSettings.SUPPORTED_MODES)}")
+            raise ValueError(f"Mode {mode} is not supported. The supported modes are {" ".join(AmazonBedrockEngineSettings.SUPPORTED_MODES)}!")
         
         return mode
+    
+    @model_validator(mode="before")
+    @classmethod
+    def check_params_for_mode_provided(cls, values: Any) -> Any:
+        """
+        Validator to check if the parameters required for the chosen mode provided are valid.
+
+        Args:
+            values (Any): Model configuration.
+
+        Raises:
+            ValueError: If the parameters provided are invalid for the mode provided.
+        """
+        # If the mode is default, one of the following need to be provided:
+        # 1. prompt_template
+        # 2. question_column
+        # TODO: Find the other possible parameters/combinations for the default mode.
+        if values["mode"] == "default":
+            if "prompt_template" not in values and "question_column" not in values:
+                raise ValueError("One of the following parameters need to be provided for the default mode: prompt_template, question_column!")
+
+        # TODO: Add validations for other modes.
+
+        return values
 

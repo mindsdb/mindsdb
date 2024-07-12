@@ -32,6 +32,7 @@ class TestS3Handler(unittest.TestCase):
         bucket='mindsdb-bucket',
         region_name='us-east-2',
     )
+    object_name = '`my-bucket/my-file.csv`'
 
     def setUp(self):
         self.patcher = patch('duckdb.connect')
@@ -130,6 +131,7 @@ class TestS3Handler(unittest.TestCase):
     def test_query_select(self, mock_boto3_client):
         """
         Tests the `query` method to ensure it executes a SELECT SQL query using a mock cursor and returns a Response object.
+        SELECT works somewhat differently than the other queries, so it is tested separately.
         `native_query` cannot be tested directly because it depends on some pre-processing steps handled by the `query` method.
         """
         # Mock the boto3 client object and its methods.
@@ -150,7 +152,7 @@ class TestS3Handler(unittest.TestCase):
 
         # Craft the SELECT query and execute it.
         object_name = '`my-bucket/my-file.csv`'
-        select_all = ast.Select(
+        select = ast.Select(
             targets=[
                 Star()
             ],
@@ -158,7 +160,7 @@ class TestS3Handler(unittest.TestCase):
                 parts=[object_name]
             )
         )
-        response = self.handler.query(select_all)
+        response = self.handler.query(select)
 
         mock_conn.execute.assert_called_once_with(
             f"CREATE TABLE {self.handler.table_name} AS SELECT * FROM 's3://{self.dummy_connection_data['bucket']}/{object_name.replace('`', '')}'"
@@ -172,25 +174,46 @@ class TestS3Handler(unittest.TestCase):
     def test_query_insert(self, mock_boto3_client):
         """
         Tests the `query` method to ensure it executes a INSERT SQL query using a mock cursor and returns a Response object.
+        INSERT works similarly to UPDATE and DELETE.
         `native_query` cannot be tested directly because it depends on some pre-processing steps handled by the `query` method.
         """
-        pass
+        # Mock the boto3 client object and its methods.
+        mock_boto3_client_instance = MagicMock()
+        mock_boto3_client.return_value = mock_boto3_client_instance
+        mock_boto3_client_instance.head_object.return_value = MagicMock()
 
-    @patch('boto3.client')
-    def test_query_update(self, mock_boto3_client):
-        """
-        Tests the `query` method to ensure it executes a UPDATE SQL query using a mock cursor and returns a Response object.
-        `native_query` cannot be tested directly because it depends on some pre-processing steps handled by the `query` method.
-        """
-        pass
+        # Mock the cursor object and its methods; these are used within `native_query`.
+        mock_conn = MagicMock()
+        mock_cursor = CursorContextManager()
 
-    @patch('boto3.client')
-    def test_query_delete(self, mock_boto3_client):
-        """
-        Tests the `query` method to ensure it executes a DELETE SQL query using a mock cursor and returns a Response object.
-        `native_query` cannot be tested directly because it depends on some pre-processing steps handled by the `query` method.
-        """
-        pass
+        self.handler.connect = MagicMock(return_value=mock_conn)
+        mock_conn.cursor = MagicMock(return_value=mock_cursor)
+
+        mock_cursor.execute.return_value = None
+        mock_cursor.commit.return_value = None
+
+        # Craft the INSERT query and execute it.
+        columns = ['col_1', 'col_2']
+        values = [('val_1', 'val_2')]
+        insert = ast.Insert(
+            table=Identifier(
+                parts=[self.object_name]
+            ),
+            columns=columns,
+            values=values
+        )
+        response = self.handler.query(insert)
+
+        values_str = ', '.join([f"'{item}'" for item in values[0]])
+        mock_cursor.execute.assert_called_with(
+            f"INSERT INTO {self.handler.table_name}({', '.join(columns)}) VALUES ({values_str})"
+        )
+        mock_conn.execute.assert_called_with(
+            f"COPY {self.handler.table_name} TO 's3://{self.dummy_connection_data['bucket']}/{self.object_name.replace('`', '')}'"
+        )
+        
+        assert isinstance(response, Response)
+        self.assertFalse(response.error_code)
 
     @patch('boto3.client')
     def test_get_tables(self, mock_boto3_client):

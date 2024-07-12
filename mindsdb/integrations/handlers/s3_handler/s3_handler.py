@@ -239,7 +239,7 @@ class S3Handler(DatabaseHandler):
         """
         try:
             connection = self.connect()
-            connection.execute(f"COPY {self.table_name} to 's3://{self.connection_data['bucket']}/{self.key}'")
+            connection.execute(f"COPY {self.table_name} TO 's3://{self.connection_data['bucket']}/{self.key}'")
         except CatalogException as e:
             logger.error(f'Error writing table {self.table_name} to file {self.key} in {self.connection_data["bucket"]}, {e}!')
             raise e

@@ -2,7 +2,11 @@ import unittest
 import pandas as pd
 from collections import OrderedDict
 from botocore.client import ClientError
-from unittest.mock import patch, MagicMock, Mock
+from unittest.mock import patch, MagicMock, Mock, call
+
+from mindsdb_sql.parser import ast
+from mindsdb_sql.parser.ast.select.star import Star
+from mindsdb_sql.parser.ast.select.identifier import Identifier
 
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
@@ -122,9 +126,65 @@ class TestS3Handler(unittest.TestCase):
         assert isinstance(response, StatusResponse)
         self.assertTrue(response.error_message)
 
-    def test_query():
+    @patch('boto3.client')
+    def test_query_select(self, mock_boto3_client):
         """
-        Tests the `query` method to ensure it executes a SQL query using a mock cursor and returns a Response object.
+        Tests the `query` method to ensure it executes a SELECT SQL query using a mock cursor and returns a Response object.
+        `native_query` cannot be tested directly because it depends on some pre-processing steps handled by the `query` method.
+        """
+        # Mock the boto3 client object and its methods.
+        mock_boto3_client_instance = MagicMock()
+        mock_boto3_client.return_value = mock_boto3_client_instance
+        mock_boto3_client_instance.head_object.return_value = MagicMock()
+
+        # Mock the cursor object and its methods; these are used within `native_query`.
+        mock_conn = MagicMock()
+        mock_cursor = CursorContextManager()
+
+        self.handler.connect = MagicMock(return_value=mock_conn)
+        mock_conn.cursor = MagicMock(return_value=mock_cursor)
+
+        mock_cursor.execute.return_value = None
+        mock_cursor.fetchall.return_value = None
+
+        # Craft the SELECT query and execute it.
+        object_name = '`my-bucket/my-file.csv`'
+        select_all = ast.Select(
+            targets=[
+                Star()
+            ],
+            from_table=Identifier(
+                parts=[object_name]
+            )
+        )
+        response = self.handler.query(select_all)
+
+        # TODO: Assert the CREATE TABLE call.
+        mock_cursor.execute.assert_called_once_with(f"SELECT * FROM {self.handler.table_name}")
+        
+        assert isinstance(response, Response)
+        self.assertFalse(response.error_code)
+
+    @patch('boto3.client')
+    def test_query_insert(self, mock_boto3_client):
+        """
+        Tests the `query` method to ensure it executes a INSERT SQL query using a mock cursor and returns a Response object.
+        `native_query` cannot be tested directly because it depends on some pre-processing steps handled by the `query` method.
+        """
+        pass
+
+    @patch('boto3.client')
+    def test_query_update(self, mock_boto3_client):
+        """
+        Tests the `query` method to ensure it executes a UPDATE SQL query using a mock cursor and returns a Response object.
+        `native_query` cannot be tested directly because it depends on some pre-processing steps handled by the `query` method.
+        """
+        pass
+
+    @patch('boto3.client')
+    def test_query_delete(self, mock_boto3_client):
+        """
+        Tests the `query` method to ensure it executes a DELETE SQL query using a mock cursor and returns a Response object.
         `native_query` cannot be tested directly because it depends on some pre-processing steps handled by the `query` method.
         """
         pass

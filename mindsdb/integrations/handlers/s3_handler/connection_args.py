@@ -43,5 +43,5 @@ connection_args_example = OrderedDict(
     aws_secret_access_key='wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
     aws_session_token='FQoGZXIvYXdzEHcaDmJjJj...',
     region_name='us-east-2',
-    bucket='mindsdb-bucket',
+    bucket='my-bucket',
 )

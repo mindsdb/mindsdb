@@ -347,7 +347,7 @@ class S3Handler(DatabaseHandler):
             data_frame=pd.DataFrame(
                 {
                     'column_name': result.data_frame.columns,
-                    'data_type': result.data_frame.dtypes
+                    'data_type': [data_type if data_type != 'object' else 'string' for data_type in result.data_frame.dtypes]
                 }
             )
         )

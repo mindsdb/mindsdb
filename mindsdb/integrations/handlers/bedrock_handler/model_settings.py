@@ -27,3 +27,15 @@ class AmazonBedrockTitanTextConfig(BaseModel):
     stop: Optional[List[Text]]
 
     # TODO: Add validations for the attributes.
+
+    def __dict__(self):
+        return {
+            'parameters': {
+                'textGenerationConfig': {
+                    'temperature': self.temperature,
+                    'topP': self.top_p,
+                    'maxTokenCount': self.max_tokens,
+                    'stopSequences': self.stop
+                }
+            }
+        }

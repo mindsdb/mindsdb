@@ -305,7 +305,7 @@ class S3Handler(DatabaseHandler):
             Response: A response object containing the list of tables and views, formatted as per the `Response` class.
         """
         boto3_conn = self._connect_boto3()
-        objects = boto3_conn.list_objects(Bucket=self.connection_data["bucket"])['Contents']
+        objects = boto3_conn.list_objects_v2(Bucket=self.connection_data["bucket"])['Contents']
 
         # Get only the supported file formats.
         # Sorround the object names with backticks to prevent SQL syntax errors.
@@ -337,6 +337,8 @@ class S3Handler(DatabaseHandler):
         if not table_name or not isinstance(table_name, str):
             raise ValueError("Invalid table name provided.")
 
+        # TODO: Is there a more efficient way to get the column details?
+        # If not, can it be limited to one column?
         query = f"SELECT * FROM {table_name} LIMIT 5"
         result = self.native_query(query)
 

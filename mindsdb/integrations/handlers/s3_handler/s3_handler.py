@@ -20,6 +20,7 @@ from mindsdb.integrations.libs.base import DatabaseHandler
 
 logger = log.getLogger(__name__)
 
+
 class S3Handler(DatabaseHandler):
     """
     This handler handles connection and execution of the SQL statements on AWS S3.
@@ -60,7 +61,7 @@ class S3Handler(DatabaseHandler):
 
         Raises:
             KeyError: If the required connection parameters are not provided.
-            
+
         Returns:
             boto3.client: A client object to the AWS (S3) account.
         """
@@ -77,7 +78,7 @@ class S3Handler(DatabaseHandler):
         self.is_connected = True
 
         return self.connection
-    
+
     def _connect_duckdb(self) -> DuckDBPyConnection:
         """
         Establishes a connection to the AWS (S3) account via DuckDB.
@@ -102,7 +103,7 @@ class S3Handler(DatabaseHandler):
             duckdb_conn.execute(f"SET s3_region='{self.connection_data['region_name']}'")
 
         return duckdb_conn
-    
+
     def _connect_boto3(self) -> boto3.client:
         """
         Establishes a connection to the AWS (S3) account via boto3.
@@ -183,7 +184,7 @@ class S3Handler(DatabaseHandler):
         cursor = connection.cursor()
 
         try:
-            # TODO: Is it possilbe to avoid creating a table for each query? 
+            # TODO: Is it possilbe to avoid creating a table for each query?
             # Re-using the same table across queries will require the connection to be left open.
             # Using a view is another option?
             self._create_table_from_file()
@@ -215,7 +216,7 @@ class S3Handler(DatabaseHandler):
             self.disconnect()
 
         return response
-    
+
     def _create_table_from_file(self) -> None:
         """
         Creates a table from a file in the S3 bucket.

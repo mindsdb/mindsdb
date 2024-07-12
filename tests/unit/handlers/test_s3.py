@@ -2,7 +2,7 @@ import unittest
 import pandas as pd
 from collections import OrderedDict
 from botocore.client import ClientError
-from unittest.mock import patch, MagicMock, Mock, call
+from unittest.mock import patch, MagicMock, Mock
 
 from mindsdb_sql.parser import ast
 from mindsdb_sql.parser.ast.select.star import Star
@@ -72,7 +72,7 @@ class TestS3Handler(unittest.TestCase):
             }
         }
         mock_boto3_client_instance.meta = MagicMock(region_name='us-east-2')
-    
+
         response = self.handler.check_connection()
 
         self.assertTrue(response.success)
@@ -96,7 +96,7 @@ class TestS3Handler(unittest.TestCase):
             },
             operation_name='HeadBucket'
         )
-    
+
         response = self.handler.check_connection()
 
         self.assertFalse(response.success)
@@ -120,7 +120,7 @@ class TestS3Handler(unittest.TestCase):
             }
         }
         mock_boto3_client_instance.meta = MagicMock(region_name='us-east-1')
-    
+
         response = self.handler.check_connection()
 
         self.assertFalse(response.success)
@@ -166,7 +166,7 @@ class TestS3Handler(unittest.TestCase):
             f"CREATE TABLE {self.handler.table_name} AS SELECT * FROM 's3://{self.dummy_connection_data['bucket']}/{object_name.replace('`', '')}'"
         )
         mock_cursor.execute.assert_called_once_with(f"SELECT * FROM {self.handler.table_name}")
-        
+
         assert isinstance(response, Response)
         self.assertFalse(response.error_code)
 
@@ -211,7 +211,7 @@ class TestS3Handler(unittest.TestCase):
         mock_conn.execute.assert_called_with(
             f"COPY {self.handler.table_name} TO 's3://{self.dummy_connection_data['bucket']}/{self.object_name.replace('`', '')}'"
         )
-        
+
         assert isinstance(response, Response)
         self.assertFalse(response.error_code)
 
@@ -229,15 +229,15 @@ class TestS3Handler(unittest.TestCase):
                 {'Key': 'file2.tsv'},
                 {'Key': 'file3.json'},
                 {'Key': 'file4.parquet'},
-                 {'Key': 'file5.xlsx'},
+                {'Key': 'file5.xlsx'},
             ]
         }
-    
+
         response = self.handler.get_tables()
 
         assert isinstance(response, Response)
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
-        
+
         df = response.data_frame
         self.assertEqual(len(df), 4)
         self.assertNotIn('file5.xlsx', df['table_name'].values)
@@ -254,7 +254,6 @@ class TestS3Handler(unittest.TestCase):
                     'col_1': ['row_1', 'row_2', 'row_3'],
                     'col_2': [1, 2, 3],
                 },
-                
             )
         )
 

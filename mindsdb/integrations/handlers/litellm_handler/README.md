@@ -1,4 +1,4 @@
-## LlamaIndex Handler
+## LiteLLM Handler
 
 This documentation describes the integration of MindsDB with [LiteLLM](https://docs.litellm.ai/docs/), that allows you to call all LLM APIs using the OpenAI format.
 
@@ -25,7 +25,7 @@ FROM litellm;
 Here is how to create a model that answers questions:
 
 ```sql
-CREATE MOEL chat_model
+CREATE MODEL chat_model
 PREDICT text
 USING
     engine="litellm",

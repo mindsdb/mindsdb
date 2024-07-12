@@ -44,10 +44,10 @@ class AmazonBedrockTitanTextConfig(BaseModel):
     provider: ClassVar = 'Amazon'
     output_modalities: ClassVar = ['TEXT']
 
-    temperature: Optional[float]
-    top_p: Optional[float]
-    max_tokens: Optional[int]
-    stop: Optional[List[Text]]
+    temperature: Optional[float] = None
+    top_p: Optional[float] = None
+    max_tokens: Optional[int] = None
+    stop: Optional[List[Text]] = None
 
     # TODO: Add validations for the attributes.
 

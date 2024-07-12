@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, Iterator, List
 
 from langchain_core.tools import BaseTool
 from sqlalchemy.orm.attributes import flag_modified
@@ -289,3 +289,41 @@ class AgentsController:
 
         lang_agent = LangchainAgent(agent, model=model)
         return lang_agent.get_completion(messages, trace_id, observation_id)
+
+    def get_completion_stream(
+            self,
+            agent: db.Agents,
+            messages: List[Dict[str, str]],
+            trace_id: str = None,
+            observation_id: str = None,
+            project_name: str = 'mindsdb',
+            tools: List[BaseTool] = None) -> Iterator[object]:
+        '''
+        Queries an agent to get a stream of completion chunks.
+
+        Parameters:
+            agent (db.Agents): Existing agent to get completion from
+            messages (List[Dict[str, str]]): Chat history to send to the agent
+            trace_id (str): ID of Langfuse trace to use
+            observation_id (str): ID of parent Langfuse observation to use
+            project_name (str): Project the agent belongs to (default mindsdb)
+            tools (List[BaseTool]): Tools to use while getting the completion
+
+        Returns:
+            chunks (Iterator[object]): Completion chunks as an iterator
+
+        Raises:
+            ValueError: Agent's model does not exist.
+        '''
+        # For circular dependency.
+        from .langchain_agent import LangchainAgent
+        model = None
+        if agent.model_name is not None:
+            model_name_no_version, version = db.Predictor.get_name_and_version(agent.model_name)
+            try:
+                model = self.model_controller.get_model(model_name_no_version, version=version, project_name=project_name)
+            except PredictorRecordNotFound:
+                raise ValueError(f'Model with name {agent.model_name} not found')
+
+        lang_agent = LangchainAgent(agent, model=model)
+        return lang_agent.get_completion_stream(messages, trace_id, observation_id)

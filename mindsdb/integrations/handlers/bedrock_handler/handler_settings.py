@@ -1,6 +1,6 @@
 from typing import Text, Optional, Any
 from botocore.exceptions import ClientError
-from pydantic import BaseModel, model_validator, field_validator
+from pydantic import BaseModel, model_validator
 
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
 

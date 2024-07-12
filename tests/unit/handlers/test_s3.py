@@ -145,7 +145,8 @@ class TestS3Handler(unittest.TestCase):
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
 
         mock_cursor.execute.return_value = None
-        mock_cursor.fetchall.return_value = None
+        mock_cursor.fetchall.return_value = [('row_1', 1), ('row_2', 2), ('row_3', 3)]
+        mock_cursor.description = [('col_1', 'string'), ('col_2', 'int64')]
 
         # Craft the SELECT query and execute it.
         object_name = '`my-bucket/my-file.csv`'
@@ -159,7 +160,9 @@ class TestS3Handler(unittest.TestCase):
         )
         response = self.handler.query(select_all)
 
-        # TODO: Assert the CREATE TABLE call.
+        mock_conn.execute.assert_called_once_with(
+            f"CREATE TABLE {self.handler.table_name} AS SELECT * FROM 's3://{self.dummy_connection_data['bucket']}/{object_name.replace('`', '')}'"
+        )
         mock_cursor.execute.assert_called_once_with(f"SELECT * FROM {self.handler.table_name}")
         
         assert isinstance(response, Response)

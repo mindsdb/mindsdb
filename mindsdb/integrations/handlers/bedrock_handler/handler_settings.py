@@ -1,6 +1,7 @@
-from typing import Text, Optional, Any
+from pydantic_settings import BaseSettings
 from botocore.exceptions import ClientError
-from pydantic import BaseModel, model_validator
+from typing import Text, List, Optional, Any
+from pydantic import BaseModel, model_validator, field_validator
 
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
 
@@ -8,9 +9,26 @@ from mindsdb.integrations.handlers.bedrock_handler.utilities import create_amazo
 from mindsdb.integrations.utilities.handlers.validation_utilities import ParameterValidationUtilities
 
 
+class AmazonBedrockEngineSettings(BaseSettings):
+    """
+    Settings for Amazon Bedrock handler.
+
+    Attributes
+    ----------
+
+    DEFAULT_MODE : Text
+        The default mode for the handler.
+
+    SUPPORTED_MODES : List
+        List of supported modes for the handler.
+    """
+    DEFAULT_MODE: Text = 'default'
+    SUPPORTED_MODES: List = ['default']
+
+
 class AmazonBedrockEngineConfig(BaseModel):
     """
-    Configuration model for Amazon Bedrock engines.
+    Model for Amazon Bedrock engines.
 
     Attributes
     ----------
@@ -36,9 +54,9 @@ class AmazonBedrockEngineConfig(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def check_param_typos(cls, values: Any) -> Any:
+    def check_params_contain_typos(cls, values: Any) -> Any:
         """
-        Root validator to check if there are any typos in the parameters.
+        Validator to check if there are any typos in the parameters.
 
         Args:
             values (Any): Engine configuration.
@@ -54,7 +72,7 @@ class AmazonBedrockEngineConfig(BaseModel):
     @classmethod
     def check_access_to_amazon_bedrock(cls, model: BaseModel) -> BaseModel:
         """
-        Root validator to check if the Amazon Bedrock credentials are valid and Amazon Bedrock is accessible.
+        Validator to check if the Amazon Bedrock credentials are valid and Amazon Bedrock is accessible.
 
         Args:
             model (BaseModel): Engine configuration.
@@ -89,6 +107,7 @@ class AmazonBedrockModelConfig(BaseModel):
         The handler storage from the engine of the model. This is not provided by the user. It is used for validating the model ID.
     """
     model_id: Text
+    mode: Optional[Text] = 'default'
 
     engine: HandlerStorage
 
@@ -97,9 +116,9 @@ class AmazonBedrockModelConfig(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def check_param_typos(cls, values: Any) -> Any:
+    def check_params_contain_typos(cls, values: Any) -> Any:
         """
-        Root validator to check if there are any typos in the parameters.
+        Validator to check if there are any typos in the parameters.
 
         Args:
             values (Any): Model configuration.
@@ -113,9 +132,9 @@ class AmazonBedrockModelConfig(BaseModel):
     
     @model_validator(mode="before")
     @classmethod
-    def check_for_valid_model_id(cls, values: Any) -> Any:
+    def check_model_id_is_valid(cls, values: Any) -> Any:
         """
-        Root validator to check if the model ID provided is valid.
+        Validator to check if the model ID provided is valid.
 
         Args:
             values (Any): Model configuration.
@@ -136,4 +155,23 @@ class AmazonBedrockModelConfig(BaseModel):
             bedrock_client.get_foundational_model(values["model_id"])
         except ClientError as e:
             raise ValueError(f"Invalid Amazon Bedrock model ID: {e}")
+        
+        return values
+    
+    @field_validator("mode", pre=True)
+    @classmethod
+    def check_mode_is_supported(cls, mode: Text) -> Text:
+        """
+        Field validator to check if the mode provided is supported.
+
+        Args:
+            mode (Text): Mode.
+
+        Raises:
+            ValueError: If the mode provided is not supported.
+        """
+        if mode not in AmazonBedrockEngineSettings.SUPPORTED_MODES:
+            raise ValueError(f"Mode {mode} is not supported. The supported modes are {" ".join(AmazonBedrockEngineSettings.SUPPORTED_MODES)}")
+        
+        return mode
 

@@ -6,7 +6,7 @@ class CompletionParameters(BaseModel):
     model: str  # The model to be used for the API call.
     prompt_template: Optional[str] = None  # Template for the prompt to be used.
 
-    # Optional OpenAI params: see  https://platform.openai.com/docs/api-reference/runs
+    # Optional OpenAI params: see  https://platform.openai.com/docs/api-reference/chat/runs
     tool_choice: Optional[str] = None  # Specific tool to be used, if applicable.
 
     timeout: Optional[Union[float, int]] = None  # Timeout for the API request.

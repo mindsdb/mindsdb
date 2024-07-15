@@ -10,7 +10,7 @@ from mindsdb.integrations.handlers.bedrock_handler.utilities import create_amazo
 from mindsdb.integrations.utilities.handlers.validation_utilities import ParameterValidationUtilities
 
 
-class AmazonBedrockEngineSettings(BaseSettings):
+class AmazonBedrockHandlerEngineSettings(BaseSettings):
     """
     Settings for Amazon Bedrock handler.
 
@@ -28,7 +28,7 @@ class AmazonBedrockEngineSettings(BaseSettings):
     SUPPORTED_MODES: List = ['default']
 
 
-class AmazonBedrockEngineConfig(BaseModel):
+class AmazonBedrockHandlerEngineConfig(BaseModel):
     """
     Model for Amazon Bedrock engines.
 
@@ -95,7 +95,7 @@ class AmazonBedrockEngineConfig(BaseModel):
             raise ValueError(f"Invalid Amazon Bedrock credentials: {e}!")
         
 
-class AmazonBedrockModelConfig(BaseModel):
+class AmazonBedrockHandlerModelConfig(BaseModel):
     """
     Configuration model for Amazon Bedrock models.
 
@@ -113,7 +113,7 @@ class AmazonBedrockModelConfig(BaseModel):
     """
     # User-provided Handler Prameters: These are parameters specific to the MindsDB handler for Amazon Bedrock provided by the user.
     model_id: Text = Field(..., handler_param=True)
-    mode: Optional[Text] = Field(AmazonBedrockEngineSettings.DEFAULT_MODE, handler_param=True)
+    mode: Optional[Text] = Field(AmazonBedrockHandlerEngineSettings.DEFAULT_MODE, handler_param=True)
     prompt_template: Optional[Text] = Field(None, handler_param=True)
     question_column: Optional[Text] = Field(None, handler_param=True)
 
@@ -206,8 +206,8 @@ class AmazonBedrockModelConfig(BaseModel):
         Raises:
             ValueError: If the mode provided is not supported.
         """
-        if mode not in AmazonBedrockEngineSettings.SUPPORTED_MODES:
-            raise ValueError(f"Mode {mode} is not supported. The supported modes are {" ".join(AmazonBedrockEngineSettings.SUPPORTED_MODES)}!")
+        if mode not in AmazonBedrockHandlerEngineSettings.SUPPORTED_MODES:
+            raise ValueError(f"Mode {mode} is not supported. The supported modes are {''.join(AmazonBedrockHandlerEngineSettings.SUPPORTED_MODES)}!")
         
         return mode
     

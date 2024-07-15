@@ -51,7 +51,7 @@ class AmazonBedrockTitanTextConfig(BaseModel):
 
     # TODO: Add validations for the attributes.
 
-    def __dict__(self):
+    def model_dump(self):
         text_generation_config = {}
 
         if self.temperature:
@@ -67,7 +67,9 @@ class AmazonBedrockTitanTextConfig(BaseModel):
             text_generation_config['stopSequences'] = self.stop
 
         if not text_generation_config:
-            return None
+            return {
+                'parameters': {}
+            }
         
         return {
             'parameters': {

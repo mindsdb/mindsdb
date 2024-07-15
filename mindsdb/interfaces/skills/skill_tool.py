@@ -6,10 +6,13 @@ from mindsdb_sql.parser.ast import Select, BinaryOperation, Identifier, Constant
 
 from mindsdb.integrations.libs.vectordatabase_handler import TableField
 from mindsdb.interfaces.storage import db
+from mindsdb.utilities import log
 from .sql_agent import SQLAgent
 
 _DEFAULT_TOP_K_SIMILARITY_SEARCH = 5
 _DEFAULT_SQL_LLM_MODEL = 'gpt-3.5-turbo'
+
+logger = log.getLogger(__name__)
 
 
 class SkillType(enum.Enum):
@@ -34,11 +37,11 @@ class SkillToolController:
         return self.command_executor
 
     def get_sql_agent(
-        self,
-        database: str,
-        include_tables: Optional[List[str]] = None,
-        ignore_tables: Optional[List[str]] = None,
-        sample_rows_in_table_info: int = 3,
+            self,
+            database: str,
+            include_tables: Optional[List[str]] = None,
+            ignore_tables: Optional[List[str]] = None,
+            sample_rows_in_table_info: int = 3,
     ):
         return SQLAgent(
             self.get_command_executor(),
@@ -58,7 +61,8 @@ class SkillToolController:
             from mindsdb.interfaces.skills.custom.text2sql.mindsdb_sql_toolkit import MindsDBSQLToolkit
             from langchain_community.tools.sql_database.tool import QuerySQLDataBaseTool
         except ImportError:
-            raise ImportError('To use the text-to-SQL skill, please install langchain with `pip install mindsdb[langchain]`')
+            raise ImportError(
+                'To use the text-to-SQL skill, please install langchain with `pip install mindsdb[langchain]`')
         database = skill.params['database']
         tables = skill.params['tables']
         tables_to_include = [f'{database}.{table}' for table in tables]
@@ -128,6 +132,9 @@ class SkillToolController:
     def _make_knowledge_base_tools(self, skill: db.Skills) -> dict:
         # To prevent dependency on Langchain unless an actual tool uses it.
         description = skill.params.get('description', '')
+
+        logger.warning("This skill is deprecated and will be removed in the future. "
+                       "Please use `retrieval` skill instead ")
 
         return dict(
             name='Knowledge Base Retrieval',

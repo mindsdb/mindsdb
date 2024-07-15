@@ -94,7 +94,7 @@ class SQLAgent:
                 except Exception as e:
                     logger.warning('Unable to get tables for %s: %s', db, str(e))
         if self._cache:
-            self._cache.set(cache_key, usable_tables)
+            self._cache.set(cache_key, set(usable_tables))
 
         return usable_tables
 
@@ -168,7 +168,7 @@ class SQLAgent:
         cached_info = self._cache.get(cache_key) if self._cache else None
         if cached_info and table_names:
             # Verify all requested tables are in cache
-            missing_tables = [name for name in table_names if name not in cached_info]
+            missing_tables = set([name for name in table_names if name not in cached_info])
             if not missing_tables:
                 return {name: cached_info[name] for name in table_names}
         return cached_info if not table_names else {}

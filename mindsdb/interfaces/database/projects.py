@@ -140,8 +140,10 @@ class Project:
 
         # regon Hide sensitive info
         training_options = predictor_record.learn_args
-        if with_secrets is False and integraion_record.engine in integration_controller.handler_modules:
-            handler_module = integration_controller.handler_modules[integraion_record.engine]
+        handler_module = integration_controller.get_handler_module(integraion_record.engine)
+
+        if with_secrets is False and handler_module:
+
             model_using_args = getattr(handler_module, 'model_using_args', None)
             if (
                 isinstance(model_using_args, dict)

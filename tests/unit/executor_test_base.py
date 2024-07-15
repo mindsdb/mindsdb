@@ -192,6 +192,20 @@ class BaseExecutorTest(BaseUnitTest):
         super().setup_method()
         self.set_executor(import_dummy_ml=import_dummy_ml)
 
+    def _import_handler(self, integration_controller, handler_name, handler_dir):
+        handler_meta = {
+            'import': {
+                'success': None,
+                'error_message': None,
+                'folder': handler_dir,
+                'dependencies': [],
+            },
+            'name': handler_name,
+            'permanent': False,
+        }
+        integration_controller.handlers_import_status[handler_name] = handler_meta
+        integration_controller.import_handler(handler_name, '')
+
     def set_executor(
         self,
         mock_lightwood=False,
@@ -227,9 +241,9 @@ class BaseExecutorTest(BaseUnitTest):
             sys.path.append(test_handler_path)
 
             handler_dir = Path(test_handler_path) / 'dummy_ml_handler'
-            integration_controller.import_handler('', handler_dir)
+            self._import_handler(integration_controller, 'dummy_ml', handler_dir)
 
-            if not integration_controller.handlers_import_status['dummy_ml']['import']['success']:
+            if not integration_controller.get_handler_meta('dummy_ml')['import']['success']:
                 error = integration_controller.handlers_import_status['dummy_ml']['import']['error_message']
                 raise Exception(f"Can not import: {str(handler_dir)}: {error}")
 
@@ -238,7 +252,7 @@ class BaseExecutorTest(BaseUnitTest):
             sys.path.append(test_handler_path)
 
             handler_dir = Path(test_handler_path) / 'dummy_llm_handler'
-            integration_controller.import_handler('', handler_dir)
+            self._import_handler(integration_controller, 'dummy_llm', handler_dir)
 
             if not integration_controller.handlers_import_status['dummy_llm']['import']['success']:
                 error = integration_controller.handlers_import_status['dummy_llm']['import']['error_message']

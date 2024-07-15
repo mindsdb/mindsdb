@@ -1,11 +1,11 @@
 import pandas as pd
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 
 from mindsdb.utilities import log
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.libs.api_handler_exceptions import MissingConnectionParams
-from mindsdb.integrations.handlers.bedrock_handler.handler_settings import AmazonBedrockEngineConfig, AmazonBedrockModelConfig
+from mindsdb.integrations.handlers.bedrock_handler.handler_settings import AmazonBedrockHandlerEngineConfig, AmazonBedrockHandlerModelConfig
 
 
 logger = log.getLogger(__name__)
@@ -32,30 +32,35 @@ class AmazonBedrockHandler(BaseMLEngine):
             Exception: If the handler is not configured with valid API credentials.
         """
         connection_args = {k.lower(): v for k, v in connection_args.items()}
-        AmazonBedrockEngineConfig(**connection_args)
+        AmazonBedrockHandlerEngineConfig(**connection_args)
 
-    @staticmethod
-    def create_validation(target: str, args: Dict = None, **kwargs: Dict) -> None:
+    def create(self, target, args: Dict = None, **kwargs: Any) -> None:
         """
-        Validates the arguments provided on model creation.
+        Create a model by connecting to the Amazon Bedrock API.
 
         Args:
-            target (str): Target column.
+            target (Text): Target column name.
             args (Dict): Parameters for the model.
+            kwargs (Any): Other keyword arguments.
 
         Raises:
-            MissingConnectionParams: If a USING clause is not provided.
+            Exception: If the model is not configured with valid parameters.
 
-            ValueError: If the parameters provided in the USING clause are invalid.
+        Returns:
+            None
         """
         if 'using' not in args:
-            raise MissingConnectionParams("Twelve Labs engine requires a USING clause! Refer to its documentation for more details.")
+            raise MissingConnectionParams("Amazon Bedrock engine requires a USING clause! Refer to its documentation for more details.")
         else:
             args = args['using']
-            AmazonBedrockModelConfig(**args)
+            args['target'] = target
+            handler_model_config = AmazonBedrockHandlerModelConfig(**args, engine=self.engine_storage)
 
-    def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
-        pass
+            # Save the model configuration to the storage.
+            llm_parameters = handler_model_config.llm_config.model_dump()['parameters']
+            logger.info(f"Saving model configuration: {llm_parameters}")
+            args['llm_parameters'] = llm_parameters
+            self.model_storage.json_set('args', args)
 
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         pass

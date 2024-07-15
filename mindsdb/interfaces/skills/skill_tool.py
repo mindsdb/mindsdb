@@ -7,10 +7,12 @@ from mindsdb_sql.parser.ast import Select, BinaryOperation, Identifier, Constant
 from mindsdb.integrations.libs.vectordatabase_handler import TableField
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities import log
+from mindsdb.utilities.cache import get_cache
 from .sql_agent import SQLAgent
 
 _DEFAULT_TOP_K_SIMILARITY_SEARCH = 5
 _DEFAULT_SQL_LLM_MODEL = 'gpt-3.5-turbo'
+_MAX_CACHE_SIZE = 1000
 
 logger = log.getLogger(__name__)
 
@@ -49,6 +51,7 @@ class SkillToolController:
             include_tables,
             ignore_tables,
             sample_rows_in_table_info,
+            cache=get_cache('agent', max_size=_MAX_CACHE_SIZE)
         )
 
     def _make_text_to_sql_tools(self, skill: db.Skills, llm) -> list:

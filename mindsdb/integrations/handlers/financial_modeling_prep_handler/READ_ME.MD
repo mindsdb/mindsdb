@@ -11,7 +11,7 @@ CREATE DATABASE my_table
 WITH
   ENGINE = 'FINANCIAL_MODELING'
   PARAMETERS = {
-    "api_key": <api_key>,
+    "api_key": <api_key>
   };
 ~~~~
 

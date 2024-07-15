@@ -1,6 +1,6 @@
 from pydantic_settings import BaseSettings
 from botocore.exceptions import ClientError
-from typing import Text, List, Optional, Any
+from typing import Text, List, Optional, Any, ClassVar
 from pydantic import BaseModel, Field, model_validator, field_validator
 
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
@@ -24,8 +24,8 @@ class AmazonBedrockHandlerEngineSettings(BaseSettings):
         List of supported modes for the handler.
     """
     # TODO: Add other modes.
-    DEFAULT_MODE: Text = 'default'
-    SUPPORTED_MODES: List = ['default']
+    DEFAULT_MODE: ClassVar[Text] = 'default'
+    SUPPORTED_MODES: ClassVar[List] = ['default']
 
 
 class AmazonBedrockHandlerEngineConfig(BaseModel):

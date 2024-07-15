@@ -10,7 +10,7 @@ from mindsdb.integrations.handlers.bedrock_handler.utilities import create_amazo
 from mindsdb.integrations.utilities.handlers.validation_utilities import ParameterValidationUtilities
 
 
-class AmazonBedrockHandlerEngineSettings(BaseSettings):
+class AmazonBedrockHandlerSettings(BaseSettings):
     """
     Settings for Amazon Bedrock handler.
 
@@ -90,9 +90,11 @@ class AmazonBedrockHandlerEngineConfig(BaseModel):
         )
 
         try:
-            bedrock_client.list_foundational_models()
+            bedrock_client.list_foundation_models()
         except ClientError as e:
             raise ValueError(f"Invalid Amazon Bedrock credentials: {e}!")
+        
+        return model
         
 
 class AmazonBedrockHandlerModelConfig(BaseModel):
@@ -108,26 +110,27 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
     engine: HandlerStorage
         The handler storage from the engine of the model. This is not provided by the user. It is used for validating the model ID.
 
-    model_config: BaseModel
+    llm_config: BaseModel
         The configuration model for the specified provider and output modalities. This is not provided by the user. It is used for validating the chosen model.
     """
     # User-provided Handler Prameters: These are parameters specific to the MindsDB handler for Amazon Bedrock provided by the user.
-    model_id: Text = Field(..., handler_param=True)
-    mode: Optional[Text] = Field(AmazonBedrockHandlerEngineSettings.DEFAULT_MODE, handler_param=True)
-    prompt_template: Optional[Text] = Field(None, handler_param=True)
-    question_column: Optional[Text] = Field(None, handler_param=True)
+    model_id: Text = Field(..., exclude=True)
+    mode: Optional[Text] = Field(AmazonBedrockHandlerSettings.DEFAULT_MODE, exclude=True)
+    prompt_template: Optional[Text] = Field(None, exclude=True)
+    question_column: Optional[Text] = Field(None, exclude=True)
 
     # Amazon Bedrock Model Parameters: These are parameters specific to the models in Amazon Bedrock. They are provided by the user.
-    temperature: Optional[float] = Field(None, handler_param=False)
-    top_p: Optional[float] = Field(None, handler_param=False)
-    max_tokens: Optional[int] = Field(None, handler_param=False)
-    stop: Optional[List[Text]] = Field(None, handler_param=False)
+    temperature: Optional[float] = Field(None)
+    top_p: Optional[float] = Field(None)
+    max_tokens: Optional[int] = Field(None)
+    stop: Optional[List[Text]] = Field(None)
 
     # System-provided Handler Parameters: These are parameters specific to the MindsDB handler for Amazon Bedrock provided by the system.
-    engine: HandlerStorage = Field(None, handler_param=True)
-    model_config = BaseModel = Field(None, handler_param=True)
+    engine: HandlerStorage = Field(None, exclude=True)
+    llm_config: BaseModel = Field(None, exclude=True)
 
     class Config:
+        arbitrary_types_allowed = True
         extra = "forbid"
 
     @model_validator(mode="before")
@@ -146,19 +149,19 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
 
         return values
     
-    @model_validator(mode="before")
+    @model_validator(mode="after")
     @classmethod
-    def check_model_id_is_valid(cls, values: Any) -> Any:
+    def check_model_id_and_params_are_valid(cls, model: BaseModel) -> BaseModel:
         """
-        Validator to check if the model ID provided is valid.
+        Validator to check if the model ID and the parameters provided for the model are valid.
 
         Args:
             values (Any): Model configuration.
 
         Raises:
-            ValueError: If the model ID is invalid.
+            ValueError: If the model ID provided is invalid or the parameters provided are invalid for the chosen model.
         """
-        connection_args = values["engine"].get_connection_args()
+        connection_args = model.engine.get_connection_args()
 
         bedrock_client = create_amazon_bedrock_client(
             connection_args["aws_access_key_id"],
@@ -168,57 +171,43 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
         )
 
         try:
-            model = bedrock_client.get_foundational_model(values["model_id"])
-
-            values["model_config"] = get_config_for_model(model.provider, model.output_modalities)
+            llm = bedrock_client.get_foundation_model(modelIdentifier=model.model_id)
         except ClientError as e:
             raise ValueError(f"Invalid Amazon Bedrock model ID: {e}!")
         
-        return values
+        llm_config_cls = get_config_for_model(llm['modelDetails']['providerName'], llm['modelDetails']['outputModalities'])
+
+        # Pass only the model parameters to the model configuration
+        model_params = cls.model_json_schema(mode='serialization')["properties"].keys()
+        model.llm_config = llm_config_cls(**{param: getattr(model, param) for param in model_params if getattr(model, param) is not None})
+        
+        return model
     
-    @model_validator(mode="before")
-    @classmethod
-    def check_model_params_valid(cls, values: Any) -> Any:
-        """
-        Validator to check if the parameters provided for the chosen model are valid.
-
-        Args:
-            values (Any): Model configuration.
-
-        Raises:
-            ValueError: If the parameters provided are invalid for the chosen model.
-        """
-        # Pass only the model parameters to the model configuration.
-        model_params = [key for key, val in cls.model_json_schema["properties"].items() if not val.handler_param]
-        values["model_config"](**{key: values[key] for key in model_params})
-
-        return values
-    
-    @field_validator("mode", pre=True)
+    @field_validator("mode")
     @classmethod
     def check_mode_is_supported(cls, mode: Text) -> Text:
         """
         Validator to check if the mode provided is supported.
 
         Args:
-            mode (Text): Mode.
+            mode (Text): The mode to run the handler model in.
 
         Raises:
             ValueError: If the mode provided is not supported.
         """
-        if mode not in AmazonBedrockHandlerEngineSettings.SUPPORTED_MODES:
-            raise ValueError(f"Mode {mode} is not supported. The supported modes are {''.join(AmazonBedrockHandlerEngineSettings.SUPPORTED_MODES)}!")
+        if mode not in AmazonBedrockHandlerSettings.SUPPORTED_MODES:
+            raise ValueError(f"Mode {mode} is not supported. The supported modes are {''.join(AmazonBedrockHandlerSettings.SUPPORTED_MODES)}!")
         
         return mode
     
-    @model_validator(mode="before")
+    @model_validator(mode="after")
     @classmethod
-    def check_mode_params_provided(cls, values: Any) -> Any:
+    def check_mode_params_provided(cls, model: BaseModel) -> BaseModel:
         """
         Validator to check if the parameters required for the chosen mode provided are valid.
 
         Args:
-            values (Any): Model configuration.
+            model (BaseModel): Handler model configuration.
 
         Raises:
             ValueError: If the parameters provided are invalid for the mode provided.
@@ -227,11 +216,11 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
         # 1. prompt_template
         # 2. question_column
         # TODO: Find the other possible parameters/combinations for the default mode.
-        if values["mode"] == "default":
-            if "prompt_template" not in values and "question_column" not in values:
+        if model.mode == "default":
+            if not model.prompt_template and not model.question_column:
                 raise ValueError("One of the following parameters need to be provided for the default mode: prompt_template, question_column!")
 
         # TODO: Add validations for other modes.
 
-        return values
+        return model
 

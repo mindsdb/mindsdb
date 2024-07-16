@@ -1,16 +1,13 @@
-from typing import Optional, Dict, List
+from typing import Optional, Dict
 import dill
 import dspy
 
 
 from dspy import ColBERTv2
 from dspy.teleprompt import BootstrapFewShot
-from dspy.evaluate import Evaluate
 
 from mindsdb.interfaces.llm.llm_controller import LLMDataController
 import pandas as pd
-
-
 from mindsdb.integrations.handlers.langchain_handler.constants import (
     DEFAULT_MODEL_NAME
 )
@@ -32,7 +29,9 @@ DEMOS = 4
 DF_EXAMPLES = 25
 PRIME_MULTIPLIER = 31
 
+
 class DSPyHandler(BaseMLEngine):
+
     """
     This is a MindsDB integration for the DSPy library, which provides a unified interface for interacting with
     various large language models (LLMs) and self improving prompts for these LLMs.
@@ -147,7 +146,7 @@ class DSPyHandler(BaseMLEngine):
         self_improvement_df = pd.DataFrame(self.llm_data_controller.list_all_llm_data(self.model_id))
         if self_improvement_df.empty:
             self_improvement_df = pd.DataFrame([{'input': 'dummy_input', 'output': 'dummy_output'}])
-        
+
         self_improvement_df = self_improvement_df.rename(columns={
             'output': args['target'],
             'input': args['user_column']
@@ -166,7 +165,7 @@ class DSPyHandler(BaseMLEngine):
 
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         raise NotImplementedError('Fine-tuning is not supported for LangChain models')
-    
+
     def setup_dspy(self, df, args):
         """
         Use the default DSPy parameters to set up the chain
@@ -183,7 +182,7 @@ class DSPyHandler(BaseMLEngine):
         dspy.configure(rm=colbertv2)
         dspy_chain = self.create_dspy_chain(df, args)
         return dspy_chain
-    
+
     def create_dspy_chain(self, df, args):
         """
         Iniialize chain with the llm, add the cold start examples and bootstrap some examples
@@ -195,7 +194,7 @@ class DSPyHandler(BaseMLEngine):
         Returns:
             Optimized DSPy chain
         """
-        
+
         # Initialize the LLM with the API key
         model = args.get('model_name')
         api_key = get_api_key(model, args, self.engine_storage, strict=False)
@@ -223,7 +222,7 @@ class DSPyHandler(BaseMLEngine):
         with dspy.context(lm=llm):
             optimized = teleprompter.compile(dspy_module, trainset=dspy_examples)  # TODO: check columns have the right name
         return optimized
-    
+
     def generate_dspy_response(self, question, chain, llm):
         """
         Generate response using DSPy
@@ -246,7 +245,7 @@ class DSPyHandler(BaseMLEngine):
                      args: Dict,
                      chain,  # TODO: specify actual type
                      llm,
-            ) -> pd.DataFrame:
+                    ) -> pd.DataFrame:
         """
         Generate response using DSPy
 

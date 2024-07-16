@@ -8,21 +8,25 @@ from ..executor_test_base import BaseExecutorTest
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
+
 def ollama_model_exists(model_name: str) -> bool:
+
     try:
         ollama.show(model_name)
         return True
     except Exception:
         return False
-    
+
+
 class TestDSPy(BaseExecutorTest):
+
     """Test Class for DSPy Integration Testing"""
     @pytest.fixture(autouse=True, scope="function")
     def setup_method(self):
         """Setup test environment, creating a project"""
         super().setup_method()
         self.run_sql("create database proj")
-    
+
     @pytest.mark.skipif(OPENAI_API_KEY is None, reason='Missing OpenAI API key (OPENAI_API_KEY env variable)')
     def test_default_provider(self):
 
@@ -30,7 +34,7 @@ class TestDSPy(BaseExecutorTest):
             f"""
             CREATE ML_ENGINE dspy_engine
             FROM dspy
-            USING  
+            USING
                 openai_api_key = '{OPENAI_API_KEY}';
             """
         )
@@ -42,9 +46,9 @@ class TestDSPy(BaseExecutorTest):
            using
             engine='dspy_engine',
             provider = 'openai',
-            model_name = 'gpt-4', 
-            mode = 'conversational', 
-            user_column = 'question', 
+            model_name = 'gpt-4',
+            mode = 'conversational',
+            user_column = 'question',
             assistant_column = 'answer',
             prompt_template='Answer the user in a useful way: {{{{question}}}}';
         """
@@ -66,7 +70,7 @@ class TestDSPy(BaseExecutorTest):
             f"""
             CREATE ML_ENGINE dspy_engine
             FROM dspy
-            USING  
+            USING
                 openai_api_key = '{OPENAI_API_KEY}';
             """
         )
@@ -78,9 +82,9 @@ class TestDSPy(BaseExecutorTest):
            using
             engine='dspy_engine',
             provider = 'openai',
-            model_name = 'gpt-3.5-turbo', 
-            mode = 'conversational', 
-            user_column = 'question', 
+            model_name = 'gpt-3.5-turbo',
+            mode = 'conversational',
+            user_column = 'question',
             assistant_column = 'answer',
             prompt_template='Answer the user in a useful way: {{{{question}}}}';
         """

@@ -51,7 +51,7 @@ class LLMDataController:
         '''
         llm_data_objects = db.session.query(db.LLMData).filter_by(model_id=model_id).all()
         return [{'input': llm_data.input, 'output': llm_data.output} for llm_data in llm_data_objects]
-    
+
     def get_llm_data(self, llm_data_id: int) -> db.LLMData:
         '''
         Retrieves a specific LLM data entry by ID.

@@ -194,7 +194,7 @@ class AmazonBedrockHandler(BaseMLEngine):
                 bedrock_client = create_amazon_bedrock_client(
                     **self.engine_storage.get_connection_args()
                 )
-                meta = bedrock_client.get_foundation_model(modelIdentifier=model_id)
+                meta = bedrock_client.get_foundation_model(modelIdentifier=model_id)['modelDetails']
             except Exception as e:
                 meta = {'error': str(e)}
             return pd.DataFrame(dict(meta).items(), columns=['key', 'value'])

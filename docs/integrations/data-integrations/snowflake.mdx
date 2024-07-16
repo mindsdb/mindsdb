@@ -13,24 +13,6 @@ Before proceeding, ensure the following prerequisites are met:
 1. Install MindsDB locally via [Docker](/setup/self-hosted/docker) or [Docker Desktop](/setup/self-hosted/docker-desktop).
 2. To connect Snowflake to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
 
-<Tip>
-Please note that, if you are using Docker to run MindsDB, before installing the dependencies for this integration as per the instructions given above, it is currently necessary to install Git in the container. To do this, run the following commands:
-
-Start an interactive shell in the container:
-```bash
-docker exec -it mindsdb_container sh
-```
-If you haven't specified a name when spinning up the MindsDB container with `docker run`, you can find it by running `docker ps`.
-
-Install Git:
-```bash
-apt-get -y update
-apt-get -y install git
-``` 
-
-The need to perform this step will be removed in future versions of MindsDB.
-</Tip>
-
 ## Connection
 
 Establish a connection to your Snowflake database from MindsDB by executing the following SQL command:

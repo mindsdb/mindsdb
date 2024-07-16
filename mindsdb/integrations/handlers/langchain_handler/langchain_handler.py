@@ -8,7 +8,8 @@ from langchain.agents import AgentExecutor
 from langchain.agents.initialize import initialize_agent
 from langchain.chains.conversation.memory import ConversationSummaryBufferMemory
 from langchain.schema import SystemMessage
-from langchain_community.chat_models import ChatAnthropic, ChatOpenAI, ChatAnyscale, ChatLiteLLM, ChatOllama
+from langchain_openai import ChatOpenAI
+from langchain_community.chat_models import ChatAnthropic, ChatAnyscale, ChatLiteLLM, ChatOllama
 from langchain_core.prompts import PromptTemplate
 from langfuse import Langfuse
 from langfuse.callback import CallbackHandler
@@ -32,6 +33,7 @@ from mindsdb.integrations.handlers.langchain_handler.constants import (
 )
 from mindsdb.integrations.handlers.langchain_handler.log_callback_handler import LogCallbackHandler
 from mindsdb.integrations.handlers.langchain_handler.langfuse_callback_handler import LangfuseCallbackHandler
+from mindsdb.integrations.handlers.langchain_handler.safe_output_parser import SafeOutputParser
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
 from mindsdb.integrations.handlers.langchain_handler.tools import setup_tools
 from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS as OPEN_AI_CHAT_MODELS
@@ -184,12 +186,9 @@ class LangChainHandler(BaseMLEngine):
                     response = response_output[-2]
 
                 # Wrap response in Langchain conversational react format.
-                langchain_react_formatted_response = f'''Do I need to use a tool? No
+                langchain_react_formatted_response = f'''Thought: Do I need to use a tool? No
 AI: {response}'''
-                response_obj = {
-                    'text': langchain_react_formatted_response
-                }
-                return json.dumps(response_obj)
+                return langchain_react_formatted_response
         return f'Agent failed with error:\n{str(error)}...'
 
     def create(self, target: str, args: Dict = None, **kwargs):
@@ -234,6 +233,8 @@ AI: {response}'''
         agent = self.create_agent(df, args, pred_args)
         # Use last message as prompt, remove other questions.
         user_column = args.get('user_column', DEFAULT_USER_COLUMN)
+        if user_column not in df.columns:
+            raise Exception(f"Expected user input in column `{user_column}`, which is not found in the input data. Either provide the column, or redefine the expected column at model creation (`USING user_column = 'value'`)")  # noqa
         df.iloc[:-1, df.columns.get_loc(user_column)] = None
         return self.run_agent(df, agent, args, pred_args)
 
@@ -293,6 +294,8 @@ AI: {response}'''
             tools,
             llm,
             agent=agent_type,
+            # Use custom output parser to handle flaky LLMs that don't ALWAYS conform to output format.
+            agent_kwargs={'output_parser': SafeOutputParser()},
             # Calls the agent’s LLM Chain one final time to generate a final answer based on the previous steps
             early_stopping_method='generate',
             handle_parsing_errors=self._handle_parsing_errors,

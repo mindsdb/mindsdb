@@ -12,9 +12,12 @@ from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.utilities.context import context as ctx
 
+from .constants import ASSISTANT_COLUMN
 
 class AgentsController:
     '''Handles CRUD operations at the database level for Agents'''
+
+    assistant_column = ASSISTANT_COLUMN
 
     def __init__(
         self,

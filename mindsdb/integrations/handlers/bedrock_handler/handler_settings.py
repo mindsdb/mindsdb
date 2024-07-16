@@ -1,11 +1,8 @@
 from pydantic_settings import BaseSettings
 from botocore.exceptions import ClientError
-from typing import Text, List, Optional, Any, ClassVar
+from typing import Text, List, Dict, Optional, Any, ClassVar
 from pydantic import BaseModel, Field, model_validator, field_validator
 
-from mindsdb.interfaces.storage.model_fs import HandlerStorage
-
-from mindsdb.integrations.handlers.bedrock_handler.model_settings import get_config_for_model
 from mindsdb.integrations.handlers.bedrock_handler.utilities import create_amazon_bedrock_client
 from mindsdb.integrations.utilities.handlers.validation_utilities import ParameterValidationUtilities
 
@@ -103,34 +100,24 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
 
     Attributes
     ----------
-    model_id: Text
-        Amazon Bedrock model ID.
 
-        
-    engine: HandlerStorage
-        The handler storage from the engine of the model. This is not provided by the user. It is used for validating the model ID.
-
-    llm_config: BaseModel
-        The configuration model for the specified provider and output modalities. This is not provided by the user. It is used for validating the chosen model.
     """
-    # User-provided Handler Prameters: These are parameters specific to the MindsDB handler for Amazon Bedrock provided by the user.
-    model_id: Text = Field(..., exclude=True)
-    mode: Optional[Text] = Field(AmazonBedrockHandlerSettings.DEFAULT_MODE, exclude=True)
-    prompt_template: Optional[Text] = Field(None, exclude=True)
-    question_column: Optional[Text] = Field(None, exclude=True)
+    # User-provided Handler Model Prameters: These are parameters specific to the MindsDB handler for Amazon Bedrock provided by the user.
+    model_id: Text = Field(...)
+    mode: Optional[Text] = Field(AmazonBedrockHandlerSettings.DEFAULT_MODE)
+    prompt_template: Optional[Text] = Field(None)
+    question_column: Optional[Text] = Field(None)
 
     # Amazon Bedrock Model Parameters: These are parameters specific to the models in Amazon Bedrock. They are provided by the user.
-    temperature: Optional[float] = Field(None)
-    top_p: Optional[float] = Field(None)
-    max_tokens: Optional[int] = Field(None)
-    stop: Optional[List[Text]] = Field(None)
+    temperature: Optional[float] = Field(None, bedrock_model_param=True)
+    top_p: Optional[float] = Field(None, bedrock_model_param=True)
+    max_tokens: Optional[int] = Field(None, bedrock_model_param=True)
+    stop: Optional[List[Text]] = Field(None, bedrock_model_param=True)
 
-    # System-provided Handler Parameters: These are parameters specific to the MindsDB handler for Amazon Bedrock provided by the system.
-    engine: HandlerStorage = Field(None, exclude=True)
-    llm_config: BaseModel = Field(None, exclude=True)
+    # System-provided Handler Model Parameters: These are parameters specific to the MindsDB handler for Amazon Bedrock provided by the system.
+    connection_args: Dict = Field(None, exclude=True)
 
     class Config:
-        arbitrary_types_allowed = True
         extra = "forbid"
 
     @model_validator(mode="before")
@@ -161,25 +148,14 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
         Raises:
             ValueError: If the model ID provided is invalid or the parameters provided are invalid for the chosen model.
         """
-        connection_args = model.engine.get_connection_args()
-
         bedrock_client = create_amazon_bedrock_client(
-            connection_args["aws_access_key_id"],
-            connection_args["aws_secret_access_key"],
-            connection_args["region_name"],
-            connection_args["aws_session_token"]
+            **model.connection_args
         )
 
         try:
-            llm = bedrock_client.get_foundation_model(modelIdentifier=model.model_id)
+            bedrock_client.get_foundation_model(modelIdentifier=model.model_id)
         except ClientError as e:
             raise ValueError(f"Invalid Amazon Bedrock model ID: {e}!")
-        
-        llm_config_cls = get_config_for_model(llm['modelDetails']['providerName'], llm['modelDetails']['outputModalities'])
-
-        # Pass only the model parameters to the model configuration
-        model_params = cls.model_json_schema(mode='serialization')["properties"].keys()
-        model.llm_config = llm_config_cls(**{param: getattr(model, param) for param in model_params if getattr(model, param) is not None})
         
         return model
     
@@ -224,3 +200,17 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
 
         return model
 
+    def model_dump(self) -> Dict:
+        """
+        Dumps the model configuration to a dictionary.
+
+        Returns:
+            Dict: The model configuration.
+        """
+        bedrock_model_params = [key for key, val in self.model_json_schema(mode='serialization')['properties'].items() if val.get("bedrock_model_param")]
+        handler_model_params = [key for key, val in self.model_json_schema(mode='serialization')['properties'].items() if not val.get("bedrock_model_param")]
+
+        return {
+            "inference_config": {key: getattr(self, key) for key in bedrock_model_params if getattr(self, key) is not None},
+            **{key: getattr(self, key) for key in handler_model_params}
+        }

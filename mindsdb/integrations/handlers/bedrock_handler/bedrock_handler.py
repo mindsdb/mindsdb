@@ -7,8 +7,8 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.libs.llm.utils import get_completed_prompts
 from mindsdb.integrations.libs.api_handler_exceptions import MissingConnectionParams
-from mindsdb.integrations.handlers.bedrock_handler.utilities import create_amazon_bedrock_runtime_client
 from mindsdb.integrations.handlers.bedrock_handler.settings import AmazonBedrockHandlerEngineConfig, AmazonBedrockHandlerModelConfig
+from mindsdb.integrations.handlers.bedrock_handler.utilities import create_amazon_bedrock_client, create_amazon_bedrock_runtime_client
 
 
 logger = log.getLogger(__name__)
@@ -124,7 +124,7 @@ class AmazonBedrockHandler(BaseMLEngine):
                 contexts = list(df[args['context_column']].apply(lambda x: str(x)))
                 questions_without_context = list(df[args['question_column']].apply(lambda x: str(x)))
 
-                prompts = [
+                questions = [
                     f'Context: {c}\nQuestion: {q}\nAnswer: '
                     for c, q in zip(contexts, questions_without_context)
                 ]
@@ -172,4 +172,32 @@ class AmazonBedrockHandler(BaseMLEngine):
         return predictions
 
     def describe(self, attribute: Optional[Text] = None) -> pd.DataFrame:
-        pass
+        """
+        Get the metadata or arguments of a model.
+
+        Args:
+            attribute (Optional[Text]): Attribute to describe. Can be 'args' or 'metadata'.
+
+        Returns:
+            pd.DataFrame: Model metadata or model arguments.
+        """
+        args = self.model_storage.json_get('args')
+
+        if attribute == 'args':
+            del args['handler_model_params']
+            return pd.DataFrame(args.items(), columns=['key', 'value'])
+        
+        elif attribute == 'metadata':
+            model_id = args.get('model_id')
+            try:
+                bedrock_client = create_amazon_bedrock_client(
+                    **self.engine_storage.get_connection_args()
+                )
+                meta = bedrock_client.get_foundation_model(modelIdentifier=model_id)
+            except Exception as e:
+                meta = {'error': str(e)}
+            return pd.DataFrame(dict(meta).items(), columns=['key', 'value'])
+        
+        else:
+            tables = ['args', 'metadata']
+            return pd.DataFrame(tables, columns=['tables'])

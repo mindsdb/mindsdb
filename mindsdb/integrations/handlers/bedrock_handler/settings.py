@@ -130,6 +130,7 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
         The connection arguments passed required to connect to Amazon Bedrock. These are AWS credentials provided when creating the engine.
     """
     # User-provided Handler Model Prameters: These are parameters specific to the MindsDB handler for Amazon Bedrock provided by the user.
+    # TODO: Make model_id optional and add a default model?
     model_id: Text = Field(...)
     mode: Optional[Text] = Field(AmazonBedrockHandlerSettings.DEFAULT_MODE)
     prompt_template: Optional[Text] = Field(None)

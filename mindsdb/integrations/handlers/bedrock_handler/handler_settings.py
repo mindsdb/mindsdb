@@ -13,7 +13,6 @@ class AmazonBedrockHandlerSettings(BaseSettings):
 
     Attributes
     ----------
-
     DEFAULT_MODE : Text
         The default mode for the handler.
 
@@ -109,10 +108,10 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
     question_column: Optional[Text] = Field(None)
 
     # Amazon Bedrock Model Parameters: These are parameters specific to the models in Amazon Bedrock. They are provided by the user.
-    temperature: Optional[float] = Field(None, bedrock_model_param=True)
-    top_p: Optional[float] = Field(None, bedrock_model_param=True)
-    max_tokens: Optional[int] = Field(None, bedrock_model_param=True)
-    stop: Optional[List[Text]] = Field(None, bedrock_model_param=True)
+    temperature: Optional[float] = Field(None, bedrock_model_param=True, bedrock_model_param_name='temperature')
+    top_p: Optional[float] = Field(None, bedrock_model_param=True, bedrock_model_param_name='topP')
+    max_tokens: Optional[int] = Field(None, bedrock_model_param=True, bedrock_model_param_name='maxTokens')
+    stop: Optional[List[Text]] = Field(None, bedrock_model_param=True, bedrock_model_param_name='stopSequences')
 
     # System-provided Handler Model Parameters: These are parameters specific to the MindsDB handler for Amazon Bedrock provided by the system.
     connection_args: Dict = Field(None, exclude=True)
@@ -207,10 +206,17 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
         Returns:
             Dict: The model configuration.
         """
+        bedrock_model_param_names = [val.get("bedrock_model_param_name") for key, val in self.model_json_schema(mode='serialization')['properties'].items() if val.get("bedrock_model_param")]
         bedrock_model_params = [key for key, val in self.model_json_schema(mode='serialization')['properties'].items() if val.get("bedrock_model_param")]
+        
         handler_model_params = [key for key, val in self.model_json_schema(mode='serialization')['properties'].items() if not val.get("bedrock_model_param")]
 
+        inference_config = {}
+        for index, key in enumerate(bedrock_model_params):
+            if getattr(self, key) is not None:
+                inference_config[bedrock_model_param_names[index]] = getattr(self, key)
+
         return {
-            "inference_config": {key: getattr(self, key) for key in bedrock_model_params if getattr(self, key) is not None},
+            "inference_config": inference_config,
             **{key: getattr(self, key) for key in handler_model_params}
         }

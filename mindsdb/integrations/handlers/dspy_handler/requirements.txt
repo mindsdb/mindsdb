@@ -8,4 +8,3 @@ langchain-experimental==0.0.58
 dspy-ai==2.4.12
 dspy==0.1.4
 -r mindsdb/integrations/handlers/openai_handler/requirements.txt
--r mindsdb/integrations/handlers/langchain_embedding_handler/requirements.txt

@@ -14,6 +14,7 @@ from mindsdb.utilities.context import context as ctx
 
 from .constants import ASSISTANT_COLUMN
 
+
 class AgentsController:
     '''Handles CRUD operations at the database level for Agents'''
 

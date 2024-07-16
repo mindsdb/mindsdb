@@ -1,9 +1,11 @@
+import numpy as np
 import pandas as pd
 from typing import Text, Dict, List, Optional, Any
 
 from mindsdb.utilities import log
 
 from mindsdb.integrations.libs.base import BaseMLEngine
+from mindsdb.integrations.libs.llm.utils import get_completed_prompts
 from mindsdb.integrations.libs.api_handler_exceptions import MissingConnectionParams
 from mindsdb.integrations.handlers.bedrock_handler.utilities import create_amazon_bedrock_runtime_client
 from mindsdb.integrations.handlers.bedrock_handler.settings import AmazonBedrockHandlerEngineConfig, AmazonBedrockHandlerModelConfig
@@ -88,13 +90,35 @@ class AmazonBedrockHandler(BaseMLEngine):
         if handler_model_params.get('question_column') is not None:
             if handler_model_params['question_column'] not in df.columns:
                 raise ValueError(f"Column {handler_model_params['question_column']} not found in the dataframe!")
-            
-            questions = list(df[args['question_column']].apply(lambda x: str(x)))
-            prompts = [{"role": "user", "content": [{"text": question}]} for question in questions]
+
+            if handler_model_params.get('context_column'):
+                empty_prompt_ids = np.where(
+                    df[[args['context_column'], args['question_column']]]
+                    .isna()
+                    .all(axis=1)
+                    .values
+                )[0]
+                contexts = list(df[args['context_column']].apply(lambda x: str(x)))
+                questions_without_context = list(df[args['question_column']].apply(lambda x: str(x)))
+
+                prompts = [
+                    f'Context: {c}\nQuestion: {q}\nAnswer: '
+                    for c, q in zip(contexts, questions_without_context)
+                ]
+
+            else:
+                questions = list(df[args['question_column']].apply(lambda x: str(x)))
+                empty_prompt_ids = np.where(
+                    df[[args['question_column']]].isna().all(axis=1).values
+                )[0]
 
         # Prompt template.
         if handler_model_params.get('prompt_template') is not None:
-            pass
+            questions, empty_prompt_ids = get_completed_prompts(handler_model_params['prompt_template'], df)
+
+        # Prepare the prompts.
+        prompts = [{"role": "user", "content": [{"text": question}]} for question in questions]
+        prompts = [j for i, j in enumerate(prompts) if i not in empty_prompt_ids]
 
         return prompts
 

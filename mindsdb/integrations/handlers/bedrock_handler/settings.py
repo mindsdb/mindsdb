@@ -188,12 +188,15 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
             ValueError: If the parameters provided are invalid for the mode provided.
         """
         # If the mode is default, one of the following need to be provided:
-        # 1. prompt_template
-        # 2. question_column
+        # 1. prompt_template.
+        # 2. question_column with an optional context_column.
         # TODO: Find the other possible parameters/combinations for the default mode.
-        if model.mode == "default":
-            if not model.prompt_template and not model.question_column:
-                raise ValueError("One of the following parameters need to be provided for the default mode: prompt_template, question_column!")
+        if model.mode == AmazonBedrockHandlerSettings.DEFAULT_MODE:
+            if model.prompt_template is None and model.question_column is None:
+                raise ValueError(f"Either prompt_template or question_column with an optional context_column need to be provided for the default mode!")
+            
+            if model.prompt_template is not None and model.question_column is not None:
+                raise ValueError(f"Only one of prompt_template or question_column with an optional context_column can be provided for the default mode!")
 
         # TODO: Add validations for other modes.
 

@@ -39,7 +39,7 @@ class AmazonBedrockHandler(BaseMLEngine):
 
     def create(self, target, args: Dict = None, **kwargs: Any) -> None:
         """
-        Create a model by connecting to the Amazon Bedrock API.
+        Creates a model by validating the model configuration and saving it to the storage.
 
         Args:
             target (Text): Target column name.
@@ -67,6 +67,19 @@ class AmazonBedrockHandler(BaseMLEngine):
             self.model_storage.json_set('args', args)
 
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+        """
+        Make predictions using a model by invoking the Amazon Bedrock API.
+
+        Args:
+            df (pd.DataFrame): Input data to make predictions on.
+            args (Dict): Parameters passed when making predictions.
+
+        Raises:
+            Exception: If the input does not match the configuration of the model.
+
+        Returns:
+            pd.DataFrame: Input data with the predicted values in a new column.
+        """  
         args = self.model_storage.json_get('args')
         handler_model_params = args['handler_model_params']
         mode = args['handler_model_params']['mode']
@@ -82,7 +95,17 @@ class AmazonBedrockHandler(BaseMLEngine):
         pred_df = pd.DataFrame(predictions, columns=[target])
         return pred_df
 
-    def _prepare_data_for_default_mode(self, df: pd.DataFrame, args: Dict) -> Dict:
+    def _prepare_data_for_default_mode(self, df: pd.DataFrame, args: Dict) -> List[Dict]:
+        """
+        Prepare the input data for the default mode of the Amazon Bedrock handler.
+
+        Args:
+            df (pd.DataFrame): Input data to make predictions on.
+            args (Dict): Parameters passed when making predictions.
+
+        Returns:
+            List[Dict]: Prepared prompts for invoking the Amazon Bedrock API.
+        """
         handler_model_params = args['handler_model_params']
 
         # Prepare the parameters + data for the prediction.
@@ -123,6 +146,14 @@ class AmazonBedrockHandler(BaseMLEngine):
         return prompts
 
     def _predict_for_default_mode(self, model_id: Text, prompts: List[Text], inference_config: Dict) -> Dict:
+        """
+        Make predictions for the default mode of the Amazon Bedrock handler.
+
+        Args:
+            model_id (Text): The ID of the model in Amazon Bedrock.
+            prompts (List[Text]): Prepared prompts for invoking the Amazon Bedrock API.
+            inference_config (Dict): Inference configuration supported by the Amazon Bedrock API.
+        """
         predictions = []
         bedrock_runtime_client = create_amazon_bedrock_runtime_client(
             **self.engine_storage.get_connection_args()

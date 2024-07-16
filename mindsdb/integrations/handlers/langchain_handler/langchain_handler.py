@@ -10,7 +10,6 @@ from langchain.schema import SystemMessage
 from langchain_openai import ChatOpenAI
 from langchain_community.chat_models import ChatAnthropic, ChatAnyscale, ChatLiteLLM, ChatOllama
 from langchain_core.prompts import PromptTemplate
-from langfuse import Langfuse
 from langfuse.callback import CallbackHandler
 
 import numpy as np
@@ -30,7 +29,6 @@ from mindsdb.integrations.handlers.langchain_handler.constants import (
     DEFAULT_ASSISTANT_COLUMN
 )
 from mindsdb.integrations.handlers.langchain_handler.log_callback_handler import LogCallbackHandler
-from mindsdb.integrations.handlers.langchain_handler.langfuse_callback_handler import LangfuseCallbackHandler
 from mindsdb.integrations.handlers.langchain_handler.safe_output_parser import SafeOutputParser
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
 from mindsdb.integrations.handlers.langchain_handler.tools import setup_tools
@@ -126,20 +124,12 @@ class LangChainHandler(BaseMLEngine):
 
         if self.langfuse_callback_handler is None and are_langfuse_args_present:
             # Trace LLM chains & tools using Langfuse.
-            langfuse = Langfuse(
+            self.langfuse_callback_handler = CallbackHandler(
+                host=langfuse_host,
                 public_key=langfuse_public_key,
                 secret_key=langfuse_secret_key,
-                host=langfuse_host,
+                trace_name=args.get('trace_id', None),
             )
-            self.langfuse_callback_handler = LangfuseCallbackHandler(
-                langfuse,
-                # these args are handled gracefully by langfuse if not already present
-                args.get('trace_id', None),
-                args.get('observation_id', None),
-            )
-            # Check credentials.
-            if not self.langfuse_callback_handler.auth_check():
-                logger.error(f'Incorrect Langfuse credentials provided to Langchain handler. Full args: {args}')
 
         if self.langfuse_callback_handler:
             all_callbacks.append(self.langfuse_callback_handler)
@@ -342,7 +332,7 @@ AI: {response}'''
                 # Handle callbacks per run.
                 all_args = args.copy()
                 all_args.update(pred_args)
-                answer = agent_executor.invoke(prompt, config={ 'callbacks': self._get_agent_callbacks(all_args) })
+                answer = agent_executor.invoke(prompt, config={ 'callbacks': self._get_agent_callbacks(all_args) })  # TODO: add info here for agent?
             except Exception as e:
                 answer = str(e)
                 if not answer.startswith("Could not parse LLM output: `"):

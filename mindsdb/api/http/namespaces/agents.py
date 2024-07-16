@@ -295,7 +295,7 @@ class AgentCompletions(Resource):
         run_completion_span = None
         messages = request.json['messages']
         # Trace Agent completions using Langfuse if configured.
-        if os.getenv('LANGFUSE_PUBLIC_KEY') is not None:
+        if os.getenv('LANGFUSE_PUBLIC_KEY') is not None:  # TODO: take from agent args?
             langfuse = Langfuse(
                 public_key=os.getenv('LANGFUSE_PUBLIC_KEY'),
                 secret_key=os.getenv('LANGFUSE_SECRET_KEY'),
@@ -304,7 +304,7 @@ class AgentCompletions(Resource):
             api_trace = langfuse.trace(
                 name='api-completion',
                 input=messages,
-                tags=[os.getenv('FLASK_ENV', 'unknown')]
+                tags=[os.getenv('FLASK_ENV', 'unknown')]  # TODO: fix, use something else
             )
             run_completion_span = api_trace.span(name='run-completion', input=messages)
             trace_id = api_trace.id

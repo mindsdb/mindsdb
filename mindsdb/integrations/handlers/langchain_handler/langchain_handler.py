@@ -1,6 +1,5 @@
 from concurrent.futures import as_completed, TimeoutError
 from typing import Optional, Dict, List
-import json
 import os
 import re
 
@@ -22,7 +21,6 @@ from mindsdb.integrations.handlers.langchain_handler.constants import (
     DEFAULT_AGENT_TIMEOUT_SECONDS,
     DEFAULT_AGENT_TOOLS,
     DEFAULT_AGENT_TYPE,
-    DEFAULT_EMBEDDINGS_MODEL_PROVIDER,
     DEFAULT_MAX_ITERATIONS,
     DEFAULT_MAX_TOKENS,
     DEFAULT_MODEL_NAME,
@@ -120,28 +118,32 @@ class LangChainHandler(BaseMLEngine):
 
     def _get_agent_callbacks(self, args: Dict) -> List:
         all_callbacks = [self.log_callback_handler]
-        are_langfuse_args_present = 'langfuse_public_key' in args and 'langfuse_secret_key' in args and 'langfuse_host' in args
+
+        langfuse_public_key = args.get('langfuse_public_key', os.getenv('LANGFUSE_PUBLIC_KEY'))
+        langfuse_secret_key = args.get('langfuse_secret_key', os.getenv('LANGFUSE_SECRET_KEY'))
+        langfuse_host = args.get('langfuse_host', os.getenv('LANGFUSE_HOST'))
+        are_langfuse_args_present = bool(langfuse_public_key) and bool(langfuse_secret_key) and bool(langfuse_host)
+
         if self.langfuse_callback_handler is None and are_langfuse_args_present:
-            self.langfuse_callback_handler = CallbackHandler(
-                args['langfuse_public_key'],
-                args['langfuse_secret_key'],
-                host=args['langfuse_host']
+            # Trace LLM chains & tools using Langfuse.
+            langfuse = Langfuse(
+                public_key=langfuse_public_key,
+                secret_key=langfuse_secret_key,
+                host=langfuse_host,
+            )
+            self.langfuse_callback_handler = LangfuseCallbackHandler(
+                langfuse,
+                # these args are handled gracefully by langfuse if not already present
+                args.get('trace_id', None),
+                args.get('observation_id', None),
             )
             # Check credentials.
             if not self.langfuse_callback_handler.auth_check():
                 logger.error(f'Incorrect Langfuse credentials provided to Langchain handler. Full args: {args}')
-        if self.langfuse_callback_handler is not None:
+
+        if self.langfuse_callback_handler:
             all_callbacks.append(self.langfuse_callback_handler)
-        if 'trace_id' not in args or 'observation_id' not in args:
-            return all_callbacks
-        # Trace LLM chains & tools using Langfuse.
-        langfuse = Langfuse(
-            public_key=os.getenv('LANGFUSE_PUBLIC_KEY'),
-            secret_key=os.getenv('LANGFUSE_SECRET_KEY'),
-            host=os.getenv('LANGFUSE_HOST')
-        )
-        langfuse_cb_handler = LangfuseCallbackHandler(langfuse, args['trace_id'], args['observation_id'])
-        all_callbacks.append(langfuse_cb_handler)
+
         return all_callbacks
     
     def _get_tiktoken_model_name(self, model: str) -> str:

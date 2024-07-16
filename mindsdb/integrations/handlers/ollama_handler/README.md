@@ -110,3 +110,27 @@ Here is the output:
 
 Go to the [Use Cases](https://docs.mindsdb.com/use-cases/overview) section to see more examples.
 </Tip>
+
+### Embeddings
+
+If you want to use an embedding model (instead of text generation), then you will want to activate embedding mode at model creation:
+
+```sql
+CREATE MODEL nomic_embed_model
+PREDICT embeddings
+USING
+   engine = 'ollama_engine',
+   model_name = 'nomic-embed-text',
+   mode = 'embedding',
+   prompt_template = '{{column}}, {{another_column}}';
+```
+
+The output will contain embeddings for each input row (length is model-dependent):
+
+```sql
++-------+---------------------------------------------------------------------------------+
+| column  | another_column  | embeddings                                                  |
++-------+---------------------------------------------------------------------------------+
+| Hello   | Matt!           | [0.7849581241607666,1.263154149055481,-4.024246692657471... |
++-------+---------------------------------------------------------------------------------+
+```

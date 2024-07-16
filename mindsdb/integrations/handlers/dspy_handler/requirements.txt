@@ -1,9 +1,10 @@
-openai==1.24.0
+openai==1.6.1
 wikipedia==1.4.0
 tiktoken==0.5.2
 anthropic>=0.26.1
 litellm==1.35.0
 chromadb # Knowledge bases.
-langchain-experimental==0.0.53
+dspy-ai==2.4.12
+dspy==0.1.4
 -r mindsdb/integrations/handlers/openai_handler/requirements.txt
--r mindsdb/integrations/handlers/langchain_embedding_handler/requirements.txt
+-r mindsdb/integrations/handlers/langchain_handler/requirements.txt

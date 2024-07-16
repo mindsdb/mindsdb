@@ -53,16 +53,20 @@ class AmazonBedrockHandler(BaseMLEngine):
             raise MissingConnectionParams("Amazon Bedrock engine requires a USING clause! Refer to its documentation for more details.")
         else:
             args = args['using']
-            args['target'] = target
-            handler_model_config = AmazonBedrockHandlerModelConfig(**args, engine=self.engine_storage)
+            handler_model_config = AmazonBedrockHandlerModelConfig(**args, connection_args=self.engine_storage.get_connection_args())
 
             # Save the model configuration to the storage.
-            llm_parameters = handler_model_config.llm_config.model_dump()['parameters']
-            logger.info(f"Saving model configuration: {llm_parameters}")
-            args['llm_parameters'] = llm_parameters
+            handler_model_params = handler_model_config.model_dump()
+            logger.info(f"Saving model configuration to storage: {handler_model_params}")
+
+            args['target'] = target
+            args['handler_model_params'] = handler_model_params
             self.model_storage.json_set('args', args)
 
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+        pass
+
+    def _predict_for_default_mode(self, df: pd.DataFrame, args: Dict) -> pd.DataFrame:
         pass
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:

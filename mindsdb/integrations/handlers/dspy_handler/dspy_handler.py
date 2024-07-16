@@ -65,7 +65,7 @@ class DSPyHandler(BaseMLEngine):
             return args['provider']
         if args['model_name'] in OPEN_AI_CHAT_MODELS:
             return 'openai'
-        raise ValueError(f"Invalid model name. Please define provider")
+        raise ValueError("Invalid model name. Please define provider")
 
     def _get_embedding_model_provider(self, args: Dict) -> str:
         if 'embedding_model_provider' in args:
@@ -73,7 +73,7 @@ class DSPyHandler(BaseMLEngine):
         if 'embedding_model_provider' not in args:
             logger.warning('No embedding model provider specified. trying to use llm provider.')
             return args.get('embedding_model_provider', self._get_llm_provider(args))
-        raise ValueError(f"Invalid model name. Please define provider")
+        raise ValueError("Invalid model name. Please define provider")
 
     def calculate_model_id(self, model_name):
         '''
@@ -114,7 +114,7 @@ class DSPyHandler(BaseMLEngine):
         # TODO: temporal workaround: serialize df and args, instead. And recreate chain (with training) every inference call.
         # ideally, we serialize the chain itself to avoid duplicate training.
 
-    def predict(self, df: pd.DataFrame, args: Dict=None) -> pd.DataFrame:
+    def predict(self, df: pd.DataFrame, args: Dict = None) -> pd.DataFrame:
         """
         Predicts a response using DSPy
 
@@ -128,7 +128,7 @@ class DSPyHandler(BaseMLEngine):
         pred_args = args['predict_params'] if args else {}
         args = self.model_storage.json_get('args')
         if 'prompt_template' not in args and 'prompt_template' not in pred_args:
-            raise ValueError(f"This model expects a `prompt_template`, please provide one.")
+            raise ValueError("This model expects a `prompt_template`, please provide one.")
         # Back compatibility for old models
         args['provider'] = args.get('provider', self._get_llm_provider(args))
         args['embedding_model_provider'] = args.get('embedding_model', self._get_embedding_model_provider(args))
@@ -240,12 +240,7 @@ class DSPyHandler(BaseMLEngine):
             response = chain(question=input_dict['question'])
         return response.answer
 
-    def predict_dspy(self,
-                     df: pd.DataFrame,
-                     args: Dict,
-                     chain,  # TODO: specify actual type
-                     llm,
-                    ) -> pd.DataFrame:
+    def predict_dspy(self, df: pd.DataFrame, args: Dict, chain, llm) -> pd.DataFrame:
         """
         Generate response using DSPy
 

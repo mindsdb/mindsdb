@@ -562,6 +562,6 @@ class LLMData(Base):
     id: int = Column(Integer, primary_key=True)
     input: str = Column(String, nullable=False)
     output: str = Column(String, nullable=False)
-    model_id: int = Column(Integer, nullable = False)
+    model_id: int = Column(Integer, nullable=False)
     created_at: datetime = Column(DateTime, default=datetime.datetime.now)
     updated_at: datetime = Column(DateTime, onupdate=datetime.datetime.now)

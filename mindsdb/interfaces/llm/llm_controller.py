@@ -22,7 +22,7 @@ class LLMDataController:
         new_llm_data = db.LLMData(
             input=input_data,
             output=output_data,
-            model_id = model_id
+            model_id=model_id
         )
         db.session.add(new_llm_data)
         db.session.commit()

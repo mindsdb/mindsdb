@@ -40,7 +40,7 @@ class TestDSPy(BaseExecutorTest):
         )
 
         self.run_sql(
-            f"""
+            """
            create model proj.test_conversational_model
            predict answer
            using
@@ -50,7 +50,7 @@ class TestDSPy(BaseExecutorTest):
             mode = 'conversational',
             user_column = 'question',
             assistant_column = 'answer',
-            prompt_template='Answer the user in a useful way: {{{{question}}}}';
+            prompt_template='Answer the user in a useful way';
         """
         )
         self.wait_predictor("proj", "test_conversational_model")
@@ -76,7 +76,7 @@ class TestDSPy(BaseExecutorTest):
         )
 
         self.run_sql(
-            f"""
+            """
            create model proj.test_conversational_model
            predict answer
            using
@@ -86,7 +86,7 @@ class TestDSPy(BaseExecutorTest):
             mode = 'conversational',
             user_column = 'question',
             assistant_column = 'answer',
-            prompt_template='Answer the user in a useful way: {{{{question}}}}';
+            prompt_template='Answer the user in a useful way';
         """
         )
         self.wait_predictor("proj", "test_conversational_model")

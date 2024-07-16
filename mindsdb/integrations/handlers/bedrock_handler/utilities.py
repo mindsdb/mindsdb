@@ -1,5 +1,5 @@
 import boto3
-from typing import Text, Optional, Any
+from typing import Text, Optional
 
 
 def create_amazon_bedrock_client(

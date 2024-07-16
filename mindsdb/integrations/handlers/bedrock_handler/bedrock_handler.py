@@ -13,6 +13,7 @@ from mindsdb.integrations.handlers.bedrock_handler.utilities import create_amazo
 
 logger = log.getLogger(__name__)
 
+
 class AmazonBedrockHandler(BaseMLEngine):
     """
     This handler handles connection and inference with the Amazon Bedrock API.
@@ -79,7 +80,7 @@ class AmazonBedrockHandler(BaseMLEngine):
 
         Returns:
             pd.DataFrame: Input data with the predicted values in a new column.
-        """  
+        """
         args = self.model_storage.json_get('args')
         handler_model_params = args['handler_model_params']
         mode = args['handler_model_params']['mode']
@@ -186,7 +187,7 @@ class AmazonBedrockHandler(BaseMLEngine):
         if attribute == 'args':
             del args['handler_model_params']
             return pd.DataFrame(args.items(), columns=['key', 'value'])
-        
+
         elif attribute == 'metadata':
             model_id = args.get('model_id')
             try:
@@ -197,7 +198,7 @@ class AmazonBedrockHandler(BaseMLEngine):
             except Exception as e:
                 meta = {'error': str(e)}
             return pd.DataFrame(dict(meta).items(), columns=['key', 'value'])
-        
+
         else:
             tables = ['args', 'metadata']
             return pd.DataFrame(tables, columns=['tables'])

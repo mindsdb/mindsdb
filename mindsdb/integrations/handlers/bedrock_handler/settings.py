@@ -65,7 +65,7 @@ class AmazonBedrockHandlerEngineConfig(BaseModel):
         ParameterValidationUtilities.validate_parameter_spelling(cls, values)
 
         return values
-    
+
     @model_validator(mode="after")
     @classmethod
     def check_access_to_amazon_bedrock(cls, model: BaseModel) -> BaseModel:
@@ -89,9 +89,9 @@ class AmazonBedrockHandlerEngineConfig(BaseModel):
             bedrock_client.list_foundation_models()
         except ClientError as e:
             raise ValueError(f"Invalid Amazon Bedrock credentials: {e}!")
-        
+
         return model
-        
+
 
 class AmazonBedrockHandlerModelConfig(BaseModel):
     """
@@ -164,7 +164,7 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
         ParameterValidationUtilities.validate_parameter_spelling(cls, values)
 
         return values
-    
+
     @model_validator(mode="after")
     @classmethod
     def check_model_id_and_params_are_valid(cls, model: BaseModel) -> BaseModel:
@@ -185,9 +185,9 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
             bedrock_client.get_foundation_model(modelIdentifier=model.model_id)
         except ClientError as e:
             raise ValueError(f"Invalid Amazon Bedrock model ID: {e}!")
-        
+
         return model
-    
+
     @field_validator("mode")
     @classmethod
     def check_mode_is_supported(cls, mode: Text) -> Text:
@@ -202,9 +202,9 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
         """
         if mode not in AmazonBedrockHandlerSettings.SUPPORTED_MODES:
             raise ValueError(f"Mode {mode} is not supported. The supported modes are {''.join(AmazonBedrockHandlerSettings.SUPPORTED_MODES)}!")
-        
+
         return mode
-    
+
     @model_validator(mode="after")
     @classmethod
     def check_mode_params_provided(cls, model: BaseModel) -> BaseModel:
@@ -223,10 +223,10 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
         # TODO: Find the other possible parameters/combinations for the default mode.
         if model.mode == AmazonBedrockHandlerSettings.DEFAULT_MODE:
             if model.prompt_template is None and model.question_column is None:
-                raise ValueError(f"Either prompt_template or question_column with an optional context_column need to be provided for the default mode!")
-            
+                raise ValueError("Either prompt_template or question_column with an optional context_column need to be provided for the default mode!")
+
             if model.prompt_template is not None and model.question_column is not None:
-                raise ValueError(f"Only one of prompt_template or question_column with an optional context_column can be provided for the default mode!")
+                raise ValueError("Only one of prompt_template or question_column with an optional context_column can be provided for the default mode!")
 
         # TODO: Add validations for other modes.
 
@@ -241,7 +241,7 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
         """
         bedrock_model_param_names = [val.get("bedrock_model_param_name") for key, val in self.model_json_schema(mode='serialization')['properties'].items() if val.get("bedrock_model_param")]
         bedrock_model_params = [key for key, val in self.model_json_schema(mode='serialization')['properties'].items() if val.get("bedrock_model_param")]
-        
+
         handler_model_params = [key for key, val in self.model_json_schema(mode='serialization')['properties'].items() if not val.get("bedrock_model_param")]
 
         inference_config = {}

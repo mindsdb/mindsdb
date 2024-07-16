@@ -137,13 +137,17 @@ class BaseUnitTest:
         con.execute('DROP TABLE IF EXISTS {}'.format(table))
         con.execute('CREATE TABLE {} AS SELECT * FROM data'.format(table))
 
-    def wait_predictor(self, project, name, timeout=100):
+    def wait_predictor(self, project, name, timeout=100, filters=None):
         """
         Wait for the predictor to be created,
         raising an exception if predictor creation fails or exceeds timeout
         """
         for attempt in range(timeout):
-            ret = self.run_sql(f"select * from {project}.models where name='{name}'")
+            sql = f"select * from {project}.models where name='{name}'"
+            if filters is not None:
+                for k, v in filters.items():
+                    sql += f" and {k}='{v}'"
+            ret = self.run_sql(sql)
             if not ret.empty:
                 status = ret["STATUS"][0]
                 if status == "complete":
@@ -158,14 +162,12 @@ class BaseUnitTest:
         ret = self.command_executor.execute_command(parse_sql(sql, dialect="mindsdb"))
         assert ret.error_code is None, f"SQL execution failed with error: {ret.error_code}"
         if ret.data is not None:
-            columns = [col.alias if col.alias else col.name for col in ret.columns]
-            return pd.DataFrame(ret.data, columns=columns)
+            return ret.data.to_df()
 
     @staticmethod
     def ret_to_df(ret):
         # converts executor response to dataframe
-        columns = [col.alias if col.alias is not None else col.name for col in ret.columns]
-        return pd.DataFrame(ret.data, columns=columns)
+        return ret.data.to_df()
 
     def reset_prom_collectors(self) -> None:
         """Resets collectors in the default Prometheus registry.
@@ -186,9 +188,9 @@ class BaseExecutorTest(BaseUnitTest):
     Set up executor: mock data handler
     """
 
-    def setup_method(self):
+    def setup_method(self, import_dummy_ml=False):
         super().setup_method()
-        self.set_executor()
+        self.set_executor(import_dummy_ml=import_dummy_ml)
 
     def set_executor(
         self,
@@ -305,15 +307,7 @@ class BaseExecutorTest(BaseUnitTest):
                 )
 
             return handler_response(
-                pd.DataFrame(
-                    [
-                        {
-                            "table_schema": "public",
-                            "table_name": "table1",
-                            "table_type": "BASE TABLE",
-                        }
-                    ]
-                )
+                pd.DataFrame(tables_ar)
             )
 
         mock_handler().get_tables.side_effect = get_tables_f
@@ -382,8 +376,7 @@ class BaseExecutorDummyML(BaseExecutorTest):
     """
 
     def setup_method(self):
-        super().setup_method()
-        self.set_executor(import_dummy_ml=True)
+        super().setup_method(import_dummy_ml=True)
 
     def run_sql(self, sql, throw_error=True, database='mindsdb'):
         self.command_executor.session.database = database
@@ -393,11 +386,13 @@ class BaseExecutorDummyML(BaseExecutorTest):
         if throw_error:
             assert ret.error_code is None
         if ret.data is not None:
-            columns = [
-                col.alias if col.alias is not None else col.name
-                for col in ret.columns
-            ]
-            return pd.DataFrame(ret.data, columns=columns)
+            return ret.data.to_df()
+
+    def get_models(self):
+        models = {}
+        for p in self.db.Predictor.query.all():
+            models[p.id] = p
+        return models
 
 
 class BaseExecutorDummyLLM(BaseExecutorTest):
@@ -518,6 +513,6 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
         )
         if ret.error_code is not None:
             raise Exception()
-        if isinstance(ret.data, list):
-            ret.records = self.ret_to_df(ret).to_dict('records')
+        if ret.data is not None:
+            ret.records = ret.data.records
         return ret

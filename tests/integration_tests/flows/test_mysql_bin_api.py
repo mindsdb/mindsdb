@@ -1,6 +1,3 @@
-import json
-from pathlib import Path
-
 import mysql.connector
 import pytest
 
@@ -22,7 +19,6 @@ class TestMySqlBinApi(TestMySqlApi):
         1. Do some preconditions
         2. Specify SQL query needs to be executed
         3. Send the query to a Mindsdb app in binary mode and execute the query"""
-
 
     def query(self, _query, encoding='utf-8'):
 
@@ -62,7 +58,7 @@ class TestMySqlBinApi(TestMySqlApi):
         queries = [
             f'''
                SELECT TABLE_NAME,TABLE_COMMENT,IF(TABLE_TYPE='BASE TABLE', 'TABLE', TABLE_TYPE),
-               TABLE_SCHEMA FROM INFORMATION_SCHEMA.TABLES 
+               TABLE_SCHEMA FROM INFORMATION_SCHEMA.TABLES
                WHERE TABLE_SCHEMA LIKE '{integration}'
                 AND ( TABLE_TYPE='BASE TABLE' OR TABLE_TYPE='VIEW' ) ORDER BY TABLE_SCHEMA, TABLE_NAME
             ''',
@@ -71,7 +67,7 @@ class TestMySqlBinApi(TestMySqlApi):
                   max(`Custom SQL Query`.`x1`) AS `sum_height_ok`,
                   max(`Custom SQL Query`.`y`) AS `sum_length1_ok`
                 FROM (
-                  SELECT res.x1, res.y 
+                  SELECT res.x1, res.y
                    FROM files.{test_ds_name} as source
                    JOIN mindsdb.{predictor_name} as res
                 ) `Custom SQL Query`
@@ -99,25 +95,25 @@ class TestMySqlBinApi(TestMySqlApi):
                 SELECT `Custom SQL Query`.`x1` AS `height`,
                   `Custom SQL Query`.`y` AS `length1`
                 FROM (
-                   SELECT res.x1, res.y 
+                   SELECT res.x1, res.y
                    FROM files.{test_ds_name} as source
                    JOIN mindsdb.{predictor_name} as res
                 ) `Custom SQL Query`
                 LIMIT 100
             ''',
             f'''
-            SELECT 
+            SELECT
               `Custom SQL Query`.`x1` AS `x1`,
               SUM(`Custom SQL Query`.`y2`) AS `sum_y2_ok`
             FROM (
-               SELECT res.x1, res.y as y2 
+               SELECT res.x1, res.y as y2
                FROM files.{test_ds_name} as source
                JOIN mindsdb.{predictor_name} as res
             ) `Custom SQL Query`
             GROUP BY 1
             ''',
             f'''
-            SELECT 
+            SELECT
               `Custom SQL Query`.`x1` AS `x1`,
               COUNT(DISTINCT TRUNCATE(`Custom SQL Query`.`y`,0)) AS `ctd_y_ok`
             FROM (

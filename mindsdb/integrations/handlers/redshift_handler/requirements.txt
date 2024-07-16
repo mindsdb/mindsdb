@@ -1,2 +1,1 @@
-redshift_connector
-sqlalchemy-redshift
+-r mindsdb/integrations/handlers/postgres_handler/requirements.txt

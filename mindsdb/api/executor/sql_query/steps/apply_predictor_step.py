@@ -94,7 +94,8 @@ class ApplyPredictorRowStepCall(ApplyPredictorBaseCall):
         result = ResultSet()
         result.is_prediction = True
         if len(predictions) == 0:
-            predictions = pd.DataFrame([], columns=project_datanode.get_table_columns(predictor_name))
+            columns = [col['name'] for col in project_datanode.get_table_columns(predictor_name)]
+            predictions = pd.DataFrame([], columns=columns)
 
         result.from_df(
             predictions,
@@ -116,25 +117,15 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
 
         params = step.params or {}
 
-        # handle columns mapping to model
-        if step.columns_map is not None:
-            # columns_map = {str: Identifier}
-            for model_col, table_col in step.columns_map.items():
-                if len(table_col.parts) != 2:
-                    continue
-                table_name, col_name = table_col.parts
-                data_cols = data.find_columns(col_name, table_alias=table_name)
-                if len(data_cols) == 0:
-                    continue
-                # rename first found column
-                data_cols[0].alias = model_col
+        # adding __mindsdb_row_id, use first table if exists
+        if len(data.find_columns('__mindsdb_row_id')) == 0:
+            table = data.get_tables()[0] if len(data.get_tables()) > 0 else None
 
-        for table in data.get_tables()[:1]:  # add  __mindsdb_row_id only for first table
             row_id_col = Column(
                 name='__mindsdb_row_id',
-                database=table['database'],
-                table_name=table['table_name'],
-                table_alias=table['table_alias']
+                database=table['database'] if table is not None else None,
+                table_name=table['table_name'] if table is not None else None,
+                table_alias=table['table_alias'] if table is not None else None
             )
 
             row_id = self.context.get('row_id')
@@ -181,7 +172,7 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
 
         project_datanode = self.session.datahub.get(project_name)
         if len(data) == 0:
-            cols = project_datanode.get_table_columns(predictor_name) + ['__mindsdb_row_id']
+            cols = [col['name'] for col in project_datanode.get_table_columns(predictor_name)] + ['__mindsdb_row_id']
             for col in cols:
                 result.add_column(Column(
                     name=col,
@@ -202,6 +193,27 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
                 predictions = None
 
             if predictions is None:
+                # handle columns mapping to model
+                if step.columns_map is not None:
+                    # step.columns_map is {str: Identifier}
+
+                    cols_to_rename = {}
+                    for model_col, table_col in step.columns_map.items():
+                        if len(table_col.parts) != 2:
+                            continue
+                        tbl_name, col_name = table_col.parts
+                        data_cols = data.find_columns(col_name, table_alias=tbl_name)
+                        if len(data_cols) == 0:
+                            continue
+                        # add first found column to rename list
+                        cols_to_rename[data.get_col_index(data_cols[0])] = model_col
+                    # update input data
+                    if cols_to_rename:
+                        columns = list(table_df.columns)
+                        for col_idx, name in cols_to_rename.items():
+                            columns[col_idx] = name
+                        table_df = table_df.set_axis(columns, axis=1)
+
                 version = None
                 if len(step.predictor.parts) > 1 and step.predictor.parts[-1].isdigit():
                     version = int(step.predictor.parts[-1])

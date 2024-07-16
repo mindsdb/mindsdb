@@ -1,11 +1,16 @@
 from typing import Iterable, List, Optional
 
+import re
+import hashlib
+
+
 import pandas as pd
-from mindsdb_sql import parse_sql, Identifier
+from mindsdb_sql import parse_sql
+from mindsdb_sql.parser.ast import Identifier
 from mindsdb_sql.planner.utils import query_traversal
 
-
 from mindsdb.utilities import log
+from mindsdb.utilities.context import context as ctx
 
 logger = log.getLogger(__name__)
 
@@ -19,10 +24,10 @@ class SQLAgent:
             include_tables: Optional[List[str]] = None,
             ignore_tables: Optional[List[str]] = None,
             sample_rows_in_table_info: int = 3,
+            cache: Optional[dict] = None
     ):
         self._database = database
         self._command_executor = command_executor
-        self._integration_controller = command_executor.session.integration_controller
 
         self._sample_rows_in_table_info = int(sample_rows_in_table_info)
 
@@ -33,6 +38,7 @@ class SQLAgent:
             # ignore_tables and include_tables should not be used together.
             # include_tables takes priority if it's set.
             self._tables_to_ignore = ignore_tables or []
+        self._cache = cache
 
     def _call_engine(self, query: str, database=None):
         # switch database
@@ -60,17 +66,26 @@ class SQLAgent:
         query_traversal(ast_query, _check_f)
 
     def get_usable_table_names(self) -> Iterable[str]:
+
+        cache_key = f'{ctx.company_id}_{self._database}_tables'
+
+        # first check cache and return if found
+        if self._cache:
+            cached_tables = self._cache.get(cache_key)
+            if cached_tables:
+                return cached_tables
+
         if self._tables_to_include:
             return self._tables_to_include
 
         ret = self._call_engine('show databases;')
-        dbs = [lst[0] for lst in ret.data if lst[0] != 'information_schema']
+        dbs = [lst[0] for lst in ret.data.to_lists() if lst[0] != 'information_schema']
         usable_tables = []
         for db in dbs:
             if db != 'mindsdb' and db == self._database:
                 try:
                     ret = self._call_engine('show tables', database=db)
-                    tables = [lst[0] for lst in ret.data if lst[0] != 'information_schema']
+                    tables = [lst[0] for lst in ret.data.to_lists() if lst[0] != 'information_schema']
                     for table in tables:
                         # By default, include all tables in a database unless expilcitly ignored.
                         table_name = f'{db}.{table}'
@@ -78,8 +93,40 @@ class SQLAgent:
                             usable_tables.append(table_name)
                 except Exception as e:
                     logger.warning('Unable to get tables for %s: %s', db, str(e))
+        if self._cache:
+            self._cache.set(cache_key, set(usable_tables))
 
         return usable_tables
+
+    def _resolve_table_names(self, table_names: List[str], all_tables: List[Identifier]) -> List[Identifier]:
+        """
+        Tries to find table (which comes directly from an LLM) by its name
+        Handles backticks (`) and tables without databases
+        """
+
+        # index to lookup table
+        tables_idx = {}
+        for table in all_tables:
+            # by name
+            tables_idx[(table.parts[-1],)] = table
+            # by path
+            tables_idx[tuple(table.parts)] = table
+
+        tables = []
+        for table_name in table_names:
+
+            # Some LLMs (e.g. gpt-4o) may include backticks or quotes when invoking tools.
+            table_name = table_name.strip(' `"\'')
+            table = Identifier(table_name)
+
+            # resolved table
+            table2 = tables_idx.get(tuple(table.parts))
+
+            if table2 is None:
+                raise ValueError(f"Table {table} not found in database")
+            tables.append(table2)
+
+        return tables
 
     def get_table_info(self, table_names: Optional[List[str]] = None) -> str:
         """ Get information about specified tables.
@@ -87,35 +134,77 @@ class SQLAgent:
         If `sample_rows_in_table_info`, the specified number of sample rows will be
         appended to each table description. This can increase performance as demonstrated in the paper.
         """
-        all_table_names = self.get_usable_table_names()
+        try:
+            cache_key = self._generate_cache_key(table_names)
+            tables_info = self._get_info_from_cache(cache_key, table_names)
+
+            if not tables_info:
+                tables_info = self._fetch_table_info(table_names)
+                self._update_cache(cache_key, tables_info)
+
+            return "\n\n".join(tables_info.values())
+        except Exception as e:
+            logger.error(f"Error fetching table info: {e}")
+            return f"Error fetching table info: {e}"
+
+    def _generate_cache_key(self, table_names: Optional[List[str]]) -> str:
+        # Base part of the cache key
+        base_key = f"{ctx.company_id}_{self._database}_table_info"
+
+        # If table names are provided, sort and concatenate them
+        if table_names:
+            sorted_names = "_".join(sorted(table_names))
+            full_key = f"{base_key}_{sorted_names}"
+        else:
+            full_key = base_key
+
+        # Hash the full key to ensure a constant length
+        hashed_key = hashlib.sha256(full_key.encode()).hexdigest()
+
+        return hashed_key
+
+    def _get_info_from_cache(self, cache_key: str, table_names: Optional[List[str]]) -> dict:
+        """Retrieve table information from cache if available."""
+        cached_info = self._cache.get(cache_key) if self._cache else None
+        if cached_info and table_names:
+            # Verify all requested tables are in cache
+            missing_tables = set([name for name in table_names if name not in cached_info])
+            if not missing_tables:
+                return {name: cached_info[name] for name in table_names}
+        return cached_info if not table_names else {}
+
+    def _fetch_table_info(self, table_names: Optional[List[str]]) -> dict:
+        """Fetch table information from the database."""
+        all_tables = [Identifier(name) for name in self.get_usable_table_names()]
+
         if table_names is not None:
-            missing_tables = set(table_names).difference(all_table_names)
-            if missing_tables:
-                raise ValueError(f"table_names {missing_tables} not found in database")
-            all_table_names = table_names
+            all_tables = self._resolve_table_names(table_names, all_tables)
 
-        tables = []
-        for table in all_table_names:
-            table_info = self._get_single_table_info(table)
-            tables.append(table_info)
+        tables_info = {}
+        for table in all_tables:
+            tables_info[table.parts[-1]] = self._get_single_table_info(table)
+        return tables_info
 
-        final_str = "\n\n".join(tables)
-        return final_str
+    def _update_cache(self, cache_key: str, tables_info: dict) -> None:
+        """Update the cache with the provided table information."""
+        if self._cache:
+            self._cache.set(cache_key, tables_info)
 
-    def get_table_columns(self, table_name: str) -> List[str]:
-        controller = self._integration_controller
-        cols_df = controller.get_data_handler(self._database).get_columns(table_name).data_frame
-        return cols_df['Field'].to_list()
+    def _get_single_table_info(self, table: Identifier) -> str:
+        if len(table.parts) < 2:
+            raise ValueError(f"Database is required for table: {table}")
+        integration, table_name = table.parts[-2:]
+        table_str = str(table)
 
-    def _get_single_table_info(self, table_str: str) -> str:
-        controller = self._integration_controller
-        integration, table_name = table_str.split('.')
-        cols_df = controller.get_data_handler(integration).get_columns(table_name).data_frame
-        fields = cols_df['Field'].to_list()
-        dtypes = cols_df['Type'].to_list()
+        dn = self._command_executor.session.datahub.get(integration)
+
+        fields, dtypes = [], []
+        for column in dn.get_table_columns(table_name):
+            fields.append(column['name'])
+            dtypes.append(column.get('type', ''))
 
         info = f'Table named `{table_name}`\n'
-        info += f"\n/* Sample with first {self._sample_rows_in_table_info} rows from table `{table_str}`:\n"
+        info += f"\n/* Sample with first {self._sample_rows_in_table_info} rows from table {table_str}:\n"
         info += "\t".join([field for field in fields])
         info += self._get_sample_rows(table_str, fields) + "\n*/"
         info += '\nColumn data types: ' + ",\t".join(
@@ -126,14 +215,20 @@ class SQLAgent:
         command = f"select {','.join(fields)} from {table} limit {self._sample_rows_in_table_info};"
         try:
             ret = self._call_engine(command)
-            sample_rows = ret.data
+            sample_rows = ret.data.to_lists()
             sample_rows = list(
                 map(lambda ls: [str(i) if len(str(i)) < 100 else str[:100] + '...' for i in ls], sample_rows))
             sample_rows_str = "\n" + "\n".join(["\t".join(row) for row in sample_rows])
-        except Exception:
+        except Exception as e:
+            logger.warning(e)
             sample_rows_str = "\n" + "\t [error] Couldn't retrieve sample rows!"
 
         return sample_rows_str
+
+    def _clean_query(self, query: str) -> str:
+        # Sometimes LLM can input markdown into query tools.
+        cmd = re.sub(r'```(sql)?', '', query)
+        return cmd
 
     def query(self, command: str, fetch: str = "all") -> str:
         """Execute a SQL command and return a string representing the results.
@@ -150,24 +245,25 @@ class SQLAgent:
             columns_str = ', '.join([repr(col.name) for col in ret.columns])
             res = f'Output columns: {columns_str}\n'
 
-            if len(ret.data) > limit_rows:
-                df = pd.DataFrame(ret.data, columns=[col.name for col in ret.columns])
+            data = ret.to_lists()
+            if len(data) > limit_rows:
+                df = pd.DataFrame(data, columns=[col.name for col in ret.columns])
 
-                res += f'Result has {len(ret.data)} rows. Description of data:\n'
+                res += f'Result has {len(data)} rows. Description of data:\n'
                 res += str(df.describe(include='all')) + '\n\n'
                 res += f'First {limit_rows} rows:\n'
 
             else:
                 res += 'Result:\n'
 
-            res += _tidy(ret.data[:limit_rows])
+            res += _tidy(data[:limit_rows])
             return res
 
-        ret = self._call_engine(command)
+        ret = self._call_engine(self._clean_query(command))
         if fetch == "all":
-            result = _repr_result(ret)
+            result = _repr_result(ret.data)
         elif fetch == "one":
-            result = _tidy(ret.data[0])
+            result = _tidy(ret.data.to_lists()[0])
         else:
             raise ValueError("Fetch parameter must be either 'one' or 'all'")
         return str(result)

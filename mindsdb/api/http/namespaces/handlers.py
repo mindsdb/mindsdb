@@ -183,7 +183,7 @@ class BYOMUpload(Resource):
         code_file_path = params['code'].name.decode()
         try:
             module_file_path = params['modules'].name.decode()
-        except AttributeError:
+        except KeyError:
             module_file_path = Path(code_file_path).parent / 'requirements.txt'
             module_file_path.touch()
             module_file_path = str(module_file_path)

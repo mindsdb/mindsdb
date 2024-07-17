@@ -249,7 +249,7 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
             if model.prompt_template is not None and model.question_column is not None:
                 raise ValueError("Only one of prompt_template or question_column with an optional context_column can be provided for the default mode!")
             
-            if model.context is not None and model.question_column is None:
+            if model.context_column is not None and model.question_column is None:
                 raise ValueError("context_column can only be provided with question_column for the default mode!")
 
         # TODO: Add validations for other modes.

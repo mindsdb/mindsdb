@@ -191,6 +191,7 @@ class BYOMUpload(Resource):
         connection_args = {
             'code': code_file_path,
             'modules': module_file_path,
+            'mode': params.get('mode'),
             'type': params.get('type')
         }
 

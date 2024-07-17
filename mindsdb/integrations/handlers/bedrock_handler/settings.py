@@ -18,10 +18,17 @@ class AmazonBedrockHandlerSettings(BaseSettings):
 
     SUPPORTED_MODES : List
         List of supported modes for the handler.
+
+    DEFAULT_TEXT_MODEL_ID : Text
+        The default model ID to use for text generation. This will be the default model ID for the default, conversational and conversational-full modes.
     """
+    # Modes.
     # TODO: Add other modes.
     DEFAULT_MODE: ClassVar[Text] = 'default'
     SUPPORTED_MODES: ClassVar[List] = ['default']
+
+    # Model IDs.
+    DEFAULT_TEXT_MODEL_ID: ClassVar[Text] = 'amazon.titan-text-express-v1'
 
 
 class AmazonBedrockHandlerEngineConfig(BaseModel):
@@ -52,7 +59,7 @@ class AmazonBedrockHandlerEngineConfig(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def check_params_contain_typos(cls, values: Any) -> Any:
+    def check_if_params_contain_typos(cls, values: Any) -> Any:
         """
         Validator to check if there are any typos in the parameters.
 
@@ -130,8 +137,7 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
         The connection arguments passed required to connect to Amazon Bedrock. These are AWS credentials provided when creating the engine.
     """
     # User-provided Handler Model Prameters: These are parameters specific to the MindsDB handler for Amazon Bedrock provided by the user.
-    # TODO: Make model_id optional and add a default model?
-    model_id: Text = Field(...)
+    model_id: Text = Field(None)
     mode: Optional[Text] = Field(AmazonBedrockHandlerSettings.DEFAULT_MODE)
     prompt_template: Optional[Text] = Field(None)
     question_column: Optional[Text] = Field(None)
@@ -151,7 +157,7 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def check_params_contain_typos(cls, values: Any) -> Any:
+    def check_if_params_contain_typos(cls, values: Any) -> Any:
         """
         Validator to check if there are any typos in the parameters.
 
@@ -164,33 +170,10 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
         ParameterValidationUtilities.validate_parameter_spelling(cls, values)
 
         return values
-
-    @model_validator(mode="after")
-    @classmethod
-    def check_model_id_and_params_are_valid(cls, model: BaseModel) -> BaseModel:
-        """
-        Validator to check if the model ID and the parameters provided for the model are valid.
-
-        Args:
-            values (Any): Model configuration.
-
-        Raises:
-            ValueError: If the model ID provided is invalid or the parameters provided are invalid for the chosen model.
-        """
-        bedrock_client = create_amazon_bedrock_client(
-            **model.connection_args
-        )
-
-        try:
-            bedrock_client.get_foundation_model(modelIdentifier=model.model_id)
-        except ClientError as e:
-            raise ValueError(f"Invalid Amazon Bedrock model ID: {e}!")
-
-        return model
-
+    
     @field_validator("mode")
     @classmethod
-    def check_mode_is_supported(cls, mode: Text) -> Text:
+    def check_if_mode_is_supported(cls, mode: Text) -> Text:
         """
         Validator to check if the mode provided is supported.
 
@@ -207,7 +190,45 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
 
     @model_validator(mode="after")
     @classmethod
-    def check_mode_params_provided(cls, model: BaseModel) -> BaseModel:
+    def check_if_model_id_is_valid_and_correct_for_mode(cls, model: BaseModel) -> BaseModel:
+        """
+        Validator to check if the model ID and the parameters provided for the model are valid.
+        If a model ID is not provided, the default model ID for that mode will be used.
+
+        Args:
+            values (Any): Model configuration.
+
+        Raises:
+            ValueError: If the model ID provided is invalid or the parameters provided are invalid for the chosen model.
+        """
+        # TODO: Set the default model ID for other modes.
+        if model.model_id is None:
+            if model.mode == 'default':
+                model.model_id = AmazonBedrockHandlerSettings.DEFAULT_TEXT_MODEL_ID
+
+            # If the default model ID is used, skip the validation.
+            return model
+
+        bedrock_client = create_amazon_bedrock_client(
+            **model.connection_args
+        )
+
+        try:
+            # Check if the model ID is valid and accessible.
+            model = bedrock_client.get_foundation_model(modelIdentifier=model.model_id)
+        except ClientError as e:
+            raise ValueError(f"Invalid Amazon Bedrock model ID: {e}!")
+        
+        # Check if the model is suitable for the mode provided.
+        if model.mode == 'default':
+            if 'TEXT' not in model['modelDetails']['outputModalities']:
+                raise ValueError(f"The models used for the {model.mode} should support text generation!")
+
+        return model
+
+    @model_validator(mode="after")
+    @classmethod
+    def check_if_mode_params_are_valid(cls, model: BaseModel) -> BaseModel:
         """
         Validator to check if the parameters required for the chosen mode provided are valid.
 
@@ -221,7 +242,7 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
         # 1. prompt_template.
         # 2. question_column with an optional context_column.
         # TODO: Find the other possible parameters/combinations for the default mode.
-        if model.mode == AmazonBedrockHandlerSettings.DEFAULT_MODE:
+        if model.mode == 'default':
             if model.prompt_template is None and model.question_column is None:
                 raise ValueError("Either prompt_template or question_column with an optional context_column need to be provided for the default mode!")
 

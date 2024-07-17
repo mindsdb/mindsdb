@@ -94,19 +94,31 @@ class HandlersCache:
                 pass
             self._start_clean()
 
-    def get(self, name: str) -> Optional[DatabaseHandler]:
+    def get(self, name: str, thread_safe: bool = False) -> Optional[DatabaseHandler]:
         """ get handler from cache by name
 
             Args:
                 name (str): handler name
+                thread_safe (bool): if True, any thread can get handler, otherwise only thread that set handler can get it
 
             Returns:
                 DatabaseHandler
         """
         with self._lock:
-            key = (name, ctx.company_id, threading.get_native_id())
+            key = None
+            # If thread_safe is True, then any thread can get handler.
+            # Therefore, the thread ID is ignored when searching for a handler.
+            if thread_safe:
+                for key_ in self.handlers.keys():
+                    if key_[0] == name and key_[1] == ctx.company_id:
+                        key = key_
+
+            # If thread_safe is False, then only the thread that set the handler can get it.
+            else:
+                key = (name, ctx.company_id, threading.get_native_id()) if (name, ctx.company_id, threading.get_native_id()) in self.handlers else None
+            
             if (
-                key not in self.handlers
+                key is None
                 or self.handlers[key]['expired_at'] < time()
             ):
                 return None

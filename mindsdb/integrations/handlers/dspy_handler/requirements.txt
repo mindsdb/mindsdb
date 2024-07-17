@@ -2,7 +2,6 @@ openai==1.6.1
 wikipedia==1.4.0
 tiktoken==0.5.2
 anthropic>=0.26.1
-litellm==1.35.0
 chromadb # Knowledge bases.
 dspy-ai==2.4.12
 dspy==0.1.4

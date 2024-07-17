@@ -139,7 +139,8 @@ AI: {response}'''
         # Use last message as prompt, remove other questions.
         user_column = args.get('user_column', USER_COLUMN)
         if user_column not in df.columns:
-            raise Exception(f"Expected user input in column `{user_column}`, which is not found in the input data. Either provide the column, or redefine the expected column at model creation (`USING user_column = 'value'`)")  # noqa
+            raise Exception(
+                f"Expected user input in column `{user_column}`, which is not found in the input data. Either provide the column, or redefine the expected column at model creation (`USING user_column = 'value'`)")  # noqa
         df.iloc[:-1, df.columns.get_loc(user_column)] = None
         return self.run_agent(df, agent, args, pred_args)
 

@@ -514,14 +514,15 @@ class IntegrationController:
         Returns:
             BaseHandler: data handler
         """
-        handler = self.handlers_cache.get(name)
-        if handler is not None:
-            return handler
-
         integration_record = self._get_integration_record(name, case_sensitive)
         integration_engine = integration_record.engine
 
         integration_meta = self.handlers_import_status[integration_engine]
+
+        handler = self.handlers_cache.get(name, integration_meta['thread_safe'])
+        if handler is not None:
+            return handler
+
         if integration_meta.get('type') != HANDLER_TYPE.DATA:
             raise Exception(f"Handler '{name}' must be DATA type")
 
@@ -628,7 +629,8 @@ class IntegrationController:
                 'folder': handler_folder_name,
                 'dependencies': dependencies
             },
-            'version': module.version
+            'version': module.version,
+            'thread_safe': getattr(module, 'thread_safe', False)
         }
         if import_error is not None:
             handler_meta['import']['error_message'] = str(import_error)

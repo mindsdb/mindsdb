@@ -10,6 +10,7 @@ from langchain.schema import SystemMessage
 from langchain_openai import ChatOpenAI
 from langchain_community.chat_models import ChatAnthropic, ChatAnyscale, ChatLiteLLM, ChatOllama
 from langchain_core.prompts import PromptTemplate
+from langfuse import Langfuse
 from langfuse.callback import CallbackHandler
 
 import numpy as np
@@ -29,6 +30,7 @@ from mindsdb.integrations.handlers.langchain_handler.constants import (
     DEFAULT_ASSISTANT_COLUMN
 )
 from mindsdb.integrations.handlers.langchain_handler.log_callback_handler import LogCallbackHandler
+from mindsdb.integrations.handlers.langchain_handler.langfuse_callback_handler import LangfuseCallbackHandler
 from mindsdb.integrations.handlers.langchain_handler.safe_output_parser import SafeOutputParser
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
 from mindsdb.integrations.handlers.langchain_handler.tools import setup_tools
@@ -78,7 +80,8 @@ class LangChainHandler(BaseMLEngine):
         self.generative = True
         self.default_agent_tools = DEFAULT_AGENT_TOOLS
         self.log_callback_handler = log_callback_handler
-        self.langfuse_callback_handler = langfuse_callback_handler
+        self.langfuse_callback_handler = langfuse_callback_handler  # native langfuse callback handler
+        self.mdb_langfuse_callback_handler = None  # custom (see langfuse_callback_handler.py)
         if self.log_callback_handler is None:
             self.log_callback_handler = LogCallbackHandler(logger)
 
@@ -122,17 +125,35 @@ class LangChainHandler(BaseMLEngine):
         langfuse_host = args.get('langfuse_host', os.getenv('LANGFUSE_HOST'))
         are_langfuse_args_present = bool(langfuse_public_key) and bool(langfuse_secret_key) and bool(langfuse_host)
 
-        if self.langfuse_callback_handler is None and are_langfuse_args_present:
-            # Trace LLM chains & tools using Langfuse.
-            self.langfuse_callback_handler = CallbackHandler(
-                host=langfuse_host,
-                public_key=langfuse_public_key,
-                secret_key=langfuse_secret_key,
-                trace_name=args.get('trace_id', None),
-            )
+        if are_langfuse_args_present:
+            if self.langfuse_callback_handler is None:
+                # Trace LLM chains & tools using native Langfuse handler
+                self.langfuse_callback_handler = CallbackHandler(
+                    host=langfuse_host,
+                    public_key=langfuse_public_key,
+                    secret_key=langfuse_secret_key,
+                    trace_name=args.get('trace_id', None),
+                )
+
+            if self.mdb_langfuse_callback_handler is None:
+                # custom tracer
+                langfuse = Langfuse(
+                    host=langfuse_host,
+                    public_key=langfuse_public_key,
+                    secret_key=langfuse_secret_key
+                )
+                self.mdb_langfuse_callback_handler = LangfuseCallbackHandler(
+                    langfuse=langfuse,
+                    trace_id=args.get('trace_id', None),
+                    observation_id=args.get('observation_id', None)
+                )
 
         if self.langfuse_callback_handler:
             all_callbacks.append(self.langfuse_callback_handler)
+
+        if self.mdb_langfuse_callback_handler:
+            # obs: we may want to unify these two, as the native langfuse handler provides details as a tree on a sub-step of the overarching custom one  # noqa
+            all_callbacks.append(self.mdb_langfuse_callback_handler)
 
         return all_callbacks
     
@@ -332,7 +353,7 @@ AI: {response}'''
                 # Handle callbacks per run.
                 all_args = args.copy()
                 all_args.update(pred_args)
-                answer = agent_executor.invoke(prompt, config={ 'callbacks': self._get_agent_callbacks(all_args) })  # TODO: add info here for agent?
+                answer = agent_executor.invoke(prompt, config={ 'callbacks': self._get_agent_callbacks(all_args) })
             except Exception as e:
                 answer = str(e)
                 if not answer.startswith("Could not parse LLM output: `"):

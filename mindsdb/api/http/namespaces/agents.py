@@ -282,6 +282,7 @@ class AgentCompletions(Resource):
         try:
             agent_model = session.model_controller.get_model(model_name_no_version, version=version, project_name=project_name)
             agent_model_record = db.Predictor.query.get(agent_model['id'])
+            model_using = agent_model.get('problem_definition').get('using')
         except PredictorRecordNotFound:
             return http_error(
                 HTTPStatus.NOT_FOUND,
@@ -295,7 +296,23 @@ class AgentCompletions(Resource):
         run_completion_span = None
         messages = request.json['messages']
         # Trace Agent completions using Langfuse if configured.
-        if os.getenv('LANGFUSE_PUBLIC_KEY') is not None:  # TODO: take from agent args?
+        if os.getenv('LANGFUSE_PUBLIC_KEY') is not None:
+
+            # metadata retrieval
+            metadata_keys = ['provider', 'model_name', 'embedding_model_provider']  # keeps keys relevant for tracing
+            trace_metadata = {}
+            for key in metadata_keys:
+                if key in model_using:
+                    trace_metadata[key] = model_using.get(key)
+            trace_metadata['skills'] = [s.type for s in existing_agent.skills]
+
+            # set up tags
+            trace_tags = []
+            if os.getenv('FLASK_ENV'):
+                trace_tags.append(os.getenv('FLASK_ENV'))  # Fix: use something other than flask_env
+            if 'provider' in trace_metadata:
+                trace_tags.append(trace_metadata['provider'])
+
             langfuse = Langfuse(
                 public_key=os.getenv('LANGFUSE_PUBLIC_KEY'),
                 secret_key=os.getenv('LANGFUSE_SECRET_KEY'),
@@ -304,7 +321,8 @@ class AgentCompletions(Resource):
             api_trace = langfuse.trace(
                 name='api-completion',
                 input=messages,
-                tags=[os.getenv('FLASK_ENV', 'unknown')]  # TODO: fix, use something else
+                tags=trace_tags,
+                metadata=trace_metadata
             )
             run_completion_span = api_trace.span(name='run-completion', input=messages)
             trace_id = api_trace.id
@@ -326,6 +344,20 @@ class AgentCompletions(Resource):
         if run_completion_span is not None and api_trace is not None:
             run_completion_span.end(output=model_output)
             api_trace.update(output=model_output)
+
+            # update metadata with tool usage
+            tool_usage = {}
+            trace = langfuse.get_trace(trace_id)
+            steps = [s.name for s in trace.observations]
+            for step in steps:
+                if 'AgentAction' in step:
+                    tool_name = step.split('-')[1]
+                    if tool_name not in tool_usage:
+                        tool_usage[tool_name] = 1
+                    tool_usage[tool_name] += 1
+            trace_metadata['tool_usage'] = tool_usage
+            api_trace.update(metadata=trace_metadata)
+
         return {
             'message': {
                 'content': model_output,

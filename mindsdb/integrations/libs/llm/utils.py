@@ -165,7 +165,7 @@ def get_llm_config(provider: str, config: Dict) -> BaseLLMConfig:
         )
     if provider == 'mindsdb':
         return MindsdbConfig(
-            llm_model_name=config['model_name'],
+            model_name=config['model_name'],
             project_name=config.get('project_name', 'mindsdb'),
         )
     raise ValueError(f'Provider {provider} is not supported.')

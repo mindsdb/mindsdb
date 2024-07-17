@@ -116,7 +116,7 @@ class HandlersCache:
             # If thread_safe is False, then only the thread that set the handler can get it.
             else:
                 key = (name, ctx.company_id, threading.get_native_id()) if (name, ctx.company_id, threading.get_native_id()) in self.handlers else None
-            
+
             if (
                 key is None
                 or self.handlers[key]['expired_at'] < time()

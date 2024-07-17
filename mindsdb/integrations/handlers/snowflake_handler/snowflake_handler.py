@@ -1,6 +1,6 @@
 from pandas import DataFrame
-from snowflake import connector
 from snowflake.sqlalchemy import snowdialect
+from snowflake import connector
 
 from mindsdb.utilities import log
 from mindsdb_sql.parser.ast.base import ASTNode

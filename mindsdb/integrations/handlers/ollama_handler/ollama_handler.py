@@ -34,32 +34,39 @@ class OllamaHandler(BaseMLEngine):
         args = args['using']
         args['target'] = target
         connection = args.get('ollama_serve_url', OllamaHandler.DEFAULT_SERVE_URL)
-        self.model_storage.json_set('args', args)
 
         def _model_check():
             """ Checks model has been pulled and that it works correctly. """
-            try:
-                return requests.post(
-                    connection + '/api/generate',
-                    json={
-                        'model': args['model_name'],
-                        'prompt': 'Hello.',
-                    }
-                ).status_code
-            except Exception:
-                return 500
+            responses = {}
+            for endpoint in ['generate', 'embeddings']:
+                try:
+                    code = requests.post(
+                        connection + f'/api/{endpoint}',
+                        json={
+                            'model': args['model_name'],
+                            'prompt': 'Hello.',
+                        }
+                    ).status_code
+                    responses[endpoint] = code
+                except Exception:
+                    responses[endpoint] = 500
+            return responses
 
-        # check model
-        response = _model_check()
-        if response != 200:
+        # check model for all supported endpoints
+        responses = _model_check()
+        if 200 not in responses.values():
             # pull model (blocking operation) and serve
             # TODO: point to the engine storage folder instead of default location
             connection = args.get('ollama_serve_url', OllamaHandler.DEFAULT_SERVE_URL)
             requests.post(connection + '/api/pull', json={'name': args['model_name']})
             # try one last time
-            response = _model_check()
-            if response != 200:
-                raise Exception(f"Ollama model `{args['model_name']}` is not working correctly (`pull` status code: {response}). Please try pulling this model manually, check it works correctly and try again.")  # noqa
+            responses = _model_check()
+            if 200 not in responses.values():
+                raise Exception(f"Ollama model `{args['model_name']}` is not working correctly. Please try pulling this model manually, check it works correctly and try again.")  # noqa
+        else:
+            args['modes'] = {k: True if v == 200 else False for k, v in responses.items()}
+
+        self.model_storage.json_set('args', args)
 
     def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
         """
@@ -76,11 +83,17 @@ class OllamaHandler(BaseMLEngine):
         model_name, target_col = args['model_name'], args['target']
         prompt_template = pred_args.get('prompt_template',
                                         args.get('prompt_template', 'Answer the following question: {{{{text}}}}'))
-        # TODO v2: add support for overriding modelfile params (e.g. temperature)
 
         # prepare prompts
         prompts, empty_prompt_ids = get_completed_prompts(prompt_template, df)
         df['__mdb_prompt'] = prompts
+
+        # setup endpoint
+        is_embedder = 'embedding' in args.get('mode', None)
+        if args['modes']['embeddings'] and is_embedder:
+            endpoint = 'embeddings'
+        else:
+            endpoint = 'generate'
 
         # call llm
         completions = []
@@ -88,24 +101,29 @@ class OllamaHandler(BaseMLEngine):
             if i not in empty_prompt_ids:
                 connection = args.get('ollama_serve_url', OllamaHandler.DEFAULT_SERVE_URL)
                 raw_output = requests.post(
-                    connection + '/api/generate',
+                    connection + f'/api/{endpoint}',
                     json={
                         'model': args['model_name'],
                         'prompt': row['__mdb_prompt'],
                     }
                 )
-                out_tokens = raw_output.content.decode().split('\n')  # stream of output tokens
+                lines = raw_output.content.decode().split('\n')  # stream of output tokens
 
-                tokens = []
-                for o in out_tokens:
-                    if o != '':
-                        # TODO v2: add support for storing `context` short conversational memory
-                        info = json.loads(o)
+                values = []
+                for line in lines:
+                    if line != '':
+                        info = json.loads(line)
                         if 'response' in info:
                             token = info['response']
-                            tokens.append(token)
+                            values.append(token)
+                        elif 'embedding' in info:
+                            embedding = info['embedding']
+                            values.append(embedding)
 
-                completions.append(''.join(tokens))
+                if is_embedder:
+                    completions.append(values)
+                else:
+                    completions.append(''.join(values))
             else:
                 completions.append('')
 

@@ -27,6 +27,7 @@ class AmazonBedrockHandlerSettings(BaseSettings):
     DEFAULT_MODE: ClassVar[Text] = 'default'
     SUPPORTED_MODES: ClassVar[List] = ['default']
 
+    # TODO: Set the default model ID for other modes.s
     # Model IDs.
     DEFAULT_TEXT_MODEL_ID: ClassVar[Text] = 'amazon.titan-text-express-v1'
 
@@ -206,9 +207,6 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
             if model.mode == 'default':
                 model.model_id = AmazonBedrockHandlerSettings.DEFAULT_TEXT_MODEL_ID
 
-            # If the default model ID is used, skip the validation.
-            return model
-
         bedrock_client = create_amazon_bedrock_client(
             **model.connection_args
         )
@@ -228,7 +226,7 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
 
     @model_validator(mode="after")
     @classmethod
-    def check_if_mode_params_are_valid(cls, model: BaseModel) -> BaseModel:
+    def check_if_params_are_valid_for_mode(cls, model: BaseModel) -> BaseModel:
         """
         Validator to check if the parameters required for the chosen mode provided are valid.
 

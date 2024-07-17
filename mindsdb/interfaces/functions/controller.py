@@ -48,7 +48,8 @@ class BYOMFunctionsController:
             self.byom_engines = []
             for name, info in self.session.integration_controller.get_all().items():
                 if info['type'] == 'ml' and info['engine'] == 'byom':
-                    self.byom_engines.append(name)
+                    if info['connection_data'].get('mode') == 'custom_function':
+                        self.byom_engines.append(name)
         return self.byom_engines
 
     def get_methods(self, engine):

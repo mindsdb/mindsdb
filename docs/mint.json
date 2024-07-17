@@ -864,7 +864,8 @@
     {
       "group": "Integrations",
       "pages": [
-        "integrations/integrations"
+        "integrations/integrations",
+        "integrations/support"
       ]
     },
     {
@@ -1003,7 +1004,6 @@
             "integrations/ai-engines/ollama",
             "integrations/ai-engines/openai",
             "integrations/ai-engines/replicate-llm",
-            "integrations/ai-engines/rag",
             "integrations/ai-engines/vertex"       
           ]
         },

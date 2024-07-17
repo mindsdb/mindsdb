@@ -213,13 +213,13 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
 
         try:
             # Check if the model ID is valid and accessible.
-            model = bedrock_client.get_foundation_model(modelIdentifier=model.model_id)
+            response = bedrock_client.get_foundation_model(modelIdentifier=model.model_id)
         except ClientError as e:
             raise ValueError(f"Invalid Amazon Bedrock model ID: {e}!")
         
         # Check if the model is suitable for the mode provided.
         if model.mode == 'default':
-            if 'TEXT' not in model['modelDetails']['outputModalities']:
+            if 'TEXT' not in response['modelDetails']['outputModalities']:
                 raise ValueError(f"The models used for the {model.mode} should support text generation!")
 
         return model

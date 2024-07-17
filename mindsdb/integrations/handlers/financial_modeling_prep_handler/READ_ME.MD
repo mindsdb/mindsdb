@@ -16,17 +16,14 @@ WITH
 ~~~~
 
 Now, you can use this established connection to query your database as follows:
-~~~~sql
-SELECT * FROM my_table;
 
-~~~~
 ### Select Data
 
-```
+~~~~sql
 SELECT *
 FROM my_table.daily_chart_table
 WHERE symbol = 'AAPL'
-```
+~~~~
 
 | Date       | Open   | High   | Low    | Close  | Adj Close | Volume   | Unadjusted Volume | Change | Change Percent | VWAP    | Change Over Time |
 |------------|--------|--------|--------|--------|-----------|----------|-------------------|--------|----------------|---------|------------------|
@@ -37,12 +34,12 @@ WHERE symbol = 'AAPL'
 | 2019-07-17 | 183.45 | 184.9  | 181.32 | 182.4  | 182.15    | 77305771 | 77305771          | -1.05  | -0.57236       | 183.0175| -0.0057236      |
 
 ### Use LIMIT Clause
-```
+~~~~sql
 SELECT *
 FROM my_table.daily_chart_table
 WHERE symbol = 'AAPL'
 LIMIT 5
-```
+~~~~
 
 | Date       | Open   | High   | Low    | Close  | Adj Close | Volume   | Unadjusted Volume | Change | Change Percent | VWAP    | Change Over Time |
 |------------|--------|--------|--------|--------|-----------|----------|-------------------|--------|----------------|---------|------------------|
@@ -54,13 +51,13 @@ LIMIT 5
 
 
 To customize specified date range, (from_date, to_date): 
-```
+~~~~sql
 SELECT *
 FROM my_table.daily_chart_table
 WHERE symbol = 'AAPL';
 AND from_date = '2023-10-10'
 AND to_date = '2023-12-10'
-```
+~~~~
 
 ### Response for AAPL Daily Chart Data
 

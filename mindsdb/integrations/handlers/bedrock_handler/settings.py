@@ -171,7 +171,7 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
         ParameterValidationUtilities.validate_parameter_spelling(cls, values)
 
         return values
-    
+
     @field_validator("mode")
     @classmethod
     def check_if_mode_is_supported(cls, mode: Text) -> Text:
@@ -216,7 +216,7 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
             response = bedrock_client.get_foundation_model(modelIdentifier=model.model_id)
         except ClientError as e:
             raise ValueError(f"Invalid Amazon Bedrock model ID: {e}!")
-        
+
         # Check if the model is suitable for the mode provided.
         if model.mode == 'default':
             if 'TEXT' not in response['modelDetails']['outputModalities']:
@@ -246,7 +246,7 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
 
             if model.prompt_template is not None and model.question_column is not None:
                 raise ValueError("Only one of prompt_template or question_column with an optional context_column can be provided for the default mode!")
-            
+
             if model.context_column is not None and model.question_column is None:
                 raise ValueError("context_column can only be provided with question_column for the default mode!")
 

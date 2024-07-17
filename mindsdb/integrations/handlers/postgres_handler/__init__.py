@@ -13,8 +13,9 @@ title = 'PostgreSQL'
 name = 'postgres'
 type = HANDLER_TYPE.DATA
 icon_path = 'icon.svg'
+thread_safe = True
 
 __all__ = [
     'Handler', 'version', 'name', 'type', 'title', 'description',
-    'connection_args', 'connection_args_example', 'import_error', 'icon_path'
+    'connection_args', 'connection_args_example', 'import_error', 'icon_path', 'thread_safe'
 ]

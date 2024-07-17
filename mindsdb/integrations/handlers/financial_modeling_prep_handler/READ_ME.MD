@@ -21,6 +21,7 @@ SELECT * FROM my_table;
 
 ~~~~
 ### Select Data
+
 ```
 SELECT *
 FROM my_table.daily_chart_table

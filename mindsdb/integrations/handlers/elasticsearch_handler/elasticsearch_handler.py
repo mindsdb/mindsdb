@@ -36,15 +36,6 @@ class ElasticsearchHandler(DatabaseHandler):
             **kwargs: arbitrary keyword arguments.
         """
         super().__init__(name)
-
-        if ('hosts' not in connection_data) and ('cloud_id' not in connection_data):
-            raise Exception("Either the hosts or cloud_id parameter should be provided!")
-
-        optional_parameters = ['hosts', 'cloud_id', 'username', 'password']
-        for parameter in optional_parameters:
-            if parameter not in connection_data:
-                connection_data[parameter] = None
-
         self.connection_data = connection_data
         self.kwargs = kwargs
 
@@ -55,7 +46,7 @@ class ElasticsearchHandler(DatabaseHandler):
         if self.is_connected is True:
             self.disconnect()
 
-    def connect(self) -> StatusResponse:
+    def connect(self) -> Elasticsearch:
         """
         Set up the connection required by the handler.
         Returns:
@@ -63,25 +54,46 @@ class ElasticsearchHandler(DatabaseHandler):
         """
 
         if self.is_connected is True:
-            return StatusResponse(True)
+            return self.connection
+        
+        # Mandatory connection parameters.
+        if not any(key in self.connection_data for key in ['hosts', 'cloud_id']):
+            raise ValueError('Either hosts or cloud_id must be provided.')
+        
+        config = {}
+
+        if self.connection_data['hosts']:
+            config['hosts'] = self.connection_data['hosts'].split(',')
+
+        if self.connection_data['cloud_id']:
+            config['cloud_id'] = self.connection_data['cloud_id']
+
+        # Username and password are optional, but if one is provided, both must be provided.
+        username = self.connection_data.get('username')
+        password = self.connection_data.get('password')
+        if username and not password:
+            raise ValueError('Password must be provided along with username.')
+        if password and not username:
+            raise ValueError('Username must be provided along with password.')
+
+        if username and password:
+            config['basic_auth'] = (username, password)
 
         try:
             self.connection = Elasticsearch(
-                hosts=self.connection_data['hosts'].split(','),
-                cloud_id=self.connection_data['cloud_id'],
-                basic_auth=(self.connection_data['username'], self.connection_data['password'])
+                **config,
             )
             self.is_connected = True
-            return StatusResponse(True)
+            return self.connection
         except ConnectionError as conn_error:
             logger.error(f'Connection error when connecting to Elasticsearch: {conn_error}')
-            return StatusResponse(False, error_message=str(conn_error))
+            raise conn_error
         except AuthenticationException as auth_error:
             logger.error(f'Authentication error when connecting to Elasticsearch: {auth_error}')
-            return StatusResponse(False, error_message=str(auth_error))
+            raise auth_error
         except Exception as e:
-            logger.error(f'Error connecting to Elasticsearch: {e}')
-            return StatusResponse(False, error_message=str(e))
+            logger.error(f'Unknown error connecting to Elasticsearch: {e}')
+            raise e
 
     def disconnect(self):
         """

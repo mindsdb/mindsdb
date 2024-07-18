@@ -1,39 +1,39 @@
 from typing import Optional
 
-import pandas as pd
 from elasticsearch import Elasticsearch
-
-from elasticsearch.exceptions import ConnectionError, AuthenticationException
-
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from elasticsearch.exceptions import AuthenticationException, ConnectionError
 from es.elastic.sqlalchemy import ESDialect
-from mindsdb.integrations.libs.base import DatabaseHandler
-
+import pandas as pd
 from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
-from mindsdb.utilities import log
+from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    HandlerStatusResponse as StatusResponse,
+    RESPONSE_TYPE,
 )
+from mindsdb.utilities import log
+
 
 logger = log.getLogger(__name__)
 
+
 class ElasticsearchHandler(DatabaseHandler):
     """
-    This handler handles connection and execution of the Airtable statements.
+    This handler handles the connection and execution of SQL statements on Elasticsearch.
     """
 
     name = 'elasticsearch'
 
-    def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
+    def __init__(self, name: str, connection_data: Optional[dict], **kwargs) -> None:
         """
-        Initialize the handler.
+        Initializes the handler.
+
         Args:
-            name (str): name of particular handler instance
-            connection_data (dict): parameters for connecting to the database
-            **kwargs: arbitrary keyword arguments.
+            name (Text): The name of the handler instance.
+            connection_data (Dict): The connection data required to connect to the AWS (S3) account.
+            kwargs: Arbitrary keyword arguments.
         """
         super().__init__(name)
         self.connection_data = connection_data
@@ -42,17 +42,23 @@ class ElasticsearchHandler(DatabaseHandler):
         self.connection = None
         self.is_connected = False
 
-    def __del__(self):
-        if self.is_connected is True:
+    def __del__(self) -> None:
+        """
+        Closes the connection when the handler instance is deleted.
+        """
+        if self.is_connected:
             self.disconnect()
 
     def connect(self) -> Elasticsearch:
         """
-        Set up the connection required by the handler.
-        Returns:
-            HandlerStatusResponse
-        """
+        Establishes a connection to the Elasticsearch host.
 
+        Raises:
+            ValueError: If the expected connection parameters are not provided.
+
+        Returns:
+            Elasticsearch: A connection object to the Elasticsearch host.
+        """
         if self.is_connected is True:
             return self.connection
         
@@ -95,55 +101,59 @@ class ElasticsearchHandler(DatabaseHandler):
             logger.error(f'Unknown error connecting to Elasticsearch: {e}')
             raise e
 
-    def disconnect(self):
+    def disconnect(self) -> None:
         """
-        Close any existing connections.
+        Closes the connection to the Elasticsearch host if it's currently open.
         """
-
         if self.is_connected is False:
             return
 
         self.connection.close()
         self.is_connected = False
-        return self.is_connected
 
     def check_connection(self) -> StatusResponse:
         """
-        Check connection to the handler.
-        Returns:
-            HandlerStatusResponse
-        """
+        Checks the status of the connection to the Elasticsearch host.
 
+        Returns:
+            StatusResponse: An object containing the success status and an error message if an error occurs.
+        """
         response = StatusResponse(False)
         need_to_close = self.is_connected is False
 
         try:
             self.connect()
+            # TODO: Execute a simple query to check the connection.
             response.success = True
+        # TODO: Make the exception handling more specific.
         except Exception as e:
-            logger.error(f'Error connecting to Elasticsearch {self.connection_data["hosts"]}, {e}!')
+            logger.error(f'Error connecting to Elasticsearch, {e}!')
             response.error_message = str(e)
-        finally:
-            if response.success is True and need_to_close:
-                self.disconnect()
-            if response.success is False and self.is_connected is True:
-                self.is_connected = False
+
+        if response.success and need_to_close:
+            self.disconnect()
+
+        elif not response.success and self.is_connected:
+            self.is_connected = False
 
         return response
 
-    def native_query(self, query: str) -> StatusResponse:
+    def native_query(self, query: str) -> Response:
         """
-        Receive raw query and act upon it somehow.
-        Args:
-            query (str): query in native format
-        Returns:
-            HandlerResponse
-        """
+        Executes a native SQL query on the Elasticsearch host and returns the result.
 
+        Args:
+            query (str): The SQL query to be executed.
+
+        Returns:
+            Response: A response object containing the result of the query or an error message.
+        """
         need_to_close = self.is_connected is False
 
         connection = self.connect()
 
+        # TODO: Make error handling more specific.
+        # TODO: Can queries outside of SELECT be executed?
         try:
             response = connection.sql.query(body={'query': query})
             records = response['rows']
@@ -169,7 +179,7 @@ class ElasticsearchHandler(DatabaseHandler):
                     )
                 )
         except Exception as e:
-            logger.error(f'Error running query: {query} on {self.connection_data["hosts"]}!')
+            logger.error(f'Error running query: {query} on Elasticsearch, {e}!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)
@@ -180,31 +190,34 @@ class ElasticsearchHandler(DatabaseHandler):
 
         return response
 
-    def query(self, query: ASTNode) -> StatusResponse:
+    def query(self, query: ASTNode) -> Response:
         """
-        Receive query as AST (abstract syntax tree) and act upon it somehow.
-        Args:
-            query (ASTNode): sql query represented as AST. May be any kind
-                of query: SELECT, INSERT, DELETE, etc
-        Returns:
-            HandlerResponse
-        """
+        Executes a SQL query represented by an ASTNode on the Elasticsearch host and retrieves the data.
 
+        Args:
+            query (ASTNode): An ASTNode representing the SQL query to be executed.
+
+        Returns:
+            Response: The response from the `native_query` method, containing the result of the SQL query execution.
+        """
         renderer = SqlalchemyRender(ESDialect)
         query_str = renderer.get_string(query, with_failback=True)
+        logger.debug(f"Executing SQL query: {query_str}")
         return self.native_query(query_str)
 
-    def get_tables(self) -> StatusResponse:
+    def get_tables(self) -> Response:
+        # TODO: Is 'indexes' right here?
         """
-        Return list of indexes that will be accessible as tables.
-        Returns:
-            HandlerResponse
-        """
+        Retrieves a list of all non-system tables (indexes) in the Elasticsearch host.
 
+        Returns:
+            Response: A response object containing a list of tables (indexes) in the Elasticsearch host.
+        """
         query = """
             SHOW TABLES
         """
         result = self.native_query(query)
+
         df = result.data_frame
         df = df.drop(['type', 'type'], axis=1)
         result.data_frame = df.rename(columns={'name': 'table_name'})
@@ -213,17 +226,25 @@ class ElasticsearchHandler(DatabaseHandler):
 
     def get_columns(self, table_name: str) -> StatusResponse:
         """
-        Returns a list of entity columns.
+        Retrieves column (field) details for a specified table (index) in the Elasticsearch host.
+
         Args:
-            table_name (str): name of one of indexes returned by self.get_tables()
+            table_name (str): The name of the table for which to retrieve column information.
+
+        Raises:
+            ValueError: If the 'table_name' is not a valid string.
+
         Returns:
-            HandlerResponse
+            Response: A response object containing the column details.
         """
+        if not table_name or not isinstance(table_name, str):
+            raise ValueError("Invalid table name provided.")
 
         query = f"""
             DESCRIBE {table_name}
         """
         result = self.native_query(query)
+
         df = result.data_frame
         df = df.drop('mapping', axis=1)
         result.data_frame = df.rename(columns={'column': 'column_name', 'type': 'data_type'})

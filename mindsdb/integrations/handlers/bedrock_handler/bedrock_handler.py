@@ -27,7 +27,7 @@ class AmazonBedrockHandler(BaseMLEngine):
 
     def create_engine(self, connection_args: Dict) -> None:
         """
-        Validates the AWS credentials provided on engine creation.
+        Validate the AWS credentials provided on engine creation.
 
         Args:
             connection_args (Dict): Parameters for the engine.
@@ -40,7 +40,7 @@ class AmazonBedrockHandler(BaseMLEngine):
 
     def create(self, target, args: Dict = None, **kwargs: Any) -> None:
         """
-        Creates a model by validating the model configuration and saving it to the storage.
+        Create a model by validating the model configuration and saving it to the storage.
 
         Args:
             target (Text): Target column name.
@@ -67,7 +67,7 @@ class AmazonBedrockHandler(BaseMLEngine):
             args['handler_model_params'] = handler_model_params
             self.model_storage.json_set('args', args)
 
-    def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+    def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> pd.DataFrame:
         """
         Make predictions using a model by invoking the Amazon Bedrock API.
 
@@ -83,7 +83,7 @@ class AmazonBedrockHandler(BaseMLEngine):
         """
         args = self.model_storage.json_get('args')
         handler_model_params = args['handler_model_params']
-        mode = args['handler_model_params']['mode']
+        mode = handler_model_params['mode']
         model_id = handler_model_params['model_id']
         inference_config = handler_model_params.get('inference_config')
         target = args['target']
@@ -146,7 +146,7 @@ class AmazonBedrockHandler(BaseMLEngine):
 
         return prompts
 
-    def _predict_for_default_mode(self, model_id: Text, prompts: List[Text], inference_config: Dict) -> Dict:
+    def _predict_for_default_mode(self, model_id: Text, prompts: List[Text], inference_config: Dict) -> List[Text]:
         """
         Make predictions for the default mode of the Amazon Bedrock handler.
 

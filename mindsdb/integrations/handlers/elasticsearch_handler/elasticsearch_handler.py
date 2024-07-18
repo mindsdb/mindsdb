@@ -1,12 +1,10 @@
 from typing import Optional
-from collections import OrderedDict
 
 import pandas as pd
 from elasticsearch import Elasticsearch
 
 from elasticsearch.exceptions import ConnectionError, AuthenticationException
 
-from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from es.elastic.sqlalchemy import ESDialect
 from mindsdb.integrations.libs.base import DatabaseHandler
@@ -19,7 +17,6 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 
 logger = log.getLogger(__name__)
 
@@ -39,8 +36,6 @@ class ElasticsearchHandler(DatabaseHandler):
             **kwargs: arbitrary keyword arguments.
         """
         super().__init__(name)
-        self.parser = parse_sql
-        self.dialect = 'elasticsearch'
 
         if ('hosts' not in connection_data) and ('cloud_id' not in connection_data):
             raise Exception("Either the hosts or cloud_id parameter should be provided!")

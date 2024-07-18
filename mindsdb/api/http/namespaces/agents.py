@@ -277,18 +277,6 @@ class AgentCompletions(Resource):
             existing_agent.params = {}
         existing_agent.params['openai_api_key'] = existing_agent.params.get('openai_api_key', os.getenv('OPENAI_API_KEY'))
 
-        # Model needs to exist.
-        model_name_no_version, version = db.Predictor.get_name_and_version(existing_agent.model_name)
-        try:
-            agent_model = session.model_controller.get_model(model_name_no_version, version=version, project_name=project_name)
-            agent_model_record = db.Predictor.query.get(agent_model['id'])
-        except PredictorRecordNotFound:
-            return http_error(
-                HTTPStatus.NOT_FOUND,
-                'Model not found',
-                f'Model with name {existing_agent.model_name} not found'
-            )
-
         trace_id = None
         observation_id = None
         api_trace = None
@@ -321,7 +309,7 @@ class AgentCompletions(Resource):
             tools=[]
         )
 
-        output_col = agent_model_record.to_predict[0]
+        output_col = session.agents_controller.assistant_column
         model_output = completion.iloc[-1][output_col]
         if run_completion_span is not None and api_trace is not None:
             run_completion_span.end(output=model_output)

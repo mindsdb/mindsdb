@@ -1,0 +1,388 @@
+openapi: 3.0.3
+info:
+  title: Minds API
+  version: 1.0.0
+tags:
+  - name: minds
+    description: >
+      In general this endpoints are the same as existing /projects/{project_name}/agents.
+      The differences in the form of the request and response.
+  - name: datasources
+    description: >
+      This endpoints mostly repeat existing /databases endpoints.
+      The difference is that current works only with user's datasources, while
+      /databases also works with our internal 'system' and 'projects' databaes.
+  - name: other_proposals
+    description: >
+      Will be nice to have in future
+paths:
+  /projects/{projectName}/minds:
+    parameters:
+      - $ref: '#/components/parameters/projectName'
+    get:
+      summary: Returns list of existing minds.
+      tags:
+        - minds
+      description: Like GET /projects/<project_name>/agents. Always return all existing minds.
+      responses:
+        '200':
+          description: List of minds.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Mind'
+    post:
+      summary: Create a mind.
+      tags:
+        - minds
+      description: Like POST /projects/<project_name>/agents
+      requestBody:
+        description: Mind to add
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MindCreate'
+      responses:
+        '201':
+          description: Mind created.
+        '400':
+          description: Mind can not be created.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Mind cannot be created, as a mind with that name already exists
+  /projects/{projectName}/minds/{mindName}:
+    parameters:
+      - $ref: '#/components/parameters/projectName'
+      - $ref: '#/components/parameters/mindName'
+    get:
+      summary: Return Mind's data.
+      tags:
+        - minds
+      description: Like GET /projects/<project_name>/agents/<agent_name>
+      responses:
+        '200':
+          description: The mind's data.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mind'
+        '404':
+          description: Datasource not found
+    patch:
+      summary: Update the mind.
+      tags:
+        - minds
+      requestBody:
+        description: new properties of mind
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MindUpdate'
+      responses:
+        '200':
+          description: Mind updated.
+        '400':
+          description: Mind can not be updated.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Datasource not found
+    delete:
+      summary: Delete the mind.
+      tags:
+        - minds
+      requestBody:
+        description: Mind to delete
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cascade:
+                  description: delete or not related data sources
+                  type: boolean
+                  default: false
+                  example: true
+      responses:
+        '200':
+          description: The mind deleted.
+        '400':
+          description: Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: The mind not found.
+  /projects/{projectName}/minds/{mindName}/datasources:
+    parameters:
+      - $ref: '#/components/parameters/projectName'
+      - $ref: '#/components/parameters/mindName'
+    post:
+      summary: Add datasource to the mind.
+      tags:
+        - minds
+      description: Add datasource to the mind's datasources list.
+      requestBody:
+        description: Datasource to add
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: my_postgres_connection
+      responses:
+        '200':
+          description: Datasource added to mind's datasources list.
+        '400':
+          description: Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Mind not exists.
+        '409':
+          description: Datasource with that name already in the list.
+  /projects/{projectName}/datasources:
+    parameters:
+      - $ref: '#/components/parameters/projectName'
+    get:
+      summary: Get list of datasources
+      tags:
+        - datasources
+      responses:
+        '200':
+          description: List of datasources
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Datasource'
+    post:
+      summary: Create a datasource.
+      tags:
+        - datasources
+      description: Like POST /databases
+      requestBody:
+        description: Datasource connection data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DatasourceCreate'
+      responses:
+        '201':
+          description: Datasource created
+        '400':
+          description: Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Datasource cannot be created, as a Datasource with that name already exists
+  /projects/{projectName}/datasources/{datasourceName}:
+    parameters:
+      - $ref: '#/components/parameters/projectName'
+      - $ref: '#/components/parameters/datasourceName'
+    get:
+      summary: Get datasource data
+      tags:
+        - datasources
+      responses:
+        '200':
+          description: Datasource data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Datasource'
+        '404':
+          description: Datasource not found
+    patch:
+      summary: Modify the datasources
+      tags:
+        - datasources
+      requestBody:
+        description: Datasource data for update
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DatasourceUpdate'
+      responses:
+        '200':
+          description: Datasource modified
+        '400':
+          description: Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Datasource not found
+    delete:
+      summary: Delete the datasources
+      tags:
+        - datasources
+      responses:
+        '200':
+          description: Datasource deleted
+        '404':
+          description: Datasource not found
+  /llm_models:
+    get:
+      summary: Get list of available LLM models
+      description: >
+        User have to specify LLM model name when creating a mind.
+        Will be good to have a route that returns list of available LLM models.
+      tags:
+        - other_proposals
+      responses:
+        '200':
+          description: List of available LLM models
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                example: ["gpt-4o", "llama-3b"]
+
+components:
+  parameters:
+    projectName:
+      name: projectName
+      description: name of the project
+      in: path
+      required: true
+      schema:
+        type: string
+        default: mindsdb
+    mindName:
+      name: mindName
+      description: name of the mind
+      in: path
+      required: true
+      schema:
+        type: string
+        example: my_mind
+    datasourceName:
+      name: datasourceName
+      description: name of the datasource
+      in: path
+      required: true
+      schema:
+        type: string
+        example: my_postgres
+  schemas:
+    DatasourceUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          example: my_postgres_connection
+        engine:
+          type: string
+          example: postgres
+        project_name:
+          type: string
+          default: mindsdb
+          example: mindsdb
+        connection_data:
+          type: object
+          example: {"user": "root", "password": "123456"}
+    DatasourceCreate:
+      allOf:
+        - $ref: '#/components/schemas/DatasourceUpdate'
+        - type: object
+          required:
+            - name
+            - engine
+    Datasource:
+      allOf:
+        - $ref: '#/components/schemas/DatasourceCreate'
+        - type: object
+          properties:
+            connection_data:
+              type: object
+              example: {"user": "root", "password": "******"}
+    MindUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          example: my_db_mind
+        model_name:
+          type: string
+          example: gpt-4o
+        params:
+          type: object
+        datasources:
+          type: array
+          description: names of datasources
+          items:
+            type: string
+          example: ["my_datasource_1", "my_datasource_2"]
+    MindCreate:
+      allOf:
+        - $ref: '#/components/schemas/MindUpdate'
+        - type: object
+          required:
+            - name
+            - model_name
+    Mind:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 99
+        company_id:
+          type: integer
+          format: int64
+          example: 777
+        name:
+          type: string
+          example: my_db_mind
+        project_name:
+          type: string
+          example: mindsdb
+        model_name:
+          type: string
+          example: gpt-4o
+        params:
+          type: object
+        updated_at:
+          type: string
+          format: datetime
+          description: datetime
+          example: 2024-07-10 12:30:10.100500
+        created_at:
+          type: string
+          format: datetime
+          description: datetime
+          example: 2024-07-10 12:30:10.100500
+    Error:
+      type: object
+      properties:
+        title:
+          type: string
+          example: Wrong arguments
+        detail:
+          type: string
+          example: First argument must be integer

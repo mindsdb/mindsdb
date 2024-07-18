@@ -36,7 +36,10 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
         """Run when tool ends running."""
         parent_run_uuid = kwargs.get('parent_run_id', uuid4()).hex
         action_span = self.action_uuid_to_span.get(parent_run_uuid)
-        action_span.update(metadata={'finished': datetime.datetime.now().isoformat()})
+        action_span.update(
+            output=output,  # tool output is action output (unless superseded by a global action output)
+            metadata={'finished': datetime.datetime.now().isoformat()}
+        )
 
     def on_tool_error(
             self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
@@ -98,7 +101,8 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
         if run_uuid not in self.action_uuid_to_span:
             return
         action_span = self.action_uuid_to_span.pop(run_uuid)
-        action_span.update(output=finish)
+        if finish is not None:
+            action_span.update(output=finish)  # supersedes tool output
         action_span.end()
 
     def auth_check(self):

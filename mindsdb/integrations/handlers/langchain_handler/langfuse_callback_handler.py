@@ -1,5 +1,6 @@
 from typing import Any, Dict, Union, Optional
 from uuid import uuid4
+import datetime
 
 from langchain_core.callbacks.base import BaseCallbackHandler
 
@@ -16,7 +17,6 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
         self.langfuse = langfuse
         self.trace_id = trace_id
         self.observation_id = observation_id
-        self.tool_uuid_to_span = {}
         self.chain_uuid_to_span = {}
         self.action_uuid_to_span = {}
 
@@ -24,30 +24,31 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
             self, serialized: Dict[str, Any], input_str: str, **kwargs: Any
     ) -> Any:
         """Run when tool starts running."""
-        run_uuid = kwargs.get('run_id', uuid4()).hex
-        tool_span = self.langfuse.span(
-            name=f'{serialized.get("name", "")}-{run_uuid}',
-            trace_id=self.trace_id,
-            parent_observation_id=self.observation_id,
-            input=input_str
-        )
-        self.tool_uuid_to_span[run_uuid] = tool_span
+        parent_run_uuid = kwargs.get('parent_run_id', uuid4()).hex
+        action_span = self.action_uuid_to_span.get(parent_run_uuid)
+        metadata = {
+            'tool_name': serialized.get("name", "tool"),
+            'started': datetime.datetime.now().isoformat()
+        }
+        action_span.update(metadata=metadata)
 
     def on_tool_end(self, output: str, **kwargs: Any) -> Any:
         """Run when tool ends running."""
-        run_uuid = kwargs.get('run_id', uuid4()).hex
-        if run_uuid not in self.tool_uuid_to_span:
-            return
-        tool_span = self.tool_uuid_to_span.pop(run_uuid)
-        tool_span.update(output=output)
-        tool_span.end()
+        parent_run_uuid = kwargs.get('parent_run_id', uuid4()).hex
+        action_span = self.action_uuid_to_span.get(parent_run_uuid)
+        action_span.update(metadata={'finished': datetime.datetime.now().isoformat()})
 
     def on_tool_error(
             self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
     ) -> Any:
         """Run when tool errors."""
-        # Do nothing for now.
-        pass
+        parent_run_uuid = kwargs.get('parent_run_id', uuid4()).hex
+        action_span = self.action_uuid_to_span.get(parent_run_uuid)
+        try:
+            error_str = str(error)
+        except Exception as e:
+            error_str = "Couldn't get error string."
+        action_span.update(metadata={'error_description': error_str})
 
     def on_chain_start(
             self, serialized: Dict[str, Any], inputs: Dict[str, Any], **kwargs: Any

@@ -353,7 +353,7 @@ class AgentCompletions(Resource):
                 if 'AgentAction' in step:
                     tool_name = step.split('-')[1]
                     if tool_name not in tool_usage:
-                        tool_usage[tool_name] = 1
+                        tool_usage[tool_name] = 0
                     tool_usage[tool_name] += 1
             trace_metadata['tool_usage'] = tool_usage
             api_trace.update(metadata=trace_metadata)

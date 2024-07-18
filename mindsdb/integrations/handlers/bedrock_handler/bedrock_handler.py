@@ -7,8 +7,8 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.libs.llm.utils import get_completed_prompts
 from mindsdb.integrations.libs.api_handler_exceptions import MissingConnectionParams
+from mindsdb.integrations.handlers.bedrock_handler.utilities import create_amazon_bedrock_client
 from mindsdb.integrations.handlers.bedrock_handler.settings import AmazonBedrockHandlerEngineConfig, AmazonBedrockHandlerModelConfig
-from mindsdb.integrations.handlers.bedrock_handler.utilities import create_amazon_bedrock_client, create_amazon_bedrock_runtime_client
 
 
 logger = log.getLogger(__name__)
@@ -156,7 +156,8 @@ class AmazonBedrockHandler(BaseMLEngine):
             inference_config (Dict): Inference configuration supported by the Amazon Bedrock API.
         """
         predictions = []
-        bedrock_runtime_client = create_amazon_bedrock_runtime_client(
+        bedrock_runtime_client = create_amazon_bedrock_client(
+            'bedrock-runtime',
             **self.engine_storage.get_connection_args()
         )
 
@@ -192,6 +193,7 @@ class AmazonBedrockHandler(BaseMLEngine):
             model_id = args.get('model_id')
             try:
                 bedrock_client = create_amazon_bedrock_client(
+                    'bedrock',
                     **self.engine_storage.get_connection_args()
                 )
                 meta = bedrock_client.get_foundation_model(modelIdentifier=model_id)['modelDetails']

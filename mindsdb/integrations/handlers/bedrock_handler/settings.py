@@ -87,6 +87,7 @@ class AmazonBedrockHandlerEngineConfig(BaseModel):
             ValueError: If the AWS credentials are invalid or do not have access to Amazon Bedrock.
         """
         bedrock_client = create_amazon_bedrock_client(
+            "bedrock",
             model.aws_access_key_id,
             model.aws_secret_access_key,
             model.region_name,
@@ -208,6 +209,7 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
                 model.model_id = AmazonBedrockHandlerSettings.DEFAULT_TEXT_MODEL_ID
 
         bedrock_client = create_amazon_bedrock_client(
+            "bedrock",
             **model.connection_args
         )
 

@@ -152,8 +152,8 @@ class ElasticsearchHandler(DatabaseHandler):
 
         connection = self.connect()
 
+        # TODO: Is the es package a better fit for running queries?
         # TODO: Make error handling more specific.
-        # TODO: Can queries outside of SELECT be executed?
         try:
             response = connection.sql.query(body={'query': query})
             records = response['rows']
@@ -200,13 +200,13 @@ class ElasticsearchHandler(DatabaseHandler):
         Returns:
             Response: The response from the `native_query` method, containing the result of the SQL query execution.
         """
+        # TODO: Add support for other query types.
         renderer = SqlalchemyRender(ESDialect)
         query_str = renderer.get_string(query, with_failback=True)
         logger.debug(f"Executing SQL query: {query_str}")
         return self.native_query(query_str)
 
     def get_tables(self) -> Response:
-        # TODO: Is 'indexes' right here?
         """
         Retrieves a list of all non-system tables (indexes) in the Elasticsearch host.
 

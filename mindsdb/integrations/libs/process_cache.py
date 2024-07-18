@@ -238,8 +238,8 @@ class ProcessCache:
             if self._init is False:
                 self._init = True
                 for handler in preload_handlers:
-                    self._keep_alive[handler.__name__] = preload_handlers[handler]
-                    self.cache[handler.__name__] = {
+                    self._keep_alive[handler.name] = preload_handlers[handler]
+                    self.cache[handler.name] = {
                         'last_usage_at': time.time(),
                         'handler_module': handler.__module__,
                         'processes': [

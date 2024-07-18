@@ -1,2 +1,1 @@
 pydantic-settings >= 2.1.0
-boto3 >= 1.34.131

@@ -42,12 +42,16 @@ MAIN_RULE_IGNORES = {
     "DEP002": ["psycopg2-binary", "lark"],
 }
 
-# THe following packages need exceptions because they are optional deps of some other packages. e.g. langchain CAN use openai
-# (pysqlite3 is imported in an unusual way in the chromadb handler and needs to be excluded too)
-# pypdf and openpyxl are optional deps of langchain, that are used for the file handler
-# sqlalchemy-solr is an optional sqlalchemy depend that is used in the solr handler
+
+# The following packages need exceptions.
+# Either because 1) they are optional deps of some other packages. E.g.:
+#   - langchain CAN use openai
+#   - pypdf and openpyxl are optional deps of langchain, that are used for the file handler
+# Or 2) because they are imported in an unusual way. E.g.:
+#   - pysqlite3 in the chromadb handler
+#   - dspy-ai in langchain handler
 OPTIONAL_HANDLER_DEPS = ["pysqlite3", "torch", "openai", "tiktoken", "wikipedia", "anthropic", "pypdf", "openpyxl",
-                         "sentence-transformers", "faiss-cpu", "litellm", "chromadb", "sqlalchemy-solr"]
+                         "sentence-transformers", "faiss-cpu", "litellm", "chromadb", "dspy-ai", "sqlalchemy-solr"]
 
 # List of rules we can ignore for specific packages
 # Here we ignore any packages in the main requirements.txt for "listed but not used" errors, because they will be used for the core code but not necessarily in a given handler

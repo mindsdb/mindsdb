@@ -6,9 +6,8 @@ class CompletionParameters(BaseModel):
     model: str  # The model to be used for the API call.
     prompt_template: Optional[str] = None  # Template for the prompt to be used.
 
-    # Optional OpenAI params: see https://platform.openai.com/docs/api-reference/chat/create
-    functions: List = []  # List of functions for advanced model operations.
-    function_call: str = ""  # String to specify a particular function call, if needed.
+    # Optional OpenAI params: see  https://platform.openai.com/docs/api-reference/chat/runs
+    tool_choice: Optional[str] = None  # Specific tool to be used, if applicable.
 
     timeout: Optional[Union[float, int]] = None  # Timeout for the API request.
     temperature: Optional[float] = None  # Controls randomness: higher value means more random responses.
@@ -33,7 +32,6 @@ class CompletionParameters(BaseModel):
     base_url: Optional[str] = None  # Base URL of the API.
     api_version: Optional[str] = None  # Version of the API to be used.
     api_key: str  # API key for authentication.
-    llm_model_list: Optional[List] = None  # List of models, API bases, keys, etc., for dynamic selection.
 
     class Config:
         extra = Extra.forbid

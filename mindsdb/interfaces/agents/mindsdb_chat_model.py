@@ -63,7 +63,6 @@ class ChatMindsdb(BaseChatModel):
     model_name: str
     project_name: Optional[str] = 'mindsdb'
     model_info: Optional[dict] = None
-    output_col: Optional[str] = None
     project_datanode: Optional[Any] = None
 
     @property
@@ -74,7 +73,8 @@ class ChatMindsdb(BaseChatModel):
         self, messages: List[dict]
     ) -> Any:
 
-        model_info = self.model_info
+        problem_definition = self.model_info['problem_definition'].get('using', {})
+        output_col = self.model_info['predict']
 
         # TODO create table for conversational model?
         if len(messages) > 1:
@@ -87,10 +87,18 @@ class ChatMindsdb(BaseChatModel):
 
         record = {}
         params = {}
-        if model_info.get('mode') == 'conversational':
-            user_column = model_info['user_column']
+        if problem_definition.get('mode') == 'conversational':
+            # flag for langchain to prevent calling agent inside of agent
+            if self.model_info['engine'] == 'langchain':
+                params['mode'] = 'chat_model'
+
+            user_column = problem_definition['user_column']
             record[user_column] = content
+        elif 'column' in problem_definition:
+            # input defined as 'column' param
+            record[problem_definition['column']] = content
         else:
+            # failback, maybe handler supports template injection
             params['prompt_template'] = content
 
         predictions = self.project_datanode.predict(
@@ -99,7 +107,7 @@ class ChatMindsdb(BaseChatModel):
             params=params,
         )
 
-        col = self.output_col
+        col = output_col
         if col not in predictions.columns:
             # get first column
             col = predictions.columns[0]
@@ -123,10 +131,7 @@ class ChatMindsdb(BaseChatModel):
         session = SessionController()
         session.database = 'mindsdb'
 
-        model = session.model_controller.get_model(model_name, project_name=project_name)
-
-        values['model_info'] = model['problem_definition'].get('using', {})
-        values["output_col"] = model['predict']
+        values['model_info'] = session.model_controller.get_model(model_name, project_name=project_name)
 
         project_datanode = session.datahub.get(values['project_name'])
 

@@ -77,6 +77,12 @@ class TestBYOM(BaseExecutorDummyML):
         assert ret['y'][0] == '34'
         assert ret['z'][0] == 7
 
+        # test without table
+        ret = self.run_sql('''
+            select myml.fibo(4) x
+        ''')
+        assert ret['x'][0] == 3
+
     def test_byom(self, byom_type):
 
         code = dedent("""

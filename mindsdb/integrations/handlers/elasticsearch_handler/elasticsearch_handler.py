@@ -1,9 +1,9 @@
 from typing import Optional
 
-from elasticsearch import Elasticsearch
-from elasticsearch.exceptions import AuthenticationException, ConnectionError
+from es.elastic.api import connect, Connection
+from es.exceptions import OperationalError, PogrammingError, TransportError
 from es.elastic.sqlalchemy import ESDialect
-import pandas as pd
+from pandas import DataFrame
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
@@ -49,7 +49,7 @@ class ElasticsearchHandler(DatabaseHandler):
         if self.is_connected:
             self.disconnect()
 
-    def connect(self) -> Elasticsearch:
+    def connect(self) -> Connection:
         """
         Establishes a connection to the Elasticsearch host.
 
@@ -57,49 +57,34 @@ class ElasticsearchHandler(DatabaseHandler):
             ValueError: If the expected connection parameters are not provided.
 
         Returns:
-            Elasticsearch: A connection object to the Elasticsearch host.
+            es.elastic.api.Connection: A connection object to the Elasticsearch host.
         """
         if self.is_connected is True:
             return self.connection
         
         # Mandatory connection parameters.
-        if not any(key in self.connection_data for key in ['hosts', 'cloud_id']):
-            raise ValueError('Either hosts or cloud_id must be provided.')
+        if 'host' not in self.connection_data:
+            raise ValueError('Host is a required parameter.')
         
-        config = {}
+        config = {
+            'host': self.connection_data['host']
+        }
 
-        if self.connection_data['hosts']:
-            config['hosts'] = self.connection_data['hosts'].split(',')
-
-        if self.connection_data['cloud_id']:
-            config['cloud_id'] = self.connection_data['cloud_id']
-
-        # Username and password are optional, but if one is provided, both must be provided.
-        username = self.connection_data.get('username')
-        password = self.connection_data.get('password')
-        if username and not password:
-            raise ValueError('Password must be provided along with username.')
-        if password and not username:
-            raise ValueError('Username must be provided along with password.')
-
-        if username and password:
-            config['basic_auth'] = (username, password)
+        # Optional connection parameters.
+        optional_params = ['port', 'user', 'password', 'fetch_size'],
+        for param in optional_params:
+            if param in self.connection_data:
+                config[param] = self.connection_data[param]
 
         try:
-            self.connection = Elasticsearch(
+            self.connection = connect(
                 **config,
             )
             self.is_connected = True
             return self.connection
-        except ConnectionError as conn_error:
-            logger.error(f'Connection error when connecting to Elasticsearch: {conn_error}')
-            raise conn_error
-        except AuthenticationException as auth_error:
-            logger.error(f'Authentication error when connecting to Elasticsearch: {auth_error}')
-            raise auth_error
-        except Exception as e:
-            logger.error(f'Unknown error connecting to Elasticsearch: {e}')
-            raise e
+        except OperationalError as e:
+            logger.error(f'Error connecting to Elasticsearch, {e}!')
+            raise
 
     def disconnect(self) -> None:
         """
@@ -122,8 +107,11 @@ class ElasticsearchHandler(DatabaseHandler):
         need_to_close = self.is_connected is False
 
         try:
-            self.connect()
-            # TODO: Execute a simple query to check the connection.
+            connection = self.connect()
+
+            # Execute a simple query to test the connection.
+            with connection.cursor() as cur:
+                cur.execute('select 1;')
             response.success = True
         # TODO: Make the exception handling more specific.
         except Exception as e:
@@ -150,40 +138,26 @@ class ElasticsearchHandler(DatabaseHandler):
         """
         need_to_close = self.is_connected is False
 
-        connection = self.connect()
-
-        # TODO: Is the es package a better fit for running queries?
         # TODO: Make error handling more specific.
-        try:
-            response = connection.sql.query(body={'query': query})
-            records = response['rows']
-            columns = response['columns']
-
-            new_records = True
-            while new_records:
-                try:
-                    if response['cursor']:
-                        response = connection.sql.query(body={'query': query, 'cursor': response['cursor']})
-
-                        new_records = response['rows']
-                        records = records + new_records
-                except Exception as e:
-                    new_records = False
-
-            if records:
+        connection = self.connect()
+        with connection.cursor() as cur:
+            try:
+                cur.execute(query)
+                result = cur.fetchall()
                 response = Response(
                     RESPONSE_TYPE.TABLE,
-                    data_frame=pd.DataFrame(
-                        records,
-                        columns=[column['name'] for column in columns]
+                    DataFrame(
+                        result,
+                        columns=[x[0] for x in cur.description]
                     )
                 )
-        except Exception as e:
-            logger.error(f'Error running query: {query} on Elasticsearch, {e}!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
-            )
+            except Exception as e:
+                logger.error(f"Error running query: {query} on Elasticsearch, {e}!")
+                response = Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_code=0,
+                    error_message=str(e)
+                )
 
         if need_to_close is True:
             self.disconnect()

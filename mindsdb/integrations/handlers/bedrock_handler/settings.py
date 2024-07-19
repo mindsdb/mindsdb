@@ -30,7 +30,7 @@ class AmazonBedrockHandlerSettings(BaseSettings):
 
     # TODO: Set the default model ID for other modes.
     # Model IDs.
-    DEFAULT_TEXT_MODEL_ID: ClassVar[Text] = 'amazon.titan-text-express-v1'
+    DEFAULT_TEXT_MODEL_ID: ClassVar[Text] = 'amazon.titan-text-premier-v1:0'
 
 
 class AmazonBedrockHandlerEngineConfig(BaseModel):

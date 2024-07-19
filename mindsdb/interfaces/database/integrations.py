@@ -712,8 +712,6 @@ class IntegrationController:
 
         # import all handlers in thread
         def import_handlers():
-            # give time to start server
-            time.sleep(3)
             self.get_handlers_import_status()
 
         thread = threading.Thread(target=import_handlers)

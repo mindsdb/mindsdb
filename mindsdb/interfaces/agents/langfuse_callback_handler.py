@@ -5,9 +5,9 @@ from langchain_core.callbacks.base import BaseCallbackHandler
 
 from mindsdb.utilities import log
 
-
 logger = log.getLogger(__name__)
 logger.setLevel('DEBUG')
+
 
 class LangfuseCallbackHandler(BaseCallbackHandler):
     '''Langchain callback handler that traces tool & chain executions using Langfuse.'''

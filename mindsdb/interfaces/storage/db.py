@@ -343,7 +343,7 @@ class ChatBots(Base):
     agent_id = Column(ForeignKey("agents.id", name="fk_agent_id"))
 
     # To be removed when existing chatbots are backfilled with newly created Agents.
-    model_name = Column(String, nullable=False)
+    model_name = Column(String)
     database_id = Column(Integer)
     params = Column(JSON)
 
@@ -461,7 +461,7 @@ class Agents(Base):
     name = Column(String, nullable=False)
     project_id = Column(Integer, nullable=False)
 
-    model_name = Column(String, nullable=False)
+    model_name = Column(String, nullable=True)
     params = Column(JSON)
 
     updated_at = Column(

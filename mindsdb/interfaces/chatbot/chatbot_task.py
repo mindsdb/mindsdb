@@ -11,7 +11,7 @@ from mindsdb.utilities import log
 
 from .polling import MessageCountPolling, RealtimePolling
 from .memory import DBMemory, HandlerMemory
-from .chatbot_executor import MultiModeBotExecutor, BotExecutor
+from .chatbot_executor import MultiModeBotExecutor, BotExecutor, AgentExecutor
 
 from .types import ChatBotMessage
 
@@ -62,7 +62,9 @@ class ChatBotTask(BaseTask):
         else:
             raise Exception(f"Not supported polling: {polling}")
 
-        if self.bot_params.get('modes') is None:
+        if self.agent_id is not None:
+            self.bot_executor_cls = AgentExecutor
+        elif self.bot_params.get('modes') is None:
             self.bot_executor_cls = BotExecutor
         else:
             self.bot_executor_cls = MultiModeBotExecutor

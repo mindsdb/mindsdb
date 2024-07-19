@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from typing import Text, Dict, List, Optional, Any
+from typing import Text, Tuple, Dict, List, Optional, Any
 
 from mindsdb.utilities import log
 
@@ -93,6 +93,10 @@ class AmazonBedrockHandler(BaseMLEngine):
             prompts = self._prepare_data_for_default_mode(df, args)
             predictions = self._predict_for_default_mode(model_id, prompts, inference_config)
 
+        elif mode == 'conversational':
+            prompt = self._prepare_data_for_conversational_mode(df, args)
+            predictions = self._predict_for_conversational_mode(model_id, prompt, inference_config)
+
         pred_df = pd.DataFrame(predictions, columns=[target])
         return pred_df
 
@@ -108,43 +112,116 @@ class AmazonBedrockHandler(BaseMLEngine):
             List[Dict]: Prepared prompts for invoking the Amazon Bedrock API.
         """
         handler_model_params = args['handler_model_params']
+        question_column = handler_model_params.get('question_column')
+        context_column = handler_model_params.get('context_column')
+        prompt_template = handler_model_params.get('prompt_template')
 
         # Prepare the parameters + data for the prediction.
         # Question column.
-        if handler_model_params.get('question_column') is not None:
-            if handler_model_params['question_column'] not in df.columns:
-                raise ValueError(f"Column {handler_model_params['question_column']} not found in the dataframe!")
+        if question_column is not None:
+            questions, empty_prompt_ids = self._prepare_data_with_question_and_context_columns(
+                df,
+                question_column,
+                context_column
+            )
 
-            if handler_model_params.get('context_column'):
-                empty_prompt_ids = np.where(
-                    df[[args['context_column'], args['question_column']]]
-                    .isna()
-                    .all(axis=1)
-                    .values
-                )[0]
-                contexts = list(df[args['context_column']].apply(lambda x: str(x)))
-                questions_without_context = list(df[args['question_column']].apply(lambda x: str(x)))
+        # Prompt template.
+        elif prompt_template is not None:
+            questions, empty_prompt_ids = self._prepare_data_with_prompt_template(df, prompt_template)
 
-                questions = [
-                    f'Context: {c}\nQuestion: {q}\nAnswer: '
-                    for c, q in zip(contexts, questions_without_context)
-                ]
+        # Prepare the prompts.
+        questions = [question for i, question in enumerate(questions) if i not in empty_prompt_ids]
+        prompts = [{"role": "user", "content": [{"text": question}]} for question in questions]
 
-            else:
-                questions = list(df[args['question_column']].apply(lambda x: str(x)))
-                empty_prompt_ids = np.where(
-                    df[[args['question_column']]].isna().all(axis=1).values
-                )[0]
+        return prompts
+    
+    def _prepare_data_for_conversational_mode(self, df: pd.DataFrame, args: Dict) -> List[Dict]:
+        """
+        Prepare the input data for the conversational mode of the Amazon Bedrock handler.
+
+        Args:
+            df (pd.DataFrame): Input data to make predictions on.
+            args (Dict): Parameters passed when making predictions.
+
+        Returns:
+            List[Dict]: Prepared prompts for invoking the Amazon Bedrock API.
+        """
+        handler_model_params = args['handler_model_params']
+        question_column = handler_model_params.get('question_column')
+        context_column = handler_model_params.get('context_column')
+        prompt_template = handler_model_params.get('prompt_template')
+
+        # Prepare the parameters + data for the prediction.
+        # Question column.
+        if question_column is not None:
+            questions, empty_prompt_ids = self._prepare_data_with_question_and_context_columns(
+                df,
+                question_column,
+                context_column
+            )
 
         # Prompt template.
         if handler_model_params.get('prompt_template') is not None:
-            questions, empty_prompt_ids = get_completed_prompts(handler_model_params['prompt_template'], df)
+            questions, empty_prompt_ids = self._prepare_data_with_prompt_template(df, prompt_template)
 
         # Prepare the prompts.
-        prompts = [{"role": "user", "content": [{"text": question}]} for question in questions]
-        prompts = [j for i, j in enumerate(prompts) if i not in empty_prompt_ids]
+        questions = [question for i, question in enumerate(questions) if i not in empty_prompt_ids]
+        prompt = [{"role": "user", "content": [{"text": question} for question in questions]}]
 
-        return prompts
+        return prompt
+    
+    def _prepare_data_with_question_and_context_columns(self, df: pd.DataFrame, question_column: Text, context_column: Text = None) -> Tuple[List[Text], List[int]]:
+        """
+        Prepare the input data with question and context columns for the Amazon Bedrock handler.
+
+        Args:
+            df (pd.DataFrame): Input data to make predictions on.
+            question_column (Text): The column containing the questions.
+            context_column (Text): The column containing the context.
+
+        Returns:
+            List[Dict]: Prepared prompts for invoking the Amazon Bedrock API.
+        """
+        if question_column not in df.columns:
+            raise ValueError(f"Column {question_column} not found in the dataframe!")
+        
+        if context_column:
+            empty_prompt_ids = np.where(
+                df[[context_column, question_column]]
+                .isna()
+                .all(axis=1)
+                .values
+            )[0]
+            contexts = list(df[context_column].apply(lambda x: str(x)))
+            questions_without_context = list(df[question_column].apply(lambda x: str(x)))
+
+            questions = [
+                f'Context: {c}\nQuestion: {q}\nAnswer: '
+                for c, q in zip(contexts, questions_without_context)
+            ]
+
+        else:
+            questions = list(df[question_column].apply(lambda x: str(x)))
+            empty_prompt_ids = np.where(
+                df[[question_column]].isna().all(axis=1).values
+            )[0]
+
+        return questions, empty_prompt_ids
+    
+    def _prepare_data_with_prompt_template(self, df: pd.DataFrame, prompt_template: Text) -> Tuple[List[Text], List[int]]:
+        """
+        Prepare the input data with a prompt template for the Amazon Bedrock handler.
+
+        Args:
+            df (pd.DataFrame): Input data to make predictions on.
+            prompt_template (Text): The base prompt template to use.
+
+        Returns:
+            List[Dict]: Prepared prompts for invoking the Amazon Bedrock API.
+        """
+        questions, empty_prompt_ids = get_completed_prompts(prompt_template, df)
+
+        return questions, empty_prompt_ids
 
     def _predict_for_default_mode(self, model_id: Text, prompts: List[Text], inference_config: Dict) -> List[Text]:
         """
@@ -172,6 +249,28 @@ class AmazonBedrockHandler(BaseMLEngine):
             )
 
         return predictions
+    
+    def _predict_for_conversational_mode(self, model_id: Text, prompt: List[Text], inference_config: Dict) -> List[Text]:
+        """
+        Make predictions for the conversational mode of the Amazon Bedrock handler.
+
+        Args:
+            model_id (Text): The ID of the model in Amazon Bedrock.
+            prompts (List[Text]): Prepared prompts for invoking the Amazon Bedrock API.
+            inference_config (Dict): Inference configuration supported by the Amazon Bedrock API.
+        """
+        bedrock_runtime_client = create_amazon_bedrock_client(
+            'bedrock-runtime',
+            **self.engine_storage.get_connection_args()
+        )
+
+        response = bedrock_runtime_client.converse(
+            modelId=model_id,
+            messages=prompt,
+            inferenceConfig=inference_config
+        )
+
+        return response["output"]["message"]["content"][0]["text"]
 
     def describe(self, attribute: Optional[Text] = None) -> pd.DataFrame:
         """

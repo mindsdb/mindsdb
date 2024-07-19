@@ -97,8 +97,8 @@ class AmazonBedrockHandler(BaseMLEngine):
                 predictions.insert(i, None)
 
         elif mode == 'conversational':
-            prompt = self._prepare_data_for_conversational_mode(df, args)
-            prediction, total_questions = self._predict_for_conversational_mode(model_id, prompt, inference_config)
+            prompt, total_questions = self._prepare_data_for_conversational_mode(df, args)
+            prediction = self._predict_for_conversational_mode(model_id, prompt, inference_config)
 
             # Create a list of None values for the total number of questions and replace the last one with the prediction.
             predictions = [None] * total_questions
@@ -188,6 +188,9 @@ class AmazonBedrockHandler(BaseMLEngine):
         """
         if question_column not in df.columns:
             raise ValueError(f"Column {question_column} not found in the dataframe!")
+        
+        if context_column and context_column not in df.columns:
+            raise ValueError(f"Column {context_column} not found in the dataframe!")
         
         if context_column:
             empty_prompt_ids = np.where(

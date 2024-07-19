@@ -88,14 +88,21 @@ class AmazonBedrockHandler(BaseMLEngine):
         inference_config = handler_model_params.get('inference_config')
         target = args['target']
 
-        # Run predict for the default mode.
         if mode == 'default':
-            prompts = self._prepare_data_for_default_mode(df, args)
+            prompts, empty_prompt_ids = self._prepare_data_for_default_mode(df, args)
             predictions = self._predict_for_default_mode(model_id, prompts, inference_config)
+
+            # Fill the empty predictions with None.
+            for i in sorted(empty_prompt_ids):
+                predictions.insert(i, None)
 
         elif mode == 'conversational':
             prompt = self._prepare_data_for_conversational_mode(df, args)
-            predictions = self._predict_for_conversational_mode(model_id, prompt, inference_config)
+            prediction, total_questions = self._predict_for_conversational_mode(model_id, prompt, inference_config)
+
+            # Create a list of None values for the total number of questions and replace the last one with the prediction.
+            predictions = [None] * total_questions
+            predictions[-1] = prediction                        
 
         pred_df = pd.DataFrame(predictions, columns=[target])
         return pred_df
@@ -116,8 +123,6 @@ class AmazonBedrockHandler(BaseMLEngine):
         context_column = handler_model_params.get('context_column')
         prompt_template = handler_model_params.get('prompt_template')
 
-        # Prepare the parameters + data for the prediction.
-        # Question column.
         if question_column is not None:
             questions, empty_prompt_ids = self._prepare_data_with_question_and_context_columns(
                 df,
@@ -125,7 +130,6 @@ class AmazonBedrockHandler(BaseMLEngine):
                 context_column
             )
 
-        # Prompt template.
         elif prompt_template is not None:
             questions, empty_prompt_ids = self._prepare_data_with_prompt_template(df, prompt_template)
 
@@ -133,7 +137,7 @@ class AmazonBedrockHandler(BaseMLEngine):
         questions = [question for i, question in enumerate(questions) if i not in empty_prompt_ids]
         prompts = [{"role": "user", "content": [{"text": question}]} for question in questions]
 
-        return prompts
+        return prompts, empty_prompt_ids
     
     def _prepare_data_for_conversational_mode(self, df: pd.DataFrame, args: Dict) -> List[Dict]:
         """
@@ -151,8 +155,6 @@ class AmazonBedrockHandler(BaseMLEngine):
         context_column = handler_model_params.get('context_column')
         prompt_template = handler_model_params.get('prompt_template')
 
-        # Prepare the parameters + data for the prediction.
-        # Question column.
         if question_column is not None:
             questions, empty_prompt_ids = self._prepare_data_with_question_and_context_columns(
                 df,
@@ -160,15 +162,17 @@ class AmazonBedrockHandler(BaseMLEngine):
                 context_column
             )
 
-        # Prompt template.
-        if handler_model_params.get('prompt_template') is not None:
+        if prompt_template is not None:
             questions, empty_prompt_ids = self._prepare_data_with_prompt_template(df, prompt_template)
 
         # Prepare the prompts.
         questions = [question for i, question in enumerate(questions) if i not in empty_prompt_ids]
         prompt = [{"role": "user", "content": [{"text": question} for question in questions]}]
 
-        return prompt
+        # Get the total number of questions; including the empty ones.
+        total_questions = len(df)
+
+        return prompt, total_questions
     
     def _prepare_data_with_question_and_context_columns(self, df: pd.DataFrame, question_column: Text, context_column: Text = None) -> Tuple[List[Text], List[int]]:
         """

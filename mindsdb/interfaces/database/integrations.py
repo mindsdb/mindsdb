@@ -3,12 +3,12 @@ import sys
 import base64
 import shutil
 import ast
+import time
 import tempfile
 import importlib
 import threading
 import inspect
 import multiprocessing
-from time import time
 from pathlib import Path
 from copy import deepcopy
 from typing import Optional
@@ -89,7 +89,7 @@ class HandlersCache:
                 handler.connect()
                 self.handlers[key] = {
                     'handler': handler,
-                    'expired_at': time() + self.ttl
+                    'expired_at': time.time() + self.ttl
                 }
             except Exception:
                 pass
@@ -108,10 +108,10 @@ class HandlersCache:
             key = (name, ctx.company_id, threading.get_native_id())
             if (
                 key not in self.handlers
-                or self.handlers[key]['expired_at'] < time()
+                or self.handlers[key]['expired_at'] < time.time()
             ):
                 return None
-            self.handlers[key]['expired_at'] = time() + self.ttl
+            self.handlers[key]['expired_at'] = time.time() + self.ttl
             return self.handlers[key]['handler']
 
     def delete(self, name: str) -> None:
@@ -138,7 +138,7 @@ class HandlersCache:
             with self._lock:
                 for key in list(self.handlers.keys()):
                     if (
-                        self.handlers[key]['expired_at'] < time()
+                        self.handlers[key]['expired_at'] < time.time()
                         and sys.getrefcount(self.handlers[key]) == 2    # returned ref count is always 1 higher
                     ):
                         try:
@@ -427,7 +427,7 @@ class IntegrationController:
         Returns:
             HandlerClass: Handler class instance
         """
-        integration_id = int(time() * 10000)
+        integration_id = int(time.time() * 10000)
 
         file_storage = FileStorage(
             resource_group=RESOURCE_GROUP.INTEGRATION,
@@ -711,7 +711,12 @@ class IntegrationController:
             self.handlers_import_status[handler_name] = handler_meta
 
         # import all handlers in thread
-        thread = threading.Thread(target=self.get_handlers_import_status)
+        def import_handlers():
+            # give time to start server
+            time.sleep(3)
+            self.get_handlers_import_status()
+
+        thread = threading.Thread(target=import_handlers)
         thread.start()
 
     def _get_handler_info(self, handler_dir: Path):

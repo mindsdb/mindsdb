@@ -156,6 +156,7 @@ class IntegrationController:
         return isinstance(s, str) and len(s) > 0
 
     def __init__(self):
+        self._import_lock = threading.Lock()
         self._load_handler_modules()
         self.handlers_cache = HandlersCache()
 
@@ -709,6 +710,10 @@ class IntegrationController:
             }
             self.handlers_import_status[handler_name] = handler_meta
 
+        # import all handlers in thread
+        thread = threading.Thread(target=self.get_handlers_import_status)
+        thread.start()
+
     def _get_handler_info(self, handler_dir: Path):
 
         init_file = handler_dir / '__init__.py'
@@ -726,24 +731,24 @@ class IntegrationController:
         return info
 
     def import_handler(self, handler_name: str, base_import: str = None):
+        with self._import_lock:
+            handler_meta = self.handlers_import_status[handler_name]
+            handler_dir = handler_meta['path']
 
-        handler_meta = self.handlers_import_status[handler_name]
-        handler_dir = handler_meta['path']
+            handler_folder_name = str(handler_dir.name)
+            if base_import is None:
+                base_import = 'mindsdb.integrations.handlers.'
 
-        handler_folder_name = str(handler_dir.name)
-        if base_import is None:
-            base_import = 'mindsdb.integrations.handlers.'
+            try:
+                handler_module = importlib.import_module(f'{base_import}{handler_folder_name}')
+                self.handler_modules[handler_name] = handler_module
+                handler_meta = self._get_handler_meta(handler_name)
+            except Exception as e:
+                handler_meta['import']['success'] = False
+                handler_meta['import']['error_message'] = str(e)
 
-        try:
-            handler_module = importlib.import_module(f'{base_import}{handler_folder_name}')
-            self.handler_modules[handler_name] = handler_module
-            handler_meta = self._get_handler_meta(handler_name)
-        except Exception as e:
-            handler_meta['import']['success'] = False
-            handler_meta['import']['error_message'] = str(e)
-
-        self.handlers_import_status[handler_meta['name']] = handler_meta
-        return handler_meta
+            self.handlers_import_status[handler_meta['name']] = handler_meta
+            return handler_meta
 
     def get_handlers_import_status(self):
         # tries to import all not imported yet

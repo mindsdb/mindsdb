@@ -130,7 +130,12 @@ class ModelController():
             name=name,
             ml_handler_name=ml_handler_name,
             project_name=project_name)
-        return self.get_reduced_model_data(predictor_record=model_record)
+        data = self.get_reduced_model_data(predictor_record=model_record)
+        integration_record = db.Integration.query.get(model_record.integration_id)
+        if integration_record is not None:
+            data['engine'] = integration_record.engine
+            data['engine_name'] = integration_record.name
+        return data
 
     def get_models(self, with_versions=False, ml_handler_name=None, integration_id=None,
                    project_name=None):

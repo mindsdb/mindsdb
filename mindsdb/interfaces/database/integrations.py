@@ -292,7 +292,7 @@ class IntegrationController:
                 base_dir=integrations_dir
             )
 
-        integration_module = self.handler_modules.get(integration_record.engine)
+        integration_module = self.get_handler_module(integration_record.engine)
         integration_type = getattr(integration_module, 'type', None)
 
         if show_secrets is False:
@@ -615,21 +615,23 @@ class IntegrationController:
         if import_error is not None:
             handler_meta['import']['error_message'] = str(import_error)
 
-        # for ml engines, patch the connection_args from the argument probing
-        if hasattr(module, 'Handler'):
-            handler_class = module.Handler
-            try:
-                prediction_args = handler_class.prediction_args()
-                creation_args = getattr(module, 'creation_args', handler_class.creation_args())
-                connection_args = {
-                    "prediction": prediction_args,
-                    "creation_args": creation_args
-                }
-                setattr(module, 'connection_args', connection_args)
-                logger.debug("Patched connection_args for %s", handler_folder_name)
-            except Exception as e:
-                # do nothing
-                logger.debug("Failed to patch connection_args for %s, reason: %s", handler_folder_name, str(e))
+        handler_type = getattr(module, 'type', None)
+        if handler_type == HANDLER_TYPE.ML:
+            # for ml engines, patch the connection_args from the argument probing
+            if hasattr(module, 'Handler'):
+                handler_class = module.Handler
+                try:
+                    prediction_args = handler_class.prediction_args()
+                    creation_args = getattr(module, 'creation_args', handler_class.creation_args())
+                    connection_args = {
+                        "prediction": prediction_args,
+                        "creation_args": creation_args
+                    }
+                    setattr(module, 'connection_args', connection_args)
+                    logger.debug("Patched connection_args for %s", handler_folder_name)
+                except Exception as e:
+                    # do nothing
+                    logger.debug("Failed to patch connection_args for %s, reason: %s", handler_folder_name, str(e))
         module_attrs = [attr for attr in [
             'connection_args_example',
             'connection_args',
@@ -766,6 +768,8 @@ class IntegrationController:
 
     def get_handler_module(self, handler_name):
         handler_meta = self.get_handler_meta(handler_name)
+        if handler_meta is None:
+            return
         if handler_meta["import"]["success"]:
             return self.handler_modules[handler_name]
 

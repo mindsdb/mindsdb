@@ -197,9 +197,10 @@ class BaseExecutorTest(BaseUnitTest):
             'import': {
                 'success': None,
                 'error_message': None,
-                'folder': handler_dir,
+                'folder': handler_dir.name,
                 'dependencies': [],
             },
+            'path': handler_dir,
             'name': handler_name,
             'permanent': False,
         }

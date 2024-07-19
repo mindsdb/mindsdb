@@ -84,7 +84,8 @@ class HandlersCache:
             return
         with self._lock:
             try:
-                key = (handler.name, ctx.company_id, threading.get_native_id())
+                # If the handler is defined to be thread safe, set 0 as the last item of the key, otherwise set the thrad ID.
+                key = (handler.name, ctx.company_id, 0 if getattr(handler, 'thread_safe', False) else threading.get_native_id())
                 handler.connect()
                 self.handlers[key] = {
                     'handler': handler,

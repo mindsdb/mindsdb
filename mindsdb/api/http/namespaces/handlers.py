@@ -57,6 +57,20 @@ class HandlerIcon(Resource):
             return send_file(icon_path)
 
 
+@ns_conf.route('/<handler_name>')
+class HandlerInfo(Resource):
+    @ns_conf.param('handler_name', 'Handler name')
+    @api_endpoint_metrics('GET', '/handlers/handler')
+    def get(self, handler_name):
+
+        handler_meta = ca.integration_controller.get_handler_meta(handler_name)
+        row = {'name': handler_name}
+        row.update(handler_meta)
+        del row['path']
+        del row['icon']
+        return row
+
+
 @ns_conf.route('/<handler_name>/install')
 class InstallDependencies(Resource):
     @ns_conf.param('handler_name', 'Handler name')

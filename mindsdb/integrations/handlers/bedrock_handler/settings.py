@@ -1,3 +1,4 @@
+import textwrap
 from pydantic_settings import BaseSettings
 from botocore.exceptions import ClientError
 from typing import Text, List, Dict, Optional, Any, ClassVar
@@ -25,9 +26,9 @@ class AmazonBedrockHandlerSettings(BaseSettings):
     # Modes.
     # TODO: Add other modes.
     DEFAULT_MODE: ClassVar[Text] = 'default'
-    SUPPORTED_MODES: ClassVar[List] = ['default']
+    SUPPORTED_MODES: ClassVar[List] = ['default', 'conversational']
 
-    # TODO: Set the default model ID for other modes.s
+    # TODO: Set the default model ID for other modes.
     # Model IDs.
     DEFAULT_TEXT_MODEL_ID: ClassVar[Text] = 'amazon.titan-text-express-v1'
 
@@ -205,7 +206,7 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
         """
         # TODO: Set the default model ID for other modes.
         if model.model_id is None:
-            if model.mode == 'default':
+            if model.mode in ['default', 'conversational']:
                 model.model_id = AmazonBedrockHandlerSettings.DEFAULT_TEXT_MODEL_ID
 
         bedrock_client = create_amazon_bedrock_client(
@@ -220,7 +221,7 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
             raise ValueError(f"Invalid Amazon Bedrock model ID: {e}!")
 
         # Check if the model is suitable for the mode provided.
-        if model.mode == 'default':
+        if model.mode in ['default', 'conversational']:
             if 'TEXT' not in response['modelDetails']['outputModalities']:
                 raise ValueError(f"The models used for the {model.mode} should support text generation!")
 
@@ -242,15 +243,22 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
         # 1. prompt_template.
         # 2. question_column with an optional context_column.
         # TODO: Find the other possible parameters/combinations for the default mode.
-        if model.mode == 'default':
+        if model.mode in ['default', 'conversational']:
+            error_message = textwrap.dedent(
+                f"""\
+                    For the {model.mode} mode, one of the following need to be provided:
+                        1) A `prompt_template`
+                        2) A `question_column` and an optional `context_column`
+                """
+            )
             if model.prompt_template is None and model.question_column is None:
-                raise ValueError("Either prompt_template or question_column with an optional context_column need to be provided for the default mode!")
+                raise ValueError(error_message)
 
             if model.prompt_template is not None and model.question_column is not None:
-                raise ValueError("Only one of prompt_template or question_column with an optional context_column can be provided for the default mode!")
+                raise ValueError(error_message)
 
             if model.context_column is not None and model.question_column is None:
-                raise ValueError("context_column can only be provided with question_column for the default mode!")
+                raise ValueError(error_message)
 
         # TODO: Add validations for other modes.
 

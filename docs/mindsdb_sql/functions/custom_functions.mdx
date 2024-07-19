@@ -24,14 +24,18 @@ Let's briefly go over the files that need to be uploaded:
 * The Python file stores an implementation of your custom functions. Here is the sample format:
 
     ```py
-    def function_name_1(a, b):
+    def function_name_1(a:type, b:type) -> type:
         <implementation goes here>
         return x
 
-    def function_name_2(a, b, c):
+    def function_name_2(a:type, b:type, c:type) -> type:
         <implementation goes here>
         return x
     ```
+
+    <Note>
+    Note that if the input and output types are not set, then `str` is used by default.
+    </Note>
 
 <Accordion title="Example">
     ```py

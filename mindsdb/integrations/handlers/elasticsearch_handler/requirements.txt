@@ -1,2 +1,1 @@
-elasticsearch
 elasticsearch-dbapi

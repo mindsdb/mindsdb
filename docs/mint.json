@@ -384,7 +384,7 @@
         "mindsdb_sql/overview",
         "mindsdb_sql/syntax",
         {
-          "group": "Get Started",
+          "group": "Connect",
           "pages": [
             "mindsdb_sql/connect/mindsdb_editor",
             "mindsdb_sql/connect/postgres-client",
@@ -400,7 +400,7 @@
           ]
         },
         {
-          "group": "Integrate Data Sources",
+          "group": "Data Sources",
           "pages": [
             "mindsdb_sql/sql/list-data-handlers",
             "mindsdb_sql/sql/create/database",
@@ -410,7 +410,7 @@
           ]
         },
         {
-          "group": "Integrate AI Engines",
+          "group": "AI/ML Engines",
           "pages": [
             "mindsdb_sql/sql/list-ml-handlers",
             "mindsdb_sql/sql/create/ml-engine",
@@ -419,7 +419,7 @@
           ]
         },
         {
-          "group": "Create Projects",
+          "group": "Projects",
           "pages": [
             "mindsdb_sql/sql/create/project",
             "mindsdb_sql/sql/drop/project",
@@ -427,7 +427,7 @@
           ]
         },
         {
-          "group": "Deploy Models",
+          "group": "Models",
           "pages": [
             "mindsdb_sql/sql/create/model",
             "mindsdb_sql/sql/drop/model",
@@ -439,7 +439,7 @@
           ]
         },
         {
-          "group": "Get Predictions",
+          "group": "Predictions",
           "pages": [
             "mindsdb_sql/sql/get-single-prediction",
             "mindsdb_sql/sql/get-batch-predictions",
@@ -448,7 +448,7 @@
           ]
         },
         {
-          "group": "Manipulate Data in Tables, Views, and Files",
+          "group": "Tables, Views, and Files",
           "pages": [
             "mindsdb_sql/sql/create/table",
             "mindsdb_sql/sql/drop/table",
@@ -467,7 +467,7 @@
           ]
         },
         {
-          "group": "Automate Workflows with Jobs",
+          "group": "Jobs",
           "pages": [
             "mindsdb_sql/sql/create/jobs",
             "mindsdb_sql/sql/drop/jobs",
@@ -475,7 +475,7 @@
           ]
         },
         {
-          "group": "Automate Workflows with Triggers",
+          "group": "Triggers",
           "pages": [
             "mindsdb_sql/sql/create/trigger",
             "mindsdb_sql/sql/drop/trigger",
@@ -483,12 +483,13 @@
           ]
         },
         {
-          "group": "Customize Chatbots with Agents",
+          "group": "AI Agents",
           "pages": [
             "mindsdb_sql/agents/agent",
             "mindsdb_sql/agents/knowledge-bases"
           ]
-        }
+        },
+        "mindsdb_sql/functions/custom_functions"
       ]
     },
     {
@@ -502,7 +503,7 @@
           ]
         },
         {
-          "group": "Databases",
+          "group": "Data Sources",
           "pages": [
             "rest/databases/create-databases",
             "rest/databases/update-databases",
@@ -512,7 +513,7 @@
           ]
         },
         {
-          "group": "AI Engines",
+          "group": "AI/ML Engines",
           "pages": [
             "rest/ml_engines/create",
             "rest/ml_engines/delete",
@@ -617,7 +618,7 @@
                   ]
               },
               {
-                  "group": "Databases",
+                  "group": "Data Sources",
                   "pages": [
                       "sdks/mongo/databases/list-data-handlers",
                       "sdks/mongo/databases/insertOne",
@@ -627,7 +628,7 @@
                   ]
               },
               {
-                  "group": "ML Engines",
+                  "group": "AI/ML Engines",
                   "pages": [
                       "sdks/mongo/ml_engines/list-ml-handlers",
                       "sdks/mongo/ml_engines/insertOne",
@@ -684,7 +685,7 @@
                   ]
               },
               {
-                  "group": "Databases",
+                  "group": "Data Sources",
                   "pages": [
                       "sdks/python/list_data_handlers",
                       "sdks/python/create_database",
@@ -693,7 +694,7 @@
                   ]
               },
               {
-                  "group": "ML Engines",
+                  "group": "AI/ML Engines",
                   "pages": [
                       "sdks/python/list_ml_handlers",
                       "sdks/python/create_ml_engine",
@@ -732,7 +733,7 @@
                   ]
               },
               {
-                  "group": "Tables, Views, Files",
+                  "group": "Tables, Views, and Files",
                   "pages": [
                       "sdks/python/create_table",
                       "sdks/python/delete_table",
@@ -783,7 +784,7 @@
                   ]
               },
               {
-                  "group": "Databases",
+                  "group": "Data Sources",
                   "pages": [
                       "sdks/javascript/list_data_handlers",
                       "sdks/javascript/create_database",
@@ -793,7 +794,7 @@
                   ]
               },
               {
-                  "group": "ML Engines",
+                  "group": "AI/ML Engines",
                   "pages": [
                       "sdks/javascript/list_ml_handlers",
                       "sdks/javascript/create_ml_engine",
@@ -830,7 +831,7 @@
                   ]
               },
               {
-                  "group": "Tables, Views, Files",
+                  "group": "Tables, Views, and Files",
                   "pages": [
                       "sdks/javascript/create_table",
                       "sdks/javascript/delete_table",

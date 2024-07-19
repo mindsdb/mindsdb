@@ -21,8 +21,21 @@ Here is the form that needs to be filled out in order to bring your model to Min
 
 Let's briefly go over the files that need to be uploaded:
 
-* The Python file stores an implementation of your model. It should contain the `train` and `predict` methods. Here is its sample content:
+* The Python file stores an implementation of your model. It should contain the class with the implementation for the `train` and `predict` methods. Here is the sample format:
 
+    ```py
+    class CustomPredictor():
+    ​
+        def train(self, df, target_col, args=None):
+                <implementation goes here>
+                return ''
+
+        def predict(self, df):
+                <implementation goes here>
+                return df
+    ```
+
+<Accordion title="Example">
     ```py
     import os
     import pandas as pd
@@ -105,7 +118,6 @@ Let's briefly go over the files that need to be uploaded:
             return pred_df
     ​
     ​
-    ​
     if __name__ == '__main__':
         BYOM = CustomPredictor()
         df_train = pd.read_csv('/data/work/mindsdb/test/byom/df_train.csv')
@@ -114,13 +126,23 @@ Let's briefly go over the files that need to be uploaded:
         df = BYOM.predict(df=df_train[:10])
         print(df)
     ```
+</Accordion>
 
-* The requirements file, known as `requirements.txt`, stores all dependencies along with their versions. Here is its sample content:
+* The optional requirements file, or `requirements.txt`, stores all dependencies along with their versions. Here is the sample format:
 
+    ```sql
+    dependency_package_1 == version
+    dependency_package_2 >= version
+    dependency_package_3 >= verion, < version
+    ...
+    ```
+
+<Accordion title="Example">
     ```sql
     pandas
     scikit-learn
     ```
+</Accordion>
 
 Once you upload the above files, please provide an engine name.
 
@@ -137,12 +159,12 @@ Let's look at an example.
 We upload the custom model, as below:
 
 <p align="center">
-  <img src="/assets/byom_pro_account.png" />
+  <img src="/assets/byom_form.png" />
 </p>
 
-Here we upload the `custom_model.py` file that stores an implementation of the model and the `requirements.txt` file that stores all the dependencies.
+Here we upload the `model.py` file that stores an implementation of the model and the `requirements.txt` file that stores all the dependencies.
 
-Once the model is uploaded, it becomes an ML engine within MindsDB. Now we use this `custom_ML_engine` to create a model as follows:
+Once the model is uploaded, it becomes an ML engine within MindsDB. Now we use this `custom_model_engine` to create a model as follows:
 
 ```sql
 CREATE MODEL custom_model
@@ -150,7 +172,7 @@ FROM my_integration
     (SELECT * FROM my_table)
 PREDICT target
 USING
-    ENGINE = 'custom_ML_engine';
+    ENGINE = 'custom_model_engine';
 ```
 
 Let's query for predictions by joining the custom model with the data table.

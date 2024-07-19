@@ -102,7 +102,7 @@ class AmazonBedrockHandler(BaseMLEngine):
 
             # Create a list of None values for the total number of questions and replace the last one with the prediction.
             predictions = [None] * total_questions
-            predictions[-1] = prediction                        
+            predictions[-1] = prediction
 
         pred_df = pd.DataFrame(predictions, columns=[target])
         return pred_df
@@ -139,7 +139,7 @@ class AmazonBedrockHandler(BaseMLEngine):
         prompts = [{"role": "user", "content": [{"text": question}]} for question in questions]
 
         return prompts, empty_prompt_ids
-    
+
     def _prepare_data_for_conversational_mode(self, df: pd.DataFrame, args: Dict) -> Tuple[List[Dict], int]:
         """
         Prepares the input data for the conversational mode of the Amazon Bedrock handler.
@@ -150,7 +150,7 @@ class AmazonBedrockHandler(BaseMLEngine):
             args (Dict): The parameters of the model.
 
         Returns:
-            Tuple[List[Dict], int]: The prepared prompt for invoking the Amazon Bedrock API and the total number of questions. 
+            Tuple[List[Dict], int]: The prepared prompt for invoking the Amazon Bedrock API and the total number of questions.
             The model will be invoked once using this prompt which contains all the questions.
             The total number of questions is used to produce the final list of predictions.
         """
@@ -177,7 +177,7 @@ class AmazonBedrockHandler(BaseMLEngine):
         total_questions = len(df)
 
         return prompt, total_questions
-    
+
     def _prepare_data_with_question_and_context_columns(self, df: pd.DataFrame, question_column: Text, context_column: Text = None) -> Tuple[List[Text], List[int]]:
         """
         Prepares the input data with question and context columns.
@@ -192,10 +192,10 @@ class AmazonBedrockHandler(BaseMLEngine):
         """
         if question_column not in df.columns:
             raise ValueError(f"Column {question_column} not found in the dataframe!")
-        
+
         if context_column and context_column not in df.columns:
             raise ValueError(f"Column {context_column} not found in the dataframe!")
-        
+
         if context_column:
             empty_prompt_ids = np.where(
                 df[[context_column, question_column]]
@@ -218,7 +218,7 @@ class AmazonBedrockHandler(BaseMLEngine):
             )[0]
 
         return questions, empty_prompt_ids
-    
+
     def _prepare_data_with_prompt_template(self, df: pd.DataFrame, prompt_template: Text) -> Tuple[List[Text], List[int]]:
         """
         Prepares the input data with a prompt template.
@@ -263,7 +263,7 @@ class AmazonBedrockHandler(BaseMLEngine):
             )
 
         return predictions
-    
+
     def _predict_for_conversational_mode(self, model_id: Text, prompt: List[Text], inference_config: Dict) -> Text:
         """
         Makes a prediction for the conversational mode of the Amazon Bedrock handler using the prepared prompt.

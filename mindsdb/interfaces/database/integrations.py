@@ -105,7 +105,7 @@ class HandlersCache:
                 DatabaseHandler
         """
         with self._lock:
-            # If the handler is not thread safe, the thread ID will be assigned to the last element of the key. 
+            # If the handler is not thread safe, the thread ID will be assigned to the last element of the key.
             key = (name, ctx.company_id, threading.get_native_id())
             if key not in self.handlers:
                 # If the handler is thread safe, a 0 will be assigned to the last element of the key.
@@ -621,7 +621,8 @@ class IntegrationController:
                 'folder': handler_folder_name,
                 'dependencies': dependencies
             },
-            'version': module.version
+            'version': module.version,
+            'thread_safe': getattr(module, 'thread_safe', False)
         }
         if import_error is not None:
             handler_meta['import']['error_message'] = str(import_error)

@@ -21,7 +21,7 @@ class AmazonBedrockHandlerSettings(BaseSettings):
         List of supported modes for the handler.
 
     DEFAULT_TEXT_MODEL_ID : Text
-        The default model ID to use for text generation. This will be the default model ID for the default, conversational and conversational-full modes.
+        The default model ID to use for text generation. This will be the default model ID for the default and conversational modes.
     """
     # Modes.
     # TODO: Add other modes.
@@ -35,7 +35,7 @@ class AmazonBedrockHandlerSettings(BaseSettings):
 
 class AmazonBedrockHandlerEngineConfig(BaseModel):
     """
-    Model for Amazon Bedrock engines.
+    Configuration model for engines created via the Amazon Bedrock handler.
 
     Attributes
     ----------
@@ -63,10 +63,10 @@ class AmazonBedrockHandlerEngineConfig(BaseModel):
     @classmethod
     def check_if_params_contain_typos(cls, values: Any) -> Any:
         """
-        Validator to check if there are any typos in the parameters.
+        Checks if there are any typos in the parameters.
 
         Args:
-            values (Any): Engine configuration.
+            values (Any): The parameters provided when creating an engine via the Amazon Bedrock handler.
 
         Raises:
             ValueError: If there are any typos in the parameters.
@@ -79,13 +79,13 @@ class AmazonBedrockHandlerEngineConfig(BaseModel):
     @classmethod
     def check_access_to_amazon_bedrock(cls, model: BaseModel) -> BaseModel:
         """
-        Validator to check if the Amazon Bedrock credentials are valid and Amazon Bedrock is accessible.
+        Checks if the AWS credentials provided are valid and Amazon Bedrock is accessible.
 
         Args:
-            model (BaseModel): Engine configuration.
+            model (BaseModel): The parameters provided when creating an engine via the Amazon Bedrock handler.
 
         Raises:
-            ValueError: If the AWS credentials are invalid or do not have access to Amazon Bedrock.
+            ValueError: If the AWS credentials are invalid or Amazon Bedrock is not accessible.
         """
         bedrock_client = create_amazon_bedrock_client(
             "bedrock",
@@ -105,7 +105,7 @@ class AmazonBedrockHandlerEngineConfig(BaseModel):
 
 class AmazonBedrockHandlerModelConfig(BaseModel):
     """
-    Configuration model for Amazon Bedrock models.
+    Configuration model for models created via the Amazon Bedrock handler.
 
     Attributes
     ----------
@@ -113,7 +113,7 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
         The ID of the model in Amazon Bedrock.
 
     mode : Optional[Text]
-        The mode to run the handler model in. The supported modes are defined in AmazonBedrockHandlerSettings.
+        The mode to run the handler model in. The default mode and the supported modes are defined in the AmazonBedrockHandlerSettings class.
 
     prompt_template : Optional[Text]
         The base template for prompts with placeholders.
@@ -162,10 +162,10 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
     @classmethod
     def check_if_params_contain_typos(cls, values: Any) -> Any:
         """
-        Validator to check if there are any typos in the parameters.
+        Checks if there are any typos in the parameters.
 
         Args:
-            values (Any): Model configuration.
+            values (Any): The parameters provided when creating a model via the Amazon Bedrock handler.
 
         Raises:
             ValueError: If there are any typos in the parameters.
@@ -178,7 +178,7 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
     @classmethod
     def check_if_mode_is_supported(cls, mode: Text) -> Text:
         """
-        Validator to check if the mode provided is supported.
+        Checks if the mode provided is supported.
 
         Args:
             mode (Text): The mode to run the handler model in.
@@ -195,11 +195,11 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
     @classmethod
     def check_if_model_id_is_valid_and_correct_for_mode(cls, model: BaseModel) -> BaseModel:
         """
-        Validator to check if the model ID and the parameters provided for the model are valid.
+        Checks if the model ID and the parameters provided for the model are valid.
         If a model ID is not provided, the default model ID for that mode will be used.
 
         Args:
-            values (Any): Model configuration.
+            values (Any): The parameters provided when creating a model via the Amazon Bedrock handler.
 
         Raises:
             ValueError: If the model ID provided is invalid or the parameters provided are invalid for the chosen model.
@@ -231,10 +231,10 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
     @classmethod
     def check_if_params_are_valid_for_mode(cls, model: BaseModel) -> BaseModel:
         """
-        Validator to check if the parameters required for the chosen mode provided are valid.
+        Checks if the parameters required for the chosen mode provided are valid.
 
         Args:
-            model (BaseModel): Handler model configuration.
+            model (BaseModel): The parameters provided when creating a model via the Amazon Bedrock handler.
 
         Raises:
             ValueError: If the parameters provided are invalid for the mode provided.
@@ -269,7 +269,7 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
         Dumps the model configuration to a dictionary.
 
         Returns:
-            Dict: The model configuration.
+            Dict: The configuration of the model.
         """
         bedrock_model_param_names = [val.get("bedrock_model_param_name") for key, val in self.model_json_schema(mode='serialization')['properties'].items() if val.get("bedrock_model_param")]
         bedrock_model_params = [key for key, val in self.model_json_schema(mode='serialization')['properties'].items() if val.get("bedrock_model_param")]

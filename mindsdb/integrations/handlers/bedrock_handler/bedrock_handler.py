@@ -27,10 +27,10 @@ class AmazonBedrockHandler(BaseMLEngine):
 
     def create_engine(self, connection_args: Dict) -> None:
         """
-        Validate the AWS credentials provided on engine creation.
+        Validates the AWS credentials provided on creation of an engine.
 
         Args:
-            connection_args (Dict): Parameters for the engine.
+            connection_args (Dict): The parameters of the engine.
 
         Raises:
             Exception: If the handler is not configured with valid API credentials.
@@ -40,11 +40,11 @@ class AmazonBedrockHandler(BaseMLEngine):
 
     def create(self, target, args: Dict = None, **kwargs: Any) -> None:
         """
-        Create a model by validating the model configuration and saving it to the storage.
+        Creates a model by validating the model configuration and saving it to the storage.
 
         Args:
-            target (Text): Target column name.
-            args (Dict): Parameters for the model.
+            target (Text): The target column name.
+            args (Dict): The parameters of the model.
             kwargs (Any): Other keyword arguments.
 
         Raises:
@@ -69,17 +69,17 @@ class AmazonBedrockHandler(BaseMLEngine):
 
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> pd.DataFrame:
         """
-        Make predictions using a model by invoking the Amazon Bedrock API.
+        Makes predictions using a model by invoking the Amazon Bedrock API.
 
         Args:
-            df (pd.DataFrame): Input data to make predictions on.
-            args (Dict): Parameters passed when making predictions.
+            df (pd.DataFrame): The input data to invoke the model with.
+            args (Dict): The parameters passed when making predictions.
 
         Raises:
-            Exception: If the input does not match the configuration of the model.
+            ValueError: If the input data does not match the configuration of the model.
 
         Returns:
-            pd.DataFrame: Input data with the predicted values in a new column.
+            pd.DataFrame: The input data with the predicted values in a new column.
         """
         args = self.model_storage.json_get('args')
         handler_model_params = args['handler_model_params']
@@ -109,14 +109,15 @@ class AmazonBedrockHandler(BaseMLEngine):
 
     def _prepare_data_for_default_mode(self, df: pd.DataFrame, args: Dict) -> List[Dict]:
         """
-        Prepare the input data for the default mode of the Amazon Bedrock handler.
+        Prepares the input data for the default mode of the Amazon Bedrock handler.
+        A separate prompt is prepared for each question.
 
         Args:
-            df (pd.DataFrame): Input data to make predictions on.
-            args (Dict): Parameters passed when making predictions.
+            df (pd.DataFrame): The input data to invoke the model with.
+            args (Dict): The parameters of the model.
 
         Returns:
-            List[Dict]: Prepared prompts for invoking the Amazon Bedrock API.
+            List[Dict]: The prepared prompts for invoking the Amazon Bedrock API. The model will be invoked for each prompt.
         """
         handler_model_params = args['handler_model_params']
         question_column = handler_model_params.get('question_column')
@@ -139,16 +140,19 @@ class AmazonBedrockHandler(BaseMLEngine):
 
         return prompts, empty_prompt_ids
     
-    def _prepare_data_for_conversational_mode(self, df: pd.DataFrame, args: Dict) -> List[Dict]:
+    def _prepare_data_for_conversational_mode(self, df: pd.DataFrame, args: Dict) -> Tuple[List[Dict], int]:
         """
-        Prepare the input data for the conversational mode of the Amazon Bedrock handler.
+        Prepares the input data for the conversational mode of the Amazon Bedrock handler.
+        A single prompt is prepared for all the questions.
 
         Args:
-            df (pd.DataFrame): Input data to make predictions on.
-            args (Dict): Parameters passed when making predictions.
+            df (pd.DataFrame): The input data to invoke the model with.
+            args (Dict): The parameters of the model.
 
         Returns:
-            List[Dict]: Prepared prompts for invoking the Amazon Bedrock API.
+            Tuple[List[Dict], int]: The prepared prompt for invoking the Amazon Bedrock API and the total number of questions. 
+            The model will be invoked once using this prompt which contains all the questions.
+            The total number of questions is used to produce the final list of predictions.
         """
         handler_model_params = args['handler_model_params']
         question_column = handler_model_params.get('question_column')
@@ -176,15 +180,15 @@ class AmazonBedrockHandler(BaseMLEngine):
     
     def _prepare_data_with_question_and_context_columns(self, df: pd.DataFrame, question_column: Text, context_column: Text = None) -> Tuple[List[Text], List[int]]:
         """
-        Prepare the input data with question and context columns for the Amazon Bedrock handler.
+        Prepares the input data with question and context columns.
 
         Args:
-            df (pd.DataFrame): Input data to make predictions on.
+            df (pd.DataFrame): The input data to invoke the model with.
             question_column (Text): The column containing the questions.
             context_column (Text): The column containing the context.
 
         Returns:
-            List[Dict]: Prepared prompts for invoking the Amazon Bedrock API.
+            Tuple[List[Text], List[int]]: The questions to build the prompts for invoking the Amazon Bedrock API and the empty prompt IDs.
         """
         if question_column not in df.columns:
             raise ValueError(f"Column {question_column} not found in the dataframe!")
@@ -217,14 +221,14 @@ class AmazonBedrockHandler(BaseMLEngine):
     
     def _prepare_data_with_prompt_template(self, df: pd.DataFrame, prompt_template: Text) -> Tuple[List[Text], List[int]]:
         """
-        Prepare the input data with a prompt template for the Amazon Bedrock handler.
+        Prepares the input data with a prompt template.
 
         Args:
-            df (pd.DataFrame): Input data to make predictions on.
+            df (pd.DataFrame): The input data to invoke the model with.
             prompt_template (Text): The base prompt template to use.
 
         Returns:
-            List[Dict]: Prepared prompts for invoking the Amazon Bedrock API.
+            Tuple[List[Text], List[int]]: The questions to build the prompts for invoking the Amazon Bedrock API and the empty prompt IDs.
         """
         questions, empty_prompt_ids = get_completed_prompts(prompt_template, df)
 
@@ -232,12 +236,15 @@ class AmazonBedrockHandler(BaseMLEngine):
 
     def _predict_for_default_mode(self, model_id: Text, prompts: List[Text], inference_config: Dict) -> List[Text]:
         """
-        Make predictions for the default mode of the Amazon Bedrock handler.
+        Makes predictions for the default mode of the Amazon Bedrock handler using the prepared prompts.
 
         Args:
             model_id (Text): The ID of the model in Amazon Bedrock.
-            prompts (List[Text]): Prepared prompts for invoking the Amazon Bedrock API.
-            inference_config (Dict): Inference configuration supported by the Amazon Bedrock API.
+            prompts (List[Text]): The prepared prompts for invoking the Amazon Bedrock API.
+            inference_config (Dict): The inference configuration supported by the Amazon Bedrock API.
+
+        Returns:
+            List[Text]: The predictions made by the Amazon Bedrock API.
         """
         predictions = []
         bedrock_runtime_client = create_amazon_bedrock_client(
@@ -257,14 +264,17 @@ class AmazonBedrockHandler(BaseMLEngine):
 
         return predictions
     
-    def _predict_for_conversational_mode(self, model_id: Text, prompt: List[Text], inference_config: Dict) -> List[Text]:
+    def _predict_for_conversational_mode(self, model_id: Text, prompt: List[Text], inference_config: Dict) -> Text:
         """
-        Make predictions for the conversational mode of the Amazon Bedrock handler.
+        Makes a prediction for the conversational mode of the Amazon Bedrock handler using the prepared prompt.
 
         Args:
             model_id (Text): The ID of the model in Amazon Bedrock.
             prompts (List[Text]): Prepared prompts for invoking the Amazon Bedrock API.
             inference_config (Dict): Inference configuration supported by the Amazon Bedrock API.
+
+        Returns:
+            Text: The prediction made by the Amazon Bedrock API.
         """
         bedrock_runtime_client = create_amazon_bedrock_client(
             'bedrock-runtime',

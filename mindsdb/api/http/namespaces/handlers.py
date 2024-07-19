@@ -26,7 +26,11 @@ class HandlersList(Resource):
     @api_endpoint_metrics('GET', '/handlers')
     def get(self):
         '''List all db handlers'''
-        handlers = ca.integration_controller.get_handlers_import_status()
+
+        if request.args.get('lasy') == '1':
+            handlers = ca.integration_controller.get_handlers_metadata()
+        else:
+            handlers = ca.integration_controller.get_handlers_import_status()
         result = []
         for handler_type, handler_meta in handlers.items():
             # remove non-integration handlers

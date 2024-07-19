@@ -37,13 +37,10 @@ Let's briefly go over the files that need to be uploaded:
     ```py
     def add_integers(a:int, b:int) -> int:
         return a+b
-
-    def add_variables(a, b):
-        return a+b
     ```
 </Accordion>
 
-* The requirements file, or `requirements.txt`, stores all dependencies along with their versions. Here is the sample format:
+* The optional requirements file, or `requirements.txt`, stores all dependencies along with their versions. Here is the sample format:
 
     ```sql
     dependency_package_1 == version
@@ -71,7 +68,7 @@ We upload the custom functions, as below:
   <img src="/assets/upload_custom_function2.png" />
 </p>
 
-Here we upload the `custom_functions.py` file that stores an implementation of the functions and the `requirements.txt` file that stores all the dependencies. We named the storage collection as `functions`.
+Here we upload the `functions.py` file that stores an implementation of the functions and the `requirements.txt` file that stores all the dependencies. We named the storage collection as `custom_functions`.
 
 Now we can use the functions as below:
 
@@ -88,23 +85,5 @@ Here is the output:
 | added_one | sqft |
 +-----------+------+
 | 918       | 917  |
-+-----------+------+
-```
-
-And:
-
-```sql
-SELECT functions.add_variables(sqft, 1) AS added_one, sqft
-FROM example_db.home_rentals
-LIMIT 1;
-```
-
-Here is the output:
-
-```sql
-+-----------+------+
-| added_one | sqft |
-+-----------+------+
-| 9171      | 917  |
 +-----------+------+
 ```

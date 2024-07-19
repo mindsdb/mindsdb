@@ -75,6 +75,8 @@ class BaseUnitTest:
             mp_patcher = mock.patch("multiprocessing.get_context").__enter__()
             mp_patcher.side_effect = lambda x: dummy
 
+        os.unlink(cfg_file)
+
     @staticmethod
     def teardown_class(cls):
         # remove tmp db file
@@ -94,12 +96,6 @@ class BaseUnitTest:
         self._dummy_db_path = os.path.join(tempfile.mkdtemp(), '_mindsdb_duck_db')
         self.clear_db(self.db)
         self.reset_prom_collectors()
-
-    def teardown_method(self):
-        try:
-            os.unlink(self._dummy_db_path)
-        except (PermissionError, FileNotFoundError) as e:
-            logger.warning('Unable to clean up temporary database file: %s', str(e))
 
     def clear_db(self, db):
         # drop
@@ -281,6 +277,9 @@ class BaseExecutorTest(BaseUnitTest):
     def teardown_method(self):
         # Don't want cache to pick up a stale version with the wrong duckdb_path.
         self.command_executor.session.integration_controller.delete('dummy_data')
+        if os.path.exists(self._dummy_db_path):
+            os.unlink(self._dummy_db_path)
+        os.rmdir(os.path.dirname(self._dummy_db_path))
 
     def save_file(self, name, df):
         file_path = tempfile.mktemp(prefix="mindsdb_file_")

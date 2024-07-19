@@ -45,7 +45,7 @@ class TestUDF(BaseExecutorDummyML):
         """)
 
         # add model
-        with TemporaryDirectory(prefix='jobs_test_') as temp_dir:
+        with TemporaryDirectory(prefix='udf_test_') as temp_dir:
             code_path = os.path.join(temp_dir, 'code.py')
             reqs_path = os.path.join(temp_dir, 'reqs.py')
 

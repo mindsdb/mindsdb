@@ -54,6 +54,7 @@ jobs:
         environment: [staging, hackathon, dev, alpha-dev]
     environment:
       name: ${{ matrix.environment }}
+      url: ${{ vars.ENV_URL }}
     # We only want to run one deploy job for an env at a time
     # Don't cancel in progress jobs because it may be for a different PR
     concurrency:

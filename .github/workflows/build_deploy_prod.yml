@@ -98,6 +98,7 @@ jobs:
     if: github.actor != 'mindsdbadmin'
     environment:
       name: prod
+      url: ${{ vars.ENV_URL }}
     # We only want to run one deploy job for an env at a time
     # Don't cancel in progress jobs because it may be for a different PR
     concurrency:

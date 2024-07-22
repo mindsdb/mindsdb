@@ -27,7 +27,7 @@ class HandlersList(Resource):
     def get(self):
         '''List all db handlers'''
 
-        if request.args.get('lasy') == '1':
+        if request.args.get('lazy') == '1':
             handlers = ca.integration_controller.get_handlers_metadata()
         else:
             handlers = ca.integration_controller.get_handlers_import_status()

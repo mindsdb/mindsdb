@@ -124,7 +124,9 @@ class LangchainAgent:
 
             # get prompt
             prompt_template = model['problem_definition'].get('using', {}).get('prompt_template')
-            args['prompt_template'] = prompt_template
+            if prompt_template is not None:
+                # only update prompt_template if it is set on the model
+                args['prompt_template'] = prompt_template
 
         if args.get('prompt_template') is None:
             if args.get('mode') == 'retrieval':

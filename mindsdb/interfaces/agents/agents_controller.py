@@ -56,15 +56,18 @@ class AgentsController:
             # If provider is not given, get it from the model name
             provider = get_llm_provider({"model_name": model_name})
 
-        if provider not in SUPPORTED_PROVIDERS and model_name not in PROVIDER_TO_MODELS.get(provider, []):
-            raise ValueError(f'Model with name does not exist for provider {provider}: {model_name}')
-
         if provider == 'mindsdb':
+            if not model_name:
+                raise ValueError('Model name is required for provider mindsdb')
+
             model_name_no_version, model_version = Predictor.get_name_and_version(model_name)
             try:
                 model = self.model_controller.get_model(model_name_no_version, version=model_version)
             except PredictorRecordNotFound:
                 raise ValueError(f'Model with name does not exist: {model_name}')
+
+        elif provider not in SUPPORTED_PROVIDERS and model_name not in PROVIDER_TO_MODELS.get(provider, []):
+            raise ValueError(f'Model with name does not exist for provider {provider}: {model_name}')
 
         return model, provider
 

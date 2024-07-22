@@ -37,6 +37,10 @@ class LangChainRAGPipeline:
 
         prompt = ChatPromptTemplate.from_template(self.prompt_template)
 
+        # Ensure all components are not None
+        if None in [prompt, self.llm]:
+            raise ValueError("One of the required components (prompt or llm) is None")
+
         rag_chain_from_docs = (
                 RunnablePassthrough.assign(context=(lambda x: format_docs(x["context"])))  # noqa: E126, E122
                 | prompt
@@ -61,7 +65,7 @@ class LangChainRAGPipeline:
         vector_store_operator = VectorStoreOperator(
             vector_store=config.vector_store,
             documents=config.documents,
-            embeddings_model=config.embeddings_model,
+            embedding_model=config.embedding_model,
             vector_store_config=config.vector_store_config
         )
 

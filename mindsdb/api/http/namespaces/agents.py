@@ -9,8 +9,6 @@ from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.api.http.utils import http_error
 from mindsdb.metrics.metrics import api_endpoint_metrics
-from mindsdb.interfaces.model.functions import PredictorRecordNotFound
-from mindsdb.interfaces.storage import db
 
 
 def create_agent(project_name, name, agent):
@@ -29,6 +27,7 @@ def create_agent(project_name, name, agent):
         )
 
     model_name = agent['model_name']
+    provider = agent['provider']
     params = agent.get('params', {})
     skills = agent.get('skills', [])
 
@@ -51,13 +50,8 @@ def create_agent(project_name, name, agent):
         )
 
     try:
-        created_agent = session.agents_controller.add_agent(
-            name,
-            project_name,
-            model_name,
-            skills,
-            params=params
-        )
+        created_agent = session.agents_controller.add_agent(name=name, project_name=project_name, model_name=model_name,
+                                                            skills=skills, provider=provider, params=params)
         return created_agent.as_dict(), HTTPStatus.CREATED
     except ValueError:
         # Model or skill doesn't exist.
@@ -168,19 +162,6 @@ class AgentResource(Resource):
         skills_to_remove = agent.get('skills_to_remove', [])
         params = agent.get('params', None)
 
-        # Model needs to exist.
-        if model_name is not None:
-            session_controller = SessionController()
-            model_name_no_version, version = db.Predictor.get_name_and_version(model_name)
-            try:
-                session_controller.model_controller.get_model(model_name_no_version, version=version, project_name=project_name)
-            except PredictorRecordNotFound:
-                return http_error(
-                    HTTPStatus.NOT_FOUND,
-                    'Model not found',
-                    f'Model with name {model_name} not found'
-                )
-
         # Agent must not exist with new name.
         if name is not None and name != agent_name:
             agent_with_new_name = session.agents_controller.get_agent(name, project_name=project_name)
@@ -276,6 +257,10 @@ class AgentCompletions(Resource):
         if not existing_agent.params:
             existing_agent.params = {}
         existing_agent.params['openai_api_key'] = existing_agent.params.get('openai_api_key', os.getenv('OPENAI_API_KEY'))
+
+        # set mode to `retrieval` if agent has a skill of type `retrieval` and mode is not set
+        if 'mode' not in existing_agent.params and any(skill.type == 'retrieval' for skill in existing_agent.skills):
+            existing_agent.params['mode'] = 'retrieval'
 
         trace_id = None
         observation_id = None

@@ -1,7 +1,7 @@
 from typing import Optional
 
 from elasticsearch import Elasticsearch
-from elasticsearch.exceptions import ConnectionError, AuthenticationException
+from elasticsearch.exceptions import ConnectionError, AuthenticationException, TransportError, RequestError
 from es.elastic.sqlalchemy import ESDialect
 from pandas import DataFrame
 from mindsdb_sql.parser.ast.base import ASTNode
@@ -93,8 +93,8 @@ class ElasticsearchHandler(DatabaseHandler):
         except AuthenticationException as auth_error:
             logger.error(f'Authentication error when connecting to Elasticsearch: {auth_error}')
             raise
-        except Exception as e:
-            logger.error(f'Unknown error when connecting to Elasticsearch: {e}')
+        except Exception as unknown_error:
+            logger.error(f'Unknown error when connecting to Elasticsearch: {unknown_error}')
             raise
 
     def disconnect(self) -> None:
@@ -123,10 +123,10 @@ class ElasticsearchHandler(DatabaseHandler):
             # Execute a simple query to test the connection.
             connection.sql.query(body={'query': 'SELECT 1'})
             response.success = True
-        # TODO: Make the exception handling more specific.
-        except Exception as e:
-            logger.error(f'Error connecting to Elasticsearch, {e}!')
-            response.error_message = str(e)
+        # All exceptions are caught here to ensure that the connection is closed if an error occurs.
+        except Exception as error:
+            logger.error(f'Error connecting to Elasticsearch, {error}!')
+            response.error_message = str(error)
 
         if response.success and need_to_close:
             self.disconnect()
@@ -148,7 +148,6 @@ class ElasticsearchHandler(DatabaseHandler):
         """
         need_to_close = self.is_connected is False
 
-        # TODO: Make error handling more specific.
         connection = self.connect()
         try:
             response = connection.sql.query(body={'query': query})
@@ -163,7 +162,7 @@ class ElasticsearchHandler(DatabaseHandler):
 
                         new_records = response['rows']
                         records = records + new_records
-                except Exception as e:
+                except KeyError:
                     new_records = False
 
             if records:
@@ -174,11 +173,17 @@ class ElasticsearchHandler(DatabaseHandler):
                         columns=[column['name'] for column in columns]
                     )
                 )
-        except Exception as e:
-            logger.error(f'Error running query: {query} on {self.connection_data["hosts"]}!')
+        except (TransportError, RequestError) as transport_or_request_error:
+            logger.error(f'Error running query: {query} on Elasticsearch, {transport_or_request_error}!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
-                error_message=str(e)
+                error_message=str(transport_or_request_error)
+            )
+        except Exception as unknown_error:
+            logger.error(f'Unknown error running query: {query} on Elasticsearch, {unknown_error}!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(unknown_error)
             )
 
         if need_to_close is True:
@@ -220,7 +225,7 @@ class ElasticsearchHandler(DatabaseHandler):
 
         return result
 
-    def get_columns(self, table_name: str) -> StatusResponse:
+    def get_columns(self, table_name: str) -> Response:
         """
         Retrieves column (field) details for a specified table (index) in the Elasticsearch host.
 

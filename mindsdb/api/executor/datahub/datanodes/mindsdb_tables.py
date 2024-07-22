@@ -383,7 +383,7 @@ class AgentsTable(MdbTable):
 
     @classmethod
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
-        agents_controller = AgentsController(inf_schema)
+        agents_controller = AgentsController()
 
         project_name = get_project_name(query)
         all_agents = agents_controller.get_agents(project_name)

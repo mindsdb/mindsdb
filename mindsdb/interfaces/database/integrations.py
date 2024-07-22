@@ -6,7 +6,6 @@ import tempfile
 import importlib
 import threading
 import inspect
-import multiprocessing
 from time import time
 from pathlib import Path
 from copy import deepcopy
@@ -79,9 +78,6 @@ class HandlersCache:
             Args:
                 handler (DatabaseHandler)
         """
-        # do not cache connections in handlers processes
-        if multiprocessing.current_process().name.startswith('HandlerProcess'):
-            return
         with self._lock:
             try:
                 # If the handler is defined to be thread safe, set 0 as the last element of the key, otherwise set the thrad ID.

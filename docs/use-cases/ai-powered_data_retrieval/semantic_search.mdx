@@ -93,7 +93,7 @@ FROM mysql_demo_db
     (SELECT * FROM demo_fda_context LIMIT 2)
 PREDICT answer
 USING
-   engine="rag",
+   engine="rag_engine",
    llm_type="openai",
    vector_store_folder_name='test_db',
    input_column='question';
@@ -134,7 +134,7 @@ FROM files
     (SELECT * FROM uploaded_file)
 PREDICT answer
 USING
-   engine="rag",
+   engine="rag_engine",
    llm_type="openai",
    vector_store_folder_name='test_db',
    input_column='question';

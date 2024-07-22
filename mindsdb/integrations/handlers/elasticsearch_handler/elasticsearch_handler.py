@@ -1,7 +1,7 @@
 from typing import Optional
 
-from es.elastic.api import connect, Connection
-from es.exceptions import OperationalError, PogrammingError, TransportError
+from elasticsearch import Elasticsearch
+from elasticsearch.exceptions import ConnectionError, AuthenticationException
 from es.elastic.sqlalchemy import ESDialect
 from pandas import DataFrame
 from mindsdb_sql.parser.ast.base import ASTNode
@@ -49,7 +49,7 @@ class ElasticsearchHandler(DatabaseHandler):
         if self.is_connected:
             self.disconnect()
 
-    def connect(self) -> Connection:
+    def connect(self) -> Elasticsearch:
         """
         Establishes a connection to the Elasticsearch host.
 
@@ -57,33 +57,44 @@ class ElasticsearchHandler(DatabaseHandler):
             ValueError: If the expected connection parameters are not provided.
 
         Returns:
-            es.elastic.api.Connection: A connection object to the Elasticsearch host.
+            elasticsearch.Elasticsearch: A connection object to the Elasticsearch host.
         """
         if self.is_connected is True:
             return self.connection
         
-        # Mandatory connection parameters.
-        if 'host' not in self.connection_data:
-            raise ValueError('Host is a required parameter.')
-        
-        config = {
-            'host': self.connection_data['host']
-        }
+        config = {}
 
-        # Optional connection parameters.
-        optional_params = ['port', 'user', 'password', 'fetch_size'],
-        for param in optional_params:
-            if param in self.connection_data:
-                config[param] = self.connection_data[param]
+        # Mandatory connection parameters.
+        if ('hosts' not in self.connection_data) and ('cloud_id' not in self.connection_data):
+            raise ValueError("Either the hosts or cloud_id parameter should be provided!")
+
+        # Optional/Additional connection parameters.
+        optional_parameters = ['hosts', 'cloud_id', 'api_key']
+        for parameter in optional_parameters:
+            if parameter in self.connection_data:
+                config[parameter] = self.connection_data[parameter]
+
+        # Ensure that if either username or password is provided, both are provided.
+        if ('username' in self.connection_data) != ('password' in self.connection_data):
+            raise ValueError("Both username and password should be provided if one of them is provided!")
+        
+        if 'username' in self.connection_data:
+            config['basic_auth'] = (self.connection_data['username'], self.connection_data['password'])
 
         try:
-            self.connection = connect(
+            self.connection = Elasticsearch(
                 **config,
             )
             self.is_connected = True
             return self.connection
-        except OperationalError as e:
-            logger.error(f'Error connecting to Elasticsearch, {e}!')
+        except ConnectionError as conn_error:
+            logger.error(f'Connection error when connecting to Elasticsearch: {conn_error}')
+            raise
+        except AuthenticationException as auth_error:
+            logger.error(f'Authentication error when connecting to Elasticsearch: {auth_error}')
+            raise
+        except Exception as e:
+            logger.error(f'Unknown error when connecting to Elasticsearch: {e}')
             raise
 
     def disconnect(self) -> None:
@@ -110,8 +121,7 @@ class ElasticsearchHandler(DatabaseHandler):
             connection = self.connect()
 
             # Execute a simple query to test the connection.
-            with connection.cursor() as cur:
-                cur.execute('select 1;')
+            connection.sql.query(body={'query': 'SELECT 1'})
             response.success = True
         # TODO: Make the exception handling more specific.
         except Exception as e:
@@ -140,24 +150,36 @@ class ElasticsearchHandler(DatabaseHandler):
 
         # TODO: Make error handling more specific.
         connection = self.connect()
-        with connection.cursor() as cur:
-            try:
-                cur.execute(query)
-                result = cur.fetchall()
+        try:
+            response = connection.sql.query(body={'query': query})
+            records = response['rows']
+            columns = response['columns']
+
+            new_records = True
+            while new_records:
+                try:
+                    if response['cursor']:
+                        response = connection.sql.query(body={'query': query, 'cursor': response['cursor']})
+
+                        new_records = response['rows']
+                        records = records + new_records
+                except Exception as e:
+                    new_records = False
+
+            if records:
                 response = Response(
                     RESPONSE_TYPE.TABLE,
-                    DataFrame(
-                        result,
-                        columns=[x[0] for x in cur.description]
+                    data_frame=DataFrame(
+                        records,
+                        columns=[column['name'] for column in columns]
                     )
                 )
-            except Exception as e:
-                logger.error(f"Error running query: {query} on Elasticsearch, {e}!")
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_code=0,
-                    error_message=str(e)
-                )
+        except Exception as e:
+            logger.error(f'Error running query: {query} on {self.connection_data["hosts"]}!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(e)
+            )
 
         if need_to_close is True:
             self.disconnect()

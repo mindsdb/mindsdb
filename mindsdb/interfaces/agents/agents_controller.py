@@ -22,7 +22,6 @@ class AgentsController:
 
     def __init__(
         self,
-        datahub,
         project_controller: ProjectController = None,
         skills_controller: SkillsController = None,
         model_controller: ModelController = None
@@ -36,7 +35,6 @@ class AgentsController:
         self.project_controller = project_controller
         self.skills_controller = skills_controller
         self.model_controller = model_controller
-        self.datahub = datahub
 
     def get_agent(self, agent_name: str, project_name: str = 'mindsdb') -> db.Agents:
         '''

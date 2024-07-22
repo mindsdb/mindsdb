@@ -6,6 +6,7 @@ from flask_restx import Resource
 from langfuse import Langfuse
 
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
+from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.api.http.utils import http_error
 from mindsdb.metrics.metrics import api_endpoint_metrics
@@ -32,10 +33,10 @@ def create_agent(project_name, name, agent):
     params = agent.get('params', {})
     skills = agent.get('skills', [])
 
-    session = SessionController()
+    agents_controller = AgentsController()
 
     try:
-        existing_agent = session.agents_controller.get_agent(name, project_name=project_name)
+        existing_agent = agents_controller.get_agent(name, project_name=project_name)
     except ValueError:
         # Project must exist.
         return http_error(
@@ -51,7 +52,7 @@ def create_agent(project_name, name, agent):
         )
 
     try:
-        created_agent = session.agents_controller.add_agent(
+        created_agent = agents_controller.add_agent(
             name,
             project_name,
             model_name,
@@ -81,9 +82,8 @@ class AgentsResource(Resource):
     @api_endpoint_metrics('GET', '/agents')
     def get(self, project_name):
         ''' List all agents '''
-        session = SessionController()
         try:
-            all_agents = session.agents_controller.get_agents(project_name)
+            all_agents = AgentsController().get_agents(project_name)
         except ValueError:
             # Project needs to exist.
             return http_error(
@@ -119,9 +119,9 @@ class AgentResource(Resource):
     @api_endpoint_metrics('GET', '/agents/agent')
     def get(self, project_name, agent_name):
         '''Gets an agent by name'''
-        session = SessionController()
+        agents_controller = AgentsController()
         try:
-            existing_agent = session.agents_controller.get_agent(agent_name, project_name=project_name)
+            existing_agent = agents_controller.get_agent(agent_name, project_name=project_name)
             if existing_agent is None:
                 return http_error(
                     HTTPStatus.NOT_FOUND,
@@ -149,10 +149,10 @@ class AgentResource(Resource):
                 'Missing parameter',
                 'Must provide "agent" parameter in POST body'
             )
-        session = SessionController()
+        agents_controller = AgentsController()
 
         try:
-            existing_agent = session.agents_controller.get_agent(agent_name, project_name=project_name)
+            existing_agent = agents_controller.get_agent(agent_name, project_name=project_name)
         except ValueError:
             # Project must exist.
             return http_error(
@@ -183,7 +183,7 @@ class AgentResource(Resource):
 
         # Agent must not exist with new name.
         if name is not None and name != agent_name:
-            agent_with_new_name = session.agents_controller.get_agent(name, project_name=project_name)
+            agent_with_new_name = agents_controller.get_agent(name, project_name=project_name)
             if agent_with_new_name is not None:
                 return http_error(
                     HTTPStatus.CONFLICT,
@@ -197,7 +197,7 @@ class AgentResource(Resource):
 
         # Update
         try:
-            updated_agent = session.agents_controller.update_agent(
+            updated_agent = agents_controller.update_agent(
                 agent_name,
                 project_name=project_name,
                 name=name,
@@ -219,9 +219,10 @@ class AgentResource(Resource):
     @api_endpoint_metrics('DELETE', '/agents/agent')
     def delete(self, project_name, agent_name):
         '''Deletes a agent by name'''
-        session = SessionController()
+        agents_controller = AgentsController()
+
         try:
-            existing_agent = session.agents_controller.get_agent(agent_name, project_name=project_name)
+            existing_agent = agents_controller.get_agent(agent_name, project_name=project_name)
             if existing_agent is None:
                 return http_error(
                     HTTPStatus.NOT_FOUND,
@@ -236,7 +237,7 @@ class AgentResource(Resource):
                 f'Project with name {project_name} does not exist'
             )
 
-        session.agents_controller.delete_agent(agent_name, project_name=project_name)
+        agents_controller.delete_agent(agent_name, project_name=project_name)
         return '', HTTPStatus.NO_CONTENT
 
 
@@ -255,9 +256,10 @@ class AgentCompletions(Resource):
                 'Missing parameter',
                 'Must provide "messages" parameter in POST body'
             )
-        session = SessionController()
+        agents_controller = AgentsController()
+
         try:
-            existing_agent = session.agents_controller.get_agent(agent_name, project_name=project_name)
+            existing_agent = agents_controller.get_agent(agent_name, project_name=project_name)
             if existing_agent is None:
                 return http_error(
                     HTTPStatus.NOT_FOUND,
@@ -298,7 +300,7 @@ class AgentCompletions(Resource):
             trace_id = api_trace.id
             observation_id = run_completion_span.id
 
-        completion = session.agents_controller.get_completion(
+        completion = agents_controller.get_completion(
             existing_agent,
             messages,
             trace_id=trace_id,
@@ -309,7 +311,7 @@ class AgentCompletions(Resource):
             tools=[]
         )
 
-        output_col = session.agents_controller.assistant_column
+        output_col = agents_controller.assistant_column
         model_output = completion.iloc[-1][output_col]
         if run_completion_span is not None and api_trace is not None:
             run_completion_span.end(output=model_output)

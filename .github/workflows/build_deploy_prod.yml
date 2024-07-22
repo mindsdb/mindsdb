@@ -118,7 +118,7 @@ jobs:
           channel-id: ${{ secrets.SLACK_DEPLOYMENTS_CHANNEL_ID }}
           status: "started"
           color: "#0099CC"
-          env-name: ${{ matrix.deploy-env }}
+          env-name: "prod"
           env-url: ${{ vars.ENV_URL }}
           slack-token: ${{ secrets.GH_ACTIONS_SLACK_BOT_TOKEN }}
       - uses: FranzDiebold/github-env-vars-action@v2
@@ -137,7 +137,7 @@ jobs:
           channel-id: ${{ secrets.SLACK_DEPLOYMENTS_CHANNEL_ID }}
           status: "${{ job.status == 'success' && 'finished' || 'failed' }}"
           color: "${{ job.status == 'success' && '#00C851' || '#FF4444' }}"
-          env-name: ${{ matrix.deploy-env }}
+          env-name: "prod"
           env-url: ${{ vars.ENV_URL }}
           slack-token: ${{ secrets.GH_ACTIONS_SLACK_BOT_TOKEN }}
           update-message-id: ${{ steps.slack.outputs.ts }}

@@ -344,7 +344,7 @@ class AgentCompletionsStream(Resource):
             api_trace = langfuse.trace(
                 name='api-completion',
                 input=messages,
-                tags=['benchmark']
+                tags=[os.getenv('FLASK_ENV', 'unknown')]
             )
             run_completion_span = api_trace.span(name='run-completion', input=messages)
             trace_id = api_trace.id

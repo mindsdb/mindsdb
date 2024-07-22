@@ -358,9 +358,6 @@ class KnowledgeBaseController:
             # create default embedding model
             model_name = self._get_default_embedding_model(project.name, params=params)
 
-            # memorize to remove it later
-            params['embedding_model'] = model_name
-
         else:
             # get embedding model from input
             model_name = embedding_model.parts[-1]

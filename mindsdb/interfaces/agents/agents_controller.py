@@ -39,7 +39,7 @@ class AgentsController:
         self.model_controller = model_controller
         self.datahub = datahub
 
-    def check_model_provider(self, model_name: str, provider: str = None):
+    def check_model_provider(self, model_name: str, provider: str = None) -> (dict, str):
         '''
         Checks if a model is supported by a provider.
 
@@ -48,7 +48,8 @@ class AgentsController:
             provider (str): The provider to check
 
         Returns:
-            model (db.Models): The database model object
+            model (dict): The model object
+            provider (str): The provider of the model
         '''
         model = None
 

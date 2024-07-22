@@ -37,9 +37,11 @@ class LangChainRAGPipeline:
 
         prompt = ChatPromptTemplate.from_template(self.prompt_template)
 
-        # Ensure all components are not None
-        if None in [prompt, self.llm]:
-            raise ValueError("One of the required components (prompt or llm) is None")
+        # Ensure all the required components are not None
+        if prompt is None:
+            raise ValueError("One of the required components (prompt) is None")
+        if self.llm is None:
+            raise ValueError("One of the required components (llm) is None")
 
         rag_chain_from_docs = (
                 RunnablePassthrough.assign(context=(lambda x: format_docs(x["context"])))  # noqa: E126, E122

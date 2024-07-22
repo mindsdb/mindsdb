@@ -44,7 +44,7 @@ from .constants import (
 from ..skills.skill_tool import skill_tool, SkillType
 from ...integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
 
-_PARSING_ERROR_PREFIXES = ['An output parsing error occured', 'Could not parse LLM output']
+_PARSING_ERROR_PREFIXES = ['An output parsing error occurred', 'Could not parse LLM output']
 
 logger = log.getLogger(__name__)
 
@@ -58,7 +58,7 @@ def get_llm_provider(args: Dict) -> str:
         return 'openai'
     if args['model_name'] in OLLAMA_CHAT_MODELS:
         return 'ollama'
-    raise ValueError("Invalid model name. Please define provider")
+    raise ValueError("Invalid model name. Please define a supported llm provider")
 
 
 def get_embedding_model_provider(args: Dict) -> str:

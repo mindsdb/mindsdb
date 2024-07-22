@@ -19,7 +19,7 @@ class LogCallbackHandler(BaseCallbackHandler):
         self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any
     ) -> Any:
         '''Run when LLM starts running.'''
-        self.logger.debug(f'LLM started with prompts:')
+        self.logger.debug('LLM started with prompts:')
         for prompt in prompts:
             self.logger.debug(prompt[:50])
 

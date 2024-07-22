@@ -54,7 +54,7 @@ def get_season_length(frequency):
 
 def get_insample_cv_results(model_args, df):
     """Gets insample cross validation results"""
-    season_length = get_season_length(model_args["frequency"])
+    season_length = get_season_length(model_args["frequency"]) if not model_args["season_length"] else model_args["season_length"]  # noqa
     if model_args["model_name"] == "auto":
         models = [model(season_length=season_length) for model in model_dict.values()]
     else:
@@ -75,7 +75,7 @@ def choose_model(model_args, results_df):
     """
     if model_args["model_name"] == "auto":
         model_args["model_name"] = get_best_model_from_results_df(results_df)
-    model_args["season_length"] = get_season_length(model_args["frequency"])
+    model_args["season_length"] = get_season_length(model_args["frequency"]) if not model_args["season_length"] else model_args["season_length"]  # noqa
     model = model_dict[model_args["model_name"]]
     return model(season_length=model_args["season_length"])
 

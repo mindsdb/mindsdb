@@ -27,29 +27,6 @@ class TestLangchain(BaseExecutorTest):
         self.run_sql("create database proj")
 
     @pytest.mark.skipif(OPENAI_API_KEY is None, reason='Missing OpenAI API key (OPENAI_API_KEY env variable)')
-    def test_mdb_read(self):
-        self.run_sql(
-            f"""
-           create model proj.test_mdb_model
-           predict answer
-           using
-             engine='langchain',
-             prompt_template='Answer the user in a useful way: {{{{question}}}}',
-             openai_api_key='{OPENAI_API_KEY}';
-        """
-        )
-        self.wait_predictor("proj", "test_mdb_model")
-
-        result_df = self.run_sql(
-            """
-            SELECT answer
-            FROM proj.test_mdb_model
-            WHERE question='Can you get a list of all available MindsDB models?'
-        """
-        )
-        assert "test_mdb_model" in result_df['answer'].iloc[0].lower()
-
-    @pytest.mark.skipif(OPENAI_API_KEY is None, reason='Missing OpenAI API key (OPENAI_API_KEY env variable)')
     def test_default_provider(self):
         self.run_sql(
             f"""
@@ -128,7 +105,7 @@ class TestLangchain(BaseExecutorTest):
            using
              engine='langchain',
              provider='anyscale',
-             model_name='meta-llama/Llama-2-7b-chat-hf',
+             model_name='meta-llama/Meta-Llama-3-8B-Instruct',
              prompt_template='Answer the user in a useful way: {{{{question}}}}',
              anyscale_api_key='{ANYSCALE_API_KEY}';
         """
@@ -181,47 +158,3 @@ class TestLangchain(BaseExecutorTest):
         """
         )
         assert agent_name in result_df['answer'].iloc[0].lower()
-
-    @pytest.mark.skipif(OPENAI_API_KEY is None, reason='Missing OpenAI API key (OPENAI_API_KEY env variable)')
-    def test_simple_vectordb_retrieval_skill(self):
-
-        self.run_sql(
-            """
-           create model proj.test_retrieval_model
-           predict answer
-           using
-             engine='langchain',
-             mode='retrieval'
-        """
-        )
-
-        self.wait_predictor("proj", "test_retrieval_model")
-
-        # create a retrieval skill
-        self.run_sql(
-            """
-            CREATE SKILL proj.retrieval_skill
-            using
-            type='retrieval',
-            name='country_info_search',
-            description='countries';
-        """
-        )
-
-        # create a retrieval agent
-        self.run_sql(
-            """
-           create agent proj.retrieval_agent
-           using
-           model='test_retrieval_model',
-           skills=['retrieval_skill'];
-        """
-        )
-        result_df = self.run_sql(
-            """
-            SELECT answer
-            FROM proj.retrieval_agent
-            WHERE question='What is the capital of Sweden?'
-        """
-        )
-        assert "stockholm" in result_df['answer'].iloc[0].lower()

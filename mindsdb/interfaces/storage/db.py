@@ -343,7 +343,7 @@ class ChatBots(Base):
     agent_id = Column(ForeignKey("agents.id", name="fk_agent_id"))
 
     # To be removed when existing chatbots are backfilled with newly created Agents.
-    model_name = Column(String, nullable=False)
+    model_name = Column(String)
     database_id = Column(Integer)
     params = Column(JSON)
 
@@ -461,7 +461,7 @@ class Agents(Base):
     name = Column(String, nullable=False)
     project_id = Column(Integer, nullable=False)
 
-    model_name = Column(String, nullable=False)
+    model_name = Column(String, nullable=True)
     params = Column(JSON)
 
     updated_at = Column(
@@ -551,3 +551,17 @@ class LLMLog(Base):
     completion_tokens: int = Column(Integer, nullable=True)
     total_tokens: int = Column(Integer, nullable=True)
     success: bool = Column(Boolean, nullable=False, default=True)
+
+
+class LLMData(Base):
+    '''
+    Stores the question/answer pairs of an LLM call so examples can be used
+    for self improvement with DSPy
+    '''
+    __tablename__ = "llm_data"
+    id: int = Column(Integer, primary_key=True)
+    input: str = Column(String, nullable=False)
+    output: str = Column(String, nullable=False)
+    model_id: int = Column(Integer, nullable=False)
+    created_at: datetime = Column(DateTime, default=datetime.datetime.now)
+    updated_at: datetime = Column(DateTime, onupdate=datetime.datetime.now)

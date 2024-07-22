@@ -89,7 +89,7 @@ class OllamaHandler(BaseMLEngine):
         df['__mdb_prompt'] = prompts
 
         # setup endpoint
-        is_embedder = 'embedding' in args.get('mode', None)
+        is_embedder = 'embeddings' in args.get('modes', {})
         if args['modes']['embeddings'] and is_embedder:
             endpoint = 'embeddings'
         else:

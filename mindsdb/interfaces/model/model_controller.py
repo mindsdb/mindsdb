@@ -225,8 +225,6 @@ class ModelController():
             integration_name = statement.integration_name.parts[0].lower()
 
             databases_meta = database_controller.get_dict()
-            logger.error(f"databases meta: {databases_meta}")
-            logger.error(f"integration name: {integration_name}")
             if integration_name not in databases_meta:
                 raise EntityNotExistsError('Database does not exist', integration_name)
             data_integration_meta = databases_meta[integration_name]

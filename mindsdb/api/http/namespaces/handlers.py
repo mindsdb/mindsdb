@@ -82,7 +82,7 @@ class InstallDependencies(Resource):
             return '', 200
         return http_error(
             500,
-            'Failed to install dependency',
+            f'Failed to install dependencies for {handler_meta.get("title", handler_name)}',
             result.get('error_message', 'unknown error')
         )
 
@@ -183,7 +183,7 @@ class BYOMUpload(Resource):
         code_file_path = params['code'].name.decode()
         try:
             module_file_path = params['modules'].name.decode()
-        except AttributeError:
+        except KeyError:
             module_file_path = Path(code_file_path).parent / 'requirements.txt'
             module_file_path.touch()
             module_file_path = str(module_file_path)
@@ -191,6 +191,7 @@ class BYOMUpload(Resource):
         connection_args = {
             'code': code_file_path,
             'modules': module_file_path,
+            'mode': params.get('mode'),
             'type': params.get('type')
         }
 

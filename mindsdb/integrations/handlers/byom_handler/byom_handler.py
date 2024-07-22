@@ -37,7 +37,7 @@ import mindsdb.utilities.profiler as profiler
 
 from .proc_wrapper import (
     pd_decode, pd_encode, encode, decode, BYOM_METHOD,
-    import_string, find_model_class, get_methods_info
+    import_string, find_model_class, check_module
 )
 from .__about__ import __version__
 
@@ -268,6 +268,7 @@ class BYOMHandler(BaseMLEngine):
 
         self.engine_storage.update_connection_args({
             'handler_version': __version__,
+            'mode': connection_args.get('mode'),
             'versions': {
                 '1': {
                     'code': code_path.name,
@@ -281,8 +282,8 @@ class BYOMHandler(BaseMLEngine):
 
         model_proxy = self._get_model_proxy()
         try:
-            methods = model_proxy.check()
-            self.engine_storage.json_set('methods', methods)
+            info = model_proxy.check(connection_args.get('mode'))
+            self.engine_storage.json_set('methods', info['methods'])
 
         except Exception as e:
             model_proxy.remove_venv()
@@ -407,10 +408,14 @@ class ModelWrapperUnsafe:
     """
 
     def __init__(self, code, modules_str, engine_id, engine_version: int):
-        module = import_string(code)
-        model_class = find_model_class(module)
-        self.model_class = model_class
-        self.model_instance = self.model_class()
+        self.module = import_string(code)
+
+        model_instance = None
+        model_class = find_model_class(self.module)
+        if model_class is not None:
+            model_instance = model_class()
+
+        self.model_instance = model_instance
 
     def train(self, df, target, args):
         self.model_instance.train(df, target, args)
@@ -444,12 +449,11 @@ class ModelWrapperUnsafe:
         return pd.DataFrame()
 
     def func_call(self, func_name, args):
-
-        func = getattr(self.model_instance, func_name)
+        func = getattr(self.module, func_name)
         return func(*args)
 
-    def check(self):
-        methods = get_methods_info(self.model_instance)
+    def check(self, mode):
+        methods = check_module(self.module, mode)
         return methods
 
 
@@ -565,7 +569,8 @@ class ModelWrapperSafe:
 
         is_pandas = any([m.lower().startswith('pandas') for m in modules])
         if not is_pandas:
-            modules.append('pandas >=2.0.0, <2.1.0')
+            modules.append('pandas>=2.0.0,<2.1.0')
+            modules.append('numpy<2.0.0')
 
         # for dataframe serialization
         modules.append('pyarrow==14.0.1')
@@ -604,10 +609,11 @@ class ModelWrapperSafe:
             raise RuntimeError(p.stderr.read())
         return ret
 
-    def check(self):
+    def check(self, mode):
         params = {
             'method': BYOM_METHOD.CHECK.value,
             'code': self.code,
+            'mode': mode,
         }
         return self._run_command(params)
 
@@ -615,10 +621,12 @@ class ModelWrapperSafe:
         params = {
             'method': BYOM_METHOD.TRAIN.value,
             'code': self.code,
-            'df': pd_encode(df),
+            'df': None,
             'to_predict': target,
             'args': args,
         }
+        if df is not None:
+            params['df'] = pd_encode(df)
 
         model_state = self._run_command(params)
         return model_state

@@ -1,3 +1,5 @@
-llama-index==0.9.23
-llama-hub==0.0.67
+llama-index==0.10.3
 openai == 1.24.0
+pydantic-settings >= 2.1.0
+llama-index-readers-web
+llama-index-embeddings-openai

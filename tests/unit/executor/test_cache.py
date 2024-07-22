@@ -10,7 +10,7 @@ import os
 
 import pandas as pd
 
-from mindsdb.utilities.cache import get_cache, RedisCache, FileCache, dataframe_checksum
+from mindsdb.utilities.cache import RedisCache, FileCache, dataframe_checksum
 
 
 class TestCashe(unittest.TestCase):
@@ -45,12 +45,12 @@ class TestCashe(unittest.TestCase):
 
         # test save
         df = pd.DataFrame([
-            [1, 1.2,'string', dt.datetime.now(), [1,2,3], {1:3}],
-            [2, 3.2,'other', dt.datetime(2011, 12, 30), [3], {11:23, 2:3}],
+            [1, 1.2, 'string', dt.datetime.now(), [1, 2, 3], {1: 3}],
+            [2, 3.2, 'other', dt.datetime(2011, 12, 30), [3], {11: 23, 2: 3}],
         ], columns=['a', 'b', 'c', 'd', 'e', 'f'])
 
         # make bigger
-        df = pd.concat([df]*100).reset_index()
+        df = pd.concat([df] * 100).reset_index()
 
         name = dataframe_checksum(df)
 

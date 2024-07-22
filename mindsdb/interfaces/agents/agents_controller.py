@@ -272,11 +272,14 @@ class AgentsController:
         Parameters:
             agent (db.Agents): Existing agent to get completion from
             messages (List[Dict[str, str]]): Chat history to send to the agent
+            trace_id (str): ID of Langfuse trace to use
+            observation_id (str): ID of parent Langfuse observation to use
             project_name (str): Project the agent belongs to (default mindsdb)
             tools (List[BaseTool]): Tools to use while getting the completion
+            stream (bool): Whether or not to stream the response
 
         Returns:
-            pd.DataFrame (pd.DataFrame): Completion as a DataFrame
+            response (Union[Iterator[object], pd.DataFrame]): Completion as a DataFrame or iterator of completion chunks
 
         Raises:
             ValueError: Agent's model does not exist.

@@ -114,7 +114,7 @@ class OllamaHandler(BaseMLEngine):
                 raw_output = requests.post(
                     connection + f'/api/{endpoint}',
                     json={
-                        'model': args['model_name'],
+                        'model': model_name,
                         'prompt': row['__mdb_prompt'],
                     }
                 )

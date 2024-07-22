@@ -157,7 +157,7 @@ class LangchainAgent:
             messages (List[dict]): Messages to get completion chunks for
             trace_id (str): Langfuse trace ID to use
             observation_id (str): Langfuse parent observation Id to use
-        
+
         Returns:
             chunks (Iterable[object]): Completion chunks
         '''
@@ -365,7 +365,7 @@ AI: {response}'''
             df (pd.DataFrame): DataFrame to use as messages input
             agent_executor (AgentExecutor): Executor to use for streaming agent
             args (Dict): Args to pass to agent
-        
+
         Returns:
             chunks (Iterable[Dict]): Completion chunks for agent
         '''

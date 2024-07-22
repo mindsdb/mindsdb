@@ -241,6 +241,7 @@ class AgentResource(Resource):
         session.agents_controller.delete_agent(agent_name, project_name=project_name)
         return '', HTTPStatus.NO_CONTENT
 
+
 def _completion_event_generator(
         agent_name: str,
         messages: List[Dict],

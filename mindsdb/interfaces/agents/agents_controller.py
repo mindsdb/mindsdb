@@ -1,4 +1,4 @@
-from typing import Dict, Iterator, List
+from typing import Dict, Iterator, List, Union
 
 from langchain_core.tools import BaseTool
 from sqlalchemy.orm.attributes import flag_modified
@@ -264,7 +264,8 @@ class AgentsController:
             trace_id: str = None,
             observation_id: str = None,
             project_name: str = 'mindsdb',
-            tools: List[BaseTool] = None) -> pd.DataFrame:
+            tools: List[BaseTool] = None,
+            stream: bool = False) -> Union[Iterator[object], pd.DataFrame]:
         '''
         Queries an agent to get a completion.
 
@@ -280,7 +281,15 @@ class AgentsController:
         Raises:
             ValueError: Agent's model does not exist.
         '''
-
+        if stream:
+            return self._get_completion_stream(
+                agent,
+                messages,
+                trace_id=trace_id,
+                observation_id=observation_id,
+                project_name=project_name,
+                tools=tools
+            )
         from .langchain_agent import LangchainAgent
 
         model = None
@@ -294,7 +303,7 @@ class AgentsController:
         lang_agent = LangchainAgent(agent, model=model)
         return lang_agent.get_completion(messages, trace_id, observation_id)
 
-    def get_completion_stream(
+    def _get_completion_stream(
             self,
             agent: db.Agents,
             messages: List[Dict[str, str]],
@@ -330,4 +339,4 @@ class AgentsController:
                 raise ValueError(f'Model with name {agent.model_name} not found')
 
         lang_agent = LangchainAgent(agent, model=model)
-        return lang_agent.get_completion_stream(messages, trace_id, observation_id)
+        return lang_agent.get_completion(messages, trace_id, observation_id, stream=True)

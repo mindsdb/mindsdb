@@ -127,7 +127,9 @@ class LangchainAgent:
         self.observation_id = None
         self.langfuse_callback_handler = None
 
-    def get_completion(self, messages, trace_id, observation_id):
+    def get_completion(self, messages, trace_id, observation_id, stream: bool = False):
+        if stream:
+            return self._get_completion_stream(messages, trace_id, observation_id)
         self.trace_id = trace_id
         self.observation_id = observation_id
 
@@ -147,7 +149,7 @@ class LangchainAgent:
         df.iloc[:-1, df.columns.get_loc(user_column)] = None
         return self.run_agent(df, agent, args)
 
-    def get_completion_stream(self, messages: List[dict], trace_id: str, observation_id: str) -> Iterable[Dict]:
+    def _get_completion_stream(self, messages: List[dict], trace_id: str, observation_id: str) -> Iterable[Dict]:
         '''
         Gets a completion as a stream of chunks from given messages.
 

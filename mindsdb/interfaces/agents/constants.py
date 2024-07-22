@@ -1,4 +1,6 @@
 from langchain.agents import AgentType
+from langchain_openai import OpenAIEmbeddings
+
 
 SUPPORTED_PROVIDERS = {'openai', 'anthropic', 'anyscale', 'litellm', 'ollama'}
 # Chat models
@@ -93,3 +95,4 @@ DEFAULT_MAX_TOKENS = 2048
 DEFAULT_MODEL_NAME = 'gpt-4-0125-preview'
 USER_COLUMN = 'question'
 DEFAULT_EMBEDDINGS_MODEL_PROVIDER = 'openai'
+DEFAULT_EMBEDDINGS_MODEL_CLASS = OpenAIEmbeddings

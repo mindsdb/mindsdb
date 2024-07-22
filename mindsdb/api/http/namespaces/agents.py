@@ -259,13 +259,14 @@ def _completion_event_generator(
     db.session.commit()
     db.session.flush()
 
-    completion_stream = session.agents_controller.get_completion_stream(
+    completion_stream = session.agents_controller.get_completion(
         existing_agent,
         messages,
         trace_id=trace_id,
         observation_id=observation_id,
         project_name=project_name,
         tools=[],
+        stream=True
     )
     last_output = None
     for chunk in completion_stream:
@@ -325,18 +326,6 @@ class AgentCompletionsStream(Resource):
                 HTTPStatus.NOT_FOUND,
                 'Project not found',
                 f'Project with name {project_name} does not exist'
-            )
-
-        # Model needs to exist.
-        model_name_no_version, version = db.Predictor.get_name_and_version(existing_agent.model_name)
-        try:
-            agent_model = session.model_controller.get_model(model_name_no_version, version=version, project_name=project_name)
-            _ = db.Predictor.query.get(agent_model['id'])
-        except PredictorRecordNotFound:
-            return http_error(
-                HTTPStatus.NOT_FOUND,
-                'Model not found',
-                f'Model with name {existing_agent.model_name} not found'
             )
 
         trace_id = None

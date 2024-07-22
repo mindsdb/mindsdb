@@ -11,6 +11,7 @@ from mindsdb_sql.parser.ast import Identifier
 from mindsdb_sql.parser.dialects.mindsdb import CreateMLEngine
 
 from mindsdb.metrics.metrics import api_endpoint_metrics
+from mindsdb.integrations.libs.ml_exec_base import process_cache
 from mindsdb.integrations.utilities.install import install_dependencies
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.api.http.utils import http_error
@@ -79,6 +80,9 @@ class InstallDependencies(Resource):
         # reload it if any result, so we can get new error message
         ca.integration_controller.reload_handler_module(handler_name)
         if result.get('success') is True:
+            # If warm processes are available in the cache, remove them.
+            # This will force a new process to be created with the installed dependencies.
+            process_cache.remove_processes_for_handler(handler_name)
             return '', 200
         return http_error(
             500,

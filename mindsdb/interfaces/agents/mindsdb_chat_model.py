@@ -125,7 +125,7 @@ class ChatMindsdb(BaseChatModel):
             'messages': [result]
         }
 
-    @root_validator()
+    @root_validator(allow_reuse=True)
     def validate_environment(cls, values: Dict) -> Dict:
 
         model_name = values['model_name']

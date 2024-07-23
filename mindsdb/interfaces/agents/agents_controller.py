@@ -22,11 +22,10 @@ class AgentsController:
     assistant_column = ASSISTANT_COLUMN
 
     def __init__(
-            self,
-            datahub,
-            project_controller: ProjectController = None,
-            skills_controller: SkillsController = None,
-            model_controller: ModelController = None
+        self,
+        project_controller: ProjectController = None,
+        skills_controller: SkillsController = None,
+        model_controller: ModelController = None
     ):
         if project_controller is None:
             project_controller = ProjectController()
@@ -37,7 +36,6 @@ class AgentsController:
         self.project_controller = project_controller
         self.skills_controller = skills_controller
         self.model_controller = model_controller
-        self.datahub = datahub
 
     def check_model_provider(self, model_name: str, provider: str = None) -> (dict, str):
         '''
@@ -201,6 +199,7 @@ class AgentsController:
             model_name: str = None,
             skills_to_add: List[str] = None,
             skills_to_remove: List[str] = None,
+            provider: str = None,
             params: Dict[str, str] = None):
         '''
         Updates an agent in the database.
@@ -212,6 +211,7 @@ class AgentsController:
             model_name (str): The name of the existing ML model the agent will use
             skills_to_add (List[str]): List of skill names to add to the agent
             skills_to_remove (List[str]): List of skill names to remove from the agent
+            provider (str): The provider of the model
             params: (Dict[str, str]): Parameters to use when running the agent
 
         Returns:
@@ -231,8 +231,12 @@ class AgentsController:
             if agent_with_new_name is not None:
                 raise ValueError(f'Agent with updated name already exists: {name}')
 
-        # check model and provider
-        self.check_model_provider(model_name, existing_agent.provider)
+        if model_name or provider:
+            # check model and provider
+            model, provider = self.check_model_provider(model_name, provider)
+            # Update model and provider
+            existing_agent.model_name = model_name
+            existing_agent.provider = provider
 
         # Check if given skills exist.
         new_skills = []

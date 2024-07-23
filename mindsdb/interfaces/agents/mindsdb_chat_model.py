@@ -74,7 +74,6 @@ class ChatMindsdb(BaseChatModel):
     def completion(
         self, messages: List[dict]
     ) -> Any:
-
         problem_definition = self.model_info['problem_definition'].get('using', {})
         output_col = self.model_info['predict']
 
@@ -89,7 +88,9 @@ class ChatMindsdb(BaseChatModel):
 
         record = {}
         params = {}
-        if problem_definition.get('mode') == 'conversational' or problem_definition.get('mode') == 'retrieval':
+        # Default to conversational if not set.
+        mode = problem_definition.get('mode', 'conversational')
+        if mode == 'conversational' or mode == 'retrieval':
             # flag for langchain to prevent calling agent inside of agent
             if self.model_info['engine'] == 'langchain':
                 params['mode'] = 'chat_model'

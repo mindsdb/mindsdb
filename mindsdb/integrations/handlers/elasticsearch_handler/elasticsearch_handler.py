@@ -61,7 +61,7 @@ class ElasticsearchHandler(DatabaseHandler):
         """
         if self.is_connected is True:
             return self.connection
-        
+
         config = {}
 
         # Mandatory connection parameters.
@@ -80,7 +80,7 @@ class ElasticsearchHandler(DatabaseHandler):
         # Ensure that if either user or password is provided, both are provided.
         if ('user' in self.connection_data) != ('password' in self.connection_data):
             raise ValueError("Both user and password should be provided if one of them is provided!")
-        
+
         if 'user' in self.connection_data:
             config['basic_auth'] = (self.connection_data['user'], self.connection_data['password'])
 

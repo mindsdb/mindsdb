@@ -74,12 +74,12 @@ class ElasticsearchHandler(DatabaseHandler):
             if parameter in self.connection_data:
                 config[parameter] = self.connection_data[parameter]
 
-        # Ensure that if either username or password is provided, both are provided.
-        if ('username' in self.connection_data) != ('password' in self.connection_data):
-            raise ValueError("Both username and password should be provided if one of them is provided!")
+        # Ensure that if either user or password is provided, both are provided.
+        if ('user' in self.connection_data) != ('password' in self.connection_data):
+            raise ValueError("Both user and password should be provided if one of them is provided!")
         
-        if 'username' in self.connection_data:
-            config['basic_auth'] = (self.connection_data['username'], self.connection_data['password'])
+        if 'user' in self.connection_data:
+            config['basic_auth'] = (self.connection_data['user'], self.connection_data['password'])
 
         try:
             self.connection = Elasticsearch(

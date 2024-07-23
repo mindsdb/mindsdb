@@ -26,10 +26,22 @@ class BaseResultsTable(APITable):
             raise ValueError('Query is missing in the SQL query')
         if 'type' not in params and hasattr(self, 'default_type'):
             params['type'] = self.default_type
-        api_response = requests.get(self.handler.base_url, params=params)
-        api_result = api_response.json()
+        try:
+            api_response = requests.get(self.handler.base_url, params=params)
+            api_response.raise_for_status() # raises HTTPError for bad responses
+            api_result = api_response.json()
+        except requests.exceptions.HTTPError as e:
+            raise SystemError(f"HTTP error occurred: {e.response.status_code} - {e.response.reason}")
+        except requests.exceptions.ConnectionError as e:
+            raise SystemError(f"Connection error occurred: {str(e)}")
+        except requests.exceptions.Timeout as e:
+            raise SystemError(f"Request timeout: {str(e)}")
+        except requests.exceptions.RequestException as e:
+            raise SystemError(f"Request exception occurred: {str(e)}")
+        except ValueError as e:
+            raise SystemError(f"Failed to parse JSON response: {str(e)}")
+        
         results = api_result.get(self.results_key, [])
-
         processed_results = [self.extract_data(result) for result in results]
 
         if len(processed_results) == 0:
@@ -54,6 +66,16 @@ class BaseResultsTable(APITable):
         raise NotImplementedError("Subclasses must implement this method.")
 
     def filter_columns(self, result: pd.DataFrame, query: ast.Select = None):
+        """
+        Filters the columns of the result DataFrame.
+
+        Args:
+            result (pandas.DataFrame): The result DataFrame.
+            query (ast.Select): The SQL query to be executed.
+
+        Returns:
+            pandas.DataFrame: A pandas DataFrame containing the filtered data.
+        """
         columns = []
         if query is not None:
             for target in query.targets:

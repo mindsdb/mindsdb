@@ -103,7 +103,8 @@ class SerpstackHandler(APIHandler):
         response = StatusResponse(False)
 
         try:
-            self.connect()
+            health_response = requests.get("http://api.serpstack.com")
+            health_response.raise_for_status()
             response.success = True
         except Exception as e:
             response.error_message = (

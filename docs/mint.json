@@ -1092,7 +1092,6 @@
       "group": "FAQs",
       "pages": [
         "faqs/benefits",
-        "faqs/whitelist-ips",
         "faqs/persist-predictions",
         "faqs/mindsdb-with-php",
         "faqs/disposable-email-doman-and-openai"

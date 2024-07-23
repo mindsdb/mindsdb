@@ -4,6 +4,7 @@ from flask import request
 from flask_restx import Resource
 
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
+from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.api.http.utils import http_error
 from mindsdb.metrics.metrics import api_endpoint_metrics
@@ -78,7 +79,7 @@ def create_chatbot(project_name, name, chatbot):
 
     # Model and agent need to exist.
     if agent_name is not None:
-        agent = session_controller.agents_controller.get_agent(agent_name, project_name)
+        agent = AgentsController().get_agent(agent_name, project_name)
         if agent is None:
             return http_error(
                 HTTPStatus.NOT_FOUND,

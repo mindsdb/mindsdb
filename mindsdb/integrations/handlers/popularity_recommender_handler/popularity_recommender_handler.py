@@ -38,7 +38,7 @@ class PopularityRecommenderHandler(BaseMLEngine):
             .sort("count", descending=True)
             .get_column(args["item_id"])
             .head(
-                args["n_recommendations"] * args["ave_per_item_user"]
+                int(args["n_recommendations"] * args["ave_per_item_user"])
             )  # to ensure there are enough to predict
             .to_pandas()
             .reset_index()

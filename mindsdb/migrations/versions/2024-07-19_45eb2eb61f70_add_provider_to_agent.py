@@ -35,10 +35,9 @@ def upgrade():
                    sa.Column('provider', sa.String()))
 
     conn = op.get_bind()
-    for agent in conn.execute(select([agents])):
+    for agent in conn.execute(select(agents)):
         if agent.params and 'provider' in agent.params:
             conn.execute(update(agents).where(agents.c.id == agent.id).values(provider=agent.params['provider']))
-
     # ### end Alembic commands ###
 
 

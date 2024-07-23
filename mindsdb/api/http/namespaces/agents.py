@@ -259,7 +259,6 @@ def _completion_event_generator(
     existing_agent.params['openai_api_key'] = existing_agent.params.get('openai_api_key', os.getenv('OPENAI_API_KEY'))
     # Have to commit/flush here so DB isn't locked while streaming.
     db.session.commit()
-    db.session.flush()
 
     completion_stream = session.agents_controller.get_completion(
         existing_agent,

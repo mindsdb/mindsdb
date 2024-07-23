@@ -72,7 +72,10 @@ class ElasticsearchHandler(DatabaseHandler):
         optional_parameters = ['hosts', 'cloud_id', 'api_key']
         for parameter in optional_parameters:
             if parameter in self.connection_data:
-                config[parameter] = self.connection_data[parameter]
+                if parameter == 'hosts':
+                    config['hosts'] = self.connection_data[parameter].split(',')
+                else:
+                    config[parameter] = self.connection_data[parameter]
 
         # Ensure that if either user or password is provided, both are provided.
         if ('user' in self.connection_data) != ('password' in self.connection_data):

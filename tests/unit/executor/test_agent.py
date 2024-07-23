@@ -82,11 +82,12 @@ class TestAgent(BaseExecutorDummyML):
 
         self.run_sql('CREATE ML_ENGINE langchain FROM langchain')
 
-        with pytest.raises(Exception):
-            # using mindsdb model without specifying provider will fail
-            self.run_sql('''
-                CREATE AGENT my_agent
-                USING
-                 model_name = "base_model", -- <
-                 prompt_template="Answer the user input in a helpful way"
-             ''')
+        self.run_sql('''
+            CREATE AGENT my_agent
+            USING
+             model_name = "base_model", -- <
+             prompt_template="Answer the user input in a helpful way"
+         ''')
+        ret = self.run_sql("select * from my_agent where question = 'hi'")
+
+        assert ret.answer[0]

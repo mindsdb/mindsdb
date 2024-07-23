@@ -39,7 +39,9 @@ class AgentsController:
 
     def check_model_provider(self, model_name: str, provider: str = None) -> (dict, str):
         '''
-        Checks if a model is supported by a provider.
+        Checks if a model exists, and gets the provider of the model.
+
+        The provider is either the provider of the model, or the provider given as an argument.
 
         Parameters:
             model_name (str): The name of the model
@@ -51,22 +53,17 @@ class AgentsController:
         '''
         model = None
 
-        if not provider:
-            # If provider is not given, get it from the model name
-            provider = get_llm_provider({"model_name": model_name})
-
-        if provider == 'mindsdb':
-            if not model_name:
-                raise ValueError('Model name is required for provider mindsdb')
-
+        try:
             model_name_no_version, model_version = Predictor.get_name_and_version(model_name)
-            try:
-                model = self.model_controller.get_model(model_name_no_version, version=model_version)
-            except PredictorRecordNotFound:
-                raise ValueError(f'Model with name does not exist: {model_name}')
+            model = self.model_controller.get_model(model_name_no_version, version=model_version)
+            provider = 'mindsdb' if model.get('provider') is None else model.get('provider')
+        except PredictorRecordNotFound:
+            if not provider:
+                # If provider is not given, get it from the model name
+                provider = get_llm_provider({"model_name": model_name})
 
-        elif provider not in SUPPORTED_PROVIDERS and model_name not in PROVIDER_TO_MODELS.get(provider, []):
-            raise ValueError(f'Model with name does not exist for provider {provider}: {model_name}')
+            elif provider not in SUPPORTED_PROVIDERS and model_name not in PROVIDER_TO_MODELS.get(provider, []):
+                raise ValueError(f'Model with name does not exist for provider {provider}: {model_name}')
 
         return model, provider
 

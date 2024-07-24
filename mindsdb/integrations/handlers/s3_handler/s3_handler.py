@@ -1,3 +1,4 @@
+import re
 import boto3
 import duckdb
 import pandas as pd
@@ -27,7 +28,6 @@ class S3Handler(DatabaseHandler):
     """
 
     name = 's3'
-    table_name = 's3_table'
     # TODO: Can other file formats be supported?
     supported_file_formats = ['csv', 'tsv', 'json', 'parquet']
 
@@ -43,13 +43,12 @@ class S3Handler(DatabaseHandler):
         super().__init__(name)
         self.connection_data = connection_data
         self.kwargs = kwargs
+        self.is_select_query = False
         self.key = None
+        self.table_name = None
 
         self.connection = None
         self.is_connected = False
-
-        self.is_select_query = False
-        self.key = None
 
     def __del__(self):
         if self.is_connected is True:
@@ -226,7 +225,7 @@ class S3Handler(DatabaseHandler):
         """
         connection = self.connect()
         try:
-            connection.execute(f"CREATE TABLE {self.table_name} AS SELECT * FROM 's3://{self.connection_data['bucket']}/{self.key}'")
+            connection.execute(f"CREATE TABLE IF NOT EXISTS {self.table_name} AS SELECT * FROM 's3://{self.connection_data['bucket']}/{self.key}'")
         except CatalogException as e:
             logger.error(f'Error creating table {self.table_name} from file {self.key} in {self.connection_data["bucket"]}, {e}!')
             raise e
@@ -260,23 +259,12 @@ class S3Handler(DatabaseHandler):
         """
         # Set the key by getting it from the query.
         # This will be used to create a table from the object in the S3 bucket.
-        # Replace the key with the name of the table to be created.
         if isinstance(query, Select):
             self.is_select_query = True
             table = query.from_table
 
-            query.from_table = Identifier(
-                parts=[self.table_name],
-                alias=table.alias
-            )
-
         else:
             table = query.table
-
-            query.table = Identifier(
-                parts=[self.table_name],
-                alias=table.alias
-            )
 
         self.key = table.get_string().replace('`', '')
 
@@ -292,6 +280,22 @@ class S3Handler(DatabaseHandler):
         except ClientError as e:
             logger.error(f'Error querying the file {self.key} in the bucket {self.connection_data["bucket"]}, {e}!')
             raise e
+
+        # Replace all special characters in the key with underscores to create a valid table name.
+        self.table_name = re.sub(r'[\W]+','_', self.key)
+
+        # Replace the key with the name of the table to be created.
+        if self.is_select_query:
+            query.from_table = Identifier(
+                parts=[self.table_name],
+                alias=table.alias
+            )
+
+        else:
+            query.table = Identifier(
+                parts=[self.table_name],
+                alias=table.alias
+            )
 
         return self.native_query(query.to_string())
 

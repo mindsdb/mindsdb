@@ -65,8 +65,11 @@ class TestElasticsearchHandler(unittest.TestCase):
         mock_conn = MagicMock()
         mock_conn.sql.query = MagicMock(
             return_value={
-                'rows': ['value1', 'value2'],
-                'columns': ['column1', 'column2'],
+                'rows': [[1, 2.0]],
+                'columns': [
+                    {'name': 'column1', 'type': 'integer'},
+                    {'name': 'column2', 'type': 'float'},
+                ],
             }
         )
 

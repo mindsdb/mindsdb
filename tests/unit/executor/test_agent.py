@@ -60,7 +60,7 @@ class TestAgent(BaseExecutorDummyML):
         assert agent_response in ret.answer[0]
 
     @patch('openai.OpenAI')
-    def test_openai_provider_with_model(self, mock_openai):
+    def test_openai_with_model(self, mock_openai):
         agent_response = 'how can I assist you today?'
 
         mock_openai().chat.completions.create.return_value = {

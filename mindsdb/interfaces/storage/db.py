@@ -462,6 +462,7 @@ class Agents(Base):
     project_id = Column(Integer, nullable=False)
 
     model_name = Column(String, nullable=True)
+    provider = Column(String, nullable=True)
     params = Column(JSON)
 
     updated_at = Column(
@@ -476,6 +477,7 @@ class Agents(Base):
             "project_id": self.project_id,
             "model_name": self.model_name,
             "skills": [s.as_dict() for s in self.skills],
+            "provider": self.provider,
             "params": self.params,
             "updated_at": self.updated_at,
             "created_at": self.created_at,

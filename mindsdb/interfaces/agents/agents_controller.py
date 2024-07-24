@@ -12,7 +12,8 @@ from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.utilities.context import context as ctx
 
-from .constants import ASSISTANT_COLUMN
+from .constants import ASSISTANT_COLUMN, SUPPORTED_PROVIDERS, PROVIDER_TO_MODELS
+from .langchain_agent import get_llm_provider
 
 
 class AgentsController:
@@ -35,6 +36,36 @@ class AgentsController:
         self.project_controller = project_controller
         self.skills_controller = skills_controller
         self.model_controller = model_controller
+
+    def check_model_provider(self, model_name: str, provider: str = None) -> (dict, str):
+        '''
+        Checks if a model exists, and gets the provider of the model.
+
+        The provider is either the provider of the model, or the provider given as an argument.
+
+        Parameters:
+            model_name (str): The name of the model
+            provider (str): The provider to check
+
+        Returns:
+            model (dict): The model object
+            provider (str): The provider of the model
+        '''
+        model = None
+
+        try:
+            model_name_no_version, model_version = Predictor.get_name_and_version(model_name)
+            model = self.model_controller.get_model(model_name_no_version, version=model_version)
+            provider = 'mindsdb' if model.get('provider') is None else model.get('provider')
+        except PredictorRecordNotFound:
+            if not provider:
+                # If provider is not given, get it from the model name
+                provider = get_llm_provider({"model_name": model_name})
+
+            elif provider not in SUPPORTED_PROVIDERS and model_name not in PROVIDER_TO_MODELS.get(provider, []):
+                raise ValueError(f'Model with name does not exist for provider {provider}: {model_name}')
+
+        return model, provider
 
     def get_agent(self, agent_name: str, project_name: str = 'mindsdb') -> db.Agents:
         '''
@@ -104,6 +135,7 @@ class AgentsController:
             project_name: str,
             model_name: str,
             skills: List[str],
+            provider: str = None,
             params: Dict[str, str] = {}) -> db.Agents:
         '''
         Adds an agent to the database.
@@ -113,6 +145,7 @@ class AgentsController:
             project_name (str): The containing project
             model_name (str): The name of the existing ML model the agent will use
             skills (List[str]): List of existing skill names to add to the new agent
+            provider (str): The provider of the model
             params (Dict[str, str]): Parameters to use when running the agent
 
         Returns:
@@ -130,13 +163,7 @@ class AgentsController:
         if agent is not None:
             raise ValueError(f'Agent with name already exists: {name}')
 
-        if model_name is not None:
-            # Check if model exists.
-            model_name_no_version, model_version = Predictor.get_name_and_version(model_name)
-            try:
-                self.model_controller.get_model(model_name_no_version, version=model_version, project_name=project_name)
-            except PredictorRecordNotFound:
-                raise ValueError(f'Model with name does not exist: {model_name}')
+        _, provider = self.check_model_provider(model_name, provider)
 
         agent = db.Agents(
             name=name,
@@ -144,6 +171,7 @@ class AgentsController:
             company_id=ctx.company_id,
             user_class=ctx.user_class,
             model_name=model_name,
+            provider=provider,
             params=params,
         )
         skills_to_add = []
@@ -168,6 +196,7 @@ class AgentsController:
             model_name: str = None,
             skills_to_add: List[str] = None,
             skills_to_remove: List[str] = None,
+            provider: str = None,
             params: Dict[str, str] = None):
         '''
         Updates an agent in the database.
@@ -179,6 +208,7 @@ class AgentsController:
             model_name (str): The name of the existing ML model the agent will use
             skills_to_add (List[str]): List of skill names to add to the agent
             skills_to_remove (List[str]): List of skill names to remove from the agent
+            provider (str): The provider of the model
             params: (Dict[str, str]): Parameters to use when running the agent
 
         Returns:
@@ -198,14 +228,12 @@ class AgentsController:
             if agent_with_new_name is not None:
                 raise ValueError(f'Agent with updated name already exists: {name}')
 
-        # Check if model exists.
-        if model_name is not None:
-            model_name_no_version, model_version = Predictor.get_name_and_version(model_name)
-            try:
-                _ = self.model_controller.get_model(model_name_no_version, version=model_version, project_name=project_name)
-                existing_agent.model_name = model_name
-            except PredictorRecordNotFound:
-                return ValueError(f'Model with name does not exist: {model_name}')
+        if model_name or provider:
+            # check model and provider
+            model, provider = self.check_model_provider(model_name, provider)
+            # Update model and provider
+            existing_agent.model_name = model_name
+            existing_agent.provider = provider
 
         # Check if given skills exist.
         new_skills = []
@@ -281,13 +309,11 @@ class AgentsController:
 
         from .langchain_agent import LangchainAgent
 
-        model = None
-        if agent.model_name is not None:
-            model_name_no_version, version = db.Predictor.get_name_and_version(agent.model_name)
-            try:
-                model = self.model_controller.get_model(model_name_no_version, version=version, project_name=project_name)
-            except PredictorRecordNotFound:
-                raise ValueError(f'Model with name {agent.model_name} not found')
+        model, provider = self.check_model_provider(agent.model_name, agent.provider)
+        # update old agents
+        if agent.provider is None and provider is not None:
+            agent.provider = provider
+            db.session.commit()
 
-        lang_agent = LangchainAgent(agent, model=model)
+        lang_agent = LangchainAgent(agent, model)
         return lang_agent.get_completion(messages, trace_id, observation_id)

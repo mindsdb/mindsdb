@@ -24,7 +24,7 @@ class MultiVectorRetriever(BaseRetriever):
         self.id_key = config.id_key
         self.documents = config.documents
         self.text_splitter = config.text_splitter
-        self.embeddings_model = config.embeddings_model
+        self.embedding_model = config.embedding_model
         self.max_concurrency = config.max_concurrency
         self.mode = config.multi_retriever_mode
 
@@ -55,7 +55,7 @@ class MultiVectorRetriever(BaseRetriever):
         vstore_operator = VectorStoreOperator(
             vector_store=self.vectorstore,
             documents=docs,
-            embeddings_model=self.embeddings_model,
+            embedding_model=self.embedding_model,
         )
         retriever = LangChainMultiVectorRetriever(
             vectorstore=vstore_operator.vector_store,

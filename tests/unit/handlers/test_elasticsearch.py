@@ -1,6 +1,6 @@
 import unittest
 import elasticsearch
-from unittest.mock import patch, MagicMock, Mock
+from unittest.mock import patch, MagicMock
 from collections import OrderedDict
 
 from mindsdb.integrations.libs.response import (

@@ -12,13 +12,16 @@ from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.utilities.context import context as ctx
 
+from .constants import ASSISTANT_COLUMN
+
 
 class AgentsController:
     '''Handles CRUD operations at the database level for Agents'''
 
+    assistant_column = ASSISTANT_COLUMN
+
     def __init__(
         self,
-        datahub,
         project_controller: ProjectController = None,
         skills_controller: SkillsController = None,
         model_controller: ModelController = None
@@ -32,7 +35,6 @@ class AgentsController:
         self.project_controller = project_controller
         self.skills_controller = skills_controller
         self.model_controller = model_controller
-        self.datahub = datahub
 
     def get_agent(self, agent_name: str, project_name: str = 'mindsdb') -> db.Agents:
         '''
@@ -128,12 +130,13 @@ class AgentsController:
         if agent is not None:
             raise ValueError(f'Agent with name already exists: {name}')
 
-        # Check if model exists.
-        model_name_no_version, model_version = Predictor.get_name_and_version(model_name)
-        try:
-            self.model_controller.get_model(model_name_no_version, version=model_version, project_name=project_name)
-        except PredictorRecordNotFound:
-            raise ValueError(f'Model with name does not exist: {model_name}')
+        if model_name is not None:
+            # Check if model exists.
+            model_name_no_version, model_version = Predictor.get_name_and_version(model_name)
+            try:
+                self.model_controller.get_model(model_name_no_version, version=model_version, project_name=project_name)
+            except PredictorRecordNotFound:
+                raise ValueError(f'Model with name does not exist: {model_name}')
 
         agent = db.Agents(
             name=name,
@@ -275,28 +278,16 @@ class AgentsController:
         Raises:
             ValueError: Agent's model does not exist.
         '''
-        # Model needs to exist.
-        model_name_no_version, version = db.Predictor.get_name_and_version(agent.model_name)
-        try:
-            _ = self.model_controller.get_model(model_name_no_version, version=version, project_name=project_name)
-        except PredictorRecordNotFound:
-            return ValueError(f'Model with name {agent.model_name} not found')
 
-        if tools is None:
-            tools = []
-        predict_params = {
-            # Underlying handler (e.g. Langchain) will handle default tools like mdb_read, mdb_write, etc.
-            'tools': tools,
-            'skills': [s for s in agent.skills],
-            **(agent.params or {})
-        }
-        if observation_id is not None:
-            predict_params['observation_id'] = observation_id
-        if trace_id is not None:
-            predict_params['trace_id'] = trace_id
-        project_datanode = self.datahub.get(project_name)
-        return project_datanode.predict(
-            model_name=agent.model_name,
-            df=pd.DataFrame(messages),
-            params=predict_params
-        )
+        from .langchain_agent import LangchainAgent
+
+        model = None
+        if agent.model_name is not None:
+            model_name_no_version, version = db.Predictor.get_name_and_version(agent.model_name)
+            try:
+                model = self.model_controller.get_model(model_name_no_version, version=version, project_name=project_name)
+            except PredictorRecordNotFound:
+                raise ValueError(f'Model with name {agent.model_name} not found')
+
+        lang_agent = LangchainAgent(agent, model=model)
+        return lang_agent.get_completion(messages, trace_id, observation_id)

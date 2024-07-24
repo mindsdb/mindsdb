@@ -60,7 +60,7 @@ class SkillToolController:
         '''
         # To prevent dependency on Langchain unless an actual tool uses it.
         try:
-            from mindsdb.integrations.handlers.langchain_handler.mindsdb_database_agent import MindsDBSQL
+            from mindsdb.interfaces.agents.mindsdb_database_agent import MindsDBSQL
             from mindsdb.interfaces.skills.custom.text2sql.mindsdb_sql_toolkit import MindsDBSQLToolkit
             from langchain_community.tools.sql_database.tool import QuerySQLDataBaseTool
         except ImportError:

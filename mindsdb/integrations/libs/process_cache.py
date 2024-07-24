@@ -238,8 +238,8 @@ class ProcessCache:
             if self._init is False:
                 self._init = True
                 for handler in preload_handlers:
-                    self._keep_alive[handler.__name__] = preload_handlers[handler]
-                    self.cache[handler.__name__] = {
+                    self._keep_alive[handler.name] = preload_handlers[handler]
+                    self.cache[handler.name] = {
                         'last_usage_at': time.time(),
                         'handler_module': handler.__module__,
                         'processes': [
@@ -401,6 +401,22 @@ class ProcessCache:
                         processes.append(
                             WarmProcess(init_ml_handler, (self.cache[handler_name]['handler_module'],))
                         )
+
+    def remove_processes_for_handler(self, handler_name: str) -> None:
+        """
+            Remove all warm processes for a given handler.
+            This is useful when the previous processes use an outdated instance of the handler.
+            A good example is when the dependencies for a handler are installed after attempting to use the handler.
+
+            Args:
+                handler_name (str): name of the handler.
+        """
+        with self._lock:
+            if handler_name in self.cache:
+                for process in self.cache[handler_name]['processes']:
+                    process.shutdown()
+
+                self.cache[handler_name]['processes'] = []
 
 
 process_cache = ProcessCache()

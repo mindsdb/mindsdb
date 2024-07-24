@@ -64,7 +64,7 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
     def raw_query(self, query, params=None) -> Response:
         resp = super().native_query(query, params)
         if resp.resp_type == RESPONSE_TYPE.ERROR:
-            raise Exception(resp.error_message)
+            raise RuntimeError(resp.error_message)
         if resp.resp_type == RESPONSE_TYPE.TABLE:
             return resp.data_frame
 

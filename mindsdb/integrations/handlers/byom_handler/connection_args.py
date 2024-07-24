@@ -11,5 +11,9 @@ connection_args = OrderedDict(
     modules={
         'type': ARG_TYPE.PATH,
         'description': 'The path to model requirements'
+    },
+    mode={
+        'type': ARG_TYPE.STR,
+        'description': 'Mode of byom hander. It can be "custom_function" for using it as container for functions'
     }
 )

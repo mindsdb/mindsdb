@@ -26,10 +26,10 @@ class SafeOutputParser(AgentOutputParser):
 
     def parse(self, text: str) -> Union[AgentAction, AgentFinish]:
         '''Parses outputted text from an LLM.
-        
+
         Args:
             text (str): Outputted text to parse.
-        
+
         Returns:
             output (str): Parsed text to an Agent step.
         '''

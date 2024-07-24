@@ -7,6 +7,7 @@ from functools import reduce
 import pandas as pd
 from mindsdb_evaluator.accuracy.general import evaluate_accuracy
 from mindsdb_sql import parse_sql
+from mindsdb_sql.planner.utils import query_traversal
 from mindsdb_sql.parser.ast import (
     Alter,
     ASTNode,
@@ -24,7 +25,6 @@ from mindsdb_sql.parser.ast import (
     Identifier,
     Insert,
     NativeQuery,
-    NullConstant,
     Operation,
     RollbackTransaction,
     Select,
@@ -1597,79 +1597,46 @@ class ExecuteCommands:
         return self.answer_select(query)
 
     def answer_single_row_select(self, statement, database_name):
-        columns = []
-        data = []
-        for target in statement.targets:
-            target_type = type(target)
-            if target_type == Variable:
-                var_name = target.value
-                column_name = f"@@{var_name}"
-                column_alias = target.alias or column_name
-                result = SERVER_VARIABLES.get(column_name)
-                if result is None:
-                    logger.error(f"Unknown variable: {column_name}")
-                    raise Exception(f"Unknown variable '{var_name}'")
-                else:
-                    result = result[0]
-            elif target_type == Function:
-                function_name = target.op.lower()
-                if function_name == "connection_id":
-                    alias = None
-                    if isinstance(target.alias, Identifier):
-                        alias = target.alias.parts[-1]
-                    return self.answer_connection_id(alias=alias)
+
+        def adapt_query(node, is_table, **kwargs):
+            if is_table:
+                return
+
+            if isinstance(node, Identifier):
+                if node.parts[-1].lower() == "session_user":
+                    return Constant(self.session.username, alias=node)
+
+            if isinstance(node, Function):
+                function_name = node.op.lower()
 
                 functions_results = {
-                    # 'connection_id': self.executor.sqlserver.connection_id,
                     "database": database_name,
                     "current_user": self.session.username,
                     "user": self.session.username,
                     "version": "8.0.17",
                     "current_schema": "public",
+                    "connection_id": self.context.get('connection_id')
                 }
+                if function_name in functions_results:
+                    return Constant(functions_results[function_name], alias=Identifier(function_name))
 
-                column_name = f"{target.op}()"
-                column_alias = target.alias or column_name
-                result = functions_results[function_name]
-            elif target_type == Constant:
-                result = target.value
-                column_name = str(result)
-                column_alias = (
-                    ".".join(target.alias.parts)
-                    if type(target.alias) is Identifier
-                    else column_name
-                )
-            elif target_type == NullConstant:
-                result = None
-                column_name = "NULL"
-                column_alias = "NULL"
-            elif target_type == Identifier:
-                result = ".".join(target.parts)
-                if result == "session_user":
-                    column_name = result
-                    result = self.session.username
+            if isinstance(node, Variable):
+                var_name = node.value
+                column_name = f"@@{var_name}"
+                result = SERVER_VARIABLES.get(column_name)
+                if result is None:
+                    logger.error(f"Unknown variable: {column_name}")
+                    raise Exception(f"Unknown variable '{var_name}'")
                 else:
-                    raise Exception(f"Unknown column '{result}'")
-            else:
-                raise WrongArgumentError(f"Unknown constant type: {target_type}")
+                    return Constant(result[0], alias=Identifier(column_name))
 
-            columns.append(
-                Column(
-                    name=column_name,
-                    alias=column_alias,
-                    table_name="",
-                    type=TYPES.MYSQL_TYPE_VAR_STRING
-                    if isinstance(result, str)
-                    else TYPES.MYSQL_TYPE_LONG,
-                    charset=self.charset_text_type
-                    if isinstance(result, str)
-                    else CHARSET_NUMBERS["binary"],
-                )
-            )
-            data.append(result)
+        query_traversal(statement, adapt_query)
+
+        statement.from_table = Identifier('t')
+        df = query_df(pd.DataFrame([[0]]), statement, session=self.session)
 
         return ExecuteAnswer(
-            data=ResultSet(columns=columns, values=[data])
+            data=ResultSet().from_df(df, table_name="")
         )
 
     def answer_show_create_table(self, table):
@@ -1994,21 +1961,6 @@ class ExecuteCommands:
         ]
         columns = [Column(**d) for d in columns]
         return ExecuteAnswer(data=ResultSet(columns=columns))
-
-    def answer_connection_id(self, alias: str = None):
-        columns = [
-            {
-                "database": "",
-                "table_name": "",
-                "name": "connection_id()",
-                "alias": alias or "connection_id()",
-                "type": TYPES.MYSQL_TYPE_LONG,
-                "charset": CHARSET_NUMBERS["binary"],
-            }
-        ]
-        columns = [Column(**d) for d in columns]
-        data = [[self.context.get('connection_id')]]
-        return ExecuteAnswer(data=ResultSet(columns=columns, values=data))
 
     def answer_create_table(self, statement, database_name):
         SQLQuery(statement, session=self.session, execute=True, database=database_name)

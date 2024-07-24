@@ -114,7 +114,7 @@ class Config():
         api_host = "127.0.0.1" if not self.use_docker_env else "0.0.0.0"
         self._default_config = {
             'permanent_storage': {
-                'location': 'local'
+                'location': 'absent'
             },
             'storage_dir': os.environ['MINDSDB_STORAGE_DIR'],
             'paths': paths,

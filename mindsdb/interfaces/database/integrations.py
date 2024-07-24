@@ -6,7 +6,6 @@ import tempfile
 import importlib
 import threading
 import inspect
-import multiprocessing
 from time import time
 from pathlib import Path
 from copy import deepcopy
@@ -79,12 +78,10 @@ class HandlersCache:
             Args:
                 handler (DatabaseHandler)
         """
-        # do not cache connections in handlers processes
-        if multiprocessing.current_process().name.startswith('HandlerProcess'):
-            return
         with self._lock:
             try:
-                key = (handler.name, ctx.company_id, threading.get_native_id())
+                # If the handler is defined to be thread safe, set 0 as the last element of the key, otherwise set the thrad ID.
+                key = (handler.name, ctx.company_id, 0 if getattr(handler, 'thread_safe', False) else threading.get_native_id())
                 handler.connect()
                 self.handlers[key] = {
                     'handler': handler,
@@ -104,7 +101,11 @@ class HandlersCache:
                 DatabaseHandler
         """
         with self._lock:
+            # If the handler is not thread safe, the thread ID will be assigned to the last element of the key.
             key = (name, ctx.company_id, threading.get_native_id())
+            if key not in self.handlers:
+                # If the handler is thread safe, a 0 will be assigned to the last element of the key.
+                key = (name, ctx.company_id, 0)
             if (
                 key not in self.handlers
                 or self.handlers[key]['expired_at'] < time()
@@ -616,7 +617,8 @@ class IntegrationController:
                 'folder': handler_folder_name,
                 'dependencies': dependencies
             },
-            'version': module.version
+            'version': module.version,
+            'thread_safe': getattr(module, 'thread_safe', False)
         }
         if import_error is not None:
             handler_meta['import']['error_message'] = str(import_error)

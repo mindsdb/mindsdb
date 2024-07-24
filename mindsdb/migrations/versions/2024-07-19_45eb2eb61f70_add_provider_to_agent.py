@@ -27,12 +27,15 @@ def upgrade():
     agents = table('agents',
                    sa.Column('id', sa.Integer, primary_key=True),
                    sa.Column('params', sa.JSON),
+                   sa.Column('model_name', sa.String()),
                    sa.Column('provider', sa.String()))
 
     conn = op.get_bind()
     for agent in conn.execute(select(agents)):
         if agent.params and 'provider' in agent.params:
             conn.execute(update(agents).where(agents.c.id == agent.id).values(provider=agent.params['provider']))
+        if agent.model_name is None:
+            conn.execute(update(agents).where(agents.c.id == agent.id).values(model_name=agent.params['model_name']))
     # ### end Alembic commands ###
 
 

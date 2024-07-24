@@ -8,12 +8,13 @@ from dspy.teleprompt import BootstrapFewShot
 
 from mindsdb.interfaces.llm.llm_controller import LLMDataController
 import pandas as pd
-from mindsdb.integrations.handlers.langchain_handler.constants import (
+from mindsdb.interfaces.agents.constants import (
     DEFAULT_MODEL_NAME
 )
-from mindsdb.integrations.handlers.langchain_handler.log_callback_handler import LogCallbackHandler
+from mindsdb.interfaces.agents.langchain_agent import (
+    get_llm_provider, get_embedding_model_provider
+)
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
-from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS as OPEN_AI_CHAT_MODELS
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.interfaces.storage.model_fs import HandlerStorage, ModelStorage
@@ -49,31 +50,12 @@ class DSPyHandler(BaseMLEngine):
             self,
             model_storage: ModelStorage,
             engine_storage: HandlerStorage,
-            log_callback_handler: LogCallbackHandler = None,
             **kwargs):
         super().__init__(model_storage, engine_storage, **kwargs)
         # if True, the target column name does not have to be specified at creation time.
         self.generative = True
-        self.log_callback_handler = log_callback_handler
         self.llm_data_controller = LLMDataController()
         self.model_id = 0
-        if self.log_callback_handler is None:
-            self.log_callback_handler = LogCallbackHandler(logger)
-
-    def _get_llm_provider(self, args: Dict) -> str:
-        if 'provider' in args:
-            return args['provider']
-        if args['model_name'] in OPEN_AI_CHAT_MODELS:
-            return 'openai'
-        raise ValueError("Invalid model name. Please define provider")
-
-    def _get_embedding_model_provider(self, args: Dict) -> str:
-        if 'embedding_model_provider' in args:
-            return args['embedding_model_provider']
-        if 'embedding_model_provider' not in args:
-            logger.warning('No embedding model provider specified. trying to use llm provider.')
-            return args.get('embedding_model_provider', self._get_llm_provider(args))
-        raise ValueError("Invalid model name. Please define provider")
 
     def calculate_model_id(self, model_name):
         '''
@@ -98,8 +80,8 @@ class DSPyHandler(BaseMLEngine):
         args = args['using']
         args['target'] = target
         args['model_name'] = args.get('model_name', DEFAULT_MODEL_NAME)
-        args['provider'] = args.get('provider', self._get_llm_provider(args))
-        args['embedding_model_provider'] = args.get('embedding_model', self._get_embedding_model_provider(args))
+        args['provider'] = args.get('provider', get_llm_provider(args))
+        args['embedding_model_provider'] = args.get('embedding_model', get_embedding_model_provider(args))
         if args.get('mode') == 'retrieval':
             # use default prompt template for retrieval i.e. RAG if not provided
             if "prompt_template" not in args:
@@ -130,8 +112,8 @@ class DSPyHandler(BaseMLEngine):
         if 'prompt_template' not in args and 'prompt_template' not in pred_args:
             raise ValueError("This model expects a `prompt_template`, please provide one.")
         # Back compatibility for old models
-        args['provider'] = args.get('provider', self._get_llm_provider(args))
-        args['embedding_model_provider'] = args.get('embedding_model', self._get_embedding_model_provider(args))
+        args['provider'] = args.get('provider', get_llm_provider(args))
+        args['embedding_model_provider'] = args.get('embedding_model', get_embedding_model_provider(args))
 
         # retrieves llm and pass it around as context
         model = args.get('model_name')
@@ -188,7 +170,7 @@ class DSPyHandler(BaseMLEngine):
         Iniialize chain with the llm, add the cold start examples and bootstrap some examples
 
         Args:
-            df (DataFrame): input to th emodel
+            df (DataFrame): input to the model
             args (Dict): Parameters for the model
 
         Returns:

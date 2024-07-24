@@ -163,7 +163,7 @@ class TestS3Handler(unittest.TestCase):
         response = self.handler.query(select)
 
         mock_conn.execute.assert_called_once_with(
-            f"CREATE TABLE {self.handler.table_name} AS SELECT * FROM 's3://{self.dummy_connection_data['bucket']}/{object_name.replace('`', '')}'"
+            f"CREATE TABLE IF NOT EXISTS {self.handler.table_name} AS SELECT * FROM 's3://{self.dummy_connection_data['bucket']}/{object_name.replace('`', '')}'"
         )
         mock_cursor.execute.assert_called_once_with(f"SELECT * FROM {self.handler.table_name}")
 

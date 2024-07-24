@@ -309,7 +309,11 @@ class AgentsController:
 
         from .langchain_agent import LangchainAgent
 
-        model, _ = self.check_model_provider(agent.model_name, agent.provider)
+        model, provider = self.check_model_provider(agent.model_name, agent.provider)
+        # update old agents
+        if agent.provider is None and provider is not None:
+            agent.provider = provider
+            db.session.commit()
 
         lang_agent = LangchainAgent(agent, model)
         return lang_agent.get_completion(messages, trace_id, observation_id)

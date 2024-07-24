@@ -22,7 +22,7 @@ class VectorStoreOperator:
 
     def __init__(self,
                  vector_store: VectorStore,
-                 embeddings_model: Embeddings,
+                 embedding_model: Embeddings,
                  documents: List[Document] = None,
                  vector_store_config: VectorStoreConfig = None,
                  token_per_minute_limit: int = _DEFAULT_TPM_LIMIT,
@@ -31,7 +31,7 @@ class VectorStoreOperator:
                  ):
 
         self.documents = documents
-        self.embeddings_model = embeddings_model
+        self.embedding_model = embedding_model
         self.token_per_minute_limit = token_per_minute_limit
         self.rate_limit_interval = rate_limit_interval
         self.current_token_usage = _INITIAL_TOKEN_USAGE
@@ -48,7 +48,7 @@ class VectorStoreOperator:
             self._vector_store = vector_store
         elif issubclass(vector_store, VectorStore):
             # if it is subclass instance, then create instance of it using vector_store_config
-            self._vector_store = load_vector_store(self.embeddings_model, self.vector_store_config)
+            self._vector_store = load_vector_store(self.embedding_model, self.vector_store_config)
 
     @property
     def vector_store(self):
@@ -78,7 +78,7 @@ class VectorStoreOperator:
     def _init_vector_store(self, documents: List[Document], vector_store: VectorStore):
         if len(documents) > 0:
             self._vector_store = vector_store.from_documents(
-                documents=[documents[0]], embedding=self.embeddings_model
+                documents=[documents[0]], embedding=self.embedding_model
             )
 
     def add_documents(self, documents: List[Document]):
@@ -86,12 +86,12 @@ class VectorStoreOperator:
             self._add_document(document)
 
 
-def load_vector_store(embeddings_model: Embeddings, config: VectorStoreConfig) -> VectorStore:
+def load_vector_store(embedding_model: Embeddings, config: VectorStoreConfig) -> VectorStore:
     """
     Loads the vector store based on the provided config and embeddings model
-    :param embeddings_model:
+    :param embedding_model:
     :param config:
     :return:
     """
-    loader = VectorStoreLoader(embeddings_model=embeddings_model, config=config)
+    loader = VectorStoreLoader(embedding_model=embedding_model, config=config)
     return loader.load()

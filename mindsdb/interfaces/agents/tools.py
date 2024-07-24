@@ -4,7 +4,7 @@ from langchain.agents import Tool
 
 from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
 from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel, VectorStoreType, DEFAULT_COLLECTION_NAME
-from mindsdb.interfaces.skills.skill_tool import skill_tool, SkillType
+from mindsdb.interfaces.skills.skill_tool import skill_tool
 from mindsdb.interfaces.storage import db
 
 from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS
@@ -12,27 +12,6 @@ from mindsdb.interfaces.storage.db import KnowledgeBase
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
-
-
-def langchain_tools_from_skill(skill, pred_args, llm):
-    # Makes Langchain compatible tools from a skill
-    tools = skill_tool.get_tools_from_skill(skill, llm)
-
-    all_tools = []
-    for tool in tools:
-        if skill.type == SkillType.RETRIEVAL.value:
-            all_tools.append(_build_retrieval_tool(tool, pred_args, skill))
-            continue
-        if isinstance(tool, dict):
-            all_tools.append(Tool(
-                name=tool['name'],
-                func=tool['func'],
-                description=tool['description'],
-                return_direct=True
-            ))
-            continue
-        all_tools.append(tool)
-    return all_tools
 
 
 def _build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):

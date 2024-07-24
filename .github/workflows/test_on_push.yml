@@ -122,6 +122,7 @@ jobs:
           pip install .[web]
           pip install .[redshift]
           pip install .[bigquery]
+          pip install .[elasticsearch]
           pip install .[minds_endpoint]
           pip freeze
       - name: Run unit tests
@@ -135,7 +136,7 @@ jobs:
           fi
       - name: Run Handlers tests and submit Coverage to coveralls
         run: |
-          handlers=("mysql" "postgres" "mssql" "clickhouse" "snowflake" "web" "redshift" "bigquery")
+          handlers=("mysql" "postgres" "mssql" "clickhouse" "snowflake" "web" "redshift" "bigquery" "elasticsearch")
           for handler in "${handlers[@]}"
           do
             pytest --cov=mindsdb/integrations/handlers/${handler}_handler tests/unit/handlers/test_${handler}.py 

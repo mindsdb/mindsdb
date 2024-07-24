@@ -193,28 +193,6 @@ class LangchainAgent:
     def create_agent(self, df: pd.DataFrame, args: Dict = None) -> AgentExecutor:
         # Set up tools.
         llm = create_chat_model(args)
-
-        # Set up embeddings model if needed.
-
-        embeddings_args = args.pop('embedding_model_args', {})
-
-        # no embedding model args provided, use default provider.
-        if not embeddings_args:
-            embeddings_provider = get_embedding_model_provider(args)
-            logger.warning("'embedding_model_args' not found in input params, "
-                           f"Trying to use LLM provider: {embeddings_provider}"
-                           )
-            embeddings_args['class'] = embeddings_provider
-            # Include API keys if present.
-            embeddings_args.update({k: v for k, v in args.items() if 'api_key' in k})
-
-        # create embeddings model
-        self.embedding_model = construct_model_from_args(embeddings_args)
-
-    def create_agent(self, df: pd.DataFrame, args: Dict = None) -> AgentExecutor:
-
-        # Set up tools.
-        llm = create_chat_model(args)
         self.llm = llm
         if args.get('mode') == 'retrieval':
             self.set_embedding_model(args)

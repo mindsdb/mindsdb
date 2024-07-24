@@ -9,6 +9,7 @@ from langfuse import Langfuse
 
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.interfaces.agents.agents_controller import AgentsController
+import mindsdb.interfaces.storage.db as db
 from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.api.http.utils import http_error
 from mindsdb.metrics.metrics import api_endpoint_metrics

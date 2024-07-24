@@ -19,7 +19,6 @@ import pandas as pd
 from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS as OPEN_AI_CHAT_MODELS
 from mindsdb.integrations.libs.llm.utils import get_llm_config
 from mindsdb.integrations.utilities.handler_utils import get_api_key
-from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
 from mindsdb.utilities import log
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 from mindsdb.interfaces.storage import db

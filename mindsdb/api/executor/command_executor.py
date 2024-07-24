@@ -1432,13 +1432,12 @@ class ExecuteCommands:
         )
 
         skills = statement.params.pop('skills', [])
-        model_name = statement.params.pop('model_name', None)
         provider = statement.params.pop('provider', None)
         try:
             _ = self.session.agents_controller.add_agent(
                 name=name,
                 project_name=project_name,
-                model_name=model_name,
+                model_name=statement.model,
                 skills=skills,
                 provider=provider,
                 params=statement.params

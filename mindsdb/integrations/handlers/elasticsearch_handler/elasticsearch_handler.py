@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Text, Dict, Optional
 
 from elasticsearch import Elasticsearch
 from elasticsearch.exceptions import ConnectionError, AuthenticationException, TransportError, RequestError
@@ -26,7 +26,7 @@ class ElasticsearchHandler(DatabaseHandler):
 
     name = 'elasticsearch'
 
-    def __init__(self, name: str, connection_data: Optional[dict], **kwargs) -> None:
+    def __init__(self, name: Text, connection_data: Optional[Dict], **kwargs) -> None:
         """
         Initializes the handler.
 
@@ -139,7 +139,7 @@ class ElasticsearchHandler(DatabaseHandler):
 
         return response
 
-    def native_query(self, query: str) -> Response:
+    def native_query(self, query: Text) -> Response:
         """
         Executes a native SQL query on the Elasticsearch host and returns the result.
 
@@ -232,7 +232,7 @@ class ElasticsearchHandler(DatabaseHandler):
 
         return result
 
-    def get_columns(self, table_name: str) -> Response:
+    def get_columns(self, table_name: Text) -> Response:
         """
         Retrieves column (field) details for a specified table (index) in the Elasticsearch host.
 

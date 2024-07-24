@@ -28,7 +28,7 @@ def create_agent(project_name, name, agent):
         )
 
     model_name = agent['model_name']
-    provider = agent['provider']
+    provider = agent.get('provider')
     params = agent.get('params', {})
     skills = agent.get('skills', [])
 

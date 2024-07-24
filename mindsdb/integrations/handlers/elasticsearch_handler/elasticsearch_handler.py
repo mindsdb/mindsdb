@@ -223,8 +223,12 @@ class ElasticsearchHandler(DatabaseHandler):
         result = self.native_query(query)
 
         df = result.data_frame
-        df = df.drop(['type', 'type'], axis=1)
-        result.data_frame = df.rename(columns={'name': 'table_name'})
+
+        # Remove indices that are system indices: These are indices that start with a period.
+        df = df[~df['name'].str.startswith('.')]
+
+        df = df.drop(['catalog', 'kind'], axis=1)
+        result.data_frame = df.rename(columns={'name': 'table_name', 'type': 'table_type'})
 
         return result
 

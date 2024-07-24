@@ -1,8 +1,6 @@
 import sys
 import time
 import threading
-import multiprocessing as mp
-
 from typing import Optional, Callable
 from concurrent.futures import ProcessPoolExecutor, Future
 
@@ -72,7 +70,7 @@ class WarmProcess:
                 initializer (Callable): the same as ProcessPoolExecutor initializer
                 initargs (tuple): the same as ProcessPoolExecutor initargs
         """
-        self.pool = ProcessPoolExecutor(1, initializer=initializer, initargs=initargs, mp_context=mp.get_context('fork'))
+        self.pool = ProcessPoolExecutor(1, initializer=initializer, initargs=initargs)
         self.last_usage_at = time.time()
         self._markers = set()
         # region bacause of ProcessPoolExecutor does not start new process

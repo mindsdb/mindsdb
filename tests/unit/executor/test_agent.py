@@ -34,11 +34,11 @@ class TestAgent(BaseExecutorDummyML):
 
         assert agent_response in ret.answer[0]
 
-    @patch('openai.resources.chat.completions.Completions.create')
-    def test_openai_provider(self, mock_chat_completion):
+    @patch('openai.OpenAI')
+    def test_openai_provider(self, mock_openai):
         agent_response = 'how can I assist you today?'
 
-        mock_chat_completion.return_value = {
+        mock_openai().chat.completions.create.return_value = {
             'choices': [{
                 'message': {
                     'role': 'system',
@@ -59,11 +59,11 @@ class TestAgent(BaseExecutorDummyML):
 
         assert agent_response in ret.answer[0]
 
-    @patch('openai.resources.chat.completions.Completions.create')
-    def test_openai_provider_with_model(self, mock_chat_completion):
+    @patch('openai.OpenAI')
+    def test_openai_provider_with_model(self, mock_openai):
         agent_response = 'how can I assist you today?'
 
-        mock_chat_completion.return_value = {
+        mock_openai().chat.completions.create.return_value = {
             'choices': [{
                 'message': {
                     'role': 'system',

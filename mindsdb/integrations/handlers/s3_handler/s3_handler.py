@@ -184,10 +184,8 @@ class S3Handler(DatabaseHandler):
         cursor = connection.cursor()
 
         try:
-            # TODO: Is it possilbe to avoid creating a table for each query?
-            # Re-using the same table across queries will require the connection to be left open.
-            # Using a view is another option?
-            self._create_table_from_file()
+            # TODO: Can the creation of tables be avoided for SELECT queries?
+            self._create_table_if_not_exists_from_file()
 
             cursor.execute(query)
             if self.is_select_query:
@@ -202,7 +200,7 @@ class S3Handler(DatabaseHandler):
 
             else:
                 connection.commit()
-                # TODO: Is it possilbe to avoid writing the table to a file after each query?
+                # TODO: Is it possible to avoid writing the table to a file after each query?
                 self._write_table_to_file()
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
@@ -217,7 +215,7 @@ class S3Handler(DatabaseHandler):
 
         return response
 
-    def _create_table_from_file(self) -> None:
+    def _create_table_if_not_exists_from_file(self) -> None:
         """
         Creates a table from a file in the S3 bucket.
 

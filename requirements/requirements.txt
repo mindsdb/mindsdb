@@ -39,7 +39,7 @@ google-auth-oauthlib
 msal
 langchain==0.1.11
 langchain-core==0.1.46
-langchain-community==0.0.27
+langchain-community==0.2.9
 langchain-openai==0.1.6
 langchain-text_splitters==0.0.1
 langfuse==2.35.0

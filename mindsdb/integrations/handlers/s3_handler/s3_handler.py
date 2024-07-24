@@ -49,6 +49,7 @@ class S3Handler(DatabaseHandler):
 
         self.connection = None
         self.is_connected = False
+        self.thread_safe = True
 
     def __del__(self):
         if self.is_connected is True:

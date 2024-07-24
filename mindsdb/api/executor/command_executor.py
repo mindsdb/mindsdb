@@ -1432,13 +1432,15 @@ class ExecuteCommands:
         )
 
         skills = statement.params.pop('skills', [])
+        provider = statement.params.pop('provider', None)
         try:
             _ = self.session.agents_controller.add_agent(
-                name,
-                project_name,
-                statement.model,
-                skills,
-                statement.params
+                name=name,
+                project_name=project_name,
+                model_name=statement.model,
+                skills=skills,
+                provider=provider,
+                params=statement.params
             )
         except ValueError as e:
             # Project does not exist or agent already exists.

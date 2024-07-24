@@ -65,12 +65,17 @@ class ChatMindsdb(BaseChatModel):
     model_info: Optional[dict] = None
     project_datanode: Optional[Any] = None
 
+    class Config:
+        """Configuration for this pydantic object."""
+        arbitrary_types_allowed = True
+        allow_reuse = True
+
     @property
     def _default_params(self) -> Dict[str, Any]:
         return {}
 
     def completion(
-        self, messages: List[dict]
+            self, messages: List[dict]
     ) -> Any:
 
         problem_definition = self.model_info['problem_definition'].get('using', {})
@@ -120,7 +125,7 @@ class ChatMindsdb(BaseChatModel):
             'messages': [result]
         }
 
-    @root_validator()
+    @root_validator(allow_reuse=True)
     def validate_environment(cls, values: Dict) -> Dict:
 
         model_name = values['model_name']
@@ -140,12 +145,12 @@ class ChatMindsdb(BaseChatModel):
         return values
 
     def _generate(
-        self,
-        messages: List[BaseMessage],
-        stop: Optional[List[str]] = None,
-        run_manager: Optional[CallbackManagerForLLMRun] = None,
-        stream: Optional[bool] = None,
-        **kwargs: Any,
+            self,
+            messages: List[BaseMessage],
+            stop: Optional[List[str]] = None,
+            run_manager: Optional[CallbackManagerForLLMRun] = None,
+            stream: Optional[bool] = None,
+            **kwargs: Any,
     ) -> ChatResult:
 
         message_dicts = [_convert_message_to_dict(m) for m in messages]

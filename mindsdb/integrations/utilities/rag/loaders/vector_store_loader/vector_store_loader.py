@@ -20,7 +20,7 @@ logger = log.getLogger(__name__)
 
 
 class VectorStoreLoader(BaseModel):
-    embeddings_model: Embeddings
+    embedding_model: Embeddings
     vector_store: VectorStore = None
     config: VectorStoreConfig = None
 
@@ -34,36 +34,36 @@ class VectorStoreLoader(BaseModel):
         Loads the vector store based on the provided config and embeddings model
         :return:
         """
-        self.vector_store = VectorStoreFactory.create(self.embeddings_model, self.config)
+        self.vector_store = VectorStoreFactory.create(self.embedding_model, self.config)
         return self.vector_store
 
 
 class VectorStoreFactory:
     @staticmethod
-    def create(embeddings_model: Embeddings, config: VectorStoreConfig):
+    def create(embedding_model: Embeddings, config: VectorStoreConfig):
 
         if config.vector_store_type == VectorStoreType.CHROMA:
-            return VectorStoreFactory._load_chromadb_store(embeddings_model, config)
+            return VectorStoreFactory._load_chromadb_store(embedding_model, config)
         elif config.vector_store_type == VectorStoreType.PGVECTOR:
-            return VectorStoreFactory._load_pgvector_store(embeddings_model, config)
+            return VectorStoreFactory._load_pgvector_store(embedding_model, config)
         else:
             raise ValueError(f"Invalid vector store type, must be one either {VectorStoreType.__members__.keys()}")
 
     @staticmethod
-    def _load_chromadb_store(embeddings_model: Embeddings, settings) -> Chroma:
+    def _load_chromadb_store(embedding_model: Embeddings, settings) -> Chroma:
         return Chroma(
             persist_directory=settings.persist_directory,
             collection_name=settings.collection_name,
-            embedding_function=embeddings_model,
+            embedding_function=embedding_model,
         )
 
     @staticmethod
-    def _load_pgvector_store(embeddings_model: Embeddings, settings) -> PGVector:
+    def _load_pgvector_store(embedding_model: Embeddings, settings) -> PGVector:
         # create an empty store if collection_name does not exist otherwise load the existing collection
         store = PGVector(
             connection_string=settings.connection_string,
             collection_name=settings.collection_name,
-            embedding_function=embeddings_model
+            embedding_function=embedding_model
         )
         return VectorStoreFactory._load_data_into_langchain_pgvector(settings, store)
 

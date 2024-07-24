@@ -9,6 +9,7 @@ from langchain.chains.conversation.memory import ConversationSummaryBufferMemory
 from langchain.schema import SystemMessage
 from langchain_community.chat_models import ChatAnthropic, ChatOpenAI, ChatAnyscale, ChatLiteLLM, ChatOllama
 from langchain_core.prompts import PromptTemplate
+from langchain_core.tools import Tool
 from langfuse import Langfuse
 from langfuse.callback import CallbackHandler
 
@@ -26,7 +27,7 @@ from mindsdb.interfaces.storage import db
 from .mindsdb_chat_model import ChatMindsdb
 from .log_callback_handler import LogCallbackHandler
 from .langfuse_callback_handler import LangfuseCallbackHandler
-from .tools import langchain_tools_from_skill
+from .tools import _build_retrieval_tool
 from .safe_output_parser import SafeOutputParser
 
 from .constants import (
@@ -40,8 +41,10 @@ from .constants import (
     USER_COLUMN,
     ASSISTANT_COLUMN
 )
+from ..skills.skill_tool import skill_tool, SkillType
+from ...integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
 
-_PARSING_ERROR_PREFIXES = ['An output parsing error occured', 'Could not parse LLM output']
+_PARSING_ERROR_PREFIXES = ['An output parsing error occurred', 'Could not parse LLM output']
 
 logger = log.getLogger(__name__)
 
@@ -55,7 +58,7 @@ def get_llm_provider(args: Dict) -> str:
         return 'openai'
     if args['model_name'] in OLLAMA_CHAT_MODELS:
         return 'ollama'
-    raise ValueError("Invalid model name. Please define provider")
+    raise ValueError("Invalid model name. Please define a supported llm provider")
 
 
 def get_embedding_model_provider(args: Dict) -> str:
@@ -106,22 +109,30 @@ def create_chat_model(args: Dict):
 
 
 class LangchainAgent:
-    def __init__(self, agent: db.Agents, model=None):
+    def __init__(self, agent: db.Agents, model):
 
+        self.llm = None
+        self.embedding_model = None
         self.agent = agent
         args = agent.params.copy()
+        args['model_name'] = agent.model_name
+        args['provider'] = agent.provider
 
         # agent is using current langchain model
-        if model is not None:
+        if agent.provider == 'mindsdb':
             args['model_name'] = agent.model_name
-            args['provider'] = 'mindsdb'
 
             # get prompt
             prompt_template = model['problem_definition'].get('using', {}).get('prompt_template')
-            args['prompt_template'] = prompt_template
+            if prompt_template is not None:
+                # only update prompt_template if it is set on the model
+                args['prompt_template'] = prompt_template
 
         if args.get('prompt_template') is None:
-            raise ValueError('Please provide a `prompt_template`')
+            if args.get('mode') == 'retrieval':
+                args['prompt_template'] = DEFAULT_RAG_PROMPT_TEMPLATE
+            else:
+                raise ValueError('Please provide a `prompt_template` or set `mode=retrieval`')
 
         self.args = args
         self.trace_id = None
@@ -139,8 +150,6 @@ class LangchainAgent:
         # Back compatibility for old models
         self.provider = args.get('provider', get_llm_provider(args))
 
-        self.embedding_model_provider = args.get('embedding_model', get_embedding_model_provider(args))
-
         df = df.reset_index(drop=True)
         agent = self.create_agent(df, args)
         # Use last message as prompt, remove other questions.
@@ -148,33 +157,37 @@ class LangchainAgent:
         df.iloc[:-1, df.columns.get_loc(user_column)] = None
         return self.run_agent(df, agent, args)
 
+    def set_embedding_model(self, args):
+        # Set up embeddings model if needed.
+
+        embeddings_args = args.pop('embedding_model_args', {})
+
+        # no embedding model args provided, use default provider.
+        if not embeddings_args:
+            embeddings_provider = get_embedding_model_provider(args)
+            logger.warning("'embedding_model_args' not found in input params, "
+                           f"Trying to use LLM provider: {embeddings_provider}"
+                           )
+            embeddings_args['class'] = embeddings_provider
+            # Include API keys if present.
+            embeddings_args.update({k: v for k, v in args.items() if 'api_key' in k})
+
+        # create embeddings model
+        self.embedding_model = construct_model_from_args(embeddings_args)
+
     def create_agent(self, df: pd.DataFrame, args: Dict = None) -> AgentExecutor:
 
         # Set up tools.
         llm = create_chat_model(args)
-
-        # Set up embeddings model if needed.
+        self.llm = llm
         if args.get('mode') == 'retrieval':
-            embeddings_args = args.pop('embedding_model_args', {})
-
-            # no embedding model args provided, use default provider.
-            if not embeddings_args:
-                embeddings_provider = get_embedding_model_provider(args)
-                logger.warning("'embedding_model_args' not found in input params, "
-                               f"Trying to use LLM provider: {embeddings_provider}"
-                               )
-                embeddings_args['class'] = embeddings_provider
-                # Include API keys if present.
-                embeddings_args.update({k: v for k, v in args.items() if 'api_key' in k})
-
-            # create embeddings model
-            self.embeddings_model = construct_model_from_args(args)
-            self.llm = llm
+            self.set_embedding_model(args)
+            self.args.pop('mode')
 
         tools = []
         skills = self.agent.skills or []
         for skill in skills:
-            tools += langchain_tools_from_skill(skill, {}, llm)
+            tools += self.langchain_tools_from_skill(skill, {}, llm)
 
         # Prefer prediction prompt template over original if provided.
         prompt_template = args['prompt_template']
@@ -212,6 +225,28 @@ class LangchainAgent:
             verbose=args.get('verbose', args.get('verbose', True))
         )
         return agent_executor
+
+    def langchain_tools_from_skill(self, skill, pred_args, llm):
+        # Makes Langchain compatible tools from a skill
+        tools = skill_tool.get_tools_from_skill(skill, llm)
+
+        all_tools = []
+        for tool in tools:
+            if skill.type == SkillType.RETRIEVAL.value:
+                pred_args['embedding_model'] = self.embedding_model
+                pred_args['llm'] = self.llm
+                all_tools.append(_build_retrieval_tool(tool, pred_args, skill))
+                continue
+            if isinstance(tool, dict):
+                all_tools.append(Tool(
+                    name=tool['name'],
+                    func=tool['func'],
+                    description=tool['description'],
+                    return_direct=True
+                ))
+                continue
+            all_tools.append(tool)
+        return all_tools
 
     def _get_agent_callbacks(self, args: Dict) -> List:
         all_callbacks = [LogCallbackHandler(logger)]

@@ -63,7 +63,12 @@ class TestElasticsearchHandler(unittest.TestCase):
         Tests the `native_query` method to ensure it executes a SQL query and returns a Response object.
         """
         mock_conn = MagicMock()
-        mock_conn.sql.query = MagicMock()
+        mock_conn.sql.query = MagicMock(
+            return_value={
+                'rows': ['value1', 'value2'],
+                'columns': ['column1', 'column2'],
+            }
+        )
 
         self.handler.connect = MagicMock(return_value=mock_conn)
 

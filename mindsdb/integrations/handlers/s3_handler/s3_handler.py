@@ -281,7 +281,7 @@ class S3Handler(DatabaseHandler):
             raise e
 
         # Replace all special characters in the key with underscores to create a valid table name.
-        self.table_name = re.sub(r'[\W]+','_', self.key)
+        self.table_name = re.sub(r'[\W]+', '_', self.key)
 
         # Replace the key with the name of the table to be created.
         if self.is_select_query:

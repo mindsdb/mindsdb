@@ -70,7 +70,7 @@ jobs:
     concurrency:
       group: deploy-${{ matrix.deploy-env }}
       cancel-in-progress: false
-    if: needs.get-deploy-labels.outputs.deploy-envs != '[]'
+    if: needs.get-deploy-labels.outputs.deploy-envs != '[]' && !github.event.pull_request.head.repo.fork
     steps:
       - name: Pull MindsDB Github Actions
         uses: actions/checkout@v4

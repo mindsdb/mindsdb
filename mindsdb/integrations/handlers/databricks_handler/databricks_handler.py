@@ -123,18 +123,22 @@ class DatabricksHandler(DatabaseHandler):
         need_to_close = self.is_connected is False
 
         try:
-            self.connect()
+            connection = self.connect()
+
+            # Execute a simple query to check the connection.
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1;")
             response.success = True
-        except Exception as e:
-            logger.error(
-                f'Error connecting to Databricks {self.connection_data["schema"]}, {e}!'
-            )
-            response.error_message = str(e)
-        finally:
-            if response.success is True and need_to_close:
-                self.disconnect()
-            if response.success is False and self.is_connected is True:
-                self.is_connected = False
+        # All exceptions are caught here to ensure that the connection is closed and logged if an error occurs.
+        except Exception as error:
+            logger.error(f'Error connecting to Databricks, {error}!')
+            response.error_message = str(error)
+
+        if response.success and need_to_close:
+            self.disconnect()
+
+        elif not response.success and self.is_connected:
+            self.is_connected = False
 
         return response
 

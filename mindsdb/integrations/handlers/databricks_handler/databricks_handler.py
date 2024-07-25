@@ -3,7 +3,6 @@ from typing import Optional
 import pandas as pd
 from databricks import sql
 
-from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from sqlalchemy_databricks import DatabricksDialect
 from mindsdb.integrations.libs.base import DatabaseHandler
@@ -36,8 +35,6 @@ class DatabricksHandler(DatabaseHandler):
             **kwargs: arbitrary keyword arguments.
         """
         super().__init__(name)
-        self.parser = parse_sql
-        self.dialect = "databricks"
 
         optional_parameters = [
             "session_configuration",

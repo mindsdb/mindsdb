@@ -1,6 +1,7 @@
 name: Comment on fork PRs
 
-permissions: write-all
+permissions:
+  issues: write
 
 
 on:

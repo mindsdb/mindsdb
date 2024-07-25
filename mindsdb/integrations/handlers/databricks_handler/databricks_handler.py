@@ -1,38 +1,38 @@
-from typing import Optional
+from typing import Text, Dict, Any, Optional
 
-import pandas as pd
 from databricks.sql import connect, RequestError
-
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from sqlalchemy_databricks import DatabricksDialect
-from mindsdb.integrations.libs.base import DatabaseHandler
-
 from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+import pandas as pd
+from sqlalchemy_databricks import DatabricksDialect
 
-from mindsdb.utilities import log
+from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE,
 )
+from mindsdb.utilities import log
+
 
 logger = log.getLogger(__name__)
 
 
 class DatabricksHandler(DatabaseHandler):
     """
-    This handler handles connection and execution of the Databricks statements.
+    This handler handles the connection and execution of SQL statements on Databricks.
     """
 
     name = "databricks"
 
-    def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
+    def __init__(self, name: Text, connection_data: Optional[Dict], **kwargs: Any) -> None:
         """
-        Initialize the handler.
+        Initializes the handler.
+
         Args:
-            name (str): name of particular handler instance
-            connection_data (dict): parameters for connecting to the database
-            **kwargs: arbitrary keyword arguments.
+            name (Text): The name of the handler instance.
+            connection_data (Dict): The connection data required to connect to Databricks workspace.
+            kwargs: Arbitrary keyword arguments.
         """
         super().__init__(name)
         self.connection_data = connection_data
@@ -41,17 +41,23 @@ class DatabricksHandler(DatabaseHandler):
         self.connection = None
         self.is_connected = False
 
-    def __del__(self):
+    def __del__(self) -> None:
+        """
+        Closes the connection when the handler instance is deleted.
+        """
         if self.is_connected is True:
             self.disconnect()
 
-    def connect(self) -> StatusResponse:
+    def connect(self) -> databricks.sql.client.Connection:
         """
-        Set up the connection required by the handler.
-        Returns:
-            HandlerStatusResponse
-        """
+        Establishes a connection to the Databricks workspace.
 
+        Raises:
+            ValueError: If the expected connection parameters are not provided.
+
+        Returns:
+            databricks.sql.client.Connection: A connection object to the Databricks workspace.
+        """
         if self.is_connected is True:
             return self.connection
         
@@ -97,9 +103,8 @@ class DatabricksHandler(DatabaseHandler):
 
     def disconnect(self):
         """
-        Close any existing connections.
+        Closes the connection to the Databricks workspace if it's currently open.
         """
-
         if self.is_connected is False:
             return
 
@@ -109,11 +114,11 @@ class DatabricksHandler(DatabaseHandler):
 
     def check_connection(self) -> StatusResponse:
         """
-        Check connection to the handler.
-        Returns:
-            HandlerStatusResponse
-        """
+        Checks the status of the connection to the Databricks workspace.
 
+        Returns:
+            StatusResponse: An object containing the success status and an error message if an error occurs.
+        """
         response = StatusResponse(False)
         need_to_close = self.is_connected is False
 
@@ -133,15 +138,16 @@ class DatabricksHandler(DatabaseHandler):
 
         return response
 
-    def native_query(self, query: str) -> StatusResponse:
+    def native_query(self, query: Text) -> Response:
         """
-        Receive raw query and act upon it somehow.
-        Args:
-            query (str): query in native format
-        Returns:
-            HandlerResponse
-        """
+        Executes a native SQL query on the Databricks workspace and returns the result.
 
+        Args:
+            query (str): The SQL query to be executed.
+
+        Returns:
+            Response: A response object containing the result of the query or an error message.
+        """
         need_to_close = self.is_connected is False
 
         connection = self.connect()
@@ -171,26 +177,27 @@ class DatabricksHandler(DatabaseHandler):
 
         return response
 
-    def query(self, query: ASTNode) -> StatusResponse:
+    def query(self, query: ASTNode) -> Response:
         """
-        Receive query as AST (abstract syntax tree) and act upon it somehow.
+        Executes a SQL query represented by an ASTNode on the Databricks Workspace and retrieves the data.
+
         Args:
-            query (ASTNode): sql query represented as AST. May be any kind
-                of query: SELECT, INTSERT, DELETE, etc
+            query (ASTNode): An ASTNode representing the SQL query to be executed.
+
         Returns:
-            HandlerResponse
+            Response: The response from the `native_query` method, containing the result of the SQL query execution.
         """
         renderer = SqlalchemyRender(DatabricksDialect)
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 
-    def get_tables(self) -> StatusResponse:
+    def get_tables(self) -> Response:
         """
-        Return list of entities that will be accessible as tables.
-        Returns:
-            HandlerResponse
-        """
+        Retrieves a list of all non-system tables in the connected schema of the Databricks workspace.
 
+        Returns:
+            Response: A response object containing a list of tables in the connected schema.
+        """
         query = """
             SHOW TABLES;
         """
@@ -199,14 +206,21 @@ class DatabricksHandler(DatabaseHandler):
         result.data_frame = df.rename(columns={"tableName": "table_name"})
         return result
 
-    def get_columns(self, table_name: str) -> StatusResponse:
+    def get_columns(self, table_name: Text) -> Response:
         """
-        Returns a list of entity columns.
+        Retrieves column details for a specified table in the Databricks workspace.
+
         Args:
-            table_name (str): name of one of tables returned by self.get_tables()
+            table_name (Text): The name of the table for which to retrieve column information.
+
+        Raises:
+            ValueError: If the 'table_name' is not a valid string.
+
         Returns:
-            HandlerResponse
+            Response: A response object containing the column details.
         """
+        if not table_name or not isinstance(table_name, str):
+            raise ValueError("Invalid table name provided.")
 
         query = f"DESCRIBE {table_name};"
         result = self.native_query(query)

@@ -242,7 +242,7 @@ class VectorStoreHandler(BaseHandler):
             if k == TableField.EMBEDDINGS.value and isinstance(v, str):
                 # it could be embeddings in string
                 try:
-                    v = eval(v)
+                    v = ast.literal_eval(v)
                 except Exception:
                     pass
             row[k] = v

@@ -21,7 +21,7 @@ Here are the recommended system specifications:
 - For 7B models, at least 8GB RAM is recommended.
 - For 13B models, at least 16GB RAM is recommended.
 - For 70B models, at least 64GB RAM is recommended.
-</Info>
+  </Info>
 
 ## Setup
 
@@ -67,6 +67,16 @@ USING
    model_name = 'llama2';
 ```
 
+<Tip>
+Models can be run in either the 'generate' or 'embedding' modes. The 'generate' mode is used for text generation, while the 'embedding' mode is used to generate embeddings for text.
+
+However, these modes can only be used with models that support them. For example, the `moondream` model supports both modes.
+
+By default, if the mode is not specified, the model will run in 'generate' mode if multiple modes are supported. If only one mode is supported, the model will run in that mode.
+
+To specify the mode, use the `mode` parameter in the `CREATE MODEL` statement. For example, `mode = 'embedding'`.
+</Tip>
+
 Query the model to get predictions.
 
 ```sql
@@ -91,7 +101,7 @@ You can override the prompt message as below:
 SELECT text, completion
 FROM llama2_model
 WHERE text = 'Hello'
-USING 
+USING
    prompt_template = 'Answer using exactly five words: {{text}}:';
 ```
 

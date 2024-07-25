@@ -219,20 +219,21 @@ class ProcessCache:
         from mindsdb.interfaces.database.integrations import integration_controller
         preload_handlers = {}
         config = Config()
-        is_cloud = config.get('cloud', False)
+        is_cloud = config.get('cloud', False) # noqa
 
         if config['ml_task_queue']['type'] != 'redis':
-            lightwood_handler = integration_controller.handler_modules['lightwood']
+            lightwood_handler = integration_controller.get_handler_module('lightwood')
             if lightwood_handler.Handler is not None:
                 preload_handlers[lightwood_handler.Handler] = 4 if is_cloud else 1
 
-            huggingface_handler = integration_controller.handler_modules['huggingface']
-            if huggingface_handler.Handler is not None:
-                preload_handlers[huggingface_handler.Handler] = 1 if is_cloud else 0
+            if is_cloud:
+                huggingface_handler = integration_controller.get_handler_module('huggingface')
+                if huggingface_handler.Handler is not None:
+                    preload_handlers[huggingface_handler.Handler] = 1
 
-            openai_handler = integration_controller.handler_modules['openai']
-            if openai_handler.Handler is not None:
-                preload_handlers[openai_handler.Handler] = 1 if is_cloud else 0
+                openai_handler = integration_controller.get_handler_module('openai')
+                if openai_handler.Handler is not None:
+                    preload_handlers[openai_handler.Handler] = 1
 
         with self._lock:
             if self._init is False:

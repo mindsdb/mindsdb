@@ -1,6 +1,6 @@
 from typing import Text, Dict, Any, Optional
 
-from databricks.sql import connect, RequestError
+from databricks.sql import connect, RequestError, ServerOperationError
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 import pandas as pd
@@ -129,10 +129,12 @@ class DatabricksHandler(DatabaseHandler):
             with connection.cursor() as cursor:
                 cursor.execute("SELECT 1;")
             response.success = True
-        # All exceptions are caught here to ensure that the connection is closed and logged if an error occurs.
-        except Exception as error:
-            logger.error(f'Error connecting to Databricks, {error}!')
-            response.error_message = str(error)
+        except (ValueError, RequestError, RuntimeError, ServerOperationError) as known_error:
+            logger.error(f'Connection check to Databricks failed, {known_error}!')
+            response.error_message = str(known_error)
+        except Exception as unknown_error:
+            logger.error(f'Connection check to Databricks failed due to an unknown error, {unknown_error}!')
+            response.error_message = str(unknown_error)
 
         if response.success and need_to_close:
             self.disconnect()
@@ -170,11 +172,22 @@ class DatabricksHandler(DatabaseHandler):
                 else:
                     response = Response(RESPONSE_TYPE.OK)
                     connection.commit()
-            except Exception as e:
+            except ServerOperationError as server_error:
                 logger.error(
-                    f'Error running query: {query} on {self.connection_data["schema"]}!'
+                    f'Server error running query: {query} on Databricks, {server_error}!'
                 )
-                response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
+                response = Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=str(server_error)
+                )
+            except Exception as unknown_error:
+                logger.error(
+                    f'Unknown error running query: {query} on Databricks, {unknown_error}!'
+                )
+                response = Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=str(unknown_error)
+                )
 
         if need_to_close is True:
             self.disconnect()

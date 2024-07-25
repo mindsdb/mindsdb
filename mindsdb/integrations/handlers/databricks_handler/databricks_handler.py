@@ -206,6 +206,7 @@ class DatabricksHandler(DatabaseHandler):
             SHOW TABLES;
         """
         result = self.native_query(query)
+
         df = result.data_frame
         result.data_frame = df.rename(columns={"tableName": "table_name"})
         return result
@@ -226,12 +227,9 @@ class DatabricksHandler(DatabaseHandler):
         if not table_name or not isinstance(table_name, str):
             raise ValueError("Invalid table name provided.")
 
-        query = f"DESCRIBE {table_name};"
+        query = f"DESCRIBE TABLE {table_name};"
         result = self.native_query(query)
+
         df = result.data_frame
-
-        drop_row = df[df["col_name"] == ""].index.tolist()[0]
-        df = df.iloc[: drop_row + 1]
-
         result.data_frame = df.rename(columns={"col_name": "column_name"})
         return result

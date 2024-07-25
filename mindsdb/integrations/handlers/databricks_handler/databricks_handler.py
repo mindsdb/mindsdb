@@ -1,7 +1,7 @@
 from typing import Optional
 
 import pandas as pd
-from databricks import sql
+from databricks.sql import connect, RequestError
 
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from sqlalchemy_databricks import DatabricksDialect
@@ -35,17 +35,6 @@ class DatabricksHandler(DatabaseHandler):
             **kwargs: arbitrary keyword arguments.
         """
         super().__init__(name)
-
-        optional_parameters = [
-            "session_configuration",
-            "http_headers",
-            "catalog",
-            "schema",
-        ]
-        for parameter in optional_parameters:
-            if parameter not in connection_data:
-                connection_data[parameter] = None
-
         self.connection_data = connection_data
         self.kwargs = kwargs
 
@@ -65,19 +54,46 @@ class DatabricksHandler(DatabaseHandler):
 
         if self.is_connected is True:
             return self.connection
+        
+        # Mandatory connection parameters.
+        if not all(
+            key in self.connection_data
+            for key in ["server_hostname", "http_path", "access_token"]
+        ):
+            raise ValueError('Required parameters (server_hostname, http_path, access_token) must be provided.')
+        
+        config = {
+            "server_hostname": self.connection_data["server_hostname"],
+            "http_path": self.connection_data["http_path"],
+            "access_token": self.connection_data["access_token"],
+        }
 
-        self.connection = sql.connect(
-            server_hostname=self.connection_data["server_hostname"],
-            http_path=self.connection_data["http_path"],
-            access_token=self.connection_data["access_token"],
-            session_configuration=self.connection_data["session_configuration"],
-            http_headers=self.connection_data["http_headers"],
-            catalog=self.connection_data["catalog"],
-            schema=self.connection_data["schema"],
-        )
-        self.is_connected = True
+        # Optional connection parameters.
+        optional_parameters = [
+            "session_configuration",
+            "http_headers",
+            "catalog",
+            "schema",
+        ]
+        for parameter in optional_parameters:
+            if parameter in self.connection_data:
+                config[parameter] = self.connection_data[parameter]
 
-        return self.connection
+        try:
+            self.connection = connect(
+                **config
+            )
+            self.is_connected = True
+            return self.connection
+        except RequestError as request_error:
+            logger.error(f'Request error when connecting to Databricks: {request_error}')
+            raise
+        except RuntimeError as runtime_error:
+            logger.error(f'Runtime error when connecting to Databricks: {runtime_error}')
+            raise
+        except Exception as unknown_error:
+            logger.error(f'Unknown error when connecting to Databricks: {unknown_error}')
+            raise
 
     def disconnect(self):
         """

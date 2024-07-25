@@ -222,7 +222,7 @@ class ModelController():
         fetch_data_query = None
         if statement.integration_name is not None:
             fetch_data_query = statement.query_str
-            integration_name = statement.integration_name.parts[0]
+            integration_name = statement.integration_name.parts[0].lower()
 
             databases_meta = database_controller.get_dict()
             if integration_name not in databases_meta:

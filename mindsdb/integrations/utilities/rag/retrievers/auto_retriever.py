@@ -37,7 +37,7 @@ class AutoRetriever(BaseRetriever):
         self.filter_columns = config.auto_retriever_filter_columns
         self.document_description = config.dataset_description
         self.llm = config.llm
-        self.embeddings_model = config.embeddings_model
+        self.embedding_model = config.embedding_model
         self.prompt_template = config.retriever_prompt_template
         self.cardinality_threshold = config.cardinality_threshold
 
@@ -99,7 +99,7 @@ class AutoRetriever(BaseRetriever):
         """
         return VectorStoreOperator(vector_store=self.vectorstore,
                                    documents=self.documents,
-                                   embeddings_model=self.embeddings_model).vector_store
+                                   embedding_model=self.embedding_model).vector_store
 
     def as_runnable(self) -> BaseRetriever:
         """

@@ -99,6 +99,7 @@ def test_post_agent(client):
             'params': {
                 'k1': 'v1'
             },
+            'provider': 'mindsdb',
             'skills': ['test_skill']
         }
     }
@@ -111,6 +112,7 @@ def test_post_agent(client):
     expected_agent = {
         'name': 'test_post_agent',
         'model_name': 'test_model',
+        'provider': 'mindsdb',
         'params': {
             'k1': 'v1'
         },
@@ -175,6 +177,7 @@ def test_post_agent_project_not_found(client):
             'params': {
                 'k1': 'v1'
             },
+            'provider': 'mindsdb',
             'skills': ['test_skill']
         }
     }
@@ -190,6 +193,7 @@ def test_post_agent_model_not_found(client):
             'params': {
                 'k1': 'v1'
             },
+            'provider': 'mindsdb',
             'skills': ['test_skill']
         }
     }
@@ -205,6 +209,7 @@ def test_post_agent_skill_not_found(client):
             'params': {
                 'k1': 'v1'
             },
+            'provider': 'mindsdb',
             'skills': ['overpowered_skill']
         }
     }
@@ -245,6 +250,7 @@ def test_get_agent(client):
             'params': {
                 'k1': 'v1'
             },
+            'provider': 'mindsdb',
             'skills': ['test_skill']
         }
     }
@@ -263,6 +269,7 @@ def test_get_agent(client):
         },
         'skills': agent['skills'],
         'id': agent['id'],
+        'provider': 'mindsdb',
         'project_id': agent['project_id'],
         'created_at': agent['created_at'],
         'updated_at': agent['updated_at']
@@ -284,6 +291,7 @@ def test_put_agent_create(client):
             'params': {
                 'k1': 'v1'
             },
+            'provider': 'mindsdb',
             'skills': ['test_skill']
         }
     }
@@ -299,6 +307,7 @@ def test_put_agent_create(client):
         'params': {
             'k1': 'v1'
         },
+        'provider': 'mindsdb',
         'skills': created_agent['skills'],
         'id': created_agent['id'],
         'project_id': created_agent['project_id'],
@@ -318,6 +327,7 @@ def test_put_agent_update(client):
                 'k1': 'v1',
                 'k2': 'v2'
             },
+            'provider': 'mindsdb',
             'skills': ['test_skill']
         }
     }
@@ -347,6 +357,7 @@ def test_put_agent_update(client):
             'k1': 'v1.1',
             'k3': 'v3'
         },
+        'provider': 'mindsdb',
         'skills': updated_agent['skills'],
         'id': updated_agent['id'],
         'project_id': updated_agent['project_id'],
@@ -385,6 +396,7 @@ def test_put_agent_model_not_found(client):
                 'k1': 'v1',
                 'k2': 'v2'
             },
+            'provider': 'mindsdb',
             'skills': ['test_skill']
         }
     }
@@ -402,6 +414,7 @@ def test_delete_agent(client):
                 'k1': 'v1',
                 'k2': 'v2'
             },
+            'provider': 'mindsdb',
             'skills': ['test_skill']
         }
     }
@@ -430,6 +443,9 @@ def test_agent_completions(client):
         'agent': {
             'name': 'test_agent',
             'model_name': 'test_model',
+            'provider': 'mindsdb',
+            'params': {'prompt_template': 'Test message!',
+                       'user_column': 'content'},
         }
     }
 

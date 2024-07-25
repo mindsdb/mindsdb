@@ -39,7 +39,10 @@ USING
       prompt_template = 'input message to the model here', -- optional, user provides instructions to the model here
       max_tokens = 100, -- optional, token limit for answer
       temperature = 0.3, -- temp
-
+      json_struct = {
+        'key': 'value',
+        ...
+      }'
 ```
 
 <Tip>
@@ -99,6 +102,10 @@ The following parameters are available to use when creating an OpenAI model:
 
   <Accordion title="temperature">
     This parameter is optional. It defines how *risky* the answers are. The value of `0` marks a well-defined answer, and the value of `0.9` marks a more creative answer. *Please note that this parameter can be overridden at prediction time.*
+  </Accordion>
+
+  <Accordion title="json_struct">
+    This parameter is optional. It is used to extract JSON data from a text column provided in the `prompt_template` parameter. [See examples here](/use-cases/data_enrichment/json-from-text#extract-json-from-text-data).
   </Accordion>
 </AccordionGroup>
 

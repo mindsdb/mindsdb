@@ -126,17 +126,12 @@ class SQLQuery:
                 except ValueError:
                     continue
                 if agent is not None:
-                    model = self.session.model_controller.get_model(
-                        agent.model_name,
-                        project_name=project_name
-                    )
-
                     predictor = {
                         'name': table_name,
                         'integration_name': project_name,  # integration_name,
                         'timeseries': False,
-                        'id': model['id'],
-                        'to_predict': model['predict'],
+                        'id': agent.id,
+                        'to_predict': 'answer',
                     }
                     predictor_metadata.append(predictor)
 

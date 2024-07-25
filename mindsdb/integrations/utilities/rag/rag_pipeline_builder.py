@@ -50,7 +50,7 @@ def _create_pipeline_from_multi_retriever(config: RAGPipelineModel) -> LangChain
 def _process_documents_to_df(config: RAGPipelineModel) -> pd.DataFrame:
     return documents_to_df(config.content_column_name,
                            config.documents,
-                           embeddings_model=config.embeddings_model,
+                           embedding_model=config.embedding_model,
                            with_embeddings=True)
 
 

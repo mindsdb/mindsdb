@@ -15,8 +15,8 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
 
     def __init__(self, langfuse, trace_id: Optional[str] = None, observation_id: Optional[str] = None):
         self.langfuse = langfuse
-        self.trace_id = trace_id
-        self.observation_id = observation_id
+        self.trace_id = trace_id if trace_id is not None else uuid4().hex
+        self.observation_id = observation_id if observation_id is not None else uuid4().hex
         self.chain_uuid_to_span = {}
         self.action_uuid_to_span = {}
 

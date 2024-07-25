@@ -1,7 +1,7 @@
 name: Comment on fork PRs
 
-permissions:
-  pull-requests: write
+permissions: write-all
+
 
 on:
   pull_request_target:

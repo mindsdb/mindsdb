@@ -206,6 +206,7 @@ class BaseExecutorTest(BaseUnitTest):
         from mindsdb.api.executor.command_executor import (
             ExecuteCommands,
         )
+        # clear cache of previous test case to apply mocks of current test case
         from mindsdb.integrations.libs.process_cache import process_cache
         process_cache.cache = {}
         from mindsdb.interfaces.database.integrations import integration_controller

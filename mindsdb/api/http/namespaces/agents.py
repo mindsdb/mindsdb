@@ -11,6 +11,7 @@ from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.metrics.metrics import api_endpoint_metrics
+from mindsdb.interfaces.agents.langfuse_callback_handler import get_metadata, get_tags, get_skills
 
 
 def create_agent(project_name, name, agent):
@@ -296,19 +297,9 @@ class AgentCompletions(Resource):
         if os.getenv('LANGFUSE_PUBLIC_KEY') is not None:
 
             # metadata retrieval
-            metadata_keys = ['provider', 'model_name', 'embedding_model_provider']  # keeps keys relevant for tracing
-            trace_metadata = {}
-            for key in metadata_keys:
-                if key in model_using:
-                    trace_metadata[key] = model_using.get(key)
-            trace_metadata['skills'] = [s.type for s in existing_agent.skills]
-
-            # set up tags
-            trace_tags = []
-            if os.getenv('FLASK_ENV'):
-                trace_tags.append(os.getenv('FLASK_ENV'))  # Fix: use something other than flask_env
-            if 'provider' in trace_metadata:
-                trace_tags.append(trace_metadata['provider'])
+            trace_metadata = get_metadata(model_using)
+            trace_metadata['skills'] = get_skills(existing_agent)
+            trace_tags = get_tags(trace_metadata)
 
             langfuse = Langfuse(
                 public_key=os.getenv('LANGFUSE_PUBLIC_KEY'),

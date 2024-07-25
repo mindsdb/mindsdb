@@ -27,7 +27,7 @@ from mindsdb.interfaces.storage import db
 
 from .mindsdb_chat_model import ChatMindsdb
 from .log_callback_handler import LogCallbackHandler
-from .langfuse_callback_handler import LangfuseCallbackHandler
+from .langfuse_callback_handler import LangfuseCallbackHandler, get_metadata, get_tags
 from .tools import _build_retrieval_tool
 from .safe_output_parser import SafeOutputParser
 
@@ -266,11 +266,14 @@ class LangchainAgent:
 
         if are_langfuse_args_present:
             if self.langfuse_callback_handler is None:
+                metadata = get_metadata(args)
                 self.langfuse_callback_handler = CallbackHandler(
                     public_key=langfuse_public_key,
                     secret_key=langfuse_secret_key,
                     host=langfuse_host,
-                    trace_name=args.get('trace_id', None),
+                    trace_name=args.get('trace_id', 'MindsDB-AgentExecutor'),
+                    tags=get_tags(metadata),
+                    metadata=metadata,
                 )
                 if not self.langfuse_callback_handler.auth_check():
                     logger.error(f'Incorrect Langfuse credentials provided to Langchain handler. Full args: {args}')

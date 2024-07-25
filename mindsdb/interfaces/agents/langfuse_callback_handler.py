@@ -1,10 +1,12 @@
-from typing import Any, Dict, Union, Optional
+from typing import Any, Dict, Union, Optional, List, Iterable
 from uuid import uuid4
 import datetime
+import os
 
 from langchain_core.callbacks.base import BaseCallbackHandler
 
 from mindsdb.utilities import log
+from mindsdb.interfaces.storage import db
 
 logger = log.getLogger(__name__)
 logger.setLevel('DEBUG')
@@ -109,3 +111,28 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
         if self.langfuse is not None:
             return self.langfuse.auth_check()
         return False
+
+
+def get_metadata(model_using: Dict) -> Dict:
+    """ Generates initial metadata mapping from information provided in a model's `using` clause.
+    Includes providers and model name.
+    """
+    metadata_keys = ['provider', 'model_name', 'embedding_model_provider']  # keeps keys relevant for tracing
+    trace_metadata = {}
+    for key in metadata_keys:
+        if key in model_using:
+            trace_metadata[key] = model_using.get(key)
+    return trace_metadata
+
+def get_skills(agent: db.Agents) -> List:
+    """ Retrieve skills from agent `skills` attribute. Specific to agent endpoints. """
+    return [s.type for s in agent.skills]
+
+def get_tags(metadata: Dict) -> List:
+    """ Retrieves tags from existing langfuse metadata (built using `get_metadata` and `get_skills`), and environment variables. """
+    trace_tags = []
+    if os.getenv('FLASK_ENV'):
+        trace_tags.append(os.getenv('FLASK_ENV'))  # Fix: use something other than flask_env
+    if 'provider' in metadata:
+        trace_tags.append(metadata['provider'])
+    return trace_tags

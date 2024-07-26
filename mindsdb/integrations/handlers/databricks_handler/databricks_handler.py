@@ -1,11 +1,11 @@
 from typing import Text, Dict, Any, Optional
 
-from databricks.sql.client import Connection
 from databricks.sql import connect, RequestError, ServerOperationError
+from databricks.sql.client import Connection
+from databricks.sqlalchemy import DatabricksDialect
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 import pandas as pd
-from sqlalchemy_databricks import DatabricksDialect
 
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (

@@ -3,6 +3,7 @@ name: Comment on fork PRs
 permissions:
   issues: write
   contents: write
+  pull-requests: write
 
 
 on:

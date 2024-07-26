@@ -267,8 +267,8 @@ class LangchainAgent:
         if are_langfuse_args_present:
             if self.langfuse_callback_handler is None:
                 trace_name = args.get('trace_id',
-                                      f'NativeTrace-...{self.trace_id[-7:]}' if self.trace_id is not None \
-                                          else 'NativeTrace-MindsDB-AgentExecutor')
+                                      f'NativeTrace-...{self.trace_id[-7:]}' if self.trace_id is not None
+                                      else 'NativeTrace-MindsDB-AgentExecutor')
                 metadata = get_metadata(args)
                 self.langfuse_callback_handler = CallbackHandler(
                     public_key=langfuse_public_key,

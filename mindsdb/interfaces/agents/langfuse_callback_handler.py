@@ -1,4 +1,4 @@
-from typing import Any, Dict, Union, Optional, List, Iterable
+from typing import Any, Dict, Union, Optional, List
 from uuid import uuid4
 import datetime
 import os
@@ -52,7 +52,7 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
         action_span = self.action_uuid_to_span.get(parent_run_uuid)
         try:
             error_str = str(error)
-        except Exception as e:
+        except Exception:
             error_str = "Couldn't get error string."
         action_span.update(metadata={'error_description': error_str})
 
@@ -78,12 +78,10 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
         chain_span.update(output=str(outputs))
         chain_span.end()
 
-    def on_chain_error(
-                self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
-        ) -> Any:
-            """Run when chain errors."""
-            # Do nothing for now.
-            pass
+    def on_chain_error(self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any) -> Any:
+        """Run when chain errors."""
+        # Do nothing for now.
+        pass
 
     def on_agent_action(self, action, **kwargs: Any) -> Any:
         """Run on agent action."""
@@ -125,9 +123,11 @@ def get_metadata(model_using: Dict) -> Dict:
             trace_metadata[key] = model_using.get(key)
     return trace_metadata
 
+
 def get_skills(agent: db.Agents) -> List:
     """ Retrieve skills from agent `skills` attribute. Specific to agent endpoints. """
     return [s.type for s in agent.skills]
+
 
 def get_tags(metadata: Dict) -> List:
     """ Retrieves tags from existing langfuse metadata (built using `get_metadata` and `get_skills`), and environment variables. """
@@ -137,6 +137,7 @@ def get_tags(metadata: Dict) -> List:
     if 'provider' in metadata:
         trace_tags.append(metadata['provider'])
     return trace_tags
+
 
 def get_tool_usage(trace) -> Dict:
     """ Retrieves tool usage information from a langfuse trace.

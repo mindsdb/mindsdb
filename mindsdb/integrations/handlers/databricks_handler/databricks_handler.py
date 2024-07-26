@@ -62,14 +62,14 @@ class DatabricksHandler(DatabaseHandler):
         """
         if self.is_connected is True:
             return self.connection
-        
+
         # Mandatory connection parameters.
         if not all(
             key in self.connection_data
             for key in ["server_hostname", "http_path", "access_token"]
         ):
             raise ValueError('Required parameters (server_hostname, http_path, access_token) must be provided.')
-        
+
         config = {
             "server_hostname": self.connection_data["server_hostname"],
             "http_path": self.connection_data["http_path"],

@@ -7,15 +7,13 @@ from flask import request, Response
 from flask_restx import Resource
 from langfuse import Langfuse
 
-from mindsdb.interfaces.storage import db
-from mindsdb.interfaces.agents.agents_controller import AgentsController
-import mindsdb.interfaces.storage.db as db
 from mindsdb.api.executor.controllers.session_controller import SessionController
-from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
-from mindsdb.api.executor.controllers.session_controller import SessionController
-from mindsdb.metrics.metrics import api_endpoint_metrics
+from mindsdb.api.http.utils import http_error
+from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.interfaces.agents.langfuse_callback_handler import get_metadata, get_tags, get_tool_usage, get_skills
+from mindsdb.interfaces.storage import db
+from mindsdb.metrics.metrics import api_endpoint_metrics
 
 
 def create_agent(project_name, name, agent):

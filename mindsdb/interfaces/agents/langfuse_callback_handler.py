@@ -17,10 +17,11 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
 
     def __init__(self, langfuse, trace_id: Optional[str] = None, observation_id: Optional[str] = None):
         self.langfuse = langfuse
-        self.trace_id = trace_id if trace_id is not None else uuid4().hex
-        self.observation_id = observation_id if observation_id is not None else uuid4().hex
         self.chain_uuid_to_span = {}
         self.action_uuid_to_span = {}
+        # if these are not available, we generate some UUIDs
+        self.trace_id = trace_id or uuid4().hex
+        self.observation_id = observation_id or uuid4().hex
 
     def on_tool_start(
             self, serialized: Dict[str, Any], input_str: str, **kwargs: Any
@@ -136,3 +137,16 @@ def get_tags(metadata: Dict) -> List:
     if 'provider' in metadata:
         trace_tags.append(metadata['provider'])
     return trace_tags
+
+def get_tool_usage(trace) -> Dict:
+    """ Retrieves tool usage information from a langfuse trace.
+    Note: assumes trace marks an action with string `AgentAction` """
+    tool_usage = {}
+    steps = [s.name for s in trace.observations]
+    for step in steps:
+        if 'AgentAction' in step:
+            tool_name = step.split('-')[1]
+            if tool_name not in tool_usage:
+                tool_usage[tool_name] = 0
+            tool_usage[tool_name] += 1
+    return tool_usage

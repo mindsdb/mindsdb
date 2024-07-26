@@ -11,7 +11,7 @@ from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.metrics.metrics import api_endpoint_metrics
-from mindsdb.interfaces.agents.langfuse_callback_handler import get_metadata, get_tags, get_skills
+from mindsdb.interfaces.agents.langfuse_callback_handler import get_metadata, get_tags, get_tool_usage, get_skills
 
 
 def create_agent(project_name, name, agent):
@@ -334,16 +334,8 @@ class AgentCompletions(Resource):
             api_trace.update(output=model_output)
 
             # update metadata with tool usage
-            tool_usage = {}
             trace = langfuse.get_trace(trace_id)
-            steps = [s.name for s in trace.observations]
-            for step in steps:
-                if 'AgentAction' in step:
-                    tool_name = step.split('-')[1]
-                    if tool_name not in tool_usage:
-                        tool_usage[tool_name] = 0
-                    tool_usage[tool_name] += 1
-            trace_metadata['tool_usage'] = tool_usage
+            trace_metadata['tool_usage'] = get_tool_usage(trace)
             api_trace.update(metadata=trace_metadata)
 
         return {

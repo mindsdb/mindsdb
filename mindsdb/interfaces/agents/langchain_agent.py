@@ -266,20 +266,25 @@ class LangchainAgent:
 
         if are_langfuse_args_present:
             if self.langfuse_callback_handler is None:
+                trace_name = args.get('trace_id',
+                                      f'NativeTrace-...{self.trace_id[-7:]}' if self.trace_id is not None \
+                                          else 'NativeTrace-MindsDB-AgentExecutor')
                 metadata = get_metadata(args)
                 self.langfuse_callback_handler = CallbackHandler(
                     public_key=langfuse_public_key,
                     secret_key=langfuse_secret_key,
                     host=langfuse_host,
-                    trace_name=args.get('trace_id', 'MindsDB-AgentExecutor'),
+                    trace_name=trace_name,
                     tags=get_tags(metadata),
                     metadata=metadata,
                 )
                 if not self.langfuse_callback_handler.auth_check():
                     logger.error(f'Incorrect Langfuse credentials provided to Langchain handler. Full args: {args}')
 
+            # custom tracer
             if self.mdb_langfuse_callback_handler is None:
-                # custom tracer
+                trace_id = args.get('trace_id', self.trace_id or None)
+                observation_id = args.get('observation_id', self.observation_id or uuid4().hex)
                 langfuse = Langfuse(
                     host=langfuse_host,
                     public_key=langfuse_public_key,
@@ -287,20 +292,16 @@ class LangchainAgent:
                 )
                 self.mdb_langfuse_callback_handler = LangfuseCallbackHandler(
                     langfuse=langfuse,
-                    trace_id=args.get('trace_id', None),
-                    observation_id=args.get('observation_id', uuid4().hex)
+                    trace_id=trace_id,
+                    observation_id=observation_id,
                 )
 
+        # obs: we may want to unify these; native langfuse handler provides details as a tree on a sub-step of the overarching custom one  # noqa
         if self.langfuse_callback_handler is not None:
             all_callbacks.append(self.langfuse_callback_handler)
 
         if self.mdb_langfuse_callback_handler:
-            # obs: we may want to unify these two, as the native langfuse handler provides details as a tree on a sub-step of the overarching custom one  # noqa
             all_callbacks.append(self.mdb_langfuse_callback_handler)
-
-        # TODO: relevant?
-        # if self.trace_id or self.observation_id is None:
-        #     return all_callbacks
 
         return all_callbacks
 

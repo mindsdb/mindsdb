@@ -32,6 +32,7 @@ from mindsdb.api.executor.exceptions import (
 )
 import mindsdb.utilities.profiler as profiler
 from mindsdb.utilities.fs import create_process_mark, delete_process_mark
+from mindsdb.utilities.exception import EntityNotExistsError
 
 from . import steps
 from .result_set import ResultSet, Column
@@ -123,7 +124,7 @@ class SQLQuery:
                 # check if it is an agent
                 try:
                     agent = self.session.agents_controller.get_agent(table_name, project_name)
-                except ValueError:
+                except EntityNotExistsError:
                     continue
                 if agent is not None:
                     predictor = {

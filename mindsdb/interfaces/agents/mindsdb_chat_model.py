@@ -102,9 +102,11 @@ class ChatMindsdb(BaseChatModel):
 
             user_column = problem_definition.get('user_column', USER_COLUMN)
             record[user_column] = content
+
         elif 'column' in problem_definition:
             # input defined as 'column' param
             record[problem_definition['column']] = content
+
         else:
             # failback, maybe handler supports template injection
             params['prompt_template'] = content

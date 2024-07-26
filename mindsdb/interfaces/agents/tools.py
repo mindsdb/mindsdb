@@ -7,6 +7,7 @@ from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel, Vector
 from mindsdb.interfaces.skills.skill_tool import skill_tool
 from mindsdb.interfaces.storage import db
 
+from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS
 from mindsdb.interfaces.storage.db import KnowledgeBase
 from mindsdb.utilities import log
 
@@ -44,7 +45,7 @@ def _build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
 
     # Can run into weird validation errors when unpacking rag_params directly into constructor.
     rag_config = RAGPipelineModel(
-        embedding_model=rag_params['embedding_model']
+        embeddings_model=rag_params.get('embeddings_model', DEFAULT_EMBEDDINGS_MODEL_CLASS())
     )
     if 'documents' in rag_params:
         rag_config.documents = rag_params['documents']

@@ -1,7 +1,15 @@
 from langchain.agents import AgentType
 
-SUPPORTED_PROVIDERS = {'openai', 'anthropic', 'anyscale', 'litellm', 'ollama'}
+SUPPORTED_PROVIDERS = {'openai', 'anthropic', 'anyscale', 'litellm', 'ollama', 'groq'}
 # Chat models
+GROQ_CHAT_MODELS = {
+    'llama-3.1-405b-reasoning',
+    'llama-3.1-70b-versatile',
+    'llama-3.1-8b-instant',
+    'llama3-70b-8192',
+    'mixtral-8x7b-32768'
+}
+
 ANTHROPIC_CHAT_MODELS = {
     'claude-3-opus-20240229',
     'claude-3-sonnet-20240229',

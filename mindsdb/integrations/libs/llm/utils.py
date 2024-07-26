@@ -11,7 +11,7 @@ from langchain.text_splitter import (
 )
 
 from mindsdb.integrations.libs.llm.config import (AnthropicConfig, AnyscaleConfig, BaseLLMConfig, LiteLLMConfig,
-                                                  OllamaConfig, OpenAIConfig, MindsdbConfig)
+                                                  OllamaConfig, OpenAIConfig, MindsdbConfig,  GroqConfig)
 
 # Default to latest GPT-4 model (https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo)
 DEFAULT_OPENAI_MODEL = 'gpt-4-0125-preview'
@@ -19,6 +19,7 @@ DEFAULT_OPENAI_MODEL = 'gpt-4-0125-preview'
 DEFAULT_OPENAI_MAX_TOKENS = 2048
 DEFAULT_OPENAI_MAX_RETRIES = 3
 
+DEFAULT_GROQ_MODEL = 'llama3-70b-8192'
 DEFAULT_ANTHROPIC_MODEL = 'claude-3-haiku-20240307'
 
 DEFAULT_ANYSCALE_MODEL = 'meta-llama/Llama-2-7b-chat-hf'
@@ -104,6 +105,19 @@ def get_llm_config(provider: str, config: Dict) -> BaseLLMConfig:
             openai_organization=config.get('api_organization', None),
             request_timeout=config.get('request_timeout', None),
         )
+
+    if provider == 'groq':
+        return GroqConfig(
+            model=config.get('model_name', DEFAULT_GROQ_MODEL),
+            temperature=temperature,
+            max_tokens=config.get('max_tokens', None),
+            top_p=config.get('top_p', None),
+            top_k=config.get('top_k', None),
+            default_request_timeout=config.get('default_request_timeout', None),
+            groq_api_key=config['api_keys'].get('groq', None),
+            groq_api_url=config.get('base_url', None),
+        )
+
     if provider == 'anthropic':
         return AnthropicConfig(
             model=config.get('model_name', DEFAULT_ANTHROPIC_MODEL),

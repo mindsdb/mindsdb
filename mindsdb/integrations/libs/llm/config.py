@@ -9,6 +9,19 @@ class BaseLLMConfig(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
 
 
+class GroqConfig(BaseLLMConfig):
+    model: str
+    temperature: Optional[float]
+    max_tokens: Optional[int]
+    top_p: Optional[float]
+    top_k: Optional[int]
+    default_request_timeout: Optional[float]
+    # Inferred from GROQ_API_KEY if not provided.
+    groq_api_key: Optional[str]
+    groq_api_url: Optional[str]
+
+
+
 # See https://api.python.langchain.com/en/latest/chat_models/langchain_community.chat_models.openai.ChatOpenAI.html#langchain_community.chat_models.openai.ChatOpenAI
 # This config does not have to be exclusively used with Langchain.
 class OpenAIConfig(BaseLLMConfig):

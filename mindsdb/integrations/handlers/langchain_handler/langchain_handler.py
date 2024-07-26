@@ -10,6 +10,7 @@ from langchain.chains.conversation.memory import ConversationSummaryBufferMemory
 from langchain.schema import SystemMessage
 from langchain_openai import ChatOpenAI
 from langchain_community.chat_models import ChatAnthropic, ChatAnyscale, ChatLiteLLM, ChatOllama
+from langchain_groq import ChatGroq
 from langchain_core.prompts import PromptTemplate
 from langfuse import Langfuse
 from langfuse.callback import CallbackHandler
@@ -18,6 +19,7 @@ import numpy as np
 import pandas as pd
 
 from mindsdb.integrations.handlers.langchain_handler.constants import (
+    GROQ_CHAT_MODELS,
     ANTHROPIC_CHAT_MODELS,
     DEFAULT_AGENT_TIMEOUT_SECONDS,
     DEFAULT_AGENT_TOOLS,
@@ -63,6 +65,7 @@ class LangChainHandler(BaseMLEngine):
         - Anyscale
         - LiteLLM
         - Ollama
+        - Groq
 
     Supported standard tools:
         - python_repl
@@ -91,6 +94,8 @@ class LangChainHandler(BaseMLEngine):
             return args['provider']
         if args['model_name'] in ANTHROPIC_CHAT_MODELS:
             return 'anthropic'
+        if args['model_name'] in GROQ_CHAT_MODELS:
+            return 'groq'
         if args['model_name'] in OPEN_AI_CHAT_MODELS:
             return 'openai'
         if args['model_name'] in OLLAMA_CHAT_MODELS:
@@ -154,6 +159,8 @@ class LangChainHandler(BaseMLEngine):
 
         if args['provider'] == 'anthropic':
             return ChatAnthropic(**model_kwargs)
+        if args['provider'] == 'groq':
+            return ChatGroq(**model_kwargs)
         if args['provider'] == 'openai':
             # Some newer GPT models (e.g. gpt-4o when released) don't have token counting support yet.
             # By setting this manually in ChatOpenAI, we count tokens like compatible GPT models.

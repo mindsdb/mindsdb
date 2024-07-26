@@ -41,6 +41,7 @@ class DatabricksHandler(DatabaseHandler):
 
         self.connection = None
         self.is_connected = False
+        self.thread_safe = True
 
     def __del__(self) -> None:
         """

@@ -181,4 +181,4 @@ class ProjectDataNode(DataNode):
 
             df = result_set.to_df()
             return kb_table.insert(df)
-        raise NotImplementedError(f"Cant create table {table_name}")
+        raise NotImplementedError(f"Can't create table {table_name}")

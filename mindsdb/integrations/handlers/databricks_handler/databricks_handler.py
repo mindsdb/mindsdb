@@ -1,5 +1,6 @@
 from typing import Text, Dict, Any, Optional
 
+from databricks.sql.client import Connection
 from databricks.sql import connect, RequestError, ServerOperationError
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
@@ -48,7 +49,7 @@ class DatabricksHandler(DatabaseHandler):
         if self.is_connected is True:
             self.disconnect()
 
-    def connect(self) -> databricks.sql.client.Connection:
+    def connect(self) -> Connection:
         """
         Establishes a connection to the Databricks workspace.
 

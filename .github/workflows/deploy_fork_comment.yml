@@ -2,6 +2,7 @@ name: Comment on fork PRs
 
 permissions:
   contents: write
+  pull-requests: write
 
 
 on:

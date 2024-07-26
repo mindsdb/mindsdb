@@ -122,7 +122,6 @@ def get_versions_where_predictors_become_obsolete():
 
 def init_lexer_parsers():
     get_lexer_parser('mindsdb')
-    get_lexer_parser('mysql')
 
 
 def resolve_table_identifier(identifier: Identifier, default_database: str = None) -> tuple:

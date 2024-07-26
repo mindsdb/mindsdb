@@ -5,11 +5,13 @@ from flask import request
 from flask_restx import Resource
 from langfuse import Langfuse
 
-from mindsdb.api.http.namespaces.configs.projects import ns_conf
+from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.agents.agents_controller import AgentsController
-from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.api.http.utils import http_error
+from mindsdb.api.http.namespaces.configs.projects import ns_conf
+from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.metrics.metrics import api_endpoint_metrics
+from mindsdb.interfaces.agents.langfuse_callback_handler import get_metadata, get_tags, get_tool_usage, get_skills
 
 
 def create_agent(project_name, name, agent):
@@ -273,6 +275,12 @@ class AgentCompletions(Resource):
         if 'mode' not in existing_agent.params and any(skill.type == 'retrieval' for skill in existing_agent.skills):
             existing_agent.params['mode'] = 'retrieval'
 
+        # get model details
+        session = SessionController()
+        model_name_no_version, version = db.Predictor.get_name_and_version(existing_agent.model_name)
+        agent_model = session.model_controller.get_model(model_name_no_version, version=version, project_name=project_name)  # noqa
+        model_using = agent_model.get('problem_definition', {}).get('using', {})
+
         trace_id = None
         observation_id = None
         api_trace = None
@@ -280,6 +288,12 @@ class AgentCompletions(Resource):
         messages = request.json['messages']
         # Trace Agent completions using Langfuse if configured.
         if os.getenv('LANGFUSE_PUBLIC_KEY') is not None:
+
+            # metadata retrieval
+            trace_metadata = get_metadata(model_using)
+            trace_metadata['skills'] = get_skills(existing_agent)
+            trace_tags = get_tags(trace_metadata)
+
             langfuse = Langfuse(
                 public_key=os.getenv('LANGFUSE_PUBLIC_KEY'),
                 secret_key=os.getenv('LANGFUSE_SECRET_KEY'),
@@ -288,7 +302,8 @@ class AgentCompletions(Resource):
             api_trace = langfuse.trace(
                 name='api-completion',
                 input=messages,
-                tags=[os.getenv('FLASK_ENV', 'unknown')]
+                tags=trace_tags,
+                metadata=trace_metadata
             )
             run_completion_span = api_trace.span(name='run-completion', input=messages)
             trace_id = api_trace.id
@@ -310,6 +325,12 @@ class AgentCompletions(Resource):
         if run_completion_span is not None and api_trace is not None:
             run_completion_span.end(output=model_output)
             api_trace.update(output=model_output)
+
+            # update metadata with tool usage
+            trace = langfuse.get_trace(trace_id)
+            trace_metadata['tool_usage'] = get_tool_usage(trace)
+            api_trace.update(metadata=trace_metadata)
+
         return {
             'message': {
                 'content': model_output,

@@ -64,7 +64,22 @@ class OllamaHandler(BaseMLEngine):
             if 200 not in responses.values():
                 raise Exception(f"Ollama model `{args['model_name']}` is not working correctly. Please try pulling this model manually, check it works correctly and try again.")  # noqa
         else:
-            args['modes'] = {k: True if v == 200 else False for k, v in responses.items()}
+            supported_modes = {k: True if v == 200 else False for k, v in responses.items()}
+
+        # check if a mode has been provided and if it is valid
+        runnable_modes = [mode for mode, supported in supported_modes.items() if supported]
+        if 'mode' in args:
+            if args['mode'] not in runnable_modes:
+                raise Exception(f"Mode `{args['mode']}` is not supported by the model `{args['model_name']}`.")
+        
+        # if a mode has not been provided, check if the model supports only one mode
+        # if it does, set it as the default mode
+        # if it supports multiple modes, set the default mode to 'generate'
+        else:
+            if len(runnable_modes) == 1:
+                args['mode'] = runnable_modes[0]
+            else:
+                args['mode'] = 'generate'
 
         self.model_storage.json_set('args', args)
 
@@ -89,11 +104,7 @@ class OllamaHandler(BaseMLEngine):
         df['__mdb_prompt'] = prompts
 
         # setup endpoint
-        is_embedder = 'embedding' in args.get('mode', None)
-        if args['modes']['embeddings'] and is_embedder:
-            endpoint = 'embeddings'
-        else:
-            endpoint = 'generate'
+        endpoint = args.get('mode')
 
         # call llm
         completions = []
@@ -103,7 +114,7 @@ class OllamaHandler(BaseMLEngine):
                 raw_output = requests.post(
                     connection + f'/api/{endpoint}',
                     json={
-                        'model': args['model_name'],
+                        'model': model_name,
                         'prompt': row['__mdb_prompt'],
                     }
                 )
@@ -120,7 +131,7 @@ class OllamaHandler(BaseMLEngine):
                             embedding = info['embedding']
                             values.append(embedding)
 
-                if is_embedder:
+                if endpoint == 'embeddings':
                     completions.append(values)
                 else:
                     completions.append(''.join(values))

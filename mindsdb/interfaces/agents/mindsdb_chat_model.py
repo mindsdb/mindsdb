@@ -30,6 +30,8 @@ from langchain_core.outputs import (
 )
 from langchain_core.pydantic_v1 import root_validator
 
+from mindsdb.interfaces.agents.constants import USER_COLUMN
+
 logger = logging.getLogger(__name__)
 
 
@@ -92,16 +94,21 @@ class ChatMindsdb(BaseChatModel):
 
         record = {}
         params = {}
-        if problem_definition.get('mode') == 'conversational':
-            # flag for langchain to prevent calling agent inside of agent
-            if self.model_info['engine'] == 'langchain':
-                params['mode'] = 'chat_model'
 
-            user_column = problem_definition['user_column']
+        if self.model_info['engine'] == 'langchain':
+            params['mode'] = 'chat_model'
+            user_column = problem_definition.get('user_column', USER_COLUMN)
             record[user_column] = content
+
+        elif problem_definition.get('mode') == 'conversational':
+            # flag for langchain to prevent calling agent inside of agent
+            user_column = problem_definition.get('user_column', USER_COLUMN)
+            record[user_column] = content
+
         elif 'column' in problem_definition:
             # input defined as 'column' param
             record[problem_definition['column']] = content
+
         else:
             # failback, maybe handler supports template injection
             params['prompt_template'] = content

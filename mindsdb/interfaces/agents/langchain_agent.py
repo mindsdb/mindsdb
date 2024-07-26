@@ -1,5 +1,6 @@
 from concurrent.futures import as_completed, TimeoutError
 from typing import Dict, List
+from uuid import uuid4
 import os
 import re
 
@@ -26,7 +27,7 @@ from mindsdb.interfaces.storage import db
 
 from .mindsdb_chat_model import ChatMindsdb
 from .log_callback_handler import LogCallbackHandler
-from .langfuse_callback_handler import LangfuseCallbackHandler
+from .langfuse_callback_handler import LangfuseCallbackHandler, get_metadata, get_tags
 from .tools import _build_retrieval_tool
 from .safe_output_parser import SafeOutputParser
 
@@ -117,6 +118,7 @@ class LangchainAgent:
         args = agent.params.copy()
         args['model_name'] = agent.model_name
         args['provider'] = agent.provider
+        args['embedding_model_provider'] = args.get('embedding_model', get_embedding_model_provider(args))
 
         # agent is using current langchain model
         if agent.provider == 'mindsdb':
@@ -137,7 +139,9 @@ class LangchainAgent:
         self.args = args
         self.trace_id = None
         self.observation_id = None
-        self.langfuse_callback_handler = None
+        self.log_callback_handler = None
+        self.langfuse_callback_handler = None  # native langfuse callback handler
+        self.mdb_langfuse_callback_handler = None  # custom (see langfuse_callback_handler.py)
 
     def get_completion(self, messages, trace_id, observation_id):
         self.trace_id = trace_id
@@ -249,29 +253,56 @@ class LangchainAgent:
         return all_tools
 
     def _get_agent_callbacks(self, args: Dict) -> List:
-        all_callbacks = [LogCallbackHandler(logger)]
-        are_langfuse_args_present = 'langfuse_public_key' in args and 'langfuse_secret_key' in args and 'langfuse_host' in args
-        if self.langfuse_callback_handler is None and are_langfuse_args_present:
-            self.langfuse_callback_handler = CallbackHandler(
-                args['langfuse_public_key'],
-                args['langfuse_secret_key'],
-                host=args['langfuse_host']
-            )
-            # Check credentials.
-            if not self.langfuse_callback_handler.auth_check():
-                logger.error(f'Incorrect Langfuse credentials provided to Langchain handler. Full args: {args}')
+
+        if self.log_callback_handler is None:
+            self.log_callback_handler = LogCallbackHandler(logger)
+
+        all_callbacks = [self.log_callback_handler]
+
+        langfuse_public_key = args.get('langfuse_public_key', os.getenv('LANGFUSE_PUBLIC_KEY'))
+        langfuse_secret_key = args.get('langfuse_secret_key', os.getenv('LANGFUSE_SECRET_KEY'))
+        langfuse_host = args.get('langfuse_host', os.getenv('LANGFUSE_HOST'))
+        are_langfuse_args_present = bool(langfuse_public_key) and bool(langfuse_secret_key) and bool(langfuse_host)
+
+        if are_langfuse_args_present:
+            if self.langfuse_callback_handler is None:
+                trace_name = args.get('trace_id',
+                                      f'NativeTrace-...{self.trace_id[-7:]}' if self.trace_id is not None
+                                      else 'NativeTrace-MindsDB-AgentExecutor')
+                metadata = get_metadata(args)
+                self.langfuse_callback_handler = CallbackHandler(
+                    public_key=langfuse_public_key,
+                    secret_key=langfuse_secret_key,
+                    host=langfuse_host,
+                    trace_name=trace_name,
+                    tags=get_tags(metadata),
+                    metadata=metadata,
+                )
+                if not self.langfuse_callback_handler.auth_check():
+                    logger.error(f'Incorrect Langfuse credentials provided to Langchain handler. Full args: {args}')
+
+            # custom tracer
+            if self.mdb_langfuse_callback_handler is None:
+                trace_id = args.get('trace_id', self.trace_id or None)
+                observation_id = args.get('observation_id', self.observation_id or uuid4().hex)
+                langfuse = Langfuse(
+                    host=langfuse_host,
+                    public_key=langfuse_public_key,
+                    secret_key=langfuse_secret_key
+                )
+                self.mdb_langfuse_callback_handler = LangfuseCallbackHandler(
+                    langfuse=langfuse,
+                    trace_id=trace_id,
+                    observation_id=observation_id,
+                )
+
+        # obs: we may want to unify these; native langfuse handler provides details as a tree on a sub-step of the overarching custom one  # noqa
         if self.langfuse_callback_handler is not None:
             all_callbacks.append(self.langfuse_callback_handler)
-        if self.trace_id or self.observation_id is None:
-            return all_callbacks
-        # Trace LLM chains & tools using Langfuse.
-        langfuse = Langfuse(
-            public_key=os.getenv('LANGFUSE_PUBLIC_KEY'),
-            secret_key=os.getenv('LANGFUSE_SECRET_KEY'),
-            host=os.getenv('LANGFUSE_HOST')
-        )
-        langfuse_cb_handler = LangfuseCallbackHandler(langfuse, self.trace_id, self.observation_id)
-        all_callbacks.append(langfuse_cb_handler)
+
+        if self.mdb_langfuse_callback_handler:
+            all_callbacks.append(self.mdb_langfuse_callback_handler)
+
         return all_callbacks
 
     def _handle_parsing_errors(self, error: Exception) -> str:

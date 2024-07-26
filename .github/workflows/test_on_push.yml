@@ -136,7 +136,7 @@ jobs:
           fi
       - name: Run Handlers tests and submit Coverage to coveralls
         run: |
-          handlers=("mysql" "postgres" "mssql" "clickhouse" "snowflake" "web" "redshift" "bigquery" "elasticsearch")
+          handlers=("mysql" "postgres" "mssql" "clickhouse" "snowflake" "web" "redshift" "bigquery" "elasticsearch" "s3")
           for handler in "${handlers[@]}"
           do
             pytest --cov=mindsdb/integrations/handlers/${handler}_handler tests/unit/handlers/test_${handler}.py 

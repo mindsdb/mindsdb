@@ -278,15 +278,8 @@ class AgentCompletions(Resource):
         # get model details
         session = SessionController()
         model_name_no_version, version = db.Predictor.get_name_and_version(existing_agent.model_name)
-        try:
-            agent_model = session.model_controller.get_model(model_name_no_version, version=version, project_name=project_name)
-            model_using = agent_model.get('problem_definition').get('using')
-        except Exception:
-            return http_error(
-                HTTPStatus.NOT_FOUND,
-                'Model not found',
-                f'Model with name {existing_agent.model_name} not found'
-            )
+        agent_model = session.model_controller.get_model(model_name_no_version, version=version, project_name=project_name)  # noqa
+        model_using = agent_model.get('problem_definition', {}).get('using', {})
 
         trace_id = None
         observation_id = None

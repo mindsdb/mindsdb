@@ -1089,7 +1089,7 @@ class ExecuteCommands:
             raise EntityExistsError('Database already exists', name)
         try:
             integration = ProjectController().get(name=name)
-        except ValueError:
+        except EntityNotExistsError:
             pass
         if integration is not None:
             raise EntityExistsError('Project exists with this name', name)

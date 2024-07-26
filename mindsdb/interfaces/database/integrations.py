@@ -295,7 +295,9 @@ class IntegrationController:
             )
 
         integration_module = self.get_handler_module(integration_record.engine)
-        integration_type = getattr(integration_module, 'type', None)
+        integration_type = None
+        if integration_module is not None:
+            integration_type = getattr(integration_module, 'type', None)
 
         if show_secrets is False:
             connection_args = getattr(integration_module, 'connection_args', None)

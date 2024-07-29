@@ -1,17 +1,19 @@
 from http import HTTPStatus
+from typing import Dict, Iterable, List
+import json
 import os
 
-from flask import request
+from flask import request, Response
 from flask_restx import Resource
 from langfuse import Langfuse
 
-from mindsdb.interfaces.storage import db
-from mindsdb.interfaces.agents.agents_controller import AgentsController
-from mindsdb.api.http.utils import http_error
-from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
-from mindsdb.metrics.metrics import api_endpoint_metrics
+from mindsdb.api.http.namespaces.configs.projects import ns_conf
+from mindsdb.api.http.utils import http_error
+from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.interfaces.agents.langfuse_callback_handler import get_metadata, get_tags, get_tool_usage, get_skills
+from mindsdb.interfaces.storage import db
+from mindsdb.metrics.metrics import api_endpoint_metrics
 
 
 def create_agent(project_name, name, agent):
@@ -231,6 +233,125 @@ class AgentResource(Resource):
 
         agents_controller.delete_agent(agent_name, project_name=project_name)
         return '', HTTPStatus.NO_CONTENT
+
+
+def _completion_event_generator(
+        agent_name: str,
+        messages: List[Dict],
+        trace_id: str,
+        observation_id: str,
+        project_name: str,
+        run_completion_span,
+        api_trace) -> Iterable[str]:
+    # Populate API key by default if not present.
+    session = SessionController()
+    existing_agent = session.agents_controller.get_agent(agent_name, project_name=project_name)
+    if not existing_agent.params:
+        existing_agent.params = {}
+    existing_agent.params['openai_api_key'] = existing_agent.params.get('openai_api_key', os.getenv('OPENAI_API_KEY'))
+    # Have to commit/flush here so DB isn't locked while streaming.
+    db.session.commit()
+
+    completion_stream = session.agents_controller.get_completion(
+        existing_agent,
+        messages,
+        trace_id=trace_id,
+        observation_id=observation_id,
+        project_name=project_name,
+        tools=[],
+        stream=True
+    )
+    last_output = None
+    for chunk in completion_stream:
+        chunk_obj = {}
+        if 'output' in chunk:
+            # Langchain final output.
+            chunk_obj['output'] = chunk['output']
+        if 'messages' in chunk:
+            # Langchain messages in output/actions.
+            chunk_obj['messages'] = [{'content': m.content} for m in chunk['messages']]
+        if 'actions' in chunk:
+            # Langchain actions.
+            chunk_obj['actions'] = [{
+                'tool': a.tool,
+                'tool_input': a.tool_input,
+                'log': a.log
+            } for a in chunk['actions']]
+        if 'steps' in chunk:
+            # Langchain steps (similar to actions).
+            chunk_obj['steps'] = [{'observation': s.observation} for s in chunk['steps']]
+        chunk_str = json.dumps(chunk_obj)
+        # Stream parsed & formatted Langchain streaming chunk.
+        yield 'data: {}\n\n'.format(chunk_str)
+        if 'output' in chunk:
+            last_output = chunk_obj
+    if run_completion_span is not None and api_trace is not None:
+        run_completion_span.end(output=last_output)
+        api_trace.update(output=last_output)
+
+
+@ns_conf.route('/<project_name>/agents/<agent_name>/completions/stream')
+@ns_conf.param('project_name', 'Name of the project')
+@ns_conf.param('agent_name', 'Name of the agent')
+class AgentCompletionsStream(Resource):
+    @ns_conf.doc('agent_completions_stream')
+    @api_endpoint_metrics('POST', '/agents/agent/completions/stream')
+    def post(self, project_name, agent_name):
+        # Check for required parameters.
+        if 'messages' not in request.json:
+            return http_error(
+                HTTPStatus.BAD_REQUEST,
+                'Missing parameter',
+                'Must provide "messages" parameter in POST body'
+            )
+        session = SessionController()
+        try:
+            existing_agent = session.agents_controller.get_agent(agent_name, project_name=project_name)
+            if existing_agent is None:
+                return http_error(
+                    HTTPStatus.NOT_FOUND,
+                    'Agent not found',
+                    f'Agent with name {agent_name} does not exist'
+                )
+        except ValueError:
+            # Project needs to exist.
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                'Project not found',
+                f'Project with name {project_name} does not exist'
+            )
+
+        trace_id = None
+        observation_id = None
+        api_trace = None
+        run_completion_span = None
+        messages = request.json['messages']
+        # Trace Agent completions using Langfuse if configured.
+        if os.getenv('LANGFUSE_PUBLIC_KEY') is not None:
+            langfuse = Langfuse(
+                public_key=os.getenv('LANGFUSE_PUBLIC_KEY'),
+                secret_key=os.getenv('LANGFUSE_SECRET_KEY'),
+                host=os.getenv('LANGFUSE_HOST')
+            )
+            api_trace = langfuse.trace(
+                name='api-completion',
+                input=messages,
+                tags=[os.getenv('FLASK_ENV', 'unknown')]
+            )
+            run_completion_span = api_trace.span(name='run-completion', input=messages)
+            trace_id = api_trace.id
+            observation_id = run_completion_span.id
+
+        gen = _completion_event_generator(
+            agent_name,
+            messages,
+            trace_id,
+            observation_id,
+            project_name,
+            run_completion_span,
+            api_trace
+        )
+        return Response(gen, mimetype='text/event-stream')
 
 
 @ns_conf.route('/<project_name>/agents/<agent_name>/completions')

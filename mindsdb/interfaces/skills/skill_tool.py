@@ -95,15 +95,19 @@ class SkillToolController:
                 sql_database_tools[i] = tool
         return sql_database_tools
 
-    def _make_retrieval_tools(self, skill: db.Skills) -> dict:
+    def _make_retrieval_tools(self, skill: db.Skills, llm) -> dict:
         """
         creates advanced retrieval tool i.e. RAG
         """
         params = skill.params
+        config = params.get('config', {})
+        if 'llm' not in config:
+            # Set LLM if not explicitly provided in configs.
+            config['llm'] = llm
         return dict(
             name=params.get('name', skill.name),
             source=params.get('source', None),
-            config=params.get('config', {}),
+            config=config,
             description=f'You must use this tool to get more context or information '
                         f'to answer a question about {params["description"]}. '
                         f'The input should be the exact question the user is asking.',
@@ -167,7 +171,7 @@ class SkillToolController:
         if skill_type == SkillType.KNOWLEDGE_BASE:
             return [self._make_knowledge_base_tools(skill)]
         if skill_type == SkillType.RETRIEVAL:
-            return [self._make_retrieval_tools(skill)]
+            return [self._make_retrieval_tools(skill, llm)]
 
 
 skill_tool = SkillToolController()

@@ -79,7 +79,6 @@ class ChatMindsdb(BaseChatModel):
     def completion(
             self, messages: List[dict]
     ) -> Any:
-
         problem_definition = self.model_info['problem_definition'].get('using', {})
         output_col = self.model_info['predict']
 
@@ -94,14 +93,13 @@ class ChatMindsdb(BaseChatModel):
 
         record = {}
         params = {}
-
-        if self.model_info['engine'] == 'langchain':
-            params['mode'] = 'chat_model'
-            user_column = problem_definition.get('user_column', USER_COLUMN)
-            record[user_column] = content
-
-        elif problem_definition.get('mode') == 'conversational':
+        # Default to conversational if not set.
+        mode = problem_definition.get('mode', 'conversational')
+        if mode == 'conversational' or mode == 'retrieval':
             # flag for langchain to prevent calling agent inside of agent
+            if self.model_info['engine'] == 'langchain':
+                params['mode'] = 'chat_model'
+
             user_column = problem_definition.get('user_column', USER_COLUMN)
             record[user_column] = content
 

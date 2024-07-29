@@ -1,3 +1,4 @@
+import json
 from concurrent.futures import as_completed, TimeoutError
 from typing import Dict, List
 from uuid import uuid4
@@ -26,7 +27,7 @@ from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 from mindsdb.interfaces.storage import db
 
 from .mindsdb_chat_model import ChatMindsdb
-from .log_callback_handler import LogCallbackHandler
+from .callback_handlers import LogCallbackHandler, ContextCaptureCallback
 from .langfuse_callback_handler import LangfuseCallbackHandler, get_metadata, get_tags
 from .tools import _build_retrieval_tool
 from .safe_output_parser import SafeOutputParser
@@ -324,9 +325,9 @@ AI: {response}'''
                 return langchain_react_formatted_response
         return f'Agent failed with error:\n{str(error)}...'
 
-    def run_agent(self, df: pd.DataFrame, agent: AgentExecutor, args: Dict) -> pd.DataFrame():
-        # Prefer prediction time prompt template, if available.
+    def run_agent(self, df: pd.DataFrame, agent: AgentExecutor, args: Dict) -> pd.DataFrame:
         base_template = args.get('prompt_template', args['prompt_template'])
+        return_context = args.get('return_context', False)
 
         input_variables = []
         matches = list(re.finditer("{{(.*?)}}", base_template))
@@ -352,40 +353,69 @@ AI: {response}'''
 
         def _invoke_agent_executor_with_prompt(agent_executor, prompt):
             if not prompt:
-                return ''
+                return {'context': [], 'answer': ''} if return_context else ''
             try:
-                # Handle callbacks per run.
-                answer = agent_executor.invoke(prompt, config={'callbacks': self._get_agent_callbacks(args)})
-            except Exception as e:
-                answer = str(e)
-                if not answer.startswith("Could not parse LLM output: `"):
-                    raise e
-                answer = {'output': answer.removeprefix("Could not parse LLM output: `").removesuffix("`")}
+                context_callback = ContextCaptureCallback()
+                callbacks = self._get_agent_callbacks(args)
+                callbacks.append(context_callback)
 
-            if 'output' not in answer:
-                # This should never happen unless Langchain changes invoke output format, but just in case.
-                return agent_executor.run(prompt)
-            return answer['output']
+                result = agent_executor.invoke(prompt, config={'callbacks': callbacks})
+
+                if return_context:
+                    captured_context = context_callback.get_contexts()
+                    if isinstance(result, dict) and 'output' in result:
+                        output = result['output']
+                        return {'context': captured_context, 'answer': output}
+                    else:
+                        return {'context': captured_context, 'answer': str(result)}
+                else:
+                    return result['output'] if isinstance(result, dict) and 'output' in result else str(result)
+            except Exception as e:
+                error_message = f"An error occurred during agent execution: {str(e)}"
+                logger.error(error_message, exc_info=True)
+                return {'context': [], 'answer': error_message} if return_context else error_message
 
         completions = []
-        # max_workers defaults to number of processors on the machine multiplied by 5.
-        # https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor
+        contexts = [] if return_context else None
+
         max_workers = args.get('max_workers', None)
         agent_timeout_seconds = args.get('timeout', DEFAULT_AGENT_TIMEOUT_SECONDS)
-        executor = ContextThreadPoolExecutor(max_workers=max_workers)
-        futures = [executor.submit(_invoke_agent_executor_with_prompt, agent, prompt) for prompt in prompts]
-        try:
-            for future in as_completed(futures, timeout=agent_timeout_seconds):
-                completions.append(future.result())
-        except TimeoutError:
-            completions.append("I'm sorry! I couldn't come up with a response in time. Please try again.")
-        # Can't use ThreadPoolExecutor as context manager since we need wait=False.
-        executor.shutdown(wait=False)
+
+        with ContextThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [executor.submit(_invoke_agent_executor_with_prompt, agent, prompt) for prompt in prompts]
+            try:
+                for future in as_completed(futures, timeout=agent_timeout_seconds):
+                    result = future.result()
+                    if result is None:
+                        result = {'context': [],
+                                  'answer': "No response generated"} if return_context else "No response generated"
+
+                    if return_context:
+                        completions.append(result.get('answer', ''))
+                        contexts.append(result.get('context', []))
+                    else:
+                        completions.append(result)
+            except TimeoutError:
+                timeout_message = "I'm sorry! I couldn't come up with a response in time. Please try again."
+                logger.warning(f"Agent execution timed out after {agent_timeout_seconds} seconds")
+                for _ in range(len(futures) - len(completions)):
+                    completions.append(timeout_message)
+                    if return_context:
+                        contexts.append([])
 
         # Add null completion for empty prompts
         for i in sorted(empty_prompt_ids)[:-1]:
             completions.insert(i, None)
+            if return_context:
+                contexts.insert(i, [])
 
-        pred_df = pd.DataFrame(completions, columns=[ASSISTANT_COLUMN])
+        # Create DataFrame with completions and context if required
+        if return_context:
+            pred_df = pd.DataFrame({
+                ASSISTANT_COLUMN: completions,
+                'context': [json.dumps(ctx) for ctx in contexts]  # Serialize context to JSON string
+            })
+        else:
+            pred_df = pd.DataFrame(completions, columns=[ASSISTANT_COLUMN])
 
         return pred_df

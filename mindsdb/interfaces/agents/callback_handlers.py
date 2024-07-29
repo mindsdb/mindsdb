@@ -11,7 +11,7 @@ class ContextCaptureCallback(BaseCallbackHandler):
     def __init__(self):
         self.context = None
 
-    def on_retriever_end(self, documents: List[Any], *, run_id: str, parent_run_id: str | None = None, **kwargs: Any) -> Any:
+    def on_retriever_end(self, documents: List[Any], *, run_id: str, parent_run_id: Union[str, None] = None, **kwargs: Any) -> Any:
         self.context = [{
             'page_content': doc.page_content,
             'metadata': doc.metadata

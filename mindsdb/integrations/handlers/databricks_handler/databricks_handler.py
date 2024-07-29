@@ -128,8 +128,18 @@ class DatabricksHandler(DatabaseHandler):
             connection = self.connect()
 
             # Execute a simple query to check the connection.
+            query = "SELECT 1 FROM information_schema.schemata"
+            if 'schema' in self.connection_data:
+                query += f" WHERE schema_name = '{self.connection_data['schema']}'"
+
             with connection.cursor() as cursor:
-                cursor.execute("SELECT 1;")
+                cursor.execute(query)
+                result = cursor.fetchall()
+
+            # If the query does not return any result, the schema does not exist.
+            if not result:
+                raise ValueError(f'The schema {self.connection_data["schema"]} does not exist!')
+
             response.success = True
         except (ValueError, RequestError, RuntimeError, ServerOperationError) as known_error:
             logger.error(f'Connection check to Databricks failed, {known_error}!')

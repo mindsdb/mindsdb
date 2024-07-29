@@ -8,7 +8,7 @@ from mindsdb.integrations.utilities.time_series_utils import (
     get_best_model_from_results_df,
     get_model_accuracy_dict,
     reconcile_forecasts,
-    get_hierarchy_from_df
+    get_hierarchy_from_df,
 )
 from sklearn.metrics import r2_score
 from statsforecast import StatsForecast
@@ -48,13 +48,19 @@ def get_season_length(frequency):
         "BQ": 4,
         "BH": 24,
     }
-    new_freq = frequency.split("-")[0] if "-" in frequency else frequency  # shortens longer frequencies like Q-DEC
+    new_freq = (
+        frequency.split("-")[0] if "-" in frequency else frequency
+    )  # shortens longer frequencies like Q-DEC
     return season_dict[new_freq] if new_freq in season_dict else 1
 
 
 def get_insample_cv_results(model_args, df):
     """Gets insample cross validation results"""
-    season_length = get_season_length(model_args["frequency"]) if not model_args["season_length"] else model_args["season_length"]  # noqa
+    season_length = (
+        get_season_length(model_args["frequency"])
+        if "season_length" not in model_args
+        else model_args["season_length"]
+    )  # noqa
     if model_args["model_name"] == "auto":
         models = [model(season_length=season_length) for model in model_dict.values()]
     else:
@@ -75,7 +81,11 @@ def choose_model(model_args, results_df):
     """
     if model_args["model_name"] == "auto":
         model_args["model_name"] = get_best_model_from_results_df(results_df)
-    model_args["season_length"] = get_season_length(model_args["frequency"]) if not model_args["season_length"] else model_args["season_length"]  # noqa
+    model_args["season_length"] = (
+        get_season_length(model_args["frequency"])
+        if "season_length" not in model_args
+        else model_args["season_length"]
+    )  # noqa
     model = model_dict[model_args["model_name"]]
     return model(season_length=model_args["season_length"])
 
@@ -98,22 +108,28 @@ class StatsForecastHandler(BaseMLEngine):
         """
         time_settings = args["timeseries_settings"]
         using_args = args["using"]
-        assert time_settings["is_timeseries"], "Specify time series settings in your query"
+        assert time_settings[
+            "is_timeseries"
+        ], "Specify time series settings in your query"
         ###### store model args and time series settings in the model folder
         model_args = {}
         model_args["target"] = target
         model_args["horizon"] = time_settings["horizon"]
         model_args["order_by"] = time_settings["order_by"]
-        if 'group_by' not in time_settings:
+        if "group_by" not in time_settings:
             # add group column
-            group_col = '__group_by'
+            group_col = "__group_by"
             time_settings["group_by"] = [group_col]
 
         model_args["group_by"] = time_settings["group_by"]
         model_args["frequency"] = (
-            using_args["frequency"] if "frequency" in using_args else infer_frequency(df, time_settings["order_by"])
+            using_args["frequency"]
+            if "frequency" in using_args
+            else infer_frequency(df, time_settings["order_by"])
         )
-        model_args["hierarchy"] = using_args["hierarchy"] if "hierarchy" in using_args else False
+        model_args["hierarchy"] = (
+            using_args["hierarchy"] if "hierarchy" in using_args else False
+        )
         if model_args["hierarchy"] and HierarchicalReconciliation is not None:
             training_df, hier_df, hier_dict = get_hierarchy_from_df(df, model_args)
             self.model_storage.file_set("hier_dict", dill.dumps(hier_dict))
@@ -121,7 +137,11 @@ class StatsForecastHandler(BaseMLEngine):
         else:
             training_df = transform_to_nixtla_df(df, model_args)
 
-        model_args["model_name"] = DEFAULT_MODEL_NAME if "model_name" not in using_args else using_args["model_name"]
+        model_args["model_name"] = (
+            DEFAULT_MODEL_NAME
+            if "model_name" not in using_args
+            else using_args["model_name"]
+        )
 
         results_df = get_insample_cv_results(model_args, training_df)
         model_args["accuracies"] = get_model_accuracy_dict(results_df, r2_score)
@@ -159,33 +179,52 @@ class StatsForecastHandler(BaseMLEngine):
         if model_args["hierarchy"] and HierarchicalReconciliation is not None:
             hier_df = dill.loads(self.model_storage.file_get("hier_df"))
             hier_dict = dill.loads(self.model_storage.file_get("hier_dict"))
-            reconciled_df = reconcile_forecasts(training_df, forecast_df, hier_df, hier_dict)
+            reconciled_df = reconcile_forecasts(
+                training_df, forecast_df, hier_df, hier_dict
+            )
             results_df = reconciled_df[reconciled_df.index.isin(groups_to_keep)]
 
         else:
             results_df = forecast_df[forecast_df.index.isin(groups_to_keep)]
 
         result = get_results_from_nixtla_df(results_df, model_args)
-        result = result.rename(columns={model_name: model_args['target']})
+        result = result.rename(columns={model_name: model_args["target"]})
         return result
 
     def describe(self, attribute=None):
         model_args = self.model_storage.json_get("model_args")
 
         if attribute == "model":
-            return pd.DataFrame({k: [model_args[k]] for k in ["model_name", "frequency", "season_length", "hierarchy"]})
+            return pd.DataFrame(
+                {
+                    k: [model_args[k]]
+                    for k in ["model_name", "frequency", "season_length", "hierarchy"]
+                }
+            )
 
         elif attribute == "features":
             return pd.DataFrame(
-                {"ds": [model_args["order_by"]], "y": model_args["target"], "unique_id": [model_args["group_by"]]}
+                {
+                    "ds": [model_args["order_by"]],
+                    "y": model_args["target"],
+                    "unique_id": [model_args["group_by"]],
+                }
             )
 
-        elif attribute == 'info':
+        elif attribute == "info":
             outputs = model_args["target"]
-            inputs = [model_args["target"], model_args["order_by"], model_args["group_by"]]
-            accuracies = [(model, acc) for model, acc in model_args["accuracies"].items()]
-            return pd.DataFrame({"accuracies": [accuracies], "outputs": outputs, "inputs": [inputs]})
+            inputs = [
+                model_args["target"],
+                model_args["order_by"],
+                model_args["group_by"],
+            ]
+            accuracies = [
+                (model, acc) for model, acc in model_args["accuracies"].items()
+            ]
+            return pd.DataFrame(
+                {"accuracies": [accuracies], "outputs": outputs, "inputs": [inputs]}
+            )
 
         else:
-            tables = ['info', 'features', 'model']
-            return pd.DataFrame(tables, columns=['tables'])
+            tables = ["info", "features", "model"]
+            return pd.DataFrame(tables, columns=["tables"])

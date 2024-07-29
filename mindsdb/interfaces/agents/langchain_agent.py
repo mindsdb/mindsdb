@@ -1,9 +1,11 @@
 import json
 from concurrent.futures import as_completed, TimeoutError
-from typing import Dict, List
+from typing import Dict, Iterable, List
 from uuid import uuid4
 import os
 import re
+import numpy as np
+import pandas as pd
 
 from langchain.agents import AgentExecutor
 from langchain.agents.initialize import initialize_agent
@@ -14,9 +16,6 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.tools import Tool
 from langfuse import Langfuse
 from langfuse.callback import CallbackHandler
-
-import numpy as np
-import pandas as pd
 
 from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS as OPEN_AI_CHAT_MODELS
 from mindsdb.integrations.libs.llm.utils import get_llm_config
@@ -144,7 +143,9 @@ class LangchainAgent:
         self.langfuse_callback_handler = None  # native langfuse callback handler
         self.mdb_langfuse_callback_handler = None  # custom (see langfuse_callback_handler.py)
 
-    def get_completion(self, messages, trace_id, observation_id):
+    def get_completion(self, messages, trace_id, observation_id, stream: bool = False):
+        if stream:
+            return self._get_completion_stream(messages, trace_id, observation_id)
         self.trace_id = trace_id
         self.observation_id = observation_id
 
@@ -161,6 +162,37 @@ class LangchainAgent:
         user_column = args.get('user_column', USER_COLUMN)
         df.iloc[:-1, df.columns.get_loc(user_column)] = None
         return self.run_agent(df, agent, args)
+
+    def _get_completion_stream(self, messages: List[dict], trace_id: str, observation_id: str) -> Iterable[Dict]:
+        '''
+        Gets a completion as a stream of chunks from given messages.
+
+        Args:
+            messages (List[dict]): Messages to get completion chunks for
+            trace_id (str): Langfuse trace ID to use
+            observation_id (str): Langfuse parent observation Id to use
+
+        Returns:
+            chunks (Iterable[object]): Completion chunks
+        '''
+        self.trace_id = trace_id
+        self.observation_id = observation_id
+
+        args = self.args
+
+        df = pd.DataFrame(messages)
+
+        # Back compatibility for old models
+        self.provider = args.get('provider', get_llm_provider(args))
+
+        self.embedding_model_provider = args.get('embedding_model', get_embedding_model_provider(args))
+
+        df = df.reset_index(drop=True)
+        agent = self.create_agent(df, args)
+        # Use last message as prompt, remove other questions.
+        user_column = args.get('user_column', USER_COLUMN)
+        df.iloc[:-1, df.columns.get_loc(user_column)] = None
+        return self.stream_agent(df, agent, args)
 
     def set_embedding_model(self, args):
         # Set up embeddings model if needed.
@@ -181,7 +213,6 @@ class LangchainAgent:
         self.embedding_model = construct_model_from_args(embeddings_args)
 
     def create_agent(self, df: pd.DataFrame, args: Dict = None) -> AgentExecutor:
-
         # Set up tools.
         llm = create_chat_model(args)
         self.llm = llm
@@ -199,8 +230,11 @@ class LangchainAgent:
 
         # Set up memory.
         memory = ConversationSummaryBufferMemory(llm=llm,
+                                                 input_key='input',
+                                                 output_key='output',
                                                  max_token_limit=args.get('max_tokens', DEFAULT_MAX_TOKENS),
                                                  memory_key='chat_history')
+
         memory.chat_memory.messages.insert(0, SystemMessage(content=prompt_template))
         # User - Assistant conversation. All except the last message.
         user_column = args.get('user_column', USER_COLUMN)
@@ -326,6 +360,7 @@ AI: {response}'''
         return f'Agent failed with error:\n{str(error)}...'
 
     def run_agent(self, df: pd.DataFrame, agent: AgentExecutor, args: Dict) -> pd.DataFrame:
+        # Prefer prediction time prompt template, if available.
         base_template = args.get('prompt_template', args['prompt_template'])
         return_context = args.get('return_context', False)
 
@@ -419,3 +454,35 @@ AI: {response}'''
             pred_df = pd.DataFrame(completions, columns=[ASSISTANT_COLUMN])
 
         return pred_df
+
+    def stream_agent(self, df: pd.DataFrame, agent_executor: AgentExecutor, args: Dict) -> Iterable[Dict]:
+        '''
+        Streams completion chunks for an agent.
+
+        Args:
+            df (pd.DataFrame): DataFrame to use as messages input
+            agent_executor (AgentExecutor): Executor to use for streaming agent
+            args (Dict): Args to pass to agent
+
+        Returns:
+            chunks (Iterable[Dict]): Completion chunks for agent
+        '''
+        # Prefer prediction time prompt template, if available.
+        base_template = args.get('prompt_template', args['prompt_template'])
+        input_variables = []
+        matches = list(re.finditer("{{(.*?)}}", base_template))
+
+        for m in matches:
+            input_variables.append(m[0].replace('{', '').replace('}', ''))
+
+        base_template = base_template.replace('{{', '{').replace('}}', '}')
+        first_row = df.iloc[0]
+        prompt_template = PromptTemplate(input_variables=input_variables, template=base_template)
+        kwargs = {}
+        for col in input_variables:
+            kwargs[col] = first_row[col] if first_row[col] is not None else ''  # add empty quote if data is missing
+        prompt = prompt_template.format(**kwargs)
+        if not prompt:
+            return
+        for chunk in agent_executor.stream(prompt, config={'callbacks': self._get_agent_callbacks(args)}):
+            yield chunk

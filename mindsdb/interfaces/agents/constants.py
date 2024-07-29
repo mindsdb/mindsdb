@@ -1,4 +1,6 @@
 from langchain.agents import AgentType
+from langchain_openai import OpenAIEmbeddings
+
 from types import MappingProxyType
 from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS as OPEN_AI_CHAT_MODELS
 
@@ -103,3 +105,4 @@ DEFAULT_MAX_TOKENS = 2048
 DEFAULT_MODEL_NAME = 'gpt-4-0125-preview'
 USER_COLUMN = 'question'
 DEFAULT_EMBEDDINGS_MODEL_PROVIDER = 'openai'
+DEFAULT_EMBEDDINGS_MODEL_CLASS = OpenAIEmbeddings

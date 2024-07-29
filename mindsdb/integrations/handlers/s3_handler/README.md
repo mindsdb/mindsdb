@@ -1,49 +1,81 @@
-# S3 Handler
+---
+title: Amazon S3
+sidebarTitle: Amazon S3
+---
 
-This is the implementation of the S3 handler for MindsDB.
+This documentation describes the integration of MindsDB with [Amazon S3](https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html), an object storage service that offers industry-leading scalability, data availability, security, and performance.
 
-## Amazon S3
-Amazon Simple Storage Service (Amazon S3) is an object storage service that offers industry-leading scalability, data availability, security, and performance. Customers of all sizes and industries can use Amazon S3 to store and protect any amount of data for a range of use cases, such as data lakes, websites, mobile applications, backup and restore, archive, enterprise applications, IoT devices, and big data analytics. Amazon S3 provides management features so that you can optimize, organize, and configure access to your data to meet your specific business, organizational, and compliance requirements.<br>
-https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html
+## Prerequisites
 
-## Implementation
-This handler was implemented using the `boto3`, the AWS SDK for Python.
+Before proceeding, ensure that MindsDB is installed locally via [Docker](/setup/self-hosted/docker) or [Docker Desktop](/setup/self-hosted/docker-desktop).
 
-The required arguments to establish a connection are,
-* `aws_access_key_id`: the AWS access key that identifies the user or IAM role
-* `aws_secret_access_key`: the AWS secret access key that identifies the user or IAM role
-* `region_name`: the AWS region
-* `bucket`: the name of the S3 bucket
-* `key`: the key of the object to be queried
-* `input_serialization`: the format of the data in the object that is to be queried
+## Connection
 
-## Usage
-In order to make use of this handler and connect to an object in a S3 bucket through MindsDB, the following syntax can be used,
-~~~~sql
+Establish a connection to your Amazon S3 bucket from MindsDB by executing the following SQL command:
+
+```sql
 CREATE DATABASE s3_datasource
 WITH
     engine = 's3',
     parameters = {
-      "aws_access_key_id": "aws_access_key_id_value",
-      "aws_secret_access_key": "aws_secret_access_key_value",
-      "region_name": "region_name",
-      "bucket": "bucket_name",
-      "key": "fine_name.csv",
-      "input_serialization": "{'CSV': {'FileHeaderInfo': 'NONE'}}"
+      "aws_access_key_id": "AQAXEQK89OX07YS34OP"
+      "aws_secret_access_key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+      "region_name": "us-east-2",
+      "bucket": "my-bucket",
     };
-~~~~
+```
 
-Now, you can use this established connection to query your object as follows,
-~~~~sql
-SELECT * FROM s3_datasource.S3Object
-~~~~
+Required connection parameters include the following:
 
-Queries to objects in S3 are issued using S3 Select,
-https://aws.amazon.com/blogs/aws/s3-glacier-select/
+* `aws_access_key_id`: The AWS access key that identifies the user or IAM role.
+* `aws_secret_access_key`: The AWS secret access key that identifies the user or IAM role.
+* `bucket`: The name of the Amazon S3 bucket.
 
-This feature is used in `boto3` as described here,
-https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Client.select_object_content
-<br>
-The required format of the `InputSerialization` parameter described here (which translates to the `input_serialization` parameter of the handler) will be of special importance. This describes how to specify the format of the data in the object that is to be queried.
+Optional connection parameters include the following:
 
-At the moment, S3 Select does not allow multiple files to be queried. Therefore, queries can be issued only to the object that is passed in as a paramter (`key`). This object should always be referred to as `S3Object` when writing queries as shown in the example given above.
+* `aws_session_token`: The AWS session token that identifies the user or IAM role. This becomes necessary when using temporary security credentials.
+* `region_name`: The AWS region to connect to. Default is `us-east-1`.
+
+## Usage
+
+Retrieve data from a specified object (file) in the S3 bucket by providing the integration name and the object key:
+
+```sql
+SELECT *
+FROM s3_datasource.`my-file.csv`;
+LIMIT 10;
+```
+
+<Tip>
+Wrap the object key in backticks (\`) to avoid any issues parsing the SQL statements provided. This is especially important when the object key contains spaces, special characters or prefixes, such as `my-folder/my-file.csv`.
+
+At the moment, the supported file formats are CSV, TSV, JSON, and Parquet. 
+</Tip>
+
+<Note>
+The above examples utilize `s3_datasource` as the datasource name, which is defined in the `CREATE DATABASE` command.
+</Note>
+
+## Troubleshooting Guide
+
+<Warning>
+`Database Connection Error`
+
+* **Symptoms**: Failure to connect MindsDB with the Amazon S3 bucket.
+* **Checklist**:
+    1. Make sure the Amazon S3 bucket exists.
+    2. Confirm that provided AWS credentials are correct. Try making a direct connection to the S3 bucket using the AWS CLI.
+    3. Ensure a stable network between MindsDB and AWS.
+</Warning>
+
+<Warning>
+`SQL statement cannot be parsed by mindsdb_sql`
+
+* **Symptoms**: SQL queries failing or not recognizing object names containing spaces, special characters or prefixes.
+* **Checklist**:
+    1. Ensure object names with spaces, special characters or prefixes are enclosed in backticks.
+    2. Examples:
+        * Incorrect: SELECT * FROM integration.travel/travel_data.csv
+        * Incorrect: SELECT * FROM integration.'travel/travel_data.csv'
+        * Correct: SELECT * FROM integration.\`travel/travel_data.csv\`
+</Warning>

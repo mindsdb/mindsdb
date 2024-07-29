@@ -14,7 +14,7 @@ from mindsdb.utilities.config import Config
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.views import ViewController
 from mindsdb.utilities.context import context as ctx
-from mindsdb.utilities.exception import EntityExistsError
+from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 import mindsdb.utilities.profiler as profiler
 
 
@@ -377,7 +377,7 @@ class ProjectController:
         record = q.first()
 
         if record is None:
-            raise ValueError(f'Project is not found: {name}/{id}')
+            raise EntityNotExistsError(f'Project not found: {name}')
         return Project.from_record(record)
 
     def add(self, name: str) -> Project:

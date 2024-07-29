@@ -1,4 +1,3 @@
-from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableParallel, RunnablePassthrough, RunnableSerializable
 
@@ -9,6 +8,8 @@ from mindsdb.integrations.utilities.rag.retrievers.multi_vector_retriever import
 
 from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel, DEFAULT_AUTO_META_PROMPT_TEMPLATE
 from mindsdb.integrations.utilities.rag.vector_store import VectorStoreOperator
+
+from mindsdb.interfaces.agents.safe_output_parser import SafeOutputParser
 
 
 class LangChainRAGPipeline:
@@ -27,7 +28,6 @@ class LangChainRAGPipeline:
         Builds a RAG pipeline with returned sources
         :return:
         """
-
         def format_docs(docs):
             if isinstance(docs, str):
                 # this is to handle the case where the retriever returns a string
@@ -37,11 +37,17 @@ class LangChainRAGPipeline:
 
         prompt = ChatPromptTemplate.from_template(self.prompt_template)
 
+        # Ensure all the required components are not None
+        if prompt is None:
+            raise ValueError("One of the required components (prompt) is None")
+        if self.llm is None:
+            raise ValueError("One of the required components (llm) is None")
+
         rag_chain_from_docs = (
                 RunnablePassthrough.assign(context=(lambda x: format_docs(x["context"])))  # noqa: E126, E122
                 | prompt
                 | self.llm
-                | StrOutputParser()
+                | SafeOutputParser()
         )
 
         rag_chain_with_source = RunnableParallel(
@@ -61,7 +67,7 @@ class LangChainRAGPipeline:
         vector_store_operator = VectorStoreOperator(
             vector_store=config.vector_store,
             documents=config.documents,
-            embeddings_model=config.embeddings_model,
+            embedding_model=config.embedding_model,
             vector_store_config=config.vector_store_config
         )
 

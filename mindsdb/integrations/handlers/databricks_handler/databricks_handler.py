@@ -32,7 +32,7 @@ class DatabricksHandler(DatabaseHandler):
 
         Args:
             name (Text): The name of the handler instance.
-            connection_data (Dict): The connection data required to connect to Databricks workspace.
+            connection_data (Dict): The connection data required to connect to the Databricks workspace.
             kwargs: Arbitrary keyword arguments.
         """
         super().__init__(name)
@@ -136,7 +136,7 @@ class DatabricksHandler(DatabaseHandler):
                 cursor.execute(query)
                 result = cursor.fetchall()
 
-            # If the query does not return any result, the schema does not exist.
+            # If the query does not return a result, the schema does not exist.
             if not result:
                 raise ValueError(f'The schema {self.connection_data["schema"]} does not exist!')
 
@@ -161,7 +161,7 @@ class DatabricksHandler(DatabaseHandler):
         Executes a native SQL query on the Databricks workspace and returns the result.
 
         Args:
-            query (str): The SQL query to be executed.
+            query (Text): The SQL query to be executed.
 
         Returns:
             Response: A response object containing the result of the query or an error message.

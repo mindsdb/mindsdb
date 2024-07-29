@@ -6,8 +6,10 @@ permissions:
 
 
 on:
-  pull_request_target:
-    types: [opened, reopened, synchronize, labeled]
+  workflow_run:
+    workflows: ["Build and deploy to dev"]
+    types:
+      - completed
 
 # Cancel any existing runs of this workflow on the same branch/pr
 # We always want to build/deploy/test a new commit over an older one
@@ -43,5 +45,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '👋 Test!'
+              body: '${{ github.sha }}'
             })

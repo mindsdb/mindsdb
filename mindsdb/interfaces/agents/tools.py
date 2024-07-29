@@ -44,7 +44,7 @@ def _build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
 
     # Can run into weird validation errors when unpacking rag_params directly into constructor.
     rag_config = RAGPipelineModel(
-        embeddings_model=rag_params.get('embedding_model', DEFAULT_EMBEDDINGS_MODEL_CLASS())
+        embedding_model=rag_params.get('embedding_model', DEFAULT_EMBEDDINGS_MODEL_CLASS())
     )
     if 'documents' in rag_params:
         rag_config.documents = rag_params['documents']

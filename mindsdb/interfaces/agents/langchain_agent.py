@@ -261,7 +261,6 @@ class LangchainAgent:
                     name=tool['name'],
                     func=tool['func'],
                     description=tool['description'],
-                    return_direct=True
                 ))
                 continue
             all_tools.append(tool)

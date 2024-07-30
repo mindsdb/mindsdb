@@ -228,6 +228,34 @@ The output generated for a single input will be the same regardless of the mode 
                         prompt_template = 'Answer the users input in a helpful way: {{question}}';
                   ```
 
+                  To generate a response for a single input, the following query can be used:
+                  ```sql
+                  SELECT question, answer
+                  FROM anyscale_endpoints_conversational_model
+                  WHERE question = 'Where is Stockholm located?';
+                  ```
+
+                  The response will look like the following:
+                  ```sql
+                  +---------------------------+-------------------------------+
+                  |question                   |answer                         |
+                  +---------------------------+-------------------------------+
+                  |Where is Stockholm located?|Stockholm is the capital city of Sweden, located in the southeastern part of the country. It is situated on an archipelago of 30,000 islands in the Baltic Sea, and is known for its beautiful waterfront, historic buildings, and vibrant cultural scene.|
+                  +---------------------------+-------------------------------+
+                  ```
+
+                  To generate responses for multiple inputs, the following query can be used:
+                  ```sql
+                  SELECT d.question, m.answer
+                  FROM files.related_questions AS d
+                  JOIN anyscale_endpoints_conversational_model AS m
+                  ```
+
+                  The response will look like the following:
+                  | question | answer |
+                  | -------- | ------ |
+                  | Where is Stockholm located? |  |
+                  | What are some fun activities to do there? | Stockholm is the capital city of Sweden and is located in the southeastern part of the country. Some fun activities to do in Stockholm include visiting the famous Vasa Museum, exploring the beautiful archipelago, taking a stroll through the charming Gamla Stan neighborhood, and trying out some of the local food and drinks. |
             </Accordion>
       </AccordionGroup>
 
@@ -247,6 +275,35 @@ The output generated for a single input will be the same regardless of the mode 
                         model_name = 'mistralai/Mistral-7B-Instruct-v0.1',
                         prompt_template = 'Answer the users input in a helpful way: {{question}}';
                   ```
+
+                  To generate a response for a single input, the following query can be used:
+                  ```sql
+                  SELECT question, answer
+                  FROM anyscale_endpoints_conversational_full_model
+                  WHERE question = 'Where is Stockholm located?';
+                  ```
+
+                  The response will look like the following:
+                  ```sql
+                  +---------------------------+-------------------------------+
+                  |question                   |answer                         |
+                  +---------------------------+-------------------------------+
+                  |Where is Stockholm located?|Stockholm is the capital city of Sweden, located in the southeastern part of the country. It is situated on an archipelago of 30,000 islands in the Baltic Sea, and is known for its beautiful waterfront, historic buildings, and vibrant cultural scene.|
+                  +---------------------------+-------------------------------+
+                  ```
+
+                  To generate responses for multiple inputs, the following query can be used:
+                  ```sql
+                  SELECT d.question, m.answer
+                  FROM files.related_questions AS d
+                  JOIN anyscale_endpoints_conversational_full_model AS m
+                  ```
+
+                  The response will look like the following:
+                  | question | answer |
+                  | -------- | ------ |
+                  | Where is Stockholm located? | Stockholm is the capital city of Sweden, located in the southeastern part of the country. It is situated on an island in the Stockholm archipelago, which is made up of more than 30,000 islands. The city is known for its beautiful architecture, museums, and cultural attractions, as well as its vibrant food and nightlife scene. |
+                  | What are some fun activities to do there? | Stockholm is the capital city of Sweden and is located in the southeastern part of the country, on the east coast of the Stockholm archipelago. Some fun activities to do in Stockholm include visiting the famous Vasa Museum, exploring the charming old town of Gamla Stan, taking a stroll through the beautiful parks and gardens, and trying out some of the local food and drinks. There are also many opportunities for shopping, cultural experiences, and outdoor activities such as hiking and biking |
 
             </Accordion>
       </AccordionGroup>

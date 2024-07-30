@@ -30,10 +30,16 @@ class RayServeHandler(BaseMLEngine):
         args = args['using']  # ignore the rest of the problem definition
         args['target'] = target
         self.model_storage.json_set('args', args)
+        # TODO: use headers dynamically
+        headers = {
+            'Content-Type': 'application/json; format=pandas-records',
+        }
+        if 'headers' in args and 'authorization' in args['headers']:  #added header authorization key based condition
+            headers['authorization'] = args['headers']['authorization']
         try:
             resp = requests.post(args['train_url'],
                                  json={'df': df.to_json(orient='records'), 'target': target},
-                                 headers={'content-type': 'application/json; format=pandas-records'})
+                                 headers=headers)
         except requests.exceptions.InvalidSchema:
             raise Exception("Error: The URL provided for the training endpoint is invalid.")
 
@@ -43,9 +49,15 @@ class RayServeHandler(BaseMLEngine):
 
     def predict(self, df, args=None):
         args = self.model_storage.json_get('args')  # override any incoming args for now
+        # TODO: use headers dynamically
+        headers = {
+            'Content-Type': 'application/json; format=pandas-records',
+        }
+        if 'headers' in args and 'authorization' in args['headers']:  #added header authorization key based condition
+            headers['authorization'] = args['headers']['authorization']
         resp = requests.post(args['predict_url'],
                              json={'df': df.to_json(orient='records')},
-                             headers={'content-type': 'application/json; format=pandas-records'})
+                             headers=headers)
         answer = resp.json()
         predictions = pd.DataFrame({args['target']: answer['prediction']})
         return predictions

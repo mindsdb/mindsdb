@@ -34,13 +34,102 @@ CREATE MODEL anyscale_endpoints_model
 PREDICT target_column
 USING
       engine = 'anyscale_endpoints_engine',   -- engine name as created via CREATE ML_ENGINE
-      model_name = 'model-name',              -- choose one of available models
-      prompt_teplate = 'prompt-to-the-model'; -- prompt message to be completed by the model
+      mode = 'mode_name', -- optional, -- optional, mode to run the model in
+      model_name = 'anyscale_endpoints_model_name',  -- optional, the LLM to use
+      question_column = 'question',  -- optional, column name that stores user input
+      context_column = 'context',  -- optional, column that stores context of the user input
+      prompt_template = 'input message to the model here', -- optional, base template with placeholders used to provide input to the model 
+      max_tokens = 100, -- optional, token limit for model output
+      temperature = 0.3, -- optional, randomness setting for the model output
+      json_struct = {
+        'key': 'value',
+        ...
+      }' -- optional, the parameter for extracting JSON data from `prompt_template`
 ```
+
+<Tip>
+It is possilbe to override certain parameters set for a model at prediction time instead of recreating the model. For example, to change the temperature parameter for a specific prediction, use the following query:
+
+```sql
+SELECT question, answer
+FROM anyscale_endpoints_model
+WHERE question = 'input question here'
+USING
+      temperature = 0.9
+```
+
+The parameters that can be overridden as shown above are mentioned below in the detailed explanation.
+</Tip>
+
+The following is a more detailed explanation of the parameters used in the `CREATE MODEL` statement:
+
+<AccordionGroup>
+
+  <Accordion title="engine">
+    This is the engine name as created with the [`CREATE ML_ENGINE`](https://docs.mindsdb.com/mindsdb_sql/sql/create/ml-engine) statement.
+  </Accordion>
+
+  <Accordion title="mode">
+    This parameter is optional.
+
+    The available modes include `default`, `conversational` and `conversational-full`.
+
+    - The `default` mode is used by default. The model will generate a separate response for each input provided. No context is maintained between the inputs.
+    - The `conversational` mode will maintain context between the inputs and generate a single response. This response will be placed in the last row of the result set.
+    - The `conversational-full` mode will maintain context between the inputs and generate a response for each input.
+  </Accordion>
+
+  <Accordion title="model_name">
+    This parameter is optional. 
+    
+    By default, the `meta-llama/Llama-2-7b-chat-hf` model is used.
+
+    You can find [all available models here](https://docs.anyscale.com/1.0.0/endpoints/overview/#supported-models).
+  </Accordion>
+
+  <Accordion title="question_column">
+    This parameter is optional. 
+    
+    It contains the column name that stores user input.
+  </Accordion>
+
+  <Accordion title="context_column">
+    This parameter is optional. 
+    
+    It contains the column name that stores context for the user input.
+  </Accordion>
+
+  <Accordion title="prompt_template">
+    This parameter is optional if you use `question_column`. 
+    
+    It stores the message or instructions as a base template with placeholders to be filled in by the user input at prediction time.
+     *Please note that this parameter can be overridden at prediction time.*
+  </Accordion>
+
+  <Accordion title="max_tokens">
+    This parameter is optional. 
+    
+    It defines the maximum token cost of the prediction. 
+    *Please note that this parameter can be overridden at prediction time.*
+  </Accordion>
+
+  <Accordion title="temperature">
+    This parameter is optional. 
+    
+    It defines how *risky* the answers are. The value of `0` marks a well-defined answer, and the value of `0.9` marks a more creative answer. 
+    *Please note that this parameter can be overridden at prediction time.*
+  </Accordion>
+
+  <Accordion title="json_struct">
+    This parameter is optional. 
+    
+    It is used to extract JSON data from a text column provided in the `prompt_template` parameter. [See examples here](/use-cases/data_enrichment/json-from-text#extract-json-from-text-data).
+  </Accordion>
+</AccordionGroup>
 
 <Note>
 
-The implementation is based on the engine for the OpenAI API, as Anyscale conforms to it. There are a few notable differences, though:
+The implementation of this integration is based on the engine for the OpenAI API, as Anyscale conforms to it. There are a few notable differences, though:
 
 1. All models supported by Anyscale Endpoints are open source. A full list can be found [here for inference-only under section *Supported models*](https://app.endpoints.anyscale.com/docs).
 2. Not every model is supported for fine-tuning. You can find a list [here under section *Fine Tuning - Supported models*](https://app.endpoints.anyscale.com/docs).
@@ -53,7 +142,6 @@ The implementation is based on the engine for the OpenAI API, as Anyscale confor
 </Note>
 
 <Info>
-
 The base URL for this API is `https://api.endpoints.anyscale.com/v1`.
 </Info>
 
@@ -61,37 +149,103 @@ The base URL for this API is `https://api.endpoints.anyscale.com/v1`.
 
 The following usage examples utilize `anyscale_endpoints_engine` to create a model with the `CREATE MODEL` statement.
 
-Classify text sentiment using the Mistral 7B model.
+<Note>
+The output generated for a single input will be the same regardless of the mode used. The difference between the modes is in how the model handles multiple inputs.
 
-```sql
-CREATE MODEL anyscale_endpoints_model
-PREDICT sentiment
-USING
-   engine = 'anyscale_endpoints_engine',
-   model_name = 'mistralai/Mistral-7B-Instruct-v0.1',
-   prompt_template = 'Classify the sentiment of the following text as one of `positive`, `neutral` or `negative`: {{text}}';
-```
+`files.unrelated_questions` is a simple CSV file containing a `question` column with simple (unrelated) questions that has been uploaded to MindsDB, while `files.related_questions` is a similar file containing related questions. These files are used in the examples given below to provide multiple inputs to the models created. It is possible to use any other supported data source in the same manner.
+</Note>
 
-Query the model to get predictions.
+<AccordionGroup>
 
-```sql
-SELECT text, sentiment
-FROM anyscale_endpoints_model
-WHERE text = 'I love machine learning!';
-```
+  <Accordion title="Default mode">
+      In the `default` mode, the model will generate a separate response for each input provided. No context is maintained between the inputs.
 
-Here is the output:
+      <AccordionGroup>
+            <Accordion title="Prompt completion">
+                  ```sql
+                  CREATE MODEL anyscale_endpoints_default_model
+                  PREDICT answer
+                  USING
+                  engine = 'anyscale_endpoints_engine',
+                  model_name = 'mistralai/Mistral-7B-Instruct-v0.1',
+                  prompt_template = 'Answer the users input in a helpful way: {{question}}';
+                  ```
 
-```sql
-+--------------------------+-----------+
-| text                     | sentiment |
-+--------------------------+-----------+
-| I love machine learning! | positive  |
-+--------------------------+-----------+
-```
+                  To generate a response for a single input, the following query can be used:
+                  ```sql
+                  SELECT question, answer
+                  FROM anyscale_endpoints_default_model
+                  WHERE question = 'Where is Stockholm located?';
+                  ```
+
+                  The response will look like the following:
+                  ```sql
+                  +---------------------------+-------------------------------+
+                  |question                   |answer                         |
+                  +---------------------------+-------------------------------+
+                  |Where is Stockholm located?|Stockholm is the capital city of Sweden, located in the southeastern part of the country. It is situated on an archipelago of 30,000 islands in the Baltic Sea, and is known for its beautiful waterfront, historic buildings, and vibrant cultural scene.|
+                  +---------------------------+-------------------------------+
+                  ```
+
+                  To generate responses for multiple inputs, the following query can be used:
+                  ```sql
+                  SELECT d.question, m.answer
+                  FROM files.unrelated_questions AS d
+                  JOIN anyscale_endpoints_default_model AS m
+                  ```
+
+                  The response will look like the following:
+                  ```sql
+                  | question | answer |
+                  | -------- | ------ |
+                  | Where is Stockholm located? | Stockholm is the capital city of Sweden, located in the southeastern part of the country. It is situated on an archipelago of 30,000 islands in the Baltic Sea, and is known for its beautiful waterfront, historic buildings, and vibrant cultural scene. |
+                  | What is the fourth planet in the solar system? | The fourth planet in the solar system is Mars. |
+                  ```
+            </Accordion>
+      </AccordionGroup>
+  </Accordion>
+
+  <Accordion title="Conversational mode">
+      In the `conversational` mode, the model will maintain context between the inputs and generate a single response. This response will be placed in the last row of the result set.
+
+      <AccordionGroup>
+            <Accordion title="Prompt completion">
+                  ```sql
+                  CREATE MODEL anyscale_endpoints_conversational_model
+                  PREDICT answer
+                  USING
+                  engine = 'anyscale_endpoints_engine',
+                  mode = 'conversational',
+                  model_name = 'mistralai/Mistral-7B-Instruct-v0.1',
+                  prompt_template = 'Answer the users input in a helpful way: {{question}}';
+                  ```
+
+            </Accordion>
+      </AccordionGroup>
+
+  </Accordion>
+
+  <Accordion title="Conversational-Full mode">
+      In the `conversational-full` mode, the model will maintain context between the inputs and generate a response for each input.
+
+      <AccordionGroup>
+            <Accordion title="Prompt completion">
+                  ```sql
+                  CREATE MODEL anyscale_endpoints_conversational_full_model
+                  PREDICT answer
+                  USING
+                  engine = 'anyscale_endpoints_engine',
+                  mode = 'conversational-full',
+                  model_name = 'mistralai/Mistral-7B-Instruct-v0.1',
+                  prompt_template = 'Answer the users input in a helpful way: {{question}}';
+                  ```
+
+            </Accordion>
+      </AccordionGroup>
+  </Accordion>
+</AccordionGroup>
 
 <Tip>
-
 **Next Steps**
 
 Follow [this tutorial](https://docs.mindsdb.com/finetune/anyscale) to see more use case examples.

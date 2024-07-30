@@ -40,7 +40,7 @@ from .constants import (
     ANTHROPIC_CHAT_MODELS,
     OLLAMA_CHAT_MODELS,
     USER_COLUMN,
-    ASSISTANT_COLUMN
+    ASSISTANT_COLUMN, CONTEXT_COLUMN
 )
 from ..skills.skill_tool import skill_tool, SkillType
 from ...integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
@@ -360,15 +360,10 @@ AI: {response}'''
         return f'Agent failed with error:\n{str(error)}...'
 
     def run_agent(self, df: pd.DataFrame, agent: AgentExecutor, args: Dict) -> pd.DataFrame:
-        # Prefer prediction time prompt template, if available.
         base_template = args.get('prompt_template', args['prompt_template'])
         return_context = args.get('return_context', False)
 
-        input_variables = []
-        matches = list(re.finditer("{{(.*?)}}", base_template))
-
-        for m in matches:
-            input_variables.append(m[0].replace('{', '').replace('}', ''))
+        input_variables = re.findall(r"{{(.*?)}}", base_template)
         empty_prompt_ids = np.where(df[input_variables].isna().all(axis=1).values)[0]
 
         base_template = base_template.replace('{{', '{').replace('}}', '}')
@@ -378,17 +373,14 @@ AI: {response}'''
         for i, row in df.iterrows():
             if i not in empty_prompt_ids:
                 prompt = PromptTemplate(input_variables=input_variables, template=base_template)
-                kwargs = {}
-                for col in input_variables:
-                    kwargs[col] = row[col] if row[col] is not None else ''  # add empty quote if data is missing
+                kwargs = {col: row[col] if row[col] is not None else '' for col in input_variables}
                 prompts.append(prompt.format(**kwargs))
             elif row.get(user_column):
-                # Just add prompt
                 prompts.append(row[user_column])
 
         def _invoke_agent_executor_with_prompt(agent_executor, prompt):
             if not prompt:
-                return {'context': [], 'answer': ''} if return_context else ''
+                return {CONTEXT_COLUMN: [], ASSISTANT_COLUMN: ''}
             try:
                 context_callback = ContextCaptureCallback()
                 callbacks = self._get_agent_callbacks(args)
@@ -396,22 +388,20 @@ AI: {response}'''
 
                 result = agent_executor.invoke(prompt, config={'callbacks': callbacks})
 
-                if return_context:
-                    captured_context = context_callback.get_contexts()
-                    if isinstance(result, dict) and 'output' in result:
-                        output = result['output']
-                        return {'context': captured_context, 'answer': output}
-                    else:
-                        return {'context': captured_context, 'answer': str(result)}
+                captured_context = context_callback.get_contexts()
+                if isinstance(result, dict) and 'output' in result:
+                    output = result['output']
                 else:
-                    return result['output'] if isinstance(result, dict) and 'output' in result else str(result)
+                    output = str(result)
+
+                return {CONTEXT_COLUMN: captured_context, ASSISTANT_COLUMN: output}
             except Exception as e:
                 error_message = f"An error occurred during agent execution: {str(e)}"
                 logger.error(error_message, exc_info=True)
-                return {'context': [], 'answer': error_message} if return_context else error_message
+                return {CONTEXT_COLUMN: [], ASSISTANT_COLUMN: error_message}
 
         completions = []
-        contexts = [] if return_context else None
+        contexts = []
 
         max_workers = args.get('max_workers', None)
         agent_timeout_seconds = args.get('timeout', DEFAULT_AGENT_TIMEOUT_SECONDS)
@@ -422,36 +412,30 @@ AI: {response}'''
                 for future in as_completed(futures, timeout=agent_timeout_seconds):
                     result = future.result()
                     if result is None:
-                        result = {'context': [],
-                                  'answer': "No response generated"} if return_context else "No response generated"
+                        result = {CONTEXT_COLUMN: [], ASSISTANT_COLUMN: "No response generated"}
 
-                    if return_context:
-                        completions.append(result.get('answer', ''))
-                        contexts.append(result.get('context', []))
-                    else:
-                        completions.append(result)
+                    completions.append(result[ASSISTANT_COLUMN])
+                    contexts.append(result[CONTEXT_COLUMN])
             except TimeoutError:
                 timeout_message = "I'm sorry! I couldn't come up with a response in time. Please try again."
                 logger.warning(f"Agent execution timed out after {agent_timeout_seconds} seconds")
                 for _ in range(len(futures) - len(completions)):
                     completions.append(timeout_message)
-                    if return_context:
-                        contexts.append([])
+                    contexts.append([])
 
         # Add null completion for empty prompts
         for i in sorted(empty_prompt_ids)[:-1]:
             completions.insert(i, None)
-            if return_context:
-                contexts.insert(i, [])
+            contexts.insert(i, [])
 
         # Create DataFrame with completions and context if required
-        if return_context:
-            pred_df = pd.DataFrame({
-                ASSISTANT_COLUMN: completions,
-                'context': [json.dumps(ctx) for ctx in contexts]  # Serialize context to JSON string
-            })
-        else:
-            pred_df = pd.DataFrame(completions, columns=[ASSISTANT_COLUMN])
+        pred_df = pd.DataFrame({
+            ASSISTANT_COLUMN: completions,
+            CONTEXT_COLUMN: [json.dumps(ctx) for ctx in contexts]  # Serialize context to JSON string
+        })
+
+        if not return_context:
+            pred_df = pred_df.drop(columns=[CONTEXT_COLUMN])
 
         return pred_df
 

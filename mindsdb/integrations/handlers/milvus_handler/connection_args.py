@@ -14,12 +14,6 @@ connection_args = OrderedDict(
         "description": "token to support docker or cloud service",
         "required": False,
     },
-    password={
-        "type": ARG_TYPE.PWD,
-        "description": "password of the username of the Milvus server",
-        "required": True,
-        "secret": True
-    },
     search_default_limit={
         "type": ARG_TYPE.INT,
         "description": "default limit to be passed in select statements",
@@ -100,7 +94,6 @@ connection_args = OrderedDict(
 connection_args_example = OrderedDict(
     uri="./milvus_local.db",
     token="",
-    password="password",
     search_default_limit=100,
     search_metric_type="L2",
     search_ignore_growing=True,

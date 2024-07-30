@@ -31,11 +31,8 @@ class TestMilvusHandler(BaseExecutorTest):
             WITH
               ENGINE = 'milvus',
               PARAMETERS = {
-                "alias": "default",
-                "host": "127.0.0.1",
-                "port": 19530,
-                "user": "username",
-                "password": "password",
+                "uri": "./milvus_local.db",
+                "token": "",
                 "create_embedding_dim": 3
             };
         """)
@@ -44,11 +41,8 @@ class TestMilvusHandler(BaseExecutorTest):
             WITH
               ENGINE = 'milvus',
               PARAMETERS = {
-                "alias": "default",
-                "host": "127.0.0.1",
-                "port": 19530,
-                "user": "username",
-                "password": "password",
+                "uri": "./milvus_local.db",
+                "token": "",
                 "create_embedding_dim": 3,
                 "create_auto_id": true
             };
@@ -56,11 +50,7 @@ class TestMilvusHandler(BaseExecutorTest):
 
     def drop_table(self, table_name):
         pymilvus.connections.connect(
-            alias="default",
-            host="127.0.0.1",
-            port=19530,
-            user="username",
-            password="password",
+            uri="./milvus_local.db"
         )
         pymilvus.utility.drop_collection(table_name)
 

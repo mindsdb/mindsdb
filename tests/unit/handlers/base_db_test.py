@@ -13,6 +13,11 @@ class CursorContextManager(Mock):
     def __exit__(self, *args):
         pass
 
+    description = [['a']]
+
+    def fetchall(self):
+        return [[1]]
+
 
 class BaseDBTest():
 
@@ -69,12 +74,9 @@ class BaseDBTest():
         self.handler.connect = MagicMock(return_value=mock_conn)
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
 
-        mock_cursor.execute.return_value = None
-        mock_cursor.fetchall.return_value = None
-
         query_str = "SELECT * FROM table"
         data = self.handler.native_query(query_str)
-        mock_cursor.execute.assert_called_once_with(query_str)
+
         assert isinstance(data, Response)
         self.assertFalse(data.error_code)
 

@@ -22,7 +22,7 @@ class TestMilvusHandler(BaseExecutorTest):
         assert ret.error_code is None
         if ret.data is not None:
             return ret.data.to_df()
-
+    # TODO：改host先，先跑通docker
     def setup_method(self):
         super().setup_method()
         # create a milvus database

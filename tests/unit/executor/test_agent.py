@@ -35,31 +35,6 @@ class TestAgent(BaseExecutorDummyML):
         assert agent_response in ret.answer[0]
 
     @patch('openai.OpenAI')
-    def test_openai_provider(self, mock_openai):
-        agent_response = 'how can I assist you today?'
-
-        mock_openai().chat.completions.create.return_value = {
-            'choices': [{
-                'message': {
-                    'role': 'system',
-                    'content': agent_response
-                }
-            }]
-        }
-
-        self.run_sql('''
-            CREATE AGENT my_agent
-            USING
-             provider='openai',
-             model = "gpt-3.5-turbo",
-             openai_api_key='--',
-             prompt_template="Answer the user input in a helpful way"
-         ''')
-        ret = self.run_sql("select * from my_agent where question = 'hi'")
-
-        assert agent_response in ret.answer[0]
-
-    @patch('openai.OpenAI')
     def test_openai_provider_with_model(self, mock_openai):
         agent_response = 'how can I assist you today?'
 
@@ -87,6 +62,31 @@ class TestAgent(BaseExecutorDummyML):
             CREATE AGENT my_agent
             USING
               model='lang_model'
+         ''')
+        ret = self.run_sql("select * from my_agent where question = 'hi'")
+
+        assert agent_response in ret.answer[0]
+
+    @patch('openai.OpenAI')
+    def test_openai_provider(self, mock_openai):
+        agent_response = 'how can I assist you today?'
+
+        mock_openai().chat.completions.create.return_value = {
+            'choices': [{
+                'message': {
+                    'role': 'system',
+                    'content': agent_response
+                }
+            }]
+        }
+
+        self.run_sql('''
+            CREATE AGENT my_agent
+            USING
+             provider='openai',
+             model = "gpt-3.5-turbo",
+             openai_api_key='--',
+             prompt_template="Answer the user input in a helpful way"
          ''')
         ret = self.run_sql("select * from my_agent where question = 'hi'")
 

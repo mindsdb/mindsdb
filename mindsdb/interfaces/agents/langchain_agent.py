@@ -1,8 +1,11 @@
+import json
 from concurrent.futures import as_completed, TimeoutError
 from typing import Dict, Iterable, List
 from uuid import uuid4
 import os
 import re
+import numpy as np
+import pandas as pd
 
 from langchain.agents import AgentExecutor
 from langchain.agents.initialize import initialize_agent
@@ -14,18 +17,16 @@ from langchain_core.tools import Tool
 from langfuse import Langfuse
 from langfuse.callback import CallbackHandler
 
-import numpy as np
-import pandas as pd
-
 from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS as OPEN_AI_CHAT_MODELS
 from mindsdb.integrations.libs.llm.utils import get_llm_config
 from mindsdb.integrations.utilities.handler_utils import get_api_key
+from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
 from mindsdb.utilities import log
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 from mindsdb.interfaces.storage import db
 
 from .mindsdb_chat_model import ChatMindsdb
-from .log_callback_handler import LogCallbackHandler
+from .callback_handlers import LogCallbackHandler, ContextCaptureCallback
 from .langfuse_callback_handler import LangfuseCallbackHandler, get_metadata, get_tags
 from .tools import _build_retrieval_tool
 from .safe_output_parser import SafeOutputParser
@@ -39,7 +40,7 @@ from .constants import (
     ANTHROPIC_CHAT_MODELS,
     OLLAMA_CHAT_MODELS,
     USER_COLUMN,
-    ASSISTANT_COLUMN
+    ASSISTANT_COLUMN, CONTEXT_COLUMN
 )
 from ..skills.skill_tool import skill_tool, SkillType
 from ...integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
@@ -193,6 +194,24 @@ class LangchainAgent:
         df.iloc[:-1, df.columns.get_loc(user_column)] = None
         return self.stream_agent(df, agent, args)
 
+    def set_embedding_model(self, args):
+        # Set up embeddings model if needed.
+
+        embeddings_args = args.pop('embedding_model_args', {})
+
+        # no embedding model args provided, use default provider.
+        if not embeddings_args:
+            embeddings_provider = get_embedding_model_provider(args)
+            logger.warning("'embedding_model_args' not found in input params, "
+                           f"Trying to use LLM provider: {embeddings_provider}"
+                           )
+            embeddings_args['class'] = embeddings_provider
+            # Include API keys if present.
+            embeddings_args.update({k: v for k, v in args.items() if 'api_key' in k})
+
+        # create embeddings model
+        self.embedding_model = construct_model_from_args(embeddings_args)
+
     def create_agent(self, df: pd.DataFrame, args: Dict = None) -> AgentExecutor:
         # Set up tools.
         llm = create_chat_model(args)
@@ -215,6 +234,7 @@ class LangchainAgent:
                                                  output_key='output',
                                                  max_token_limit=args.get('max_tokens', DEFAULT_MAX_TOKENS),
                                                  memory_key='chat_history')
+
         memory.chat_memory.messages.insert(0, SystemMessage(content=prompt_template))
         # User - Assistant conversation. All except the last message.
         user_column = args.get('user_column', USER_COLUMN)
@@ -339,14 +359,10 @@ AI: {response}'''
         return f'Agent failed with error:\n{str(error)}...'
 
     def run_agent(self, df: pd.DataFrame, agent: AgentExecutor, args: Dict) -> pd.DataFrame:
-        # Prefer prediction time prompt template, if available.
         base_template = args.get('prompt_template', args['prompt_template'])
+        return_context = args.get('return_context', False)
 
-        input_variables = []
-        matches = list(re.finditer("{{(.*?)}}", base_template))
-
-        for m in matches:
-            input_variables.append(m[0].replace('{', '').replace('}', ''))
+        input_variables = re.findall(r"{{(.*?)}}", base_template)
         empty_prompt_ids = np.where(df[input_variables].isna().all(axis=1).values)[0]
 
         base_template = base_template.replace('{{', '{').replace('}}', '}')
@@ -356,51 +372,69 @@ AI: {response}'''
         for i, row in df.iterrows():
             if i not in empty_prompt_ids:
                 prompt = PromptTemplate(input_variables=input_variables, template=base_template)
-                kwargs = {}
-                for col in input_variables:
-                    kwargs[col] = row[col] if row[col] is not None else ''  # add empty quote if data is missing
+                kwargs = {col: row[col] if row[col] is not None else '' for col in input_variables}
                 prompts.append(prompt.format(**kwargs))
             elif row.get(user_column):
-                # Just add prompt
                 prompts.append(row[user_column])
 
         def _invoke_agent_executor_with_prompt(agent_executor, prompt):
             if not prompt:
-                return ''
+                return {CONTEXT_COLUMN: [], ASSISTANT_COLUMN: ''}
             try:
-                # Handle callbacks per run.
-                answer = agent_executor.invoke(prompt, config={'callbacks': self._get_agent_callbacks(args)})
-            except Exception as e:
-                answer = str(e)
-                if not answer.startswith("Could not parse LLM output: `"):
-                    raise e
-                answer = {'output': answer.removeprefix("Could not parse LLM output: `").removesuffix("`")}
+                context_callback = ContextCaptureCallback()
+                callbacks = self._get_agent_callbacks(args)
+                callbacks.append(context_callback)
 
-            if 'output' not in answer:
-                # This should never happen unless Langchain changes invoke output format, but just in case.
-                return agent_executor.run(prompt)
-            return answer['output']
+                result = agent_executor.invoke(prompt, config={'callbacks': callbacks})
+
+                captured_context = context_callback.get_contexts()
+                if isinstance(result, dict) and 'output' in result:
+                    output = result['output']
+                else:
+                    output = str(result)
+
+                return {CONTEXT_COLUMN: captured_context, ASSISTANT_COLUMN: output}
+            except Exception as e:
+                error_message = f"An error occurred during agent execution: {str(e)}"
+                logger.error(error_message, exc_info=True)
+                return {CONTEXT_COLUMN: [], ASSISTANT_COLUMN: error_message}
 
         completions = []
-        # max_workers defaults to number of processors on the machine multiplied by 5.
-        # https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor
+        contexts = []
+
         max_workers = args.get('max_workers', None)
         agent_timeout_seconds = args.get('timeout', DEFAULT_AGENT_TIMEOUT_SECONDS)
-        executor = ContextThreadPoolExecutor(max_workers=max_workers)
-        futures = [executor.submit(_invoke_agent_executor_with_prompt, agent, prompt) for prompt in prompts]
-        try:
-            for future in as_completed(futures, timeout=agent_timeout_seconds):
-                completions.append(future.result())
-        except TimeoutError:
-            completions.append("I'm sorry! I couldn't come up with a response in time. Please try again.")
-        # Can't use ThreadPoolExecutor as context manager since we need wait=False.
-        executor.shutdown(wait=False)
+
+        with ContextThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [executor.submit(_invoke_agent_executor_with_prompt, agent, prompt) for prompt in prompts]
+            try:
+                for future in as_completed(futures, timeout=agent_timeout_seconds):
+                    result = future.result()
+                    if result is None:
+                        result = {CONTEXT_COLUMN: [], ASSISTANT_COLUMN: "No response generated"}
+
+                    completions.append(result[ASSISTANT_COLUMN])
+                    contexts.append(result[CONTEXT_COLUMN])
+            except TimeoutError:
+                timeout_message = "I'm sorry! I couldn't come up with a response in time. Please try again."
+                logger.warning(f"Agent execution timed out after {agent_timeout_seconds} seconds")
+                for _ in range(len(futures) - len(completions)):
+                    completions.append(timeout_message)
+                    contexts.append([])
 
         # Add null completion for empty prompts
         for i in sorted(empty_prompt_ids)[:-1]:
             completions.insert(i, None)
+            contexts.insert(i, [])
 
-        pred_df = pd.DataFrame(completions, columns=[ASSISTANT_COLUMN])
+        # Create DataFrame with completions and context if required
+        pred_df = pd.DataFrame({
+            ASSISTANT_COLUMN: completions,
+            CONTEXT_COLUMN: [json.dumps(ctx) for ctx in contexts]  # Serialize context to JSON string
+        })
+
+        if not return_context:
+            pred_df = pred_df.drop(columns=[CONTEXT_COLUMN])
 
         return pred_df
 

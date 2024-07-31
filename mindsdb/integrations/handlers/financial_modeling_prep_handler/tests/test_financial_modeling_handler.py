@@ -8,7 +8,7 @@ class FinancialModelingHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         connection_data = {
-            "api_key": "GJvlw9YgVm5J4KIxdP1VPkvWzt747Q6j"
+            "api_key": "--"
         }
         cls.handler = FinancialModelingHandler('test_financial_handler', connection_data)
     

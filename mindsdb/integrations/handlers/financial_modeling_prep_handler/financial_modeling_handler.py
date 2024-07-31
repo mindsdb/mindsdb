@@ -12,12 +12,8 @@ from mindsdb.integrations.handlers.financial_modeling_prep_handler.financial_mod
 from urllib.request import urlopen
 from mindsdb.utilities import log
 #from mindsdb_sql import parse_sql
-import certifi
 import json
 import requests
-# https://site.financialmodelingprep.com/developer/docs/daily-chart-charts
-#To authorize your requests, add ?apikey= ----- at the end of every request.
-
 _FINANCIAL_MODELING_URL = 'https://financialmodelingprep.com/api/v3/'
 
 logger = log.getLogger(__name__)

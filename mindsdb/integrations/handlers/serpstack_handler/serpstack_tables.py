@@ -28,7 +28,7 @@ class BaseResultsTable(APITable):
             params['type'] = self.default_type
         try:
             api_response = requests.get(self.handler.base_url, params=params)
-            api_response.raise_for_status() # raises HTTPError for bad responses
+            api_response.raise_for_status()  # raises HTTPError for bad responses
             api_result = api_response.json()
         except requests.exceptions.HTTPError as e:
             raise SystemError(f"HTTP error occurred: {e.response.status_code} - {e.response.reason}")
@@ -40,7 +40,7 @@ class BaseResultsTable(APITable):
             raise SystemError(f"Request exception occurred: {str(e)}")
         except ValueError as e:
             raise SystemError(f"Failed to parse JSON response: {str(e)}")
-        
+
         results = api_result.get(self.results_key, [])
         processed_results = [self.extract_data(result) for result in results]
 

@@ -85,8 +85,6 @@ The following is a more detailed explanation of the parameters used in the `CREA
     This parameter is optional. 
     
     By default, the `meta-llama/Llama-2-7b-chat-hf` model is used.
-
-    You can find [all available models here](https://docs.anyscale.com/1.0.0/endpoints/overview/#supported-models).
   </Accordion>
 
   <Accordion title="question_column">
@@ -394,7 +392,7 @@ These files are used in the examples given below to provide multiple inputs to t
                   USING
                         engine = 'anyscale_endpoints_engine',
                         mode = 'conversational',
-                        model_name = 'mistralai/Mistral-7B-Instruct-v0.1',
+                        model_name = 'mlabonne/NeuralHermes-2.5-Mistral-7B',
                         prompt = 'You are a helpful assistant. Your task is to continue the chat.',
                         question_column = 'question',
                         context_column = 'context';
@@ -412,7 +410,7 @@ These files are used in the examples given below to provide multiple inputs to t
                   +---------------------------+-------------------------------+-------------------------------+
                   |question                   |context                         | answer                        |
                   +---------------------------+-------------------------------+-------------------------------+
-                  |What is the main topic of the conference happening next week? | The conference, focusing on advancements in AI, will take place in San Francisco next week.|The main topic of the conference happening next week in San Francisco is advancements in AI.|
+                  |What is the main topic of the conference happening next week? | The main topic of the conference happening next week is advancements in Artificial Intelligence.|
                   +---------------------------+-------------------------------+-------------------------------+
                   ```
 
@@ -424,11 +422,16 @@ These files are used in the examples given below to provide multiple inputs to t
                   ```
 
                   The response will look like the following:
-                  
+                  | question | context | answer |
+                  | -------- | ------- | ------ |
+                  | Where is Anna planning a trip to next month? | Anna is planning a trip to Kyoto next month. |  |
+                  | What does Anna plan on doing there? | Anna plans on going sightseeing. | Anna plans on going sightseeing during her trip to Kyoto next month. |
+
+            </Accordion>
       </AccordionGroup>
   </Accordion>
 
-  <Accordion title="Conversational-Full mode">
+  <Accordion title="Conversational-full mode">
       In the `conversational-full` mode, the model will maintain context between the inputs and generate a response for each input.
 
       <AccordionGroup>
@@ -471,7 +474,87 @@ These files are used in the examples given below to provide multiple inputs to t
                   | -------- | ------ |
                   | Where is Stockholm located? | Stockholm is the capital city of Sweden, located in the southeastern part of the country. It is situated on an island in the Stockholm archipelago, which is made up of more than 30,000 islands. The city is known for its beautiful architecture, museums, and cultural attractions, as well as its vibrant food and nightlife scene. |
                   | What are some fun activities to do there? | Stockholm is the capital city of Sweden and is located in the southeastern part of the country, on the east coast of the Stockholm archipelago. Some fun activities to do in Stockholm include visiting the famous Vasa Museum, exploring the charming old town of Gamla Stan, taking a stroll through the beautiful parks and gardens, and trying out some of the local food and drinks. There are also many opportunities for shopping, cultural experiences, and outdoor activities such as hiking and biking |
+            </Accordion>
+            <Accordion title="Question answering">
+                  ```sql
+                  CREATE MODEL anyscale_endpoints_conversational_full_model
+                  PREDICT answer
+                  USING
+                        engine = 'anyscale_endpoints_engine',
+                        mode = 'conversational-full',
+                        model_name = 'mistralai/Mistral-7B-Instruct-v0.1',
+                        question_column = 'question';
+                  ```
 
+                  To generate a response for a single input, the following query can be used:
+                  ```sql
+                  SELECT question, answer
+                  FROM anyscale_endpoints_conversational_full_model
+                  WHERE question = 'Where is Stockholm located?';
+                  ```
+
+                  The response will look like the following:
+                  ```sql
+                  +---------------------------+-------------------------------+
+                  |question                   |answer                         |
+                  +---------------------------+-------------------------------+
+                  |Where is Stockholm located?|Stockholm is the capital city of Sweden, located in the southeastern part of the country. It is situated on an archipelago of 30,000 islands in the Baltic Sea, and is known for its beautiful waterfront, historic buildings, and vibrant cultural scene.|
+                  +---------------------------+-------------------------------+
+                  ```
+
+                  To generate responses for multiple inputs, the following query can be used:
+                  ```sql
+                  SELECT d.question, m.answer
+                  FROM files.related_questions AS d
+                  JOIN anyscale_endpoints_conversational_full_model AS m
+                  ```
+
+                  The response will look like the following:
+                  | question | answer |
+                  | -------- | ------ |
+                  | Where is Stockholm located? | Stockholm is the capital city of Sweden, located in the southeastern part of the country. It is situated on an island in the Stockholm archipelago, which is made up of more than 30,000 islands. The city is known for its beautiful architecture, museums, and cultural attractions, as well as its vibrant food and nightlife scene. |
+                  | What are some fun activities to do there? | Stockholm is the capital city of Sweden and is located in the southeastern part of the country, on the east coast of the Stockholm archipelago. Some fun activities to do in Stockholm include visiting the famous Vasa Museum, exploring the charming old town of Gamla Stan, taking a stroll through the beautiful parks and gardens, and trying out some of the local food and drinks. There are also many opportunities for shopping, cultural experiences, and outdoor activities such as hiking and biking |
+            </Accordion>
+            <Accordion title="Question answering with context">
+                  ```sql
+                  CREATE MODEL anyscale_endpoints_conversational_full_model
+                  PREDICT answer
+                  USING
+                        engine = 'anyscale_endpoints_engine',
+                        mode = 'conversational-full',
+                        model_name = 'mlabonne/NeuralHermes-2.5-Mistral-7B',
+                        question_column = 'question',
+                        context_column = 'context';
+                  ```
+
+                  To generate a response for a single input, the following query can be used:
+                  ```sql
+                  SELECT question, context, answer
+                  FROM anyscale_endpoints_conversational_full_model
+                  WHERE question = 'What is the main topic of the conference happening next week?' AND context = 'The conference, focusing on advancements in AI, will take place in San Francisco next week.';
+                  ```
+
+                  The response will look like the following:
+                  ```sql
+                  +---------------------------+-------------------------------+-------------------------------+
+                  |question                   |context                         | answer                        |
+                  +---------------------------+-------------------------------+-------------------------------+
+                  |What is the main topic of the conference happening next week? | The conference, focusing on advancements in AI, will take place in San Francisco next week.|The main topic of the conference happening next week in San Francisco is advancements in AI.|
+                  +---------------------------+-------------------------------+-------------------------------+
+                  ```
+
+                  To generate responses for multiple inputs, the following query can be used:
+                  ```sql
+                  SELECT d.question, d.context, m.answer
+                  FROM files.related_questions_with_context AS d
+                  JOIN anyscale_endpoints_conversational_full_model AS m
+                  ```
+
+                  The response will look like the following:
+                  | question | context | answer |
+                  | -------- | ------- | ------ |
+                  | Where is Anna planning a trip to next month? | Anna is planning a trip to Kyoto next month. | Anna is planning a trip to Kyoto next month. |
+                  | What does Anna plan on doing there? | Anna plans on going sigtseeing. | Anna plans on going sightseeing during her trip to Kyoto next month. |
             </Accordion>
       </AccordionGroup>
   </Accordion>

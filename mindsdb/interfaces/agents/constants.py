@@ -1,17 +1,21 @@
 from langchain.agents import AgentType
+from langchain_openai import OpenAIEmbeddings
+
+from types import MappingProxyType
+from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS as OPEN_AI_CHAT_MODELS
 
 SUPPORTED_PROVIDERS = {'openai', 'anthropic', 'anyscale', 'litellm', 'ollama'}
 # Chat models
-ANTHROPIC_CHAT_MODELS = {
+ANTHROPIC_CHAT_MODELS = (
     'claude-3-opus-20240229',
     'claude-3-sonnet-20240229',
     'claude-3-haiku-20240307',
     'claude-2.1',
     'claude-2.0',
     'claude-instant-1.2'
-}
-# See https://ollama.com/library.
-OLLAMA_CHAT_MODELS = {
+)
+
+OLLAMA_CHAT_MODELS = (
     "gemma",
     "llama2",
     "mistral",
@@ -82,8 +86,17 @@ OLLAMA_CHAT_MODELS = {
     "wizardlm",
     "duckdb-nsql",
     "notus"
-}
+)
+
+# Define a read-only dictionary mapping providers to their models
+PROVIDER_TO_MODELS = MappingProxyType({
+    'anthropic': ANTHROPIC_CHAT_MODELS,
+    'ollama': OLLAMA_CHAT_MODELS,
+    'openai': OPEN_AI_CHAT_MODELS
+})
+
 ASSISTANT_COLUMN = 'answer'
+CONTEXT_COLUMN = 'context'
 DEFAULT_AGENT_TIMEOUT_SECONDS = 300
 # These should require no additional arguments.
 DEFAULT_AGENT_TOOLS = []
@@ -93,3 +106,4 @@ DEFAULT_MAX_TOKENS = 2048
 DEFAULT_MODEL_NAME = 'gpt-4-0125-preview'
 USER_COLUMN = 'question'
 DEFAULT_EMBEDDINGS_MODEL_PROVIDER = 'openai'
+DEFAULT_EMBEDDINGS_MODEL_CLASS = OpenAIEmbeddings

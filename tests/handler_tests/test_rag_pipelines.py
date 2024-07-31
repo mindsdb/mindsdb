@@ -39,7 +39,7 @@ def config(request):
         config = yaml.safe_load(file)
     config['documents'] = create_test_documents()
     config['llm'] = DEFAULT_LLM
-    config['embeddings_model'] = DEFAULT_EMBEDDINGS
+    config['embedding_model'] = DEFAULT_EMBEDDINGS
 
     return RAGPipelineModel(**config)
 

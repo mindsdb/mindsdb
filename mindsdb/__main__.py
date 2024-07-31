@@ -26,7 +26,7 @@ from mindsdb.utilities.ml_task_queue.consumer import start as start_ml_task_queu
 from mindsdb.interfaces.jobs.scheduler import start as start_scheduler
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
-from mindsdb.utilities.functions import args_parse, get_handler_install_message, get_versions_where_predictors_become_obsolete
+from mindsdb.utilities.functions import args_parse, get_versions_where_predictors_become_obsolete
 from mindsdb.interfaces.database.integrations import integration_controller
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.utilities.install import install_dependencies
@@ -201,39 +201,25 @@ if __name__ == '__main__':
     logger.info(f"Storage path: {config['paths']['root']}")
     logger.debug(f"User config: {user_config}")
 
-    for (
-        handler_name,
-        handler_meta,
-    ) in integration_controller.get_handlers_import_status().items():
-        import_meta = handler_meta.get("import", {})
-        if import_meta.get("success", False) is not True:
-            logger.info(
-                """Some handlers cannot be imported. You can check list of available handlers by execute command in sql editor:
-select * from information_schema.handlers;"""
-            )
-            break
-    # @TODO Backwards compatibility for tests, remove later
-    for (
-        handler_name,
-        handler_meta,
-    ) in integration_controller.get_handlers_import_status().items():
-        import_meta = handler_meta.get("import", {})
-        dependencies = import_meta.get("dependencies")
-        if import_meta.get("success", False) is not True:
-            logger.debug(
-                f"Dependencies for the handler '{handler_name}' are not installed."
-            )
-            logger.debug(get_handler_install_message(handler_name))
-
-    # from mindsdb.utilities.fs import get_marked_processes_and_threads
-    # marks = get_marked_processes_and_threads()
+#     TODO keep it?
+#     for (
+#         handler_name,
+#         handler_meta,
+#     ) in integration_controller.get_handlers_import_status().items():
+#         import_meta = handler_meta.get("import", {})
+#         if import_meta.get("success", False) is not True:
+#             logger.info(
+#                 """Some handlers cannot be imported. You can check list of available handlers by execute command in sql editor:
+# select * from information_schema.handlers;"""
+#             )
+#             break
 
     if not is_cloud:
         # region creating permanent integrations
         for (
             integration_name,
             handler,
-        ) in integration_controller.get_handlers_import_status().items():
+        ) in integration_controller.get_handlers_metadata().items():
             if handler.get("permanent"):
                 integration_meta = integration_controller.get(name=integration_name)
                 if integration_meta is None:

@@ -37,7 +37,6 @@ exclude =
   mindsdb/integrations/handlers/pinot_handler/pinot_handler.py
   mindsdb/integrations/handlers/postgres_handler/tests/test_postgres_handler.py
   mindsdb/integrations/handlers/questdb_handler/*
-  mindsdb/integrations/handlers/s3_handler/s3_handler.py
   mindsdb/integrations/handlers/singlestore_handler/*
   mindsdb/integrations/handlers/sqlite_handler/sqlite_handler.py
   mindsdb/integrations/handlers/supabase_handler/tests/test_supabase_handler.py

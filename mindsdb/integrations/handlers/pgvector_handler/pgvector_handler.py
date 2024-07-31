@@ -1,22 +1,24 @@
+import os
 import json
 from typing import List, Union
+from urllib.parse import urlparse
 
 import pandas as pd
 import psycopg
-from mindsdb_sql import ASTNode, Parameter, Identifier, Update, BinaryOperation
+from mindsdb_sql.parser.ast import Parameter, Identifier, Update, BinaryOperation
 from pgvector.psycopg import register_vector
 
 from mindsdb.integrations.handlers.postgres_handler.postgres_handler import (
     PostgresHandler,
 )
-from mindsdb.integrations.libs.response import RESPONSE_TYPE
-from mindsdb.integrations.libs.response import HandlerResponse
+from mindsdb.integrations.libs.response import RESPONSE_TYPE, HandlerResponse as Response
 from mindsdb.integrations.libs.vectordatabase_handler import (
     FilterCondition,
     VectorStoreHandler,
 )
 from mindsdb.utilities import log
 from mindsdb.utilities.profiler import profiler
+from mindsdb.utilities.context import context as ctx
 
 logger = log.getLogger(__name__)
 
@@ -30,7 +32,41 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
     def __init__(self, name: str, **kwargs):
 
         super().__init__(name=name, **kwargs)
+        self._is_shared_db = False
         self.connect()
+
+    def _make_connection_args(self):
+        cloud_pgvector_url = os.environ.get('KB_PGVECTOR_URL')
+        if cloud_pgvector_url is not None:
+            result = urlparse(cloud_pgvector_url)
+            self.connection_args = {
+                'host': result.hostname,
+                'port': result.port,
+                'user': result.username,
+                'password': result.password,
+                'database': result.path[1:]
+            }
+            self._is_shared_db = True
+        return super()._make_connection_args()
+
+    def get_tables(self) -> Response:
+        # Hide list of tables from all users
+        if self._is_shared_db:
+            return Response(RESPONSE_TYPE.OK)
+        return super().get_tables()
+
+    def native_query(self, query) -> Response:
+        # Prevent execute native queries
+        if self._is_shared_db:
+            return Response(RESPONSE_TYPE.OK)
+        return super().native_query(query)
+
+    def raw_query(self, query, params=None) -> Response:
+        resp = super().native_query(query, params)
+        if resp.resp_type == RESPONSE_TYPE.ERROR:
+            raise RuntimeError(resp.error_message)
+        if resp.resp_type == RESPONSE_TYPE.TABLE:
+            return resp.data_frame
 
     @profiler.profile()
     def connect(self) -> psycopg.connection:
@@ -46,10 +82,11 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
                 logger.info("pg_vector extension loaded")
 
             except psycopg.Error as e:
+                self.connection.rollback()
                 logger.error(
                     f"Error loading pg_vector extension, ensure you have installed it before running, {e}!"
                 )
-                return HandlerResponse(resp_type=RESPONSE_TYPE.ERROR, error_message=str(e))
+                raise
 
         # register vector type with psycopg2 connection
         register_vector(self.connection)
@@ -157,6 +194,13 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
             # if no filter conditions, return all rows
             return f"SELECT {targets} FROM {table_name} {after_from_clause}"
 
+    def _check_table(self, table_name: str):
+        # Apply namespace for a user
+        if self._is_shared_db:
+            company_id = ctx.company_id or 'x'
+            return f't_{company_id}_{table_name}'
+        return table_name
+
     def select(
         self,
         table_name: str,
@@ -168,17 +212,14 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         """
         Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
         """
+        table_name = self._check_table(table_name)
+
         if columns is None:
             columns = ["id", "content", "embeddings", "metadata"]
 
-        with self.connection.cursor() as cur:
-            query = self._build_select_query(table_name, columns, conditions, limit, offset)
-            cur.execute(query)
+        query = self._build_select_query(table_name, columns, conditions, limit, offset)
+        result = self.raw_query(query)
 
-            self.connection.commit()
-            result = cur.fetchall()
-
-        result = pd.DataFrame(result, columns=columns)
         # ensure embeddings are returned as string so they can be parsed by mindsdb
         if "embeddings" in columns:
             result["embeddings"] = result["embeddings"].astype(str)
@@ -189,11 +230,10 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         """
         Run a create table query on the pgvector database.
         """
-        with self.connection.cursor() as cur:
-            cur.execute(
-                f"CREATE TABLE IF NOT EXISTS {table_name} (id text PRIMARY KEY, content text, embeddings vector, metadata jsonb)"
-            )
-            self.connection.commit()
+        table_name = self._check_table(table_name)
+
+        query = f"CREATE TABLE IF NOT EXISTS {table_name} (id text PRIMARY KEY, content text, embeddings vector, metadata jsonb)"
+        self.raw_query(query)
 
     def insert(
         self, table_name: str, data: pd.DataFrame
@@ -201,6 +241,8 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         """
         Insert data into the pgvector table database.
         """
+        table_name = self._check_table(table_name)
+
         data_dict = data.to_dict(orient="list")
 
         if 'metadata' in data_dict:
@@ -212,9 +254,7 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
 
         insert_statement = f"INSERT INTO {table_name} ({columns}) VALUES ({values})"
 
-        with self.connection.cursor() as cur:
-            cur.executemany(insert_statement, transposed_data)
-            self.connection.commit()
+        self.raw_query(insert_statement, params=transposed_data)
 
     def update(
         self, table_name: str, data: pd.DataFrame, key_columns: List[str] = None
@@ -222,6 +262,7 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         """
         Udate data into the pgvector table database.
         """
+        table_name = self._check_table(table_name)
 
         where = None
         update_columns = {}
@@ -250,45 +291,36 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
             where=where
         )
 
-        with self.connection.cursor() as cur:
-            transposed_data = []
-            for _, record in data.iterrows():
-                row = [
-                    record[col]
-                    for col in update_columns.keys()
-                ]
-                for key_column in key_columns:
-                    row.append(record[key_column])
-                transposed_data.append(row)
+        transposed_data = []
+        for _, record in data.iterrows():
+            row = [
+                record[col]
+                for col in update_columns.keys()
+            ]
+            for key_column in key_columns:
+                row.append(record[key_column])
+            transposed_data.append(row)
 
-            query_str = self.renderer.get_string(query)
-            cur.executemany(query_str, transposed_data)
-            self.connection.commit()
+        query_str = self.renderer.get_string(query)
+        self.raw_query(query_str, transposed_data)
 
     def delete(
         self, table_name: str, conditions: List[FilterCondition] = None
     ):
+        table_name = self._check_table(table_name)
 
         filter_conditions = self._translate_conditions(conditions)
         where_clause = self._construct_where_clause(filter_conditions)
 
-        with self.connection.cursor() as cur:
-
-            # convert search embedding to string
-
-            # we need to use the <-> operator to search for similar vectors,
-            # so we need to convert the string to a vector and also use a threshold (e.g. 0.5)
-
-            query = (
-                f"DELETE FROM {table_name} {where_clause}"
-            )
-            cur.execute(query)
-            self.connection.commit()
+        query = (
+            f"DELETE FROM {table_name} {where_clause}"
+        )
+        self.raw_query(query)
 
     def drop_table(self, table_name: str, if_exists=True):
         """
         Run a drop table query on the pgvector database.
         """
-        with self.connection.cursor() as cur:
-            cur.execute(f"DROP TABLE IF EXISTS {table_name}")
-            self.connection.commit()
+        table_name = self._check_table(table_name)
+        self.raw_query(f"DROP TABLE IF EXISTS {table_name}")
+

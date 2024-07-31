@@ -45,3 +45,4 @@ langchain-text_splitters==0.0.1
 langfuse==2.35.0
 lark
 prometheus-client==0.20.0
+transformers >= 4.42.4

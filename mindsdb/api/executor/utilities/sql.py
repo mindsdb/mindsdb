@@ -102,7 +102,7 @@ def query_df(df, query, session=None):
     """
 
     if isinstance(query, str):
-        query_ast = parse_sql(query, dialect='mysql')
+        query_ast = parse_sql(query)
     else:
         query_ast = copy.deepcopy(query)
 

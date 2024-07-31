@@ -12,7 +12,7 @@ import pandas as pd
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
-from mindsdb.integrations.libs.llm_utils import get_completed_prompts
+from mindsdb.integrations.libs.llm.utils import get_completed_prompts
 import concurrent.futures
 
 logger = log.getLogger(__name__)

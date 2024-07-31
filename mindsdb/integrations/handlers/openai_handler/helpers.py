@@ -125,7 +125,14 @@ def truncate_msgs_for_token_limit(messages: List[Dict], model_name: Text, max_to
     Returns:
         List[Dict]: Truncated message list
     """  # noqa
-    encoder = tiktoken.encoding_for_model(model_name)
+    try:
+        encoder = tiktoken.encoding_for_model(model_name)
+    except KeyError:
+        # If the encoding is not found, defualt to cl100k_base.
+        # This is applicable for handlers that extend the OpenAI handler such as Anyscale.
+        model_name = 'gpt-3.5-turbo-0301'
+        encoder = tiktoken.get_encoding('cl100k_base')
+
     sys_priming = messages[0:1]
     n_tokens = count_tokens(messages, encoder, model_name)
     while n_tokens > max_tokens:

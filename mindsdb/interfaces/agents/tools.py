@@ -1,5 +1,4 @@
 from typing import Dict
-
 from langchain.agents import Tool
 
 from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
@@ -45,7 +44,7 @@ def _build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
 
     # Can run into weird validation errors when unpacking rag_params directly into constructor.
     rag_config = RAGPipelineModel(
-        embeddings_model=rag_params.get('embeddings_model', DEFAULT_EMBEDDINGS_MODEL_CLASS())
+        embedding_model=rag_params.get('embedding_model', DEFAULT_EMBEDDINGS_MODEL_CLASS())
     )
     if 'documents' in rag_params:
         rag_config.documents = rag_params['documents']
@@ -65,11 +64,14 @@ def _build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
     # build retriever
     rag_pipeline = RAG(rag_config)
 
-    # create RAG tool
+    logger.debug(f"RAG pipeline created with config: {rag_config}")
+
+    # Create RAG tool
     return Tool(
         func=rag_pipeline,
         name=tool['name'],
-        description=tool['description']
+        description=tool['description'],
+        return_direct=False  # Changed to False to allow the agent to use this information
     )
 
 

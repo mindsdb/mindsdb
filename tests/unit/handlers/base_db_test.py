@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from unittest.mock import MagicMock, Mock
 
 from mindsdb.integrations.libs.response import (
@@ -19,9 +20,19 @@ class CursorContextManager(Mock):
         return [[1]]
 
 
-class BaseDBTest():
+class BaseDBTest(ABC):
+    mock_table = 'mock_table'
 
     def setUp(self):
+        """
+        Set up the test environment by creating instances of the patcher and handler.
+        This method should be called by the `setUp` method of the subclass.
+        The `setUp` method of subclasses should also set the following attributes:
+        - `dummy_connection_data`: A dictionary containing dummy connection data.
+        - `err_to_raise_on_connect_failure`: An exception to raise when the connection fails.
+        - `get_tables_query`: A SQL query to get the list of tables.
+        - `get_columns_query`: A SQL query to get the columns of a table.
+        """
         self.patcher = self.create_patcher()
         self.mock_connect = self.patcher.start()
         self.handler = self.create_handler()
@@ -29,19 +40,21 @@ class BaseDBTest():
     def tearDown(self):
         self.patcher.stop()
 
+    @abstractmethod
     def create_patcher(self):
         """
-        Create a patcher object for the package used to implement the connection.
-        This method should be overridden in subclasses to provide the specific handler.
+        Create and return a unittest.mock.patch instance for the package used to implement the connection.
+        This method should be overridden in subclasses to provide the specific patch instance.
         """
-        raise NotImplementedError("Subclasses should implement this method to return a patcher object.")
+        pass
 
+    @abstractmethod
     def create_handler(self):
         """
         Create and return a handler instance.
         This method should be overridden in subclasses to provide the specific handler.
         """
-        raise NotImplementedError("Subclasses should implement this method to return a handler instance.")
+        pass
 
     def test_connect_success(self):
         """
@@ -82,7 +95,7 @@ class BaseDBTest():
 
     def test_get_columns(self):
         """
-        Tests if the `get_tables` method to confirm it correctly calls `native_query` with the appropriate SQL commands.
+        Tests if the `get_tables` method calls `native_query` with the correct SQL query.
         """
         self.handler.native_query = MagicMock()
 
@@ -93,7 +106,7 @@ class BaseDBTest():
 
     def test_get_tables(self):
         """
-        Tests if the `get_columns` method correctly constructs the SQL query and if it calls `native_query` with the correct query.
+        Tests if the `get_columns` method constructs the correct SQL query and if it calls `native_query` with that query.
         """
         self.handler.native_query = MagicMock()
         self.handler.get_tables()

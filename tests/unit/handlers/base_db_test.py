@@ -67,6 +67,16 @@ class BaseDBTest(ABC):
         self.assertTrue(self.handler.is_connected)
         self.mock_connect.assert_called_once()
 
+    def test_connect_failure(self):
+        """
+        Tests if the `connect` method correctly handles a connection failure by raising an exception and sets `is_connected` to False.
+        """
+        self.mock_connect.side_effect = self.err_to_raise_on_connect_failure
+
+        with self.assertRaises(type(self.err_to_raise_on_connect_failure)):
+            self.handler.connect()
+        self.assertFalse(self.handler.is_connected)
+
     def test_check_connection_success(self):
         """
         Tests if the `check_connection` method handles a successful connection check and returns a StatusResponse object that accurately reflects the connection status.

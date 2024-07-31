@@ -34,12 +34,12 @@ CREATE MODEL anyscale_endpoints_model
 PREDICT target_column
 USING
       engine = 'anyscale_endpoints_engine',   -- engine name as created via CREATE ML_ENGINE
-      mode = 'mode_name', -- optional, -- optional, mode to run the model in
+      mode = 'conversational', -- optional, mode to run the model in
       model_name = 'anyscale_endpoints_model_name',  -- optional, the LLM to use
-      prompt = 'system prompt',  -- optional, system prompt for the model
+      prompt = 'You are a helpful assistant. Your task is to continue the chat.',  -- optional, system prompt for the model
       question_column = 'question',  -- optional, column name that stores user input
       context_column = 'context',  -- optional, column that stores context of the user input
-      prompt_template = 'input message to the model here', -- optional, base template with placeholders used to provide input to the model 
+      prompt_template = 'Answer the users input in a helpful way: {{question}}', -- optional, base template with placeholders used to provide input to the model 
       max_tokens = 100, -- optional, token limit for model output
       temperature = 0.3, -- optional, randomness setting for the model output
       json_struct = {

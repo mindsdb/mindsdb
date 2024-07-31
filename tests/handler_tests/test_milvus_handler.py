@@ -22,7 +22,7 @@ class TestMilvusHandler(BaseExecutorTest):
         assert ret.error_code is None
         if ret.data is not None:
             return ret.data.to_df()
-    # TODO：改host先，先跑通docker
+
     def setup_method(self):
         super().setup_method()
         # create a milvus database
@@ -31,8 +31,11 @@ class TestMilvusHandler(BaseExecutorTest):
             WITH
               ENGINE = 'milvus',
               PARAMETERS = {
-                "uri": "./milvus_local.db",
-                "token": "",
+                "alias": "default",
+                "host": "127.0.0.1",
+                "port": 19530,
+                "user": "username",
+                "password": "password",
                 "create_embedding_dim": 3
             };
         """)
@@ -41,8 +44,11 @@ class TestMilvusHandler(BaseExecutorTest):
             WITH
               ENGINE = 'milvus',
               PARAMETERS = {
-                "uri": "./milvus_local.db",
-                "token": "",
+                "alias": "default",
+                "host": "127.0.0.1",
+                "port": 19530,
+                "user": "username",
+                "password": "password",
                 "create_embedding_dim": 3,
                 "create_auto_id": true
             };
@@ -50,7 +56,11 @@ class TestMilvusHandler(BaseExecutorTest):
 
     def drop_table(self, table_name):
         pymilvus.connections.connect(
-            uri="./milvus_local.db"
+            alias="default",
+            host="127.0.0.1",
+            port=19530,
+            user="username",
+            password="password",
         )
         pymilvus.utility.drop_collection(table_name)
 

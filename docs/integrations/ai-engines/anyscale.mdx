@@ -54,9 +54,10 @@ It is possilbe to override certain parameters set for a model at prediction time
 ```sql
 SELECT question, answer
 FROM anyscale_endpoints_model
-WHERE question = 'input question here'
+WHERE question = 'Where is Stockholm located?'
 USING
       temperature = 0.9
+      prompt_template = 'Answer the users input as a pirate: {{question}}';
 ```
 
 The parameters that can be overridden as shown above are mentioned below in the detailed explanation.

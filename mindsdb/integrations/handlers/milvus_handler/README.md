@@ -57,7 +57,6 @@ WITH
   PARAMETERS = {
     "uri": "./milvus_local.db",
     "token": "",
-    "password": "password",
     "create_embedding_dim": 3,
     "create_auto_id": true
 };

@@ -98,12 +98,29 @@ jobs:
     if: github.actor != 'mindsdbadmin'
     environment:
       name: prod
+      url: ${{ vars.ENV_URL }}
     # We only want to run one deploy job for an env at a time
     # Don't cancel in progress jobs because it may be for a different PR
     concurrency:
       group: deploy-prod
       cancel-in-progress: false
     steps:
+      - name: Pull MindsDB Github Actions
+        uses: actions/checkout@v4
+        with:
+          repository: mindsdb/github-actions
+          path: github-actions
+          ssh-key: ${{ secrets.GH_ACTIONS_PULL_SSH }}
+      - name: Notify of deployment starting
+        id: slack
+        uses: ./github-actions/slack-deploy-msg
+        with:
+          channel-id: ${{ secrets.SLACK_DEPLOYMENTS_CHANNEL_ID }}
+          status: "started"
+          color: "#0099CC"
+          env-name: "prod"
+          env-url: ${{ vars.ENV_URL }}
+          slack-token: ${{ secrets.GH_ACTIONS_SLACK_BOT_TOKEN }}
       - uses: FranzDiebold/github-env-vars-action@v2
       - uses: convictional/trigger-workflow-and-wait@v1.6.5
         with:
@@ -113,6 +130,18 @@ jobs:
           workflow_file_name: deploy-prod.yml
           ref: main
           client_payload: '{"image-tag-prefix": "${{ env.CI_REF_NAME }}", "deploy-env": "prod"}'
+      - name: Notify of deployment finish
+        uses: ./github-actions/slack-deploy-msg
+        if: always()
+        with:
+          channel-id: ${{ secrets.SLACK_DEPLOYMENTS_CHANNEL_ID }}
+          status: "${{ job.status == 'success' && 'finished' || 'failed' }}"
+          color: "${{ job.status == 'success' && '#00C851' || '#FF4444' }}"
+          env-name: "prod"
+          env-url: ${{ vars.ENV_URL }}
+          slack-token: ${{ secrets.GH_ACTIONS_SLACK_BOT_TOKEN }}
+          update-message-id: ${{ steps.slack.outputs.ts }}
+  
 
   trigger_dd_extension_release:
     # Trigger private repo to deploy to prod env

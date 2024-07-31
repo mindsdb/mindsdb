@@ -36,10 +36,11 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.to
 # Hierarchicalforecast is an optional dep of neural/statsforecast
 # lark is required for auto retrieval (RAG utilities). It is used by langchain
 # and not explicitly imported in mindsdb.
+# transformers is required for langchain_core and not explicitly imported by mindsdb.
 MAIN_RULE_IGNORES = {
     "DEP003": ["torch"],
     "DEP001": ["torch"],
-    "DEP002": ["psycopg2-binary", "lark"],
+    "DEP002": ["psycopg2-binary", "lark", "transformers"],
 }
 
 

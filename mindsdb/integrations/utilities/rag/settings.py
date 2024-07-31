@@ -108,7 +108,7 @@ class RAGPipelineModel(BaseModel):
     db_connection_string: str = None  # Database connection string
     table_name: str = DEFAULT_TEST_TABLE_NAME  # table name
     llm: BaseChatModel = None  # Language model
-    embeddings_model: Embeddings  # Embeddings model
+    embedding_model: Embeddings  # Embedding model
     rag_prompt_template: str = DEFAULT_RAG_PROMPT_TEMPLATE  # RAG prompt template
     retriever_prompt_template: Union[str, dict] = None  # Retriever prompt template
     retriever_type: RetrieverType = RetrieverType.VECTOR_STORE  # Retriever type

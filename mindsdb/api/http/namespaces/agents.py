@@ -7,13 +7,18 @@ from flask import request, Response
 from flask_restx import Resource
 from langfuse import Langfuse
 
-from mindsdb.api.executor.controllers.session_controller import SessionController
-from mindsdb.api.http.namespaces.configs.projects import ns_conf
-from mindsdb.api.http.utils import http_error
 from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.interfaces.agents.langfuse_callback_handler import get_metadata, get_tags, get_tool_usage, get_skills
 from mindsdb.interfaces.storage import db
+
+from mindsdb.api.http.utils import http_error
+from mindsdb.api.http.namespaces.configs.projects import ns_conf
+from mindsdb.api.executor.controllers.session_controller import SessionController
+
 from mindsdb.metrics.metrics import api_endpoint_metrics
+from mindsdb.utilities.log import getLogger
+
+logger = getLogger(__name__)
 
 
 def create_agent(project_name, name, agent):
@@ -396,12 +401,6 @@ class AgentCompletions(Resource):
         if 'mode' not in existing_agent.params and any(skill.type == 'retrieval' for skill in existing_agent.skills):
             existing_agent.params['mode'] = 'retrieval'
 
-        # get model details
-        session = SessionController()
-        model_name_no_version, version = db.Predictor.get_name_and_version(existing_agent.model_name)
-        agent_model = session.model_controller.get_model(model_name_no_version, version=version, project_name=project_name)  # noqa
-        model_using = agent_model.get('problem_definition', {}).get('using', {})
-
         trace_id = None
         observation_id = None
         api_trace = None
@@ -409,6 +408,17 @@ class AgentCompletions(Resource):
         messages = request.json['messages']
         # Trace Agent completions using Langfuse if configured.
         if os.getenv('LANGFUSE_PUBLIC_KEY') is not None:
+
+            # todo we need to fix this as this assumes that the model is always langchain
+            # since decoupling the model from langchain, we need to find a way to get the model name
+            # this breaks retrieval agents
+
+            # get model details
+            session = SessionController()
+            model_name_no_version, version = db.Predictor.get_name_and_version(existing_agent.model_name)
+            agent_model = session.model_controller.get_model(model_name_no_version, version=version,
+                                                             project_name=project_name)  # noqa
+            model_using = agent_model.get('problem_definition', {}).get('using', {})
 
             # metadata retrieval
             trace_metadata = get_metadata(model_using)
@@ -452,9 +462,24 @@ class AgentCompletions(Resource):
             trace_metadata['tool_usage'] = get_tool_usage(trace)
             api_trace.update(metadata=trace_metadata)
 
-        return {
+        response = {
             'message': {
                 'content': model_output,
                 'role': 'assistant'
             }
         }
+
+        if existing_agent.params.get('return_context', False):
+            context = []
+            if 'context' in completion.columns:
+                try:
+                    last_context = completion.iloc[-1]['context']
+                    if last_context:
+                        context = json.loads(last_context)
+                except (json.JSONDecodeError, IndexError) as e:
+                    logger.error(f'Error decoding context: {e}')
+                    pass  # Keeping context as an empty list in case of error
+
+            response['message']['context'] = context
+
+        return response

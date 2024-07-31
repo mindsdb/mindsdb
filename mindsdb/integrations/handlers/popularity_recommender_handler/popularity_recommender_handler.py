@@ -29,16 +29,16 @@ class PopularityRecommenderHandler(BaseMLEngine):
         args["ave_per_item_user"] = (
             interaction_data.get_column(args["user_id"])
             .value_counts()
-            .mean()["counts"][0]
+            .mean()["count"][0]
         )
 
         popularity = (
             interaction_data.get_column(args["item_id"])
             .value_counts()
-            .sort("counts", descending=True)
+            .sort("count", descending=True)
             .get_column(args["item_id"])
             .head(
-                args["n_recommendations"] * args["ave_per_item_user"]
+                int(args["n_recommendations"] * args["ave_per_item_user"])
             )  # to ensure there are enough to predict
             .to_pandas()
             .reset_index()

@@ -97,7 +97,7 @@ class BaseDBTest(ABC):
         self.handler.connect = MagicMock(return_value=mock_conn)
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
 
-        query_str = "SELECT * FROM table"
+        query_str = f"SELECT * FROM {self.mock_table}"
         data = self.handler.native_query(query_str)
 
         assert isinstance(data, Response)
@@ -109,8 +109,7 @@ class BaseDBTest(ABC):
         """
         self.handler.native_query = MagicMock()
 
-        table_name = 'mock_table'
-        self.handler.get_columns(table_name)
+        self.handler.get_columns(self.mock_table)
 
         self.handler.native_query.assert_called_once_with(self.get_columns_query)
 

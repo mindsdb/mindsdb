@@ -459,6 +459,7 @@ AI: {response}'''
     def stream_agent(self, df: pd.DataFrame, agent_executor: AgentExecutor, args: Dict) -> Iterable[Dict]:
         base_template = args.get('prompt_template', args['prompt_template'])
         input_variables = re.findall(r"{{(.*?)}}", base_template)
+        return_context = args.get('return_context', False)
 
         prompts, _ = prepare_prompts(df, base_template, input_variables, args.get('user_column', USER_COLUMN))
 
@@ -477,9 +478,11 @@ AI: {response}'''
         for chunk in stream_iterator:
             yield self.process_chunk(chunk)
 
-        captured_context = context_callback.get_contexts()
-        if captured_context:
-            yield {"type": "context", "content": captured_context}
+        if return_context:
+            # Yield context if required
+            captured_context = context_callback.get_contexts()
+            if captured_context:
+                yield {"type": "context", "content": captured_context}
 
     @staticmethod
     def process_chunk(chunk):

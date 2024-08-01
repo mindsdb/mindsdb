@@ -27,13 +27,18 @@ class HandlersList(Resource):
     @api_endpoint_metrics('GET', '/handlers')
     def get(self):
         '''List all db handlers'''
-        handlers = ca.integration_controller.get_handlers_import_status()
+
+        if request.args.get('lazy') == '1':
+            handlers = ca.integration_controller.get_handlers_metadata()
+        else:
+            handlers = ca.integration_controller.get_handlers_import_status()
         result = []
         for handler_type, handler_meta in handlers.items():
             # remove non-integration handlers
             if handler_type not in ['utilities', 'dummy_data']:
                 row = {'name': handler_type}
                 row.update(handler_meta)
+                del row['path']
                 result.append(row)
         return result
 
@@ -44,9 +49,9 @@ class HandlerIcon(Resource):
     @api_endpoint_metrics('GET', '/handlers/handler/icon')
     def get(self, handler_name):
         try:
-            handlers_import_status = ca.integration_controller.get_handlers_import_status()
-            icon_name = handlers_import_status[handler_name]['icon']['name']
-            handler_folder = handlers_import_status[handler_name]['import']['folder']
+            handler_meta = ca.integration_controller.get_handler_meta(handler_name)
+            icon_name = handler_meta['icon']['name']
+            handler_folder = handler_meta['import']['folder']
             mindsdb_path = Path(importlib.util.find_spec('mindsdb').origin).parent
             icon_path = mindsdb_path.joinpath('integrations/handlers').joinpath(handler_folder).joinpath(icon_name)
             if icon_path.is_absolute() is False:
@@ -57,19 +62,32 @@ class HandlerIcon(Resource):
             return send_file(icon_path)
 
 
+@ns_conf.route('/<handler_name>')
+class HandlerInfo(Resource):
+    @ns_conf.param('handler_name', 'Handler name')
+    @api_endpoint_metrics('GET', '/handlers/handler')
+    def get(self, handler_name):
+
+        handler_meta = ca.integration_controller.get_handler_meta(handler_name)
+        row = {'name': handler_name}
+        row.update(handler_meta)
+        del row['path']
+        del row['icon']
+        return row
+
+
 @ns_conf.route('/<handler_name>/install')
 class InstallDependencies(Resource):
     @ns_conf.param('handler_name', 'Handler name')
     @api_endpoint_metrics('POST', '/handlers/handler/install')
     def post(self, handler_name):
-        handler_import_status = ca.integration_controller.get_handlers_import_status()
-        if handler_name not in handler_import_status:
+        handler_meta = ca.integration_controller.get_handler_meta(handler_name)
+
+        if handler_meta is None:
             return f'Unknown handler: {handler_name}', 400
 
-        if handler_import_status[handler_name].get('import', {}).get('success', False) is True:
+        if handler_meta.get('import', {}).get('success', False) is True:
             return 'Installed', 200
-
-        handler_meta = handler_import_status[handler_name]
 
         dependencies = handler_meta['import']['dependencies']
         if len(dependencies) == 0:

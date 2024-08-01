@@ -17,7 +17,7 @@ from tests.unit.executor_test_base import BaseExecutorDummyML
 class TestBYOM(BaseExecutorDummyML):
 
     def _create_engine(self, name, code, **kwargs):
-        with TemporaryDirectory(prefix='jobs_test_') as temp_dir:
+        with TemporaryDirectory(prefix='udf_test_') as temp_dir:
             code_path = os.path.join(temp_dir, 'code.py')
             reqs_path = os.path.join(temp_dir, 'reqs.py')
 

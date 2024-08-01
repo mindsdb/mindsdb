@@ -13,6 +13,7 @@ from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb_sql import parse_sql, ParsingException
 from mindsdb_sql.parser.ast import CreateTable, DropTables
+from mindsdb.utilities.exception import EntityNotExistsError
 
 
 @ns_conf.route('/')
@@ -63,7 +64,7 @@ class DatabaseResource(Resource):
                 'id': project.id,
                 'engine': None
             }
-        except NoResultFound:
+        except (ValueError, EntityNotExistsError):
             integration = session.integration_controller.get(database_name)
             if integration is None:
                 abort(HTTPStatus.NOT_FOUND, f'Database with name {database_name} does not exist.')

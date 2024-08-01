@@ -15,7 +15,7 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 
 import pandas as pd
 from crate import client as db
-from crate.client.sqlalchemy.dialect import CrateDialect
+from sqlalchemy_cratedb import dialect
 
 logger = log.getLogger(__name__)
 
@@ -148,7 +148,7 @@ class CrateHandler(DatabaseHandler):
             HandlerResponse
         """
 
-        renderer = SqlalchemyRender(CrateDialect)
+        renderer = SqlalchemyRender(dialect)
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 

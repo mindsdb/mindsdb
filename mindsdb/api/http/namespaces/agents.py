@@ -251,12 +251,10 @@ def _completion_event_generator(
         api_trace) -> Iterable[str]:
     logger.info(f"Starting completion event generator for agent {agent_name}")
 
-    # Generate and yield quick response
-    quick_response = {
-        "quick_response": True,
-        "output": "I understand your request. I'm working on a detailed response for you."
-    }
-    yield 'data: {}\n\n'.format(json.dumps(quick_response))
+    def json_serialize(data):
+        return f'data: {json.dumps(data)}\n\n'
+
+    yield json_serialize({"quick_response": True, "output": "I understand your request. I'm working on a detailed response for you."})
     logger.info("Quick response sent")
 
     try:
@@ -288,7 +286,10 @@ def _completion_event_generator(
                 if 'error' in chunk:
                     # Handle error chunks
                     logger.error(f"Error in completion stream: {chunk['error']}")
-                    yield 'data: {}\n\n'.format(json.dumps({"error": chunk['error']}))
+                    yield json_serialize({"error": chunk['error']})
+                elif chunk.get('type') == 'context':
+                    # Handle context message
+                    yield json_serialize({"type": "context", "content": chunk.get('content')})
                 else:
                     # Process and yield other types of chunks
                     chunk_obj = {}
@@ -312,25 +313,28 @@ def _completion_event_generator(
                     if 'context' in chunk:
                         chunk_obj['context'] = chunk['context']
 
-                    yield 'data: {}\n\n'.format(json.dumps(chunk_obj))
+                    yield json_serialize(chunk_obj)
             else:
                 # For any other unexpected chunk types
-                yield 'data: {}\n\n'.format(json.dumps({"output": str(chunk)}))
+                yield json_serialize({"output": str(chunk)})
 
-            logger.debug(f"Streamed chunk: {str(chunk)[:100]}...")  # Log first 100 chars of chunk
+            logger.debug(f"Streamed chunk: {str(chunk)[:100]}...")
 
         logger.info("Completion stream finished")
-
-        if run_completion_span is not None and api_trace is not None:
-            run_completion_span.end()
-            api_trace.update()
-            logger.info("Langfuse trace updated")
 
     except Exception as e:
         error_message = f"Error in completion event generator: {str(e)}"
         logger.error(error_message)
         logger.error(traceback.format_exc())
-        yield 'data: {}\n\n'.format(json.dumps({"error": error_message}))
+        yield json_serialize({"error": error_message})
+
+    finally:
+        yield json_serialize({"type": "end"})
+
+    if run_completion_span is not None and api_trace is not None:
+        run_completion_span.end()
+        api_trace.update()
+        logger.info("Langfuse trace updated")
 
 
 @ns_conf.route('/<project_name>/agents/<agent_name>/completions/stream')

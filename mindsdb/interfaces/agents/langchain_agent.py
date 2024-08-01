@@ -464,45 +464,30 @@ AI: {response}'''
 
         callbacks, context_callback = prepare_callbacks(self, args)
 
-        yield 'data: {}\n\n'.format(json.dumps({"type": "start", "prompt": prompts[0]}))
+        yield {"type": "start", "prompt": prompts[0]}
 
-        try:
-            # Check if stream method exists
-            if not hasattr(agent_executor, 'stream') or not callable(agent_executor.stream):
-                raise AttributeError("The agent_executor does not have a 'stream' method")
+        if not hasattr(agent_executor, 'stream') or not callable(agent_executor.stream):
+            raise AttributeError("The agent_executor does not have a 'stream' method")
 
-            # Try to get the stream iterator
-            stream_iterator = agent_executor.stream(prompts[0], config={'callbacks': callbacks})
+        stream_iterator = agent_executor.stream(prompts[0], config={'callbacks': callbacks})
 
-            # Ensure it's iterable
-            if not hasattr(stream_iterator, '__iter__'):
-                raise TypeError("The stream method did not return an iterable")
+        if not hasattr(stream_iterator, '__iter__'):
+            raise TypeError("The stream method did not return an iterable")
 
-            for chunk in stream_iterator:
-                chunk_obj = process_chunk(chunk)
-                yield 'data: {}\n\n'.format(json.dumps(chunk_obj))
+        for chunk in stream_iterator:
+            yield self.process_chunk(chunk)
 
-            # After the stream is complete, yield the captured context
-            captured_context = context_callback.get_contexts()
-            if captured_context:
-                yield 'data: {}\n\n'.format(json.dumps({
-                    "type": "context",
-                    "content": captured_context
-                }))
+        captured_context = context_callback.get_contexts()
+        if captured_context:
+            yield {"type": "context", "content": captured_context}
 
-        except AttributeError as e:
-            error_message = f"Stream method error: {str(e)}"
-            logger.error(error_message, exc_info=True)
-            yield 'data: {}\n\n'.format(json.dumps({"error": error_message}))
-
-        except TypeError as e:
-            error_message = f"Stream iterator error: {str(e)}"
-            logger.error(error_message, exc_info=True)
-            yield 'data: {}\n\n'.format(json.dumps({"error": error_message}))
-
-        except Exception as e:
-            error_message = handle_agent_error(e)
-            yield 'data: {}\n\n'.format(json.dumps({"error": error_message}))
-
-        finally:
-            yield 'data: {}\n\n'.format(json.dumps({"type": "end"}))
+    @staticmethod
+    def process_chunk(chunk):
+        if isinstance(chunk, dict):
+            return {k: LangchainAgent.process_chunk(v) for k, v in chunk.items()}
+        elif isinstance(chunk, list):
+            return [LangchainAgent.process_chunk(item) for item in chunk]
+        elif isinstance(chunk, (str, int, float, bool, type(None))):
+            return chunk
+        else:
+            return str(chunk)

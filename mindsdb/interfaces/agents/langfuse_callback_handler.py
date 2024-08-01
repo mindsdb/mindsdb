@@ -1,9 +1,12 @@
 from typing import Any, Dict, Union, Optional, List
 from uuid import uuid4
+import tiktoken
 import datetime
 import os
 
 from langchain_core.callbacks.base import BaseCallbackHandler
+from langchain_core.outputs.generation import Generation
+from langchain_core.outputs import LLMResult
 
 from mindsdb.utilities import log
 from mindsdb.interfaces.storage import db
@@ -22,6 +25,44 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
         # if these are not available, we generate some UUIDs
         self.trace_id = trace_id or uuid4().hex
         self.observation_id = observation_id or uuid4().hex
+        self.llm_generation_usage = {}
+
+    def on_chat_model_start(self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any) -> Any:
+        # TODO: here, I should set a token counter for the run uuid, starting value will be tokenized prompt
+        # TODO: for now we will use a unique tokenizer, openai. Good enough as a first approximation.
+        # parent_run_uuid = kwargs.get('parent_run_id', uuid4()).hex
+        # tags = kwargs.get('tags', uuid4()).hex
+        # metadata = kwargs.get('metadata', uuid4()).hex
+        # llm_call_id = uuid4().hex
+        run_uuid = kwargs.get('run_id', uuid4()).hex
+        enc = tiktoken.get_encoding("cl100k_base")  # TODO: check what is the best option here
+
+        in_tokens = 0
+        for prompt in prompts:
+            for msg in prompt:
+                encoded = enc.encode(msg.content)
+                in_tokens += len(encoded)
+
+        self.llm_generation_usage[run_uuid] = in_tokens
+
+    def on_llm_end(self, response: LLMResult, **kwargs: Any) -> Any:
+        # TODO: here, I should retrieve the LLM result (tokens out) and add it to the dict
+        # parent_run_uuid = kwargs.get('parent_run_id', uuid4()).hex
+
+        run_uuid = kwargs.get('run_id', uuid4()).hex
+        running_count = self.llm_generation_usage[run_uuid]
+
+        enc = tiktoken.get_encoding("cl100k_base")  # TODO: check what is the best option here
+        flattened: List[LLMResult] = response.flatten()
+        for result in flattened:
+            gen: Generation = result.generations[0][0]  # single item, guaranteed by .flatten()
+            encoded = enc.encode(gen.text)
+            out_tokens = len(encoded)
+            running_count += out_tokens
+
+        # update trace usage
+        total_tokens = running_count
+        self.llm_generation_usage[run_uuid] = total_tokens
 
     def on_tool_start(
             self, serialized: Dict[str, Any], input_str: str, **kwargs: Any
@@ -75,7 +116,8 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
         if chain_uuid not in self.chain_uuid_to_span:
             return
         chain_span = self.chain_uuid_to_span.pop(chain_uuid)
-        chain_span.update(output=str(outputs))
+        total_tokens = sum(self.llm_generation_usage.values())
+        chain_span.update(output=str(outputs), usage={'total': total_tokens})  # TODO: check if correct, and deaggregate into input/output with 2 mappings, or list
         chain_span.end()
 
     def on_chain_error(self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any) -> Any:

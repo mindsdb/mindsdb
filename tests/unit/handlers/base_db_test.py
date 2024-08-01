@@ -58,18 +58,18 @@ class BaseDBTest(ABC):
 
     def test_connect_success(self):
         """
-        Tests if the `connect` method successfully establishes a connection and sets `is_connected` flag to True.
-        Also, verifies that databricks.sql.client.Connection is called exactly once.
+        Tests if the `connect` method handles a successful connection and sets `is_connected` to True.
         """
         self.mock_connect.return_value = MagicMock()
         connection = self.handler.connect()
+
         self.assertIsNotNone(connection)
         self.assertTrue(self.handler.is_connected)
         self.mock_connect.assert_called_once()
 
     def test_connect_failure(self):
         """
-        Tests if the `connect` method correctly handles a connection failure by raising an exception and sets `is_connected` to False.
+        Tests if the `connect` method handles a failed connection and sets `is_connected` to False.
         """
         self.mock_connect.side_effect = self.err_to_raise_on_connect_failure
 
@@ -83,9 +83,21 @@ class BaseDBTest(ABC):
         """
         self.mock_connect.return_value = MagicMock()
         response = self.handler.check_connection()
-        self.assertTrue(response)
+
         assert isinstance(response, StatusResponse)
+        self.assertTrue(response.success)
         self.assertFalse(response.error_message)
+
+    def test_check_connection_failure(self):
+        """
+        Tests if the `check_connection` method handles a failed connection check and returns a StatusResponse object that accurately reflects the connection status.
+        """
+        self.mock_connect.side_effect = self.err_to_raise_on_connect_failure
+        response = self.handler.check_connection()
+
+        assert isinstance(response, StatusResponse)
+        self.assertFalse(response.success)
+        self.assertTrue(response.error_message)
 
     def test_native_query(self):
         """
@@ -108,7 +120,6 @@ class BaseDBTest(ABC):
         Tests if the `get_tables` method calls `native_query` with the correct SQL query.
         """
         self.handler.native_query = MagicMock()
-
         self.handler.get_columns(self.mock_table)
 
         self.handler.native_query.assert_called_once_with(self.get_columns_query)

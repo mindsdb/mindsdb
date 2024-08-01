@@ -12,7 +12,7 @@ Before proceeding, ensure the following prerequisites are met:
 
 1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
 2. To use Anyscale Endpoints within MindsDB, install the required dependencies following [this instruction](https://docs.mindsdb.com/setup/self-hosted/docker#install-dependencies).
-3. Obtain the Anyscale Endpoints API key required to deploy and use Anyscale Endpoints models within MindsDB. Follow the [instructions for obtaining the API key](https://docs.endpoints.anyscale.com/guides/authenticate/).
+3. Obtain the Anyscale Endpoints API key required to deploy and use Anyscale Endpoints models within MindsDB. Follow the [instructions for obtaining the API key](https://docs.anyscale.com/endpoints/text-generation/authenticate/).
 
 ## Setup
 
@@ -554,7 +554,7 @@ These files are used in the examples given below to provide multiple inputs to t
                   | question | context | answer |
                   | -------- | ------- | ------ |
                   | Where is Anna planning a trip to next month? | Anna is planning a trip to Kyoto next month. | Anna is planning a trip to Kyoto next month. |
-                  | What does Anna plan on doing there? | Anna plans on going sigtseeing. | Anna plans on going sightseeing during her trip to Kyoto next month. |
+                  | What does Anna plan on doing there? | Anna plans on going sightseeing. | Anna plans on going sightseeing during her trip to Kyoto next month. |
             </Accordion>
       </AccordionGroup>
   </Accordion>
@@ -565,3 +565,43 @@ These files are used in the examples given below to provide multiple inputs to t
 
 Follow [this tutorial](https://docs.mindsdb.com/finetune/anyscale) to see more use case examples.
 </Tip>
+
+## Troubleshooting Guide
+
+<Warning>
+`Authentication Error`
+
+* **Symptoms**: Failure to authenticate to the Anyscale.
+* **Checklist**:
+    1. Make sure that your Anyscale account is active.
+    2. Confirm that your API key is correct.
+    3. Ensure that your API key has not been revoked.
+    4. Ensure that you have not exceeded the API usage or rate limit.
+</Warning>
+
+<Warning>
+`SQL statement cannot be parsed by mindsdb_sql`
+
+* **Symptoms**: SQL queries failing or not recognizing table and model names containing spaces or special characters.
+* **Checklist**:
+    1. Ensure table names with spaces or special characters are enclosed in backticks.
+    Examples:
+        * Incorrect:
+            ```sql
+            SELECT input.text, output.sentiment
+            FROM integration.travel data AS input
+            JOIN openai_engine AS output
+            ```
+        * Incorrect: 
+            ```sql
+            SELECT input.text, output.sentiment
+            FROM integration.'travel data' AS input
+            JOIN openai_engine AS output
+            ```
+        * Correct:  
+            ```sql 
+            SELECT input.text, output.sentiment
+            FROM integration.`travel data` AS input
+            JOIN openai_engine AS output
+            ```
+</Warning>

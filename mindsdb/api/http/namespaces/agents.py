@@ -196,6 +196,22 @@ class AgentResource(Resource):
 
         # Update
         try:
+            # Prepare the params dictionary
+            if params is None:
+                params = {}
+
+            # Check if any of the skills to be added is of type 'retrieval'
+            session = SessionController()
+            skills_controller = session.skills_controller
+            retrieval_skill_added = any(
+                skills_controller.get_skill(skill_name).type == 'retrieval'
+                for skill_name in skills_to_add
+                if skills_controller.get_skill(skill_name) is not None
+            )
+
+            if retrieval_skill_added and 'mode' not in params:
+                params['mode'] = 'retrieval'
+
             updated_agent = agents_controller.update_agent(
                 agent_name,
                 project_name=project_name,
@@ -206,6 +222,7 @@ class AgentResource(Resource):
                 provider=provider,
                 params=params
             )
+
             return updated_agent.as_dict()
         except ValueError as e:
             # Model or skill doesn't exist.

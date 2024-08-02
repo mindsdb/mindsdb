@@ -75,14 +75,14 @@ def create_agent(project_name, name, agent):
         return http_error(
             HTTPStatus.NOT_FOUND,
             'Resource not found',
-            f'The {model_name} or skills "{skills}" do not exist. Please ensure that the names are correct and try again.'
+            f'The model "{model_name}" or skills "{skills}" do not exist. Please ensure that the names are correct and try again.'
         )
     except NotImplementedError:
         # Free users trying to create agent.
         return http_error(
             HTTPStatus.UNAUTHORIZED,
             'Unavailable to free users',
-            f'The {model_name} or skills "{skills}" do not exist. Please ensure that the names are correct and try again.'
+            f'The model "{model_name}" or skills "{skills}" do not exist. Please ensure that the names are correct and try again.'
         )
 
 

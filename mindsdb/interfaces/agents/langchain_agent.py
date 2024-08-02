@@ -12,6 +12,7 @@ from langchain.agents.initialize import initialize_agent
 from langchain.chains.conversation.memory import ConversationSummaryBufferMemory
 from langchain.schema import SystemMessage
 from langchain_community.chat_models import ChatAnthropic, ChatOpenAI, ChatAnyscale, ChatLiteLLM, ChatOllama
+from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langchain_core.prompts import PromptTemplate
 from langchain_core.tools import Tool
 from langfuse import Langfuse
@@ -39,6 +40,7 @@ from .constants import (
     SUPPORTED_PROVIDERS,
     ANTHROPIC_CHAT_MODELS,
     OLLAMA_CHAT_MODELS,
+    NVIDIA_NIM_CHAT_MODELS,
     USER_COLUMN,
     ASSISTANT_COLUMN, CONTEXT_COLUMN
 )
@@ -59,6 +61,8 @@ def get_llm_provider(args: Dict) -> str:
         return 'openai'
     if args['model_name'] in OLLAMA_CHAT_MODELS:
         return 'ollama'
+    if args['model_name'] in NVIDIA_NIM_CHAT_MODELS:
+        return 'nvidia_nim'
     raise ValueError("Invalid model name. Please define a supported llm provider")
 
 
@@ -104,6 +108,8 @@ def create_chat_model(args: Dict):
         return ChatLiteLLM(**model_kwargs)
     if args['provider'] == 'ollama':
         return ChatOllama(**model_kwargs)
+    if args['provider'] == 'nvidia_nim':
+        return ChatNVIDIA(**model_kwargs)
     if args['provider'] == 'mindsdb':
         return ChatMindsdb(**model_kwargs)
     raise ValueError(f'Unknown provider: {args["provider"]}')

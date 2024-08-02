@@ -11,7 +11,7 @@ from langchain.text_splitter import (
 )
 
 from mindsdb.integrations.libs.llm.config import (AnthropicConfig, AnyscaleConfig, BaseLLMConfig, LiteLLMConfig,
-                                                  OllamaConfig, OpenAIConfig, MindsdbConfig)
+                                                  OllamaConfig, OpenAIConfig, NvidiaNIMConfig, MindsdbConfig)
 
 # Default to latest GPT-4 model (https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo)
 DEFAULT_OPENAI_MODEL = 'gpt-4-0125-preview'
@@ -30,6 +30,9 @@ DEFAULT_LITELLM_BASE_URL = 'https://ai.dev.mindsdb.com'
 
 DEFAULT_OLLAMA_BASE_URL = 'http://localhost:11434'
 DEFAULT_OLLAMA_MODEL = 'llama2'
+
+DEFAULT_NVIDIA_NIM_BASE_URL = 'http://localhost:8000/v1'  # Assumes local port forwarding through ssh
+DEFAULT_NVIDIA_NIM_MODEL = 'meta/llama-3.1-8b-instruct'
 
 
 def get_completed_prompts(base_template: str, df: pd.DataFrame, strict=True) -> Tuple[List[str], np.ndarray]:
@@ -162,6 +165,23 @@ def get_llm_config(provider: str, config: Dict) -> BaseLLMConfig:
             repeat_penalty=config.get('repeat_penalty', None),
             stop=config.get('stop', None),
             template=config.get('template', None),
+        )
+    if provider == 'nvidia_nim':
+        return NvidiaNIMConfig(
+            base_url=config.get('base_url', DEFAULT_NVIDIA_NIM_BASE_URL),
+            model=config.get('model_name', DEFAULT_NVIDIA_NIM_MODEL),
+            temperature=temperature,
+            top_p=config.get('top_p', None),
+            timeout=config.get('request_timeout', None),
+            format=config.get('format', None),
+            headers=config.get('headers', None),
+            num_predict=config.get('num_predict', None),
+            num_ctx=config.get('num_ctx', None),
+            num_gpu=config.get('num_gpu', None),
+            repeat_penalty=config.get('repeat_penalty', None),
+            stop=config.get('stop', None),
+            template=config.get('template', None),
+            anthropic_api_key=config['api_keys'].get('nvidia_nim', None)
         )
     if provider == 'mindsdb':
         return MindsdbConfig(

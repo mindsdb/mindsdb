@@ -104,7 +104,7 @@ class OllamaHandler(BaseMLEngine):
         df['__mdb_prompt'] = prompts
 
         # setup endpoint
-        endpoint = args.get('mode')
+        endpoint = args.get('mode', 'generate')
 
         # call llm
         completions = []

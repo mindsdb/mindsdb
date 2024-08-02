@@ -58,7 +58,7 @@ jobs:
           path: github-actions
       - uses: ./github-actions/docker-bake-cache
 
-  # Call our deployment workflow
+  # Call our deployment workflow, so long as this is not a forked PR
   deploy:
     name: Deploy
     needs: [build, get-deploy-labels]

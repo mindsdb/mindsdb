@@ -80,18 +80,6 @@ The following is a more detailed explanation of the parameters used in the `CREA
 * `max_tokens`: This parameter is optional. It defines the maximum token cost of the prediction. *Please note that this parameter can be overridden at prediction time.*
 * `temperature`: This parameter is optional. It defines how *risky* the answers are. The value of `0` marks a well-defined answer, and the value of `0.9` marks a more creative answer. *Please note that this parameter can be overridden at prediction time.*
 * `json_struct`: This parameter is optional. It is used to extract JSON data from a text column provided in the `prompt_template` parameter. [See examples here](/use-cases/data_enrichment/json-from-text#extract-json-from-text-data).
-  <Accordion title="engine">
-    This is the engine name as created with the [`CREATE ML_ENGINE`](https://docs.mindsdb.com/mindsdb_sql/sql/create/ml-engine) statement.
-  </Accordion>
-
-  <Accordion title="mode">
-    This parameter is optional.
-
-    The available modes include `default`, `conversational` and `conversational-full`.
-
-    - The `default` mode is used by default. The model will generate a separate response for each input provided. No context is maintained between the inputs.
-    - The `conversational` mode will maintain context between the inputs and generate a single response. This response will be placed in the last row of the result set.
-    - The `conversational-full` mode will maintain context between the inputs and generate a response for each input.
 
 <Note>
 

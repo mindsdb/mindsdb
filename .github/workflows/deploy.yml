@@ -7,6 +7,10 @@ on:
       image-tag:
         required: true
         type: string
+      prod:
+        required: false
+        type: boolean
+        default: false
     secrets:
       SLACK_DEPLOYMENTS_CHANNEL_ID:
         required: true
@@ -14,8 +18,9 @@ on:
         required: true
   
 jobs:
+  # Trigger private repo to deploy
   trigger_deploy:
-    # Trigger private repo to deploy to dev envs
+    if: github.actor != 'mindsdbadmin'
     runs-on: mdb-dev
     strategy:
       matrix:
@@ -50,7 +55,7 @@ jobs:
         owner: mindsdb
         repo: INTERNAL-mindsdb-build-deploy-to-kubernetes
         github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}
-        workflow_file_name: deploy-dev.yml
+        workflow_file_name: ${{ inputs.prod && 'deploy-dev.yml' || 'deploy-prod.yml' }}
         ref: main
         client_payload: '{"image-tag-prefix": "${{ inputs.image-tag }}", "deploy-env": "${{ matrix.deploy-env }}"}'
     - name: Notify of deployment finish

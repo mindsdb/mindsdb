@@ -13,6 +13,7 @@ concurrency:
 jobs:
   # Looks for labels like "deploy-to-<env>" attached to a PR so we can deploy to those envs
   get-deploy-labels:
+    name: Get Deploy Envs
     runs-on: mdb-dev
     outputs:
       deploy-envs: ${{ steps.get-labels.outputs.deploy-envs }}
@@ -25,8 +26,9 @@ jobs:
       - id: get-labels
         uses: ./github-actions/get-deploy-labels
 
+  # Build our docker images based on our bake file
   build:
-    # Build our docker images based on our bake file
+    name: Build Docker Images
     runs-on: mdb-dev
     needs: [get-deploy-labels]
     if: needs.get-deploy-labels.outputs.deploy-envs != '[]'
@@ -40,10 +42,11 @@ jobs:
       # Build the bakefile and push
       - uses: ./github-actions/docker-bake
   
+  # Build our docker images based on our bake file
+  # This job only pushes the layers to the cache repo
+  # It's done separately so other jobs can run without waiting for this one
   build_cache:
-    # Build our docker images based on our bake file
-    # This job only pushes the layers to the cache repo
-    # It's done separately so other jobs can run without waiting for this one
+    name: Build Docker Cache
     runs-on: mdb-dev
     needs: [build]
     steps:
@@ -55,7 +58,9 @@ jobs:
           path: github-actions
       - uses: ./github-actions/docker-bake-cache
 
+  # Call our deployment workflow
   deploy:
+    name: Deploy
     needs: [build, get-deploy-labels]
     if: needs.get-deploy-labels.outputs.deploy-envs != '[]' && !github.event.pull_request.head.repo.fork
     uses: ./.github/workflows/deploy.yml
@@ -64,61 +69,10 @@ jobs:
       image-tag: ${{ github.sha }}
     secrets: inherit
 
-  # trigger_deploy:
-  #   # Trigger private repo to deploy to dev envs
-  #   runs-on: mdb-dev
-  #   needs: [build, get-deploy-labels]
-  #   strategy:
-  #     matrix:
-  #       deploy-env: ${{fromJson(needs.get-deploy-labels.outputs.deploy-envs)}}
-  #   environment:
-  #     name: ${{ matrix.deploy-env }}
-  #     url: ${{ vars.ENV_URL }}
-  #   # We only want to run one deploy job for an env at a time
-  #   # Don't cancel in progress jobs because it may be for a different PR
-  #   concurrency:
-  #     group: deploy-${{ matrix.deploy-env }}
-  #     cancel-in-progress: false
-  #   if: needs.get-deploy-labels.outputs.deploy-envs != '[]' && !github.event.pull_request.head.repo.fork
-  #   steps:
-  #     - name: Pull MindsDB Github Actions
-  #       uses: actions/checkout@v4
-  #       with:
-  #         repository: mindsdb/github-actions
-  #         path: github-actions
-  #     - uses: FranzDiebold/github-env-vars-action@v2
-  #     - name: Notify of deployment starting
-  #       id: slack
-  #       uses: ./github-actions/slack-deploy-msg
-  #       with:
-  #         channel-id: ${{ secrets.SLACK_DEPLOYMENTS_CHANNEL_ID }}
-  #         status: "started"
-  #         color: "#0099CC"
-  #         env-name: ${{ matrix.deploy-env }}
-  #         env-url: ${{ vars.ENV_URL }}
-  #         slack-token: ${{ secrets.GH_ACTIONS_SLACK_BOT_TOKEN }}
-  #     - uses: convictional/trigger-workflow-and-wait@v1.6.5
-  #       with:
-  #         owner: mindsdb
-  #         repo: INTERNAL-mindsdb-build-deploy-to-kubernetes
-  #         github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}
-  #         workflow_file_name: deploy-dev.yml
-  #         ref: main
-  #         client_payload: '{"image-tag-prefix": "${{ env.CI_SHA }}", "deploy-env": "${{matrix.deploy-env}}"}'
-  #     - name: Notify of deployment finish
-  #       uses: ./github-actions/slack-deploy-msg
-  #       if: always()
-  #       with:
-  #         channel-id: ${{ secrets.SLACK_DEPLOYMENTS_CHANNEL_ID }}
-  #         status: "${{ job.status == 'success' && 'finished' || 'failed' }}"
-  #         color: "${{ job.status == 'success' && '#00C851' || '#FF4444' }}"
-  #         env-name: ${{ matrix.deploy-env }}
-  #         env-url: ${{ vars.ENV_URL }}
-  #         slack-token: ${{ secrets.GH_ACTIONS_SLACK_BOT_TOKEN }}
-  #         update-message-id: ${{ steps.slack.outputs.ts }}
-
+  # Run integration tests
+  # TODO: Run these against the deployed environment
   run_tests:
-    name: Run Post-Deploy Tests
+    name: Run Integration Tests
     needs: [deploy]
     uses: ./.github/workflows/test_on_deploy.yml
     secrets: inherit

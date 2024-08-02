@@ -789,13 +789,22 @@ class ExecuteCommands:
                 f'Nested query failed to execute with error: "{e}", please check and try again.'
             )
         result = sqlquery.fetch('dataframe')
+        print(result)
         df = result["result"]
+        print(df)
         df.columns = [
             str(t.alias) if hasattr(t, "alias") else str(t.parts[-1])
             for t in statement.data.targets
         ]
-
-        for col in ["actual", "prediction"]:
+        is_llm = True
+        # for col in ["actual", "prediction"]:
+        #     assert (
+        #         col in df.columns
+        #     ), f"`{col}` column was not provided, please try again."
+        #     assert (
+        #         df[col].isna().sum() == 0
+        #     ), f"There are missing values in the `{col}` column, please try again."
+        for col in ["question", "answer", "contexts", "ground_truth"]:
             assert (
                 col in df.columns
             ), f"`{col}` column was not provided, please try again."
@@ -803,17 +812,27 @@ class ExecuteCommands:
                 df[col].isna().sum() == 0
             ), f"There are missing values in the `{col}` column, please try again."
 
+
         metric_name = statement.name.parts[-1]
-        target_series = df.pop("prediction")
-        using_clause = statement.using if statement.using is not None else {}
-        metric_value = evaluate_accuracy(
+        if is_llm:
+            target_series = df.pop("answer")
+            metric_value = evaluate_accuracy(
             df,
             target_series,
             metric_name,
-            target="actual",
-            ts_analysis=using_clause.get("ts_analysis", {}),  # will be deprecated soon
             n_decimals=using_clause.get("n_decimals", 3),
         )  # 3 decimals by default
+        else:
+            target_series = df.pop("prediction")
+            using_clause = statement.using if statement.using is not None else {}
+            metric_value = evaluate_accuracy(
+                df,
+                target_series,
+                metric_name,
+                target="actual",
+                ts_analysis=using_clause.get("ts_analysis", {}),  # will be deprecated soon
+                n_decimals=using_clause.get("n_decimals", 3),
+            )  # 3 decimals by default
         return ExecuteAnswer(
             data=ResultSet(
                 columns=[Column(name=metric_name, table_name="", type="str")],

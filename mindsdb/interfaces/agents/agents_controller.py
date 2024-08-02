@@ -227,6 +227,7 @@ class AgentsController:
             agent_with_new_name = self.get_agent(name, project_name=project_name)
             if agent_with_new_name is not None:
                 raise ValueError(f'Agent with updated name already exists: {name}')
+            existing_agent.name = name
 
         if model_name or provider:
             # check model and provider

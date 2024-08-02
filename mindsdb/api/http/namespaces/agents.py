@@ -10,13 +10,13 @@ from langfuse import Langfuse
 from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.interfaces.agents.langfuse_callback_handler import get_metadata, get_tags, get_tool_usage, get_skills
 from mindsdb.interfaces.storage import db
-
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
-
 from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.utilities.log import getLogger
+from mindsdb.utilities.exception import EntityNotExistsError
+
 
 logger = getLogger(__name__)
 
@@ -94,7 +94,7 @@ class AgentsResource(Resource):
         session = SessionController()
         try:
             all_agents = session.agents_controller.get_agents(project_name)
-        except ValueError:
+        except EntityNotExistsError:
             # Project needs to exist.
             return http_error(
                 HTTPStatus.NOT_FOUND,

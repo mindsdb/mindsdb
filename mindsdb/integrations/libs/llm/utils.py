@@ -32,7 +32,7 @@ DEFAULT_OLLAMA_BASE_URL = 'http://localhost:11434'
 DEFAULT_OLLAMA_MODEL = 'llama2'
 
 DEFAULT_NVIDIA_NIM_BASE_URL = 'http://localhost:8000/v1'  # Assumes local port forwarding through ssh
-DEFAULT_NVIDIA_NIM_MODEL = 'meta/llama-3.1-8b-instruct'
+DEFAULT_NVIDIA_NIM_MODEL = 'meta/llama-3_1-8b-instruct'
 
 
 def get_completed_prompts(base_template: str, df: pd.DataFrame, strict=True) -> Tuple[List[str], np.ndarray]:
@@ -181,7 +181,7 @@ def get_llm_config(provider: str, config: Dict) -> BaseLLMConfig:
             repeat_penalty=config.get('repeat_penalty', None),
             stop=config.get('stop', None),
             template=config.get('template', None),
-            anthropic_api_key=config['api_keys'].get('nvidia_nim', None)
+            nvidia_api_key=config['api_keys'].get('nvidia_nim', None)
         )
     if provider == 'mindsdb':
         return MindsdbConfig(

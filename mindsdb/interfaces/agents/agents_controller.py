@@ -357,13 +357,13 @@ class AgentsController:
         '''
         # For circular dependency.
         from .langchain_agent import LangchainAgent
-        model = None
-        if agent.model_name is not None:
-            model_name_no_version, version = db.Predictor.get_name_and_version(agent.model_name)
-            try:
-                model = self.model_controller.get_model(model_name_no_version, version=version, project_name=project_name)
-            except PredictorRecordNotFound:
-                raise ValueError(f'Model with name {agent.model_name} not found')
+
+        model, provider = self.check_model_provider(agent.model_name, agent.provider)
+
+        # update old agents
+        if agent.provider is None and provider is not None:
+            agent.provider = provider
+            db.session.commit()
 
         lang_agent = LangchainAgent(agent, model=model)
         return lang_agent.get_completion(messages, trace_id, observation_id, stream=True)

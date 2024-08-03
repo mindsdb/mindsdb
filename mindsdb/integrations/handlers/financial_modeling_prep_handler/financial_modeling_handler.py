@@ -11,7 +11,6 @@ from mindsdb.integrations.handlers.financial_modeling_prep_handler.financial_mod
 
 from urllib.request import urlopen
 from mindsdb.utilities import log
-#from mindsdb_sql import parse_sql
 import json
 import requests
 _FINANCIAL_MODELING_URL = 'https://financialmodelingprep.com/api/v3/'
@@ -97,6 +96,6 @@ class FinancialModelingHandler(APIHandler):
         
         if endpoint_name == 'daily_chart':
             return self.get_daily_chart(params)
-            #return None
+            
         raise NotImplementedError('Endpoint {} not supported by Financial Modeling API Handler'.format(endpoint_name))
     

@@ -95,7 +95,7 @@ class SkillToolController:
                 sql_database_tools[i] = tool
         return sql_database_tools
 
-    def _make_retrieval_tools(self, skill: db.Skills, llm) -> dict:
+    def _make_retrieval_tools(self, skill: db.Skills, llm, pred_args, embedding_model):
         """
         creates advanced retrieval tool i.e. RAG
         """
@@ -104,7 +104,7 @@ class SkillToolController:
         if 'llm' not in config:
             # Set LLM if not explicitly provided in configs.
             config['llm'] = llm
-        return dict(
+        tool = dict(
             name=params.get('name', skill.name),
             source=params.get('source', None),
             config=config,
@@ -113,6 +113,11 @@ class SkillToolController:
                         f'The input should be the exact question the user is asking.',
             type=skill.type
         )
+        pred_args['embedding_model'] = embedding_model
+        pred_args['llm'] = llm
+
+        from .retrieval_tool import build_retrieval_tool
+        return build_retrieval_tool(tool, pred_args, skill)
 
     def _get_rag_query_function(self, skill: db.Skills):
 
@@ -150,7 +155,7 @@ class SkillToolController:
             type=skill.type
         )
 
-    def get_tools_from_skill(self, skill: db.Skills, llm) -> dict:
+    def get_tools_from_skills(self, skills: List[db.Skills], llm, pred_args, embedding_model) -> dict:
         """
             Creates function for skill and metadata (name, description)
         Args:
@@ -160,18 +165,34 @@ class SkillToolController:
             dict with keys: name, description, func
         """
 
-        try:
-            skill_type = SkillType(skill.type)
-        except ValueError:
-            raise NotImplementedError(
-                f'skill of type {skill.type} is not supported as a tool, supported types are: {list(SkillType._member_names_)}')
+        # group skills by type
+        skills_group = defaultdict(list)
+        for skill in skills:
+            try:
+                skill_type = SkillType(skill.type)
+            except ValueError:
+                raise NotImplementedError(
+                    f'skill of type {skill.type} is not supported as a tool, supported types are: {list(SkillType._member_names_)}')
 
-        if skill_type == SkillType.TEXT2SQL or skill_type == SkillType.TEXT2SQL_LEGACY:
-            return self._make_text_to_sql_tools(skill, llm)
-        if skill_type == SkillType.KNOWLEDGE_BASE:
-            return [self._make_knowledge_base_tools(skill)]
-        if skill_type == SkillType.RETRIEVAL:
-            return [self._make_retrieval_tools(skill, llm)]
+            if skill_type == SkillType.TEXT2SQL_LEGACY:
+                skill_type = SkillType.TEXT2SQL
+            skills_group[skill_type].append(skill)
+
+        tools = {}
+        for skill_type, skills in skills_group.items():
+            if skill_type == SkillType.TEXT2SQL:
+                tools[skill_type] = self._make_text_to_sql_tools(skills, llm)
+            if skill_type == SkillType.KNOWLEDGE_BASE:
+                tools[skill_type] = [
+                    self._make_knowledge_base_tools(skill)
+                    for skill in skills
+                ]
+            if skill_type == SkillType.RETRIEVAL:
+                tools[skill_type] = [
+                    self._make_retrieval_tools(skill, llm, pred_args, embedding_model)
+                    for skill in skills
+                ]
+        return tools
 
 
 skill_tool = SkillToolController()

@@ -11,13 +11,13 @@ from langfuse import Langfuse
 from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.interfaces.agents.langfuse_callback_handler import get_metadata, get_tags, get_tool_usage, get_skills
 from mindsdb.interfaces.storage import db
-
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
-
 from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.utilities.log import getLogger
+from mindsdb.utilities.exception import EntityNotExistsError
+
 
 logger = getLogger(__name__)
 
@@ -75,14 +75,14 @@ def create_agent(project_name, name, agent):
         return http_error(
             HTTPStatus.NOT_FOUND,
             'Resource not found',
-            f'The {model_name} or skills "{skills}" do not exist. Please ensure that the names are correct and try again.'
+            f'The model "{model_name}" or skills "{skills}" do not exist. Please ensure that the names are correct and try again.'
         )
     except NotImplementedError:
         # Free users trying to create agent.
         return http_error(
             HTTPStatus.UNAUTHORIZED,
             'Unavailable to free users',
-            f'The {model_name} or skills "{skills}" do not exist. Please ensure that the names are correct and try again.'
+            f'The model "{model_name}" or skills "{skills}" do not exist. Please ensure that the names are correct and try again.'
         )
 
 
@@ -95,7 +95,7 @@ class AgentsResource(Resource):
         session = SessionController()
         try:
             all_agents = session.agents_controller.get_agents(project_name)
-        except ValueError:
+        except EntityNotExistsError:
             # Project needs to exist.
             return http_error(
                 HTTPStatus.NOT_FOUND,

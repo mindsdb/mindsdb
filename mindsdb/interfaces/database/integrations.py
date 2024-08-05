@@ -761,7 +761,7 @@ class IntegrationController:
         # tries to import all not imported yet
 
         result = {}
-        for handler_name in self.handlers_import_status.keys():
+        for handler_name in list(self.handlers_import_status.keys()):
             handler_meta = self.get_handler_meta(handler_name)
             result[handler_name] = handler_meta
 

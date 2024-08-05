@@ -1,19 +1,17 @@
-from typing import Optional
+from typing import Text, Dict, Optional
 
-import pandas as pd
 import boto3
 from boto3.dynamodb.types import TypeDeserializer
+from mindsdb_sql.parser.ast.base import ASTNode
+import pandas as pd
 
 from mindsdb.integrations.libs.base import DatabaseHandler
-
-from mindsdb_sql.parser.ast.base import ASTNode
-
-from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
+from mindsdb.utilities import log
 
 
 logger = log.getLogger(__name__)
@@ -21,18 +19,19 @@ logger = log.getLogger(__name__)
 
 class DyanmoDBHandler(DatabaseHandler):
     """
-    This handler handles connection and execution of the DynamoDB statements.
+    This handler handles connection and execution of the SQL statements on Amazon DyanmoDB.
     """
 
     name = 'dynamodb'
 
-    def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
+    def __init__(self, name: Text, connection_data: Optional[Dict], **kwargs):
         """
-        Initialize the handler.
+        Initializes the handler.
+
         Args:
-            name (str): name of particular handler instance
-            connection_data (dict): parameters for connecting to the database
-            **kwargs: arbitrary keyword arguments.
+            name (Text): The name of the handler instance.
+            connection_data (Dict): The connection data required to connect to the AWS (S3) account.
+            kwargs: Arbitrary keyword arguments.
         """
         super().__init__(name)
         self.connection_data = connection_data
@@ -41,13 +40,16 @@ class DyanmoDBHandler(DatabaseHandler):
         self.connection = None
         self.is_connected = False
 
-    def connect(self) -> StatusResponse:
+    def connect(self) -> boto3.client:
         """
-        Set up the connection required by the handler.
-        Returns:
-            HandlerStatusResponse
-        """
+        Establishes a connection to Amazon DynamoDB.
 
+        Raises:
+            ValueError: If the expected connection parameters are not provided.
+
+        Returns:
+            boto3.client: A client object to Amazon DynamoDB.
+        """
         if self.is_connected is True:
             return self.connection
         
@@ -76,25 +78,23 @@ class DyanmoDBHandler(DatabaseHandler):
 
         return self.connection
 
-    def disconnect(self):
+    def disconnect(self) -> None:
         """
-        Close any existing connections.
+        Closes the connection to the Amazon DynamoDB if it's currently open.
         """
-
         if self.is_connected is False:
             return
 
         self.connection.close()
         self.is_connected = False
-        return self.is_connected
 
     def check_connection(self) -> StatusResponse:
         """
-        Check connection to the handler.
-        Returns:
-            HandlerStatusResponse
-        """
+        Checks the status of the connection to Amazon DynamoDB.
 
+        Returns:
+            StatusResponse: An object containing the success status and an error message if an error occurs.
+        """
         response = StatusResponse(False)
         need_to_close = self.is_connected is False
 
@@ -112,15 +112,16 @@ class DyanmoDBHandler(DatabaseHandler):
 
         return response
 
-    def native_query(self, query: str) -> StatusResponse:
+    def native_query(self, query: Text) -> Response:
         """
-        Receive raw query and act upon it somehow.
-        Args:
-            query (str): query in native format
-        Returns:
-            HandlerResponse
-        """
+        Executes a native SQL query (PartiQL) on Amazon DynamoDB and returns the result.
 
+        Args:
+            query (Text): The SQL query to be executed.
+
+        Returns:
+            Response: A response object containing the result of the query or an error message.
+        """
         need_to_close = self.is_connected is False
 
         connection = self.connect()
@@ -130,7 +131,7 @@ class DyanmoDBHandler(DatabaseHandler):
             if result['Items']:
                 records = []
                 for record in result['Items']:
-                    records.append(self.parse_record(record))
+                    records.append(self._parse_record(record))
                 response = Response(
                     RESPONSE_TYPE.TABLE,
                     data_frame=pd.json_normalize(records)
@@ -150,29 +151,38 @@ class DyanmoDBHandler(DatabaseHandler):
 
         return response
 
-    def parse_record(self, record):
+    def _parse_record(self, record: Dict) -> Dict:
+        """
+        Parses a record from Amazon DynamoDB into a dictionary.
+
+        Args:
+            record: The record to be parsed.
+
+        Returns:
+            Dict: A dictionary containing the parsed record.
+        """
         deserializer = TypeDeserializer()
         return {k: deserializer.deserialize(v) for k,v in record.items()}
 
-    def query(self, query: ASTNode) -> StatusResponse:
+    def query(self, query: ASTNode) -> Response:
         """
-        Receive query as AST (abstract syntax tree) and act upon it somehow.
-        Args:
-            query (ASTNode): sql query represented as AST. May be any kind
-                of query: SELECT, INTSERT, DELETE, etc
-        Returns:
-            HandlerResponse
-        """
+        Executes a SQL query represented by an ASTNode on Amazon DynamoDB and retrieves the data.
 
+        Args:
+            query (ASTNode): An ASTNode representing the SQL query to be executed.
+
+        Returns:
+            Response: The response from the `native_query` method, containing the result of the SQL query execution.
+        """
         return self.native_query(query.to_string())
 
-    def get_tables(self) -> StatusResponse:
+    def get_tables(self) -> Response:
         """
-        Return list of entities that will be accessible as tables.
-        Returns:
-            HandlerResponse
-        """
+        Retrieves a list of all tables in Amazon DynamoDB.
 
+        Returns:
+            Response: A response object containing a list of tables in Amazon DynamoDB.
+        """
         result = self.connection.list_tables()
 
         df = pd.DataFrame(
@@ -187,14 +197,21 @@ class DyanmoDBHandler(DatabaseHandler):
 
         return response
 
-    def get_columns(self, table_name: str) -> StatusResponse:
+    def get_columns(self, table_name: Text) -> Response:
         """
-        Returns a list of entity columns.
+        Retrieves column (attribute) details for a specified table in Amazon DynamoDB.
+
         Args:
-            table_name (str): name of one of tables returned by self.get_tables()
+            table_name (Text): The name of the table for which to retrieve column information.
+
+        Raises:
+            ValueError: If the 'table_name' is not a valid string.
+
         Returns:
-            HandlerResponse
+            Response: A response object containing the column details.
         """
+        if not table_name or not isinstance(table_name, str):
+            raise ValueError("Invalid table name provided.")
 
         result = self.connection.describe_table(
             TableName=table_name

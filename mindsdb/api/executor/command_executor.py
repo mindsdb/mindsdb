@@ -5,7 +5,7 @@ from typing import Optional
 from functools import reduce
 
 import pandas as pd
-from mindsdb_evaluator.accuracy.general import evaluate_accuracy
+from mindsdb_evaluator.accuracy.general import evaluate_accuracy, is_llm
 from mindsdb_sql import parse_sql
 from mindsdb_sql.planner.utils import query_traversal
 from mindsdb_sql.parser.ast import (
@@ -789,32 +789,31 @@ class ExecuteCommands:
                 f'Nested query failed to execute with error: "{e}", please check and try again.'
             )
         result = sqlquery.fetch('dataframe')
-        print(result)
         df = result["result"]
-        print(df)
         df.columns = [
             str(t.alias) if hasattr(t, "alias") else str(t.parts[-1])
             for t in statement.data.targets
         ]
-        is_llm = True
-        # for col in ["actual", "prediction"]:
-        #     assert (
-        #         col in df.columns
-        #     ), f"`{col}` column was not provided, please try again."
-        #     assert (
-        #         df[col].isna().sum() == 0
-        #     ), f"There are missing values in the `{col}` column, please try again."
-        for col in ["question", "answer", "contexts", "ground_truth"]:
-            assert (
-                col in df.columns
-            ), f"`{col}` column was not provided, please try again."
-            assert (
-                df[col].isna().sum() == 0
-            ), f"There are missing values in the `{col}` column, please try again."
-
-
         metric_name = statement.name.parts[-1]
-        if is_llm:
+
+        if is_llm(metric_name):
+            for col in ["question", "answer", "contexts", "ground_truth"]:
+                assert (
+                    col in df.columns
+                ), f"`{col}` column was not provided, please try again."
+                assert (
+                    df[col].isna().sum() == 0
+                ), f"There are missing values in the `{col}` column, please try again."
+        else:
+            for col in ["actual", "prediction"]:
+                assert (
+                    col in df.columns
+                ), f"`{col}` column was not provided, please try again."
+                assert (
+                    df[col].isna().sum() == 0
+                ), f"There are missing values in the `{col}` column, please try again."
+
+        if is_llm(metric_name):
             target_series = df.pop("answer")
             metric_value = evaluate_accuracy(
             df,

@@ -46,6 +46,8 @@ jobs:
           path: github-actions
       # Build the bakefile and push
       - uses: ./github-actions/docker-bake
+        with:
+          git-sha: ${{ github.event.pull_request.head.sha }}
   
   # Build our docker images based on our bake file
   # This job only pushes the layers to the cache repo
@@ -64,6 +66,8 @@ jobs:
           repository: mindsdb/github-actions
           path: github-actions
       - uses: ./github-actions/docker-bake-cache
+        with:
+          git-sha: ${{ github.event.pull_request.head.sha }}
 
   # Call our deployment workflow, so long as this is not a forked PR
   # This will run the deployment workflow in the base branch, not in the PR.

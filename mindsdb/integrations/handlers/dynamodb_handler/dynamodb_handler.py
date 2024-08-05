@@ -4,8 +4,6 @@ import pandas as pd
 import boto3
 from boto3.dynamodb.types import TypeDeserializer
 
-from mindsdb_sql import parse_sql
-
 from mindsdb.integrations.libs.base import DatabaseHandler
 
 from mindsdb_sql.parser.ast.base import ASTNode
@@ -37,9 +35,6 @@ class DyanmoDBHandler(DatabaseHandler):
             **kwargs: arbitrary keyword arguments.
         """
         super().__init__(name)
-        self.parser = parse_sql
-        self.dialect = 'dynamodb'
-
         self.connection_data = connection_data
         self.kwargs = kwargs
 

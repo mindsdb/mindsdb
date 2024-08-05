@@ -69,6 +69,7 @@ class DyanmoDBHandler(DatabaseHandler):
             if param in self.connection_data:
                 config[param] = self.connection_data[param]
 
+        # TODO: Add error handling.
         self.connection = boto3.client(
             'dynamodb',
             **config
@@ -100,7 +101,9 @@ class DyanmoDBHandler(DatabaseHandler):
 
         try:
             self.connect()
+            # TODO: Execute a simple query to check the connection.
             response.success = True
+        # TODO: Catch specific exceptions.
         except Exception as e:
             logger.error(f'Error connecting to DynamoDB, {e}!')
             response.error_message = str(e)
@@ -129,6 +132,8 @@ class DyanmoDBHandler(DatabaseHandler):
         try:
             result = connection.execute_statement(Statement=query)
             if result['Items']:
+                # TODO: Handle pagination.
+                # TODO: Can this be optimized?
                 records = []
                 for record in result['Items']:
                     records.append(self._parse_record(record))
@@ -136,8 +141,10 @@ class DyanmoDBHandler(DatabaseHandler):
                     RESPONSE_TYPE.TABLE,
                     data_frame=pd.json_normalize(records)
                 )
+            # TODO: Handle situations where a SELECT query returns no records.
             else:
                 response = Response(RESPONSE_TYPE.OK)
+        # TODO: Catch specific exceptions.
         except Exception as e:
             logger.error(f'Error running query: {query} on DynamoDB!')
             response = Response(

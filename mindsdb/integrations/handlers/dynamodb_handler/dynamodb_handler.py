@@ -1,4 +1,4 @@
-from typing import Text, Dict, Optional
+from typing import Text, List, Dict, Optional
 
 import boto3
 from boto3.dynamodb.types import TypeDeserializer
@@ -132,11 +132,17 @@ class DyanmoDBHandler(DatabaseHandler):
         try:
             result = connection.execute_statement(Statement=query)
             if result['Items']:
-                # TODO: Handle pagination.
-                # TODO: Can this be optimized?
+                # TODO: Can parsing be optimized?
                 records = []
-                for record in result['Items']:
-                    records.append(self._parse_record(record))
+                records.extend(self._parse_records(result['Items']))
+
+                while 'LastEvaluatedKey' in result:
+                    result = connection.execute_statement(
+                        Statement=query,
+                        NextToken=result['NextToken']
+                    )
+                    records.extend(self._parse_records(result['Items']))
+                    
                 response = Response(
                     RESPONSE_TYPE.TABLE,
                     data_frame=pd.json_normalize(records)
@@ -158,18 +164,23 @@ class DyanmoDBHandler(DatabaseHandler):
 
         return response
 
-    def _parse_record(self, record: Dict) -> Dict:
+    def _parse_records(self, records: List[Dict]) -> Dict:
         """
-        Parses a record from Amazon DynamoDB into a dictionary.
+        Parses the records returned by the PartiQL query execution.
 
         Args:
-            record: The record to be parsed.
+            records (List[Dict]): A list of records returned by the PartiQL query execution.
 
         Returns:
             Dict: A dictionary containing the parsed record.
         """
         deserializer = TypeDeserializer()
-        return {k: deserializer.deserialize(v) for k,v in record.items()}
+        
+        parsed_records = []
+        for record in records:
+            parsed_records.append({k: deserializer.deserialize(v) for k,v in record.items()})
+
+        return parsed_records
 
     def query(self, query: ASTNode) -> Response:
         """

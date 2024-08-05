@@ -109,6 +109,46 @@ def create_chat_model(args: Dict):
     raise ValueError(f'Unknown provider: {args["provider"]}')
 
 
+def prepare_prompts(df, base_template, input_variables, user_column=USER_COLUMN):
+    empty_prompt_ids = np.where(df[input_variables].isna().all(axis=1).values)[0]
+    base_template = base_template.replace('{{', '{').replace('}}', '}')
+    prompts = []
+
+    for i, row in df.iterrows():
+        if i not in empty_prompt_ids:
+            prompt = PromptTemplate(input_variables=input_variables, template=base_template)
+            kwargs = {col: row[col] if row[col] is not None else '' for col in input_variables}
+            prompts.append(prompt.format(**kwargs))
+        elif row.get(user_column):
+            prompts.append(row[user_column])
+
+    return prompts, empty_prompt_ids
+
+
+def prepare_callbacks(self, args):
+    context_callback = ContextCaptureCallback()
+    callbacks = self._get_agent_callbacks(args)
+    callbacks.append(context_callback)
+    return callbacks, context_callback
+
+
+def handle_agent_error(e):
+    error_message = f"An error occurred during agent execution: {str(e)}"
+    logger.error(error_message, exc_info=True)
+    return error_message
+
+
+def process_chunk(chunk):
+    if isinstance(chunk, dict):
+        return {k: process_chunk(v) for k, v in chunk.items()}
+    elif isinstance(chunk, list):
+        return [process_chunk(item) for item in chunk]
+    elif isinstance(chunk, (str, int, float, bool, type(None))):
+        return chunk
+    else:
+        return str(chunk)
+
+
 class LangchainAgent:
     def __init__(self, agent: db.Agents, model):
 
@@ -185,7 +225,7 @@ class LangchainAgent:
         # Back compatibility for old models
         self.provider = args.get('provider', get_llm_provider(args))
 
-        self.embedding_model_provider = args.get('embedding_model', get_embedding_model_provider(args))
+        self.embedding_model_provider = args.get('embedding_model_provider', get_embedding_model_provider(args))
 
         df = df.reset_index(drop=True)
         agent = self.create_agent(df, args)
@@ -361,43 +401,21 @@ AI: {response}'''
     def run_agent(self, df: pd.DataFrame, agent: AgentExecutor, args: Dict) -> pd.DataFrame:
         base_template = args.get('prompt_template', args['prompt_template'])
         return_context = args.get('return_context', False)
-
         input_variables = re.findall(r"{{(.*?)}}", base_template)
-        empty_prompt_ids = np.where(df[input_variables].isna().all(axis=1).values)[0]
 
-        base_template = base_template.replace('{{', '{').replace('}}', '}')
-        prompts = []
-
-        user_column = args.get('user_column', USER_COLUMN)
-        for i, row in df.iterrows():
-            if i not in empty_prompt_ids:
-                prompt = PromptTemplate(input_variables=input_variables, template=base_template)
-                kwargs = {col: row[col] if row[col] is not None else '' for col in input_variables}
-                prompts.append(prompt.format(**kwargs))
-            elif row.get(user_column):
-                prompts.append(row[user_column])
+        prompts, empty_prompt_ids = prepare_prompts(df, base_template, input_variables, args.get('user_column', USER_COLUMN))
 
         def _invoke_agent_executor_with_prompt(agent_executor, prompt):
             if not prompt:
                 return {CONTEXT_COLUMN: [], ASSISTANT_COLUMN: ''}
             try:
-                context_callback = ContextCaptureCallback()
-                callbacks = self._get_agent_callbacks(args)
-                callbacks.append(context_callback)
-
+                callbacks, context_callback = prepare_callbacks(self, args)
                 result = agent_executor.invoke(prompt, config={'callbacks': callbacks})
-
                 captured_context = context_callback.get_contexts()
-                if isinstance(result, dict) and 'output' in result:
-                    output = result['output']
-                else:
-                    output = str(result)
-
+                output = result['output'] if isinstance(result, dict) and 'output' in result else str(result)
                 return {CONTEXT_COLUMN: captured_context, ASSISTANT_COLUMN: output}
             except Exception as e:
-                error_message = f"An error occurred during agent execution: {str(e)}"
-                logger.error(error_message, exc_info=True)
-                return {CONTEXT_COLUMN: [], ASSISTANT_COLUMN: error_message}
+                return {CONTEXT_COLUMN: [], ASSISTANT_COLUMN: handle_agent_error(e)}
 
         completions = []
         contexts = []
@@ -439,33 +457,40 @@ AI: {response}'''
         return pred_df
 
     def stream_agent(self, df: pd.DataFrame, agent_executor: AgentExecutor, args: Dict) -> Iterable[Dict]:
-        '''
-        Streams completion chunks for an agent.
-
-        Args:
-            df (pd.DataFrame): DataFrame to use as messages input
-            agent_executor (AgentExecutor): Executor to use for streaming agent
-            args (Dict): Args to pass to agent
-
-        Returns:
-            chunks (Iterable[Dict]): Completion chunks for agent
-        '''
-        # Prefer prediction time prompt template, if available.
         base_template = args.get('prompt_template', args['prompt_template'])
-        input_variables = []
-        matches = list(re.finditer("{{(.*?)}}", base_template))
+        input_variables = re.findall(r"{{(.*?)}}", base_template)
+        return_context = args.get('return_context', False)
 
-        for m in matches:
-            input_variables.append(m[0].replace('{', '').replace('}', ''))
+        prompts, _ = prepare_prompts(df, base_template, input_variables, args.get('user_column', USER_COLUMN))
 
-        base_template = base_template.replace('{{', '{').replace('}}', '}')
-        first_row = df.iloc[0]
-        prompt_template = PromptTemplate(input_variables=input_variables, template=base_template)
-        kwargs = {}
-        for col in input_variables:
-            kwargs[col] = first_row[col] if first_row[col] is not None else ''  # add empty quote if data is missing
-        prompt = prompt_template.format(**kwargs)
-        if not prompt:
-            return
-        for chunk in agent_executor.stream(prompt, config={'callbacks': self._get_agent_callbacks(args)}):
-            yield chunk
+        callbacks, context_callback = prepare_callbacks(self, args)
+
+        yield {"type": "start", "prompt": prompts[0]}
+
+        if not hasattr(agent_executor, 'stream') or not callable(agent_executor.stream):
+            raise AttributeError("The agent_executor does not have a 'stream' method")
+
+        stream_iterator = agent_executor.stream(prompts[0], config={'callbacks': callbacks})
+
+        if not hasattr(stream_iterator, '__iter__'):
+            raise TypeError("The stream method did not return an iterable")
+
+        for chunk in stream_iterator:
+            yield self.process_chunk(chunk)
+
+        if return_context:
+            # Yield context if required
+            captured_context = context_callback.get_contexts()
+            if captured_context:
+                yield {"type": "context", "content": captured_context}
+
+    @staticmethod
+    def process_chunk(chunk):
+        if isinstance(chunk, dict):
+            return {k: LangchainAgent.process_chunk(v) for k, v in chunk.items()}
+        elif isinstance(chunk, list):
+            return [LangchainAgent.process_chunk(item) for item in chunk]
+        elif isinstance(chunk, (str, int, float, bool, type(None))):
+            return chunk
+        else:
+            return str(chunk)

@@ -50,12 +50,26 @@ class DyanmoDBHandler(DatabaseHandler):
 
         if self.is_connected is True:
             return self.connection
+        
+        # Mandatory connection parameters.
+        if not all(key in self.connection_data for key in ['aws_access_key_id', 'aws_secret_access_key', 'region_name']):
+            raise ValueError('Required parameters (aws_access_key_id, aws_secret_access_key, region_name) must be provided.')
+        
+        config = {
+            'aws_access_key_id': self.connection_data.get('aws_access_key_id'),
+            'aws_secret_access_key': self.connection_data.get('aws_secret_access_key'),
+            'region_name': self.connection_data.get('region_name')
+        }
+
+        # Optional connection parameters.
+        optional_parameters = ['aws_session_token']
+        for param in optional_parameters:
+            if param in self.connection_data:
+                config[param] = self.connection_data[param]
 
         self.connection = boto3.client(
             'dynamodb',
-            aws_access_key_id=self.connection_data['aws_access_key_id'],
-            aws_secret_access_key=self.connection_data['aws_secret_access_key'],
-            region_name=self.connection_data['region_name']
+            **config
         )
 
         self.is_connected = True

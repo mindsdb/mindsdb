@@ -2,6 +2,7 @@ from typing import Text, List, Dict, Optional
 
 import boto3
 from boto3.dynamodb.types import TypeDeserializer
+from botocore.exceptions import ClientError
 from mindsdb_sql.parser.ast.base import ASTNode
 import pandas as pd
 
@@ -30,7 +31,7 @@ class DyanmoDBHandler(DatabaseHandler):
 
         Args:
             name (Text): The name of the handler instance.
-            connection_data (Dict): The connection data required to connect to the AWS (S3) account.
+            connection_data (Dict): The connection data required to connect to Amazon DyanmoDB.
             kwargs: Arbitrary keyword arguments.
         """
         super().__init__(name)
@@ -100,18 +101,22 @@ class DyanmoDBHandler(DatabaseHandler):
         need_to_close = self.is_connected is False
 
         try:
-            self.connect()
-            # TODO: Execute a simple query to check the connection.
+            connection = self.connect()
+            connection.list_tables()
+            
             response.success = True
-        # TODO: Catch specific exceptions.
-        except Exception as e:
-            logger.error(f'Error connecting to DynamoDB, {e}!')
-            response.error_message = str(e)
-        finally:
-            if response.success is True and need_to_close:
-                self.disconnect()
-            if response.success is False and self.is_connected is True:
-                self.is_connected = False
+        except (ValueError, ClientError) as known_error:
+            logger.error(f'Connection check to Amazon DynamoDB failed, {known_error}!')
+            response.error_message = str(known_error)
+        except Exception as unknown_error:
+            logger.error(f'Connection check to Amazon DynamoDB failed due to an unknown error, {unknown_error}!')
+            response.error_message = str(unknown_error)
+
+        if response.success and need_to_close:
+            self.disconnect()
+
+        elif not response.success and self.is_connected:
+            self.is_connected = False
 
         return response
 

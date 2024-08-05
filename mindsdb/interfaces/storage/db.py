@@ -483,6 +483,36 @@ class Agents(Base):
             "created_at": self.created_at,
         }
 
+class AgentsHistory(Base):
+    __tablename__ = "agents_history"
+    id = Column(Integer, primary_key=True)
+    agent_id = Column(Integer, ForeignKey("agents.id", name="fk_agent_id"), nullable=False)
+    type = Column(String)  # TODO replace with enum if needed
+    text = Column(String)
+    sender_type = Column(String)  # 'AI' or 'Human'
+    destination = Column(String)
+    sent_at = Column(DateTime, default=datetime.datetime.now)
+    error = Column(String, nullable=True)
+    trace_id = Column(String, nullable=True)
+    observation_id = Column(String, nullable=True)
+    tools = Column(String, nullable=True)  # Store as a comma-separated string
+    stream_id = Column(String, nullable=True)  # Null if no stream, unique hash if it is a stream
+
+    def as_dict(self) -> Dict:
+        return {
+            "id": self.id,
+            "agent_id": self.agent_id,
+            "type": self.type,
+            "text": self.text,
+            "sender_type": self.sender_type,
+            "destination": self.destination,
+            "sent_at": self.sent_at,
+            "error": self.error,
+            "trace_id": self.trace_id,
+            "observation_id": self.observation_id,
+            "tools": self.tools,
+            "stream_id": self.stream_id,
+        }
 
 class KnowledgeBase(Base):
     __tablename__ = "knowledge_base"

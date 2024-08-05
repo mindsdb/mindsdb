@@ -1,3 +1,5 @@
+import datetime
+import uuid
 from typing import Dict, Iterator, List, Union
 
 from langchain_core.tools import BaseTool
@@ -5,7 +7,7 @@ from sqlalchemy.orm.attributes import flag_modified
 import pandas as pd
 
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
-from mindsdb.interfaces.storage.db import Predictor
+from mindsdb.interfaces.storage.db import Predictor, AgentsHistory
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.skills.skills_controller import SkillsController
 from mindsdb.interfaces.storage import db
@@ -22,10 +24,10 @@ class AgentsController:
     assistant_column = ASSISTANT_COLUMN
 
     def __init__(
-        self,
-        project_controller: ProjectController = None,
-        skills_controller: SkillsController = None,
-        model_controller: ModelController = None
+            self,
+            project_controller: ProjectController = None,
+            skills_controller: SkillsController = None,
+            model_controller: ModelController = None
     ):
         if project_controller is None:
             project_controller = ProjectController()
@@ -310,14 +312,36 @@ class AgentsController:
         Raises:
             ValueError: Agent's model does not exist.
         '''
+        # Log the human question
+        human_question = "\n".join(f"{key}: {value}" for message in messages for key, value in message.items())
+        self.save_agent_history(
+            agent_id=agent.id,
+            type='question',
+            text=human_question,
+            sender_type='Human',
+            trace_id=trace_id,
+            observation_id=observation_id,
+            tools=None,
+            stream_id=None
+        )
+
         if stream:
-            return self._get_completion_stream(
+            response = self._get_completion_stream(
                 agent,
                 messages,
                 trace_id=trace_id,
                 observation_id=observation_id,
                 project_name=project_name,
                 tools=tools
+            )
+            return self.log_from_iterator(
+                iterator=response,
+                agent_id=agent.id,
+                type='completion',
+                sender_type='AI',
+                trace_id=trace_id,
+                observation_id=observation_id,
+                stream_id=str(uuid.uuid4())
             )
         from .langchain_agent import LangchainAgent
 
@@ -328,7 +352,17 @@ class AgentsController:
             db.session.commit()
 
         lang_agent = LangchainAgent(agent, model)
-        return lang_agent.get_completion(messages, trace_id, observation_id)
+        response = lang_agent.get_completion(messages, trace_id, observation_id)
+        self.log_from_dataframe(
+            df=response,
+            agent_id=agent.id,
+            type='completion',
+            sender_type='AI',
+            trace_id=trace_id,
+            observation_id=observation_id
+            # tools=tools_str,
+        )
+        return response
 
     def _get_completion_stream(
             self,
@@ -367,3 +401,60 @@ class AgentsController:
 
         lang_agent = LangchainAgent(agent, model=model)
         return lang_agent.get_completion(messages, trace_id, observation_id, stream=True)
+
+    @staticmethod
+    def save_agent_history(agent_id: int, type: str, text: str, sender_type: str, destination: str = None,
+                           trace_id: str = None,
+                           observation_id: str = None, tools: str = None, stream_id: str = None, error: str = None):
+        if not destination:
+            destination = "mindsdb"
+        agent_history = AgentsHistory(
+            agent_id=agent_id,
+            type=type,
+            text=text,
+            sender_type=sender_type,
+            destination=destination,
+            sent_at=datetime.datetime.now(),
+            error=error,
+            trace_id=trace_id,
+            observation_id=observation_id,
+            tools=tools,
+            stream_id=stream_id
+        )
+        db.session.add(agent_history)
+        db.session.commit()
+
+    @staticmethod
+    def log_from_dataframe(df: pd.DataFrame, agent_id: int, type: str, sender_type: str, trace_id: str,
+                           observation_id: str, tools: str = None, stream_id: str = None):
+        answers = "\n".join(f"answer: {answer}" for answer in df['answer'])
+        AgentsController.save_agent_history(
+            agent_id=agent_id,
+            type=type,
+            text=answers,
+            sender_type=sender_type,
+            trace_id=trace_id,
+            observation_id=observation_id,
+            tools=tools,
+            stream_id=stream_id
+        )
+
+    @staticmethod
+    def log_from_iterator(iterator: Iterator[object], agent_id: int, type: str, sender_type: str, trace_id: str,
+                          observation_id: str, stream_id: str, tools: str = None):
+        def generator_with_logging():
+            for obj in iterator:
+                text = repr(obj) if hasattr(obj, '__repr__') else str(obj)
+                AgentsController.save_agent_history(
+                    agent_id=agent_id,
+                    type=type,
+                    text=text,
+                    sender_type=sender_type,
+                    trace_id=trace_id,
+                    observation_id=observation_id,
+                    tools=tools,
+                    stream_id=stream_id
+                )
+                yield obj  # Yield the original object to preserve the iterator functionality
+
+        return generator_with_logging()

@@ -103,7 +103,7 @@ An agent can be created, deleted, queried, and updated. Here is how you can do t
     USING 
         skills=['text_to_sql_skill'], -- this must be created with CREATE SKILL
         provider='openai', -- choose one of the available model providers (openai, anthropic, anyscale, ollama, litellm, mindsdb)
-        model_name='gpt-4', -- define the model from the provider
+        model='gpt-4', -- define the model from the provider
         prompt_template='Answer the user input in a helpful way using tools', -- provide instruction to the model
         verbose=True,
         max_tokens=100;

@@ -483,6 +483,7 @@ class Agents(Base):
             "created_at": self.created_at,
         }
 
+
 class AgentsHistory(Base):
     __tablename__ = "agents_history"
     id = Column(Integer, primary_key=True)
@@ -513,6 +514,7 @@ class AgentsHistory(Base):
             "tools": self.tools,
             "stream_id": self.stream_id,
         }
+
 
 class KnowledgeBase(Base):
     __tablename__ = "knowledge_base"

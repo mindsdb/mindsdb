@@ -1,0 +1,9 @@
+name: "TEST"
+on:
+  push:
+jobs:
+  Test:
+    runs-on: mdb-dev
+    steps:
+      - name: test
+        uses: actions/checkout@v4

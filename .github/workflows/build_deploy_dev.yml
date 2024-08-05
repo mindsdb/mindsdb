@@ -1,7 +1,7 @@
 name: Build and deploy to dev
 
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, reopened, synchronize, labeled]
 
 # Cancel any existing runs of this workflow on the same branch/pr
@@ -11,10 +11,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+
   # Looks for labels like "deploy-to-<env>" attached to a PR so we can deploy to those envs
   get-deploy-labels:
     name: Get Deploy Envs
     runs-on: mdb-dev
+    environment:
+      name: ${{ github.event.pull_request.head.repo.fork && 'manual-approval' || '' }}
     outputs:
       deploy-envs: ${{ steps.get-labels.outputs.deploy-envs }}
     steps:
@@ -34,6 +37,8 @@ jobs:
     if: needs.get-deploy-labels.outputs.deploy-envs != '[]'
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Pull MindsDB Github Actions
         uses: actions/checkout@v4
         with:
@@ -51,6 +56,8 @@ jobs:
     needs: [build]
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Pull MindsDB Github Actions
         uses: actions/checkout@v4
         with:
@@ -59,14 +66,16 @@ jobs:
       - uses: ./github-actions/docker-bake-cache
 
   # Call our deployment workflow, so long as this is not a forked PR
+  # This will run the deployment workflow in the base branch, not in the PR.
+  # So if you change the deploy workflow in your PR, the changes won't be reflected in this run.
   deploy:
     name: Deploy
     needs: [build, get-deploy-labels]
-    if: needs.get-deploy-labels.outputs.deploy-envs != '[]' && !github.event.pull_request.head.repo.fork
+    if: needs.get-deploy-labels.outputs.deploy-envs != '[]'
     uses: ./.github/workflows/deploy.yml
     with:
       deploy-envs: ${{ needs.get-deploy-labels.outputs.deploy-envs }}
-      image-tag: ${{ github.sha }}
+      image-tag: ${{ github.event.pull_request.head.sha }}
     secrets: inherit
 
   # Run integration tests

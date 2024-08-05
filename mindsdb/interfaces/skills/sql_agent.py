@@ -1,8 +1,6 @@
 from typing import Iterable, List, Optional
 
 import re
-import hashlib
-
 
 import pandas as pd
 from mindsdb_sql import parse_sql
@@ -26,14 +24,13 @@ class SQLAgent:
             sample_rows_in_table_info: int = 3,
             cache: Optional[dict] = None
     ):
-        self._database = database
         self._command_executor = command_executor
 
         self._sample_rows_in_table_info = int(sample_rows_in_table_info)
 
         self._tables_to_include = include_tables
         self._tables_to_ignore = []
-        self._database = database
+        self._databases = database.split(',')
         if not self._tables_to_include:
             # ignore_tables and include_tables should not be used together.
             # include_tables takes priority if it's set.
@@ -47,7 +44,8 @@ class SQLAgent:
         self._check_tables(ast_query)
 
         if database is None:
-            database = self._database
+            # if we use tables with prefixes it should work for any database
+            database = self._databases[0]
 
         ret = self._command_executor.execute_command(
             ast_query,
@@ -67,7 +65,7 @@ class SQLAgent:
 
     def get_usable_table_names(self) -> Iterable[str]:
 
-        cache_key = f'{ctx.company_id}_{self._database}_tables'
+        cache_key = f'{ctx.company_id}_{",".join(self._databases)}_tables'
 
         # first check cache and return if found
         if self._cache:
@@ -82,7 +80,7 @@ class SQLAgent:
         dbs = [lst[0] for lst in ret.data.to_lists() if lst[0] != 'information_schema']
         usable_tables = []
         for db in dbs:
-            if db != 'mindsdb' and db == self._database:
+            if db != 'mindsdb' and db in self._databases:
                 try:
                     ret = self._call_engine('show tables', database=db)
                     tables = [lst[0] for lst in ret.data.to_lists() if lst[0] != 'information_schema']

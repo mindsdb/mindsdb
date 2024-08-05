@@ -1,4 +1,5 @@
 import enum
+from collections import defaultdict
 from typing import List, Optional
 
 from mindsdb_sql.parser.ast import Select, BinaryOperation, Identifier, Constant, Star
@@ -7,6 +8,7 @@ from mindsdb.integrations.libs.vectordatabase_handler import TableField
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities import log
 from mindsdb.utilities.cache import get_cache
+
 from .sql_agent import SQLAgent
 
 _DEFAULT_TOP_K_SIMILARITY_SEARCH = 5
@@ -54,7 +56,7 @@ class SkillToolController:
             cache=get_cache('agent', max_size=_MAX_CACHE_SIZE)
         )
 
-    def _make_text_to_sql_tools(self, skill: db.Skills, llm) -> list:
+    def _make_text_to_sql_tools(self, skills: List[db.Skills], llm) -> list:
         '''
            Uses SQLAgent to execute tool
         '''
@@ -66,26 +68,37 @@ class SkillToolController:
         except ImportError:
             raise ImportError(
                 'To use the text-to-SQL skill, please install langchain with `pip install mindsdb[langchain]`')
-        database = skill.params['database']
-        tables = skill.params['tables']
-        tables_to_include = [f'{database}.{table}' for table in tables]
+
+        tables_list = []
+        for skill in skills:
+            database = skill.params['database']
+            for table in skill.params['tables']:
+                tables_list.append(f'{database}.{table}')
+
+        # use list databases
+        database = ','.join(set(s.params['database'] for s in skills))
         db = MindsDBSQL(
             engine=self.get_command_executor(),
             database=database,
             metadata=self.get_command_executor().session.integration_controller,
-            include_tables=tables_to_include
+            include_tables=tables_list
         )
+
         # Users probably don't need to configure this for now.
         sql_database_tools = MindsDBSQLToolkit(db=db, llm=llm).get_tools()
-        description = skill.params.get('description', '')
-        tables_list = ','.join([f'{database}.{table}' for table in tables])
+        descriptions = []
+        for skill in skills:
+            description = skill.params.get('description', '')
+            if description:
+                descriptions.append(description)
+
         for i, tool in enumerate(sql_database_tools):
             if isinstance(tool, QuerySQLDataBaseTool):
                 # Add our own custom description so our agent knows when to query this table.
                 tool.description = (
-                    f'Use this tool if you need data about {description}. '
+                    f'Use this tool if you need data about {" OR ".join(descriptions)}. '
                     'Use the conversation context to decide which table to query. '
-                    f'These are the available tables: {tables_list}.\n'
+                    f'These are the available tables: {",".join(tables_list)}.\n'
                     f'ALWAYS consider these special cases:\n'
                     f'- Not all SQL functions are supported. Do NOT use the following functions: INTERVAL. \n'
                     f'- For TIMESTAMP type columns, make sure you include the time portion in your query (e.g. WHERE date_column = "2020-01-01 12:00:00")'

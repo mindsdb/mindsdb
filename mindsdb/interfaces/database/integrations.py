@@ -587,7 +587,7 @@ class IntegrationController:
     def reload_handler_module(self, handler_name):
         importlib.reload(self.handler_modules[handler_name])
         try:
-            handler_meta = self._get_handler_meta(self.handler_modules[handler_name], handler_name)
+            handler_meta = self._get_handler_meta(handler_name)
         except Exception as e:
             handler_meta = self.handlers_import_status[handler_name]
             handler_meta['import']['success'] = False
@@ -761,7 +761,7 @@ class IntegrationController:
         # tries to import all not imported yet
 
         result = {}
-        for handler_name in self.handlers_import_status.keys():
+        for handler_name in list(self.handlers_import_status.keys()):
             handler_meta = self.get_handler_meta(handler_name)
             result[handler_name] = handler_meta
 

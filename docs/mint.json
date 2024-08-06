@@ -484,6 +484,7 @@
           "group": "AI Agents",
           "pages": [
             "mindsdb_sql/agents/agent",
+            "mindsdb_sql/agents/chatbot",
             "mindsdb_sql/agents/knowledge-bases"
           ]
         },
@@ -595,7 +596,12 @@
             "rest/agents/list-skills",
             "rest/agents/get-skill",
             "rest/agents/update-skill",
-            "rest/agents/delete-skill"
+            "rest/agents/delete-skill",
+            "rest/agents/create-chatbot",
+            "rest/agents/list-chatbots",
+            "rest/agents/get-chatbot",
+            "rest/agents/update-chatbot",
+            "rest/agents/delete-chatbot"
           ]
         }
       ]

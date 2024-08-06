@@ -14,12 +14,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Check that the version defined in the github release is valid
   check-version:
+    name: Check Code Version
     runs-on: mdb-dev
     if: github.actor != 'mindsdbadmin'
     steps:
       - uses: actions/checkout@v4
-      # Get clean environment variables via https://github.com/marketplace/actions/github-environment-variables-action
       - uses: FranzDiebold/github-env-vars-action@v2
       - name: Set up Python
         uses: actions/setup-python@v5.1.0
@@ -29,7 +30,9 @@ jobs:
         run: |
           PYTHONPATH=./ python tests/scripts/check_version.py ${{ env.CI_REF_NAME }} ${{ github.event.release.prerelease }}
 
+  # Push a new release to PyPI
   deploy_to_pypi:
+    name: Publish to PyPI
     runs-on: mdb-dev
     needs: check-version
     if: github.actor != 'mindsdbadmin'
@@ -51,9 +54,10 @@ jobs:
           python setup.py sdist
           twine upload dist/*
 
-  docker_build:
-    # Build our docker images based on our bake file
-    # This will tag with the release version tag and push to both dockerhub and ECR
+  # Build our docker images based on our bake file
+  # This will tag with the release version tag and push to both dockerhub and ECR
+  build:
+    name: Build Docker Images
     runs-on: mdb-dev
     needs: [check-version]
     if: github.actor != 'mindsdbadmin'
@@ -75,12 +79,13 @@ jobs:
         with:
           push-to-dockerhub: true
 
-  docker_build_cache:
-    # Build our docker images based on our bake file
-    # This job only pushes the layers to the cache repo
-    # It's done separately so other jobs can run without waiting for this one
+  # Build our docker images based on our bake file
+  # This job only pushes the layers to the cache repo
+  # It's done separately so other jobs can run without waiting for this one
+  build_cache:
+    name: Build Docker Cache
     runs-on: mdb-dev
-    needs: [docker_build]
+    needs: [build]
     steps:
       - uses: actions/checkout@v4
       - name: Pull MindsDB Github Actions
@@ -91,62 +96,23 @@ jobs:
           ssh-key: ${{ secrets.GH_ACTIONS_PULL_SSH }}
       - uses: ./github-actions/docker-bake-cache
 
-  trigger_deploy:
-    # Trigger private repo to deploy to prod env
-    runs-on: mdb-dev
-    needs: docker_build
-    if: github.actor != 'mindsdbadmin'
-    environment:
-      name: prod
-      url: ${{ vars.ENV_URL }}
-    # We only want to run one deploy job for an env at a time
-    # Don't cancel in progress jobs because it may be for a different PR
-    concurrency:
-      group: deploy-prod
-      cancel-in-progress: false
-    steps:
-      - name: Pull MindsDB Github Actions
-        uses: actions/checkout@v4
-        with:
-          repository: mindsdb/github-actions
-          path: github-actions
-          ssh-key: ${{ secrets.GH_ACTIONS_PULL_SSH }}
-      - name: Notify of deployment starting
-        id: slack
-        uses: ./github-actions/slack-deploy-msg
-        with:
-          channel-id: ${{ secrets.SLACK_DEPLOYMENTS_CHANNEL_ID }}
-          status: "started"
-          color: "#0099CC"
-          env-name: "prod"
-          env-url: ${{ vars.ENV_URL }}
-          slack-token: ${{ secrets.GH_ACTIONS_SLACK_BOT_TOKEN }}
-      - uses: FranzDiebold/github-env-vars-action@v2
-      - uses: convictional/trigger-workflow-and-wait@v1.6.5
-        with:
-          owner: mindsdb
-          repo: INTERNAL-mindsdb-build-deploy-to-kubernetes
-          github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}
-          workflow_file_name: deploy-prod.yml
-          ref: main
-          client_payload: '{"image-tag-prefix": "${{ env.CI_REF_NAME }}", "deploy-env": "prod"}'
-      - name: Notify of deployment finish
-        uses: ./github-actions/slack-deploy-msg
-        if: always()
-        with:
-          channel-id: ${{ secrets.SLACK_DEPLOYMENTS_CHANNEL_ID }}
-          status: "${{ job.status == 'success' && 'finished' || 'failed' }}"
-          color: "${{ job.status == 'success' && '#00C851' || '#FF4444' }}"
-          env-name: "prod"
-          env-url: ${{ vars.ENV_URL }}
-          slack-token: ${{ secrets.GH_ACTIONS_SLACK_BOT_TOKEN }}
-          update-message-id: ${{ steps.slack.outputs.ts }}
-  
 
+  # Call our deployment workflow
+  deploy:
+    name: Deploy to Prod
+    needs: [build]
+    uses: ./.github/workflows/deploy.yml
+    with:
+      deploy-envs: '["prod"]'
+      image-tag: ${{ github.event.release.tag_name }}
+      prod: true
+    secrets: inherit
+  
+  # Trigger private repo to deploy the docker desktop extension
   trigger_dd_extension_release:
-    # Trigger private repo to deploy to prod env
+    name: Deploy Docker Desktop Extension
     runs-on: mdb-dev
-    needs: docker_build
+    needs: [build]
     if: github.actor != 'mindsdbadmin'
     environment:
       name: prod
@@ -161,8 +127,10 @@ jobs:
           ref: main
           client_payload: '{"image-tag": "${{ env.CI_REF_NAME }}"}'
 
+  # Run integration tests
+  # TODO: Run these against the deployed environment
   run_tests:
-    name: Run Post-Deploy Tests
-    needs: [trigger_deploy]
+    name: Run Integration Tests
+    needs: [deploy]
     uses: ./.github/workflows/test_on_deploy.yml
     secrets: inherit

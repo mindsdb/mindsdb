@@ -1,23 +1,16 @@
 import unittest
+from unittest.mock import MagicMock
+
 import numpy as np
 import pandas as pd
-from unittest.mock import MagicMock, Mock
 
-from test_postgres import TestPostgresHandler
-
-from mindsdb.integrations.handlers.redshift_handler.redshift_handler import RedshiftHandler
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-
-
-class CursorContextManager(Mock):
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        pass
+from mindsdb.integrations.handlers.redshift_handler.redshift_handler import RedshiftHandler
+from test_postgres import TestPostgresHandler
+from tests.unit.handlers.base_db_test import CursorContextManager
 
 
 class TestRedshiftHandler(TestPostgresHandler):

@@ -205,6 +205,7 @@ class DynamoDBHandler(DatabaseHandler):
             Response: The response from the `native_query` method, containing the result of the SQL query execution.
         """
         if isinstance(query, Select):
+            error_message = None
             if query.limit or query.group_by or query.having or query.offset:
                 error_message = "The provided SELECT query contains unsupported clauses. "
 

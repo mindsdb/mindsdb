@@ -111,7 +111,7 @@ class TestDynamoDBHandler(unittest.TestCase):
 
     def test_query_select_failure_with_unsupported_clause(self):
         """
-        Test if the `query` method returns a response object with an error status on a SELECT query with an unsupported clause.
+        Test if the `query` method raises ValueError on a SELECT query with an unsupported clause.
         """
         query = ast.Select(
             targets=[
@@ -125,8 +125,7 @@ class TestDynamoDBHandler(unittest.TestCase):
 
     def test_query_insert_failure(self):
         """
-        Test if the `query` method returns a response object with a success status on an INSERT query.
-        `native_query` cannot be tested directly because it depends on some pre-processing steps handled by the `query` method.
+        Test if the `query` method raises ValueError on an INSERT query. INSERT queries are not supported by this handler at the moment.
         """
         mock_boto3_client = Mock()
         mock_boto3_client.execute_statement.return_value = {}

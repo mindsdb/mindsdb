@@ -55,12 +55,12 @@ class DynamoDBHandler(DatabaseHandler):
         """
         if self.is_connected is True:
             return self.connection
-        
+
         # Mandatory connection parameters.
         if not all(key in self.connection_data for key in ['aws_access_key_id', 'aws_secret_access_key', 'region_name']):
             logger.error('Connection failed as required parameters (aws_access_key_id, aws_secret_access_key, region_name) have not been provided.')
             raise ValueError('Required parameters (aws_access_key_id, aws_secret_access_key, region_name) must be provided.')
-        
+
         config = {
             'aws_access_key_id': self.connection_data.get('aws_access_key_id'),
             'aws_secret_access_key': self.connection_data.get('aws_secret_access_key'),
@@ -106,7 +106,7 @@ class DynamoDBHandler(DatabaseHandler):
         try:
             connection = self.connect()
             connection.list_tables()
-            
+
             response.success = True
         except (ValueError, ClientError) as known_error:
             logger.error(f'Connection check to Amazon DynamoDB failed, {known_error}!')
@@ -139,7 +139,7 @@ class DynamoDBHandler(DatabaseHandler):
 
         try:
             result = connection.execute_statement(Statement=query)
-            
+
             if self.is_select_query:
                 if result['Items']:
                     # TODO: Can parsing be optimized?
@@ -152,7 +152,7 @@ class DynamoDBHandler(DatabaseHandler):
                             NextToken=result['NextToken']
                         )
                         records.extend(self._parse_records(result['Items']))
-                        
+
                     response = Response(
                         RESPONSE_TYPE.TABLE,
                         data_frame=pd.json_normalize(records)
@@ -194,10 +194,10 @@ class DynamoDBHandler(DatabaseHandler):
             Dict: A dictionary containing the parsed record.
         """
         deserializer = TypeDeserializer()
-        
+
         parsed_records = []
         for record in records:
-            parsed_records.append({k: deserializer.deserialize(v) for k,v in record.items()})
+            parsed_records.append({k: deserializer.deserialize(v) for k, v in record.items()})
 
         return parsed_records
 

@@ -213,7 +213,6 @@ class DynamoDBHandler(DatabaseHandler):
         """
         if isinstance(query, Select):
             if query.limit or query.group_by or query.having or query.offset:
-                self.is_select_query = True
                 raise ValueError(
                     "The provided SELECT query contains unsupported clauses. "
                     "Please refer to the following documentation for running PartiQL SELECT queries "
@@ -221,6 +220,9 @@ class DynamoDBHandler(DatabaseHandler):
                     "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ql-reference.select.html"
                 )
 
+            self.is_select_query = True
+        
+        # TODO: Add support for INSERT queries.
         elif isinstance(query, Insert):
             raise ValueError("Insert queries are not supported by this integration at the moment.")
 

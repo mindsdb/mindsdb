@@ -1,27 +1,20 @@
-import unittest
-import pandas as pd
 from collections import OrderedDict
-from botocore.client import ClientError
-from unittest.mock import patch, MagicMock, Mock
+import unittest
+from unittest.mock import patch, MagicMock
 
+from botocore.client import ClientError
 from mindsdb_sql.parser import ast
 from mindsdb_sql.parser.ast.select.star import Star
 from mindsdb_sql.parser.ast.select.identifier import Identifier
+import pandas as pd
 
+from mindsdb.integrations.handlers.s3_handler.s3_handler import S3Handler
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
     RESPONSE_TYPE
 )
-from mindsdb.integrations.handlers.s3_handler.s3_handler import S3Handler
-
-
-class CursorContextManager(Mock):
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        pass
+from tests.unit.handlers.base_db_test import CursorContextManager
 
 
 class TestS3Handler(unittest.TestCase):

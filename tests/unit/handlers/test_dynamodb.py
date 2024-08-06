@@ -1,5 +1,4 @@
 import unittest
-import pandas as pd
 from collections import OrderedDict
 from botocore.client import ClientError
 from unittest.mock import patch, MagicMock, Mock

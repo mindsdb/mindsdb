@@ -78,7 +78,7 @@ class TestDynamoDBHandler(unittest.TestCase):
         assert isinstance(response, StatusResponse)
         self.assertFalse(response.error_message)
 
-    def test_query_select(self):
+    def test_query_select_success(self):
         """
         Test if the `query` method returns a response object with a data frame containing the query result.
         `native_query` cannot be tested directly because it depends on some pre-processing steps handled by the `query` method.
@@ -108,6 +108,20 @@ class TestDynamoDBHandler(unittest.TestCase):
         self.assertEqual(df.columns.tolist(), ['id', 'name'])
         self.assertEqual(df['id'].tolist(), [1, 2])
         self.assertEqual(df['name'].tolist(), ['Alice', 'Bob'])
+
+    def test_query_select_failure_with_unsupported_clause(self):
+        """
+        Test if the `query` method returns a response object with an error status on a SELECT query with an unsupported clause.
+        """
+        query = ast.Select(
+            targets=[
+                Star(),
+            ],
+            from_table=ast.Identifier('table1'),
+            limit=10
+        )
+        with self.assertRaises(ValueError):
+            self.handler.query(query)
 
     def test_query_insert(self):
         """

@@ -29,7 +29,7 @@ dill == 0.3.6
 numpy
 pytz
 botocore
-boto3
+boto3 >= 1.34.131
 python-dateutil
 gunicorn
 scikit-learn==1.3.2

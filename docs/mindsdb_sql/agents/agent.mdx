@@ -96,6 +96,19 @@ An agent can be created, deleted, queried, and updated. Here is how you can do t
        skills = ['test_skill']; -- this must be created with CREATE SKILL
     ```
 
+    Alternatively, you can create an agent and define the model to be used by an agent at the agent creation time based on [the model providers defined here](/integrations/ai-engines/langchain#openai).
+
+    ```sql
+    CREATE AGENT my_agent
+    USING 
+        skills=['text_to_sql_skill'], -- this must be created with CREATE SKILL
+        provider='openai', -- choose one of the available model providers (openai, anthropic, anyscale, ollama, litellm, mindsdb)
+        model='gpt-4', -- define the model from the provider
+        prompt_template='Answer the user input in a helpful way using tools', -- provide instruction to the model
+        verbose=True,
+        max_tokens=100;
+    ```
+
 * Updating an AI agent:
 
     ```sql

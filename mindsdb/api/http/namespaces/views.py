@@ -1,10 +1,11 @@
 from http import HTTPStatus
 
 from flask import request
-from flask_restx import Resource, abort
+from flask_restx import Resource
 from sqlalchemy.exc import NoResultFound
 
 
+from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.metrics.metrics import api_endpoint_metrics
@@ -20,7 +21,11 @@ class ViewsList(Resource):
         try:
             project = session.database_controller.get_project(project_name)
         except NoResultFound:
-            abort(HTTPStatus.NOT_FOUND, f'Project name {project_name} does not exist')
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                'Project not found',
+                f'Project name {project_name} does not exist'
+            )
 
         all_views = project.get_views()
         all_view_objs = []
@@ -38,23 +43,23 @@ class ViewsList(Resource):
     def post(self, project_name):
         '''Create a new view'''
         if 'view' not in request.json:
-            abort(HTTPStatus.BAD_REQUEST, 'Must provide "view" parameter in POST body')
+            return http_error(HTTPStatus.BAD_REQUEST, 'Wrong argument', 'Must provide "view" parameter in POST body')
         session = SessionController()
         view_obj = request.json['view']
         if 'name' not in view_obj:
-            abort(HTTPStatus.BAD_REQUEST, 'Missing "name" field for view')
+            return http_error(HTTPStatus.BAD_REQUEST, 'Wrong argument', 'Missing "name" field for view')
         if 'query' not in view_obj:
-            abort(HTTPStatus.BAD_REQUEST, 'Missing "query" field for view')
+            return http_error(HTTPStatus.BAD_REQUEST, 'Wrong argument', 'Missing "query" field for view')
         name = view_obj['name']
         query = view_obj['query']
 
         try:
             project = session.database_controller.get_project(project_name)
         except NoResultFound:
-            abort(HTTPStatus.NOT_FOUND, f'Project name {project_name} does not exist')
+            return http_error(HTTPStatus.NOT_FOUND, 'Not found', f'Project name {project_name} does not exist')
 
         if project.get_view(name) is not None:
-            abort(HTTPStatus.CONFLICT, f'View with name {name} already exists.')
+            return http_error(HTTPStatus.CONFLICT, 'Name conflict', f'View with name {name} already exists.')
 
         project.create_view(name, query)
         created_view = project.get_view(name)
@@ -78,11 +83,11 @@ class ViewResource(Resource):
         try:
             project = session.database_controller.get_project(project_name)
         except NoResultFound:
-            abort(HTTPStatus.NOT_FOUND, f'Project name {project_name} does not exist')
+            return http_error(HTTPStatus.NOT_FOUND, 'Project not found', f'Project name {project_name} does not exist')
 
         view = project.get_view(view_name)
         if view is None:
-            abort(HTTPStatus.NOT_FOUND, f'View with name {view_name} does not exist')
+            return http_error(HTTPStatus.NOT_FOUND, 'View not found', f'View with name {view_name} does not exist')
 
         # Only want to return relevant fields to the user.
         return {
@@ -96,19 +101,19 @@ class ViewResource(Resource):
     def put(self, project_name, view_name):
         '''Updates or creates a view'''
         if 'view' not in request.json:
-            abort(HTTPStatus.BAD_REQUEST, 'Must provide "view" parameter in PUT body')
+            return http_error(HTTPStatus.BAD_REQUEST, 'Wrong argument', 'Must provide "view" parameter in PUT body')
         request_view = request.json['view']
         session = SessionController()
         try:
             project = session.database_controller.get_project(project_name)
         except NoResultFound:
-            abort(HTTPStatus.NOT_FOUND, f'Project name {project_name} does not exist')
+            return http_error(HTTPStatus.NOT_FOUND, 'Project not found', f'Project name {project_name} does not exist')
 
         existing_view = project.get_view(view_name)
         if existing_view is None:
             # Create
             if 'query' not in request_view:
-                abort(HTTPStatus.BAD_REQUEST, 'Missing "query" field for new view')
+                return http_error(HTTPStatus.BAD_REQUEST, 'Wrong argument', 'Missing "query" field for new view')
             project.create_view(view_name, request_view['query'])
             created_view = project.get_view(view_name)
             # Only want to return relevant fields to the user.
@@ -139,10 +144,10 @@ class ViewResource(Resource):
         try:
             project = session.database_controller.get_project(project_name)
         except NoResultFound:
-            abort(HTTPStatus.NOT_FOUND, f'Project name {project_name} does not exist')
+            return http_error(HTTPStatus.NOT_FOUND, 'Project not found', f'Project name {project_name} does not exist')
 
         if project.get_view(view_name) is None:
-            abort(HTTPStatus.NOT_FOUND, f'View with name {view_name} does not exist')
+            return http_error(HTTPStatus.NOT_FOUND, 'View not found', f'View with name {view_name} does not exist')
 
         project.delete_view(view_name)
         return '', HTTPStatus.NO_CONTENT

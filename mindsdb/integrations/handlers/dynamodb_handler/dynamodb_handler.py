@@ -58,6 +58,7 @@ class DynamoDBHandler(DatabaseHandler):
         
         # Mandatory connection parameters.
         if not all(key in self.connection_data for key in ['aws_access_key_id', 'aws_secret_access_key', 'region_name']):
+            logger.error('Connection failed as required parameters (aws_access_key_id, aws_secret_access_key, region_name) have not been provided.')
             raise ValueError('Required parameters (aws_access_key_id, aws_secret_access_key, region_name) must be provided.')
         
         config = {

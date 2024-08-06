@@ -1,7 +1,8 @@
+import json
 import shopify
 import requests
 import pandas as pd
-from typing import Text, List, Dict, Any
+from typing import Text, List, Dict, Any, Set
 
 from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APITable
@@ -398,6 +399,55 @@ class OrdersTable(APITable):
 
         return orders_df
 
+    def insert(self, query: ast.Insert) -> None:
+        """
+        Inserts data into the Shopify "POST /orders" API endpoint.
+
+        Parameters
+        ----------
+        query : ast.Insert
+            Given SQL INSERT query
+        
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the query contains an unsupported condition
+        """
+        insert_statement_parser = INSERTQueryParser(
+            query,
+            supported_columns=['address1_ba', 'address2_ba', 'city_ba', 'company_ba', 'country_ba',
+                               'country_code_ba', 'first_name_ba', 'last_name_ba', 'latitude_ba', 
+                               'longitude_ba', 'name_ba', 'phone_ba', 'province_ba', 'province_code_ba', 
+                               'zip_ba', 
+                               'address1_sa', 'address2_sa', 'city_sa', 'company_sa',
+                               'country_sa', 'country_code_sa', 'first_name_sa', 'last_name_sa', 
+                               'latitude_sa', 'longitude_sa', 'name_sa', 'phone_sa', 'province_sa', 
+                               'province_code_sa', 'zip_sa', 
+                               'amount_dc', 'code_dc', 'type_dc',
+                               'gift_card_li', 'grams_li',  'price_li', 'quantity_li', 'title_li', 
+                               'vendor_li', 'fulfillment_status_li', 'sku_li', 'variant_title_li', 
+                               'name_li', 'value_li',
+                               'price_tl', 'rate_tl', 'title_tl', 'channel_liable_tl',
+                               'name_na', 'value_na',
+                               'code_sl', 'price_sl', 'discounted_price_sl', 'source_sl', 
+                               'title_sl', 
+                               'carrier_identifier_sl', 'requested_fulfillment_service_id_sl', 
+                               'is_removed_sl',
+                               'buyer_accepts_marketing', 'currency', 'email', 'financial_status', 
+                               'fulfillment_status', 'note', 'phone', 'po_number', 'processed_at', 
+                               'referring_site', 'source_name', 'source_identifier', 'source_url', 
+                               'tags', 'taxes_included', 'test', 'total_tax', 'total_weight'],
+            mandatory_columns=['price_li', 'title_li'],
+            all_mandatory=False
+        )
+        order_data = insert_statement_parser.parse_query()
+        self.create_orders(order_data)
+
+
     def update(self, query: ast.Update) -> None:
         """Updates data in the Shopify "PUT /orders" API endpoint.
 
@@ -470,6 +520,72 @@ class OrdersTable(APITable):
             order.save()
             logger.info(f'Order {order_id} updated')
 
+    def create_orders(self, order_data: List[Dict[Text, Any]]) -> None:
+        api_session = self.handler.connect()
+        shopify.ShopifyResource.activate_session(api_session)
+        # separate columns by API object
+        line_items_columns = {'gift_card_li', 'grams_li', 'price_li', 'quantity_li', 'title_li',
+                             'vendor_li', 'fulfillment_status_li', 'sku_li', 'variant_title_li'}
+        billing_address_columns = {'address1_ba', 'address2_ba', 'city_ba', 'company_ba',
+                                   'country_ba', 'country_code_ba', 'first_name_ba', 'last_name_ba', 
+                                   'latitude_ba', 'longitude_ba', 'name_ba', 'phone_ba',
+                                   'province_ba', 'province_code_ba', 'zip_ba'}
+        shipping_address_columns = {'address1_sa', 'address2_sa', 'city_sa', 'company_sa',
+                                   'country_sa', 'country_code_sa', 'first_name_sa', 'last_name_sa',
+                                   'latitude_sa', 'longitude_sa', 'name_sa', 'phone_sa',
+                                   'province_sa', 'province_code_sa', 'zip_sa'}
+        discount_codes_columns = {'amount_dc', 'code_dc', 'type_dc'}
+        tax_lines_columns = {'price_tl', 'rate_tl', 'title_tl', 'channel_liable_tl'}
+        note_attributes_columns = {'name_na', 'value_na'}
+        shipping_lines_columns = {'code_sl', 'price_sl', 'discounted_price_sl',
+                                  'source_sl', 'title_sl', 'carrier_identifier_sl',
+                                  'requested_fulfillment_service_id_sl', 'is_removed_sl'}
+        line_items_properties_columns = {'name_li', 'value_li'}
+        all_columns = (line_items_columns | billing_address_columns | shipping_address_columns |
+                       discount_codes_columns | tax_lines_columns | note_attributes_columns |
+                       shipping_lines_columns | line_items_properties_columns)
+        modified_order_data = []
+
+        for order in order_data:
+            # separate values by object
+            order_data_trimmed = {key: val for key, val in order.items()
+                                if key not in all_columns}
+            line_items_data = OrdersTable._extract_data_helper(order, line_items_columns)
+            billing_address_data = OrdersTable._extract_data_helper(order, billing_address_columns)
+            shipping_address_data = OrdersTable._extract_data_helper(order, shipping_address_columns)
+            discount_codes_data = OrdersTable._extract_data_helper(order, discount_codes_columns)
+            tax_lines_data = OrdersTable._extract_data_helper(order, tax_lines_columns)
+            note_attributes_data = OrdersTable._extract_data_helper(order, note_attributes_columns)
+            shipping_lines_data = OrdersTable._extract_data_helper(order, shipping_lines_columns)
+            line_items_properties_data = OrdersTable._extract_data_helper(order, line_items_properties_columns)
+
+            # add sub-arrays to line items object
+            line_items_data['properties'] = [line_items_properties_data]
+
+            # add JSON and array objects to dictionary
+            order_data_trimmed['billing_address'] = json.loads(json.dumps(billing_address_data))
+            order_data_trimmed['shipping_address'] = json.loads(json.dumps(shipping_address_data))
+            order_data_trimmed['line_items'] = json.loads(json.dumps([line_items_data]))
+            order_data_trimmed['discount_codes'] = json.loads(json.dumps([discount_codes_data]))
+            order_data_trimmed['tax_lines'] = json.loads(json.dumps([tax_lines_data]))
+            order_data_trimmed['note_attributes'] = json.loads(json.dumps([note_attributes_data]))
+            order_data_trimmed['shipping_lines'] = json.loads(json.dumps([shipping_lines_data]))
+
+            modified_order_data.append(order_data_trimmed)
+
+        for order in modified_order_data:
+
+            created_order = shopify.Order.create(order)
+            if 'id' not in created_order.to_dict():
+                raise Exception('Order creation failed')
+
+            logger.info(f'Order {created_order.to_dict()["id"]} created')
+
+    @staticmethod
+    def _extract_data_helper(order: Dict, columns: Set, subscript_len: int = 3) -> Dict:
+        strip_index = subscript_len * -1
+        return {key[:strip_index]: val for key, val in order.items() if key in columns}
+
     def delete_orders(self, order_ids: List[int]) -> None:
         api_session = self.handler.connect()
         shopify.ShopifyResource.activate_session(api_session)
@@ -478,7 +594,6 @@ class OrdersTable(APITable):
             order = shopify.Order.find(order_id)
             order.destroy()
             logger.info(f'Order {order_id} deleted')
-    
 
     def get_columns(self) -> List[Text]:
         return pd.json_normalize(self.get_orders(limit=1)).columns.tolist()

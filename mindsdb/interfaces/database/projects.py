@@ -340,6 +340,16 @@ class Project:
                 columns = predictor_record.to_predict
                 if not isinstance(columns, list):
                     columns = [columns]
+        else:
+            # is it agent?
+            agent = db.Agents.query.filter_by(
+                company_id=ctx.company_id,
+                project_id=self.id,
+                name=table_name
+            ).first()
+            if agent is not None:
+                from mindsdb.interfaces.agents.constants import ASSISTANT_COLUMN, USER_COLUMN
+                columns = [ASSISTANT_COLUMN, USER_COLUMN]
 
         return columns
 

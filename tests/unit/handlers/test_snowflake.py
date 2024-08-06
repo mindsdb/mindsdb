@@ -37,7 +37,7 @@ class TestSnowflakeHandler(BaseDBTest, unittest.TestCase):
         return super().setUp()
 
     def create_handler(self):
-        return SnowflakeHandler('mssql', connection_data=self.dummy_connection_data)
+        return SnowflakeHandler('snowflake', connection_data=self.dummy_connection_data)
     
     def create_patcher(self):
         return patch('snowflake.connector.connect')

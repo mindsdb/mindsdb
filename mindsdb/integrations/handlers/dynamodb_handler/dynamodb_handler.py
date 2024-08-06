@@ -72,7 +72,7 @@ class DyanmoDBHandler(DatabaseHandler):
             if param in self.connection_data:
                 config[param] = self.connection_data[param]
 
-        # TODO: Add error handling.
+        # An exception is not raised even if the credentials are invalid, therefore, no error handling is required.
         self.connection = boto3.client(
             'dynamodb',
             **config
@@ -163,12 +163,17 @@ class DyanmoDBHandler(DatabaseHandler):
                     )
             else:
                 response = Response(RESPONSE_TYPE.OK)
-        # TODO: Catch specific exceptions.
-        except Exception as e:
+        except ClientError as client_error:
             logger.error(f'Error running query: {query} on DynamoDB!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
-                error_message=str(e)
+                error_message=str(client_error)
+            )
+        except Exception as unknown_error:
+            logger.error(f'Unknown error running query: {query} on DynamoDB!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(unknown_error)
             )
 
         connection.close()

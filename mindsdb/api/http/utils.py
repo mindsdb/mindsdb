@@ -1,5 +1,6 @@
 import json
 from typing import Optional
+from datetime import datetime
 
 from flask import Response
 
@@ -26,7 +27,8 @@ def http_error(status_code: int, title: Optional[str] = None, detail: Optional[s
     return Response(
         response=json.dumps({
             'title': title,
-            'detail': detail
+            'detail': detail,
+            'timestamp': str(datetime.now())
         }),
         status=status_code,
         headers={

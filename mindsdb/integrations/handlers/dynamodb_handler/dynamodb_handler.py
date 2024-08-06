@@ -3,6 +3,7 @@ from typing import Text, List, Dict, Optional
 import boto3
 from boto3.dynamodb.types import TypeDeserializer
 from botocore.exceptions import ClientError
+from mindsdb_sql.parser.ast import Select
 from mindsdb_sql.parser.ast.base import ASTNode
 import pandas as pd
 
@@ -40,6 +41,7 @@ class DyanmoDBHandler(DatabaseHandler):
 
         self.connection = None
         self.is_connected = False
+        self.is_select_query = False
 
     def connect(self) -> boto3.client:
         """
@@ -136,23 +138,29 @@ class DyanmoDBHandler(DatabaseHandler):
 
         try:
             result = connection.execute_statement(Statement=query)
-            if result['Items']:
-                # TODO: Can parsing be optimized?
-                records = []
-                records.extend(self._parse_records(result['Items']))
-
-                while 'LastEvaluatedKey' in result:
-                    result = connection.execute_statement(
-                        Statement=query,
-                        NextToken=result['NextToken']
-                    )
+            
+            if self.is_select_query:
+                if result['Items']:
+                    # TODO: Can parsing be optimized?
+                    records = []
                     records.extend(self._parse_records(result['Items']))
-                    
-                response = Response(
-                    RESPONSE_TYPE.TABLE,
-                    data_frame=pd.json_normalize(records)
-                )
-            # TODO: Handle situations where a SELECT query returns no records.
+
+                    while 'LastEvaluatedKey' in result:
+                        result = connection.execute_statement(
+                            Statement=query,
+                            NextToken=result['NextToken']
+                        )
+                        records.extend(self._parse_records(result['Items']))
+                        
+                    response = Response(
+                        RESPONSE_TYPE.TABLE,
+                        data_frame=pd.json_normalize(records)
+                    )
+                else:
+                    response = Response(
+                        RESPONSE_TYPE.TABLE,
+                        pd.DataFrame()
+                    )
             else:
                 response = Response(RESPONSE_TYPE.OK)
         # TODO: Catch specific exceptions.
@@ -197,6 +205,9 @@ class DyanmoDBHandler(DatabaseHandler):
         Returns:
             Response: The response from the `native_query` method, containing the result of the SQL query execution.
         """
+        if isinstance(query, Select):
+            self.is_select_query = True
+
         return self.native_query(query.to_string())
 
     def get_tables(self) -> Response:

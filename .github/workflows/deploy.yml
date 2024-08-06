@@ -42,7 +42,7 @@ jobs:
     - uses: FranzDiebold/github-env-vars-action@v2
     - name: Notify of deployment starting
       id: slack
-      uses: ./github-actions/slack-deploy-msg
+      uses: ./github-actions/slack-deploy-msg@9daabefda2c7f33000c5867af87df504df27439b
       with:
         channel-id: ${{ secrets.SLACK_DEPLOYMENTS_CHANNEL_ID }}
         status: "started"
@@ -59,7 +59,7 @@ jobs:
         ref: main
         client_payload: '{"image-tag-prefix": "${{ inputs.image-tag }}", "deploy-env": "${{ matrix.deploy-env }}"}'
     - name: Notify of deployment finish
-      uses: ./github-actions/slack-deploy-msg
+      uses: ./github-actions/slack-deploy-msg@9daabefda2c7f33000c5867af87df504df27439b
       if: always()
       with:
         channel-id: ${{ secrets.SLACK_DEPLOYMENTS_CHANNEL_ID }}

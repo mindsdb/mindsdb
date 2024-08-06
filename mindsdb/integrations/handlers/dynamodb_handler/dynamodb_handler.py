@@ -3,7 +3,7 @@ from typing import Text, List, Dict, Optional
 import boto3
 from boto3.dynamodb.types import TypeDeserializer
 from botocore.exceptions import ClientError
-from mindsdb_sql.parser.ast import Select
+from mindsdb_sql.parser.ast import Select, Insert
 from mindsdb_sql.parser.ast.base import ASTNode
 import pandas as pd
 
@@ -212,7 +212,17 @@ class DynamoDBHandler(DatabaseHandler):
             Response: The response from the `native_query` method, containing the result of the SQL query execution.
         """
         if isinstance(query, Select):
-            self.is_select_query = True
+            if query.limit or query.group_by or query.having or query.offset:
+                self.is_select_query = True
+                raise ValueError(
+                    "The provided SELECT query contains unsupported clauses. "
+                    "Please refer to the following documentation for running PartiQL SELECT queries "
+                    "against Amazon DynamoDB: "
+                    "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ql-reference.select.html"
+                )
+
+        elif isinstance(query, Insert):
+            raise ValueError("Insert queries are not supported by this integration at the moment.")
 
         return self.native_query(query.to_string())
 

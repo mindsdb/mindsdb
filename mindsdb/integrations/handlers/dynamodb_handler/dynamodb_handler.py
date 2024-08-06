@@ -19,9 +19,9 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 
-class DyanmoDBHandler(DatabaseHandler):
+class DynamoDBHandler(DatabaseHandler):
     """
-    This handler handles connection and execution of the SQL statements on Amazon DyanmoDB.
+    This handler handles connection and execution of the SQL statements on Amazon DynamoDB.
     """
 
     name = 'dynamodb'
@@ -32,7 +32,7 @@ class DyanmoDBHandler(DatabaseHandler):
 
         Args:
             name (Text): The name of the handler instance.
-            connection_data (Dict): The connection data required to connect to Amazon DyanmoDB.
+            connection_data (Dict): The connection data required to connect to Amazon DynamoDB.
             kwargs: Arbitrary keyword arguments.
         """
         super().__init__(name)

@@ -41,7 +41,6 @@ class DynamoDBHandler(DatabaseHandler):
 
         self.connection = None
         self.is_connected = False
-        self.is_select_query = False
 
     def connect(self) -> boto3.client:
         """
@@ -140,28 +139,22 @@ class DynamoDBHandler(DatabaseHandler):
         try:
             result = connection.execute_statement(Statement=query)
 
-            if self.is_select_query:
-                if result['Items']:
-                    # TODO: Can parsing be optimized?
-                    records = []
+            if result['Items']:
+                # TODO: Can parsing be optimized?
+                records = []
+                records.extend(self._parse_records(result['Items']))
+
+                while 'LastEvaluatedKey' in result:
+                    result = connection.execute_statement(
+                        Statement=query,
+                        NextToken=result['NextToken']
+                    )
                     records.extend(self._parse_records(result['Items']))
 
-                    while 'LastEvaluatedKey' in result:
-                        result = connection.execute_statement(
-                            Statement=query,
-                            NextToken=result['NextToken']
-                        )
-                        records.extend(self._parse_records(result['Items']))
-
-                    response = Response(
-                        RESPONSE_TYPE.TABLE,
-                        data_frame=pd.json_normalize(records)
-                    )
-                else:
-                    response = Response(
-                        RESPONSE_TYPE.TABLE,
-                        pd.DataFrame()
-                    )
+                response = Response(
+                    RESPONSE_TYPE.TABLE,
+                    data_frame=pd.json_normalize(records)
+                )
             else:
                 response = Response(RESPONSE_TYPE.OK)
         except ClientError as client_error:
@@ -219,8 +212,6 @@ class DynamoDBHandler(DatabaseHandler):
                     "against Amazon DynamoDB: "
                     "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ql-reference.select.html"
                 )
-
-            self.is_select_query = True
 
         # TODO: Add support for INSERT queries.
         elif isinstance(query, Insert):

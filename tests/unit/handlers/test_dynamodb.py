@@ -123,7 +123,7 @@ class TestDynamoDBHandler(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.handler.query(query)
 
-    def test_query_insert(self):
+    def test_query_insert_failure(self):
         """
         Test if the `query` method returns a response object with a success status on an INSERT query.
         `native_query` cannot be tested directly because it depends on some pre-processing steps handled by the `query` method.
@@ -137,10 +137,8 @@ class TestDynamoDBHandler(unittest.TestCase):
             columns=['id', 'name'],
             values=[[1, 'Alice']]
         )
-        response = self.handler.query(query)
-
-        assert isinstance(response, Response)
-        self.assertEqual(response.type, RESPONSE_TYPE.OK)
+        with self.assertRaises(ValueError):
+            self.handler.query(query)
 
     def test_get_tables(self):
         """

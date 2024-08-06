@@ -1,7 +1,8 @@
 from collections import OrderedDict
-from mysql.connector import Error as MySQLError
 import unittest
 from unittest.mock import patch
+
+from mysql.connector import Error as MySQLError
 
 from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
 from tests.unit.handlers.base_db_test import BaseDBTest

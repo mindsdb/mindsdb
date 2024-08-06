@@ -1,7 +1,8 @@
 from collections import OrderedDict
-import pymssql
 import unittest
 from unittest.mock import patch
+
+import pymssql
 
 from mindsdb.integrations.handlers.mssql_handler.mssql_handler import SqlServerHandler
 from tests.unit.handlers.base_db_test import BaseDBTest

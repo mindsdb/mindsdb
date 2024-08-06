@@ -1,8 +1,9 @@
 from collections import OrderedDict
-import psycopg
-from psycopg.pq import ExecStatus
 import unittest
 from unittest.mock import patch, MagicMock
+
+import psycopg
+from psycopg.pq import ExecStatus
 
 from mindsdb.integrations.handlers.postgres_handler.postgres_handler import PostgresHandler
 from mindsdb.integrations.libs.response import (
@@ -58,16 +59,6 @@ class TestPostgresHandler(BaseDBTest, unittest.TestCase):
     
     def create_patcher(self):
         return patch('psycopg.connect')
-
-    dummy_connection_data = OrderedDict(
-        host='127.0.0.1',
-        port=5432,
-        user='example_user',
-        schema='public',
-        password='example_pass',
-        database='example_db',
-        sslmode='prefer'
-    )
 
     def test_native_query(self):
         """

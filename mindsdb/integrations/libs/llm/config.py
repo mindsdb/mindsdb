@@ -83,6 +83,7 @@ class OllamaConfig(BaseLLMConfig):
     stop: Optional[List[str]]
     template: Optional[str]
 
+
 class NvidiaNIMConfig(BaseLLMConfig):
     base_url: str
     model: str
@@ -98,6 +99,7 @@ class NvidiaNIMConfig(BaseLLMConfig):
     stop: Optional[List[str]]
     template: Optional[str]
     nvidia_api_key: Optional[str]
+
 
 class MindsdbConfig(BaseLLMConfig):
     model_name: str

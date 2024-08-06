@@ -3,7 +3,7 @@ from typing import Text, List, Dict, Optional
 import boto3
 from boto3.dynamodb.types import TypeDeserializer
 from botocore.exceptions import ClientError
-from mindsdb_sql.parser.ast import Select, Insert
+from mindsdb_sql.parser.ast import Select, Insert, Join
 from mindsdb_sql.parser.ast.base import ASTNode
 import pandas as pd
 
@@ -206,12 +206,17 @@ class DynamoDBHandler(DatabaseHandler):
         """
         if isinstance(query, Select):
             if query.limit or query.group_by or query.having or query.offset:
-                raise ValueError(
-                    "The provided SELECT query contains unsupported clauses. "
-                    "Please refer to the following documentation for running PartiQL SELECT queries "
-                    "against Amazon DynamoDB: "
-                    "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ql-reference.select.html"
-                )
+                error_message = "The provided SELECT query contains unsupported clauses. "
+
+            if isinstance(query.from_table, Select):
+                error_message = "The provided SELECT query contains subqueies, which are not supported. "
+
+            if isinstance(query, Join):
+                error_message = "The provided SELECT query contains JOIN clauses, which are not supported. "
+
+            if error_message:
+                error_message += "Please refer to the following documentation for running PartiQL SELECT queries against Amazon DynamoDB: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ql-reference.select.html"
+                raise ValueError(error_message)
 
         # TODO: Add support for INSERT queries.
         elif isinstance(query, Insert):

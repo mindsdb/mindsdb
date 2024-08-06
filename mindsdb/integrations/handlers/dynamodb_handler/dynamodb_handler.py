@@ -221,7 +221,7 @@ class DynamoDBHandler(DatabaseHandler):
                 )
 
             self.is_select_query = True
-        
+
         # TODO: Add support for INSERT queries.
         elif isinstance(query, Insert):
             raise ValueError("Insert queries are not supported by this integration at the moment.")

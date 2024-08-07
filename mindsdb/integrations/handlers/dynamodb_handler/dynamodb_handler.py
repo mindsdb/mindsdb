@@ -41,6 +41,7 @@ class DynamoDBHandler(DatabaseHandler):
 
         self.connection = None
         self.is_connected = False
+        self.thread_safe = True
 
     def connect(self) -> boto3.client:
         """

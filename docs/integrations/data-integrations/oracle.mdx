@@ -57,7 +57,7 @@ FROM oracle_datasource.schema_name.table_name
 LIMIT 10;
 ```
 
-Run PL/SQL SQL queries directly on the connected Oracle database:
+Run PL/SQL queries directly on the connected Oracle database:
 
 ```sql
 SELECT * FROM oracle_datasource (
@@ -74,3 +74,17 @@ SELECT * FROM oracle_datasource (
 <Note>
 The above examples utilize `oracle_datasource` as the datasource name, which is defined in the `CREATE DATABASE` command.
 </Note>
+
+## Troubleshooting Guide
+
+<Warning>
+`Database Connection Error`
+
+* **Symptoms**: Failure to connect MindsDB with the Oracle database.
+* **Checklist**:
+    1. Make sure the Oracle database is active.
+    2. Confirm that the connection parameters provided (DSN, host, SID, service_name) and the credentials (user, password) are correct.
+    3. Ensure a stable network between MindsDB and Oracle.
+</Warning>
+
+This [troubleshooting guide](https://docs.oracle.com/en/database/oracle/oracle-database/19/ntqrf/database-connection-issues.html) provided by Oracle might also be helpful.

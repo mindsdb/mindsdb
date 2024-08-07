@@ -110,7 +110,7 @@ class Integration(Resource):
     def get(self, name):
         integration = ca.integration_controller.get(name, show_secrets=False)
         if integration is None:
-            return http_error(HTTPStatus.NOT_FOUND, 'Not found', f'Can\'t find database integration: {name}')
+            return http_error(HTTPStatus.NOT_FOUND, 'Not found', f'Can\'t find integration: {name}')
         integration = copy.deepcopy(integration)
         return integration
 
@@ -211,7 +211,7 @@ class Integration(Resource):
         integration = ca.integration_controller.get(name)
         if integration is None:
             return http_error(
-                HTTPStatus.BAD_REQUEST, 'Integration not exists',
+                HTTPStatus.BAD_REQUEST, 'Integration does not exists',
                 f"Nothing to delete. '{name}' not exists."
             )
         try:
@@ -239,7 +239,7 @@ class Integration(Resource):
         integration = ca.integration_controller.get(name)
         if integration is None:
             return http_error(
-                HTTPStatus.BAD_REQUEST, 'Integration not exists',
+                HTTPStatus.BAD_REQUEST, 'Integration does not exists',
                 f"Nothin to modify. '{name}' not exists."
             )
         try:
@@ -252,7 +252,7 @@ class Integration(Resource):
             logger.error(str(e))
             return http_error(
                 HTTPStatus.INTERNAL_SERVER_ERROR, 'Error',
-                f"Error during integration modifycation: {str(e)}"
+                f"Error during integration modification: {str(e)}"
             )
         return "", 200
 

@@ -28,30 +28,8 @@ class OracleHandler(DatabaseHandler):
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         super().__init__(name)
-        self.host = connection_data.get("host")
-        self.port = int(connection_data.get("port") or 1521)
-        self.sid = connection_data.get("sid")
-        self.service_name = connection_data.get("service_name")
-        self.user = connection_data.get("user")
-        self.password = connection_data.get("password")
-        self.disable_oob = bool(connection_data.get("disable_oob"))
-
-        self.auth_mode = None
-        if 'auth_mode' in connection_data:
-            mode_name = 'AUTH_MODE_' + connection_data['auth_mode'].upper()
-            if not hasattr(oracledb, mode_name):
-                raise ValueError(f'Unknown auth mode: {mode_name}')
-            self.auth_mode = getattr(oracledb, mode_name)
-
-        if self.sid is None and self.service_name is None:
-            raise ValueError("Either 'sid' or 'service_name' must be given")
-        if self.sid and self.service_name:
-            raise ValueError("Only one of 'sid' or 'service_name' must be given")
-
-        if self.sid:
-            self.dsn = makedsn(host=self.host, port=self.port, sid=self.sid)
-        else:
-            self.dsn = makedsn(host=self.host, port=self.port, service_name=self.service_name)
+        self.connection_data = connection_data
+        self.kwargs = kwargs
 
         self.connection = None
         self.is_connected = False
@@ -59,8 +37,43 @@ class OracleHandler(DatabaseHandler):
     def connect(self) -> Connection:
         if self.is_connected is True:
             return self.connection
-        d = None  # default suitable for Linux OS
-        oracledb.init_oracle_client(lib_dir=d)
+        
+        # Mandatory connection parameters.
+        if not all(key in self.connection_data for key in ['user', 'password']):
+            raise ValueError('Required parameters (user, password) must be provided.')
+        
+        config = {
+            'user': self.connection_data['user'],
+            'password': self.connection_data['password'],
+        }
+
+        # If 'dsn' is given, use it. Otherwise, use the individual connection parameters.
+        if 'dsn' in self.connection_data:
+            config['dsn'] = self.connection_data['dsn']
+
+        else:
+            if 'host' not in self.connection_data and not any(key in self.connection_data for key in ['sid', 'service_name']):
+                raise ValueError('Required parameter host and either sid or service_name must be provided. Alternatively, dsn can be provided.')
+            
+            config['host'] = self.connection_data.get('host')
+
+            # Optional connection parameters when 'dsn' is not given.
+            optional_parameters = ['port', 'sid', 'service_name']
+            for parameter in optional_parameters:
+                if parameter in self.connection_data:
+                    config[parameter] = self.connection_data[parameter]
+
+        # Other optional connection parameters.
+        if 'disable_oob' in self.connection_data:
+            config['disable_oob'] = self.connection_data['disable_oob']
+
+        if 'auth_mode' in self.connection_data:
+            mode_name = 'AUTH_MODE_' + self.connection_data['auth_mode'].upper()
+            if not hasattr(oracledb, mode_name):
+                raise ValueError(f'Unknown auth mode: {mode_name}')
+            config['mode'] = getattr(oracledb, mode_name)
+
+        oracledb.init_oracle_client(lib_dir=None) # default suitable for Linux OS
         connection = connect(
             user=self.user, password=self.password, dsn=self.dsn,
             disable_oob=self.disable_oob, mode=self.auth_mode,

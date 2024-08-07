@@ -1,32 +1,40 @@
-from typing import Optional
+from typing import Text, Dict, Optional
 
-import pandas as pd
-import oracledb
-from oracledb import connect, Connection, makedsn
-
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+import oracledb
+from oracledb import connect, Connection
+import pandas as pd
 
-from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE,
 )
+from mindsdb.utilities import log
 
-oracledb.defaults.fetch_lobs = False  # return LOBs directly as strings or bytes
 
+oracledb.defaults.fetch_lobs = False  # Return LOBs directly as strings or bytes.
 logger = log.getLogger(__name__)
+
 
 class OracleHandler(DatabaseHandler):
     """
-    This handler handles connection and execution of the Microsoft SQL Server statements.
+    This handler handles connection and execution of SQL queries on Oracle.
     """
 
     name = "oracle"
 
-    def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
+    def __init__(self, name: Text, connection_data: Optional[Dict], **kwargs) -> None:
+        """
+        Initializes the handler.
+
+        Args:
+            name (Text): The name of the handler instance.
+            connection_data (Dict): The connection data required to connect to Amazon DynamoDB.
+            kwargs: Arbitrary keyword arguments.
+        """
         super().__init__(name)
         self.connection_data = connection_data
         self.kwargs = kwargs
@@ -35,6 +43,15 @@ class OracleHandler(DatabaseHandler):
         self.is_connected = False
 
     def connect(self) -> Connection:
+        """
+        Establishes a connection to the Oracle database.
+
+        Raises:
+            ValueError: If the expected connection parameters are not provided.
+
+        Returns:
+            oracledb.Connection: A connection object to the Oracle database.
+        """
         if self.is_connected is True:
             return self.connection
         
@@ -73,10 +90,10 @@ class OracleHandler(DatabaseHandler):
                 raise ValueError(f'Unknown auth mode: {mode_name}')
             config['mode'] = getattr(oracledb, mode_name)
 
-        oracledb.init_oracle_client(lib_dir=None) # default suitable for Linux OS
+        oracledb.init_oracle_client(lib_dir=None) # Default suitable for Linux OS.
+        # TODO: Add error handling.
         connection = connect(
-            user=self.user, password=self.password, dsn=self.dsn,
-            disable_oob=self.disable_oob, mode=self.auth_mode,
+            **config,
         )
 
         self.is_connected = True
@@ -84,17 +101,21 @@ class OracleHandler(DatabaseHandler):
         return self.connection
 
     def disconnect(self):
-        if self.is_connected:
-            self.connection.close()
+        """
+        Closes the connection to the Oracle database if it's currently open.
+        """
+        if self.is_connected is False:
+            return
+        self.connection.close()
         self.is_connected = False
-        return
 
     def check_connection(self) -> StatusResponse:
         """
-        Check the connection of the database
-        :return: success status and error message if error occurs
-        """
+        Checks the status of the connection to the Oracle database.
 
+        Returns:
+            StatusResponse: An object containing the success status and an error message if an error occurs.
+        """
         response = StatusResponse(False)
         need_to_close = self.is_connected is False
 
@@ -102,21 +123,28 @@ class OracleHandler(DatabaseHandler):
             con = self.connect()
             con.ping()
             response.success = True
+        # TODO: Catch specific exceptions.
         except Exception as e:
-            logger.error(f"Error connecting to Oracle DB {self.dsn}, {e}!")
+            logger.error(f'Error connecting to Oracle, {e}!')
             response.error_message = str(e)
-        finally:
-            if response.success is True and need_to_close:
-                self.disconnect()
-            if response.success is False and self.is_connected is True:
-                self.is_connected = False
+
+        if response.success and need_to_close:
+            self.disconnect()
+
+        elif not response.success and self.is_connected:
+            self.is_connected = False
+
         return response
 
-    def native_query(self, query: str) -> Response:
+    def native_query(self, query: Text) -> Response:
         """
-        Receive SQL query and runs it
-        :param query: The SQL query to run
-        :return: returns the records from the current recordset
+        Executes a SQL query on the Oracle database and returns the result.
+
+        Args:
+            query (Text): The SQL query to be executed.
+
+        Returns:
+            Response: A response object containing the result of the query or an error message.
         """
         need_to_close = self.is_connected is False
 
@@ -137,6 +165,7 @@ class OracleHandler(DatabaseHandler):
                     response = Response(RESPONSE_TYPE.OK)
 
                 connection.commit()
+            # TODO: Catch specific exceptions.
             except Exception as e:
                 logger.error(f"Error running query: {query} on {self.dsn}!")
                 response = Response(
@@ -152,7 +181,13 @@ class OracleHandler(DatabaseHandler):
 
     def query(self, query: ASTNode) -> Response:
         """
-        Retrieve the data from the SQL statement.
+        Executes a SQL query represented by an ASTNode and retrieves the data.
+
+        Args:
+            query (ASTNode): An ASTNode representing the SQL query to be executed.
+
+        Returns:
+            Response: The response from the `native_query` method, containing the result of the SQL query execution.
         """
         renderer = SqlalchemyRender("oracle")
         query_str = renderer.get_string(query, with_failback=True)
@@ -160,7 +195,10 @@ class OracleHandler(DatabaseHandler):
 
     def get_tables(self) -> Response:
         """
-        List all tables in Oracle DB owned by the current user.
+        Retrieves a list of all non-system tables and views in the current schema of the Oracle database.
+
+        Returns:
+            Response: A response object containing the list of tables and views, formatted as per the `Response` class.
         """
         query = """
             SELECT table_name
@@ -169,9 +207,17 @@ class OracleHandler(DatabaseHandler):
         """
         return self.native_query(query)
 
-    def get_columns(self, table_name: str) -> Response:
+    def get_columns(self, table_name: Text) -> Response:
         """
-        Show details about the table.
+        Retrieves column details for a specified table in the Oracle database.
+
+        Args:
+            table_name (Text): The name of the table for which to retrieve column information.
+
+        Returns:
+            Response: A response object containing the column details, formatted as per the `Response` class.
+        Raises:
+            ValueError: If the 'table_name' is not a valid string.
         """
         query = f"""
             SELECT 

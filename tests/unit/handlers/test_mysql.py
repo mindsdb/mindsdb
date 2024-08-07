@@ -5,10 +5,10 @@ from unittest.mock import patch
 from mysql.connector import Error as MySQLError
 
 from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
-from tests.unit.handlers.base_db_test import BaseDBTest
+from tests.unit.handlers.base_handler_test import BaseDatabaseHandlerTest
 
 
-class TestMySQLHandler(BaseDBTest, unittest.TestCase):
+class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
     def setUp(self):
         self.dummy_connection_data = OrderedDict(

@@ -9,10 +9,10 @@ from mindsdb.integrations.handlers.postgres_handler.postgres_handler import Post
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response
 )
-from tests.unit.handlers.base_db_test import BaseDBTest, CursorContextManager
+from tests.unit.handlers.base_handler_test import BaseDatabaseHandlerTest, MockCursorContextManager
 
 
-class TestPostgresHandler(BaseDBTest, unittest.TestCase):
+class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
     def setUp(self):
         self.dummy_connection_data = OrderedDict(
@@ -67,7 +67,7 @@ class TestPostgresHandler(BaseDBTest, unittest.TestCase):
         """
         # TODO: Can this be handled via the base class? The use of ExecStatus is specific to Postgres.
         mock_conn = MagicMock()
-        mock_cursor = CursorContextManager()
+        mock_cursor = MockCursorContextManager()
 
         self.handler.connect = MagicMock(return_value=mock_conn)
         mock_conn.cursor = MagicMock(return_value=mock_cursor)

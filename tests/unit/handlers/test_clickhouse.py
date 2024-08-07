@@ -5,10 +5,10 @@ from unittest.mock import patch, MagicMock
 from sqlalchemy.exc import SQLAlchemyError
 
 from mindsdb.integrations.handlers.clickhouse_handler.clickhouse_handler import ClickHouseHandler
-from tests.unit.handlers.base_db_test import BaseDBTest
+from tests.unit.handlers.base_handler_test import BaseDatabaseHandlerTest
 
 
-class TestClickHouseHandler(BaseDBTest, unittest.TestCase):
+class TestClickHouseHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
     def setUp(self):
         self.dummy_connection_data = OrderedDict(

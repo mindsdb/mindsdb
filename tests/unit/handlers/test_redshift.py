@@ -10,7 +10,7 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.integrations.handlers.redshift_handler.redshift_handler import RedshiftHandler
 from test_postgres import TestPostgresHandler
-from tests.unit.handlers.base_db_test import CursorContextManager
+from tests.unit.handlers.base_handler_test import MockCursorContextManager
 
 
 class TestRedshiftHandler(TestPostgresHandler):
@@ -23,7 +23,7 @@ class TestRedshiftHandler(TestPostgresHandler):
         Tests the `insert` method to ensure it correctly inserts a DataFrame into a table and returns the appropriate response.
         """
         mock_conn = MagicMock()
-        mock_cursor = CursorContextManager()
+        mock_cursor = MockCursorContextManager()
 
         self.handler.connect = MagicMock(return_value=mock_conn)
         mock_conn.cursor = MagicMock(return_value=mock_cursor)

@@ -7,7 +7,7 @@ from mindsdb.integrations.libs.response import (
 )
 
 
-class CursorContextManager(Mock):
+class MockCursorContextManager(Mock):
     """
     A mock class that simulates a cursor context manager for database clients.
     This class is used in the `BaseDatabaseHandlerTest` class to simulate the cursor object returned by the database client.    
@@ -124,7 +124,7 @@ class BaseHandlerTest(ABC):
         self.assertTrue(response.error_message)
 
 
-class BaseDBTest(BaseHandlerTest):
+class BaseDatabaseHandlerTest(BaseHandlerTest):
     """
     Base class for testing database handlers. This class provides methods to test the `native_query`, `get_tables` and `get_columns` methods of a handler.
     This class should be used as a base class for testing database handlers which have a typical implementation via a database client.
@@ -161,7 +161,7 @@ class BaseDBTest(BaseHandlerTest):
         Tests the `native_query` method to ensure it executes a SQL query using a mock cursor and returns a Response object.
         """
         mock_conn = MagicMock()
-        mock_cursor = CursorContextManager()
+        mock_cursor = MockCursorContextManager()
 
         self.handler.connect = MagicMock(return_value=mock_conn)
         mock_conn.cursor = MagicMock(return_value=mock_cursor)

@@ -14,7 +14,7 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     RESPONSE_TYPE
 )
-from tests.unit.handlers.base_db_test import CursorContextManager
+from tests.unit.handlers.base_handler_test import MockCursorContextManager
 
 
 class TestS3Handler(unittest.TestCase):
@@ -134,7 +134,7 @@ class TestS3Handler(unittest.TestCase):
 
         # Mock the cursor object and its methods; these are used within `native_query`.
         mock_conn = MagicMock()
-        mock_cursor = CursorContextManager()
+        mock_cursor = MockCursorContextManager()
 
         self.handler.connect = MagicMock(return_value=mock_conn)
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
@@ -177,7 +177,7 @@ class TestS3Handler(unittest.TestCase):
 
         # Mock the cursor object and its methods; these are used within `native_query`.
         mock_conn = MagicMock()
-        mock_cursor = CursorContextManager()
+        mock_cursor = MockCursorContextManager()
 
         self.handler.connect = MagicMock(return_value=mock_conn)
         mock_conn.cursor = MagicMock(return_value=mock_cursor)

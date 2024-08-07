@@ -5,10 +5,10 @@ from unittest.mock import patch
 import snowflake
 
 from mindsdb.integrations.handlers.snowflake_handler.snowflake_handler import SnowflakeHandler
-from tests.unit.handlers.base_db_test import BaseDBTest
+from tests.unit.handlers.base_handler_test import BaseDatabaseHandlerTest
 
 
-class TestSnowflakeHandler(BaseDBTest, unittest.TestCase):
+class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
     def setUp(self):
         self.dummy_connection_data = OrderedDict(

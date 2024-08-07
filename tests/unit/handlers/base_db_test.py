@@ -18,11 +18,9 @@ class CursorContextManager(Mock):
 
     def fetchall(self):
         return [[1]]
+    
 
-
-class BaseDBTest(ABC):
-    mock_table = 'mock_table'
-
+class BaseHandlerTest(ABC):
     def setUp(self):
         """
         Set up the test environment by creating instances of the patcher and handler.
@@ -30,8 +28,6 @@ class BaseDBTest(ABC):
         The `setUp` method of subclasses should also set the following attributes:
         - `dummy_connection_data`: A dictionary containing dummy connection data.
         - `err_to_raise_on_connect_failure`: An exception to raise when the connection fails.
-        - `get_tables_query`: A SQL query to get the list of tables.
-        - `get_columns_query`: A SQL query to get the columns of a table.
         """
         self.patcher = self.create_patcher()
         self.mock_connect = self.patcher.start()
@@ -98,6 +94,10 @@ class BaseDBTest(ABC):
         assert isinstance(response, StatusResponse)
         self.assertFalse(response.success)
         self.assertTrue(response.error_message)
+
+
+class BaseDBTest(BaseHandlerTest):
+    mock_table = 'mock_table'
 
     def test_native_query(self):
         """

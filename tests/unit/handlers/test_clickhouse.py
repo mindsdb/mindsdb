@@ -10,8 +10,9 @@ from tests.unit.handlers.base_handler_test import BaseDatabaseHandlerTest
 
 class TestClickHouseHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
-    def setUp(self):
-        self.dummy_connection_data = OrderedDict(
+    @property
+    def dummy_connection_data(self):
+        return OrderedDict(
             host='127.0.0.1',
             port=8123,
             user='example_user',
@@ -19,14 +20,18 @@ class TestClickHouseHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             database='example_db',
             protocol='native'
         )
-
-        self.err_to_raise_on_connect_failure = SQLAlchemyError("Connection Failed")
-
-        self.get_tables_query = f"SHOW TABLES FROM {self.dummy_connection_data['database']}"
-
-        self.get_columns_query = f"DESCRIBE {self.mock_table}"
-
-        return super().setUp()
+    
+    @property
+    def err_to_raise_on_connect_failure(self):
+        return SQLAlchemyError("Connection Failed")
+    
+    @property
+    def get_tables_query(self):
+        return f"SHOW TABLES FROM {self.dummy_connection_data['database']}"
+    
+    @property
+    def get_columns_query(self):
+        return f"DESCRIBE {self.mock_table}"
 
     def create_handler(self):
         return ClickHouseHandler('clickhouse', connection_data=self.dummy_connection_data)

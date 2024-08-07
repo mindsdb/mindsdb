@@ -14,8 +14,9 @@ from tests.unit.handlers.base_handler_test import BaseDatabaseHandlerTest, MockC
 
 class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
-    def setUp(self):
-        self.dummy_connection_data = OrderedDict(
+    @property
+    def dummy_connection_data(self):
+        return OrderedDict(
             host='127.0.0.1',
             port=5432,
             user='example_user',
@@ -24,10 +25,14 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             database='example_db',
             sslmode='prefer'
         )
-
-        self.err_to_raise_on_connect_failure = psycopg.Error("Connection Failed")
-
-        self.get_tables_query = """
+    
+    @property
+    def err_to_raise_on_connect_failure(self):
+        return psycopg.Error("Connection Failed")
+    
+    @property
+    def get_tables_query(self):
+        return """
             SELECT
                 table_schema,
                 table_name,
@@ -39,8 +44,10 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                 and table_type in ('BASE TABLE', 'VIEW')
                 and table_schema = current_schema()
         """
-
-        self.get_columns_query = f"""
+    
+    @property
+    def get_columns_query(self):
+        return f"""
             SELECT
                 column_name as "Field",
                 data_type as "Type"
@@ -51,8 +58,6 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             AND
                 table_schema = current_schema()
         """
-
-        return super().setUp()
 
     def create_handler(self):
         return PostgresHandler('psql', connection_data=self.dummy_connection_data)

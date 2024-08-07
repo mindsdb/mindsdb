@@ -10,8 +10,9 @@ from tests.unit.handlers.base_handler_test import BaseDatabaseHandlerTest
 
 class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
-    def setUp(self):
-        self.dummy_connection_data = OrderedDict(
+    @property
+    def dummy_connection_data(self):
+        return OrderedDict(
             host='127.0.0.1',
             port=3306,
             user='example_user',
@@ -19,10 +20,14 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             database='example_db',
             url='mysql://example_user:example_pass@localhost:3306/example_db'
         )
-
-        self.err_to_raise_on_connect_failure = MySQLError("Connection Failed")
-
-        self.get_tables_query = """
+    
+    @property
+    def err_to_raise_on_connect_failure(self):
+        return MySQLError("Connection Failed")
+    
+    @property
+    def get_tables_query(self):
+        return """
             SELECT
                 TABLE_SCHEMA AS table_schema,
                 TABLE_NAME AS table_name,
@@ -35,10 +40,10 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ORDER BY 2
             ;
         """
-
-        self.get_columns_query = f"DESCRIBE `{self.mock_table}`;"
-
-        return super().setUp()
+    
+    @property
+    def get_columns_query(self):
+        return f"DESCRIBE `{self.mock_table}`;"
 
     def create_handler(self):
         return MySQLHandler('mysql', connection_data=self.dummy_connection_data)

@@ -10,31 +10,36 @@ from tests.unit.handlers.base_handler_test import BaseDatabaseHandlerTest
 
 class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
-    def setUp(self):
-        self.dummy_connection_data = OrderedDict(
+    @property
+    def dummy_connection_data(self):
+        return OrderedDict(
             account='tvuibdy-vm85921',
             user='example_user',
             password='example_pass',
             database='example_db',
         )
-
-        self.err_to_raise_on_connect_failure = snowflake.connector.errors.Error("Connection Failed")
-
-        self.get_tables_query = """
+    
+    @property
+    def err_to_raise_on_connect_failure(self):
+        return snowflake.connector.errors.Error("Connection Failed")
+    
+    @property
+    def get_tables_query(self):
+        return """
             SELECT TABLE_NAME, TABLE_SCHEMA, TABLE_TYPE
             FROM INFORMATION_SCHEMA.TABLES
             WHERE TABLE_TYPE IN ('BASE TABLE', 'VIEW')
               AND TABLE_SCHEMA = current_schema()
         """
-
-        self.get_columns_query = f"""
+    
+    @property
+    def get_columns_query(self):
+        return f"""
             SELECT COLUMN_NAME AS FIELD, DATA_TYPE AS TYPE
             FROM INFORMATION_SCHEMA.COLUMNS
             WHERE TABLE_NAME = '{self.mock_table}'
               AND TABLE_SCHEMA = current_schema()
         """
-
-        return super().setUp()
 
     def create_handler(self):
         return SnowflakeHandler('snowflake', connection_data=self.dummy_connection_data)

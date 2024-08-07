@@ -14,9 +14,9 @@ from tests.unit.handlers.base_handler_test import MockCursorContextManager
 
 
 class TestRedshiftHandler(TestPostgresHandler):
-    def setUp(self):
-        super().setUp()
-        self.handler = RedshiftHandler('redshift', connection_data={'connection_data': self.dummy_connection_data})
+
+    def create_handler(self):
+        return RedshiftHandler('redshift', connection_data={'connection_data': self.dummy_connection_data})
 
     def test_insert(self):
         """

@@ -27,7 +27,7 @@ class MockCursorContextManager(Mock):
 
 class BaseHandlerTest(ABC):
     """
-    Base class for testing handlers. This class provides methods to test the `connect` and `check_connection` methods of a handler.
+    The Base class for testing handlers. This class provides methods to test the `connect` and `check_connection` methods of a handler.
     A 'base' subclass of this class like `BaseDatabaseHandlerTest` should be used when testing typical handlers.
     Handlers that take a non-conventional approach in their implementation can use this class directly.
     """
@@ -126,8 +126,8 @@ class BaseHandlerTest(ABC):
 
 class BaseDatabaseHandlerTest(BaseHandlerTest):
     """
-    Base class for testing database handlers. This class provides methods to test the `native_query`, `get_tables` and `get_columns` methods of a handler.
-    This class should be used as a base class for testing database handlers which have a typical implementation via a database client.
+    The Base class for testing database handlers. This class provides methods to test the `native_query`, `get_tables` and `get_columns` methods of a handler.
+    This class should be used as a base class for testing database handlers which have an implementation that uses a typical database client (with a cursor) like psycopg2, pymssql, etc.
     """
 
     @property

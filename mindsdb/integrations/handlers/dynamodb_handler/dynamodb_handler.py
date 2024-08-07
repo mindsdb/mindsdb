@@ -43,6 +43,13 @@ class DynamoDBHandler(DatabaseHandler):
         self.is_connected = False
         self.thread_safe = True
 
+    def __del__(self) -> None:
+        """
+        Closes the connection when the handler instance is deleted.
+        """
+        if self.is_connected:
+            self.disconnect()
+
     def connect(self) -> boto3.client:
         """
         Establishes a connection to Amazon DynamoDB.

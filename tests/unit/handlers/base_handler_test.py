@@ -25,12 +25,21 @@ class MockCursorContextManager(Mock):
         return [[1]]
     
 
-class BaseHandlerTest(ABC):
+class BaseHandlerTestSetup(ABC):
     """
-    The Base class for testing handlers. This class provides methods to test the `connect` and `check_connection` methods of a handler.
-    A 'base' subclass of this class like `BaseDatabaseHandlerTest` should be used when testing typical handlers.
-    Handlers that take a non-conventional approach in their implementation can use this class directly.
+    The base class that provides setup and teardown methods for tests.
+    It is recommended to use a 'base' subclass of `BaseHandlerTest` as a base class for testing handlers.
+    This class can be used as a base class to only set up the test environment for testing handlers.
     """
+
+    @property
+    @abstractmethod
+    def dummy_connection_data(self):
+        """
+        A dictionary containing dummy connection data.
+        This attribute should be overridden in subclasses to provide the specific connection data.
+        """
+        pass
 
     def setUp(self):
         """
@@ -46,24 +55,6 @@ class BaseHandlerTest(ABC):
         """
         self.patcher.stop()
 
-    @property
-    @abstractmethod
-    def dummy_connection_data(self):
-        """
-        A dictionary containing dummy connection data.
-        This attribute should be overridden in subclasses to provide the specific connection data.
-        """
-        pass
-
-    @property
-    @abstractmethod
-    def err_to_raise_on_connect_failure(self):
-        """
-        An exception to raise when the connection fails. This is the exception that is raised in the `connect` and `check_connection` methods when the connection fails.
-        This attribute should be overridden in subclasses to provide the specific exception.
-        """
-        pass
-
     @abstractmethod
     def create_patcher(self):
         """
@@ -77,6 +68,23 @@ class BaseHandlerTest(ABC):
         """
         Create and return a handler instance.
         This method should be overridden in subclasses to provide the specific handler.
+        """
+        pass
+    
+
+class BaseHandlerTest(BaseHandlerTestSetup):
+    """
+    The Base class for testing handlers. This class provides methods to test the `connect` and `check_connection` methods of a handler.
+    It is recommended to use a 'base' subclass of this class as a base class for testing handlers.
+    This class can be used as a base class for testing only the connection-related methods of a handler.
+    """
+
+    @property
+    @abstractmethod
+    def err_to_raise_on_connect_failure(self):
+        """
+        An exception to raise when the connection fails. This is the exception that is raised in the `connect` and `check_connection` methods when the connection fails.
+        This attribute should be overridden in subclasses to provide the specific exception.
         """
         pass
 

@@ -20,11 +20,11 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             database='example_db',
             url='mysql://example_user:example_pass@localhost:3306/example_db'
         )
-    
+
     @property
     def err_to_raise_on_connect_failure(self):
         return MySQLError("Connection Failed")
-    
+
     @property
     def get_tables_query(self):
         return """
@@ -40,14 +40,14 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             ORDER BY 2
             ;
         """
-    
+
     @property
     def get_columns_query(self):
         return f"DESCRIBE `{self.mock_table}`;"
 
     def create_handler(self):
         return MySQLHandler('mysql', connection_data=self.dummy_connection_data)
-    
+
     def create_patcher(self):
         return patch('mysql.connector.connect')
 

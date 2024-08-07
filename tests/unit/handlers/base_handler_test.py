@@ -10,7 +10,7 @@ from mindsdb.integrations.libs.response import (
 class MockCursorContextManager(Mock):
     """
     A mock class that simulates a cursor context manager for database clients.
-    This class is used in the `BaseDatabaseHandlerTest` class to simulate the cursor object returned by the database client.    
+    This class is used in the `BaseDatabaseHandlerTest` class to simulate the cursor object returned by the database client.
     """
 
     def __enter__(self):
@@ -23,7 +23,7 @@ class MockCursorContextManager(Mock):
 
     def fetchall(self):
         return [[1]]
-    
+
 
 class BaseHandlerTestSetup(ABC):
     """
@@ -70,7 +70,7 @@ class BaseHandlerTestSetup(ABC):
         This method should be overridden in subclasses to provide the specific handler.
         """
         pass
-    
+
 
 class BaseHandlerTest(BaseHandlerTestSetup):
     """
@@ -197,4 +197,3 @@ class BaseDatabaseHandlerTest(BaseHandlerTest):
         self.handler.get_tables()
 
         self.handler.native_query.assert_called_once_with(self.get_tables_query)
-

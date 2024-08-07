@@ -34,7 +34,7 @@ class TestS3Handler(BaseHandlerTestSetup, unittest.TestCase):
 
     def create_handler(self):
         return S3Handler('s3', connection_data=self.dummy_connection_data)
-    
+
     def create_patcher(self):
         return patch('duckdb.connect')
 

@@ -19,11 +19,11 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             password='example_pass',
             database='example_db',
         )
-    
+
     @property
     def err_to_raise_on_connect_failure(self):
         return pymssql.OperationalError("Connection Failed")
-    
+
     @property
     def get_tables_query(self):
         return f"""
@@ -34,7 +34,7 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             FROM {self.dummy_connection_data['database']}.INFORMATION_SCHEMA.TABLES
             WHERE TABLE_TYPE in ('BASE TABLE', 'VIEW');
         """
-    
+
     @property
     def get_columns_query(self):
         return f"""
@@ -49,7 +49,7 @@ class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
     def create_handler(self):
         return SqlServerHandler('mssql', connection_data=self.dummy_connection_data)
-    
+
     def create_patcher(self):
         return patch('pymssql.connect')
 

@@ -20,22 +20,22 @@ class TestClickHouseHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             database='example_db',
             protocol='native'
         )
-    
+
     @property
     def err_to_raise_on_connect_failure(self):
         return SQLAlchemyError("Connection Failed")
-    
+
     @property
     def get_tables_query(self):
         return f"SHOW TABLES FROM {self.dummy_connection_data['database']}"
-    
+
     @property
     def get_columns_query(self):
         return f"DESCRIBE {self.mock_table}"
 
     def create_handler(self):
         return ClickHouseHandler('clickhouse', connection_data=self.dummy_connection_data)
-    
+
     def create_patcher(self):
         return patch('mindsdb.integrations.handlers.clickhouse_handler.clickhouse_handler.create_engine', return_value=MagicMock())
 

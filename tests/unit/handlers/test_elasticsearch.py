@@ -19,17 +19,17 @@ class TestElasticsearchHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             user='example_user',
             password='example_pass'
         )
-    
+
     @property
     def err_to_raise_on_connect_failure(self):
         return elasticsearch.exceptions.AuthenticationException("Connection Failed", 403)
-    
+
     @property
     def get_tables_query(self):
         return """
             SHOW TABLES
         """
-    
+
     @property
     def get_columns_query(self):
         return f"""
@@ -38,15 +38,9 @@ class TestElasticsearchHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
     def create_handler(self):
         return ElasticsearchHandler('elasticsearch', connection_data=self.dummy_connection_data)
-    
+
     def create_patcher(self):
         return patch('mindsdb.integrations.handlers.elasticsearch_handler.elasticsearch_handler.Elasticsearch')
-
-    dummy_connection_data = OrderedDict(
-        hosts='http://localhost:9200',
-        user='example_user',
-        password='example_pass'
-    )
 
     def test_native_query(self):
         """

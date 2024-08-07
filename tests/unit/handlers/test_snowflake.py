@@ -18,11 +18,11 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             password='example_pass',
             database='example_db',
         )
-    
+
     @property
     def err_to_raise_on_connect_failure(self):
         return snowflake.connector.errors.Error("Connection Failed")
-    
+
     @property
     def get_tables_query(self):
         return """
@@ -31,7 +31,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             WHERE TABLE_TYPE IN ('BASE TABLE', 'VIEW')
               AND TABLE_SCHEMA = current_schema()
         """
-    
+
     @property
     def get_columns_query(self):
         return f"""
@@ -43,7 +43,7 @@ class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
     def create_handler(self):
         return SnowflakeHandler('snowflake', connection_data=self.dummy_connection_data)
-    
+
     def create_patcher(self):
         return patch('snowflake.connector.connect')
 

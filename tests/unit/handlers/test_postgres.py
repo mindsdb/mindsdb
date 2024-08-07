@@ -25,11 +25,11 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
             database='example_db',
             sslmode='prefer'
         )
-    
+
     @property
     def err_to_raise_on_connect_failure(self):
         return psycopg.Error("Connection Failed")
-    
+
     @property
     def get_tables_query(self):
         return """
@@ -44,7 +44,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                 and table_type in ('BASE TABLE', 'VIEW')
                 and table_schema = current_schema()
         """
-    
+
     @property
     def get_columns_query(self):
         return f"""
@@ -61,7 +61,7 @@ class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
     def create_handler(self):
         return PostgresHandler('psql', connection_data=self.dummy_connection_data)
-    
+
     def create_patcher(self):
         return patch('psycopg.connect')
 

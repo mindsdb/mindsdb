@@ -8,6 +8,11 @@ from mindsdb.integrations.libs.response import (
 
 
 class CursorContextManager(Mock):
+    """
+    A mock class that simulates a cursor context manager for database clients.
+    This class is used in the `BaseDatabaseHandlerTest` class to simulate the cursor object returned by the database client.    
+    """
+
     def __enter__(self):
         return self
 
@@ -21,19 +26,24 @@ class CursorContextManager(Mock):
     
 
 class BaseHandlerTest(ABC):
+    """
+    Base class for testing handlers. This class provides methods to test the `connect` and `check_connection` methods of a handler.
+    A 'base' subclass of this class like `BaseDatabaseHandlerTest` should be used when testing typical handlers.
+    Handlers that take a non-conventional approach in their implementation can use this class directly.
+    """
+
     def setUp(self):
         """
-        Set up the test environment by creating instances of the patcher and handler.
-        This method should be called by the `setUp` method of the subclass.
-        The `setUp` method of subclasses should also set the following attributes:
-        - `dummy_connection_data`: A dictionary containing dummy connection data.
-        - `err_to_raise_on_connect_failure`: An exception to raise when the connection fails.
+        Sets up the test environment by creating instances of the patcher and handler.
         """
         self.patcher = self.create_patcher()
         self.mock_connect = self.patcher.start()
         self.handler = self.create_handler()
 
     def tearDown(self):
+        """
+        Tears down the test environment by stopping the patcher.
+        """
         self.patcher.stop()
 
     @property
@@ -115,7 +125,18 @@ class BaseHandlerTest(ABC):
 
 
 class BaseDBTest(BaseHandlerTest):
-    mock_table = 'mock_table'
+    """
+    Base class for testing database handlers. This class provides methods to test the `native_query`, `get_tables` and `get_columns` methods of a handler.
+    This class should be used as a base class for testing database handlers which have a typical implementation via a database client.
+    """
+
+    @property
+    def mock_table(self):
+        """
+        A string containing the name of a mock table. This attribute should be used as the table name when constructing SQL queries.
+        It should be used in the `get_columns_query` attribute.
+        """
+        return 'mock_table'
 
     @property
     @abstractmethod

@@ -54,11 +54,11 @@ class OracleHandler(DatabaseHandler):
         """
         if self.is_connected is True:
             return self.connection
-        
+
         # Mandatory connection parameters.
         if not all(key in self.connection_data for key in ['user', 'password']):
             raise ValueError('Required parameters (user, password) must be provided.')
-        
+
         config = {
             'user': self.connection_data['user'],
             'password': self.connection_data['password'],
@@ -71,7 +71,7 @@ class OracleHandler(DatabaseHandler):
         else:
             if 'host' not in self.connection_data and not any(key in self.connection_data for key in ['sid', 'service_name']):
                 raise ValueError('Required parameter host and either sid or service_name must be provided. Alternatively, dsn can be provided.')
-            
+
             config['host'] = self.connection_data.get('host')
 
             # Optional connection parameters when 'dsn' is not given.
@@ -235,7 +235,7 @@ class OracleHandler(DatabaseHandler):
             ValueError: If the 'table_name' is not a valid string.
         """
         query = f"""
-            SELECT 
+            SELECT
                 column_name,
                 data_type
             FROM USER_TAB_COLUMNS

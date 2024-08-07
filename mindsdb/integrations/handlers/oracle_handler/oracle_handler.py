@@ -90,7 +90,6 @@ class OracleHandler(DatabaseHandler):
                 raise ValueError(f'Unknown auth mode: {mode_name}')
             config['mode'] = getattr(oracledb, mode_name)
 
-        oracledb.init_oracle_client(lib_dir=None) # Default suitable for Linux OS.
         # TODO: Add error handling.
         connection = connect(
             **config,

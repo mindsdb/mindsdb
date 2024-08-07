@@ -215,6 +215,7 @@ class OracleHandler(DatabaseHandler):
         Returns:
             Response: A response object containing the list of tables and views, formatted as per the `Response` class.
         """
+        # TODO: This query does not seem to be correct.
         query = """
             SELECT table_name
             FROM user_tables

@@ -716,13 +716,6 @@ class IntegrationController:
                     handler_meta['icon'] = icon
             self.handlers_import_status[handler_name] = handler_meta
 
-        # import all handlers in thread
-        def import_handlers():
-            self.get_handlers_import_status()
-
-        thread = threading.Thread(target=import_handlers)
-        thread.start()
-
     def _get_handler_info(self, handler_dir: Path):
 
         init_file = handler_dir / '__init__.py'

@@ -36,6 +36,24 @@ class BaseHandlerTest(ABC):
     def tearDown(self):
         self.patcher.stop()
 
+    @property
+    @abstractmethod
+    def dummy_connection_data(self):
+        """
+        A dictionary containing dummy connection data.
+        This attribute should be overridden in subclasses to provide the specific connection data.
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def err_to_raise_on_connect_failure(self):
+        """
+        An exception to raise when the connection fails. This is the exception that is raised in the `connect` and `check_connection` methods when the connection fails.
+        This attribute should be overridden in subclasses to provide the specific exception.
+        """
+        pass
+
     @abstractmethod
     def create_patcher(self):
         """
@@ -98,6 +116,24 @@ class BaseHandlerTest(ABC):
 
 class BaseDBTest(BaseHandlerTest):
     mock_table = 'mock_table'
+
+    @property
+    @abstractmethod
+    def get_tables_query(self):
+        """
+        A string containing the SQL query to get the tables of a database. This is the query that is executed in the `get_tables` method.
+        This attribute should be overridden in subclasses to provide the specific query.
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def get_columns_query(self):
+        """
+        A string containing the SQL query to get the columns of a table. This is the query that is executed in the `get_columns` method.
+        This attribute should be overridden in subclasses to provide the specific query.
+        """
+        pass
 
     def test_native_query(self):
         """

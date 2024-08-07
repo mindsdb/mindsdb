@@ -1,3 +1,4 @@
+import pandas as pd
 from tests.unit.executor_test_base import BaseExecutorDummyML
 
 from unittest.mock import patch
@@ -28,31 +29,6 @@ class TestAgent(BaseExecutorDummyML):
             USING
              provider='mindsdb',
              model = "base_model", -- <
-             prompt_template="Answer the user input in a helpful way"
-         ''')
-        ret = self.run_sql("select * from my_agent where question = 'hi'")
-
-        assert agent_response in ret.answer[0]
-
-    @patch('openai.OpenAI')
-    def test_openai_provider(self, mock_openai):
-        agent_response = 'how can I assist you today?'
-
-        mock_openai().chat.completions.create.return_value = {
-            'choices': [{
-                'message': {
-                    'role': 'system',
-                    'content': agent_response
-                }
-            }]
-        }
-
-        self.run_sql('''
-            CREATE AGENT my_agent
-            USING
-             provider='openai',
-             model = "gpt-3.5-turbo",
-             openai_api_key='--',
              prompt_template="Answer the user input in a helpful way"
          ''')
         ret = self.run_sql("select * from my_agent where question = 'hi'")
@@ -91,3 +67,49 @@ class TestAgent(BaseExecutorDummyML):
         ret = self.run_sql("select * from my_agent where question = 'hi'")
 
         assert agent_response in ret.answer[0]
+
+    @patch('openai.OpenAI')
+    def test_openai_provider(self, mock_openai):
+        agent_response = 'how can I assist you today?'
+
+        mock_openai().chat.completions.create.return_value = {
+            'choices': [{
+                'message': {
+                    'role': 'system',
+                    'content': agent_response
+                }
+            }]
+        }
+
+        self.run_sql('''
+            CREATE AGENT my_agent
+            USING
+             provider='openai',
+             model = "gpt-3.5-turbo",
+             openai_api_key='--',
+             prompt_template="Answer the user input in a helpful way"
+         ''')
+        ret = self.run_sql("select * from my_agent where question = 'hi'")
+
+        assert agent_response in ret.answer[0]
+
+        # test join
+        df = pd.DataFrame([
+            {'q': 'hi'},
+        ])
+        self.save_file('questions', df)
+
+        ret = self.run_sql('''
+            select * from files.questions t
+            join my_agent a on a.question=t.q
+        ''')
+
+        assert agent_response in ret.answer[0]
+
+        # empty query
+        ret = self.run_sql('''
+            select * from files.questions t
+            join my_agent a on a.question=t.q
+            where t.q = ''
+        ''')
+        assert len(ret) == 0

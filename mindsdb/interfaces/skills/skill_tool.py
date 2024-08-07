@@ -76,7 +76,7 @@ class SkillToolController:
             include_tables=tables_to_include
         )
         # Users probably don't need to configure this for now.
-        sql_database_tools = MindsDBSQLToolkit(db=db, llm=llm).get_tools()
+        sql_database_tools = MindsDBSQLToolkit(db=db, llm=llm).get_tools(prefix=str(skill.id))
         description = skill.params.get('description', '')
         tables_list = ','.join([f'{database}.{table}' for table in tables])
         for i, tool in enumerate(sql_database_tools):

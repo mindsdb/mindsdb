@@ -7,6 +7,10 @@ sidebarTitle: Upload a File
 
 In MindsDB, files are treated as tables. These are stored in the default `files` database. To upload a file, you must save this `files` database into a variable and then, run the `create_table()` function on it.
 
+<Note>
+Note that the trailing whitespaces on column names are erased upon uploading a file to MindsDB.
+</Note>
+
 ## Syntax
 
 Here is the syntax:

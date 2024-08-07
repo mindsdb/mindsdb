@@ -116,7 +116,6 @@ PACKAGE_NAME_MAP = {
     "hubspot-api-client": ["hubspot"],
     "pytest-lazy-fixture": ["pytest_lazyfixture"],
     "eventbrite-python": ["eventbrite"],
-    "python-magic": ["magic"],
     "clickhouse-sqlalchemy": ["clickhouse_sqlalchemy"],
     "pillow": ["PIL"],
     "auto-ts": ["auto_ts"],

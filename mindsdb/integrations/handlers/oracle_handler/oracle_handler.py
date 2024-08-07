@@ -3,7 +3,7 @@ from typing import Text, Dict, Optional
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 import oracledb
-from oracledb import connect, Connection
+from oracledb import connect, Connection, DatabaseError
 import pandas as pd
 
 from mindsdb.integrations.libs.base import DatabaseHandler
@@ -90,10 +90,17 @@ class OracleHandler(DatabaseHandler):
                 raise ValueError(f'Unknown auth mode: {mode_name}')
             config['mode'] = getattr(oracledb, mode_name)
 
-        # TODO: Add error handling.
-        connection = connect(
-            **config,
-        )
+        try:
+            connection = connect(
+                **config,
+            )
+        except DatabaseError as database_error:
+            logger.error(f'Error connecting to Oracle, {database_error}!')
+            raise
+
+        except Exception as unknown_error:
+            logger.error(f'Unknown error when connecting to Elasticsearch: {unknown_error}')
+            raise
 
         self.is_connected = True
         self.connection = connection
@@ -122,10 +129,12 @@ class OracleHandler(DatabaseHandler):
             con = self.connect()
             con.ping()
             response.success = True
-        # TODO: Catch specific exceptions.
-        except Exception as e:
-            logger.error(f'Error connecting to Oracle, {e}!')
-            response.error_message = str(e)
+        except (ValueError, DatabaseError) as known_error:
+            logger.error(f'Connection check to Oracle failed, {known_error}!')
+            response.error_message = str(known_error)
+        except Exception as unknown_error:
+            logger.error(f'Connection check to Oracle failed due to an unknown error, {unknown_error}!')
+            response.error_message = str(unknown_error)
 
         if response.success and need_to_close:
             self.disconnect()
@@ -164,12 +173,19 @@ class OracleHandler(DatabaseHandler):
                     response = Response(RESPONSE_TYPE.OK)
 
                 connection.commit()
-            # TODO: Catch specific exceptions.
-            except Exception as e:
-                logger.error(f"Error running query: {query} on {self.dsn}!")
+            except DatabaseError as database_error:
+                logger.error(f"Error running query: {query} on Oracle, {database_error}!")
                 response = Response(
                     RESPONSE_TYPE.ERROR,
-                    error_message=str(e),
+                    error_message=str(database_error),
+                )
+                connection.rollback()
+
+            except Exception as unknown_error:
+                logger.error(f"Unknwon error running query: {query} on Oracle, {unknown_error}!")
+                response = Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=str(unknown_error),
                 )
                 connection.rollback()
 

@@ -4,10 +4,9 @@ from unittest.mock import patch, MagicMock
 
 import elasticsearch
 
-
+from base_handler_test import BaseDatabaseHandlerTest
 from mindsdb.integrations.handlers.elasticsearch_handler.elasticsearch_handler import ElasticsearchHandler
 from mindsdb.integrations.libs.response import HandlerResponse as Response
-from tests.unit.handlers.base_handler_test import BaseDatabaseHandlerTest
 
 
 class TestElasticsearchHandler(BaseDatabaseHandlerTest, unittest.TestCase):

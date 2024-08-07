@@ -4,8 +4,8 @@ from unittest.mock import patch
 
 import snowflake
 
+from base_handler_test import BaseDatabaseHandlerTest
 from mindsdb.integrations.handlers.snowflake_handler.snowflake_handler import SnowflakeHandler
-from tests.unit.handlers.base_handler_test import BaseDatabaseHandlerTest
 
 
 class TestSnowflakeHandler(BaseDatabaseHandlerTest, unittest.TestCase):

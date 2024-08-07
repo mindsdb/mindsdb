@@ -4,8 +4,8 @@ from unittest.mock import patch
 
 import pymssql
 
+from base_handler_test import BaseDatabaseHandlerTest
 from mindsdb.integrations.handlers.mssql_handler.mssql_handler import SqlServerHandler
-from tests.unit.handlers.base_handler_test import BaseDatabaseHandlerTest
 
 
 class TestMSSQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):

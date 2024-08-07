@@ -8,13 +8,13 @@ from mindsdb_sql.parser.ast.select.star import Star
 from mindsdb_sql.parser.ast.select.identifier import Identifier
 import pandas as pd
 
+from base_handler_test import BaseHandlerTestSetup, MockCursorContextManager
 from mindsdb.integrations.handlers.s3_handler.s3_handler import S3Handler
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
     RESPONSE_TYPE
 )
-from tests.unit.handlers.base_handler_test import BaseHandlerTestSetup, MockCursorContextManager
 
 
 class TestS3Handler(BaseHandlerTestSetup, unittest.TestCase):

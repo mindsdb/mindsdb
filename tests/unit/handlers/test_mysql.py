@@ -4,8 +4,8 @@ from unittest.mock import patch
 
 from mysql.connector import Error as MySQLError
 
+from base_handler_test import BaseDatabaseHandlerTest
 from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
-from tests.unit.handlers.base_handler_test import BaseDatabaseHandlerTest
 
 
 class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):

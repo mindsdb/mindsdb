@@ -5,11 +5,11 @@ from unittest.mock import patch, MagicMock
 import psycopg
 from psycopg.pq import ExecStatus
 
+from base_handler_test import BaseDatabaseHandlerTest, MockCursorContextManager
 from mindsdb.integrations.handlers.postgres_handler.postgres_handler import PostgresHandler
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response
 )
-from tests.unit.handlers.base_handler_test import BaseDatabaseHandlerTest, MockCursorContextManager
 
 
 class TestPostgresHandler(BaseDatabaseHandlerTest, unittest.TestCase):

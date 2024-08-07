@@ -4,8 +4,8 @@ from unittest.mock import patch, MagicMock
 
 from sqlalchemy.exc import SQLAlchemyError
 
+from base_handler_test import BaseDatabaseHandlerTest
 from mindsdb.integrations.handlers.clickhouse_handler.clickhouse_handler import ClickHouseHandler
-from tests.unit.handlers.base_handler_test import BaseDatabaseHandlerTest
 
 
 class TestClickHouseHandler(BaseDatabaseHandlerTest, unittest.TestCase):

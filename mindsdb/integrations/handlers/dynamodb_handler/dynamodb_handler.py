@@ -212,7 +212,7 @@ class DynamoDBHandler(DatabaseHandler):
             if isinstance(query.from_table, Select):
                 error_message = "The provided SELECT query contains subqueies, which are not supported. "
 
-            if isinstance(query, Join):
+            if isinstance(query.from_table, Join):
                 error_message = "The provided SELECT query contains JOIN clauses, which are not supported. "
 
             if error_message:

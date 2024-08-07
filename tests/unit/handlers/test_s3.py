@@ -14,26 +14,29 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     RESPONSE_TYPE
 )
-from tests.unit.handlers.base_handler_test import MockCursorContextManager
+from tests.unit.handlers.base_handler_test import BaseHandlerTestSetup, MockCursorContextManager
 
 
-class TestS3Handler(unittest.TestCase):
+class TestS3Handler(BaseHandlerTestSetup, unittest.TestCase):
 
-    dummy_connection_data = OrderedDict(
-        aws_access_key_id='AQAXEQK89OX07YS34OP',
-        aws_secret_access_key='wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
-        bucket='mindsdb-bucket',
-        region_name='us-east-2',
-    )
-    object_name = '`my-bucket/my-file.csv`'
+    @property
+    def object_name(self):
+        return '`my-bucket/my-file.csv`'
 
-    def setUp(self):
-        self.patcher = patch('duckdb.connect')
-        self.mock_connect = self.patcher.start()
-        self.handler = S3Handler('s3', connection_data=self.dummy_connection_data)
+    @property
+    def dummy_connection_data(self):
+        return OrderedDict(
+            aws_access_key_id='AQAXEQK89OX07YS34OP',
+            aws_secret_access_key='wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
+            bucket='mindsdb-bucket',
+            region_name='us-east-2',
+        )
 
-    def tearDown(self):
-        self.patcher.stop()
+    def create_handler(self):
+        return S3Handler('s3', connection_data=self.dummy_connection_data)
+    
+    def create_patcher(self):
+        return patch('duckdb.connect')
 
     def test_connect(self):
         """
@@ -140,8 +143,7 @@ class TestS3Handler(unittest.TestCase):
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
 
         mock_cursor.execute.return_value = None
-        mock_cursor.fetchall.return_value = [('row_1', 1), ('row_2', 2), ('row_3', 3)]
-        mock_cursor.description = [('col_1', 'string'), ('col_2', 'int64')]
+        mock_cursor.description = [('col_2', 'int64')]
 
         # Craft the SELECT query and execute it.
         object_name = '`my-bucket/my-file.csv`'

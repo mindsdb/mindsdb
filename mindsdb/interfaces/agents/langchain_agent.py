@@ -241,7 +241,7 @@ class LangchainAgent:
             trace_metadata = {
                 'provider': self.args["provider"],
                 'model_name': self.args["model_name"],
-                'embedding_model_provider':  self.args.get('embedding_model_provider', get_embedding_model_provider(args))
+                'embedding_model_provider': self.args.get('embedding_model_provider', get_embedding_model_provider(self.args))
             }
             trace_metadata['skills'] = get_skills(self.agent)
             trace_tags = get_tags(trace_metadata)

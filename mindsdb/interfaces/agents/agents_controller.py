@@ -243,7 +243,7 @@ class AgentsController:
             if existing_skill is None:
                 raise ValueError(f'Skill with name does not exist: {skill}')
             new_skills.append(existing_skill)
-        existing_agent.skills += new_skills
+        existing_agent.skills = list(set(existing_agent.skills + new_skills))
 
         removed_skills = []
         for skill in existing_agent.skills:

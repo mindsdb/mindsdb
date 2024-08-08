@@ -6,10 +6,8 @@ import os
 
 from flask import request, Response
 from flask_restx import Resource
-from langfuse import Langfuse
 
 from mindsdb.interfaces.agents.agents_controller import AgentsController
-from mindsdb.interfaces.agents.langfuse_callback_handler import get_metadata, get_tags, get_tool_usage, get_skills
 from mindsdb.interfaces.storage import db
 from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
@@ -261,11 +259,7 @@ class AgentResource(Resource):
 def _completion_event_generator(
         agent_name: str,
         messages: List[Dict],
-        trace_id: str,
-        observation_id: str,
-        project_name: str,
-        run_completion_span,
-        api_trace) -> Iterable[str]:
+        project_name: str) -> Iterable[str]:
     logger.info(f"Starting completion event generator for agent {agent_name}")
 
     def json_serialize(data):
@@ -288,8 +282,6 @@ def _completion_event_generator(
         completion_stream = session.agents_controller.get_completion(
             existing_agent,
             messages,
-            trace_id=trace_id,
-            observation_id=observation_id,
             project_name=project_name,
             tools=[],
             stream=True
@@ -348,11 +340,6 @@ def _completion_event_generator(
     finally:
         yield json_serialize({"type": "end"})
 
-    if run_completion_span is not None and api_trace is not None:
-        run_completion_span.end()
-        api_trace.update()
-        logger.info("Langfuse trace updated")
-
 
 @ns_conf.route('/<project_name>/agents/<agent_name>/completions/stream')
 @ns_conf.param('project_name', 'Name of the project')
@@ -390,41 +377,13 @@ class AgentCompletionsStream(Resource):
                 f'Project with name {project_name} does not exist'
             )
 
-        trace_id = None
-        observation_id = None
-        api_trace = None
-        run_completion_span = None
         messages = request.json['messages']
-
-        # Trace Agent completions using Langfuse if configured.
-        if os.getenv('LANGFUSE_PUBLIC_KEY') is not None:
-            try:
-                langfuse = Langfuse(
-                    public_key=os.getenv('LANGFUSE_PUBLIC_KEY'),
-                    secret_key=os.getenv('LANGFUSE_SECRET_KEY'),
-                    host=os.getenv('LANGFUSE_HOST')
-                )
-                api_trace = langfuse.trace(
-                    name='api-completion',
-                    input=messages,
-                    tags=[os.getenv('FLASK_ENV', 'unknown')]
-                )
-                run_completion_span = api_trace.span(name='run-completion', input=messages)
-                trace_id = api_trace.id
-                observation_id = run_completion_span.id
-                logger.info(f"Langfuse trace created with ID: {trace_id}")
-            except Exception as e:
-                logger.error(f"Failed to create Langfuse trace: {str(e)}")
 
         try:
             gen = _completion_event_generator(
                 agent_name,
                 messages,
-                trace_id,
-                observation_id,
-                project_name,
-                run_completion_span,
-                api_trace
+                project_name
             )
             logger.info(f"Starting streaming response for agent {agent_name}")
             return Response(gen, mimetype='text/event-stream')
@@ -480,50 +439,11 @@ class AgentCompletions(Resource):
         if 'mode' not in existing_agent.params and any(skill.type == 'retrieval' for skill in existing_agent.skills):
             existing_agent.params['mode'] = 'retrieval'
 
-        trace_id = None
-        observation_id = None
-        api_trace = None
-        run_completion_span = None
         messages = request.json['messages']
-        # Trace Agent completions using Langfuse if configured.
-        if os.getenv('LANGFUSE_PUBLIC_KEY') is not None:
-
-            # todo we need to fix this as this assumes that the model is always langchain
-            # since decoupling the model from langchain, we need to find a way to get the model name
-            # this breaks retrieval agents
-
-            # get model details
-            session = SessionController()
-            model_name_no_version, version = db.Predictor.get_name_and_version(existing_agent.model_name)
-            agent_model = session.model_controller.get_model(model_name_no_version, version=version,
-                                                             project_name=project_name)  # noqa
-            model_using = agent_model.get('problem_definition', {}).get('using', {})
-
-            # metadata retrieval
-            trace_metadata = get_metadata(model_using)
-            trace_metadata['skills'] = get_skills(existing_agent)
-            trace_tags = get_tags(trace_metadata)
-
-            langfuse = Langfuse(
-                public_key=os.getenv('LANGFUSE_PUBLIC_KEY'),
-                secret_key=os.getenv('LANGFUSE_SECRET_KEY'),
-                host=os.getenv('LANGFUSE_HOST')
-            )
-            api_trace = langfuse.trace(
-                name='api-completion',
-                input=messages,
-                tags=trace_tags,
-                metadata=trace_metadata
-            )
-            run_completion_span = api_trace.span(name='run-completion', input=messages)
-            trace_id = api_trace.id
-            observation_id = run_completion_span.id
 
         completion = agents_controller.get_completion(
             existing_agent,
             messages,
-            trace_id=trace_id,
-            observation_id=observation_id,
             project_name=project_name,
             # Don't need to include backoffice_db related tools into this endpoint.
             # Underlying handler (e.g. Langchain) will handle default tools like mdb_read, mdb_write, etc.
@@ -532,14 +452,6 @@ class AgentCompletions(Resource):
 
         output_col = agents_controller.assistant_column
         model_output = completion.iloc[-1][output_col]
-        if run_completion_span is not None and api_trace is not None:
-            run_completion_span.end(output=model_output)
-            api_trace.update(output=model_output)
-
-            # update metadata with tool usage
-            trace = langfuse.get_trace(trace_id)
-            trace_metadata['tool_usage'] = get_tool_usage(trace)
-            api_trace.update(metadata=trace_metadata)
 
         response = {
             'message': {

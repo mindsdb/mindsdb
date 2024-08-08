@@ -288,8 +288,6 @@ class AgentsController:
             self,
             agent: db.Agents,
             messages: List[Dict[str, str]],
-            trace_id: str = None,
-            observation_id: str = None,
             project_name: str = 'mindsdb',
             tools: List[BaseTool] = None,
             stream: bool = False) -> Union[Iterator[object], pd.DataFrame]:
@@ -315,8 +313,6 @@ class AgentsController:
             return self._get_completion_stream(
                 agent,
                 messages,
-                trace_id=trace_id,
-                observation_id=observation_id,
                 project_name=project_name,
                 tools=tools
             )
@@ -329,14 +325,12 @@ class AgentsController:
             db.session.commit()
 
         lang_agent = LangchainAgent(agent, model)
-        return lang_agent.get_completion(messages, trace_id, observation_id)
+        return lang_agent.get_completion(messages)
 
     def _get_completion_stream(
             self,
             agent: db.Agents,
             messages: List[Dict[str, str]],
-            trace_id: str = None,
-            observation_id: str = None,
             project_name: str = 'mindsdb',
             tools: List[BaseTool] = None) -> Iterator[object]:
         '''
@@ -367,4 +361,4 @@ class AgentsController:
             db.session.commit()
 
         lang_agent = LangchainAgent(agent, model=model)
-        return lang_agent.get_completion(messages, trace_id, observation_id, stream=True)
+        return lang_agent.get_completion(messages, stream=True)

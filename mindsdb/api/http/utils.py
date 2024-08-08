@@ -1,9 +1,11 @@
 import json
+from typing import Optional
+from datetime import datetime
 
 from flask import Response
 
 
-def http_error(status_code, title, detail=None):
+def http_error(status_code: int, title: Optional[str] = None, detail: Optional[str] = None):
     ''' Wrapper for error responce acoording with RFC 7807 (https://tools.ietf.org/html/rfc7807)
 
         :param status_code: int - http status code for response
@@ -12,6 +14,8 @@ def http_error(status_code, title, detail=None):
 
         :return: flask Response object
     '''
+    if title is None:
+        title = 'Error'
     if detail is None:
         if 400 <= status_code < 500:
             detail = "A client error occurred. Please check your request and try again."
@@ -23,7 +27,8 @@ def http_error(status_code, title, detail=None):
     return Response(
         response=json.dumps({
             'title': title,
-            'detail': detail
+            'detail': detail,
+            'timestamp': str(datetime.now())
         }),
         status=status_code,
         headers={

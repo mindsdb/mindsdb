@@ -5,7 +5,8 @@ from typing import Optional
 from functools import reduce
 
 import pandas as pd
-from mindsdb_evaluator.accuracy.general import evaluate_accuracy, is_llm
+from mindsdb_evaluator.accuracy.general import evaluate_accuracy
+from mindsdb_evaluator.helpers.general import is_llm
 from mindsdb_sql import parse_sql
 from mindsdb_sql.planner.utils import query_traversal
 from mindsdb_sql.parser.ast import (
@@ -813,17 +814,17 @@ class ExecuteCommands:
                     df[col].isna().sum() == 0
                 ), f"There are missing values in the `{col}` column, please try again."
 
+        using_clause = statement.using if statement.using is not None else {}
         if is_llm(metric_name):
             target_series = df.pop("answer")
             metric_value = evaluate_accuracy(
-            df,
-            target_series,
-            metric_name,
-            n_decimals=using_clause.get("n_decimals", 3),
-        )  # 3 decimals by default
+                df,
+                target_series,
+                metric_name,
+                n_decimals=using_clause.get("n_decimals", 3),
+            )
         else:
             target_series = df.pop("prediction")
-            using_clause = statement.using if statement.using is not None else {}
             metric_value = evaluate_accuracy(
                 df,
                 target_series,

@@ -229,8 +229,8 @@ class LangchainAgent:
 
     def get_completion(self, messages, stream: bool = False):
 
-        run_completion_span = None
-        api_trace = None
+        self.run_completion_span = None
+        self.api_trace = None
         if self.langfuse:
 
             # todo we need to fix this as this assumes that the model is always langchain
@@ -246,31 +246,23 @@ class LangchainAgent:
             trace_metadata['skills'] = get_skills(self.agent)
             trace_tags = get_tags(trace_metadata)
 
-            api_trace = self.langfuse.trace(
+            self.api_trace = self.langfuse.trace(
                 name='api-completion',
                 input=messages,
                 tags=trace_tags,
                 metadata=trace_metadata
             )
 
-            run_completion_span = api_trace.span(name='run-completion', input=messages)
-            trace_id = api_trace.id
-            observation_id = run_completion_span.id
+            self.run_completion_span = self.api_trace.span(name='run-completion', input=messages)
+            trace_id = self.api_trace.id
+            observation_id = self.run_completion_span.id
 
             self.trace_id = trace_id
             self.observation_id = observation_id
             logger.info(f"Langfuse trace created with ID: {trace_id}")
 
         if stream:
-            for chunk in self._get_completion_stream(messages):
-                yield chunk
-
-            if run_completion_span is not None:
-                run_completion_span.end()
-                api_trace.update()
-                logger.info("Langfuse trace updated")
-
-            return
+            return self._get_completion_stream(messages)
 
         args = self.args
 
@@ -286,14 +278,15 @@ class LangchainAgent:
         df.iloc[:-1, df.columns.get_loc(user_column)] = None
         response = self.run_agent(df, agent, args)
 
-        if run_completion_span is not None and api_trace is not None:
-            run_completion_span.end(output=response)
-            api_trace.update(output=response)
+        if self.run_completion_span is not None and self.api_trace is not None:
+            self.run_completion_span.end(output=response)
+            self.api_trace.update(output=response)
 
             # update metadata with tool usage
             trace = self.langfuse.get_trace(self.trace_id)
             trace_metadata['tool_usage'] = get_tool_usage(trace)
-            api_trace.update(metadata=trace_metadata)
+            self.api_trace.update(metadata=trace_metadata)
+        return response
 
     def _get_completion_stream(
         self, messages: List[dict]
@@ -614,6 +607,11 @@ AI: {response}"""
             captured_context = context_callback.get_contexts()
             if captured_context:
                 yield {"type": "context", "content": captured_context}
+
+        if self.run_completion_span is not None:
+            self.run_completion_span.end()
+            self.api_trace.update()
+            logger.info("Langfuse trace updated")
 
     @staticmethod
     def process_chunk(chunk):

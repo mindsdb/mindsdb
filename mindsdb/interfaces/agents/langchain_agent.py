@@ -11,16 +11,27 @@ from langchain.agents import AgentExecutor
 from langchain.agents.initialize import initialize_agent
 from langchain.chains.conversation.memory import ConversationSummaryBufferMemory
 from langchain.schema import SystemMessage
-from langchain_community.chat_models import ChatAnthropic, ChatOpenAI, ChatAnyscale, ChatLiteLLM, ChatOllama
+from langchain_community.chat_models import (
+    ChatAnthropic,
+    ChatOpenAI,
+    ChatAnyscale,
+    ChatLiteLLM,
+    ChatOllama,
+)
+from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langchain_core.prompts import PromptTemplate
 from langchain_core.tools import Tool
 from langfuse import Langfuse
 from langfuse.callback import CallbackHandler
 
-from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS as OPEN_AI_CHAT_MODELS
+from mindsdb.integrations.handlers.openai_handler.constants import (
+    CHAT_MODELS as OPEN_AI_CHAT_MODELS,
+)
 from mindsdb.integrations.libs.llm.utils import get_llm_config
 from mindsdb.integrations.utilities.handler_utils import get_api_key
-from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
+from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import (
+    construct_model_from_args,
+)
 from mindsdb.utilities import log
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 from mindsdb.interfaces.storage import db
@@ -39,45 +50,56 @@ from .constants import (
     SUPPORTED_PROVIDERS,
     ANTHROPIC_CHAT_MODELS,
     OLLAMA_CHAT_MODELS,
+    NVIDIA_NIM_CHAT_MODELS,
     USER_COLUMN,
-    ASSISTANT_COLUMN, CONTEXT_COLUMN
+    ASSISTANT_COLUMN,
+    CONTEXT_COLUMN,
 )
 from ..skills.skill_tool import skill_tool, SkillType
 from ...integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
 
-_PARSING_ERROR_PREFIXES = ['An output parsing error occurred', 'Could not parse LLM output']
+_PARSING_ERROR_PREFIXES = [
+    "An output parsing error occurred",
+    "Could not parse LLM output",
+]
 
 logger = log.getLogger(__name__)
 
 
 def get_llm_provider(args: Dict) -> str:
-    if 'provider' in args:
-        return args['provider']
-    if args['model_name'] in ANTHROPIC_CHAT_MODELS:
-        return 'anthropic'
-    if args['model_name'] in OPEN_AI_CHAT_MODELS:
-        return 'openai'
-    if args['model_name'] in OLLAMA_CHAT_MODELS:
-        return 'ollama'
+    if "provider" in args:
+        return args["provider"]
+    if args["model_name"] in ANTHROPIC_CHAT_MODELS:
+        return "anthropic"
+    if args["model_name"] in OPEN_AI_CHAT_MODELS:
+        return "openai"
+    if args["model_name"] in OLLAMA_CHAT_MODELS:
+        return "ollama"
+    if args["model_name"] in NVIDIA_NIM_CHAT_MODELS:
+        return "nvidia_nim"
     raise ValueError("Invalid model name. Please define a supported llm provider")
 
 
 def get_embedding_model_provider(args: Dict) -> str:
-    if 'embedding_model_provider' in args:
-        return args['embedding_model_provider']
-    if 'embedding_model_provider' not in args:
-        logger.warning('No embedding model provider specified. trying to use llm provider.')
-        return args.get('embedding_model_provider', get_llm_provider(args))
+    if "embedding_model_provider" in args:
+        return args["embedding_model_provider"]
+    if "embedding_model_provider" not in args:
+        logger.warning(
+            "No embedding model provider specified. trying to use llm provider."
+        )
+        return args.get("embedding_model_provider", get_llm_provider(args))
     raise ValueError("Invalid model name. Please define provider")
 
 
 def get_chat_model_params(args: Dict) -> Dict:
     model_config = args.copy()
     # Include API keys.
-    model_config['api_keys'] = {
+    model_config["api_keys"] = {
         p: get_api_key(p, model_config, None, strict=False) for p in SUPPORTED_PROVIDERS
     }
-    llm_config = get_llm_config(args.get('provider', get_llm_provider(args)), model_config)
+    llm_config = get_llm_config(
+        args.get("provider", get_llm_provider(args)), model_config
+    )
     config_dict = llm_config.model_dump()
     config_dict = {k: v for k, v in config_dict.items() if v is not None}
     return config_dict
@@ -87,24 +109,28 @@ def create_chat_model(args: Dict):
     model_kwargs = get_chat_model_params(args)
 
     def _get_tiktoken_model_name(model: str) -> str:
-        if model.startswith('gpt-4'):
-            return 'gpt-4'
+        if model.startswith("gpt-4"):
+            return "gpt-4"
         return model
 
-    if args['provider'] == 'anthropic':
+    if args["provider"] == "anthropic":
         return ChatAnthropic(**model_kwargs)
-    if args['provider'] == 'openai':
+    if args["provider"] == "openai":
         # Some newer GPT models (e.g. gpt-4o when released) don't have token counting support yet.
         # By setting this manually in ChatOpenAI, we count tokens like compatible GPT models.
-        model_kwargs['tiktoken_model_name'] = _get_tiktoken_model_name(model_kwargs.get('model_name'))
+        model_kwargs["tiktoken_model_name"] = _get_tiktoken_model_name(
+            model_kwargs.get("model_name")
+        )
         return ChatOpenAI(**model_kwargs)
-    if args['provider'] == 'anyscale':
+    if args["provider"] == "anyscale":
         return ChatAnyscale(**model_kwargs)
-    if args['provider'] == 'litellm':
+    if args["provider"] == "litellm":
         return ChatLiteLLM(**model_kwargs)
-    if args['provider'] == 'ollama':
+    if args["provider"] == "ollama":
         return ChatOllama(**model_kwargs)
-    if args['provider'] == 'mindsdb':
+    if args["provider"] == "nvidia_nim":
+        return ChatNVIDIA(**model_kwargs)
+    if args["provider"] == "mindsdb":
         return ChatMindsdb(**model_kwargs)
     raise ValueError(f'Unknown provider: {args["provider"]}')
 
@@ -156,32 +182,40 @@ class LangchainAgent:
         self.embedding_model = None
         self.agent = agent
         args = agent.params.copy()
-        args['model_name'] = agent.model_name
-        args['provider'] = agent.provider
-        args['embedding_model_provider'] = args.get('embedding_model', get_embedding_model_provider(args))
+        args["model_name"] = agent.model_name
+        args["provider"] = agent.provider
+        args["embedding_model_provider"] = args.get(
+            "embedding_model", get_embedding_model_provider(args)
+        )
 
         # agent is using current langchain model
-        if agent.provider == 'mindsdb':
-            args['model_name'] = agent.model_name
+        if agent.provider == "mindsdb":
+            args["model_name"] = agent.model_name
 
             # get prompt
-            prompt_template = model['problem_definition'].get('using', {}).get('prompt_template')
+            prompt_template = (
+                model["problem_definition"].get("using", {}).get("prompt_template")
+            )
             if prompt_template is not None:
                 # only update prompt_template if it is set on the model
-                args['prompt_template'] = prompt_template
+                args["prompt_template"] = prompt_template
 
-        if args.get('prompt_template') is None:
-            if args.get('mode') == 'retrieval':
-                args['prompt_template'] = DEFAULT_RAG_PROMPT_TEMPLATE
+        if args.get("prompt_template") is None:
+            if args.get("mode") == "retrieval":
+                args["prompt_template"] = DEFAULT_RAG_PROMPT_TEMPLATE
             else:
-                raise ValueError('Please provide a `prompt_template` or set `mode=retrieval`')
+                raise ValueError(
+                    "Please provide a `prompt_template` or set `mode=retrieval`"
+                )
 
         self.args = args
         self.trace_id = None
         self.observation_id = None
         self.log_callback_handler = None
         self.langfuse_callback_handler = None  # native langfuse callback handler
-        self.mdb_langfuse_callback_handler = None  # custom (see langfuse_callback_handler.py)
+        self.mdb_langfuse_callback_handler = (
+            None  # custom (see langfuse_callback_handler.py)
+        )
 
     def get_completion(self, messages, trace_id, observation_id, stream: bool = False):
         if stream:
@@ -194,17 +228,19 @@ class LangchainAgent:
         df = pd.DataFrame(messages)
 
         # Back compatibility for old models
-        self.provider = args.get('provider', get_llm_provider(args))
+        self.provider = args.get("provider", get_llm_provider(args))
 
         df = df.reset_index(drop=True)
         agent = self.create_agent(df, args)
         # Use last message as prompt, remove other questions.
-        user_column = args.get('user_column', USER_COLUMN)
+        user_column = args.get("user_column", USER_COLUMN)
         df.iloc[:-1, df.columns.get_loc(user_column)] = None
         return self.run_agent(df, agent, args)
 
-    def _get_completion_stream(self, messages: List[dict], trace_id: str, observation_id: str) -> Iterable[Dict]:
-        '''
+    def _get_completion_stream(
+        self, messages: List[dict], trace_id: str, observation_id: str
+    ) -> Iterable[Dict]:
+        """
         Gets a completion as a stream of chunks from given messages.
 
         Args:
@@ -214,7 +250,7 @@ class LangchainAgent:
 
         Returns:
             chunks (Iterable[object]): Completion chunks
-        '''
+        """
         self.trace_id = trace_id
         self.observation_id = observation_id
 
@@ -223,31 +259,32 @@ class LangchainAgent:
         df = pd.DataFrame(messages)
 
         # Back compatibility for old models
-        self.provider = args.get('provider', get_llm_provider(args))
+        self.provider = args.get("provider", get_llm_provider(args))
 
         self.embedding_model_provider = args.get('embedding_model_provider', get_embedding_model_provider(args))
 
         df = df.reset_index(drop=True)
         agent = self.create_agent(df, args)
         # Use last message as prompt, remove other questions.
-        user_column = args.get('user_column', USER_COLUMN)
+        user_column = args.get("user_column", USER_COLUMN)
         df.iloc[:-1, df.columns.get_loc(user_column)] = None
         return self.stream_agent(df, agent, args)
 
     def set_embedding_model(self, args):
         # Set up embeddings model if needed.
 
-        embeddings_args = args.pop('embedding_model_args', {})
+        embeddings_args = args.pop("embedding_model_args", {})
 
         # no embedding model args provided, use default provider.
         if not embeddings_args:
             embeddings_provider = get_embedding_model_provider(args)
-            logger.warning("'embedding_model_args' not found in input params, "
-                           f"Trying to use LLM provider: {embeddings_provider}"
-                           )
-            embeddings_args['class'] = embeddings_provider
+            logger.warning(
+                "'embedding_model_args' not found in input params, "
+                f"Trying to use LLM provider: {embeddings_provider}"
+            )
+            embeddings_args["class"] = embeddings_provider
             # Include API keys if present.
-            embeddings_args.update({k: v for k, v in args.items() if 'api_key' in k})
+            embeddings_args.update({k: v for k, v in args.items() if "api_key" in k})
 
         # create embeddings model
         self.embedding_model = construct_model_from_args(embeddings_args)
@@ -256,9 +293,9 @@ class LangchainAgent:
         # Set up tools.
         llm = create_chat_model(args)
         self.llm = llm
-        if args.get('mode') == 'retrieval':
+        if args.get("mode") == "retrieval":
             self.set_embedding_model(args)
-            self.args.pop('mode')
+            self.args.pop("mode")
 
         tools = []
         skills = self.agent.skills or []
@@ -266,20 +303,22 @@ class LangchainAgent:
             tools += self.langchain_tools_from_skill(skill, {}, llm)
 
         # Prefer prediction prompt template over original if provided.
-        prompt_template = args['prompt_template']
+        prompt_template = args["prompt_template"]
 
         # Set up memory.
-        memory = ConversationSummaryBufferMemory(llm=llm,
-                                                 input_key='input',
-                                                 output_key='output',
-                                                 max_token_limit=args.get('max_tokens', DEFAULT_MAX_TOKENS),
-                                                 memory_key='chat_history')
+        memory = ConversationSummaryBufferMemory(
+            llm=llm,
+            input_key="input",
+            output_key="output",
+            max_token_limit=args.get("max_tokens", DEFAULT_MAX_TOKENS),
+            memory_key="chat_history",
+        )
 
         memory.chat_memory.messages.insert(0, SystemMessage(content=prompt_template))
         # User - Assistant conversation. All except the last message.
-        user_column = args.get('user_column', USER_COLUMN)
-        assistant_column = args.get('assistant_column', ASSISTANT_COLUMN)
-        for row in df[:-1].to_dict('records'):
+        user_column = args.get("user_column", USER_COLUMN)
+        assistant_column = args.get("assistant_column", ASSISTANT_COLUMN)
+        for row in df[:-1].to_dict("records"):
             question = row[user_column]
             answer = row[assistant_column]
             if question:
@@ -287,21 +326,26 @@ class LangchainAgent:
             if answer:
                 memory.chat_memory.add_ai_message(answer)
 
-        agent_type = args.get('agent_type', DEFAULT_AGENT_TYPE)
+        agent_type = args.get("agent_type", DEFAULT_AGENT_TYPE)
         agent_executor = initialize_agent(
             tools,
             llm,
             agent=agent_type,
             # Use custom output parser to handle flaky LLMs that don't ALWAYS conform to output format.
-            agent_kwargs={'output_parser': SafeOutputParser()},
+            agent_kwargs={"output_parser": SafeOutputParser()},
             # Calls the agent’s LLM Chain one final time to generate a final answer based on the previous steps
-            early_stopping_method='generate',
+            early_stopping_method="generate",
             handle_parsing_errors=self._handle_parsing_errors,
             # Timeout per agent invocation.
-            max_execution_time=args.get('timeout_seconds', args.get('timeout_seconds', DEFAULT_AGENT_TIMEOUT_SECONDS)),
-            max_iterations=args.get('max_iterations', args.get('max_iterations', DEFAULT_MAX_ITERATIONS)),
+            max_execution_time=args.get(
+                "timeout_seconds",
+                args.get("timeout_seconds", DEFAULT_AGENT_TIMEOUT_SECONDS),
+            ),
+            max_iterations=args.get(
+                "max_iterations", args.get("max_iterations", DEFAULT_MAX_ITERATIONS)
+            ),
             memory=memory,
-            verbose=args.get('verbose', args.get('verbose', True))
+            verbose=args.get("verbose", args.get("verbose", True)),
         )
         return agent_executor
 
@@ -312,16 +356,18 @@ class LangchainAgent:
         all_tools = []
         for tool in tools:
             if skill.type == SkillType.RETRIEVAL.value:
-                pred_args['embedding_model'] = self.embedding_model
-                pred_args['llm'] = self.llm
+                pred_args["embedding_model"] = self.embedding_model
+                pred_args["llm"] = self.llm
                 all_tools.append(_build_retrieval_tool(tool, pred_args, skill))
                 continue
             if isinstance(tool, dict):
-                all_tools.append(Tool(
-                    name=tool['name'],
-                    func=tool['func'],
-                    description=tool['description'],
-                ))
+                all_tools.append(
+                    Tool(
+                        name=tool["name"],
+                        func=tool["func"],
+                        description=tool["description"],
+                    )
+                )
                 continue
             all_tools.append(tool)
         return all_tools
@@ -333,16 +379,29 @@ class LangchainAgent:
 
         all_callbacks = [self.log_callback_handler]
 
-        langfuse_public_key = args.get('langfuse_public_key', os.getenv('LANGFUSE_PUBLIC_KEY'))
-        langfuse_secret_key = args.get('langfuse_secret_key', os.getenv('LANGFUSE_SECRET_KEY'))
-        langfuse_host = args.get('langfuse_host', os.getenv('LANGFUSE_HOST'))
-        are_langfuse_args_present = bool(langfuse_public_key) and bool(langfuse_secret_key) and bool(langfuse_host)
+        langfuse_public_key = args.get(
+            "langfuse_public_key", os.getenv("LANGFUSE_PUBLIC_KEY")
+        )
+        langfuse_secret_key = args.get(
+            "langfuse_secret_key", os.getenv("LANGFUSE_SECRET_KEY")
+        )
+        langfuse_host = args.get("langfuse_host", os.getenv("LANGFUSE_HOST"))
+        are_langfuse_args_present = (
+            bool(langfuse_public_key)
+            and bool(langfuse_secret_key)
+            and bool(langfuse_host)
+        )
 
         if are_langfuse_args_present:
             if self.langfuse_callback_handler is None:
-                trace_name = args.get('trace_id',
-                                      f'NativeTrace-...{self.trace_id[-7:]}' if self.trace_id is not None
-                                      else 'NativeTrace-MindsDB-AgentExecutor')
+                trace_name = args.get(
+                    "trace_id",
+                    (
+                        f"NativeTrace-...{self.trace_id[-7:]}"
+                        if self.trace_id is not None
+                        else "NativeTrace-MindsDB-AgentExecutor"
+                    ),
+                )
                 metadata = get_metadata(args)
                 self.langfuse_callback_handler = CallbackHandler(
                     public_key=langfuse_public_key,
@@ -353,16 +412,20 @@ class LangchainAgent:
                     metadata=metadata,
                 )
                 if not self.langfuse_callback_handler.auth_check():
-                    logger.error(f'Incorrect Langfuse credentials provided to Langchain handler. Full args: {args}')
+                    logger.error(
+                        f"Incorrect Langfuse credentials provided to Langchain handler. Full args: {args}"
+                    )
 
             # custom tracer
             if self.mdb_langfuse_callback_handler is None:
-                trace_id = args.get('trace_id', self.trace_id or None)
-                observation_id = args.get('observation_id', self.observation_id or uuid4().hex)
+                trace_id = args.get("trace_id", self.trace_id or None)
+                observation_id = args.get(
+                    "observation_id", self.observation_id or uuid4().hex
+                )
                 langfuse = Langfuse(
                     host=langfuse_host,
                     public_key=langfuse_public_key,
-                    secret_key=langfuse_secret_key
+                    secret_key=langfuse_secret_key,
                 )
                 self.mdb_langfuse_callback_handler = LangfuseCallbackHandler(
                     langfuse=langfuse,
@@ -387,16 +450,16 @@ class LangchainAgent:
                 #
                 # Ideally, in the future, we would write a parser that is more robust and flexible than the one Langchain uses.
                 # Response is wrapped in ``
-                logger.info('Handling parsing error, salvaging response...')
-                response_output = response.split('`')
+                logger.info("Handling parsing error, salvaging response...")
+                response_output = response.split("`")
                 if len(response_output) >= 2:
                     response = response_output[-2]
 
                 # Wrap response in Langchain conversational react format.
-                langchain_react_formatted_response = f'''Thought: Do I need to use a tool? No
-AI: {response}'''
+                langchain_react_formatted_response = f"""Thought: Do I need to use a tool? No
+AI: {response}"""
                 return langchain_react_formatted_response
-        return f'Agent failed with error:\n{str(error)}...'
+        return f"Agent failed with error:\n{str(error)}..."
 
     def run_agent(self, df: pd.DataFrame, agent: AgentExecutor, args: Dict) -> pd.DataFrame:
         base_template = args.get('prompt_template', args['prompt_template'])
@@ -407,7 +470,7 @@ AI: {response}'''
 
         def _invoke_agent_executor_with_prompt(agent_executor, prompt):
             if not prompt:
-                return {CONTEXT_COLUMN: [], ASSISTANT_COLUMN: ''}
+                return {CONTEXT_COLUMN: [], ASSISTANT_COLUMN: ""}
             try:
                 callbacks, context_callback = prepare_callbacks(self, args)
                 result = agent_executor.invoke(prompt, config={'callbacks': callbacks})
@@ -420,22 +483,30 @@ AI: {response}'''
         completions = []
         contexts = []
 
-        max_workers = args.get('max_workers', None)
-        agent_timeout_seconds = args.get('timeout', DEFAULT_AGENT_TIMEOUT_SECONDS)
+        max_workers = args.get("max_workers", None)
+        agent_timeout_seconds = args.get("timeout", DEFAULT_AGENT_TIMEOUT_SECONDS)
 
         with ContextThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = [executor.submit(_invoke_agent_executor_with_prompt, agent, prompt) for prompt in prompts]
+            futures = [
+                executor.submit(_invoke_agent_executor_with_prompt, agent, prompt)
+                for prompt in prompts
+            ]
             try:
                 for future in as_completed(futures, timeout=agent_timeout_seconds):
                     result = future.result()
                     if result is None:
-                        result = {CONTEXT_COLUMN: [], ASSISTANT_COLUMN: "No response generated"}
+                        result = {
+                            CONTEXT_COLUMN: [],
+                            ASSISTANT_COLUMN: "No response generated",
+                        }
 
                     completions.append(result[ASSISTANT_COLUMN])
                     contexts.append(result[CONTEXT_COLUMN])
             except TimeoutError:
                 timeout_message = "I'm sorry! I couldn't come up with a response in time. Please try again."
-                logger.warning(f"Agent execution timed out after {agent_timeout_seconds} seconds")
+                logger.warning(
+                    f"Agent execution timed out after {agent_timeout_seconds} seconds"
+                )
                 for _ in range(len(futures) - len(completions)):
                     completions.append(timeout_message)
                     contexts.append([])
@@ -446,10 +517,14 @@ AI: {response}'''
             contexts.insert(i, [])
 
         # Create DataFrame with completions and context if required
-        pred_df = pd.DataFrame({
-            ASSISTANT_COLUMN: completions,
-            CONTEXT_COLUMN: [json.dumps(ctx) for ctx in contexts]  # Serialize context to JSON string
-        })
+        pred_df = pd.DataFrame(
+            {
+                ASSISTANT_COLUMN: completions,
+                CONTEXT_COLUMN: [
+                    json.dumps(ctx) for ctx in contexts
+                ],  # Serialize context to JSON string
+            }
+        )
 
         if not return_context:
             pred_df = pred_df.drop(columns=[CONTEXT_COLUMN])

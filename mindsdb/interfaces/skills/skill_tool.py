@@ -87,7 +87,6 @@ class SkillToolController:
                     'Use the conversation context to decide which table to query. '
                     f'These are the available tables: {tables_list}.\n'
                     f'ALWAYS consider these special cases:\n'
-                    f'- Not all SQL functions are supported. Do NOT use the following functions: INTERVAL. \n'
                     f'- For TIMESTAMP type columns, make sure you include the time portion in your query (e.g. WHERE date_column = "2020-01-01 12:00:00")'
                     f'Here are the rest of the instructions:\n'
                     f'{tool.description}'

@@ -38,9 +38,11 @@ from mindsdb.interfaces.storage import db
 
 from .mindsdb_chat_model import ChatMindsdb
 from .callback_handlers import LogCallbackHandler, ContextCaptureCallback
-from .langfuse_callback_handler import LangfuseCallbackHandler, get_metadata, get_tags
+from .langfuse_callback_handler import LangfuseCallbackHandler, get_metadata, get_tags, get_tool_usage, get_skills
+
 from .tools import _build_retrieval_tool
 from .safe_output_parser import SafeOutputParser
+
 
 from .constants import (
     DEFAULT_AGENT_TIMEOUT_SECONDS,
@@ -188,6 +190,14 @@ class LangchainAgent:
             "embedding_model", get_embedding_model_provider(args)
         )
 
+        self.langfuse = None
+        if os.getenv('LANGFUSE_PUBLIC_KEY') is not None:
+            self.langfuse = Langfuse(
+                public_key=os.getenv('LANGFUSE_PUBLIC_KEY'),
+                secret_key=os.getenv('LANGFUSE_SECRET_KEY'),
+                host=os.getenv('LANGFUSE_HOST')
+            )
+
         # agent is using current langchain model
         if agent.provider == "mindsdb":
             args["model_name"] = agent.model_name
@@ -217,11 +227,42 @@ class LangchainAgent:
             None  # custom (see langfuse_callback_handler.py)
         )
 
-    def get_completion(self, messages, trace_id, observation_id, stream: bool = False):
+    def get_completion(self, messages, stream: bool = False):
+
+        self.run_completion_span = None
+        self.api_trace = None
+        if self.langfuse:
+
+            # todo we need to fix this as this assumes that the model is always langchain
+            # since decoupling the model from langchain, we need to find a way to get the model name
+            # this breaks retrieval agents
+
+            # metadata retrieval
+            trace_metadata = {
+                'provider': self.args["provider"],
+                'model_name': self.args["model_name"],
+                'embedding_model_provider': self.args.get('embedding_model_provider', get_embedding_model_provider(self.args))
+            }
+            trace_metadata['skills'] = get_skills(self.agent)
+            trace_tags = get_tags(trace_metadata)
+
+            self.api_trace = self.langfuse.trace(
+                name='api-completion',
+                input=messages,
+                tags=trace_tags,
+                metadata=trace_metadata
+            )
+
+            self.run_completion_span = self.api_trace.span(name='run-completion', input=messages)
+            trace_id = self.api_trace.id
+            observation_id = self.run_completion_span.id
+
+            self.trace_id = trace_id
+            self.observation_id = observation_id
+            logger.info(f"Langfuse trace created with ID: {trace_id}")
+
         if stream:
-            return self._get_completion_stream(messages, trace_id, observation_id)
-        self.trace_id = trace_id
-        self.observation_id = observation_id
+            return self._get_completion_stream(messages)
 
         args = self.args
 
@@ -235,10 +276,20 @@ class LangchainAgent:
         # Use last message as prompt, remove other questions.
         user_column = args.get("user_column", USER_COLUMN)
         df.iloc[:-1, df.columns.get_loc(user_column)] = None
-        return self.run_agent(df, agent, args)
+        response = self.run_agent(df, agent, args)
+
+        if self.run_completion_span is not None and self.api_trace is not None:
+            self.run_completion_span.end(output=response)
+            self.api_trace.update(output=response)
+
+            # update metadata with tool usage
+            trace = self.langfuse.get_trace(self.trace_id)
+            trace_metadata['tool_usage'] = get_tool_usage(trace)
+            self.api_trace.update(metadata=trace_metadata)
+        return response
 
     def _get_completion_stream(
-        self, messages: List[dict], trace_id: str, observation_id: str
+        self, messages: List[dict]
     ) -> Iterable[Dict]:
         """
         Gets a completion as a stream of chunks from given messages.
@@ -251,8 +302,6 @@ class LangchainAgent:
         Returns:
             chunks (Iterable[object]): Completion chunks
         """
-        self.trace_id = trace_id
-        self.observation_id = observation_id
 
         args = self.args
 
@@ -558,6 +607,11 @@ AI: {response}"""
             captured_context = context_callback.get_contexts()
             if captured_context:
                 yield {"type": "context", "content": captured_context}
+
+        if self.run_completion_span is not None:
+            self.run_completion_span.end()
+            self.api_trace.update()
+            logger.info("Langfuse trace updated")
 
     @staticmethod
     def process_chunk(chunk):

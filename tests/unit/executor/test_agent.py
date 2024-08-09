@@ -4,6 +4,17 @@ from tests.unit.executor_test_base import BaseExecutorDummyML
 from unittest.mock import patch
 
 
+def set_openai_completion(mock_openai, response):
+    mock_openai().chat.completions.create.return_value = {
+        'choices': [{
+            'message': {
+                'role': 'system',
+                'content': response
+            }
+        }]
+    }
+
+
 class TestAgent(BaseExecutorDummyML):
 
     def test_mindsdb_provider(self):
@@ -38,15 +49,7 @@ class TestAgent(BaseExecutorDummyML):
     @patch('openai.OpenAI')
     def test_openai_provider_with_model(self, mock_openai):
         agent_response = 'how can I assist you today?'
-
-        mock_openai().chat.completions.create.return_value = {
-            'choices': [{
-                'message': {
-                    'role': 'system',
-                    'content': agent_response
-                }
-            }]
-        }
+        set_openai_completion(mock_openai, agent_response)
 
         self.run_sql('CREATE ML_ENGINE langchain FROM langchain')
 
@@ -71,15 +74,7 @@ class TestAgent(BaseExecutorDummyML):
     @patch('openai.OpenAI')
     def test_openai_provider(self, mock_openai):
         agent_response = 'how can I assist you today?'
-
-        mock_openai().chat.completions.create.return_value = {
-            'choices': [{
-                'message': {
-                    'role': 'system',
-                    'content': agent_response
-                }
-            }]
-        }
+        set_openai_completion(mock_openai, agent_response)
 
         self.run_sql('''
             CREATE AGENT my_agent
@@ -113,3 +108,28 @@ class TestAgent(BaseExecutorDummyML):
             where t.q = ''
         ''')
         assert len(ret) == 0
+
+    @patch('openai.OpenAI')
+    def test_agent_stream(self, mock_openai):
+        agent_response = 'how can I assist you today?'
+        set_openai_completion(mock_openai, agent_response)
+
+        self.run_sql('''
+            CREATE AGENT my_agent
+            USING
+             provider='openai',
+             model = "gpt-3.5-turbo",
+             openai_api_key='--',
+             prompt_template="Answer the user input in a helpful way"
+         ''')
+
+        agents_controller = self.command_executor.session.agents_controller
+        agent = agents_controller.get_agent('my_agent')
+
+        messages = [{'question': 'hi'}]
+        found = False
+        for chunk in agents_controller.get_completion(agent, messages, stream=True):
+            if chunk.get('output') == agent_response:
+                found = True
+        if not found:
+            raise AttributeError('Agent response is not found')

@@ -783,6 +783,10 @@ class ExecuteCommands:
         return ExecuteAnswer()
 
     def answer_evaluate_metric(self, statement, database_name):
+        """
+        Converts the SQL command of EVALUATE to score the output
+        for either LLM output or table output
+        """
         try:
             sqlquery = SQLQuery(statement.data, session=self.session, database=database_name)
         except Exception as e:

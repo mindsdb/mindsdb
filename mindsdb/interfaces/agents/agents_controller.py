@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, Iterator, List, Union
 
 from langchain_core.tools import BaseTool
 from sqlalchemy.orm.attributes import flag_modified
@@ -227,6 +227,7 @@ class AgentsController:
             agent_with_new_name = self.get_agent(name, project_name=project_name)
             if agent_with_new_name is not None:
                 raise ValueError(f'Agent with updated name already exists: {name}')
+            existing_agent.name = name
 
         if model_name or provider:
             # check model and provider
@@ -242,7 +243,7 @@ class AgentsController:
             if existing_skill is None:
                 raise ValueError(f'Skill with name does not exist: {skill}')
             new_skills.append(existing_skill)
-        existing_agent.skills += new_skills
+        existing_agent.skills = list(set(existing_agent.skills + new_skills))
 
         removed_skills = []
         for skill in existing_agent.skills:
@@ -287,26 +288,34 @@ class AgentsController:
             self,
             agent: db.Agents,
             messages: List[Dict[str, str]],
-            trace_id: str = None,
-            observation_id: str = None,
             project_name: str = 'mindsdb',
-            tools: List[BaseTool] = None) -> pd.DataFrame:
+            tools: List[BaseTool] = None,
+            stream: bool = False) -> Union[Iterator[object], pd.DataFrame]:
         '''
         Queries an agent to get a completion.
 
         Parameters:
             agent (db.Agents): Existing agent to get completion from
             messages (List[Dict[str, str]]): Chat history to send to the agent
+            trace_id (str): ID of Langfuse trace to use
+            observation_id (str): ID of parent Langfuse observation to use
             project_name (str): Project the agent belongs to (default mindsdb)
             tools (List[BaseTool]): Tools to use while getting the completion
+            stream (bool): Whether or not to stream the response
 
         Returns:
-            pd.DataFrame (pd.DataFrame): Completion as a DataFrame
+            response (Union[Iterator[object], pd.DataFrame]): Completion as a DataFrame or iterator of completion chunks
 
         Raises:
             ValueError: Agent's model does not exist.
         '''
-
+        if stream:
+            return self._get_completion_stream(
+                agent,
+                messages,
+                project_name=project_name,
+                tools=tools
+            )
         from .langchain_agent import LangchainAgent
 
         model, provider = self.check_model_provider(agent.model_name, agent.provider)
@@ -316,4 +325,40 @@ class AgentsController:
             db.session.commit()
 
         lang_agent = LangchainAgent(agent, model)
-        return lang_agent.get_completion(messages, trace_id, observation_id)
+        return lang_agent.get_completion(messages)
+
+    def _get_completion_stream(
+            self,
+            agent: db.Agents,
+            messages: List[Dict[str, str]],
+            project_name: str = 'mindsdb',
+            tools: List[BaseTool] = None) -> Iterator[object]:
+        '''
+        Queries an agent to get a stream of completion chunks.
+
+        Parameters:
+            agent (db.Agents): Existing agent to get completion from
+            messages (List[Dict[str, str]]): Chat history to send to the agent
+            trace_id (str): ID of Langfuse trace to use
+            observation_id (str): ID of parent Langfuse observation to use
+            project_name (str): Project the agent belongs to (default mindsdb)
+            tools (List[BaseTool]): Tools to use while getting the completion
+
+        Returns:
+            chunks (Iterator[object]): Completion chunks as an iterator
+
+        Raises:
+            ValueError: Agent's model does not exist.
+        '''
+        # For circular dependency.
+        from .langchain_agent import LangchainAgent
+
+        model, provider = self.check_model_provider(agent.model_name, agent.provider)
+
+        # update old agents
+        if agent.provider is None and provider is not None:
+            agent.provider = provider
+            db.session.commit()
+
+        lang_agent = LangchainAgent(agent, model=model)
+        return lang_agent.get_completion(messages, stream=True)

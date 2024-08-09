@@ -1,12 +1,13 @@
-import datetime
-import mimetypes
 import os
+import datetime
 import secrets
+import mimetypes
 import threading
 import traceback
 import webbrowser
-from distutils.version import LooseVersion
 from pathlib import Path
+from http import HTTPStatus
+from distutils.version import LooseVersion
 
 import requests
 from flask import Flask, url_for, make_response, request, send_from_directory
@@ -210,7 +211,11 @@ def initialize_app(config, no_studio):
     @app.route('/<path:path>', methods=['GET'])
     def root_index(path):
         if path.startswith('api/'):
-            return {'message': 'wrong query'}, 400
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                'Not found',
+                'The endpoint you are trying to access does not exist on the server.'
+            )
         if static_root.joinpath(path).is_file():
             return send_from_directory(static_root, path)
         else:
@@ -245,10 +250,22 @@ def initialize_app(config, no_studio):
     def handle_exception(e):
         logger.error(f"http exception: {e}")
         # pass through HTTP errors
+        # NOTE flask_restx require 'message', also it modyfies 'application/problem+json' to 'application/json'
         if isinstance(e, HTTPException):
-            return {"message": str(e)}, e.code, e.get_response().headers
-        name = getattr(type(e), "__name__") or "Unknown error"
-        return {"message": f"{name}: {str(e)}"}, 500
+            return ({
+                'title': e.name,
+                'detail': e.description,
+                'message': e.description
+            }, e.code, {
+                'Content-Type': 'application/problem+json'
+            })
+        return ({
+            'title': getattr(type(e), "__name__") or "Unknown error",
+            'detail': str(e),
+            'message': str(e)
+        }, 500, {
+            'Content-Type': 'application/problem+json'
+        })
 
     @app.teardown_appcontext
     def remove_session(*args, **kwargs):

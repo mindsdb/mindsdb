@@ -1,91 +1,33 @@
-import unittest
-from unittest.mock import patch, MagicMock, Mock
 from collections import OrderedDict
-from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
+import unittest
+from unittest.mock import patch
+
 from mysql.connector import Error as MySQLError
-from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response
-)
+
+from base_handler_test import BaseDatabaseHandlerTest
+from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
 
 
-class CursorContextManager(Mock):
-    def __enter__(self):
-        return self
+class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
-    def __exit__(self, *args):
-        pass
+    @property
+    def dummy_connection_data(self):
+        return OrderedDict(
+            host='127.0.0.1',
+            port=3306,
+            user='example_user',
+            password='example_pass',
+            database='example_db',
+            url='mysql://example_user:example_pass@localhost:3306/example_db'
+        )
 
-    description = [['a']]
+    @property
+    def err_to_raise_on_connect_failure(self):
+        return MySQLError("Connection Failed")
 
-    def fetchall(self):
-        return [[1]]
-
-
-class TestMySQLHandler(unittest.TestCase):
-
-    dummy_connection_data = OrderedDict(
-        host='127.0.0.1',
-        port=3306,
-        user='example_user',
-        password='example_pass',
-        database='example_db',
-        url='mysql://example_user:example_pass@localhost:3306/example_db'
-    )
-
-    def setUp(self):
-        self.patcher = patch('mysql.connector.connect')
-        self.mock_connect = self.patcher.start()
-        self.handler = MySQLHandler('mysql', connection_data=self.dummy_connection_data)
-
-    def tearDown(self):
-        self.patcher.stop()
-
-    def test_connect_success(self):
-        self.mock_connect.return_value = MagicMock()
-        connection = self.handler.connect()
-        self.assertIsNotNone(connection)
-        self.assertTrue(self.handler.is_connected)
-        self.mock_connect.assert_called_once()
-
-    def test_connect_failure(self):
-        self.mock_connect.side_effect = MySQLError("Connection Failed")
-
-        with self.assertRaises(MySQLError):
-            self.handler.connect()
-        self.assertFalse(self.handler.is_connected)
-
-    def test_check_connection(self):
-        self.mock_connect.return_value = MagicMock()
-        connected = self.handler.check_connection()
-        self.assertTrue(connected)
-
-    def test_native_query(self):
-        mock_conn = MagicMock()
-        mock_cursor = CursorContextManager()
-
-        self.handler.connect = MagicMock(return_value=mock_conn)
-        mock_conn.cursor = MagicMock(return_value=mock_cursor)
-
-        query_str = "SELECT * FROM table"
-        data = self.handler.native_query(query_str)
-
-        assert isinstance(data, Response)
-        self.assertFalse(data.error_code)
-
-    def test_get_columns(self):
-        self.handler.native_query = MagicMock()
-
-        table_name = 'mock_table'
-        self.handler.get_columns(table_name)
-
-        expected_query = f"DESCRIBE `{table_name}`;"
-        self.handler.native_query.assert_called_once_with(expected_query)
-
-    def test_get_tables(self):
-        self.handler.native_query = MagicMock()
-        self.handler.get_tables()
-
-        expected_query = """
+    @property
+    def get_tables_query(self):
+        return """
             SELECT
                 TABLE_SCHEMA AS table_schema,
                 TABLE_NAME AS table_name,
@@ -99,7 +41,15 @@ class TestMySQLHandler(unittest.TestCase):
             ;
         """
 
-        self.handler.native_query.assert_called_once_with(expected_query)
+    @property
+    def get_columns_query(self):
+        return f"DESCRIBE `{self.mock_table}`;"
+
+    def create_handler(self):
+        return MySQLHandler('mysql', connection_data=self.dummy_connection_data)
+
+    def create_patcher(self):
+        return patch('mysql.connector.connect')
 
 
 if __name__ == '__main__':

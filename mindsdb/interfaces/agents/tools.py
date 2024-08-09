@@ -1,5 +1,4 @@
 from typing import Dict
-
 from langchain.agents import Tool
 
 from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
@@ -7,6 +6,7 @@ from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel, Vector
 from mindsdb.interfaces.skills.skill_tool import skill_tool
 from mindsdb.interfaces.storage import db
 
+from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS
 from mindsdb.interfaces.storage.db import KnowledgeBase
 from mindsdb.utilities import log
 
@@ -44,7 +44,7 @@ def _build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
 
     # Can run into weird validation errors when unpacking rag_params directly into constructor.
     rag_config = RAGPipelineModel(
-        embedding_model=rag_params['embedding_model']
+        embedding_model=rag_params.get('embedding_model', DEFAULT_EMBEDDINGS_MODEL_CLASS())
     )
     if 'documents' in rag_params:
         rag_config.documents = rag_params['documents']
@@ -64,11 +64,23 @@ def _build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
     # build retriever
     rag_pipeline = RAG(rag_config)
 
-    # create RAG tool
+    logger.debug(f"RAG pipeline created with config: {rag_config}")
+
+    def rag_wrapper(query: str) -> str:
+        try:
+            result = rag_pipeline(query)
+            logger.debug(f"RAG pipeline result: {result}")
+            return result['answer']
+        except Exception as e:
+            logger.error(f"Error in RAG pipeline: {str(e)}")
+            return f"Error in retrieval: {str(e)}"
+
+    # Create RAG tool
     return Tool(
-        func=rag_pipeline,
+        func=rag_wrapper,
         name=tool['name'],
-        description=tool['description']
+        description=tool['description'],
+        return_direct=False  # Changed to False to allow the agent to use this information
     )
 
 

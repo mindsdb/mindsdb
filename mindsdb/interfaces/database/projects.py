@@ -14,7 +14,7 @@ from mindsdb.utilities.config import Config
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.views import ViewController
 from mindsdb.utilities.context import context as ctx
-from mindsdb.utilities.exception import EntityExistsError
+from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 import mindsdb.utilities.profiler as profiler
 
 
@@ -140,8 +140,10 @@ class Project:
 
         # regon Hide sensitive info
         training_options = predictor_record.learn_args
-        if with_secrets is False and integraion_record.engine in integration_controller.handler_modules:
-            handler_module = integration_controller.handler_modules[integraion_record.engine]
+        handler_module = integration_controller.get_handler_module(integraion_record.engine)
+
+        if with_secrets is False and handler_module:
+
             model_using_args = getattr(handler_module, 'model_using_args', None)
             if (
                 isinstance(model_using_args, dict)
@@ -338,6 +340,16 @@ class Project:
                 columns = predictor_record.to_predict
                 if not isinstance(columns, list):
                     columns = [columns]
+        else:
+            # is it agent?
+            agent = db.Agents.query.filter_by(
+                company_id=ctx.company_id,
+                project_id=self.id,
+                name=table_name
+            ).first()
+            if agent is not None:
+                from mindsdb.interfaces.agents.constants import ASSISTANT_COLUMN, USER_COLUMN
+                columns = [ASSISTANT_COLUMN, USER_COLUMN]
 
         return columns
 
@@ -375,7 +387,7 @@ class ProjectController:
         record = q.first()
 
         if record is None:
-            raise ValueError(f'Project is not found: {name}/{id}')
+            raise EntityNotExistsError(f'Project not found: {name}')
         return Project.from_record(record)
 
     def add(self, name: str) -> Project:

@@ -1058,10 +1058,7 @@ class ExecuteCommands:
 
         storage = None
         try:
-            handlers_meta = (
-                self.session.integration_controller.get_handlers_import_status()
-            )
-            handler_meta = handlers_meta[engine]
+            handler_meta = self.session.integration_controller.get_handler_meta(engine)
             if handler_meta.get("import", {}).get("success") is not True:
                 raise ExecutorException(f"The '{engine}' handler isn't installed.\n" + get_handler_install_message(engine))
 
@@ -1115,7 +1112,7 @@ class ExecuteCommands:
             raise EntityExistsError('Database already exists', name)
         try:
             integration = ProjectController().get(name=name)
-        except ValueError:
+        except EntityNotExistsError:
             pass
         if integration is not None:
             raise EntityExistsError('Project exists with this name', name)
@@ -1134,11 +1131,8 @@ class ExecuteCommands:
             else:
                 return ExecuteAnswer()
 
-        handler_module_meta = (
-            self.session.integration_controller.get_handlers_import_status().get(
-                handler
-            )
-        )
+        handler_module_meta = self.session.integration_controller.get_handler_meta(handler)
+
         if handler_module_meta is None:
             raise ExecutorException(f"There is no engine '{handler}'")
 

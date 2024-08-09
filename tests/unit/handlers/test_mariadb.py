@@ -1,14 +1,12 @@
 from collections import OrderedDict
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from mysql.connector import Error as MySQLError
 
-from base_handler_test import BaseDatabaseHandlerTest, MockCursorContextManager
+from base_handler_test import BaseDatabaseHandlerTest
 from mindsdb.integrations.handlers.mariadb_handler.mariadb_handler import MariaDBHandler
-from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response
-)
+
 
 class TestMariaDBHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
@@ -51,6 +49,7 @@ class TestMariaDBHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
     def create_patcher(self):
         return patch('mysql.connector.connect')
+
 
 if __name__ == '__main__':
     unittest.main()

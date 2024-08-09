@@ -1,7 +1,7 @@
 from typing import List, Optional
 
 import pandas as pd
-from pymilvus import Collection, CollectionSchema, DataType, FieldSchema, connections, utility
+from pymilvus import MilvusClient, CollectionSchema, DataType, FieldSchema
 
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse
@@ -20,6 +20,7 @@ class MilvusHandler(VectorStoreHandler):
 
     def __init__(self, name: str, **kwargs):
         super().__init__(name)
+        self.milvus_client = None
         self._connection_data = kwargs["connection_data"]
         # Extract parameters used while searching and leave the rest for establishing connection
         self._search_limit = 100
@@ -62,7 +63,7 @@ class MilvusHandler(VectorStoreHandler):
         if self.is_connected is True:
             return
         try:
-            connections.connect(**self._connection_data)
+            self.milvus_client = MilvusClient(**self._connection_data)
             self.is_connected = True
         except Exception as e:
             logger.error(f"Error connecting to Milvus client: {e}!")
@@ -72,14 +73,14 @@ class MilvusHandler(VectorStoreHandler):
         """Close the database connection."""
         if self.is_connected is False:
             return
-        connections.disconnect(self._connection_data["alias"])
+        self.milvus_client.close()
         self.is_connected = False
 
     def check_connection(self):
         """Check the connection to the Milvus database."""
         response_code = StatusResponse(False)
         try:
-            response_code.success = connections.has_connection(self._connection_data["alias"])
+            response_code.success = self.milvus_client is not None
         except Exception as e:
             logger.error(f"Error checking Milvus connection: {e}!")
             response_code.error_message = str(e)
@@ -87,7 +88,7 @@ class MilvusHandler(VectorStoreHandler):
 
     def get_tables(self) -> HandlerResponse:
         """Get the list of collections in the Milvus database."""
-        collections = utility.list_collections()
+        collections = self.milvus_client.list_collections()
         collections_name = pd.DataFrame(
             columns=["TABLE_NAME"],
             data=[collection for collection in collections],
@@ -97,7 +98,7 @@ class MilvusHandler(VectorStoreHandler):
     def drop_table(self, table_name: str, if_exists=True) -> HandlerResponse:
         """Delete a collection from the Milvus database."""
         try:
-            utility.drop_collection(table_name)
+            self.milvus_client.drop_collection(collection_name=table_name)
         except Exception as e:
             if if_exists:
                 return Response(resp_type=RESPONSE_TYPE.OK)
@@ -171,10 +172,8 @@ class MilvusHandler(VectorStoreHandler):
         offset: int = None,
         limit: int = None,
     ) -> HandlerResponse:
-        # Load collection table
-        collection = Collection(table_name)
         try:
-            collection.load()
+            self.milvus_client.has_collection(collection_name=table_name)
         except Exception as e:
             return Response(
                 resp_type=RESPONSE_TYPE.ERROR,
@@ -201,7 +200,7 @@ class MilvusHandler(VectorStoreHandler):
             search_arguments["output_fields"] = columns
         else:
             search_arguments["output_fields"] = [schema_obj.name for schema_obj in self.SCHEMA]
-        search_arguments["expr"] = self._translate_conditions(conditions)
+        search_arguments["filter"] = self._translate_conditions(conditions)
         # NOTE: According to api sum of offset and limit should be less than 16384.
         api_limit = 16384
         if limit is not None and offset is not None and limit + offset >= api_limit:
@@ -214,40 +213,38 @@ class MilvusHandler(VectorStoreHandler):
         else:
             search_arguments["limit"] = self._search_limit
         if offset is not None:
-            search_arguments["param"]["offset"] = offset
+            search_arguments["offset"] = offset
 
         # Vector search
         if vector_filter:
             search_arguments["data"] = vector_filter
             search_arguments["anns_field"] = TableField.EMBEDDINGS.value
-            search_arguments["param"]["metric_type"] = self._search_params["search_metric_type"]
-            search_arguments["param"]["ignore_growing"] = self._search_params["search_ignore_growing"]
-            search_arguments["param"]["param"] = self._search_params["search_ignore_growing"]
-            results = collection.search(**search_arguments)
+            search_arguments["search_params"]["metric_type"] = self._search_params["search_metric_type"]
+            search_arguments["search_params"]["ignore_growing"] = self._search_params["search_ignore_growing"]
+            results = self.milvus_client.search(**search_arguments)[0]
             columns_required = [TableField.ID.value, TableField.DISTANCE.value]
             if TableField.CONTENT.value in columns:
                 columns_required.append(TableField.CONTENT.value)
             if TableField.EMBEDDINGS.value in columns:
                 columns_required.append(TableField.EMBEDDINGS.value)
             data = {k: [] for k in columns_required}
-            for hits in results:
-                for hit in hits:
-                    for col in columns_required:
-                        if col != TableField.DISTANCE.value:
-                            data[col].append(hit.entity.get(col))
-                        else:
-                            data[TableField.DISTANCE.value].append(hit.distance)
+            for hit in results:
+                for col in columns_required:
+                    if col != TableField.DISTANCE.value:
+                        data[col].append(hit.entity.get(col))
+                    else:
+                        data[TableField.DISTANCE.value].append(hit.distance)
             return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(data))
         else:
             # Basic search
-            if not search_arguments["expr"]:
-                search_arguments["expr"] = ""
+            if not search_arguments["filter"]:
+                search_arguments["filter"] = ""
             search_arguments["output_fields"] = [
                 TableField.ID.value,
                 TableField.CONTENT.value,
                 TableField.EMBEDDINGS.value,
             ] if not columns else columns
-            results = collection.query(**search_arguments)
+            results = self.milvus_client.query(**search_arguments)
             return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame.from_records(results))
 
     def create_table(self, table_name: str, if_not_exists=True) -> HandlerResponse:
@@ -276,12 +273,10 @@ class MilvusHandler(VectorStoreHandler):
             enable_dynamic_field=self._create_table_params["create_dynamic_field"]
         )
         collection_name = table_name
-        collection = None
         try:
-            collection = Collection(
-                name=collection_name,
-                schema=schema,
-                using=self._create_table_params["create_alias"],
+            self.milvus_client.create_collection(
+                collection_name=collection_name,
+                schema=schema
             )
         except Exception as e:
             return Response(
@@ -289,13 +284,16 @@ class MilvusHandler(VectorStoreHandler):
                 error_message=f"Unable to create collection `{table_name}`: {e}"
             )
         try:
-            collection.create_index(
-                field_name=TableField.EMBEDDINGS.value,
-                index_params={
-                    "index_type": self._create_table_params["create_index_type"],
-                    "metric_type": self._create_table_params["create_index_metric_type"],
-                    "params": self._create_table_params["create_index_params"]
-                }
+            index_params = self.milvus_client.prepare_index_params()
+            index_params.add_index(
+                field=TableField.EMBEDDINGS.value,
+                index_type=self._create_table_params["create_index_type"],
+                metric_type=self._create_table_params["create_index_metric_type"],
+                params=self._create_table_params["create_params"]
+            )
+            self.milvus_client.create_index(
+                collection_name=collection_name,
+                index_params=index_params,
             )
         except Exception as e:
             return Response(
@@ -308,9 +306,8 @@ class MilvusHandler(VectorStoreHandler):
         self, table_name: str, data: pd.DataFrame, columns: List[str] = None
     ) -> HandlerResponse:
         """Insert data into the Milvus collection."""
-        collection = None
         try:
-            collection = Collection(table_name)
+            self.milvus_client.has_collection(collection_name=table_name)
         except Exception as e:
             return Response(
                 resp_type=RESPONSE_TYPE.ERROR,
@@ -322,8 +319,7 @@ class MilvusHandler(VectorStoreHandler):
                 rows = data[TableField.METADATA.value].to_list()
                 data = pd.concat([data, pd.DataFrame.from_records(rows)], axis=1)
                 data.drop(TableField.METADATA.value, axis=1, inplace=True)
-            collection.insert(data.to_dict(orient="records"))
-            collection.flush()
+            self.milvus_client.insert(data.to_dict(orient="records"))
         except Exception as e:
             return Response(
                 resp_type=RESPONSE_TYPE.ERROR,
@@ -347,15 +343,14 @@ class MilvusHandler(VectorStoreHandler):
                 error_message="Some filters are required, use DROP TABLE to delete everything",
             )
         try:
-            collection = Collection(table_name)
+            self.milvus_client.has_collection(collection_name=table_name)
         except Exception as e:
             return Response(
                 resp_type=RESPONSE_TYPE.ERROR,
                 error_message=f"Error retrieving collection `{table_name}`: {e}",
             )
         try:
-            collection.delete(filters)
-            collection.flush()
+            self.milvus_client.delete(filter=filters)
         except Exception as e:
             return Response(
                 resp_type=RESPONSE_TYPE.ERROR,
@@ -365,16 +360,15 @@ class MilvusHandler(VectorStoreHandler):
 
     def get_columns(self, table_name: str) -> HandlerResponse:
         """Get columns in a Milvus collection"""
-        collection = None
         try:
-            collection = Collection(table_name)
+            self.milvus_client.has_collection(collection_name=table_name)
         except Exception as e:
             return Response(
                 resp_type=RESPONSE_TYPE.ERROR,
                 error_message=f"Error finding table: {e}",
             )
         try:
-            field_names = {field["name"] for field in collection.schema.fields}
+            field_names = {field["name"] for field in self.milvus_client.describe_collection(collection_name=table_name)["fields"]}
             schema = [mindsdb_schema_field for mindsdb_schema_field in self.SCHEMA if mindsdb_schema_field["name"] in field_names]
             data = pd.DataFrame(schema)
             data.columns = ["COLUMN_NAME", "DATA_TYPE"]

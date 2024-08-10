@@ -16,7 +16,7 @@ class BaseResultsTable(APITable):
         Returns:
             pandas.DataFrame: A pandas DataFrame containing the selected data.
         """
-        self.handler.connect()
+        base_url = self.handler.connect()
 
         params = {'access_key': self.handler.access_key}
         conditions = extract_comparison_conditions(query.where)
@@ -27,7 +27,7 @@ class BaseResultsTable(APITable):
         if 'type' not in params and hasattr(self, 'default_type'):
             params['type'] = self.default_type
         try:
-            api_response = requests.get(self.handler.base_url, params=params)
+            api_response = requests.get(base_url, params=params)
             api_response.raise_for_status()  # raises HTTPError for bad responses
             api_result = api_response.json()
         except requests.exceptions.HTTPError as e:

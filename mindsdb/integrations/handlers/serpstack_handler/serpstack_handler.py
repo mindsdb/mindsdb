@@ -57,17 +57,16 @@ class SerpstackHandler(APIHandler):
         shopping_results = ShoppingResultsTable(self)
         self._register_table('shopping_results', shopping_results)
 
-    def connect(self) -> StatusResponse:
-        """ Sets up connection"""
-        response = StatusResponse(False)
+    def connect(self):
+        """ Sets up connection and returns the base URL to be used"""
+
+        if self.is_connected:
+            return self.base_url
 
         if not self.access_key:
-            response.error_message = (
-                "No access key provided for Serpstack API"
-            )
-            logger.error(response.error_message)
-            response.success = False
-            return response
+            logger.error("No access key provided for Serpstack API")
+            return None
+
         try:
             url = f"https://api.serpstack.com/search?access_key={self.access_key}"
             api_request = requests.get(url)
@@ -80,32 +79,24 @@ class SerpstackHandler(APIHandler):
                 self.base_url = "https://api.serpstack.com/search"
             # any other error suggests issues with the account
             else:
-                response.error_message = (
-                    f"Failed to connect to Serpstack API: {api_response['error']['info']}"
-                )
-                logger.error(response.error_message)
-                response.success = False
-                return response
+                logger.error(f"Failed to connect to Serpstack API: {api_response['error']['info']}")
+                return None
 
             self.is_connected = True
-            response.success = True
-        except Exception as e:
-            response.error_message = (
-                f"Failed to connect to Serpstack API: {str(e)}"
-            )
-            logger.error(response.error_message)
-            response.success = False
+            return self.base_url
 
-        return response
+        except Exception as e:
+            logger.error(f"Failed to connect to Serpstack API: {str(e)}")
+            return None
 
     def check_connection(self) -> StatusResponse:
         """ Checks connection to Serpstack API"""
         response = StatusResponse(False)
 
         try:
-            health_response = requests.get("http://api.serpstack.com")
-            health_response.raise_for_status()
+            self.connect()
             response.success = True
+            response.copy_storage = True
         except Exception as e:
             response.error_message = (
                 f"Failed to connect to Serpstack API: {str(e)}"
@@ -113,8 +104,8 @@ class SerpstackHandler(APIHandler):
             logger.error(response.error_message)
             response.success = False
 
-        if response.success is False:
-            self.is_connected = False
+        self.is_connected = response.success
+
         return response
 
     def native_query(self, query: str = None) -> Response:

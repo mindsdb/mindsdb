@@ -66,9 +66,18 @@ def _build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
 
     logger.debug(f"RAG pipeline created with config: {rag_config}")
 
+    def rag_wrapper(query: str) -> str:
+        try:
+            result = rag_pipeline(query)
+            logger.debug(f"RAG pipeline result: {result}")
+            return result['answer']
+        except Exception as e:
+            logger.error(f"Error in RAG pipeline: {str(e)}")
+            return f"Error in retrieval: {str(e)}"
+
     # Create RAG tool
     return Tool(
-        func=rag_pipeline,
+        func=rag_wrapper,
         name=tool['name'],
         description=tool['description'],
         return_direct=False  # Changed to False to allow the agent to use this information

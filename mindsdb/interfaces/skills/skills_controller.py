@@ -1,8 +1,11 @@
+import datetime
 from typing import Dict, List
+
+from sqlalchemy import null
+from sqlalchemy.orm.attributes import flag_modified
 
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
-from sqlalchemy.orm.attributes import flag_modified
 
 
 class SkillsController:
@@ -31,7 +34,8 @@ class SkillsController:
         project = self.project_controller.get(name=project_name)
         return db.Skills.query.filter(
             db.Skills.name == skill_name,
-            db.Skills.project_id == project.id
+            db.Skills.project_id == project.id,
+            db.Skills.deleted_at == null()
         ).first()
 
     def get_skills(self, project_name: str) -> List[dict]:
@@ -56,7 +60,10 @@ class SkillsController:
 
         query = (
             db.session.query(db.Skills)
-            .filter(db.Skills.project_id.in_(project_ids))
+            .filter(
+                db.Skills.project_id.in_(project_ids),
+                db.Skills.deleted_at == null()
+            )
         )
 
         return query.all()
@@ -164,6 +171,5 @@ class SkillsController:
         skill = self.get_skill(skill_name, project_name)
         if skill is None:
             raise ValueError(f"Skill with name doesn't exist: {skill_name}")
-        db.session.delete(skill)
-
+        skill.deleted_at = datetime.datetime.now()
         db.session.commit()

@@ -22,13 +22,13 @@ class BasePolling:
         chat_id = message.destination
         text = message.text
 
-        t_params = self.params['chat_table']
+        t_params = self.params["chat_table"]
         ast_query = Insert(
-            table=Identifier(t_params['name']),
-            columns=[t_params['chat_id_col'], t_params['text_col']],
+            table=Identifier(t_params["name"]),
+            columns=[t_params["chat_id_col"], t_params["text_col"]],
             values=[
                 [chat_id, text],
-            ]
+            ],
         )
 
         self.chat_task.chat_handler.query(ast_query)
@@ -42,14 +42,22 @@ class MessageCountPolling(BasePolling):
         self.chats_prev = None
 
     def run(self, stop_event):
-
         while True:
             try:
                 chat_ids = self.check_message_count()
+                logger.debug(f"number of chat ids found: {len(chat_ids)}")
                 for chat_id in chat_ids:
-                    chat_memory = self.chat_task.memory.get_chat(chat_id)
+                    try:
+                        chat_memory = self.chat_task.memory.get_chat(chat_id)
+                    except Exception as e:
+                        logger.error(f"Problem retrieving chat memory: {e}")
 
-                    message = self.get_last_message(chat_memory)
+                    try:
+                        message = self.get_last_message(chat_memory)
+                    except Exception as e:
+                        logger.error(f"Problem getting last message: {e}")
+                        message = None
+
                     if message:
                         self.chat_task.on_message(chat_memory, message)
 
@@ -58,39 +66,41 @@ class MessageCountPolling(BasePolling):
 
             if stop_event.is_set():
                 return
-            logger.debug(f'running {self.chat_task.bot_id}')
+            logger.debug(f"running {self.chat_task.bot_id}")
             time.sleep(7)
 
     def get_last_message(self, chat_memory):
         # retrive from history
-        history = chat_memory.get_history()
+        try:
+            history = chat_memory.get_history()
+        except Exception as e:
+            logger.error(f"Problem retrieving history: {e}")
+            history = []
         last_message = history[-1]
-        if last_message.user == self.chat_task.bot_params['bot_username']:
+        if last_message.user == self.chat_task.bot_params["bot_username"]:
             # the last message is from bot
             return
         return last_message
 
     def check_message_count(self):
-        p_params = self.params['polling']
+        p_params = self.params["polling"]
 
         chat_ids = []
 
-        id_col = p_params['chat_id_col']
-        msgs_col = p_params['count_col']
+        id_col = p_params["chat_id_col"]
+        msgs_col = p_params["count_col"]
         # get chats status info
         ast_query = Select(
-            targets=[
-                Identifier(id_col),
-                Identifier(msgs_col)],
-            from_table=Identifier(p_params['table'])
+            targets=[Identifier(id_col), Identifier(msgs_col)],
+            from_table=Identifier(p_params["table"]),
         )
 
         resp = self.chat_task.chat_handler.query(query=ast_query)
         if resp.data_frame is None:
-            raise BotException('Error to get count of messages')
+            raise BotException("Error to get count of messages")
 
         chats = {}
-        for row in resp.data_frame.to_dict('records'):
+        for row in resp.data_frame.to_dict("records"):
             chat_id = row[id_col]
             msgs = row[msgs_col]
 
@@ -125,24 +135,26 @@ class RealtimePolling(BasePolling):
 
         row.update(key)
 
-        t_params = self.params['chat_table']
+        t_params = self.params["chat_table"]
 
         message = ChatBotMessage(
             ChatBotMessage.Type.DIRECT,
-            row[t_params['text_col']],
+            row[t_params["text_col"]],
             # In Slack direct messages are treated as channels themselves.
-            row[t_params['username_col']],
-            row[t_params['chat_id_col']]
+            row[t_params["username_col"]],
+            row[t_params["chat_id_col"]],
         )
 
-        chat_id = row[t_params['chat_id_col']]
+        chat_id = row[t_params["chat_id_col"]]
 
         chat_memory = self.chat_task.memory.get_chat(chat_id)
         self.chat_task.on_message(chat_memory, message)
 
     def run(self, stop_event):
-        t_params = self.params['chat_table']
-        self.chat_task.chat_handler.subscribe(stop_event, self._callback, t_params['name'])
+        t_params = self.params["chat_table"]
+        self.chat_task.chat_handler.subscribe(
+            stop_event, self._callback, t_params["name"]
+        )
 
     # def send_message(self, message: ChatBotMessage):
     #

@@ -227,6 +227,7 @@ class AgentsController:
             agent_with_new_name = self.get_agent(name, project_name=project_name)
             if agent_with_new_name is not None:
                 raise ValueError(f'Agent with updated name already exists: {name}')
+            existing_agent.name = name
 
         if model_name or provider:
             # check model and provider
@@ -242,7 +243,7 @@ class AgentsController:
             if existing_skill is None:
                 raise ValueError(f'Skill with name does not exist: {skill}')
             new_skills.append(existing_skill)
-        existing_agent.skills += new_skills
+        existing_agent.skills = list(set(existing_agent.skills + new_skills))
 
         removed_skills = []
         for skill in existing_agent.skills:
@@ -287,8 +288,6 @@ class AgentsController:
             self,
             agent: db.Agents,
             messages: List[Dict[str, str]],
-            trace_id: str = None,
-            observation_id: str = None,
             project_name: str = 'mindsdb',
             tools: List[BaseTool] = None,
             stream: bool = False) -> Union[Iterator[object], pd.DataFrame]:
@@ -314,8 +313,6 @@ class AgentsController:
             return self._get_completion_stream(
                 agent,
                 messages,
-                trace_id=trace_id,
-                observation_id=observation_id,
                 project_name=project_name,
                 tools=tools
             )
@@ -328,14 +325,12 @@ class AgentsController:
             db.session.commit()
 
         lang_agent = LangchainAgent(agent, model)
-        return lang_agent.get_completion(messages, trace_id, observation_id)
+        return lang_agent.get_completion(messages)
 
     def _get_completion_stream(
             self,
             agent: db.Agents,
             messages: List[Dict[str, str]],
-            trace_id: str = None,
-            observation_id: str = None,
             project_name: str = 'mindsdb',
             tools: List[BaseTool] = None) -> Iterator[object]:
         '''
@@ -366,4 +361,4 @@ class AgentsController:
             db.session.commit()
 
         lang_agent = LangchainAgent(agent, model=model)
-        return lang_agent.get_completion(messages, trace_id, observation_id, stream=True)
+        return lang_agent.get_completion(messages, stream=True)

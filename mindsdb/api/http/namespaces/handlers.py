@@ -1,10 +1,11 @@
 import os
-import importlib
-from pathlib import Path
 import tempfile
+import importlib
 import multipart
+from pathlib import Path
+from http import HTTPStatus
 
-from flask import request, send_file, abort, current_app as ca
+from flask import request, send_file, current_app as ca
 from flask_restx import Resource
 
 from mindsdb_sql.parser.ast import Identifier
@@ -57,7 +58,7 @@ class HandlerIcon(Resource):
             if icon_path.is_absolute() is False:
                 icon_path = Path(os.getcwd()).joinpath(icon_path)
         except Exception:
-            return abort(404)
+            return http_error(HTTPStatus.NOT_FOUND, 'Icon not found', f'Icon for {handler_name} not found')
         else:
             return send_file(icon_path)
 

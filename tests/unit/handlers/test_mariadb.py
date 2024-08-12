@@ -5,20 +5,19 @@ from unittest.mock import patch
 from mysql.connector import Error as MySQLError
 
 from base_handler_test import BaseDatabaseHandlerTest
-from mindsdb.integrations.handlers.mysql_handler.mysql_handler import MySQLHandler
+from mindsdb.integrations.handlers.mariadb_handler.mariadb_handler import MariaDBHandler
 
 
-class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
+class TestMariaDBHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
     @property
     def dummy_connection_data(self):
         return OrderedDict(
             host='127.0.0.1',
-            port=3306,
+            port=3307,
             user='example_user',
             password='example_pass',
             database='example_db',
-            url='mysql://example_user:example_pass@localhost:3306/example_db'
         )
 
     @property
@@ -46,7 +45,7 @@ class TestMySQLHandler(BaseDatabaseHandlerTest, unittest.TestCase):
         return f"DESCRIBE `{self.mock_table}`;"
 
     def create_handler(self):
-        return MySQLHandler('mysql', connection_data=self.dummy_connection_data)
+        return MariaDBHandler('mariadb', connection_data=self.dummy_connection_data)
 
     def create_patcher(self):
         return patch('mysql.connector.connect')

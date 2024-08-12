@@ -26,7 +26,6 @@ exclude =
   mindsdb/integrations/handlers/informix_handler/tests/test_informix_handler.py
   mindsdb/integrations/handlers/lightwood_handler/*
   mindsdb/integrations/handlers/ludwig_handler/test_ludwig.py
-  mindsdb/integrations/handlers/mariadb_handler/tests/test_mariadb_handler.py
   mindsdb/integrations/handlers/matrixone_handler/*
   mindsdb/integrations/handlers/mlflow_handler/*
   mindsdb/integrations/handlers/monetdb_handler/*

@@ -9,11 +9,11 @@ from mindsdb.interfaces.skills.custom.text2sql.mindsdb_sql_tool import MindsDBSQ
 
 class MindsDBSQLToolkit(SQLDatabaseToolkit):
 
-    def get_tools(self) -> List[BaseTool]:
+    def get_tools(self, prefix='') -> List[BaseTool]:
         # Return the tools that this toolkit provides as well as MindDB's SQL validator tool
 
         """Get the tools in the toolkit."""
-        list_sql_database_tool = ListSQLDatabaseTool(db=self.db)
+        list_sql_database_tool = ListSQLDatabaseTool(name=f'sql_db_list_tables{prefix}', db=self.db)
         info_sql_database_tool_description = (
             "Input to this tool is a comma-separated list of tables, output is the "
             "schema and sample rows for those tables. "
@@ -22,6 +22,7 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
             "Example Input: table1, table2, table3"
         )
         info_sql_database_tool = InfoSQLDatabaseTool(
+            name=f'sql_db_schema{prefix}',
             db=self.db, description=info_sql_database_tool_description
         )
         query_sql_database_tool_description = (
@@ -33,6 +34,7 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
             "to query the correct table fields."
         )
         query_sql_database_tool = QuerySQLDataBaseTool(
+            name=f'sql_db_query{prefix}',
             db=self.db, description=query_sql_database_tool_description
         )
 
@@ -48,6 +50,7 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
         )
 
         mindsdb_sql_parser_tool = MindsDBSQLParserTool(
+            name=f'mindsdb_sql_parser_tool{prefix}',
             description=mindsdb_sql_parser_tool_description
         )
 

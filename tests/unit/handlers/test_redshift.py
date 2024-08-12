@@ -1,36 +1,29 @@
 import unittest
+from unittest.mock import MagicMock
+
 import numpy as np
 import pandas as pd
-from unittest.mock import MagicMock, Mock
 
-from test_postgres import TestPostgresHandler
-
-from mindsdb.integrations.handlers.redshift_handler.redshift_handler import RedshiftHandler
+from base_handler_test import MockCursorContextManager
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-
-
-class CursorContextManager(Mock):
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        pass
+from mindsdb.integrations.handlers.redshift_handler.redshift_handler import RedshiftHandler
+from test_postgres import TestPostgresHandler
 
 
 class TestRedshiftHandler(TestPostgresHandler):
-    def setUp(self):
-        super().setUp()
-        self.handler = RedshiftHandler('redshift', connection_data={'connection_data': self.dummy_connection_data})
+
+    def create_handler(self):
+        return RedshiftHandler('redshift', connection_data={'connection_data': self.dummy_connection_data})
 
     def test_insert(self):
         """
         Tests the `insert` method to ensure it correctly inserts a DataFrame into a table and returns the appropriate response.
         """
         mock_conn = MagicMock()
-        mock_cursor = CursorContextManager()
+        mock_cursor = MockCursorContextManager()
 
         self.handler.connect = MagicMock(return_value=mock_conn)
         mock_conn.cursor = MagicMock(return_value=mock_cursor)

@@ -1,2 +1,2 @@
 virtualenv
-pyarrow>=14.0.1
+pyarrow==14.0.1

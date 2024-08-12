@@ -100,7 +100,7 @@ class ModelController():
                 reduced_model_data['training_time'] = (
                     reduced_model_data['training_time']
                     - dt.timedelta(microseconds=reduced_model_data['training_time'].microseconds)
-                )
+                ).total_seconds()
 
         return reduced_model_data
 

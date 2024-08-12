@@ -1,8 +1,10 @@
 name: Build and deploy to dev
 
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, reopened, synchronize, labeled]
+    branches:
+      - 'main'
 
 # Cancel any existing runs of this workflow on the same branch/pr
 # We always want to build/deploy/test a new commit over an older one
@@ -11,9 +13,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+
   # Looks for labels like "deploy-to-<env>" attached to a PR so we can deploy to those envs
   get-deploy-labels:
+    name: Get Deploy Envs
     runs-on: mdb-dev
+    environment:
+      name: ${{ github.event.pull_request.head.repo.fork && 'manual-approval' || '' }}
     outputs:
       deploy-envs: ${{ steps.get-labels.outputs.deploy-envs }}
     steps:
@@ -22,98 +28,66 @@ jobs:
         with:
           repository: mindsdb/github-actions
           path: github-actions
-          ssh-key: ${{ secrets.GH_ACTIONS_PULL_SSH }}
       - id: get-labels
         uses: ./github-actions/get-deploy-labels
 
+  # Build our docker images based on our bake file
   build:
-    # Build our docker images based on our bake file
+    name: Build Docker Images
     runs-on: mdb-dev
     needs: [get-deploy-labels]
     if: needs.get-deploy-labels.outputs.deploy-envs != '[]'
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Pull MindsDB Github Actions
         uses: actions/checkout@v4
         with:
           repository: mindsdb/github-actions
           path: github-actions
-          ssh-key: ${{ secrets.GH_ACTIONS_PULL_SSH }}
       # Build the bakefile and push
       - uses: ./github-actions/docker-bake
+        with:
+          git-sha: ${{ github.event.pull_request.head.sha }}
   
+  # Build our docker images based on our bake file
+  # This job only pushes the layers to the cache repo
+  # It's done separately so other jobs can run without waiting for this one
   build_cache:
-    # Build our docker images based on our bake file
-    # This job only pushes the layers to the cache repo
-    # It's done separately so other jobs can run without waiting for this one
+    name: Build Docker Cache
     runs-on: mdb-dev
     needs: [build]
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Pull MindsDB Github Actions
         uses: actions/checkout@v4
         with:
           repository: mindsdb/github-actions
           path: github-actions
-          ssh-key: ${{ secrets.GH_ACTIONS_PULL_SSH }}
       - uses: ./github-actions/docker-bake-cache
+        with:
+          git-sha: ${{ github.event.pull_request.head.sha }}
 
-  trigger_deploy:
-    # Trigger private repo to deploy to dev envs
-    runs-on: mdb-dev
+  # Call our deployment workflow, so long as this is not a forked PR
+  # This will run the deployment workflow in the base branch, not in the PR.
+  # So if you change the deploy workflow in your PR, the changes won't be reflected in this run.
+  deploy:
+    name: Deploy
     needs: [build, get-deploy-labels]
-    strategy:
-      matrix:
-        deploy-env: ${{fromJson(needs.get-deploy-labels.outputs.deploy-envs)}}
-    environment:
-      name: ${{ matrix.deploy-env }}
-      url: ${{ vars.ENV_URL }}
-    # We only want to run one deploy job for an env at a time
-    # Don't cancel in progress jobs because it may be for a different PR
-    concurrency:
-      group: deploy-${{ matrix.deploy-env }}
-      cancel-in-progress: false
     if: needs.get-deploy-labels.outputs.deploy-envs != '[]'
-    steps:
-      - name: Pull MindsDB Github Actions
-        uses: actions/checkout@v4
-        with:
-          repository: mindsdb/github-actions
-          path: github-actions
-          ssh-key: ${{ secrets.GH_ACTIONS_PULL_SSH }}
-      - uses: FranzDiebold/github-env-vars-action@v2
-      - name: Notify of deployment starting
-        id: slack
-        uses: ./github-actions/slack-deploy-msg
-        with:
-          channel-id: ${{ secrets.SLACK_DEPLOYMENTS_CHANNEL_ID }}
-          status: "started"
-          color: "#0099CC"
-          env-name: ${{ matrix.deploy-env }}
-          env-url: ${{ vars.ENV_URL }}
-          slack-token: ${{ secrets.GH_ACTIONS_SLACK_BOT_TOKEN }}
-      - uses: convictional/trigger-workflow-and-wait@v1.6.5
-        with:
-          owner: mindsdb
-          repo: INTERNAL-mindsdb-build-deploy-to-kubernetes
-          github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}
-          workflow_file_name: deploy-dev.yml
-          ref: main
-          client_payload: '{"image-tag-prefix": "${{ env.CI_SHA }}", "deploy-env": "${{matrix.deploy-env}}"}'
-      - name: Notify of deployment finish
-        uses: ./github-actions/slack-deploy-msg
-        if: always()
-        with:
-          channel-id: ${{ secrets.SLACK_DEPLOYMENTS_CHANNEL_ID }}
-          status: "${{ job.status == 'success' && 'finished' || 'failed' }}"
-          color: "${{ job.status == 'success' && '#00C851' || '#FF4444' }}"
-          env-name: ${{ matrix.deploy-env }}
-          env-url: ${{ vars.ENV_URL }}
-          slack-token: ${{ secrets.GH_ACTIONS_SLACK_BOT_TOKEN }}
-          update-message-id: ${{ steps.slack.outputs.ts }}
+    uses: ./.github/workflows/deploy.yml
+    with:
+      deploy-envs: ${{ needs.get-deploy-labels.outputs.deploy-envs }}
+      image-tag: ${{ github.event.pull_request.head.sha }}
+    secrets: inherit
 
+  # Run integration tests
+  # TODO: Run these against the deployed environment
   run_tests:
-    name: Run Post-Deploy Tests
-    needs: [trigger_deploy]
+    name: Run Integration Tests
+    needs: [deploy]
     uses: ./.github/workflows/test_on_deploy.yml
     secrets: inherit

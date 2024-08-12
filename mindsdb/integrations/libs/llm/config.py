@@ -84,6 +84,23 @@ class OllamaConfig(BaseLLMConfig):
     template: Optional[str]
 
 
+class NvidiaNIMConfig(BaseLLMConfig):
+    base_url: str
+    model: str
+    temperature: Optional[float]
+    top_p: Optional[float]
+    timeout: Optional[int]
+    format: Optional[str]
+    headers: Optional[Dict]
+    num_predict: Optional[int]
+    num_ctx: Optional[int]
+    num_gpu: Optional[int]
+    repeat_penalty: Optional[float]
+    stop: Optional[List[str]]
+    template: Optional[str]
+    nvidia_api_key: Optional[str]
+
+
 class MindsdbConfig(BaseLLMConfig):
     model_name: str
     project_name: str

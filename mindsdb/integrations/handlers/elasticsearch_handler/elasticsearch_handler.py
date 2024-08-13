@@ -2,6 +2,8 @@ from typing import Text, Dict, Optional
 
 from elasticsearch import Elasticsearch
 from elasticsearch.exceptions import ConnectionError, AuthenticationException, TransportError, RequestError
+from elasticsearch.helpers import bulk
+from elasticsearch.helpers.errors import BulkIndexError
 from es.elastic.sqlalchemy import ESDialect
 from pandas import DataFrame
 from mindsdb_sql.parser.ast.base import ASTNode
@@ -184,6 +186,49 @@ class ElasticsearchHandler(DatabaseHandler):
             )
         except Exception as unknown_error:
             logger.error(f'Unknown error running query: {query} on Elasticsearch, {unknown_error}!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(unknown_error)
+            )
+
+        if need_to_close is True:
+            self.disconnect()
+
+        return response
+    
+    def insert(self, table_name: Text, df: DataFrame) -> Response:
+        """
+        Inserts data into the specified table (index) in the Elasticsearch host.
+        This function will be invoked instead of `native_query` when the query is an insert statement.
+
+        Args:
+            table_name (str): The name of the table (index) to insert the data into.
+            df (DataFrame): The data to be inserted into the table.
+
+        Returns:
+            Response: A response object containing the result of the insert operation.
+        """
+        need_to_close = self.is_connected is False
+
+        connection = self.connect()
+
+        # Add the index name and the 'create' operation type to each document.
+        df['_index'] = table_name
+        df['_op_type'] = 'create'
+
+        documents = df.to_dict(orient='records')
+                    
+        try:
+            bulk(connection, documents)
+            response = Response(RESPONSE_TYPE.OK)
+        except (BulkIndexError, RequestError) as bulk_index_or_request_error:
+            logger.error(f'Error inserting data into Elasticsearch: {bulk_index_or_request_error}')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(bulk_index_or_request_error)
+            )
+        except Exception as unknown_error:
+            logger.error(f'Unknown error inserting data into Elasticsearch: {unknown_error}')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(unknown_error)

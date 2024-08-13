@@ -22,6 +22,7 @@ from mindsdb.utilities.fs import safe_extract
 logger = log.getLogger(__name__)
 MAX_FILE_SIZE = 1024 * 1024 * 100  # 100Mb
 
+
 @ns_conf.route("/")
 class FilesList(Resource):
     @ns_conf.doc("get_files_list")
@@ -122,7 +123,7 @@ class File(Resource):
                         "Error getting file info",
                         "Сan't determine remote file size",
                     )
-                if file_size >  MAX_FILE_SIZE:
+                if file_size > MAX_FILE_SIZE:
                     return http_error(
                         400, "File is too big", "Upload limit for file is 100Mb"
                     )

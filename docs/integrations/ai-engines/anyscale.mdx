@@ -12,7 +12,7 @@ Before proceeding, ensure the following prerequisites are met:
 
 1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
 2. To use Anyscale Endpoints within MindsDB, install the required dependencies following [this instruction](https://docs.mindsdb.com/setup/self-hosted/docker#install-dependencies).
-3. Obtain the Anyscale Endpoints API key required to deploy and use Anyscale Endpoints models within MindsDB. Follow the [instructions for obtaining the API key](https://docs.endpoints.anyscale.com/guides/authenticate/).
+3. Obtain the Anyscale Endpoints API key required to deploy and use Anyscale Endpoints models within MindsDB. Follow the [instructions for obtaining the API key](https://docs.anyscale.com/endpoints/text-generation/authenticate/).
 
 ## Setup
 
@@ -34,13 +34,108 @@ CREATE MODEL anyscale_endpoints_model
 PREDICT target_column
 USING
       engine = 'anyscale_endpoints_engine',   -- engine name as created via CREATE ML_ENGINE
-      model_name = 'model-name',              -- choose one of available models
-      prompt_teplate = 'prompt-to-the-model'; -- prompt message to be completed by the model
+      mode = 'conversational', -- optional, mode to run the model in
+      model_name = 'anyscale_endpoints_model_name',  -- optional, the LLM to use
+      prompt = 'You are a helpful assistant. Your task is to continue the chat.',  -- optional, system prompt for the model
+      question_column = 'question',  -- optional, column name that stores user input
+      context_column = 'context',  -- optional, column that stores context of the user input
+      prompt_template = 'Answer the users input in a helpful way: {{question}}', -- optional, base template with placeholders used to provide input to the model 
+      max_tokens = 100, -- optional, token limit for model output
+      temperature = 0.3, -- optional, randomness setting for the model output
+      json_struct = {
+        'key': 'value',
+        ...
+      }' -- optional, the parameter for extracting JSON data from `prompt_template`
 ```
+
+<Tip>
+It is possilbe to override certain parameters set for a model at prediction time instead of recreating the model. For example, to change the temperature parameter for a specific prediction, use the following query:
+
+```sql
+SELECT question, answer
+FROM anyscale_endpoints_model
+WHERE question = 'Where is Stockholm located?'
+USING
+      temperature = 0.9
+      prompt_template = 'Answer the users input as a pirate: {{question}}';
+```
+
+The parameters that can be overridden as shown above are mentioned below in the detailed explanation.
+</Tip>
+
+The following is a more detailed explanation of the parameters used in the `CREATE MODEL` statement:
+
+<AccordionGroup>
+
+  <Accordion title="engine">
+    This is the engine name as created with the [`CREATE ML_ENGINE`](https://docs.mindsdb.com/mindsdb_sql/sql/create/ml-engine) statement.
+  </Accordion>
+
+  <Accordion title="mode">
+    This parameter is optional.
+
+    The available modes include `default`, `conversational` and `conversational-full`.
+
+    - The `default` mode is used by default. The model will generate a separate response for each input provided. No context is maintained between the inputs.
+    - The `conversational` mode will maintain context between the inputs and generate a single response. This response will be placed in the last row of the result set.
+    - The `conversational-full` mode will maintain context between the inputs and generate a response for each input.
+  </Accordion>
+
+  <Accordion title="model_name">
+    This parameter is optional. 
+    
+    By default, the `meta-llama/Llama-2-7b-chat-hf` model is used.
+  </Accordion>
+
+  <Accordion title="question_column">
+    This parameter is optional. 
+    
+    It contains the column name that stores user input.
+  </Accordion>
+
+  <Accordion title="context_column">
+    This parameter is optional. 
+    
+    It contains the column name that stores context for the user input.
+  </Accordion>
+
+  <Accordion title="prompt_template">
+    This parameter is optional if you use `question_column`. 
+    
+    It stores the message or instructions as a base template with placeholders to be filled in by the user input at prediction time.
+     *Please note that this parameter can be overridden at prediction time.*
+  </Accordion>
+
+  <Accordion title="prompt">
+    This parameter is optional. 
+    
+    It defines the initial (system) prompt for the model.
+  </Accordion>
+
+  <Accordion title="max_tokens">
+    This parameter is optional. 
+    
+    It defines the maximum token cost of the prediction. 
+    *Please note that this parameter can be overridden at prediction time.*
+  </Accordion>
+
+  <Accordion title="temperature">
+    This parameter is optional. 
+    
+    It defines how *risky* the answers are. The value of `0` marks a well-defined answer, and the value of `0.9` marks a more creative answer. 
+    *Please note that this parameter can be overridden at prediction time.*
+  </Accordion>
+
+  <Accordion title="json_struct">
+    This parameter is optional. 
+    
+    It is used to extract JSON data from a text column provided in the `prompt_template` parameter. [See examples here](/use-cases/data_enrichment/json-from-text#extract-json-from-text-data).
+  </Accordion>
+</AccordionGroup>
 
 <Note>
 
-The implementation is based on the engine for the OpenAI API, as Anyscale conforms to it. There are a few notable differences, though:
+The implementation of this integration is based on the engine for the OpenAI API, as Anyscale conforms to it. There are a few notable differences, though:
 
 1. All models supported by Anyscale Endpoints are open source. A full list can be found [here for inference-only under section *Supported models*](https://app.endpoints.anyscale.com/docs).
 2. Not every model is supported for fine-tuning. You can find a list [here under section *Fine Tuning - Supported models*](https://app.endpoints.anyscale.com/docs).
@@ -53,7 +148,6 @@ The implementation is based on the engine for the OpenAI API, as Anyscale confor
 </Note>
 
 <Info>
-
 The base URL for this API is `https://api.endpoints.anyscale.com/v1`.
 </Info>
 
@@ -61,38 +155,453 @@ The base URL for this API is `https://api.endpoints.anyscale.com/v1`.
 
 The following usage examples utilize `anyscale_endpoints_engine` to create a model with the `CREATE MODEL` statement.
 
-Classify text sentiment using the Mistral 7B model.
+<Note>
+The output generated for a single input will be the same regardless of the mode used. The difference between the modes is in how the model handles multiple inputs.
 
-```sql
-CREATE MODEL anyscale_endpoints_model
-PREDICT sentiment
-USING
-   engine = 'anyscale_endpoints_engine',
-   model_name = 'mistralai/Mistral-7B-Instruct-v0.1',
-   prompt_template = 'Classify the sentiment of the following text as one of `positive`, `neutral` or `negative`: {{text}}';
-```
+`files.unrelated_questions` is a simple CSV file containing a `question` column with simple (unrelated) questions that has been uploaded to MindsDB, while `files.related_questions` is a similar file containing related questions. `files.unrelated_questions_with_context` and `files.related_questions_with_context` are similar files containing an additional `context` column.
 
-Query the model to get predictions.
+These files are used in the examples given below to provide multiple inputs to the models created. It is possible to use any other supported data source in the same manner.
+</Note>
 
-```sql
-SELECT text, sentiment
-FROM anyscale_endpoints_model
-WHERE text = 'I love machine learning!';
-```
+<AccordionGroup>
 
-Here is the output:
+  <Accordion title="Default mode">
+      In the `default` mode, the model will generate a separate response for each input provided. No context is maintained between the inputs.
 
-```sql
-+--------------------------+-----------+
-| text                     | sentiment |
-+--------------------------+-----------+
-| I love machine learning! | positive  |
-+--------------------------+-----------+
-```
+      <AccordionGroup>
+            <Accordion title="Prompt completion">
+                  ```sql
+                  CREATE MODEL anyscale_endpoints_default_model
+                  PREDICT answer
+                  USING
+                        engine = 'anyscale_endpoints_engine',
+                        model_name = 'mistralai/Mistral-7B-Instruct-v0.1',
+                        prompt_template = 'Answer the users input in a helpful way: {{question}}';
+                  ```
+
+                  To generate a response for a single input, the following query can be used:
+                  ```sql
+                  SELECT question, answer
+                  FROM anyscale_endpoints_default_model
+                  WHERE question = 'Where is Stockholm located?';
+                  ```
+
+                  The response will look like the following:
+                  ```sql
+                  +---------------------------+-------------------------------+
+                  |question                   |answer                         |
+                  +---------------------------+-------------------------------+
+                  |Where is Stockholm located?|Stockholm is the capital city of Sweden, located in the southeastern part of the country. It is situated on an archipelago of 30,000 islands in the Baltic Sea, and is known for its beautiful waterfront, historic buildings, and vibrant cultural scene.|
+                  +---------------------------+-------------------------------+
+                  ```
+
+                  To generate responses for multiple inputs, the following query can be used:
+                  ```sql
+                  SELECT d.question, m.answer
+                  FROM files.unrelated_questions AS d
+                  JOIN anyscale_endpoints_default_model AS m
+                  ```
+
+                  The response will look like the following:
+                  ```sql
+                  | question | answer |
+                  | -------- | ------ |
+                  | Where is Stockholm located? | Stockholm is the capital city of Sweden, located in the southeastern part of the country. It is situated on an archipelago of 30,000 islands in the Baltic Sea, and is known for its beautiful waterfront, historic buildings, and vibrant cultural scene. |
+                  | What is the fourth planet in the solar system? | The fourth planet in the solar system is Mars. |
+                  ```
+            </Accordion>
+            <Accordion title="Question answering">
+                  ```sql
+                  CREATE MODEL anyscale_endpoints_default_model
+                  PREDICT answer
+                  USING
+                        engine = 'anyscale_endpoints_engine',
+                        model_name = 'mistralai/Mistral-7B-Instruct-v0.1',
+                        question_column = 'question';
+                  ```
+
+                  To generate a response for a single input, the following query can be used:
+                  ```sql
+                  SELECT question, answer
+                  FROM anyscale_endpoints_default_model
+                  WHERE question = 'Where is Stockholm located?';
+                  ```
+
+                  The response will look like the following:
+                  ```sql
+                  +---------------------------+-------------------------------+
+                  |question                   |answer                         |
+                  +---------------------------+-------------------------------+
+                  |Where is Stockholm located?|Stockholm is the capital city of Sweden, located in the southeastern part of the country. It is situated on an archipelago of 30,000 islands in the Baltic Sea, and is known for its beautiful waterfront, historic buildings, and vibrant cultural scene.|
+                  +---------------------------+-------------------------------+
+                  ```
+
+                  To generate responses for multiple inputs, the following query can be used:
+                  ```sql
+                  SELECT d.question, m.answer
+                  FROM files.unrelated_questions AS d
+                  JOIN anyscale_endpoints_default_model AS m
+                  ```
+
+                  The response will look like the following:
+                  ```sql
+                  | question | answer |
+                  | -------- | ------ |
+                  | Where is Stockholm located? | Stockholm is the capital city of Sweden, located in the southeastern part of the country. It is situated on an archipelago of 30,000 islands in the Baltic Sea, and is known for its beautiful waterfront, historic buildings, and vibrant cultural scene. |
+                  | What is the fourth planet in the solar system? | The fourth planet in the solar system is Mars. |
+                  ```
+            </Accordion>
+            <Accordion title="Question answering with context">
+                  ```sql
+                  CREATE MODEL anyscale_endpoints_default_model
+                  PREDICT answer
+                  USING
+                        engine = 'anyscale_endpoints_engine',
+                        model_name = 'mistralai/Mistral-7B-Instruct-v0.1',
+                        question_column = 'question',
+                        context_column = 'context';
+                  ```
+
+                  To generate a response for a single input, the following query can be used:
+                  ```sql
+                  SELECT question, context, answer
+                  FROM anyscale_endpoints_default_model
+                  WHERE question = 'What is the main topic of the conference happening next week?' AND context = 'The conference, focusing on advancements in AI, will take place in San Francisco next week.';
+                  ```
+
+                  The response will look like the following:
+                  ```sql
+                  +---------------------------+-------------------------------+-------------------------------+
+                  |question                   |context                         | answer                        |
+                  +---------------------------+-------------------------------+-------------------------------+
+                  |What is the main topic of the conference happening next week? | The conference, focusing on advancements in AI, will take place in San Francisco next week.|The main topic of the conference happening next week in San Francisco is advancements in AI.|
+                  +---------------------------+-------------------------------+-------------------------------+
+                  ```
+
+                  To generate responses for multiple inputs, the following query can be used:
+                  ```sql
+                  SELECT d.question, d.context, m.answer
+                  FROM files.unrelated_questions_with_context AS d
+                  JOIN anyscale_endpoints_default_model AS m
+                  ```
+
+                  The response will look like the following:
+                  ```sql
+                  +---------------------------+-------------------------------+-------------------------------+
+                  |question                   |context                         | answer                        |
+                  +---------------------------+-------------------------------+-------------------------------+
+                  |What is the main topic of the conference happening next week? | The conference, focusing on advancements in AI, will take place in San Francisco next week.|The main topic of the conference happening next week in San Francisco is advancements in AI.|
+                  +---------------------------+-------------------------------+-------------------------------+
+                  |What caused the extension of the project deadline? | The project deadline was extended by two weeks due to team members falling sick unexpectedly. | The extension of the project deadline was caused by unexpected illnesses among team members. |
+                  +---------------------------+-------------------------------+-------------------------------+
+                  ```
+            </Accordion>
+      </AccordionGroup>
+  </Accordion>
+
+  <Accordion title="Conversational mode">
+      In the `conversational` mode, the model will maintain context between the inputs and generate a single response. This response will be placed in the last row of the result set.
+
+      <AccordionGroup>
+            <Accordion title="Prompt completion">
+                  ```sql
+                  CREATE MODEL anyscale_endpoints_conversational_model
+                  PREDICT answer
+                  USING
+                        engine = 'anyscale_endpoints_engine',
+                        mode = 'conversational',
+                        model_name = 'mistralai/Mistral-7B-Instruct-v0.1',
+                        prompt = 'You are a helpful assistant. Your task is to continue the chat.',
+                        prompt_template = 'Answer the users input in a helpful way: {{question}}';
+                  ```
+
+                  To generate a response for a single input, the following query can be used:
+                  ```sql
+                  SELECT question, answer
+                  FROM anyscale_endpoints_conversational_model
+                  WHERE question = 'Where is Stockholm located?';
+                  ```
+
+                  The response will look like the following:
+                  ```sql
+                  +---------------------------+-------------------------------+
+                  |question                   |answer                         |
+                  +---------------------------+-------------------------------+
+                  |Where is Stockholm located?|Stockholm is the capital city of Sweden, located in the southeastern part of the country. It is situated on an archipelago of 30,000 islands in the Baltic Sea, and is known for its beautiful waterfront, historic buildings, and vibrant cultural scene.|
+                  +---------------------------+-------------------------------+
+                  ```
+
+                  To generate responses for multiple inputs, the following query can be used:
+                  ```sql
+                  SELECT d.question, m.answer
+                  FROM files.related_questions AS d
+                  JOIN anyscale_endpoints_conversational_model AS m
+                  ```
+
+                  The response will look like the following:
+                  | question | answer |
+                  | -------- | ------ |
+                  | Where is Stockholm located? |  |
+                  | What are some fun activities to do there? | Stockholm is the capital city of Sweden and is located in the southeastern part of the country. Some fun activities to do in Stockholm include visiting the famous Vasa Museum, exploring the beautiful archipelago, taking a stroll through the charming Gamla Stan neighborhood, and trying out some of the local food and drinks. |
+            </Accordion>
+            <Accordion title="Question answering">
+                  ```sql
+                  CREATE MODEL anyscale_endpoints_conversational_model
+                  PREDICT answer
+                  USING
+                        engine = 'anyscale_endpoints_engine',
+                        mode = 'conversational',
+                        model_name = 'mistralai/Mistral-7B-Instruct-v0.1',
+                        prompt = 'You are a helpful assistant. Your task is to continue the chat.',
+                        question_column = 'question';
+                  ```
+
+                  To generate a response for a single input, the following query can be used:
+                  ```sql
+                  SELECT question, answer
+                  FROM anyscale_endpoints_conversational_model
+                  WHERE question = 'Where is Stockholm located?';
+                  ```
+
+                  The response will look like the following:
+                  ```sql
+                  +---------------------------+-------------------------------+
+                  |question                   |answer                         |
+                  +---------------------------+-------------------------------+
+                  |Where is Stockholm located?|Stockholm is the capital city of Sweden, located in the southeastern part of the country. It is situated on an archipelago of 30,000 islands in the Baltic Sea, and is known for its beautiful waterfront, historic buildings, and vibrant cultural scene.|
+                  +---------------------------+-------------------------------+
+                  ```
+
+                  To generate responses for multiple inputs, the following query can be used:
+                  ```sql
+                  SELECT d.question, m.answer
+                  FROM files.unrelated_questions AS d
+                  JOIN anyscale_endpoints_conversational_model AS m
+                  ```
+
+                  The response will look like the following:
+                  | question | answer |
+                  | -------- | ------ |
+                  | Where is Stockholm located? |  |
+                  | What are some fun activities to do there? | Stockholm is the capital city of Sweden and is located in the southeastern part of the country. Some fun activities to do in Stockholm include visiting the famous Vasa Museum, exploring the beautiful archipelago, taking a stroll through the charming Gamla Stan neighborhood, and trying out some of the local food and drinks. |
+            </Accordion>
+            <Accordion title="Question answering with context">
+                  ```sql
+                  CREATE MODEL anyscale_endpoints_conversational_model
+                  PREDICT answer
+                  USING
+                        engine = 'anyscale_endpoints_engine',
+                        mode = 'conversational',
+                        model_name = 'mlabonne/NeuralHermes-2.5-Mistral-7B',
+                        prompt = 'You are a helpful assistant. Your task is to continue the chat.',
+                        question_column = 'question',
+                        context_column = 'context';
+                  ```
+
+                  To generate a response for a single input, the following query can be used:
+                  ```sql
+                  SELECT question, context, answer
+                  FROM anyscale_endpoints_conversational_model
+                  WHERE question = 'What is the main topic of the conference happening next week?' AND context = 'The conference, focusing on advancements in AI, will take place in San Francisco next week.';
+                  ```
+
+                  The response will look like the following:
+                  ```sql
+                  +---------------------------+-------------------------------+-------------------------------+
+                  |question                   |context                         | answer                        |
+                  +---------------------------+-------------------------------+-------------------------------+
+                  |What is the main topic of the conference happening next week? | The main topic of the conference happening next week is advancements in Artificial Intelligence.|
+                  +---------------------------+-------------------------------+-------------------------------+
+                  ```
+
+                  To generate responses for multiple inputs, the following query can be used:
+                  ```sql
+                  SELECT d.question, d.context, m.answer
+                  FROM files.related_questions_with_context AS d
+                  JOIN anyscale_endpoints_conversational_model AS m
+                  ```
+
+                  The response will look like the following:
+                  | question | context | answer |
+                  | -------- | ------- | ------ |
+                  | Where is Anna planning a trip to next month? | Anna is planning a trip to Kyoto next month. |  |
+                  | What does Anna plan on doing there? | Anna plans on going sightseeing. | Anna plans on going sightseeing during her trip to Kyoto next month. |
+
+            </Accordion>
+      </AccordionGroup>
+  </Accordion>
+
+  <Accordion title="Conversational-full mode">
+      In the `conversational-full` mode, the model will maintain context between the inputs and generate a response for each input.
+
+      <AccordionGroup>
+            <Accordion title="Prompt completion">
+                  ```sql
+                  CREATE MODEL anyscale_endpoints_conversational_full_model
+                  PREDICT answer
+                  USING
+                        engine = 'anyscale_endpoints_engine',
+                        mode = 'conversational-full',
+                        model_name = 'mistralai/Mistral-7B-Instruct-v0.1',
+                        prompt_template = 'Answer the users input in a helpful way: {{question}}';
+                  ```
+
+                  To generate a response for a single input, the following query can be used:
+                  ```sql
+                  SELECT question, answer
+                  FROM anyscale_endpoints_conversational_full_model
+                  WHERE question = 'Where is Stockholm located?';
+                  ```
+
+                  The response will look like the following:
+                  ```sql
+                  +---------------------------+-------------------------------+
+                  |question                   |answer                         |
+                  +---------------------------+-------------------------------+
+                  |Where is Stockholm located?|Stockholm is the capital city of Sweden, located in the southeastern part of the country. It is situated on an archipelago of 30,000 islands in the Baltic Sea, and is known for its beautiful waterfront, historic buildings, and vibrant cultural scene.|
+                  +---------------------------+-------------------------------+
+                  ```
+
+                  To generate responses for multiple inputs, the following query can be used:
+                  ```sql
+                  SELECT d.question, m.answer
+                  FROM files.related_questions AS d
+                  JOIN anyscale_endpoints_conversational_full_model AS m
+                  ```
+
+                  The response will look like the following:
+                  | question | answer |
+                  | -------- | ------ |
+                  | Where is Stockholm located? | Stockholm is the capital city of Sweden, located in the southeastern part of the country. It is situated on an island in the Stockholm archipelago, which is made up of more than 30,000 islands. The city is known for its beautiful architecture, museums, and cultural attractions, as well as its vibrant food and nightlife scene. |
+                  | What are some fun activities to do there? | Stockholm is the capital city of Sweden and is located in the southeastern part of the country, on the east coast of the Stockholm archipelago. Some fun activities to do in Stockholm include visiting the famous Vasa Museum, exploring the charming old town of Gamla Stan, taking a stroll through the beautiful parks and gardens, and trying out some of the local food and drinks. There are also many opportunities for shopping, cultural experiences, and outdoor activities such as hiking and biking |
+            </Accordion>
+            <Accordion title="Question answering">
+                  ```sql
+                  CREATE MODEL anyscale_endpoints_conversational_full_model
+                  PREDICT answer
+                  USING
+                        engine = 'anyscale_endpoints_engine',
+                        mode = 'conversational-full',
+                        model_name = 'mistralai/Mistral-7B-Instruct-v0.1',
+                        question_column = 'question';
+                  ```
+
+                  To generate a response for a single input, the following query can be used:
+                  ```sql
+                  SELECT question, answer
+                  FROM anyscale_endpoints_conversational_full_model
+                  WHERE question = 'Where is Stockholm located?';
+                  ```
+
+                  The response will look like the following:
+                  ```sql
+                  +---------------------------+-------------------------------+
+                  |question                   |answer                         |
+                  +---------------------------+-------------------------------+
+                  |Where is Stockholm located?|Stockholm is the capital city of Sweden, located in the southeastern part of the country. It is situated on an archipelago of 30,000 islands in the Baltic Sea, and is known for its beautiful waterfront, historic buildings, and vibrant cultural scene.|
+                  +---------------------------+-------------------------------+
+                  ```
+
+                  To generate responses for multiple inputs, the following query can be used:
+                  ```sql
+                  SELECT d.question, m.answer
+                  FROM files.related_questions AS d
+                  JOIN anyscale_endpoints_conversational_full_model AS m
+                  ```
+
+                  The response will look like the following:
+                  | question | answer |
+                  | -------- | ------ |
+                  | Where is Stockholm located? | Stockholm is the capital city of Sweden, located in the southeastern part of the country. It is situated on an island in the Stockholm archipelago, which is made up of more than 30,000 islands. The city is known for its beautiful architecture, museums, and cultural attractions, as well as its vibrant food and nightlife scene. |
+                  | What are some fun activities to do there? | Stockholm is the capital city of Sweden and is located in the southeastern part of the country, on the east coast of the Stockholm archipelago. Some fun activities to do in Stockholm include visiting the famous Vasa Museum, exploring the charming old town of Gamla Stan, taking a stroll through the beautiful parks and gardens, and trying out some of the local food and drinks. There are also many opportunities for shopping, cultural experiences, and outdoor activities such as hiking and biking |
+            </Accordion>
+            <Accordion title="Question answering with context">
+                  ```sql
+                  CREATE MODEL anyscale_endpoints_conversational_full_model
+                  PREDICT answer
+                  USING
+                        engine = 'anyscale_endpoints_engine',
+                        mode = 'conversational-full',
+                        model_name = 'mlabonne/NeuralHermes-2.5-Mistral-7B',
+                        question_column = 'question',
+                        context_column = 'context';
+                  ```
+
+                  To generate a response for a single input, the following query can be used:
+                  ```sql
+                  SELECT question, context, answer
+                  FROM anyscale_endpoints_conversational_full_model
+                  WHERE question = 'What is the main topic of the conference happening next week?' AND context = 'The conference, focusing on advancements in AI, will take place in San Francisco next week.';
+                  ```
+
+                  The response will look like the following:
+                  ```sql
+                  +---------------------------+-------------------------------+-------------------------------+
+                  |question                   |context                         | answer                        |
+                  +---------------------------+-------------------------------+-------------------------------+
+                  |What is the main topic of the conference happening next week? | The conference, focusing on advancements in AI, will take place in San Francisco next week.|The main topic of the conference happening next week in San Francisco is advancements in AI.|
+                  +---------------------------+-------------------------------+-------------------------------+
+                  ```
+
+                  To generate responses for multiple inputs, the following query can be used:
+                  ```sql
+                  SELECT d.question, d.context, m.answer
+                  FROM files.related_questions_with_context AS d
+                  JOIN anyscale_endpoints_conversational_full_model AS m
+                  ```
+
+                  The response will look like the following:
+                  | question | context | answer |
+                  | -------- | ------- | ------ |
+                  | Where is Anna planning a trip to next month? | Anna is planning a trip to Kyoto next month. | Anna is planning a trip to Kyoto next month. |
+                  | What does Anna plan on doing there? | Anna plans on going sightseeing. | Anna plans on going sightseeing during her trip to Kyoto next month. |
+            </Accordion>
+      </AccordionGroup>
+  </Accordion>
+</AccordionGroup>
 
 <Tip>
-
 **Next Steps**
 
 Follow [this tutorial](https://docs.mindsdb.com/finetune/anyscale) to see more use case examples.
 </Tip>
+
+## Troubleshooting Guide
+
+<Warning>
+`Authentication Error`
+
+* **Symptoms**: Failure to authenticate to the Anyscale.
+* **Checklist**:
+    1. Make sure that your Anyscale account is active.
+    2. Confirm that your API key is correct.
+    3. Ensure that your API key has not been revoked.
+    4. Ensure that you have not exceeded the API usage or rate limit.
+</Warning>
+
+<Warning>
+`SQL statement cannot be parsed by mindsdb_sql`
+
+* **Symptoms**: SQL queries failing or not recognizing table and model names containing spaces or special characters.
+* **Checklist**:
+    1. Ensure table names with spaces or special characters are enclosed in backticks.
+    Examples:
+        * Incorrect:
+            ```sql
+            SELECT input.text, output.sentiment
+            FROM integration.travel data AS input
+            JOIN openai_engine AS output
+            ```
+        * Incorrect: 
+            ```sql
+            SELECT input.text, output.sentiment
+            FROM integration.'travel data' AS input
+            JOIN openai_engine AS output
+            ```
+        * Correct:  
+            ```sql 
+            SELECT input.text, output.sentiment
+            FROM integration.`travel data` AS input
+            JOIN openai_engine AS output
+            ```
+</Warning>

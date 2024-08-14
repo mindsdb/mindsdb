@@ -1,4 +1,4 @@
-from typing import Text, Dict, Optional
+from typing import Text, List, Dict, Optional
 
 from elasticsearch import Elasticsearch
 from elasticsearch.exceptions import ConnectionError, AuthenticationException, TransportError, RequestError
@@ -210,36 +210,13 @@ class ElasticsearchHandler(DatabaseHandler):
         Returns:
             Response: A response object containing the result of the insert operation.
         """
-        need_to_close = self.is_connected is False
-
-        connection = self.connect()
-
         # Add the index name and the 'create' operation type to each document.
         df['_index'] = table_name
         df['_op_type'] = 'create'
 
         documents = df.to_dict(orient='records')
                     
-        try:
-            bulk(connection, documents)
-            response = Response(RESPONSE_TYPE.OK)
-        except (BulkIndexError, RequestError) as bulk_index_or_request_error:
-            logger.error(f'Error inserting data into Elasticsearch: {bulk_index_or_request_error}')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(bulk_index_or_request_error)
-            )
-        except Exception as unknown_error:
-            logger.error(f'Unknown error inserting data into Elasticsearch: {unknown_error}')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(unknown_error)
-            )
-
-        if need_to_close is True:
-            self.disconnect()
-
-        return response
+        return self._index_in_bulk(documents)
     
     def update(self, query: ASTNode) -> Response:
         """
@@ -251,10 +228,6 @@ class ElasticsearchHandler(DatabaseHandler):
         Returns:
             Response: A response object containing the result of the update operation.
         """
-        need_to_close = self.is_connected is False
-
-        connection = self.connect()
-
         where_conditions = extract_comparison_conditions(query.where)
 
         # Validate if a WHERE clause is provided with an _id filter.
@@ -279,6 +252,23 @@ class ElasticsearchHandler(DatabaseHandler):
                 '_source': {'doc': {key: val.value for key, val in values_to_update.items()}}
             }
             documents.append(document)
+
+        return self._index_in_bulk(documents)
+    
+    def _index_in_bulk(self, documents: List[Dict]) -> Response:
+        """
+        Indexes a list of documents in bulk into the Elasticsearch host.
+        Both inserts and updates are supported based on the '_op_type' field and the other fields in the document.
+
+        Args:
+            documents (List[Dict]): A list of documents to be inserted into the Elasticsearch host.
+
+        Returns:
+            Response: A response object containing the result of the bulk insert operation.
+        """
+        need_to_close = self.is_connected is False
+
+        connection = self.connect()
 
         try:
             bulk(connection, documents)

@@ -125,7 +125,7 @@ class File(Resource):
                     )
                 if file_size > MAX_FILE_SIZE:
                     return http_error(
-                        400, "File is too big", "Upload limit for file is 100Mb"
+                        400, "File is too big", f"Upload limit for file is {MAX_FILE_SIZE >> 20} MB"
                     )
             with requests.get(url, stream=True) as r:
                 if r.status_code != 200:

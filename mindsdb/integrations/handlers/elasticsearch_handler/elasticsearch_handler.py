@@ -7,7 +7,7 @@ from elasticsearch.helpers.errors import BulkIndexError
 from es.elastic.sqlalchemy import ESDialect
 import pandas as pd
 from pandas import DataFrame
-from mindsdb_sql.parser.ast import Update, Select
+from mindsdb_sql.parser.ast import Update, Select, Delete
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
@@ -377,13 +377,15 @@ class ElasticsearchHandler(DatabaseHandler):
         query_str = renderer.get_string(query, with_failback=True)
         logger.debug(f"Executing SQL query: {query_str}")
 
+        # INSERT queries are passed directly to the `insert` method.
         if isinstance(query, Select):
             return self._select(query.from_table.get_string(), query_str)
 
         elif isinstance(query, Update):
             return self._update(query)
 
-        return self.native_query(query_str)
+        elif isinstance(query, Delete):
+            raise NotImplementedError("Delete operation is not supported.")
 
     def get_tables(self) -> Response:
         """

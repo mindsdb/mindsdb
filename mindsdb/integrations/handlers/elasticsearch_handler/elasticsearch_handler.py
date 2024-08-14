@@ -218,7 +218,7 @@ class ElasticsearchHandler(DatabaseHandler):
                     
         return self._index_in_bulk(documents)
     
-    def update(self, query: ASTNode) -> Response:
+    def _update(self, query: ASTNode) -> Response:
         """
         Executes an update query on the Elasticsearch host.
 
@@ -230,6 +230,7 @@ class ElasticsearchHandler(DatabaseHandler):
         """
         where_conditions = extract_comparison_conditions(query.where)
 
+        # TODO: Support other fields in the WHERE clause?
         # Validate if a WHERE clause is provided with an _id filter.
         if not where_conditions or len(where_conditions) != 1 or where_conditions[0][1] != '_id':
             raise ValueError("A WHERE clause with an _id filter is required for an update operation.")
@@ -302,7 +303,7 @@ class ElasticsearchHandler(DatabaseHandler):
             Response: The response from the `native_query` method, containing the result of the SQL query execution.
         """
         if isinstance(query, Update):
-            return self.update(query)
+            return self._update(query)
 
         renderer = SqlalchemyRender(ESDialect)
         query_str = renderer.get_string(query, with_failback=True)

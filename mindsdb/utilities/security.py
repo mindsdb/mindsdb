@@ -48,12 +48,11 @@ def is_allowed_url(url):
     """
     Checks if the provided URL is from an allowed host.
 
-    This function parses the URL and checks the network location part (netloc) 
+    This function parses the URL and checks the network location part (netloc)
     against a list of allowed hosts.
-    
+
     :param url: The URL to check.
     :return bool:  True if the URL is from an allowed host, False otherwise.
     """
     parsed_url = urlparse(url.lower())
     return parsed_url.netloc in ALLOWED_DOMAINS
-    

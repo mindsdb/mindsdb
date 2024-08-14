@@ -27,7 +27,7 @@ class TestDynamoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         )
 
     def create_handler(self):
-        return DynamoDBHandler('s3', connection_data=self.dummy_connection_data)
+        return DynamoDBHandler('dynamodb', connection_data=self.dummy_connection_data)
 
     def create_patcher(self):
         return patch('boto3.client')

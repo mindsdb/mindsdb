@@ -31,7 +31,7 @@ def install_dependencies(dependencies: List[Text]) -> dict:
     except Exception as unknown_error:
         result['error_message'] = f"Unknown error parsing dependencies: {str(unknown_error)}"
         return result
-    
+
     try:
         # Install the dependencies using the `pip install` command.
         sp = subprocess.Popen(

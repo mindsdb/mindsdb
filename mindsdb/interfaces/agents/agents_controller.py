@@ -1,7 +1,9 @@
+import datetime
 from typing import Dict, Iterator, List, Union
 
 from langchain_core.tools import BaseTool
 from sqlalchemy.orm.attributes import flag_modified
+from sqlalchemy import null
 import pandas as pd
 
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
@@ -83,7 +85,8 @@ class AgentsController:
         agent = db.Agents.query.filter(
             db.Agents.name == agent_name,
             db.Agents.project_id == project.id,
-            db.Agents.company_id == ctx.company_id
+            db.Agents.company_id == ctx.company_id,
+            db.Agents.deleted_at == null()
         ).first()
         return agent
 
@@ -103,7 +106,8 @@ class AgentsController:
         agent = db.Agents.query.filter(
             db.Agents.id == id,
             db.Agents.project_id == project.id,
-            db.Agents.company_id == ctx.company_id
+            db.Agents.company_id == ctx.company_id,
+            db.Agents.deleted_at == null()
         ).first()
         return agent
 
@@ -119,7 +123,8 @@ class AgentsController:
         """
 
         all_agents = db.Agents.query.filter(
-            db.Agents.company_id == ctx.company_id
+            db.Agents.company_id == ctx.company_id,
+            db.Agents.deleted_at == null()
         )
 
         if project_name is not None:
@@ -281,7 +286,7 @@ class AgentsController:
         agent = self.get_agent(agent_name, project_name)
         if agent is None:
             raise ValueError(f'Agent with name does not exist: {agent_name}')
-        db.session.delete(agent)
+        agent.deleted_at = datetime.datetime.now()
         db.session.commit()
 
     def get_completion(

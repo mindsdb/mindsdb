@@ -268,7 +268,7 @@ class ElasticsearchHandler(DatabaseHandler):
             self.disconnect()
 
         return response
-    
+
     def insert(self, table_name: Text, df: DataFrame) -> Response:
         """
         Executes an insert query on the Elasticsearch host.
@@ -286,9 +286,9 @@ class ElasticsearchHandler(DatabaseHandler):
         df['_op_type'] = 'create'
 
         documents = df.to_dict(orient='records')
-                    
+       
         return self._index_in_bulk(documents)
-    
+
     def _update(self, query: ASTNode) -> Response:
         """
         Executes an update query on the Elasticsearch host.
@@ -305,10 +305,10 @@ class ElasticsearchHandler(DatabaseHandler):
         # Validate if a WHERE clause is provided with an _id filter.
         if not where_conditions or len(where_conditions) != 1 or where_conditions[0][1] != '_id':
             raise ValueError("A WHERE clause with an _id filter is required for an update operation.")
-        
+
         if where_conditions[0][0] not in ['=', 'in']:
             raise ValueError("Only the '=' and 'in' operators are supported for the _id filter.")
-        
+
         ids = where_conditions[0][2] if isinstance(where_conditions[0][2], list) else [where_conditions[0][2]]
 
         table_name = query.table.get_string()
@@ -326,7 +326,7 @@ class ElasticsearchHandler(DatabaseHandler):
             documents.append(document)
 
         return self._index_in_bulk(documents)
-    
+
     def _index_in_bulk(self, documents: List[Dict]) -> Response:
         """
         Indexes a list of documents in bulk into the Elasticsearch host.

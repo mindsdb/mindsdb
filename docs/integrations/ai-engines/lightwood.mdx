@@ -121,14 +121,23 @@ To learn more about all the `model` options, visit the [Lightwood documentation 
 
 #### `problem_definition` Key
 
-It allows you to specify the embeddings only mode for the model.
+To train an embedding-only model, use the below parameter when creating the model.
 
 ```sql
+CREATE MODEL embedding_only_model
 ...
 USING problem_definition.embedding_only = True;
 ```
 
-The predictions made by this model come in the form of embeddings by default.
+The predictions made by this embedding model come in the form of embeddings by default.
+
+Alternatively, to get predictions in the form of embeddings from a normal model (that is, trained without specifying the `problem_definition.embedding_only` parameter), use the below parameter when querying this model for predictions.
+
+```sql
+SELECT predictions
+...
+USING return_embedding = True;
+```
 
 #### Other Keys Supported by Lightwood in JsonAI
 

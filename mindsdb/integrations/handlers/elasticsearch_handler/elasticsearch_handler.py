@@ -6,6 +6,7 @@ from elasticsearch.helpers import bulk
 from elasticsearch.helpers.errors import BulkIndexError
 from es.elastic.sqlalchemy import ESDialect
 from pandas import DataFrame
+from mindsdb_sql.parser.ast import Update
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
@@ -15,6 +16,7 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     RESPONSE_TYPE,
 )
+from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb.utilities import log
 
 
@@ -198,7 +200,7 @@ class ElasticsearchHandler(DatabaseHandler):
     
     def insert(self, table_name: Text, df: DataFrame) -> Response:
         """
-        Inserts data into the specified table (index) in the Elasticsearch host.
+        Executes an update query on the Elasticsearch host.
         This function will be invoked instead of `native_query` when the query is an insert statement.
 
         Args:
@@ -238,6 +240,66 @@ class ElasticsearchHandler(DatabaseHandler):
             self.disconnect()
 
         return response
+    
+    def update(self, query: ASTNode) -> Response:
+        """
+        Executes an update query on the Elasticsearch host.
+
+        Args:
+            query (ASTNode): An ASTNode representing the SQL update query to be executed.
+
+        Returns:
+            Response: A response object containing the result of the update operation.
+        """
+        need_to_close = self.is_connected is False
+
+        connection = self.connect()
+
+        where_conditions = extract_comparison_conditions(query.where)
+
+        # Validate if a WHERE clause is provided with an _id filter.
+        if not where_conditions or len(where_conditions) != 1 or where_conditions[0][1] != '_id':
+            raise ValueError("A WHERE clause with an _id filter is required for an update operation.")
+        
+        if where_conditions[0][0] not in ['=', 'in']:
+            raise ValueError("Only the '=' and 'in' operators are supported for the _id filter.")
+        
+        ids = where_conditions[0][2] if isinstance(where_conditions[0][2], list) else [where_conditions[0][2]]
+
+        table_name = query.table.get_string()
+        values_to_update = query.update_columns
+
+        # Add the index name, _id and the 'update' operation type to each document.
+        documents = []
+        for _id in ids:
+            document = {
+                '_index': table_name,
+                '_id': _id,
+                '_op_type': 'update',
+                '_source': {'doc': {key: val.value for key, val in values_to_update.items()}}
+            }
+            documents.append(document)
+
+        try:
+            bulk(connection, documents)
+            response = Response(RESPONSE_TYPE.OK)
+        except (BulkIndexError, RequestError) as bulk_index_or_request_error:
+            logger.error(f'Error inserting data into Elasticsearch: {bulk_index_or_request_error}')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(bulk_index_or_request_error)
+            )
+        except Exception as unknown_error:
+            logger.error(f'Unknown error inserting data into Elasticsearch: {unknown_error}')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(unknown_error)
+            )
+
+        if need_to_close is True:
+            self.disconnect()
+
+        return response
 
     def query(self, query: ASTNode) -> Response:
         """
@@ -249,7 +311,9 @@ class ElasticsearchHandler(DatabaseHandler):
         Returns:
             Response: The response from the `native_query` method, containing the result of the SQL query execution.
         """
-        # TODO: Add support for other query types.
+        if isinstance(query, Update):
+            return self.update(query)
+
         renderer = SqlalchemyRender(ESDialect)
         query_str = renderer.get_string(query, with_failback=True)
         logger.debug(f"Executing SQL query: {query_str}")

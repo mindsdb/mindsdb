@@ -286,7 +286,7 @@ class ElasticsearchHandler(DatabaseHandler):
         df['_op_type'] = 'create'
 
         documents = df.to_dict(orient='records')
-       
+
         return self._index_in_bulk(documents)
 
     def _update(self, query: ASTNode) -> Response:

@@ -2,11 +2,12 @@ from typing import Text, List, Dict, Optional
 
 from elasticsearch import Elasticsearch
 from elasticsearch.exceptions import ConnectionError, AuthenticationException, TransportError, RequestError
-from elasticsearch.helpers import bulk
+from elasticsearch.helpers import bulk, scan
 from elasticsearch.helpers.errors import BulkIndexError
 from es.elastic.sqlalchemy import ESDialect
+import pandas as pd
 from pandas import DataFrame
-from mindsdb_sql.parser.ast import Update
+from mindsdb_sql.parser.ast import Update, Select
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
@@ -197,10 +198,80 @@ class ElasticsearchHandler(DatabaseHandler):
             self.disconnect()
 
         return response
+
+    def _select(self, table_name: Text, query: Text) -> Response:
+        """
+        Executes a select query on the Elasticsearch host.
+
+        Args:
+            query (str): The SQL select query to be executed.
+
+        Returns:
+            Response: A response object containing the result of the select operation.
+        """
+        need_to_close = self.is_connected is False
+
+        connection = self.connect()
+
+        # Translate the SQL query to an Elasticsearch query.
+        try:
+            elasticsearch_query = connection.sql.translate(body={'query': query})
+        except RequestError as request_error:
+            logger.error(f'Error translating query: {query} to Elasticsearch: {request_error}')
+            return Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(request_error)
+            )
+        except Exception as unknown_error:
+            logger.error(f'Unknown error translating query: {query} to Elasticsearch: {unknown_error}')
+            return Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(unknown_error)
+            )
+
+        # Remove the 'size' and 'track_total_hits' parameters from the query.
+        del elasticsearch_query['size']
+        del elasticsearch_query['track_total_hits']
+        # Ensure that the '_source' parameter is set to True to retrieve the source documents.
+        elasticsearch_query['_source'] = True
+
+        try:
+            results = scan(connection, query=elasticsearch_query, index=table_name)
+
+            documents = []
+            for result in results:
+                documents.append(
+                    {
+                        '_id': result['_id'],
+                        **result['_source']
+                    }
+                )
+
+            response = Response(
+                RESPONSE_TYPE.TABLE,
+                data_frame=pd.json_normalize(documents)
+            )
+        except (TransportError, RequestError) as transport_or_request_error:
+            logger.error(f'Error running query: {query} on Elasticsearch, {transport_or_request_error}!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(transport_or_request_error)
+            )
+        except Exception as unknown_error:
+            logger.error(f'Unknown error running query: {query} on Elasticsearch, {unknown_error}!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(unknown_error)
+            )
+
+        if need_to_close is True:
+            self.disconnect()
+
+        return response
     
     def insert(self, table_name: Text, df: DataFrame) -> Response:
         """
-        Executes an update query on the Elasticsearch host.
+        Executes an insert query on the Elasticsearch host.
         This function will be invoked instead of `native_query` when the query is an insert statement.
 
         Args:
@@ -302,12 +373,16 @@ class ElasticsearchHandler(DatabaseHandler):
         Returns:
             Response: The response from the `native_query` method, containing the result of the SQL query execution.
         """
-        if isinstance(query, Update):
-            return self._update(query)
-
         renderer = SqlalchemyRender(ESDialect)
         query_str = renderer.get_string(query, with_failback=True)
         logger.debug(f"Executing SQL query: {query_str}")
+
+        if isinstance(query, Select):
+            return self._select(query.from_table.get_string(), query_str)
+
+        elif isinstance(query, Update):
+            return self._update(query)
+
         return self.native_query(query_str)
 
     def get_tables(self) -> Response:

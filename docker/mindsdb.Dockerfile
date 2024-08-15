@@ -40,8 +40,8 @@ RUN --mount=type=cache,id=pip-$TARGETARCH,target=/root/.cache/pip,sharing=locked
 RUN --mount=type=cache,id=pip-$TARGETARCH,target=/root/.cache/pip,sharing=locked if [ -n "$EXTRAS" ]; then pip install $EXTRAS; fi
 
 # Copy all of the mindsdb code over finally
-COPY . .
 ADD --chmod=755 https://github.com/MShekow/directory-checksum/releases/download/v1.4.5/directory-checksum_1.4.5_linux_${TARGETARCH} /usr/local/bin/directory-checksum
+COPY . .
 RUN directory-checksum --max-depth 1 .
 # Install the "mindsdb" package now that we have the code for it
 RUN --mount=type=cache,id=pip-$TARGETARCH,target=/root/.cache/pip,sharing=locked pip install "."

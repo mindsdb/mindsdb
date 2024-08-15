@@ -40,9 +40,7 @@ RUN pip install "."
 RUN if [ -n "$EXTRAS" ]; then pip install $EXTRAS; fi
 
 # Copy all of the mindsdb code over finally
-ADD --chmod=755 https://github.com/MShekow/directory-checksum/releases/download/v1.4.5/directory-checksum_1.4.5_linux_${TARGETARCH} /usr/local/bin/directory-checksum
 COPY . .
-RUN directory-checksum --max-depth 1 .
 # Install the "mindsdb" package now that we have the code for it
 RUN pip install "."
 

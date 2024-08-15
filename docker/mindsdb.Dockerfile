@@ -35,16 +35,16 @@ RUN --mount=target=/var/lib/apt,id=apt-lib-$TARGETARCH,type=cache,sharing=locked
 # Copy the requirements files, setup.py etc from above
 COPY --from=deps /mindsdb .
 # Install all requirements for mindsdb and all the default handlers
-RUN --mount=type=cache,id=pip-$TARGETARCH,target=/root/.cache/pip,sharing=locked pip install "."
+RUN pip install "."
 # Install extras on top of the bare mindsdb
-RUN --mount=type=cache,id=pip-$TARGETARCH,target=/root/.cache/pip,sharing=locked if [ -n "$EXTRAS" ]; then pip install $EXTRAS; fi
+RUN if [ -n "$EXTRAS" ]; then pip install $EXTRAS; fi
 
 # Copy all of the mindsdb code over finally
 ADD --chmod=755 https://github.com/MShekow/directory-checksum/releases/download/v1.4.5/directory-checksum_1.4.5_linux_${TARGETARCH} /usr/local/bin/directory-checksum
 COPY . .
 RUN directory-checksum --max-depth 1 .
 # Install the "mindsdb" package now that we have the code for it
-RUN --mount=type=cache,id=pip-$TARGETARCH,target=/root/.cache/pip,sharing=locked pip install "."
+RUN pip install "."
 
 
 

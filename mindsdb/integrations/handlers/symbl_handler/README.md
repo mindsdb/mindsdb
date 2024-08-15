@@ -3,7 +3,7 @@ title: Symbl
 sidebarTitle: Symbl
 ---
 
-This documentation describes the integration of MindsDB with [Symbl](https://symbl.ai/), a platform with with state-of-the-art and task specific LLMs, enables businesses to analyze multi-party conversations at scale.
+This documentation describes the integration of MindsDB with [Symbl](https://symbl.ai/), a platform with state-of-the-art and task-specific LLMs that enables businesses to analyze multi-party conversations at scale.
 This integration allows MindsDB to process conversation data and extract insights from it.
 
 ## Prerequisites
@@ -56,7 +56,7 @@ Required connection parameters include the following:
 
 ## Usage
 
-First, process the conversation data and get the conversation ID via the 'get_conversation_id' table:
+First, process the conversation data and get the conversation ID via the `get_conversation_id` table:
 
 ```sql
 SELECT * 

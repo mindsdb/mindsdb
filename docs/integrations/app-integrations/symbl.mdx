@@ -3,15 +3,15 @@ title: Symbl
 sidebarTitle: Symbl
 ---
 
-This documentation describes the integration of MindsDB with [Symbl](https://symbl.ai/), a platform with with state-of-the-art and task specific LLMs, enables businesses to analyze multi-party conversations at scale.
+This documentation describes the integration of MindsDB with [Symbl](https://symbl.ai/), a platform with state-of-the-art and task-specific LLMs that enables businesses to analyze multi-party conversations at scale.
 This integration allows MindsDB to process conversation data and extract insights from it.
 
 ## Prerequisites
 
 Before proceeding, ensure the following prerequisites are met:
 
-1. Install MindsDB locally via [Docker](/setup/self-hosted/docker) or [Docker Desktop](/setup/self-hosted/docker-desktop).
-2. To connect Symbl to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
+2. To connect Symbl to MindsDB, install the required dependencies following [this instruction](https://docs.mindsdb.com/setup/self-hosted/docker#install-dependencies).
 
 <Tip>
 Please note that in order to successfully install the dependencies for Symbl, it is necessary to install `portaudio` and few other Linux packages in the Docker container first. To do this, run the following commands:
@@ -56,7 +56,7 @@ Required connection parameters include the following:
 
 ## Usage
 
-First, process the conversation data and get the conversation ID via the 'get_conversation_id' table:
+First, process the conversation data and get the conversation ID via the `get_conversation_id` table:
 
 ```sql
 SELECT * 

@@ -7,6 +7,20 @@ from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.messages.base import BaseMessage
 
 
+class ContextCaptureCallback(BaseCallbackHandler):
+    def __init__(self):
+        self.context = None
+
+    def on_retriever_end(self, documents: List[Any], *, run_id: str, parent_run_id: Union[str, None] = None, **kwargs: Any) -> Any:
+        self.context = [{
+            'page_content': doc.page_content,
+            'metadata': doc.metadata
+        } for doc in documents]
+
+    def get_contexts(self):
+        return self.context
+
+
 class LogCallbackHandler(BaseCallbackHandler):
     '''Langchain callback handler that logs agent and chain executions.'''
 
@@ -19,7 +33,7 @@ class LogCallbackHandler(BaseCallbackHandler):
         self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any
     ) -> Any:
         '''Run when LLM starts running.'''
-        self.logger.debug(f'LLM started with prompts:')
+        self.logger.debug('LLM started with prompts:')
         for prompt in prompts:
             self.logger.debug(prompt[:50])
 

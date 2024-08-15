@@ -1,3 +1,4 @@
+import ast
 from datetime import datetime
 from typing import List, Optional
 
@@ -335,7 +336,7 @@ class WeaviateDBHandler(VectorStoreHandler):
             # assuming there would be only one vector based search per query
             vector_filter = vector_filter[0]
             near_vector = {
-                "vector": eval(vector_filter.value)
+                "vector": ast.literal_eval(vector_filter.value)
                 if isinstance(vector_filter.value, str)
                 else vector_filter.value
             }

@@ -1,16 +1,18 @@
 import os
-import importlib
-from pathlib import Path
 import tempfile
+import importlib
 import multipart
+from pathlib import Path
+from http import HTTPStatus
 
-from flask import request, send_file, abort, current_app as ca
+from flask import request, send_file, current_app as ca
 from flask_restx import Resource
 
 from mindsdb_sql.parser.ast import Identifier
 from mindsdb_sql.parser.dialects.mindsdb import CreateMLEngine
 
 from mindsdb.metrics.metrics import api_endpoint_metrics
+from mindsdb.integrations.libs.ml_exec_base import process_cache
 from mindsdb.integrations.utilities.install import install_dependencies
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
 from mindsdb.api.http.utils import http_error
@@ -26,13 +28,18 @@ class HandlersList(Resource):
     @api_endpoint_metrics('GET', '/handlers')
     def get(self):
         '''List all db handlers'''
-        handlers = ca.integration_controller.get_handlers_import_status()
+
+        if request.args.get('lazy') == '1':
+            handlers = ca.integration_controller.get_handlers_metadata()
+        else:
+            handlers = ca.integration_controller.get_handlers_import_status()
         result = []
         for handler_type, handler_meta in handlers.items():
             # remove non-integration handlers
             if handler_type not in ['utilities', 'dummy_data']:
                 row = {'name': handler_type}
                 row.update(handler_meta)
+                del row['path']
                 result.append(row)
         return result
 
@@ -43,17 +50,31 @@ class HandlerIcon(Resource):
     @api_endpoint_metrics('GET', '/handlers/handler/icon')
     def get(self, handler_name):
         try:
-            handlers_import_status = ca.integration_controller.get_handlers_import_status()
-            icon_name = handlers_import_status[handler_name]['icon']['name']
-            handler_folder = handlers_import_status[handler_name]['import']['folder']
+            handler_meta = ca.integration_controller.get_handler_meta(handler_name)
+            icon_name = handler_meta['icon']['name']
+            handler_folder = handler_meta['import']['folder']
             mindsdb_path = Path(importlib.util.find_spec('mindsdb').origin).parent
             icon_path = mindsdb_path.joinpath('integrations/handlers').joinpath(handler_folder).joinpath(icon_name)
             if icon_path.is_absolute() is False:
                 icon_path = Path(os.getcwd()).joinpath(icon_path)
         except Exception:
-            return abort(404)
+            return http_error(HTTPStatus.NOT_FOUND, 'Icon not found', f'Icon for {handler_name} not found')
         else:
             return send_file(icon_path)
+
+
+@ns_conf.route('/<handler_name>')
+class HandlerInfo(Resource):
+    @ns_conf.param('handler_name', 'Handler name')
+    @api_endpoint_metrics('GET', '/handlers/handler')
+    def get(self, handler_name):
+
+        handler_meta = ca.integration_controller.get_handler_meta(handler_name)
+        row = {'name': handler_name}
+        row.update(handler_meta)
+        del row['path']
+        del row['icon']
+        return row
 
 
 @ns_conf.route('/<handler_name>/install')
@@ -61,14 +82,13 @@ class InstallDependencies(Resource):
     @ns_conf.param('handler_name', 'Handler name')
     @api_endpoint_metrics('POST', '/handlers/handler/install')
     def post(self, handler_name):
-        handler_import_status = ca.integration_controller.get_handlers_import_status()
-        if handler_name not in handler_import_status:
+        handler_meta = ca.integration_controller.get_handler_meta(handler_name)
+
+        if handler_meta is None:
             return f'Unknown handler: {handler_name}', 400
 
-        if handler_import_status[handler_name].get('import', {}).get('success', False) is True:
+        if handler_meta.get('import', {}).get('success', False) is True:
             return 'Installed', 200
-
-        handler_meta = handler_import_status[handler_name]
 
         dependencies = handler_meta['import']['dependencies']
         if len(dependencies) == 0:
@@ -79,6 +99,9 @@ class InstallDependencies(Resource):
         # reload it if any result, so we can get new error message
         ca.integration_controller.reload_handler_module(handler_name)
         if result.get('success') is True:
+            # If warm processes are available in the cache, remove them.
+            # This will force a new process to be created with the installed dependencies.
+            process_cache.remove_processes_for_handler(handler_name)
             return '', 200
         return http_error(
             500,
@@ -183,7 +206,7 @@ class BYOMUpload(Resource):
         code_file_path = params['code'].name.decode()
         try:
             module_file_path = params['modules'].name.decode()
-        except AttributeError:
+        except KeyError:
             module_file_path = Path(code_file_path).parent / 'requirements.txt'
             module_file_path.touch()
             module_file_path = str(module_file_path)
@@ -191,6 +214,7 @@ class BYOMUpload(Resource):
         connection_args = {
             'code': code_file_path,
             'modules': module_file_path,
+            'mode': params.get('mode'),
             'type': params.get('type')
         }
 

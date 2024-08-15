@@ -53,7 +53,7 @@ class SessionController:
         self.kb_controller = KnowledgeBaseController(self)
 
         self.datahub = init_datahub(self)
-        self.agents_controller = AgentsController(self.datahub)
+        self.agents_controller = AgentsController()
 
         self.prepared_stmts = {}
         self.packet_sequence_number = 0

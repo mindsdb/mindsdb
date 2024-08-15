@@ -1,0 +1,71 @@
+on:
+  workflow_call:
+    inputs:
+      deploy-envs:
+        required: true
+        type: string
+      image-tag:
+        required: true
+        type: string
+      prod:
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      SLACK_DEPLOYMENTS_CHANNEL_ID:
+        required: true
+      REPO_DISPATCH_PAT_TOKEN:
+        required: true
+  
+jobs:
+  # Trigger private repo to deploy
+  trigger_deploy:
+    if: github.actor != 'mindsdbadmin'
+    runs-on: mdb-dev
+    strategy:
+      matrix:
+        deploy-env: ${{ fromJson(inputs.deploy-envs) }}
+    environment:
+      name: ${{ matrix.deploy-env }}
+      url: ${{ vars.ENV_URL }}
+    # We only want to run one deploy job for an env at a time
+    # Don't cancel in progress jobs because it may be for a different PR
+    concurrency:
+      group: deploy-${{ matrix.deploy-env }}
+      cancel-in-progress: false
+    steps:
+    - name: Pull MindsDB Github Actions
+      uses: actions/checkout@v4
+      with:
+        repository: mindsdb/github-actions
+        path: github-actions
+    - uses: FranzDiebold/github-env-vars-action@v2
+    - name: Notify of deployment starting
+      id: slack
+      uses: ./github-actions/slack-deploy-msg
+      with:
+        channel-id: ${{ secrets.SLACK_DEPLOYMENTS_CHANNEL_ID }}
+        status: "started"
+        color: "#0099CC"
+        env-name: ${{ matrix.deploy-env }}
+        env-url: ${{ vars.ENV_URL }}
+        slack-token: ${{ secrets.GH_ACTIONS_SLACK_BOT_TOKEN }}
+    - uses: convictional/trigger-workflow-and-wait@v1.6.5
+      with:
+        owner: mindsdb
+        repo: INTERNAL-mindsdb-build-deploy-to-kubernetes
+        github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}
+        workflow_file_name: ${{ inputs.prod && 'deploy-prod.yml' || 'deploy-dev.yml' }}
+        ref: main
+        client_payload: '{"image-tag-prefix": "${{ inputs.image-tag }}", "deploy-env": "${{ matrix.deploy-env }}"}'
+    - name: Notify of deployment finish
+      uses: ./github-actions/slack-deploy-msg
+      if: always()
+      with:
+        channel-id: ${{ secrets.SLACK_DEPLOYMENTS_CHANNEL_ID }}
+        status: "${{ job.status == 'success' && 'finished' || 'failed' }}"
+        color: "${{ job.status == 'success' && '#00C851' || '#FF4444' }}"
+        env-name: ${{ matrix.deploy-env }}
+        env-url: ${{ vars.ENV_URL }}
+        slack-token: ${{ secrets.GH_ACTIONS_SLACK_BOT_TOKEN }}
+        update-message-id: ${{ steps.slack.outputs.ts }}

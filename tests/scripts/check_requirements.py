@@ -36,18 +36,23 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.to
 # Hierarchicalforecast is an optional dep of neural/statsforecast
 # lark is required for auto retrieval (RAG utilities). It is used by langchain
 # and not explicitly imported in mindsdb.
+# transformers is required for langchain_core and not explicitly imported by mindsdb.
 MAIN_RULE_IGNORES = {
     "DEP003": ["torch"],
     "DEP001": ["torch"],
-    "DEP002": ["psycopg2-binary", "lark"],
+    "DEP002": ["psycopg2-binary", "lark", "transformers"],
 }
 
-# THe following packages need exceptions because they are optional deps of some other packages. e.g. langchain CAN use openai
-# (pysqlite3 is imported in an unusual way in the chromadb handler and needs to be excluded too)
-# pypdf and openpyxl are optional deps of langchain, that are used for the file handler
-# sqlalchemy-solr is an optional sqlalchemy depend that is used in the solr handler
+
+# The following packages need exceptions.
+# Either because 1) they are optional deps of some other packages. E.g.:
+#   - langchain CAN use openai
+#   - pypdf and openpyxl are optional deps of langchain, that are used for the file handler
+# Or 2) because they are imported in an unusual way. E.g.:
+#   - pysqlite3 in the chromadb handler
+#   - dspy-ai in langchain handler
 OPTIONAL_HANDLER_DEPS = ["pysqlite3", "torch", "openai", "tiktoken", "wikipedia", "anthropic", "pypdf", "openpyxl",
-                         "sentence-transformers", "faiss-cpu", "litellm", "chromadb", "sqlalchemy-solr"]
+                         "sentence-transformers", "faiss-cpu", "litellm", "chromadb", "dspy-ai", "sqlalchemy-solr"]
 
 # List of rules we can ignore for specific packages
 # Here we ignore any packages in the main requirements.txt for "listed but not used" errors, because they will be used for the core code but not necessarily in a given handler
@@ -111,7 +116,6 @@ PACKAGE_NAME_MAP = {
     "hubspot-api-client": ["hubspot"],
     "pytest-lazy-fixture": ["pytest_lazyfixture"],
     "eventbrite-python": ["eventbrite"],
-    "python-magic": ["magic"],
     "clickhouse-sqlalchemy": ["clickhouse_sqlalchemy"],
     "pillow": ["PIL"],
     "auto-ts": ["auto_ts"],

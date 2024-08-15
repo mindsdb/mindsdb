@@ -36,7 +36,7 @@ connection_args = OrderedDict(
         'label': 'Port',
     },
     kwargs={
-        'type': dict,
+        'type': ARG_TYPE.DICT,
         'description': 'Additional parameters of DocumentDB same as MongoDB.',
         'required': False,
         'label': 'Kwargs',

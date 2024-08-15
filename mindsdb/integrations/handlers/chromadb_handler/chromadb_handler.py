@@ -1,3 +1,4 @@
+import ast
 import sys
 from typing import List, Optional
 
@@ -329,7 +330,7 @@ class ChromaDBHandler(VectorStoreHandler):
         # ensure metadata is a dict, convert to dict if it is a string
         if data.get(TableField.METADATA.value) is not None:
             data[TableField.METADATA.value] = data[TableField.METADATA.value].apply(
-                lambda x: x if isinstance(x, dict) else eval(x)
+                lambda x: x if isinstance(x, dict) else ast.literal_eval(x)
             )
 
         # convert to dict

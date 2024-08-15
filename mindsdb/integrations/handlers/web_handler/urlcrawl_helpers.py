@@ -203,7 +203,7 @@ def get_readable_text_from_soup(soup) -> str:
     return html_converter.handle(str(soup))
 
 
-def get_all_website_links_recursively(url, reviewed_urls, limit=None, crawl_depth: int = 1, current_depth: int = 0, filters: List[str]=None):
+def get_all_website_links_recursively(url, reviewed_urls, limit=None, crawl_depth: int = 1, current_depth: int = 0, filters: List[str] = None):
     """
     Recursively gathers all links from a given website up to a specified limit.
 

@@ -123,7 +123,6 @@ class KnowledgeBaseResource(Resource):
         crawl_depth = kb.get('crawl_depth', 1)
         filters = kb.get('filters', [])
 
-
         # Load, split, & embed files into Knowledge Base.
         for file_name in files:
             _insert_file_into_knowledge_base(table, file_name)

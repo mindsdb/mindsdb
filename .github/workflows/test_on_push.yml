@@ -4,8 +4,8 @@ on:
   pull_request:
     branches: [main]
     paths-ignore:
-      - '**/*.md'
-      - 'docs/**'
+      - "**/*.md"
+      - "docs/**"
   workflow_dispatch:
 
 defaults:
@@ -127,6 +127,7 @@ jobs:
           pip install .[bigquery]
           pip install .[elasticsearch]
           pip install .[databricks]
+          pip install .[oracle]
           pip install .[minds_endpoint]
           pip freeze
       - name: Run unit tests
@@ -140,7 +141,7 @@ jobs:
           fi
       - name: Run Handlers tests and submit Coverage to coveralls
         run: |
-          handlers=("mysql" "postgres" "mssql" "clickhouse" "snowflake" "web" "redshift" "bigquery" "elasticsearch" "s3" "databricks" "dynamodb" "mariadb")
+          handlers=("mysql" "postgres" "mssql" "clickhouse" "snowflake" "web" "redshift" "bigquery" "elasticsearch" "s3" "databricks" "dynamodb" "mariadb" "oracle")
           for handler in "${handlers[@]}"
           do
             pytest --cov=mindsdb/integrations/handlers/${handler}_handler tests/unit/handlers/test_${handler}.py 

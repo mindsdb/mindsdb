@@ -250,9 +250,12 @@ def check_relative_reqs():
 
             # Report on imports of other handlers that are missing a corresponding requirements.txt entry
             for line, imported_handler_name in imported_handlers.items():
-                if imported_handler_name not in required_handlers:
-                    errors.append(
-                        f"{line} <- {imported_handler_name} not in handler requirements.txt. Add it like: \"-r mindsdb/integrations/handlers/{imported_handler_name}/requirements.txt\"")
+                # Check if the imported handler has a requirements.txt file.
+                imported_handler_req_file = f"mindsdb/integrations/handlers/{imported_handler_name}/requirements.txt"
+                if os.path.exists(imported_handler_req_file):
+                    if imported_handler_name not in required_handlers:
+                        errors.append(
+                            f"{line} <- {imported_handler_name} not in handler requirements.txt. Add it like: \"-r {imported_handler_req_file}\"")
 
             # Print all the errors for this .py file
             print_errors(file, errors)

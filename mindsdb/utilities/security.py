@@ -3,6 +3,7 @@ import socket
 import ipaddress
 from mindsdb.utilities.config import Config
 
+
 def is_private_url(url: str):
     """
     Raises exception if url is private

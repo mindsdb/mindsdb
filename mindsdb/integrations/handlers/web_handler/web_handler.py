@@ -6,7 +6,7 @@ from mindsdb_sql.parser import ast
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions, project_dataframe
 
-from mindsdb.utilities.security import is_private_url, validate_crawling_sites
+from mindsdb.utilities.security import validate_crawling_sites
 from mindsdb.utilities.config import Config
 
 from .urlcrawl_helpers import get_all_websites

@@ -244,9 +244,10 @@ class Project:
 
     def get_agents(self):
         records = (
-            db.session.query(db.Agents).filter_by(
-                project_id=self.id,
-                company_id=ctx.company_id
+            db.session.query(db.Agents).filter(
+                db.Agents.project_id == self.id,
+                db.Agents.company_id == ctx.company_id,
+                db.Agents.deleted_at == sa.null()
             )
             .order_by(db.Agents.name)
             .all()

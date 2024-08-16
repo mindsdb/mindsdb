@@ -22,27 +22,26 @@ COPY mindsdb/__about__.py mindsdb/
 FROM python:3.10 as build
 WORKDIR /mindsdb
 ARG EXTRAS
-ARG TARGETARCH
 
 # "rm ... docker-clean" stops docker from removing packages from our cache
 # https://github.com/moby/buildkit/blob/master/frontend/dockerfile/docs/reference.md#example-cache-apt-packages
 RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
-RUN --mount=target=/var/lib/apt,id=apt-lib-$TARGETARCH,type=cache,sharing=locked \
-    --mount=target=/var/cache/apt,id=apt-cache-$TARGETARCH,type=cache,sharing=locked \
+RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
+    --mount=target=/var/cache/apt,type=cache,sharing=locked \
     apt update && apt-get upgrade -y \
     && apt-get install -y freetds-dev  # freetds required to build pymssql on arm64 for mssql_handler. Can be removed when we are on python3.11+
 
 # Copy the requirements files, setup.py etc from above
 COPY --from=deps /mindsdb .
 # Install all requirements for mindsdb and all the default handlers
-RUN pip install "."
+RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked pip install "."
 # Install extras on top of the bare mindsdb
-RUN if [ -n "$EXTRAS" ]; then pip install $EXTRAS; fi
+RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked if [ -n "$EXTRAS" ]; then pip install $EXTRAS; fi
 
 # Copy all of the mindsdb code over finally
 COPY . .
 # Install the "mindsdb" package now that we have the code for it
-RUN pip install "."
+RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked pip install "."
 
 
 
@@ -55,11 +54,11 @@ WORKDIR /mindsdb
 # "rm ... docker-clean" stops docker from removing packages from our cache
 # https://github.com/moby/buildkit/blob/master/frontend/dockerfile/docs/reference.md#example-cache-apt-packages
 RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
-RUN --mount=target=/var/lib/apt,id=apt-lib-$TARGETARCH,type=cache,sharing=locked \
-    --mount=target=/var/cache/apt,id=apt-cache-$TARGETARCH,type=cache,sharing=locked \
+RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
+    --mount=target=/var/cache/apt,type=cache,sharing=locked \
     apt update && apt-get upgrade -y \
     && apt-get install -y libpq5 freetds-bin curl
-RUN --mount=type=cache,id=pip-$TARGETARCH,target=/root/.cache/pip,sharing=locked pip install -r requirements/requirements-dev.txt
+RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked pip install -r requirements/requirements-dev.txt
 
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
@@ -84,8 +83,8 @@ WORKDIR /mindsdb
 # "rm ... docker-clean" stops docker from removing packages from our cache
 # https://github.com/moby/buildkit/blob/master/frontend/dockerfile/docs/reference.md#example-cache-apt-packages
 RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
-RUN --mount=target=/var/lib/apt,id=apt-lib-$TARGETARCH,type=cache,sharing=locked \
-    --mount=target=/var/cache/apt,id=apt-cache-$TARGETARCH,type=cache,sharing=locked \
+RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
+    --mount=target=/var/cache/apt,type=cache,sharing=locked \
     apt update && apt-get upgrade -y \
     && apt-get install -y libpq5 freetds-bin curl
 

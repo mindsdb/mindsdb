@@ -28,8 +28,8 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
         self.llm_generation_usage = {}
 
     def on_chat_model_start(self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any) -> Any:
-        # TODO: here, I should set a token counter for the run uuid, starting value will be tokenized prompt
-        # TODO: for now we will use a unique tokenizer, openai. Good enough as a first approximation.
+        # TODO: here, we should set a token counter for the run uuid, starting value will be tokenized prompt
+        # TODO: for now we will use a unique tokenizer from openai. Good enough as a first approximation.
         # parent_run_uuid = kwargs.get('parent_run_id', uuid4()).hex
         # tags = kwargs.get('tags', uuid4()).hex
         # metadata = kwargs.get('metadata', uuid4()).hex
@@ -46,7 +46,7 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
         self.llm_generation_usage[run_uuid] = in_tokens
 
     def on_llm_end(self, response: LLMResult, **kwargs: Any) -> Any:
-        # TODO: here, I should retrieve the LLM result (tokens out) and add it to the dict
+        # TODO: here, we should retrieve the LLM result (tokens out) and add it to the dict
         # parent_run_uuid = kwargs.get('parent_run_id', uuid4()).hex
 
         run_uuid = kwargs.get('run_id', uuid4()).hex

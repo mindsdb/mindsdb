@@ -1,0 +1,3 @@
+[console_scripts]
+langid = py3langid.langid:main
+

@@ -1,0 +1,2 @@
+[nbdev]
+hierarchicalforecast = hierarchicalforecast._modidx:d

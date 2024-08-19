@@ -1,0 +1,445 @@
+Metadata-Version: 2.1
+Name: langsmith
+Version: 0.1.82
+Summary: Client library to connect to the LangSmith LLM Tracing and Evaluation Platform.
+Home-page: https://smith.langchain.com/
+License: MIT
+Keywords: langsmith,langchain,llm,nlp,language,translation,evaluation,tracing,platform
+Author: LangChain
+Author-email: support@langchain.dev
+Requires-Python: >=3.8.1,<4.0
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Provides-Extra: vcr
+Requires-Dist: orjson (>=3.9.14,<4.0.0)
+Requires-Dist: pydantic (>=1,<3) ; python_full_version < "3.12.4"
+Requires-Dist: pydantic (>=2.7.4,<3.0.0) ; python_full_version >= "3.12.4"
+Requires-Dist: requests (>=2,<3)
+Project-URL: Documentation, https://docs.smith.langchain.com/
+Project-URL: Repository, https://github.com/langchain-ai/langsmith-sdk
+Description-Content-Type: text/markdown
+
+# LangSmith Client SDK
+ [![Release Notes](https://img.shields.io/github/release/langchain-ai/langsmith-sdk?logo=python)](https://github.com/langchain-ai/langsmith-sdk/releases)
+ [![Python Downloads](https://static.pepy.tech/badge/langsmith/month)](https://pepy.tech/project/langsmith)
+
+This package contains the Python client for interacting with the [LangSmith platform](https://smith.langchain.com/).
+
+To install:
+
+```bash
+pip install -U langsmith
+export LANGSMITH_TRACING=true
+export LANGSMITH_API_KEY=ls_...
+```
+
+Then trace:
+
+```python
+import openai
+from langsmith.wrappers import wrap_openai
+from langsmith import traceable
+
+# Auto-trace LLM calls in-context
+client = wrap_openai(openai.Client())
+
+@traceable # Auto-trace this function
+def pipeline(user_input: str):
+    result = client.chat.completions.create(
+        messages=[{"role": "user", "content": user_input}],
+        model="gpt-3.5-turbo"
+    )
+    return result.choices[0].message.content
+
+pipeline("Hello, world!")
+```
+See the resulting nested trace [🌐 here](https://smith.langchain.com/public/b37ca9b1-60cd-4a2a-817e-3c4e4443fdc0/r).
+
+LangSmith helps you and your team develop and evaluate language models and intelligent agents. It is compatible with any LLM application.
+
+> **Cookbook:** For tutorials on how to get more value out of LangSmith, check out the [Langsmith Cookbook](https://github.com/langchain-ai/langsmith-cookbook/tree/main) repo.
+
+A typical workflow looks like:
+
+1. Set up an account with LangSmith.
+2. Log traces while debugging and prototyping.
+3. Run benchmark evaluations and continuously improve with the collected data.
+
+We'll walk through these steps in more detail below.
+
+## 1. Connect to LangSmith
+
+Sign up for [LangSmith](https://smith.langchain.com/) using your GitHub, Discord accounts, or an email address and password. If you sign up with an email, make sure to verify your email address before logging in.
+
+Then, create a unique API key on the [Settings Page](https://smith.langchain.com/settings), which is found in the menu at the top right corner of the page.
+
+Note: Save the API Key in a secure location. It will not be shown again.
+
+## 2. Log Traces
+
+You can log traces natively using the LangSmith SDK or within your LangChain application.
+
+### Logging Traces with LangChain
+
+LangSmith seamlessly integrates with the Python LangChain library to record traces from your LLM applications.
+
+1. **Copy the environment variables from the Settings Page and add them to your application.**
+
+Tracing can be activated by setting the following environment variables or by manually specifying the LangChainTracer.
+
+```python
+import os
+os.environ["LANGSMITH_TRACING_V2"] = "true"
+os.environ["LANGSMITH_ENDPOINT"] = "https://api.smith.langchain.com"
+os.environ["LANGSMITH_API_KEY"] = "<YOUR-LANGSMITH-API-KEY>"
+# os.environ["LANGSMITH_PROJECT"] = "My Project Name" # Optional: "default" is used if not set
+```
+
+> **Tip:** Projects are groups of traces. All runs are logged to a project. If not specified, the project is set to `default`.
+
+2. **Run an Agent, Chain, or Language Model in LangChain**
+
+If the environment variables are correctly set, your application will automatically connect to the LangSmith platform.
+
+```python
+from langchain_core.runnables import chain
+
+@chain
+def add_val(x: dict) -> dict:
+    return {"val": x["val"] + 1}
+
+add_val({"val": 1})
+```
+
+### Logging Traces Outside LangChain
+
+You can still use the LangSmith development platform without depending on any
+LangChain code.
+
+1. **Copy the environment variables from the Settings Page and add them to your application.**
+
+```python
+import os
+os.environ["LANGCHAIN_ENDPOINT"] = "https://api.smith.langchain.com"
+os.environ["LANGCHAIN_API_KEY"] = "<YOUR-LANGSMITH-API-KEY>"
+# os.environ["LANGCHAIN_PROJECT"] = "My Project Name" # Optional: "default" is used if not set
+```
+
+2. **Log traces**
+
+The easiest way to log traces using the SDK is via the `@traceable` decorator. Below is an example.
+
+```python
+from datetime import datetime
+from typing import List, Optional, Tuple
+
+import openai
+from langsmith import traceable
+from langsmith.wrappers import wrap_openai
+
+client = wrap_openai(openai.Client())
+
+@traceable
+def argument_generator(query: str, additional_description: str = "") -> str:
+    return client.chat.completions.create(
+        [
+            {"role": "system", "content": "You are a debater making an argument on a topic."
+             f"{additional_description}"
+             f" The current time is {datetime.now()}"},
+            {"role": "user", "content": f"The discussion topic is {query}"}
+        ]
+    ).choices[0].message.content
+
+
+
+@traceable
+def argument_chain(query: str, additional_description: str = "") -> str:
+    argument = argument_generator(query, additional_description)
+    # ... Do other processing or call other functions...
+    return argument
+
+argument_chain("Why is blue better than orange?")
+```
+
+Alternatively, you can manually log events using the `Client` directly or using a `RunTree`, which is what the traceable decorator is meant to manage for you!
+
+A RunTree tracks your application. Each RunTree object is required to have a `name` and `run_type`. These and other important attributes are as follows:
+
+- `name`: `str` - used to identify the component's purpose
+- `run_type`: `str` - Currently one of "llm", "chain" or "tool"; more options will be added in the future
+- `inputs`: `dict` - the inputs to the component
+- `outputs`: `Optional[dict]` - the (optional) returned values from the component
+- `error`: `Optional[str]` - Any error messages that may have arisen during the call
+
+```python
+from langsmith.run_trees import RunTree
+
+parent_run = RunTree(
+    name="My Chat Bot",
+    run_type="chain",
+    inputs={"text": "Summarize this morning's meetings."},
+    # project_name= "Defaults to the LANGCHAIN_PROJECT env var"
+)
+parent_run.post()
+# .. My Chat Bot calls an LLM
+child_llm_run = parent_run.create_child(
+    name="My Proprietary LLM",
+    run_type="llm",
+    inputs={
+        "prompts": [
+            "You are an AI Assistant. The time is XYZ."
+            " Summarize this morning's meetings."
+        ]
+    },
+)
+child_llm_run.post()
+child_llm_run.end(
+    outputs={
+        "generations": [
+            "I should use the transcript_loader tool"
+            " to fetch meeting_transcripts from XYZ"
+        ]
+    }
+)
+child_llm_run.patch()
+# ..  My Chat Bot takes the LLM output and calls
+# a tool / function for fetching transcripts ..
+child_tool_run = parent_run.create_child(
+    name="transcript_loader",
+    run_type="tool",
+    inputs={"date": "XYZ", "content_type": "meeting_transcripts"},
+)
+child_tool_run.post()
+# The tool returns meeting notes to the chat bot
+child_tool_run.end(outputs={"meetings": ["Meeting1 notes.."]})
+child_tool_run.patch()
+
+child_chain_run = parent_run.create_child(
+    name="Unreliable Component",
+    run_type="tool",
+    inputs={"input": "Summarize these notes..."},
+)
+child_chain_run.post()
+
+try:
+    # .... the component does work
+    raise ValueError("Something went wrong")
+    child_chain_run.end(outputs={"output": "foo"}
+    child_chain_run.patch()
+except Exception as e:
+    child_chain_run.end(error=f"I errored again {e}")
+    child_chain_run.patch()
+    pass
+# .. The chat agent recovers
+
+parent_run.end(outputs={"output": ["The meeting notes are as follows:..."]})
+res = parent_run.patch()
+res.result()
+```
+
+## Create a Dataset from Existing Runs
+
+Once your runs are stored in LangSmith, you can convert them into a dataset.
+For this example, we will do so using the Client, but you can also do this using
+the web interface, as explained in the [LangSmith docs](https://docs.smith.langchain.com/docs/).
+
+```python
+from langsmith import Client
+
+client = Client()
+dataset_name = "Example Dataset"
+# We will only use examples from the top level AgentExecutor run here,
+# and exclude runs that errored.
+runs = client.list_runs(
+    project_name="my_project",
+    execution_order=1,
+    error=False,
+)
+
+dataset = client.create_dataset(dataset_name, description="An example dataset")
+for run in runs:
+    client.create_example(
+        inputs=run.inputs,
+        outputs=run.outputs,
+        dataset_id=dataset.id,
+    )
+```
+
+## Evaluating Runs
+
+Check out the [LangSmith Testing & Evaluation dos](https://docs.smith.langchain.com/docs/evaluation/) for up-to-date workflows.
+
+For generating automated feedback on individual runs, you can run evaluations directly using the LangSmith client.
+
+```python
+from typing import Optional
+from langsmith.evaluation import StringEvaluator
+
+
+def jaccard_chars(output: str, answer: str) -> float:
+    """Naive Jaccard similarity between two strings."""
+    prediction_chars = set(output.strip().lower())
+    answer_chars = set(answer.strip().lower())
+    intersection = prediction_chars.intersection(answer_chars)
+    union = prediction_chars.union(answer_chars)
+    return len(intersection) / len(union)
+
+
+def grader(run_input: str, run_output: str, answer: Optional[str]) -> dict:
+    """Compute the score and/or label for this run."""
+    if answer is None:
+        value = "AMBIGUOUS"
+        score = 0.5
+    else:
+        score = jaccard_chars(run_output, answer)
+        value = "CORRECT" if score > 0.9 else "INCORRECT"
+    return dict(score=score, value=value)
+
+evaluator = StringEvaluator(evaluation_name="Jaccard", grading_function=grader)
+
+runs = client.list_runs(
+    project_name="my_project",
+    execution_order=1,
+    error=False,
+)
+for run in runs:
+    client.evaluate_run(run, evaluator)
+```
+
+
+## Integrations
+
+LangSmith easily integrates with your favorite LLM framework.
+
+## OpenAI SDK
+
+<!-- markdown-link-check-disable -->
+We provide a convenient wrapper for the [OpenAI SDK](https://platform.openai.com/docs/api-reference).
+
+In order to use, you first need to set your LangSmith API key.
+
+```shell
+export LANGCHAIN_API_KEY=<your-api-key>
+```
+
+Next, you will need to install the LangSmith SDK:
+
+```shell
+pip install -U langsmith
+```
+
+After that, you can wrap the OpenAI client:
+
+```python
+from openai import OpenAI
+from langsmith import wrappers
+
+client = wrappers.wrap_openai(OpenAI())
+```
+
+Now, you can use the OpenAI client as you normally would, but now everything is logged to LangSmith!
+
+```python
+client.chat.completions.create(
+    model="gpt-4",
+    messages=[{"role": "user", "content": "Say this is a test"}],
+)
+```
+
+Oftentimes, you use the OpenAI client inside of other functions.
+You can get nested traces by using this wrapped client and decorating those functions with `@traceable`.
+See [this documentation](https://docs.smith.langchain.com/tracing/faq/logging_and_viewing) for more documentation how to use this decorator
+
+```python
+from langsmith import traceable
+
+@traceable(name="Call OpenAI")
+def my_function(text: str):
+    return client.chat.completions.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": f"Say {text}"}],
+    )
+
+my_function("hello world")
+```
+
+# Instructor
+
+We provide a convenient integration with [Instructor](https://jxnl.github.io/instructor/), largely by virtue of it essentially just using the OpenAI SDK.
+
+In order to use, you first need to set your LangSmith API key.
+
+```shell
+export LANGCHAIN_API_KEY=<your-api-key>
+```
+
+Next, you will need to install the LangSmith SDK:
+
+```shell
+pip install -U langsmith
+```
+
+After that, you can wrap the OpenAI client:
+
+```python
+from openai import OpenAI
+from langsmith import wrappers
+
+client = wrappers.wrap_openai(OpenAI())
+```
+
+After this, you can patch the OpenAI client using `instructor`:
+
+```python
+import instructor
+
+client = instructor.patch(OpenAI())
+```
+
+Now, you can use `instructor` as you normally would, but now everything is logged to LangSmith!
+
+```python
+from pydantic import BaseModel
+
+
+class UserDetail(BaseModel):
+    name: str
+    age: int
+
+
+user = client.chat.completions.create(
+    model="gpt-3.5-turbo",
+    response_model=UserDetail,
+    messages=[
+        {"role": "user", "content": "Extract Jason is 25 years old"},
+    ]
+)
+```
+
+Oftentimes, you use `instructor` inside of other functions.
+You can get nested traces by using this wrapped client and decorating those functions with `@traceable`.
+See [this documentation](https://docs.smith.langchain.com/tracing/faq/logging_and_viewing) for more documentation how to use this decorator
+
+```python
+@traceable()
+def my_function(text: str) -> UserDetail:
+    return client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        response_model=UserDetail,
+        messages=[
+            {"role": "user", "content": f"Extract {text}"},
+        ]
+    )
+
+
+my_function("Jason is 25 years old")
+```
+
+
+## Additional Documentation
+
+To learn more about the LangSmith platform, check out the [docs](https://docs.smith.langchain.com/docs/).
+

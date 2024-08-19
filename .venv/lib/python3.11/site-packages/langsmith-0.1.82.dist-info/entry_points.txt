@@ -1,0 +1,3 @@
+[console_scripts]
+langsmith=langsmith.cli.main:main
+

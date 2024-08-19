@@ -1,0 +1,19 @@
+Metadata-Version: 2.1
+Name: duckdb
+Version: 0.9.1
+Summary: DuckDB embedded database
+Home-page: https://www.duckdb.org
+Maintainer: Hannes Muehleisen
+Maintainer-email: hannes@cwi.nl
+License: MIT
+Project-URL: Documentation, https://duckdb.org/docs/api/python/overview
+Project-URL: Source, https://github.com/duckdb/duckdb/blob/main/tools/pythonpkg
+Project-URL: Issues, https://github.com/duckdb/duckdb/issues
+Project-URL: Changelog, https://github.com/duckdb/duckdb/releases
+Keywords: DuckDB Database SQL OLAP
+Classifier: Topic :: Database :: Database Engines/Servers
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Requires-Python: >=3.7.0
+
+See here for an introduction: https://duckdb.org/docs/api/python/overview

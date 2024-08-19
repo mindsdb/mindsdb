@@ -1,0 +1,57 @@
+Metadata-Version: 2.1
+Name: langchain-community
+Version: 0.2.6
+Summary: Community contributed LangChain integrations.
+Home-page: https://github.com/langchain-ai/langchain
+License: MIT
+Requires-Python: >=3.8.1,<4.0
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Requires-Dist: PyYAML (>=5.3)
+Requires-Dist: SQLAlchemy (>=1.4,<3)
+Requires-Dist: aiohttp (>=3.8.3,<4.0.0)
+Requires-Dist: dataclasses-json (>=0.5.7,<0.7)
+Requires-Dist: langchain (>=0.2.6,<0.3.0)
+Requires-Dist: langchain-core (>=0.2.10,<0.3.0)
+Requires-Dist: langsmith (>=0.1.0,<0.2.0)
+Requires-Dist: numpy (>=1,<2) ; python_version < "3.12"
+Requires-Dist: numpy (>=1.26.0,<2.0.0) ; python_version >= "3.12"
+Requires-Dist: requests (>=2,<3)
+Requires-Dist: tenacity (>=8.1.0,<9.0.0,!=8.4.0)
+Project-URL: Repository, https://github.com/langchain-ai/langchain
+Description-Content-Type: text/markdown
+
+# 🦜️🧑‍🤝‍🧑 LangChain Community
+
+[![Downloads](https://static.pepy.tech/badge/langchain_community/month)](https://pepy.tech/project/langchain_community)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## Quick Install
+
+```bash
+pip install langchain-community
+```
+
+## What is it?
+
+LangChain Community contains third-party integrations that implement the base interfaces defined in LangChain Core, making them ready-to-use in any LangChain application.
+
+For full documentation see the [API reference](https://api.python.langchain.com/en/stable/community_api_reference.html).
+
+![Diagram outlining the hierarchical organization of the LangChain framework, displaying the interconnected parts across multiple layers.](../../docs/static/img/langchain_stack.png "LangChain Framework Overview")
+
+## 📕 Releases & Versioning
+
+`langchain-community` is currently on version `0.0.x`
+
+All changes will be accompanied by a patch version increase.
+
+## 💁 Contributing
+
+As an open-source project in a rapidly developing field, we are extremely open to contributions, whether it be in the form of a new feature, improved infrastructure, or better documentation.
+
+For detailed information on how to contribute, see the [Contributing Guide](https://python.langchain.com/docs/contributing/).

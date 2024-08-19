@@ -1,5 +1,6 @@
 import datetime as dt
 
+from bson.objectid import ObjectId
 from mindsdb_sql.parser.ast import *
 
 from mindsdb.api.mongo.utilities.mongodb_query import MongoQuery
@@ -167,7 +168,7 @@ class MongodbRender:
             if isinstance(arg2, Constant):
                 # identifier and constant
 
-                val = arg2.value
+                val = ObjectId(arg2.value) if var_name == '_id' else arg2.value
                 if op in ('=', '=='):
                     pass
                 elif op in ops_map:

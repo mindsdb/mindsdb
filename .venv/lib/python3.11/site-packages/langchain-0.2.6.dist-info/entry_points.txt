@@ -1,3 +1,0 @@
-[console_scripts]
-langchain-server=langchain.server:main
-

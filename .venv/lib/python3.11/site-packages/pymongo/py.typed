@@ -1,2 +1,0 @@
-# PEP-561 Support File.
-# "Package maintainers who wish to support type checking of their code MUST add a marker file named py.typed to their package supporting typing".

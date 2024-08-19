@@ -1,5 +1,0 @@
-[console_scripts]
-waitress-serve = waitress.runner:run
-
-[paste.server_runner]
-main = waitress:serve_paste

@@ -1,3 +1,0 @@
-[console_scripts]
-checksumdir=checksumdir.cli:main
-

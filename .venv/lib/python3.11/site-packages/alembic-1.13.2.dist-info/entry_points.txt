@@ -1,2 +1,0 @@
-[console_scripts]
-alembic = alembic.config:main

@@ -1,3 +1,0 @@
-adbc_driver_duckdb
-duckdb
-duckdb-stubs

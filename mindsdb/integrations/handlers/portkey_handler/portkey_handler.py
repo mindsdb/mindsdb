@@ -1,4 +1,3 @@
-import os
 from typing import Dict, Optional
 
 import pandas as pd
@@ -6,7 +5,6 @@ from portkey_ai import Portkey
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities import log
-from mindsdb.utilities.config import Config
 
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 

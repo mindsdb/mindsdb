@@ -7,6 +7,7 @@ from mindsdb_sql.parser.ast.base import ASTNode
 import pandas as pd
 import pymongo
 from pymongo import MongoClient
+from pymongo.errors import ServerSelectionTimeoutError, OperationFailure, ConfigurationError, InvalidURI
 from typing import Text, List, Dict, Any, Union
 
 from mindsdb.api.mongo.utilities.mongodb_query import MongoQuery
@@ -82,11 +83,18 @@ class MongoDBHandler(DatabaseHandler):
         if re.match(r'/?.*tls=false', self.host.lower()):
             kwargs['tls'] = False
 
-        connection = MongoClient(
-            self.host,
-            port=self.port,
-            **kwargs
-        )
+        try:
+            connection = MongoClient(
+                self.host,
+                port=self.port,
+                **kwargs
+            )
+        except InvalidURI as invalid_uri_error:
+            logger.error(f'Invalid URI provided for MongoDB connection: {invalid_uri_error}!')
+            raise
+        except Exception as unknown_error:
+            logger.error(f'Unknown error connecting to MongoDB: {unknown_error}!')
+            raise
 
         # Get the database name from the connection if it's not provided.
         if self.database is None:
@@ -165,10 +173,21 @@ class MongoDBHandler(DatabaseHandler):
             con = self.connect()
             con.server_info()
             response.success = True
-        # TODO: Catch specific exceptions.
-        except Exception as e:
-            logger.error(f'Error connecting to MongoDB {self.database}, {e}!')
-            response.error_message = str(e)
+        except InvalidURI as invalid_uri_error:
+            logger.error(f'Invalid URI provided for MongoDB {self.database}, {e}!')
+            response.error_message = str(invalid_uri_error)
+        except ServerSelectionTimeoutError as server_error:
+            logger.error(f'Server error connecting to MongoDB {self.database}, {e}!')
+            response.error_message = str(server_error)
+        except OperationFailure as operation_error:
+            logger.error(f'Operation error connecting to MongoDB {self.database}, {e}!')
+            response.error_message = str(operation_error)
+        except ConfigurationError as config_error:
+            logger.error(f'Configuration error connecting to MongoDB {self.database}, {e}!')
+            response.error_message = str(config_error)
+        except Exception as unknown_error:
+            logger.error(f'Unknown error connecting to MongoDB {self.database}, {e}!')
+            response.error_message = str(unknown_error)
 
         if response.success and need_to_close:
             self.disconnect()

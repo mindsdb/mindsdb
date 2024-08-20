@@ -1,6 +1,7 @@
+import time
+from typing import Dict
 from http import HTTPStatus
 from sqlalchemy.exc import NoResultFound
-from typing import Dict
 
 from flask import request
 from flask_restx import Resource
@@ -35,6 +36,7 @@ class DatabasesResource(Resource):
                 HTTPStatus.BAD_REQUEST, 'Wrong argument',
                 'Must provide "database" parameter in POST body'
             )
+        check_connection = request.json.get('check_connection', False)
         session = SessionController()
         database = request.json['database']
         parameters = {}
@@ -57,6 +59,16 @@ class DatabasesResource(Resource):
                 HTTPStatus.CONFLICT, 'Name conflict',
                 f'Database with name {name} already exists.'
             )
+
+        if check_connection:
+            handler = session.integration_controller.create_tmp_handler(name, database['engine'], parameters)
+            status = handler.check_connection()
+            if status.success is not True:
+                return http_error(
+                    HTTPStatus.BAD_REQUEST, 'Connection error',
+                    status.error_message or 'Connection error'
+                )
+
         new_integration_id = session.integration_controller.add(name, database['engine'], parameters)
         new_integration = session.database_controller.get_integration(new_integration_id)
         return new_integration, HTTPStatus.CREATED
@@ -99,6 +111,8 @@ class DatabaseResource(Resource):
         session = SessionController()
         parameters = {}
         database = request.json['database']
+        check_connection = request.json.get('check_connection', False)
+
         if 'parameters' in database:
             parameters = database['parameters']
         if not session.database_controller.exists(database_name):
@@ -112,6 +126,19 @@ class DatabaseResource(Resource):
             new_integration_id = session.integration_controller.add(database_name, database['engine'], parameters)
             new_integration = session.database_controller.get_integration(new_integration_id)
             return new_integration, HTTPStatus.CREATED
+
+        if check_connection:
+            existing_integration = session.integration_controller.get(database_name)
+            temp_name = f'{database_name}_{time.time()}'.replace('.', '')
+            handler = session.integration_controller.create_tmp_handler(
+                temp_name, existing_integration['engine'], parameters
+            )
+            status = handler.check_connection()
+            if status.success is not True:
+                return http_error(
+                    HTTPStatus.BAD_REQUEST, 'Connection error',
+                    status.error_message or 'Connection error'
+                )
 
         session.integration_controller.modify(database_name, parameters)
         return session.integration_controller.get(database_name)

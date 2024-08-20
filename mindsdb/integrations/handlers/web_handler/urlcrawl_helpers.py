@@ -1,7 +1,9 @@
 import concurrent.futures
 import io
+import re
 import traceback
 from threading import Lock
+from typing import List
 from urllib.parse import urljoin, urlparse, urlunparse
 
 import html2text
@@ -201,7 +203,7 @@ def get_readable_text_from_soup(soup) -> str:
     return html_converter.handle(str(soup))
 
 
-def get_all_website_links_recursively(url, reviewed_urls, limit=None):
+def get_all_website_links_recursively(url, reviewed_urls, limit=None, crawl_depth: int = 1, current_depth: int = 0, filters: List[str] = None):
     """
     Recursively gathers all links from a given website up to a specified limit.
 
@@ -209,14 +211,23 @@ def get_all_website_links_recursively(url, reviewed_urls, limit=None):
         url (str): The starting URL to fetch links from.
         reviewed_urls (dict): A dictionary to keep track of reviewed URLs and associated data.
         limit (int, optional): The maximum number of URLs to process.
+        crawl_depth: How deep to crawl from each base URL. 0 = scrape given URLs only
+        current_depth: How deep we are currently crawling from the base URL.
+        filters (List[str]): Crawl URLs that only match these regex patterns.
 
     TODO: Refactor this function to use a iterative aproach instead of recursion
     """
     if limit is not None:
         if len(reviewed_urls) >= limit:
             return reviewed_urls
+    if crawl_depth == current_depth:
+        return reviewed_urls
 
-    if url not in reviewed_urls:
+    if not filters:
+        matches_filter = True
+    else:
+        matches_filter = any(re.match(f, url) is not None for f in filters)
+    if url not in reviewed_urls and matches_filter:
         try:
             reviewed_urls[url] = get_all_website_links(url)
         except Exception as e:
@@ -234,6 +245,12 @@ def get_all_website_links_recursively(url, reviewed_urls, limit=None):
 
     # create a list of new urls to review that don't exist in the already reviewed ones
     for new_url in reviewed_urls[url]["urls"]:
+        if not filters:
+            matches_filter = True
+        else:
+            matches_filter = any(re.match(f, new_url) is not None for f in filters)
+        if not matches_filter:
+            continue
         # if this is already in the urls, then no need to go and crawl for it
         if new_url in reviewed_urls or new_url in to_rev_url_list:
             continue
@@ -253,23 +270,26 @@ def get_all_website_links_recursively(url, reviewed_urls, limit=None):
         reviewed_urls.update(new_revised_urls)
 
         for new_url in new_revised_urls:
-            get_all_website_links_recursively(new_url, reviewed_urls, limit)
+            get_all_website_links_recursively(new_url, reviewed_urls, limit, crawl_depth=crawl_depth, current_depth=current_depth + 1, filters=filters)
 
 
-def get_all_websites(urls, limit=1, html=False) -> pd.DataFrame:
+def get_all_websites(urls, limit=1, html=False, crawl_depth: int = 1, filters: List[str] = None) -> pd.DataFrame:
     """
     Crawl a list of websites and return a DataFrame containing the results.
 
     Args:
         urls (list): a list of URLs to crawl
+        limit (int): Absolute max number of web pages to crawl, regardless of crawl depth.
+        crawl_depth (int): Crawl depth for URLs.
         html (bool): a boolean indicating whether to include the HTML content in the results
+        filters (List[str]): Crawl URLs that only match these regex patterns.
 
     Returns:
         A DataFrame containing the results.
     """
     reviewed_urls = {}
 
-    def fetch_url(url):
+    def fetch_url(url, crawl_depth: int = 1, filters: List[str] = None):
         # Allow URLs to be passed wrapped in quotation marks so they can be used
         # directly from the SQL editor.
         if url.startswith("'") and url.endswith("'"):
@@ -278,11 +298,11 @@ def get_all_websites(urls, limit=1, html=False) -> pd.DataFrame:
         if urlparse(url).scheme == "":
             # Try HTTPS first
             url = "https://" + url
-        get_all_website_links_recursively(url, reviewed_urls, limit)
+        get_all_website_links_recursively(url, reviewed_urls, limit, crawl_depth=crawl_depth, filters=filters)
 
     # Use a ThreadPoolExecutor to run the helper function in parallel.
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        future_to_url = {executor.submit(fetch_url, url): url for url in urls}
+        future_to_url = {executor.submit(fetch_url, url, crawl_depth=crawl_depth, filters=filters): url for url in urls}
 
         for future in concurrent.futures.as_completed(future_to_url):
             future.result()

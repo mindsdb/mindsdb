@@ -225,7 +225,7 @@ class MongoDBHandler(DatabaseHandler):
             # Fallback for the previous API.
             mquery = MongoQuery(query['collection'])
 
-            for c in  query['call']:
+            for c in query['call']:
                 mquery.add_step({
                     'method': c['method'],
                     'args': c['args']
@@ -280,7 +280,7 @@ class MongoDBHandler(DatabaseHandler):
 
         return response
 
-    def flatten(self, row: Dict, level: int  = 0) -> Dict:
+    def flatten(self, row: Dict, level: int = 0) -> Dict:
         """
         Flattens a nested dictionary to a single level.
 

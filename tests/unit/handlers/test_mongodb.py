@@ -31,7 +31,7 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
 
     def create_patcher(self):
         return patch('mindsdb.integrations.handlers.mongodb_handler.mongodb_handler.MongoClient')
-    
+
     def test_connect_success(self):
         """
         Test if `connect` method successfully establishes a connection and sets `is_connected` flag to True.
@@ -197,6 +197,6 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.assertEqual(df['Field'].tolist(), ['_id', 'name', 'plot', 'runtime'])
         self.assertEqual(df['Type'].tolist(), ['str', 'str', 'str', 'int'])
 
-    
+
 if __name__ == '__main__':
     unittest.main()

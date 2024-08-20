@@ -10,7 +10,7 @@ from mindsdb.api.mongo.utilities.mongodb_query import MongoQuery
 
 class MongodbRender:
     """
-    Renderer to convert SQL queries represented as ASTNodes to MongoQuery instances.    
+    Renderer to convert SQL queries represented as ASTNodes to MongoQuery instances.
     """
 
     def to_mongo_query(self, node: ASTNode) -> MongoQuery:
@@ -37,7 +37,7 @@ class MongodbRender:
             node (Update): An ASTNode representing the SQL Update statement.
 
         Returns:
-            MongoQuery: The converted MongoQuery instance.        
+            MongoQuery: The converted MongoQuery instance.
         """
         collection = node.table.parts[-1]
         mquery = MongoQuery(collection)
@@ -77,7 +77,7 @@ class MongodbRender:
             filters = self.handle_where(node.where)
 
         group = {}
-        project = {'_id': 0} # Hide _id field when it has not been explicitly requested.
+        project = {'_id': 0}  # Hide _id field when it has not been explicitly requested.
         if node.distinct:
             # Group by distinct fields.
             group = {'_id': {}}
@@ -95,7 +95,7 @@ class MongodbRender:
                     else:
                         alias = col.alias.parts[-1]
 
-                    project[alias] = f'${name}' # Project field.
+                    project[alias] = f'${name}'  # Project field.
 
                     # Group by distinct fields.
                     if node.distinct:
@@ -109,7 +109,6 @@ class MongodbRender:
                     else:
                         alias = col.alias.parts[-1]
                     project[alias] = val
-
 
         if node.group_by is not None:
             # TODO
@@ -167,7 +166,7 @@ class MongodbRender:
 
         Returns:
             dict: The converted MongoDB query filters.
-        """        
+        """
         # TODO: UnaryOperation, function.
         if not type(node) in [BinaryOperation]:
             raise NotImplementedError(f'Not supported type {type(node)}')
@@ -268,7 +267,7 @@ class MongodbRender:
         if isinstance(node, Identifier):
             return f'${node.parts[-1]}'
         elif isinstance(node, Latest):
-            return f'LATEST'
+            return 'LATEST'
         elif isinstance(node, Constant):
             return node.value
         elif isinstance(node, TypeCast)\
@@ -285,4 +284,3 @@ class MongodbRender:
             raise RuntimeError(f'Not supported date format. Supported: {formats}')
         else:
             raise NotImplementedError(f'Unknown where element {node}')
-

@@ -297,7 +297,7 @@ class IntegrationController:
         handler_meta = self.get_handler_meta(integration_record.engine)
         integration_type = None
         if isinstance(handler_meta, dict):
-            # in other cases, the handler directory is likely not to exist.
+            # in other cases, the handler directory is likely not exist.
             integration_type = handler_meta.get('type')
         integration_module = self.get_handler_module(integration_record.engine)
 

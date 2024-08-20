@@ -92,6 +92,9 @@ class MongoDBHandler(DatabaseHandler):
         except InvalidURI as invalid_uri_error:
             logger.error(f'Invalid URI provided for MongoDB connection: {invalid_uri_error}!')
             raise
+        except ConfigurationError as config_error:
+            logger.error(f'Configuration error connecting to MongoDB: {config_error}!')
+            raise
         except Exception as unknown_error:
             logger.error(f'Unknown error connecting to MongoDB: {unknown_error}!')
             raise
@@ -253,6 +256,9 @@ class MongoDBHandler(DatabaseHandler):
             if not isinstance(cursor, pymongo.results.UpdateResult):
                 for row in cursor:
                     result.append(self.flatten(row, level=self.flatten_level))
+
+            else:
+                return Response(RESPONSE_TYPE.OK)
 
             if len(result) > 0:
                 df = pd.DataFrame(result)

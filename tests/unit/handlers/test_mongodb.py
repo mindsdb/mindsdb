@@ -6,6 +6,7 @@ from bson import ObjectId
 from mindsdb_sql.parser import ast
 from mindsdb_sql.parser.ast.select.star import Star
 import pymongo
+from pymongo.errors import InvalidURI, OperationFailure
 import pymongo.results
 
 from base_handler_test import BaseHandlerTestSetup
@@ -43,7 +44,27 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         self.assertTrue(self.handler.is_connected)
         self.mock_connect.assert_called_once()
 
-    # TODO: Add tests for `connect` failures.
+    def test_connect_failure_with_invalid_uri(self):
+        """
+        Test if `connect` method raises InvalidURI exception when an invalid URI is provided.
+        """
+        self.mock_connect.side_effect = InvalidURI
+
+        with self.assertRaises(InvalidURI):
+            self.handler.connect()
+
+        self.assertFalse(self.handler.is_connected)
+
+    def test_connect_failure_with_incorrect_credentials(self):
+        """
+        Test if `connect` method raises OperationFailure exception when incorrect credentials are provided.
+        """
+        self.mock_connect.side_effect = OperationFailure(error='Authentication failed.')
+
+        with self.assertRaises(OperationFailure):
+            self.handler.connect()
+
+        self.assertFalse(self.handler.is_connected)
 
     def test_check_connection_failure_with_non_existent_database(self):
         """
@@ -57,8 +78,6 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         assert isinstance(response, StatusResponse)
         self.assertTrue(response.error_message)
 
-    # TODO: Add tests for other `check_connection` failures.
-
     def test_check_connection_success(self):
         """
         Test if the `check_connection` method returns a StatusResponse object and accurately reflects the connection status on a successful connection.
@@ -71,7 +90,7 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         assert isinstance(response, StatusResponse)
         self.assertFalse(response.error_message)
 
-    def test_query_sfailure_with_non_existent_collection(self):
+    def test_query_failure_with_non_existent_collection(self):
         """
         Test if the `query` method returns a response object with an error message on failed query due to non-existent collection.
         """
@@ -89,6 +108,42 @@ class TestMongoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
         assert isinstance(response, Response)
         self.assertEqual(response.type, RESPONSE_TYPE.ERROR)
         self.assertTrue(response.error_message)
+
+    def test_query_failure_with_unsupported_query_type(self):
+        """
+        Test if the `query` method raises NotImplementedError on unsupported query operation.
+        This exception will be raised in the `to_mongo_query` method of the `MongodbRender` class.
+        """
+        query = ast.Insert(
+            table=ast.Identifier('table1'),
+            columns=['id', 'name'],
+            values=[[1, 'Alice']]
+        )
+
+        with self.assertRaises(NotImplementedError):
+            self.handler.query(query)
+
+    def test_query_failure_with_unsupported_operation(self):
+        """
+        Test if the `query` method raises NotImplementedError on unsupported operation.
+        This exception will be raised in the `handle_where` method of the `MongodbRender` class.
+        """
+        query = ast.Select(
+            targets=[
+                Star(),
+            ],
+            from_table=ast.Identifier('movies'),
+            where=ast.BinaryOperation(
+                args=[
+                    ast.Identifier('name'),
+                    ast.Constant('The Dark Knight')
+                ],
+                op='in'
+            )
+        )
+
+        with self.assertRaises(NotImplementedError):
+            self.handler.query(query)
 
     def test_query_select_success(self):
         """

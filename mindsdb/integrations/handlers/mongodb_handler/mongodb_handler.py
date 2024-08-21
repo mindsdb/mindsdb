@@ -258,7 +258,6 @@ class MongoDBHandler(DatabaseHandler):
                 RESPONSE_TYPE.TABLE,
                 df
             )
-        # TODO: Catch specific exceptions.
         except Exception as e:
             logger.error(f'Error running query: {query} on {self.database}.{collection}!')
             response = Response(

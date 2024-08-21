@@ -181,21 +181,9 @@ class MongoDBHandler(DatabaseHandler):
                 raise ValueError(f'Database {self.database} not found!')
 
             response.success = True
-        except InvalidURI as invalid_uri_error:
-            logger.error(f'Invalid URI provided for MongoDB {self.database}, {invalid_uri_error}!')
-            response.error_message = str(invalid_uri_error)
-        except ServerSelectionTimeoutError as server_error:
-            logger.error(f'Server error connecting to MongoDB {self.database}, {server_error}!')
-            response.error_message = str(server_error)
-        except OperationFailure as operation_error:
-            logger.error(f'Operation error connecting to MongoDB {self.database}, {operation_error}!')
-            response.error_message = str(operation_error)
-        except ConfigurationError as config_error:
-            logger.error(f'Configuration error connecting to MongoDB {self.database}, {config_error}!')
-            response.error_message = str(config_error)
-        except ValueError as value_error:
-            logger.error(f'Value error connecting to MongoDB {self.database}, {value_error}!')
-            response.error_message = str(value_error)
+        except (InvalidURI, ServerSelectionTimeoutError, OperationFailure, ConfigurationError, ValueError) as known_error:
+            logger.error(f'Error connecting to MongoDB {self.database}, {known_error}!')
+            response.error_message = str(known_error)
         except Exception as unknown_error:
             logger.error(f'Unknown error connecting to MongoDB {self.database}, {unknown_error}!')
             response.error_message = str(unknown_error)

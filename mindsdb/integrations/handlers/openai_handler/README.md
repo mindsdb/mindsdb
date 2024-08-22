@@ -32,7 +32,8 @@ CREATE MODEL openai_model
 PREDICT target_column
 USING
       engine = 'openai_engine',  -- engine name as created via CREATE ML_ENGINE
-      mode = 'mode_name', -- optional, ...
+      api_base = 'base-url', -- optional, replaces the default base URL
+      mode = 'mode_name', -- optional, mode to run the model in
       model_name = 'openai_model_name',  -- optional with default value of gpt-3.5-turbo
       question_column = 'question',  -- optional, column name that stores user input
       context_column = 'context',  -- optional, column that stores context of the user input
@@ -45,6 +46,7 @@ USING
 The following parameters are available to use when creating an OpenAI model:
 
 * `engine`: This is the engine name as created with the [`CREATE ML_ENGINE`](https://docs.mindsdb.com/mindsdb_sql/sql/create/ml-engine) statement.
+* `api_base`: This parameter is optional. It replaces the default OpenAI's base URL with the defined value.
 * `mode`: This parameter is optional. The available modes include `default`, `conversational`, `conversational-full`, `image`, and `embedding`.
     - The `default` mode is used by default. The model replies to the `prompt_template` message.
     - The `conversational` mode enables the model to read and reply to multiple messages.

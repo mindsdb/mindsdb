@@ -69,7 +69,7 @@ The following is a more detailed explanation of the parameters used in the `CREA
 <AccordionGroup>
 
 * `engine`: This is the engine name as created with the [`CREATE ML_ENGINE`](https://docs.mindsdb.com/mindsdb_sql/sql/create/ml-engine) statement.
-* `api_base`: This parameter is optional. It replaces the default OpenAI's base URL with the defined value.
+* `api_base`: This parameter is optional. It replaces the default Anyscale's base URL with the defined value.
 * `mode`: This parameter is optional. The available modes include `default`, `conversational`, and `conversational-full`.
     - The `default` mode is used by default. The model will generate a separate response for each input provided. No context is maintained between the inputs.
     - The `conversational` mode will maintain context between the inputs and generate a single response. This response will be placed in the last row of the result set.

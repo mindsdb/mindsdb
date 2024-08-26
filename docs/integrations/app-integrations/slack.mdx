@@ -58,22 +58,24 @@ Here is how to set up a Slack app and generate both a Slack bot token and a Slac
   4. Go to *Socket Mode* under *Settings* and toggle the button to *Enable Socket Mode*.
   5. Go to *OAuth & Permissions* under *Features*.
       - Add the following *Bot Token Scopes*:
+        - app_mentions:read
         - channels:history
         - channels:read
         - chat:write
-        - groups:read
+        - groups:history
+        - groups:read (optional)
         - im:history
         - im:read
         - im:write
-        - mpim:read
+        - mpim:read (optional)
         - users.profile:read
-        - users:read
+        - users:read (optional)
       - In the *OAuth Tokens for Your Workspace* section, click on *Install to Workspace* and then *Allow*.
       - **Copy and save the `xoxb-...` token - you'll need it to publish the chatbot.**
   6. Go to *App Home* under *Features* and click on the checkbox to *Allow users to send Slash commands and messages from the messages tab*.
   7. Go to *Event Subscriptions* under *Features*.
       - Toggle the button to *Enable Events*.
-      - Under *Subscribe to bot events*, click on *Add Bot User Event* and add `message.im`.
+      - Under *Subscribe to bot events*, click on *Add Bot User Event* and add `app_mention`, `message_channels`, and `message.im`.
       - Click on *Save Changes*.
   8. Now you can use tokens from points 3 and 5 to initialize the Slack handler in MindsDB.
 </Accordion>

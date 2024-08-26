@@ -11,6 +11,10 @@ The MindsDB SQL API supports creating connections to integrations by passing the
 connection parameters specific per integration. You can find more in the
 [Supported Integrations](#supported-integrations) chapter.
 
+<Note>
+MindsDB doesn't store or copy your data. Instead, it fetches data directly from your connected sources each time you make a query, ensuring that any changes to the data are instantly reflected. This means your data remains in its original location, and MindsDB always works with the most up-to-date information.
+</Note>
+
 ## Syntax
 
 Let's review the syntax for the `CREATE DATABASE` command.

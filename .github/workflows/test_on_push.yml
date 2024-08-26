@@ -30,6 +30,7 @@ jobs:
           not-docs:
             - '!docs/**'
             - '!**/*.md'
+            - '!.github/**'
 
   # Run all of our static code checks here
   code_checking:

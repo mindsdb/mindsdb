@@ -3,9 +3,6 @@ name: Test on Push
 on:
   pull_request:
     branches: [main]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
   workflow_dispatch:
 
 defaults:
@@ -19,13 +16,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Sets an output var to indicate if all changes are in docs files
+  # This output is used to skip running code checks on docs changes
+  changes:
+    name: Filter changed files
+    runs-on: mdb-dev
+    outputs:
+      not-docs: ${{ steps.filter.outputs.not-docs }}
+    steps:
+    - uses: dorny/paths-filter@v3
+      id: filter
+      with:
+        predicate-quantifier: 'every'
+        filters: |
+          not-docs:
+            - '!docs/**'  
+            - '!**/*.md'
+
   # Run all of our static code checks here
   code_checking:
     name: Run static code checks
-    runs-on: ubuntu-latest
+    runs-on: mdb-dev
+    needs: changes
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        if: ${{ needs.changes.outputs.not-docs == 'true' }}
+        uses: actions/checkout@v4
       - name: Set up Python
+        if: ${{ needs.changes.outputs.not-docs == 'true' }}
         uses: actions/setup-python@v5.1.0
         with:
           python-version: ${{ vars.CI_PYTHON_VERSION }}
@@ -35,17 +53,20 @@ jobs:
       # Checks the codebase for print() statements and fails if any are found
       # We should be using loggers instead
       - name: Check for print statements
+        if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
           python tests/scripts/check_print_statements.py
 
       # Gathers a list of changed files for pre-commit to use
       - name: Get changed files
+        if: ${{ needs.changes.outputs.not-docs == 'true' }}
         id: changed-files
         uses: tj-actions/changed-files@v41
 
       # Run pre-commit on all changed files
       # See .pre-commit-config.yaml for the list of checks
       - name: Run pre-commit
+        if: ${{ needs.changes.outputs.not-docs == 'true' }}
         uses: pre-commit/action@v3.0.0
         with:
           extra_args: --files ${{ steps.changed-files.outputs.all_changed_files }}
@@ -53,6 +74,7 @@ jobs:
       # Runs a few different checks against our many requirements files
       # to make sure they're in order
       - name: Check requirements files
+        if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
           # We don't need to install mindsdb itself here because these are just static code checks
           pip install -r requirements/requirements-dev.txt
@@ -63,7 +85,7 @@ jobs:
   # Used for installation checks below
   matrix_prep:
     name: Prepare matrix
-    runs-on: ubuntu-latest
+    runs-on: mdb-dev
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
@@ -76,19 +98,23 @@ jobs:
   # Check that our pip package is able to be installed in all of our supported environments
   check_install:
     name: Check pip installation
-    needs: [matrix_prep, code_checking]
+    needs: [changes, matrix_prep, code_checking]
     strategy:
       matrix: ${{fromJson(needs.matrix_prep.outputs.matrix)}}
     runs-on: ${{ matrix.runs_on }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        if: ${{ needs.changes.outputs.not-docs == 'true' }}
+        uses: actions/checkout@v4
       - name: Set up Python
+        if: ${{ needs.changes.outputs.not-docs == 'true' }}
         uses: actions/setup-python@v5.1.0
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
           cache-dependency-path: "**/requirements*.txt"
       - name: Check requirements files are installable
+        if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
           # Install dev requirements and build our pip package
           pip install -r requirements/requirements-dev.txt
@@ -101,20 +127,24 @@ jobs:
 
   unit_tests:
     name: Run Unit Tests
-    needs: [matrix_prep, code_checking]
+    needs: [changes, matrix_prep, code_checking]
     strategy:
       matrix: ${{fromJson(needs.matrix_prep.outputs.matrix)}}
     runs-on: ${{ matrix.runs_on }}
     if: github.ref_type == 'branch'
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        if: ${{ needs.changes.outputs.not-docs == 'true' }}
+        uses: actions/checkout@v4
       - name: Set up Python
+        if: ${{ needs.changes.outputs.not-docs == 'true' }}
         uses: actions/setup-python@v5.1.0
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
           cache-dependency-path: "**/requirements*.txt"
       - name: Install dependencies
+        if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
           pip install .
           pip install -r requirements/requirements-test.txt
@@ -131,6 +161,7 @@ jobs:
           pip install .[minds_endpoint]
           pip freeze
       - name: Run unit tests
+        if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
             env PYTHONPATH=./ pytest tests/unit/executor/ -x
@@ -140,6 +171,7 @@ jobs:
             # env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_anyscale_endpoints.py
           fi
       - name: Run Handlers tests and submit Coverage to coveralls
+        if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
           handlers=("mysql" "postgres" "mssql" "clickhouse" "snowflake" "web" "redshift" "bigquery" "elasticsearch" "s3" "databricks" "dynamodb" "mariadb" "oracle")
           for handler in "${handlers[@]}"

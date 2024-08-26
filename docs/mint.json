@@ -20,6 +20,20 @@
   "api": {
     "baseUrl": "http://127.0.0.1:47334"
   },
+  "topbarLinks": [
+    {
+      "name": "Blog",
+      "url": "https://mindsdb.com/blog"
+    },
+    {
+      "name": "Events",
+      "url": "https://mindsdb.com/events"
+    },
+    {
+      "name": "News",
+      "url": "https://mindsdb.com/newsroom"
+    }
+  ],
   "topbarCtaButton": {
     "name": "Get Started",
     "url": "https://github.com/mindsdb/mindsdb"

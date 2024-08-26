@@ -339,7 +339,7 @@
           "group": "AI-Powered Data Retrieval",
           "pages": [
             "use-cases/ai-powered_data_retrieval/overview",
-            "use-cases/ai-powered_data_retrieval/semantic_search",
+            "use-cases/ai-powered_data_retrieval/embedding-model",
             "use-cases/ai-powered_data_retrieval/recommenders"
           ]
         },

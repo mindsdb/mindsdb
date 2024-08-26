@@ -23,10 +23,17 @@ def install_dependencies(dependencies: List[Text]) -> dict:
     code = None
 
     try:
-        # split the dependencies by parsing the contents of the requirements.txt file
+        # Split the dependencies by parsing the contents of the requirements.txt file.
         split_dependencies = parse_dependencies(dependencies)
+    except FileNotFoundError as file_not_found_error:
+        result['error_message'] = f"Error parsing dependencies, file not found: {str(file_not_found_error)}"
+        return result
+    except Exception as unknown_error:
+        result['error_message'] = f"Unknown error parsing dependencies: {str(unknown_error)}"
+        return result
 
-        # run the pip install command
+    try:
+        # Install the dependencies using the `pip install` command.
         sp = subprocess.Popen(
             [sys.executable, '-m', 'pip', 'install', *split_dependencies],
             stdout=subprocess.PIPE,
@@ -34,10 +41,15 @@ def install_dependencies(dependencies: List[Text]) -> dict:
         )
         code = sp.wait()
         outs, errs = sp.communicate(timeout=1)
-    except Exception as e:
-        result['error_message'] = str(e)
+    except subprocess.TimeoutExpired as timeout_error:
+        sp.kill()
+        result['error_message'] = f"Timeout error while installing dependencies: {str(timeout_error)}"
+        return result
+    except Exception as unknown_error:
+        result['error_message'] = f"Unknown error while installing dependencies: {str(unknown_error)}"
+        return result
 
-    # return the result of the installation
+    # Return the result of the installation if successful, otherwise return an error message.
     if code != 0:
         output = ''
         if isinstance(outs, bytes) and len(outs) > 0:

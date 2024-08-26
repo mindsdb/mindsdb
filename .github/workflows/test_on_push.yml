@@ -16,6 +16,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Sets an output var to indicate if all changes are in docs files
+  # This output is used to skip running code checks on docs changes
   changes:
     name: Filter changed files
     runs-on: mdb-dev

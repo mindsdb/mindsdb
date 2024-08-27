@@ -66,5 +66,3 @@ def validate_crawling_sites(urls):
     # Check if all provided URLs are from the allowed sites
     valid = all(urlparse(url).netloc in allowed_netlocs for url in urls)
     return valid
-
-

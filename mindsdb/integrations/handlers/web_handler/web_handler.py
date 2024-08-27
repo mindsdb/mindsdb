@@ -1,14 +1,9 @@
 import pandas as pd
-
 from mindsdb.integrations.libs.response import HandlerStatusResponse
 from mindsdb_sql.parser import ast
-
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions, project_dataframe
-
-from mindsdb.utilities.security import is_private_url
-from mindsdb.utilities.config import Config
-
+from mindsdb.utilities.security import validate_crawling_sites
 from .urlcrawl_helpers import get_all_websites
 
 
@@ -43,19 +38,13 @@ class CrawlerTable(APITable):
             raise NotImplementedError(
                 'You must specify what url you want to crawl, for example: SELECT * FROM crawl WHERE url = "someurl"')
 
+        if not validate_crawling_sites(urls):
+            raise ValueError('The provided URL is not allowed for web crawling. Please check web_crawling_allowed_sites in config.json')
+
         if query.limit is None:
             raise NotImplementedError('You must specify a LIMIT clause which defines the number of pages to crawl')
 
         limit = query.limit.value
-
-        config = Config()
-        is_cloud = config.get("cloud", False)
-        if is_cloud:
-            urls = [
-                url
-                for url in urls
-                if not is_private_url(url)
-            ]
 
         result = get_all_websites(urls, limit, html=False)
         if len(result) > limit:

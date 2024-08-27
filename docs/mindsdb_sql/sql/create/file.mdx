@@ -9,18 +9,6 @@ Follow the steps below to upload a file to MindsDB.
 Note that the trailing whitespaces on column names are erased upon uploading a file to MindsDB.
 </Note>
 
-<Warning>
-
-MindsDB supports file uploads from specific domains:
-
-1. **Amazon S3**: Use the S3 object URL.
-2. **Google Drive**: Use the shareable link. Ensure the file is publicly accessible.
-3. **Azure Blob Storage**: Use the blob URL.
-4. **Dropbox**: Use the shareable link. Ensure the file is publicly accessible.
-5. **GitHub**: Use the raw content URL.
-6. **OneDrive**: Use the shareable link. Ensure the file is publicly accessible.
-
-</Warning>
 
 1. Access the MindsDB Editor.
 2. Navigate to `Add data` section by clicking the `Add data` button located in
@@ -45,6 +33,19 @@ MindsDB supports file uploads from specific domains:
      <img src="/assets/sql/add-file-to-mindsdb-cloud-2.png" />
    </p>
 
+### Configuring URL File Upload for Specific Domains
+
+The File Uploader can be configured to interact only with specific domains by using the `file_upload_domains` setting in the `config.json` file. 
+This feature allows you to restrict the handler to upoad and process files only from the domains you specify, enhancing security and control over web interactions.
+
+To configure this, simply list the allowed domains under the `file_upload_domains` key in `config.json`. For example:
+
+```json
+"file_upload_domains": [
+   "s3.amazonaws.com",
+    "drive.google.com"
+]
+```
 
 ## What's Next?
 

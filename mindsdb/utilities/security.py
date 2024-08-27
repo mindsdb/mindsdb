@@ -1,6 +1,7 @@
 from urllib.parse import urlparse
 import socket
 import ipaddress
+from mindsdb.utilities.config import Config
 
 
 def is_private_url(url: str):
@@ -33,18 +34,7 @@ def clear_filename(filename: str) -> str:
     return filename
 
 
-# TODO: make this list configurable in config.json
-ALLOWED_DOMAINS = [
-    "s3.amazonaws.com",
-    "drive.google.com",
-    "blob.core.windows.net",
-    "dropbox.com",
-    "githubusercontent.com",
-    "onedrive.live.com"
-]
-
-
-def is_allowed_url(url):
+def is_allowed_host(url):
     """
     Checks if the provided URL is from an allowed host.
 
@@ -54,5 +44,25 @@ def is_allowed_url(url):
     :param url: The URL to check.
     :return bool:  True if the URL is from an allowed host, False otherwise.
     """
-    parsed_url = urlparse(url.lower())
-    return parsed_url.netloc in ALLOWED_DOMAINS
+    config = Config()
+    parsed_url = urlparse(url)
+    return parsed_url.netloc in config.get('file_upload_domains', [])
+
+
+def validate_crawling_sites(urls):
+    """
+    Checks if the provided URL is from one of the allowed sites for web crawling.
+
+    :param urls: The list of URLs to check.
+    :return bool: True if the URL is from one of the allowed sites, False otherwise.
+    """
+    config = Config()
+    allowed_urls = config.get('web_crawling_allowed_sites', [])
+    allowed_netlocs = [urlparse(allowed_url).netloc for allowed_url in allowed_urls]
+    if not allowed_urls:
+        return True
+    if isinstance(urls, str):
+        urls = [urls]
+    # Check if all provided URLs are from the allowed sites
+    valid = all(urlparse(url).netloc in allowed_netlocs for url in urls)
+    return valid

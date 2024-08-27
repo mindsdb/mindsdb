@@ -1,31 +1,54 @@
 ---
-title: Elasticsearch
-sidebarTitle: Elasticsearch
+title: ElasticSearch
+sidebarTitle: ElasticSearch
 ---
 
-This documentation describes the integration of MindsDB with [Elasticsearch](https://www.elastic.co/what-is/elasticsearch), a distributed, free and open search and analytics engine for all types of data, including textual, numerical, geospatial, structured, and unstructured.
+This documentation describes the integration of MindsDB with [ElasticSearch](https://www.elastic.co/), a distributed, multitenant-capable full-text search engine with an HTTP web interface and schema-free JSON documents..
+The integration allows MindsDB to access data from ElasticSearch and enhance ElasticSearch with AI capabilities.
 
 ## Prerequisites
 
 Before proceeding, ensure the following prerequisites are met:
 
-1. Install MindsDB locally via [Docker](/setup/self-hosted/docker) or [Docker Desktop](/setup/self-hosted/docker-desktop).
-2. To connect Elasticsearch to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
+2. To connect ElasticSearch to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Install or ensure access to ElasticSearch.
 
 ## Connection
 
-Establish a connection to Elasticsearch from MindsDB by executing the following SQL command:
+Establish a connection to ElasticSearch from MindsDB by executing the following SQL command and providing its [handler name](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/elasticsearch_handler) as an engine.
 
 ```sql
 CREATE DATABASE elasticsearch_datasource
-WITH
-  engine = 'elasticsearch',
-  parameters = {
-    "hosts": "127.0.0.1:9200",
-    "user": "user",
-    "password": "password"
-  };
+WITH ENGINE = 'elasticsearch',
+PARAMETERS={
+   'cloud_id': 'xyz',
+   'endpoint': 'https://xyz.xyz.gcp.cloud.es.io:123',
+   'api_key': 'xyz',
+   'user': 'elastic',
+   'password': 'xyz'
+};
 ```
+
+Required connection parameters include the following:
+
+* `cloud_id`: The Cloud ID provided with the ElasticSearch deployment.
+* `endpoint`: The ElasticSearch endpoint provided with the ElasticSearch deployment.
+* `api_key`: The API key that you generated for the ElasticSearch deployment.
+* `user`: The default `elastic` user.
+* `password`: The default password that comes with the default `elastic` user. You can find it by clicking on `Manage` next to your deployment and going to the `Security` section.
+
+<Tip>
+If you want to connect to the local instance of ElasticSearch, use the below statement:
+
+```sql
+CREATE DATABASE elasticsearch_datasource
+WITH ENGINE = 'elasticsearch',
+PARAMETERS = {
+   "hosts": "127.0.0.1:9200",
+   "user": "user",
+   "password": "password"
+};
 
 Required connection parameters include the following (at least one of these parameters should be provided):
 
@@ -37,6 +60,8 @@ Optional connection parameters include the following:
 * `user`: The username to connect to the Elasticsearch server with.
 * `password`: The password to authenticate the user with the Elasticsearch server.
 * `api_key`: The API key for authentication with the Elasticsearch server.
+```
+</Tip>
 
 ## Usage
 

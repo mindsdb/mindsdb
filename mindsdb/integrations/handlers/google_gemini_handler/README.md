@@ -21,7 +21,7 @@ Create an AI engine from the [Google Gemini handler](https://github.com/mindsdb/
 CREATE ML_ENGINE google_gemini_engine
 FROM google_gemini
 USING
-      google_gemini_api_key = 'api-key-value';
+      api_key = 'api-key-value';
 ```
 
 ## Example Usage

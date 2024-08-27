@@ -244,6 +244,11 @@ class IntegrationController:
         if len(active_models) > 0:
             raise Exception(f'Unable to drop ml engine with active models: {active_models}')
 
+        # check linked KBs
+        kb = db.KnowledgeBase.query.filter_by(vector_database_id=integration_record.id).first()
+        if kb is not None:
+            raise Exception(f'Unable to drop, integration is used by knowledge base: {kb.name}')
+
         # check linked predictors
         models = get_model_records()
         for model in models:

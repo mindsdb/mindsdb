@@ -86,7 +86,6 @@ exclude =
   mindsdb/integrations/handlers/tdengine_handler/*
   mindsdb/integrations/handlers/huggingface_api_handler/*
   mindsdb/integrations/handlers/ignite_handler/*
-  mindsdb/integrations/handlers/hive_handler/*
   mindsdb/integrations/handlers/teradata_handler/*
   mindsdb/integrations/handlers/google_books_handler/*
   mindsdb/integrations/handlers/edgelessdb_handler/*

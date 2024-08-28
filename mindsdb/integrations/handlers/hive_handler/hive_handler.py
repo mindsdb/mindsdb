@@ -4,6 +4,8 @@ from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.parser.ast.base import ASTNode
 import pandas as pd
 from pyhive import (hive, sqlalchemy_hive)
+from pyhive.exc import OperationalError
+from thrift.transport.TTransport import TTransportException
 
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
@@ -77,10 +79,16 @@ class HiveHandler(DatabaseHandler):
 
         config['auth'] = config['auth'].get('auth', 'CUSTOM').upper()
 
-        connection = hive.Connection(**config)
-        self.is_connected = True
-        self.connection = connection
-        return self.connection
+        try:
+            self.connection = hive.Connection(**config)
+            self.is_connected = True
+            return self.connection
+        except (OperationalError, TTransportException, ValueError) as known_error:
+            logger.error(f'Error connecting to Hive {config["database"]}, {known_error}!')
+            raise
+        except Exception as unknown_error:
+            logger.error(f'Unknown error connecting to Hive {config["database"]}, {unknown_error}!')
+            raise
 
     def disconnect(self) -> None:
         """
@@ -106,9 +114,12 @@ class HiveHandler(DatabaseHandler):
         try:
             self.connect()
             response.success = True
-        except Exception as e:
-            logger.error(f'Error connecting to Hive {self.connection_data["database"]}, {e}!')
-            response.error_message = str(e)
+        except (OperationalError, TTransportException, ValueError) as known_error:
+            logger.error(f'Connection check to Hive failed, {known_error}!')
+            response.error_message = str(known_error)
+        except Exception as unknown_error:
+            logger.error(f'Connection check to Hive failed due to an unknown error, {unknown_error}!')
+            response.error_message = str(unknown_error)
 
         if response.success is True and need_to_close:
             self.disconnect()
@@ -145,11 +156,18 @@ class HiveHandler(DatabaseHandler):
                 else:
                     response = Response(RESPONSE_TYPE.OK)
                 connection.commit()
-            except Exception as e:
+            except OperationalError as operational_error:
                 logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
-                    error_message=str(e)
+                    error_message=str(operational_error)
+                )
+                connection.rollback()
+            except Exception as unknown_error:
+                logger.error(f'Unknown error running query: {query} on {self.connection_data["database"]}!')
+                response = Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=str(unknown_error)
                 )
                 connection.rollback()
 

@@ -40,6 +40,8 @@ class FinancialModelingHandler(APIHandler):
     def connect(self) -> StatusResponse: 
         self.is_connected = True
         return StatusResponse(success = True)
+        # base_url = "https://financialmodelingprep.com/api/v3/historical-price-full/"
+        # return 
     
     def check_connection(self) -> StatusResponse:
         """ Check connection to the handler
@@ -47,44 +49,6 @@ class FinancialModelingHandler(APIHandler):
             HandlerStatusResponse
         """
         return StatusResponse(success = True)
-
-    def get_daily_chart(self, params: Dict = None) -> pd.DataFrame:  
-        base_url = "https://financialmodelingprep.com/api/v3/historical-price-full/"
-
-        if 'symbol' not in params:
-            raise ValueError('Missing "symbol" param')
-        symbol = params['symbol']
-        params.pop('symbol')
-
-        limitParam = False
-        limit = 0
-        if 'limit' in params:
-            limit = params['limit']
-            params.pop('limit')
-            limitParam = True
-
-        url = f"{base_url}{symbol}" #https://financialmodelingprep.com/api/v3/historical-price-full/<symbol>
-        param = {'apikey': self.api_key, **params}
-
-        response = requests.get(url, param)
-        historical_data = response.json()
-        historical = historical_data.get("historical")
-        
-
-        if limitParam:
-            return pd.DataFrame(historical).head(limit)
-        
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=pd.DataFrame(
-                historical
-            )
-        )
-
-        if historical:
-            return pd.DataFrame(historical)
-        else:
-            return pd.DataFrame() 
 
 
     def call_financial_modeling_api(self, endpoint_name: str = None, params: Dict = None) -> pd.DataFrame:

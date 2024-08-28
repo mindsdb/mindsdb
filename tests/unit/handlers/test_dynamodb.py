@@ -7,6 +7,7 @@ from mindsdb_sql.parser import ast
 from mindsdb_sql.parser.ast.select.star import Star
 from mindsdb_sql.parser.ast.select.identifier import Identifier
 
+from base_handler_test import BaseHandlerTestSetup
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
@@ -15,21 +16,21 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.integrations.handlers.dynamodb_handler.dynamodb_handler import DynamoDBHandler
 
 
-class TestDynamoDBHandler(unittest.TestCase):
+class TestDynamoDBHandler(BaseHandlerTestSetup, unittest.TestCase):
 
-    dummy_connection_data = OrderedDict(
-        aws_access_key_id='AQAXEQK89OX07YS34OP',
-        aws_secret_access_key='wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
-        region_name='us-east-2',
-    )
+    @property
+    def dummy_connection_data(self):
+        return OrderedDict(
+            aws_access_key_id='AQAXEQK89OX07YS34OP',
+            aws_secret_access_key='wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
+            region_name='us-east-2',
+        )
 
-    def setUp(self):
-        self.patcher = patch('boto3.client')
-        self.mock_connect = self.patcher.start()
-        self.handler = DynamoDBHandler('dynamodb', connection_data=self.dummy_connection_data)
+    def create_handler(self):
+        return DynamoDBHandler('dynamodb', connection_data=self.dummy_connection_data)
 
-    def tearDown(self):
-        self.patcher.stop()
+    def create_patcher(self):
+        return patch('boto3.client')
 
     def test_connect_failure_with_missing_connection_data(self):
         """

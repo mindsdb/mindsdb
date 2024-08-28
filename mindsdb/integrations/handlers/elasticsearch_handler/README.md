@@ -22,21 +22,20 @@ Establish a connection to ElasticSearch from MindsDB by executing the following 
 CREATE DATABASE elasticsearch_datasource
 WITH ENGINE = 'elasticsearch',
 PARAMETERS={
-   'cloud_id': 'xyz',
-   'endpoint': 'https://xyz.xyz.gcp.cloud.es.io:123',
-   'api_key': 'xyz',
-   'user': 'elastic',
-   'password': 'xyz'
+   'cloud_id': 'xyz',                               -- optional, if hosts are provided
+   'hosts': 'https://xyz.xyz.gcp.cloud.es.io:123',  -- optional, if cloud_id is provided
+   'api_key': 'xyz',                                -- optional, if user and password are provided
+   'user': 'elastic',                               -- optional, if api_key is provided
+   'password': 'xyz'                                -- optional, if api_key is provided
 };
 ```
 
-Required connection parameters include the following:
+The connection parameters include the following:
 
-* `cloud_id`: The Cloud ID provided with the ElasticSearch deployment.
-* `endpoint`: The ElasticSearch endpoint provided with the ElasticSearch deployment.
-* `api_key`: The API key that you generated for the ElasticSearch deployment.
-* `user`: The default `elastic` user.
-* `password`: The default password that comes with the default `elastic` user. You can find it by clicking on `Manage` next to your deployment and going to the `Security` section.
+* `cloud_id`: The Cloud ID provided with the ElasticSearch deployment. Required only when `hosts` is not provided.
+* `hosts`: The ElasticSearch endpoint provided with the ElasticSearch deployment. Required only when `cloud_id` is not provided.
+* `api_key`: The API key that you generated for the ElasticSearch deployment. Required only when `user` and `password` are not provided.
+* `user` and `password`: The user and password used to authenticate. Required only when `api_key` is not provided.
 
 <Tip>
 If you want to connect to the local instance of ElasticSearch, use the below statement:
@@ -49,18 +48,13 @@ PARAMETERS = {
    "user": "user",
    "password": "password"
 };
+```
 
 Required connection parameters include the following (at least one of these parameters should be provided):
 
-* `hosts`: The host name(s) or IP address(es) of the Elasticsearch server(s). If multiple host name(s) or IP address(es) exist, they should be separated by commas, e.g., `host1:port1, host2:port2`. If this parameter is not provided, `cloud_id` should be.
-* `cloud_id`: The unique ID to your hosted Elasticsearch deployment on Elastic Cloud. If this parameter is not provided, `hosts` should be.
-
-Optional connection parameters include the following:
-
-* `user`: The username to connect to the Elasticsearch server with.
-* `password`: The password to authenticate the user with the Elasticsearch server.
-* `api_key`: The API key for authentication with the Elasticsearch server.
-```
+* `hosts`: The IP address and port where ElasticSearch is deployed.
+* `user`: The user used to autheticate access.
+* `password`: The password used to autheticate access.
 </Tip>
 
 ## Usage

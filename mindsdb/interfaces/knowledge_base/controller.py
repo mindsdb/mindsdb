@@ -1,6 +1,7 @@
 import os
 import copy
 from typing import List
+from urllib.parse import urlparse
 
 import pandas as pd
 
@@ -424,7 +425,19 @@ class KnowledgeBaseController:
         if self.session.integration_controller.get(vector_store_name):
             return vector_store_name
 
-        self.session.integration_controller.add(vector_store_name, 'pgvector', {})
+
+        cloud_pgvector_url = os.environ.get('KB_PGVECTOR_URL')
+        connection_args = {}
+        if cloud_pgvector_url is not None:
+            result = urlparse(cloud_pgvector_url)
+            connection_args.update({
+                'host': result.hostname,
+                'port': result.port,
+                'user': result.username,
+                'password': result.password,
+                'database': result.path[1:]
+            })
+        self.session.integration_controller.add(vector_store_name, 'pgvector', connection_args)
         return vector_store_name
 
     def _create_persistent_chroma(self, kb_name, engine="chromadb"):

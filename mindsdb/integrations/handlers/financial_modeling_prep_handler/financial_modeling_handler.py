@@ -26,10 +26,7 @@ class FinancialModelingHandler(APIHandler):
 
         self.api_key = None
         self.connection_data = connection_data
-        if "api_key" not in connection_data:
-            raise Exception(
-                "FINANCIAL_MODELING engine requires an API key. Retrieve an API key from https://site.financialmodelingprep.com/developer. See financial_modeling_prep_handler/README.MD on how to include API key in query."
-            )
+        
         self.api_key = connection_data['api_key']
         self.client = None
         self.is_connected = False

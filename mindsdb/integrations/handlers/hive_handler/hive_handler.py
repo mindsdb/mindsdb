@@ -1,4 +1,4 @@
-from typing import Text, Optional
+from typing import Text, Dict, Optional
 
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.parser.ast.base import ASTNode
@@ -24,7 +24,7 @@ class HiveHandler(DatabaseHandler):
 
     name = 'hive'
 
-    def __init__(self, name: str, connection_data: Optional[dict], **kwargs) -> None:
+    def __init__(self, name: Text, connection_data: Optional[Dict], **kwargs) -> None:
         """
         Initializes the handler.
 
@@ -59,15 +59,23 @@ class HiveHandler(DatabaseHandler):
         """
         if self.is_connected:
             return self.connection
+        
+        # Mandatory connection parameters.
+        if not all(key in self.connection_data for key in ['host', 'database']):
+            raise ValueError('Required parameters (account, database) must be provided.')
 
         config = {
             'host': self.connection_data.get('host'),
-            'port': self.connection_data.get('port'),
-            'auth': self.connection_data.get('auth', 'CUSTOM'),
-            'username': self.connection_data.get('user'),
-            'password': self.connection_data.get('password'),
             'database': self.connection_data.get('database')
         }
+
+        # Optional connection parameters.
+        optional_parameters = ['port', 'username', 'password']
+        for param in optional_parameters:
+            if param in self.connection_data:
+                config[param] = self.connection_data[param]
+
+        config['auth'] = config['auth'].get('auth', 'CUSTOM').upper()
 
         connection = hive.Connection(**config)
         self.is_connected = True

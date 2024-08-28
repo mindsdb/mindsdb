@@ -34,6 +34,7 @@ CREATE MODEL anyscale_endpoints_model
 PREDICT target_column
 USING
       engine = 'anyscale_endpoints_engine',   -- engine name as created via CREATE ML_ENGINE
+      api_base = 'base-url', -- optional, replaces the default base URL
       mode = 'conversational', -- optional, mode to run the model in
       model_name = 'anyscale_endpoints_model_name',  -- optional, the LLM to use
       prompt = 'You are a helpful assistant. Your task is to continue the chat.',  -- optional, system prompt for the model
@@ -68,6 +69,7 @@ The following is a more detailed explanation of the parameters used in the `CREA
 <AccordionGroup>
 
 * `engine`: This is the engine name as created with the [`CREATE ML_ENGINE`](https://docs.mindsdb.com/mindsdb_sql/sql/create/ml-engine) statement.
+* `api_base`: This parameter is optional. It replaces the default Anyscale's base URL with the defined value.
 * `mode`: This parameter is optional. The available modes include `default`, `conversational`, and `conversational-full`.
     - The `default` mode is used by default. The model will generate a separate response for each input provided. No context is maintained between the inputs.
     - The `conversational` mode will maintain context between the inputs and generate a single response. This response will be placed in the last row of the result set.

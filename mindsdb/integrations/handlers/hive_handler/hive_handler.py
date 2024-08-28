@@ -3,7 +3,6 @@ from typing import Optional
 import pandas as pd
 from pyhive import (hive, sqlalchemy_hive)
 
-from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.parser.ast.base import ASTNode
 
@@ -26,9 +25,6 @@ class HiveHandler(DatabaseHandler):
 
     def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
         super().__init__(name)
-        self.parser = parse_sql
-        self.dialect = 'hive'
-
         self.connection_data = connection_data
         self.kwargs = kwargs
 

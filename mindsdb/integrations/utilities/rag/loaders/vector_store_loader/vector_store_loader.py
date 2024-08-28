@@ -60,12 +60,15 @@ class VectorStoreFactory:
     @staticmethod
     def _load_pgvector_store(embedding_model: Embeddings, settings) -> PGVector:
         # create an empty store if collection_name does not exist otherwise load the existing collection
+        logger.info(f'Loading pgvector with connection string {settings.connection_string}')
         store = PGVector(
             connection_string=settings.connection_string,
             collection_name=settings.collection_name,
             embedding_function=embedding_model
         )
-        return VectorStoreFactory._load_data_into_langchain_pgvector(settings, store)
+        loaded_data = VectorStoreFactory._load_data_into_langchain_pgvector(settings, store)
+        logger.info('Loaded data successfully into pgvector store')
+        return loaded_data
 
     @staticmethod
     def _load_data_into_langchain_pgvector(settings, vectorstore: PGVector) -> PGVector:

@@ -8,7 +8,12 @@ from typing import Dict, List
 
 import pandas as pd
 import time
-
+from mindsdb.integrations.libs.response import (
+    HandlerStatusResponse as StatusResponse,
+    HandlerResponse as Response,
+    RESPONSE_TYPE
+)
+import requests
 
 class FinancialModelingTradesTable(APITable):
     def _get_daily_endpoint_params_from_conditions(self, conditions: List) -> Dict:
@@ -45,11 +50,52 @@ class FinancialModelingTradesTable(APITable):
             limit_value = query.limit.value
             params['limit'] = limit_value
 
-        daily_chart_table = self.handler.call_financial_modeling_api(
-                endpoint_name='daily_chart',
-                params=params
-        )
+        # daily_chart_table = self.handler.call_financial_modeling_api(
+        #         endpoint_name='daily_chart',
+        #         params=params
+        # )
         
+
+        daily_chart_table = self.get_daily_chart(params = params)
+        
+
         return daily_chart_table
 
     
+    def get_daily_chart(self, params: Dict = None) -> pd.DataFrame:  
+        base_url = "https://financialmodelingprep.com/api/v3/historical-price-full/"
+
+        if 'symbol' not in params:
+            raise ValueError('Missing "symbol" param')
+        symbol = params['symbol']
+        params.pop('symbol')
+
+        limitParam = False
+        limit = 0
+        if 'limit' in params:
+            limit = params['limit']
+            params.pop('limit')
+            limitParam = True
+
+        url = f"{base_url}{symbol}" #https://financialmodelingprep.com/api/v3/historical-price-full/<symbol>
+        param = {'apikey': self.handler.api_key, **params}
+
+        response = requests.get(url, param)
+        historical_data = response.json()
+        historical = historical_data.get("historical")
+        
+
+        if limitParam:
+            return pd.DataFrame(historical).head(limit)
+        
+        response = Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=pd.DataFrame(
+                historical
+            )
+        )
+
+        if historical:
+            return pd.DataFrame(historical)
+        else:
+            return pd.DataFrame() 

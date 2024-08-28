@@ -188,6 +188,7 @@
     {"source": "/sql/drop/database","destination": "/mindsdb_sql/sql/drop/database"},
     {"source": "/sql/show-databases","destination": "/mindsdb_sql/sql/show-databases"},
     {"source": "/sql/api/use","destination": "/mindsdb_sql/sql/api/use"},
+    {"source": "/sql/create/file","destination": "/mindsdb_sql/sql/create/file"},
     {"source": "/sql/list-ml-handlers","destination": "/mindsdb_sql/sql/list-ml-handlers"},
     {"source": "/sql/create/ml-engine","destination": "/mindsdb_sql/sql/create/ml-engine"},
     {"source": "/sql/drop/ml-engine","destination": "/mindsdb_sql/sql/drop/ml-engine"},

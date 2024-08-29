@@ -77,14 +77,22 @@ class VectorStoreFactory:
         """
         df = VectorStoreFactory._fetch_data_from_db(settings)
 
-        df[TableField.EMBEDDINGS] = df[TableField.EMBEDDINGS].apply(ast.literal_eval)
-        df[TableField.METADATA] = df[TableField.METADATA].apply(ast.literal_eval)
+        df[TableField.EMBEDDINGS.value] = df[TableField.EMBEDDINGS.value].apply(ast.literal_eval)
 
-        metadata = df[TableField.METADATA].tolist()
-        embeddings = df[TableField.EMBEDDINGS].tolist()
-        texts = df[TableField.CONTENT].tolist()
+        def apply_f(x):
+            if x is None:
+                return {}
+            elif isinstance(x, str):
+                return ast.literal_eval(x)
+            return x
+
+        df[TableField.METADATA.value] = df[TableField.METADATA.value].apply(apply_f)
+
+        metadata = df[TableField.METADATA.value].tolist()
+        embeddings = df[TableField.EMBEDDINGS.value].tolist()
+        texts = df[TableField.CONTENT.value].tolist()
         ids = [str(uuid.uuid1()) for _ in range(len(df))] \
-            if TableField.ID not in df.columns else df[TableField.ID].tolist()
+            if TableField.ID.value not in df.columns else df[TableField.ID.value].tolist()
 
         vectorstore.add_embeddings(
             texts=texts,

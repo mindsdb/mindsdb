@@ -65,7 +65,7 @@ class KnowledgeBaseTable:
         query.targets = targets
 
         # send to vectordb
-        db_handler = self._get_vector_db()
+        db_handler = self.get_vector_db()
         resp = db_handler.query(query)
         return resp.data_frame
 
@@ -91,7 +91,7 @@ class KnowledgeBaseTable:
         query.table = Identifier(parts=[self._kb.vector_database_table])
 
         # send to vectordb
-        db_handler = self._get_vector_db()
+        db_handler = self.get_vector_db()
         db_handler.query(query)
 
     def delete_query(self, query: Delete):
@@ -106,7 +106,7 @@ class KnowledgeBaseTable:
         query.table = Identifier(parts=[self._kb.vector_database_table])
 
         # send to vectordb
-        db_handler = self._get_vector_db()
+        db_handler = self.get_vector_db()
         db_handler.query(query)
 
     def clear(self):
@@ -114,7 +114,7 @@ class KnowledgeBaseTable:
         Clear data in KB table
         Sends delete to vector db table
         """
-        db_handler = self._get_vector_db()
+        db_handler = self.get_vector_db()
         db_handler.delete(self._kb.vector_database_table)
 
     def insert(self, df: pd.DataFrame):
@@ -134,7 +134,7 @@ class KnowledgeBaseTable:
         df = pd.concat([df, df_emb], axis=1)
 
         # send to vector db
-        db_handler = self._get_vector_db()
+        db_handler = self.get_vector_db()
         db_handler.do_upsert(self._kb.vector_database_table, df)
 
     def _adapt_column_names(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -251,7 +251,7 @@ class KnowledgeBaseTable:
                     node.args[0].parts = [TableField.EMBEDDINGS.value]
                     node.args[1].value = [self._content_to_embeddings(node.args[1].value)]
 
-    def _get_vector_db(self):
+    def get_vector_db(self):
         """
         helper to get vector db handler
         """

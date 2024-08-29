@@ -77,7 +77,7 @@ class HiveHandler(DatabaseHandler):
             if param in self.connection_data:
                 config[param] = self.connection_data[param]
 
-        config['auth'] = config['auth'].get('auth', 'CUSTOM').upper()
+        config['auth'] = self.connection_data.get('auth', 'CUSTOM').upper()
 
         try:
             self.connection = hive.Connection(**config)

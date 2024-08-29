@@ -1,4 +1,6 @@
 from typing import Dict
+from urllib.parse import urlparse
+import os
 from langchain.agents import Tool
 
 from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
@@ -127,6 +129,19 @@ def _build_vector_store_config_from_knowledge_base(rag_params: Dict, knowledge_b
         # For pgvector, we get connection string
         # todo requires further testing
         connection_params = knowledge_base.vector_database.data
+        if 'database' not in connection_params:
+            # If a valid pgvector connection isn't provided, default to pgvector deployment if it's defined.
+            cloud_pgvector_url = os.environ.get('KB_PGVECTOR_URL')
+            logger.info(f'Falling back to default pgvector deployment at {cloud_pgvector_url}')
+            if cloud_pgvector_url is not None:
+                result = urlparse(cloud_pgvector_url)
+                connection_params.update({
+                    'host': result.hostname,
+                    'port': result.port,
+                    'user': result.username,
+                    'password': result.password,
+                    'database': result.path[1:]
+                })
         vector_store_config['connection_string'] = _create_conn_string(connection_params)
 
     else:

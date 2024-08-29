@@ -23,7 +23,6 @@ Available models include the following:
 - Anyscale ([how to get the API key](https://docs.endpoints.anyscale.com/guides/authenticate/))
 - Ollama ([how to download Ollama](https://ollama.com/download))
 
-The LiteLLM model provider is available in MindsDB Cloud only. Use the MindsDB API key, which can be generated in the MindsDB Cloud editor at `cloud.mindsdb.com/account`.
 </Info>
 
 ## Setup
@@ -165,7 +164,7 @@ USING
      mode = 'conversational',                -- conversational mode
      user_column = 'question',               -- column name that stores input from the user
      assistant_column = 'answer',            -- column name that stores output of the model (see PREDICT column)
-     base_url = 'https://ai.dev.mindsdb.com',
+     base_url = 'http://0.0.0.0:4000,
      verbose = True,
      prompt_template = 'Answer the users input in a helpful way: {{question}}';
 ```

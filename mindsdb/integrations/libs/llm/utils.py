@@ -34,7 +34,7 @@ DEFAULT_ANYSCALE_BASE_URL = "https://api.endpoints.anyscale.com/v1"
 
 DEFAULT_LITELLM_MODEL = "gpt-3.5-turbo"
 DEFAULT_LITELLM_PROVIDER = "openai"
-DEFAULT_LITELLM_BASE_URL = "https://ai.dev.mindsdb.com"
+DEFAULT_LITELLM_BASE_URL = "http://0.0.0.0:4000"
 
 DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434"
 DEFAULT_OLLAMA_MODEL = "llama2"

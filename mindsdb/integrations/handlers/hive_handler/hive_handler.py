@@ -61,7 +61,7 @@ class HiveHandler(DatabaseHandler):
         """
         if self.is_connected:
             return self.connection
-        
+
         # Mandatory connection parameters.
         if not all(key in self.connection_data for key in ['host', 'database']):
             raise ValueError('Required parameters (account, database) must be provided.')

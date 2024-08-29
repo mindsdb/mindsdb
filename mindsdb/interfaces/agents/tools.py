@@ -43,7 +43,7 @@ def _build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
             raise ValueError(f"Knowledge base not found: {kb_name}")
 
         rag_params['vector_store_config'] = _build_vector_store_config_from_knowledge_base(rag_params, kb, executor)
-        logger.debug(f'Using vector store config\n {rag_params['vector_store_config']}')
+        logger.debug(f'Using vector store config\n {rag_params["vector_store_config"]}')
 
     # Can run into weird validation errors when unpacking rag_params directly into constructor.
     rag_config = RAGPipelineModel(

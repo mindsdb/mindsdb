@@ -4,30 +4,42 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 
 
 connection_args = OrderedDict(
-    user={
+    username={
         'type': ARG_TYPE.STR,
-        'description': 'The user name used to authenticate with the Hive server.'
+        'description': 'The username for the Apache Hive database.',
+        'required': False,
+        'label': 'Username'
     },
     password={
         'type': ARG_TYPE.PWD,
-        'description': 'The password to authenticate the user with the Hive server.',
-        'secret': True
+        'description': 'The password for the Apache Hive database.',
+        'secret': True,
+        'required': False,
+        'label': 'Password'
     },
     database={
         'type': ARG_TYPE.STR,
-        'description': 'The database name to use when connecting with the Hive server.'
+        'description': 'The name of the Apache Hive database to connect to.',
+        'required': True,
+        'label': 'Database'
     },
     host={
         'type': ARG_TYPE.STR,
-        'description': 'The host name or IP address of the Hive server. NOTE: use \'127.0.0.1\' instead of \'localhost\' to connect to local server.'
+        'description': 'The hostname, IP address, or URL of the Apache Hive server.. NOTE: use \'127.0.0.1\' instead of \'localhost\' to connect to local server.',
+        'required': True,
+        'label': 'Host'
     },
     port={
         'type': ARG_TYPE.INT,
-        'description': 'The TCP/IP port of the Hive server. Must be an integer.'
+        'description': 'The port number for connecting to the Apache Hive server. Default is `10000`.',
+        'required': False,
+        'label': 'Port'
     },
     auth={
         'type': ARG_TYPE.STR,
-        'description': 'The Auth type of the Hive server.'
+        'description': 'The authentication mechanism to use. Default is `CUSTOM`. Other options are `NONE`, `NOSASL`, `KERBEROS` and `LDAP`.',
+        'required': False,
+        'label': 'Authentication'
     }
 )
 

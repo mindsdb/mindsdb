@@ -345,9 +345,6 @@ class KnowledgeBaseController:
 
         project_id = project.id
 
-        # not difference between cases in sql
-        name = name.lower()
-
         kb = self.get(name, project_id)
         if kb is not None:
             if if_not_exists:

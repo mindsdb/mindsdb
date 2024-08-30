@@ -1,7 +1,6 @@
 from urllib.parse import urlparse
 import socket
 import ipaddress
-from mindsdb.utilities.config import Config
 
 
 def is_private_url(url: str):
@@ -46,10 +45,10 @@ def validate_urls(urls, allowed_urls):
     :return bool:  True if the URL(s) is/are from an allowed host, False otherwise.
     """
     allowed_netlocs = [urlparse(allowed_url).netloc for allowed_url in allowed_urls]
-    
+
     if isinstance(urls, str):
         urls = [urls]
-    
+
     # Check if all provided URLs are from the allowed sites
     valid = all(urlparse(url).netloc in allowed_netlocs for url in urls)
     return valid

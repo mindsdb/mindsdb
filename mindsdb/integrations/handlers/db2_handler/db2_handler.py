@@ -1,7 +1,7 @@
 from typing import Optional
 
 import pandas as pd
-import ibm_db_dbi as love
+import ibm_db_dbi
 from ibm_db_sa.ibm_db import DB2Dialect_ibm_db as DB2Dialect
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
@@ -29,32 +29,8 @@ class DB2Handler(DatabaseHandler):
             **kwargs: arbitrary keyword arguments.
         """
         super().__init__(name)
-
+        self.connection_data = connection_data
         self.kwargs = kwargs
-        self.driver = "{IBM DB2 ODBC DRIVER}"
-        self.database = connection_data["database"]
-        self.user = connection_data["user"]
-        self.password = connection_data["password"]
-        self.schemaName = connection_data["schema_name"]
-        self.host = connection_data["host"]
-        self.port = connection_data["port"]
-        self.connString = (
-            "DRIVER={0};"
-            "DATABASE={1};"
-            "HOST={2};"
-            "PORT={3};"
-            "PROTOCOL={4};"
-            "UID={5};"
-            "PWD={6};"
-        ).format(
-            self.driver,
-            self.database,
-            self.host,
-            self.port,
-            "TCPIP",
-            self.user,
-            self.password,
-        )
 
         self.connection = None
         self.is_connected = False
@@ -68,15 +44,26 @@ class DB2Handler(DatabaseHandler):
         """
         if self.is_connected is True:
             return self.connection
+        
+        # Mandatory connection parameters.
+        if not all(key in self.connection_data for key in ['host', 'user', 'password', 'database']):
+            raise ValueError('Required parameters (host, user, password, database) must be provided.')
+
+        connection_string = f"DRIVER={'IBM DB2 ODBC DRIVER'};DATABASE={self.connection_data['database']};HOST={self.connection_data['host']};PROTOCOL=TCPIP;UID={self.connection_data['user']};PWD={self.connection_data['password']};"
+
+        # Optional connection parameters.
+        if 'port' in self.connection_data:
+            connection_string += f"PORT={self.connection_data['port']};"
+
+        if 'schema' in self.connection_data:
+            connection_string += f"CURRENTSCHEMA={self.connection_data['schema']};"
 
         try:
-            self.connection = love.pconnect(self.connString, "", "")
-
+            self.connection = ibm_db_dbi.pconnect(connection_string, "", "")
             self.is_connected = True
+            return self.connection
         except Exception as e:
-            logger.error(f"Error while connecting to {self.database}, {e}")
-
-        return self.connection
+            logger.error(f"Error while connecting to {self.connection_data.get('database')}, {e}")
 
     def disconnect(self):
         """Close any existing connections
@@ -88,7 +75,7 @@ class DB2Handler(DatabaseHandler):
             self.connection.close()
             self.is_connected = False
         except Exception as e:
-            logger.error(f"Error while disconnecting to {self.database}, {e}")
+            logger.error(f"Error while disconnecting to {self.connection_data.get('database')}, {e}")
 
         return
 
@@ -104,7 +91,7 @@ class DB2Handler(DatabaseHandler):
             self.connect()
             responseCode.success = True
         except Exception as e:
-            logger.error(f"Error connecting to database {self.database}, {e}!")
+            logger.error(f"Error connecting to database {self.connection_data.get('database')}, {e}!")
             responseCode.error_message = str(e)
         finally:
             if responseCode.success is True and need_to_close:
@@ -141,7 +128,7 @@ class DB2Handler(DatabaseHandler):
                     response = Response(RESPONSE_TYPE.OK)
                 self.connection.commit()
             except Exception as e:
-                logger.error(f"Error running query: {query} on {self.database}!")
+                logger.error(f"Error running query: {query} on {self.connection_data.get('database')}!")
                 response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
                 self.connection.rollback()
 
@@ -173,7 +160,7 @@ class DB2Handler(DatabaseHandler):
         """
         self.connect()
 
-        result = self.connection.tables(self.schemaName)
+        result = self.connection.tables()
         try:
             if result:
                 response = Response(

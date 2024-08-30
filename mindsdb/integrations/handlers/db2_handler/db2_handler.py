@@ -194,20 +194,12 @@ class DB2Handler(DatabaseHandler):
         self.connect()
 
         result = self.connection.columns(table_name=table_name)
-        try:
-            if result:
-                response = Response(
-                    RESPONSE_TYPE.TABLE,
-                    data_frame=pd.DataFrame(
-                        [result[i]["COLUMN_NAME"] for i in range(len(result))],
-                        columns=["COLUMN_NAME"],
-                    ),
-                )
-            else:
-                response = Response(RESPONSE_TYPE.OK)
+        
+        columns = [column["COLUMN_NAME"] for column in result]
 
-        except Exception as e:
-            logger.error(f"Error running while getting table {e} on ")
-            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
+        response = Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=pd.DataFrame(columns, columns=["COLUMN_NAME"])
+        )
 
         return response

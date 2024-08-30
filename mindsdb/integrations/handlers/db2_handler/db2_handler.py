@@ -1,18 +1,18 @@
-from typing import Optional
+from typing import Text, Dict, Optional, Any
 
-import pandas as pd
 import ibm_db_dbi
 from ibm_db_sa.ibm_db import DB2Dialect_ibm_db as DB2Dialect
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+import pandas as pd
 
 from mindsdb.integrations.libs.base import DatabaseHandler
-from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE,
 )
+from mindsdb.utilities import log
 
 
 logger = log.getLogger(__name__)
@@ -21,12 +21,13 @@ logger = log.getLogger(__name__)
 class DB2Handler(DatabaseHandler):
     name = "DB2"
 
-    def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
-        """Initialize the handler
+    def __init__(self, name: Text, connection_data: Optional[Dict], **kwargs: Any) -> None:
+        """
+        Initializes the handler.
         Args:
-            name (str): name of particular handler instance
-            connection_data (dict): parameters for connecting to the database
-            **kwargs: arbitrary keyword arguments.
+            name (Text): The name of the handler instance.
+            connection_data (Dict): The connection data required to connect to the IBM DB2 database.
+            kwargs: Arbitrary keyword arguments.
         """
         super().__init__(name)
         self.connection_data = connection_data
@@ -35,14 +36,25 @@ class DB2Handler(DatabaseHandler):
         self.connection = None
         self.is_connected = False
 
-    def connect(self):
-        """Set up any connections required by the handler
-        Should return output of check_connection() method after attempting
-        connection. Should switch self.is_connected.
-        Returns:
-            Connection Object
+    def __del__(self) -> None:
         """
-        if self.is_connected is True:
+        Closes the connection when the handler instance is deleted.
+        """
+        if self.is_connected:
+            self.disconnect()
+
+    def connect(self) -> ibm_db_dbi.Connection:
+        """
+        Establishes a connection to a IBM DB2 database.
+
+        Raises:
+            ValueError: If the required connection parameters are not provided.
+            ibm_db_dbi.OperationalError: If an error occurs while connecting to the IBM DB2 database.
+
+        Returns:
+            ibm_db_dbi.Connection: A connection object to the IBM DB2 database.
+        """
+        if self.is_connected:
             return self.connection
         
         # Mandatory connection parameters.
@@ -65,24 +77,22 @@ class DB2Handler(DatabaseHandler):
         except Exception as e:
             logger.error(f"Error while connecting to {self.connection_data.get('database')}, {e}")
 
-    def disconnect(self):
-        """Close any existing connections
-        Should switch self.is_connected.
+    def disconnect(self) -> None:
         """
-        if self.is_connected is False:
+        Closes the connection to the IBM DB2 database if it's currently open.
+        """
+        if not self.is_connected:
             return
-        try:
-            self.connection.close()
-            self.is_connected = False
-        except Exception as e:
-            logger.error(f"Error while disconnecting to {self.connection_data.get('database')}, {e}")
 
-        return
+        self.connection.close()
+        self.is_connected = False
 
     def check_connection(self) -> StatusResponse:
-        """Check connection to the handler
+        """
+        Checks the status of the connection to the IBM DB2 database.
+
         Returns:
-            HandlerStatusResponse
+            StatusResponse: An object containing the success status and an error message if an error occurs.
         """
         responseCode = StatusResponse(False)
         need_to_close = self.is_connected is False
@@ -101,13 +111,15 @@ class DB2Handler(DatabaseHandler):
 
         return responseCode
 
-    def native_query(self, query: str) -> StatusResponse:
-        """Receive raw query and act upon it somehow.
+    def native_query(self, query: Text) -> Response:
+        """
+        Executes a SQL query on the IBM DB2 database and returns the result (if any).
+
         Args:
-            query (Any): query in native format (str for sql databases,
-                dict for mongo, etc)
+            query (str): The SQL query to be executed.
+
         Returns:
-            HandlerResponse
+            Response: A response object containing the result of the query or an error message.
         """
         need_to_close = self.is_connected is False
         query = query.upper()
@@ -137,26 +149,26 @@ class DB2Handler(DatabaseHandler):
 
         return response
 
-    def query(self, query: ASTNode) -> StatusResponse:
-        """Receive query as AST (abstract syntax tree) and act upon it somehow.
-        Args:
-            query (ASTNode): sql query represented as AST. May be any kind
-                of query: SELECT, INTSERT, DELETE, etc
-        Returns:
-            HandlerResponse
+    def query(self, query: ASTNode) -> Response:
         """
+        Executes a SQL query represented by an ASTNode on the IBM DB2 database and retrieves the data (if any).
 
+        Args:
+            query (ASTNode): An ASTNode representing the SQL query to be executed.
+
+        Returns:
+            Response: The response from the `native_query` method, containing the result of the SQL query execution.
+        """
         renderer = SqlalchemyRender(DB2Dialect)
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 
-    def get_tables(self) -> StatusResponse:
-        """Return list of entities
-        Return list of entities that will be accesible as tables.
+    def get_tables(self) -> Response:
+        """
+        Retrieves a list of all non-system tables and views in the current schema of the IBM DB2 database.
+
         Returns:
-            HandlerResponse: shoud have same columns as information_schema.tables
-                (https://dev.mysql.com/doc/refman/8.0/en/information-schema-tables-table.html)
-                Column 'TABLE_NAME' is mandatory, other is optional.
+            Response: A response object containing the list of tables and views, formatted as per the `Response` class.
         """
         self.connect()
 
@@ -179,17 +191,21 @@ class DB2Handler(DatabaseHandler):
 
         return response
 
-    def get_columns(self, table_name: str) -> StatusResponse:
-        """Returns a list of entity columns
-        Args:
-            table_name (str): name of one of tables returned by self.get_tables()
-        Returns:
-            HandlerResponse: shoud have same columns as information_schema.columns
-                (https://dev.mysql.com/doc/refman/8.0/en/information-schema-columns-table.html)
-                Column 'COLUMN_NAME' is mandatory, other is optional. Hightly
-                recomended to define also 'DATA_TYPE': it should be one of
-                python data types (by default it str).
+    def get_columns(self, table_name: Text) -> Response:
         """
+        Retrieves column details for a specified table in the IBM DB2 database.
+
+        Args:
+            table_name (Text): The name of the table for which to retrieve column information.
+
+        Raises:
+            ValueError: If the 'table_name' is not a valid string.
+
+        Returns:
+            Response: A response object containing the column details.
+        """
+        if not table_name or not isinstance(table_name, str):
+            raise ValueError("Invalid table name provided.")
 
         self.connect()
 

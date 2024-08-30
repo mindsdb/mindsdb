@@ -160,22 +160,22 @@ class DB2Handler(DatabaseHandler):
         """
         self.connect()
 
-        result = self.connection.tables()
-        try:
-            if result:
-                response = Response(
-                    RESPONSE_TYPE.TABLE,
-                    data_frame=pd.DataFrame(
-                        [result[i]["TABLE_NAME"] for i in range(len(result))],
-                        columns=["TABLE_NAME"],
-                    ),
-                )
-            else:
-                response = Response(RESPONSE_TYPE.OK)
+        result = self.connection.tables(self.connection.current_schema)
 
-        except Exception as e:
-            logger.error(f"Error running while getting table {e} on ")
-            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
+        tables = []
+        for table in result:
+            tables.append(
+                {
+                    "TABLE_NAME": table["TABLE_NAME"],
+                    "TABLE_SCHEMA": table["TABLE_SCHEM"],
+                    "TABLE_TYPE": table["TABLE_TYPE"],
+                }
+            )
+
+        response = Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=pd.DataFrame(tables)
+        )
 
         return response
 

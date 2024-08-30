@@ -13,7 +13,7 @@ class CrawlerTable(APITable):
     def __init__(self, handler: APIHandler):
         super().__init__(handler)
         self.config = Config()
-        
+
     def select(self, query: ast.Select) -> pd.DataFrame:
         """
         Selects data from the provided websites

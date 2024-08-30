@@ -170,55 +170,34 @@ class PineconeHandler(VectorStoreHandler):
         )
         return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=indexes_names)
 
-    def create_table(self, table_name: str, if_not_exists=True) -> HandlerResponse:
+    def create_table(self, table_name: str, if_not_exists=True):
         """Create an index with the given name in the Pinecone database."""
-        try:
-            pinecone.create_index(name=table_name, **self._table_create_params)
-        except Exception as e:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Error creating index '{table_name}': {e}"
-            )
-        return Response(resp_type=RESPONSE_TYPE.OK)
+        pinecone.create_index(name=table_name, **self._table_create_params)
 
-    def insert(self, table_name: str, data: pd.DataFrame, columns: List[str] = None) -> HandlerResponse:
+    def insert(self, table_name: str, data: pd.DataFrame, columns: List[str] = None):
         """Insert data into pinecone index passed in through `table_name` parameter."""
         upsert_batch_size = 99  # API reccomendation
         index = self._get_index_handle(table_name)
         if index is None:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Error getting index '{table_name}', are you sure the name is correct?"
-            )
+            raise Exception(f"Error getting index '{table_name}', are you sure the name is correct?")
+
         data.rename(columns={
             TableField.ID.value: "id",
             TableField.EMBEDDINGS.value: "values",
             TableField.METADATA.value: "metadata"},
             inplace=True)
         data = data[["id", "values", "metadata"]]
-        try:
-            for chunk in (data[pos:pos + upsert_batch_size] for pos in range(0, len(data), upsert_batch_size)):
-                chunk = chunk.to_dict(orient="records")
-                index.upsert(vectors=chunk)
-        except Exception as e:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Error upserting data into {table_name}: {e}"
-            )
-        return Response(resp_type=RESPONSE_TYPE.OK)
 
-    def drop_table(self, table_name: str, if_exists=True) -> HandlerResponse:
+        for chunk in (data[pos:pos + upsert_batch_size] for pos in range(0, len(data), upsert_batch_size)):
+            chunk = chunk.to_dict(orient="records")
+            index.upsert(vectors=chunk)
+
+    def drop_table(self, table_name: str, if_exists=True):
         """Delete an index passed in through `table_name` from the pinecone ."""
-        try:
-            pinecone.delete_index(table_name)
-        except Exception as e:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Error deleting index {table_name}: {e}"
-            )
-        return Response(resp_type=RESPONSE_TYPE.OK)
 
-    def delete(self, table_name: str, conditions: List[FilterCondition] = None) -> HandlerResponse:
+        pinecone.delete_index(table_name)
+
+    def delete(self, table_name: str, conditions: List[FilterCondition] = None):
         """Delete records in pinecone index `table_name` based on ids or based on metadata conditions."""
         filters = self._translate_metadata_condition(conditions)
         ids = [
@@ -230,21 +209,12 @@ class PineconeHandler(VectorStoreHandler):
             raise Exception("Delete query must have either id condition or metadata condition!")
         index = self._get_index_handle(table_name)
         if index is None:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Error getting index '{table_name}', are you sure the name is correct?"
-            )
-        try:
-            if filters is None:
-                index.delete(ids=ids)
-            else:
-                index.delete(filter=filters)
-        except Exception as e:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Error deleting records in '{table_name}': {e}"
-            )
-        return Response(resp_type=RESPONSE_TYPE.OK)
+            raise Exception(f"Error getting index '{table_name}', are you sure the name is correct?")
+
+        if filters is None:
+            index.delete(ids=ids)
+        else:
+            index.delete(filter=filters)
 
     def select(
         self,
@@ -253,14 +223,12 @@ class PineconeHandler(VectorStoreHandler):
         conditions: List[FilterCondition] = None,
         offset: int = None,
         limit: int = None,
-    ) -> HandlerResponse:
+    ):
         """Run query on pinecone index named `table_name` and get results."""
         index = self._get_index_handle(table_name)
         if index is None:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Error getting index '{table_name}', are you sure the name is correct?"
-            )
+            raise Exception(f"Error getting index '{table_name}', are you sure the name is correct?")
+
         query = {
             "include_values": True,
             "include_metadata": True
@@ -279,25 +247,19 @@ class PineconeHandler(VectorStoreHandler):
         )
         if vector_filter:
             if len(vector_filter) > 1:
-                return Response(
-                    resp_type=RESPONSE_TYPE.ERROR,
-                    error_message="You cannot have multiple search_vectors in query"
-                )
+                raise Exception("You cannot have multiple search_vectors in query")
+
             query["vector"] = vector_filter[0]
             # For subqueries, the vector filter is a list of list of strings
             if isinstance(query["vector"], list) and isinstance(query["vector"][0], str):
                 if len(query["vector"]) > 1:
-                    return Response(
-                        resp_type=RESPONSE_TYPE.ERROR,
-                        error_message="You cannot have multiple search_vectors in query"
-                    )
+                    raise Exception("You cannot have multiple search_vectors in query")
+
                 try:
                     query["vector"] = ast.literal_eval(query["vector"][0])
                 except Exception as e:
-                    return Response(
-                        resp_type=RESPONSE_TYPE.ERROR,
-                        error_message=f"Cannot parse the search vector '{query['vector']}'into a list: {e}"
-                    )
+                    raise Exception(f"Cannot parse the search vector '{query['vector']}'into a list: {e}")
+
         # check for limit
         if limit is not None:
             query["top_k"] = limit
@@ -315,20 +277,15 @@ class PineconeHandler(VectorStoreHandler):
             ] or None
         if id_filters:
             if len(id_filters) > 1:
-                return Response(
-                    resp_type=RESPONSE_TYPE.ERROR,
-                    error_message="You cannot have multiple IDs in query"
-                )
+                raise Exception("You cannot have multiple IDs in query")
+
             query["id"] = id_filters[0]
         # exec query
-        result = None
         try:
             result = index.query(**query)
         except Exception as e:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Error running SELECT query on '{table_name}': {e}"
-            )
+            raise Exception(f"Error running SELECT query on '{table_name}': {e}")
+
         # convert to dataframe
         df_columns = {
             "id": TableField.ID.value,
@@ -341,7 +298,7 @@ class PineconeHandler(VectorStoreHandler):
         else:
             results_df = pd.DataFrame(columns=list(df_columns.values()))
         results_df[TableField.CONTENT.value] = ""
-        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=results_df[columns])
+        return results_df[columns]
 
     def get_columns(self, table_name: str) -> HandlerResponse:
         return super().get_columns(table_name)

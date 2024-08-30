@@ -3,7 +3,6 @@ from typing import Optional
 import pandas as pd
 import ibm_db_dbi as love
 from ibm_db_sa.ibm_db import DB2Dialect_ibm_db as DB2Dialect
-from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
@@ -32,7 +31,6 @@ class DB2Handler(DatabaseHandler):
         super().__init__(name)
 
         self.kwargs = kwargs
-        self.parser = parse_sql
         self.driver = "{IBM DB2 ODBC DRIVER}"
         self.database = connection_data["database"]
         self.user = connection_data["user"]

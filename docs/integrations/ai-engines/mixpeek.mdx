@@ -1,0 +1,131 @@
+---
+title: Mixpeek Embed (Video Semantic Search)
+sidebarTitle: Mixpeek Embed
+---
+
+This guide demonstrates how to implement advanced video understanding using Mixpeek Embed with MindsDB. We'll cover indexing videos, performing text-based searches, and conducting reverse video searches.
+
+[Mixpeek Embed](https://docs.mixpeek.com/api-documentation/inference/embed) provides powerful video understanding capabilities, allowing you to implement semantic search and analysis on video content.
+
+## Prerequisites
+
+Before proceeding, ensure the following:
+
+1. Install MindsDB on your system or obtain access to cloud options.
+2. Install the required dependencies for Mixpeek Embed with MindsDB.
+3. Obtain your Mixpeek API Key from the [Mixpeek Dashboard](https://mixpeek.com/start).
+
+## AI Engine Setup
+
+First, create an ML Engine using your Mixpeek API key:
+
+```sql
+CREATE ML_ENGINE mixpeek_engine
+FROM mixpeek
+USING
+  mixpeek_api_key = '<YOUR_API_KEY>';
+```
+
+## Video Indexing
+
+To index videos, create a model that processes and embeds video content:
+
+```sql
+CREATE MODEL mindsdb.mixpeek_video_index
+PREDICT embeddings
+USING
+  engine = 'mixpeek_engine',
+  task = 'indexing',
+  model_id = 'vuse-generic-v1',
+  video_urls = [
+    'https://mixpeek-public-demo.s3.us-east-2.amazonaws.com/starter/jurassic_park_trailer.mp4'
+  ],
+  chunk_interval = 1,
+  resolution = [720, 1280];
+```
+
+This model will process the specified video(s) into 1-second chunks and generate embeddings for each chunk.
+
+## Text-Based Search
+
+To perform text-based searches on the indexed videos, create a search model:
+
+```sql
+CREATE MODEL mindsdb.mixpeek_text_search
+PREDICT search_results
+USING
+  engine = 'mixpeek_engine',
+  task = 'search',
+  model_id = 'vuse-generic-v1',
+  search_query_column = 'query',
+  index_model = 'mixpeek_video_index';
+```
+
+To search for video segments using text:
+
+```sql
+SELECT *
+FROM mindsdb.mixpeek_text_search
+WHERE query = 'two people inside a car';
+```
+
+This query will return video chunks that are semantically similar to the description "two people inside a car".
+
+## Reverse Video Search
+
+For reverse video search, create another model:
+
+```sql
+CREATE MODEL mindsdb.mixpeek_reverse_video_search
+PREDICT search_results
+USING
+  engine = 'mixpeek_engine',
+  task = 'reverse_search',
+  model_id = 'vuse-generic-v1',
+  video_query_column = 'query_video',
+  index_model = 'mixpeek_video_index';
+```
+
+To perform a reverse video search:
+
+```sql
+SELECT *
+FROM mindsdb.mixpeek_reverse_video_search
+WHERE query_video = 'https://mixpeek-public-demo.s3.us-east-2.amazonaws.com/starter/jurassic_bunny.mp4';
+```
+
+This query will return the top most similar video chunks from the indexed videos.
+
+## Retrieving Indexed Videos
+
+To view information about the indexed videos:
+
+```sql
+DESCRIBE mindsdb.mixpeek_video_index.indexed_videos;
+```
+
+This will display details about all processed videos, including their IDs, durations, and file information.
+
+## Technical Insights
+
+- **Chunking Strategy**: 1-second intervals balance precision and database size.
+- **Embedding Model**: vuse-generic-v1 creates 768-dimensional embeddings capturing both visual and semantic information.
+- **Cross-Modal Search**: The system supports both video and text queries against the same video database.
+- **Scalability**: This approach can handle larger video databases with proper optimization.
+
+## Practical Applications
+
+1. Content Recommendation
+2. Copyright Enforcement
+3. Video Summarization
+4. Educational Tools
+5. Forensic Analysis
+6. Content Moderation
+
+## Conclusion
+
+By integrating Mixpeek's video processing and embedding capabilities with MindsDB, we've created a powerful system for video indexing and semantic search. This setup enables both text-to-video and video-to-video search capabilities, opening up a wide range of applications in video analysis and retrieval.
+
+As video content continues to grow, tools like this become increasingly valuable for managing and deriving insights from vast video repositories. The cross-modal nature of this system, allowing both video and text queries, makes it particularly versatile and suited for various use cases.
+
+For more information, refer to the [Mixpeek Official Docs](https://docs.mixpeek.com) and [MindsDB Documentation](https://docs.mindsdb.com).

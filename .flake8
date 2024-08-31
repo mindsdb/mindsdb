@@ -29,7 +29,6 @@ exclude =
   mindsdb/integrations/handlers/matrixone_handler/*
   mindsdb/integrations/handlers/mlflow_handler/*
   mindsdb/integrations/handlers/monetdb_handler/*
-  mindsdb/integrations/handlers/mongodb_handler/*
   mindsdb/integrations/handlers/mysql_handler/tests/test_mysql_handler.py
   mindsdb/integrations/handlers/pinot_handler/pinot_handler.py
   mindsdb/integrations/handlers/postgres_handler/tests/test_postgres_handler.py

@@ -13,7 +13,7 @@ from llama_index.core import Settings
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities.config import Config
-from mindsdb.utilities.security import is_private_url
+from mindsdb.utilities.security import is_private_url, validate_crawling_sites
 from mindsdb.integrations.handlers.llama_index_handler.settings import llama_index_config, LlamaIndexModel
 from mindsdb.integrations.libs.api_handler_exceptions import MissingConnectionParams
 from mindsdb.integrations.utilities.handler_utils import get_api_key
@@ -62,11 +62,8 @@ class LlamaIndexHandler(BaseMLEngine):
             reader = list(map(lambda x: Document(text=x), dstrs.tolist()))
         elif args_reader == "SimpleWebPageReader":
             url = args["using"]["source_url_link"]
-            config = Config()
-            is_cloud = config.get("cloud", False)
-            if is_cloud and is_private_url(url):
-                raise Exception(f"URL is private: {url}")
-
+            if not validate_crawling_sites(url):
+                raise ValueError('The provided URL is not allowed for web crawling. Please check web_crawling_allowed_sites in config.json')
             reader = SimpleWebPageReader(html_to_text=True).load_data([url])
         else:
             raise Exception(

@@ -32,7 +32,7 @@ Now you can access your MindsDB locally at `127.0.0.1:47334`.
 
 First, you should prepare a `config.json` file based on the following template; remember to substitute the values for your custom configuration.
 
-```bash
+```json
 {
     "permanent_storage": {
         "location": "local"
@@ -51,7 +51,7 @@ First, you should prepare a `config.json` file based on the following template; 
         "autoupdate": true
     },
     "auth":{
-        "http_auth_enabled": False,
+        "http_auth_enabled": false,
         "username": "mindsdb",
         "password": "123"
     },
@@ -88,8 +88,42 @@ python -m mindsdb --config=/path-to-the-extended-config-file/config-file.json
 You can access your MindsDB locally at `127.0.0.1:47334`, or any other IP
 address and port combination if you altered them.
 
+## Enabling Basic Authentication for REST APIs
+
+MindsDB allows you to enable basic authentication for its REST APIs. This adds an extra layer of security to your MindsDB instance. To enable basic authentication:
+
+1. Open your `config.json` file.
+
+2. In the `auth` section, set `http_auth_enabled` to `true` and provide a username and password:
+
+```json
+"auth": {
+    "http_auth_enabled": true,
+    "username": "your_username",
+    "password": "your_secure_password"
+}
+```
+
+3. Save the `config.json` file and restart MindsDB with this configuration.
+
+Once enabled, all HTTP requests to MindsDB's REST APIs will require basic authentication. Clients must include an `Authorization` header with a base64-encoded string of `username:password`.
+
+Example using cURL:
+
+```bash
+curl -X GET "http://localhost:47334/api/projects" \
+     -H "Authorization: Basic $(echo -n 'your_username:your_secure_password' | base64)"
+```
+
+Remember to replace `your_username` and `your_secure_password` with the credentials you set in the configuration file.
+
+<Warning>
+Ensure you use HTTPS in production environments to encrypt credentials during transmission.
+</Warning>
+
+For more details on MindsDB's API authentication, please refer to our [API documentation](/rest/authentication).
+
 <Tip>
 **What's next?** We recommend you follow one of our tutorials or learn more about the
 [MindsDB Database](/sql/table-structure/).
-
 </Tip>

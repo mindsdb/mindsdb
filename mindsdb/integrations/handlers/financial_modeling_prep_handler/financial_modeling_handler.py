@@ -39,7 +39,8 @@ class FinancialModelingHandler(APIHandler):
 
     def connect(self): 
         self.is_connected = True
-        return StatusResponse(success = True)
+        base_url = "https://financialmodelingprep.com/api/v3/historical-price-full/"
+        return base_url
     
     def check_connection(self) -> StatusResponse:
         """ Check connection to the handler

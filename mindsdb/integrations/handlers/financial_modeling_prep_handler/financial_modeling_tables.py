@@ -63,8 +63,8 @@ class FinancialModelingTradesTable(APITable):
 
     
     def get_daily_chart(self, params: Dict = None) -> pd.DataFrame:  
-        base_url = "https://financialmodelingprep.com/api/v3/historical-price-full/"
-
+        # base_url = "https://financialmodelingprep.com/api/v3/historical-price-full/"
+        base_url = self.handler.connect()
         if 'symbol' not in params:
             raise ValueError('Missing "symbol" param')
         symbol = params['symbol']

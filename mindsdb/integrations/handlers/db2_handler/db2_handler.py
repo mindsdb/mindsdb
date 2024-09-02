@@ -132,8 +132,8 @@ class DB2Handler(DatabaseHandler):
         """
         need_to_close = self.is_connected is False
 
-        conn = self.connect()
-        with conn.cursor() as cur:
+        connection = self.connect()
+        with connection.cursor() as cur:
             try:
                 cur.execute(query)
 
@@ -147,16 +147,16 @@ class DB2Handler(DatabaseHandler):
                     )
                 else:
                     response = Response(RESPONSE_TYPE.OK)
-                self.connection.commit()
+                connection.commit()
             except (OperationalError, ProgrammingError) as known_error:
                 logger.error(f"Error running query: {query} on {self.connection_data.get('database')}!")
                 response = Response(RESPONSE_TYPE.ERROR, error_message=str(known_error))
-                self.connection.rollback()
+                connection.rollback()
 
             except Exception as unknown_error:
                 logger.error(f"Unknown error running query: {query} on {self.connection_data.get('database')}!")
                 response = Response(RESPONSE_TYPE.ERROR, error_message=str(unknown_error))
-                self.connection.rollback()
+                connection.rollback()
 
         if need_to_close is True:
             self.disconnect()
@@ -184,9 +184,9 @@ class DB2Handler(DatabaseHandler):
         Returns:
             Response: A response object containing the list of tables and views, formatted as per the `Response` class.
         """
-        self.connect()
+        connection = self.connect()
 
-        result = self.connection.tables(self.connection.current_schema)
+        result = connection.tables(connection.current_schema)
 
         tables = []
         for table in result:
@@ -221,9 +221,9 @@ class DB2Handler(DatabaseHandler):
         if not table_name or not isinstance(table_name, str):
             raise ValueError("Invalid table name provided.")
 
-        self.connect()
+        connection = self.connect()
 
-        result = self.connection.columns(table_name=table_name)
+        result = connection.columns(table_name=table_name)
         
         columns = [column["COLUMN_NAME"] for column in result]
 

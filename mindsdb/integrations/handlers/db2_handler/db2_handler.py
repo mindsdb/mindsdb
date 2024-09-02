@@ -148,9 +148,14 @@ class DB2Handler(DatabaseHandler):
                 else:
                     response = Response(RESPONSE_TYPE.OK)
                 self.connection.commit()
-            except Exception as e:
+            except (OperationalError, ProgrammingError) as known_error:
                 logger.error(f"Error running query: {query} on {self.connection_data.get('database')}!")
-                response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
+                response = Response(RESPONSE_TYPE.ERROR, error_message=str(known_error))
+                self.connection.rollback()
+
+            except Exception as unknown_error:
+                logger.error(f"Unknown error running query: {query} on {self.connection_data.get('database')}!")
+                response = Response(RESPONSE_TYPE.ERROR, error_message=str(unknown_error))
                 self.connection.rollback()
 
         if need_to_close is True:

@@ -1,20 +1,44 @@
 import datetime as dt
+from typing import Dict, Union, Any
 
-from mindsdb_sql.parser.ast import *
+from bson.objectid import ObjectId
+from mindsdb_sql.parser.ast import Select, Update, Identifier, Star, Constant, Tuple, BinaryOperation, Latest, TypeCast
+from mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.api.mongo.utilities.mongodb_query import MongoQuery
 
 
 class MongodbRender:
+    """
+    Renderer to convert SQL queries represented as ASTNodes to MongoQuery instances.
+    """
 
-    def to_mongo_query(self, node):
+    def to_mongo_query(self, node: ASTNode) -> MongoQuery:
+        """
+        Converts SQL query to MongoQuery instance.
+
+        Args:
+            node (ASTNode): An ASTNode representing the SQL query to be converted.
+
+        Returns:
+            MongoQuery: The converted MongoQuery instance.
+        """
         if isinstance(node, Select):
             return self.select(node)
         elif isinstance(node, Update):
             return self.update(node)
         raise NotImplementedError(f'Unknown statement: {node.__class__.__name__}')
 
-    def update(self, node: Update):
+    def update(self, node: Update) -> MongoQuery:
+        """
+        Converts an Update statement to MongoQuery instance.
+
+        Args:
+            node (Update): An ASTNode representing the SQL Update statement.
+
+        Returns:
+            MongoQuery: The converted MongoQuery instance.
+        """
         collection = node.table.parts[-1]
         mquery = MongoQuery(collection)
 
@@ -33,28 +57,35 @@ class MongodbRender:
         return mquery
 
     def select(self, node: Select):
-        # collection
+        """
+        Converts a Select statement to MongoQuery instance.
+
+        Args:
+            node (Select): An ASTNode representing the SQL Select statement.
+
+        Returns:
+            MongoQuery: The converted MongoQuery instance.
+        """
         if not isinstance(node.from_table, Identifier):
             raise NotImplementedError(f'Not supported from {node.from_table}')
 
         collection = node.from_table.parts[-1]
 
-        # filter
         filters = {}
 
         if node.where is not None:
             filters = self.handle_where(node.where)
 
         group = {}
-        project = {'_id': 0}   # hide _id
+        project = {'_id': 0}  # Hide _id field when it has not been explicitly requested.
         if node.distinct:
-            # is group by distinct fields
+            # Group by distinct fields.
             group = {'_id': {}}
 
         if node.targets is not None:
             for col in node.targets:
                 if isinstance(col, Star):
-                    # show all
+                    # Show all fields.
                     project = {}
                     break
                 if isinstance(col, Identifier):
@@ -64,21 +95,20 @@ class MongodbRender:
                     else:
                         alias = col.alias.parts[-1]
 
-                    project[alias] = f'${name}'  # project field
+                    project[alias] = f'${name}'  # Project field.
 
-                    # group by distinct fields
+                    # Group by distinct fields.
                     if node.distinct:
-                        group['_id'][name] = f'${name}'  # group field
-                        group[name] = {'$first': f'${name}'}  # show field
+                        group['_id'][name] = f'${name}'  # Group field.
+                        group[name] = {'$first': f'${name}'}  # Show field.
 
                 elif isinstance(col, Constant):
-                    val = str(col.value)  # str because int is interpreted as index
+                    val = str(col.value)  # Convert to string becuase it is interpreted as an index.
                     if col.alias is None:
                         alias = val
                     else:
                         alias = col.alias.parts[-1]
                     project[alias] = val
-
 
         if node.group_by is not None:
             # TODO
@@ -91,14 +121,13 @@ class MongodbRender:
                 direction = 1 if col.direction.upper() == 'ASC' else -1
                 sort[name] = direction
 
-        # compose mongo query
-
+        # Compose the MongoDB query.
         mquery = MongoQuery(collection)
 
         method = 'aggregate'
         arg = []
 
-        # mongodb related pipeline steps for aggregate method
+        # MongoDB related pipeline steps for the aggregate method.
         if node.modifiers is not None:
             for modifier in node.modifiers:
                 arg.append(modifier)
@@ -128,12 +157,20 @@ class MongodbRender:
 
         return mquery
 
-    def handle_where(self, node):
-        # todo UnaryOperation, function
+    def handle_where(self, node: BinaryOperation) -> Dict:
+        """
+        Converts a BinaryOperation node to a dictionary of MongoDB query filters.
+
+        Args:
+            node (BinaryOperation): A BinaryOperation node representing the SQL WHERE clause.
+
+        Returns:
+            dict: The converted MongoDB query filters.
+        """
+        # TODO: UnaryOperation, function.
         if not type(node) in [BinaryOperation]:
             raise NotImplementedError(f'Not supported type {type(node)}')
 
-        # logic operation
         op = node.op.lower()
         arg1, arg2 = node.args
 
@@ -163,11 +200,10 @@ class MongodbRender:
 
         if isinstance(arg1, Identifier):
             var_name = arg1.parts[-1]
-            # is simple operation
+            # Simple operation.
             if isinstance(arg2, Constant):
-                # identifier and constant
-
-                val = arg2.value
+                # Identifier and Constant.
+                val = ObjectId(arg2.value) if var_name == '_id' else arg2.value
                 if op in ('=', '=='):
                     pass
                 elif op in ops_map:
@@ -178,14 +214,14 @@ class MongodbRender:
 
                 return {var_name: val}
 
-            # is IN condition
+            # IN condition.
             elif isinstance(arg2, Tuple):
-                # it should be IN, NOT IN
+                # Should be IN, NOT IN.
                 ops = {
                     'in': '$in',
                     'not in': '$nin'
                 }
-                # must be list of Constants
+                # Must be list of Constants.
                 values = [
                     i.value
                     for i in arg2.items
@@ -199,8 +235,7 @@ class MongodbRender:
 
                 return {var_name: cond}
 
-        # try to make expression
-
+        # Create expression.
         val1 = self.where_element_convert(arg1)
         val2 = self.where_element_convert(arg2)
 
@@ -215,11 +250,24 @@ class MongodbRender:
             }
         }
 
-    def where_element_convert(self, node):
+    def where_element_convert(self, node: Union[Identifier, Latest, Constant, TypeCast]) -> Any:
+        """
+        Converts a WHERE element to the corresponding MongoDB query element.
+
+        Args:
+            node (Union[Identifier, Latest, Constant, TypeCast]): The WHERE element to be converted.
+
+        Returns:
+            Any: The converted MongoDB query element.
+
+        Raises:
+            NotImplementedError: If the WHERE element is not supported.
+            RuntimeError: If the date format is not supported.
+        """
         if isinstance(node, Identifier):
             return f'${node.parts[-1]}'
         elif isinstance(node, Latest):
-            return f'LATEST'
+            return 'LATEST'
         elif isinstance(node, Constant):
             return node.value
         elif isinstance(node, TypeCast)\
@@ -236,4 +284,3 @@ class MongodbRender:
             raise RuntimeError(f'Not supported date format. Supported: {formats}')
         else:
             raise NotImplementedError(f'Unknown where element {node}')
-

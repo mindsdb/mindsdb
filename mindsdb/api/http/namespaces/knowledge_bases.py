@@ -26,6 +26,8 @@ _DEFAULT_MARKDOWN_HEADERS_TO_SPLIT_ON = [
     ("###", "Header 3"),
 ]
 
+_DEFAULT_WEB_CRAWL_LIMIT = 100
+
 
 def _insert_file_into_knowledge_base(table: KnowledgeBaseTable, file_name: str):
     file_controller = FileController()
@@ -45,7 +47,7 @@ def _insert_file_into_knowledge_base(table: KnowledgeBaseTable, file_name: str):
     table.insert(docs_df)
 
 
-def _insert_web_pages_into_knowledge_base(table: KnowledgeBaseTable, urls: List[str]):
+def _insert_web_pages_into_knowledge_base(table: KnowledgeBaseTable, urls: List[str], crawl_depth: int = 1, filters: List[str] = None):
     try:
         # To prevent dependency on langchain_text_splitters unless needed.
         from langchain_text_splitters import MarkdownHeaderTextSplitter
@@ -53,7 +55,7 @@ def _insert_web_pages_into_knowledge_base(table: KnowledgeBaseTable, urls: List[
         logger.error(f'Error importing langchain_text_splitters to insert web page into knowledge base: {e}')
         raise e
 
-    websites_df = get_all_websites(urls)
+    websites_df = get_all_websites(urls, limit=_DEFAULT_WEB_CRAWL_LIMIT, crawl_depth=crawl_depth, filters=filters)
     # Text content is treated as markdown.
     markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=_DEFAULT_MARKDOWN_HEADERS_TO_SPLIT_ON)
 
@@ -117,10 +119,13 @@ class KnowledgeBaseResource(Resource):
         kb = request.json['knowledge_base']
         files = kb.get('files', [])
         urls = kb.get('urls', [])
+        # Optional params for web pages.
+        crawl_depth = kb.get('crawl_depth', 1)
+        filters = kb.get('filters', [])
 
         # Load, split, & embed files into Knowledge Base.
         for file_name in files:
             _insert_file_into_knowledge_base(table, file_name)
         # Crawl, split, & embed web pages into Knowledge Base.
-        _insert_web_pages_into_knowledge_base(table, urls)
+        _insert_web_pages_into_knowledge_base(table, urls, crawl_depth=crawl_depth, filters=filters)
         return '', HTTPStatus.OK

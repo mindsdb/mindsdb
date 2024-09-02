@@ -204,14 +204,13 @@ def check_relative_reqs():
 
     def get_relative_requirements(files):
         """Find entries in a requirements.txt that are including another requirements.txt"""
-        entries = []
+        entries = {}
         for file in files:
             with open(file, 'r') as fh:
                 for line in fh.readlines():
                     line = line.lower().strip()
                     if line.startswith("-r mindsdb/integrations/handlers/"):
-                        entries.append(line.split("mindsdb/integrations/handlers/")[1].split("/")[0])  # just return
-                        # the handler name
+                        entries[line.split("mindsdb/integrations/handlers/")[1].split("/")[0]] = line
 
         return entries
 
@@ -250,17 +249,28 @@ def check_relative_reqs():
 
             # Report on imports of other handlers that are missing a corresponding requirements.txt entry
             for line, imported_handler_name in imported_handlers.items():
-                if imported_handler_name not in required_handlers:
-                    errors.append(
-                        f"{line} <- {imported_handler_name} not in handler requirements.txt. Add it like: \"-r mindsdb/integrations/handlers/{imported_handler_name}/requirements.txt\"")
+                # Check if the imported handler has a requirements.txt file.
+                imported_handler_req_file = f"mindsdb/integrations/handlers/{imported_handler_name}/requirements.txt"
+                if os.path.exists(imported_handler_req_file):
+                    if imported_handler_name not in required_handlers.keys():
+                        errors.append(
+                            f"{line} <- {imported_handler_name} not in handler requirements.txt. Add it like: \"-r {imported_handler_req_file}\"")
 
             # Print all the errors for this .py file
             print_errors(file, errors)
 
         # Report on requirements.txt entries that point to a handler that isn't used
-        requirements_errors = [required_handler_name + " in requirements.txt but not used in code" for required_handler_name in required_handlers if
+        requirements_errors = [required_handler_name + " in requirements.txt but not used in code" for required_handler_name in required_handlers.keys() if
                                required_handler_name not in all_imported_handlers]
         print_errors(handler_dir, requirements_errors)
+
+        # Report on requirements.txt entries that point to a handler requirements file that doesn't exist
+        errors = []
+        for _, required_handler_line in required_handlers.items():
+            if not os.path.exists(required_handler_line.split('-r ')[1]):
+                errors.append(f"{required_handler_line} <- this requirements file doesn't exist.")
+
+        print_errors(handler_dir, errors)
 
 
 def check_requirements_imports():

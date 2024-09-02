@@ -131,7 +131,7 @@ class DB2Handler(DatabaseHandler):
             Response: A response object containing the result of the query or an error message.
         """
         need_to_close = self.is_connected is False
-        query = query.upper()
+
         conn = self.connect()
         with conn.cursor() as cur:
             try:

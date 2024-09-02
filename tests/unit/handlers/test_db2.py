@@ -26,7 +26,7 @@ class TestDB2Handler(BaseDatabaseHandlerTest, unittest.TestCase):
     @property
     def err_to_raise_on_connect_failure(self):
         return OperationalError("Connection Failed")
-    
+
     # The tests for get_tables and get_columns methods do not follow the typical implementation pattern.
     # Therefore, the get_tables_query and get_columns_query properties are not used in the test cases.
     @property
@@ -44,7 +44,7 @@ class TestDB2Handler(BaseDatabaseHandlerTest, unittest.TestCase):
                 'TABLE_NAME': 'table1',
                 'TABLE_TYPE': 'TABLE',
                 'TABLE_SCHEM': 'example_db'
-            }, 
+            },
             {
                 'TABLE_NAME': 'table2',
                 'TABLE_TYPE': 'TABLE',
@@ -63,7 +63,7 @@ class TestDB2Handler(BaseDatabaseHandlerTest, unittest.TestCase):
         self.assertEqual(len(df), 2)
         self.assertEqual(df.columns.tolist(), ['TABLE_NAME', 'TABLE_SCHEMA', 'TABLE_TYPE'])
         self.assertEqual(df['TABLE_NAME'].tolist(), ['table1', 'table2'])
-    
+
     def test_get_columns(self):
         mock_client = Mock()
         mock_client.columns.return_value = [

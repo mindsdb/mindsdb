@@ -57,7 +57,7 @@ class DB2Handler(DatabaseHandler):
         """
         if self.is_connected:
             return self.connection
-        
+
         # Mandatory connection parameters.
         if not all(key in self.connection_data for key in ['host', 'user', 'password', 'database']):
             raise ValueError('Required parameters (host, user, password, database) must be provided.')
@@ -224,7 +224,7 @@ class DB2Handler(DatabaseHandler):
         connection = self.connect()
 
         result = connection.columns(table_name=table_name)
-        
+
         columns = [column["COLUMN_NAME"] for column in result]
 
         response = Response(

@@ -1,6 +1,7 @@
 from typing import Text, Dict, Optional, Any
 
 import ibm_db_dbi
+from ibm_db_dbi import OperationalError, ProgrammingError
 from ibm_db_sa.ibm_db import DB2Dialect_ibm_db as DB2Dialect
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
@@ -74,8 +75,12 @@ class DB2Handler(DatabaseHandler):
             self.connection = ibm_db_dbi.pconnect(connection_string, "", "")
             self.is_connected = True
             return self.connection
-        except Exception as e:
-            logger.error(f"Error while connecting to {self.connection_data.get('database')}, {e}")
+        except OperationalError as operational_error:
+            logger.error(f"Error while connecting to {self.connection_data.get('database')}, {operational_error}!")
+            raise
+        except Exception as unknown_error:
+            logger.error(f"Unknown error while connecting to {self.connection_data.get('database')}, {unknown_error}!")
+            raise
 
     def disconnect(self) -> None:
         """
@@ -94,22 +99,26 @@ class DB2Handler(DatabaseHandler):
         Returns:
             StatusResponse: An object containing the success status and an error message if an error occurs.
         """
-        responseCode = StatusResponse(False)
+        response = StatusResponse(False)
         need_to_close = self.is_connected is False
 
         try:
             self.connect()
-            responseCode.success = True
-        except Exception as e:
-            logger.error(f"Error connecting to database {self.connection_data.get('database')}, {e}!")
-            responseCode.error_message = str(e)
-        finally:
-            if responseCode.success is True and need_to_close:
-                self.disconnect()
-            if responseCode.success is False and self.is_connected is True:
-                self.is_connected = False
+            response.success = True
+        except (OperationalError, ValueError) as known_error:
+            logger.error(f'Connection check to IBM DB2 failed, {known_error}!')
+            response.error_message = str(known_error)
+        except Exception as unknown_error:
+            logger.error(f'Connection check to IBM DB2 failed due to an unknown error, {unknown_error}!')
+            response.error_message = str(unknown_error)
 
-        return responseCode
+        if response.success and need_to_close:
+            self.disconnect()
+
+        elif not response.success and self.is_connected:
+            self.is_connected = False
+
+        return response
 
     def native_query(self, query: Text) -> Response:
         """

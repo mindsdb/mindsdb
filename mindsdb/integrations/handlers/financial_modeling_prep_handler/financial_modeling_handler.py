@@ -56,5 +56,6 @@ class FinancialModelingHandler(APIHandler):
         if response.status_code == 200:
             return StatusResponse(success = True)
         else:
-            return StatusResponse(success = False)
-
+            raise Exception(
+                "API key provided in query is not valid. Retrieve a valid API key from https://site.financialmodelingprep.com/developer. See financial_modeling_prep_handler/README.MD on how to include API key in query."
+            )

@@ -1,3 +1,8 @@
+---
+title: LlamaIndex
+sidebarTitle: LlamaIndex
+---
+
 ## LlamaIndex Handler
 
 This documentation describes the integration of MindsDB with [LlamaIndex](https://docs.llamaindex.ai/en/stable/), a framework for building context-augmented generative AI applications with LLMs. 
@@ -45,7 +50,6 @@ CREATE MODEL qa_model
 PREDICT answer
 USING 
   engine = 'llama_index', 
-  index_class = 'VectorStoreIndex',
   reader = 'SimpleWebPageReader',
   source_url_link = 'https://mindsdb.com/about',
   input_column = 'question';
@@ -65,9 +69,23 @@ Here is the output:
 +---------------------------+-------------------------------+
 |question                   |answer                         |
 +---------------------------+-------------------------------+
-|What is MindsDBs story?|MindsDB is a fast-growing open-source infrastructure company founded in 2017 by Adam Carrigan and Jorge Torres...|
+|What is MindsDB's story?    |MindsDB is a fast-growing open-source ...|
 +---------------------------+-------------------------------+
 
+```
+
+### Configuring SimpleWebPageReader for Specific Domains
+
+When SimpleWebPageReader is used it can be configured to interact only with specific domains by using the `web_crawling_allowed_sites` setting in the `config.json` file. 
+This feature allows you to restrict the handler to read and process content only from the domains you specify, enhancing security and control over web interactions.
+
+To configure this, simply list the allowed domains under the `web_crawling_allowed_sites` key in `config.json`. For example:
+
+```json
+"web_crawling_allowed_sites": [
+    "https://docs.mindsdb.com",
+    "https://another-allowed-site.com"
+]
 ```
 
 <Tip>

@@ -16,7 +16,7 @@ from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities import log
-from mindsdb.utilities.security import is_private_url, clear_filename, is_allowed_host
+from mindsdb.utilities.security import is_private_url, clear_filename, validate_urls
 from mindsdb.utilities.fs import safe_extract
 
 logger = log.getLogger(__name__)
@@ -98,11 +98,11 @@ class File(Resource):
 
         if data.get("source_type") == "url":
             url = data["source"]
-            if not is_allowed_host(url):
-                return http_error(400, "Invalid File URL source. Only S3, Dropbox, GitHub, Google Drive and Azure Blob URLs are allowed.")
-            data["file"] = clear_filename(data["name"])
-
             config = Config()
+            allowed_urls = config.get('file_upload_domains', [])
+            if allowed_urls and not validate_urls(url, allowed_urls):
+                return http_error(400, "Invalid File URL source.", f"Allowed hosts are: {', '.join(allowed_urls)}.")
+            data["file"] = clear_filename(data["name"])
             is_cloud = config.get("cloud", False)
             if is_cloud and is_private_url(url):
                 return http_error(

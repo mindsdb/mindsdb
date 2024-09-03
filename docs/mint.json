@@ -919,6 +919,7 @@
             "integrations/app-integrations/slack",
             "integrations/app-integrations/strapi",
             "integrations/app-integrations/stripe",
+            "integrations/app-integrations/symbl",
             "integrations/app-integrations/twitter",
             "integrations/app-integrations/web-crawler",
             "integrations/app-integrations/youtube"

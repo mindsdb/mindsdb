@@ -80,10 +80,10 @@ class VectorStoreFactory:
         df[TableField.EMBEDDINGS.value] = df[TableField.EMBEDDINGS.value].apply(ast.literal_eval)
 
         def apply_f(x):
-            if x is None:
-                return {}
-            elif isinstance(x, str):
-                return ast.literal_eval(x)
+            if isinstance(x, str):
+                x = ast.literal_eval(x)
+            if not bool(x):
+                x = {'a': 0}
             return x
 
         df[TableField.METADATA.value] = df[TableField.METADATA.value].apply(apply_f)

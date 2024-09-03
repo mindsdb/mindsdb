@@ -20,6 +20,20 @@
   "api": {
     "baseUrl": "http://127.0.0.1:47334"
   },
+  "topbarLinks": [
+    {
+      "name": "Blog",
+      "url": "https://mindsdb.com/blog"
+    },
+    {
+      "name": "Events",
+      "url": "https://mindsdb.com/events"
+    },
+    {
+      "name": "News",
+      "url": "https://mindsdb.com/newsroom"
+    }
+  ],
   "topbarCtaButton": {
     "name": "Get Started",
     "url": "https://github.com/mindsdb/mindsdb"
@@ -174,6 +188,7 @@
     {"source": "/sql/drop/database","destination": "/mindsdb_sql/sql/drop/database"},
     {"source": "/sql/show-databases","destination": "/mindsdb_sql/sql/show-databases"},
     {"source": "/sql/api/use","destination": "/mindsdb_sql/sql/api/use"},
+    {"source": "/sql/create/file","destination": "/mindsdb_sql/sql/create/file"},
     {"source": "/sql/list-ml-handlers","destination": "/mindsdb_sql/sql/list-ml-handlers"},
     {"source": "/sql/create/ml-engine","destination": "/mindsdb_sql/sql/create/ml-engine"},
     {"source": "/sql/drop/ml-engine","destination": "/mindsdb_sql/sql/drop/ml-engine"},
@@ -325,7 +340,7 @@
           "group": "AI-Powered Data Retrieval",
           "pages": [
             "use-cases/ai-powered_data_retrieval/overview",
-            "use-cases/ai-powered_data_retrieval/semantic_search",
+            "use-cases/ai-powered_data_retrieval/embedding-model",
             "use-cases/ai-powered_data_retrieval/recommenders"
           ]
         },
@@ -904,6 +919,7 @@
             "integrations/app-integrations/slack",
             "integrations/app-integrations/strapi",
             "integrations/app-integrations/stripe",
+            "integrations/app-integrations/symbl",
             "integrations/app-integrations/twitter",
             "integrations/app-integrations/web-crawler",
             "integrations/app-integrations/youtube"

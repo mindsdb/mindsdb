@@ -162,7 +162,9 @@ class Config():
             "cache": {
                 "type": "local"
             },
-            'ml_task_queue': ml_queue
+            'ml_task_queue': ml_queue,
+            "file_upload_domains": [],
+            "web_crawling_allowed_sites": [],
         }
 
         return _merge_configs(self._default_config, self._override_config)

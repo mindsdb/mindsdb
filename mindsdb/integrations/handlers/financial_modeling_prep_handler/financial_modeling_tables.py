@@ -16,7 +16,7 @@ from mindsdb.integrations.libs.response import (
 import requests
 
 class HistoricalPriceTable(APITable):
-    def _get_daily_endpoint_params_from_conditions(self, conditions: List) -> Dict:
+    def _get_historical_price_endpoint_params_from_conditions(self, conditions: List) -> Dict:
         params = {}
         for op, arg1, arg2 in conditions: 
             if arg1 == 'symbol':
@@ -44,7 +44,7 @@ class HistoricalPriceTable(APITable):
             query (ast.Select): Given SQL SELECT query
         """
         conditions = extract_comparison_conditions(query.where)
-        params = self._get_daily_endpoint_params_from_conditions(conditions)
+        params = self._get_historical_price_endpoint_params_from_conditions(conditions)
 
         if query.limit and query.limit.value:
             limit_value = query.limit.value

@@ -38,23 +38,20 @@ These additional parameters need to have the exact same naming as in [OpenBB doc
 
 ## Examples
 
-### **Example 1**: obb.stocks.load
+### **Example 1**: obb.crypto.price.historical
 
+Reference: [https://docs.openbb.co/platform/reference/crypto/price/historical](https://docs.openbb.co/platform/reference/crypto/price/historical)
 
-
-
-Reference: [https://docs.openbb.co/sdk/reference/stocks/load](https://docs.openbb.co/sdk/reference/stocks/load)
+>>Note: Make Sure to add API Key corresponding to provider to [OpenBB Dashboard](https://my.openbb.co/app/platform/credentials) 
 
 MindsDB will provide an abstraction in full SQL for commands so that they look like virtual tables: 
 
 ```sql
-select * from obb_db.stock_historical 
-where  
-    symbol = 'MSFT' 
-    AND provider = "polygon" 
-    AND interval = "1m" 
-    AND date > "2023-09-01" 
-    ORDER BY date desc;
+SELECT *
+FROM obb_db.crypto_price_historical
+WHERE  symbol = 'BCTUSD'
+    AND start_date = '2023-09-01'
+    AND  provider='fmp';
 ```
 
 You can also call the command like this:
@@ -124,14 +121,11 @@ E.g. if you want to access data from yfinance, all you need to do is add `openbb
 
 ```sql
 
-select * from obb_db.stock_historical 
+SELECT * 
+FROM obb_db.equity_price_quote
 where  
     symbol = 'RELIANCE.NS' 
-    AND provider = "yfinance" 
-    AND interval = "1m" 
-    AND date >= "2023-09-01" 
-    ORDER BY date desc;
-
+    AND provider = "yfinance";
 
 ```
 

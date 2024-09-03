@@ -50,12 +50,12 @@ class HistoricalPriceTable(APITable):
             limit_value = query.limit.value
             params['limit'] = limit_value
 
-        daily_chart_table = self.get_daily_chart(params = params)
+        historical_price_table = self.get_historical_price_chart(params = params)
         
-        return daily_chart_table
+        return historical_price_table
 
     
-    def get_daily_chart(self, params: Dict = None) -> pd.DataFrame:  
+    def get_historical_price_chart(self, params: Dict = None) -> pd.DataFrame:  
         base_url = self.handler.connect()
         if 'symbol' not in params:
             raise ValueError('Missing "symbol" param')

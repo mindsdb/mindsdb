@@ -15,7 +15,7 @@ from mindsdb.integrations.libs.response import (
 )
 import requests
 
-class FinancialModelingTradesTable(APITable):
+class HistoricalPriceTable(APITable):
     def _get_daily_endpoint_params_from_conditions(self, conditions: List) -> Dict:
         params = {}
         for op, arg1, arg2 in conditions: 

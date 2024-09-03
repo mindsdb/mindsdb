@@ -7,7 +7,7 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from mindsdb.integrations.handlers.financial_modeling_prep_handler.financial_modeling_tables import FinancialModelingTradesTable
+from mindsdb.integrations.handlers.financial_modeling_prep_handler.financial_modeling_tables import HistoricalPriceTable
 
 from urllib.request import urlopen
 from mindsdb.utilities import log
@@ -34,8 +34,8 @@ class FinancialModelingHandler(APIHandler):
         self.client = None
         self.is_connected = False
 
-        daily_chart_table = FinancialModelingTradesTable(self) 
-        self._register_table('daily_chart_table', daily_chart_table)
+        historical_price_table = HistoricalPriceTable(self) 
+        self._register_table('historical_price_table', historical_price_table)
 
     def connect(self): 
         self.is_connected = True

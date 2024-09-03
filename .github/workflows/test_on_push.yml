@@ -24,14 +24,14 @@ jobs:
     outputs:
       not-docs: ${{ steps.filter.outputs.not-docs }}
     steps:
-    - uses: dorny/paths-filter@v3
-      id: filter
-      with:
-        predicate-quantifier: 'every'
-        filters: |
-          not-docs:
-            - '!docs/**'  
-            - '!**/*.md'
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          predicate-quantifier: "every"
+          filters: |
+            not-docs:
+              - '!docs/**'  
+              - '!**/*.md'
 
   # Run all of our static code checks here
   code_checking:
@@ -158,6 +158,7 @@ jobs:
           pip install .[elasticsearch]
           pip install .[databricks]
           pip install .[oracle]
+          pip install .[hive]
           pip install .[minds_endpoint]
           pip freeze
       - name: Run unit tests
@@ -173,7 +174,7 @@ jobs:
       - name: Run Handlers tests and submit Coverage to coveralls
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
-          handlers=("mysql" "postgres" "mssql" "clickhouse" "snowflake" "web" "redshift" "bigquery" "elasticsearch" "s3" "databricks" "dynamodb" "mariadb" "oracle" "mongodb")
+          handlers=("mysql" "postgres" "mssql" "clickhouse" "snowflake" "web" "redshift" "bigquery" "elasticsearch" "s3" "databricks" "dynamodb" "mariadb" "oracle" "mongodb" "hive")
           for handler in "${handlers[@]}"
           do
             pytest --cov=mindsdb/integrations/handlers/${handler}_handler tests/unit/handlers/test_${handler}.py 

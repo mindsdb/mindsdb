@@ -20,14 +20,14 @@ logger = log.getLogger(__name__)
 
 
 class DB2Handler(DatabaseHandler):
-    name = "DB2"
+    name = "db2"
 
     def __init__(self, name: Text, connection_data: Optional[Dict], **kwargs: Any) -> None:
         """
         Initializes the handler.
         Args:
             name (Text): The name of the handler instance.
-            connection_data (Dict): The connection data required to connect to the IBM DB2 database.
+            connection_data (Dict): The connection data required to connect to the IBM Db2 database.
             kwargs: Arbitrary keyword arguments.
         """
         super().__init__(name)
@@ -46,14 +46,14 @@ class DB2Handler(DatabaseHandler):
 
     def connect(self) -> ibm_db_dbi.Connection:
         """
-        Establishes a connection to a IBM DB2 database.
+        Establishes a connection to a IBM Db2 database.
 
         Raises:
             ValueError: If the required connection parameters are not provided.
-            ibm_db_dbi.OperationalError: If an error occurs while connecting to the IBM DB2 database.
+            ibm_db_dbi.OperationalError: If an error occurs while connecting to the IBM Db2 database.
 
         Returns:
-            ibm_db_dbi.Connection: A connection object to the IBM DB2 database.
+            ibm_db_dbi.Connection: A connection object to the IBM Db2 database.
         """
         if self.is_connected:
             return self.connection
@@ -84,7 +84,7 @@ class DB2Handler(DatabaseHandler):
 
     def disconnect(self) -> None:
         """
-        Closes the connection to the IBM DB2 database if it's currently open.
+        Closes the connection to the IBM Db2 database if it's currently open.
         """
         if not self.is_connected:
             return
@@ -94,7 +94,7 @@ class DB2Handler(DatabaseHandler):
 
     def check_connection(self) -> StatusResponse:
         """
-        Checks the status of the connection to the IBM DB2 database.
+        Checks the status of the connection to the IBM Db2 database.
 
         Returns:
             StatusResponse: An object containing the success status and an error message if an error occurs.
@@ -106,10 +106,10 @@ class DB2Handler(DatabaseHandler):
             self.connect()
             response.success = True
         except (OperationalError, ValueError) as known_error:
-            logger.error(f'Connection check to IBM DB2 failed, {known_error}!')
+            logger.error(f'Connection check to IBM Db2 failed, {known_error}!')
             response.error_message = str(known_error)
         except Exception as unknown_error:
-            logger.error(f'Connection check to IBM DB2 failed due to an unknown error, {unknown_error}!')
+            logger.error(f'Connection check to IBM Db2 failed due to an unknown error, {unknown_error}!')
             response.error_message = str(unknown_error)
 
         if response.success and need_to_close:
@@ -122,7 +122,7 @@ class DB2Handler(DatabaseHandler):
 
     def native_query(self, query: Text) -> Response:
         """
-        Executes a SQL query on the IBM DB2 database and returns the result (if any).
+        Executes a SQL query on the IBM Db2 database and returns the result (if any).
 
         Args:
             query (str): The SQL query to be executed.
@@ -165,7 +165,7 @@ class DB2Handler(DatabaseHandler):
 
     def query(self, query: ASTNode) -> Response:
         """
-        Executes a SQL query represented by an ASTNode on the IBM DB2 database and retrieves the data (if any).
+        Executes a SQL query represented by an ASTNode on the IBM Db2 database and retrieves the data (if any).
 
         Args:
             query (ASTNode): An ASTNode representing the SQL query to be executed.
@@ -179,7 +179,7 @@ class DB2Handler(DatabaseHandler):
 
     def get_tables(self) -> Response:
         """
-        Retrieves a list of all non-system tables and views in the current schema of the IBM DB2 database.
+        Retrieves a list of all non-system tables and views in the current schema of the IBM Db2 database.
 
         Returns:
             Response: A response object containing the list of tables and views, formatted as per the `Response` class.
@@ -207,7 +207,7 @@ class DB2Handler(DatabaseHandler):
 
     def get_columns(self, table_name: Text) -> Response:
         """
-        Retrieves column details for a specified table in the IBM DB2 database.
+        Retrieves column details for a specified table in the IBM Db2 database.
 
         Args:
             table_name (Text): The name of the table for which to retrieve column information.

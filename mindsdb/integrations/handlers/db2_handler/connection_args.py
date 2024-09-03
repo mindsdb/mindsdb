@@ -36,7 +36,7 @@ connection_args = OrderedDict(
         "label": "Port"
     },
     schema={
-        "type": ARG_TYPE.STR, 
+        "type": ARG_TYPE.STR,
         "description": "The database schema to use within the IBM Db2 database.",
         "required": False,
         "label": "Schema"

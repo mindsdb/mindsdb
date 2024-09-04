@@ -1,0 +1,14 @@
+---
+title: Missing required CPU features
+sidebarTitle: Missing required CPU features
+---
+
+Depending on the operating system and its setup, you may encounter this runtime warning when starting MindsDB:
+
+```bash
+RuntimeWarning: Missing required CPU features.
+The following required CPU features were not detected:
+avx2, fma, bmi1, bmi2, lzcnt
+```
+
+The solution is to install the `polars-lts-cpu` package in the environment where MindsDB runs.

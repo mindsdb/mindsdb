@@ -8,7 +8,6 @@ from pydantic import BaseModel
 from mindsdb.integrations.utilities.rag.settings import VectorStoreType, VectorStoreConfig
 from mindsdb.utilities import log
 
-from .pgvector import PGVectorMDB
 
 logger = log.getLogger(__name__)
 
@@ -53,7 +52,7 @@ class VectorStoreFactory:
 
     @staticmethod
     def _load_pgvector_store(embedding_model: Embeddings, settings) -> PGVector:
-
+        from .pgvector import PGVectorMDB
         return PGVectorMDB(
             connection_string=settings.connection_string,
             collection_name=settings.collection_name,

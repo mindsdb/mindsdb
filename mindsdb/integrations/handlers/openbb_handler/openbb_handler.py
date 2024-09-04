@@ -89,7 +89,7 @@ class OpenBBHandler(APIHandler):
         """
         self.is_connected = False
         self.obb.account.login(pat=self.PAT)
-        # self.obb.account.refresh()
+        self.obb.account.refresh()
 
         # Check if PAT utilized is valid
         # if obb.user.profile.active:

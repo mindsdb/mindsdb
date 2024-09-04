@@ -287,7 +287,10 @@ class KnowledgeBaseTable:
         # keep only content
         df = df[[TableField.CONTENT.value]]
 
-        input_col = model_rec.learn_args.get('using', {}).get('question_column')
+        model_using = model_rec.learn_args.get('using', {})
+        input_col = model_using.get('question_column')
+        if input_col is None:
+            input_col = model_using.get('input_column')
 
         if input_col is not None and input_col != TableField.CONTENT.value:
             df = df.rename(columns={TableField.CONTENT.value: input_col})

@@ -219,22 +219,14 @@ class PostgresHandler(DatabaseHandler):
                 with cur.copy(f'copy "{table_name}" ({",".join(columns)}) from STDIN  WITH CSV') as copy:
                     df.to_csv(copy, index=False, header=False)
 
-                response = Response(RESPONSE_TYPE.OK)
-
                 connection.commit()
             except Exception as e:
                 logger.error(f'Error running insert to {table_name} on {self.database}, {e}!')
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_code=0,
-                    error_message=str(e)
-                )
                 connection.rollback()
+                raise e
 
         if need_to_close:
             self.disconnect()
-
-        return response
 
     @profiler.profile()
     def query(self, query: ASTNode) -> Response:

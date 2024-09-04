@@ -1,20 +1,14 @@
-import ast
-import uuid
 
 from langchain_core.embeddings import Embeddings
 from langchain_community.vectorstores import Chroma, PGVector
 from langchain_core.vectorstores import VectorStore
+
 from pydantic import BaseModel
 
-from mindsdb.integrations.libs.vectordatabase_handler import TableField
 from mindsdb.integrations.utilities.rag.settings import VectorStoreType, VectorStoreConfig
 from mindsdb.utilities import log
 
-import pandas as pd
-
-from sqlalchemy import create_engine
-from sqlalchemy.orm import scoped_session, sessionmaker
-from sqlalchemy.exc import DisconnectionError
+from .pgvector import PGVectorMDB
 
 logger = log.getLogger(__name__)
 
@@ -59,68 +53,9 @@ class VectorStoreFactory:
 
     @staticmethod
     def _load_pgvector_store(embedding_model: Embeddings, settings) -> PGVector:
-        # create an empty store if collection_name does not exist otherwise load the existing collection
-        store = PGVector(
+
+        return PGVectorMDB(
             connection_string=settings.connection_string,
             collection_name=settings.collection_name,
             embedding_function=embedding_model
         )
-        return VectorStoreFactory._load_data_into_langchain_pgvector(settings, store)
-
-    @staticmethod
-    def _load_data_into_langchain_pgvector(settings, vectorstore: PGVector) -> PGVector:
-        """
-        Fetches data from the existing pgvector table and loads it into the langchain pgvector vector store
-        :param settings:
-        :param vectorstore:
-        :return:
-        """
-        df = VectorStoreFactory._fetch_data_from_db(settings)
-
-        df[TableField.EMBEDDINGS.value] = df[TableField.EMBEDDINGS.value].apply(ast.literal_eval)
-
-        def apply_f(x):
-            if isinstance(x, str):
-                x = ast.literal_eval(x)
-            if not bool(x):
-                x = {'a': 0}
-            return x
-
-        df[TableField.METADATA.value] = df[TableField.METADATA.value].apply(apply_f)
-
-        metadata = df[TableField.METADATA.value].tolist()
-        embeddings = df[TableField.EMBEDDINGS.value].tolist()
-        texts = df[TableField.CONTENT.value].tolist()
-        ids = [str(uuid.uuid1()) for _ in range(len(df))] \
-            if TableField.ID.value not in df.columns else df[TableField.ID.value].tolist()
-
-        vectorstore.add_embeddings(
-            texts=texts,
-            embeddings=embeddings,
-            metadatas=metadata,
-            ids=ids
-        )
-        return vectorstore
-
-    @staticmethod
-    def _fetch_data_from_db(settings: VectorStoreConfig) -> pd.DataFrame:
-        """
-        Fetches data from the database using the provided connection_string in the settings
-        :param settings:
-        :return:
-        """
-        try:
-            engine = create_engine(settings.connection_string)
-            db = scoped_session(sessionmaker(bind=engine))
-
-            df = pd.read_sql(f"SELECT * FROM {settings.collection_name}", engine)
-
-            return df
-        except DisconnectionError as e:
-            logger.error("Unable to connect to the database. Please check your connection string and try again.")
-            raise e
-        except Exception as e:
-            logger.error(f"An error occurred while fetching data from the database: {e}")
-            raise e
-        finally:
-            db.close()

@@ -46,7 +46,8 @@ jobs:
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         uses: actions/setup-python@v5.1.0
         with:
-          python-version: ${{ vars.CI_PYTHON_VERSION }}
+          # I can't work out how to use vars.CI_PYTHON_VERSION for forks here in a nice way, so we have to hardcode it for forks
+          python-version: ${{ vars.CI_PYTHON_VERSION || '3.10' }}
           cache: pip
           cache-dependency-path: "**/requirements*.txt"
 

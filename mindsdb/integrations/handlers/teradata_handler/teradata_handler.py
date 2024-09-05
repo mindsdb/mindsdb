@@ -157,20 +157,25 @@ class TeradataHandler(DatabaseHandler):
         List all tables in Teradata in the current database
         """
 
-        return self.native_query(
-            str(text(f"""
-            SELECT DataBaseName,
-                   TableName,
-                   TableKind
+        query = f"""
+            SELECT 
+                TableName AS table_name,
+                TableKind AS table_type
             FROM DBC.TablesV
-            WHERE DatabaseName = :database
+            WHERE DatabaseName = '{self.connection_data.get('database') if self.connection_data.get('database') else self.connection_data.get('user')}'
             AND (TableKind = 'T'
                 OR TableKind = 'O'
-                OR TableKind = 'Q')
-            """).bindparams(
-                bindparam('database', value=self.database, type_=String)
-            ).compile(compile_kwargs={"literal_binds": True}))
-        )
+                OR TableKind = 'Q'
+                OR TableKind = 'V')
+        """
+        result = self.native_query(query)
+
+        df = result.data_frame
+        df['table_type'] = df['table_type'].apply(lambda x: 'VIEW' if x == 'V' else 'BASE TABLE')
+
+        result.data_frame = df
+        return result
+
 
     def get_columns(self, table_name: str) -> Response:
         """

@@ -81,6 +81,7 @@ class TeradataHandler(DatabaseHandler):
             self.connection = teradatasql.connect(
                 **config,
             )
+            self.is_connected = True
             return self.connection
         except OperationalError as operational_error:
             logger.error(f'Error connecting to Teradata, {operational_error}!')

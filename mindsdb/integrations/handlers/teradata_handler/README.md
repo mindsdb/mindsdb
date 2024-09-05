@@ -90,3 +90,12 @@ The above examples utilize `teradata_datasource` as the datasource name, which i
         * Incorrect: SELECT * FROM integration.'travel-data'
         * Correct: SELECT * FROM integration.\`travel-data\`
 </Warning>
+
+<Warning>
+`Connection Timeout Error`
+
+* **Symptoms**: Connection to the Teradata database times out or queries take too long to execute.
+* **Checklist**:
+    1. Ensure the Teradata server is running and accessible (if the server has been idle for a long time, it may have shut down automatically).
+
+</Warning>

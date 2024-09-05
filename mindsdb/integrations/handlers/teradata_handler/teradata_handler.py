@@ -77,13 +77,17 @@ class TeradataHandler(DatabaseHandler):
         if 'database' in self.connection_data:
             config['database'] = self.connection_data.get('database')
 
-        connection = teradatasql.connect(
-            **config,
-        )
-
-        self.is_connected = True
-        self.connection = connection
-        return self.connection
+        try:
+            self.connection = teradatasql.connect(
+                **config,
+            )
+            return self.connection
+        except OperationalError as operational_error:
+            logger.error(f'Error connecting to Teradata, {operational_error}!')
+            raise
+        except Exception as unknown_error:
+            logger.error(f'Unknown error connecting to Teradata, {unknown_error}!')
+            raise
 
     def disconnect(self) -> None:
         """
@@ -111,9 +115,12 @@ class TeradataHandler(DatabaseHandler):
             with connection.cursor() as cur:
                 cur.execute('SELECT 1 FROM (SELECT 1 AS "dual") AS "dual"')
             response.success = True
-        except teradatasql.Error as e:
-            logger.error(f'Error connecting to Teradata {self.host}, {e}!')
-            response.error_message = e
+        except (OperationalError, ValueError) as known_error:
+            logger.error(f'Connection check to Teradata failed, {known_error}!')
+            response.error_message = str(known_error)
+        except Exception as unknown_error:
+            logger.error(f'Connection check to Teradata failed due to an unknown error, {unknown_error}!')
+            response.error_message = str(unknown_error)
 
         if response.success is True and need_to_close:
             self.disconnect()
@@ -150,12 +157,18 @@ class TeradataHandler(DatabaseHandler):
                         )
                     )
                 connection.commit()
-            except Exception as e:
-                logger.error(f'Error running query: {query} on {self.host}!')
+            except OperationalError as operational_error:
+                logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
-                    error_code=0,
-                    error_message=str(e)
+                    error_message=str(operational_error)
+                )
+                connection.rollback()
+            except Exception as unknown_error:
+                logger.error(f'Unknown error running query: {query} on {self.connection_data["database"]}!')
+                response = Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=str(unknown_error)
                 )
                 connection.rollback()
 

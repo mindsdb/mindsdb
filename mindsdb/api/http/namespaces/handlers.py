@@ -52,7 +52,7 @@ class HandlerIcon(Resource):
         try:
             handler_meta = ca.integration_controller.get_handlers_metadata().get(handler_name)
             if handler_meta is None:
-                return abort(404)
+                return http_error(HTTPStatus.NOT_FOUND, 'Icon not found', f'Icon for {handler_name} not found')
             icon_name = handler_meta['icon']['name']
             handler_folder = handler_meta['import']['folder']
             mindsdb_path = Path(importlib.util.find_spec('mindsdb').origin).parent

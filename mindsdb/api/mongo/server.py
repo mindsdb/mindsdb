@@ -261,7 +261,7 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
         make_ssl_cert(CERT_PATH)
         atexit.register(lambda: os.remove(CERT_PATH))
 
-        ssl_context = ssl.SSLContext()
+        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         ssl_context.load_cert_chain(CERT_PATH)
         ssl_socket = ssl_context.wrap_socket(
             self.request,

@@ -1,62 +1,45 @@
-import unittest
-import elasticsearch
-from unittest.mock import patch, MagicMock
 from collections import OrderedDict
+import unittest
+from unittest.mock import patch, MagicMock
 
-from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response,
-    HandlerStatusResponse as StatusResponse,
-)
+import elasticsearch
+
+from base_handler_test import BaseDatabaseHandlerTest
 from mindsdb.integrations.handlers.elasticsearch_handler.elasticsearch_handler import ElasticsearchHandler
+from mindsdb.integrations.libs.response import HandlerResponse as Response
 
 
-class TestElasticsearchHandler(unittest.TestCase):
+class TestElasticsearchHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
-    dummy_connection_data = OrderedDict(
-        hosts='http://localhost:9200',
-        user='example_user',
-        password='example_pass'
-    )
+    @property
+    def dummy_connection_data(self):
+        return OrderedDict(
+            hosts='http://localhost:9200',
+            user='example_user',
+            password='example_pass'
+        )
 
-    def setUp(self):
-        self.patcher = patch('mindsdb.integrations.handlers.elasticsearch_handler.elasticsearch_handler.Elasticsearch')
-        self.mock_connect = self.patcher.start()
-        self.handler = ElasticsearchHandler('elasticsearch', connection_data=self.dummy_connection_data)
+    @property
+    def err_to_raise_on_connect_failure(self):
+        return elasticsearch.exceptions.AuthenticationException("Connection Failed", 403)
 
-    def tearDown(self):
-        self.patcher.stop()
-
-    def test_connect_success(self):
+    @property
+    def get_tables_query(self):
+        return """
+            SHOW TABLES
         """
-        Test if `connect` method successfully establishes a connection and sets `is_connected` flag to True.
-        Also, verifies that elasticsearch.Elasticsearch is called exactly once.
-        """
-        self.mock_connect.return_value = MagicMock()
-        connection = self.handler.connect()
-        self.assertIsNotNone(connection)
-        self.assertTrue(self.handler.is_connected)
-        self.mock_connect.assert_called_once()
 
-    def test_connect_failure(self):
+    @property
+    def get_columns_query(self):
+        return f"""
+            DESCRIBE {self.mock_table}
         """
-        Ensures that the connect method correctly handles a connection failure by raising a elasticsearch.exceptions.AuthenticationException and setting is_connected to False.
-        There can be other exceptions that can be raised by the connect method such as elasticsearch.exceptions.ConnectionError, etc.
-        """
-        self.mock_connect.side_effect = elasticsearch.exceptions.AuthenticationException("Connection Failed", 403)
 
-        with self.assertRaises(elasticsearch.exceptions.AuthenticationException):
-            self.handler.connect()
-        self.assertFalse(self.handler.is_connected)
+    def create_handler(self):
+        return ElasticsearchHandler('elasticsearch', connection_data=self.dummy_connection_data)
 
-    def test_check_connection(self):
-        """
-        Verifies that the `check_connection` method returns a StatusResponse object and accurately reflects the connection status.
-        """
-        self.mock_connect.return_value = MagicMock()
-        connected = self.handler.check_connection()
-        self.assertTrue(connected)
-        assert isinstance(connected, StatusResponse)
-        self.assertFalse(connected.error_message)
+    def create_patcher(self):
+        return patch('mindsdb.integrations.handlers.elasticsearch_handler.elasticsearch_handler.Elasticsearch')
 
     def test_native_query(self):
         """
@@ -81,35 +64,6 @@ class TestElasticsearchHandler(unittest.TestCase):
         mock_conn.sql.query.assert_called_once_with(body={'query': query_str})
         assert isinstance(data, Response)
         self.assertFalse(data.error_code)
-
-    def test_get_tables(self):
-        """
-        Tests the `get_tables` method to confirm it correctly calls `native_query` with the appropriate SQL commands.
-        """
-        self.handler.native_query = MagicMock()
-
-        self.handler.get_tables()
-
-        expected_query = """
-            SHOW TABLES
-        """
-
-        self.handler.native_query.assert_called_once_with(expected_query)
-
-    def test_get_columns(self):
-        """
-        Checks if the `get_columns` method correctly constructs the SQL query and if it calls `native_query` with the correct query.
-        """
-        self.handler.native_query = MagicMock()
-
-        table_name = 'mock_table'
-        self.handler.get_columns(table_name)
-
-        expected_query = f"""
-            DESCRIBE {table_name}
-        """
-
-        self.handler.native_query.assert_called_once_with(expected_query)
 
 
 if __name__ == '__main__':

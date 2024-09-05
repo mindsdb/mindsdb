@@ -143,7 +143,7 @@ class Packet:
         ret = []
         body_len = len(body_string)
         mod = body_len % MAX_PACKET_SIZE
-        num_packets = body_len / MAX_PACKET_SIZE + (1 if mod > 0 else 0)
+        num_packets = body_len // MAX_PACKET_SIZE + (1 if mod > 0 else 0)
 
         for i in range(num_packets):
             left_limit = i * MAX_PACKET_SIZE

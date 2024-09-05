@@ -9,6 +9,7 @@ Follow the steps below to upload a file to MindsDB.
 Note that the trailing whitespaces on column names are erased upon uploading a file to MindsDB.
 </Note>
 
+
 1. Access the MindsDB Editor.
 2. Navigate to `Add data` section by clicking the `Add data` button located in
    the top right corner.
@@ -31,6 +32,20 @@ Note that the trailing whitespaces on column names are erased upon uploading a f
    <p align="center">
      <img src="/assets/sql/add-file-to-mindsdb-cloud-2.png" />
    </p>
+
+### Configuring URL File Upload for Specific Domains
+
+The File Uploader can be configured to interact only with specific domains by using the `file_upload_domains` setting in the `config.json` file. 
+This feature allows you to restrict the handler to upoad and process files only from the domains you specify, enhancing security and control over web interactions.
+
+To configure this, simply list the allowed domains under the `file_upload_domains` key in `config.json`. For example:
+
+```json
+"file_upload_domains": [
+   "s3.amazonaws.com",
+    "drive.google.com"
+]
+```
 
 ## What's Next?
 

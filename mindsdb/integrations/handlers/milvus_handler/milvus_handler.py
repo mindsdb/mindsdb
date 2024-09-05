@@ -94,19 +94,13 @@ class MilvusHandler(VectorStoreHandler):
         )
         return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=collections_name)
 
-    def drop_table(self, table_name: str, if_exists=True) -> HandlerResponse:
+    def drop_table(self, table_name: str, if_exists=True):
         """Delete a collection from the Milvus database."""
         try:
             utility.drop_collection(table_name)
         except Exception as e:
-            if if_exists:
-                return Response(resp_type=RESPONSE_TYPE.OK)
-            else:
-                return Response(
-                    resp_type=RESPONSE_TYPE.ERROR,
-                    error_message=f"Error dropping table '{table_name}': {e}",
-                )
-        return Response(resp_type=RESPONSE_TYPE.OK)
+            if not if_exists:
+                raise Exception(f"Error dropping table '{table_name}': {e}")
 
     def _get_milvus_operator(self, operator: FilterOperator) -> str:
         mapping = {
@@ -170,16 +164,10 @@ class MilvusHandler(VectorStoreHandler):
         conditions: List[FilterCondition] = None,
         offset: int = None,
         limit: int = None,
-    ) -> HandlerResponse:
+    ):
         # Load collection table
         collection = Collection(table_name)
-        try:
-            collection.load()
-        except Exception as e:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Error loading collection {table_name}: {e}",
-            )
+        collection.load()
 
         # Find vector filter in conditions
         vector_filter = (
@@ -205,10 +193,8 @@ class MilvusHandler(VectorStoreHandler):
         # NOTE: According to api sum of offset and limit should be less than 16384.
         api_limit = 16384
         if limit is not None and offset is not None and limit + offset >= api_limit:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Sum of limit and offset should be less than {api_limit}",
-            )
+            raise Exception(f"Sum of limit and offset should be less than {api_limit}")
+
         if limit is not None:
             search_arguments["limit"] = limit
         else:
@@ -237,7 +223,7 @@ class MilvusHandler(VectorStoreHandler):
                             data[col].append(hit.entity.get(col))
                         else:
                             data[TableField.DISTANCE.value].append(hit.distance)
-            return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(data))
+            return pd.DataFrame(data)
         else:
             # Basic search
             if not search_arguments["expr"]:
@@ -248,9 +234,9 @@ class MilvusHandler(VectorStoreHandler):
                 TableField.EMBEDDINGS.value,
             ] if not columns else columns
             results = collection.query(**search_arguments)
-            return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame.from_records(results))
+            return pd.DataFrame.from_records(results)
 
-    def create_table(self, table_name: str, if_not_exists=True) -> HandlerResponse:
+    def create_table(self, table_name: str, if_not_exists=True):
         """Create a collection with default parameters in the Milvus database as described in documentation."""
         id = FieldSchema(
             name=TableField.ID.value,
@@ -276,64 +262,40 @@ class MilvusHandler(VectorStoreHandler):
             enable_dynamic_field=self._create_table_params["create_dynamic_field"]
         )
         collection_name = table_name
-        collection = None
-        try:
-            collection = Collection(
-                name=collection_name,
-                schema=schema,
-                using=self._create_table_params["create_alias"],
-            )
-        except Exception as e:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Unable to create collection `{table_name}`: {e}"
-            )
-        try:
-            collection.create_index(
-                field_name=TableField.EMBEDDINGS.value,
-                index_params={
-                    "index_type": self._create_table_params["create_index_type"],
-                    "metric_type": self._create_table_params["create_index_metric_type"],
-                    "params": self._create_table_params["create_index_params"]
-                }
-            )
-        except Exception as e:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Unable to create index on collection `{table_name}`: {e}"
-            )
-        return Response(resp_type=RESPONSE_TYPE.OK)
+
+        collection = Collection(
+            name=collection_name,
+            schema=schema,
+            using=self._create_table_params["create_alias"],
+        )
+
+        collection.create_index(
+            field_name=TableField.EMBEDDINGS.value,
+            index_params={
+                "index_type": self._create_table_params["create_index_type"],
+                "metric_type": self._create_table_params["create_index_metric_type"],
+                "params": self._create_table_params["create_index_params"]
+            }
+        )
 
     def insert(
         self, table_name: str, data: pd.DataFrame, columns: List[str] = None
-    ) -> HandlerResponse:
+    ):
         """Insert data into the Milvus collection."""
-        collection = None
-        try:
-            collection = Collection(table_name)
-        except Exception as e:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Unable to fetch collection `{table_name}`: {e}"
-            )
-        try:
-            data = data[columns]
-            if TableField.METADATA.value in data.columns:
-                rows = data[TableField.METADATA.value].to_list()
-                data = pd.concat([data, pd.DataFrame.from_records(rows)], axis=1)
-                data.drop(TableField.METADATA.value, axis=1, inplace=True)
-            collection.insert(data.to_dict(orient="records"))
-            collection.flush()
-        except Exception as e:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Unable to insert data into collection `{table_name}`: {e}"
-            )
-        return Response(resp_type=RESPONSE_TYPE.OK)
+
+        collection = Collection(table_name)
+
+        data = data[columns]
+        if TableField.METADATA.value in data.columns:
+            rows = data[TableField.METADATA.value].to_list()
+            data = pd.concat([data, pd.DataFrame.from_records(rows)], axis=1)
+            data.drop(TableField.METADATA.value, axis=1, inplace=True)
+        collection.insert(data.to_dict(orient="records"))
+        collection.flush()
 
     def delete(
         self, table_name: str, conditions: List[FilterCondition] = None
-    ) -> HandlerResponse:
+    ):
         # delete only supports IN operator
         for condition in conditions:
             if condition.op in [FilterOperator.EQUAL, FilterOperator.IN]:
@@ -342,26 +304,12 @@ class MilvusHandler(VectorStoreHandler):
                     condition.value = [condition.value]
         filters = self._translate_conditions(conditions, exclude_id=False)
         if not filters:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message="Some filters are required, use DROP TABLE to delete everything",
-            )
-        try:
-            collection = Collection(table_name)
-        except Exception as e:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Error retrieving collection `{table_name}`: {e}",
-            )
-        try:
-            collection.delete(filters)
-            collection.flush()
-        except Exception as e:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Error deleting from collection `{table_name}`: {e}",
-            )
-        return Response(resp_type=RESPONSE_TYPE.OK)
+            raise Exception("Some filters are required, use DROP TABLE to delete everything")
+
+        collection = Collection(table_name)
+
+        collection.delete(filters)
+        collection.flush()
 
     def get_columns(self, table_name: str) -> HandlerResponse:
         """Get columns in a Milvus collection"""

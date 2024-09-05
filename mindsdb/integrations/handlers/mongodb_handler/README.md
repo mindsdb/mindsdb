@@ -3,40 +3,20 @@ title: MongoDB
 sidebarTitle: MongoDB
 ---
 
-This is the implementation of the MongoDB data handler for MindsDB.
-
-[MongoDB](https://www.mongodb.com/) is an open-source cross-platform document-oriented database program. It is classified as a NoSQL database.
+This documentation describes the integration of MindsDB with [MongoDB](https://www.mongodb.com/company/what-is-mongodb), a document database with the scalability and flexibility that you want with the querying and indexing that you need.
 
 ## Prerequisites
 
 Before proceeding, ensure the following prerequisites are met:
 
 1. Install MindsDB locally via [Docker](/setup/self-hosted/docker) or [Docker Desktop](/setup/self-hosted/docker-desktop).
-2. To connect MongoDB to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
-3. Install or ensure access to MongoDB.
 
-## Implementation
+## Connection
 
-This handler is implemented using `pymongo`, a Python library that contains tools for working with the MongoDB database.
-
-The required arguments to establish a connection are as follows:
-
-* `host` is the MongoDB connection string.
-
-Optionally, you can connect using these parameters:
-
-* `username` is the username associated with the database.
-* `password` is the password to authenticate your access.
-* `host` is the host name or IP address.
-* `port` is the port through which TCP/IP connection is to be made.
-* `database` is the database name to be connected. Note, this will be required if the connection string is missing the `/database` path.
-
-## Usage
-
-In order to make use of this handler and connect to the MongoDB database in MindsDB, the following syntax can be used:
+Establish a connection to MongoDB from MindsDB by executing the following SQL command:
 
 ```sql
-CREATE DATABASE mongo_datasource
+CREATE DATABASE mongodb_datasource
 WITH
   ENGINE = 'mongodb',
   PARAMETERS = {
@@ -44,12 +24,34 @@ WITH
   };
 ```
 
-You can use this established connection to query your table as follows:
+Required connection parameters include the following:
+
+* `host`: The host name, IP address or connection string of the MongoDB server.
+
+Optional connection parameters include the following:
+
+* `username`: The username associated with the database.
+* `password`: The password to authenticate your access.
+* `port`: The port through which TCP/IP connection is to be made.
+* `database`: The database name to be connected. This will be required if the connection string is missing the `/database` path.
+
+## Usage
+
+Retrieve data from a specified collection by providing the integration name and collection name:
 
 ```sql
 SELECT *
-FROM mongo_datasource.demo;
+FROM mongodb_datasource.my_collection
+LIMIT 10;
 ```
+
+<Note>
+The above examples utilize `mongodb_datasource` as the datasource name, which is defined in the `CREATE DATABASE` command.
+</Note>
+
+<Tip>
+At the moment, this integration only supports `SELECT` and `UPDATE` queries.
+</Tip>
 
 <Warning>
 **For this connection, we strongly suggest using the Mongo API instead of the SQL API.**
@@ -81,3 +83,36 @@ mindsdb> use mongo_datasource
 mongo_datasource> db.demo.find({}).limit(3)
 ```
 </Tip>
+
+## Troubleshooting Guide
+
+<Warning>
+`Database Connection Error`
+
+* **Symptoms**: Failure to connect MindsDB with the MongoDB server.
+* **Checklist**:
+    1. Make sure the MongoDB server is active.
+    2. Confirm that host and credentials provided are correct. Try a direct MongoDB connection using a client like MongoDB Compass.
+    3. Ensure a stable network between MindsDB and MongoDB. For example, if you are using MongoDB Atlas, ensure that the IP address of the machine running MindsDB is whitelisted.
+</Warning>
+
+<Warning>
+`Unknown statement`
+
+* **Symptoms**: Errors related to the issuing of unsupported queries to MongoDB via the integration.
+* **Checklist**:
+    1. Ensure the query is a `SELECT` or `UPDATE` query.
+
+</Warning>
+
+<Warning>
+`SQL statement cannot be parsed by mindsdb_sql`
+
+* **Symptoms**: SQL queries failing or not recognizing collection names containing special characters.
+* **Checklist**:
+    1. Ensure table names with special characters are enclosed in backticks.
+    2. Examples:
+        * Incorrect: SELECT * FROM integration.travel-data
+        * Incorrect: SELECT * FROM integration.'travel-data'
+        * Correct: SELECT * FROM integration.\`travel-data\`
+</Warning>

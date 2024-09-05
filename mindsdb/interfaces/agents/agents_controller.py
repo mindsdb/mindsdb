@@ -1,7 +1,9 @@
+import datetime
 from typing import Dict, Iterator, List, Union
 
 from langchain_core.tools import BaseTool
 from sqlalchemy.orm.attributes import flag_modified
+from sqlalchemy import null
 import pandas as pd
 
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
@@ -83,7 +85,8 @@ class AgentsController:
         agent = db.Agents.query.filter(
             db.Agents.name == agent_name,
             db.Agents.project_id == project.id,
-            db.Agents.company_id == ctx.company_id
+            db.Agents.company_id == ctx.company_id,
+            db.Agents.deleted_at == null()
         ).first()
         return agent
 
@@ -103,7 +106,8 @@ class AgentsController:
         agent = db.Agents.query.filter(
             db.Agents.id == id,
             db.Agents.project_id == project.id,
-            db.Agents.company_id == ctx.company_id
+            db.Agents.company_id == ctx.company_id,
+            db.Agents.deleted_at == null()
         ).first()
         return agent
 
@@ -119,7 +123,8 @@ class AgentsController:
         """
 
         all_agents = db.Agents.query.filter(
-            db.Agents.company_id == ctx.company_id
+            db.Agents.company_id == ctx.company_id,
+            db.Agents.deleted_at == null()
         )
 
         if project_name is not None:
@@ -243,7 +248,7 @@ class AgentsController:
             if existing_skill is None:
                 raise ValueError(f'Skill with name does not exist: {skill}')
             new_skills.append(existing_skill)
-        existing_agent.skills += new_skills
+        existing_agent.skills = list(set(existing_agent.skills + new_skills))
 
         removed_skills = []
         for skill in existing_agent.skills:
@@ -281,15 +286,13 @@ class AgentsController:
         agent = self.get_agent(agent_name, project_name)
         if agent is None:
             raise ValueError(f'Agent with name does not exist: {agent_name}')
-        db.session.delete(agent)
+        agent.deleted_at = datetime.datetime.now()
         db.session.commit()
 
     def get_completion(
             self,
             agent: db.Agents,
             messages: List[Dict[str, str]],
-            trace_id: str = None,
-            observation_id: str = None,
             project_name: str = 'mindsdb',
             tools: List[BaseTool] = None,
             stream: bool = False) -> Union[Iterator[object], pd.DataFrame]:
@@ -315,8 +318,6 @@ class AgentsController:
             return self._get_completion_stream(
                 agent,
                 messages,
-                trace_id=trace_id,
-                observation_id=observation_id,
                 project_name=project_name,
                 tools=tools
             )
@@ -329,14 +330,12 @@ class AgentsController:
             db.session.commit()
 
         lang_agent = LangchainAgent(agent, model)
-        return lang_agent.get_completion(messages, trace_id, observation_id)
+        return lang_agent.get_completion(messages)
 
     def _get_completion_stream(
             self,
             agent: db.Agents,
             messages: List[Dict[str, str]],
-            trace_id: str = None,
-            observation_id: str = None,
             project_name: str = 'mindsdb',
             tools: List[BaseTool] = None) -> Iterator[object]:
         '''
@@ -367,4 +366,4 @@ class AgentsController:
             db.session.commit()
 
         lang_agent = LangchainAgent(agent, model=model)
-        return lang_agent.get_completion(messages, trace_id, observation_id, stream=True)
+        return lang_agent.get_completion(messages, stream=True)

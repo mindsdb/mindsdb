@@ -62,7 +62,7 @@ class LiteLLMConfig(BaseLLMConfig):
     top_k: Optional[int]
     temperature: Optional[float]
     custom_llm_provider: Optional[str]
-    llm_model_kwargs: Optional[Dict[str, Any]]
+    model_kwargs: Optional[Dict[str, Any]]
 
 
 # See https://api.python.langchain.com/en/latest/chat_models/langchain_community.chat_models.ollama.ChatOllama.html
@@ -82,6 +82,23 @@ class OllamaConfig(BaseLLMConfig):
     repeat_penalty: Optional[float]
     stop: Optional[List[str]]
     template: Optional[str]
+
+
+class NvidiaNIMConfig(BaseLLMConfig):
+    base_url: str
+    model: str
+    temperature: Optional[float]
+    top_p: Optional[float]
+    timeout: Optional[int]
+    format: Optional[str]
+    headers: Optional[Dict]
+    num_predict: Optional[int]
+    num_ctx: Optional[int]
+    num_gpu: Optional[int]
+    repeat_penalty: Optional[float]
+    stop: Optional[List[str]]
+    template: Optional[str]
+    nvidia_api_key: Optional[str]
 
 
 class MindsdbConfig(BaseLLMConfig):

@@ -55,7 +55,7 @@ jobs:
         owner: mindsdb
         repo: INTERNAL-mindsdb-build-deploy-to-kubernetes
         github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}
-        workflow_file_name: ${{ inputs.prod == 'true' && 'deploy-prod.yml' || 'deploy-dev.yml' }}
+        workflow_file_name: ${{ inputs.prod && 'deploy-prod.yml' || 'deploy-dev.yml' }}
         ref: main
         client_payload: '{"image-tag-prefix": "${{ inputs.image-tag }}", "deploy-env": "${{ matrix.deploy-env }}"}'
     - name: Notify of deployment finish

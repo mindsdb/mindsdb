@@ -20,6 +20,20 @@
   "api": {
     "baseUrl": "http://127.0.0.1:47334"
   },
+  "topbarLinks": [
+    {
+      "name": "Blog",
+      "url": "https://mindsdb.com/blog"
+    },
+    {
+      "name": "Events",
+      "url": "https://mindsdb.com/events"
+    },
+    {
+      "name": "News",
+      "url": "https://mindsdb.com/newsroom"
+    }
+  ],
   "topbarCtaButton": {
     "name": "Get Started",
     "url": "https://github.com/mindsdb/mindsdb"
@@ -174,6 +188,7 @@
     {"source": "/sql/drop/database","destination": "/mindsdb_sql/sql/drop/database"},
     {"source": "/sql/show-databases","destination": "/mindsdb_sql/sql/show-databases"},
     {"source": "/sql/api/use","destination": "/mindsdb_sql/sql/api/use"},
+    {"source": "/sql/create/file","destination": "/mindsdb_sql/sql/create/file"},
     {"source": "/sql/list-ml-handlers","destination": "/mindsdb_sql/sql/list-ml-handlers"},
     {"source": "/sql/create/ml-engine","destination": "/mindsdb_sql/sql/create/ml-engine"},
     {"source": "/sql/drop/ml-engine","destination": "/mindsdb_sql/sql/drop/ml-engine"},
@@ -325,7 +340,7 @@
           "group": "AI-Powered Data Retrieval",
           "pages": [
             "use-cases/ai-powered_data_retrieval/overview",
-            "use-cases/ai-powered_data_retrieval/semantic_search",
+            "use-cases/ai-powered_data_retrieval/embedding-model",
             "use-cases/ai-powered_data_retrieval/recommenders"
           ]
         },
@@ -484,6 +499,7 @@
           "group": "AI Agents",
           "pages": [
             "mindsdb_sql/agents/agent",
+            "mindsdb_sql/agents/chatbot",
             "mindsdb_sql/agents/knowledge-bases"
           ]
         },
@@ -595,7 +611,12 @@
             "rest/agents/list-skills",
             "rest/agents/get-skill",
             "rest/agents/update-skill",
-            "rest/agents/delete-skill"
+            "rest/agents/delete-skill",
+            "rest/agents/create-chatbot",
+            "rest/agents/list-chatbots",
+            "rest/agents/get-chatbot",
+            "rest/agents/update-chatbot",
+            "rest/agents/delete-chatbot"
           ]
         }
       ]
@@ -898,6 +919,7 @@
             "integrations/app-integrations/slack",
             "integrations/app-integrations/strapi",
             "integrations/app-integrations/stripe",
+            "integrations/app-integrations/symbl",
             "integrations/app-integrations/twitter",
             "integrations/app-integrations/web-crawler",
             "integrations/app-integrations/youtube"
@@ -1093,7 +1115,8 @@
         "faqs/benefits",
         "faqs/persist-predictions",
         "faqs/mindsdb-with-php",
-        "faqs/disposable-email-doman-and-openai"
+        "faqs/disposable-email-doman-and-openai",
+        "faqs/missing-required-cpu-features"
       ]
     }
   ],

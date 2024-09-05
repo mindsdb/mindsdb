@@ -32,7 +32,6 @@ class TeradataHandler(DatabaseHandler):
         super().__init__(name)
         self.connection_data = connection_data
         self.kwargs = kwargs
-        self.renderer = SqlalchemyRender(teradata_dialect.TeradataDialect)
 
         self.connection = None
         self.is_connected = False
@@ -149,7 +148,8 @@ class TeradataHandler(DatabaseHandler):
         Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
         """
 
-        query_str = self.renderer.get_string(query, with_failback=True)
+        renderer = SqlalchemyRender(teradata_dialect.TeradataDialect)
+        query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 
     def get_tables(self) -> Response:

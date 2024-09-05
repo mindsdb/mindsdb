@@ -40,7 +40,7 @@ class PGVectorMDB(PGVector):
 
         self.EmbeddingStore = _generated_sa_tables[collection_name]
 
-    def _query_collection(
+    def __query_collection(
         self,
         embedding: List[float],
         k: int = 4,
@@ -63,6 +63,13 @@ class PGVectorMDB(PGVector):
                 rec.cmetadata = {0: 0}
 
         return results
+
+    # aliases for different langchain versions
+    def _PGVector__query_collection(self, *args, **kwargs):
+        return self.__query_collection(*args, **kwargs)
+
+    def _query_collection(self, *args, **kwargs):
+        return self.__query_collection(*args, **kwargs)
 
     def create_collection(self):
         raise RuntimeError('Forbidden')

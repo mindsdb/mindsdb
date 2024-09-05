@@ -184,15 +184,15 @@ class TeradataHandler(DatabaseHandler):
         :return: returns the columns in the table
         """
 
-        return self.native_query(
-            str(text(f"""
+        if not table_name or not isinstance(table_name, str):
+            raise ValueError("Invalid table name provided.")
+        
+        query = f"""
             SELECT ColumnName AS "Field",
                    ColumnType AS "Type"
             FROM DBC.ColumnsV
-            WHERE DatabaseName (NOT CASESPECIFIC) = :database
-            AND TableName (NOT CASESPECIFIC) = :table_name
-            """).bindparams(
-                bindparam('database', value=self.database, type_=String),
-                bindparam('table_name', value=table_name, type_=String)
-            ).compile(compile_kwargs={"literal_binds": True}))
-        )
+            WHERE DatabaseName = '{self.connection_data.get('database') if self.connection_data.get('database') else self.connection_data.get('user')}'
+            AND TableName = '{table_name}'
+        """
+
+        return self.native_query(query)

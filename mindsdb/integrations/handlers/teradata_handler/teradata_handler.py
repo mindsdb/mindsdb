@@ -1,15 +1,11 @@
-from pandas import DataFrame
-from sqlalchemy import String
-
-from sqlalchemy.sql import text, bindparam
-
-import teradatasql
-import teradatasqlalchemy.dialect as teradata_dialect
+from typing import Any, Dict, Text
 
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-
-from mindsdb.utilities import log
+from pandas import DataFrame
+import teradatasql
+from teradatasql import OperationalError
+import teradatasqlalchemy.dialect as teradata_dialect
 
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
@@ -17,18 +13,28 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
+from mindsdb.utilities import log
 
 
 logger = log.getLogger(__name__)
 
+
 class TeradataHandler(DatabaseHandler):
     """
-    This handler handles connection and execution of the Teradata statements.
+    This handler handles the connection and execution of SQL statements on Teradata.
     """
 
     name = 'teradata'
 
-    def __init__(self, name: str, connection_data: dict, **kwargs):
+    def __init__(self, name: Text, connection_data: Dict, **kwargs: Any) -> None:
+        """
+        Initializes the handler.
+
+        Args:
+            name (Text): The name of the handler instance.
+            connection_data (Dict): The connection data required to connect to the Teradata database.
+            kwargs: Arbitrary keyword arguments.
+        """
         super().__init__(name)
         self.connection_data = connection_data
         self.kwargs = kwargs
@@ -36,15 +42,24 @@ class TeradataHandler(DatabaseHandler):
         self.connection = None
         self.is_connected = False
 
-    def __del__(self):
+    def __del__(self) -> None:
+        """
+        Closes the connection when the handler instance is deleted.
+        """
         if self.is_connected is True:
             self.disconnect()
 
-    def connect(self):
+    def connect(self) -> teradatasql.TeradataConnection:
         """
-        Handles the connection to a Teradata database insance.
-        """
+        Establishes a connection to the Teradata database.
 
+        Raises:
+            ValueError: If the expected connection parameters are not provided.
+            teradatasql.OperationalError: If an error occurs while connecting to the Teradata database.
+
+        Returns:
+            teradatasql.TeradataConnection: A connection object to the Teradata database.
+        """
         if self.is_connected is True:
             return self.connection
         
@@ -70,21 +85,24 @@ class TeradataHandler(DatabaseHandler):
         self.connection = connection
         return self.connection
 
-    def disconnect(self):
+    def disconnect(self) -> None:
         """
-        Disconnects from the Teradata database
+        Closes the connection to the Teradata database if it's currently open.
         """
+        if self.is_connected is False:
+            return
 
-        if self.is_connected is True:
-            self.connection.close()
-            self.is_connected = False
+        self.connection.close()
+        self.is_connected = False
+        return
 
     def check_connection(self) -> StatusResponse:
         """
-        Check the connection of the Teradata database
-        :return: success status and error message if error occurs
-        """
+        Checks the status of the connection to the Teradata database.
 
+        Returns:
+            StatusResponse: An object containing the success status and an error message if an error occurs.
+        """
         response = StatusResponse(False)
         need_to_close = self.is_connected is False
 
@@ -104,13 +122,16 @@ class TeradataHandler(DatabaseHandler):
 
         return response
 
-    def native_query(self, query: str) -> Response:
+    def native_query(self, query: Text) -> Response:
         """
-        Receive SQL query and runs it
-        :param query: The SQL query to run in Teradata
-        :return: returns the records from the current recordset
-        """
+        Executes a native SQL query on the Teradata database and returns the result.
 
+        Args:
+            query (Text): The SQL query to be executed.
+
+        Returns:
+            Response: A response object containing the result of the query or an error message.
+        """
         need_to_close = self.is_connected is False
 
         connection = self.connect()
@@ -145,18 +166,25 @@ class TeradataHandler(DatabaseHandler):
 
     def query(self, query: ASTNode) -> Response:
         """
-        Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
-        """
+        Executes a SQL query represented by an ASTNode on the Teradata database and retrieves the data (if any).
 
+        Args:
+            query (ASTNode): An ASTNode representing the SQL query to be executed.
+
+        Returns:
+            Response: The response from the `native_query` method, containing the result of the SQL query execution.
+        """
         renderer = SqlalchemyRender(teradata_dialect.TeradataDialect)
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 
     def get_tables(self) -> Response:
         """
-        List all tables in Teradata in the current database
-        """
+        Retrieves a list of all non-system tables in the Teradata database.
 
+        Returns:
+            Response: A response object containing a list of tables in the Teradata database.
+        """
         query = f"""
             SELECT 
                 TableName AS table_name,
@@ -176,14 +204,19 @@ class TeradataHandler(DatabaseHandler):
         result.data_frame = df
         return result
 
-
-    def get_columns(self, table_name: str) -> Response:
+    def get_columns(self, table_name: Text) -> Response:
         """
-        List all columns in a table in Teradata in the current schema
-        :param table_name: the table name for which to list the columns
-        :return: returns the columns in the table
-        """
+        Retrieves column details for a specified table in the Teradata database.
 
+        Args:
+            table_name (Text): The name of the table for which to retrieve column information.
+
+        Raises:
+            ValueError: If the 'table_name' is not a valid string.
+
+        Returns:
+            Response: A response object containing the column details.
+        """
         if not table_name or not isinstance(table_name, str):
             raise ValueError("Invalid table name provided.")
         

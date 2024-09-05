@@ -31,10 +31,8 @@ class TeradataHandler(DatabaseHandler):
     def __init__(self, name: str, connection_data: dict, **kwargs):
         super().__init__(name)
         self.connection_data = connection_data
+        self.kwargs = kwargs
         self.renderer = SqlalchemyRender(teradata_dialect.TeradataDialect)
-
-        self.host = self.connection_data.get('host')
-        self.database = self.connection_data.get('database')
 
         self.connection = None
         self.is_connected = False
@@ -50,9 +48,23 @@ class TeradataHandler(DatabaseHandler):
 
         if self.is_connected is True:
             return self.connection
+        
+        # Mandatory connection parameters.
+        if not all(key in self.connection_data for key in ['host', 'user', 'password']):
+            raise ValueError('Required parameters (host, user, password) must be provided.')
+
+        config = {
+            'host': self.connection_data.get('host'),
+            'user': self.connection_data.get('user'),
+            'password': self.connection_data.get('password')
+        }
+
+        # Optional connection parameters.
+        if 'database' in self.connection_data:
+            config['database'] = self.connection_data.get('database')
 
         connection = teradatasql.connect(
-            **self.connection_data
+            **config,
         )
 
         self.is_connected = True

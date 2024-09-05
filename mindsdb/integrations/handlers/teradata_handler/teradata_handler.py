@@ -6,7 +6,6 @@ from sqlalchemy.sql import text, bindparam
 import teradatasql
 import teradatasqlalchemy.dialect as teradata_dialect
 
-from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
@@ -31,9 +30,6 @@ class TeradataHandler(DatabaseHandler):
 
     def __init__(self, name: str, connection_data: dict, **kwargs):
         super().__init__(name)
-
-        self.dialect = 'teradata'
-        self.parser = parse_sql
         self.connection_data = connection_data
         self.renderer = SqlalchemyRender(teradata_dialect.TeradataDialect)
 

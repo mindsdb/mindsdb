@@ -88,45 +88,33 @@ class XataHandler(VectorStoreHandler):
 
     def create_table(self, table_name: str, if_not_exists=True) -> HandlerResponse:
         """Create a table with the given name in the Xata database."""
-        try:
-            resp = self._client.table().create(table_name)
-            if not resp.is_success():
-                raise Exception(f"Unable to create table {table_name}: {resp['message']}")
-            resp = self._client.table().set_schema(
-                table_name=table_name,
-                payload={
-                    "columns": [
-                        {
-                            "name": "embeddings",
-                            "type": "vector",
-                            "vector": {"dimension": self._create_table_params["dimension"]}
-                        },
-                        {"name": "content", "type": "text"},
-                        {"name": "metadata", "type": "json"},
-                    ]
-                }
-            )
-            if not resp.is_success():
-                raise Exception(f"Unable to change schema of table {table_name}: {resp['message']}")
-        except Exception as e:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"{e}",
-            )
-        return Response(resp_type=RESPONSE_TYPE.OK)
+
+        resp = self._client.table().create(table_name)
+        if not resp.is_success():
+            raise Exception(f"Unable to create table {table_name}: {resp['message']}")
+        resp = self._client.table().set_schema(
+            table_name=table_name,
+            payload={
+                "columns": [
+                    {
+                        "name": "embeddings",
+                        "type": "vector",
+                        "vector": {"dimension": self._create_table_params["dimension"]}
+                    },
+                    {"name": "content", "type": "text"},
+                    {"name": "metadata", "type": "json"},
+                ]
+            }
+        )
+        if not resp.is_success():
+            raise Exception(f"Unable to change schema of table {table_name}: {resp['message']}")
 
     def drop_table(self, table_name: str, if_exists=True) -> HandlerResponse:
         """Delete a table from the Xata database."""
-        try:
-            resp = self._client.table().delete(table_name)
-            if not resp.is_success():
-                raise Exception(f"Unable to delete table: {resp['message']}")
-        except Exception as e:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"{e}",
-            )
-        return Response(resp_type=RESPONSE_TYPE.OK)
+
+        resp = self._client.table().delete(table_name)
+        if not resp.is_success():
+            raise Exception(f"Unable to delete table: {resp['message']}")
 
     def get_columns(self, table_name: str) -> HandlerResponse:
         """Get columns of the given table"""
@@ -157,7 +145,7 @@ class XataHandler(VectorStoreHandler):
                 error_message=f"Error getting list of tables: {e}",
             )
 
-    def insert(self, table_name: str, data: pd.DataFrame, columns: List[str] = None) -> HandlerResponse:
+    def insert(self, table_name: str, data: pd.DataFrame, columns: List[str] = None):
         """ Insert data into the Xata database. """
         if columns:
             data = data[columns]
@@ -169,15 +157,10 @@ class XataHandler(VectorStoreHandler):
                 row["metadata"] = json.dumps(row["metadata"])
         if len(data) > 1:
             # Bulk processing
-            try:
-                bp = BulkProcessor(self._client, throw_exception=True)
-                bp.put_records(table_name, data)
-                bp.flush_queue()
-            except Exception as e:
-                return Response(
-                    resp_type=RESPONSE_TYPE.ERROR,
-                    error_message=f"Error inserting data into '{table_name}': {e}",
-                )
+            bp = BulkProcessor(self._client, throw_exception=True)
+            bp.put_records(table_name, data)
+            bp.flush_queue()
+
         elif len(data) == 0:
             # Skip
             return Response(resp_type=RESPONSE_TYPE.OK)
@@ -186,37 +169,26 @@ class XataHandler(VectorStoreHandler):
             id = data[0]["id"]
             rest_of_data = data[0].copy()
             del rest_of_data["id"]
-            try:
-                resp = self._client.records().insert_with_id(
-                    table_name=table_name,
-                    record_id=id,
-                    payload=rest_of_data,
-                    create_only=True,
-                    columns=columns
-                )
-                if not resp.is_success():
-                    raise Exception(resp["message"])
-            except Exception as e:
-                return Response(
-                    resp_type=RESPONSE_TYPE.ERROR,
-                    error_message=f"Error inserting data into '{table_name}': {e}",
-                )
+
+            resp = self._client.records().insert_with_id(
+                table_name=table_name,
+                record_id=id,
+                payload=rest_of_data,
+                create_only=True,
+                columns=columns
+            )
+            if not resp.is_success():
+                raise Exception(resp["message"])
+
         else:
             # If id not present
-            try:
-                resp = self._client.records().insert(
-                    table_name=table_name,
-                    payload=data[0],
-                    columns=columns
-                )
-                if not resp.is_success():
-                    raise Exception(resp["message"])
-            except Exception as e:
-                return Response(
-                    resp_type=RESPONSE_TYPE.ERROR,
-                    error_message=f"Error inserting data into '{table_name}': {e}",
-                )
-        return Response(resp_type=RESPONSE_TYPE.OK)
+            resp = self._client.records().insert(
+                table_name=table_name,
+                payload=data[0],
+                columns=columns
+            )
+            if not resp.is_success():
+                raise Exception(resp["message"])
 
     def update(self, table_name: str, data: pd.DataFrame, columns: List[str] = None) -> HandlerResponse:
         """Update data in the Xata database."""
@@ -288,7 +260,8 @@ class XataHandler(VectorStoreHandler):
                     filters = {**filters, **original_filter}
         return filters if filters else None
 
-    def select(self, table_name: str, columns: List[str] = None, conditions: List[FilterCondition] = None, offset: int = None, limit: int = None) -> HandlerResponse:
+    def select(self, table_name: str, columns: List[str] = None, conditions: List[FilterCondition] = None,
+               offset: int = None, limit: int = None) -> pd.DataFrame:
         """Run general query or a vector similarity search and return results."""
         if not columns:
             columns = [col["name"] for col in self.SCHEMA]
@@ -312,60 +285,52 @@ class XataHandler(VectorStoreHandler):
         results_df = pd.DataFrame(columns)
         if search_vector is not None:
             # Similarity
-            try:
-                params = {
-                    "queryVector": search_vector,
-                    "column": TableField.EMBEDDINGS.value,
-                    "similarityFunction": self._select_params["similarity_function"]
-                }
-                if filters:
-                    params["filter"] = filters
-                if limit:
-                    params["size"] = limit
-                results = self._client.data().vector_search(table_name, params)
-                # Check for errors
-                if not results.is_success():
-                    raise Exception(results["message"])
-                # Convert result
-                results_df = pd.DataFrame.from_records(results["records"])
-                if "xata" in results_df.columns:
-                    results_df["xata"] = results_df["xata"].apply(lambda x: x["score"])
-                    results_df.rename({"xata": TableField.DISTANCE.value}, axis=1, inplace=True)
-            except Exception as e:
-                return Response(
-                    resp_type=RESPONSE_TYPE.ERROR,
-                    error_message=f"Unable to run similarity search: {e}",
-                )
+
+            params = {
+                "queryVector": search_vector,
+                "column": TableField.EMBEDDINGS.value,
+                "similarityFunction": self._select_params["similarity_function"]
+            }
+            if filters:
+                params["filter"] = filters
+            if limit:
+                params["size"] = limit
+            results = self._client.data().vector_search(table_name, params)
+            # Check for errors
+            if not results.is_success():
+                raise Exception(results["message"])
+            # Convert result
+            results_df = pd.DataFrame.from_records(results["records"])
+            if "xata" in results_df.columns:
+                results_df["xata"] = results_df["xata"].apply(lambda x: x["score"])
+                results_df.rename({"xata": TableField.DISTANCE.value}, axis=1, inplace=True)
+
         else:
             # General get query
-            try:
-                params = {
-                    "columns": columns if columns else [],
-                }
-                if filters:
-                    params["filter"] = filters
-                if limit or offset:
-                    params["page"] = {}
-                    if limit:
-                        params["page"]["size"] = limit
-                    if offset:
-                        params["page"]["offset"] = offset
-                results = self._client.data().query(table_name, params)
-                # Check for errors
-                if not results.is_success():
-                    raise Exception(results["message"])
-                # Convert result
-                results_df = pd.DataFrame.from_records(results["records"])
-                if "xata" in results_df.columns:
-                    results_df.drop(["xata"], axis=1, inplace=True)
-            except Exception as e:
-                return Response(
-                    resp_type=RESPONSE_TYPE.ERROR,
-                    error_message=f"Unable to run general SELECT query : {e}",
-                )
-        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=results_df)
 
-    def delete(self, table_name: str, conditions: List[FilterCondition] = None) -> HandlerResponse:
+            params = {
+                "columns": columns if columns else [],
+            }
+            if filters:
+                params["filter"] = filters
+            if limit or offset:
+                params["page"] = {}
+                if limit:
+                    params["page"]["size"] = limit
+                if offset:
+                    params["page"]["offset"] = offset
+            results = self._client.data().query(table_name, params)
+            # Check for errors
+            if not results.is_success():
+                raise Exception(results["message"])
+            # Convert result
+            results_df = pd.DataFrame.from_records(results["records"])
+            if "xata" in results_df.columns:
+                results_df.drop(["xata"], axis=1, inplace=True)
+
+        return results_df
+
+    def delete(self, table_name: str, conditions: List[FilterCondition] = None):
         ids = []
         for condition in conditions:
             if condition.op == FilterOperator.EQUAL:
@@ -375,14 +340,8 @@ class XataHandler(VectorStoreHandler):
                     resp_type=RESPONSE_TYPE.ERROR,
                     error_message="You can only delete using '=' operator ID one at a time!",
                 )
-        try:
-            for id in ids:
-                resp = self._client.records().delete(table_name, id)
-                if not resp.is_success():
-                    raise Exception(resp["message"])
-        except Exception as e:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Unable to run DELETE records: {e}",
-            )
-        return Response(resp_type=RESPONSE_TYPE.OK)
+
+        for id in ids:
+            resp = self._client.records().delete(table_name, id)
+            if not resp.is_success():
+                raise Exception(resp["message"])

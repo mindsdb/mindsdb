@@ -62,7 +62,7 @@ class LiteLLMConfig(BaseLLMConfig):
     top_k: Optional[int]
     temperature: Optional[float]
     custom_llm_provider: Optional[str]
-    llm_model_kwargs: Optional[Dict[str, Any]]
+    model_kwargs: Optional[Dict[str, Any]]
 
 
 # See https://api.python.langchain.com/en/latest/chat_models/langchain_community.chat_models.ollama.ChatOllama.html

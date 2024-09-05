@@ -168,7 +168,7 @@ def get_llm_config(provider: str, config: Dict) -> BaseLLMConfig:
             custom_llm_provider=config.get(
                 "custom_llm_provider", DEFAULT_LITELLM_PROVIDER
             ),
-            llm_model_kwargs=model_kwargs,
+            model_kwargs=model_kwargs,
         )
     if provider == "ollama":
         return OllamaConfig(

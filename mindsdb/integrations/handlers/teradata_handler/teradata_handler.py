@@ -62,7 +62,7 @@ class TeradataHandler(DatabaseHandler):
         """
         if self.is_connected is True:
             return self.connection
-        
+
         # Mandatory connection parameters.
         if not all(key in self.connection_data for key in ['host', 'user', 'password']):
             raise ValueError('Required parameters (host, user, password) must be provided.')
@@ -200,7 +200,7 @@ class TeradataHandler(DatabaseHandler):
             Response: A response object containing a list of tables in the Teradata database.
         """
         query = f"""
-            SELECT 
+            SELECT
                 TableName AS table_name,
                 TableKind AS table_type
             FROM DBC.TablesV
@@ -233,7 +233,7 @@ class TeradataHandler(DatabaseHandler):
         """
         if not table_name or not isinstance(table_name, str):
             raise ValueError("Invalid table name provided.")
-        
+
         query = f"""
             SELECT ColumnName AS "Field",
                    ColumnType AS "Type"

@@ -26,7 +26,7 @@ class TestTeradataHandler(BaseDatabaseHandlerTest, unittest.TestCase):
     @property
     def get_tables_query(self):
         return f"""
-            SELECT 
+            SELECT
                 TableName AS table_name,
                 TableKind AS table_type
             FROM DBC.TablesV

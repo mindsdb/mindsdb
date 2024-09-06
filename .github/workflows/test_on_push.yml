@@ -159,6 +159,7 @@ jobs:
           pip install .[elasticsearch]
           pip install .[databricks]
           pip install .[oracle]
+          pip install .[db2]
           pip install .[hive]
           pip install .[teradata]
           pip install .[minds_endpoint]
@@ -176,7 +177,7 @@ jobs:
       - name: Run Handlers tests and submit Coverage to coveralls
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
-          handlers=("mysql" "postgres" "mssql" "clickhouse" "snowflake" "web" "redshift" "bigquery" "elasticsearch" "s3" "databricks" "dynamodb" "mariadb" "oracle" "mongodb" "hive" "teradata")
+          handlers=("mysql" "postgres" "mssql" "clickhouse" "snowflake" "web" "redshift" "bigquery" "elasticsearch" "s3" "databricks" "dynamodb" "mariadb" "oracle" "mongodb" "db2" "hive" "teradata")
           for handler in "${handlers[@]}"
           do
             pytest --cov=mindsdb/integrations/handlers/${handler}_handler tests/unit/handlers/test_${handler}.py 

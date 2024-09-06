@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "mintlify": "4.0.196",
+    "mintlify": "^4.0.217",
     "sharp": "^0.33.2"
   }
 }

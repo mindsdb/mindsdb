@@ -1,82 +1,101 @@
-# Teradata Handler
+---
+title: Teradata
+sidebarTitle: Teradata
+---
 
-This is the implementation of the Teradata handler for MindsDB.
+This documentation describes the integration of MindsDB with [Teradata](https://www.teradata.com/why-teradata), the complete cloud analytics and data platform for Trusted AI.
+The integration allows MindsDB to access data from Teradata and enhance Teradata with AI capabilities.
 
-## Teradata Database
+## Prerequisites
 
-Teradata Vantage Advanced SQL Engine (formerly known as Teradata Database) is a connected multi-cloud data platform offering for enterprise analytics, that enables users to solve complex data challenges from start to scale. It supports huge data warehouse applications and was designed with a patented massively parallel processing (MPP) architecture. [Read more](https://docs.teradata.com/r/Teradata-VantageTM-Advanced-SQL-Engine-Release-Summary/June-2022/Introduction/What-is-Teradata-Vantage).
+Before proceeding, ensure the following prerequisites are met:
 
-## Implementation
+1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
+2. To connect Teradata to MindsDB, install the required dependencies following [this instruction](https://docs.mindsdb.com/setup/self-hosted/docker#install-dependencies).
 
-This handler was implemented using `teradatasql` - the Python driver for Teradata.
+## Connection
 
-The required arguments to establish a connection are,
+Establish a connection to Teradata from MindsDB by executing the following SQL command and providing its [handler name](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/teradata_handler) as an engine.
 
-* `host`: the host name or IP address of the Teradata Vantage instance
-* `user`: specifies the user name
-* `password`: specifies the password for the user
-* `database`: sets the database for the connection
+```sql
+CREATE DATABASE teradata_datasource
+WITH
+   ENGINE = 'teradata',
+   PARAMETERS = {
+      "host": "192.168.0.41",
+      "user": "demo_user",
+      "password": "demo_password",
+      "database": "example_db"
+   };
+```
+
+Required connection parameters include the following:
+
+* `host`: The hostname, IP address, or URL of the Teradata server.
+* `user`: The username for the Teradata database.
+* `password`: The password for the Teradata database.
+
+Optional connection parameters include the following:
+
+* `database`: The name of the Teradata database to connect to. Defaults is the user's default database.
 
 ## Usage
 
-Assuming you created a database in Teradata called `HR` and you have a table called `Employees` that was created using
-the following SQL statements:
+Retrieve data from a specified table by providing the integration, database and table names:
 
-~~~~sql
-CREATE
-DATABASE HR
-AS PERMANENT = 60e6, -- 60MB
-   SPOOL = 120e6; -- 120MB
+```sql
+SELECT *
+FROM teradata_datasource.database_name.table_name
+LIMIT 10;
+```
 
-CREATE
-SET TABLE HR.Employees (
-   GlobalID INTEGER,
-   FirstName VARCHAR(30),
-   LastName VARCHAR(30),
-   DateOfBirth DATE FORMAT 'YYYY-MM-DD',
-   JoinedDate DATE FORMAT 'YYYY-MM-DD',
-   DepartmentCode BYTEINT
-)
-UNIQUE PRIMARY INDEX ( GlobalID );
+Run Teradata SQL queries directly on the connected Teradata database:
 
-INSERT INTO HR.Employees (GlobalID,
-                          FirstName,
-                          LastName,
-                          DateOfBirth,
-                          JoinedDate,
-                          DepartmentCode)
-VALUES (101,
-        'Adam',
-        'Tworkowski',
-        '1980-01-05',
-        '2004-08-01',
-        01);
-~~~~
+```sql
+SELECT * FROM teradata_datasource (
 
-In order to make use of this handler and connect to the Teradata database in MindsDB, the following syntax can be used:
+   --Native Query Goes Here
+   SELECT emp_id, emp_name, job_duration AS tsp
+   FROM employee
+   EXPAND ON job_duration AS tsp BY INTERVAL '1' YEAR
+      FOR PERIOD(DATE '2006-01-01', DATE '2008-01-01');
 
-~~~~sql
-CREATE DATABASE teradata_db
-WITH ENGINE = 'teradata',
-PARAMETERS = {
-    "host": "192.168.0.41",
-    "user": "dbc",
-    "password": "dbc",
-    "database": "HR"
-};
+);
+```
 
-~~~~
+<Note>
+The above examples utilize `teradata_datasource` as the datasource name, which is defined in the `CREATE DATABASE` command.
+</Note>
 
-**Note**: The above example assumes usage of Teradata Vantage running on Oracle VirtualBox.
+## Troubleshooting
 
-Now, you can use this established connection to query your database as follows:
+<Warning>
+`Database Connection Error`
 
-~~~~sql
-SELECT * FROM teradata_db.Employees;
-~~~~
+* **Symptoms**: Failure to connect MindsDB with the Teradata database.
+* **Checklist**:
+    1. Make sure the Teradata database is active.
+    2. Confirm that host, user and password are correct. Try a direct connection using a client like DBeaver.
+    3. Ensure a stable network between MindsDB and Teradata.
+</Warning>
 
-|GlobalID | FirstName | LastName   | DateOfBirth | JoinedDate | DepartmentCode |
-|---------|-----------|------------|-------------|------------|----------------|
-|101      | Adam      | Tworkowski | 1980-01-05  | 2004-08-01 | 1              |
+<Warning>
+`SQL statement cannot be parsed by mindsdb_sql`
 
-![MindsDB using Teradata Integration](https://i.imgur.com/GfSd9yW.png)
+* **Symptoms**: SQL queries failing or not recognizing table names containing spaces or special characters.
+* **Checklist**:
+    1. Ensure table names with spaces or special characters are enclosed in backticks.
+    2. Examples:
+        * Incorrect: SELECT * FROM integration.travel-data
+        * Incorrect: SELECT * FROM integration.'travel-data'
+        * Correct: SELECT * FROM integration.\`travel-data\`
+</Warning>
+
+<Warning>
+`Connection Timeout Error`
+
+* **Symptoms**: Connection to the Teradata database times out or queries take too long to execute.
+* **Checklist**:
+    1. Ensure the Teradata server is running and accessible (if the server has been idle for a long time, it may have shut down automatically).
+
+</Warning>

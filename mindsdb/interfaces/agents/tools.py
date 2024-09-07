@@ -1,4 +1,6 @@
 from typing import Dict
+from urllib.parse import urlparse
+import os
 from langchain.agents import Tool
 
 from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
@@ -26,6 +28,8 @@ def _build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
 
     rag_params = _get_rag_params(tools_config)
 
+    logger.info(f'Building retrieval tool\n{tool} \nwith rag params: \n{rag_params}')
+    logger.info(f'Using tools config:\n {tools_config}')
     if 'vector_store_config' not in rag_params:
         rag_params['vector_store_config'] = {}
         logger.warning(f'No collection_name specified for the retrieval tool, '
@@ -41,6 +45,7 @@ def _build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
             raise ValueError(f"Knowledge base not found: {kb_name}")
 
         rag_params['vector_store_config'] = _build_vector_store_config_from_knowledge_base(rag_params, kb, executor)
+        logger.info(f'Using vector store config\n {rag_params["vector_store_config"]}')
 
     # Can run into weird validation errors when unpacking rag_params directly into constructor.
     rag_config = RAGPipelineModel(
@@ -62,9 +67,9 @@ def _build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
         rag_config.retriever_prompt_template = rag_params['retriever_prompt_template']
 
     # build retriever
+    logger.info(f'Creating RAG pipeline with config:\n {rag_config}')
     rag_pipeline = RAG(rag_config)
-
-    logger.debug(f"RAG pipeline created with config: {rag_config}")
+    logger.info(f"RAG pipeline created with config: {rag_config}")
 
     def rag_wrapper(query: str) -> str:
         try:
@@ -124,6 +129,19 @@ def _build_vector_store_config_from_knowledge_base(rag_params: Dict, knowledge_b
         # For pgvector, we get connection string
         # todo requires further testing
         connection_params = knowledge_base.vector_database.data
+        if 'database' not in connection_params:
+            # If a valid pgvector connection isn't provided, default to pgvector deployment if it's defined.
+            cloud_pgvector_url = os.environ.get('KB_PGVECTOR_URL')
+            logger.info(f'Falling back to default pgvector deployment at {cloud_pgvector_url}')
+            if cloud_pgvector_url is not None:
+                result = urlparse(cloud_pgvector_url)
+                connection_params.update({
+                    'host': result.hostname,
+                    'port': result.port,
+                    'user': result.username,
+                    'password': result.password,
+                    'database': result.path[1:]
+                })
         vector_store_config['connection_string'] = _create_conn_string(connection_params)
 
     else:

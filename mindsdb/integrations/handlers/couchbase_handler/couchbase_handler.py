@@ -27,8 +27,7 @@ class CouchbaseHandler(DatabaseHandler):
     """
 
     name = "couchbase"
-    # TODO: Check the timeout value with the sdk default time
-    DEFAULT_TIMEOUT_SECONDS = 60
+    DEFAULT_TIMEOUT_SECONDS = 5
 
     def __init__(self, name, **kwargs):
         super().__init__(name)
@@ -61,17 +60,17 @@ class CouchbaseHandler(DatabaseHandler):
 
         options = ClusterOptions(auth)
 
-        host = self.connection_data.get("host")
-        domain = urlparse(host).hostname
-        if domain and domain.endswith(".couchbase.com"):
-            options.apply_profile('wan_development')
-        endpoint = f"couchbases://{host}"
+        conn_str = self.connection_data.get("connection_string")
+        # wan_development is used to avoid latency issues while connecting to Couchbase over the internet
+        options.apply_profile('wan_development')
+        # connect to the cluster
         cluster = Cluster(
-            endpoint,
+            conn_str,
             options,
         )
 
         try:
+            # wait until the cluster is ready for use
             cluster.wait_until_ready(timedelta(seconds=self.DEFAULT_TIMEOUT_SECONDS))
             self.is_connected = cluster.connected
             self.cluster = cluster
@@ -160,7 +159,7 @@ class CouchbaseHandler(DatabaseHandler):
 
     def get_tables(self) -> Response:
         """
-        Get a list with of collection in database
+        Get a list of collections in database
         """
         cluster = self.connect()
         bucket = cluster.bucket(self.bucket_name)

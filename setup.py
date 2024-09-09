@@ -171,5 +171,5 @@ setup(
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
     ],
-    python_requires=">=3.8,<3.11",
+    python_requires=">=3.8,<3.12",
 )

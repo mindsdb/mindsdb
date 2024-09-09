@@ -13,7 +13,7 @@ from llama_index.core import Settings
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities.config import Config
-from mindsdb.utilities.security import is_private_url, validate_crawling_sites
+from mindsdb.utilities.security import validate_urls
 from mindsdb.integrations.handlers.llama_index_handler.settings import llama_index_config, LlamaIndexModel
 from mindsdb.integrations.libs.api_handler_exceptions import MissingConnectionParams
 from mindsdb.integrations.utilities.handler_utils import get_api_key
@@ -31,6 +31,7 @@ class LlamaIndexHandler(BaseMLEngine):
         self.supported_index_class = llama_index_config.SUPPORTED_INDEXES
         self.default_reader = llama_index_config.DEFAULT_READER
         self.supported_reader = llama_index_config.SUPPORTED_READERS
+        self.config = Config()
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
@@ -62,8 +63,9 @@ class LlamaIndexHandler(BaseMLEngine):
             reader = list(map(lambda x: Document(text=x), dstrs.tolist()))
         elif args_reader == "SimpleWebPageReader":
             url = args["using"]["source_url_link"]
-            if not validate_crawling_sites(url):
-                raise ValueError('The provided URL is not allowed for web crawling. Please check web_crawling_allowed_sites in config.json')
+            allowed_urls = self.config.get('web_crawling_allowed_sites', [])
+            if allowed_urls and not validate_urls(url, allowed_urls):
+                raise ValueError(f"The provided URL is not allowed for web crawling. Please use any of {', '.join(allowed_urls)}.")
             reader = SimpleWebPageReader(html_to_text=True).load_data([url])
         else:
             raise Exception(

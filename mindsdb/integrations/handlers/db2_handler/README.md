@@ -1,38 +1,105 @@
-# DB2 Handler
+---
+title: IBM Db2
+sidebarTitle: IBM Db2
+---
 
-This is the implementation of the IBM DB2 handler for MindsDB.
+This documentation describes the integration of MindsDB with [IBM Db2](https://www.ibm.com/db2), the cloud-native database built to power low-latency transactions, real-time analytics and AI applications at scale.
+The integration allows MindsDB to access data stored in the IBM Db2 database and enhance it with AI capabilities.
 
-## IBM DB2
-DB2 is a database product from IBM. It is a Relational Database Management System (RDBMS). DB2 is designed to store, analyze and retrieve the data efficiently. DB2 product is extended with the support of Object-Oriented features and non-relational structures with XML.
+## Prerequisites
 
-## Implementation
-This handler was implemented using the `ibm_db/ibm_db_dbi`, a Python library that allows you to use Python code to run SQL commands on DB2 Database.
+Before proceeding, ensure the following prerequisites are met:
 
-The required arguments to establish a connection are,
-* `user`: username asscociated with database
-* `password`: password to authenticate your access
-* `host`: host to server IP Address or hostname
-* `port`: port through which TCPIP connection is to be made
-* `database`: Database name to be connected
-* `schema`: schema name to get tables 
+1. Install MindsDB locally via [Docker](/setup/self-hosted/docker) or [Docker Desktop](/setup/self-hosted/docker-desktop).
+2. To connect IBM Db2 to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+
+## Connection
+
+Establish a connection to your IBM Db2 database from MindsDB by executing the following SQL command:
+
+```sql
+CREATE DATABASE db2_datasource
+WITH
+    engine = 'db2',
+    parameters = {
+        "host": "127.0.0.1",
+        "user": "db2inst1",
+        "password": "password",
+        "database": "example_db"
+    };
+```
+
+Required connection parameters include the following:
+
+* `host`: The hostname, IP address, or URL of the IBM Db2 database.
+* `user`: The username for the IBM Db2 database.
+* `password`: The password for the IBM Db2 database.
+* `database`: The name of the IBM Db2 database to connect to.
+
+Optional connection parameters include the following:
+
+* `port`: The port number for connecting to the IBM Db2 database. Default is `50000`.
+* `schema`: The database schema to use within the IBM Db2 database.
 
 ## Usage
-In order to make use of this handler and connect to DB2 in MindsDB, the following syntax can be used,
-~~~~sql
-CREATE DATABASE DB2_datasource
-WITH
-engine='DB2',
-parameters={
-    "user":"db2admin",
-    "password":"1234",
-    "host":"127.0.0.1",
-    "port":25000,
-    "schema_name":"db2admin",
-    "database":"BOOKS"
-};
-~~~~
 
-Now, you can use this established connection to query your database as follows,
-~~~~sql
-SELECT * FROM DB2_datasource.AUTHORS;
-~~~~
+Retrieve data from a specified table by providing the integration name, schema, and table name:
+
+```sql
+SELECT *
+FROM db2_datasource.schema_name.table_name
+LIMIT 10;
+```
+
+Run IBM Db2 native queries directly on the connected database:
+
+```sql
+SELECT * FROM db2_datasource (
+
+    --Native Query Goes Here
+    WITH
+    DINFO (DEPTNO, AVGSALARY, EMPCOUNT) AS
+        (SELECT OTHERS.WORKDEPT, AVG(OTHERS.SALARY), COUNT(*)
+            FROM EMPLOYEE OTHERS
+            GROUP BY OTHERS.WORKDEPT
+        ),
+    DINFOMAX AS
+        (SELECT MAX(AVGSALARY) AS AVGMAX FROM DINFO)
+    SELECT THIS_EMP.EMPNO, THIS_EMP.SALARY,
+        DINFO.AVGSALARY, DINFO.EMPCOUNT, DINFOMAX.AVGMAX
+    FROM EMPLOYEE THIS_EMP, DINFO, DINFOMAX
+    WHERE THIS_EMP.JOB = 'SALESREP'
+    AND THIS_EMP.WORKDEPT = DINFO.DEPTNO
+
+);
+```
+
+<Note>
+The above examples utilize `db2_datasource` as the datasource name, which is defined in the `CREATE DATABASE` command.
+</Note>
+
+## Troubleshooting Guide
+
+<Warning>
+`Database Connection Error`
+
+* **Symptoms**: Failure to connect MindsDB with the IBM Db2 database.
+* **Checklist**:
+    1. Make sure the IBM Db2 database is active.
+    2. Confirm that host, user, password and database are correct. Try a direct connection using a client like DBeaver.
+    3. Ensure a stable network between MindsDB and the IBM Db2 database.
+</Warning>
+
+<Warning>
+`SQL statement cannot be parsed by mindsdb_sql`
+
+* **Symptoms**: SQL queries failing or not recognizing table names containing spaces or special characters.
+* **Checklist**:
+    1. Ensure table names with spaces or special characters are enclosed in backticks.
+    2. Examples:
+        * Incorrect: SELECT * FROM integration.travel-data
+        * Incorrect: SELECT * FROM integration.'travel-data'
+        * Correct: SELECT * FROM integration.\`travel-data\`
+</Warning>
+
+This [guide](https://www.ibm.com/docs/en/db2/11.5?topic=connect-common-db2-problems) of common connection Db2 connection issues provided by IBM might also be helpful.

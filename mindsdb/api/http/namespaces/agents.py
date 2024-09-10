@@ -20,6 +20,9 @@ from mindsdb.utilities.exception import EntityNotExistsError
 logger = getLogger(__name__)
 
 
+AGENT_QUICK_RESPONSE = "I understand your request. I'm working on a detailed response for you."
+
+
 def create_agent(project_name, name, agent):
     if name is None:
         return http_error(
@@ -265,7 +268,11 @@ def _completion_event_generator(
     def json_serialize(data):
         return f'data: {json.dumps(data)}\n\n'
 
-    yield json_serialize({"quick_response": True, "output": "I understand your request. I'm working on a detailed response for you."})
+    quick_response_message = {
+        'role': 'assistant',
+        'content': AGENT_QUICK_RESPONSE
+    }
+    yield json_serialize({"quick_response": True, "messages": [quick_response_message]})
     logger.info("Quick response sent")
 
     try:

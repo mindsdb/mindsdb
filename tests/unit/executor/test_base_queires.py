@@ -442,6 +442,13 @@ class TestSelect(BaseExecutorDummyML):
         first_row = ret.to_dict('split')['data'][0]
         assert first_row == [1, 1, 1, 10]
 
+    def test_system_vars(self):
+
+        ret = self.run_sql('select @@session.auto_increment_increment, @@character_set_client')
+
+        assert ret.iloc[0, 0] == 1
+        assert ret.iloc[0, 1] == 'utf8'
+
 
 class TestDML(BaseExecutorDummyML):
 

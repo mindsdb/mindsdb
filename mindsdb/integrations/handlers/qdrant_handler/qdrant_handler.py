@@ -1,3 +1,4 @@
+import ast
 from typing import Any, List, Optional
 from itertools import zip_longest
 
@@ -80,7 +81,7 @@ class QdrantHandler(VectorStoreHandler):
 
         return response_code
 
-    def drop_table(self, table_name: str, if_exists=True) -> HandlerResponse:
+    def drop_table(self, table_name: str, if_exists=True):
         """Delete a collection from the Qdrant Instance.
 
         Args:
@@ -91,13 +92,8 @@ class QdrantHandler(VectorStoreHandler):
             HandlerResponse: _description_
         """
         result = self._client.delete_collection(table_name)
-        if result or if_exists:
-            return Response(resp_type=RESPONSE_TYPE.OK)
-        else:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Table {table_name} does not exist!",
-            )
+        if not (result or if_exists):
+            raise Exception(f"Table {table_name} does not exist!")
 
     def get_tables(self) -> HandlerResponse:
         """Get the list of collections in the Qdrant instance.
@@ -124,7 +120,7 @@ class QdrantHandler(VectorStoreHandler):
 
     def insert(
         self, table_name: str, data: pd.DataFrame, columns: List[str] = None
-    ) -> HandlerResponse:
+    ):
         """Handler for the insert query
 
         Args:
@@ -142,8 +138,10 @@ class QdrantHandler(VectorStoreHandler):
         data = data.to_dict(orient="list")
         payloads = []
         content_list = data[TableField.CONTENT.value]
-        metadata_list = data[TableField.METADATA.value]
-
+        if TableField.METADATA.value in data:
+            metadata_list = data[TableField.METADATA.value]
+        else:
+            metadata_list = [None] * len(data)
         for document, metadata in zip_longest(content_list, metadata_list, fillvalue=None):
             payload = {}
 
@@ -153,6 +151,8 @@ class QdrantHandler(VectorStoreHandler):
 
             # Unpack all the metadata fields into the payload
             if metadata is not None:
+                if isinstance(metadata, str):
+                    metadata = ast.literal_eval(metadata)
                 payload = {**payload, **metadata}
 
             if payload:
@@ -167,9 +167,7 @@ class QdrantHandler(VectorStoreHandler):
             payloads=payloads
         ))
 
-        return Response(resp_type=RESPONSE_TYPE.OK)
-
-    def create_table(self, table_name: str, if_not_exists=True) -> HandlerResponse:
+    def create_table(self, table_name: str, if_not_exists=True):
         """Create a collection with the given name in the Qdrant database.
 
         Args:
@@ -182,14 +180,9 @@ class QdrantHandler(VectorStoreHandler):
         try:
             # Create a collection with the collection name and collection_config set during __init__
             self._client.create_collection(table_name, self.collection_config)
-        except ValueError:
+        except ValueError as e:
             if if_not_exists is False:
-                return Response(
-                    resp_type=RESPONSE_TYPE.ERROR,
-                    error_message=f"Table {table_name} already exists!",
-                )
-
-        return Response(resp_type=RESPONSE_TYPE.OK)
+                raise e
 
     def _get_qdrant_filter(self, operator: FilterOperator, value: Any) -> dict:
         """ Map the filter operator to the Qdrant filter
@@ -277,15 +270,12 @@ class QdrantHandler(VectorStoreHandler):
 
     def update(
         self, table_name: str, data: pd.DataFrame, columns: List[str] = None
-    ) -> HandlerResponse:
-        """
-        Update data in the Qdrant database.
-        TODO: Update for vector DBs has not been implemented.
-        Ref: https://github.com/mindsdb/mindsdb/blob/a870ba93b0afee234e48c0268489a94a6e6fd5f7/mindsdb/integrations/libs/vectordatabase_handler.py#L273-L277
-        """
-        return super().update(table_name, data, columns)
+    ):
+        # insert makes upsert
+        return self.insert(table_name, data)
 
-    def select(self, table_name: str, columns: Optional[List[str]] = None, conditions: Optional[List[FilterCondition]] = None, offset: int = 0, limit: int = 10,) -> HandlerResponse:
+    def select(self, table_name: str, columns: Optional[List[str]] = None,
+               conditions: Optional[List[FilterCondition]] = None, offset: int = 0, limit: int = 10) -> pd.DataFrame:
         """Select query handler
            Eg: SELECT * FROM qdrant.test_table
 
@@ -308,7 +298,7 @@ class QdrantHandler(VectorStoreHandler):
         if not conditions:
             results = self._client.scroll(table_name, limit=limit, offset=offset)
             payload = self._process_select_results(results[0], columns)
-            return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=payload)
+            return payload
 
         # Filter conditions
         vector_filter = [condition.value for condition in conditions if condition.column == TableField.SEARCH_VECTOR.value]
@@ -317,6 +307,14 @@ class QdrantHandler(VectorStoreHandler):
 
         # Prefer returning results by IDs first
         if id_filters:
+
+            if len(id_filters) > 0:
+                # is wrapped to a list
+                if isinstance(id_filters[0], list):
+                    id_filters = id_filters[0]
+            # convert to int if possible
+            id_filters = [int(id) if isinstance(id, str) and id.isdigit() else id for id in id_filters]
+
             results = self._client.retrieve(table_name, ids=id_filters)
         # Followed by the search_vector value
         elif vector_filter:
@@ -327,7 +325,7 @@ class QdrantHandler(VectorStoreHandler):
 
         # Process results
         payload = self._process_select_results(results, columns)
-        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=payload)
+        return payload
 
     def _process_select_results(self, results=None, columns=None):
         """Private method to process the results of a select query
@@ -373,7 +371,7 @@ class QdrantHandler(VectorStoreHandler):
 
     def delete(
         self, table_name: str, conditions: List[FilterCondition] = None
-    ) -> HandlerResponse:
+    ):
         """Delete query handler
 
         Args:
@@ -402,4 +400,3 @@ class QdrantHandler(VectorStoreHandler):
 
         if filters:
             self._client.delete(table_name, points_selector=models.FilterSelector(filter=filters))
-        return Response(resp_type=RESPONSE_TYPE.OK)

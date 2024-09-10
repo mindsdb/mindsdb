@@ -47,6 +47,7 @@ from .safe_output_parser import SafeOutputParser
 from .constants import (
     DEFAULT_AGENT_TIMEOUT_SECONDS,
     DEFAULT_AGENT_TYPE,
+    DEFAULT_EMBEDDINGS_MODEL_PROVIDER,
     DEFAULT_MAX_ITERATIONS,
     DEFAULT_MAX_TOKENS,
     SUPPORTED_PROVIDERS,
@@ -89,7 +90,11 @@ def get_embedding_model_provider(args: Dict) -> str:
         logger.warning(
             "No embedding model provider specified. trying to use llm provider."
         )
-        return args.get("embedding_model_provider", get_llm_provider(args))
+        llm_provider = get_llm_provider(args)
+        if llm_provider == 'mindsdb':
+            # We aren't an embeddings provider, so use the default instead.
+            llm_provider = DEFAULT_EMBEDDINGS_MODEL_PROVIDER
+        return args.get("embedding_model_provider", llm_provider)
     raise ValueError("Invalid model name. Please define provider")
 
 

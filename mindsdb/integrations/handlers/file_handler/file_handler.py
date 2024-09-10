@@ -211,10 +211,10 @@ class FileHandler(DatabaseHandler):
     @staticmethod
     def is_it_xlsx(file_path: str) -> bool:
         file_type = filetype.guess(file_path)
-        if file_type in [
+        if file_type and file_type.mime in {
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "application/vnd.ms-excel",
-        ]:
+        }:
             return True
         return False
 

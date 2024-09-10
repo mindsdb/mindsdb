@@ -90,7 +90,7 @@ target "images" {
       },
       {
         name = "cloud"
-        extras = ".[lightwood,huggingface,statsforecast-extra,neuralforecast-extra,timegpt,mssql,youtube,gmail,pgvector,llama_index,writer,rag,github,snowflake,clickhouse,twelve_labs,bigquery] darts datasetsforecast"
+        extras = ".[lightwood,huggingface,statsforecast-extra,neuralforecast-extra,timegpt,mssql,youtube,gmail,pgvector,writer,rag,github,snowflake,clickhouse,bigquery,elasticsearch,s3,dynamodb,databricks,oracle] darts datasetsforecast"
         target = ""
       },
     ]

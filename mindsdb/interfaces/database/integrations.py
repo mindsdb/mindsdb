@@ -33,7 +33,7 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 from mindsdb.integrations.libs.base import BaseHandler
 import mindsdb.utilities.profiler as profiler
-from mindsdb.utilities.security import encrypt, decrypt
+from mindsdb.utilities.security import encrypt_object, decrypt_object
 
 
 logger = log.getLogger(__name__)
@@ -160,14 +160,11 @@ class IntegrationController:
     def __init__(self):
         self._load_handler_modules()
         self.handlers_cache = HandlersCache()
-        self.encryption_enabled = Config().encryption_enabled
 
     def _add_integration_record(self, name, engine, connection_args):
         connection_args = connection_args or {}
-        if self.encryption_enabled:
-            connection_args = {
-                '_mindsdb_encrypted_object': encrypt(connection_args)
-            }
+
+        connection_args = encrypt_object(connection_args)
 
         integration_record = db.Integration(
             name=name,
@@ -278,13 +275,11 @@ class IntegrationController:
         ):
             return None
 
-        encrypted_object = integration_record.data.get('_mindsdb_encrypted_object')
-        if encrypted_object is not None:
-            if ctx.encryption_key is None:
-                raise Exception('The encryption key is missing')
-            data = decrypt(encrypted_object)
+        data = integration_record.data
+        if isinstance(data, str):
+            data = decrypt_object(data)
         else:
-            data = deepcopy(integration_record.data)
+            data = deepcopy(data)
 
         bundle_path = data.get('secure_connect_bundle')
         mysql_ssl_ca = data.get('ssl_ca')

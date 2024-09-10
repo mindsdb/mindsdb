@@ -31,28 +31,6 @@ class HanaHandler(DatabaseHandler):
         self.connection_data = connection_data
         self.renderer = SqlalchemyRender(hana_dialect.HANAHDBCLIDialect)
 
-        self.address = self.connection_data.get('host')
-        self.port = self.connection_data.get('port')
-        self.user = self.connection_data.get('user')
-        self.password = self.connection_data.get('password')
-        self.autocommit = self.connection_data.get('autocommit', True)
-        self.properties = self.connection_data.get('properties')
-        self.currentSchema = self.connection_data.get('schema', 'CURRENTUSER')
-        self.databaseName = self.connection_data.get('database')
-        self.encrypt = self.connection_data.get('encrypt', False)
-        self.sslHostNameInCertificate = self.connection_data.get('sslHostNameInCertificate')
-        self.sslValidateCertificate = self.connection_data.get('sslValidateCertificate', False)
-        self.sslCryptoProvider = self.connection_data.get('sslCryptoProvider')
-        self.sslTrustStore = self.connection_data.get('sslTrustStore')
-        self.sslKeyStore = self.connection_data.get('sslKeyStore')
-        self.cseKeyStorePassword = self.connection_data.get('cseKeyStorePassword')
-        self.sslSNIHostname = self.connection_data.get('sslSNIHostname')
-        self.sslSNIRequest = self.connection_data.get('sslSNIRequest', True)
-        self.siteType = self.connection_data.get('siteType')
-        self.splitBatchCommands = self.connection_data.get('splitBatchCommands', True)
-        self.routeDirectExecute = self.connection_data.get('routeDirectExecute', False)
-        self.secondarySessionFallback = self.connection_data.get('secondarySessionFallback', True)
-
         self.connection = None
         self.is_connected = False
 
@@ -67,33 +45,30 @@ class HanaHandler(DatabaseHandler):
 
         if self.is_connected is True:
             return self.connection
+        
+        # Mandatory connection parameters.
+        if not all(key in self.connection_data for key in ['address', 'port', 'user', 'password']):
+            raise ValueError('Required parameters (address, port, user, password) must be provided.')
+        
+        config = {
+            'address': self.address,
+            'port': self.port,
+            'user': self.user,
+            'password': self.password,
+        }
 
-        connection = dbapi.connect(
-            address=self.address,
-            port=self.port,
-            user=self.user,
-            password=self.password,
-            autocommit=self.autocommit,
-            properties=self.properties,
-            currentSchema=self.currentSchema,
-            databaseName=self.databaseName,
-            encrypt=self.encrypt,
-            sslHostNameInCertificate=self.sslHostNameInCertificate,
-            sslValidateCertificate=self.sslValidateCertificate,
-            sslCryptoProvider=self.sslCryptoProvider,
-            sslTrustStore=self.sslTrustStore,
-            sslKeyStore=self.sslKeyStore,
-            cseKeyStorePassword=self.cseKeyStorePassword,
-            sslSNIHostname=self.sslSNIHostname,
-            sslSNIRequest=self.sslSNIRequest,
-            siteType=self.siteType,
-            splitBatchCommands=self.splitBatchCommands,
-            routeDirectExecute=self.routeDirectExecute,
-            secondarySessionFallback=self.secondarySessionFallback
+        # Optional connection parameters.
+        if 'database' in self.connection_data:
+            config['databaseName'] = self.databaseName
+
+        if 'schema' in self.connection_data:
+            config['currentSchema'] = self.currentSchema
+
+        self.connection = dbapi.connect(
+            **config
         )
 
         self.is_connected = True
-        self.connection = connection
         return self.connection
 
     def disconnect(self):

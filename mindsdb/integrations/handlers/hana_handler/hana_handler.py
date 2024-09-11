@@ -1,12 +1,11 @@
-from pandas import DataFrame
+from typing import Any, Dict, Text
 
 from hdbcli import dbapi
-import sqlalchemy_hana.dialect as hana_dialect
-
+from hdbcli.dbapi import Error
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-
-from mindsdb.utilities import log
+from pandas import DataFrame
+import sqlalchemy_hana.dialect as hana_dialect
 
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
@@ -14,34 +13,53 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
+from mindsdb.utilities import log
 
 
 logger = log.getLogger(__name__)
 
+
 class HanaHandler(DatabaseHandler):
     """
-    This handler handles connection and execution of the SAP Hana statements.
+    This handler handles the connection and execution of SQL statements on SAP HANA.
     """
 
     name = 'hana'
 
-    def __init__(self, name: str, connection_data: dict, **kwargs):
-        super().__init__(name)
+    def __init__(self, name: Text, connection_data: Dict, **kwargs: Any) -> None:
+        """
+        Initializes the handler.
 
+        Args:
+            name (Text): The name of the handler instance.
+            connection_data (Dict): The connection data required to connect to the SAP HANA database.
+            kwargs: Arbitrary keyword arguments.
+        """
+        super().__init__(name)
         self.connection_data = connection_data
+        self.kwargs = kwargs
 
         self.connection = None
         self.is_connected = False
 
     def __del__(self):
+        """
+        Closes the connection when the handler instance is deleted.
+        """
         if self.is_connected is True:
             self.disconnect()
 
-    def connect(self):
+    def connect(self) -> dbapi.Connection:
         """
-        Handles the connection to a SAP Hana database insance.
-        """
+        Establishes a connection to the SAP HANA database.
 
+        Raises:
+            ValueError: If the expected connection parameters are not provided.
+            hdbcli.dbapi.Error: If an error occurs while connecting to the SAP HANA database.
+
+        Returns:
+            hdbcli.dbapi.Connection: A connection object to the SAP HANA database.
+        """
         if self.is_connected is True:
             return self.connection
         
@@ -70,21 +88,21 @@ class HanaHandler(DatabaseHandler):
         self.is_connected = True
         return self.connection
 
-    def disconnect(self):
+    def disconnect(self) -> None:
         """
-        Disconnects from the SAP HANA database
+        Closes the connection to the SAP HANA database if it's currently open.
         """
-
         if self.is_connected is True:
             self.connection.close()
             self.is_connected = False
 
     def check_connection(self) -> StatusResponse:
         """
-        Check the connection of the SAP HANA database
-        :return: success status and error message if error occurs
-        """
+        Checks the status of the connection to the SAP HANA database.
 
+        Returns:
+            StatusResponse: An object containing the success status and an error message if an error occurs.
+        """
         response = StatusResponse(False)
         need_to_close = self.is_connected is False
 
@@ -104,13 +122,16 @@ class HanaHandler(DatabaseHandler):
 
         return response
 
-    def native_query(self, query: str) -> Response:
+    def native_query(self, query: Text) -> Response:
         """
-        Receive SQL query and runs it
-        :param query: The SQL query to run in SAP HANA
-        :return: returns the records from the current recordset
-        """
+        Executes a native SQL query on the SAP HANA database and returns the result.
 
+        Args:
+            query (Text): The SQL query to be executed.
+
+        Returns:
+            Response: A response object containing the result of the query or an error message.
+        """
         need_to_close = self.is_connected is False
 
         connection = self.connect()
@@ -145,7 +166,13 @@ class HanaHandler(DatabaseHandler):
 
     def query(self, query: ASTNode) -> Response:
         """
-        Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
+        Executes a SQL query represented by an ASTNode on the SAP HANA database and retrieves the data (if any).
+
+        Args:
+            query (ASTNode): An ASTNode representing the SQL query to be executed.
+
+        Returns:
+            Response: The response from the `native_query` method, containing the result of the SQL query execution.
         """
         renderer = SqlalchemyRender(hana_dialect.HANAHDBCLIDialect)
         query_str = renderer.get_string(query, with_failback=True)
@@ -153,9 +180,11 @@ class HanaHandler(DatabaseHandler):
 
     def get_tables(self) -> Response:
         """
-        List all tables in SAP HANA in the current schema
-        """
+        Retrieves a list of all non-system tables in the SAP HANA database.
 
+        Returns:
+            Response: A response object containing a list of tables in the SAP HANA database.
+        """
         query = """
             SELECT SCHEMA_NAME,
                    TABLE_NAME,
@@ -178,11 +207,18 @@ class HanaHandler(DatabaseHandler):
         """
         return self.native_query(query)
 
-    def get_columns(self, table_name: str) -> Response:
+    def get_columns(self, table_name: Text) -> Response:
         """
-        List all columns in a table in SAP HANA in the current schema
-        :param table_name: the table name for which to list the columns
-        :return: returns the columns in the table
+        Retrieves column details for a specified table in the SAP HANA database.
+
+        Args:
+            table_name (Text): The name of the table for which to retrieve column information.
+
+        Raises:
+            ValueError: If the 'table_name' is not a valid string.
+
+        Returns:
+            Response: A response object containing the column details.
         """
         if not table_name or not isinstance(table_name, str):
             raise ValueError("Invalid table name provided.")

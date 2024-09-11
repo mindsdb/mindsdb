@@ -58,19 +58,19 @@ You can also call the command like this:
 
 ```sql
 SELECT *
-FROM obb_db.openbb_fetcher
-WHERE cmd = "obb.stocks.load"
-    AND symbol = "'MSFT'"
+FROM obb_db.openbb_fetcher 
+WHERE cmd = "obb.crypto.price.historical"
+    AND symbol = "'BCTUSD'"
     AND start_date = "'2023-09-01'"
-    AND provider = "'polygon'"
+    AND provider = "'fmp'";
 ```
 
 is converted into:
 
 ```python
-obb.stocks.load(symbol = 'MSFT', start_date = '2023-09-01', provider = 'polygon')
+obb.crypto.price.historical(symbol = 'BCTUSD', start_date = '2023-09-01', provider = 'fmp')
 ```
-<img width="1115" alt="Screenshot 2023-10-07 at 7 06 28 PM" src="https://github.com/DidierRLopes/mindsdb/assets/25267873/a8ee9c5b-01c9-443f-bc50-d4514f55d3b7">
+<img width="1115" alt="OpenBB Results" src="https://github.com/user-attachments/assets/f1bdc7e5-f511-46aa-896b-3465f494dbf8">
 
 
 ### **Example 2**: obb.economy.cpi
@@ -78,38 +78,19 @@ obb.stocks.load(symbol = 'MSFT', start_date = '2023-09-01', provider = 'polygon'
 Reference: [https://docs.openbb.co/sdk/reference/economy/cpi](https://docs.openbb.co/sdk/reference/economy/cpi)
 
 ```sql
-FROM obb_datab9.openbb_fetcher
+SELECT *
+FROM obb_db.openbb_fetcher
 WHERE cmd = "obb.economy.cpi"
-    AND countries = "['portugal','italy']"
+    AND country = "'india,israel'";
 ```
 
 is converted into:
 
 ```python
-obb.economy.cpi(countries = ['portugal','italy'])
+obb.economy.cpi(country = 'india,israel')
 ```
 
-<img width="881" alt="Screenshot 2023-10-07 at 7 05 57 PM" src="https://github.com/DidierRLopes/mindsdb/assets/25267873/3465dcc5-02f5-44cf-8aab-e8868fcfcbe7">
-
-
-### **Example 3**: obb.fixedincome.ycrv
-
-Reference:
-
-```sql
-SELECT *
-FROM obb_datab9.openbb_fetcher
-WHERE cmd = "obb.fixedincome.ycrv"
-```
-
-is converted into: [https://docs.openbb.co/sdk/reference/fixedincome/ycrv](https://docs.openbb.co/sdk/reference/fixedincome/ycrv)
-
-```python
-obb.fixedincome.ycrv()
-```
-
-<img width="469" alt="Screenshot 2023-10-07 at 7 05 25 PM" src="https://github.com/DidierRLopes/mindsdb/assets/25267873/90538eda-15db-4a6f-816a-07ca0f35af52">
-
+<img width="881" alt="OpenBB Results" src="https://github.com/user-attachments/assets/56ec368f-6ae0-4940-b328-588afaa37977">
 
 ## Enhance data access through OpenBB extensions
 

@@ -29,7 +29,6 @@ class HanaHandler(DatabaseHandler):
         super().__init__(name)
 
         self.connection_data = connection_data
-        self.renderer = SqlalchemyRender(hana_dialect.HANAHDBCLIDialect)
 
         self.connection = None
         self.is_connected = False
@@ -148,8 +147,8 @@ class HanaHandler(DatabaseHandler):
         """
         Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
         """
-
-        query_str = self.renderer.get_string(query, with_failback=True)
+        renderer = SqlalchemyRender(hana_dialect.HANAHDBCLIDialect)
+        query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 
     def get_tables(self) -> Response:

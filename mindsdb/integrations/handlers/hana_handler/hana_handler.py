@@ -67,18 +67,18 @@ class HanaHandler(DatabaseHandler):
             raise ValueError('Required parameters (address, port, user, password) must be provided.')
         
         config = {
-            'address': self.address,
-            'port': self.port,
-            'user': self.user,
-            'password': self.password,
+            'address': self.connection_data['address'],
+            'port': self.connection_data['port'],
+            'user': self.connection_data['user'],
+            'password': self.connection_data['password'],
         }
 
         # Optional connection parameters.
         if 'database' in self.connection_data:
-            config['databaseName'] = self.databaseName
+            config['databaseName'] = self.connection_data['database'],
 
         if 'schema' in self.connection_data:
-            config['currentSchema'] = self.currentSchema
+            config['currentSchema'] = self.connection_data['schema'],
 
         try:
             self.connection = dbapi.connect(

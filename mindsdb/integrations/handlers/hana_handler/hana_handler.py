@@ -184,5 +184,20 @@ class HanaHandler(DatabaseHandler):
         :param table_name: the table name for which to list the columns
         :return: returns the columns in the table
         """
+        if not table_name or not isinstance(table_name, str):
+            raise ValueError("Invalid table name provided.")
 
-        return self.renderer.dialect.get_columns(table_name)
+        query = f"""
+            SELECT COLUMN_NAME AS Field,
+                DATA_TYPE_NAME AS Type
+            FROM SYS.TABLE_COLUMNS
+            WHERE TABLE_NAME = '{table_name}'
+
+            UNION ALL
+
+            SELECT COLUMN_NAME AS Field,
+                DATA_TYPE_NAME AS Type
+            FROM SYS.VIEW_COLUMNS
+            WHERE VIEW_NAME = '{table_name}'
+        """
+        return self.native_query(query)

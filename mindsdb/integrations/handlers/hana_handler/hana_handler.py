@@ -1,7 +1,6 @@
 from typing import Any, Dict, Text
 
 from hdbcli import dbapi
-from hdbcli.dbapi import Error
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from pandas import DataFrame
@@ -81,12 +80,18 @@ class HanaHandler(DatabaseHandler):
         if 'schema' in self.connection_data:
             config['currentSchema'] = self.currentSchema
 
-        self.connection = dbapi.connect(
-            **config
-        )
-
-        self.is_connected = True
-        return self.connection
+        try:
+            self.connection = dbapi.connect(
+                **config
+            )
+            self.is_connected = True
+            return self.connection
+        except dbapi.Error as known_error:
+            logger.error(f'Error connecting to SAP HANA, {known_error}!')
+            raise
+        except Exception as unknown_error:
+            logger.error(f'Unknown error connecting to Teradata, {unknown_error}!')
+            raise
 
     def disconnect(self) -> None:
         """

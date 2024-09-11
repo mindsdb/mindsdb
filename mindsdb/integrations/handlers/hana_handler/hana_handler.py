@@ -1,6 +1,7 @@
 from typing import Any, Dict, Text
 
 from hdbcli import dbapi
+from hdbcli.dbapi import Error, ProgrammingError
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from pandas import DataFrame
@@ -86,7 +87,7 @@ class HanaHandler(DatabaseHandler):
             )
             self.is_connected = True
             return self.connection
-        except dbapi.Error as known_error:
+        except Error as known_error:
             logger.error(f'Error connecting to SAP HANA, {known_error}!')
             raise
         except Exception as unknown_error:
@@ -116,9 +117,12 @@ class HanaHandler(DatabaseHandler):
             with connection.cursor() as cur:
                 cur.execute('SELECT 1 FROM SYS.DUMMY')
             response.success = True
-        except dbapi.Error as e:
-            logger.error(f'Error connecting to SAP HANA {self.address}, {e}!')
-            response.error_message = e
+        except (Error, ProgrammingError, ValueError) as known_error:
+            logger.error(f'Connection check to SAP HANA failed, {known_error}!')
+            response.error_message = str(known_error)
+        except Exception as unknown_error:
+            logger.error(f'Connection check to SAP HANA failed due to an unknown error, {unknown_error}!')
+            response.error_message = str(unknown_error)
 
         if response.success is True and need_to_close:
             self.disconnect()
@@ -155,12 +159,20 @@ class HanaHandler(DatabaseHandler):
                         )
                     )
                 connection.commit()
-            except Exception as e:
+            except ProgrammingError as programming_error:
                 logger.error(f'Error running query: {query} on {self.address}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
                     error_code=0,
-                    error_message=str(e)
+                    error_message=str(programming_error)
+                )
+                connection.rollback()
+            except Exception as unknown_error:
+                logger.error(f'Unknown error running query: {query} on {self.address}!')
+                response = Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_code=0,
+                    error_message=str(unknown_error)
                 )
                 connection.rollback()
 

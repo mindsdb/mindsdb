@@ -156,16 +156,27 @@ class HanaHandler(DatabaseHandler):
         List all tables in SAP HANA in the current schema
         """
 
-        return self.native_query(f"""
+        query = """
             SELECT SCHEMA_NAME,
                    TABLE_NAME,
-                   TABLE_TYPE
+                   'BASE TABLE' AS TABLE_TYPE
             FROM
                 SYS.TABLES
             WHERE IS_SYSTEM_TABLE = 'FALSE'  
               AND IS_USER_DEFINED_TYPE = 'FALSE'
               AND IS_TEMPORARY = 'FALSE'
-        """)
+
+            UNION
+
+            SELECT SCHEMA_NAME,
+                   VIEW_NAME AS TABLE_NAME,
+                   'VIEW' AS TABLE_TYPE
+            FROM
+                SYS.VIEWS
+            WHERE SCHEMA_NAME <> 'SYS'
+              AND SCHEMA_NAME NOT LIKE '_SYS%'            
+        """
+        return self.native_query(query)
 
     def get_columns(self, table_name: str) -> Response:
         """

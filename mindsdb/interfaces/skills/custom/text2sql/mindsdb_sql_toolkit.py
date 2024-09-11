@@ -1,21 +1,19 @@
 from typing import List
+
 from langchain_community.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
 from langchain_community.tools import ListSQLDatabaseTool, InfoSQLDatabaseTool, QuerySQLDataBaseTool
 from langchain_core.tools import BaseTool
+
 from mindsdb.interfaces.skills.custom.text2sql.mindsdb_sql_tool import MindsDBSQLParserTool
-import json
-
-
-class CustomQuerySQLDataBaseTool(QuerySQLDataBaseTool):
-    def _run(self, query: str) -> str:
-        result = super()._run(query)
-        return json.dumps({"query": query, "result": result})
 
 
 class MindsDBSQLToolkit(SQLDatabaseToolkit):
-    def get_tools(self, prefix='') -> List[BaseTool]:
-        list_sql_database_tool = ListSQLDatabaseTool(name=f'sql_db_list_tables{prefix}', db=self.db)
 
+    def get_tools(self, prefix='') -> List[BaseTool]:
+        # Return the tools that this toolkit provides as well as MindDB's SQL validator tool
+
+        """Get the tools in the toolkit."""
+        list_sql_database_tool = ListSQLDatabaseTool(name=f'sql_db_list_tables{prefix}', db=self.db)
         info_sql_database_tool_description = (
             "Input to this tool is a comma-separated list of tables, output is the "
             "schema and sample rows for those tables. "
@@ -27,29 +25,30 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
             name=f'sql_db_schema{prefix}',
             db=self.db, description=info_sql_database_tool_description
         )
-
         query_sql_database_tool_description = (
             "Input to this tool is a detailed and correct SQL query, output is a "
-            "JSON string containing the executed query and its result. If the query is not correct, an error message "
+            "result from the database. If the query is not correct, an error message "
             "will be returned. If an error is returned, rewrite the query, check the "
             "query, and try again. If you encounter an issue with Unknown column "
             f"'xxxx' in 'field list', use {info_sql_database_tool.name} "
             "to query the correct table fields."
         )
-        query_sql_database_tool = CustomQuerySQLDataBaseTool(
+        query_sql_database_tool = QuerySQLDataBaseTool(
             name=f'sql_db_query{prefix}',
             db=self.db, description=query_sql_database_tool_description
         )
 
         mindsdb_sql_parser_tool_description = (
-            "Use this tool to ensure that a SQL query passes the MindsDB SQL parser. "
-            "If the query is not correct, it will be corrected and the new query will be returned. Use this new query. "
-            "If the query is not correct and cannot be corrected, an error will be returned. "
-            "In this case an error is returned, rewrite the query, check the query, and try again. "
-            "If query is correct, the query will be parsed and returned. "
-            "This tool should ALWAYS be run before executing a query with the tool "
+            "Use this tool to ensure that a SQL query passes the MindsDB SQL parser."
+            "If the query is not correct, it will be corrected and the new query will be returned. Use this new query."
+            "If the query is not correct and cannot be corrected, an error will be returned."
+            "In this case an error is returned, rewrite the query, check the query, and try again."
+            "If query is correct, the query will be parsed and returned."
+            "This tool should ALWAYS be run before executing a query with the tool  "
             f"{query_sql_database_tool.name}!"
+            ""
         )
+
         mindsdb_sql_parser_tool = MindsDBSQLParserTool(
             name=f'mindsdb_sql_parser_tool{prefix}',
             description=mindsdb_sql_parser_tool_description

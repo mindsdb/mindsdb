@@ -5,6 +5,7 @@ from mindsdb.integrations.handlers.openbb_handler.openbb_tables import create_ta
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb.utilities import log
+from mindsdb.integrations.handlers.openbb_handler.openbb_tables import OpenBBtable
 
 logger = log.getLogger(__name__)
 
@@ -81,6 +82,10 @@ class OpenBBHandler(APIHandler):
                     provider=provider
                 )
                 self._register_table(f"{cmd.replace('.', '_')[1:]}_{provider}", table_class(self))
+        
+        obb_table =OpenBBtable(self)
+        self._register_table("openbb_fetcher", obb_table)
+            
 
     def connect(self) -> bool:
         """Connects with OpenBB account through personal access token (PAT).
@@ -89,7 +94,6 @@ class OpenBBHandler(APIHandler):
         """
         self.is_connected = False
         self.obb.account.login(pat=self.PAT)
-        self.obb.account.refresh()
 
         # Check if PAT utilized is valid
         # if obb.user.profile.active:

@@ -1,5 +1,5 @@
 from http import HTTPStatus
-from typing import List
+from typing import List, Dict
 
 from flask import request
 from flask_restx import Resource
@@ -9,6 +9,8 @@ import pandas as pd
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.api.http.utils import http_error
+from mindsdb.interfaces.knowledge_base.data_source_config import S3Config
+from mindsdb.integrations.utilities.rag.s3_knowledge_base import get_filtered_files, save_s3_file_to_tempfile
 from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.integrations.handlers.web_handler.urlcrawl_helpers import get_all_websites
 from mindsdb.interfaces.database.projects import ProjectController
@@ -80,6 +82,42 @@ def _insert_web_pages_into_knowledge_base(table: KnowledgeBaseTable, urls: List[
     table.insert(docs_df)
 
 
+def _insert_from_s3_config_into_knowledge_base(table: KnowledgeBaseTable, s3_config: S3Config):
+    files: List[Dict] = get_filtered_files(s3_config=s3_config)  # dict key format: bucket, key, last_modified, size
+    for file_config in files:
+        bucket = file_config['bucket']
+        key = file_config['key']
+
+        # Save the S3 file to a temporary file
+        temp_file = save_s3_file_to_tempfile(s3_config=s3_config, bucket_name=bucket, file_key=key)
+
+        if temp_file:
+            # Use FileLoader to load and split the documents
+            loader = FileLoader(temp_file.name)
+            splitter = FileSplitter(FileSplitterConfig())
+            split_docs = []
+
+            # Lazily load the documents from the temporary file
+            for doc in loader.lazy_load():
+                split_docs += [{'page_number': i, 'document' : x} for i, x in enumerate(splitter.split_documents([doc]))]
+
+            # Prepare documents for insertion
+            doc_objs = []
+            for split_doc in split_docs:
+                content = split_doc['document'].page_content
+                page_number = split_doc['page_number']
+                doc_objs.append({'content':content, 'id':f'{bucket},{page_number},{key}'})
+            docs_df = pd.DataFrame.from_records(doc_objs)
+
+            # Insert documents into the knowledge base
+            table.insert(docs_df)
+            # clean up the temporary file
+            temp_file.close()
+
+        else:
+            logger.error(f"Failed to save file {key} from bucket {bucket} to temporary storage.")
+
+
 @ns_conf.route('/<project_name>/knowledge_bases/<knowledge_base_name>')
 @ns_conf.param('project_name', 'Name of the project')
 @ns_conf.param('knowledge_base_name', 'Name of the knowledge_base')
@@ -117,6 +155,12 @@ class KnowledgeBaseResource(Resource):
             )
 
         kb = request.json['knowledge_base']
+        if 's3' in kb and kb.get('s3'):
+            s3_config: S3Config
+            for config in kb['s3']:
+                s3_config = S3Config(**config)
+                _insert_from_s3_config_into_knowledge_base(table=table,s3_config=s3_config)
+
         files = kb.get('files', [])
         urls = kb.get('urls', [])
         # Optional params for web pages.

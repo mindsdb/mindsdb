@@ -16,7 +16,6 @@
     "raiseIssue": true,
     "thumbsRating": true
   },
-  "openapi": "https://raw.githubusercontent.com/mindsdb/mindsdb/openapi-specs/mindsdb/api/http/openapi.yml",
   "api": {
     "baseUrl": "http://127.0.0.1:47334"
   },

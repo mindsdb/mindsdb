@@ -318,14 +318,8 @@ class HuggingFaceHandler(BaseMLEngine):
             batch_items = input_list[i : i + batch_size].tolist()
 
             try:
-                # # Directly use the pipeline's built-in truncation
-                # predictions = pipeline(
-                #     batch_batchs,
-                #     truncation=True,  # Simplified truncation
-                #     max_length=pred_args.get("max_length", pipeline.tokenizer.model_max_length)
-                # )
-                batch_result = fnc(pipeline, batch_items, args)
-                results.append(batch_result)
+                batch_results = fnc(pipeline, batch_items, args)
+                results.append(batch_results)
 
             except Exception as e:
                 msg = str(e).strip()

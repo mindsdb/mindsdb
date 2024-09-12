@@ -1,5 +1,5 @@
 from typing import Dict, Optional
-
+import torch 
 import pandas as pd
 import transformers
 from huggingface_hub import HfApi
@@ -13,6 +13,14 @@ logger = log.getLogger(__name__)
 
 class HuggingFaceHandler(BaseMLEngine):
     name = "huggingface"
+
+
+    @staticmethod
+    def is_gpu_available():
+        return torch.cuda.is_available()
+    
+    def get_device(self):
+        return 0 if self.is_gpu_available() else -1
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
@@ -112,18 +120,20 @@ class HuggingFaceHandler(BaseMLEngine):
 
         logger.debug(f"Checking file system for {model_name}...")
 
+        device = self.get_device()
+
         ####
         # Check if pipeline has already been downloaded
         try:
             pipeline = transformers.pipeline(task=args['task_proper'], model=hf_model_storage_path,
-                                             tokenizer=hf_model_storage_path)
+                                             tokenizer=hf_model_storage_path, device=device)
             logger.debug(f'Model already downloaded!')
         ####
         # Otherwise download it
         except OSError:
             try:
                 logger.debug(f"Downloading {model_name}...")
-                pipeline = transformers.pipeline(task=args['task_proper'], model=model_name)
+                pipeline = transformers.pipeline(task=args['task_proper'], model=model_name, device=device)
 
                 pipeline.save_pretrained(hf_model_storage_path)
 
@@ -161,11 +171,11 @@ class HuggingFaceHandler(BaseMLEngine):
         self.engine_storage.folder_sync(model_name)
 
     # todo move infer tasks to a seperate file
-    def predict_text_classification(self, pipeline, item, args):
+    def predict_text_classification(self, pipeline, batch, args):
         top_k = args.get("top_k", 1000)
 
         result = pipeline(
-            [item], top_k=top_k, truncation=True, max_length=args["max_length"]
+            batch, top_k=top_k, truncation=True, max_length=args["max_length"]
         )[0]
 
         final = {}
@@ -181,19 +191,19 @@ class HuggingFaceHandler(BaseMLEngine):
         final[f"{args['target']}_explain"] = explain
         return final
 
-    def predict_text_generation(self, pipeline, item, args):
-        result = pipeline([item], max_length=args["max_length"])[0]
+    def predict_text_generation(self, pipeline, batch, args):
+        result = pipeline(batch, max_length=args["max_length"])[0]
 
         final = {}
         final[args["target"]] = result["generated_text"]
 
         return final
 
-    def predict_zero_shot(self, pipeline, item, args):
+    def predict_zero_shot(self, pipeline, batch, args):
         top_k = args.get("top_k", 1000)
 
         result = pipeline(
-            [item],
+            batch,
             candidate_labels=args["candidate_labels"],
             truncation=True,
             top_k=top_k,
@@ -208,17 +218,17 @@ class HuggingFaceHandler(BaseMLEngine):
 
         return final
 
-    def predict_translation(self, pipeline, item, args):
-        result = pipeline([item], max_length=args["max_length"])[0]
+    def predict_translation(self, pipeline, batch, args):
+        result = pipeline(batch, max_length=args["max_length"])[0]
 
         final = {}
         final[args["target"]] = result["translation_text"]
 
         return final
 
-    def predict_summarization(self, pipeline, item, args):
+    def predict_summarization(self, pipeline, batch, args):
         result = pipeline(
-            [item],
+            batch,
             min_length=args["min_output_length"],
             max_length=args["max_output_length"],
         )[0]
@@ -228,16 +238,16 @@ class HuggingFaceHandler(BaseMLEngine):
 
         return final
 
-    def predict_text2text(self, pipeline, item, args):
-        result = pipeline([item], max_length=args["max_length"])[0]
+    def predict_text2text(self, pipeline, batch, args):
+        result = pipeline(batch, max_length=args["max_length"])[0]
 
         final = {}
         final[args["target"]] = result["generated_text"]
 
         return final
 
-    def predict_fill_mask(self, pipeline, item, args):
-        result = pipeline([item])[0]
+    def predict_fill_mask(self, pipeline, batch, args):
+        result = pipeline(batch)[0]
 
         final = {}
         final[args["target"]] = result[0]["sequence"]
@@ -257,6 +267,9 @@ class HuggingFaceHandler(BaseMLEngine):
             "fill-mask": self.predict_fill_mask,
         }
 
+        # params passed at  prediction time like batch_size and max_length
+        pred_args= args.get('predict_params', {})
+
         ###### get stuff from model folder
         args = self.model_storage.json_get("args")
 
@@ -267,6 +280,8 @@ class HuggingFaceHandler(BaseMLEngine):
 
         fnc = fnc_list[task]
 
+        device = self.get_device()
+
         try:
             # load from model storage (finetuned models will use this)
             hf_model_storage_path = self.model_storage.folder_get(
@@ -276,6 +291,7 @@ class HuggingFaceHandler(BaseMLEngine):
                 task=args["task_proper"],
                 model=hf_model_storage_path,
                 tokenizer=hf_model_storage_path,
+                device=device
             )
         except OSError:
             # load from engine storage (i.e. 'common' models)
@@ -286,6 +302,7 @@ class HuggingFaceHandler(BaseMLEngine):
                 task=args["task_proper"],
                 model=hf_model_storage_path,
                 tokenizer=hf_model_storage_path,
+                device=device
             )
 
         input_column = args["input_column"]
@@ -293,42 +310,29 @@ class HuggingFaceHandler(BaseMLEngine):
             raise RuntimeError(f'Column "{input_column}" not found in input data')
         input_list = df[input_column]
 
-        max_tokens = pipeline.tokenizer.model_max_length
+        # Set batch size (default to 1 if not provided)
+        batch_size = pred_args.get("batch_size", 1)
 
         results = []
-        for item in input_list:
-            if max_tokens is not None:
-                tokens = pipeline.tokenizer.encode(item)
-                if len(tokens) > max_tokens:
-                    truncation_policy = args.get("truncation_policy", "strict")
-                    if truncation_policy == "strict":
-                        results.append(
-                            {
-                                "error": f"Tokens count exceed model limit: {len(tokens)} > {max_tokens}"
-                            }
-                        )
-                        continue
-                    elif truncation_policy == "left":
-                        tokens = tokens[
-                            -max_tokens + 1 : -1
-                        ]  # cut 2 empty tokens from left and right
-                    else:
-                        tokens = tokens[
-                            1 : max_tokens - 1
-                        ]  # cut 2 empty tokens from left and right
+        for i in range(0, len(input_list), batch_size):
+            batch_items = input_list[i : i + batch_size].tolist()
 
-                    item = pipeline.tokenizer.decode(tokens)
-
-            item = str(item)
             try:
-                result = fnc(pipeline, item, args)
+                # # Directly use the pipeline's built-in truncation
+                # predictions = pipeline(
+                #     batch_batchs,
+                #     truncation=True,  # Simplified truncation
+                #     max_length=pred_args.get("max_length", pipeline.tokenizer.model_max_length)
+                # )
+                batch_result = fnc(pipeline, batch_items, args)
+                results.append(batch_result)
+
             except Exception as e:
                 msg = str(e).strip()
                 if msg == "":
                     msg = e.__class__.__name__
-                result = {"error": msg}
-            results.append(result)
-
+                results.append({"error": msg})
+        
         pred_df = pd.DataFrame(results)
 
         return pred_df

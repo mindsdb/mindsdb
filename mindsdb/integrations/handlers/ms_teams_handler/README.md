@@ -197,8 +197,5 @@ Finally, create a chatbot using the agent and the Microsoft Teams data source cr
 CREATE CHATBOT teams_chatbot
 USING
     database = 'teams_datasource',
-    agent = 'convo_agent',
-    enable_dms = true
+    agent = 'convo_agent';
 ~~~~
-
-Note: The `enable_dms` parameter is optional and is the initially supported mode of talking to a chatbot. A chatbot responds to direct messages.

@@ -26,9 +26,6 @@ A chatbot can be created, deleted, queried, and updated. Here is how you can do 
     USING
         database = 'my_slack',                    -- this must be created with CREATE DATABASE
         agent = 'customer_support_agent',         -- this must be created with CREATE AGENT
-        included_channels = ['support', 'help'],  -- default is all
-        excluded_channels = [],                   -- default is none
-        enable_dms = true,                        -- default is true
         is_running = true;                        -- default is true
     ```
 
@@ -36,13 +33,21 @@ A chatbot can be created, deleted, queried, and updated. Here is how you can do 
 
     * `database` stores connection to a chat app (like [Slack](/integrations/app-integrations/slack) or [MS Teams](/integrations/app-integrations/microsoft-teams)) that should be created with the `CREATE DATABASE` statement.
     * `agent` is an [AI agent](/agents/agent) created with the `CREATE AGENT` command. It consists of an AI model trained with defined data sets.
-    * `included_channels` and `excluded_channels` are optional and store channel names where the bot will or will not respond.
-    * `enable_dms` is the initially supported mode of talking to a chatbot. A chatbot responds to direct messages.
     * `is_running` indicates whether or not to start the chatbot upon creation.
 
     <Note>
     If you want to use Slack in the [`CREATE CHATBOT`](/agents/chatbot) syntax, use [this method of connecting Slack to MindsDB](/integrations/app-integrations/slack#method-1-chatbot-responds-in-direct-messages-to-a-slack-app).
     </Note>
+
+    <Tip>
+    **How to connect the chatbot to multiple Slack channels?**
+
+    Open your Slack application and add the App/Bot to one or more channels:
+      - Go to the channel where you want to use the bot.
+      - Right-click on the channel and select *View Channel Details*.
+      - Select *Integrations*.
+      - Click on *Add an App*.
+    </Tip>
 
 * Deleting a chatbot:
 
@@ -74,7 +79,6 @@ CREATE CHATBOT text_to_sql_chatbot
 USING
     database = 'my_slack',        -- this must be created with CREATE DATABASE
     agent = 'text_to_sql_agent',  -- this must be created with CREATE AGENT
-    enable_dms = true,
     is_running = true;
 ```
 

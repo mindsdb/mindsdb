@@ -70,9 +70,7 @@ The parameters given above can be obtained by registering an application in Entr
 12. Enter a description for your client secret and select an expiration period.
 13. Click on **Add** and copy the generated client secret and record it as the `client_secret` parameter.
 14. Click on **Authentication** and then click on **Add a platform**.
-15. Select **Web** and enter the following URLs in the **Redirect URIs** field:
-    - `https://cloud.mindsdb.com/verify-auth`
-    - `http://localhost:47334/verify-auth` (for local development)
+15. Select **Web** and enter URL where MindsDB has been deployed followed by `/verify-auth` in the **Redirect URIs** field. For example, if you are running MindsDB locally (on `http://localhost:47334`), enter `http://localhost:47334/verify-auth` in the **Redirect URIs** field.
 
 <Tip>
 You can find more information about creating app registrations [here](https://docs.microsoft.com/en-us/graph/auth-register-app-v2).

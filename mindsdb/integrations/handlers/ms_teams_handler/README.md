@@ -57,8 +57,6 @@ The parameters given above can be obtained by registering an application in Micr
         - Group.ReadWrite.All
   
     - Channels:
-        - ChannelSettings.ReadWrite.Group
-        - Channel.ReadBasic.All
         - ChannelSettings.Read.All
         - ChannelSettings.ReadWrite.All
         - Directory.Read.All

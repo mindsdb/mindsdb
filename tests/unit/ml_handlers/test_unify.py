@@ -1,74 +1,154 @@
-import os
-import pytest
+import unittest
+from unittest.mock import patch, MagicMock
 import pandas as pd
+from collections import OrderedDict
 
-from mindsdb_sql import parse_sql
+from mindsdb.integrations.handlers.unify_handler.unify_handler import UnifyHandler  # Replace with the actual import path
 
-from ..executor_test_base import BaseExecutorTest
-
-class TestUnify(BaseExecutorTest):
-    # def wait_predictor(self, project, name):
-    #     # wait
-    #     done = False
-    #     for _ in range(200):
-    #         ret = self.run_sql(f"select * from {project}.models where name='{name}'")
-    #         if not ret.empty:
-    #             if ret["STATUS"][0] == "complete":
-    #                 done = True
-    #                 break
-    #             elif ret["STATUS"][0] == "error":
-    #                 break
-    #         time.sleep(0.5)
-    #     if not done:
-    #         raise RuntimeError("predictor wasn't created")
-    
-    def run_sql(self, sql):
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect="mindsdb"))
-        assert ret.error_code is None
-        if ret.data is not None:
-            return ret.data.to_df()
-
-
+class TestUnify(unittest.TestCase):
     """
-    Integration tests for the Unify handler.
+    Unit tests for the Unify handler.
     """
-    @pytest.fixture(autouse=True, scope="function")
-    def setup_method(self):
-        """
-        Setup test environment, creating a project
-        """
-        super().setup_method()
-        self.run_sql("create database proj")
-        # self.run_sql(
-        #     f"""
-        #     CREATE ML_ENGINE unify-engine
-        #     FROM unify
-        #     USING
-        #     unify_api_key = '{os.environ.get('UNIFY_API_KEY')}';
-        #     """
-        # )
-    @pytest.mark.skipif(os.environ.get('UNIFY_API_KEY') is None, reason='Missing API key!')
-    
-    def test_unify_correct_flow(self):
-        self.run_sql(
-        f"""
-        CREATE MODEL proj.test_unify_correct_flow
-        PREDICT output
-        USING
-            engine='unify',
-            model = 'llama-3-8b-chat',
-            provider = 'together-ai',
-            column = 'text',
-            api_key='{os.environ.get('UNIFY_API_KEY')}';
-        """
-        )
-        self.wait_predictor("proj", "test_unify_correct_flow")
 
-        result_df = self.run_sql(
+    dummy_connection_data = OrderedDict(
+        unify_api_key='dummy_api_key',
+    )
+
+    def setUp(self):
+        # Mock model storage and engine storage
+        mock_engine_storage = MagicMock()
+        mock_model_storage = MagicMock()
+
+        # Define a return value for the `get_connection_args` method of the mock engine storage
+        mock_engine_storage.get_connection_args.return_value = self.dummy_connection_data
+
+        # Assign mock engine storage to instance variable for create validation tests
+        self.mock_engine_storage = mock_engine_storage
+
+        self.handler = UnifyHandler(mock_model_storage, mock_engine_storage)
+
+    def test_create_without_using_clause_raises_exception(self):
         """
-            SELECT text, output
-            FROM proj.test_unify_correct_flow
-            WHERE text = 'Hello';
+        Test if model creation raises an exception without a USING clause.
         """
-        )
-        assert "Hello" in result_df["answer"].iloc[0].lower()
+        with self.assertRaisesRegex(Exception, "Unify engine requires a USING clause!"):
+            self.handler.create('target', args={})
+
+    def test_create_with_valid_arguments_runs_no_errors(self):
+        """
+        Test if model creation is validated correctly with valid arguments.
+        """
+        args = {
+            'using': {
+                'model': 'dummy_model',
+                'provider': 'dummy_provider',
+                'column': 'dummy_column'
+            }
+        }
+        self.handler.create('target', args=args)
+        self.assertTrue(self.handler.generative)
+        self.handler.model_storage.json_set.assert_called_once_with('args', args)
+
+    @patch('unify.utils.list_endpoints')
+    @patch('unify.Unify')
+    def test_predict_with_valid_arguments_runs_no_errors(self, mock_unify, mock_list_endpoints):
+        """
+        Test if model prediction returns the expected result with valid arguments.
+        """
+        # Mock the necessary methods and attributes
+        self.handler.model_storage.json_get.return_value = {
+            'using': {
+                'model': 'dummy_model',
+                'provider': 'dummy_provider',
+                'column': 'input_text'
+            },
+            'target': 'output_text'
+        }
+        mock_list_endpoints.return_value = ['dummy_model@dummy_provider']
+        
+        mock_client = MagicMock()
+        mock_client.generate.return_value = 'Generated text'
+        mock_unify.return_value = mock_client
+
+        # Create a dummy DataFrame
+        df = pd.DataFrame({'input_text': ['Test input']})
+
+        result = self.handler.predict(df)
+
+        self.assertIsInstance(result, pd.DataFrame)
+        self.assertEqual(list(result.columns), ['output_text'])
+        self.assertEqual(result['output_text'][0], 'Generated text')
+
+    def test_predict_with_missing_model_raises_exception(self):
+        """
+        Test if model prediction raises an exception when 'model' is missing from the USING clause.
+        """
+        self.handler.model_storage.json_get.return_value = {
+            'using': {
+                'provider': 'dummy_provider',
+                'column': 'input_text'
+            }
+        }
+        with self.assertRaisesRegex(Exception, "Unify requires an model parameter in the USING clause!"):
+            self.handler.predict(pd.DataFrame())
+
+    def test_predict_with_missing_provider_raises_exception(self):
+        """
+        Test if model prediction raises an exception when 'provider' is missing from the USING clause.
+        """
+        self.handler.model_storage.json_get.return_value = {
+            'using': {
+                'model': 'dummy_model',
+                'column': 'input_text'
+            }
+        }
+        with self.assertRaisesRegex(Exception, "Unify requires a provider parameter in the USING clause!"):
+            self.handler.predict(pd.DataFrame())
+
+    @patch('unify.utils.list_endpoints')
+    def test_predict_with_unsupported_endpoint_raises_exception(self, mock_list_endpoints):
+        """
+        Test if model prediction raises an exception when the endpoint is not supported by Unify.
+        """
+        self.handler.model_storage.json_get.return_value = {
+            'using': {
+                'model': 'dummy_model',
+                'provider': 'dummy_provider',
+                'column': 'input_text'
+            }
+        }
+        mock_list_endpoints.return_value = ['other_model@other_provider']
+        
+        with self.assertRaisesRegex(Exception, "The model, provider or their combination is not supported by Unify!"):
+            self.handler.predict(pd.DataFrame())
+    
+    @patch('mindsdb.integrations.handlers.unify_handler.unify_handler.unify.utils.list_endpoints')
+    @patch('mindsdb.integrations.handlers.unify_handler.unify_handler.get_api_key')
+    def test_predict_with_missing_input_column_raises_exception(self, mock_get_api_key, mock_list_endpoints):
+        # Mock the necessary methods and attributes
+        mock_get_api_key.return_value = 'dummy_api_key'
+        mock_list_endpoints.return_value = ['dummy_model@dummy_provider']
+        
+        self.handler.model_storage.json_get.return_value = {
+            'using': {
+                'model': 'dummy_model',
+                'provider': 'dummy_provider',
+                'column': 'non_existent_column'
+            },
+            'target': 'output_column'
+        }
+
+        # Create a DataFrame without the expected input column
+        df = pd.DataFrame({'other_column': ['Test input']})
+
+        # Assert that the correct exception is raised
+        with self.assertRaisesRegex(RuntimeError, 'Column "non_existent_column" not found in input data'):
+            self.handler.predict(df)
+
+        # Verify that the mocked methods were called
+        self.handler.model_storage.json_get.assert_called_once_with('args')
+        mock_get_api_key.assert_called_once()
+        mock_list_endpoints.assert_called_once()
+
+if __name__ == '__main__':
+    unittest.main()

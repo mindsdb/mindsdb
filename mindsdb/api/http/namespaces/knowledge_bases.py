@@ -42,7 +42,7 @@ def _insert_file_into_knowledge_base(table: KnowledgeBaseTable, file_name: str):
     doc_objs = []
     for split_doc in split_docs:
         doc_objs.append({
-            'content': split_doc.page_content,
+            'content': split_doc.page_content, 'id': f'file,{file_name}'
         })
     docs_df = pd.DataFrame.from_records(doc_objs)
     # Insert documents into KB
@@ -73,9 +73,11 @@ def _insert_web_pages_into_knowledge_base(table: KnowledgeBaseTable, urls: List[
     # Convert back to a DF.
     doc_objs = []
     for doc in all_docs:
+        url = doc.metadata['url']
         doc_objs.append({
             'content': doc.page_content,
-            'url': doc.metadata['url']
+            'url': url,
+            'id':f'web,{url}'
         })
     docs_df = pd.DataFrame.from_records(doc_objs)
     # Insert documents into KB.
@@ -106,7 +108,7 @@ def _insert_from_s3_config_into_knowledge_base(table: KnowledgeBaseTable, s3_con
             for split_doc in split_docs:
                 content = split_doc['document'].page_content
                 page_number = split_doc['page_number']
-                doc_objs.append({'content':content, 'id':f'{bucket},{page_number},{key}'})
+                doc_objs.append({'content':content, 'id':f's3,{bucket},{page_number},{key}'})
             docs_df = pd.DataFrame.from_records(doc_objs)
 
             # Insert documents into the knowledge base

@@ -262,6 +262,28 @@ class VectorStoreHandler(BaseHandler):
 
         return self.do_upsert(table_name, df)
 
+    def remove_ids_not_in_list(self, table_name: str, ids_to_keep: List[str]) -> HandlerResponse:
+        """
+        Removes any entries from the specified table that are not in the given list of IDs.
+
+        :param table_name: The name of the table.
+        :param ids_to_keep: A list of IDs that should remain in the table.
+        :return: HandlerResponse after the deletion operation.
+        """
+        # Check if there are ids to keep
+        if not ids_to_keep:
+            raise ValueError("The list of IDs to keep cannot be empty.")
+
+        # Create a condition to filter out IDs not in the list
+        conditions = [FilterCondition(
+            column=TableField.ID.value,
+            op=FilterOperator.NOT_IN,
+            value=ids_to_keep
+        )]
+
+        # Execute delete operation with the created conditions
+        return self.delete(table_name, conditions=conditions)
+
     def do_upsert(self, table_name, df):
         # if handler supports it, call upsert method
 

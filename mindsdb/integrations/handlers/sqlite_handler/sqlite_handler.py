@@ -1,5 +1,5 @@
+import os
 from typing import Optional
-from collections import OrderedDict
 
 import pandas as pd
 import sqlite3
@@ -16,7 +16,7 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+
 
 logger = log.getLogger(__name__)
 
@@ -86,6 +86,8 @@ class SQLiteHandler(DatabaseHandler):
         need_to_close = self.is_connected is False
 
         try:
+            if not os.path.isfile(self.connection_data['db_file']):
+                raise FileNotFoundError(f"File '{self.connection_data['db_file']}' not found. Use ':memory:' to create an in-memory database if you don't have a file.")
             self.connect()
             response.success = True
         except Exception as e:
@@ -180,16 +182,3 @@ class SQLiteHandler(DatabaseHandler):
         df = result.data_frame
         result.data_frame = df.rename(columns={'name': 'column_name', 'type': 'data_type'})
         return result
-
-
-connection_args = OrderedDict(
-    db_file={
-        'type': ARG_TYPE.STR,
-        'description': 'The database file where the data will be stored. The special path name :memory: can be provided'
-                       ' to create a temporary database in RAM.'
-    }
-)
-
-connection_args_example = OrderedDict(
-    db_file='chinook.db'
-)

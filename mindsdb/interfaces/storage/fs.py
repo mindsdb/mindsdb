@@ -28,6 +28,7 @@ from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
 import mindsdb.utilities.profiler as profiler
 from mindsdb.utilities import log
+from mindsdb.utilities.fs import safe_extract
 
 logger = log.getLogger(__name__)
 
@@ -112,6 +113,19 @@ def get_dir_size(path: str):
             elif entry.is_dir():
                 total += get_dir_size(entry.path)
     return total
+
+
+class AbsentFSStore(BaseFSStore):
+    """Storage class that does not store anything. It is just a dummy.
+    """
+    def get(self, *args, **kwargs):
+        pass
+
+    def put(self, *args, **kwargs):
+        pass
+
+    def delete(self, *args, **kwargs):
+        pass
 
 
 class LocalFSStore(BaseFSStore):
@@ -299,7 +313,7 @@ class S3FSStore(BaseFSStore):
             fh = io.BytesIO()
             self.s3.download_fileobj(self.bucket, remote_ziped_name, fh)
             with tarfile.open(fileobj=fh) as tar:
-                tar.extractall(path=base_dir)
+                safe_extract(tar, path=base_dir)
         else:
             self.s3.download_file(self.bucket, remote_ziped_name, local_ziped_path)
             shutil.unpack_archive(local_ziped_path, base_dir)
@@ -392,12 +406,13 @@ class S3FSStore(BaseFSStore):
 
 def FsStore():
     storage_location = Config()['permanent_storage']['location']
+    if storage_location == 'absent':
+        return AbsentFSStore()
     if storage_location == 'local':
         return LocalFSStore()
-    elif storage_location == 's3':
+    if storage_location == 's3':
         return S3FSStore()
-    else:
-        raise Exception(f"Location: '{storage_location}' not supported")
+    raise Exception(f"Location: '{storage_location}' not supported")
 
 
 class FileStorage:

@@ -17,7 +17,8 @@ from mindsdb.integrations.libs.ml_handler_process import (
     describe_process,
     create_engine_process,
     update_engine_process,
-    create_validation_process
+    create_validation_process,
+    func_call_process
 )
 
 
@@ -218,27 +219,28 @@ class ProcessCache:
         from mindsdb.interfaces.database.integrations import integration_controller
         preload_handlers = {}
         config = Config()
-        is_cloud = config.get('cloud', False)
+        is_cloud = config.get('cloud', False) # noqa
 
         if config['ml_task_queue']['type'] != 'redis':
-            lightwood_handler = integration_controller.handler_modules['lightwood']
-            if lightwood_handler.Handler is not None:
+            lightwood_handler = integration_controller.get_handler_module('lightwood')
+            if lightwood_handler is not None and lightwood_handler.Handler is not None:
                 preload_handlers[lightwood_handler.Handler] = 4 if is_cloud else 1
 
-            huggingface_handler = integration_controller.handler_modules['huggingface']
-            if huggingface_handler.Handler is not None:
-                preload_handlers[huggingface_handler.Handler] = 1 if is_cloud else 0
+            if is_cloud:
+                huggingface_handler = integration_controller.get_handler_module('huggingface')
+                if huggingface_handler is not None and huggingface_handler.Handler is not None:
+                    preload_handlers[huggingface_handler.Handler] = 1
 
-            openai_handler = integration_controller.handler_modules['openai']
-            if openai_handler.Handler is not None:
-                preload_handlers[openai_handler.Handler] = 1 if is_cloud else 0
+                openai_handler = integration_controller.get_handler_module('openai')
+                if openai_handler is not None and openai_handler.Handler is not None:
+                    preload_handlers[openai_handler.Handler] = 1
 
         with self._lock:
             if self._init is False:
                 self._init = True
                 for handler in preload_handlers:
-                    self._keep_alive[handler.__name__] = preload_handlers[handler]
-                    self.cache[handler.__name__] = {
+                    self._keep_alive[handler.name] = preload_handlers[handler]
+                    self.cache[handler.name] = {
                         'last_usage_at': time.time(),
                         'handler_module': handler.__module__,
                         'processes': [
@@ -323,6 +325,14 @@ class ProcessCache:
                 'model_id': model_id,
                 'module_path': handler_module_path
             }
+        elif task_type == ML_TASK_TYPE.FUNC_CALL:
+            func = func_call_process
+            kwargs = {
+                'name': payload['name'],
+                'args': payload['args'],
+                'integration_id': integration_id,
+                'module_path': handler_module_path
+            }
         else:
             raise Exception(f'Unknown ML task type: {task_type}')
 
@@ -392,6 +402,22 @@ class ProcessCache:
                         processes.append(
                             WarmProcess(init_ml_handler, (self.cache[handler_name]['handler_module'],))
                         )
+
+    def remove_processes_for_handler(self, handler_name: str) -> None:
+        """
+            Remove all warm processes for a given handler.
+            This is useful when the previous processes use an outdated instance of the handler.
+            A good example is when the dependencies for a handler are installed after attempting to use the handler.
+
+            Args:
+                handler_name (str): name of the handler.
+        """
+        with self._lock:
+            if handler_name in self.cache:
+                for process in self.cache[handler_name]['processes']:
+                    process.shutdown()
+
+                self.cache[handler_name]['processes'] = []
 
 
 process_cache = ProcessCache()

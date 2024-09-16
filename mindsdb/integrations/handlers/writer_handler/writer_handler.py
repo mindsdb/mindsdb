@@ -26,7 +26,7 @@ def extract_llm_params(args):
     """extract llm params from input query args"""
 
     llm_params = {}
-    for param in WriterLLMParameters.__fields__:
+    for param in WriterLLMParameters.model_fields:
         if param in args:
             llm_params[param] = args.pop(param)
 

@@ -1,15 +1,26 @@
+import traceback
 from http import HTTPStatus
+from typing import Dict, Iterable, List
+import json
+import os
 
-from flask import request
+from flask import request, Response
 from flask_restx import Resource
 
+from mindsdb.interfaces.agents.agents_controller import AgentsController
+from mindsdb.interfaces.storage import db
+from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
-from mindsdb.api.http.utils import http_error
 from mindsdb.metrics.metrics import api_endpoint_metrics
-from mindsdb.interfaces.agents.agents_controller import AgentsController
-from mindsdb.interfaces.model.functions import PredictorRecordNotFound
-from mindsdb.interfaces.storage import db
+from mindsdb.utilities.log import getLogger
+from mindsdb.utilities.exception import EntityNotExistsError
+
+
+logger = getLogger(__name__)
+
+
+AGENT_QUICK_RESPONSE = "I understand your request. I'm working on a detailed response for you."
 
 
 def create_agent(project_name, name, agent):
@@ -28,6 +39,7 @@ def create_agent(project_name, name, agent):
         )
 
     model_name = agent['model_name']
+    provider = agent.get('provider')
     params = agent.get('params', {})
     skills = agent.get('skills', [])
 
@@ -51,26 +63,27 @@ def create_agent(project_name, name, agent):
 
     try:
         created_agent = agents_controller.add_agent(
-            name,
-            project_name,
-            model_name,
-            skills,
+            name=name,
+            project_name=project_name,
+            model_name=model_name,
+            skills=skills,
+            provider=provider,
             params=params
         )
         return created_agent.as_dict(), HTTPStatus.CREATED
-    except ValueError as e:
+    except ValueError:
         # Model or skill doesn't exist.
         return http_error(
             HTTPStatus.NOT_FOUND,
             'Resource not found',
-            str(e)
+            f'The model "{model_name}" or skills "{skills}" do not exist. Please ensure that the names are correct and try again.'
         )
-    except NotImplementedError as e:
+    except NotImplementedError:
         # Free users trying to create agent.
         return http_error(
             HTTPStatus.UNAUTHORIZED,
             'Unavailable to free users',
-            str(e)
+            f'The model "{model_name}" or skills "{skills}" do not exist. Please ensure that the names are correct and try again.'
         )
 
 
@@ -80,10 +93,10 @@ class AgentsResource(Resource):
     @api_endpoint_metrics('GET', '/agents')
     def get(self, project_name):
         ''' List all agents '''
-        agents_controller = AgentsController()
+        session = SessionController()
         try:
-            all_agents = agents_controller.get_agents(project_name)
-        except ValueError:
+            all_agents = session.agents_controller.get_agents(project_name)
+        except EntityNotExistsError:
             # Project needs to exist.
             return http_error(
                 HTTPStatus.NOT_FOUND,
@@ -117,10 +130,10 @@ class AgentResource(Resource):
     @ns_conf.doc('get_agent')
     @api_endpoint_metrics('GET', '/agents/agent')
     def get(self, project_name, agent_name):
-        '''Gets a agent by name'''
-        agents_controller = AgentsController()
+        '''Gets an agent by name'''
+        session = SessionController()
         try:
-            existing_agent = agents_controller.get_agent(agent_name, project_name=project_name)
+            existing_agent = session.agents_controller.get_agent(agent_name, project_name=project_name)
             if existing_agent is None:
                 return http_error(
                     HTTPStatus.NOT_FOUND,
@@ -139,7 +152,7 @@ class AgentResource(Resource):
     @ns_conf.doc('update_agent')
     @api_endpoint_metrics('PUT', '/agents/agent')
     def put(self, project_name, agent_name):
-        '''Updates a agent by name, creating one if it doesn't exist'''
+        '''Updates an agent by name, creating one if it doesn't exist'''
 
         # Check for required parameters.
         if 'agent' not in request.json:
@@ -165,20 +178,8 @@ class AgentResource(Resource):
         model_name = agent.get('model_name', None)
         skills_to_add = agent.get('skills_to_add', [])
         skills_to_remove = agent.get('skills_to_remove', [])
+        provider = agent.get('provider')
         params = agent.get('params', None)
-
-        # Model needs to exist.
-        if model_name is not None:
-            session_controller = SessionController()
-            model_name_no_version, version = db.Predictor.get_name_and_version(model_name)
-            try:
-                session_controller.model_controller.get_model(model_name_no_version, version=version, project_name=project_name)
-            except PredictorRecordNotFound:
-                return http_error(
-                    HTTPStatus.NOT_FOUND,
-                    'Model not found',
-                    f'Model with name {model_name} not found'
-                )
 
         # Agent must not exist with new name.
         if name is not None and name != agent_name:
@@ -196,6 +197,22 @@ class AgentResource(Resource):
 
         # Update
         try:
+            # Prepare the params dictionary
+            if params is None:
+                params = {}
+
+            # Check if any of the skills to be added is of type 'retrieval'
+            session = SessionController()
+            skills_controller = session.skills_controller
+            retrieval_skill_added = any(
+                skills_controller.get_skill(skill_name).type == 'retrieval'
+                for skill_name in skills_to_add
+                if skills_controller.get_skill(skill_name) is not None
+            )
+
+            if retrieval_skill_added and 'mode' not in params:
+                params['mode'] = 'retrieval'
+
             updated_agent = agents_controller.update_agent(
                 agent_name,
                 project_name=project_name,
@@ -203,8 +220,10 @@ class AgentResource(Resource):
                 model_name=model_name,
                 skills_to_add=skills_to_add,
                 skills_to_remove=skills_to_remove,
+                provider=provider,
                 params=params
             )
+
             return updated_agent.as_dict()
         except ValueError as e:
             # Model or skill doesn't exist.
@@ -219,6 +238,7 @@ class AgentResource(Resource):
     def delete(self, project_name, agent_name):
         '''Deletes a agent by name'''
         agents_controller = AgentsController()
+
         try:
             existing_agent = agents_controller.get_agent(agent_name, project_name=project_name)
             if existing_agent is None:
@@ -239,6 +259,156 @@ class AgentResource(Resource):
         return '', HTTPStatus.NO_CONTENT
 
 
+def _completion_event_generator(
+        agent_name: str,
+        messages: List[Dict],
+        project_name: str) -> Iterable[str]:
+    logger.info(f"Starting completion event generator for agent {agent_name}")
+
+    def json_serialize(data):
+        return f'data: {json.dumps(data)}\n\n'
+
+    quick_response_message = {
+        'role': 'assistant',
+        'content': AGENT_QUICK_RESPONSE
+    }
+    yield json_serialize({"quick_response": True, "messages": [quick_response_message]})
+    logger.info("Quick response sent")
+
+    try:
+        # Populate API key by default if not present.
+        session = SessionController()
+        existing_agent = session.agents_controller.get_agent(agent_name, project_name=project_name)
+        if not existing_agent.params:
+            existing_agent.params = {}
+        existing_agent.params['openai_api_key'] = existing_agent.params.get('openai_api_key',
+                                                                            os.getenv('OPENAI_API_KEY'))
+        # Have to commit/flush here so DB isn't locked while streaming.
+        db.session.commit()
+
+        completion_stream = session.agents_controller.get_completion(
+            existing_agent,
+            messages,
+            project_name=project_name,
+            tools=[],
+            stream=True
+        )
+
+        for chunk in completion_stream:
+            if isinstance(chunk, str) and chunk.startswith('data: '):
+                # The chunk is already formatted correctly, yield it as is
+                yield chunk
+            elif isinstance(chunk, dict):
+                if 'error' in chunk:
+                    # Handle error chunks
+                    logger.error(f"Error in completion stream: {chunk['error']}")
+                    yield json_serialize({"error": chunk['error']})
+                elif chunk.get('type') == 'context':
+                    # Handle context message
+                    yield json_serialize({"type": "context", "content": chunk.get('content')})
+                elif chunk.get('type') == 'sql':
+                    # Handle SQL query message
+                    yield json_serialize({"type": "sql", "content": chunk.get('content')})
+                else:
+                    # Process and yield other types of chunks
+                    chunk_obj = {}
+                    if 'type' in chunk:
+                        chunk_obj['type'] = chunk['type']
+                    if 'prompt' in chunk:
+                        chunk_obj['prompt'] = chunk['prompt']
+                    if 'output' in chunk:
+                        chunk_obj['output'] = chunk['output']
+                    if 'messages' in chunk:
+                        chunk_obj['messages'] = [{'content': str(m.content) if hasattr(m, 'content') else str(m)} for m
+                                                 in chunk['messages']]
+                    if 'actions' in chunk:
+                        chunk_obj['actions'] = [{
+                            'tool': getattr(a, 'tool', str(a)),
+                            'tool_input': getattr(a, 'tool_input', ''),
+                            'log': getattr(a, 'log', '')
+                        } for a in chunk['actions']]
+                    if 'steps' in chunk:
+                        chunk_obj['steps'] = [{'observation': getattr(s, 'observation', str(s))} for s in chunk['steps']]
+                    if 'context' in chunk:
+                        chunk_obj['context'] = chunk['context']
+                    if 'sql' in chunk:
+                        chunk_obj['sql'] = chunk['sql']
+
+                    yield json_serialize(chunk_obj)
+            else:
+                # For any other unexpected chunk types
+                yield json_serialize({"output": str(chunk)})
+
+            logger.debug(f"Streamed chunk: {str(chunk)[:100]}...")
+
+        logger.info("Completion stream finished")
+
+    except Exception as e:
+        error_message = f"Error in completion event generator: {str(e)}"
+        logger.error(error_message)
+        logger.error(traceback.format_exc())
+        yield json_serialize({"error": error_message})
+
+    finally:
+        yield json_serialize({"type": "end"})
+
+
+@ns_conf.route('/<project_name>/agents/<agent_name>/completions/stream')
+@ns_conf.param('project_name', 'Name of the project')
+@ns_conf.param('agent_name', 'Name of the agent')
+class AgentCompletionsStream(Resource):
+    @ns_conf.doc('agent_completions_stream')
+    @api_endpoint_metrics('POST', '/agents/agent/completions/stream')
+    def post(self, project_name, agent_name):
+        logger.info(f"Received streaming request for agent {agent_name} in project {project_name}")
+
+        # Check for required parameters.
+        if 'messages' not in request.json:
+            logger.error("Missing 'messages' parameter in request body")
+            return http_error(
+                HTTPStatus.BAD_REQUEST,
+                'Missing parameter',
+                'Must provide "messages" parameter in POST body'
+            )
+
+        session = SessionController()
+        try:
+            existing_agent = session.agents_controller.get_agent(agent_name, project_name=project_name)
+            if existing_agent is None:
+                logger.error(f"Agent {agent_name} not found in project {project_name}")
+                return http_error(
+                    HTTPStatus.NOT_FOUND,
+                    'Agent not found',
+                    f'Agent with name {agent_name} does not exist'
+                )
+        except ValueError as e:
+            logger.error(f"Project {project_name} not found: {str(e)}")
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                'Project not found',
+                f'Project with name {project_name} does not exist'
+            )
+
+        messages = request.json['messages']
+
+        try:
+            gen = _completion_event_generator(
+                agent_name,
+                messages,
+                project_name
+            )
+            logger.info(f"Starting streaming response for agent {agent_name}")
+            return Response(gen, mimetype='text/event-stream')
+        except Exception as e:
+            logger.error(f"Error during streaming for agent {agent_name}: {str(e)}")
+            logger.error(traceback.format_exc())
+            return http_error(
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+                'Streaming error',
+                f'An error occurred during streaming: {str(e)}'
+            )
+
+
 @ns_conf.route('/<project_name>/agents/<agent_name>/completions')
 @ns_conf.param('project_name', 'Name of the project')
 @ns_conf.param('agent_name', 'Name of the agent')
@@ -255,6 +425,7 @@ class AgentCompletions(Resource):
                 'Must provide "messages" parameter in POST body'
             )
         agents_controller = AgentsController()
+
         try:
             existing_agent = agents_controller.get_agent(agent_name, project_name=project_name)
             if existing_agent is None:
@@ -271,37 +442,47 @@ class AgentCompletions(Resource):
                 f'Project with name {project_name} does not exist'
             )
 
-        # Model needs to exist.
-        session_controller = SessionController()
-        model_name_no_version, version = db.Predictor.get_name_and_version(existing_agent.model_name)
-        try:
-            agent_model = session_controller.model_controller.get_model(model_name_no_version, version=version, project_name=project_name)
-            agent_model_record = db.Predictor.query.get(agent_model['id'])
-        except PredictorRecordNotFound:
-            return http_error(
-                HTTPStatus.NOT_FOUND,
-                'Model not found',
-                f'Model with name {existing_agent.model_name} not found'
-            )
+        # Add OpenAI API key to agent params if not already present.
+        if not existing_agent.params:
+            existing_agent.params = {}
+        existing_agent.params['openai_api_key'] = existing_agent.params.get('openai_api_key', os.getenv('OPENAI_API_KEY'))
 
-        predict_params = {
+        # set mode to `retrieval` if agent has a skill of type `retrieval` and mode is not set
+        if 'mode' not in existing_agent.params and any(skill.type == 'retrieval' for skill in existing_agent.skills):
+            existing_agent.params['mode'] = 'retrieval'
+
+        messages = request.json['messages']
+
+        completion = agents_controller.get_completion(
+            existing_agent,
+            messages,
+            project_name=project_name,
             # Don't need to include backoffice_db related tools into this endpoint.
             # Underlying handler (e.g. Langchain) will handle default tools like mdb_read, mdb_write, etc.
-            'tools': [],
-            'skills': [s for s in existing_agent.skills],
-        }
-        project_datanode = session_controller.datahub.get(project_name)
-        predictions = project_datanode.predict(
-            model_name=existing_agent.model_name,
-            data=request.json['messages'],
-            params=predict_params
+            tools=[]
         )
 
-        output_col = agent_model_record.to_predict[0]
-        model_output = predictions.iloc[-1][output_col]
-        return {
+        output_col = agents_controller.assistant_column
+        model_output = completion.iloc[-1][output_col]
+
+        response = {
             'message': {
                 'content': model_output,
                 'role': 'assistant'
             }
         }
+
+        if existing_agent.params.get('return_context', False):
+            context = []
+            if 'context' in completion.columns:
+                try:
+                    last_context = completion.iloc[-1]['context']
+                    if last_context:
+                        context = json.loads(last_context)
+                except (json.JSONDecodeError, IndexError) as e:
+                    logger.error(f'Error decoding context: {e}')
+                    pass  # Keeping context as an empty list in case of error
+
+            response['message']['context'] = context
+
+        return response

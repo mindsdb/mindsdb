@@ -201,41 +201,25 @@ if __name__ == '__main__':
     logger.info(f"Storage path: {config['paths']['root']}")
     logger.debug(f"User config: {user_config}")
 
-    for (
-        handler_name,
-        handler_meta,
-    ) in integration_controller.get_handlers_import_status().items():
-        import_meta = handler_meta.get("import", {})
-        if import_meta.get("success", False) is not True:
-            logger.info(
-                """Some handlers cannot be imported. You can check list of available handlers by execute command in sql editor:
-select * from information_schema.handlers;"""
-            )
-            break
-    # @TODO Backwards compatibility for tests, remove later
-    for (
-        handler_name,
-        handler_meta,
-    ) in integration_controller.get_handlers_import_status().items():
-        import_meta = handler_meta.get("import", {})
-        dependencies = import_meta.get("dependencies")
-        if import_meta.get("success", False) is not True:
-            logger.debug(
-                f"Dependencies for the handler '{handler_name}' are not installed by default."
-            )
-            logger.debug(
-                f'If you want to use "{handler_name}" please "pip install mindsdb[{handler_name}]"'
-            )
-
-    # from mindsdb.utilities.fs import get_marked_processes_and_threads
-    # marks = get_marked_processes_and_threads()
+#     TODO keep it?
+#     for (
+#         handler_name,
+#         handler_meta,
+#     ) in integration_controller.get_handlers_import_status().items():
+#         import_meta = handler_meta.get("import", {})
+#         if import_meta.get("success", False) is not True:
+#             logger.info(
+#                 """Some handlers cannot be imported. You can check list of available handlers by execute command in sql editor:
+# select * from information_schema.handlers;"""
+#             )
+#             break
 
     if not is_cloud:
         # region creating permanent integrations
         for (
             integration_name,
             handler,
-        ) in integration_controller.get_handlers_import_status().items():
+        ) in integration_controller.get_handlers_metadata().items():
             if handler.get("permanent"):
                 integration_meta = integration_controller.get(name=integration_name)
                 if integration_meta is None:

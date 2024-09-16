@@ -3,14 +3,30 @@ title: MindsDB SQL Syntax
 sidebarTitle: MindsDB SQL Syntax
 ---
 
-Generally speaking, MindsDB SQL attempts to follow the syntax conventions of MySQL and PostgreSQL. The following
+In general, MindsDB SQL attempts to follow the syntax conventions of MySQL and PostgreSQL. The following
 sections describe some common conventions of MindsDB SQL.
 
+## Notation
+
+We adopt the following notation to describe our commands:
+
+- Reserved words are capitalized. For example: SELECT
+- Square brackets `[]` indicate optional clauses
+- Curly brackets `{}` indicate logical or choices with the options separated by `|`. For examples `{x | y | z}`
+- Red denotes required clauses, choices, or identifiers. For readability, statements enclosed in red square or curly
+brackets are black.
+- Square brackets with a separator followed by three ellipses denote repetition of the previous item, separated by the
+separator. For example, `identifier [, ...]` denotes a comma separated list of identifiers.
+
+<Note>
+    Parentheses `()` are reserved characters of the MindsDB SQL and are not part of the notation. Where present
+    parentheses are required unless explicitly wrapped in square brackets.
+</Note>
 
 ## Single/Double Quotes & Backticks
 
-Identifiers (databases, tables, and column names) with special characters or reserved words must use the backtick
-"`":
+Identifiers (databases, tables, and column names) with special characters or reserved words must be enclosed with
+backticks "`":
 
 ```sql
 SELECT * FROM `select` WHERE `select`.id > 100;

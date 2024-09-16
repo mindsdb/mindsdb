@@ -79,7 +79,7 @@ FROM email_datasource.emails;
 And you can apply filters like this:
 
 ```sql
-SELECT id, to, subject, body
+SELECT id, body, subject, to_field, from_field, datetime
 FROM email_datasource.emails
 WHERE subject = 'MindsDB'
 ORDER BY id
@@ -89,6 +89,6 @@ LIMIT 5;
 Or, write emails like this:
 
 ```sql
-INSERT INTO email_datasource.emails(to, subject, body)
+INSERT INTO email_datasource.emails(to_field, subject, body)
 VALUES ("toemail@outlook.com", "MindsDB", "Hello from MindsDB!");
 ```

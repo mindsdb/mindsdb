@@ -5,3 +5,4 @@ from mindsdb.integrations.libs.ml_handler_process.describe_process import descri
 from mindsdb.integrations.libs.ml_handler_process.predict_process import predict_process
 from mindsdb.integrations.libs.ml_handler_process.update_process import update_process
 from mindsdb.integrations.libs.ml_handler_process.learn_process import learn_process
+from mindsdb.integrations.libs.ml_handler_process.func_call_process import func_call_process

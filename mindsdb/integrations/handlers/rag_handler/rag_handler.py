@@ -12,9 +12,16 @@ from mindsdb.integrations.handlers.rag_handler.settings import (
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities import log
 
-# these require no additional arguments
 
 logger = log.getLogger(__name__)
+
+logger.warning("\nThe RAG handler has been deprecated and is no longer being actively supported. \n"
+               "It will be fully removed in v24.8.x.x, "
+               "for RAG workflows, please migrate to "
+               "Agents + Retrieval skill. \n"
+               "Example usage can be found here: \n"
+               "https://github.com/mindsdb/mindsdb_python_sdk/blob/staging/examples"
+               "/using_agents_with_retrieval.py")
 
 
 class RAGHandler(BaseMLEngine):
@@ -40,10 +47,10 @@ class RAGHandler(BaseMLEngine):
             )
 
     def create(
-        self,
-        target: str,
-        df: pd.DataFrame = None,
-        args: Optional[Dict] = None,
+            self,
+            target: str,
+            df: pd.DataFrame = None,
+            args: Optional[Dict] = None,
     ):
         """
         Dispatch is running embeddings and storing in a VectorDB, unless user already has embeddings persisted
@@ -54,7 +61,7 @@ class RAGHandler(BaseMLEngine):
         ml_engine_args = self.engine_storage.get_connection_args()
 
         # for a model created with USING, only get api for that specific llm type
-        args.update({k: v for k, v in ml_engine_args.items() if args["llm_type"] in k})
+        args.update({k:v for k, v in ml_engine_args.items() if args["llm_type"] in k})
 
         input_args = build_llm_params(args)
 
@@ -67,7 +74,6 @@ class RAGHandler(BaseMLEngine):
 
         if args.run_embeddings:
             if "context_columns" not in args and df is not None:
-
                 # if no context columns provided, use all columns in df
                 logger.info("No context columns provided, using all columns in df")
                 args.context_columns = df.columns.tolist()

@@ -119,7 +119,7 @@ class Responce(Responder):
             if isinstance(ast_query.from_table, Identifier):
                 table_name = ast_query.from_table.parts[-1].lower()
 
-                if table_name == 'models' or table_name == 'models_versions':
+                if table_name == 'models':
 
                     models = mindsdb_env['model_controller'].get_models(
                         ml_handler_name=None,
@@ -140,7 +140,7 @@ class Responce(Responder):
 
         data = run_sql_command(request_env, ast_query)
 
-        if table_name == 'models' or table_name == 'models_versions':
+        if table_name == 'models':
             # for models and models_versions _id is:
             #   - first 20 bytes is version
             #   - next bytes is model id
@@ -150,8 +150,7 @@ class Responce(Responder):
                 if model_id is not None:
                     obj_id = model_id << 20
 
-                    if table_name == 'models_versions':
-                        obj_id += row.get('VERSION', 0)
+                    obj_id += row.get('VERSION', 0)
 
                     row['_id'] = helpers.int_to_objectid(obj_id)
         elif table_name == 'jobs':

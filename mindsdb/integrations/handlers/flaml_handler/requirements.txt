@@ -1,2 +1,2 @@
 flaml<=1.2.3
-type_infer==0.0.18
+type_infer==0.0.20

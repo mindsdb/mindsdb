@@ -29,12 +29,12 @@ class UpdateToTableCall(BaseStepCall):
 
         dn = self.session.datahub.get(integration_name)
 
-        result = step.dataframe
+        result_step = step.dataframe
 
         params_map_index = []
 
         if step.update_command.keys is not None:
-            result_data = result.result_data
+            result_data = self.steps_data[result_step.result.step_num]
 
             where = None
             update_columns = {}
@@ -83,11 +83,11 @@ class UpdateToTableCall(BaseStepCall):
                 where=step.update_command.where
             )
 
-            if result is None:
+            if result_step is None:
                 # run as is
                 dn.query(query=update_query, session=self.session)
                 return data
-            result_data = result.result_data
+            result_data = self.steps_data[result_step.result.step_num]
 
             # link nodes with parameters for fast replacing with values
             input_table_alias = step.update_command.from_select_alias

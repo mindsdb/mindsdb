@@ -1,7 +1,10 @@
-import logging
 from locust import between, HttpUser
-from load.test_postgresql import PostgreSQLConnectionBehavior
-from utils.config import get_value_from_json_env_var
+from tests.load.test_postgresql import PostgreSQLConnectionBehavior
+from tests.utils.config import get_value_from_json_env_var
+
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 class DBConnectionUser(HttpUser):
@@ -19,4 +22,4 @@ class DBConnectionUser(HttpUser):
             })
             response.raise_for_status()
         except Exception as e:
-            logging.error('Logging to MindsDB failed: ', e)
+            logger.error(f'Logging to MindsDB failed: {e}')

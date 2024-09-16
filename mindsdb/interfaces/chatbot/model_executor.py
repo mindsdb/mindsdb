@@ -1,4 +1,5 @@
 import datetime as dt
+import pandas as pd
 
 from mindsdb.interfaces.storage import db
 
@@ -29,7 +30,7 @@ class ModelExecutor:
         # redefined prompt
         self.prompt = None
 
-    def call(self, history, functions, skills):
+    def call(self, history, functions):
         model_info = self.model_info
 
         if model_info['mode'] != 'conversational':
@@ -53,18 +54,18 @@ class ModelExecutor:
             context = '\n'.join(context_list)
 
             # call model
-            params = {'tools': all_tools, 'skills': skills, 'context': context, 'prompt': self.prompt}
+            params = {'tools': all_tools, 'context': context, 'prompt': self.prompt}
 
             predictions = self.chat_task.project_datanode.predict(
                 model_name=model_info['model_name'],
-                data=messages,
+                df=pd.DataFrame(messages),
                 params=params
             )
 
         elif model_info['engine'] == 'llama_index':
             predictions = self.chat_task.project_datanode.predict(
                 model_name=model_info['model_name'],
-                data=messages,
+                df=pd.DataFrame(messages),
                 params={'prompt': self.prompt}
             )
 

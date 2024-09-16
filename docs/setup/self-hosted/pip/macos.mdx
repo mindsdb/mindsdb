@@ -96,11 +96,11 @@ The dependencies for many of the data or ML integrations are not installed by de
 If you want to use a data or ML integration whose dependencies are not available by default, install it by running this command:
 
 ```
-pip install 'mindsdb[handler_name]'
+pip install mindsdb[handler_name]
 ```
 
 <Tip>
-You can find all available [handlers here](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers).
+You can find all available [handlers here](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers).
 </Tip>
 
 ## Troubleshooting
@@ -143,14 +143,6 @@ Some users can get `OSError: dlopen Library not loaded 'libomp.dylib'`. Please m
 brew install libomp
 export LDFLAGS="-L/usr/local/opt/libomp/lib"
 export CPPFLAGS="-I/usr/local/opt/libomp/include"
-```
-
-### How to Overcome `ImportError: failed to find libmagic`
-
-If you get the `ImportError: failed to find libmagic` error, you should install the `libmagic` manually by running the command below:
-
-```bash
-brew install libmagic
 ```
 
 ## Further Issues?

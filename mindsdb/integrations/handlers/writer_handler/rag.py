@@ -11,4 +11,4 @@ class QuestionAnswerer(RAGQuestionAnswerer):
 
         super().__init__(args)
 
-        self.llm = Writer(**args.llm_params.dict())
+        self.llm = Writer(**args.llm_params.model_dump())

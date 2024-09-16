@@ -11,7 +11,7 @@ This is the implementation of the ScyllaDB data handler for MindsDB.
 
 Before proceeding, ensure the following prerequisites are met:
 
-1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
+1. Install MindsDB locally via [Docker](/setup/self-hosted/docker) or [Docker Desktop](/setup/self-hosted/docker-desktop).
 2. To connect ScyllaDB to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
 3. Install or ensure access to ScyllaDB.
 
@@ -20,15 +20,15 @@ Before proceeding, ensure the following prerequisites are met:
 The ScyllaDB handler for MindsDB was developed using the scylla-driver library for Python.
 The required arguments to establish a connection are as follows:
 
-* `host`: Host name or IP address of ScyllaDB.
-* `port`: Connection port.
-* `user`: Authentication username.
-* `password`: Authentication password.
-* `keyspace`: The specific keyspace (top-level container for tables) to connect to.
-* `protocol_version`: Optional. Defaults to 4.
-* `secure_connect_bundle`: Optional. Needed only for connections to DataStax Astra.
+- `host`: Host name or IP address of ScyllaDB.
+- `port`: Connection port.
+- `user`: Authentication username. Optional; required only if authentication is enabled.
+- `password`: Authentication password. Optional; required only if authentication is enabled.
+- `keyspace`: The specific keyspace (top-level container for tables) to connect to.
+- `protocol_version`: Optional. Defaults to 4.
+- `secure_connect_bundle`: Optional. Needed only for connections to DataStax Astra.
 
-## Usage 
+## Usage
 
 To set up a connection between MindsDB and a Scylla server, utilize the following SQL syntax:
 
@@ -44,8 +44,11 @@ WITH
     "keyspace": "test_data"
   };
 ```
+
 <Tip>
-The protocol version is set to 4 by default. Should you wish to modify it, simply include "protocol_version": 5 within the PARAMETERS dictionary in the query above.
+  The protocol version is set to 4 by default. Should you wish to modify it,
+  simply include "protocol_version": 5 within the PARAMETERS dictionary in the
+  query above.
 </Tip>
 
 With the connection established, you can execute queries on your keyspace as demonstrated below:

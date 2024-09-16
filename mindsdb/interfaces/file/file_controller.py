@@ -109,10 +109,9 @@ class FileController:
             self.fs_store.put(store_file_path, base_dir=self.dir)
         except Exception as e:
             logger.error(e)
-            raise
-        finally:
             if file_dir is not None:
                 shutil.rmtree(file_dir)
+            raise
 
         return file_record.id
 

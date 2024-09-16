@@ -2,8 +2,10 @@
 class BaseStepCall:
     bind = None
 
-    def __init__(self, sql_query):
-        self.steps_data = sql_query.steps_data
+    def __init__(self, sql_query, steps_data=None):
+        if steps_data is None:
+            steps_data = sql_query.steps_data
+        self.steps_data = steps_data
 
         self.sql_query = sql_query
         self.context = sql_query.context

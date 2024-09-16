@@ -43,4 +43,6 @@ def google_auth_flow(secret_file, scopes, code=None):
 def save_creds_to_file(creds, file_path):
     with open(file_path, 'w') as token:
         data = credentials_to_dict(creds)
-        token.write(encrypt(json.dumps(data)))
+        encrypted_data = encrypt(json.dumps(data))
+
+        token.write(encrypted_data)

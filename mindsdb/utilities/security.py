@@ -17,6 +17,7 @@ from mindsdb.utilities.config import Config
 logger = log.getLogger(__name__)
 
 ENCRYPT_PREFIX = 'MDB\x00ENC'
+ENCRYPT_JSON_KEY = '_mdb_encrypted'
 
 
 def is_private_url(url: str):
@@ -87,7 +88,7 @@ def _decrypt(data) -> bytes:
     return decrypted_message
 
 
-def encrypt_object(data: object) -> Union[object, str]:
+def encrypt_object(data: object) -> Union[object]:
     """Serialize object to encrypted string.
     If encryption is not enabled it returns the same object
 
@@ -101,10 +102,12 @@ def encrypt_object(data: object) -> Union[object, str]:
         return data
 
     message_bytes = pickle.dumps(data)
-    return _encrypt_v1(message_bytes)
+    return {
+        "MDB_ENC": _encrypt_v1(message_bytes)
+    }
 
 
-def decrypt_object(data: str) -> object:
+def decrypt_object(data: object) -> object:
     """Deserialize string to an object
 
     Args:
@@ -113,7 +116,11 @@ def decrypt_object(data: str) -> object:
     Returns:
         object: unpickled object
     """
-    decrypted_message = _decrypt(data)
+    if ENCRYPT_JSON_KEY not in data:
+        # not encrypted
+        return data
+
+    decrypted_message = _decrypt(data[ENCRYPT_JSON_KEY])
     decrypted_object = pickle.loads(decrypted_message)
     return decrypted_object
 

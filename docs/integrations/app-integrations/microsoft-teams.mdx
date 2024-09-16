@@ -37,14 +37,38 @@ The parameters given above can be obtained by registering an application in Entr
 3. Click on **App registrations** and then click on **New registration**.
 4. Enter a name for your application and select the **Accounts in this organizational directory only** option for the **Supported account types** field.
 5. Keep the **Redirect URI** field empty and click on **Register**.
-6. Copy the **Application (client) ID** and record it as the `client_id` parameter, and copy the **Directory (tenant) ID** and record it as the `tenant_id` parameter.
-7. Click on **Certificates & secrets** and then click on **New client secret**.
-8. Enter a description for your client secret and select an expiration period.
-9. Click on **Add** and copy the generated client secret and record it as the `client_secret` parameter.
-10. Click on **Authentication** and then click on **Add a platform**.
-11. Select **Web** and enter the following URLs in the **Redirect URIs** field:
-    - `https://cloud.mindsdb.com/verify-auth`
-    - `http://localhost:47334/verify-auth` (for local development)
+6. Click on **API permissions** and then click on **Add a permission**.
+7. Select **Microsoft Graph** and then click on **Delegated permissions**.
+8. Select the following permissions based on the data you want to access and the operations you want to perform:
+    - Chats:
+        - Chat.ReadBasic
+        - Chat.Read
+        - Chat.ReadWrite
+
+    - Chat messages:
+        - Chat.Read
+        -	Chat.ReadWrite
+        - Group.ReadWrite.All
+  
+    - Channels:
+        - ChannelSettings.Read.All
+        - ChannelSettings.ReadWrite.All
+        - Directory.Read.All
+        - Directory.ReadWrite.All
+        - Group.Read.All
+        - Group.ReadWrite.All
+
+    - Channel messages:
+        - ChannelMessage.Read.All
+        - Group.Read.All
+        - Group.ReadWrite.All
+9. Click on **Add permissions**.
+10. Copy the **Application (client) ID** and record it as the `client_id` parameter, and copy the **Directory (tenant) ID** and record it as the `tenant_id` parameter.
+11. Click on **Certificates & secrets** and then click on **New client secret**.
+12. Enter a description for your client secret and select an expiration period.
+13. Click on **Add** and copy the generated client secret and record it as the `client_secret` parameter.
+14. Click on **Authentication** and then click on **Add a platform**.
+15. Select **Web** and enter URL where MindsDB has been deployed followed by `/verify-auth` in the **Redirect URIs** field. For example, if you are running MindsDB locally (on `http://localhost:47334`), enter `http://localhost:47334/verify-auth` in the **Redirect URIs** field.
 
 <Tip>
 You can find more information about creating app registrations [here](https://docs.microsoft.com/en-us/graph/auth-register-app-v2).

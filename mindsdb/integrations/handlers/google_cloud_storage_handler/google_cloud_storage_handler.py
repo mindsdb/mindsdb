@@ -105,7 +105,7 @@ class GoogleCloudStorageHandler(DatabaseHandler):
             connection = self.connect()
             connection.list_buckets()
 
-            # Check if the dataset exists
+            # Check if the bucket exists
             connection.get_bucket(self.bucket)
 
             response.success = True

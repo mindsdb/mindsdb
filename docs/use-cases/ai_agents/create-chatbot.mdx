@@ -93,8 +93,7 @@ CREATE CHATBOT my_chatbot
 USING
    database = 'chat_app',     -- this parameters stores a connection to a chat app, like Slack or MS Teams
    agent = 'support_agent',   -- this parameter stores an agent name, which was create with CREATE AGENT
-   enable_dms = true,         -- this parameter is optional and enable direct messages with the chatbot
-   running = true;            -- this parameter is optional and set to true by default, meaning that the chatbot is running
+   is_running = true;            -- this parameter is optional and set to true by default, meaning that the chatbot is running
 ```
 
 The `database` parameter stores connection to a chat app. And the `agent` parameter stores an AI agent created by passing a model and training data.

@@ -33,6 +33,7 @@ class OpenBBtable(APITable):
             params[arg1] = arg2
 
         return params
+
     def _process_cols_names(self, cols: list) -> list:
         new_cols = []
         for element in cols:
@@ -49,6 +50,7 @@ class OpenBBtable(APITable):
             else:
                 new_cols.append(element)
         return new_cols
+
     def select(self, query: ast.Select) -> pd.DataFrame:
         """Selects data from the OpenBB Platform and returns it as a pandas DataFrame.
 
@@ -105,7 +107,7 @@ class OpenBBtable(APITable):
             raise Exception(f"Error accessing data from OpenBB: {e}!")
 
         return data
-    
+
 
 def create_table_class(
     params_metadata,

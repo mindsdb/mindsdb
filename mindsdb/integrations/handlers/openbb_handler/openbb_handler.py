@@ -82,10 +82,9 @@ class OpenBBHandler(APIHandler):
                     provider=provider
                 )
                 self._register_table(f"{cmd.replace('.', '_')[1:]}_{provider}", table_class(self))
-        
-        obb_table =OpenBBtable(self)
+
+        obb_table = OpenBBtable(self)
         self._register_table("openbb_fetcher", obb_table)
-            
 
     def connect(self) -> bool:
         """Connects with OpenBB account through personal access token (PAT).

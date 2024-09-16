@@ -1,4 +1,5 @@
 import os
+import json
 
 import pandas as pd
 from google.auth.transport.requests import Request
@@ -11,6 +12,7 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
 )
+from mindsdb.utilities.security import decrypt
 from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
@@ -76,7 +78,9 @@ class GoogleCalendarHandler(APIHandler):
 
         creds = None
         if os.path.isfile(creds_file):
-            creds = Credentials.from_authorized_user_file(creds_file, self.scopes)
+            content = open(creds_file).read()
+            data = json.loads(decrypt(content))
+            creds = Credentials.from_authorized_user_info(data, self.scopes)
 
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:

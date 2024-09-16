@@ -2,6 +2,7 @@ import datetime as dt
 
 import json
 
+from mindsdb.utilities.security import encrypt
 from google_auth_oauthlib.flow import Flow
 
 
@@ -42,4 +43,4 @@ def google_auth_flow(secret_file, scopes, code=None):
 def save_creds_to_file(creds, file_path):
     with open(file_path, 'w') as token:
         data = credentials_to_dict(creds)
-        token.write(json.dumps(data))
+        token.write(encrypt(json.dumps(data)))

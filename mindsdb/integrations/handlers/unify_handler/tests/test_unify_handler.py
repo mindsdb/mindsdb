@@ -7,20 +7,6 @@ from mindsdb_sql import parse_sql
 from tests.unit.executor_test_base import BaseExecutorTest
 
 class TestUnify(BaseExecutorTest):
-    # def wait_predictor(self, project, name):
-    #     # wait
-    #     done = False
-    #     for _ in range(200):
-    #         ret = self.run_sql(f"select * from {project}.models where name='{name}'")
-    #         if not ret.empty:
-    #             if ret["STATUS"][0] == "complete":
-    #                 done = True
-    #                 break
-    #             elif ret["STATUS"][0] == "error":
-    #                 break
-    #         time.sleep(0.5)
-    #     if not done:
-    #         raise RuntimeError("predictor wasn't created")
     
     def run_sql(self, sql):
         ret = self.command_executor.execute_command(parse_sql(sql, dialect="mindsdb"))
@@ -39,14 +25,6 @@ class TestUnify(BaseExecutorTest):
         """
         super().setup_method()
         self.run_sql("create database proj")
-        # self.run_sql(
-        #     f"""
-        #     CREATE ML_ENGINE unify-engine
-        #     FROM unify
-        #     USING
-        #     unify_api_key = '{os.environ.get('UNIFY_API_KEY')}';
-        #     """
-        # )
     
     @pytest.mark.skipif(os.environ.get('UNIFY_API_KEY') is None, reason='Missing API key!')
     def test_unify_correct_flow(self):

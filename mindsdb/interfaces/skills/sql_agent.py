@@ -116,7 +116,7 @@ class SQLAgent:
         for table_name in table_names:
 
             # Some LLMs (e.g. gpt-4o) may include backticks or quotes when invoking tools.
-            table_name = table_name.strip(' `"\'')
+            table_name = table_name.strip(' `"\'\n')
             table = Identifier(table_name)
 
             # resolved table
@@ -139,6 +139,7 @@ class SQLAgent:
             tables_info = self._get_info_from_cache(cache_key, table_names)
 
             if not tables_info:
+                logger.debug(f"Tables not found in cache, fetching tables.")
                 tables_info = self._fetch_table_info(table_names)
                 self._update_cache(cache_key, tables_info)
 
@@ -176,6 +177,7 @@ class SQLAgent:
     def _fetch_table_info(self, table_names: Optional[List[str]]) -> dict:
         """Fetch table information from the database."""
         all_tables = [Identifier(name) for name in self.get_usable_table_names()]
+        logger.debug(f"Fetching table information from database with tables {all_tables}")
 
         if table_names is not None:
             all_tables = self._resolve_table_names(table_names, all_tables)

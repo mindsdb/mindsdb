@@ -14,6 +14,7 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
 
         """Get the tools in the toolkit."""
         list_sql_database_tool = ListSQLDatabaseTool(name=f'sql_db_list_tables{prefix}', db=self.db)
+
         info_sql_database_tool_description = (
             "Input to this tool is a comma-separated list of tables, output is the "
             "schema and sample rows for those tables. "
@@ -23,8 +24,10 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
         )
         info_sql_database_tool = InfoSQLDatabaseTool(
             name=f'sql_db_schema{prefix}',
-            db=self.db, description=info_sql_database_tool_description
+            db=self.db,
+            description=info_sql_database_tool_description
         )
+
         query_sql_database_tool_description = (
             "Input to this tool is a detailed and correct SQL query, output is a "
             "result from the database. If the query is not correct, an error message "
@@ -35,7 +38,8 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
         )
         query_sql_database_tool = QuerySQLDataBaseTool(
             name=f'sql_db_query{prefix}',
-            db=self.db, description=query_sql_database_tool_description
+            db=self.db,
+            description=query_sql_database_tool_description
         )
 
         mindsdb_sql_parser_tool_description = (
@@ -48,7 +52,6 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
             f"{query_sql_database_tool.name}!"
             ""
         )
-
         mindsdb_sql_parser_tool = MindsDBSQLParserTool(
             name=f'mindsdb_sql_parser_tool{prefix}',
             description=mindsdb_sql_parser_tool_description

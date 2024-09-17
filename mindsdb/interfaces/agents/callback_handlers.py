@@ -28,6 +28,7 @@ class LogCallbackHandler(BaseCallbackHandler):
         logger.setLevel('DEBUG')
         self.logger = logger
         self._num_running_chains = 0
+        self.generated_sql = None
 
     def on_llm_start(
         self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any
@@ -112,6 +113,9 @@ class LogCallbackHandler(BaseCallbackHandler):
         '''Run on agent action.'''
         self.logger.debug(f'Running tool {action.tool} with input:')
         self.logger.debug(action.tool_input)
+        if action.tool.startswith("sql_db_query"):
+            # Save the generated SQL query
+            self.generated_sql = action.tool_input
 
     def on_agent_finish(self, finish: AgentFinish, **kwargs: Any) -> Any:
         '''Run on agent end.'''

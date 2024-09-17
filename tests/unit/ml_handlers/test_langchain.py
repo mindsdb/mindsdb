@@ -1,4 +1,4 @@
-
+import os
 
 import ollama
 import pytest

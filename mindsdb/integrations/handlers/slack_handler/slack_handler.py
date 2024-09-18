@@ -1,4 +1,5 @@
 import os
+import json
 import datetime as dt
 from typing import List
 import pandas as pd
@@ -32,10 +33,7 @@ DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 class SlackChannelListsTable(APIResource):
 
     def list(self, **kwargs) -> pd.DataFrame:
-
-        client = self.handler.connect()
-
-        channels = client.conversations_list(types="public_channel,private_channel")['channels']
+        channels = self.handler.get_all_channels()
 
         for channel in channels:
             channel['created_at'] = dt.datetime.fromtimestamp(channel['created'])
@@ -98,7 +96,7 @@ class SlackChannelsTable(APIResource):
             return date_obj
 
         # Get the channels list and ids
-        channels = client.conversations_list(types="public_channel,private_channel")['channels']
+        channels = self.handler.get_all_channels()
         channel_ids = {c['name']: c['id'] for c in channels}
         
         # Extract comparison conditions from the query
@@ -214,7 +212,7 @@ class SlackChannelsTable(APIResource):
         client = self.handler.connect()
 
         # Get the channels list and ids
-        channels = client.conversations_list(types="public_channel,private_channel")['channels']
+        channels = self.handler.get_all_channels()
         channel_ids = {c['name']: c['id'] for c in channels}
 
         # Extract comparison conditions from the query
@@ -271,7 +269,7 @@ class SlackChannelsTable(APIResource):
         client = self.handler.connect()
 
         # Get the channels list and ids
-        channels = client.conversations_list(types="public_channel,private_channel")['channels']
+        channels = self.handler.get_all_channels()
         channel_ids = {c['name']: c['id'] for c in channels}
         # Extract comparison conditions from the query
         conditions = extract_comparison_conditions(query.where)
@@ -512,6 +510,27 @@ class SlackHandler(APIChatHandler):
             result['channels'] = self.convert_channel_data(result['channels'])
 
         return [result]
+    
+    def get_all_channels(self) -> List:
+        """
+        Get all channels in the workspace by paginating through the response.
+
+        Returns
+        -------
+        List[Dict]
+            The channels data.
+        """
+        client = self.connect()
+
+        response = client.conversations_list(types="public_channel,private_channel")
+        channels = response['channels']
+        # Paginate through the response
+        while response["response_metadata"]["next_cursor"] != '':
+            cursor = response["response_metadata"]["next_cursor"]
+            response = client.conversations_list(cursor=cursor, types="public_channel,private_channel")
+            channels.extend(response['channels'])
+
+        return channels
 
     def convert_channel_data(self, channels: List[dict]):
         """

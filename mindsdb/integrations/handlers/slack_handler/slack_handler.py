@@ -363,15 +363,17 @@ class SlackHandler(APIChatHandler):
         return params
 
     def get_my_user_name(self):
-        # TODO
-        api = self.connect()
-        resp = api.users_profile_get()
+        resp = self._get_my_user_info()
         return resp.data['profile']['bot_id']
     
     def _get_my_user_id(self):
+        resp = self._get_my_user_info()
+        return resp.data['user_id']
+    
+    def _get_my_user_info(self):
         api = self.connect()
         resp = api.auth_test()
-        return resp.data['user_id']
+        return resp
 
     def subscribe(self, stop_event, callback, table_name, **kwargs):
         if table_name != 'channels':

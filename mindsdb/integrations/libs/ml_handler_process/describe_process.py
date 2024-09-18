@@ -71,7 +71,7 @@ def describe_process(integration_id: int, attribute: Optional[Union[str, list]],
                 engine_storage=handlerStorage,
                 model_storage=modelStorage
             )
-            return ml_handler.describe(attribute=attribute)
+            return ml_handler.describe(attribute)
         except NotImplementedError:
             return DataFrame()
         except Exception as e:
@@ -96,7 +96,7 @@ def describe_process(integration_id: int, attribute: Optional[Union[str, list]],
                     engine_storage=handlerStorage,
                     model_storage=modelStorage
                 )
-                attrs_df = ml_handler.describe(attribute=attribute)
+                attrs_df = ml_handler.describe(attribute)
             except NotImplementedError:
                 pass
             except Exception as e:

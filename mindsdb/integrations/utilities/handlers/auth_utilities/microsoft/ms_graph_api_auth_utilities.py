@@ -48,9 +48,12 @@ class MSGraphAPIAuthManager:
             logger.error(f'Error getting credentials from storage: {e}!')
 
         response = self._execute_ms_graph_api_auth_flow()
+
         if "access_token" in response:
             self.handler_storage.file_set('creds', json.dumps(response).encode('utf-8'))
             return response['access_token']
+        elif "error_description" in response and "OAuth2 Authorization code was already redeemed, please retry with a new valid code or use an existing refresh token." in response["error_description"]:
+            pass
         else:
             raise AuthException(
                 f'Error getting access token: {response.get("error_description")}',

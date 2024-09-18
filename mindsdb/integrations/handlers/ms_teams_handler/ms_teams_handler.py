@@ -39,6 +39,7 @@ class MSTeamsHandler(APIChatHandler):
 
         self.connection = None
         self.is_connected = False
+        self.cache_safe = False
 
         channels_data = ChannelsTable(self)
         self._register_table("channels", channels_data)

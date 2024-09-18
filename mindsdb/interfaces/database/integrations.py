@@ -587,7 +587,9 @@ class IntegrationController:
         )
         HandlerClass = self.handler_modules[integration_engine].Handler
         handler = HandlerClass(**handler_ars)
-        self.handlers_cache.set(handler)
+
+        if getattr(handler, 'cache_safe', True):
+            self.handlers_cache.set(handler)
 
         return handler
 

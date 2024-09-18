@@ -613,6 +613,10 @@ AI: {response}"""
             if captured_context:
                 yield {"type": "context", "content": captured_context}
 
+        if self.log_callback_handler.generated_sql:
+            # Yield generated SQL if available
+            yield {"type": "sql", "content": self.log_callback_handler.generated_sql}
+
         if self.run_completion_span is not None:
             self.run_completion_span.end()
             self.api_trace.update()

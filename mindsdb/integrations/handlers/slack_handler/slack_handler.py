@@ -364,7 +364,7 @@ class SlackHandler(APIChatHandler):
 
     def get_my_user_name(self):
         resp = self._get_my_user_info()
-        return resp.data['profile']['bot_id']
+        return resp.data['bot_id']
     
     def _get_my_user_id(self):
         resp = self._get_my_user_info()

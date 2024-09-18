@@ -392,11 +392,13 @@ class SlackHandler(APIChatHandler):
                 return
 
             payload_event = request.payload['event']
-            if payload_event['type'] not in ('message', 'app_mention'):
+
+            if payload_event['type'] == 'message' and payload_event['channel_type'] != 'im':
+                # Avoid responding to messages in channels
                 return
 
-            if payload_event['channel_type'] == 'channel' and payload_event['event_type'] != 'app_mention':
-                # Avoid responding to messages in channels; only respond to app mentions
+            if payload_event['type'] == 'app_mention' and self.get_my_user_name() not in payload_event['text']:
+                # Avoid responding to app mentions not directed at the bot
                 return
 
             if 'subtype' in payload_event:

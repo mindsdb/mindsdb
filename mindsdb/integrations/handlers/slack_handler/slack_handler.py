@@ -367,6 +367,11 @@ class SlackHandler(APIChatHandler):
         api = self.connect()
         resp = api.users_profile_get()
         return resp.data['profile']['bot_id']
+    
+    def _get_my_user_id(self):
+        api = self.connect()
+        resp = api.auth_test()
+        return resp.data['user_id']
 
     def subscribe(self, stop_event, callback, table_name, **kwargs):
         if table_name != 'channels':
@@ -397,7 +402,7 @@ class SlackHandler(APIChatHandler):
                 # Avoid responding to messages in channels
                 return
 
-            if payload_event['type'] == 'app_mention' and self.get_my_user_name() not in payload_event['text']:
+            if payload_event['type'] == 'app_mention' and self._get_my_user_id() not in payload_event['text']:
                 # Avoid responding to app mentions not directed at the bot
                 return
 

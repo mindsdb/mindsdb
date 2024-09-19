@@ -408,18 +408,14 @@ class SlackHandler(APIChatHandler):
             if request.type != 'events_api':
                 return
 
-            # ignore duplicated requests
+            # Ignore duplicated requests
             if request.retry_attempt is not None and request.retry_attempt > 0:
                 return
 
             payload_event = request.payload['event']
 
-            if payload_event['type'] == 'message' and payload_event['channel_type'] != 'im':
-                # Avoid responding to messages in channels
-                return
-
-            if payload_event['type'] == 'app_mention' and my_user_id not in payload_event['text']:
-                # Avoid responding to app mentions not directed at the bot
+            if payload_event['type'] not in ('message', 'app_mention'):
+                # TODO: Refresh the channels cache
                 return
 
             if 'subtype' in payload_event:
@@ -427,7 +423,7 @@ class SlackHandler(APIChatHandler):
                 return
 
             if 'bot_id' in payload_event:
-                # Avoid responding to messages from bots
+                # Avoid responding to messages from the bot
                 return
 
             key = {

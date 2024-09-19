@@ -132,6 +132,9 @@ class SlackChannelsTable(APIResource):
         if limit:
             params['limit'] = limit
 
+        if 'channel' not in params:
+            raise Exception("To retrieve data from Slack, you need to provide the 'channel' parameter.")
+
         # Retrieve the conversation history
         result = client.conversations_history(**params)
 

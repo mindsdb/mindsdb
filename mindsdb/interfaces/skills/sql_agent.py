@@ -3,7 +3,6 @@ from typing import Iterable, List, Optional
 import re
 import hashlib
 
-
 import pandas as pd
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import Identifier
@@ -211,7 +210,55 @@ class SQLAgent:
         info += self._get_sample_rows(table_str, fields) + "\n*/"
         info += '\nColumn data types: ' + ",\t".join(
             [f'`{field}` : `{dtype}`' for field, dtype in zip(fields, dtypes)]) + '\n'  # noqa
+
+        #incoming, outgoing = self._get_schema(table_str)
+        #info += '\n/* Tables with columns as foreign keys in this table:\n'
+        #info += incoming + "\n*/"
+        #info += '\n/* Tables with foreign keys from columns in this table:\n'
+        #info += outgoing + "\n*/"
         return info
+
+    def _get_schema(self, table: str) -> str:
+        command_incoming = f"""SELECT DISTINCT ccu.table_name AS foreign_table_name
+FROM information_schema.table_constraints AS tc 
+JOIN information_schema.key_column_usage AS kcu
+    ON tc.constraint_name = kcu.constraint_name
+    AND tc.table_schema = kcu.table_schema
+JOIN information_schema.constraint_column_usage AS ccu
+    ON ccu.constraint_name = tc.constraint_name
+WHERE tc.constraint_type = 'FOREIGN KEY'
+    AND tc.table_schema='public'
+    AND tc.table_name='{table}';"""
+
+        command_outgoing = f"""SELECT DISTINCT ccu.table_name AS foreign_table_name
+        FROM information_schema.table_constraints AS tc 
+        JOIN information_schema.key_column_usage AS kcu
+            ON tc.constraint_name = kcu.constraint_name
+            AND tc.table_schema = kcu.table_schema
+        JOIN information_schema.constraint_column_usage AS ccu
+            ON ccu.constraint_name = tc.constraint_name
+        WHERE tc.constraint_type = 'FOREIGN KEY'
+            AND ccu.table_schema='public'
+            AND ccu.table_name='{table}';"""
+
+        try:
+            in_ret = self._call_engine(command_incoming)
+            out_ret = self._call_engine(command_outgoing)
+
+            sample_rows_list = []
+            for ret in [in_ret, out_ret]:
+                sample_rows = ret.data.to_lists()
+                sample_rows = list(
+                    map(lambda ls: [str(i) if len(str(i)) < 100 else str[:100] + '...' for i in ls], sample_rows))
+                sample_rows_str = "\n" + "\n".join(["\t".join(row) for row in sample_rows])
+                sample_rows_list.extend(sample_rows_str)
+
+        except Exception as e:
+            logger.warning(e)
+            sample_rows_list = ["\n" + "\t [error] Couldn't retrieve table schema!",
+                                "\n" + "\t [error] Couldn't retrieve table schema!"]
+
+        return sample_rows_list
 
     def _get_sample_rows(self, table: str, fields: List[str]) -> str:
         command = f"select {','.join(fields)} from {table} limit {self._sample_rows_in_table_info};"

@@ -1,3 +1,4 @@
+import socket
 from mindsdb.integrations.handlers.youtube_handler.youtube_tables import (
     YoutubeCommentsTable,
     YoutubeChannelsTable,
@@ -89,9 +90,14 @@ class YoutubeHandler(APIHandler):
         google_oauth2_manager = GoogleUserOAuth2Manager(self.handler_storage, self.scopes, self.credentials_file, self.credentials_url, self.connection_data.get('code'))
         creds = google_oauth2_manager.get_oauth2_credentials()
 
+        timeout_in_sec = 60*10
+        socket.setdefaulttimeout(timeout_in_sec)
+
         youtube = build(
             "youtube", "v3", developerKey=self.youtube_api_token, credentials=creds
         )
+
+        socket.setdefaulttimeout(None)
         self.connection = youtube
 
         return self.connection

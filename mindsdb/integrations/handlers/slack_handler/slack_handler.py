@@ -323,6 +323,7 @@ class SlackHandler(APIChatHandler):
         super().__init__(name)
 
         args = kwargs.get('connection_data', {})
+        self.handler_storage = kwargs.get('handler_storage')
         self.connection_args = {}
         handler_config = Config().get('slack_handler', {})
         for k in ['token', 'app_token']:
@@ -534,15 +535,22 @@ class SlackHandler(APIChatHandler):
         List[Dict]
             The channels data.
         """
-        client = self.connect()
+        # Get the channels from the handler storage if available
+        channels = self.handler_storage.json_get('args').get('channels') if self.handler_storage.json_get('args') else None
 
-        response = client.conversations_list(types="public_channel,private_channel")
-        channels = response['channels']
-        # Paginate through the response
-        while response["response_metadata"]["next_cursor"] != '':
-            cursor = response["response_metadata"]["next_cursor"]
-            response = client.conversations_list(cursor=cursor, types="public_channel,private_channel")
-            channels.extend(response['channels'])
+        if not channels:
+            client = self.connect()
+
+            response = client.conversations_list(types="public_channel,private_channel")
+            channels = response['channels']
+            # Paginate through the response
+            while response["response_metadata"]["next_cursor"] != '':
+                cursor = response["response_metadata"]["next_cursor"]
+                response = client.conversations_list(cursor=cursor, types="public_channel,private_channel")
+                channels.extend(response['channels'])
+
+            # Store the channels in the handler storage
+            self.handler_storage.json_set('args', {"channels": channels})
 
         return channels
 

@@ -1,9 +1,13 @@
-from typing import Text, Dict, Optional
+from typing import Text, List, Dict, Optional
 
 from elasticsearch import Elasticsearch
 from elasticsearch.exceptions import ConnectionError, AuthenticationException, TransportError, RequestError
+from elasticsearch.helpers import bulk, scan
+from elasticsearch.helpers.errors import BulkIndexError
 from es.elastic.sqlalchemy import ESDialect
+import pandas as pd
 from pandas import DataFrame
+from mindsdb_sql.parser.ast import Update, Select, Delete
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 
@@ -13,6 +17,7 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     RESPONSE_TYPE,
 )
+from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb.utilities import log
 
 
@@ -194,6 +199,170 @@ class ElasticsearchHandler(DatabaseHandler):
 
         return response
 
+    def _select(self, table_name: Text, query: Text) -> Response:
+        """
+        Executes a select query on the Elasticsearch host.
+
+        Args:
+            query (str): The SQL select query to be executed.
+
+        Returns:
+            Response: A response object containing the result of the select operation.
+        """
+        need_to_close = self.is_connected is False
+
+        connection = self.connect()
+
+        # Translate the SQL query to an Elasticsearch query.
+        try:
+            elasticsearch_query = connection.sql.translate(body={'query': query})
+        except RequestError as request_error:
+            logger.error(f'Error translating query: {query} to Elasticsearch: {request_error}')
+            return Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(request_error)
+            )
+        except Exception as unknown_error:
+            logger.error(f'Unknown error translating query: {query} to Elasticsearch: {unknown_error}')
+            return Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(unknown_error)
+            )
+
+        # Remove the 'size' and 'track_total_hits' parameters from the query.
+        del elasticsearch_query['size']
+        del elasticsearch_query['track_total_hits']
+        # Ensure that the '_source' parameter is set to True to retrieve the source documents.
+        elasticsearch_query['_source'] = True
+
+        try:
+            results = scan(connection, query=elasticsearch_query, index=table_name)
+
+            documents = []
+            for result in results:
+                documents.append(
+                    {
+                        '_id': result['_id'],
+                        **result['_source']
+                    }
+                )
+
+            response = Response(
+                RESPONSE_TYPE.TABLE,
+                data_frame=pd.json_normalize(documents)
+            )
+        except (TransportError, RequestError) as transport_or_request_error:
+            logger.error(f'Error running query: {query} on Elasticsearch, {transport_or_request_error}!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(transport_or_request_error)
+            )
+        except Exception as unknown_error:
+            logger.error(f'Unknown error running query: {query} on Elasticsearch, {unknown_error}!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(unknown_error)
+            )
+
+        if need_to_close is True:
+            self.disconnect()
+
+        return response
+
+    def insert(self, table_name: Text, df: DataFrame) -> Response:
+        """
+        Executes an insert query on the Elasticsearch host.
+        This function will be invoked instead of `native_query` when the query is an insert statement.
+
+        Args:
+            table_name (str): The name of the table (index) to insert the data into.
+            df (DataFrame): The data to be inserted into the table.
+
+        Returns:
+            Response: A response object containing the result of the insert operation.
+        """
+        # Add the index name and the 'create' operation type to each document.
+        df['_index'] = table_name
+        df['_op_type'] = 'create'
+
+        documents = df.to_dict(orient='records')
+
+        return self._index_in_bulk(documents)
+
+    def _update(self, query: ASTNode) -> Response:
+        """
+        Executes an update query on the Elasticsearch host.
+
+        Args:
+            query (ASTNode): An ASTNode representing the SQL update query to be executed.
+
+        Returns:
+            Response: A response object containing the result of the update operation.
+        """
+        where_conditions = extract_comparison_conditions(query.where)
+
+        # TODO: Support other fields in the WHERE clause?
+        # Validate if a WHERE clause is provided with an _id filter.
+        if not where_conditions or len(where_conditions) != 1 or where_conditions[0][1] != '_id':
+            raise ValueError("A WHERE clause with an _id filter is required for an update operation.")
+
+        if where_conditions[0][0] not in ['=', 'in']:
+            raise ValueError("Only the '=' and 'in' operators are supported for the _id filter.")
+
+        ids = where_conditions[0][2] if isinstance(where_conditions[0][2], list) else [where_conditions[0][2]]
+
+        table_name = query.table.get_string()
+        values_to_update = query.update_columns
+
+        # Add the index name, _id and the 'update' operation type to each document.
+        documents = []
+        for _id in ids:
+            document = {
+                '_index': table_name,
+                '_id': _id,
+                '_op_type': 'update',
+                '_source': {'doc': {key: val.value for key, val in values_to_update.items()}}
+            }
+            documents.append(document)
+
+        return self._index_in_bulk(documents)
+
+    def _index_in_bulk(self, documents: List[Dict]) -> Response:
+        """
+        Indexes a list of documents in bulk into the Elasticsearch host.
+        Both inserts and updates are supported based on the '_op_type' field and the other fields in the document.
+
+        Args:
+            documents (List[Dict]): A list of documents to be inserted into the Elasticsearch host.
+
+        Returns:
+            Response: A response object containing the result of the bulk insert operation.
+        """
+        need_to_close = self.is_connected is False
+
+        connection = self.connect()
+
+        try:
+            bulk(connection, documents)
+            response = Response(RESPONSE_TYPE.OK)
+        except (BulkIndexError, RequestError) as bulk_index_or_request_error:
+            logger.error(f'Error inserting data into Elasticsearch: {bulk_index_or_request_error}')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(bulk_index_or_request_error)
+            )
+        except Exception as unknown_error:
+            logger.error(f'Unknown error inserting data into Elasticsearch: {unknown_error}')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(unknown_error)
+            )
+
+        if need_to_close is True:
+            self.disconnect()
+
+        return response
+
     def query(self, query: ASTNode) -> Response:
         """
         Executes a SQL query represented by an ASTNode on the Elasticsearch host and retrieves the data.
@@ -204,11 +373,19 @@ class ElasticsearchHandler(DatabaseHandler):
         Returns:
             Response: The response from the `native_query` method, containing the result of the SQL query execution.
         """
-        # TODO: Add support for other query types.
         renderer = SqlalchemyRender(ESDialect)
         query_str = renderer.get_string(query, with_failback=True)
         logger.debug(f"Executing SQL query: {query_str}")
-        return self.native_query(query_str)
+
+        # INSERT queries are passed directly to the `insert` method.
+        if isinstance(query, Select):
+            return self._select(query.from_table.get_string(), query_str)
+
+        elif isinstance(query, Update):
+            return self._update(query)
+
+        elif isinstance(query, Delete):
+            raise NotImplementedError("Delete operation is not supported.")
 
     def get_tables(self) -> Response:
         """

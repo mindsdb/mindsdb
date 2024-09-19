@@ -372,12 +372,15 @@ class SlackHandler(APIChatHandler):
         return user_info['user_id']
     
     def _get_my_user_info(self):
-        user_info = self.handler_storage.json_get('args').get('user_info') if self.handler_storage.json_get('args') else None
+        try:
+            user_info = json.loads(self.handler_storage.file_get('user_info'))
+        except FileNotFoundError:
+            user_info = None
 
         if not user_info:    
             api = self.connect()
             user_info = api.auth_test().data
-            self.handler_storage.json_set('args', {"user_info": user_info})
+            self.handler_storage.file_set('user_info', json.dumps(user_info).encode('utf-8'))
 
         return user_info
 
@@ -540,7 +543,10 @@ class SlackHandler(APIChatHandler):
             The channels data.
         """
         # Get the channels from the handler storage if available
-        channels = self.handler_storage.json_get('args').get('channels') if self.handler_storage.json_get('args') else None
+        try:
+            channels = json.loads(self.handler_storage.file_get('channels'))
+        except FileNotFoundError:
+            channels = None
 
         if not channels:
             client = self.connect()
@@ -554,7 +560,7 @@ class SlackHandler(APIChatHandler):
                 channels.extend(response['channels'])
 
             # Store the channels in the handler storage
-            self.handler_storage.json_set('args', {"channels": channels})
+            self.handler_storage.file_set('channels', json.dumps(channels).encode('utf-8'))
 
         return channels
 

@@ -364,17 +364,22 @@ class SlackHandler(APIChatHandler):
         return params
 
     def get_my_user_name(self):
-        resp = self._get_my_user_info()
-        return resp.data['bot_id']
+        user_info = self._get_my_user_info()
+        return user_info['bot_id']
     
     def _get_my_user_id(self):
-        resp = self._get_my_user_info()
-        return resp.data['user_id']
+        user_info = self._get_my_user_info()
+        return user_info['user_id']
     
     def _get_my_user_info(self):
-        api = self.connect()
-        resp = api.auth_test()
-        return resp
+        user_info = self.handler_storage.json_get('args').get('user_info') if self.handler_storage.json_get('args') else None
+
+        if not user_info:    
+            api = self.connect()
+            user_info = api.auth_test().data
+            self.handler_storage.json_set('args', {"user_info": user_info})
+
+        return user_info
 
     def subscribe(self, stop_event, callback, table_name, **kwargs):
         if table_name != 'channels':
@@ -435,7 +440,6 @@ class SlackHandler(APIChatHandler):
         stop_event.wait()
 
         self._socket_mode_client.close()
-
 
     def create_connection(self):
         """

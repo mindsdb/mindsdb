@@ -74,12 +74,6 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
             "If the query can't be corrected, an error is returned. In this case, rewrite and retry. "
             "If the query is correct, it will be parsed and returned. "
             f"ALWAYS run this tool before executing a query with {query_sql_database_tool.name}. "
-            "To answer questions with database data: "
-            "1. Identify relevant tables. "
-            "2. Investigate table schemas for needed columns. "
-            "3. Construct a query to answer the question. "
-            "4. Run the query and return results. "
-            "Use SELECT DISTINCT for categorical columns in WHERE clauses."
         )
         mindsdb_sql_parser_tool = MindsDBSQLParserTool(
             name=f'mindsdb_sql_parser_tool{prefix}',

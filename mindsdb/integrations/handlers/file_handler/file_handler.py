@@ -13,7 +13,7 @@ import pandas as pd
 import requests
 from charset_normalizer import from_bytes
 from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import DropTables, Select
+from mindsdb_sql.parser.ast import CreateTable, DropTables, Select
 from mindsdb_sql.parser.ast.base import ASTNode
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
@@ -89,6 +89,35 @@ class FileHandler(DatabaseHandler):
                         error_message=f"Can't delete table '{table_name}': {e}",
                     )
             return Response(RESPONSE_TYPE.OK)
+        
+        if type(query) is CreateTable:
+            existing_files = self.file_controller.get_files_names()
+
+            if len(query.name.parts) != 1:
+                return Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_message="Table name cannot contain more than one namespace",
+                )
+
+            table_name = query.name.parts[-1]
+            if table_name in existing_files:
+                return Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=f"Table '{table_name}' already exists",
+                )
+            
+            # Create a temp file to save the table
+            temp_dir_path = tempfile.mkdtemp(prefix="mindsdb_file_")
+            temp_file_path = os.path.join(temp_dir_path, f"{table_name}.csv")
+
+            # Create an empty file using with the columns in the query
+            df = pd.DataFrame(columns=[col.name for col in query.columns])
+            df.to_csv(temp_file_path, index=False)
+
+            self.file_controller.save_file(table_name, temp_file_path, file_name=table_name)
+
+            return Response(RESPONSE_TYPE.OK)
+
         elif type(query) is Select:
             table_name = query.from_table.parts[-1]
             file_path = self.file_controller.get_file_path(table_name)

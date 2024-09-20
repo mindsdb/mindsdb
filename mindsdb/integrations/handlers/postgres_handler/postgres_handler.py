@@ -57,6 +57,14 @@ class PostgresHandler(DatabaseHandler):
             'dbname': self.connection_args.get('database')
         }
 
+        # https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-PARAMKEYWORDS
+        parameters = self.connection_args.get('parameters')
+        if isinstance(parameters, dict) is False:
+            parameters = {}
+        if 'connect_timeout' not in parameters:
+            parameters['connect_timeout'] = 10
+        config.update(parameters)
+
         if self.connection_args.get('sslmode'):
             config['sslmode'] = self.connection_args.get('sslmode')
 
@@ -81,7 +89,7 @@ class PostgresHandler(DatabaseHandler):
 
         config = self._make_connection_args()
         try:
-            self.connection = psycopg.connect(**config, connect_timeout=10)
+            self.connection = psycopg.connect(**config)
             self.is_connected = True
             return self.connection
         except psycopg.Error as e:

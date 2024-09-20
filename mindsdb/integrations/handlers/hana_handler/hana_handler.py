@@ -76,10 +76,13 @@ class HanaHandler(DatabaseHandler):
 
         # Optional connection parameters.
         if 'database' in self.connection_data:
-            config['databaseName'] = self.connection_data['database'],
+            config['databaseName'] = self.connection_data['database']
 
         if 'schema' in self.connection_data:
-            config['currentSchema'] = self.connection_data['schema'],
+            config['currentSchema'] = self.connection_data['schema']
+
+        if 'encrypt' in self.connection_data:
+            config['encrypt'] = self.connection_data['encrypt']
 
         try:
             self.connection = dbapi.connect(

@@ -13,7 +13,7 @@ class TestHanaHandler(BaseDatabaseHandlerTest, unittest.TestCase):
     @property
     def dummy_connection_data(self):
         return OrderedDict(
-            address='127.0.0.1',
+            address='123e4567-e89b-12d3-a456-426614174000.hana.trial-us10.hanacloud.ondemand.com',
             port=443,
             user='example_user',
             password='example_pass'

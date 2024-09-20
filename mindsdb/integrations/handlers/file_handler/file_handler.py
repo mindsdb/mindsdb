@@ -108,7 +108,8 @@ class FileHandler(DatabaseHandler):
                     error_message=f"Table '{table_name}' already exists",
                 )
 
-            # TODO: Handle CREATE OR REPLACE
+            if query.is_replace:
+                self.file_controller.delete_file(table_name)
 
             # Create a temp file to save the table
             temp_dir_path = tempfile.mkdtemp(prefix="mindsdb_file_")

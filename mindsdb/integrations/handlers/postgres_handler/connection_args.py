@@ -46,6 +46,12 @@ connection_args = OrderedDict(
         'description': 'sslmode that will be used for connection.',
         'required': False,
         'label': 'sslmode'
+    },
+    parameters={
+        'type': ARG_TYPE.DICT,
+        'description': 'Connection string parameters',
+        'required': False,
+        'label': 'parameters'
     }
 )
 

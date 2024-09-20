@@ -3,84 +3,104 @@ title: SAP HANA
 sidebarTitle: SAP HANA
 ---
 
-This is the implementation of the SAP HANA data handler for MindsDB.
-
-[SAP HANA](https://www.sap.com/products/technology-platform/hana/what-is-sap-hana.html), where HANA stands for High-performance ANalytic Appliance, is a multi-model database that stores data in its memory instead of keeping it on a disk. The column-oriented in-memory database design used by SAP HANA allows users to run advanced analytics alongside high-speed transactions in a single system.
+This documentation describes the integration of MindsDB with [SAP HANA](https://www.sap.com/products/technology-platform/hana/what-is-sap-hana.html), a multi-model database with a column-oriented in-memory design that stores data in its memory instead of keeping it on a disk.
+The integration allows MindsDB to access data from SAP HANA and enhance SAP HANA with AI capabilities.
 
 ## Prerequisites
 
 Before proceeding, ensure the following prerequisites are met:
 
-1. Install MindsDB locally via [Docker](/setup/self-hosted/docker) or [Docker Desktop](/setup/self-hosted/docker-desktop).
-2. To connect SAP HANA to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
-3. Install or ensure access to SAP HANA.
+1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
+2. To connect SAP HANA to MindsDB, install the required dependencies following [this instruction](https://docs.mindsdb.com/setup/self-hosted/docker#install-dependencies).
 
-## Implementation
+## Connection
 
-This handler is implemented using `hdbcli`, the Python driver for SAP HANA.
-
-The required arguments to establish a connection are as follows:
-
-* `host` is the host name or IP address of the SAP HANA instance.
-* `port` is the port number of the SAP HANA instance.
-* `user` specifies the user name.
-* `password` specifies the password for the user.
-* `schema` sets the current schema, which is used for identifiers without a defined schema.
-
-## Usage
-
-You can use the below SQL statements to create a schema in SAP HANA called `MINDSDB` and a table called `TEST`.
+Establish a connection to SAP HANA from MindsDB by executing the following SQL command and providing its [handler name](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/hana_handler) as an engine.
 
 ```sql
-CREATE SCHEMA MINDSDB;
-
-CREATE TABLE MINDSDB.TEST
-(
-    ID          INTEGER NOT NULL,
-    NAME        NVARCHAR(1),
-    DESCRIPTION NVARCHAR(1)
-);
-
-CREATE UNIQUE INDEX MINDSDB.TEST_ID_INDEX
-    ON MINDSDB.TEST (ID);
-
-ALTER TABLE MINDSDB.TEST
-    ADD CONSTRAINT TEST_PK
-        PRIMARY KEY (ID);
-
-INSERT INTO MINDSDB.TEST
-VALUES (1, 'h', 'w');
-```
-
-In order to make use of this handler and connect to the SAP HANA database in MindsDB, the following syntax can be used:
-
-```sql
-CREATE DATABASE sap_hana_trial
+CREATE DATABASE sap_hana_datasource
 WITH
     ENGINE = 'hana',
     PARAMETERS = {
-        "user": "DBADMIN",
-        "password": "password",
-        "host": "<uuid>.hana.trial-us10.hanacloud.ondemand.com",
+        "host": "123e4567-e89b-12d3-a456-426614174000.hana.trial-us10.hanacloud.ondemand.com",
         "port": "443",
-        "schema": "MINDSDB",
+        "user": "demo_user",
+        "password": "demo_password",
         "encrypt": true
     };
 ```
 
-<Note>
-The above example assumes usage of SAP HANA Cloud, which requires the `encrypt` parameter to be set to `true` and uses port `443`.
-</Note>
+Required connection parameters include the following:
 
-You can use this established connection to query your table as follows:
+* `host`: The hostname, IP address, or URL of the SAP HANA database.
+* `port`: The port number for connecting to the SAP HANA database.
+* `user`: The username for the SAP HANA database.
+* `password`: The password for the SAP HANA database.
+
+Optional connection parameters include the following:
+
+* 'database': The name of the database to connect to. This parameter is not used for SAP HANA Cloud.
+* `schema`: The database schema to use. Defaults to the user's default schema.
+* `encrypt`: The setting to enable or disable encryption. Defaults to `True'
+
+## Usage
+
+Retrieve data from a specified table by providing the integration, schema and table names:
 
 ```sql
 SELECT *
-FROM sap_hana_trial.test;
+FROM sap_hana_datasource.schema_name.table_name
+LIMIT 10;
 ```
 
-On execution, we get:
+Run Teradata SQL queries directly on the connected Teradata database:
 
-| ID  | NAME | DESCRIPTION |
-| --- | ---- | ----------- |
-| 1   | h    | w           |
+```sql
+SELECT * FROM sap_hana_datasource (
+
+    --Native Query Goes Here
+    SELECT customer, year, SUM(sales)
+        FROM t1
+        GROUP BY ROLLUP(customer, year);
+
+    SELECT customer, year, SUM(sales)
+        FROM t1
+        GROUP BY GROUPING SETS
+        (
+        (customer, year),
+        (customer)
+        )
+    UNION ALL
+    SELECT NULL, NULL, SUM(sales)
+        FROM t1;    
+
+);
+```
+
+<Note>
+The above examples utilize `sap_hana_datasource` as the datasource name, which is defined in the `CREATE DATABASE` command.
+</Note>
+
+## Troubleshooting
+
+<Warning>
+`Database Connection Error`
+
+* **Symptoms**: Failure to connect MindsDB with the SAP HANA database.
+* **Checklist**:
+    1. Make sure the SAP HANA database is active.
+    2. Confirm that address, port, user and password are correct. Try a direct connection using a client like DBeaver.
+    3. Ensure a stable network between MindsDB and SAP HANA.
+</Warning>
+
+<Warning>
+`SQL statement cannot be parsed by mindsdb_sql`
+
+* **Symptoms**: SQL queries failing or not recognizing table names containing spaces or special characters.
+* **Checklist**:
+    1. Ensure table names with spaces or special characters are enclosed in backticks.
+    2. Examples:
+        * Incorrect: SELECT * FROM integration.travel-data
+        * Incorrect: SELECT * FROM integration.'travel-data'
+        * Correct: SELECT * FROM integration.\`travel-data\`
+</Warning>

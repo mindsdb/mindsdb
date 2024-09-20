@@ -156,7 +156,7 @@ class FileHandler(DatabaseHandler):
         else:
             return Response(
                 RESPONSE_TYPE.ERROR,
-                error_message="Only 'select' and 'drop' queries allowed for files",
+                error_message="Only 'select', 'insert', 'create' and 'drop' queries allowed for files",
             )
 
     def native_query(self, query: str) -> Response:

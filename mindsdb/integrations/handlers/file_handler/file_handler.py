@@ -91,6 +91,7 @@ class FileHandler(DatabaseHandler):
             return Response(RESPONSE_TYPE.OK)
         
         if type(query) is CreateTable:
+            # Check if the table already exists or if the table name contains more than one namespace
             existing_files = self.file_controller.get_files_names()
 
             if len(query.name.parts) != 1:
@@ -135,6 +136,7 @@ class FileHandler(DatabaseHandler):
             table_name = query.table.parts[-1]
             file_path = self.file_controller.get_file_path(table_name)
 
+            # Load the existing data from the file
             df, _ = self._handle_source(
                 file_path,
                 self.clean_rows,
@@ -143,7 +145,10 @@ class FileHandler(DatabaseHandler):
                 self.chunk_overlap,
             )
 
+            # Create a new dataframe with the values from the query
             new_df = pd.DataFrame(query.values, columns=[col.name for col in query.columns])
+
+            # Concatenate the new dataframe with the existing one
             df = pd.concat([df, new_df], ignore_index=True)
 
             # Write the concatenated data to the file based on its format

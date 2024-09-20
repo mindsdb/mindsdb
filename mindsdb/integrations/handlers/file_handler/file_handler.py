@@ -89,7 +89,7 @@ class FileHandler(DatabaseHandler):
                         error_message=f"Can't delete table '{table_name}': {e}",
                     )
             return Response(RESPONSE_TYPE.OK)
-        
+
         if type(query) is CreateTable:
             # Check if the table already exists or if the table name contains more than one namespace
             existing_files = self.file_controller.get_files_names()
@@ -106,7 +106,7 @@ class FileHandler(DatabaseHandler):
                     RESPONSE_TYPE.ERROR,
                     error_message=f"Table '{table_name}' already exists",
                 )
-            
+
             # Create a temp file to save the table
             temp_dir_path = tempfile.mkdtemp(prefix="mindsdb_file_")
             temp_file_path = os.path.join(temp_dir_path, f"{table_name}.csv")
@@ -131,7 +131,7 @@ class FileHandler(DatabaseHandler):
             )
             result_df = query_df(df, query)
             return Response(RESPONSE_TYPE.TABLE, data_frame=result_df)
-        
+
         elif type(query) is Insert:
             table_name = query.table.parts[-1]
             file_path = self.file_controller.get_file_path(table_name)

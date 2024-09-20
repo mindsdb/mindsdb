@@ -31,13 +31,13 @@ connection_args = OrderedDict(
     },
     schema={
         'type': ARG_TYPE.STR,
-        'description': 'The schema to use for the connection. Default to the user\'s default schema.',
+        'description': "The database schema to use. Defaults to the user's default schema.",
         'required': False,
         'label': 'Schema'
     },
     database={
         'type': ARG_TYPE.STR,
-        'description': 'The name of the SAP HANA database to connect to. This parameter is not used for SAP HANA Cloud.',
+        'description': 'The name of the database to connect to. This parameter is not used for SAP HANA Cloud.',
         'required': False,
         'label': 'Database'
     },

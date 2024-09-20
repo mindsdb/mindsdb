@@ -415,8 +415,6 @@ class SlackHandler(APIChatHandler):
             web_client=WebClient(token=self.connection_args['token']),  # xoxb-111-222-xyz
         )
 
-        my_user_id = self._get_my_user_id()
-
         def _process_websocket_message(client: SocketModeClient, request: SocketModeRequest):
             # Acknowledge the request
             response = SocketModeResponse(envelope_id=request.envelope_id)

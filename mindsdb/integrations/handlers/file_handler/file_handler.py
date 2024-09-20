@@ -114,7 +114,7 @@ class FileHandler(DatabaseHandler):
             df = pd.DataFrame(columns=[col.name for col in query.columns])
             df.to_csv(temp_file_path, index=False)
 
-            self.file_controller.save_file(table_name, temp_file_path, file_name=table_name)
+            self.file_controller.save_file(table_name, temp_file_path, file_name=f"{table_name}.csv")
 
             return Response(RESPONSE_TYPE.OK)
 

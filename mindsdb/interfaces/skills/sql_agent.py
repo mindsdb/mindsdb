@@ -59,7 +59,7 @@ class SQLAgent:
 
         # check type of query
         if not isinstance(ast_query, Select):
-            raise ValueError(f"Only SELECT is allowed")
+            raise ValueError("Only SELECT is allowed")
 
         # Check tables
         if self._tables_to_include:

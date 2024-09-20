@@ -13,7 +13,7 @@ import pandas as pd
 import requests
 from charset_normalizer import from_bytes
 from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import CreateTable, DropTables, Select
+from mindsdb_sql.parser.ast import CreateTable, DropTables, Insert, Select
 from mindsdb_sql.parser.ast.base import ASTNode
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
@@ -130,6 +130,29 @@ class FileHandler(DatabaseHandler):
             )
             result_df = query_df(df, query)
             return Response(RESPONSE_TYPE.TABLE, data_frame=result_df)
+        
+        elif type(query) is Insert:
+            table_name = query.table.parts[-1]
+            file_path = self.file_controller.get_file_path(table_name)
+
+            df, _ = self._handle_source(
+                file_path,
+                self.clean_rows,
+                self.custom_parser,
+                self.chunk_size,
+                self.chunk_overlap,
+            )
+
+            new_df = pd.DataFrame(query.values, columns=[col.name for col in query.columns])
+            df = pd.concat([df, new_df], ignore_index=True)
+
+            # Write the concatenated data to the file based on its format
+            format = Path(file_path).suffix.strip(".").lower()
+            write_method = getattr(df, f"to_{format}")
+            write_method(file_path, index=False)
+
+            return Response(RESPONSE_TYPE.OK)
+
         else:
             return Response(
                 RESPONSE_TYPE.ERROR,

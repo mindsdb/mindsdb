@@ -306,6 +306,9 @@ def _completion_event_generator(
                 elif chunk.get('type') == 'context':
                     # Handle context message
                     yield json_serialize({"type": "context", "content": chunk.get('content')})
+                elif chunk.get('type') == 'sql':
+                    # Handle SQL query message
+                    yield json_serialize({"type": "sql", "content": chunk.get('content')})
                 else:
                     # Process and yield other types of chunks
                     chunk_obj = {}
@@ -328,6 +331,8 @@ def _completion_event_generator(
                         chunk_obj['steps'] = [{'observation': getattr(s, 'observation', str(s))} for s in chunk['steps']]
                     if 'context' in chunk:
                         chunk_obj['context'] = chunk['context']
+                    if 'sql' in chunk:
+                        chunk_obj['sql'] = chunk['sql']
 
                     yield json_serialize(chunk_obj)
             else:

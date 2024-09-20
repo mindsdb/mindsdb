@@ -58,12 +58,12 @@ class PostgresHandler(DatabaseHandler):
         }
 
         # https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-PARAMKEYWORDS
-        parameters = self.connection_args.get('parameters')
-        if isinstance(parameters, dict) is False:
-            parameters = {}
-        if 'connect_timeout' not in parameters:
-            parameters['connect_timeout'] = 10
-        config.update(parameters)
+        connection_parameters = self.connection_args.get('connection_parameters')
+        if isinstance(connection_parameters, dict) is False:
+            connection_parameters = {}
+        if 'connect_timeout' not in connection_parameters:
+            connection_parameters['connect_timeout'] = 10
+        config.update(connection_parameters)
 
         if self.connection_args.get('sslmode'):
             config['sslmode'] = self.connection_args.get('sslmode')

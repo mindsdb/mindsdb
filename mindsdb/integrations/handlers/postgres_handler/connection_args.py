@@ -47,11 +47,11 @@ connection_args = OrderedDict(
         'required': False,
         'label': 'sslmode'
     },
-    parameters={
+    connection_parameters={
         'type': ARG_TYPE.DICT,
         'description': 'Connection string parameters',
         'required': False,
-        'label': 'parameters'
+        'label': 'connection_parameters'
     }
 )
 

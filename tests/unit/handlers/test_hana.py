@@ -31,7 +31,7 @@ class TestHanaHandler(BaseDatabaseHandlerTest, unittest.TestCase):
                    'BASE TABLE' AS TABLE_TYPE
             FROM
                 SYS.TABLES
-            WHERE IS_SYSTEM_TABLE = 'FALSE'  
+            WHERE IS_SYSTEM_TABLE = 'FALSE'
               AND IS_USER_DEFINED_TYPE = 'FALSE'
               AND IS_TEMPORARY = 'FALSE'
 

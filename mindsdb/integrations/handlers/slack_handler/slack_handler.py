@@ -32,14 +32,34 @@ DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 class SlackChannelListsTable(APIResource):
 
-    def list(self, **kwargs) -> pd.DataFrame:
-        channels = self.handler.get_all_channels()
+    def list(self,
+             conditions: List[FilterCondition] = None,
+             **kwargs) -> pd.DataFrame:
+        channel_id = None
+        for condition in conditions:
+            value = condition.value
+            op = condition.op
 
-        for channel in channels:
-            channel['created_at'] = dt.datetime.fromtimestamp(channel['created'])
-            channel['updated_at'] = dt.datetime.fromtimestamp(channel['updated'] / 1000)
+            if condition.column == 'id':
+                # TODO: Should the IN operator be supported?
+                if op != FilterOperator.EQUAL:
+                    raise ValueError(f"Unsupported operator '{op}' for column 'id'")
 
-        return pd.DataFrame(channels, columns=self.get_columns())
+                # Check if the channel exists
+                try:
+                    channel = self.handler.get_channel(value)
+                    condition.applied = True
+                    channel_id = value
+                except SlackApiError as e:
+                    raise ValueError(f"Channel '{value}' not found")
+
+        if channel_id is None:
+            raise Exception("To retrieve data from Slack, you need to provide the 'id' parameter.")
+
+        channel['created_at'] = dt.datetime.fromtimestamp(channel['created'])
+        channel['updated_at'] = dt.datetime.fromtimestamp(channel['updated'] / 1000)
+
+        return pd.DataFrame([channel], columns=self.get_columns())
 
     def get_columns(self) -> List[str]:
         return [
@@ -95,13 +115,6 @@ class SlackChannelsTable(APIResource):
             date_obj = dt.datetime.fromisoformat(date_str).replace(tzinfo=dt.timezone.utc)
             return date_obj
 
-        # Get the channels list and ids
-        channels = self.handler.get_all_channels()
-        channel_ids = {c['name']: c['id'] for c in channels}
-        
-        # Extract comparison conditions from the query
-        channel_name = None
-
         # Build the filters and parameters for the query
         params = {}
 
@@ -109,12 +122,17 @@ class SlackChannelsTable(APIResource):
             value = condition.value
             op = condition.op
 
-            if condition.column == 'channel':
-                if value in channel_ids:
-                    params['channel'] = channel_ids[value]
-                    channel_name = value
+            if condition.column == 'channel_id':
+                # TODO: Should the IN operator be supported?
+                if op != FilterOperator.EQUAL:
+                    raise ValueError(f"Unsupported operator '{op}' for column 'channel_id'")
+
+                # Check if the channel exists
+                try:
+                    channel = self.handler.get_channel(value)
+                    params['channel'] = value
                     condition.applied = True
-                else:
+                except SlackApiError as e:
                     raise ValueError(f"Channel '{value}' not found")
 
             elif condition.column == 'created_at' and value is not None:
@@ -133,7 +151,7 @@ class SlackChannelsTable(APIResource):
             params['limit'] = limit
 
         if 'channel' not in params:
-            raise Exception("To retrieve data from Slack, you need to provide the 'channel' parameter.")
+            raise Exception("To retrieve data from Slack, you need to provide the 'channel_id' parameter.")
 
         # Retrieve the conversation history
         result = client.conversations_history(**params)
@@ -145,7 +163,8 @@ class SlackChannelsTable(APIResource):
         result = result[result['text'].notnull()]
 
         # Add the selected channel to the dataframe
-        result['channel'] = channel_name
+        result['channel_id'] = params['channel']
+        result['channel'] = channel['name']
 
         # translate the time stamp into a 'created_at' field
         result['created_at'] = pd.to_datetime(result['ts'].astype(float), unit='s').dt.strftime('%Y-%m-%d %H:%M:%S')
@@ -154,6 +173,7 @@ class SlackChannelsTable(APIResource):
 
     def get_columns(self) -> List[str]:
         return [
+            'channel_id',
             'channel',
             'client_msg_id',
             'type',
@@ -188,13 +208,13 @@ class SlackChannelsTable(APIResource):
             params = dict(zip(columns, row))
 
             # check if required parameters are provided
-            if 'channel' not in params or 'text' not in params:
+            if 'channel_id' not in params or 'text' not in params:
                 raise Exception("To insert data into Slack, you need to provide the 'channel' and 'text' parameters.")
 
             # post message to Slack channel
             try:
                 response = client.chat_postMessage(
-                    channel=params['channel'],
+                    channel=params['channel_id'],
                     text=params['text']
                 )
             except SlackApiError as e:
@@ -214,10 +234,6 @@ class SlackChannelsTable(APIResource):
         """
         client = self.handler.connect()
 
-        # Get the channels list and ids
-        channels = self.handler.get_all_channels()
-        channel_ids = {c['name']: c['id'] for c in channels}
-
         # Extract comparison conditions from the query
         conditions = extract_comparison_conditions(query.where)
 
@@ -228,10 +244,12 @@ class SlackChannelsTable(APIResource):
 
         # Build the filters and parameters for the query
         for op, arg1, arg2 in conditions:
-            if arg1 == 'channel':
-                if arg2 in channel_ids:
-                    params['channel'] = channel_ids[arg2]
-                else:
+            if arg1 == 'channel_id':
+                # Check if the channel exists
+                try:
+                    self.handler.get_channel(arg2)
+                    params['channel'] = arg2
+                except SlackApiError as e:
                     raise ValueError(f"Channel '{arg2}' not found")
 
             if keys[0] == 'text':
@@ -271,9 +289,6 @@ class SlackChannelsTable(APIResource):
         """
         client = self.handler.connect()
 
-        # Get the channels list and ids
-        channels = self.handler.get_all_channels()
-        channel_ids = {c['name']: c['id'] for c in channels}
         # Extract comparison conditions from the query
         conditions = extract_comparison_conditions(query.where)
 
@@ -282,10 +297,12 @@ class SlackChannelsTable(APIResource):
 
         # Build the filters and parameters for the query
         for op, arg1, arg2 in conditions:
-            if arg1 == 'channel':
-                if arg2 in channel_ids:
-                    params['channel'] = channel_ids[arg2]
-                else:
+            if arg1 == 'channel_id':
+                # Check if the channel exists
+                try:
+                    self.handler.get_channel(arg2)
+                    params['channel'] = arg2
+                except SlackApiError as e:
                     raise ValueError(f"Channel '{arg2}' not found")
 
             if arg1 == 'ts':
@@ -358,7 +375,7 @@ class SlackHandler(APIChatHandler):
             },
             'chat_table': {
                 'name': 'channels',
-                'chat_id_col': 'channel',
+                'chat_id_col': 'channel_id',
                 'username_col': 'user',
                 'text_col': 'text',
                 'time_col': 'thread_ts',
@@ -427,12 +444,12 @@ class SlackHandler(APIChatHandler):
                 return
 
             key = {
-                'channel': payload_event['channel'],
+                'channel_id': payload_event['channel'],
             }
             row = {
                 'text': payload_event['text'],
                 'user': payload_event['user'],
-                'channel': payload_event['channel'],
+                'channel_id': payload_event['channel'],
                 'created_at': dt.datetime.fromtimestamp(float(payload_event['ts'])).strftime('%Y-%m-%d %H:%M:%S')
             }
 
@@ -533,6 +550,22 @@ class SlackHandler(APIChatHandler):
             result['channels'] = self.convert_channel_data(result['channels'])
 
         return [result]
+    
+    def get_channel(self, channel_id: str):
+        """
+        Get the channel data by channel id.
+
+        Args:
+            channel_id: str
+                The channel id.
+
+        Returns:
+            dict
+                The channel data.
+        """
+        client = self.connect()
+        response = client.conversations_info(channel=channel_id)
+        return response['channel']
     
     def get_all_channels(self) -> List:
         """

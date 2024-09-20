@@ -108,6 +108,8 @@ class FileHandler(DatabaseHandler):
                     error_message=f"Table '{table_name}' already exists",
                 )
 
+            # TODO: Handle CREATE OR REPLACE
+
             # Create a temp file to save the table
             temp_dir_path = tempfile.mkdtemp(prefix="mindsdb_file_")
             temp_file_path = os.path.join(temp_dir_path, f"{table_name}.csv")
@@ -116,10 +118,10 @@ class FileHandler(DatabaseHandler):
             df = pd.DataFrame(columns=[col.name for col in query.columns])
             df.to_csv(temp_file_path, index=False)
 
+            self.file_controller.save_file(table_name, temp_file_path, file_name=f"{table_name}.csv")
+
             # Remove the temp file created
             shutil.rmtree(temp_dir_path, ignore_errors=True)
-
-            self.file_controller.save_file(table_name, temp_file_path, file_name=f"{table_name}.csv")
 
             return Response(RESPONSE_TYPE.OK)
 

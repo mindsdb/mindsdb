@@ -62,11 +62,11 @@ class HanaHandler(DatabaseHandler):
         """
         if self.is_connected is True:
             return self.connection
-        
+
         # Mandatory connection parameters.
         if not all(key in self.connection_data for key in ['address', 'port', 'user', 'password']):
             raise ValueError('Required parameters (address, port, user, password) must be provided.')
-        
+
         config = {
             'address': self.connection_data['address'],
             'port': self.connection_data['port'],
@@ -211,7 +211,7 @@ class HanaHandler(DatabaseHandler):
                    'BASE TABLE' AS TABLE_TYPE
             FROM
                 SYS.TABLES
-            WHERE IS_SYSTEM_TABLE = 'FALSE'  
+            WHERE IS_SYSTEM_TABLE = 'FALSE'
               AND IS_USER_DEFINED_TYPE = 'FALSE'
               AND IS_TEMPORARY = 'FALSE'
 
@@ -223,7 +223,7 @@ class HanaHandler(DatabaseHandler):
             FROM
                 SYS.VIEWS
             WHERE SCHEMA_NAME <> 'SYS'
-              AND SCHEMA_NAME NOT LIKE '_SYS%'            
+              AND SCHEMA_NAME NOT LIKE '_SYS%'
         """
         return self.native_query(query)
 

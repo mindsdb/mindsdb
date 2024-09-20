@@ -2,6 +2,7 @@ import codecs
 import csv
 import json
 import os
+import shutil
 import tempfile
 import traceback
 from io import BytesIO, StringIO
@@ -114,6 +115,9 @@ class FileHandler(DatabaseHandler):
             # Create an empty file using with the columns in the query
             df = pd.DataFrame(columns=[col.name for col in query.columns])
             df.to_csv(temp_file_path, index=False)
+
+            # Remove the temp file created
+            shutil.rmtree(temp_dir_path, ignore_errors=True)
 
             self.file_controller.save_file(table_name, temp_file_path, file_name=f"{table_name}.csv")
 

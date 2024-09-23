@@ -280,4 +280,7 @@ class SQLAgent:
         try:
             return self.query(command, fetch)
         except Exception as e:
-            return f"Error: {e}"
+            msg = f"Error: {e}"
+            if 'does not exist' in msg:
+                msg += '\nAvailable tables: ' + ', '.join(self.get_usable_table_names())
+            return msg

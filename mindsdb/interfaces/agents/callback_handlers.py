@@ -117,6 +117,9 @@ class LogCallbackHandler(BaseCallbackHandler):
             # Save the generated SQL query
             self.generated_sql = action.tool_input
 
+        # fix for mistral
+        action.tool = action.tool.replace('\\', '')
+
     def on_agent_finish(self, finish: AgentFinish, **kwargs: Any) -> Any:
         '''Run on agent end.'''
         self.logger.debug('Agent finished with return values:')

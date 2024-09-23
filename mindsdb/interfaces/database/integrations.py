@@ -505,7 +505,7 @@ class IntegrationController:
         return handler
 
     @profiler.profile()
-    def get_data_handler(self, name: str, case_sensitive: bool = False) -> BaseHandler:
+    def get_data_handler(self, name: str, case_sensitive: bool = False, connect=True) -> BaseHandler:
         """Get DATA handler (DB or API) by name
         Args:
             name (str): name of the handler
@@ -587,7 +587,8 @@ class IntegrationController:
         )
         HandlerClass = self.handler_modules[integration_engine].Handler
         handler = HandlerClass(**handler_ars)
-        self.handlers_cache.set(handler)
+        if connect:
+            self.handlers_cache.set(handler)
 
         return handler
 

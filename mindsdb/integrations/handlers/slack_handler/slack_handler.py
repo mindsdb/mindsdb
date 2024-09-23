@@ -37,31 +37,39 @@ class SlackChannelListsTable(APIResource):
         conditions: List[FilterCondition] = None,
         **kwargs
     ) -> pd.DataFrame:
-        channel_id = None
         for condition in conditions:
             value = condition.value
             op = condition.op
 
+            channels = []
             if condition.column == 'id':
-                # TODO: Should the IN operator be supported?
-                if op != FilterOperator.EQUAL:
+                if op not in [FilterOperator.EQUAL, FilterOperator.IN]:
                     raise ValueError(f"Unsupported operator '{op}' for column 'id'")
+                
+                if op == FilterOperator.EQUAL:
+                    try:
+                        channels = [self.handler.get_channel(value)]
+                        condition.applied = True
+                    except ValueError:
+                        raise
+                    
+                if op == FilterOperator.IN:
+                    try:
+                        channels = self.handler.get_channels(
+                            value if isinstance(value, list) else [value]
+                        )
+                        condition.applied = True
+                    except ValueError:
+                        raise
 
-                # Check if the channel exists
-                try:
-                    channel = self.handler.get_channel(value)
-                    condition.applied = True
-                    channel_id = value
-                except SlackApiError as e:
-                    raise ValueError(f"Channel '{value}' not found")
-
-        if channel_id is None:
+        if not channels:
             raise Exception("To retrieve data from Slack, you need to provide the 'id' parameter.")
 
-        channel['created_at'] = dt.datetime.fromtimestamp(channel['created'])
-        channel['updated_at'] = dt.datetime.fromtimestamp(channel['updated'] / 1000)
+        for channel in channels:
+            channel['created_at'] = dt.datetime.fromtimestamp(channel['created'])
+            channel['updated_at'] = dt.datetime.fromtimestamp(channel['updated'] / 1000)
 
-        return pd.DataFrame([channel], columns=self.get_columns())
+        return pd.DataFrame(channels, columns=self.get_columns())
 
     def get_columns(self) -> List[str]:
         return [
@@ -565,8 +573,37 @@ class SlackHandler(APIChatHandler):
                 The channel data.
         """
         client = self.connect()
-        response = client.conversations_info(channel=channel_id)
+        try:
+            response = client.conversations_info(channel=channel_id)
+        except SlackApiError as e:
+            logger.error(f"Error getting channel '{channel_id}': {e.response['error']}")
+            raise ValueError(f"Channel '{channel_id}' not found")
+
         return response['channel']
+    
+    def get_channels(self, channel_ids: List[str]):
+        """
+        Get the channel data by channel ids.
+
+        Args:
+            channel_ids: List[str]
+                The channel ids.
+
+        Returns:
+            List[dict]
+                The channel data.
+        """
+        # TODO: Handle rate limiting
+        channels = []
+        for channel_id in channel_ids:
+            try:
+                channel = self.get_channel(channel_id)
+                channels.append(channel)
+            except SlackApiError:
+                logger.error(f"Channel '{channel_id}' not found")
+                raise ValueError(f"Channel '{channel_id}' not found")
+                
+        return channels
     
     def get_all_channels(self) -> List:
         """

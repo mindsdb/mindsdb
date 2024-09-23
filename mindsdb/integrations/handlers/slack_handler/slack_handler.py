@@ -75,8 +75,19 @@ class SlackChannelListsTable(APIResource):
         return [
             'id',
             'name',
+            'is_channel',
+            'is_group',
+            'is_im',
+            'is_mpim',
+            'is_private',
+            'is_archived',
+            'is_general',
+            'is_shared',
+            'is_ext_shared',
+            'is_org_shared',
+            'creator',
             'created_at',
-            'updated_at'
+            'updated_at',
         ]
 
 

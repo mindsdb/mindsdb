@@ -114,6 +114,8 @@ class SQLAgent:
 
         tables = []
         for table_name in table_names:
+            if not table_name.strip():
+                continue
 
             # Some LLMs (e.g. gpt-4o) may include backticks or quotes when invoking tools.
             table_name = table_name.strip(' `"\'\n\r')

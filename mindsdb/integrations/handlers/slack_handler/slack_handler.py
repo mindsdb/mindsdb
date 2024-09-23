@@ -32,9 +32,11 @@ DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 class SlackChannelListsTable(APIResource):
 
-    def list(self,
-             conditions: List[FilterCondition] = None,
-             **kwargs) -> pd.DataFrame:
+    def list(
+        self,
+        conditions: List[FilterCondition] = None,
+        **kwargs
+    ) -> pd.DataFrame:
         channel_id = None
         for condition in conditions:
             value = condition.value
@@ -98,9 +100,10 @@ class SlackUsersTable(APIResource):
 class SlackChannelsTable(APIResource):
 
     def list(self,
-             conditions: List[FilterCondition] = None,
-             limit: int = None,
-             **kwargs) -> pd.DataFrame:
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        **kwargs
+    ) -> pd.DataFrame:
         """
         Retrieves the data from the channel using SlackAPI
 

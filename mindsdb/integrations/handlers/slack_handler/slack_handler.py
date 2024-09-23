@@ -145,7 +145,6 @@ class SlackChannelsTable(APIResource):
             op = condition.op
 
             if condition.column == 'channel_id':
-                # TODO: Should the IN operator be supported?
                 if op != FilterOperator.EQUAL:
                     raise ValueError(f"Unsupported operator '{op}' for column 'channel_id'")
 
@@ -186,7 +185,7 @@ class SlackChannelsTable(APIResource):
 
         # Add the selected channel to the dataframe
         result['channel_id'] = params['channel']
-        result['channel'] = channel['name']
+        result['channel'] = channel['name'] if 'name' in channel else None
 
         # translate the time stamp into a 'created_at' field
         result['created_at'] = pd.to_datetime(result['ts'].astype(float), unit='s').dt.strftime('%Y-%m-%d %H:%M:%S')
@@ -231,7 +230,7 @@ class SlackChannelsTable(APIResource):
 
             # check if required parameters are provided
             if 'channel_id' not in params or 'text' not in params:
-                raise Exception("To insert data into Slack, you need to provide the 'channel' and 'text' parameters.")
+                raise Exception("To insert data into Slack, you need to provide the 'channel_id' and 'text' parameters.")
 
             # post message to Slack channel
             try:

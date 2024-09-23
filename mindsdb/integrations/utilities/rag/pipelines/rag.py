@@ -5,7 +5,7 @@ from langchain_core.runnables import RunnableParallel, RunnablePassthrough, Runn
 
 from mindsdb.integrations.utilities.rag.retrievers.auto_retriever import AutoRetriever
 from mindsdb.integrations.utilities.rag.retrievers.multi_vector_retriever import MultiVectorRetriever
-
+from mindsdb.integrations.utilities.rag.rerankers.openai_reranker import Reranker
 
 from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel, DEFAULT_AUTO_META_PROMPT_TEMPLATE
 from mindsdb.integrations.utilities.rag.vector_store import VectorStoreOperator
@@ -15,12 +15,15 @@ class LangChainRAGPipeline:
     """
     Builds a RAG pipeline using langchain LCEL components
     """
-
-    def __init__(self, retriever_runnable, prompt_template, llm):
+    def __init__(self, retriever_runnable, prompt_template, llm, reranker: bool = False):
 
         self.retriever_runnable = retriever_runnable
         self.prompt_template = prompt_template
         self.llm = llm
+        if reranker:
+            self.reranker = Reranker()
+        else:
+            self.reranker = None
 
     def with_returned_sources(self) -> RunnableSerializable:
         """
@@ -44,6 +47,8 @@ class LangChainRAGPipeline:
 
         rag_chain_from_docs = (
                 RunnablePassthrough.assign(context=(lambda x: format_docs(x["context"])))  # noqa: E126, E122
+                | (
+                    self.reranker if self.reranker is not None else RunnablePassthrough())  # Add reranking step if reranker exists
                 | prompt
                 | self.llm
                 | StrOutputParser()

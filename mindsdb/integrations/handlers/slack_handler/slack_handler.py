@@ -405,25 +405,9 @@ class SlackHandler(APIChatHandler):
         return params
 
     def get_my_user_name(self):
-        user_info = self._get_my_user_info()
+        api = self.connect()
+        user_info = api.auth_test().data
         return user_info['bot_id']
-    
-    def _get_my_user_id(self):
-        user_info = self._get_my_user_info()
-        return user_info['user_id']
-    
-    def _get_my_user_info(self):
-        try:
-            user_info = json.loads(self.handler_storage.file_get('user_info'))
-        except FileNotFoundError:
-            user_info = None
-
-        if not user_info:    
-            api = self.connect()
-            user_info = api.auth_test().data
-            self.handler_storage.file_set('user_info', json.dumps(user_info).encode('utf-8'))
-
-        return user_info
 
     def subscribe(self, stop_event, callback, table_name, **kwargs):
         if table_name != 'channels':
@@ -613,37 +597,6 @@ class SlackHandler(APIChatHandler):
                 logger.error(f"Channel '{channel_id}' not found")
                 raise ValueError(f"Channel '{channel_id}' not found")
                 
-        return channels
-    
-    def get_all_channels(self) -> List:
-        """
-        Get all channels in the workspace by paginating through the response.
-
-        Returns
-        -------
-        List[Dict]
-            The channels data.
-        """
-        # Get the channels from the handler storage if available
-        try:
-            channels = json.loads(self.handler_storage.file_get('channels'))
-        except FileNotFoundError:
-            channels = None
-
-        if not channels:
-            client = self.connect()
-
-            response = client.conversations_list(types="public_channel,private_channel")
-            channels = response['channels']
-            # Paginate through the response
-            while response["response_metadata"]["next_cursor"] != '':
-                cursor = response["response_metadata"]["next_cursor"]
-                response = client.conversations_list(cursor=cursor, types="public_channel,private_channel")
-                channels.extend(response['channels'])
-
-            # Store the channels in the handler storage
-            self.handler_storage.file_set('channels', json.dumps(channels).encode('utf-8'))
-
         return channels
 
     def convert_channel_data(self, channels: List[dict]):

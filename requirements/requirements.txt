@@ -47,3 +47,4 @@ langfuse==2.35.0
 lark
 prometheus-client==0.20.0
 transformers >= 4.42.4
+sentry-sdk[flask] == 2.14.0

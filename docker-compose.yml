@@ -1,5 +1,3 @@
-version: "3.2"
-
 services:
 
   mindsdb:
@@ -15,11 +13,14 @@ services:
       - '47335:47335'
       - '47336:47336'
     # watchfiles will reload the app when python files are changed
-    command: bash -c "watchfiles --filter python 'python -m mindsdb' ."
+    entrypoint: bash -c "watchfiles --filter python 'python -m mindsdb' ."
     environment:
       MINDSDB_DOCKER_ENV: "True"
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
       FLASK_DEBUG: 1  # This will make sure http requests are logged regardless of log level
+      SENTRY_IO_DSN: ""
+      SENTRY_IO_ENVIRONMENT: "local"
+      # SENTRY_IO_FORCE_RUN: "true" # Uncomment me to force-start sentry on local development. Good for profiling, but may annoy other devs on sentry.io with the "noise"
       # MINDSDB_LOG_LEVEL: "DEBUG"
       # OPENAI_API_KEY: "..."
     volumes:

@@ -8,6 +8,8 @@ from mindsdb.integrations.utilities.rag.retrievers.multi_vector_retriever import
 from mindsdb.integrations.utilities.rag.rerankers.openai_reranker import Reranker
 
 from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel, DEFAULT_AUTO_META_PROMPT_TEMPLATE
+from mindsdb.integrations.utilities.rag.settings import DEFAULT_RERANKER_FLAG
+
 from mindsdb.integrations.utilities.rag.vector_store import VectorStoreOperator
 
 
@@ -15,7 +17,7 @@ class LangChainRAGPipeline:
     """
     Builds a RAG pipeline using langchain LCEL components
     """
-    def __init__(self, retriever_runnable, prompt_template, llm, reranker: bool = False):
+    def __init__(self, retriever_runnable, prompt_template, llm, reranker: bool = DEFAULT_RERANKER_FLAG):
 
         self.retriever_runnable = retriever_runnable
         self.prompt_template = prompt_template

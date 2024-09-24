@@ -5,7 +5,7 @@ from sklearn.metrics import r2_score
 
 # handle optional dependency
 try:
-    import hierarchicalforecast   # noqa: F401
+    import hierarchicalforecast  # noqa: F401
     from hierarchicalforecast.core import HierarchicalReconciliation
     from hierarchicalforecast.methods import BottomUp
     from hierarchicalforecast.utils import aggregate

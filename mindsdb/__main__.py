@@ -39,7 +39,6 @@ from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
 try:
     import torch.multiprocessing as mp
 except Exception:
-    print("\n\nFailed to import torch torch.multiprocessing")
     import multiprocessing as mp
 try:
     mp.set_start_method('spawn')

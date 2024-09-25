@@ -2,7 +2,7 @@ from typing import Iterable, List, Optional
 
 import re
 import hashlib
-from mindsdb_sql.parser.ast import Select
+from mindsdb_sql.parser.ast import Select, Show, Describe, Explain
 
 import pandas as pd
 from mindsdb_sql import parse_sql
@@ -58,8 +58,8 @@ class SQLAgent:
     def _check_permissions(self, ast_query):
 
         # check type of query
-        if not isinstance(ast_query, Select):
-            raise ValueError("Only SELECT is allowed")
+        if not isinstance(ast_query, (Select, Show, Describe, Explain)):
+            raise ValueError(f"Query is not allowed: {ast_query.to_string()}")
 
         # Check tables
         if self._tables_to_include:

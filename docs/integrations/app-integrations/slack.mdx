@@ -163,6 +163,20 @@ FROM mindsdb_slack.messages
 WHERE channel_id="<channel-id>";
 ```
 
+<Tip>
+To find the channel ID of a conversation, you can use the `conversations` table:
+
+```sql
+SELECT *
+FROM mindsdb_slack.conversations
+WHERE name = "<channel-name>";
+```
+
+Please note that if your workspace has more than 1000 conversations, you may need to use the `LIMIT` clause to retrieve all conversations. More information on this can be found below.
+
+You can also find the channel ID by right-clicking on the conversation in Slack, selecting 'View conversation details' or 'View channel details,' and copying the channel ID from the bottom of the 'About' tab.
+</Tip>
+
 Also, you can post messages to the conversation like this:
 
 ```sql

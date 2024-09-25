@@ -35,13 +35,14 @@ class SlackChannelListsTable(APIResource):
     def list(
         self,
         conditions: List[FilterCondition] = None,
+        limit: int = None,
         **kwargs
     ) -> pd.DataFrame:
+        channels = []
         for condition in conditions:
             value = condition.value
             op = condition.op
 
-            channels = []
             if condition.column == 'id':
                 if op not in [FilterOperator.EQUAL, FilterOperator.IN]:
                     raise ValueError(f"Unsupported operator '{op}' for column 'id'")
@@ -63,7 +64,7 @@ class SlackChannelListsTable(APIResource):
                         raise
 
         if not channels:
-            raise Exception("To retrieve data from Slack, you need to provide the 'id' parameter.")
+            channels = self.handler.get_limited_channels(limit)
 
         for channel in channels:
             channel['created_at'] = dt.datetime.fromtimestamp(channel['created'])
@@ -567,6 +568,7 @@ class SlackHandler(APIChatHandler):
                 The channel data.
         """
         client = self.connect()
+
         try:
             response = client.conversations_info(channel=channel_id)
         except SlackApiError as e:
@@ -597,6 +599,42 @@ class SlackHandler(APIChatHandler):
                 logger.error(f"Channel '{channel_id}' not found")
                 raise ValueError(f"Channel '{channel_id}' not found")
                 
+        return channels
+
+    def get_limited_channels(self, limit: int = None):
+        """
+        Get the list of channels with a limit.
+        If the provided limit is greater than 1000, provide no limit to the API call and paginate the results until the limit is reached.
+
+        Args:
+            limit: int
+                The limit of the channels to return.
+
+        Returns:
+            List[dict]
+                The list of channels.
+        """
+        client = self.connect()
+
+        try:
+            if limit and limit > 1000:
+                response = client.conversations_list()
+                channels = response['channels']
+
+                while response['response_metadata']['next_cursor']:
+                    response = client.conversations_list(cursor=response['response_metadata']['next_cursor'])
+                    channels.extend(response['channels'])
+                    if len(channels) >= limit:
+                        break
+
+                channels = channels[:limit]
+            else:
+                response = client.conversations_list(limit=limit if limit else 1000)
+                channels = response['channels']
+        except SlackApiError as e:
+            logger.error(f"Error getting channels: {e.response['error']}")
+            raise ValueError(f"Error getting channels: {e.response['error']}")
+
         return channels
 
     def convert_channel_data(self, channels: List[dict]):

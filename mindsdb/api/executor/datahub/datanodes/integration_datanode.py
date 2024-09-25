@@ -155,9 +155,7 @@ class IntegrationDataNode(DataNode):
         if hasattr(self.integration_handler, 'insert'):
             df = result_set.to_df()
 
-            result = self.integration_handler.insert(table_name.parts[-1], df)
-            if result.type == RESPONSE_TYPE.ERROR:
-                raise Exception(result.error_message)
+            self.integration_handler.insert(table_name.parts[-1], df)
             return
 
         insert_columns = [Identifier(parts=[x.alias]) for x in result_set.columns]

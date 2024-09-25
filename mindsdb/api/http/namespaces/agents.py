@@ -20,6 +20,9 @@ from mindsdb.utilities.exception import EntityNotExistsError
 logger = getLogger(__name__)
 
 
+AGENT_QUICK_RESPONSE = "I understand your request. I'm working on a detailed response for you."
+
+
 def create_agent(project_name, name, agent):
     if name is None:
         return http_error(
@@ -265,7 +268,11 @@ def _completion_event_generator(
     def json_serialize(data):
         return f'data: {json.dumps(data)}\n\n'
 
-    yield json_serialize({"quick_response": True, "output": "I understand your request. I'm working on a detailed response for you."})
+    quick_response_message = {
+        'role': 'assistant',
+        'content': AGENT_QUICK_RESPONSE
+    }
+    yield json_serialize({"quick_response": True, "messages": [quick_response_message]})
     logger.info("Quick response sent")
 
     try:
@@ -299,6 +306,9 @@ def _completion_event_generator(
                 elif chunk.get('type') == 'context':
                     # Handle context message
                     yield json_serialize({"type": "context", "content": chunk.get('content')})
+                elif chunk.get('type') == 'sql':
+                    # Handle SQL query message
+                    yield json_serialize({"type": "sql", "content": chunk.get('content')})
                 else:
                     # Process and yield other types of chunks
                     chunk_obj = {}
@@ -321,6 +331,8 @@ def _completion_event_generator(
                         chunk_obj['steps'] = [{'observation': getattr(s, 'observation', str(s))} for s in chunk['steps']]
                     if 'context' in chunk:
                         chunk_obj['context'] = chunk['context']
+                    if 'sql' in chunk:
+                        chunk_obj['sql'] = chunk['sql']
 
                     yield json_serialize(chunk_obj)
             else:

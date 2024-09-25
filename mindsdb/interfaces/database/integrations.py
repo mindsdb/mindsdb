@@ -244,6 +244,11 @@ class IntegrationController:
         if len(active_models) > 0:
             raise Exception(f'Unable to drop ml engine with active models: {active_models}')
 
+        # check linked KBs
+        kb = db.KnowledgeBase.query.filter_by(vector_database_id=integration_record.id).first()
+        if kb is not None:
+            raise Exception(f'Unable to drop, integration is used by knowledge base: {kb.name}')
+
         # check linked predictors
         models = get_model_records()
         for model in models:
@@ -294,10 +299,12 @@ class IntegrationController:
                 base_dir=integrations_dir
             )
 
-        integration_module = self.get_handler_module(integration_record.engine)
+        handler_meta = self.get_handler_meta(integration_record.engine)
         integration_type = None
-        if integration_module is not None:
-            integration_type = getattr(integration_module, 'type', None)
+        if isinstance(handler_meta, dict):
+            # in other cases, the handler directory is likely not exist.
+            integration_type = handler_meta.get('type')
+        integration_module = self.get_handler_module(integration_record.engine)
 
         if show_secrets is False:
             connection_args = getattr(integration_module, 'connection_args', None)
@@ -498,7 +505,7 @@ class IntegrationController:
         return handler
 
     @profiler.profile()
-    def get_data_handler(self, name: str, case_sensitive: bool = False) -> BaseHandler:
+    def get_data_handler(self, name: str, case_sensitive: bool = False, connect=True) -> BaseHandler:
         """Get DATA handler (DB or API) by name
         Args:
             name (str): name of the handler
@@ -580,7 +587,8 @@ class IntegrationController:
         )
         HandlerClass = self.handler_modules[integration_engine].Handler
         handler = HandlerClass(**handler_ars)
-        self.handlers_cache.set(handler)
+        if connect:
+            self.handlers_cache.set(handler)
 
         return handler
 

@@ -251,18 +251,9 @@ class MongoRequestHandler(SocketServer.BaseRequestHandler):
 
     def _init_ssl(self):
         import ssl
-        import tempfile
-        import atexit
-        import os
 
-        from mindsdb.utilities.wizards import make_ssl_cert
+        ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
 
-        CERT_PATH = tempfile.mkstemp(prefix='mindsdb_cert_', text=True)[1]
-        make_ssl_cert(CERT_PATH)
-        atexit.register(lambda: os.remove(CERT_PATH))
-
-        ssl_context = ssl.SSLContext()
-        ssl_context.load_cert_chain(CERT_PATH)
         ssl_socket = ssl_context.wrap_socket(
             self.request,
             server_side=True,

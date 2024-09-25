@@ -186,7 +186,7 @@ class SlackMessagesTable(APIResource):
 
         # Add the selected channel to the dataframe
         result['channel_id'] = params['channel']
-        result['channel'] = channel['name'] if 'name' in channel else None
+        result['channel_name'] = channel['name'] if 'name' in channel else None
 
         # translate the time stamp into a 'created_at' field
         result['created_at'] = pd.to_datetime(result['ts'].astype(float), unit='s').dt.strftime('%Y-%m-%d %H:%M:%S')

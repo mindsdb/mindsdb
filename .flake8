@@ -92,7 +92,6 @@ exclude =
   mindsdb/integrations/handlers/altibase_handler/*
   mindsdb/integrations/handlers/ms_teams_handler/*
   mindsdb/integrations/handlers/discord_handler/*
-  mindsdb/integrations/handlers/hana_handler/*
   mindsdb/integrations/handlers/sheets_handler/*
   mindsdb/integrations/handlers/autosklearn_handler/*
   mindsdb/integrations/handlers/twitter_handler/*

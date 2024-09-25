@@ -1,6 +1,7 @@
 from typing import List, Optional
 
 import pandas as pd
+import json
 from pymilvus import MilvusClient, CollectionSchema, DataType, FieldSchema
 
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
@@ -179,9 +180,7 @@ class MilvusHandler(VectorStoreHandler):
         )
 
         # Generate search arguments
-        search_arguments = {
-            "param": {}
-        }
+        search_arguments = {}
         # TODO: check if distance in columns work
         if columns:
             search_arguments["output_fields"] = columns
@@ -204,9 +203,11 @@ class MilvusHandler(VectorStoreHandler):
         if vector_filter:
             search_arguments["data"] = vector_filter
             search_arguments["anns_field"] = TableField.EMBEDDINGS.value
+            if "search_params" not in search_arguments:
+                search_arguments["search_params"] = {}
             search_arguments["search_params"]["metric_type"] = self._search_params["search_metric_type"]
             search_arguments["search_params"]["ignore_growing"] = self._search_params["search_ignore_growing"]
-            results = self.milvus_client.search(**search_arguments)[0]
+            results = self.milvus_client.search(table_name, **search_arguments)[0]
             columns_required = [TableField.ID.value, TableField.DISTANCE.value]
             if TableField.CONTENT.value in columns:
                 columns_required.append(TableField.CONTENT.value)
@@ -216,9 +217,9 @@ class MilvusHandler(VectorStoreHandler):
             for hit in results:
                 for col in columns_required:
                     if col != TableField.DISTANCE.value:
-                        data[col].append(hit.entity.get(col))
+                        data[col].append(hit["entity"].get(col))
                     else:
-                        data[TableField.DISTANCE.value].append(hit.distance)
+                        data[TableField.DISTANCE.value].append(hit["distance"])
             return pd.DataFrame(data)
         else:
             # Basic search
@@ -229,7 +230,7 @@ class MilvusHandler(VectorStoreHandler):
                 TableField.CONTENT.value,
                 TableField.EMBEDDINGS.value,
             ] if not columns else columns
-            results = self.milvus_client.query(**search_arguments)
+            results = self.milvus_client.query(table_name, **search_arguments)
             return pd.DataFrame.from_records(results)
 
     def create_table(self, table_name: str, if_not_exists=True):
@@ -264,29 +265,35 @@ class MilvusHandler(VectorStoreHandler):
         )
         index_params = self.milvus_client.prepare_index_params()
         index_params.add_index(
-            field=TableField.EMBEDDINGS.value,
+            field_name=TableField.EMBEDDINGS.value,
             index_type=self._create_table_params["create_index_type"],
             metric_type=self._create_table_params["create_index_metric_type"],
-            params=self._create_table_params["create_params"]
+            params=self._create_table_params.get("create_params", {})
         )
         self.milvus_client.create_index(
             collection_name=collection_name,
             index_params=index_params,
         )
 
-
     def insert(
         self, table_name: str, data: pd.DataFrame, columns: List[str] = None
     ):
         """Insert data into the Milvus collection."""
-        self.milvus_client.has_collection(collection_name=table_name)
-
-        data = data[columns]
+        self.milvus_client.load_collection(collection_name=table_name)
+        if columns:
+            data = data[columns]
         if TableField.METADATA.value in data.columns:
             rows = data[TableField.METADATA.value].to_list()
+            for i, row in enumerate(rows):
+                if isinstance(row, str):
+                    rows[i] = json.loads(row)
             data = pd.concat([data, pd.DataFrame.from_records(rows)], axis=1)
             data.drop(TableField.METADATA.value, axis=1, inplace=True)
-        self.milvus_client.insert(data.to_dict(orient="records"))
+        data_list = data.to_dict(orient="records")
+        for data_dict in data_list:
+            if TableField.EMBEDDINGS.value in data_dict and isinstance(data_dict[TableField.EMBEDDINGS.value], str):
+                data_dict[TableField.EMBEDDINGS.value] = json.loads(data_dict[TableField.EMBEDDINGS.value])
+        self.milvus_client.insert(table_name, data_list)
 
     def delete(
         self, table_name: str, conditions: List[FilterCondition] = None
@@ -301,7 +308,7 @@ class MilvusHandler(VectorStoreHandler):
         if not filters:
             raise Exception("Some filters are required, use DROP TABLE to delete everything")
         if self.milvus_client.has_collection(collection_name=table_name):
-            self.milvus_client.delete(filter=filters)
+            self.milvus_client.delete(table_name, filter=filters)
 
     def get_columns(self, table_name: str) -> HandlerResponse:
         """Get columns in a Milvus collection"""

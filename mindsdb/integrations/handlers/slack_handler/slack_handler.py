@@ -30,7 +30,7 @@ logger = log.getLogger(__name__)
 DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 
-class SlackChannelListsTable(APIResource):
+class SlackConversationsTable(APIResource):
 
     def list(
         self,
@@ -117,7 +117,7 @@ class SlackUsersTable(APIResource):
         ]
 
 
-class SlackChannelsTable(APIResource):
+class SlackMessagesTable(APIResource):
 
     def list(self,
         conditions: List[FilterCondition] = None,
@@ -378,11 +378,11 @@ class SlackHandler(APIChatHandler):
         self.api = None
         self.is_connected = False
         
-        channels = SlackChannelsTable(self)
-        self._register_table('channels', channels)
+        channels = SlackMessagesTable(self)
+        self._register_table('messages', channels)
 
-        channel_lists = SlackChannelListsTable(self)
-        self._register_table('channel_lists', channel_lists)
+        channel_lists = SlackConversationsTable(self)
+        self._register_table('conversations', channel_lists)
 
         users = SlackUsersTable(self)
         self._register_table('users', users)
@@ -393,10 +393,10 @@ class SlackHandler(APIChatHandler):
         params = {
             'polling': {
                 'type': 'realtime',
-                'table_name': 'channels'
+                'table_name': 'messages'
             },
             'chat_table': {
-                'name': 'channels',
+                'name': 'messages',
                 'chat_id_col': 'channel_id',
                 'username_col': 'user',
                 'text_col': 'text',
@@ -411,7 +411,7 @@ class SlackHandler(APIChatHandler):
         return user_info['bot_id']
 
     def subscribe(self, stop_event, callback, table_name, **kwargs):
-        if table_name != 'channels':
+        if table_name != 'messages':
             raise RuntimeError(f'Table not supported: {table_name}')
 
         self._socket_mode_client = SocketModeClient(

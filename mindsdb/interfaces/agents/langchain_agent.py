@@ -22,6 +22,7 @@ from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langchain_core.prompts import PromptTemplate
 from langchain_core.tools import Tool
 from langfuse import Langfuse
+from langfuse.api.resources.commons.errors.not_found_error import NotFoundError as TraceNotFoundError
 from langfuse.callback import CallbackHandler
 
 from mindsdb.integrations.handlers.openai_handler.constants import (
@@ -288,9 +289,16 @@ class LangchainAgent:
             self.api_trace.update(output=response)
 
             # update metadata with tool usage
-            trace = self.langfuse.get_trace(self.trace_id)
-            trace_metadata['tool_usage'] = get_tool_usage(trace)
-            self.api_trace.update(metadata=trace_metadata)
+            try:
+                # Ensure all batched traces are sent before fetching.
+                self.langfuse.flush()
+                trace = self.langfuse.get_trace(self.trace_id)
+                trace_metadata['tool_usage'] = get_tool_usage(trace)
+                self.api_trace.update(metadata=trace_metadata)
+            except TraceNotFoundError:
+                logger.warning(f'Langfuse trace {self.trace_id} not found')
+            except Exception as e:
+                logger.error(f'Something went wrong while processing Langfuse trace {self.trace_id}: {str(e)}')
         return response
 
     def _get_completion_stream(
@@ -612,6 +620,10 @@ AI: {response}"""
             captured_context = context_callback.get_contexts()
             if captured_context:
                 yield {"type": "context", "content": captured_context}
+
+        if self.log_callback_handler.generated_sql:
+            # Yield generated SQL if available
+            yield {"type": "sql", "content": self.log_callback_handler.generated_sql}
 
         if self.run_completion_span is not None:
             self.run_completion_span.end()

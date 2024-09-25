@@ -1096,7 +1096,7 @@ class ExecuteCommands:
 
         self.session.integration_controller.add(name, engine, connection_args)
         if storage:
-            handler = self.session.integration_controller.get_data_handler(name)
+            handler = self.session.integration_controller.get_data_handler(name, connect=False)
             handler.handler_storage.import_files(storage)
 
     def answer_create_ml_engine(self, name: str, handler: str, params: dict = None, if_not_exists=False):

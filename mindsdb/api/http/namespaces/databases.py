@@ -81,14 +81,20 @@ class DatabaseResource(Resource):
     def get(self, database_name):
         '''Gets a database by name'''
         session = SessionController()
+        check_connection = request.args.get('check_connection', 'false').lower() in ('1', 'true')
         try:
             project = session.database_controller.get_project(database_name)
-            return {
+            result = {
                 'name': database_name,
                 'type': 'project',
                 'id': project.id,
                 'engine': None
             }
+            if check_connection:
+                result['connection_status'] = {
+                    'success': True,
+                    'error_message': None
+                }
         except (ValueError, EntityNotExistsError):
             integration = session.integration_controller.get(database_name)
             if integration is None:
@@ -96,7 +102,22 @@ class DatabaseResource(Resource):
                     HTTPStatus.NOT_FOUND, 'Database not found',
                     f'Database with name {database_name} does not exist.'
                 )
-            return integration
+            result = integration
+            if check_connection:
+                integration['connection_status'] = {
+                    'success': False,
+                    'error_message': None
+                }
+                try:
+                    handler = session.integration_controller.get_data_handler(database_name)
+                    status = handler.check_connection()
+                    integration['connection_status']['success'] = status.success
+                    integration['connection_status']['error_message'] = status.error_message
+                except Exception as e:
+                    integration['connection_status']['success'] = False
+                    integration['connection_status']['error_message'] = str(e)
+
+        return result
 
     @ns_conf.doc('update_database')
     @api_endpoint_metrics('PUT', '/databases/database')

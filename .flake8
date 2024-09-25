@@ -86,14 +86,12 @@ exclude =
   mindsdb/integrations/handlers/tdengine_handler/*
   mindsdb/integrations/handlers/huggingface_api_handler/*
   mindsdb/integrations/handlers/ignite_handler/*
-  mindsdb/integrations/handlers/teradata_handler/*
   mindsdb/integrations/handlers/google_books_handler/*
   mindsdb/integrations/handlers/edgelessdb_handler/*
   mindsdb/integrations/handlers/google_fit_handler/*
   mindsdb/integrations/handlers/altibase_handler/*
   mindsdb/integrations/handlers/ms_teams_handler/*
   mindsdb/integrations/handlers/discord_handler/*
-  mindsdb/integrations/handlers/hana_handler/*
   mindsdb/integrations/handlers/sheets_handler/*
   mindsdb/integrations/handlers/autosklearn_handler/*
   mindsdb/integrations/handlers/twitter_handler/*

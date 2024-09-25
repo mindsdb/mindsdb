@@ -1,3 +1,5 @@
+import os
+
 from duckdb.typing import BIGINT, DOUBLE, VARCHAR, BLOB, BOOLEAN
 from mindsdb.interfaces.storage.model_fs import HandlerStorage
 
@@ -41,6 +43,8 @@ class BYOMFunctionsController:
         self.byom_methods = {}
         self.byom_handlers = {}
 
+        self.callbacks = {}
+
     def get_engines(self):
         # get all byom engines
         if self.byom_engines is None:
@@ -63,11 +67,93 @@ class BYOMFunctionsController:
 
         return self.byom_methods[engine]
 
+    def check_function(self, node):
+        engine = node.namespace
+        if engine not in self.get_engines():
+            return
+
+        methods = self.get_methods(engine)
+
+        fnc_name = node.op.lower()
+        if fnc_name not in methods:
+            # do nothing
+            return
+
+        new_name = f'{node.namespace}_{fnc_name}'
+        node.op = new_name
+
+        if new_name in self.callbacks:
+            # already exists
+            return self.callbacks[new_name]
+
+        def callback(*args):
+            return self.method_call(engine, fnc_name, args)
+
+        input_types = [
+            param['type']
+            for param in methods[fnc_name]['input_params']
+        ]
+
+        meta = {
+            'name': new_name,
+            'callback': callback,
+            'input_types': input_types,
+            'output_type': methods[fnc_name]['output_type']
+        }
+
+        self.callbacks[new_name] = meta
+        return meta
+
     def method_call(self, engine, method_name, args):
         return self.byom_handlers[engine].function_call(method_name, args)
 
     def create_function_set(self):
         return DuckDBFunctions(self)
+
+
+class FunctionController(BYOMFunctionsController):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def check_function(self, node):
+        meta = super().check_function(node)
+        if meta is not None:
+            return meta
+
+        # builtin function
+        if node.op.lower() == 'llm':
+            return self.llm_call_function(node)
+
+    def llm_call_function(self, node):
+        name = node.op.lower()
+
+        model_name = os.getenv('LLM_FUNCTION_MODEL')
+        if model_name is None:
+            return
+
+        try:
+            from langchain_core.messages import HumanMessage
+            from mindsdb.interfaces.agents.langchain_agent import create_chat_model
+        except ImportError:
+            return
+
+        if name in self.callbacks:
+            return self.callbacks[name]
+
+        def callback(question):
+            llm = create_chat_model({'model_name': model_name, 'provider': 'openai'})
+            resp = llm([HumanMessage(question)])
+            return resp.content
+
+        meta = {
+            'name': name,
+            'callback': callback,
+            'input_types': ['str'],
+            'output_type': 'str'
+        }
+        self.callbacks[name] = meta
+        return meta
 
 
 class DuckDBFunctions:
@@ -77,37 +163,24 @@ class DuckDBFunctions:
 
     def check_function(self, node):
 
-        engine = node.namespace
-        if engine not in self.controller.get_engines():
+        meta = self.controller.check_function(node)
+        if meta is None:
             return
 
-        methods = self.controller.get_methods(engine)
+        name = meta['name']
 
-        fnc_name = node.op.lower()
-        if fnc_name not in methods:
-            # do nothing
+        if name in self.functions:
             return
-
-        new_name = f'{node.namespace}_{fnc_name}'
-        if new_name in self.functions:
-            # already exists
-            return
-
-        node.op = new_name
-
-        def callback(*args):
-            return self.controller.method_call(engine, fnc_name, args)
 
         input_types = [
-            python_to_duckdb_type(param['type'])
-            for param in methods[fnc_name]['input_params']
+            python_to_duckdb_type(param)
+            for param in meta['input_types']
         ]
-        output_type = methods[fnc_name]['output_type']
 
-        self.functions[new_name] = {
-            'callback': function_maker(len(input_types), callback),
+        self.functions[name] = {
+            'callback': function_maker(len(input_types), meta['callback']),
             'input': input_types,
-            'output': python_to_duckdb_type(output_type)
+            'output': python_to_duckdb_type(meta['output_type'])
         }
 
     def register(self, connection):

@@ -102,7 +102,7 @@ WITH
     };
 ```
 
-It comes with the `channels` and `channel_lists` table.
+It comes with the `conversations` and `messages` tables.
 
 ### Method 2: Chatbot responds on a defined Slack channel
 
@@ -145,7 +145,7 @@ WITH
     };
 ```
 
-It comes with the `channels` and `channel_lists` table.
+It comes with the `conversations` and `messages` tables.
 
 ## Usage
 
@@ -155,26 +155,26 @@ The following usage applies when **Connection Method 2** was used to connect Sla
 See the usage for **Connection Method 1** [via the `CREATE CHATBOT` syntax](/sql/tutorials/create-chatbot).
 </Warning>
 
-You can select all messages from the channel using the below query.
+You can select all messages from a conversation using the below query.
 
 ```sql
 SELECT *
-FROM mindsdb_slack.channels
-WHERE channel="<channel-name>";
+FROM mindsdb_slack.messages
+WHERE channel_id="<channel-id>";
 ```
 
-Also, you can post messages to the channel like this:
+Also, you can post messages to the conversation like this:
 
 ```sql
-INSERT INTO mindsdb_slack.channels (channel, text)
-VALUES("<channel-name>", "Hey MindsDB, Thanks to you! Now I can respond to my Slack messages through SQL Queries.");
+INSERT INTO mindsdb_slack.messages (channel_id, text)
+VALUES("<channel-id>", "Hey MindsDB, Thanks to you! Now I can respond to my Slack messages through SQL Queries.");
 ```
 
 And you can delete messages, but only the ones posted by the bot.
 
 ```sql
-DELETE FROM mindsdb_slack.channels
-WHERE channel = "<channel-name>"
+DELETE FROM mindsdb_slack.messages
+WHERE channel_id = "<channel-id>"
 AND ts = "1688863707.197229";
 ```
 
@@ -182,8 +182,8 @@ Let's select 10 messages created after the specified timestamp:
 
 ```sql
 SELECT *
-FROM mindsdb_slack.channels
-WHERE channel="<channel-name>"
+FROM mindsdb_slack.messages
+WHERE channel_id = "<channel-id>"
 AND message_created_at > '2023-07-25 00:13:07'
 LIMIT 10;
 ```
@@ -192,17 +192,39 @@ We can also order the selected messages:
 
 ```sql
 SELECT *
-FROM mindsdb_slack.channels
-WHERE channel="<channel-name>"
-ORDER BY messages ASC
+FROM mindsdb_slack.messages
+WHERE channel_id = "<channel-id>"
+ORDER BY created_at ASC;
 LIMIT 5;
 ```
 
-List all channels by selecting from the `channel_lists` table.
+List all conversations by selecting from the `conversations` table.
 
 ```sql
 SELECT *
-FROM mindsdb_slack.channel_lists;
+FROM mindsdb_slack.conversations;
+```
+
+<Note>
+The `conversations` table will return the first 1000 conversations by default. To retrieve more, use the `LIMIT` clause.
+
+When using the LIMIT clause to query additional conversations, you may encounter Slack API rate limits.
+</Note>
+
+You can also filter conversations by providing the channel ID:
+  
+```sql
+SELECT *
+FROM mindsdb_slack.conversations
+WHERE channel_id = "<channel-id>";
+```
+
+To select multiple conversations, provide a list of channel IDs in an IN clause:
+
+```sql
+SELECT *
+FROM mindsdb_slack.conversations
+WHERE channel_id IN ("<channel-id-1>", "<channel-id-2>");
 ```
 
 <Tip>

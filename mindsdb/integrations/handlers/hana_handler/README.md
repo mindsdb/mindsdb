@@ -22,7 +22,7 @@ CREATE DATABASE sap_hana_datasource
 WITH
     ENGINE = 'hana',
     PARAMETERS = {
-        "host": "123e4567-e89b-12d3-a456-426614174000.hana.trial-us10.hanacloud.ondemand.com",
+        "address": "123e4567-e89b-12d3-a456-426614174000.hana.trial-us10.hanacloud.ondemand.com",
         "port": "443",
         "user": "demo_user",
         "password": "demo_password",
@@ -32,7 +32,7 @@ WITH
 
 Required connection parameters include the following:
 
-* `host`: The hostname, IP address, or URL of the SAP HANA database.
+* `address`: The hostname, IP address, or URL of the SAP HANA database.
 * `port`: The port number for connecting to the SAP HANA database.
 * `user`: The username for the SAP HANA database.
 * `password`: The password for the SAP HANA database.

@@ -220,7 +220,7 @@ class ResultSet:
         if self._df is None:
             self._df = df
         else:
-            self._df = pd.concat([self._df, df])
+            self._df = pd.concat([self._df, df], ignore_index=True)
 
     def add_raw_values(self, values):
 

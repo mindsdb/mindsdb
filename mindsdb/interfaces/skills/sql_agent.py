@@ -65,9 +65,11 @@ class SQLAgent:
         if self._tables_to_include:
             def _check_f(node, is_table=None, **kwargs):
                 if is_table and isinstance(node, Identifier):
-                    table = node.parts[-1]
-                    if table not in self._tables_to_include:
-                        raise ValueError(f"Table {table} not found. Available tables: {', '.join(self._tables_to_include)}")
+                    name1 = node.to_string()
+                    name2 = '.'.join(node.parts)
+                    name3 = node.parts[-1]
+                    if not {name1, name2, name3}.intersection(self._tables_to_include):
+                        raise ValueError(f"Table {name1} not found. Available tables: {', '.join(self._tables_to_include)}")
 
             query_traversal(ast_query, _check_f)
 

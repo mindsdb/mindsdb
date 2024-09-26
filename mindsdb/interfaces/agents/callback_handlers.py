@@ -113,6 +113,11 @@ class LogCallbackHandler(BaseCallbackHandler):
         '''Run on agent action.'''
         self.logger.debug(f'Running tool {action.tool} with input:')
         self.logger.debug(action.tool_input)
+
+        stop_block = 'Observation: '
+        if stop_block in action.tool_input:
+            action.tool_input = action.tool_input[: action.tool_input.find(stop_block)]
+
         if action.tool.startswith("sql_db_query"):
             # Save the generated SQL query
             self.generated_sql = action.tool_input

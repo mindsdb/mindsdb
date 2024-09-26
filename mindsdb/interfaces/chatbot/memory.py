@@ -94,19 +94,20 @@ class HandlerMemory(BaseMemory):
         text_col = t_params['text_col']
         username_col = t_params['username_col']
         time_col = t_params['time_col']
+        chat_id_cols = t_params['chat_id_col'] if isinstance(t_params['chat_id_col'], list) else [t_params['chat_id_col']]
 
         ast_query = Select(
             targets=[Identifier(text_col),
                      Identifier(username_col),
                      Identifier(time_col)],
             from_table=Identifier(t_params['name']),
-            where=BinaryOperation(
+            where=[BinaryOperation(
                 op='=',
                 args=[
-                    Identifier(t_params['chat_id_col']),
-                    Constant(chat_id)
+                    Identifier(chat_id_col),
+                    Constant(chat_id[idx])
                 ]
-            ),
+            ) for idx, chat_id_col in enumerate(chat_id_cols)],
             order_by=[OrderBy(Identifier(time_col))],
             limit=Constant(self.MAX_DEPTH),
         )

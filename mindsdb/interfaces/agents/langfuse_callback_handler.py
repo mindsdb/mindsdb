@@ -29,6 +29,8 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
         """Run when tool starts running."""
         parent_run_uuid = kwargs.get('parent_run_id', uuid4()).hex
         action_span = self.action_uuid_to_span.get(parent_run_uuid)
+        if action_span is None:
+            return
         metadata = {
             'tool_name': serialized.get("name", "tool"),
             'started': datetime.datetime.now().isoformat()
@@ -39,6 +41,8 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
         """Run when tool ends running."""
         parent_run_uuid = kwargs.get('parent_run_id', uuid4()).hex
         action_span = self.action_uuid_to_span.get(parent_run_uuid)
+        if action_span is None:
+            return
         action_span.update(
             output=output,  # tool output is action output (unless superseded by a global action output)
             metadata={'finished': datetime.datetime.now().isoformat()}
@@ -50,6 +54,8 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
         """Run when tool errors."""
         parent_run_uuid = kwargs.get('parent_run_id', uuid4()).hex
         action_span = self.action_uuid_to_span.get(parent_run_uuid)
+        if action_span is None:
+            return
         try:
             error_str = str(error)
         except Exception:
@@ -75,6 +81,8 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
         if chain_uuid not in self.chain_uuid_to_span:
             return
         chain_span = self.chain_uuid_to_span.pop(chain_uuid)
+        if chain_span is None:
+            return
         chain_span.update(output=str(outputs))
         chain_span.end()
 
@@ -102,6 +110,8 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
         if run_uuid not in self.action_uuid_to_span:
             return
         action_span = self.action_uuid_to_span.pop(run_uuid)
+        if action_span is None:
+            return
         if finish is not None:
             action_span.update(output=finish)  # supersedes tool output
         action_span.end()

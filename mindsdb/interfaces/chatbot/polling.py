@@ -23,11 +23,13 @@ class BasePolling:
         text = message.text
 
         t_params = self.params["chat_table"]
+        chat_id_cols = t_params["chat_id_col"] if isinstance(t_params["chat_id_col"], list) else [t_params["chat_id_col"]]
+
         ast_query = Insert(
             table=Identifier(t_params["name"]),
-            columns=[t_params["chat_id_col"], t_params["text_col"]],
+            columns=[*chat_id_cols, t_params["text_col"]],
             values=[
-                [chat_id, text],
+                [*chat_id, text],
             ],
         )
 
@@ -87,11 +89,11 @@ class MessageCountPolling(BasePolling):
 
         chat_ids = []
 
-        id_col = p_params["chat_id_col"]
+        id_cols = p_params["chat_id_col"] if isinstance(p_params["chat_id_col"], list) else [p_params["chat_id_col"]]
         msgs_col = p_params["count_col"]
         # get chats status info
         ast_query = Select(
-            targets=[Identifier(id_col), Identifier(msgs_col)],
+            targets=[*[Identifier(id_col) for id_col in id_cols], Identifier(msgs_col)],
             from_table=Identifier(p_params["table"]),
         )
 
@@ -101,7 +103,7 @@ class MessageCountPolling(BasePolling):
 
         chats = {}
         for row in resp.data_frame.to_dict("records"):
-            chat_id = row[id_col]
+            chat_id = tuple(row[id_col] for id_col in id_cols)
             msgs = row[msgs_col]
 
             chats[chat_id] = msgs

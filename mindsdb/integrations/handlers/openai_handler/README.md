@@ -38,6 +38,9 @@ USING
       question_column = 'question',  -- optional, column name that stores user input
       context_column = 'context',  -- optional, column that stores context of the user input
       prompt_template = 'input your query here', -- optional, user provides instructions to the model here
+      user_column = 'user_input', -- optional, stores user input
+      assistant_column = 'conversation_context', -- optional, stores conversation context
+      prompt = 'instruction to the model', -- optional stores instruction to the model
       max_tokens = 100, -- optional, token limit for answer
       temperature = 0.3, -- temp
 
@@ -65,6 +68,12 @@ The following parameters are available to use when creating an OpenAI model:
 * `temperature`: This parameter is optional. It defines how *risky* the answers are. The value of `0` marks a well-defined answer, and the value of `0.9` marks a more creative answer. *Please note that this parameter can be overridden at prediction time.*
 
 ## Usage
+
+Here are the combination of parameters for creating a model:
+
+1. Provide a `prompt_template` alone.
+2. Provide a `question_column` and optionally a `context_column`.
+3. Provide a `prompt`, `user_column`, and `assistant_column` to create a model in the conversational mode.
 
 The following usage examples utilize `openai_engine` to create a model with the `CREATE MODEL` statement.
 
@@ -156,6 +165,31 @@ On execution, we get:
 +----------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 |Speculate extensively |Some people speculate that Tom Hanks likes to play golf, while others believe that he enjoys acting and directing. It is also speculated that he likes to spend time with his family and friends, and that he enjoys traveling.|
 +----------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```
+
+### Conversational mode
+
+Here is how to create a model in the conversational mode.
+
+```sql
+CREATE MODEL openai_chat_model
+PREDICT response
+USING
+  engine = 'openai_engine',
+  mode = 'conversational',
+  model_name = 'gpt-3.5-turbo',
+  user_column = 'user_input',
+  assistant_column = 'conversation_history',
+  prompt = 'Answer the question in a helpful way.';
+```
+
+And here is how to query this model:
+
+```sql
+SELECT response
+FROM openai_chat_model
+WHERE user_input = '<question>'
+AND conversation_history = '<optionally, provide the context for the question>';
 ```
 
 ## Next Steps

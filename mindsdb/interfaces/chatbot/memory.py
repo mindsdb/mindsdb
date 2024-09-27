@@ -66,8 +66,12 @@ class BaseMemory:
         key = (chat_id, table_name) if table_name else chat_id
         if cached and key in self._cache:
             history = self._cache[key]
+
         else:
-            history = self._get_chat_history(chat_id, table_name)
+            if table_name is None:
+                history = self._get_chat_history(chat_id)
+            else:
+                history = self._get_chat_history(chat_id, table_name)
             self._cache[key] = history
 
         history = self._apply_hiding(chat_id, history)

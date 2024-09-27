@@ -222,7 +222,7 @@ FROM mindsdb_slack.conversations;
 <Note>
 The `conversations` table will return the first 1000 conversations by default. To retrieve more, use the `LIMIT` clause.
 
-When using the LIMIT clause to query additional conversations, you may encounter Slack API rate limits.
+When using the `LIMIT` clause to query additional conversations, you may encounter Slack API rate limits.
 </Note>
 
 You can also filter conversations by providing the channel ID:
@@ -233,7 +233,7 @@ FROM mindsdb_slack.conversations
 WHERE channel_id = "<channel-id>";
 ```
 
-To select multiple conversations, provide a list of channel IDs in an IN clause:
+To select multiple conversations, provide a list of channel IDs in an `IN` clause:
 
 ```sql
 SELECT *

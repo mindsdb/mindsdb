@@ -174,7 +174,7 @@ SELECT
     r.response as output_text
 FROM mindsdb_slack.messages as t
 JOIN mindsdb.whizfizz_model as r
-WHERE channel_id = "<channel-id>"
+WHERE t.channel_id = "<channel-id>"
 LIMIT 3;
 ```
 
@@ -189,7 +189,7 @@ INSERT INTO mindsdb_slack.messages(channel_id, text)
     r.response as text
   FROM mindsdb_slack.messages as t
   JOIN mindsdb.whizfizz_model as r
-  WHERE channel_id = "<channel-id>"
+  WHERE t.channel_id = "<channel-id>"
   LIMIT 3;
 ```
 
@@ -218,7 +218,7 @@ CREATE JOB mindsdb.gpt4_slack_job AS (
       r.response as text
     FROM mindsdb_slack.messages as t
     JOIN mindsdb.whizfizz_model as r
-    WHERE channel_id = "<channel-id>"
+    WHERE t.channel_id = "<channel-id>"
     AND t.created_at > LAST
     AND t.user = 'user_id' -- to avoid the bot replying to its own messages, include users to which bot should reply
     --AND t.user != 'bot_id' -- alternatively, to avoid the bot replying to its own messages, exclude the user id of the bot

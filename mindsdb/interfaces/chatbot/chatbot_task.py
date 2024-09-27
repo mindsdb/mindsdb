@@ -53,8 +53,9 @@ class ChatBotTask(BaseTask):
 
         polling = chat_params['polling']['type']
         if polling == 'message_count':
-            self.chat_pooling = MessageCountPolling(self, chat_params if isinstance(chat_params, list) else [chat_params])
-            self.memory = HandlerMemory(self, chat_params if isinstance(chat_params, list) else [chat_params])
+            chat_params = chat_params['tables'] if 'tables' in chat_params else [chat_params]
+            self.chat_pooling = MessageCountPolling(self, chat_params)
+            self.memory = HandlerMemory(self, chat_params)
 
         elif polling == 'realtime':
             self.chat_pooling = RealtimePolling(self, chat_params)

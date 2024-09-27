@@ -12,7 +12,6 @@ import os
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 client = AsyncOpenAI(api_key=OPENAI_API_KEY)
-# Reusing your reranking function within LangChain
 
 
 class Reranker(RunnableParallel):

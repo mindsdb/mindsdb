@@ -5,8 +5,7 @@ from langchain_core.runnables import RunnableParallel, RunnablePassthrough, Runn
 
 from mindsdb.integrations.utilities.rag.retrievers.auto_retriever import AutoRetriever
 from mindsdb.integrations.utilities.rag.retrievers.multi_vector_retriever import MultiVectorRetriever
-from mindsdb.integrations.utilities.rag.rerankers.openai_reranker import Reranker
-
+from mindsdb.integrations.handlers.openai_handler.reranker import Reranker
 from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel, DEFAULT_AUTO_META_PROMPT_TEMPLATE
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RERANKER_FLAG
 

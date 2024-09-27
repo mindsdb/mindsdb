@@ -19,7 +19,7 @@ class BasePolling:
         raise NotImplementedError
 
     def send_message(self, message: ChatBotMessage, table_name=None):
-        chat_id = message.destination
+        chat_id = message.destination if isinstance(message.destination, tuple) else (message.destination,)
         text = message.text
 
         t_params = self.params["chat_table"] if table_name is None else next(

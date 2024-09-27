@@ -1,3 +1,4 @@
+import copy
 import time
 
 from mindsdb_sql.parser.ast import Identifier, Select, Insert
@@ -42,24 +43,36 @@ class MessageCountPolling(BasePolling):
         self.chats_prev = None
 
     def run(self, stop_event):
+
+        if 'tables' in self.params['polling']:
+            polling_tables = self.params['polling']['tables']
+        else:
+            table = copy.deepcopy(self.params['polling'])
+            table['chat_table'] = self.params['chat_table']
+            polling_tables = [table]
+
         while True:
             try:
-                chat_ids = self.check_message_count()
-                logger.debug(f"number of chat ids found: {len(chat_ids)}")
-                for chat_id in chat_ids:
-                    try:
-                        chat_memory = self.chat_task.memory.get_chat(chat_id)
-                    except Exception as e:
-                        logger.error(f"Problem retrieving chat memory: {e}")
+                for polling_table in polling_tables:
+                    chat_ids = self.check_message_count(polling_table)
+                    logger.debug(f"number of chat ids found: {len(chat_ids)}")
+                    for chat_id in chat_ids:
+                        try:
+                            chat_memory = self.chat_task.memory.get_chat(
+                                chat_id,
+                                table_params=polling_table['chat_table']
+                            )
+                        except Exception as e:
+                            logger.error(f"Problem retrieving chat memory: {e}")
 
-                    try:
-                        message = self.get_last_message(chat_memory)
-                    except Exception as e:
-                        logger.error(f"Problem getting last message: {e}")
-                        message = None
+                        try:
+                            message = self.get_last_message(chat_memory)
+                        except Exception as e:
+                            logger.error(f"Problem getting last message: {e}")
+                            message = None
 
-                    if message:
-                        self.chat_task.on_message(chat_memory, message)
+                        if message:
+                            self.chat_task.on_message(chat_memory, message)
 
             except Exception as e:
                 logger.error(e)
@@ -82,8 +95,9 @@ class MessageCountPolling(BasePolling):
             return
         return last_message
 
-    def check_message_count(self):
-        p_params = self.params["polling"]
+    def check_message_count(self, p_params=None):
+        if p_params is None:
+            p_params = self.params["polling"]
 
         chat_ids = []
 

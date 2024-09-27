@@ -62,11 +62,11 @@ class BaseMemory:
         if chat_id in self._cache:
             del self._cache[chat_id]
 
-    def get_chat_history(self, chat_id, cached=True):
+    def get_chat_history(self, chat_id, cached=True, table_params=None):
         if cached and chat_id in self._cache:
             history = self._cache[chat_id]
         else:
-            history = self._get_chat_history(chat_id)
+            history = self._get_chat_history(chat_id, table_params=table_params)
             self._cache[chat_id] = history
 
         history = self._apply_hiding(chat_id, history)
@@ -75,7 +75,7 @@ class BaseMemory:
     def _add_to_history(self, chat_id, chat_message):
         raise NotImplementedError
 
-    def _get_chat_history(self, chat_id):
+    def _get_chat_history(self, chat_id, **kwargs):
         raise NotImplementedError
 
 
@@ -88,8 +88,11 @@ class HandlerMemory(BaseMemory):
         # do nothing. sent message will be stored by handler db
         pass
 
-    def _get_chat_history(self, chat_id):
-        t_params = self.chat_params['chat_table']
+    def _get_chat_history(self, chat_id, table_params=None):
+        if table_params is None:
+            t_params = self.chat_params['chat_table']
+        else:
+            t_params = table_params
 
         text_col = t_params['text_col']
         username_col = t_params['username_col']
@@ -151,7 +154,7 @@ class DBMemory(BaseMemory):
         db.session.add(message)
         db.session.commit()
 
-    def _get_chat_history(self, chat_id):
+    def _get_chat_history(self, chat_id, **kwargs):
         chat_bot_id = self.chat_task.bot_id
         query = db.ChatBotsHistory.query\
             .filter(
@@ -178,14 +181,18 @@ class ChatMemory:
     '''
     interface to work with individual chat
     '''
-    def __init__(self, memory, chat_id):
+    def __init__(self, memory, chat_id, table_params=None):
         self.memory = memory
         self.chat_id = chat_id
-
+        self.table_params = table_params
         self.cached = False
 
     def get_history(self, cached=True):
-        result = self.memory.get_chat_history(self.chat_id, cached=cached and self.cached)
+        result = self.memory.get_chat_history(
+            self.chat_id,
+            table_params=self.table_params,
+            cached=cached and self.cached,
+        )
         self.cached = True
         return result
 

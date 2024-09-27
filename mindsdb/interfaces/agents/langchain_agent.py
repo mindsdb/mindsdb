@@ -201,7 +201,8 @@ class LangchainAgent:
             self.langfuse = Langfuse(
                 public_key=os.getenv('LANGFUSE_PUBLIC_KEY'),
                 secret_key=os.getenv('LANGFUSE_SECRET_KEY'),
-                host=os.getenv('LANGFUSE_HOST')
+                host=os.getenv('LANGFUSE_HOST'),
+                release=os.getenv('LANGFUSE_RELEASE', 'local'),
             )
 
         # agent is using current langchain model
@@ -473,10 +474,14 @@ class LangchainAgent:
                     tags=get_tags(metadata),
                     metadata=metadata,
                 )
-                if not self.langfuse_callback_handler.auth_check():
-                    logger.error(
-                        f"Incorrect Langfuse credentials provided to Langchain handler. Full args: {args}"
-                    )
+                try:
+                    # This try is critical to catch fatal errors which would otherwise prevent the agent from running properly
+                    if not self.langfuse_callback_handler.auth_check():
+                        logger.error(
+                            f"Incorrect Langfuse credentials provided to Langchain handler. Full args: {args}"
+                        )
+                except Exception as e:
+                    logger.error(f'Something went wrong while running langfuse_callback_handler.auth_check {str(e)}')
 
             # custom tracer
             if self.mdb_langfuse_callback_handler is None:

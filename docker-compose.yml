@@ -23,6 +23,14 @@ services:
       # SENTRY_IO_FORCE_RUN: "true" # Uncomment me to force-start sentry on local development. Good for profiling, but may annoy other devs on sentry.io with the "noise"
       # MINDSDB_LOG_LEVEL: "DEBUG"
       # OPENAI_API_KEY: "..."
+      LANGFUSE_HOST: "OMITTED_FOR_SECURITY"
+      LANGFUSE_PUBLIC_KEY: "OMITTED_FOR_SECURITY"
+      LANGFUSE_SECRET_KEY: "OMITTED_FOR_SECURITY"
+      LANGFUSE_RELEASE: "local"
+      # LANGFUSE_DEBUG: "True"
+      LANGFUSE_TIMEOUT: "10"
+      LANGFUSE_SAMPLE_RATE: "1.0"
+
     volumes:
       - type: bind
         source: .

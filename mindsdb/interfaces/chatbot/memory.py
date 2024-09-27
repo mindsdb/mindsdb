@@ -21,14 +21,14 @@ class BaseMemory:
         self.chat_params = chat_params
         self.chat_task = chat_task
 
-    def get_chat(self, chat_id):
-        return ChatMemory(self, chat_id)
+    def get_chat(self, chat_id, table_name=None):
+        return ChatMemory(self, chat_id, table_name=table_name)
 
-    def hide_history(self, chat_id, left_count):
+    def hide_history(self, chat_id, left_count, table_name=None):
         '''
         set date to start hiding messages
         '''
-        history = self.get_chat_history(chat_id)
+        history = self.get_chat_history(chat_id, table_name=table_name)
         if left_count > len(history) - 1:
             left_count = len(history) - 1
         sent_at = history[-left_count].sent_at
@@ -62,12 +62,13 @@ class BaseMemory:
         if chat_id in self._cache:
             del self._cache[chat_id]
 
-    def get_chat_history(self, chat_id, cached=True):
-        if cached and chat_id in self._cache:
-            history = self._cache[chat_id]
+    def get_chat_history(self, chat_id, table_name=None, cached=True):
+        key = (chat_id, table_name) if table_name else chat_id
+        if cached and key in self._cache:
+            history = self._cache[key]
         else:
-            history = self._get_chat_history(chat_id)
-            self._cache[chat_id] = history
+            history = self._get_chat_history(chat_id, table_name)
+            self._cache[key] = history
 
         history = self._apply_hiding(chat_id, history)
         return history
@@ -88,8 +89,10 @@ class HandlerMemory(BaseMemory):
         # do nothing. sent message will be stored by handler db
         pass
 
-    def _get_chat_history(self, chat_id):
-        t_params = self.chat_params['chat_table']
+    def _get_chat_history(self, chat_id, table_name):
+        t_params = next(
+            chat_params['chat_table'] for chat_params in self.chat_params if chat_params['chat_table']['name'] == table_name
+        )
 
         text_col = t_params['text_col']
         username_col = t_params['username_col']
@@ -179,14 +182,19 @@ class ChatMemory:
     '''
     interface to work with individual chat
     '''
-    def __init__(self, memory, chat_id):
+    def __init__(self, memory, chat_id, table_name=None):
         self.memory = memory
         self.chat_id = chat_id
+        self.table_name = table_name
 
         self.cached = False
 
     def get_history(self, cached=True):
-        result = self.memory.get_chat_history(self.chat_id, cached=cached and self.cached)
+        if self.table_name:
+            result = self.memory.get_chat_history(self.chat_id, self.table_name, cached=cached and self.cached)
+        else:
+            result = self.memory.get_chat_history(self.chat_id, cached=cached and self.cached)
+
         self.cached = True
         return result
 
@@ -203,4 +211,4 @@ class ChatMemory:
         '''
         set date to start hiding messages
         '''
-        self.memory.hide_history(self.chat_id, left_count)
+        self.memory.hide_history(self.chat_id, left_count, table_name=self.table_name)

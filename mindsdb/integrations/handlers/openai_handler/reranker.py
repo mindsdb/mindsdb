@@ -8,12 +8,6 @@ import math
 import os
 
 
-# Assume the OpenAI API Key is set
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-
-client = AsyncOpenAI(api_key=OPENAI_API_KEY)
-
-
 class Reranker(RunnableParallel):
     """
     Reranker class for reranking query-document pairs based on relevance
@@ -22,10 +16,13 @@ class Reranker(RunnableParallel):
     filtering: bool = False
     filtering_threshold: float = 0.5
 
+    # Assume the OpenAI API Key is set
+
     async def _call_reranker(self, query_document_pairs: List[Tuple[str, str]]) -> List[Tuple[str, float]]:
         """
         Calls the relevancy ranking logic on the given query-document pairs.
         """
+
         results = await asyncio.gather(
             *[self.search_relevancy(query=query, document=document) for (query, document) in query_document_pairs]
         )
@@ -47,6 +44,10 @@ class Reranker(RunnableParallel):
         return ranked_results
 
     async def search_relevancy(self, query: str, document: str) -> Any:
+        openai_api_key = os.environ.get("OPENAI_API_KEY")
+
+        client = AsyncOpenAI(api_key=openai_api_key)
+
         message_history = [
             {
                 "role": "system",

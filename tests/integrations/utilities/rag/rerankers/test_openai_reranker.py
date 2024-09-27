@@ -1,5 +1,5 @@
 import pytest
-from mindsdb.integrations.utilities.handlers.api_utilities.openai.openai_reranker import Reranker
+from mindsdb.integrations.handlers.openai_handler.reranker import Reranker
 
 DOCUMENT_EXAMPLE = """The former home secretary Suella Braverman acted unlawfully in making it easier for the police to criminalise peaceful protests, the high court has ruled. She was found to have both acted outside her powers and to have failed to consult properly over regulations that would be likely to increase prosecutions of protesters by a third. Hundreds of protesters have been arrested since the government redefined the sort of protest that could be restricted by the police, allowing it where there is merely a “more than minor” hindrance to people’s daily lives."""
 QUERY_EXAMPLE = "What happened with Suella Braverman?"
@@ -19,9 +19,7 @@ async def test_reranker():
     )
     assert output is not None, "Reranker should return a non-null output"
     assert isinstance(output, list), "Reranker output should be a list"
-    assert (
-        output[0][1] > 0.8
-    ), "Reranker should have assigned a high score to the correct answer"
+    assert (output[0][1] > 0.8), "Reranker should have assigned a high score to the correct answer"
     # assert all results have high score (results with low score were filtered out
     assert all([score > 0.8 for doc, score in output])
 
@@ -34,7 +32,5 @@ async def test_reranker_batch():
     )
     assert output is not None, "Reranker should return a non-null output"
     assert isinstance(output, list), "Reranker output should be a list"
-    assert (
-        output[0][1] > 0.8
-    ), "Reranker should have assigned a high score to the correct answer"
+    assert (output[0][1] > 0.8), "Reranker should have assigned a high score to the correct answer"
     assert all([score > 0.8 for doc, score in output])

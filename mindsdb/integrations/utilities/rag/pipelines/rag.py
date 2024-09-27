@@ -2,7 +2,6 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableParallel, RunnablePassthrough, RunnableSerializable
 
-
 from mindsdb.integrations.utilities.rag.retrievers.auto_retriever import AutoRetriever
 from mindsdb.integrations.utilities.rag.retrievers.multi_vector_retriever import MultiVectorRetriever
 from mindsdb.integrations.handlers.openai_handler.reranker import Reranker
@@ -16,6 +15,7 @@ class LangChainRAGPipeline:
     """
     Builds a RAG pipeline using langchain LCEL components
     """
+
     def __init__(self, retriever_runnable, prompt_template, llm, reranker: bool = DEFAULT_RERANKER_FLAG):
 
         self.retriever_runnable = retriever_runnable
@@ -31,6 +31,7 @@ class LangChainRAGPipeline:
         Builds a RAG pipeline with returned sources
         :return:
         """
+
         def format_docs(docs):
             if isinstance(docs, str):
                 # this is to handle the case where the retriever returns a string

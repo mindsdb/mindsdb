@@ -148,7 +148,6 @@ class MSTeamsHandler(APIChatHandler):
             'tables': [
                 {
                     'polling': {
-                        'type': 'message_count',
                         'table': 'chats',
                         'chat_id_col': 'id',
                         'count_col': 'lastMessagePreview_id'
@@ -163,7 +162,6 @@ class MSTeamsHandler(APIChatHandler):
                 },
                 {
                     'polling': {
-                        'type': 'message_count',
                         'table': 'channels',
                         'chat_id_col': ['teamId', 'id'],
                         'count_col': 'lastMessagePreview_id'

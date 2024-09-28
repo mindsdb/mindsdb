@@ -8,7 +8,7 @@ pyparsing == 2.3.1
 cryptography>=35.0
 psycopg[binary]
 waitress >= 1.4.4
-pymongo[srv] >= 4.1.1
+pymongo[srv] == 4.8.0
 psutil
 sqlalchemy >= 2.0.0, < 3.0.0
 psycopg2-binary  # This is required for using sqlalchemy with postgres
@@ -17,7 +17,7 @@ redis >=5.0.0, < 6.0.0
 walrus==0.9.3
 flask-compress >= 1.0.0
 appdirs >= 1.0.0
-mindsdb-sql ~= 0.18.1
+mindsdb-sql ~= 0.19.0
 pydantic >= 2.7.0
 mindsdb-evaluator >= 0.0.7, < 0.1.0
 checksumdir >= 1.2.0
@@ -47,3 +47,4 @@ langfuse==2.35.0
 lark
 prometheus-client==0.20.0
 transformers >= 4.42.4
+sentry-sdk[flask] == 2.14.0

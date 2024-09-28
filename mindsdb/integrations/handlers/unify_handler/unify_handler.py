@@ -26,9 +26,9 @@ class UnifyHandler(BaseMLEngine):
         self.model_storage.json_set('args', args)
 
     def predict(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
-        print("DataFrame columns:", df.columns)
+        
         args = self.model_storage.json_get('args')
-        print("Args:", args)
+        
 
         input_keys = list(args.keys())
 

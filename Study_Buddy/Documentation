@@ -1,0 +1,12 @@
+Study Buddy
+
+This repository contains a simple Flask web application that interacts with OpenAI's GPT-3.5 API. It provides a chatbot interface that allows users to input a message and receive a conversational response from the GPT-3.5 language model.
+
+Features
+Flask-based web server for handling HTTP requests.
+Renders a basic HTML template (chat.html) that serves as the user interface.
+Accepts user input via a POST request and sends it to OpenAI's GPT-3.5 API.
+Returns the chatbot response in real-time via a JSON object.
+
+
+![alt text](image.png)

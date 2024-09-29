@@ -1,16 +1,11 @@
-from pandas import DataFrame
-from sqlalchemy import String
+from typing import Any, Dict, Text
 
-from sqlalchemy.sql import text, bindparam
-
-import teradatasql
-import teradatasqlalchemy.dialect as teradata_dialect
-
-from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-
-from mindsdb.utilities import log
+from pandas import DataFrame
+import teradatasql
+from teradatasql import OperationalError
+import teradatasqlalchemy.dialect as teradata_dialect
 
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
@@ -18,66 +13,101 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
+from mindsdb.utilities import log
 
 
 logger = log.getLogger(__name__)
 
+
 class TeradataHandler(DatabaseHandler):
     """
-    This handler handles connection and execution of the Teradata statements.
+    This handler handles the connection and execution of SQL statements on Teradata.
     """
 
     name = 'teradata'
 
-    def __init__(self, name: str, connection_data: dict, **kwargs):
+    def __init__(self, name: Text, connection_data: Dict, **kwargs: Any) -> None:
+        """
+        Initializes the handler.
+
+        Args:
+            name (Text): The name of the handler instance.
+            connection_data (Dict): The connection data required to connect to the Teradata database.
+            kwargs: Arbitrary keyword arguments.
+        """
         super().__init__(name)
-
-        self.dialect = 'teradata'
-        self.parser = parse_sql
         self.connection_data = connection_data
-        self.renderer = SqlalchemyRender(teradata_dialect.TeradataDialect)
-
-        self.host = self.connection_data.get('host')
-        self.database = self.connection_data.get('database')
+        self.kwargs = kwargs
 
         self.connection = None
         self.is_connected = False
 
-    def __del__(self):
+    def __del__(self) -> None:
+        """
+        Closes the connection when the handler instance is deleted.
+        """
         if self.is_connected is True:
             self.disconnect()
 
-    def connect(self):
+    def connect(self) -> teradatasql.TeradataConnection:
         """
-        Handles the connection to a Teradata database insance.
-        """
+        Establishes a connection to the Teradata database.
 
+        Raises:
+            ValueError: If the expected connection parameters are not provided.
+            teradatasql.OperationalError: If an error occurs while connecting to the Teradata database.
+
+        Returns:
+            teradatasql.TeradataConnection: A connection object to the Teradata database.
+        """
         if self.is_connected is True:
             return self.connection
 
-        connection = teradatasql.connect(
-            **self.connection_data
-        )
+        # Mandatory connection parameters.
+        if not all(key in self.connection_data for key in ['host', 'user', 'password']):
+            raise ValueError('Required parameters (host, user, password) must be provided.')
 
-        self.is_connected = True
-        self.connection = connection
-        return self.connection
+        config = {
+            'host': self.connection_data.get('host'),
+            'user': self.connection_data.get('user'),
+            'password': self.connection_data.get('password')
+        }
 
-    def disconnect(self):
+        # Optional connection parameters.
+        if 'database' in self.connection_data:
+            config['database'] = self.connection_data.get('database')
+
+        try:
+            self.connection = teradatasql.connect(
+                **config,
+            )
+            self.is_connected = True
+            return self.connection
+        except OperationalError as operational_error:
+            logger.error(f'Error connecting to Teradata, {operational_error}!')
+            raise
+        except Exception as unknown_error:
+            logger.error(f'Unknown error connecting to Teradata, {unknown_error}!')
+            raise
+
+    def disconnect(self) -> None:
         """
-        Disconnects from the Teradata database
+        Closes the connection to the Teradata database if it's currently open.
         """
+        if self.is_connected is False:
+            return
 
-        if self.is_connected is True:
-            self.connection.close()
-            self.is_connected = False
+        self.connection.close()
+        self.is_connected = False
+        return
 
     def check_connection(self) -> StatusResponse:
         """
-        Check the connection of the Teradata database
-        :return: success status and error message if error occurs
-        """
+        Checks the status of the connection to the Teradata database.
 
+        Returns:
+            StatusResponse: An object containing the success status and an error message if an error occurs.
+        """
         response = StatusResponse(False)
         need_to_close = self.is_connected is False
 
@@ -86,9 +116,12 @@ class TeradataHandler(DatabaseHandler):
             with connection.cursor() as cur:
                 cur.execute('SELECT 1 FROM (SELECT 1 AS "dual") AS "dual"')
             response.success = True
-        except teradatasql.Error as e:
-            logger.error(f'Error connecting to Teradata {self.host}, {e}!')
-            response.error_message = e
+        except (OperationalError, ValueError) as known_error:
+            logger.error(f'Connection check to Teradata failed, {known_error}!')
+            response.error_message = str(known_error)
+        except Exception as unknown_error:
+            logger.error(f'Connection check to Teradata failed due to an unknown error, {unknown_error}!')
+            response.error_message = str(unknown_error)
 
         if response.success is True and need_to_close:
             self.disconnect()
@@ -97,13 +130,16 @@ class TeradataHandler(DatabaseHandler):
 
         return response
 
-    def native_query(self, query: str) -> Response:
+    def native_query(self, query: Text) -> Response:
         """
-        Receive SQL query and runs it
-        :param query: The SQL query to run in Teradata
-        :return: returns the records from the current recordset
-        """
+        Executes a native SQL query on the Teradata database and returns the result.
 
+        Args:
+            query (Text): The SQL query to be executed.
+
+        Returns:
+            Response: A response object containing the result of the query or an error message.
+        """
         need_to_close = self.is_connected is False
 
         connection = self.connect()
@@ -122,12 +158,18 @@ class TeradataHandler(DatabaseHandler):
                         )
                     )
                 connection.commit()
-            except Exception as e:
-                logger.error(f'Error running query: {query} on {self.host}!')
+            except OperationalError as operational_error:
+                logger.error(f'Error running query: {query} on {self.connection_data["database"]}!')
                 response = Response(
                     RESPONSE_TYPE.ERROR,
-                    error_code=0,
-                    error_message=str(e)
+                    error_message=str(operational_error)
+                )
+                connection.rollback()
+            except Exception as unknown_error:
+                logger.error(f'Unknown error running query: {query} on {self.connection_data["database"]}!')
+                response = Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=str(unknown_error)
                 )
                 connection.rollback()
 
@@ -138,48 +180,66 @@ class TeradataHandler(DatabaseHandler):
 
     def query(self, query: ASTNode) -> Response:
         """
-        Retrieve the data from the SQL statement with eliminated rows that dont satisfy the WHERE condition
-        """
+        Executes a SQL query represented by an ASTNode on the Teradata database and retrieves the data (if any).
 
-        query_str = self.renderer.get_string(query, with_failback=True)
+        Args:
+            query (ASTNode): An ASTNode representing the SQL query to be executed.
+
+        Returns:
+            Response: The response from the `native_query` method, containing the result of the SQL query execution.
+        """
+        renderer = SqlalchemyRender(teradata_dialect.TeradataDialect)
+        query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 
     def get_tables(self) -> Response:
         """
-        List all tables in Teradata in the current database
-        """
+        Retrieves a list of all non-system tables in the Teradata database.
 
-        return self.native_query(
-            str(text(f"""
-            SELECT DataBaseName,
-                   TableName,
-                   TableKind
+        Returns:
+            Response: A response object containing a list of tables in the Teradata database.
+        """
+        query = f"""
+            SELECT
+                TableName AS table_name,
+                TableKind AS table_type
             FROM DBC.TablesV
-            WHERE DatabaseName = :database
+            WHERE DatabaseName = '{self.connection_data.get('database') if self.connection_data.get('database') else self.connection_data.get('user')}'
             AND (TableKind = 'T'
                 OR TableKind = 'O'
-                OR TableKind = 'Q')
-            """).bindparams(
-                bindparam('database', value=self.database, type_=String)
-            ).compile(compile_kwargs={"literal_binds": True}))
-        )
-
-    def get_columns(self, table_name: str) -> Response:
+                OR TableKind = 'Q'
+                OR TableKind = 'V')
         """
-        List all columns in a table in Teradata in the current schema
-        :param table_name: the table name for which to list the columns
-        :return: returns the columns in the table
-        """
+        result = self.native_query(query)
 
-        return self.native_query(
-            str(text(f"""
+        df = result.data_frame
+        df['table_type'] = df['table_type'].apply(lambda x: 'VIEW' if x == 'V' else 'BASE TABLE')
+
+        result.data_frame = df
+        return result
+
+    def get_columns(self, table_name: Text) -> Response:
+        """
+        Retrieves column details for a specified table in the Teradata database.
+
+        Args:
+            table_name (Text): The name of the table for which to retrieve column information.
+
+        Raises:
+            ValueError: If the 'table_name' is not a valid string.
+
+        Returns:
+            Response: A response object containing the column details.
+        """
+        if not table_name or not isinstance(table_name, str):
+            raise ValueError("Invalid table name provided.")
+
+        query = f"""
             SELECT ColumnName AS "Field",
                    ColumnType AS "Type"
             FROM DBC.ColumnsV
-            WHERE DatabaseName (NOT CASESPECIFIC) = :database
-            AND TableName (NOT CASESPECIFIC) = :table_name
-            """).bindparams(
-                bindparam('database', value=self.database, type_=String),
-                bindparam('table_name', value=table_name, type_=String)
-            ).compile(compile_kwargs={"literal_binds": True}))
-        )
+            WHERE DatabaseName = '{self.connection_data.get('database') if self.connection_data.get('database') else self.connection_data.get('user')}'
+            AND TableName = '{table_name}'
+        """
+
+        return self.native_query(query)

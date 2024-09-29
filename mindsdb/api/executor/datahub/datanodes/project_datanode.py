@@ -52,7 +52,10 @@ class ProjectDataNode(DataNode):
         return table_name in tables
 
     def get_table_columns(self, table_name):
-        return self.project.get_columns(table_name)
+        return [
+            {'name': name}
+            for name in self.project.get_columns(table_name)
+        ]
 
     def predict(self, model_name: str, df, version=None, params=None):
         model_metadata = self.project.get_model(model_name)
@@ -178,4 +181,4 @@ class ProjectDataNode(DataNode):
 
             df = result_set.to_df()
             return kb_table.insert(df)
-        raise NotImplementedError(f"Cant create table {table_name}")
+        raise NotImplementedError(f"Can't create table {table_name}")

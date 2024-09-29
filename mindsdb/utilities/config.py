@@ -114,7 +114,7 @@ class Config():
         api_host = "127.0.0.1" if not self.use_docker_env else "0.0.0.0"
         self._default_config = {
             'permanent_storage': {
-                'location': 'local'
+                'location': 'absent'
             },
             'storage_dir': os.environ['MINDSDB_STORAGE_DIR'],
             'paths': paths,
@@ -162,7 +162,9 @@ class Config():
             "cache": {
                 "type": "local"
             },
-            'ml_task_queue': ml_queue
+            'ml_task_queue': ml_queue,
+            "file_upload_domains": [],
+            "web_crawling_allowed_sites": [],
         }
 
         return _merge_configs(self._default_config, self._override_config)

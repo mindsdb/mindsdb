@@ -27,7 +27,6 @@ class LangChainRAGPipeline:
         Builds a RAG pipeline with returned sources
         :return:
         """
-
         def format_docs(docs):
             if isinstance(docs, str):
                 # this is to handle the case where the retriever returns a string
@@ -36,6 +35,12 @@ class LangChainRAGPipeline:
             return "\n\n".join(doc.page_content for doc in docs)
 
         prompt = ChatPromptTemplate.from_template(self.prompt_template)
+
+        # Ensure all the required components are not None
+        if prompt is None:
+            raise ValueError("One of the required components (prompt) is None")
+        if self.llm is None:
+            raise ValueError("One of the required components (llm) is None")
 
         rag_chain_from_docs = (
                 RunnablePassthrough.assign(context=(lambda x: format_docs(x["context"])))  # noqa: E126, E122
@@ -61,7 +66,7 @@ class LangChainRAGPipeline:
         vector_store_operator = VectorStoreOperator(
             vector_store=config.vector_store,
             documents=config.documents,
-            embeddings_model=config.embeddings_model,
+            embedding_model=config.embedding_model,
             vector_store_config=config.vector_store_config
         )
 

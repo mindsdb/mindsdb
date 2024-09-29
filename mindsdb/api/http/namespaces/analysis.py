@@ -1,7 +1,6 @@
 import time
 
 import pandas as pd
-from dataprep_ml.insights import analyze_dataset
 from flask import request
 from flask_restx import Resource
 from mindsdb_sql import parse_sql
@@ -36,6 +35,7 @@ def analyze_df(df: DataFrame) -> dict:
     # rename the columns with the cols list.
     df.columns = cols
 
+    from dataprep_ml.insights import analyze_dataset
     analysis = analyze_dataset(df)
     return analysis.to_dict()
 

@@ -123,7 +123,10 @@ class InformationSchemaDataNode(DataNode):
     def get_table_columns(self, tableName):
         tn = tableName.upper()
         if tn in self.tables:
-            return self.tables[tn].columns
+            return [
+                {'name': name}
+                for name in self.tables[tn].columns
+            ]
         raise exc.TableNotExistError(
             f"Table information_schema.{tableName} does not exists"
         )

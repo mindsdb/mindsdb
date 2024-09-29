@@ -75,6 +75,8 @@ class BaseUnitTest:
             mp_patcher = mock.patch("multiprocessing.get_context").__enter__()
             mp_patcher.side_effect = lambda x: dummy
 
+        os.unlink(cfg_file)
+
     @staticmethod
     def teardown_class(cls):
         # remove tmp db file
@@ -94,12 +96,6 @@ class BaseUnitTest:
         self._dummy_db_path = os.path.join(tempfile.mkdtemp(), '_mindsdb_duck_db')
         self.clear_db(self.db)
         self.reset_prom_collectors()
-
-    def teardown_method(self):
-        try:
-            os.unlink(self._dummy_db_path)
-        except (PermissionError, FileNotFoundError) as e:
-            logger.warning('Unable to clean up temporary database file: %s', str(e))
 
     def clear_db(self, db):
         # drop
@@ -137,13 +133,17 @@ class BaseUnitTest:
         con.execute('DROP TABLE IF EXISTS {}'.format(table))
         con.execute('CREATE TABLE {} AS SELECT * FROM data'.format(table))
 
-    def wait_predictor(self, project, name, timeout=100):
+    def wait_predictor(self, project, name, timeout=100, filters=None):
         """
         Wait for the predictor to be created,
         raising an exception if predictor creation fails or exceeds timeout
         """
         for attempt in range(timeout):
-            ret = self.run_sql(f"select * from {project}.models where name='{name}'")
+            sql = f"select * from {project}.models where name='{name}'"
+            if filters is not None:
+                for k, v in filters.items():
+                    sql += f" and {k}='{v}'"
+            ret = self.run_sql(sql)
             if not ret.empty:
                 status = ret["STATUS"][0]
                 if status == "complete":
@@ -184,9 +184,24 @@ class BaseExecutorTest(BaseUnitTest):
     Set up executor: mock data handler
     """
 
-    def setup_method(self):
+    def setup_method(self, import_dummy_ml=False):
         super().setup_method()
-        self.set_executor()
+        self.set_executor(import_dummy_ml=import_dummy_ml)
+
+    def _import_handler(self, integration_controller, handler_name, handler_dir):
+        handler_meta = {
+            'import': {
+                'success': None,
+                'error_message': None,
+                'folder': handler_dir.name,
+                'dependencies': [],
+            },
+            'path': handler_dir,
+            'name': handler_name,
+            'permanent': False,
+        }
+        integration_controller.handlers_import_status[handler_name] = handler_meta
+        integration_controller.import_handler(handler_name, '')
 
     def set_executor(
         self,
@@ -202,6 +217,9 @@ class BaseExecutorTest(BaseUnitTest):
         from mindsdb.api.executor.command_executor import (
             ExecuteCommands,
         )
+        # clear cache of previous test case to apply mocks of current test case
+        from mindsdb.integrations.libs.process_cache import process_cache
+        process_cache.cache = {}
         from mindsdb.interfaces.database.integrations import integration_controller
         from mindsdb.interfaces.file.file_controller import FileController
         from mindsdb.interfaces.model.model_controller import ModelController
@@ -223,9 +241,9 @@ class BaseExecutorTest(BaseUnitTest):
             sys.path.append(test_handler_path)
 
             handler_dir = Path(test_handler_path) / 'dummy_ml_handler'
-            integration_controller.import_handler('', handler_dir)
+            self._import_handler(integration_controller, 'dummy_ml', handler_dir)
 
-            if not integration_controller.handlers_import_status['dummy_ml']['import']['success']:
+            if not integration_controller.get_handler_meta('dummy_ml')['import']['success']:
                 error = integration_controller.handlers_import_status['dummy_ml']['import']['error_message']
                 raise Exception(f"Can not import: {str(handler_dir)}: {error}")
 
@@ -234,7 +252,7 @@ class BaseExecutorTest(BaseUnitTest):
             sys.path.append(test_handler_path)
 
             handler_dir = Path(test_handler_path) / 'dummy_llm_handler'
-            integration_controller.import_handler('', handler_dir)
+            self._import_handler(integration_controller, 'dummy_llm', handler_dir)
 
             if not integration_controller.handlers_import_status['dummy_llm']['import']['success']:
                 error = integration_controller.handlers_import_status['dummy_llm']['import']['error_message']
@@ -262,6 +280,9 @@ class BaseExecutorTest(BaseUnitTest):
     def teardown_method(self):
         # Don't want cache to pick up a stale version with the wrong duckdb_path.
         self.command_executor.session.integration_controller.delete('dummy_data')
+        if os.path.exists(self._dummy_db_path):
+            os.unlink(self._dummy_db_path)
+        os.rmdir(os.path.dirname(self._dummy_db_path))
 
     def save_file(self, name, df):
         file_path = tempfile.mktemp(prefix="mindsdb_file_")
@@ -372,8 +393,7 @@ class BaseExecutorDummyML(BaseExecutorTest):
     """
 
     def setup_method(self):
-        super().setup_method()
-        self.set_executor(import_dummy_ml=True)
+        super().setup_method(import_dummy_ml=True)
 
     def run_sql(self, sql, throw_error=True, database='mindsdb'):
         self.command_executor.session.database = database
@@ -384,6 +404,12 @@ class BaseExecutorDummyML(BaseExecutorTest):
             assert ret.error_code is None
         if ret.data is not None:
             return ret.data.to_df()
+
+    def get_models(self):
+        models = {}
+        for p in self.db.Predictor.query.all():
+            models[p.id] = p
+        return models
 
 
 class BaseExecutorDummyLLM(BaseExecutorTest):

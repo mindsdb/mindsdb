@@ -1,3 +1,4 @@
+import os
 import copy
 from typing import List
 
@@ -18,7 +19,10 @@ from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.libs.vectordatabase_handler import TableField
 from mindsdb.interfaces.database.projects import ProjectController
+from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
+
+from mindsdb.api.executor.command_executor import ExecuteCommands
 
 
 class KnowledgeBaseTable:
@@ -61,7 +65,7 @@ class KnowledgeBaseTable:
         query.targets = targets
 
         # send to vectordb
-        db_handler = self._get_vector_db()
+        db_handler = self.get_vector_db()
         resp = db_handler.query(query)
         return resp.data_frame
 
@@ -87,7 +91,7 @@ class KnowledgeBaseTable:
         query.table = Identifier(parts=[self._kb.vector_database_table])
 
         # send to vectordb
-        db_handler = self._get_vector_db()
+        db_handler = self.get_vector_db()
         db_handler.query(query)
 
     def delete_query(self, query: Delete):
@@ -102,7 +106,7 @@ class KnowledgeBaseTable:
         query.table = Identifier(parts=[self._kb.vector_database_table])
 
         # send to vectordb
-        db_handler = self._get_vector_db()
+        db_handler = self.get_vector_db()
         db_handler.query(query)
 
     def clear(self):
@@ -110,7 +114,7 @@ class KnowledgeBaseTable:
         Clear data in KB table
         Sends delete to vector db table
         """
-        db_handler = self._get_vector_db()
+        db_handler = self.get_vector_db()
         db_handler.delete(self._kb.vector_database_table)
 
     def insert(self, df: pd.DataFrame):
@@ -130,7 +134,7 @@ class KnowledgeBaseTable:
         df = pd.concat([df, df_emb], axis=1)
 
         # send to vector db
-        db_handler = self._get_vector_db()
+        db_handler = self.get_vector_db()
         db_handler.do_upsert(self._kb.vector_database_table, df)
 
     def _adapt_column_names(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -247,7 +251,7 @@ class KnowledgeBaseTable:
                     node.args[0].parts = [TableField.EMBEDDINGS.value]
                     node.args[1].value = [self._content_to_embeddings(node.args[1].value)]
 
-    def _get_vector_db(self):
+    def get_vector_db(self):
         """
         helper to get vector db handler
         """
@@ -283,7 +287,10 @@ class KnowledgeBaseTable:
         # keep only content
         df = df[[TableField.CONTENT.value]]
 
-        input_col = model_rec.learn_args.get('using', {}).get('question_column')
+        model_using = model_rec.learn_args.get('using', {})
+        input_col = model_using.get('question_column')
+        if input_col is None:
+            input_col = model_using.get('input_column')
 
         if input_col is not None and input_col != TableField.CONTENT.value:
             df = df.rename(columns={TableField.CONTENT.value: input_col})
@@ -352,10 +359,7 @@ class KnowledgeBaseController:
 
         if embedding_model is None:
             # create default embedding model
-            model_name = self._create_default_embedding_model(project.name, name, params=params)
-
-            # memorize to remove it later
-            params['embedding_model'] = model_name
+            model_name = self._get_default_embedding_model(project.name, params=params)
 
         else:
             # get embedding model from input
@@ -376,14 +380,20 @@ class KnowledgeBaseController:
 
         # search for the vector database table
         if storage is None:
-            # create chroma db with same name
-            vector_table_name = "default_collection"
-            vector_db_name = self._create_persistent_chroma(
-                name
-            )
 
-            # memorize to remove it later
-            params['vector_storage'] = vector_db_name
+            cloud_pg_vector = os.environ.get('KB_PGVECTOR_URL')
+            if cloud_pg_vector:
+                vector_table_name = name
+                vector_db_name = self._create_persistent_pgvector()
+            else:
+                # create chroma db with same name
+                vector_table_name = "default_collection"
+                vector_db_name = self._create_persistent_chroma(
+                    name
+                )
+
+                # memorize to remove it later
+                params['vector_storage'] = vector_db_name
         elif len(storage.parts) != 2:
             raise ValueError('Storage param has to be vector db with table')
         else:
@@ -408,6 +418,18 @@ class KnowledgeBaseController:
         db.session.commit()
         return kb
 
+    def _create_persistent_pgvector(self):
+        """Create default vector database for knowledge base, if not specified"""
+
+        vector_store_name = "kb_pgvector_store"
+
+        # check if exists
+        if self.session.integration_controller.get(vector_store_name):
+            return vector_store_name
+
+        self.session.integration_controller.add(vector_store_name, 'pgvector', {})
+        return vector_store_name
+
     def _create_persistent_chroma(self, kb_name, engine="chromadb"):
         """Create default vector database for knowledge base, if not specified"""
 
@@ -423,13 +445,25 @@ class KnowledgeBaseController:
         self.session.integration_controller.add(vector_store_name, engine, connection_args)
         return vector_store_name
 
-    def _create_default_embedding_model(self, project_name, kb_name, engine="langchain_embedding", params: dict = None):
+    def _get_default_embedding_model(self, project_name, engine="langchain_embedding", params: dict = None):
         """create a default embedding model for knowledge base, if not specified"""
-        model_name = f"{kb_name}_default_model"
-        using_args = {}
+        model_name = "kb_default_embedding_model"
+
+        # check exists
+        try:
+            model = self.session.model_controller.get_model(model_name, project_name=project_name)
+            if model is not None:
+                return model_name
+        except PredictorRecordNotFound:
+            pass
+
+        using_args = {
+            'engine': engine
+        }
         if engine == 'langchain_embedding':
             # Use default embeddings.
             using_args['class'] = 'openai'
+
         # Include API key if provided.
         using_args.update({k: v for k, v in params.items() if 'api_key' in k})
         statement = CreatePredictor(
@@ -439,12 +473,9 @@ class KnowledgeBaseController:
                 Identifier(parts=[TableField.EMBEDDINGS.value])
             ]
         )
-        ml_handler = self.session.integration_controller.get_ml_handler(engine)
 
-        _ = self.session.model_controller.create_model(
-            statement,
-            ml_handler
-        )
+        command_executor = ExecuteCommands(self.session)
+        command_executor.answer_create_predictor(statement, project_name)
 
         return model_name
 

@@ -303,10 +303,12 @@ class ColumnsTable(Table):
                 dn = inf_schema.get(db_name)
                 if dn is None:
                     continue
-                tables = {
-                    table_row.TABLE_NAME: dn.get_table_columns(table_row.TABLE_NAME)
-                    for table_row in dn.get_tables()
-                }
+                tables = {}
+                for table_row in dn.get_tables():
+                    tables[table_row.TABLE_NAME] = [
+                        col['name']
+                        for col in dn.get_table_columns(table_row.TABLE_NAME)
+                    ]
 
             for table_name, table_columns in tables.items():
                 for i, column_name in enumerate(table_columns):

@@ -1,15 +1,19 @@
 import enum
 from typing import List, Optional
 
-from mindsdb.api.executor.controllers import SessionController
 from mindsdb_sql.parser.ast import Select, BinaryOperation, Identifier, Constant, Star
 
 from mindsdb.integrations.libs.vectordatabase_handler import TableField
 from mindsdb.interfaces.storage import db
+from mindsdb.utilities import log
+from mindsdb.utilities.cache import get_cache
 from .sql_agent import SQLAgent
 
 _DEFAULT_TOP_K_SIMILARITY_SEARCH = 5
 _DEFAULT_SQL_LLM_MODEL = 'gpt-3.5-turbo'
+_MAX_CACHE_SIZE = 1000
+
+logger = log.getLogger(__name__)
 
 
 class SkillType(enum.Enum):
@@ -26,6 +30,7 @@ class SkillToolController:
     def get_command_executor(self):
         if self.command_executor is None:
             from mindsdb.api.executor.command_executor import ExecuteCommands
+            from mindsdb.api.executor.controllers import SessionController  # Top-level import produces circular import in some cases TODO: figure out a fix without losing runtime improvements (context: see #9304)  # noqa
 
             sql_session = SessionController()
             sql_session.database = 'mindsdb'
@@ -34,11 +39,11 @@ class SkillToolController:
         return self.command_executor
 
     def get_sql_agent(
-        self,
-        database: str,
-        include_tables: Optional[List[str]] = None,
-        ignore_tables: Optional[List[str]] = None,
-        sample_rows_in_table_info: int = 3,
+            self,
+            database: str,
+            include_tables: Optional[List[str]] = None,
+            ignore_tables: Optional[List[str]] = None,
+            sample_rows_in_table_info: int = 3,
     ):
         return SQLAgent(
             self.get_command_executor(),
@@ -46,6 +51,7 @@ class SkillToolController:
             include_tables,
             ignore_tables,
             sample_rows_in_table_info,
+            cache=get_cache('agent', max_size=_MAX_CACHE_SIZE)
         )
 
     def _make_text_to_sql_tools(self, skill: db.Skills, llm) -> list:
@@ -54,11 +60,12 @@ class SkillToolController:
         '''
         # To prevent dependency on Langchain unless an actual tool uses it.
         try:
-            from mindsdb.integrations.handlers.langchain_handler.mindsdb_database_agent import MindsDBSQL
+            from mindsdb.interfaces.agents.mindsdb_database_agent import MindsDBSQL
             from mindsdb.interfaces.skills.custom.text2sql.mindsdb_sql_toolkit import MindsDBSQLToolkit
             from langchain_community.tools.sql_database.tool import QuerySQLDataBaseTool
         except ImportError:
-            raise ImportError('To use the text-to-SQL skill, please install langchain with `pip install mindsdb[langchain]`')
+            raise ImportError(
+                'To use the text-to-SQL skill, please install langchain with `pip install mindsdb[langchain]`')
         database = skill.params['database']
         tables = skill.params['tables']
         tables_to_include = [f'{database}.{table}' for table in tables]
@@ -69,7 +76,7 @@ class SkillToolController:
             include_tables=tables_to_include
         )
         # Users probably don't need to configure this for now.
-        sql_database_tools = MindsDBSQLToolkit(db=db, llm=llm).get_tools()
+        sql_database_tools = MindsDBSQLToolkit(db=db, llm=llm).get_tools(prefix=str(skill.id))
         description = skill.params.get('description', '')
         tables_list = ','.join([f'{database}.{table}' for table in tables])
         for i, tool in enumerate(sql_database_tools):
@@ -80,7 +87,6 @@ class SkillToolController:
                     'Use the conversation context to decide which table to query. '
                     f'These are the available tables: {tables_list}.\n'
                     f'ALWAYS consider these special cases:\n'
-                    f'- Not all SQL functions are supported. Do NOT use the following functions: INTERVAL. \n'
                     f'- For TIMESTAMP type columns, make sure you include the time portion in your query (e.g. WHERE date_column = "2020-01-01 12:00:00")'
                     f'Here are the rest of the instructions:\n'
                     f'{tool.description}'
@@ -88,15 +94,19 @@ class SkillToolController:
                 sql_database_tools[i] = tool
         return sql_database_tools
 
-    def _make_retrieval_tools(self, skill: db.Skills) -> dict:
+    def _make_retrieval_tools(self, skill: db.Skills, llm) -> dict:
         """
         creates advanced retrieval tool i.e. RAG
         """
         params = skill.params
+        config = params.get('config', {})
+        if 'llm' not in config:
+            # Set LLM if not explicitly provided in configs.
+            config['llm'] = llm
         return dict(
             name=params.get('name', skill.name),
             source=params.get('source', None),
-            config=params.get('config', {}),
+            config=config,
             description=f'You must use this tool to get more context or information '
                         f'to answer a question about {params["description"]}. '
                         f'The input should be the exact question the user is asking.',
@@ -129,6 +139,9 @@ class SkillToolController:
         # To prevent dependency on Langchain unless an actual tool uses it.
         description = skill.params.get('description', '')
 
+        logger.warning("This skill is deprecated and will be removed in the future. "
+                       "Please use `retrieval` skill instead ")
+
         return dict(
             name='Knowledge Base Retrieval',
             func=self._get_rag_query_function(skill),
@@ -157,7 +170,7 @@ class SkillToolController:
         if skill_type == SkillType.KNOWLEDGE_BASE:
             return [self._make_knowledge_base_tools(skill)]
         if skill_type == SkillType.RETRIEVAL:
-            return [self._make_retrieval_tools(skill)]
+            return [self._make_retrieval_tools(skill, llm)]
 
 
 skill_tool = SkillToolController()

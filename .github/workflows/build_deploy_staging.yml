@@ -1,9 +1,11 @@
 name: Build and deploy to staging
 
 on:
-  push:
-    branches:
-      - main
+  # Using pull_request instead of push on main because we want access to the pull request's details via 'github.event'
+  # But it means we need to check below if this PR was merged and not just closed
+  pull_request:
+    types:
+      - closed
 
 # Cancel any existing runs of this workflow on the same branch/pr
 # We always want to build/deploy/test a new commit over an older one
@@ -12,8 +14,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  
+  # Build our docker images based on our bake file
   build:
-    # Build our docker images based on our bake file
+    if: github.event.pull_request.merged == true
+    name: Build Docker Images
     runs-on: mdb-dev
     steps:
       - uses: actions/checkout@v4
@@ -26,10 +31,12 @@ jobs:
       # Build the bakefile and push
       - uses: ./github-actions/docker-bake
   
+  # Build our docker images based on our bake file
+  # This job only pushes the layers to the cache repo
+  # It's done separately so other jobs can run without waiting for this one
   build_cache:
-    # Build our docker images based on our bake file
-    # This job only pushes the layers to the cache repo
-    # It's done separately so other jobs can run without waiting for this one
+    if: github.event.pull_request.merged == true
+    name: Build Docker Cache
     runs-on: mdb-dev
     needs: [build]
     steps:
@@ -42,33 +49,21 @@ jobs:
           ssh-key: ${{ secrets.GH_ACTIONS_PULL_SSH }}
       - uses: ./github-actions/docker-bake-cache
 
-  trigger_deploy:
-    # Trigger private repo to deploy to staging and dev related environments
-    runs-on: mdb-dev
+  # Call our deployment workflow
+  deploy:
+    name: Deploy to Staging
     needs: [build]
-    strategy:
-      matrix:
-        environment: [staging, hackathon, dev, alpha-dev]
-    environment:
-      name: ${{ matrix.environment }}
-    # We only want to run one deploy job for an env at a time
-    # Don't cancel in progress jobs because it may be for a different PR
-    concurrency:
-      group: deploy-${{ matrix.environment }}
-      cancel-in-progress: false
-    steps:
-      - uses: FranzDiebold/github-env-vars-action@v2
-      - uses: convictional/trigger-workflow-and-wait@v1.6.5
-        with:
-          owner: mindsdb
-          repo: INTERNAL-mindsdb-build-deploy-to-kubernetes
-          github_token: ${{ secrets.REPO_DISPATCH_PAT_TOKEN }}
-          workflow_file_name: deploy-dev.yml
-          ref: main
-          client_payload: '{"image-tag-prefix": "${{ env.CI_SHA }}", "deploy-env": "${{ matrix.environment }}"}'
+    uses: ./.github/workflows/deploy.yml
+    with:
+      deploy-envs: '["staging", "hackathon", "dev", "alpha-dev"]'
+      image-tag: ${{ github.sha }}
+    secrets: inherit
 
+  # Run integration tests
+  # TODO: Run these against the deployed environment
   run_tests:
-    name: Run Post-Deploy Tests
-    needs: [trigger_deploy]
+    if: github.event.pull_request.merged == true
+    name: Run Integration Tests
+    needs: [deploy]
     uses: ./.github/workflows/test_on_deploy.yml
     secrets: inherit

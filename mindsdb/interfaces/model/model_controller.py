@@ -100,7 +100,7 @@ class ModelController():
                 reduced_model_data['training_time'] = (
                     reduced_model_data['training_time']
                     - dt.timedelta(microseconds=reduced_model_data['training_time'].microseconds)
-                )
+                ).total_seconds()
 
         return reduced_model_data
 
@@ -130,7 +130,12 @@ class ModelController():
             name=name,
             ml_handler_name=ml_handler_name,
             project_name=project_name)
-        return self.get_reduced_model_data(predictor_record=model_record)
+        data = self.get_reduced_model_data(predictor_record=model_record)
+        integration_record = db.Integration.query.get(model_record.integration_id)
+        if integration_record is not None:
+            data['engine'] = integration_record.engine
+            data['engine_name'] = integration_record.name
+        return data
 
     def get_models(self, with_versions=False, ml_handler_name=None, integration_id=None,
                    project_name=None):
@@ -217,7 +222,7 @@ class ModelController():
         fetch_data_query = None
         if statement.integration_name is not None:
             fetch_data_query = statement.query_str
-            integration_name = statement.integration_name.parts[0]
+            integration_name = statement.integration_name.parts[0].lower()
 
             databases_meta = database_controller.get_dict()
             if integration_name not in databases_meta:

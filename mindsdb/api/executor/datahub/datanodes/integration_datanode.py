@@ -44,6 +44,7 @@ class IntegrationDataNode(DataNode):
             result_dict = response.data_frame.to_dict(orient='records')
             result = []
             for row in result_dict:
+
                 result.append(TablesRow.from_dict(row))
             return result
         else:
@@ -53,6 +54,39 @@ class IntegrationDataNode(DataNode):
         return True
 
     def get_table_columns(self, tableName):
+        response = self.integration_handler.get_columns(tableName)
+        if response.type == RESPONSE_TYPE.TABLE:
+            df = response.data_frame
+            # case independent
+            columns = [str(c).lower() for c in df.columns]
+
+            col_name = None
+            # looking for specific column names
+            for col in ('field', 'column_name', 'column', 'name'):
+                if col in columns:
+                    col_name = columns.index(col)
+                    break
+            # if not found - pick first one
+            if col_name is None:
+                col_name = 0
+
+            names = df[df.columns[col_name]]
+
+            # type
+            if 'type' in columns:
+                types = df[df.columns[columns.index('type')]]
+            else:
+                types = [None] * len(columns)
+
+            ret = []
+            for i, name in enumerate(names):
+                ret.append({
+                    'name': name,
+                    'type': types[i]
+                })
+
+            return ret
+
         return []
 
     def drop_table(self, name: Identifier, if_exists=False):
@@ -121,9 +155,7 @@ class IntegrationDataNode(DataNode):
         if hasattr(self.integration_handler, 'insert'):
             df = result_set.to_df()
 
-            result = self.integration_handler.insert(table_name.parts[-1], df)
-            if result.type == RESPONSE_TYPE.ERROR:
-                raise Exception(result.error_message)
+            self.integration_handler.insert(table_name.parts[-1], df)
             return
 
         insert_columns = [Identifier(parts=[x.alias]) for x in result_set.columns]

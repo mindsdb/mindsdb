@@ -1,7 +1,7 @@
-import google
 import unittest
 from collections import OrderedDict
 from unittest.mock import patch, MagicMock
+from google.api_core.exceptions import BadRequest
 
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
@@ -20,7 +20,7 @@ class TestBigQueryHandler(unittest.TestCase):
 
     def setUp(self):
         self.patcher_get_oauth2_credentials = patch('mindsdb.integrations.utilities.handlers.auth_utilities.GoogleServiceAccountOAuth2Manager.get_oauth2_credentials')
-        self.patcher_client = patch('google.cloud.bigquery.Client')
+        self.patcher_client = patch('mindsdb.integrations.handlers.bigquery_handler.bigquery_handler.Client')
         self.mock_get_oauth2_credentials = self.patcher_get_oauth2_credentials.start()
         self.mock_connect = self.patcher_client.start()
         self.handler = BigQueryHandler('bigquery', connection_data=self.dummy_connection_data)
@@ -44,9 +44,9 @@ class TestBigQueryHandler(unittest.TestCase):
         """
         Ensures that the connect method correctly handles a connection failure by raising a google.api_core.exceptions.BadRequest and sets is_connected to False.
         """
-        self.mock_connect.side_effect = google.api_core.exceptions.BadRequest("Connection Failed")
+        self.mock_connect.side_effect = BadRequest("Connection Failed")
 
-        with self.assertRaises(google.api_core.exceptions.BadRequest):
+        with self.assertRaises(BadRequest):
             self.handler.connect()
         self.assertFalse(self.handler.is_connected)
 
@@ -73,7 +73,7 @@ class TestBigQueryHandler(unittest.TestCase):
 
         query_str = "SELECT * FROM table"
 
-        with patch('google.cloud.bigquery.QueryJobConfig') as mock_query_job_config:
+        with patch('mindsdb.integrations.handlers.bigquery_handler.bigquery_handler.QueryJobConfig') as mock_query_job_config:
             mock_query_job_config_instance = mock_query_job_config.return_value
             data = self.handler.native_query(query_str)
             mock_conn.query.assert_called_once_with(query_str, job_config=mock_query_job_config_instance)

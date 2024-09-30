@@ -1,5 +1,6 @@
 from typing import List
 import copy
+import numpy as np
 import pandas as pd
 
 from mindsdb.api.executor.exceptions import WrongArgumentError
@@ -62,15 +63,15 @@ class ResultSet:
 
     def from_df(self, df, database=None, table_name=None, table_alias=None):
 
-        columns_dtypes = dict(df.dtypes)
+        columns_dtypes = list(df.dtypes)
 
-        for col in df.columns:
+        for i, col in enumerate(df.columns):
             self._columns.append(Column(
                 name=col,
                 table_name=table_name,
                 table_alias=table_alias,
                 database=database,
-                type=columns_dtypes.get(col)
+                type=columns_dtypes[i]
             ))
 
         # rename columns to indexes
@@ -219,7 +220,7 @@ class ResultSet:
         if self._df is None:
             self._df = df
         else:
-            self._df = pd.concat([self._df, df])
+            self._df = pd.concat([self._df, df], ignore_index=True)
 
     def add_raw_values(self, values):
 
@@ -241,6 +242,7 @@ class ResultSet:
             for name, dtype in df.dtypes.to_dict().items():
                 if pd.api.types.is_datetime64_any_dtype(dtype):
                     df[name] = df[name].dt.strftime("%Y-%m-%d %H:%M:%S.%f")
+            df = df.replace({np.nan: None})
             return df.to_records(index=False).tolist()
 
         # slower but keep timestamp type

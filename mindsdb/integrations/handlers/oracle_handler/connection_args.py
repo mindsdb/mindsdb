@@ -4,38 +4,60 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 
 
 connection_args = OrderedDict(
+    dsn={
+        "type": ARG_TYPE.STR,
+        "description": "The data source name (DSN) for the Oracle database.",
+        "required": False,
+        "label": "Data Source Name (DSN)",
+    },
     host={
         "type": ARG_TYPE.STR,
-        "description": "The host name or IP address of the Oracle DB.",
+        "description": "The hostname, IP address, or URL of the Oracle server.",
+        "required": False,
+        "label": "Host",
     },
     port={
         "type": ARG_TYPE.INT,
-        "description": "The TCP/IP port of the Oracle DB. Must be an integer. Default 1521.",
+        "description": "The port number for connecting to the Oracle database. Default is 1521.",
+        "required": False,
+        "label": "Port",
     },
     sid={
         "type": ARG_TYPE.STR,
-        "description": "The site identifier of the Oracle DB. Either sid or service_name should be provided.",
+        "description": "The system identifier (SID) of the Oracle database.",
+        "required": False,
+        "label": "SID",
     },
     service_name={
         "type": ARG_TYPE.STR,
-        "description": "The name of the Oracle DB service. Either sid or service_name should be provided.",
+        "description": "The service name of the Oracle database.",
+        "required": False,
+        "label": "Service Name",
     },
     user={
         "type": ARG_TYPE.STR,
-        "description": "The user name used to authenticate against the Oracle DB.",
+        "description": "The username for the Oracle database.",
+        "required": True,
+        "label": "User",
     },
     password={
         "type": ARG_TYPE.PWD,
-        "description": "The password to authenticate the user against Oracle DB.",
-        "secret": True
+        "description": "The password for the Oracle database.",
+        "secret": True,
+        "required": True,
+        "label": "Password",
     },
     disable_oob={
         "type": ARG_TYPE.BOOL,
-        "description": "Disable out-of-band breaks",
+        "description": "The boolean parameter to disable out-of-band breaks. Default is `false`.",
+        "required": False,
+        "label": "Disable OOB",
     },
     auth_mode={
         "type": ARG_TYPE.STR,
-        "description": "Database privilege for connection",
+        "description": "The authorization mode to use.",
+        "required": False,
+        "label": "Auth Mode",
     },
 )
 

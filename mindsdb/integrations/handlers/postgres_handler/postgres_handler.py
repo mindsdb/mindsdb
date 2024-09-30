@@ -42,6 +42,7 @@ class PostgresHandler(DatabaseHandler):
 
         self.connection = None
         self.is_connected = False
+        self.thread_safe = True
 
     def __del__(self):
         if self.is_connected:
@@ -55,6 +56,14 @@ class PostgresHandler(DatabaseHandler):
             'password': self.connection_args.get('password'),
             'dbname': self.connection_args.get('database')
         }
+
+        # https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-PARAMKEYWORDS
+        connection_parameters = self.connection_args.get('connection_parameters')
+        if isinstance(connection_parameters, dict) is False:
+            connection_parameters = {}
+        if 'connect_timeout' not in connection_parameters:
+            connection_parameters['connect_timeout'] = 10
+        config.update(connection_parameters)
 
         if self.connection_args.get('sslmode'):
             config['sslmode'] = self.connection_args.get('sslmode')
@@ -80,7 +89,7 @@ class PostgresHandler(DatabaseHandler):
 
         config = self._make_connection_args()
         try:
-            self.connection = psycopg.connect(**config, connect_timeout=10)
+            self.connection = psycopg.connect(**config)
             self.is_connected = True
             return self.connection
         except psycopg.Error as e:
@@ -218,22 +227,14 @@ class PostgresHandler(DatabaseHandler):
                 with cur.copy(f'copy "{table_name}" ({",".join(columns)}) from STDIN  WITH CSV') as copy:
                     df.to_csv(copy, index=False, header=False)
 
-                response = Response(RESPONSE_TYPE.OK)
-
                 connection.commit()
             except Exception as e:
                 logger.error(f'Error running insert to {table_name} on {self.database}, {e}!')
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_code=0,
-                    error_message=str(e)
-                )
                 connection.rollback()
+                raise e
 
         if need_to_close:
             self.disconnect()
-
-        return response
 
     @profiler.profile()
     def query(self, query: ASTNode) -> Response:
@@ -286,7 +287,6 @@ class PostgresHandler(DatabaseHandler):
 
         if not table_name or not isinstance(table_name, str):
             raise ValueError("Invalid table name provided.")
-
         query = f"""
             SELECT
                 column_name as "Field",
@@ -295,6 +295,8 @@ class PostgresHandler(DatabaseHandler):
                 information_schema.columns
             WHERE
                 table_name = '{table_name}'
+            AND
+                table_schema = current_schema()
         """
         return self.native_query(query)
 

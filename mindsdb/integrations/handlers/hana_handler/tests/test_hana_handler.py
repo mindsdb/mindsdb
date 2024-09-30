@@ -31,7 +31,7 @@ class HanaHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
-            "host": os.environ.get('HANA_HOST', 'localhost'),
+            "address": os.environ.get('HANA_ADDRESS', 'localhost'),
             "port": os.environ.get('HANA_PORT', 30015),
             "user": "DBADMIN",
             "password": os.environ.get('HANA_PASSWORD'),

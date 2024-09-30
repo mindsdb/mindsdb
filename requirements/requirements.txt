@@ -1,14 +1,14 @@
 packaging
-werkzeug==2.3.8
+flask == 3.0.3
+werkzeug == 3.0.3
+flask-restx >= 1.3.0, < 2.0.0
 pandas >=2.0.0, <2.1.0
-flask-restx >= 1.0.1, < 2.0.0
-flask == 2.2.5
 python-multipart >= 0.0.5
 pyparsing == 2.3.1
 cryptography>=35.0
 psycopg[binary]
 waitress >= 1.4.4
-pymongo[srv] >= 4.1.1
+pymongo[srv] == 4.8.0
 psutil
 sqlalchemy >= 2.0.0, < 3.0.0
 psycopg2-binary  # This is required for using sqlalchemy with postgres
@@ -17,9 +17,8 @@ redis >=5.0.0, < 6.0.0
 walrus==0.9.3
 flask-compress >= 1.0.0
 appdirs >= 1.0.0
-mindsdb-sql ~= 0.16.0
+mindsdb-sql ~= 0.19.0
 pydantic >= 2.7.0
-pydantic-settings >= 2.1.0
 mindsdb-evaluator >= 0.0.7, < 0.1.0
 checksumdir >= 1.2.0
 duckdb == 0.9.1
@@ -30,7 +29,7 @@ dill == 0.3.6
 numpy
 pytz
 botocore
-boto3
+boto3 >= 1.34.131
 python-dateutil
 gunicorn
 scikit-learn==1.3.2
@@ -38,12 +37,14 @@ protobuf==3.20.3
 hierarchicalforecast~=0.4.0
 google-auth-oauthlib
 msal
-langchain>=0.1.9
-langchain-core>=0.1.28
-langchain-community
-langchain-openai
-langchain-text_splitters
+langchain==0.1.11
+langchain-core==0.1.46
+langchain-community==0.0.27
+langchain-openai==0.1.6
+langchain-text_splitters==0.0.1
+langchain-nvidia-ai-endpoints==0.1.7
 langfuse==2.35.0
-bs4 # For web crawler.
 lark
 prometheus-client==0.20.0
+transformers >= 4.42.4
+sentry-sdk[flask] == 2.14.0

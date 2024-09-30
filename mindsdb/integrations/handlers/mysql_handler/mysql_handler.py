@@ -77,6 +77,9 @@ class MySQLHandler(DatabaseHandler):
         if 'conn_attrs' in self.connection_data:
             config['conn_attrs'] = self.connection_data['conn_attrs']
 
+        if 'connection_timeout' not in config:
+            config['connection_timeout'] = 10
+
         ssl = self.connection_data.get('ssl')
         if ssl is True:
             ssl_ca = self.connection_data.get('ssl_ca')
@@ -142,6 +145,7 @@ class MySQLHandler(DatabaseHandler):
         """
 
         need_to_close = not self.is_connected
+        connection = None
         try:
             connection = self.connect()
             with connection.cursor(dictionary=True, buffered=True) as cur:
@@ -163,7 +167,7 @@ class MySQLHandler(DatabaseHandler):
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)
             )
-            if connection.is_connected():
+            if connection is not None and connection.is_connected():
                 connection.rollback()
 
         if need_to_close:

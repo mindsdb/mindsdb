@@ -11,7 +11,7 @@ The integration allows for the deployment of OpenAI models within MindsDB, provi
 Before proceeding, ensure the following prerequisites are met:
 
 1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
-2. To use OpenAI within MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+2. To use OpenAI within MindsDB, install the required dependencies following [this instruction](https://docs.mindsdb.com/setup/self-hosted/docker#install-dependencies).
 3. Obtain the OpenAI API key required to deploy and use OpenAI models within MindsDB. Follow the [instructions for obtaining the API key](https://help.openai.com/en/articles/4936850-where-do-i-find-my-secret-api-key).
 
 ## Setup
@@ -32,11 +32,15 @@ CREATE MODEL openai_model
 PREDICT target_column
 USING
       engine = 'openai_engine',  -- engine name as created via CREATE ML_ENGINE
-      mode = 'mode_name', -- optional, ...
+      api_base = 'base-url', -- optional, replaces the default base URL
+      mode = 'mode_name', -- optional, mode to run the model in
       model_name = 'openai_model_name',  -- optional with default value of gpt-3.5-turbo
       question_column = 'question',  -- optional, column name that stores user input
       context_column = 'context',  -- optional, column that stores context of the user input
       prompt_template = 'input your query here', -- optional, user provides instructions to the model here
+      user_column = 'user_input', -- optional, stores user input
+      assistant_column = 'conversation_context', -- optional, stores conversation context
+      prompt = 'instruction to the model', -- optional stores instruction to the model
       max_tokens = 100, -- optional, token limit for answer
       temperature = 0.3, -- temp
 
@@ -45,6 +49,7 @@ USING
 The following parameters are available to use when creating an OpenAI model:
 
 * `engine`: This is the engine name as created with the [`CREATE ML_ENGINE`](https://docs.mindsdb.com/mindsdb_sql/sql/create/ml-engine) statement.
+* `api_base`: This parameter is optional. It replaces the default OpenAI's base URL with the defined value.
 * `mode`: This parameter is optional. The available modes include `default`, `conversational`, `conversational-full`, `image`, and `embedding`.
     - The `default` mode is used by default. The model replies to the `prompt_template` message.
     - The `conversational` mode enables the model to read and reply to multiple messages.
@@ -63,6 +68,12 @@ The following parameters are available to use when creating an OpenAI model:
 * `temperature`: This parameter is optional. It defines how *risky* the answers are. The value of `0` marks a well-defined answer, and the value of `0.9` marks a more creative answer. *Please note that this parameter can be overridden at prediction time.*
 
 ## Usage
+
+Here are the combination of parameters for creating a model:
+
+1. Provide a `prompt_template` alone.
+2. Provide a `question_column` and optionally a `context_column`.
+3. Provide a `prompt`, `user_column`, and `assistant_column` to create a model in the conversational mode.
 
 The following usage examples utilize `openai_engine` to create a model with the `CREATE MODEL` statement.
 
@@ -156,9 +167,34 @@ On execution, we get:
 +----------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 
+### Conversational mode
+
+Here is how to create a model in the conversational mode.
+
+```sql
+CREATE MODEL openai_chat_model
+PREDICT response
+USING
+  engine = 'openai_engine',
+  mode = 'conversational',
+  model_name = 'gpt-3.5-turbo',
+  user_column = 'user_input',
+  assistant_column = 'conversation_history',
+  prompt = 'Answer the question in a helpful way.';
+```
+
+And here is how to query this model:
+
+```sql
+SELECT response
+FROM openai_chat_model
+WHERE user_input = '<question>'
+AND conversation_history = '<optionally, provide the context for the question>';
+```
+
 ## Next Steps
 
-Follow [this tutorial on sentiment analysis](/use-cases/data_enrichment/sentiment-analysis-inside-mysql-with-openai) and [this tutorial on finetuning OpenAI models](/use-cases/automated_finetuning/openai) to see more use case examples.
+Follow [this tutorial on sentiment analysis](https://docs.mindsdb.com/use-cases/data_enrichment/sentiment-analysis-inside-mysql-with-openai) and [this tutorial on finetuning OpenAI models](https://docs.mindsdb.com/use-cases/automated_finetuning/openai) to see more use case examples.
 
 ## Troubleshooting Guide
 

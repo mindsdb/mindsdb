@@ -23,7 +23,7 @@ Available models include the following:
 - Anyscale ([how to get the API key](https://docs.endpoints.anyscale.com/guides/authenticate/))
 - Ollama ([how to download Ollama](https://ollama.com/download))
 
-The LiteLLM model provider is available in MindsDB Cloud only. Use the MindsDB API key, which can be generated in the MindsDB Cloud editor at `cloud.mindsdb.com/account`.
+The LiteLLM model provider is available through [Minds Cloud](https://mdb.ai/) where you can generate the API key.
 </Info>
 
 ## Setup
@@ -134,6 +134,23 @@ USING
      verbose = True,
      prompt_template = 'Answer the users input in a helpful way: {{question}}';
 ```
+</Accordion>
+
+<Accordion title="Ollama">
+```sql
+CREATE MODEL langchain_ollama_model
+PREDICT answer 
+USING
+     engine = 'langchain_engine',       -- engine name as created via CREATE ML_ENGINE
+     provider = 'ollama',               -- one of the available providers
+     model_name = 'llama2',             -- choose one of the models available from Ollama
+     mode = 'conversational',           -- conversational mode
+     user_column = 'question',          -- column name that stores input from the user
+     assistant_column = 'answer',       -- column name that stores output of the model (see PREDICT column) 
+     verbose = True,
+     prompt_template = 'Answer the users input in a helpful way: {{question}}';
+```
+Ensure to have Ollama set up locally by following this guide on [how to download Ollama](https://ollama.com/download).
 </Accordion>
 
 <Accordion title="LiteLLM">

@@ -73,6 +73,19 @@ FROM my_web.crawler
 WHERE url = '<link-to-pdf-file>' 
 LIMIT 1;
 ```
+### Configuring Web Handler for Specific Domains
+
+The Web Handler can be configured to interact only with specific domains by using the `web_crawling_allowed_sites` setting in the `config.json` file. 
+This feature allows you to restrict the handler to crawl and process content only from the domains you specify, enhancing security and control over web interactions.
+
+To configure this, simply list the allowed domains under the `web_crawling_allowed_sites` key in `config.json`. For example:
+
+```json
+"web_crawling_allowed_sites": [
+    "https://docs.mindsdb.com",
+    "https://another-allowed-site.com"
+]
+```
 
 ## Troubleshooting
 

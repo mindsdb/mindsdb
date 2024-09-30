@@ -5,6 +5,7 @@ from collections import OrderedDict
 
 from mindsdb.integrations.handlers.unify_handler.unify_handler import UnifyHandler  # Replace with the actual import path
 
+
 class TestUnify(unittest.TestCase):
     """
     Unit tests for the Unify handler.
@@ -65,7 +66,7 @@ class TestUnify(unittest.TestCase):
             'target': 'output_text'
         }
         mock_list_endpoints.return_value = ['dummy_model@dummy_provider']
-        
+
         mock_client = MagicMock()
         mock_client.generate.return_value = 'Generated text'
         mock_unify.return_value = mock_client
@@ -118,17 +119,17 @@ class TestUnify(unittest.TestCase):
             }
         }
         mock_list_endpoints.return_value = ['other_model@other_provider']
-        
+
         with self.assertRaisesRegex(Exception, "The model, provider or their combination is not supported by Unify!"):
             self.handler.predict(pd.DataFrame())
-    
+
     @patch('mindsdb.integrations.handlers.unify_handler.unify_handler.unify.utils.list_endpoints')
     @patch('mindsdb.integrations.handlers.unify_handler.unify_handler.get_api_key')
     def test_predict_with_missing_input_column_raises_exception(self, mock_get_api_key, mock_list_endpoints):
         # Mock the necessary methods and attributes
         mock_get_api_key.return_value = 'dummy_api_key'
         mock_list_endpoints.return_value = ['dummy_model@dummy_provider']
-        
+
         self.handler.model_storage.json_get.return_value = {
             'using': {
                 'model': 'dummy_model',
@@ -149,6 +150,7 @@ class TestUnify(unittest.TestCase):
         self.handler.model_storage.json_get.assert_called_once_with('args')
         mock_get_api_key.assert_called_once()
         mock_list_endpoints.assert_called_once()
+
 
 if __name__ == '__main__':
     unittest.main()

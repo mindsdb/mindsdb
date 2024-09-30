@@ -75,7 +75,7 @@ Here is how to set up a Slack app and generate both a Slack bot token and a Slac
   6. Go to *App Home* under *Features* and click on the checkbox to *Allow users to send Slash commands and messages from the messages tab*.
   7. Go to *Event Subscriptions* under *Features*.
       - Toggle the button to *Enable Events*.
-      - Under *Subscribe to bot events*, click on *Add Bot User Event* and add `app_mention`, `message_channels`, and `message.im`.
+      - Under *Subscribe to bot events*, click on *Add Bot User Event* and add `app_mention` and `message.im`.
       - Click on *Save Changes*.
   8. Now you can use tokens from points 3 and 5 to initialize the Slack handler in MindsDB.
 </Accordion>
@@ -102,7 +102,7 @@ WITH
     };
 ```
 
-It comes with the `channels` and `channel_lists` table.
+It comes with the `conversations` and `messages` tables.
 
 ### Method 2: Chatbot responds on a defined Slack channel
 
@@ -145,7 +145,7 @@ WITH
     };
 ```
 
-It comes with the `channels` and `channel_lists` table.
+It comes with the `conversations` and `messages` tables.
 
 ## Usage
 
@@ -155,26 +155,40 @@ The following usage applies when **Connection Method 2** was used to connect Sla
 See the usage for **Connection Method 1** [via the `CREATE CHATBOT` syntax](/sql/tutorials/create-chatbot).
 </Warning>
 
-You can select all messages from the channel using the below query.
+You can select all messages from a conversation using the below query.
 
 ```sql
 SELECT *
-FROM mindsdb_slack.channels
-WHERE channel="<channel-name>";
+FROM mindsdb_slack.messages
+WHERE channel_id="<channel-id>";
 ```
 
-Also, you can post messages to the channel like this:
+<Tip>
+To find the channel ID of a conversation, you can use the `conversations` table:
 
 ```sql
-INSERT INTO mindsdb_slack.channels (channel, text)
-VALUES("<channel-name>", "Hey MindsDB, Thanks to you! Now I can respond to my Slack messages through SQL Queries.");
+SELECT *
+FROM mindsdb_slack.conversations
+WHERE name = "<channel-name>";
+```
+
+Please note that if your workspace has more than 1000 conversations, you may need to use the `LIMIT` clause to retrieve all conversations. More information on this can be found below.
+
+You can also find the channel ID by right-clicking on the conversation in Slack, selecting 'View conversation details' or 'View channel details,' and copying the channel ID from the bottom of the 'About' tab.
+</Tip>
+
+Also, you can post messages to the conversation like this:
+
+```sql
+INSERT INTO mindsdb_slack.messages (channel_id, text)
+VALUES("<channel-id>", "Hey MindsDB, Thanks to you! Now I can respond to my Slack messages through SQL Queries.");
 ```
 
 And you can delete messages, but only the ones posted by the bot.
 
 ```sql
-DELETE FROM mindsdb_slack.channels
-WHERE channel = "<channel-name>"
+DELETE FROM mindsdb_slack.messages
+WHERE channel_id = "<channel-id>"
 AND ts = "1688863707.197229";
 ```
 
@@ -182,8 +196,8 @@ Let's select 10 messages created after the specified timestamp:
 
 ```sql
 SELECT *
-FROM mindsdb_slack.channels
-WHERE channel="<channel-name>"
+FROM mindsdb_slack.messages
+WHERE channel_id = "<channel-id>"
 AND message_created_at > '2023-07-25 00:13:07'
 LIMIT 10;
 ```
@@ -192,17 +206,39 @@ We can also order the selected messages:
 
 ```sql
 SELECT *
-FROM mindsdb_slack.channels
-WHERE channel="<channel-name>"
-ORDER BY messages ASC
+FROM mindsdb_slack.messages
+WHERE channel_id = "<channel-id>"
+ORDER BY created_at ASC;
 LIMIT 5;
 ```
 
-List all channels by selecting from the `channel_lists` table.
+List all conversations by selecting from the `conversations` table.
 
 ```sql
 SELECT *
-FROM mindsdb_slack.channel_lists;
+FROM mindsdb_slack.conversations;
+```
+
+<Note>
+The `conversations` table will return the first 1000 conversations by default. To retrieve more, use the `LIMIT` clause.
+
+When using the `LIMIT` clause to query additional conversations, you may encounter Slack API rate limits.
+</Note>
+
+You can also filter conversations by providing the channel ID:
+  
+```sql
+SELECT *
+FROM mindsdb_slack.conversations
+WHERE channel_id = "<channel-id>";
+```
+
+To select multiple conversations, provide a list of channel IDs in an `IN` clause:
+
+```sql
+SELECT *
+FROM mindsdb_slack.conversations
+WHERE channel_id IN ("<channel-id-1>", "<channel-id-2>");
 ```
 
 <Tip>

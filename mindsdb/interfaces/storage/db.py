@@ -452,6 +452,7 @@ class Skills(Base):
             "agent_ids": [a.id for a in self.agents],
             "type": self.type,
             "params": self.params,
+            "created_at": self.created_at,
         }
 
 

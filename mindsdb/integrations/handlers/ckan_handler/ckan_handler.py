@@ -1,16 +1,15 @@
 from ckanapi import RemoteCKAN as rc
 import pandas as pd
 
-from mindsdb.integrations.libs.base import DatabaseHandler
+from mindsdb.integrations.libs.api_handler import APIHandler, APITable, APIResource
 from mindsdb.integrations.libs.response import HandlerStatusResponse, HandlerResponse, RESPONSE_TYPE
 from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
 
-class CkanHandler(DatabaseHandler):
+class CkanHandler(APIHandler):
     """
     This handler handles connection and consumption of the CKAN API.
     """
@@ -18,28 +17,22 @@ class CkanHandler(DatabaseHandler):
 
     def __init__(self, name=None, **kwargs):
         super().__init__(name)
-        self.type = 'ckan'
-        self.name = name
-        self.connection_args = kwargs.get('connection_data')
-        self.ckan = None
-        self.dialect = 'postgresql'
-        self.renderer = SqlalchemyRender('postgres')
         self.connection = None
         self.is_connected = False
+        self.connection_args = kwargs.get('connection_data')
 
     def connect(self) -> HandlerStatusResponse:
         """
         Handles the connection to a CKAN remote portal instance.
         """
         url = self.connection_args.get('url')
+        api_key = self.connection_args.get('api_key')
         try:
-            ckan = rc(url)
+            self.connection = rc(url) if api_key is None else rc(url, apikey=api_key)
             self.is_connected = True
-            self.ckan = ckan
+            return HandlerStatusResponse(True)
         except Exception as e:
             return HandlerStatusResponse(False, f'Failed to connect to CKAN: {e}')
-        self.connection = ckan
-        return HandlerStatusResponse(True)
 
     def disconnect(self):
         self.is_connected = False

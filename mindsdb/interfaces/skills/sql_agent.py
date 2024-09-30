@@ -122,6 +122,8 @@ class SQLAgent:
 
         tables = []
         for table_name in table_names:
+            if not table_name.strip():
+                continue
 
             # Some LLMs (e.g. gpt-4o) may include backticks or quotes when invoking tools.
             table_name = table_name.strip(' `"\'\n\r')
@@ -286,4 +288,7 @@ class SQLAgent:
         try:
             return self.query(command, fetch)
         except Exception as e:
-            return f"Error: {e}"
+            msg = f"Error: {e}"
+            if 'does not exist' in msg and ' relation ' in msg:
+                msg += '\nAvailable tables: ' + ', '.join(self.get_usable_table_names())
+            return msg

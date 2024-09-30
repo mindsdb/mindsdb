@@ -37,8 +37,8 @@ Here is how to retrieve the 10 messages after specific timestamp:
 
 ```sql
 SELECT *
-FROM mindsdb_slack.channels
-WHERE channel = "<channel-name>"
+FROM mindsdb_slack.messages
+WHERE channel_id = "<channel-id>"
 AND created_at > '2023-07-25 00:13:07'   -- created_at stores the timestamp when the message was created
 LIMIT 10;
 ```
@@ -47,8 +47,8 @@ You can also retrieve messages in alphabetical order:
 
 ```sql
 SELECT *
-FROM mindsdb_slack.channels
-WHERE channel = "<channel-name>"
+FROM mindsdb_slack.messages
+WHERE channel_id = "<channel-id>"
 ORDER BY text ASC
 LIMIT 5;
 ```
@@ -58,17 +58,17 @@ By default, it retrieves by the order the messages were sent, unless specified a
 Here is how to post messages:
 
 ```sql
-INSERT INTO mindsdb_slack.channels (channel, text)
+INSERT INTO mindsdb_slack.messages (channel_id, text)
 VALUES
-    ("<channel-name>", "Hey MindsDB, Thanks to you! Now I can respond to my Slack messages through SQL Queries. 🚀 "),
-    ("<channel-name>", "It's never been that easy to build ML apps using MindsDB!");
+    ("<channel-id>", "Hey MindsDB, Thanks to you! Now I can respond to my Slack messages through SQL Queries. 🚀 "),
+    ("<channel-id>", "It's never been that easy to build ML apps using MindsDB!");
 ```
 
 Whoops! Sent it by mistake? No worries! Use this to delete a specific message:
 
 ```sql
-DELETE FROM mindsdb_slack.channels
-WHERE channel = "<channel-name>" AND ts = "1688863707.197229";
+DELETE FROM mindsdb_slack.messages
+WHERE channel_id = "<channel-id>" AND ts = "1688863707.197229";
 ```
 
 Now, let's roll up our sleeves and start building the GPT-4 Model together. 
@@ -163,18 +163,18 @@ WHERE text = 'if a time-traveling astronaut had a dance-off with a black hole, w
 
 ### 3. Let's Connect our GPT Model to Slack!
 
-The `channels` table can be used to search for `channels`, `messages`, and `timestamps`, as well as to post messages into slack channels. These functionalities can also be done by using Slack API or Webhooks.
+The `messages` table can be used to search for `channels`, `messages`, and `timestamps`, as well as to post messages into Slack conversations. These functionalities can also be done by using Slack API or Webhooks.
 
-Let's query the user's question and see how our GPT model responds to it, by joining the model with the `channels` table:
+Let's query the user's question and see how our GPT model responds to it, by joining the model with the `messages` table:
 
 ```sql
 SELECT
-    t.channel as channel,
+    t.channel_id as channel_id,
     t.text as input_text, 
     r.response as output_text
-FROM mindsdb_slack.channels as t
+FROM mindsdb_slack.messages as t
 JOIN mindsdb.whizfizz_model as r
-WHERE t.channel = "<channel-name>"
+WHERE t.channel_id = "<channel-id>"
 LIMIT 3;
 ```
 
@@ -183,13 +183,13 @@ LIMIT 3;
 We want to respond to the user's questions by posting the output of our newly created **WhizFizz** Model. Let's post the message by querying and joining the user's questions to our model:
 
 ```sql
-INSERT INTO mindsdb_slack.channels(channel, text)
+INSERT INTO mindsdb_slack.messages(channel_id, text)
   SELECT
-    t.channel as channel,
+    t.channel_id as channel_id,
     r.response as text
-  FROM mindsdb_slack.channels as t
+  FROM mindsdb_slack.messages as t
   JOIN mindsdb.whizfizz_model as r
-  WHERE t.channel = "<channel-name>"
+  WHERE t.channel_id = "<channel-id>"
   LIMIT 3;
 ```
 
@@ -212,13 +212,13 @@ Let's do it in single SQL statement:
 CREATE JOB mindsdb.gpt4_slack_job AS (
 
    -- insert into channels the output of joining model and new responses
-  INSERT INTO mindsdb_slack.channels(channel, text)
+  INSERT INTO mindsdb_slack.messages(channel_id, text)
     SELECT
-      t.channel as channel,
+      t.channel_id as channel_id,
       r.response as text
-    FROM mindsdb_slack.channels as t
+    FROM mindsdb_slack.messages as t
     JOIN mindsdb.whizfizz_model as r
-    WHERE t.channel = "<channel-name>"
+    WHERE t.channel_id = "<channel-id>"
     AND t.created_at > LAST
     AND t.user = 'user_id' -- to avoid the bot replying to its own messages, include users to which bot should reply
     --AND t.user != 'bot_id' -- alternatively, to avoid the bot replying to its own messages, exclude the user id of the bot
@@ -250,13 +250,13 @@ DROP JOB gpt4_slack_job;
 Alternatively, you can create a trigger on Slack, instead of scheduling a job. This way, every time new messages are posted, the trigger executes.
 
 ```sql
-CREATE TRIGGER slack_trigger ON mindsdb_slack.channels (
+CREATE TRIGGER slack_trigger ON mindsdb_slack.messages (
 
-    INSERT INTO mindsdb_slack.channels(channel, text)
-      SELECT t.channel as channel, a.sentiment as text, 
+    INSERT INTO mindsdb_slack.messages(channel_id, text)
+      SELECT t.channel_id as channel_id, a.sentiment as text, 
       FROM data_table t              
       JOIN model_table as a
-      WHERE t.channel = 'channel_name' 
+      WHERE t.channel_id = '<channel-id>' 
       AND t.user != 'bot_id'  -- exclude bot
 );
 ```

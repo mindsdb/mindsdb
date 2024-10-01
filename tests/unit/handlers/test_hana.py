@@ -1,9 +1,7 @@
 from collections import OrderedDict
 import unittest
-from unittest.mock import patch
-
+from unittest.mock import patch, MagicMock
 from hdbcli.dbapi import ProgrammingError
-
 from base_handler_test import BaseDatabaseHandlerTest
 from mindsdb.integrations.handlers.hana_handler.hana_handler import HanaHandler
 
@@ -67,6 +65,36 @@ class TestHanaHandler(BaseDatabaseHandlerTest, unittest.TestCase):
 
     def create_patcher(self):
         return patch('hdbcli.dbapi.connect')
+
+    @patch('hdbcli.dbapi.connect')
+    def test_successful_connection(self, mock_connect):
+        # Simulate a successful connection
+        mock_connect.return_value = MagicMock()
+        handler = self.create_handler()
+        self.assertIsNotNone(handler)
+
+    @patch('hdbcli.dbapi.connect')
+    def test_connection_failure(self, mock_connect):
+        # Simulate a connection failure
+        mock_connect.side_effect = self.err_to_raise_on_connect_failure
+        with self.assertRaises(ProgrammingError):
+            handler = self.create_handler()
+
+    @patch('hdbcli.dbapi.connect')
+    def test_get_tables_empty_result(self, mock_connect):
+        # Simulate empty tables result
+        mock_connect.return_value.cursor.return_value.fetchall.return_value = []
+        handler = self.create_handler()
+        tables = handler.get_tables()
+        self.assertEqual(tables, [])
+
+    @patch('hdbcli.dbapi.connect')
+    def test_get_columns_empty_result(self, mock_connect):
+        # Simulate empty columns result
+        mock_connect.return_value.cursor.return_value.fetchall.return_value = []
+        handler = self.create_handler()
+        columns = handler.get_columns(self.mock_table)
+        self.assertEqual(columns, [])
 
 
 if __name__ == '__main__':

@@ -48,3 +48,4 @@ lark
 prometheus-client==0.20.0
 transformers >= 4.42.4
 sentry-sdk[flask] == 2.14.0
+LiteLLM==1.44.8

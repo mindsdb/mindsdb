@@ -172,7 +172,4 @@ setup(
         "Operating System :: OS Independent",
     ],
     python_requires=">=3.8,<3.12",
-    install_requires=[
-    "LiteLLM==1.44.8",
-]
 )

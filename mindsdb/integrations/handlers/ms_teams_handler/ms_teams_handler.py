@@ -1,5 +1,10 @@
+import os
 from typing import Text, Dict
 
+from botframework.connector import ConnectorClient
+from botframework.connector.auth import MicrosoftAppCredentials
+from botbuilder.schema import Activity, ActivityTypes
+from botbuilder.schema import ChannelAccount
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 from mindsdb.integrations.utilities.handlers.auth_utilities import MSGraphAPIAuthManager
@@ -143,17 +148,11 @@ class MSTeamsHandler(APIChatHandler):
 
         params = {
             'polling': {
-                'type': 'message_count',
-                'table': 'chats',
-                'chat_id_col': 'id',
-                'count_col': 'lastMessagePreview_id'
-            },
-            'chat_table': {
-                'name': 'chat_messages',
-                'chat_id_col': 'chatId',
-                'username_col': 'from_user_displayName',
-                'text_col': 'body_content',
-                'time_col': 'createdDateTime',
+                'type': 'webhook',
+                'chat_id_attr': ['conversation', 'id'],
+                'message_attr': 'text',
+                'from_attr': ['from', 'id'],
+                'to_attr': ['recipient', 'id'],
             }
         }
 
@@ -170,7 +169,42 @@ class MSTeamsHandler(APIChatHandler):
             Name of the signed in user.
         """        
 
-        connection = self.connect()
-        user_profile = connection.get_user_profile()
+        # connection = self.connect()
+        # user_profile = connection.get_user_profile()
         
-        return user_profile['displayName']
+        # return user_profile['displayName']
+        return None
+    
+    def respond(self, message):
+        """
+        Respond to a message.
+
+        Parameters
+        ----------
+        message: Dict
+            Message to respond to.
+
+        Returns
+        -------
+        Dict
+            Response to the message.
+        """
+        RECIPIENT_ID = message.destination
+        TEXT = message.text
+        SERVICE_URL = message.kwargs['request']['serviceUrl']
+        CHANNEL_ID = message.kwargs['request']['channelId']
+        BOT_ID = message.kwargs['request']['from']['id']
+        CONVERSATION_ID = message.kwargs['request']['conversation']['id']
+
+        credentials = MicrosoftAppCredentials(
+            self.connection_data["client_id"],
+            self.connection_data["client_secret"]
+        )
+        connector = ConnectorClient(credentials, base_url=SERVICE_URL)
+
+        connector.conversations.send_to_conversation(CONVERSATION_ID, Activity(
+                    type=ActivityTypes.message,
+                    channel_id=CHANNEL_ID,
+                    recipient=ChannelAccount(id=RECIPIENT_ID),
+                    from_property=ChannelAccount(id=BOT_ID),
+                    text=TEXT))

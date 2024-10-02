@@ -185,7 +185,7 @@ The default configuration for MindsDB's Docker image is stored as a JSON code, a
 To override the default configuration, you can mount a config file over `/root/mindsdb_config.json`, as below.
 
 ```bash
-docker run -v mdb_config.json:/root/mindsdb_config.json mindsdb/mindsdb
+docker run --name mindsdb_container -d -p 47334:47334 -p 47335:47335 -v mdb_config.json:/root/mindsdb_config.json mindsdb/mindsdb
 ```
 
 <Tip>

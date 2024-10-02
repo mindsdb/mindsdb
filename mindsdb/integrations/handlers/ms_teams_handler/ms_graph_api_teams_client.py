@@ -72,6 +72,9 @@ class MSGraphAPITeamsClient(MSGraphAPIBaseClient):
         # add the group ID to the channel data
         channel.update({"teamId": group_id})
 
+        last_message = self.get_last_channel_message(group_id, channel_id)
+        channel["lastMessagePreview_id"] = last_message.get("id")
+
         return channel
     
     def get_channels(self) -> List[Dict]:
@@ -87,7 +90,13 @@ class MSGraphAPITeamsClient(MSGraphAPIBaseClient):
         channels = []
         for group_id in self._get_group_ids():
             for group_channels in self._fetch_data(f"teams/{group_id}/channels", pagination=False):
-                [group_channel.update({"teamId": group_id}) for group_channel in group_channels]
+                for group_channel in group_channels:
+                    # add the group ID to the channel data
+                    group_channel.update({"teamId": group_id})
+
+                    last_message = self.get_last_channel_message(group_id, group_channel["id"])
+                    group_channel["lastMessagePreview_id"] = last_message.get("id")
+
                 channels.extend(group_channels)
 
         return channels
@@ -135,6 +144,30 @@ class MSGraphAPITeamsClient(MSGraphAPIBaseClient):
                     channel_messages.extend(messages)
 
         return channel_messages
+
+    def get_last_channel_message(self, group_id: Text, channel_id: Text) -> Dict:
+        """
+        Get the last message in a channel.
+
+        Parameters
+        ----------
+        group_id : Text
+            The ID of the group that the channel belongs to.
+
+        channel_id : Text
+            The ID of the channel.
+
+        Returns
+        -------
+        Dict
+            The last message data.
+        """
+
+        api_url = self._get_api_url(f"teams/{group_id}/channels/{channel_id}/messages")
+        # get the last message only
+        messages = self._get_response_value_unsafe(self._make_request(api_url, params={"$top": 1}))
+
+        return messages[0] if messages else {}
     
     def send_channel_message(self, group_id: Text, channel_id: Text, message: Text, subject: Optional[Text] = None) -> None:
         """

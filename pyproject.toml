@@ -5,3 +5,5 @@ requires = [
     "setuptools",
     "wheel",
 ]
+[tool.poetry.dependencies]
+LiteLLM = "1.44.8"

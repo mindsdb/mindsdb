@@ -189,6 +189,7 @@ class MSTeamsHandler(APIChatHandler):
         Dict
             Response to the message.
         """
+
         RECIPIENT_ID = message.destination
         TEXT = message.text
         SERVICE_URL = message.kwargs['request']['serviceUrl']
@@ -202,9 +203,12 @@ class MSTeamsHandler(APIChatHandler):
         )
         connector = ConnectorClient(credentials, base_url=SERVICE_URL)
 
-        connector.conversations.send_to_conversation(CONVERSATION_ID, Activity(
-                    type=ActivityTypes.message,
-                    channel_id=CHANNEL_ID,
-                    recipient=ChannelAccount(id=RECIPIENT_ID),
-                    from_property=ChannelAccount(id=BOT_ID),
-                    text=TEXT))
+        connector.conversations.send_to_conversation(
+            CONVERSATION_ID, 
+            Activity(
+                type=ActivityTypes.message,
+                channel_id=CHANNEL_ID,
+                recipient=ChannelAccount(id=RECIPIENT_ID),
+                from_property=ChannelAccount(id=BOT_ID),
+                text=TEXT)
+            )

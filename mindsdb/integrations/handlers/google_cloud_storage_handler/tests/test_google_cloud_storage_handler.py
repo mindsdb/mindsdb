@@ -1,4 +1,6 @@
 import unittest
+
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.integrations.handlers.google_cloud_storage_handler.google_cloud_storage_handler import \
     GoogleCloudStorageHandler
 
@@ -8,13 +10,17 @@ class GCSHandlerTest(unittest.TestCase):
     def setUpClass(cls):
         cls.kwargs = {
             "service_account_keys": 'C:/Users/Talaat/Documents/Github/integration/creds/credentials.json',
-            "bucket": 'easy_tour_bucket',
-            'project_id': 'easytour-422214'
+            "bucket": 'easy_tour_bucket'
         }
         cls.handler = GoogleCloudStorageHandler('test_gcs_handler', cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()
+
+    def test_1_get_tables(self):
+        result = self.handler.get_tables()
+        print(result)
+        assert result.type is RESPONSE_TYPE.TABLE
 
 
 if __name__ == '__main__':

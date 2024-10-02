@@ -1,4 +1,6 @@
 from typing import Text, Dict, Optional, Any
+
+import pandas as pd
 from google.api_core.exceptions import BadRequest
 from google.cloud.storage import Client
 
@@ -6,7 +8,9 @@ from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.utilities import log
 from mindsdb.integrations.utilities.handlers.auth_utilities import GoogleServiceAccountOAuth2Manager
 from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse
+    HandlerStatusResponse as StatusResponse,
+    HandlerResponse as Response,
+    RESPONSE_TYPE
 )
 
 logger = log.getLogger(__name__)
@@ -18,6 +22,7 @@ class GoogleCloudStorageHandler(DatabaseHandler):
     """
 
     name = 'google_cloud_storage'
+    supported_file_formats = ['csv', 'tsv', 'json', 'parquet']
 
     def __init__(self, name: Text, connection_data: Optional[Dict], **kwargs: Any):
         """
@@ -40,33 +45,19 @@ class GoogleCloudStorageHandler(DatabaseHandler):
             self.disconnect()
 
     @property
-    def project_id(self) -> str:
-        return self.connection_data.get('project_id')
-
-    @property
     def bucket(self) -> str:
         return self.connection_data.get('bucket')
-
-    @property
-    def file_type(self) -> str:
-        return self.connection_data.get('file_type')
 
     @property
     def prefix(self) -> str:
         return self.connection_data.get('prefix')
 
-    @property
-    def object_key(self) -> str:
-        return self.connection_data.get('object_key')
-
     def connect(self) -> Client:
         """
         Establishes a connection to Google CLoud Storage.
 
-        Raises: ValueError: If the required connection parameters are not provided or if the credentials cannot be
-        parsed. mindsdb.integrations.utilities.handlers.auth_utilities.exceptions.NoCredentialsException: If none of
-        the required forms of credentials are provided.
-        mindsdb.integrations.utilities.handlers.auth_utilities.exceptions.AuthException: If authentication fails.
+        Raises:
+            ValueError: If the required connection parameters are not provided or if the credentials cannot be parsed.
 
         Returns:
             google.cloud.storage.client.Client: The client object for the Google CLoud Storage connection.
@@ -75,8 +66,8 @@ class GoogleCloudStorageHandler(DatabaseHandler):
             return self.connection
 
         # Mandatory connection parameters
-        if not self.bucket and not self.project_id:
-            raise ValueError('Required parameters (project_id, bucket) must be provided.')
+        if not self.bucket:
+            raise ValueError('Required parameters (bucket) must be provided.')
 
         google_sa_oauth2_manager = GoogleServiceAccountOAuth2Manager(
             credentials_file=self.connection_data.get('service_account_keys'),
@@ -84,13 +75,19 @@ class GoogleCloudStorageHandler(DatabaseHandler):
         )
         credentials = google_sa_oauth2_manager.get_oauth2_credentials()
 
-        client = Client(
-            project=self.project_id,
-            credentials=credentials
-        )
+        client = Client(credentials=credentials)
         self.is_connected = True
         self.connection = client
         return self.connection
+
+    def disconnect(self):
+        """
+        Closes the connection to the GCS Bucket if it's currently open.
+        """
+        if self.is_connected is False:
+            return
+        self.connection.close()
+        self.is_connected = False
 
     def check_connection(self) -> StatusResponse:
         """
@@ -110,10 +107,42 @@ class GoogleCloudStorageHandler(DatabaseHandler):
 
             response.success = True
         except (BadRequest, ValueError) as e:
-            logger.error(f'Error connecting to Google CLoud Storage {self.project_id}, {e}!')
+            logger.error(f'Error connecting to Google CLoud Storage Bucket {self.bucket}, {e}!')
             response.error_message = e
 
         if response.success is False and self.is_connected is True:
             self.is_connected = False
 
         return response
+
+    def get_tables(self) -> Response:
+        """
+        Retrieves a list of objects in the GCS bucket.
+
+        Each object is considered a table. Only the supported file formats are considered as tables.
+
+        Returns:
+            Response: A response object containing the list of tables and views, formatted as per the `Response` class.
+        """
+        client = self.connect()
+        blobs = client.list_blobs(self.bucket, prefix=self.prefix)
+        objects = []
+
+        for blob in blobs:
+            key = blob.name
+            parts = key.split('.')
+
+            if parts[-1] in self.supported_file_formats:
+                objects.append(f"`{key}`")
+
+        response = Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=pd.DataFrame(
+                objects,
+                columns=['table_name']
+            )
+        )
+
+        return response
+
+

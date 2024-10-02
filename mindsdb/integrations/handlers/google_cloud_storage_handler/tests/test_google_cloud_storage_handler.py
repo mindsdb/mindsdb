@@ -10,7 +10,8 @@ class GCSHandlerTest(unittest.TestCase):
     def setUpClass(cls):
         cls.kwargs = {
             "service_account_keys": 'C:/Users/Talaat/Documents/Github/integration/creds/credentials.json',
-            "bucket": 'easy_tour_bucket'
+            "bucket": 'easy_tour_bucket',
+            "prefix": 'ai'
         }
         cls.handler = GoogleCloudStorageHandler('test_gcs_handler', cls.kwargs)
 
@@ -19,7 +20,6 @@ class GCSHandlerTest(unittest.TestCase):
 
     def test_1_get_tables(self):
         result = self.handler.get_tables()
-        print(result)
         assert result.type is RESPONSE_TYPE.TABLE
 
 

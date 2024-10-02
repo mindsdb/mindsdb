@@ -10,7 +10,7 @@ from mindsdb.integrations.utilities.handlers.auth_utilities import GoogleService
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
-    RESPONSE_TYPE
+    RESPONSE_TYPE, HandlerResponse
 )
 
 logger = log.getLogger(__name__)
@@ -51,6 +51,10 @@ class GoogleCloudStorageHandler(DatabaseHandler):
     @property
     def prefix(self) -> str:
         return self.connection_data.get('prefix')
+
+    @property
+    def file_type(self) -> str:
+        return self.connection_data.get('file_type')
 
     def connect(self) -> Client:
         """
@@ -128,12 +132,18 @@ class GoogleCloudStorageHandler(DatabaseHandler):
         blobs = client.list_blobs(self.bucket, prefix=self.prefix)
         objects = []
 
+        # filter blobs based on file type
+        if self.file_type:
+            self.supported_file_formats = [self.file_type]
+
         for blob in blobs:
             key = blob.name
             parts = key.split('.')
 
             if parts[-1] in self.supported_file_formats:
                 objects.append(f"`{key}`")
+
+        logger.info(f"Retrieved {len(objects)} objects from bucket '{self.bucket}'.")
 
         response = Response(
             RESPONSE_TYPE.TABLE,
@@ -145,4 +155,6 @@ class GoogleCloudStorageHandler(DatabaseHandler):
 
         return response
 
+    def get_columns(self, table_name: str) -> Response:
+        pass
 

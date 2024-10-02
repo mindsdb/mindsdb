@@ -9,7 +9,7 @@ from mindsdb.interfaces.tasks.task import BaseTask
 
 from mindsdb.utilities import log
 
-from .polling import MessageCountPolling, RealtimePolling
+from .polling import MessageCountPolling, RealtimePolling, WebhookPolling
 from .memory import DBMemory, HandlerMemory
 from .chatbot_executor import MultiModeBotExecutor, BotExecutor, AgentExecutor
 
@@ -59,6 +59,11 @@ class ChatBotTask(BaseTask):
         elif polling == 'realtime':
             self.chat_pooling = RealtimePolling(self, chat_params)
             self.memory = DBMemory(self, chat_params)
+
+        elif polling == 'webhook':
+            self.chat_pooling = WebhookPolling(self, chat_params)
+            self.memory = DBMemory(self, chat_params)
+
         else:
             raise Exception(f"Not supported polling: {polling}")
 
@@ -101,7 +106,8 @@ class ChatBotTask(BaseTask):
             # In Slack direct messages are treated as channels themselves.
             user=bot_username,
             destination=chat_id,
-            sent_at=dt.datetime.now()
+            sent_at=dt.datetime.now(),
+            **message.kwargs
         )
 
         # send to chat adapter

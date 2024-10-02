@@ -1,3 +1,4 @@
+from functools import reduce
 import time
 
 from mindsdb_sql.parser.ast import Identifier, Select, Insert
@@ -159,3 +160,35 @@ class RealtimePolling(BasePolling):
     # def send_message(self, message: ChatBotMessage):
     #
     #     self.chat_task.chat_handler.realtime_send(message)
+
+
+class WebhookPolling(BasePolling):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def run(self, request):
+        p_params = self.params["polling"]
+        chat_id_attr = p_params["chat_id_attr"]
+
+        chat_id = self._parse_request(request, chat_id_attr)
+        chat_memory = self.chat_task.memory.get_chat(chat_id)
+
+        message = ChatBotMessage(
+            ChatBotMessage.Type.DIRECT,
+            self._parse_request(request, p_params["message_attr"]),
+            self._parse_request(request, p_params["from_attr"]),
+            self._parse_request(request, p_params["to_attr"]),
+            request=request
+        )
+
+        self.chat_task.on_message(chat_memory, message)
+
+    def send_message(self, message: ChatBotMessage):
+        self.chat_task.chat_handler.respond(message)
+
+    def _parse_request(self, request, key):
+        if isinstance(key, list):
+            return reduce(lambda x, y: x[y], key, request)
+        
+        else:
+            return request[key]

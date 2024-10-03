@@ -1,7 +1,6 @@
 from datetime import timedelta
 
 import pandas as pd
-from urllib.parse import urlparse
 from couchbase.auth import PasswordAuthenticator
 from couchbase.cluster import Cluster
 from couchbase.exceptions import UnAmbiguousTimeoutException

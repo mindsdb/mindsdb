@@ -13,6 +13,9 @@ logger = log.getLogger(__name__)
 
 
 class DynamicResourceTable(APITable):
+    """
+    A class representing a CKAN resource table that is fetched dynamically
+    """
     def __init__(self, handler, resource_id, resource_name):
         super().__init__(handler)
         self.resource_id = resource_id
@@ -62,6 +65,9 @@ class DynamicResourceTable(APITable):
         return HandlerResponse(RESPONSE_TYPE.TABLE, result[columns])
 
     def get_columns(self):
+        """
+        Get the columns of the table for each resource
+        """
         return [field["id"] for field in self.fields]
 
 
@@ -102,13 +108,9 @@ class CkanHandler(APIHandler):
                     "datastore_search", {"resource_id": "_table_metadata"}
                 )
                 self.resource_metadata = metadata.to_dict("records")
-                logger.info(
+                logger.debug(
                     f"Fetched metadata for {len(self.resource_metadata)} resources"
                 )
-                logger.info(
-                    f"Metadata structure: {self.resource_metadata[0].keys() if self.resource_metadata else 'No metadata'}"
-                )
-
                 # Attempt to create id_to_name mapping
                 for resource in self.resource_metadata:
                     id_field = resource.get("id") or resource.get("name")
@@ -116,15 +118,17 @@ class CkanHandler(APIHandler):
                     if id_field and name_field:
                         self.id_to_name[id_field] = name_field
 
-                logger.info(
+                logger.debug(
                     f"Created id_to_name mapping for {len(self.id_to_name)} resources"
                 )
             except Exception as e:
                 logger.error(f"Error fetching resource metadata: {e}")
-                logger.error(f"Metadata content: {self.resource_metadata}")
-                raise
+                pass
 
     def _register_table(self, resource_id):
+        """
+        Register a table with the given resource ID
+        """
         if resource_id not in self.tables:
             resource_name = self.id_to_name.get(resource_id, resource_id)
             table = DynamicResourceTable(self, resource_id, resource_name)
@@ -170,8 +174,6 @@ class CkanHandler(APIHandler):
                 self._register_table(resource_id)
                 return self.tables[resource_name]
 
-        logger.error(f"Table not found: {table_name}")
-        logger.info(f"Available tables: {list(self.id_to_name.values())}")
         raise ValueError(f"Table {table_name} not found")
 
     def query(self, query: ast.Select) -> HandlerResponse:

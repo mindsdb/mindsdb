@@ -34,8 +34,8 @@ class FinancialModelingHandler(APIHandler):
         self.client = None
         self.is_connected = False
 
-        historical_price_table = HistoricalPriceTable(self) 
-        self._register_table('historical_price_table', historical_price_table)
+        historical_prices = HistoricalPriceTable(self) 
+        self._register_table('historical_prices', historical_price_table)
 
     def connect(self): 
         self.is_connected = True

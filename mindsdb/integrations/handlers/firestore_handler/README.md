@@ -28,3 +28,21 @@ PARAMETERS = {
    "credentials_file": "path/to/serviceAccountKey.json",
    "project_id": "your_project_id"
 };
+
+### Insert data into Firestore
+
+You can insert data into a Firestore collection by specifying the table schema and providing the data source.
+
+```sql
+CREATE TABLE firestore_db.users (
+    SELECT * FROM mysql_demo_db.users
+);
+
+
+### Fetch data from Firestore
+
+Once the data is inserted, you can retrieve data by querying the Firestore collection like so:
+
+```sql
+SELECT * FROM firestore_db.users;
+

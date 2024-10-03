@@ -34,7 +34,8 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
 # Copy the requirements files, setup.py etc from above
 COPY --from=deps /mindsdb .
 # Install all requirements for mindsdb and all the default handlers
-RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked pip install "."
+RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked pip install uv
+RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked uv pip install --system "."
 # Install extras on top of the bare mindsdb
 RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked if [ -n "$EXTRAS" ]; then pip install $EXTRAS; fi
 

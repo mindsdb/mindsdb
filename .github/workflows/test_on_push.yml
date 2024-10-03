@@ -148,23 +148,23 @@ jobs:
       - name: Install dependencies
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
-          pip install .
-          pip install -r requirements/requirements-test.txt
-          pip install .[lightwood]  # TODO: for now some tests rely on lightwood
-          pip install .[mssql]
-          pip install .[clickhouse]
-          pip install .[snowflake]
-          pip install .[web]
-          pip install .[redshift]
-          pip install .[bigquery]
-          pip install .[elasticsearch]
-          pip install .[databricks]
-          pip install .[oracle]
-          pip install .[db2]
-          pip install .[hive]
-          pip install .[teradata]
-          pip install .[hana]
-          pip install .[minds_endpoint]
+          uv pip install --system .
+          uv pip install --system -r requirements/requirements-test.txt
+          uv pip install --system .[lightwood]  # TODO: for now some tests rely on lightwood
+          uv pip install --system .[mssql]
+          uv pip install --system .[clickhouse]
+          uv pip install --system .[snowflake]
+          uv pip install --system .[web]
+          uv pip install --system .[redshift]
+          uv pip install --system .[bigquery]
+          uv pip install --system .[elasticsearch]
+          uv pip install --system .[databricks]
+          uv pip install --system .[oracle]
+          uv pip install --system .[db2]
+          uv pip install --system .[hive]
+          uv pip install --system .[teradata]
+          uv pip install --system .[hana]
+          uv pip install --system .[minds_endpoint]
           pip freeze
       - name: Run unit tests
         if: ${{ needs.changes.outputs.not-docs == 'true' }}

@@ -148,6 +148,7 @@ jobs:
       - name: Install dependencies
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
+          pip install uv
           uv pip install --system .
           uv pip install --system -r requirements/requirements-test.txt
           uv pip install --system .[lightwood]  # TODO: for now some tests rely on lightwood

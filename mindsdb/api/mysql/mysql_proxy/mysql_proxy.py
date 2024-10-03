@@ -880,6 +880,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             cert_path = tempfile.mkstemp(prefix="mindsdb_cert_", text=True)[1]
             make_ssl_cert(cert_path)
             atexit.register(lambda: os.remove(cert_path))
+        elif not os.path.exists(cert_path):
+            logger.error("Certificate defined in 'certificate_path' setting does not exist")
 
         # TODO make it session local
         server_capabilities.set(CAPABILITIES.CLIENT_SSL, config["api"]["mysql"]["ssl"])

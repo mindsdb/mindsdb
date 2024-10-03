@@ -23,7 +23,32 @@ class ChatBotTask(BaseTask):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.bot_id = self.object_id
-        self.agent_id = None
+
+        bot_record = db.ChatBots.query.get(self.bot_id)
+
+        self.base_model_name = bot_record.model_name
+        self.project_name = db.Project.query.get(bot_record.project_id).name
+        self.project_datanode = self.session.datahub.get(self.project_name)
+
+        self.agent_id = bot_record.agent_id
+        if self.agent_id is not None:
+            self.bot_executor_cls = AgentExecutor
+        elif self.bot_params.get('modes') is None:
+            self.bot_executor_cls = BotExecutor
+        else:
+            self.bot_executor_cls = MultiModeBotExecutor
+
+        database_name = db.Integration.query.get(bot_record.database_id).name
+
+        self.chat_handler = self.session.integration_controller.get_data_handler(database_name)
+        if not isinstance(self.chat_handler, APIChatHandler):
+            raise Exception(f"Can't use chat database: {database_name}")
+        
+        # get chat handler info
+        self.bot_params = bot_record.params or {}
+
+        chat_params = self.chat_handler.get_chat_config()
+        self.bot_params['bot_username'] = self.chat_handler.get_my_user_name()
 
         self.session = SessionController()
 
@@ -31,25 +56,6 @@ class ChatBotTask(BaseTask):
 
         # TODO check deleted, raise errors
         # TODO checks on delete predictor / project/ integration
-
-        bot_record = db.ChatBots.query.get(self.bot_id)
-
-        self.base_model_name = bot_record.model_name
-        self.agent_id = bot_record.agent_id
-        self.project_name = db.Project.query.get(bot_record.project_id).name
-        self.project_datanode = self.session.datahub.get(self.project_name)
-
-        database_name = db.Integration.query.get(bot_record.database_id).name
-
-        self.chat_handler = self.session.integration_controller.get_data_handler(database_name)
-        if not isinstance(self.chat_handler, APIChatHandler):
-            raise Exception(f"Can't use chat database: {database_name}")
-
-        # get chat handler info
-        self.bot_params = bot_record.params or {}
-
-        chat_params = self.chat_handler.get_chat_config()
-        self.bot_params['bot_username'] = self.chat_handler.get_my_user_name()
 
         polling = chat_params['polling']['type']
         if polling == 'message_count':
@@ -67,13 +73,6 @@ class ChatBotTask(BaseTask):
 
         else:
             raise Exception(f"Not supported polling: {polling}")
-
-        if self.agent_id is not None:
-            self.bot_executor_cls = AgentExecutor
-        elif self.bot_params.get('modes') is None:
-            self.bot_executor_cls = BotExecutor
-        else:
-            self.bot_executor_cls = MultiModeBotExecutor
 
         self.chat_pooling.run(stop_event)
 

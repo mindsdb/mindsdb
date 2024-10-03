@@ -14,3 +14,4 @@ async def test_openai_reranker():
         query="Trump opinion on animals",
     )
     assert len(results) == 1
+    assert "cats" in results[0].page_content

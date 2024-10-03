@@ -62,7 +62,7 @@ class OpenAIReranker(BaseDocumentCompressor):
         return self.client
 
     async def search_relevancy(self, query: str, document: str) -> Any:
-        openai_api_key = os.environ.get("OPENAI_API_KEY")
+        openai_api_key = self.openai_api_key or os.getenv(self._api_key_var)
 
         client = AsyncOpenAI(api_key=openai_api_key)
 
@@ -85,7 +85,7 @@ class OpenAIReranker(BaseDocumentCompressor):
         )
         return response
 
-    async def _rank(self, query_document_pairs: List[Tuple[str, str]]) -> List[Ranking]:
+    async def _rank(self, query_document_pairs: List[Tuple[str, str]]) -> List[Tuple[str, float]]:
         results = await asyncio.gather(
             *[self.search_relevancy(query=query, document=document) for (query, document) in query_document_pairs]
         )
@@ -102,8 +102,6 @@ class OpenAIReranker(BaseDocumentCompressor):
 
             ranked_results.append((query_document_pairs[idx][1], score))  # (document, score)
 
-        # Sort documents by relevance score
-        ranked_results.sort(key=lambda x: x[1], reverse=True)
         return ranked_results
 
     async def compress_documents(
@@ -128,7 +126,11 @@ class OpenAIReranker(BaseDocumentCompressor):
             document_text, score = ranking
             doc.metadata["relevance_score"] = score
             doc.metadata["is_relevant"] = score > self.filtering_threshold
-            compressed.append(doc)
+            # Add the document to the compressed list if it is relevant or if we are not removing irrelevant documents
+            if not self.remove_irrelevant:
+                compressed.append(doc)
+            elif doc.metadata["is_relevant"]:
+                compressed.append(doc)
 
         log.info(f"Compression complete. {len(compressed)} documents returned")
         if not compressed:
@@ -145,19 +147,3 @@ class OpenAIReranker(BaseDocumentCompressor):
             "temperature": self.temperature,
             "remove_irrelevant": self.remove_irrelevant,
         }
-
-
-async def _test_openai_reranker():
-    openai_reranker = OpenAIReranker()
-    openai_reranker.top_n = 5
-    openai_reranker.model_post_init(None)
-    results = await openai_reranker.compress_documents(
-        documents=[Document(page_content="Trump declared that he likes cats more than dogs"),
-                   Document(page_content="Trump declared that he likes AI")],
-        query="Trump opinion on animals",
-    )
-    print(results)
-
-
-if __name__ == "__main__":
-    asyncio.run(_test_openai_reranker())

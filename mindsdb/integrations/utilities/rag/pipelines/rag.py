@@ -1,10 +1,14 @@
+from copy import copy
+
 from langchain_core.output_parsers import StrOutputParser
+from langchain.retrievers import ContextualCompressionRetriever
+
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableParallel, RunnablePassthrough, RunnableSerializable
 
 from mindsdb.integrations.utilities.rag.retrievers.auto_retriever import AutoRetriever
 from mindsdb.integrations.utilities.rag.retrievers.multi_vector_retriever import MultiVectorRetriever
-from mindsdb.integrations.handlers.openai_handler.reranker import Reranker
+from mindsdb.integrations.utilities.rag.rerankers.reranker_compressor import OpenAIReranker
 from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel, DEFAULT_AUTO_META_PROMPT_TEMPLATE
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RERANKER_FLAG
 
@@ -22,7 +26,7 @@ class LangChainRAGPipeline:
         self.prompt_template = prompt_template
         self.llm = llm
         if reranker:
-            self.reranker = Reranker()
+            self.reranker = OpenAIReranker()
         else:
             self.reranker = None
 
@@ -46,6 +50,13 @@ class LangChainRAGPipeline:
             raise ValueError("One of the required components (prompt) is None")
         if self.llm is None:
             raise ValueError("One of the required components (llm) is None")
+
+        if self.reranker:
+            reranker = self.reranker
+            retriever = copy(self.retriever_runnable)
+            self.retriever_runnable = ContextualCompressionRetriever(
+                base_compressor=reranker, base_retriever=retriever
+            )
 
         rag_chain_from_docs = (
                 RunnablePassthrough.assign(context=(lambda x: format_docs(x["context"])))  # noqa: E126, E122

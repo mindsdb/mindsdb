@@ -6,12 +6,12 @@ from pydantic import BaseModel
 from langchain.schema import Document
 from langchain_core.callbacks import Callbacks
 from langchain.retrievers.document_compressors.base import BaseDocumentCompressor
+from langchain.chat_models import ChatOpenAI
+from langchain.schema import SystemMessage, HumanMessage
 import logging
-import openai
 import asyncio
 import math
 from mindsdb.integrations.handlers.rag_handler.settings import DEFAULT_RERANKING_MODEL
-from openai import AsyncOpenAI
 
 log = logging.getLogger(__name__)
 
@@ -50,8 +50,6 @@ class OpenAIReranker(BaseDocumentCompressor):
                 raise ValueError(
                     f"OpenAI API key must be provided either through the 'openai_api_key' parameter or the {self._api_key_var} environment variable."
                 )
-            openai.api_key = api_key
-            self.client = openai
 
     def _get_client(self) -> Any:
         """Ensure client is initialized and return it."""
@@ -62,42 +60,49 @@ class OpenAIReranker(BaseDocumentCompressor):
     async def search_relevancy(self, query: str, document: str) -> Any:
         openai_api_key = self.openai_api_key or os.getenv(self._api_key_var)
 
-        client = AsyncOpenAI(api_key=openai_api_key)
+        # Initialize the ChatOpenAI client
+        client = ChatOpenAI(api_key=openai_api_key, model="gpt-4", temperature=0, logprobs=True)
 
+        # Create the message history for the conversation
         message_history = [
-            {
-                "role": "system",
-                "content": """Your task is to classify whether the document is relevant to the search query provided below. Answer just "YES" or "NO". """
-            },
-            {
-                "role": "user",
-                "content": f"""Document: ```{document}```; Search query: ```{query}```"""
-            },
+            SystemMessage(
+                content="""Your task is to classify whether the document is relevant to the search query provided below. Answer just "YES" or "NO"."""),
+            HumanMessage(content=f"""Document: ```{document}```; Search query: ```{query}```""")
         ]
-        response = await client.chat.completions.create(
-            model="gpt-4o",
-            messages=message_history,
-            temperature=0,
-            logprobs=True,
-            max_tokens=1,
+
+        # Generate the response using LangChain's chat model
+        response = await client.agenerate(
+            messages=[message_history],
+            max_tokens=1
         )
-        return response
+
+        # Return the response from the model
+        return response.generations[0]
 
     async def _rank(self, query_document_pairs: List[Tuple[str, str]]) -> List[Tuple[str, float]]:
+        # Gather results asynchronously for all query-document pairs
         results = await asyncio.gather(
             *[self.search_relevancy(query=query, document=document) for (query, document) in query_document_pairs]
         )
+
         ranked_results = []
+
         for idx, result in enumerate(results):
-            prob = math.exp(result.choices[0].logprobs.content[0].logprob)
-            answer = result.choices[0].logprobs.content[0].token
+            # Extract the log probability (assuming logprobs are provided in LangChain response)
+            msg = result[0].message
+            logprob = msg.response_metadata['logprobs']['content'][0]['logprob']
+            prob = math.exp(logprob)
+            answer = result[0].message.content  # The model's "YES" or "NO" response
+
+            # Calculate the score based on the model's response
             if answer == "YES":
                 score = prob
             elif answer == "NO":
                 score = 1 - prob
             else:
-                score = 0.0
+                score = 0.0  # Default if something unexpected happens
 
+            # Append the document and score to the result
             ranked_results.append((query_document_pairs[idx][1], score))  # (document, score)
 
         return ranked_results

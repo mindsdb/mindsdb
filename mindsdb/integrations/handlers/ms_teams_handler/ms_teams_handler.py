@@ -144,17 +144,37 @@ class MSTeamsHandler(APIChatHandler):
         params = {
             'polling': {
                 'type': 'message_count',
-                'table': 'chats',
-                'chat_id_col': 'id',
-                'count_col': 'lastMessagePreview_id'
             },
-            'chat_table': {
-                'name': 'chat_messages',
-                'chat_id_col': 'chatId',
-                'username_col': 'from_user_displayName',
-                'text_col': 'body_content',
-                'time_col': 'createdDateTime',
-            }
+            'tables': [
+                {
+                    'polling': {
+                        'table': 'chats',
+                        'chat_id_col': 'id',
+                        'count_col': 'lastMessagePreview_id'
+                    },
+                    'chat_table': {
+                        'name': 'chat_messages',
+                        'chat_id_col': 'chatId',
+                        'username_col': 'from_user_displayName',
+                        'text_col': 'body_content',
+                        'time_col': 'createdDateTime',
+                    }
+                },
+                {
+                    'polling': {
+                        'table': 'channels',
+                        'chat_id_col': ['teamId', 'id'],
+                        'count_col': 'lastMessagePreview_id'
+                    },
+                    'chat_table': {
+                        'name': 'channel_messages',
+                        'chat_id_col': ['channelIdentity_teamId', 'channelIdentity_channelId'],
+                        'username_col': 'from_user_displayName',
+                        'text_col': 'body_content',
+                        'time_col': 'createdDateTime',
+                    }
+                }
+            ]
         }
 
         return params

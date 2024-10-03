@@ -48,15 +48,6 @@ class ChatBotTask(BaseTask):
         self.bot_params = bot_record.params or {}
 
         chat_params = self.chat_handler.get_chat_config()
-        self.bot_params['bot_username'] = self.chat_handler.get_my_user_name()
-
-        self.session = SessionController()
-
-    def run(self, stop_event):
-
-        # TODO check deleted, raise errors
-        # TODO checks on delete predictor / project/ integration
-
         polling = chat_params['polling']['type']
         if polling == 'message_count':
             chat_params = chat_params['tables'] if 'tables' in chat_params else [chat_params]
@@ -73,6 +64,15 @@ class ChatBotTask(BaseTask):
 
         else:
             raise Exception(f"Not supported polling: {polling}")
+
+        self.bot_params['bot_username'] = self.chat_handler.get_my_user_name()
+
+        self.session = SessionController()
+
+    def run(self, stop_event):
+
+        # TODO check deleted, raise errors
+        # TODO checks on delete predictor / project/ integration
 
         self.chat_pooling.run(stop_event)
 

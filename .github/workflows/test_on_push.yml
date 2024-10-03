@@ -125,7 +125,7 @@ jobs:
           # Install from the pip package
           # If we install from source, we don't know if the pip package is installable.
           cd dist
-          uv pip install --system --ignore-installed *.tar.gz
+          uv pip install --system *.tar.gz
 
   unit_tests:
     name: Run Unit Tests

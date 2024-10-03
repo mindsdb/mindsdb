@@ -119,12 +119,13 @@ jobs:
         run: |
           # Install dev requirements and build our pip package
           pip install -r requirements/requirements-dev.txt
+          pip install uv
           python setup.py sdist
 
           # Install from the pip package
           # If we install from source, we don't know if the pip package is installable.
           cd dist
-          pip install --ignore-installed *.tar.gz
+          uv pip install --system --ignore-installed *.tar.gz
 
   unit_tests:
     name: Run Unit Tests

@@ -60,8 +60,6 @@ class LangChainRAGPipeline:
 
         rag_chain_from_docs = (
                 RunnablePassthrough.assign(context=(lambda x: format_docs(x["context"])))  # noqa: E126, E122
-                | (
-                    self.reranker if self.reranker is not None else RunnablePassthrough())  # Add reranking step if reranker exists
                 | prompt
                 | self.llm
                 | StrOutputParser()

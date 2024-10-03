@@ -30,8 +30,6 @@ class OpenAIReranker(BaseDocumentCompressor):
     temperature: float = 0.0  # Temperature for the model
     openai_api_key: Optional[str] = None
     remove_irrelevant: bool = True  # New flag to control removal of irrelevant documents,
-    # by default it will remove irrelevant documents
-    top_n: int = 5  # Number of documents to return
 
     _api_key_var: str = "OPENAI_API_KEY"
     client: Optional[Any] = None
@@ -112,8 +110,8 @@ class OpenAIReranker(BaseDocumentCompressor):
     ) -> Sequence[Document]:
         """Compress documents using OpenAI's rerank capability with individual document assessment."""
         log.info(f"Compressing documents. Initial count: {len(documents)}")
-        if len(documents) == 0 or self.top_n < 1:
-            log.warning("No documents to compress or top_n < 1. Returning empty list.")
+        if len(documents) == 0:
+            log.warning("No documents to compress. Returning empty list.")
             return []
 
         doc_contents = [doc.page_content for doc in documents]
@@ -143,7 +141,6 @@ class OpenAIReranker(BaseDocumentCompressor):
         """Get the identifying parameters."""
         return {
             "model": self.model,
-            "top_n": self.top_n,
             "temperature": self.temperature,
             "remove_irrelevant": self.remove_irrelevant,
         }

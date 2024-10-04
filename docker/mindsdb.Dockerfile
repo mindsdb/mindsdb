@@ -71,29 +71,29 @@ RUN --mount=type=cache,target=/root/.cache uv pip install --no-deps "."
 
 # Same as build image, but with dev dependencies installed.
 # This image is used in our docker-compose
-# FROM build as dev
-# WORKDIR /mindsdb
+FROM build as dev
+WORKDIR /mindsdb
 
-# # "rm ... docker-clean" stops docker from removing packages from our cache
-# # https://github.com/moby/buildkit/blob/master/frontend/dockerfile/docs/reference.md#example-cache-apt-packages
-# RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
-# RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
-#     --mount=target=/var/cache/apt,type=cache,sharing=locked \
-#     apt update && apt-get upgrade -y \
-#     && apt-get install -y libpq5 freetds-bin curl
-# RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked uv pip install --system -r requirements/requirements-dev.txt
+# "rm ... docker-clean" stops docker from removing packages from our cache
+# https://github.com/moby/buildkit/blob/master/frontend/dockerfile/docs/reference.md#example-cache-apt-packages
+RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
+RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
+    --mount=target=/var/cache/apt,type=cache,sharing=locked \
+    apt update && apt-get upgrade -y \
+    && apt-get install -y libpq5 freetds-bin curl
+RUN --mount=type=cache,target=/root/.cache uv pip install -r requirements/requirements-dev.txt
 
-# COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
+COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
 
-# ENV PYTHONUNBUFFERED 1
-# ENV MINDSDB_DOCKER_ENV 1
+ENV PYTHONUNBUFFERED 1
+ENV MINDSDB_DOCKER_ENV 1
 
-# EXPOSE 47334/tcp
-# EXPOSE 47335/tcp
-# EXPOSE 47336/tcp
+EXPOSE 47334/tcp
+EXPOSE 47335/tcp
+EXPOSE 47336/tcp
 
-# ENTRYPOINT [ "sh", "-c", "python -m mindsdb --config=/root/mindsdb_config.json --api=http,mysql,mongodb" ]
+ENTRYPOINT [ "sh", "-c", "python -m mindsdb --config=/root/mindsdb_config.json --api=http,mysql,mongodb" ]
 
 
 

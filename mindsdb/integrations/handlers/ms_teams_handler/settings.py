@@ -113,6 +113,7 @@ class MSTeamsHandlerConfig(BaseSettings):
         "webUrl",
         "membershipType",
         "teamId",
+        "lastMessagePreview_id"
     ]
 
     CHANNEL_MESSAGES_TABLE_COLUMNS: List = [

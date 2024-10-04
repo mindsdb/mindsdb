@@ -1,74 +1,106 @@
-# SAP HANA Handler
+---
+title: SAP HANA
+sidebarTitle: SAP HANA
+---
 
-This is the implementation of the SAP HANA handler for MindsDB.
+This documentation describes the integration of MindsDB with [SAP HANA](https://www.sap.com/products/technology-platform/hana/what-is-sap-hana.html), a multi-model database with a column-oriented in-memory design that stores data in its memory instead of keeping it on a disk.
+The integration allows MindsDB to access data from SAP HANA and enhance SAP HANA with AI capabilities.
 
-## SAP HANA
+## Prerequisites
 
-SAP HANA (High-performance ANalytic Appliance) is a multi-model database that stores data in its memory instead of keeping it on a disk. The column-oriented in-memory database design used by SAP HANA allows users to run advanced analytics alongside high-speed transactions in a single system. [Read more](https://www.sap.com/products/technology-platform/hana/what-is-sap-hana.html).
+Before proceeding, ensure the following prerequisites are met:
 
-## Implementation
+1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
+2. To connect SAP HANA to MindsDB, install the required dependencies following [this instruction](https://docs.mindsdb.com/setup/self-hosted/docker#install-dependencies).
 
-This handler was implemented using `hdbcli` - the Python driver for SAP HANA.
+## Connection
 
-The required arguments to establish a connection are,
+Establish a connection to SAP HANA from MindsDB by executing the following SQL command and providing its [handler name](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/hana_handler) as an engine.
 
-* `host`: the host name or IP address of the SAP HANA instance
-* `port`: the port number of the SAP HANA instance
-* `user`: specifies the user name
-* `password`: specifies the password for the user
-* `schema`: sets the current schema, which is used for identifiers without a schema
+```sql
+CREATE DATABASE sap_hana_datasource
+WITH
+    ENGINE = 'hana',
+    PARAMETERS = {
+        "address": "123e4567-e89b-12d3-a456-426614174000.hana.trial-us10.hanacloud.ondemand.com",
+        "port": "443",
+        "user": "demo_user",
+        "password": "demo_password",
+        "encrypt": true
+    };
+```
+
+Required connection parameters include the following:
+
+* `address`: The hostname, IP address, or URL of the SAP HANA database.
+* `port`: The port number for connecting to the SAP HANA database.
+* `user`: The username for the SAP HANA database.
+* `password`: The password for the SAP HANA database.
+
+Optional connection parameters include the following:
+
+* 'database': The name of the database to connect to. This parameter is not used for SAP HANA Cloud.
+* `schema`: The database schema to use. Defaults to the user's default schema.
+* `encrypt`: The setting to enable or disable encryption. Defaults to `True'
 
 ## Usage
 
-Assuming you created a schema in SAP HANA called `MINDSDB` and you have a table called `TEST` that was created using
-the following SQL statements:
+Retrieve data from a specified table by providing the integration, schema and table names:
 
-~~~~sql
-CREATE SCHEMA MINDSDB;
+```sql
+SELECT *
+FROM sap_hana_datasource.schema_name.table_name
+LIMIT 10;
+```
 
-CREATE TABLE MINDSDB.TEST
-(
-    ID          INTEGER NOT NULL,
-    NAME        NVARCHAR(1),
-    DESCRIPTION NVARCHAR(1)
+Run Teradata SQL queries directly on the connected Teradata database:
+
+```sql
+SELECT * FROM sap_hana_datasource (
+
+    --Native Query Goes Here
+    SELECT customer, year, SUM(sales)
+        FROM t1
+        GROUP BY ROLLUP(customer, year);
+
+    SELECT customer, year, SUM(sales)
+        FROM t1
+        GROUP BY GROUPING SETS
+        (
+        (customer, year),
+        (customer)
+        )
+    UNION ALL
+    SELECT NULL, NULL, SUM(sales)
+        FROM t1;    
+
 );
+```
 
-CREATE UNIQUE INDEX MINDSDB.TEST_ID_INDEX
-    ON MINDSDB.TEST (ID);
+<Note>
+The above examples utilize `sap_hana_datasource` as the datasource name, which is defined in the `CREATE DATABASE` command.
+</Note>
 
-ALTER TABLE MINDSDB.TEST
-    ADD CONSTRAINT TEST_PK
-        PRIMARY KEY (ID);
+## Troubleshooting
 
-INSERT INTO MINDSDB.TEST
-VALUES (1, 'h', 'w');
-~~~~
+<Warning>
+`Database Connection Error`
 
-In order to make use of this handler and connect to the SAP HANA database in MindsDB, the following syntax can be used:
+* **Symptoms**: Failure to connect MindsDB with the SAP HANA database.
+* **Checklist**:
+    1. Make sure the SAP HANA database is active.
+    2. Confirm that address, port, user and password are correct. Try a direct connection using a client like DBeaver.
+    3. Ensure a stable network between MindsDB and SAP HANA.
+</Warning>
 
-~~~~sql
-CREATE DATABASE sap_hana_trial
-WITH ENGINE = 'hana', 
-PARAMETERS = {
-    "user": "DBADMIN",
-    "password": "password",
-    "host": "<uuid>.hana.trial-us10.hanacloud.ondemand.com",
-    "port": "443",
-    "schema": "MINDSDB",
-    "encrypt": true
-};
-~~~~
+<Warning>
+`SQL statement cannot be parsed by mindsdb_sql`
 
-**Note**: The above example assumes usage of SAP HANA Cloud, which requires the `encrypt` parameter to be set to `true` and uses port `443`.
-
-Now, you can use this established connection to query your database as follows:
-
-~~~~sql
-SELECT * FROM sap_hana_trial.test
-~~~~
-
-| ID | NAME | DESCRIPTION |
-|----|------|-------------|
-| 1  | h    | w           |
-
-![MindsDB using SAP HANA Integration](https://i.imgur.com/okXNhoc.jpg)
+* **Symptoms**: SQL queries failing or not recognizing table names containing spaces or special characters.
+* **Checklist**:
+    1. Ensure table names with spaces or special characters are enclosed in backticks.
+    2. Examples:
+        * Incorrect: SELECT * FROM integration.travel-data
+        * Incorrect: SELECT * FROM integration.'travel-data'
+        * Correct: SELECT * FROM integration.\`travel-data\`
+</Warning>

@@ -22,6 +22,7 @@ from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langchain_core.prompts import PromptTemplate
 from langchain_core.tools import Tool
 from langfuse import Langfuse
+from langfuse.api.resources.commons.errors.not_found_error import NotFoundError as TraceNotFoundError
 from langfuse.callback import CallbackHandler
 
 from mindsdb.integrations.handlers.openai_handler.constants import (
@@ -200,7 +201,8 @@ class LangchainAgent:
             self.langfuse = Langfuse(
                 public_key=os.getenv('LANGFUSE_PUBLIC_KEY'),
                 secret_key=os.getenv('LANGFUSE_SECRET_KEY'),
-                host=os.getenv('LANGFUSE_HOST')
+                host=os.getenv('LANGFUSE_HOST'),
+                release=os.getenv('LANGFUSE_RELEASE', 'local'),
             )
 
         # agent is using current langchain model
@@ -288,9 +290,16 @@ class LangchainAgent:
             self.api_trace.update(output=response)
 
             # update metadata with tool usage
-            trace = self.langfuse.get_trace(self.trace_id)
-            trace_metadata['tool_usage'] = get_tool_usage(trace)
-            self.api_trace.update(metadata=trace_metadata)
+            try:
+                # Ensure all batched traces are sent before fetching.
+                self.langfuse.flush()
+                trace = self.langfuse.get_trace(self.trace_id)
+                trace_metadata['tool_usage'] = get_tool_usage(trace)
+                self.api_trace.update(metadata=trace_metadata)
+            except TraceNotFoundError:
+                logger.warning(f'Langfuse trace {self.trace_id} not found')
+            except Exception as e:
+                logger.error(f'Something went wrong while processing Langfuse trace {self.trace_id}: {str(e)}')
         return response
 
     def _get_completion_stream(
@@ -465,10 +474,14 @@ class LangchainAgent:
                     tags=get_tags(metadata),
                     metadata=metadata,
                 )
-                if not self.langfuse_callback_handler.auth_check():
-                    logger.error(
-                        f"Incorrect Langfuse credentials provided to Langchain handler. Full args: {args}"
-                    )
+                try:
+                    # This try is critical to catch fatal errors which would otherwise prevent the agent from running properly
+                    if not self.langfuse_callback_handler.auth_check():
+                        logger.error(
+                            f"Incorrect Langfuse credentials provided to Langchain handler. Full args: {args}"
+                        )
+                except Exception as e:
+                    logger.error(f'Something went wrong while running langfuse_callback_handler.auth_check {str(e)}')
 
             # custom tracer
             if self.mdb_langfuse_callback_handler is None:

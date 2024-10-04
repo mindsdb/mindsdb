@@ -2,73 +2,149 @@ import pandas as pd
 from ckanapi import RemoteCKAN
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable
 from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse,
     HandlerResponse,
+    HandlerStatusResponse,
     RESPONSE_TYPE,
 )
 from mindsdb_sql.parser import ast
 from mindsdb.utilities import log
+from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 
 logger = log.getLogger(__name__)
 
 
-class DynamicResourceTable(APITable):
-    """
-    A class representing a CKAN resource table that is fetched dynamically
-    """
-    def __init__(self, handler, resource_id, resource_name):
-        super().__init__(handler)
-        self.resource_id = resource_id
-        self.resource_name = resource_name
-        self._fields = None
-
-    @property
-    def fields(self):
-        if self._fields is None:
-            self._fetch_fields()
-        return self._fields
-
-    def _fetch_fields(self):
-        resource_info = self.handler.call_ckan_api(
-            "datastore_search", {"resource_id": self.resource_id, "limit": 0}
-        )
-        self._fields = resource_info.get("fields", [])
-
+class PackageIDsTable(APITable):
     def select(self, query: ast.Select) -> HandlerResponse:
-        params = {"resource_id": self.resource_id, "limit": 100}
+        conditions = extract_comparison_conditions(query.where) if query.where else []
+        limit = query.limit.value if query.limit else 1000
 
-        # Handle WHERE conditions
-        if query.where:
-            conditions = query.where.get_conditions()
-            for op, arg1, arg2 in conditions:
-                if op == "=":
-                    params[arg1] = arg2
-                elif op in (">", "<", ">=", "<="):
-                    params[f"{arg1}{op}"] = arg2
+        packages = self.list(conditions, limit)
+        return HandlerResponse(RESPONSE_TYPE.TABLE, packages)
 
-        # Handle LIMIT clause
-        if query.limit:
-            params["limit"] = query.limit.value
+    def list(self, conditions=None, limit=1000):
+        self.handler.connect()
+        package_list = self.handler.call_ckan_api("package_search", {"rows": limit})
+        packages = package_list.get("results", [])
+
+        data = []
+        # Get only datastore active resources
+        for pkg in packages:
+            datastore_active_resources = [
+                r for r in pkg.get("resources", []) if r.get("datastore_active")
+            ]
+            data.append(
+                {
+                    "id": pkg.get("id"),
+                    "name": pkg.get("name"),
+                    "title": pkg.get("title"),
+                    "num_resources": len(pkg.get("resources", [])),
+                    "num_datastore_active_resources": len(datastore_active_resources),
+                }
+            )
+
+        return pd.DataFrame(data)
+
+    # Define the columns that will be returned by the table
+    # Maybe we can make this dynamic in the future
+    def get_columns(self):
+        return [
+            "id",
+            "name",
+            "title",
+            "num_resources",
+            "num_datastore_active_resources",
+        ]
+
+
+class ResourceIDsTable(APITable):
+    def select(self, query: ast.Select) -> HandlerResponse:
+        conditions = extract_comparison_conditions(query.where) if query.where else []
+        limit = query.limit.value if query.limit else 1000
+
+        resources = self.list(conditions, limit)
+        return HandlerResponse(RESPONSE_TYPE.TABLE, resources)
+
+    def list(self, conditions=None, limit=1000):
+        self.handler.connect()
+        package_list = self.handler.call_ckan_api("package_search", {"rows": limit})
+        packages = package_list.get("results", [])
+
+        data = []
+        for package in packages:
+            for resource in package.get("resources", []):
+                # Get only datastore active resources
+                if resource.get("datastore_active"):
+                    data.append(
+                        {
+                            "id": resource.get("id"),
+                            "package_id": package.get("id"),
+                            "name": resource.get("name"),
+                            "format": resource.get("format"),
+                            "url": resource.get("url"),
+                            "datastore_active": resource.get("datastore_active"),
+                        }
+                    )
+                if len(data) >= limit:
+                    break
+            if len(data) >= limit:
+                break
+
+        return pd.DataFrame(data)
+
+    def get_columns(self):
+        return [
+            "id",
+            "package_id",
+            "name",
+            "format",
+            "url",
+            "datastore_active",
+        ]
+
+
+class DatastoreTable(APITable):
+    def select(self, query: ast.Select) -> HandlerResponse:
+        conditions = extract_comparison_conditions(query.where) if query.where else []
+        limit = query.limit.value if query.limit else 100
+
+        resource_id = None
+        other_conditions = []
+        for condition in conditions:
+            if isinstance(condition, list) and len(condition) == 3:
+                op, col, val = condition
+                if col == "resource_id" and op == "=":
+                    resource_id = val
+                else:
+                    other_conditions.append(condition)
+
+        if not resource_id:
+            # We are handling this by design, as we want to the user to provide a resource_id
+            message = "Please provide a resource_id in your query. Example: SELECT * FROM datastore WHERE resource_id = 'your_resource_id'"
+            df = pd.DataFrame({"message": [message]})
+            return HandlerResponse(RESPONSE_TYPE.TABLE, df)
+
+        data = self.query_datastore(resource_id, other_conditions, limit)
+        return HandlerResponse(RESPONSE_TYPE.TABLE, data)
+
+    def query_datastore(self, resource_id, conditions, limit):
+        params = {"resource_id": resource_id, "limit": limit}
+
+        filters = {}
+        for condition in conditions:
+            op, col, val = condition
+            if op == "=":
+                filters[col] = val
+
+        if filters:
+            params["filters"] = filters
 
         result = self.handler.call_ckan_api("datastore_search", params)
 
-        # Collect the columns to return in the result
-        columns = [
-            target.parts[-1]
-            for target in query.targets
-            if isinstance(target, ast.Identifier)
-        ]
-
-        if not columns or "*" in columns:
-            columns = result.columns
-
-        return HandlerResponse(RESPONSE_TYPE.TABLE, result[columns])
+        records = result.get("records", [])
+        return pd.DataFrame(records)
 
     def get_columns(self):
-        """
-        Get the columns of the table for each resource
-        """
-        return [field["id"] for field in self.fields]
+        return [field['id'] for field in self.fields]
 
 
 class CkanHandler(APIHandler):
@@ -79,9 +155,14 @@ class CkanHandler(APIHandler):
         self.connection = None
         self.is_connected = False
         self.connection_args = kwargs.get("connection_data", {})
-        self.tables = {}
-        self.resource_metadata = None
-        self.id_to_name = {}
+
+        self.package_ids_table = PackageIDsTable(self)
+        self.resource_ids_table = ResourceIDsTable(self)
+        self.datastore_table = DatastoreTable(self)
+
+        self._register_table("package_ids", self.package_ids_table)
+        self._register_table("resource_ids", self.resource_ids_table)
+        self._register_table("datastore", self.datastore_table)
 
     def connect(self):
         if self.is_connected:
@@ -91,123 +172,75 @@ class CkanHandler(APIHandler):
         api_key = self.connection_args.get("api_key")
         if not url:
             raise ValueError("CKAN URL is required")
+
         try:
             self.connection = RemoteCKAN(url, apikey=api_key)
             self.is_connected = True
-            self._fetch_resource_metadata()
+            logger.info(f"Successfully connected to CKAN at {url}")
         except Exception as e:
             logger.error(f"Error connecting to CKAN: {e}")
             raise ConnectionError(f"Failed to connect to CKAN: {e}")
 
         return self.connection
 
-    def _fetch_resource_metadata(self):
-        if self.resource_metadata is None:
-            try:
-                metadata = self.call_ckan_api(
-                    "datastore_search", {"resource_id": "_table_metadata"}
-                )
-                self.resource_metadata = metadata.to_dict("records")
-                logger.debug(
-                    f"Fetched metadata for {len(self.resource_metadata)} resources"
-                )
-                # Attempt to create id_to_name mapping
-                for resource in self.resource_metadata:
-                    id_field = resource.get("id") or resource.get("name")
-                    name_field = resource.get("name") or resource.get("id")
-                    if id_field and name_field:
-                        self.id_to_name[id_field] = name_field
-
-                logger.debug(
-                    f"Created id_to_name mapping for {len(self.id_to_name)} resources"
-                )
-            except Exception as e:
-                logger.error(f"Error fetching resource metadata: {e}")
-                pass
-
-    def _register_table(self, resource_id):
-        """
-        Register a table with the given resource ID
-        """
-        if resource_id not in self.tables:
-            resource_name = self.id_to_name.get(resource_id, resource_id)
-            table = DynamicResourceTable(self, resource_id, resource_name)
-            super()._register_table(resource_id, table)
-            self.tables[resource_id] = table
-            self.tables[resource_name] = table
-            logger.info(f"Registered table: {resource_name} (ID: {resource_id})")
-
     def check_connection(self) -> HandlerStatusResponse:
         try:
             self.connect()
             return HandlerStatusResponse(success=True)
         except Exception as e:
+            logger.error(f"Error checking connection: {e}")
             return HandlerStatusResponse(success=False, error_message=str(e))
 
-    def get_tables(self) -> HandlerResponse:
-        self.connect()
-        table_names = list(self.id_to_name.values())
-        return HandlerResponse(
-            RESPONSE_TYPE.TABLE, pd.DataFrame({"table_name": table_names})
-        )
-
-    def get_table(self, table_name):
-        self.connect()
-
-        logger.info(f"Attempting to get table: {table_name}")
-
-        if isinstance(table_name, ast.Identifier):
-            table_name = table_name.parts[-1]
-        table_name = table_name.strip("`")
-
-        if table_name in self.tables:
-            return self.tables[table_name]
-
-        # Check if table_name is a resource ID
-        if table_name in self.id_to_name:
-            self._register_table(table_name)
-            return self.tables[table_name]
-
-        # Check if table_name is a resource name
-        for resource_id, resource_name in self.id_to_name.items():
-            if resource_name == table_name:
-                self._register_table(resource_id)
-                return self.tables[resource_name]
-
-        raise ValueError(f"Table {table_name} not found")
-
-    def query(self, query: ast.Select) -> HandlerResponse:
-        table = self.get_table(query.from_table)
-        return table.select(query)
-
-    def native_query(self, query: str = None) -> HandlerResponse:
-        method, params = self.parse_native_query(query)
-        df = self.call_ckan_api(method, params)
-        return HandlerResponse(RESPONSE_TYPE.TABLE, df)
-
-    def call_ckan_api(self, method_name: str, params: dict) -> pd.DataFrame:
+    def call_ckan_api(self, method_name: str, params: dict):
         connection = self.connect()
         method = getattr(connection.action, method_name)
 
         try:
             result = method(**params)
-            if "records" in result:
-                df = pd.DataFrame(result["records"])
-                return df
-            else:
-                return pd.DataFrame(result)
+            return result
         except Exception as e:
             logger.error(f"Error calling CKAN API: {e}")
             raise RuntimeError(f"Failed to call CKAN API: {e}")
 
+    def query(self, query: ast.Select) -> HandlerResponse:
+        table_name = query.from_table.parts[-1]
+
+        if table_name == "package_ids":
+            return self.package_ids_table.select(query)
+        elif table_name == "resource_ids":
+            return self.resource_ids_table.select(query)
+        elif table_name == "datastore":
+            return self.datastore_table.select(query)
+        else:
+            raise ValueError(f"Unknown table: {table_name}")
+
+    def native_query(self, query: str) -> HandlerResponse:
+        method, params = self.parse_native_query(query)
+        try:
+            result = self.call_ckan_api(method, params)
+            if isinstance(result, list):
+                df = pd.DataFrame(result)
+            elif isinstance(result, dict):
+                df = pd.DataFrame([result])
+            else:
+                df = pd.DataFrame([{"result": result}])
+            return HandlerResponse(RESPONSE_TYPE.TABLE, df)
+        except Exception as e:
+            logger.error(f"Error executing native query: {e}")
+            return HandlerResponse(RESPONSE_TYPE.ERROR, error_message=str(e))
+
     @staticmethod
     def parse_native_query(query: str):
         parts = query.split(":")
+        if len(parts) != 2:
+            raise ValueError(
+                "Invalid query format. Expected 'method_name:param1=value1,param2=value2'")
         method = parts[0].strip()
         params = {}
-        if len(parts) > 1:
+        if parts[1].strip():
             param_pairs = parts[1].split(",")
             for pair in param_pairs:
                 key, value = pair.split("=")
                 params[key.strip()] = value.strip()
+
         return method, params

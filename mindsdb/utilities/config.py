@@ -111,6 +111,16 @@ class Config():
             ml_queue['username'] = os.environ.get('MINDSDB_ML_QUEUE_USERNAME')
             ml_queue['password'] = os.environ.get('MINDSDB_ML_QUEUE_PASSWORD')
 
+        # Check if credentials are set as environment variables and set the http_auth_enabled flag.
+        if os.environ.get('MINDSDB_USERNAME') and os.environ.get('MINDSDB_PASSWORD'):
+            auth = {
+                "auth": {
+                    "http_auth_enabled": True,
+                }
+            }
+
+        self._override_config.update(auth)
+
         api_host = "127.0.0.1" if not self.use_docker_env else "0.0.0.0"
         self._default_config = {
             'permanent_storage': {
@@ -120,8 +130,6 @@ class Config():
             'paths': paths,
             'auth': {
                 'http_auth_enabled': False,
-                'username': 'mindsdb',
-                'password': ''
             },
             "log": {
                 "level": {

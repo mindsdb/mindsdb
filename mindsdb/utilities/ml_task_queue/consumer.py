@@ -27,6 +27,7 @@ from mindsdb.utilities.ml_task_queue.const import (
     TASKS_STREAM_CONSUMER_GROUP_NAME
 )
 from mindsdb.utilities import log
+from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
 
 logger = log.getLogger(__name__)
 

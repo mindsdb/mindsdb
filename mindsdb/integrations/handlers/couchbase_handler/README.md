@@ -8,15 +8,15 @@ This handler was implemented using the `couchbase` library, the Python driver fo
 
 The required arguments to establish a connection are:
 
-* `connection_string`: the Connection string to specify the cluster endpoint
+* `connection_string`: the connection string for the endpoint of the Couchbase server
 * `bucket`: the bucket name to use when connecting with the Couchbase server
 * `user`: the user to authenticate with the Couchbase server
 * `password`: the password to authenticate the user with the Couchbase server
 * `scope`:  scopes are a level of data organization within a bucket. If omitted, will default to `_default`
 
-Note: The connection string expects the couchbases:// or couchbase:// part.
+Note: The connection string expects either the couchbases:// or couchbase:// protocol.
 
-If you are using Couchbase Capella, the `connection_string` can be found out when you navigate under the Connect tab.
+If you are using Couchbase Capella, you can find the `connection_string` under the Connect tab.
 It will also be required to whitelist the machine(s) that will be running MindsDB and database credentials will need to be created for the user. These steps can also be taken under the Connect tab.
 
 ## Usage

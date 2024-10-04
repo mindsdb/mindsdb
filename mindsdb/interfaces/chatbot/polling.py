@@ -18,16 +18,20 @@ class BasePolling:
     def start(self, stop_event):
         raise NotImplementedError
 
-    def send_message(self, message: ChatBotMessage):
-        chat_id = message.destination
+    def send_message(self, message: ChatBotMessage, table_name=None):
+        chat_id = message.destination if isinstance(message.destination, tuple) else (message.destination,)
         text = message.text
 
-        t_params = self.params["chat_table"]
+        t_params = self.params["chat_table"] if table_name is None else next(
+            (t["chat_table"] for t in self.params if t["chat_table"]["name"] == table_name)
+        )
+        chat_id_cols = t_params["chat_id_col"] if isinstance(t_params["chat_id_col"], list) else [t_params["chat_id_col"]]
+
         ast_query = Insert(
             table=Identifier(t_params["name"]),
-            columns=[t_params["chat_id_col"], t_params["text_col"]],
+            columns=[*chat_id_cols, t_params["text_col"]],
             values=[
-                [chat_id, text],
+                [*chat_id, text],
             ],
         )
 
@@ -44,22 +48,27 @@ class MessageCountPolling(BasePolling):
     def run(self, stop_event):
         while True:
             try:
-                chat_ids = self.check_message_count()
-                logger.debug(f"number of chat ids found: {len(chat_ids)}")
-                for chat_id in chat_ids:
-                    try:
-                        chat_memory = self.chat_task.memory.get_chat(chat_id)
-                    except Exception as e:
-                        logger.error(f"Problem retrieving chat memory: {e}")
+                for chat_params in self.params:
+                    chat_ids = self.check_message_count(chat_params)
+                    logger.debug(f"number of chat ids found: {len(chat_ids)}")
 
-                    try:
-                        message = self.get_last_message(chat_memory)
-                    except Exception as e:
-                        logger.error(f"Problem getting last message: {e}")
-                        message = None
+                    for chat_id in chat_ids:
+                        try:
+                            chat_memory = self.chat_task.memory.get_chat(
+                                chat_id,
+                                table_name=chat_params["chat_table"]["name"],
+                            )
+                        except Exception as e:
+                            logger.error(f"Problem retrieving chat memory: {e}")
 
-                    if message:
-                        self.chat_task.on_message(chat_memory, message)
+                        try:
+                            message = self.get_last_message(chat_memory)
+                        except Exception as e:
+                            logger.error(f"Problem getting last message: {e}")
+                            message = None
+
+                        if message:
+                            self.chat_task.on_message(chat_memory, message, table_name=chat_params["chat_table"]["name"])
 
             except Exception as e:
                 logger.error(e)
@@ -82,16 +91,16 @@ class MessageCountPolling(BasePolling):
             return
         return last_message
 
-    def check_message_count(self):
-        p_params = self.params["polling"]
+    def check_message_count(self, chat_params):
+        p_params = chat_params["polling"]
 
         chat_ids = []
 
-        id_col = p_params["chat_id_col"]
+        id_cols = p_params["chat_id_col"] if isinstance(p_params["chat_id_col"], list) else [p_params["chat_id_col"]]
         msgs_col = p_params["count_col"]
         # get chats status info
         ast_query = Select(
-            targets=[Identifier(id_col), Identifier(msgs_col)],
+            targets=[*[Identifier(id_col) for id_col in id_cols], Identifier(msgs_col)],
             from_table=Identifier(p_params["table"]),
         )
 
@@ -101,7 +110,7 @@ class MessageCountPolling(BasePolling):
 
         chats = {}
         for row in resp.data_frame.to_dict("records"):
-            chat_id = row[id_col]
+            chat_id = tuple(row[id_col] for id_col in id_cols)
             msgs = row[msgs_col]
 
             chats[chat_id] = msgs

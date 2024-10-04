@@ -120,7 +120,7 @@ class HuggingFaceHandler(BaseMLEngine):
             logger.debug(f'Model already downloaded!')
         ####
         # Otherwise download it
-        except OSError:
+        except (ValueError, OSError):
             try:
                 logger.debug(f"Downloading {model_name}...")
                 pipeline = transformers.pipeline(task=args['task_proper'], model=model_name)
@@ -277,7 +277,7 @@ class HuggingFaceHandler(BaseMLEngine):
                 model=hf_model_storage_path,
                 tokenizer=hf_model_storage_path,
             )
-        except OSError:
+        except (ValueError, OSError):
             # load from engine storage (i.e. 'common' models)
             hf_model_storage_path = self.engine_storage.folder_get(
                 args["model_name"]

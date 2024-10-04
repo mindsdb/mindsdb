@@ -77,6 +77,9 @@ class MySQLHandler(DatabaseHandler):
         if 'conn_attrs' in self.connection_data:
             config['conn_attrs'] = self.connection_data['conn_attrs']
 
+        if 'connection_timeout' not in config:
+            config['connection_timeout'] = 10
+
         ssl = self.connection_data.get('ssl')
         if ssl is True:
             ssl_ca = self.connection_data.get('ssl_ca')

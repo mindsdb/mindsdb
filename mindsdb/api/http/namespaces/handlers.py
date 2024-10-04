@@ -50,7 +50,9 @@ class HandlerIcon(Resource):
     @api_endpoint_metrics('GET', '/handlers/handler/icon')
     def get(self, handler_name):
         try:
-            handler_meta = ca.integration_controller.get_handler_meta(handler_name)
+            handler_meta = ca.integration_controller.get_handlers_metadata().get(handler_name)
+            if handler_meta is None:
+                return http_error(HTTPStatus.NOT_FOUND, 'Icon not found', f'Icon for {handler_name} not found')
             icon_name = handler_meta['icon']['name']
             handler_folder = handler_meta['import']['folder']
             mindsdb_path = Path(importlib.util.find_spec('mindsdb').origin).parent

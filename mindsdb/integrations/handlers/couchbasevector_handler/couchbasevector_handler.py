@@ -3,13 +3,12 @@ from datetime import timedelta
 import uuid
 
 import pandas as pd
-from urllib.parse import urlparse
 from couchbase.auth import PasswordAuthenticator
 from couchbase.cluster import Cluster
 from couchbase.exceptions import UnAmbiguousTimeoutException
 from couchbase.options import ClusterOptions
-from couchbase.exceptions import KeyspaceNotFoundException, CouchbaseException
-from typing import List, Optional, Union
+from couchbase.exceptions import CouchbaseException
+from typing import List, Union
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
@@ -117,7 +116,6 @@ class CouchbaseVectorHandler(VectorStoreHandler):
         if result.success is False and self.is_connected is True:
             self.is_connected = False
         return result
-    
 
     def _translate_conditions(self, conditions: List[FilterCondition]) -> Union[dict, None]:
         """
@@ -133,16 +131,16 @@ class CouchbaseVectorHandler(VectorStoreHandler):
             }
             for condition in conditions
         }
-    
+
     def _construct_full_after_from_query(self,
-        where_query: str,
-        limit_query: str,
-        offset_query: str,
-        search_query: str
-    ) -> str:
+                                         where_query: str,
+                                         limit_query: str,
+                                         offset_query: str,
+                                         search_query: str
+                                         ) -> str:
 
         return f"{where_query} {search_query} {limit_query} {offset_query} "
-    
+
     def _construct_where_query(self, filter_conditions=None):
         """
         Construct where querys from filter conditions
@@ -173,7 +171,7 @@ class CouchbaseVectorHandler(VectorStoreHandler):
 
     def _construct_search_query(self, table_name: str, field: str, vector: list, k: int, condition: str):
         """
-        Construct a SEARCH query for KNN 
+        Construct a SEARCH query for KNN
         :param table_name: Name of the table
         :param field: The field on which to perform the search (e.g., embeddings)
         :param vector: The vector to search against
@@ -222,9 +220,9 @@ class CouchbaseVectorHandler(VectorStoreHandler):
 
             where_query = self._construct_where_query(filter_conditions)
             if where_query == "":
-                search_query = self._construct_search_query(table_name,TableField.EMBEDDINGS.value,vector_filter.value,limit,"WHERE")
+                search_query = self._construct_search_query(table_name, TableField.EMBEDDINGS.value, vector_filter.value, limit, "WHERE")
             else:
-                search_query = self._construct_search_query(table_name,TableField.EMBEDDINGS.value,vector_filter.value,limit, "AND")
+                search_query = self._construct_search_query(table_name, TableField.EMBEDDINGS.value, vector_filter.value, limit, "AND")
             after_from_query = self._construct_full_after_from_query(
                 where_query, limit_query, offset_query, search_query
             )
@@ -264,7 +262,7 @@ class CouchbaseVectorHandler(VectorStoreHandler):
                 result = scope.query(query)
             except CouchbaseException as e:
                 raise Exception(f"Error while executing query: '{e}'")
-            
+
             ids = []
             documents = []
             for hit in result.rows():
@@ -315,8 +313,8 @@ class CouchbaseVectorHandler(VectorStoreHandler):
 
             if TableField.METADATA.value in record:
                 document[TableField.METADATA.value] = record[TableField.METADATA.value]
-            document_key = f"{table_name}::{doc_id}" 
-            
+            document_key = f"{table_name}::{doc_id}"
+
             collection.upsert(document_key, document)
         return Response(resp_type=RESPONSE_TYPE.OK)
 
@@ -344,7 +342,7 @@ class CouchbaseVectorHandler(VectorStoreHandler):
                         collection.replace(doc_id, updated_doc)
         except CouchbaseException as e:
             raise Exception(f"Error while updating document: '{e}'")
-        
+
     def delete(self, table_name: str, conditions: List[FilterCondition] = None):
         """
         Delete documents in Couchbase based on conditions.
@@ -357,7 +355,7 @@ class CouchbaseVectorHandler(VectorStoreHandler):
 
         query = f"DELETE FROM {table_name} {where_query}"
         try:
-            result = scope.query(query)
+            _ = scope.query(query)
         except CouchbaseException as e:
             raise Exception(f"Error while performing delete query index: '{e}'")
 
@@ -369,13 +367,11 @@ class CouchbaseVectorHandler(VectorStoreHandler):
         cluster = self.connect()
         bucket = cluster.bucket(self.bucket_name)
         scope = bucket.scope(self.scope)
-        collection = scope.collection(table_name)
+        _ = scope.collection(table_name)
         try:
-            bucket.collections().create_collection(scope_name="color",collection_name=table_name)
+            bucket.collections().create_collection(scope_name="color", collection_name=table_name)
         except Exception as e:
             raise Exception(f"Error while creating table: '{e}'")
-
-
 
     def drop_table(self, table_name: str, if_exists=True) -> Response:
         """
@@ -384,7 +380,7 @@ class CouchbaseVectorHandler(VectorStoreHandler):
         cluster = self.connect()
         bucket = cluster.bucket(self.bucket_name)
         scope = bucket.scope(self.scope)
-        collection = scope.collection(table_name)
+        _ = scope.collection(table_name)
         try:
             bucket.collections().drop_collection(table_name)
             return Response(resp_type=RESPONSE_TYPE.OK)
@@ -410,8 +406,8 @@ class CouchbaseVectorHandler(VectorStoreHandler):
             cluster = self.connect()
             bucket = cluster.bucket(self.bucket_name)
             scope = bucket.scope(self.scope)
-            collection = scope.collection(table_name)
-        except Exception as e:
+            _ = scope.collection(table_name)
+        except Exception:
             return Response(
                 resp_type=RESPONSE_TYPE.ERROR,
                 error_message=f"Table {table_name} does not exist!",

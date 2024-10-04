@@ -75,7 +75,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
 )
 from mindsdb.api.executor import exceptions as exec_exc
 
-from mindsdb.api.common import check_auth
+from mindsdb.api.common.check_auth import check_auth
 from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config

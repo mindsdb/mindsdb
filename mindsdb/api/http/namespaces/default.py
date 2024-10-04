@@ -35,7 +35,7 @@ def check_auth() -> bool:
 
         return True
 
-    return session.get('username') == os.environ.get('MINDSDB_HTTP_USERNAME')
+    return session.get('username') == os.environ.get('MINDSDB_USERNAME')
 
 
 @ns_conf.route('/login', methods=['POST'])
@@ -67,8 +67,8 @@ class LoginRoute(Resource):
             )
 
         if (
-            username != os.environ.get('MINDSDB_HTTP_USERNAME')
-            or password != os.environ.get('MINDSDB_HTTP_PASSWORD')
+            username != os.environ.get('MINDSDB_USERNAME')
+            or password != os.environ.get('MINDSDB_PASSWORD')
         ):
             return http_error(
                 401, 'Forbidden',

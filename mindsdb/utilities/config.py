@@ -112,11 +112,11 @@ class Config():
             ml_queue['password'] = os.environ.get('MINDSDB_ML_QUEUE_PASSWORD')
 
         # If only one of the username or password is set, raise an error.
-        http_username = os.environ.get('MINDSDB_HTTP_USERNAME')
-        http_password = os.environ.get('MINDSDB_HTTP_PASSWORD')
+        http_username = os.environ.get('MINDSDB_USERNAME')
+        http_password = os.environ.get('MINDSDB_PASSWORD')
         
         if bool(http_username) != bool(http_password):
-            raise ValueError('Both MINDSDB_HTTP_USERNAME and MINDSDB_HTTP_PASSWORD must be set together and must be non-empty strings.')
+            raise ValueError('Both MINDSDB_USERNAME and MINDSDB_PASSWORD must be set together and must be non-empty strings.')
 
         # If both username and password are set, enable HTTP auth.
         if http_username and http_password:

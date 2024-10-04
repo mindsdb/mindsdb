@@ -1,29 +1,53 @@
 ## CKAN Integration handler
 
-This handler is used to integrate with [CKAN](https://ckan.org/).
-CKAN is Data Catalogue for Open Data, and it stores data in a [DataStore](http://docs.ckan.org/en/2.9/maintaining/datastore.html). 
-To retrieve data from CKAN, you need to use the CKAN [API](https://ckan.org/docs/api/). 
+This handler facilitates integration with [CKAN](https://ckan.org/).
+an open-source data catalog platform for managing and publishing open data. CKAN organizes datasets and stores data in its [DataStore](http://docs.ckan.org/en/2.11/maintaining/datastore.html).To retrieve data from CKAN, the [CKAAPI](https://github.com/ckan/ckanapi) must be used.
 
+## Installation
 
-## Creating a CKAN API client
-Connecting to CKAN is done by creating a CKAN API client
-In this handler, you can create a CKAN API client with [ckanapi](https://github.com/ckan/ckanapi).
+To use the CKAN handler, you need to have MindsDB installed. If you haven't installed MindsDB yet, you can do so using pip:
 
-*Note: Some CKAN instances will require you to provide API key. You can find it in the CKAN user panel.
-
-```python
-from ckanapi import RemoteCKAN
-ckan = RemoteCKAN('https://ckan.example.com/', apikey='YOUR_API_KEY')
+```bash
+pip install mindsdb
 ```
 
-CKANAPI client supports all API methods of CKAN. 
-For our handler we are using the [DataStore API](http://docs.ckan.org/en/2.9/maintaining/datastore.html#the-datastore-api)
+The CKAN handler is included with MindsDB by default, so no additional installation is required.
 
-The [`datastore_search_sql` ](http://docs.ckan.org/en/2.9/maintaining/datastore.html#ckanext.datastore.logic.action.datastore_search_sql) 
-action supports raw SQL commands to be used to search for the data 
+## Configuration
 
-Example:
-```python
+To use the CKAN handler, you need to provide the URL of the CKAN instance you want to connect to. You can do this by setting the `CKAN_URL` environment variable. For example:
 
-ckan.action.datastore_search_sql(sql='SELECT * FROM "resource_id"')
+```sql
+CREATE DATABASE ckan_datasource
+WITH ENGINE = 'ckan',
+PARAMETERS = {
+    "url": "https://your-ckan-instance-url.com",
+    "api_key": "your-api-key-if-required"
+};
 ```
+
+> **_NOTE:_** Some CKAN instances will require you to provide an API Token. You can create one in the CKAN user panel.
+
+## Usage
+
+After setting up the connection, you can query CKAN data using SQL. The CKAN handler provides three main tables:
+
+- `package_ids`: Lists all packages (datasets) in the CKAN instance.
+- `resource_ids`: Lists all resources across all packages.
+- `datastore`:  Allows querying individual datastore resources.
+
+Here's an example of how to query a CKAN dataset:
+
+```sql
+SELECT * FROM datastore WHERE resource_id = 'your-resource-id';
+```
+
+## Limitations
+
+- The handler currently supports read operations only. Write operations are not supported.
+- The handler currently supports read operations only. Write operations are not supported.
+- Performance may vary depending on the size of the CKAN instance and the complexity of your queries.
+- The handler may not work with all CKAN instances, especially those with custom configurations.
+- The handler does not support all CKAN API features. Some advanced features may not be available.
+
+

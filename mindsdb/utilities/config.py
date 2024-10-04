@@ -111,15 +111,19 @@ class Config():
             ml_queue['username'] = os.environ.get('MINDSDB_ML_QUEUE_USERNAME')
             ml_queue['password'] = os.environ.get('MINDSDB_ML_QUEUE_PASSWORD')
 
-        # Check if credentials are set as environment variables and set the http_auth_enabled flag.
-        if os.environ.get('MINDSDB_HTTP_USERNAME') and os.environ.get('MINDSDB_HTTP_PASSWORD'):
-            auth = {
-                "auth": {
-                    "http_auth_enabled": True,
-                }
-            }
+        # If only one of the username or password is set, raise an error.
+        http_username = os.environ.get('MINDSDB_HTTP_USERNAME')
+        http_password = os.environ.get('MINDSDB_HTTP_PASSWORD')
+        
+        if bool(http_username) != bool(http_password):
+            raise ValueError('Both MINDSDB_HTTP_USERNAME and MINDSDB_HTTP_PASSWORD must be set together and must be non-empty strings.')
 
-            self._override_config.update(auth)
+        # If both username and password are set, enable HTTP auth.
+        if http_username and http_password:
+            if 'auth' not in self._override_config:
+                self._override_config['auth'] = {}
+
+            self._override_config['auth']['http_auth_enabled'] = True
 
         api_host = "127.0.0.1" if not self.use_docker_env else "0.0.0.0"
         self._default_config = {

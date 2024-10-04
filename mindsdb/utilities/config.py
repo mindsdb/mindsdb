@@ -114,7 +114,7 @@ class Config():
         # If only one of the username or password is set, raise an error.
         http_username = os.environ.get('MINDSDB_USERNAME')
         http_password = os.environ.get('MINDSDB_PASSWORD')
-        
+
         if bool(http_username) != bool(http_password):
             raise ValueError('Both MINDSDB_USERNAME and MINDSDB_PASSWORD must be set together and must be non-empty strings.')
 

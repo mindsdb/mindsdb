@@ -112,7 +112,7 @@ class Config():
             ml_queue['password'] = os.environ.get('MINDSDB_ML_QUEUE_PASSWORD')
 
         # Check if credentials are set as environment variables and set the http_auth_enabled flag.
-        if os.environ.get('MINDSDB_USERNAME') and os.environ.get('MINDSDB_PASSWORD'):
+        if os.environ.get('MINDSDB_HTTP_USERNAME') and os.environ.get('MINDSDB_HTTP_PASSWORD'):
             auth = {
                 "auth": {
                     "http_auth_enabled": True,

@@ -10,6 +10,9 @@ from mindsdb.integrations.utilities.handler_utils import get_api_key
 
 logger = log.getLogger(__name__)
 
+DEFAULT_METADATA = {
+    "_source": "portkey-mindsdb-integration",
+}
 
 class PortkeyHandler(BaseMLEngine):
     """
@@ -46,6 +49,7 @@ class PortkeyHandler(BaseMLEngine):
         self.client = Portkey(
             **self.engine_storage.get_connection_args(),
             api_key=api_key,
+            metadata=DEFAULT_METADATA
         )
 
         result_df = pd.DataFrame()

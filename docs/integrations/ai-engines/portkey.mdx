@@ -27,8 +27,8 @@ You can pass all the parameters that are supported by Portkey inside the `USING`
 CREATE ML_ENGINE portkey_engine
 FROM portkey
 USING
-    portkey_api_key = '{PORTKEY_API_KEY}', // get this from Portkey dashboard (https://app.portkey.ai/api-keys)
-    config = '{PORTKEY_CONFIG_ID}'; // get this from Portkey dashboard (https://app.portkey.ai/configs)
+    portkey_api_key = '{PORTKEY_API_KEY}', -- get this from Portkey dashboard (https://app.portkey.ai/api-keys)
+    config = '{PORTKEY_CONFIG_ID}'; -- get this from Portkey dashboard (https://app.portkey.ai/configs)
 ```
 
 Create a model using `portkey_engine` as an engine.
@@ -42,11 +42,11 @@ CREATE MODEL portkey_model
 PREDICT answer
 USING
       engine = 'portkey_engine',
+      model = 'gpt-3.5-turbo',
       temperature = 0.2;
-</Info>``
+```
 
 <Info>
-
 The integrations between Portkey and MindsDB was implemented using [Portkey Python SDK](https://docs.portkey.ai/docs/api-reference/portkey-sdk-client).
 </Info>
 

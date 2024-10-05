@@ -27,13 +27,14 @@ You can pass all the parameters that are supported by Portkey inside the `USING`
 CREATE ML_ENGINE portkey_engine
 FROM portkey
 USING
-    portkey_api_key = '{PORTKEY_API_KEY}',
-    config = '{PORTKEY_CONFIG_ID}';
+    portkey_api_key = '{PORTKEY_API_KEY}', // get this from Portkey dashboard (https://app.portkey.ai/api-keys)
+    config = '{PORTKEY_CONFIG_ID}'; // get this from Portkey dashboard (https://app.portkey.ai/configs)
 ```
 
 Create a model using `portkey_engine` as an engine.
 <Info>
-You can pass all the parameters supported by Portkey Chat completions here inside the `USING` clause.
+You can pass all the parameters supported by Portkey Chat completions here inside the `USING` clause. 
+refer [Portkey Chat completions](https://docs.portkey.ai/docs/provider-endpoints/chat) for more details.
 </Info>
 
 ```sql

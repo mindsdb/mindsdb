@@ -24,6 +24,8 @@ class ChatBotTask(BaseTask):
         super().__init__(*args, **kwargs)
         self.bot_id = self.object_id
 
+        self.session = SessionController()
+
         bot_record = db.ChatBots.query.get(self.bot_id)
 
         self.base_model_name = bot_record.model_name
@@ -67,8 +69,6 @@ class ChatBotTask(BaseTask):
 
         self.bot_params['bot_username'] = self.chat_handler.get_my_user_name()
 
-        self.session = SessionController()
-
     def run(self, stop_event):
 
         # TODO check deleted, raise errors
@@ -107,7 +107,7 @@ class ChatBotTask(BaseTask):
             user=bot_username,
             destination=chat_id,
             sent_at=dt.datetime.now(),
-            **message.kwargs
+            request=message.request
         )
 
         # send to chat adapter
@@ -116,3 +116,6 @@ class ChatBotTask(BaseTask):
 
         # send to history
         chat_memory.add_to_history(response_message)
+
+    def on_webhook(self, request):
+        self.chat_pooling.on_webhook(request)

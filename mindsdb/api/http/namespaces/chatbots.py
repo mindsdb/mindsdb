@@ -319,4 +319,4 @@ class ChatBotMessagesResource(Resource):
             )
 
         chatbot_task = ChatBotTask(task_id=None, object_id=existing_chatbot["id"])
-        chatbot_task.run(req)
+        chatbot_task.on_webhook(req)

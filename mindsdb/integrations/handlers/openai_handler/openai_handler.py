@@ -543,7 +543,7 @@ class OpenAIHandler(BaseMLEngine):
                 return _submit_embedding_completion(kwargs, prompts, api_args)
             elif model_name in self.chat_completion_models:
                 if(model_name == "gpt-3.5-turbo-instruct"):
-                    return _submit_completion(
+                    return _submit_normal_completion(
                         kwargs,
                         prompts,
                         api_args

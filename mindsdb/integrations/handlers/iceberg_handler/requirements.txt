@@ -1,0 +1,2 @@
+pyiceberg[hive,s3fs,duckdb]
+psycopg2

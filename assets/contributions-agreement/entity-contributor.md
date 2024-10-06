@@ -93,8 +93,3 @@ The parties accept and agree to be bound by the terms of this Agreement as of th
 signature below (the “Effective Date”).
 
 
-
-
-I have read the CLA Document and I hereby sign the CLA
-
-

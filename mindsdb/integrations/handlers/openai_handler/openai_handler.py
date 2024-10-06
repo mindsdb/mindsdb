@@ -544,12 +544,9 @@ class OpenAIHandler(BaseMLEngine):
             elif model_name in self.chat_completion_models:
                 if(model_name == "gpt-3.5-turbo-instruct"):
                     return _submit_completion(
-                        "gpt-3.5-turbo-instruct",
+                        kwargs,
                         prompts,
-                        api_key,
-                        api_args,
-                        model_name,
-                        df,
+                        api_args
                     )
                 else:
                     return _submit_chat_completion(

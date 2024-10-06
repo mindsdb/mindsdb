@@ -32,8 +32,8 @@ PARAMETERS = {
 
 After setting up the connection, you can query CKAN data using SQL. The CKAN handler provides three main tables:
 
-- `package_ids`: Lists all packages (datasets) in the CKAN instance.
-- `resource_ids`: Lists all resources across all packages.
+- `datasets`: Lists all datasets in the CKAN instance.
+- `resources`: Lists all resources metadata across all packages.
 - `datastore`:  Allows querying individual datastore resources.
 
 Here's an example of how to query a CKAN dataset:
@@ -45,9 +45,6 @@ SELECT * FROM datastore WHERE resource_id = 'your-resource-id';
 ## Limitations
 
 - The handler currently supports read operations only. Write operations are not supported.
-- The handler currently supports read operations only. Write operations are not supported.
 - Performance may vary depending on the size of the CKAN instance and the complexity of your queries.
 - The handler may not work with all CKAN instances, especially those with custom configurations.
 - The handler does not support all CKAN API features. Some advanced features may not be available.
-
-

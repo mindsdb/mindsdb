@@ -156,12 +156,12 @@ class CkanHandler(APIHandler):
         self.is_connected = False
         self.connection_args = kwargs.get("connection_data", {})
 
-        self.package_ids_table = PackageIDsTable(self)
-        self.resource_ids_table = ResourceIDsTable(self)
+        self.datasets_table = PackageIDsTable(self)
+        self.resources_table = ResourceIDsTable(self)
         self.datastore_table = DatastoreTable(self)
 
-        self._register_table("package_ids", self.package_ids_table)
-        self._register_table("resource_ids", self.resource_ids_table)
+        self._register_table("datasets", self.datasets_table)
+        self._register_table("resources", self.resources_table)
         self._register_table("datastore", self.datastore_table)
 
     def connect(self):
@@ -205,10 +205,10 @@ class CkanHandler(APIHandler):
     def query(self, query: ast.Select) -> HandlerResponse:
         table_name = query.from_table.parts[-1]
 
-        if table_name == "package_ids":
-            return self.package_ids_table.select(query)
-        elif table_name == "resource_ids":
-            return self.resource_ids_table.select(query)
+        if table_name == "datasets":
+            return self.datasets_table.select(query)
+        elif table_name == "resources":
+            return self.resources_table.select(query)
         elif table_name == "datastore":
             return self.datastore_table.select(query)
         else:

@@ -121,4 +121,6 @@ EXPOSE 47334/tcp
 EXPOSE 47335/tcp
 EXPOSE 47336/tcp
 
+RUN source ./.venv/bin/activate
+
 ENTRYPOINT [ "sh", "-c", ".venv/bin/python -m mindsdb --config=/root/mindsdb_config.json --api=http,mysql,mongodb" ]

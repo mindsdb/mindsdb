@@ -542,13 +542,23 @@ class OpenAIHandler(BaseMLEngine):
             elif model_name == 'embedding':
                 return _submit_embedding_completion(kwargs, prompts, api_args)
             elif model_name in self.chat_completion_models:
-                return _submit_chat_completion(
-                    kwargs,
-                    prompts,
-                    api_args,
-                    df,
-                    mode=args.get('mode', 'conversational'),
-                )
+                if(model_name == "gpt-3.5-turbo-instruct"):
+                    return _submit_completion(
+                        "gpt-3.5-turbo-instruct",
+                        prompts,
+                        api_key,
+                        api_args,
+                        model_name,
+                        df,
+                    )
+                else:
+                    return _submit_chat_completion(
+                        kwargs,
+                        prompts,
+                        api_args,
+                        df,
+                        mode=args.get('mode', 'conversational'),
+                    )
             else:
                 return _submit_normal_completion(kwargs, prompts, api_args)
 

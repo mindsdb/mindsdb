@@ -79,8 +79,12 @@ WORKDIR /mindsdb
 RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
 RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
-    apt update && apt-get upgrade -y \
-    && apt-get install -y libpq5 freetds-bin curl
+    apt update -qy \
+    && apt-get upgrade -qy \
+    && apt-get install -qy \
+    -o APT::Install-Recommends=false \
+    -o APT::Install-Suggests=false \
+    libpq5 freetds-bin curl
 RUN --mount=type=cache,target=/root/.cache uv pip install -r requirements/requirements-dev.txt
 
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
@@ -88,6 +92,7 @@ COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
 ENV PYTHONUNBUFFERED 1
 ENV MINDSDB_DOCKER_ENV 1
+ENV PATH=/mindsdb/.venv/bin:$PATH
 
 EXPOSE 47334/tcp
 EXPOSE 47335/tcp
@@ -108,19 +113,22 @@ WORKDIR /mindsdb
 RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
 RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
-    apt update && apt-get upgrade -y \
-    && apt-get install -y libpq5 freetds-bin curl
+    apt update -qy \
+    && apt-get upgrade -qy \
+    && apt-get install -qy \
+    -o APT::Install-Recommends=false \
+    -o APT::Install-Suggests=false \
+    libpq5 freetds-bin curl
 
 COPY --link --from=build /mindsdb /mindsdb
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
 ENV PYTHONUNBUFFERED 1
 ENV MINDSDB_DOCKER_ENV 1
+ENV PATH=/mindsdb/.venv/bin:$PATH
 
 EXPOSE 47334/tcp
 EXPOSE 47335/tcp
 EXPOSE 47336/tcp
 
-RUN source ./.venv/bin/activate
-
-ENTRYPOINT [ "sh", "-c", ".venv/bin/python -m mindsdb --config=/root/mindsdb_config.json --api=http,mysql,mongodb" ]
+ENTRYPOINT [ "sh", "-c", "python -m mindsdb --config=/root/mindsdb_config.json --api=http,mysql,mongodb" ]

@@ -69,7 +69,7 @@ class MessageCountPolling(BasePolling):
                             message = None
 
                         if message:
-                            self.chat_task.on_message(chat_memory, message, table_name=chat_params["chat_table"]["name"])
+                            self.chat_task.on_message(chat_id, message, table_name=chat_params["chat_table"]["name"])
 
             except Exception as e:
                 logger.error(e)
@@ -157,8 +157,7 @@ class RealtimePolling(BasePolling):
 
         chat_id = row[t_params["chat_id_col"]]
 
-        chat_memory = self.chat_task.memory.get_chat(chat_id)
-        self.chat_task.on_message(chat_memory, message)
+        self.chat_task.on_message(chat_id, message)
 
     def run(self, stop_event):
         t_params = self.params["chat_table"]

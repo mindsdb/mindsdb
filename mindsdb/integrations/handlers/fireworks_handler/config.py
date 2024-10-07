@@ -11,4 +11,3 @@ class FireworksHandlerArgs(BaseModel):
     class Config:
         # For all args that are not expected, raise an error
         extra = Extra.forbid
-

@@ -47,7 +47,7 @@ class LastQuery:
                     'column': <column name>,
                     'links': [<link to ast node>, ... ],
                     'target_idx': <number of column in select target>,
-                    'gen_init_query': if true: to generate query to initial values for las
+                    'gen_init_query': if true: to generate query to initial values for LAST
                 }
         """
 
@@ -55,7 +55,11 @@ class LastQuery:
         tables_idx = defaultdict(dict)
         conditions = []
 
-        def replace_last_in_tree(node, injected):
+        def replace_last_in_tree(node: ASTNode, injected: Constant):
+            """
+            Recursively searches LAST in AST tree. Goes only into functions and type casts
+            When LAST is found - it is replaced with injected constant
+            """
             # go into functions and type casts
             if isinstance(node, TypeCast):
                 if isinstance(node.arg, Last):

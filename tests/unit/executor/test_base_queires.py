@@ -420,7 +420,7 @@ class TestSelect(BaseExecutorDummyML):
         self.set_data('tasks', df)
 
         sql = '''
-            select * from dummy_data.tasks 
+            select * from dummy_data.tasks
             where a > coalesce(last, 1)
         '''
 

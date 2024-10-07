@@ -55,7 +55,7 @@ class AccessHandler(DatabaseHandler):
             HandlerStatusResponse
         """
         if self.is_connected:
-            return self.connection
+            return StatusResponse(success=True)
 
         try:
             self.connection = pyodbc.connect(
@@ -124,9 +124,6 @@ class AccessHandler(DatabaseHandler):
         except Exception as e:
             logger.error(f"Error running query: {query}, {e}")
             return Response(RESPONSE_TYPE.ERROR, error_message=str(e))
-        finally:
-            if not self.is_connected:
-                self.disconnect()
 
     def query(self, query: ASTNode) -> Response:
         """

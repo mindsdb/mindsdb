@@ -1,6 +1,7 @@
 from typing import Dict, List
 
 from mindsdb.interfaces.agents.agents_controller import AgentsController
+from mindsdb.interfaces.chatbot.chatbot_task import ChatBotTask
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.storage import db
 
@@ -321,3 +322,21 @@ class ChatBotController:
         db.session.delete(bot_rec)
 
         db.session.commit()
+
+    def on_webhook(self, webhook_token: str, request: dict) -> None:
+        """
+        Handles incoming webhook requests.
+
+        Parameters:
+            webhook_token (str): The token to uniquely identify the webhook.
+            request (dict): The incoming webhook request.
+        """
+        chat_bot = db.ChatBots.query.filter_by(webhook_token=webhook_token).first()
+
+        if chat_bot is None:
+            raise Exception(f"No chat bot exists for webhook token: {webhook_token}")
+        
+        chat_bot_task = ChatBotTask(task_id=None, object_id=chat_bot.id)
+        chat_bot_task.on_webhook(request)
+        
+

@@ -234,7 +234,7 @@ class TestS3Handler(BaseHandlerTestSetup, unittest.TestCase):
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
 
         df = response.data_frame
-        self.assertEqual(len(df), 4)
+        self.assertEqual(len(df), 5)  # +1 table is 'files'
         self.assertNotIn('file5.xlsx', df['table_name'].values)
 
     @patch('mindsdb.integrations.handlers.s3_handler.s3_handler.S3Handler.native_query')

@@ -92,5 +92,3 @@ to Prior Contributions. This Agreement may be freely assigned by Company, withou
 The parties accept and agree to be bound by the terms of this Agreement as of the date of the last
 signature below (the “Effective Date”).
 
-
-I have read the CLA Document and I hereby sign the CLA

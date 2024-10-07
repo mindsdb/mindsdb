@@ -519,7 +519,7 @@ class OpenAIHandler(BaseMLEngine):
             List[Any]: List of completions. The type of completion depends on the task type.
         """
 
-        @retry_with_exponential_backoff() 
+        @retry_with_exponential_backoff()
         def _submit_completion(model_name: Text, prompts: List[Text], api_args: Dict, args: Dict, df: pd.DataFrame) -> List[Text]:
             """
             Submit a request to the relevant completion endpoint of the OpenAI API based on the type of task.
@@ -542,11 +542,11 @@ class OpenAIHandler(BaseMLEngine):
             elif model_name == 'embedding':
                 return _submit_embedding_completion(kwargs, prompts, api_args)
             elif model_name in self.chat_completion_models:
-                if(model_name == "gpt-3.5-turbo-instruct"):
+                if model_name == "gpt-3.5-turbo-instruct":
                     return _submit_normal_completion(
-                       kwargs, 
-                       prompts, 
-                       api_args
+                        kwargs,
+                        prompts,
+                        api_args
                     )
                 else:
                     return _submit_chat_completion(

@@ -6,6 +6,7 @@ from langchain_core.vectorstores import VectorStore
 from pydantic import BaseModel
 
 from mindsdb.integrations.utilities.rag.settings import VectorStoreType, VectorStoreConfig
+from mindsdb.integrations.utilities.rag.loaders.vector_store_loader.MDBVectorStore import MDBVectorStore
 from mindsdb.utilities import log
 
 
@@ -27,8 +28,7 @@ class VectorStoreLoader(BaseModel):
         Loads the vector store based on the provided config and embeddings model
         :return:
         """
-        self.vector_store = VectorStoreFactory.create(self.embedding_model, self.config)
-        return self.vector_store
+        return MDBVectorStore(kb_table=self.config.kb_table)
 
 
 class VectorStoreFactory:

@@ -133,3 +133,24 @@ class TestAgent(BaseExecutorDummyML):
                 found = True
         if not found:
             raise AttributeError('Agent response is not found')
+
+    @patch('openai.OpenAI')
+    def test_agent_retrieval(self, mock_openai):
+        self.run_sql('create knowledge base kb_review')
+        # self.run_sql('''
+        #   create skill retr_skill
+        #   using
+        #       type = 'retrieval',
+        #       source = 'kb_review',
+        #       description = 'user reviews'
+        # ''')
+        # self.run_sql('''
+        #   create agent retrieve_agent
+        #    using
+        #   skills=['retr_skill'],
+        #   model='gpt-4o',
+        #   provider='openai',
+        #   prompt_template='Answer the user input in a helpful way using tools',
+        #   mode='retrieval'
+        # ''')
+        # ret = self.run_sql('main purpose to buy Kindle Voyage according to reviews')

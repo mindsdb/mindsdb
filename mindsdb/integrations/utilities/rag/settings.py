@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Union
+from typing import List, Union, Any
 
 from langchain_community.vectorstores.chroma import Chroma
 from langchain_community.vectorstores.pgvector import PGVector
@@ -92,6 +92,7 @@ class VectorStoreConfig(BaseModel):
     persist_directory: str = None
     collection_name: str = DEFAULT_COLLECTION_NAME
     connection_string: str = None
+    kb_table: Any = None
 
     class Config:
         arbitrary_types_allowed = True

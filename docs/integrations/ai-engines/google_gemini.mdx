@@ -1,0 +1,74 @@
+---
+title: Google Gemini
+sidebarTitle: Google Gemini
+---
+
+This documentation describes the integration of MindsDB with [Google Gemini](<link>), a generative artificial intelligence model developed by Google.
+The integration allows for the deployment of Google Gemini models within MindsDB, providing the models with access to data from various data sources.
+
+## Prerequisites
+
+Before proceeding, ensure the following prerequisites are met:
+
+1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
+2. To use Google Gemini within MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+3. Obtain the Google Gemini API key required to deploy and use Google Gemini models within MindsDB. Follow the [instructions for obtaining the API key](https://ai.google.dev/gemini-api/docs/api-key).
+
+## Setup
+
+Create an AI engine from the [Google Gemini handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/google_gemini_handler).
+
+```sql
+CREATE ML_ENGINE google_gemini_engine
+FROM google_gemini
+USING
+      api_key = 'api-key-value';
+```
+
+Create a model using `google_gemini_engine` as an engine.
+
+```sql
+CREATE MODEL google_gemini_model
+PREDICT target_column
+USING
+      engine = 'google_gemini_engine',  -- engine name as created via CREATE ML_ENGINE
+      column = 'input_column',          -- column name that stores user input
+      model = 'gemini-pro';             -- model name to be used
+```
+
+## Usage
+
+The following usage examples utilize `google_gemini_engine` to create a model with the `CREATE MODEL` statement.
+
+Create a model to generate text completions with the Gemini Pro model for your existing text data.
+
+```sql
+CREATE MODEL google_gemini_model
+PREDICT answer
+USING
+      engine = 'google_gemini_engine',
+      column = 'question',
+      model = 'gemini-pro';
+```
+
+Query the model to get predictions.
+
+```sql
+SELECT question, answer
+FROM google_gemini_model
+WHERE question = 'How are you?';
+```
+
+Alternatively, you can query for batch predictions:
+
+```sql
+SELECT t.question, m.answer
+FROM google_gemini_model AS m
+JOIN data_table AS t;
+```
+
+<Tip>
+**Next Steps**
+
+Go to the [Use Cases](/use-cases/overview) section to see more examples.
+</Tip>

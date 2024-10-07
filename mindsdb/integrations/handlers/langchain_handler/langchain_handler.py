@@ -1,44 +1,43 @@
 from concurrent.futures import as_completed, TimeoutError
-from typing import Optional, Dict, List
+from typing import Optional, Dict
 import re
 
 from langchain.agents import AgentExecutor
 from langchain.agents.initialize import initialize_agent
 from langchain.chains.conversation.memory import ConversationSummaryBufferMemory
 from langchain.schema import SystemMessage
-from langchain_community.chat_models import ChatAnthropic, ChatOpenAI, ChatAnyscale, ChatLiteLLM, ChatOllama
 from langchain_core.prompts import PromptTemplate
-from langfuse.callback import CallbackHandler
+from langchain_core.messages import HumanMessage
 
 import numpy as np
 import pandas as pd
 
-from mindsdb.integrations.handlers.langchain_handler.constants import (
-    ANTHROPIC_CHAT_MODELS,
+from mindsdb.interfaces.agents.safe_output_parser import SafeOutputParser
+from mindsdb.interfaces.agents.langchain_agent import (
+    get_llm_provider, get_embedding_model_provider, create_chat_model, get_chat_model_params
+)
+
+from mindsdb.interfaces.agents.constants import (
     DEFAULT_AGENT_TIMEOUT_SECONDS,
     DEFAULT_AGENT_TOOLS,
     DEFAULT_AGENT_TYPE,
     DEFAULT_MAX_ITERATIONS,
     DEFAULT_MAX_TOKENS,
     DEFAULT_MODEL_NAME,
-    OLLAMA_CHAT_MODELS,
-    SUPPORTED_PROVIDERS,
-    DEFAULT_USER_COLUMN,
-    DEFAULT_ASSISTANT_COLUMN
+    USER_COLUMN,
+    ASSISTANT_COLUMN
 )
-from mindsdb.integrations.handlers.langchain_handler.log_callback_handler import LogCallbackHandler
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
 from mindsdb.integrations.handlers.langchain_handler.tools import setup_tools
-from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS as OPEN_AI_CHAT_MODELS
 from mindsdb.integrations.libs.base import BaseMLEngine
-from mindsdb.integrations.libs.llm.utils import get_llm_config
-from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.interfaces.storage.model_fs import HandlerStorage, ModelStorage
 from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
+from mindsdb.integrations.handlers.openai_handler.constants import CHAT_MODELS  # noqa, for dependency checker
+
 from mindsdb.utilities import log
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 
-_PARSING_ERROR_PREFIX = 'An output parsing error occured'
+_PARSING_ERROR_PREFIXES = ['An output parsing error occured', 'Could not parse LLM output']
 
 logger = log.getLogger(__name__)
 
@@ -65,98 +64,33 @@ class LangChainHandler(BaseMLEngine):
             self,
             model_storage: ModelStorage,
             engine_storage: HandlerStorage,
-            log_callback_handler: LogCallbackHandler = None,
-            langfuse_callback_handler: CallbackHandler = None,
             **kwargs):
         super().__init__(model_storage, engine_storage, **kwargs)
         # if True, the target column name does not have to be specified at creation time.
         self.generative = True
         self.default_agent_tools = DEFAULT_AGENT_TOOLS
-        self.log_callback_handler = log_callback_handler
-        self.langfuse_callback_handler = langfuse_callback_handler
-        if self.log_callback_handler is None:
-            self.log_callback_handler = LogCallbackHandler(logger)
-
-    def _get_llm_provider(self, args: Dict) -> str:
-        if 'provider' in args:
-            return args['provider']
-        if args['model_name'] in ANTHROPIC_CHAT_MODELS:
-            return 'anthropic'
-        if args['model_name'] in OPEN_AI_CHAT_MODELS:
-            return 'openai'
-        if args['model_name'] in OLLAMA_CHAT_MODELS:
-            return 'ollama'
-        raise ValueError(f"Invalid model name. Please define provider")
-
-    def _get_embedding_model_provider(self, args: Dict) -> str:
-        if 'embedding_model_provider' in args:
-            return args['embedding_model_provider']
-        if 'embedding_model_provider' not in args:
-            logger.warning('No embedding model provider specified. trying to use llm provider.')
-            return args.get('embedding_model_provider', self._get_llm_provider(args))
-        raise ValueError(f"Invalid model name. Please define provider")
-
-    def _get_chat_model_params(self, args: Dict, pred_args: Dict) -> Dict:
-        model_config = args.copy()
-        # Override with prediction args.
-        model_config.update(pred_args)
-        # Include API keys.
-        model_config['api_keys'] = {
-            p: get_api_key(p, args, self.engine_storage, strict=False) for p in SUPPORTED_PROVIDERS
-        }
-        llm_config = get_llm_config(args.get('provider', self._get_llm_provider(args)), model_config)
-        config_dict = llm_config.dict()
-        config_dict = {k: v for k, v in config_dict.items() if v is not None}
-        return config_dict
-
-    def _get_agent_callbacks(self, args: Dict) -> List:
-        all_callbacks = [self.log_callback_handler]
-        are_langfuse_args_present = 'langfuse_public_key' in args and 'langfuse_secret_key' in args and 'langfuse_host' in args
-        if self.langfuse_callback_handler is None and are_langfuse_args_present:
-            self.langfuse_callback_handler = CallbackHandler(
-                args['langfuse_public_key'],
-                args['langfuse_secret_key'],
-                host=args['langfuse_host']
-            )
-            # Check credentials.
-            if not self.langfuse_callback_handler.auth_check():
-                logger.error(f'Incorrect Langfuse credentials provided to Langchain handler. Full args: {args}')
-        if self.langfuse_callback_handler is not None:
-            all_callbacks.append(self.langfuse_callback_handler)
-        return all_callbacks
-
-    def _create_chat_model(self, args: Dict, pred_args: Dict):
-        model_kwargs = self._get_chat_model_params(args, pred_args)
-
-        if args['provider'] == 'anthropic':
-            return ChatAnthropic(**model_kwargs)
-        if args['provider'] == 'openai':
-            return ChatOpenAI(**model_kwargs)
-        if args['provider'] == 'anyscale':
-            return ChatAnyscale(**model_kwargs)
-        if args['provider'] == 'litellm':
-            return ChatLiteLLM(**model_kwargs)
-        if args['provider'] == 'ollama':
-            return ChatOllama(**model_kwargs)
-        raise ValueError(f'Unknown provider: {args["provider"]}')
 
     def _create_embeddings_model(self, args: Dict):
         return construct_model_from_args(args)
 
     def _handle_parsing_errors(self, error: Exception) -> str:
         response = str(error)
-        if not response.startswith(_PARSING_ERROR_PREFIX):
-            return f'Agent failed with error:\n{str(error)}...'
-        else:
-            # As a somewhat dirty workaround, we accept the output formatted incorrectly and use it as a response.
-            #
-            # Ideally, in the future, we would write a parser that is more robust and flexible than the one Langchain uses.
-            # Response is wrapped in ``
-            logger.info('Handling parsing error, salvaging response...')
-            response_output = response.split('`')
-            if len(response_output) >= 2:
-                response = response_output[-2]
-            return response
+        for p in _PARSING_ERROR_PREFIXES:
+            if response.startswith(p):
+                # As a somewhat dirty workaround, we accept the output formatted incorrectly and use it as a response.
+                #
+                # Ideally, in the future, we would write a parser that is more robust and flexible than the one Langchain uses.
+                # Response is wrapped in ``
+                logger.info('Handling parsing error, salvaging response...')
+                response_output = response.split('`')
+                if len(response_output) >= 2:
+                    response = response_output[-2]
+
+                # Wrap response in Langchain conversational react format.
+                langchain_react_formatted_response = f'''Thought: Do I need to use a tool? No
+AI: {response}'''
+                return langchain_react_formatted_response
+        return f'Agent failed with error:\n{str(error)}...'
 
     def create(self, target: str, args: Dict = None, **kwargs):
         self.default_agent_tools = args.get('tools', self.default_agent_tools)
@@ -164,8 +98,8 @@ class LangChainHandler(BaseMLEngine):
         args = args['using']
         args['target'] = target
         args['model_name'] = args.get('model_name', DEFAULT_MODEL_NAME)
-        args['provider'] = args.get('provider', self._get_llm_provider(args))
-        args['embedding_model_provider'] = args.get('embedding_model', self._get_embedding_model_provider(args))
+        args['provider'] = args.get('provider', get_llm_provider(args))
+        args['embedding_model_provider'] = args.get('embedding_model', get_embedding_model_provider(args))
         if args.get('mode') == 'retrieval':
             # use default prompt template for retrieval i.e. RAG if not provided
             if "prompt_template" not in args:
@@ -193,31 +127,40 @@ class LangChainHandler(BaseMLEngine):
         if 'prompt_template' not in args and 'prompt_template' not in pred_args:
             raise ValueError(f"This model expects a `prompt_template`, please provide one.")
         # Back compatibility for old models
-        args['provider'] = args.get('provider', self._get_llm_provider(args))
-        args['embedding_model_provider'] = args.get('embedding_model', self._get_embedding_model_provider(args))
+        args['provider'] = args.get('provider', get_llm_provider(args))
+        args['embedding_model_provider'] = args.get('embedding_model', get_embedding_model_provider(args))
 
         df = df.reset_index(drop=True)
+
+        if pred_args.get('mode') == 'chat_model':
+            return self.call_llm(df, args, pred_args)
+
         agent = self.create_agent(df, args, pred_args)
         # Use last message as prompt, remove other questions.
-        user_column = args.get('user_column', DEFAULT_USER_COLUMN)
+        user_column = args.get('user_column', USER_COLUMN)
+        if user_column not in df.columns:
+            raise Exception(
+                f"Expected user input in column `{user_column}`, which is not found in the input data. Either provide the column, or redefine the expected column at model creation (`USING user_column = 'value'`)")  # noqa
         df.iloc[:-1, df.columns.get_loc(user_column)] = None
         return self.run_agent(df, agent, args, pred_args)
+
+    def call_llm(self, df, args=None, pred_args=None):
+        llm = create_chat_model({**args, **pred_args})
+
+        user_column = args.get('user_column', USER_COLUMN)
+        assistant_column = args.get('assistant_column', ASSISTANT_COLUMN)
+
+        question = df[user_column].iloc[-1]
+        resp = llm([HumanMessage(question)], stop=['\nObservation:', '\n\tObservation:'])
+
+        return pd.DataFrame([resp.content], columns=[assistant_column])
 
     def create_agent(self, df: pd.DataFrame, args: Dict=None, pred_args: Dict=None) -> AgentExecutor:
         pred_args = pred_args if pred_args else {}
 
         # Set up tools.
-        model_kwargs = self._get_chat_model_params(args, pred_args)
-        llm = self._create_chat_model(args, pred_args)
-
-        # Set up embeddings model if needed.
-        if args.get('mode') == 'retrieval':
-            # get args for embeddings model
-            embeddings_args = args.pop('embedding_model_args', {})
-            # create embeddings model
-            pred_args['embeddings_model'] = self._create_embeddings_model(embeddings_args)
-            pred_args['llm'] = llm
-            pred_args['mindsdb_path'] = self.engine_storage.folder_get
+        model_kwargs = get_chat_model_params({**args, **pred_args})
+        llm = create_chat_model({**args, **pred_args})
 
         tools = setup_tools(llm,
                             model_kwargs,
@@ -235,8 +178,8 @@ class LangChainHandler(BaseMLEngine):
                                                  memory_key='chat_history')
         memory.chat_memory.messages.insert(0, SystemMessage(content=prompt_template))
         # User - Assistant conversation. All except the last message.
-        user_column = args.get('user_column', DEFAULT_USER_COLUMN)
-        assistant_column = args.get('assistant_column', DEFAULT_ASSISTANT_COLUMN)
+        user_column = args.get('user_column', USER_COLUMN)
+        assistant_column = args.get('assistant_column', ASSISTANT_COLUMN)
         for row in df[:-1].to_dict('records'):
             question = row[user_column]
             answer = row[assistant_column]
@@ -250,7 +193,8 @@ class LangChainHandler(BaseMLEngine):
             tools,
             llm,
             agent=agent_type,
-            callbacks=self._get_agent_callbacks(args),
+            # Use custom output parser to handle flaky LLMs that don't ALWAYS conform to output format.
+            agent_kwargs={'output_parser': SafeOutputParser()},
             # Calls the agent’s LLM Chain one final time to generate a final answer based on the previous steps
             early_stopping_method='generate',
             handle_parsing_errors=self._handle_parsing_errors,
@@ -262,7 +206,7 @@ class LangChainHandler(BaseMLEngine):
         )
         return agent_executor
 
-    def run_agent(self, df: pd.DataFrame, agent: AgentExecutor, args: Dict, pred_args: Dict) -> str:
+    def run_agent(self, df: pd.DataFrame, agent: AgentExecutor, args: Dict, pred_args: Dict) -> pd.DataFrame:
         # Prefer prediction time prompt template, if available.
         base_template = pred_args.get('prompt_template', args['prompt_template'])
 
@@ -276,7 +220,7 @@ class LangChainHandler(BaseMLEngine):
         base_template = base_template.replace('{{', '{').replace('}}', '}')
         prompts = []
 
-        user_column = args.get('user_column', DEFAULT_USER_COLUMN)
+        user_column = args.get('user_column', USER_COLUMN)
         for i, row in df.iterrows():
             if i not in empty_prompt_ids:
                 prompt = PromptTemplate(input_variables=input_variables, template=base_template)
@@ -291,8 +235,13 @@ class LangChainHandler(BaseMLEngine):
         def _invoke_agent_executor_with_prompt(agent_executor, prompt):
             if not prompt:
                 return ''
-
-            answer = agent_executor.invoke(prompt)
+            try:
+                answer = agent_executor.invoke(prompt)
+            except Exception as e:
+                answer = str(e)
+                if not answer.startswith("Could not parse LLM output: `"):
+                    raise e
+                answer = {'output': answer.removeprefix("Could not parse LLM output: `").removesuffix("`")}
 
             if 'output' not in answer:
                 # This should never happen unless Langchain changes invoke output format, but just in case.

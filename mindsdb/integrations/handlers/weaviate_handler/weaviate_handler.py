@@ -1,4 +1,4 @@
-from collections import OrderedDict
+import ast
 from datetime import datetime
 from typing import List, Optional
 
@@ -6,8 +6,6 @@ import weaviate
 from weaviate.embedded import EmbeddedOptions
 import pandas as pd
 
-
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse
 from mindsdb.integrations.libs.response import HandlerResponse as Response
@@ -269,7 +267,7 @@ class WeaviateDBHandler(VectorStoreHandler):
         conditions: List[FilterCondition] = None,
         offset: int = None,
         limit: int = None,
-    ) -> HandlerResponse:
+    ):
         table_name = table_name.capitalize()
         # columns which we will always provide in the result
         filters = None
@@ -338,7 +336,7 @@ class WeaviateDBHandler(VectorStoreHandler):
             # assuming there would be only one vector based search per query
             vector_filter = vector_filter[0]
             near_vector = {
-                "vector": eval(vector_filter.value)
+                "vector": ast.literal_eval(vector_filter.value)
                 if isinstance(vector_filter.value, str)
                 else vector_filter.value
             }
@@ -377,11 +375,11 @@ class WeaviateDBHandler(VectorStoreHandler):
         if distances:
             payload[TableField.DISTANCE.value] = distances
         result_df = pd.DataFrame(payload)
-        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=result_df)
+        return result_df
 
     def insert(
         self, table_name: str, data: pd.DataFrame, columns: List[str] = None
-    ) -> HandlerResponse:
+    ):
         """
         Insert data into the Weaviate database.
         """
@@ -415,11 +413,10 @@ class WeaviateDBHandler(VectorStoreHandler):
                     from_property_name="associatedMetadata",
                     to_uuid=meta_id,
                 )
-        return Response(resp_type=RESPONSE_TYPE.OK)
 
     def update(
         self, table_name: str, data: pd.DataFrame, columns: List[str] = None
-    ) -> HandlerResponse:
+    ):
         """
         Update data in the weaviate database.
         """
@@ -462,11 +459,10 @@ class WeaviateDBHandler(VectorStoreHandler):
                 class_name=metadata_table_name,
                 data_object={key: row[key] for key in metadata_keys},
             )
-        return Response(resp_type=RESPONSE_TYPE.OK)
 
     def delete(
         self, table_name: str, conditions: List[FilterCondition] = None
-    ) -> HandlerResponse:
+    ):
         table_name = table_name.capitalize()
         non_metadata_conditions = [
             condition
@@ -519,9 +515,8 @@ class WeaviateDBHandler(VectorStoreHandler):
                 "valueTextArray": metadata_ids,
             },
         )
-        return Response(resp_type=RESPONSE_TYPE.OK)
 
-    def create_table(self, table_name: str, if_not_exists=True) -> HandlerResponse:
+    def create_table(self, table_name: str, if_not_exists=True):
         """
         Create a class with the given name in the weaviate database.
         """
@@ -550,9 +545,7 @@ class WeaviateDBHandler(VectorStoreHandler):
             }
             self._client.schema.property.create(table_name.capitalize(), add_prop)
 
-        return Response(resp_type=RESPONSE_TYPE.OK)
-
-    def drop_table(self, table_name: str, if_exists=True) -> HandlerResponse:
+    def drop_table(self, table_name: str, if_exists=True):
         """
         Delete a class from the weaviate database.
         """
@@ -589,15 +582,8 @@ class WeaviateDBHandler(VectorStoreHandler):
             self._client.schema.delete_class(table_name)
             self._client.schema.delete_class(metadata_table_name)
         except ValueError:
-            if if_exists:
-                return Response(resp_type=RESPONSE_TYPE.OK)
-            else:
-                return Response(
-                    resp_type=RESPONSE_TYPE.ERROR,
-                    error_message=f"Table {table_name} does not exist!",
-                )
-
-        return Response(resp_type=RESPONSE_TYPE.OK)
+            if not if_exists:
+                raise Exception(f"Table {table_name} does not exist!")
 
     def get_tables(self) -> HandlerResponse:
         """
@@ -664,28 +650,3 @@ class WeaviateDBHandler(VectorStoreHandler):
             data_object=data, class_name=table_name.capitalize() + "_metadata"
         )
         return metadata_id
-
-
-connection_args = OrderedDict(
-    weaviate_url={
-        "type": ARG_TYPE.STR,
-        "description": "weaviate url/ local endpoint",
-        "required": False,
-    },
-    weaviate_api_key={
-        "type": ARG_TYPE.STR,
-        "description": "weaviate API KEY",
-        "required": False,
-    },
-    persistence_directory={
-        "type": ARG_TYPE.STR,
-        "description": "persistence directory for weaviate",
-        "required": False,
-    },
-)
-
-connection_args_example = OrderedDict(
-    weaviate_url="http://localhost:8080",
-    weaviate_api_key="<api_key>",
-    persistence_directory="db_path",
-)

@@ -1,2 +1,2 @@
 chardet
-bs4==0.0.2
+bs4

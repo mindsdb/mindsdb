@@ -1,10 +1,12 @@
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class BaseLLMConfig(BaseModel):
-    pass
+    # Remove 'model_' prefix from protected namespaces since Langchain constructor
+    # kwargs share the same prefix.
+    model_config = ConfigDict(protected_namespaces=())
 
 
 # See https://api.python.langchain.com/en/latest/chat_models/langchain_community.chat_models.openai.ChatOpenAI.html#langchain_community.chat_models.openai.ChatOpenAI
@@ -52,7 +54,7 @@ class AnyscaleConfig(BaseLLMConfig):
 # See https://api.python.langchain.com/en/latest/chat_models/langchain_community.chat_models.litellm.ChatLiteLLM.html
 # This config does not have to be exclusively used with Langchain.
 class LiteLLMConfig(BaseLLMConfig):
-    model_name: str
+    model: str
     api_base: Optional[str]
     max_retries: Optional[int]
     max_tokens: Optional[int]
@@ -80,3 +82,25 @@ class OllamaConfig(BaseLLMConfig):
     repeat_penalty: Optional[float]
     stop: Optional[List[str]]
     template: Optional[str]
+
+
+class NvidiaNIMConfig(BaseLLMConfig):
+    base_url: str
+    model: str
+    temperature: Optional[float]
+    top_p: Optional[float]
+    timeout: Optional[int]
+    format: Optional[str]
+    headers: Optional[Dict]
+    num_predict: Optional[int]
+    num_ctx: Optional[int]
+    num_gpu: Optional[int]
+    repeat_penalty: Optional[float]
+    stop: Optional[List[str]]
+    template: Optional[str]
+    nvidia_api_key: Optional[str]
+
+
+class MindsdbConfig(BaseLLMConfig):
+    model_name: str
+    project_name: str

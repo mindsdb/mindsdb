@@ -68,16 +68,6 @@ def cast_row_types(row, field_types):
                 pass
 
 
-def is_notebook():
-    try:
-        if 'IPKernelApp' in get_ipython().config:
-            return True
-        else:
-            return False
-    except NameError:
-        return False      # Probably standard Python interpreter
-
-
 def mark_process(name: str, custom_mark: str = None) -> Callable:
     def mark_process_wrapper(func: Callable) -> Callable:
         @wraps(func)
@@ -132,7 +122,6 @@ def get_versions_where_predictors_become_obsolete():
 
 def init_lexer_parsers():
     get_lexer_parser('mindsdb')
-    get_lexer_parser('mysql')
 
 
 def resolve_table_identifier(identifier: Identifier, default_database: str = None) -> tuple:

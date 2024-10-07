@@ -1,3 +1,4 @@
+import ast
 from datetime import datetime, timezone
 from typing import Text, List, Dict, Any
 
@@ -249,10 +250,10 @@ class SharepointAPI:
         url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists/"
         payload = {}
         if column:
-            column = eval(column)
+            column = ast.literal_eval(column)
             payload["column"] = column
         payload["displayName"] = display_name
-        payload["list"] = eval(list_template)
+        payload["list"] = ast.literal_eval(list_template)
         create_an_entity(url=url, payload=payload, bearer_token=self.bearer_token)
 
     def get_site_columns_by_site(
@@ -410,7 +411,7 @@ class SharepointAPI:
         url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/columns/"
         payload = {}
         if text:
-            text = eval(text)
+            text = ast.literal_eval(text)
             payload["text"] = text
         payload["name"] = name
         if enforce_unique_values is not None:
@@ -574,5 +575,5 @@ class SharepointAPI:
         url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists/{list_id}/items/"
         payload = {}
         if fields:
-            payload["fields"] = eval(fields)
+            payload["fields"] = ast.literal_eval(fields)
         create_an_entity(url=url, payload=payload, bearer_token=self.bearer_token)

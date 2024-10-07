@@ -1,9 +1,8 @@
-from typing import List
+from typing import List, Tuple
 import uuid
 
 from langchain.retrievers.multi_vector import MultiVectorRetriever as LangChainMultiVectorRetriever
 from langchain_core.documents import Document
-from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 
@@ -11,6 +10,7 @@ from mindsdb.integrations.utilities.rag.retrievers.base import BaseRetriever
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_LLM_MODEL, \
     MultiVectorRetrieverMode, RAGPipelineModel
 from mindsdb.integrations.utilities.rag.vector_store import VectorStoreOperator
+from mindsdb.interfaces.agents.safe_output_parser import SafeOutputParser
 
 
 class MultiVectorRetriever(BaseRetriever):
@@ -24,11 +24,11 @@ class MultiVectorRetriever(BaseRetriever):
         self.id_key = config.id_key
         self.documents = config.documents
         self.text_splitter = config.text_splitter
-        self.embeddings_model = config.embeddings_model
+        self.embedding_model = config.embedding_model
         self.max_concurrency = config.max_concurrency
         self.mode = config.multi_retriever_mode
 
-    def _generate_id_and_split_document(self, doc: Document) -> tuple[str, list[Document]]:
+    def _generate_id_and_split_document(self, doc: Document) -> Tuple[str, List[Document]]:
         """
         Generate a unique id for the document and split it into sub-documents.
         :param doc:
@@ -40,7 +40,7 @@ class MultiVectorRetriever(BaseRetriever):
             sub_doc.metadata[self.id_key] = doc_id
         return doc_id, sub_docs
 
-    def _split_documents(self) -> tuple[list[Document], list[str]]:
+    def _split_documents(self) -> Tuple[List[Document], List[str]]:
         """
         Split the documents into sub-documents and generate unique ids for each document.
         :return:
@@ -51,11 +51,11 @@ class MultiVectorRetriever(BaseRetriever):
         return split_docs, list(doc_ids)
 
     def _create_retriever_and_vs_operator(self, docs: List[Document]) \
-            -> tuple[LangChainMultiVectorRetriever, VectorStoreOperator]:
+            -> Tuple[LangChainMultiVectorRetriever, VectorStoreOperator]:
         vstore_operator = VectorStoreOperator(
             vector_store=self.vectorstore,
             documents=docs,
-            embeddings_model=self.embeddings_model,
+            embedding_model=self.embedding_model,
         )
         retriever = LangChainMultiVectorRetriever(
             vectorstore=vstore_operator.vector_store,
@@ -69,7 +69,7 @@ class MultiVectorRetriever(BaseRetriever):
                 {"doc": lambda x: x.page_content}  # noqa: E126, E122
                 | ChatPromptTemplate.from_template("Summarize the following document:\n\n{doc}")
                 | ChatOpenAI(max_retries=0, model_name=DEFAULT_LLM_MODEL)
-                | StrOutputParser()
+                | SafeOutputParser()
         )
         return chain.batch(self.documents, {"max_concurrency": self.max_concurrency})
 

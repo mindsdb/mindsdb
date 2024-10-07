@@ -2,12 +2,12 @@ import os
 import sys
 import base64
 import shutil
+import ast
+import time
 import tempfile
 import importlib
 import threading
 import inspect
-import multiprocessing
-from time import time
 from pathlib import Path
 from copy import deepcopy
 from typing import Optional
@@ -26,7 +26,6 @@ from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE, HANDLER_TYPE
-from mindsdb.integrations.handlers_client.db_client_factory import DBClient
 from mindsdb.interfaces.model.functions import get_model_records
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities import log
@@ -80,16 +79,14 @@ class HandlersCache:
             Args:
                 handler (DatabaseHandler)
         """
-        # do not cache connections in handlers processes
-        if multiprocessing.current_process().name.startswith('HandlerProcess'):
-            return
         with self._lock:
             try:
-                key = (handler.name, ctx.company_id, threading.get_native_id())
+                # If the handler is defined to be thread safe, set 0 as the last element of the key, otherwise set the thrad ID.
+                key = (handler.name, ctx.company_id, 0 if getattr(handler, 'thread_safe', False) else threading.get_native_id())
                 handler.connect()
                 self.handlers[key] = {
                     'handler': handler,
-                    'expired_at': time() + self.ttl
+                    'expired_at': time.time() + self.ttl
                 }
             except Exception:
                 pass
@@ -105,13 +102,17 @@ class HandlersCache:
                 DatabaseHandler
         """
         with self._lock:
+            # If the handler is not thread safe, the thread ID will be assigned to the last element of the key.
             key = (name, ctx.company_id, threading.get_native_id())
+            if key not in self.handlers:
+                # If the handler is thread safe, a 0 will be assigned to the last element of the key.
+                key = (name, ctx.company_id, 0)
             if (
                 key not in self.handlers
-                or self.handlers[key]['expired_at'] < time()
+                or self.handlers[key]['expired_at'] < time.time()
             ):
                 return None
-            self.handlers[key]['expired_at'] = time() + self.ttl
+            self.handlers[key]['expired_at'] = time.time() + self.ttl
             return self.handlers[key]['handler']
 
     def delete(self, name: str) -> None:
@@ -138,7 +139,7 @@ class HandlersCache:
             with self._lock:
                 for key in list(self.handlers.keys()):
                     if (
-                        self.handlers[key]['expired_at'] < time()
+                        self.handlers[key]['expired_at'] < time.time()
                         and sys.getrefcount(self.handlers[key]) == 2    # returned ref count is always 1 higher
                     ):
                         try:
@@ -156,6 +157,7 @@ class IntegrationController:
         return isinstance(s, str) and len(s) > 0
 
     def __init__(self):
+        self._import_lock = threading.Lock()
         self._load_handler_modules()
         self.handlers_cache = HandlersCache()
 
@@ -176,8 +178,8 @@ class IntegrationController:
             "%s: add method calling name=%s, engine=%s, connection_args=%s, company_id=%s",
             self.__class__.__name__, name, engine, connection_args, ctx.company_id
         )
-        handlers_meta = self.get_handlers_import_status()
-        handler_meta = handlers_meta[engine]
+        handler_meta = self.get_handler_meta(engine)
+
         accept_connection_args = handler_meta.get('connection_args')
         logger.debug("%s: accept_connection_args - %s", self.__class__.__name__, accept_connection_args)
 
@@ -242,6 +244,11 @@ class IntegrationController:
         if len(active_models) > 0:
             raise Exception(f'Unable to drop ml engine with active models: {active_models}')
 
+        # check linked KBs
+        kb = db.KnowledgeBase.query.filter_by(vector_database_id=integration_record.id).first()
+        if kb is not None:
+            raise Exception(f'Unable to drop, integration is used by knowledge base: {kb.name}')
+
         # check linked predictors
         models = get_model_records()
         for model in models:
@@ -261,7 +268,7 @@ class IntegrationController:
         db.session.delete(integration_record)
         db.session.commit()
 
-    def _get_integration_record_data(self, integration_record, sensitive_info=True):
+    def _get_integration_record_data(self, integration_record, show_secrets=True):
         if (
             integration_record is None
             or integration_record.data is None
@@ -292,20 +299,39 @@ class IntegrationController:
                 base_dir=integrations_dir
             )
 
-        if not sensitive_info:
-            if 'password' in data:
-                data['password'] = None
-            if (
-                data.get('type') == 'redis'
-                and isinstance(data.get('connection'), dict)
-                and 'password' in data['connection']
-            ):
-                data['connection'] = None
-
+        handler_meta = self.get_handler_meta(integration_record.engine)
         integration_type = None
-        integration_module = self.handler_modules.get(integration_record.engine)
-        if hasattr(integration_module, 'type'):
-            integration_type = integration_module.type
+        if isinstance(handler_meta, dict):
+            # in other cases, the handler directory is likely not exist.
+            integration_type = handler_meta.get('type')
+        integration_module = self.get_handler_module(integration_record.engine)
+
+        if show_secrets is False:
+            connection_args = getattr(integration_module, 'connection_args', None)
+            if isinstance(connection_args, dict):
+                if integration_type == HANDLER_TYPE.DATA:
+                    for key, value in connection_args.items():
+                        if key in data and value.get('secret', False) is True:
+                            data[key] = '******'
+                elif integration_type == HANDLER_TYPE.ML:
+                    creation_args = connection_args.get('creation_args')
+                    if isinstance(creation_args, dict):
+                        for key, value in creation_args.items():
+                            if key in data and value.get('secret', False) is True:
+                                data[key] = '******'
+                else:
+                    raise ValueError(f'Unexpected handler type: {integration_type}')
+            else:
+                # region obsolete, del in future
+                if 'password' in data:
+                    data['password'] = None
+                if (
+                    data.get('type') == 'redis'
+                    and isinstance(data.get('connection'), dict)
+                    and 'password' in data['connection']
+                ):
+                    data['connection'] = None
+                # endregion
 
         class_type = None
         if integration_module is not None and inspect.isclass(integration_module.Handler):
@@ -323,24 +349,24 @@ class IntegrationController:
             'class_type': class_type,
             'engine': integration_record.engine,
             'permanent': getattr(integration_module, 'permanent', False),
-            'date_last_update': deepcopy(integration_record.updated_at),
+            'date_last_update': deepcopy(integration_record.updated_at),  # to del ?
             'connection_data': data
         }
 
-    def get_by_id(self, integration_id, sensitive_info=True):
+    def get_by_id(self, integration_id, show_secrets=True):
         integration_record = (
             db.session.query(db.Integration)
             .filter_by(company_id=ctx.company_id, id=integration_id)
             .first()
         )
-        return self._get_integration_record_data(integration_record, sensitive_info)
+        return self._get_integration_record_data(integration_record, show_secrets)
 
-    def get(self, name, sensitive_info=True, case_sensitive=False):
+    def get(self, name, show_secrets=True, case_sensitive=False):
         try:
             integration_record = self._get_integration_record(name, case_sensitive)
         except EntityNotExistsError:
             return None
-        return self._get_integration_record_data(integration_record, sensitive_info)
+        return self._get_integration_record_data(integration_record, show_secrets)
 
     @staticmethod
     def _get_integration_record(name: str, case_sensitive: bool = False) -> db.Integration:
@@ -373,29 +399,18 @@ class IntegrationController:
 
         return integration_record
 
-    def get_all(self, sensitive_info=True):
+    def get_all(self, show_secrets=True):
         integration_records = db.session.query(db.Integration).filter_by(company_id=ctx.company_id).all()
         integration_dict = {}
         for record in integration_records:
             if record is None or record.data is None:
                 continue
-            integration_dict[record.name] = self._get_integration_record_data(record, sensitive_info)
+            integration_dict[record.name] = self._get_integration_record_data(record, show_secrets)
         return integration_dict
-
-    def check_connections(self):
-        connections = {}
-        for integration_name, integration_meta in self.get_all().items():
-            handler = self.create_tmp_handler(
-                handler_type=integration_meta['engine'],
-                connection_data=integration_meta['connection_data']
-            )
-            status = handler.check_connection()
-            connections[integration_name] = status.get('success', False)
-        return connections
 
     def _make_handler_args(self, name: str, handler_type: str, connection_data: dict, integration_id: int = None,
                            file_storage: FileStorage = None, handler_storage: HandlerStorage = None):
-        handler_ars = dict(
+        handler_args = dict(
             name=name,
             integration_id=integration_id,
             connection_data=connection_data,
@@ -404,29 +419,26 @@ class IntegrationController:
         )
 
         if handler_type == 'files':
-            handler_ars['file_controller'] = FileController()
+            handler_args['file_controller'] = FileController()
         elif self.handler_modules.get(handler_type, False).type == HANDLER_TYPE.ML:
-            handler_ars['handler_controller'] = self
-            handler_ars['company_id'] = ctx.company_id
+            handler_args['handler_controller'] = self
+            handler_args['company_id'] = ctx.company_id
 
-        return handler_ars
+        return handler_args
 
-    def create_tmp_handler(self, handler_type: str, connection_data: dict) -> object:
-        """ Returns temporary handler. That handler does not exist in database.
+    def create_tmp_handler(self, name: str, engine: str, connection_args: dict) -> dict:
+        """Create temporary handler, mostly for testing connections
 
-            Args:
-                handler_type (str)
-                connection_data (dict)
+        Args:
+            name (str): Integration  name
+            engine (str): Integration engine name
+            connection_args (dict): Connection arguments
 
-            Returns:
-                Handler object
+        Returns:
+            HandlerClass: Handler class instance
         """
-        handler_meta = self.handlers_import_status[handler_type]
-        if not handler_meta["import"]["success"]:
-            logger.info(f"to use {handler_type} please install 'pip install mindsdb[{handler_type}]'")
+        integration_id = int(time.time() * 10000)
 
-        logger.debug("%s.create_tmp_handler: connection args - %s", self.__class__.__name__, connection_data)
-        integration_id = int(time() * 10000)
         file_storage = FileStorage(
             resource_group=RESOURCE_GROUP.INTEGRATION,
             resource_id=integration_id,
@@ -434,17 +446,18 @@ class IntegrationController:
             sync=False
         )
         handler_storage = HandlerStorage(integration_id, root_dir='tmp', is_temporal=True)
-        handler_ars = self._make_handler_args(
-            name='tmp_handler',
-            handler_type=handler_type,
-            connection_data=connection_data,
+
+        HandlerClass = self.handler_modules[engine].Handler
+        handler_args = self._make_handler_args(
+            name=name,
+            handler_type=engine,
+            connection_data=connection_args,
             integration_id=integration_id,
             file_storage=file_storage,
             handler_storage=handler_storage,
         )
-
-        logger.debug("%s.create_tmp_handler: create a client to db of %s type", self.__class__.__name__, handler_type)
-        return DBClient(handler_type, self.handler_modules[handler_type].Handler, **handler_ars)
+        handler = HandlerClass(**handler_args)
+        return handler
 
     def copy_integration_storage(self, integration_id_from, integration_id_to):
         storage_from = HandlerStorage(integration_id_from)
@@ -472,10 +485,10 @@ class IntegrationController:
         integration_record = self._get_integration_record(name, case_sensitive)
         integration_engine = integration_record.engine
 
-        if integration_engine not in self.handlers_import_status:
+        integration_meta = self.get_handler_meta(integration_engine)
+        if integration_meta is None:
             raise Exception(f"Handler '{name}' does not exists")
 
-        integration_meta = self.handlers_import_status[integration_engine]
         if integration_meta.get('type') != HANDLER_TYPE.ML:
             raise Exception(f"Handler '{name}' must be ML type")
 
@@ -492,7 +505,7 @@ class IntegrationController:
         return handler
 
     @profiler.profile()
-    def get_data_handler(self, name: str, case_sensitive: bool = False) -> BaseHandler:
+    def get_data_handler(self, name: str, case_sensitive: bool = False, connect=True) -> BaseHandler:
         """Get DATA handler (DB or API) by name
         Args:
             name (str): name of the handler
@@ -508,7 +521,8 @@ class IntegrationController:
         integration_record = self._get_integration_record(name, case_sensitive)
         integration_engine = integration_record.engine
 
-        integration_meta = self.handlers_import_status[integration_engine]
+        integration_meta = self.get_handler_meta(integration_engine)
+
         if integration_meta.get('type') != HANDLER_TYPE.DATA:
             raise Exception(f"Handler '{name}' must be DATA type")
 
@@ -573,25 +587,21 @@ class IntegrationController:
         )
         HandlerClass = self.handler_modules[integration_engine].Handler
         handler = HandlerClass(**handler_ars)
-        self.handlers_cache.set(handler)
+        if connect:
+            self.handlers_cache.set(handler)
 
         return handler
 
     def reload_handler_module(self, handler_name):
         importlib.reload(self.handler_modules[handler_name])
         try:
-            handler_meta = self._get_handler_meta(self.handler_modules[handler_name])
+            handler_meta = self._get_handler_meta(handler_name)
         except Exception as e:
-            handler_meta = {
-                'import': {
-                    'success': False,
-                    'error_message': str(e),
-                    'dependencies': []
-                },
-                'name': handler_name
-            }
+            handler_meta = self.handlers_import_status[handler_name]
+            handler_meta['import']['success'] = False
+            handler_meta['import']['error_message'] = str(e)
 
-        self.handlers_import_status[handler_meta['name']] = handler_meta
+        self.handlers_import_status[handler_name] = handler_meta
 
     def _read_dependencies(self, path):
         dependencies = []
@@ -602,72 +612,49 @@ class IntegrationController:
                 dependencies = [x for x in dependencies if len(x) > 0]
         return dependencies
 
-    def _get_handler_meta(self, module):
+    def _get_handler_meta(self, handler_name):
+
+        module = self.handler_modules[handler_name]
+
         handler_dir = Path(module.__path__[0])
         handler_folder_name = handler_dir.name
-        dependencies = self._read_dependencies(handler_dir)
 
-        self.handler_modules[module.name] = module
         import_error = getattr(module, 'import_error', None)
-        handler_meta = {
-            'import': {
-                'success': import_error is None,
-                'folder': handler_folder_name,
-                'dependencies': dependencies
-            },
-            'version': module.version
-        }
+        handler_meta = self.handlers_import_status[handler_name]
+        handler_meta['import']['success'] = import_error is None
+        handler_meta['version'] = module.version
+        handler_meta['thread_safe'] = getattr(module, 'thread_safe', False)
+
         if import_error is not None:
             handler_meta['import']['error_message'] = str(import_error)
 
-        # for ml engines, patch the connection_args from the argument probing
-        if hasattr(module, 'Handler'):
-            handler_class = module.Handler
-            try:
-                prediction_args = handler_class.prediction_args()
-                creation_args = handler_class.creation_args()
-                connection_args = {
-                    "prediction": prediction_args,
-                    "creation_args": creation_args
-                }
-                setattr(module, 'connection_args', connection_args)
-                logger.debug("Patched connection_args for %s", handler_folder_name)
-            except Exception as e:
-                # do nothing
-                logger.debug("Failed to patch connection_args for %s, reason: %s", handler_folder_name, str(e))
+        handler_type = getattr(module, 'type', None)
+        if handler_type == HANDLER_TYPE.ML:
+            # for ml engines, patch the connection_args from the argument probing
+            if hasattr(module, 'Handler'):
+                handler_class = module.Handler
+                try:
+                    prediction_args = handler_class.prediction_args()
+                    creation_args = getattr(module, 'creation_args', handler_class.creation_args())
+                    connection_args = {
+                        "prediction": prediction_args,
+                        "creation_args": creation_args
+                    }
+                    setattr(module, 'connection_args', connection_args)
+                    logger.debug("Patched connection_args for %s", handler_folder_name)
+                except Exception as e:
+                    # do nothing
+                    logger.debug("Failed to patch connection_args for %s, reason: %s", handler_folder_name, str(e))
         module_attrs = [attr for attr in [
             'connection_args_example',
             'connection_args',
             'description',
-            'name',
             'type',
             'title'
         ] if hasattr(module, attr)]
 
         for attr in module_attrs:
             handler_meta[attr] = getattr(module, attr)
-
-        # region icon
-        if hasattr(module, 'icon_path'):
-            try:
-                icon_path = handler_dir.joinpath(module.icon_path)
-                icon_type = icon_path.name[icon_path.name.rfind('.') + 1:].lower()
-
-                if icon_type == 'svg':
-                    with open(str(icon_path), 'rt') as f:
-                        handler_meta['icon'] = {
-                            'data': f.read()
-                        }
-                else:
-                    with open(str(icon_path), 'rb') as f:
-                        handler_meta['icon'] = {
-                            'data': base64.b64encode(f.read()).decode('utf-8')
-                        }
-
-                handler_meta['icon']['name'] = icon_path.name
-                handler_meta['icon']['type'] = icon_type
-            except Exception as e:
-                logger.error(f'Error reading icon for {handler_folder_name}, {e}!')
 
         # endregion
         if hasattr(module, 'permanent'):
@@ -679,6 +666,26 @@ class IntegrationController:
                 handler_meta['permanent'] = False
 
         return handler_meta
+
+    def _get_handler_icon(self, handler_dir, icon_path):
+        icon = {}
+        try:
+            icon_path = handler_dir.joinpath(icon_path)
+            icon_type = icon_path.name[icon_path.name.rfind('.') + 1:].lower()
+
+            if icon_type == 'svg':
+                with open(str(icon_path), 'rt') as f:
+                    icon['data'] = f.read()
+            else:
+                with open(str(icon_path), 'rb') as f:
+                    icon['data'] = base64.b64encode(f.read()).decode('utf-8')
+
+            icon['name'] = icon_path.name
+            icon['type'] = icon_type
+
+        except Exception as e:
+            logger.error(f'Error reading icon for {handler_dir}, {e}!')
+        return icon
 
     def _load_handler_modules(self):
         mindsdb_path = Path(importlib.util.find_spec('mindsdb').origin).parent
@@ -694,33 +701,92 @@ class IntegrationController:
         for handler_dir in handlers_path.iterdir():
             if handler_dir.is_dir() is False or handler_dir.name.startswith('__'):
                 continue
-            self.import_handler('mindsdb.integrations.handlers.', handler_dir)
 
-    def import_handler(self, base_import: str, handler_dir: Path):
-        handler_folder_name = str(handler_dir.name)
-
-        try:
-            handler_module = importlib.import_module(f'{base_import}{handler_folder_name}')
-            handler_meta = self._get_handler_meta(handler_module)
-        except Exception as e:
-            handler_name = handler_folder_name
-            if handler_name.endswith('_handler'):
-                handler_name = handler_name[:-8]
+            handler_info = self._get_handler_info(handler_dir)
+            if 'name' not in handler_info:
+                continue
+            handler_name = handler_info['name']
             dependencies = self._read_dependencies(handler_dir)
             handler_meta = {
+                'path': handler_dir,
                 'import': {
-                    'success': False,
-                    'error_message': str(e),
-                    'folder': handler_folder_name,
-                    'dependencies': dependencies
+                    'success': None,
+                    'error_message': None,
+                    'folder': handler_dir.name,
+                    'dependencies': dependencies,
                 },
-                'name': handler_name
+                'name': handler_name,
+                'permanent': handler_info.get('permanent', False),
             }
+            if 'icon_path' in handler_info:
+                icon = self._get_handler_icon(handler_dir, handler_info['icon_path'])
+                if icon:
+                    handler_meta['icon'] = icon
+            self.handlers_import_status[handler_name] = handler_meta
 
-        self.handlers_import_status[handler_meta['name']] = handler_meta
+    def _get_handler_info(self, handler_dir: Path):
+
+        init_file = handler_dir / '__init__.py'
+        if not init_file.exists():
+            return {}
+        code = ast.parse(open(init_file).read())
+
+        info = {}
+        for item in code.body:
+            if not isinstance(item, ast.Assign):
+                continue
+            if isinstance(item.targets[0], ast.Name) and isinstance(item.value, ast.Constant):
+                info[item.targets[0].id] = item.value.value
+
+        return info
+
+    def import_handler(self, handler_name: str, base_import: str = None):
+        with self._import_lock:
+            handler_meta = self.handlers_import_status[handler_name]
+            handler_dir = handler_meta['path']
+
+            handler_folder_name = str(handler_dir.name)
+            if base_import is None:
+                base_import = 'mindsdb.integrations.handlers.'
+
+            try:
+                handler_module = importlib.import_module(f'{base_import}{handler_folder_name}')
+                self.handler_modules[handler_name] = handler_module
+                handler_meta = self._get_handler_meta(handler_name)
+            except Exception as e:
+                handler_meta['import']['success'] = False
+                handler_meta['import']['error_message'] = str(e)
+
+            self.handlers_import_status[handler_meta['name']] = handler_meta
+            return handler_meta
 
     def get_handlers_import_status(self):
+        # tries to import all not imported yet
+
+        result = {}
+        for handler_name in list(self.handlers_import_status.keys()):
+            handler_meta = self.get_handler_meta(handler_name)
+            result[handler_name] = handler_meta
+
+        return result
+
+    def get_handlers_metadata(self):
         return self.handlers_import_status
+
+    def get_handler_meta(self, handler_name):
+        handler_meta = self.handlers_import_status.get(handler_name)
+        if handler_meta is None:
+            return
+        if handler_meta["import"]["success"] is None:
+            handler_meta = self.import_handler(handler_name)
+        return handler_meta
+
+    def get_handler_module(self, handler_name):
+        handler_meta = self.get_handler_meta(handler_name)
+        if handler_meta is None:
+            return
+        if handler_meta["import"]["success"]:
+            return self.handler_modules[handler_name]
 
 
 integration_controller = IntegrationController()

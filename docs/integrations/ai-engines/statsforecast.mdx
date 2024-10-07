@@ -27,8 +27,20 @@ ORDER BY date_column
 GROUP BY column_name, column_name, ...
 WINDOW 12 -- model looks back at sets of 12 rows each
 HORIZON 3 -- model forecasts the next 3 rows
-USING ENGINE = 'statsforecast';
+USING
+  engine = 'statsforecast',
+  model_name = 'model',
+  frequency = 'X',
+  season_length = 1,
+  hierarchy = ['column'];
 ```
+
+The following parameters can be used while creating the StatsForecast model:
+
+- `model_name` is an optional parameter that lets users specify one of the models from [this list](https://github.com/Nixtla/statsforecast?tab=readme-ov-file#models), which otherwise is chosen automatically.
+- `frequency` is an optional parameter that defines the frequency of data such as daily, weekly, monthly, etc. Available values include "H", "M", "MS", "Q", "SM", "BM", "BMS", "BQ", "BH".        
+- `season_length` is an optional parameter that defines the length of the season depending on frequency. For instance, `season_length` defaults to `12` if `frequency` is set to `M` (months).
+- `hierarchy` is an optional parameter that may improve prediction accuracy when the data has a hierarchical structure. [See more here](/integrations/ai-engines/statsforecast#statsforecast-hierarchicalforecast).
 
 To ensure that the model is created based on the StatsForecast engine, include the `USING` clause at the end.
 
@@ -63,7 +75,7 @@ WITH ENGINE = 'mysql',
 PARAMETERS = {
     "user": "user",
     "password": "MindsDBUser123!",
-    "host": "db-demo-data.cwoyhfn6bzs0.us-east-1.rds.amazonaws.com",
+    "host": "samples.mindsdb.com",
     "port": "3306",
     "database": "public"
 };
@@ -233,7 +245,7 @@ The `engine` parameter in the `training_options` clause specifies the ML engine 
 We can check the training status with the following query:
 
 ```bash
-> db.getCollection('models').find({
+> db.models.find({
       name: 'quarterly_expenditure_forecaster'
   })
 ```
@@ -244,12 +256,12 @@ Once the model status is `complete`, the behavior is the same as with any other 
 
 ```bash
 > db.quarterly_expenditure_forecaster.find({
-      collection: 'mongo_demo_db.historical_expenditures', 
-      query:  { 
-          "$where": "this.month > latest and this.category = 'food'" 
-      }
+      "collection": "mongo_pred_01.historical_expenditures",
+      "query": {"category": "food"}
   }).limit(3)
 ```
+
+By default the forecasts are made for `month > LATEST`.
 
 Here is the output data:
 

@@ -10,8 +10,8 @@ The integration allows for the deployment of Ollama models within MindsDB, provi
 
 Before proceeding, ensure the following prerequisites are met:
 
-1. Install MindsDB [locally via Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or use [MindsDB Cloud](https://cloud.mindsdb.com/).
-2. To use Ollama within MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
+1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
+2. To use Ollama within MindsDB, install the required dependencies following [this instruction](https://docs.mindsdb.com/setup/self-hosted/docker#install-dependencies).
 3. Follow [this instruction](https://github.com/ollama/ollama?tab=readme-ov-file#ollama) to download Ollama and run models locally.
 
 <Info>
@@ -21,11 +21,11 @@ Here are the recommended system specifications:
 - For 7B models, at least 8GB RAM is recommended.
 - For 13B models, at least 16GB RAM is recommended.
 - For 70B models, at least 64GB RAM is recommended.
-</Info>
+  </Info>
 
 ## Setup
 
-Create an AI engine from the [Ollama handler](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/ollama_handler).
+Create an AI engine from the [Ollama handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/ollama_handler).
 
 ```sql
 CREATE ML_ENGINE ollama_engine
@@ -67,6 +67,16 @@ USING
    model_name = 'llama2';
 ```
 
+<Tip>
+Models can be run in either the 'generate' or 'embedding' modes. The 'generate' mode is used for text generation, while the 'embedding' mode is used to generate embeddings for text.
+
+However, these modes can only be used with models that support them. For example, the `moondream` model supports both modes.
+
+By default, if the mode is not specified, the model will run in 'generate' mode if multiple modes are supported. If only one mode is supported, the model will run in that mode.
+
+To specify the mode, use the `mode` parameter in the `CREATE MODEL` statement. For example, `mode = 'embedding'`.
+</Tip>
+
 Query the model to get predictions.
 
 ```sql
@@ -91,7 +101,7 @@ You can override the prompt message as below:
 SELECT text, completion
 FROM llama2_model
 WHERE text = 'Hello'
-USING 
+USING
    prompt_template = 'Answer using exactly five words: {{text}}:';
 ```
 
@@ -108,5 +118,29 @@ Here is the output:
 <Tip>
 **Next Steps**
 
-Go to the [Use Cases](/use-cases/overview) section to see more examples.
+Go to the [Use Cases](https://docs.mindsdb.com/use-cases/overview) section to see more examples.
 </Tip>
+
+### Embeddings
+
+If you want to use an embedding model (instead of text generation), then you will want to activate embedding mode at model creation:
+
+```sql
+CREATE MODEL nomic_embed_model
+PREDICT embeddings
+USING
+   engine = 'ollama_engine',
+   model_name = 'nomic-embed-text',
+   mode = 'embedding',
+   prompt_template = '{{column}}, {{another_column}}';
+```
+
+The output will contain embeddings for each input row (length is model-dependent):
+
+```sql
++-------+---------------------------------------------------------------------------------+
+| column  | another_column  | embeddings                                                  |
++-------+---------------------------------------------------------------------------------+
+| Hello   | Matt!           | [0.7849581241607666,1.263154149055481,-4.024246692657471... |
++-------+---------------------------------------------------------------------------------+
+```

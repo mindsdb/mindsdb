@@ -1,7 +1,9 @@
-from typing import Dict, List
+import datetime
+from typing import Dict, Iterator, List, Union
 
 from langchain_core.tools import BaseTool
 from sqlalchemy.orm.attributes import flag_modified
+from sqlalchemy import null
 import pandas as pd
 
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
@@ -11,15 +13,18 @@ from mindsdb.interfaces.skills.skills_controller import SkillsController
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.utilities.context import context as ctx
-from mindsdb.utilities.config import Config
+
+from .constants import ASSISTANT_COLUMN, SUPPORTED_PROVIDERS, PROVIDER_TO_MODELS
+from .langchain_agent import get_llm_provider
 
 
 class AgentsController:
     '''Handles CRUD operations at the database level for Agents'''
 
+    assistant_column = ASSISTANT_COLUMN
+
     def __init__(
         self,
-        datahub,
         project_controller: ProjectController = None,
         skills_controller: SkillsController = None,
         model_controller: ModelController = None
@@ -33,7 +38,36 @@ class AgentsController:
         self.project_controller = project_controller
         self.skills_controller = skills_controller
         self.model_controller = model_controller
-        self.datahub = datahub
+
+    def check_model_provider(self, model_name: str, provider: str = None) -> (dict, str):
+        '''
+        Checks if a model exists, and gets the provider of the model.
+
+        The provider is either the provider of the model, or the provider given as an argument.
+
+        Parameters:
+            model_name (str): The name of the model
+            provider (str): The provider to check
+
+        Returns:
+            model (dict): The model object
+            provider (str): The provider of the model
+        '''
+        model = None
+
+        try:
+            model_name_no_version, model_version = Predictor.get_name_and_version(model_name)
+            model = self.model_controller.get_model(model_name_no_version, version=model_version)
+            provider = 'mindsdb' if model.get('provider') is None else model.get('provider')
+        except PredictorRecordNotFound:
+            if not provider:
+                # If provider is not given, get it from the model name
+                provider = get_llm_provider({"model_name": model_name})
+
+            elif provider not in SUPPORTED_PROVIDERS and model_name not in PROVIDER_TO_MODELS.get(provider, []):
+                raise ValueError(f'Model with name does not exist for provider {provider}: {model_name}')
+
+        return model, provider
 
     def get_agent(self, agent_name: str, project_name: str = 'mindsdb') -> db.Agents:
         '''
@@ -51,7 +85,8 @@ class AgentsController:
         agent = db.Agents.query.filter(
             db.Agents.name == agent_name,
             db.Agents.project_id == project.id,
-            db.Agents.company_id == ctx.company_id
+            db.Agents.company_id == ctx.company_id,
+            db.Agents.deleted_at == null()
         ).first()
         return agent
 
@@ -71,12 +106,13 @@ class AgentsController:
         agent = db.Agents.query.filter(
             db.Agents.id == id,
             db.Agents.project_id == project.id,
-            db.Agents.company_id == ctx.company_id
+            db.Agents.company_id == ctx.company_id,
+            db.Agents.deleted_at == null()
         ).first()
         return agent
 
     def get_agents(self, project_name: str) -> List[dict]:
-        '''
+        """
         Gets all agents in a project.
 
         Parameters:
@@ -84,15 +120,19 @@ class AgentsController:
 
         Returns:
             all-agents (List[db.Agents]): List of database agent object
-        '''
-        if project_name is None:
-            project_name = 'mindsdb'
-        project = self.project_controller.get(name=project_name)
+        """
+
         all_agents = db.Agents.query.filter(
-            db.Agents.project_id == project.id,
-            db.Agents.company_id == ctx.company_id
-        ).all()
-        return all_agents
+            db.Agents.company_id == ctx.company_id,
+            db.Agents.deleted_at == null()
+        )
+
+        if project_name is not None:
+            project = self.project_controller.get(name=project_name)
+
+            all_agents = all_agents.filter(db.Agents.project_id == project.id)
+
+        return all_agents.all()
 
     def add_agent(
             self,
@@ -100,6 +140,7 @@ class AgentsController:
             project_name: str,
             model_name: str,
             skills: List[str],
+            provider: str = None,
             params: Dict[str, str] = {}) -> db.Agents:
         '''
         Adds an agent to the database.
@@ -109,6 +150,7 @@ class AgentsController:
             project_name (str): The containing project
             model_name (str): The name of the existing ML model the agent will use
             skills (List[str]): List of existing skill names to add to the new agent
+            provider (str): The provider of the model
             params (Dict[str, str]): Parameters to use when running the agent
 
         Returns:
@@ -116,15 +158,7 @@ class AgentsController:
 
         Raises:
             ValueError: Agent with given name already exists, or skill/model with given name does not exist.
-            NotImplementedError: Free users try to create an agent.
         '''
-
-        config = Config()
-
-        is_cloud = config.get('cloud', False)
-        if is_cloud and ctx.user_class == 0:
-            raise NotImplementedError('Free users cannot create agents. Please subscribe to MindsDB Pro.')
-
         if project_name is None:
             project_name = 'mindsdb'
         project = self.project_controller.get(name=project_name)
@@ -134,12 +168,7 @@ class AgentsController:
         if agent is not None:
             raise ValueError(f'Agent with name already exists: {name}')
 
-        # Check if model exists.
-        model_name_no_version, model_version = Predictor.get_name_and_version(model_name)
-        try:
-            self.model_controller.get_model(model_name_no_version, version=model_version, project_name=project_name)
-        except PredictorRecordNotFound:
-            raise ValueError(f'Model with name does not exist: {model_name}')
+        _, provider = self.check_model_provider(model_name, provider)
 
         agent = db.Agents(
             name=name,
@@ -147,6 +176,7 @@ class AgentsController:
             company_id=ctx.company_id,
             user_class=ctx.user_class,
             model_name=model_name,
+            provider=provider,
             params=params,
         )
         skills_to_add = []
@@ -171,6 +201,7 @@ class AgentsController:
             model_name: str = None,
             skills_to_add: List[str] = None,
             skills_to_remove: List[str] = None,
+            provider: str = None,
             params: Dict[str, str] = None):
         '''
         Updates an agent in the database.
@@ -182,6 +213,7 @@ class AgentsController:
             model_name (str): The name of the existing ML model the agent will use
             skills_to_add (List[str]): List of skill names to add to the agent
             skills_to_remove (List[str]): List of skill names to remove from the agent
+            provider (str): The provider of the model
             params: (Dict[str, str]): Parameters to use when running the agent
 
         Returns:
@@ -200,15 +232,14 @@ class AgentsController:
             agent_with_new_name = self.get_agent(name, project_name=project_name)
             if agent_with_new_name is not None:
                 raise ValueError(f'Agent with updated name already exists: {name}')
+            existing_agent.name = name
 
-        # Check if model exists.
-        if model_name is not None:
-            model_name_no_version, model_version = Predictor.get_name_and_version(model_name)
-            try:
-                _ = self.model_controller.get_model(model_name_no_version, version=model_version, project_name=project_name)
-                existing_agent.model_name = model_name
-            except PredictorRecordNotFound:
-                return ValueError(f'Model with name does not exist: {model_name}')
+        if model_name or provider:
+            # check model and provider
+            model, provider = self.check_model_provider(model_name, provider)
+            # Update model and provider
+            existing_agent.model_name = model_name
+            existing_agent.provider = provider
 
         # Check if given skills exist.
         new_skills = []
@@ -217,7 +248,7 @@ class AgentsController:
             if existing_skill is None:
                 raise ValueError(f'Skill with name does not exist: {skill}')
             new_skills.append(existing_skill)
-        existing_agent.skills += new_skills
+        existing_agent.skills = list(set(existing_agent.skills + new_skills))
 
         removed_skills = []
         for skill in existing_agent.skills:
@@ -255,7 +286,7 @@ class AgentsController:
         agent = self.get_agent(agent_name, project_name)
         if agent is None:
             raise ValueError(f'Agent with name does not exist: {agent_name}')
-        db.session.delete(agent)
+        agent.deleted_at = datetime.datetime.now()
         db.session.commit()
 
     def get_completion(
@@ -263,39 +294,76 @@ class AgentsController:
             agent: db.Agents,
             messages: List[Dict[str, str]],
             project_name: str = 'mindsdb',
-            tools: List[BaseTool] = None) -> pd.DataFrame:
+            tools: List[BaseTool] = None,
+            stream: bool = False) -> Union[Iterator[object], pd.DataFrame]:
         '''
         Queries an agent to get a completion.
 
         Parameters:
             agent (db.Agents): Existing agent to get completion from
             messages (List[Dict[str, str]]): Chat history to send to the agent
+            trace_id (str): ID of Langfuse trace to use
+            observation_id (str): ID of parent Langfuse observation to use
             project_name (str): Project the agent belongs to (default mindsdb)
             tools (List[BaseTool]): Tools to use while getting the completion
+            stream (bool): Whether or not to stream the response
 
         Returns:
-            pd.DataFrame (pd.DataFrame): Completion as a DataFrame
+            response (Union[Iterator[object], pd.DataFrame]): Completion as a DataFrame or iterator of completion chunks
 
         Raises:
             ValueError: Agent's model does not exist.
         '''
-        # Model needs to exist.
-        model_name_no_version, version = db.Predictor.get_name_and_version(agent.model_name)
-        try:
-            _ = self.model_controller.get_model(model_name_no_version, version=version, project_name=project_name)
-        except PredictorRecordNotFound:
-            return ValueError(f'Model with name {agent.model_name} not found')
+        if stream:
+            return self._get_completion_stream(
+                agent,
+                messages,
+                project_name=project_name,
+                tools=tools
+            )
+        from .langchain_agent import LangchainAgent
 
-        if tools is None:
-            tools = []
-        predict_params = {
-            # Underlying handler (e.g. Langchain) will handle default tools like mdb_read, mdb_write, etc.
-            'tools': tools,
-            'skills': [s for s in agent.skills],
-        }
-        project_datanode = self.datahub.get(project_name)
-        return project_datanode.predict(
-            model_name=agent.model_name,
-            data=messages,
-            params=predict_params
-        )
+        model, provider = self.check_model_provider(agent.model_name, agent.provider)
+        # update old agents
+        if agent.provider is None and provider is not None:
+            agent.provider = provider
+            db.session.commit()
+
+        lang_agent = LangchainAgent(agent, model)
+        return lang_agent.get_completion(messages)
+
+    def _get_completion_stream(
+            self,
+            agent: db.Agents,
+            messages: List[Dict[str, str]],
+            project_name: str = 'mindsdb',
+            tools: List[BaseTool] = None) -> Iterator[object]:
+        '''
+        Queries an agent to get a stream of completion chunks.
+
+        Parameters:
+            agent (db.Agents): Existing agent to get completion from
+            messages (List[Dict[str, str]]): Chat history to send to the agent
+            trace_id (str): ID of Langfuse trace to use
+            observation_id (str): ID of parent Langfuse observation to use
+            project_name (str): Project the agent belongs to (default mindsdb)
+            tools (List[BaseTool]): Tools to use while getting the completion
+
+        Returns:
+            chunks (Iterator[object]): Completion chunks as an iterator
+
+        Raises:
+            ValueError: Agent's model does not exist.
+        '''
+        # For circular dependency.
+        from .langchain_agent import LangchainAgent
+
+        model, provider = self.check_model_provider(agent.model_name, agent.provider)
+
+        # update old agents
+        if agent.provider is None and provider is not None:
+            agent.provider = provider
+            db.session.commit()
+
+        lang_agent = LangchainAgent(agent, model=model)
+        return lang_agent.get_completion(messages, stream=True)

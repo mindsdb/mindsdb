@@ -65,6 +65,14 @@ class Config():
             os.environ['MINDSDB_STORAGE_DIR'] = root_storage_dir
         # endregion
 
+        # region
+        is_storage_absent = os.environ.get('MINDSDB_STORAGE_BACKUP_DISABLED', '').lower() in ('1', 'true')
+        if is_storage_absent is True:
+            self._override_config['permanent_storage'] = {
+                'location': 'absent'
+            }
+        # endregion
+
         if os.path.isdir(root_storage_dir) is False:
             os.makedirs(root_storage_dir)
 
@@ -106,7 +114,7 @@ class Config():
         api_host = "127.0.0.1" if not self.use_docker_env else "0.0.0.0"
         self._default_config = {
             'permanent_storage': {
-                'location': 'local'
+                'location': 'absent'
             },
             'storage_dir': os.environ['MINDSDB_STORAGE_DIR'],
             'paths': paths,
@@ -154,7 +162,9 @@ class Config():
             "cache": {
                 "type": "local"
             },
-            'ml_task_queue': ml_queue
+            'ml_task_queue': ml_queue,
+            "file_upload_domains": [],
+            "web_crawling_allowed_sites": [],
         }
 
         return _merge_configs(self._default_config, self._override_config)

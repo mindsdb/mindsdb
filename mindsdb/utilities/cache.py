@@ -18,7 +18,7 @@ How to use it:
 
 Configuration:
 
-- max_size size of cache in count of records, default is 50
+- max_size size of cache in count of records, default is 500
 - serializer, module for serialization, default is dill
 
 It can be set via:
@@ -67,10 +67,14 @@ from mindsdb.utilities.json_encoder import CustomJSONEncoder
 from mindsdb.interfaces.storage.fs import FileLock
 from mindsdb.utilities.context import context as ctx
 
+_CACHE_MAX_SIZE = 500
+
 
 def dataframe_checksum(df: pd.DataFrame):
-    checksum = str_checksum(df.to_json())
-    return checksum
+
+    return str_checksum(str(
+        df.set_axis(range(len(df.columns)), axis=1).to_records(index=False)
+    ))
 
 
 def json_checksum(obj: t.Union[dict, list]):
@@ -87,7 +91,7 @@ class BaseCache(ABC):
     def __init__(self, max_size=None, serializer=None):
         self.config = Config()
         if max_size is None:
-            max_size = self.config["cache"].get("max_size", 50)
+            max_size = self.config["cache"].get("max_size", _CACHE_MAX_SIZE)
         self.max_size = max_size
         if serializer is None:
             serializer_module = self.config["cache"].get('serializer')

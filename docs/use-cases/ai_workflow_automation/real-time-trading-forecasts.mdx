@@ -1,0 +1,153 @@
+---
+title: Automate Real-Time Trading Data Forecasts
+sidebarTitle: Real-time Trading Forecasts
+---
+
+MindsDB enables you to automate AI workflows between any source of data and any AI/ML Model. The core building block of this automation is a job that allows anything in MindsDB to be run either on a timer (e.g. every day) or based on a trigger (e.g. when a new row is added to the database).
+
+In this tutorial we will use a job to automate real-time forecasts for the BTC/USDT crypto price as Slack notifications.
+
+## Connect a data source
+
+MindsDB can connect to any source of data - a database, warehouse, stream or app. Here, we’ll connect to Binance API to get a feed of real-time price information.
+
+```sql
+CREATE DATABASE my_binance
+WITH ENGINE = 'binance';
+```
+
+We now have access to the Binance API, which updates data every minute so the interval between data rows in one minute. Let's take a look at the data for the crypto pair we’ll ultimately use.
+
+```sql
+SELECT *
+FROM my_binance.aggregated_trade_data
+WHERE symbol = 'BTCUSDT'
+LIMIT 10;
+```
+
+## Deploy a time-series model
+
+The Binance trade data is updated every minute. As a trader, you might want to predict the open prices for the next 10 minutes - so let’s set it up. We’ll use a forecasting engine called Lightwood for ease and speed but you’re also able to train your own model if you like.
+
+```sql
+CREATE MODEL cryptocurrency_forecast_model
+FROM my_binance (
+SELECT *
+FROM aggregated_trade_data
+WHERE symbol = 'BTCUSDT'
+)
+PREDICT open_price
+ORDER BY open_time
+WINDOW 100
+HORIZON 10;
+```
+
+Here’s what’s going on in the `CREATE MODEL` statement:
+
+- `CREATE MODEL`: It is used to create, train, and deploy an ML model. By default, MindsDB’s AutoML will automatically choose the best model for your data but this can be overridden (docs).
+
+- `FROM`: Here, we specify which of our integrations to use. Anything that is between the parentheses is the data that will be used to train the model - here, the latest Binance data from the connection we’ve already made to Binance is used.
+
+- `PREDICT`: It specifies the target column - here, the open price of the BTC/USDT trading pair is to be forecasted.
+
+The following elements are unique to forecasting models in MindsDB:
+
+- As it is a forecasting model, you should use ORDER BY to order the data by a date column - here, it is the open time when the open price takes effect.
+
+- The `WINDOW` clause defines the window the model looks back at while making forecasts - here, the model looks back at sets of 100 rows (intervals of 100 minutes).
+
+- The `HORIZON` clause defines how many rows into the future the model will forecast - here, it forecasts the next 10 rows (the next 10 minutes).
+
+After executing the `CREATE MODEL` statement as above, you can check the progress status using this query:
+
+```sql
+DESCRIBE cryptocurrency_forecast_model;
+```
+
+The time it takes to train the model depends on the amount of training data. In this case, it takes about 2 minutes on MindsDB Cloud. Once the status reads complete, we’re ready to make some forecasts!
+
+## Make forecasts
+
+First, we’ll save the Binance data into a view, which will be the input data for making forecasts.
+
+```sql
+CREATE VIEW btcusdt_recent AS (
+SELECT *
+FROM my_binance.aggregated_trade_data
+WHERE symbol = 'BTCUSDT'
+);
+```
+
+Next, we query for forecasts by joining the model with the Binance input data table.
+
+```sql
+SELECT to_timestamp(cast(m.open_time as bigint)) AS open_time,
+m.open_price, m.open_price_explain
+FROM btcusdt_recent AS d
+JOIN cryptocurrency_forecast_model AS m
+WHERE d.open_time > LATEST;
+```
+
+Please note that the Binance data is updated every minute, so every time you query the model, you will get forecasts for the following 10 minutes (as defined by the `HORIZON` clause).
+
+The next thing we can do is automate price alerts. Here we’ll choose Slack as our preferred place to receive the alerts but this could be any other system that MindsDB integrates with.
+
+## Connect Slack
+
+Follow these instructions to set up your Slack app and generate a Slack bot token. Once you get the Slack bot token and integrate your Slack app into one of the Slack channels, you can connect it to MindsDB.
+
+```sql
+CREATE DATABASE btcusdt_slack_app
+WITH ENGINE = 'slack',
+PARAMETERS =  {
+"token": "xoxb-..."
+};
+```
+
+Here is how to send messages to a Slack channel:
+
+```sql
+INSERT INTO btcusdt_slack_app.messages (channel_id, text)
+VALUES("slack-channel-id", "BTCUSDT forecasts coming soon.");
+```
+
+So, let’s put it all together again.
+
+## Automate real-time forecasts
+
+By now you have connected Binance to MindsDB, deployed and trained a time-series model, and set up the Slack connection. Let's create a job that will retrain your model periodically using the latest Binance data (which allows us to keep improving the accuracy and performance of the model) and send real-time forecasts of the BTC/USDT trading pair for the next 10 minutes as Slack notifications.
+
+```sql
+CREATE JOB btcusdt_forecasts_to_slack (
+
+-- step 1: retrain the model with new data to improve its accuracy --
+
+RETRAIN cryptocurrency_forecast_model
+FROM my_binance
+(
+SELECT *
+FROM aggregated_trade_data
+WHERE symbol = 'BTCUSDT'
+)
+USING
+join_learn_process = true;
+
+
+-- step 2: make fresh forecasts for the following 10 minutes and insert it into slack --
+
+INSERT INTO btcusdt_slack_app.messages (channel_id, text)
+VALUES("slack-channel-id", "Here are the BTCUSDT forecasts for the next 10 minutes:");
+INSERT INTO btcusdt_slack_app.messages (channel_id, text)
+SELECT "slack-channel-id" AS channel_id, concat('timestamp: ', cast(to_timestamp(cast(m.open_time as bigint)) as string), ' -> open price: ', m.open_price) AS text
+FROM btcusdt_recent AS d
+JOIN cryptocurrency_forecast_model AS m
+WHERE d.open_time > LATEST;
+)
+EVERY 5 minutes
+-- Make sure to highlight the whole query to be able to execute it --
+;
+```
+
+So there you have it - you’ve successfully built a fully automated end-to-end alert system for crypto prices.
+
+Happy trading!

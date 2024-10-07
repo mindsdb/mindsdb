@@ -17,19 +17,16 @@ class LimitOffsetStepCall(BaseStepCall):
     def call(self, step):
         step_data = self.steps_data[step.dataframe.step_num]
 
-        step_data2 = ResultSet()
-        for col in step_data.columns:
-            step_data2.add_column(col)
+        df = step_data.get_raw_df()
 
-        records = step_data.get_records_raw()
+        step_data2 = ResultSet(columns=list(step_data.columns))
 
         if isinstance(step.offset, int):
-            records = records[step.offset:]
+            df = df[step.offset:]
         if isinstance(step.limit, int):
-            records = records[:step.limit]
+            df = df[:step.limit]
 
-        for record in records:
-            step_data2.add_record_raw(record)
+        step_data2.add_raw_df(df)
 
         return step_data2
 

@@ -25,13 +25,28 @@ class JoinStepCall(BaseStepCall):
     def call(self, step):
         left_data = self.steps_data[step.left.step_num]
         right_data = self.steps_data[step.right.step_num]
-        table_a, names_a = left_data.to_df_cols(prefix='A')
-        table_b, names_b = right_data.to_df_cols(prefix='B')
 
         if right_data.is_prediction or left_data.is_prediction:
             # ignore join condition, use row_id
-            a_row_id = left_data.find_columns('__mindsdb_row_id')[0].get_hash_name(prefix='A')
-            b_row_id = right_data.find_columns('__mindsdb_row_id')[0].get_hash_name(prefix='B')
+            l_row_ids = left_data.find_columns('__mindsdb_row_id')
+            r_row_ids = right_data.find_columns('__mindsdb_row_id')
+
+            if len(l_row_ids) == 0:
+                if len(r_row_ids) == 0:
+                    raise RuntimeError('Unable to find row id')
+                else:
+                    # copy from right to left
+                    idx = right_data.get_col_index(r_row_ids[0])
+                    left_data.set_column_values('__mindsdb_row_id', right_data.get_column_values(idx))
+                    l_row_ids = left_data.find_columns('__mindsdb_row_id')
+            elif len(r_row_ids) == 0:
+                # copy from left to right
+                idx = left_data.get_col_index(l_row_ids[0])
+                right_data.set_column_values('__mindsdb_row_id', left_data.get_column_values(idx))
+                r_row_ids = right_data.find_columns('__mindsdb_row_id')
+
+            a_row_id = l_row_ids[0].get_hash_name(prefix='A')
+            b_row_id = r_row_ids[0].get_hash_name(prefix='B')
 
             join_condition = f'table_a.{a_row_id} = table_b.{b_row_id}'
 
@@ -66,6 +81,9 @@ class JoinStepCall(BaseStepCall):
 
             join_condition = SqlalchemyRender('postgres').get_string(condition)
             join_type = step.query.join_type
+
+        table_a, names_a = left_data.to_df_cols(prefix='A')
+        table_b, names_b = right_data.to_df_cols(prefix='B')
 
         query = f"""
                        SELECT * FROM table_a {join_type} table_b

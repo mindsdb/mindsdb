@@ -6,6 +6,22 @@ sidebarTitle: Get a Single Prediction
 
 <ResponseExample>
 
+```json Request
+curl --request POST \
+  --url http://127.0.0.1:47334/api/projects/mindsdb/models/home_rentals_model/predict \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "data": [
+      {
+        "sqft": "823",
+        "location": "good",
+        "neighborhood": "downtown",
+        "days_on_market": "10"
+      }
+    ]
+  }'
+```
+
 ```json Response
 [
     {
@@ -33,7 +49,12 @@ sidebarTitle: Get a Single Prediction
 
 <Note>
 
-The REST API playground can currently only be used with MindsDB running locally at http://127.0.0.1:47334. Support for MindsDB Cloud is in progress. In the meantime,
-check out our [SQL example](/rest/sql) for how to use the REST API with MindsDB Cloud. 
+The REST API endpoints can be used with MindsDB running locally at http://127.0.0.1:47334/api. 
 
 </Note>
+
+<Tip>
+
+Note that `data` sent in the request is specific to the model. For instance, the `home_rentals_model` has been trained on data that includes details of rental properties, and we want to predict the `rental_price` value for a specific property that matches `data` passed in the request.
+
+</Tip>

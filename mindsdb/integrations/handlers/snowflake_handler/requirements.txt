@@ -1,2 +1,2 @@
 snowflake-connector-python>=2.7.12
-snowflake-sqlalchemy @ git+https://github.com/ea-rus/snowflake-sqlalchemy
+snowflake-sqlalchemy>=1.6.1

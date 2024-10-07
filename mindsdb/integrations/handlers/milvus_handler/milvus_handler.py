@@ -1,10 +1,8 @@
-from collections import OrderedDict
 from typing import List, Optional
 
 import pandas as pd
 from pymilvus import Collection, CollectionSchema, DataType, FieldSchema, connections, utility
 
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse
 from mindsdb.integrations.libs.response import HandlerResponse as Response
@@ -96,19 +94,13 @@ class MilvusHandler(VectorStoreHandler):
         )
         return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=collections_name)
 
-    def drop_table(self, table_name: str, if_exists=True) -> HandlerResponse:
+    def drop_table(self, table_name: str, if_exists=True):
         """Delete a collection from the Milvus database."""
         try:
             utility.drop_collection(table_name)
         except Exception as e:
-            if if_exists:
-                return Response(resp_type=RESPONSE_TYPE.OK)
-            else:
-                return Response(
-                    resp_type=RESPONSE_TYPE.ERROR,
-                    error_message=f"Error dropping table '{table_name}': {e}",
-                )
-        return Response(resp_type=RESPONSE_TYPE.OK)
+            if not if_exists:
+                raise Exception(f"Error dropping table '{table_name}': {e}")
 
     def _get_milvus_operator(self, operator: FilterOperator) -> str:
         mapping = {
@@ -172,16 +164,10 @@ class MilvusHandler(VectorStoreHandler):
         conditions: List[FilterCondition] = None,
         offset: int = None,
         limit: int = None,
-    ) -> HandlerResponse:
+    ):
         # Load collection table
         collection = Collection(table_name)
-        try:
-            collection.load()
-        except Exception as e:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Error loading collection {table_name}: {e}",
-            )
+        collection.load()
 
         # Find vector filter in conditions
         vector_filter = (
@@ -207,10 +193,8 @@ class MilvusHandler(VectorStoreHandler):
         # NOTE: According to api sum of offset and limit should be less than 16384.
         api_limit = 16384
         if limit is not None and offset is not None and limit + offset >= api_limit:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Sum of limit and offset should be less than {api_limit}",
-            )
+            raise Exception(f"Sum of limit and offset should be less than {api_limit}")
+
         if limit is not None:
             search_arguments["limit"] = limit
         else:
@@ -239,7 +223,7 @@ class MilvusHandler(VectorStoreHandler):
                             data[col].append(hit.entity.get(col))
                         else:
                             data[TableField.DISTANCE.value].append(hit.distance)
-            return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame(data))
+            return pd.DataFrame(data)
         else:
             # Basic search
             if not search_arguments["expr"]:
@@ -250,9 +234,9 @@ class MilvusHandler(VectorStoreHandler):
                 TableField.EMBEDDINGS.value,
             ] if not columns else columns
             results = collection.query(**search_arguments)
-            return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=pd.DataFrame.from_records(results))
+            return pd.DataFrame.from_records(results)
 
-    def create_table(self, table_name: str, if_not_exists=True) -> HandlerResponse:
+    def create_table(self, table_name: str, if_not_exists=True):
         """Create a collection with default parameters in the Milvus database as described in documentation."""
         id = FieldSchema(
             name=TableField.ID.value,
@@ -278,64 +262,40 @@ class MilvusHandler(VectorStoreHandler):
             enable_dynamic_field=self._create_table_params["create_dynamic_field"]
         )
         collection_name = table_name
-        collection = None
-        try:
-            collection = Collection(
-                name=collection_name,
-                schema=schema,
-                using=self._create_table_params["create_alias"],
-            )
-        except Exception as e:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Unable to create collection `{table_name}`: {e}"
-            )
-        try:
-            collection.create_index(
-                field_name=TableField.EMBEDDINGS.value,
-                index_params={
-                    "index_type": self._create_table_params["create_index_type"],
-                    "metric_type": self._create_table_params["create_index_metric_type"],
-                    "params": self._create_table_params["create_index_params"]
-                }
-            )
-        except Exception as e:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Unable to create index on collection `{table_name}`: {e}"
-            )
-        return Response(resp_type=RESPONSE_TYPE.OK)
+
+        collection = Collection(
+            name=collection_name,
+            schema=schema,
+            using=self._create_table_params["create_alias"],
+        )
+
+        collection.create_index(
+            field_name=TableField.EMBEDDINGS.value,
+            index_params={
+                "index_type": self._create_table_params["create_index_type"],
+                "metric_type": self._create_table_params["create_index_metric_type"],
+                "params": self._create_table_params["create_index_params"]
+            }
+        )
 
     def insert(
         self, table_name: str, data: pd.DataFrame, columns: List[str] = None
-    ) -> HandlerResponse:
+    ):
         """Insert data into the Milvus collection."""
-        collection = None
-        try:
-            collection = Collection(table_name)
-        except Exception as e:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Unable to fetch collection `{table_name}`: {e}"
-            )
-        try:
-            data = data[columns]
-            if TableField.METADATA.value in data.columns:
-                rows = data[TableField.METADATA.value].to_list()
-                data = pd.concat([data, pd.DataFrame.from_records(rows)], axis=1)
-                data.drop(TableField.METADATA.value, axis=1, inplace=True)
-            collection.insert(data.to_dict(orient="records"))
-            collection.flush()
-        except Exception as e:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Unable to insert data into collection `{table_name}`: {e}"
-            )
-        return Response(resp_type=RESPONSE_TYPE.OK)
+
+        collection = Collection(table_name)
+
+        data = data[columns]
+        if TableField.METADATA.value in data.columns:
+            rows = data[TableField.METADATA.value].to_list()
+            data = pd.concat([data, pd.DataFrame.from_records(rows)], axis=1)
+            data.drop(TableField.METADATA.value, axis=1, inplace=True)
+        collection.insert(data.to_dict(orient="records"))
+        collection.flush()
 
     def delete(
         self, table_name: str, conditions: List[FilterCondition] = None
-    ) -> HandlerResponse:
+    ):
         # delete only supports IN operator
         for condition in conditions:
             if condition.op in [FilterOperator.EQUAL, FilterOperator.IN]:
@@ -344,26 +304,12 @@ class MilvusHandler(VectorStoreHandler):
                     condition.value = [condition.value]
         filters = self._translate_conditions(conditions, exclude_id=False)
         if not filters:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message="Some filters are required, use DROP TABLE to delete everything",
-            )
-        try:
-            collection = Collection(table_name)
-        except Exception as e:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Error retrieving collection `{table_name}`: {e}",
-            )
-        try:
-            collection.delete(filters)
-            collection.flush()
-        except Exception as e:
-            return Response(
-                resp_type=RESPONSE_TYPE.ERROR,
-                error_message=f"Error deleting from collection `{table_name}`: {e}",
-            )
-        return Response(resp_type=RESPONSE_TYPE.OK)
+            raise Exception("Some filters are required, use DROP TABLE to delete everything")
+
+        collection = Collection(table_name)
+
+        collection.delete(filters)
+        collection.flush()
 
     def get_columns(self, table_name: str) -> HandlerResponse:
         """Get columns in a Milvus collection"""
@@ -386,130 +332,3 @@ class MilvusHandler(VectorStoreHandler):
                 resp_type=RESPONSE_TYPE.ERROR,
                 error_message=f"Error finding table: {e}",
             )
-
-
-connection_args = OrderedDict(
-    alias={
-        "type": ARG_TYPE.STR,
-        "description": "alias of the Milvus connection to construct",
-        "required": True,
-    },
-    host={
-        "type": ARG_TYPE.STR,
-        "description": "IP address of the Milvus server",
-        "required": True,
-    },
-    port={
-        "type": ARG_TYPE.INT,
-        "description": "port of the Milvus server",
-        "required": True,
-    },
-    user={
-        "type": ARG_TYPE.STR,
-        "description": "username of the Milvus server",
-        "required": True,
-    },
-    password={
-        "type": ARG_TYPE.STR,
-        "description": "password of the username of the Milvus server",
-        "required": True,
-    },
-    search_default_limit={
-        "type": ARG_TYPE.INT,
-        "description": "default limit to be passed in select statements",
-        "required": False,
-    },
-    search_metric_type={
-        "type": ARG_TYPE.STR,
-        "description": "metric type used for searches",
-        "required": False,
-    },
-    search_ignore_growing={
-        "type": ARG_TYPE.BOOL,
-        "description": "whether to ignore growing segments during similarity searches",
-        "required": False,
-    },
-    search_params={
-        "type": ARG_TYPE.DICT,
-        "description": "specific to the `search_metric_type`",
-        "required": False,
-    },
-    create_auto_id={
-        "type": ARG_TYPE.BOOL,
-        "description": "whether to auto generate id when inserting records with no ID (default=False)",
-        "required": False,
-    },
-    create_id_max_len={
-        "type": ARG_TYPE.STR,
-        "description": "maximum length of the id field when creating a table (default=64)",
-        "required": False,
-    },
-    create_embedding_dim={
-        "type": ARG_TYPE.INT,
-        "description": "embedding dimension for creating table (default=8)",
-        "required": False,
-    },
-    create_dynamic_field={
-        "type": ARG_TYPE.BOOL,
-        "description": "whether or not the created tables have dynamic fields or not (default=True)",
-        "required": False,
-    },
-    create_content_max_len={
-        "type": ARG_TYPE.INT,
-        "description": "max length of the content column (default=200)",
-        "required": False,
-    },
-    create_content_default_value={
-        "type": ARG_TYPE.STR,
-        "description": "default value of content column (default='')",
-        "required": False,
-    },
-    create_schema_description={
-        "type": ARG_TYPE.STR,
-        "description": "description of the created schemas (default='')",
-        "required": False,
-    },
-    create_alias={
-        "type": ARG_TYPE.STR,
-        "description": "alias of the created schemas (default='default')",
-        "required": False,
-    },
-    create_index_params={
-        "type": ARG_TYPE.DICT,
-        "description": "parameters of the index created on embeddings column (default={})",
-        "required": False,
-    },
-    create_index_metric_type={
-        "type": ARG_TYPE.STR,
-        "description": "metric used to create the index (default='L2')",
-        "required": False,
-    },
-    create_index_type={
-        "type": ARG_TYPE.STR,
-        "description": "the type of index (default='AUTOINDEX')",
-        "required": False,
-    },
-)
-
-connection_args_example = OrderedDict(
-    alias="default",
-    host="127.0.0.1",
-    port=19530,
-    user="username",
-    password="password",
-    search_default_limit=100,
-    search_metric_type="L2",
-    search_ignore_growing=True,
-    search_params={"nprobe": 10},
-    create_auto_id=False,
-    create_id_max_len=64,
-    create_embedding_dim=8,
-    create_dynamic_field=True,
-    create_content_max_len=200,
-    create_content_default_value="",
-    create_schema_description="MindsDB generated table",
-    create_alias="default",
-    create_index_params={},
-    create_index_metric_type="L2",
-    create_index_type="AUTOINDEX",
-)

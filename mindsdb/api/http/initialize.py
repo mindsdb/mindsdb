@@ -1,12 +1,13 @@
-import datetime
-import mimetypes
 import os
+import datetime
 import secrets
+import mimetypes
 import threading
 import traceback
 import webbrowser
-from distutils.version import LooseVersion
 from pathlib import Path
+from http import HTTPStatus
+from distutils.version import LooseVersion
 
 import requests
 from flask import Flask, url_for, make_response, request, send_from_directory
@@ -22,11 +23,13 @@ from mindsdb.api.http.namespaces.agents import ns_conf as agents_ns
 from mindsdb.api.http.namespaces.analysis import ns_conf as analysis_ns
 from mindsdb.api.http.namespaces.auth import ns_conf as auth_ns
 from mindsdb.api.http.namespaces.chatbots import ns_conf as chatbots_ns
+from mindsdb.api.http.namespaces.jobs import ns_conf as jobs_ns
 from mindsdb.api.http.namespaces.config import ns_conf as conf_ns
 from mindsdb.api.http.namespaces.databases import ns_conf as databases_ns
 from mindsdb.api.http.namespaces.default import ns_conf as default_ns, check_auth
 from mindsdb.api.http.namespaces.file import ns_conf as file_ns
 from mindsdb.api.http.namespaces.handlers import ns_conf as handlers_ns
+from mindsdb.api.http.namespaces.knowledge_bases import ns_conf as knowledge_bases_ns
 from mindsdb.api.http.namespaces.models import ns_conf as models_ns
 from mindsdb.api.http.namespaces.projects import ns_conf as projects_ns
 from mindsdb.api.http.namespaces.skills import ns_conf as skills_ns
@@ -46,6 +49,7 @@ from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.utilities.telemetry import inject_telemetry_to_static
+from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
 
 logger = log.getLogger(__name__)
 
@@ -171,7 +175,7 @@ def initialize_static():
 
         # ignore versions like '23.9.2.2'
         if current_gui_version_lv is not None and len(current_gui_version_lv.version) < 3:
-            if current_gui_version_lv >= last_gui_version_lv:
+            if current_gui_version_lv == last_gui_version_lv:
                 return True
         logger.debug("Updating gui..")
         success = update_static(last_gui_version_lv)
@@ -208,7 +212,11 @@ def initialize_app(config, no_studio):
     @app.route('/<path:path>', methods=['GET'])
     def root_index(path):
         if path.startswith('api/'):
-            return {'message': 'wrong query'}, 400
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                'Not found',
+                'The endpoint you are trying to access does not exist on the server.'
+            )
         if static_root.joinpath(path).is_file():
             return send_from_directory(static_root, path)
         else:
@@ -229,7 +237,9 @@ def initialize_app(config, no_studio):
         models_ns,
         chatbots_ns,
         skills_ns,
-        agents_ns
+        agents_ns,
+        jobs_ns,
+        knowledge_bases_ns
     ]
 
     for ns in protected_namespaces:
@@ -241,10 +251,22 @@ def initialize_app(config, no_studio):
     def handle_exception(e):
         logger.error(f"http exception: {e}")
         # pass through HTTP errors
+        # NOTE flask_restx require 'message', also it modyfies 'application/problem+json' to 'application/json'
         if isinstance(e, HTTPException):
-            return {"message": str(e)}, e.code, e.get_response().headers
-        name = getattr(type(e), "__name__") or "Unknown error"
-        return {"message": f"{name}: {str(e)}"}, 500
+            return ({
+                'title': e.name,
+                'detail': e.description,
+                'message': e.description
+            }, e.code, {
+                'Content-Type': 'application/problem+json'
+            })
+        return ({
+            'title': getattr(type(e), "__name__") or "Unknown error",
+            'detail': str(e),
+            'message': str(e)
+        }, 500, {
+            'Content-Type': 'application/problem+json'
+        })
 
     @app.teardown_appcontext
     def remove_session(*args, **kwargs):

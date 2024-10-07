@@ -326,8 +326,9 @@ class ChatBotController:
     def on_webhook(self, webhook_token: str, request: dict) -> None:
         """
         Handles incoming webhook requests.
+        Finds the chat bot associated with the webhook token and passes the request to the chat bot task.
 
-        Parameters:
+        Args:
             webhook_token (str): The token to uniquely identify the webhook.
             request (dict): The incoming webhook request.
         """

@@ -107,8 +107,7 @@ class ChatBotTask(BaseTask):
             # In Slack direct messages are treated as channels themselves.
             user=bot_username,
             destination=chat_id,
-            sent_at=dt.datetime.now(),
-            request=message.request
+            sent_at=dt.datetime.now()
         )
 
         # send to chat adapter

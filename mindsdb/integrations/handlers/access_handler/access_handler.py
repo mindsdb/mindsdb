@@ -22,7 +22,7 @@ logger = log.getLogger(__name__)
 
 class AccessHandler(DatabaseHandler):
     """
-    This handler handles connection and execution of the Microsoft Access statements.
+    This handler manages connection and execution of Microsoft Access statements.
     """
 
     name = 'access'
@@ -31,9 +31,9 @@ class AccessHandler(DatabaseHandler):
         """
         Initialize the handler.
         Args:
-            name (str): name of particular handler instance
-            connection_data (dict): parameters for connecting to the database
-            **kwargs: arbitrary keyword arguments.
+            name (str): Name of the handler instance.
+            connection_data (dict): Parameters for connecting to the database.
+            **kwargs: Arbitrary keyword arguments.
         """
         super().__init__(name)
         self.parser = parse_sql
@@ -45,7 +45,7 @@ class AccessHandler(DatabaseHandler):
         self.is_connected = False
 
     def __del__(self):
-        if self.is_connected is True:
+        if self.is_connected:
             self.disconnect()
 
     def connect(self) -> StatusResponse:
@@ -54,28 +54,35 @@ class AccessHandler(DatabaseHandler):
         Returns:
             HandlerStatusResponse
         """
-
-        if self.is_connected is True:
+        if self.is_connected:
             return self.connection
 
-        self.connection = pyodbc.connect(
-            r'Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=' + self.connection_data['db_file']
-        )
-        self.is_connected = True
+        try:
+            self.connection = pyodbc.connect(
+                r'Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=' + self.connection_data['db_file']
+            )
+            self.is_connected = True
+            logger.info(f"Connected to Access database: {self.connection_data['db_file']}")
+        except Exception as e:
+            logger.error(f"Failed to connect to Access database: {e}")
+            return StatusResponse(success=False, error_message=str(e))
 
-        return self.connection
+        return StatusResponse(success=True)
 
     def disconnect(self):
         """
         Close any existing connections.
         """
-
-        if self.is_connected is False:
+        if not self.is_connected:
             return
 
-        self.connection.close()
-        self.is_connected = False
-        return self.is_connected
+        try:
+            self.connection.close()
+            logger.info("Disconnected from Access database.")
+        except Exception as e:
+            logger.error(f"Error disconnecting from database: {e}")
+        finally:
+            self.is_connected = False
 
     def check_connection(self) -> StatusResponse:
         """
@@ -83,115 +90,97 @@ class AccessHandler(DatabaseHandler):
         Returns:
             HandlerStatusResponse
         """
+        if self.is_connected:
+            return StatusResponse(success=True)
 
-        response = StatusResponse(False)
-        need_to_close = self.is_connected is False
+        logger.info("Checking connection to Access database.")
+        return self.connect()
 
-        try:
-            self.connect()
-            response.success = True
-        except Exception as e:
-            logger.error(f'Error connecting to SQLite {self.connection_data["db_file"]}, {e}!')
-            response.error_message = str(e)
-        finally:
-            if response.success is True and need_to_close:
-                self.disconnect()
-            if response.success is False and self.is_connected is True:
-                self.is_connected = False
-
-        return response
-
-    def native_query(self, query: str) -> StatusResponse:
+    def native_query(self, query: str) -> Response:
         """
-        Receive raw query and act upon it somehow.
+        Execute a raw query.
         Args:
-            query (str): query in native format
+            query (str): Query in native format.
         Returns:
             HandlerResponse
         """
+        if not self.is_connected:
+            connection_status = self.connect()
+            if not connection_status.success:
+                return Response(RESPONSE_TYPE.ERROR, error_message=connection_status.error_message)
 
-        need_to_close = self.is_connected is False
-
-        connection = self.connect()
-        with connection.cursor() as cursor:
-            try:
+        try:
+            with self.connection.cursor() as cursor:
                 cursor.execute(query)
                 result = cursor.fetchall()
                 if result:
-                    response = Response(
-                        RESPONSE_TYPE.TABLE,
-                        data_frame=pd.DataFrame.from_records(
-                            result,
-                            columns=[x[0] for x in cursor.description]
-                        )
-                    )
-
+                    df = pd.DataFrame.from_records(result, columns=[x[0] for x in cursor.description])
+                    logger.info(f"Query executed successfully: {query}")
+                    return Response(RESPONSE_TYPE.TABLE, data_frame=df)
                 else:
-                    response = Response(RESPONSE_TYPE.OK)
-                    connection.commit()
-            except Exception as e:
-                logger.error(f'Error running query: {query} on {self.connection_data["db_file"]}!')
-                response = Response(
-                    RESPONSE_TYPE.ERROR,
-                    error_message=str(e)
-                )
+                    self.connection.commit()
+                    logger.info(f"Query executed successfully with no result set: {query}")
+                    return Response(RESPONSE_TYPE.OK)
+        except Exception as e:
+            logger.error(f"Error running query: {query}, {e}")
+            return Response(RESPONSE_TYPE.ERROR, error_message=str(e))
+        finally:
+            if not self.is_connected:
+                self.disconnect()
 
-        if need_to_close is True:
-            self.disconnect()
-
-        return response
-
-    def query(self, query: ASTNode) -> StatusResponse:
+    def query(self, query: ASTNode) -> Response:
         """
-        Receive query as AST (abstract syntax tree) and act upon it somehow.
+        Execute a query provided as an AST (abstract syntax tree).
         Args:
-            query (ASTNode): sql query represented as AST. May be any kind
-                of query: SELECT, INTSERT, DELETE, etc
+            query (ASTNode): SQL query represented as AST. Can be SELECT, INSERT, DELETE, etc.
         Returns:
             HandlerResponse
         """
-
         renderer = SqlalchemyRender(AccessDialect)
         query_str = renderer.get_string(query, with_failback=True)
+        logger.debug(f"Rendering AST to SQL: {query_str}")
         return self.native_query(query_str)
 
-    def get_tables(self) -> StatusResponse:
+    def get_tables(self) -> Response:
         """
-        Return list of entities that will be accessible as tables.
+        Return a list of tables in the database.
         Returns:
             HandlerResponse
         """
+        if not self.is_connected:
+            connection_status = self.connect()
+            if not connection_status.success:
+                return Response(RESPONSE_TYPE.ERROR, error_message=connection_status.error_message)
 
-        connection = self.connect()
-        with connection.cursor() as cursor:
-            df = pd.DataFrame([table.table_name for table in cursor.tables(tableType='Table')], columns=['table_name'])
+        try:
+            with self.connection.cursor() as cursor:
+                tables = [table.table_name for table in cursor.tables(tableType='TABLE')]
+                df = pd.DataFrame(tables, columns=['table_name'])
+                logger.info("Retrieved list of tables.")
+                return Response(RESPONSE_TYPE.TABLE, data_frame=df)
+        except Exception as e:
+            logger.error(f"Error retrieving tables: {e}")
+            return Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            df
-        )
-
-        return response
-
-    def get_columns(self, table_name: str) -> StatusResponse:
+    def get_columns(self, table_name: str) -> Response:
         """
-        Returns a list of entity columns.
+        Return a list of columns for a given table.
         Args:
-            table_name (str): name of one of tables returned by self.get_tables()
+            table_name (str): Name of the table.
         Returns:
             HandlerResponse
         """
+        if not self.is_connected:
+            connection_status = self.connect()
+            if not connection_status.success:
+                return Response(RESPONSE_TYPE.ERROR, error_message=connection_status.error_message)
 
-        connection = self.connect()
-        with connection.cursor() as cursor:
-            df = pd.DataFrame(
-                [(column.column_name, column.type_name) for column in cursor.columns(table=table_name)],
-                columns=['column_name', 'data_type']
-            )
-
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            df
-        )
-
-        return response
+        try:
+            with self.connection.cursor() as cursor:
+                columns = [(column.column_name, column.type_name) for column in cursor.columns(table=table_name)]
+                df = pd.DataFrame(columns, columns=['column_name', 'data_type'])
+                logger.info(f"Retrieved columns for table: {table_name}")
+                return Response(RESPONSE_TYPE.TABLE, data_frame=df)
+        except Exception as e:
+            logger.error(f"Error retrieving columns for table {table_name}: {e}")
+            return Response(RESPONSE_TYPE.ERROR, error_message=str(e))

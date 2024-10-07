@@ -1,21 +1,21 @@
 [
   {
-    "runs_on": "ubuntu-latest",
+    "runs_on": "mdb-dev",
     "python-version": "3.11",
     "runOnBranch": "refs/heads/staging"
   },
   {
-    "runs_on": "ubuntu-latest",
+    "runs_on": "mdb-dev",
     "python-version": "3.10",
     "runOnBranch": "refs/heads/main"
   },
   {
-    "runs_on": "ubuntu-latest",
+    "runs_on": "mdb-dev",
     "python-version": 3.9,
     "runOnBranch": "refs/heads/main"
   },
   {
-    "runs_on": "ubuntu-latest",
+    "runs_on": "mdb-dev",
     "python-version": 3.8,
     "runOnBranch": "always"
   }

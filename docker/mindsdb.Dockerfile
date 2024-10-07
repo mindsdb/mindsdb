@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1.7-labs
+# Syntax declaration is for "--exclude" below
 
 FROM python:3.10 as build
-WORKDIR /mindsdb
+WORKDIR /app
 ARG EXTRAS
 
 # Copy everything to get requirements files.
@@ -118,7 +119,9 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     && apt-get install -qy \
     -o APT::Install-Recommends=false \
     -o APT::Install-Suggests=false \
-    libpq5 freetds-bin curl
+    libpq5 freetds-bin curl direnv
+
+RUN echo "source .venv/bin/activate" >> .envrc && echo 'eval "$(direnv hook bash)"' >> .envrc
 
 COPY --link --from=build /mindsdb /mindsdb
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
@@ -131,4 +134,4 @@ EXPOSE 47334/tcp
 EXPOSE 47335/tcp
 EXPOSE 47336/tcp
 
-ENTRYPOINT [ "sh", "-c", "python -m mindsdb --config=/root/mindsdb_config.json --api=http,mysql,mongodb" ]
+ENTRYPOINT [ "sh", "-c", "python -Im mindsdb --config=/root/mindsdb_config.json --api=http,mysql,mongodb" ]

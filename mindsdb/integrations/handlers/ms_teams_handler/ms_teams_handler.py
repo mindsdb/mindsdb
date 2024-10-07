@@ -1,5 +1,5 @@
 import os
-from typing import Text, Dict
+from typing import Text, Dict, Callable
 
 from botframework.connector import ConnectorClient
 from botframework.connector.auth import MicrosoftAppCredentials
@@ -16,6 +16,7 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.integrations.libs.api_handler import APIChatHandler
 from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_tables import ChannelsTable, ChannelMessagesTable, ChatsTable, ChatMessagesTable
+from mindsdb.interfaces.chatbot.types import ChatBotMessage
 
 logger = log.getLogger(__name__)
 
@@ -56,6 +57,11 @@ class MSTeamsHandler(APIChatHandler):
 
         chat_messages_data = ChatMessagesTable(self)
         self._register_table("chat_messages", chat_messages_data)
+
+        self.service_url = None
+        self.channel_id = None
+        self.bot_id = None
+        self.conversation_id = None
 
     def connect(self) -> MSGraphAPITeamsClient:
         """
@@ -148,11 +154,7 @@ class MSTeamsHandler(APIChatHandler):
 
         params = {
             'polling': {
-                'type': 'webhook',
-                'chat_id_attr': ['conversation', 'id'],
-                'message_attr': 'text',
-                'from_attr': ['from', 'id'],
-                'to_attr': ['recipient', 'id'],
+                'type': 'webhook'
             }
         }
 
@@ -167,48 +169,67 @@ class MSTeamsHandler(APIChatHandler):
         -------
         Text
             Name of the signed in user.
-        """        
+        """
 
-        # connection = self.connect()
-        # user_profile = connection.get_user_profile()
-        
-        # return user_profile['displayName']
         return None
     
-    def respond(self, message):
+    def on_webhook(self, request: Dict, callback: Callable) -> None:
         """
-        Respond to a message.
+        Handle a webhook request.
 
         Parameters
         ----------
-        message: Dict
-            Message to respond to.
+        request: Dict
+            The incoming webhook request.
 
-        Returns
-        -------
-        Dict
-            Response to the message.
+        callback: Callable
+            Callback function to call after parsing the request.
         """
 
-        RECIPIENT_ID = message.destination
-        TEXT = message.text
-        SERVICE_URL = message.kwargs['request']['serviceUrl']
-        CHANNEL_ID = message.kwargs['request']['channelId']
-        BOT_ID = message.kwargs['request']['from']['id']
-        CONVERSATION_ID = message.kwargs['request']['conversation']['id']
+        self.service_url = request["serviceUrl"]
+        self.channel_id = request["channelId"]
+        self.bot_id = request["from"]["id"]
+        self.conversation_id = request["conversation"]["id"]
+
+        chat_bot_message = ChatBotMessage(
+            ChatBotMessage.Type.DIRECT,
+            text=request["text"],
+            user=request["from"]["id"],
+            destination=request["recipient"]["id"]
+        )
+
+        callback(
+            chat_id=request['conversation']['id'],
+            message=chat_bot_message
+        )    
+            
+    def respond(self, message: ChatBotMessage) -> None:
+        """
+        Send a response to the chatbot.
+
+        Parameters
+        ----------
+        message: ChatBotMessage
+            The message to send.
+        """
 
         credentials = MicrosoftAppCredentials(
             self.connection_data["client_id"],
             self.connection_data["client_secret"]
         )
-        connector = ConnectorClient(credentials, base_url=SERVICE_URL)
 
+        connector = ConnectorClient(credentials, base_url=self.service_url)
         connector.conversations.send_to_conversation(
-            CONVERSATION_ID, 
+            self.conversation_id,
             Activity(
                 type=ActivityTypes.message,
-                channel_id=CHANNEL_ID,
-                recipient=ChannelAccount(id=RECIPIENT_ID),
-                from_property=ChannelAccount(id=BOT_ID),
-                text=TEXT)
+                channel_id=self.channel_id,
+                recipient=ChannelAccount(
+                    id=message.destination
+                ),
+                from_property=ChannelAccount(
+                    id=self.bot_id
+                ),
+                text=message.text
             )
+        )

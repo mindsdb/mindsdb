@@ -11,6 +11,8 @@ defaults:
   run:
     shell: bash
 
+env:
+  UV_SYSTEM_PYTHON: 1
 
 jobs:
   # Creates a matrix of environments to test against using matrix_includes.json

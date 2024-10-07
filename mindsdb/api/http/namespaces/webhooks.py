@@ -1,3 +1,4 @@
+from flask import request
 from flask_restx import Resource
 
 from mindsdb.api.http.namespaces.configs.webhooks import ns_conf
@@ -9,11 +10,13 @@ from mindsdb.metrics.metrics import api_endpoint_metrics
 class ChatbotWebhooks(Resource):
     @ns_conf.doc('chatbots_webhook')
     @api_endpoint_metrics('POST', '/chatbots/<webhook_token>')
-    def post(self, webhook_token):
+    def post(self, webhook_token: str) -> None:
         """
         This endpoint is used to receive messages posted by bots from different platforms.
 
         :param webhook_token: The token of the webhook. It is used to uniquely identify the webhook.        
         """
-        chatbot_controller = ChatBotController()
-        return chatbot_controller.on_webhook(webhook_token)
+        request_data = request.json
+
+        chat_bot_controller = ChatBotController()
+        return chat_bot_controller.on_webhook(webhook_token, request_data)

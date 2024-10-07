@@ -113,6 +113,12 @@ jobs:
         uses: actions/setup-python@v5.1.0
         with:
           python-version: ${{ matrix.python-version }}
+      # We have to install UV because (for now) these run in GH's runners
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/requirements*.txt" 
       - name: Check requirements files are installable
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |

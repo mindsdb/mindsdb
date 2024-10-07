@@ -41,10 +41,10 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        uv pip install --system .
-        uv pip install --system -r requirements/requirements-test.txt
-        uv pip install --system .[lightwood]  # TODO: for now some tests rely on lightwood and huggingface
-        uv pip install --system .[huggingface]
+        uv pip install .
+        uv pip install -r requirements/requirements-test.txt
+        uv pip install .[lightwood]  # TODO: for now some tests rely on lightwood and huggingface
+        uv pip install .[huggingface]
         uv pip freeze  
     - name: Run integration api and flow tests
       run: |

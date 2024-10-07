@@ -7,6 +7,9 @@ on:
       - "docs/**"
       - "README.md"
 
+env:
+  UV_SYSTEM_PYTHON: 1
+
 # Cancel any existing runs of this workflow on the same branch/pr
 # We always want to build/deploy/test a new commit over an older one
 concurrency:
@@ -44,7 +47,7 @@ jobs:
           python-version: ${{ vars.CI_PYTHON_VERSION }}
       - name: Install dependencies
         run: |
-          uv pip install --system -r requirements/requirements-dev.txt
+          uv pip install -r requirements/requirements-dev.txt
       - name: Build and publish
         env:
           TWINE_USERNAME: __token__

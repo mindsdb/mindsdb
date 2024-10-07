@@ -1,17 +1,19 @@
 from __future__ import annotations
 
+import asyncio
+import logging
+import math
 import os
 from typing import Any, Dict, List, Optional, Sequence, Tuple
-from pydantic import BaseModel
-from langchain.schema import Document
-from langchain_core.callbacks import Callbacks
-from langchain.retrievers.document_compressors.base import BaseDocumentCompressor
+
 from langchain.chat_models import ChatOpenAI
+from langchain.retrievers.document_compressors.base import BaseDocumentCompressor
+from langchain.schema import Document
 from langchain.schema import SystemMessage, HumanMessage
-import logging
-import asyncio
-import math
-from mindsdb.integrations.handlers.rag_handler.settings import DEFAULT_RERANKING_MODEL
+from langchain_core.callbacks import Callbacks
+from pydantic import BaseModel
+
+from mindsdb.integrations.utilities.rag.settings import DEFAULT_RERANKING_MODEL
 
 log = logging.getLogger(__name__)
 

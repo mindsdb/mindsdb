@@ -44,7 +44,7 @@ jobs:
           python-version: ${{ vars.CI_PYTHON_VERSION }}
       - name: Install dependencies
         run: |
-          pip install -r requirements/requirements-dev.txt
+          uv pip install --system -r requirements/requirements-dev.txt
       - name: Build and publish
         env:
           TWINE_USERNAME: __token__

@@ -70,13 +70,18 @@ jobs:
         with:
           extra_args: --files ${{ steps.changed-files.outputs.all_changed_files }}
 
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/requirements*.txt"
+
       # Runs a few different checks against our many requirements files
       # to make sure they're in order
       - name: Check requirements files
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
           # We don't need to install mindsdb itself here because these are just static code checks
-          pip install uv
           uv pip install --system -r requirements/requirements-dev.txt
 
           python tests/scripts/check_requirements.py

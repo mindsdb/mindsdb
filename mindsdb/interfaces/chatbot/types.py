@@ -22,13 +22,12 @@ class ChatBotMessage:
         DIRECT = 1
         CHANNEL = 2
 
-    def __init__(self, type: Type, text: str, user: str, destination: str = None, sent_at: dt.datetime = None, request=None):
+    def __init__(self, type: Type, text: str, user: str, destination: str = None, sent_at: dt.datetime = None):
         self.type = type
         self.text = text
         self.user = user
         self.destination = destination
         self.sent_at = sent_at or dt.datetime.now()
-        self.request = request
 
 
 class Function:

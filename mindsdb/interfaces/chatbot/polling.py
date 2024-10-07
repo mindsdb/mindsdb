@@ -175,28 +175,5 @@ class WebhookPolling(BasePolling):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def on_webhook(self, request):
-        p_params = self.params["polling"]
-
-        chat_id = self._parse_request(request, p_params["chat_id_path"])
-        chat_memory = self.chat_task.memory.get_chat(chat_id)
-
-        message = ChatBotMessage(
-            ChatBotMessage.Type.DIRECT,
-            text=self._parse_request(request, p_params["message_path"]),
-            user=self._parse_request(request, p_params["from_path"]),
-            destination=self._parse_request(request, p_params["to_path"]),
-            request=request
-        )
-
-        self.chat_task.on_message(chat_memory, message)
-
     def send_message(self, message: ChatBotMessage, table_name=None):
         self.chat_task.chat_handler.respond(message)
-
-    def _parse_request(self, request, key):
-        if isinstance(key, list):
-            return reduce(lambda x, y: x[y], key, request)
-        
-        else:
-            return request[key]

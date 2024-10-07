@@ -2,7 +2,7 @@
 # Syntax declaration is for "--exclude" below
 
 FROM python:3.10 as build
-WORKDIR /app
+WORKDIR /mindsdb
 ARG EXTRAS
 
 # Copy everything to get requirements files.

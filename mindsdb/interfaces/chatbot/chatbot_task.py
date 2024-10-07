@@ -76,10 +76,10 @@ class ChatBotTask(BaseTask):
 
         self.chat_pooling.run(stop_event)
 
-    def on_message(self, chat_memory, message: ChatBotMessage, table_name=None):
+    def on_message(self, chat_id, message: ChatBotMessage, table_name=None):
 
         try:
-            self._on_message(chat_memory, message, table_name)
+            self._on_message(chat_id, message, table_name)
         except (SystemExit, KeyboardInterrupt):
             raise
         except Exception:
@@ -87,9 +87,10 @@ class ChatBotTask(BaseTask):
             logger.error(error)
             self.set_error(str(error))
 
-    def _on_message(self, chat_memory, message: ChatBotMessage, table_name=None):
+    def _on_message(self, chat_id, message: ChatBotMessage, table_name=None):
         # add question to history
         # TODO move it to realtime pooling
+        chat_memory = self.memory.get_chat(chat_id, table_name=table_name)
         chat_memory.add_to_history(message)
 
         logger.debug(f'>>chatbot {chat_memory.chat_id} in: {message.text}')
@@ -117,5 +118,12 @@ class ChatBotTask(BaseTask):
         # send to history
         chat_memory.add_to_history(response_message)
 
-    def on_webhook(self, request):
-        self.chat_pooling.on_webhook(request)
+    def on_webhook(self, request: dict) -> None:
+        """
+        Handle incoming webhook requests.
+        Passes the request to the chat handler along with the callback method.
+
+        Args:
+            request (dict): The incoming webhook request.
+        """
+        self.chat_handler.on_webhook(request, self.on_message)

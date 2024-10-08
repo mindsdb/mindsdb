@@ -77,6 +77,57 @@ class ChatBotController:
             'last_error': task.last_error,
         }
         return bot_obj
+    
+    def get_chatbot_by_id(self, chatbot_id: int) -> db.ChatBots:
+        '''
+        Gets a chatbot by id.
+
+        Parameters:
+            chatbot_id (int): The id of the chatbot
+
+        Returns:
+            bot (db.ChatBots): The database chatbot object
+        '''
+
+        query = db.session.query(
+            db.ChatBots, db.Tasks
+        ).join(
+            db.Tasks, db.ChatBots.id == db.Tasks.object_id
+        ).filter(
+            db.ChatBots.id == chatbot_id,
+            db.Tasks.object_type == self.OBJECT_TYPE,
+            db.Tasks.company_id == ctx.company_id,
+        )
+
+        query_result = query.first()
+        if query_result is None:
+            return None
+        bot, task = query_result
+
+        # Include DB, Agent, and Task information in response.
+        session = SessionController()
+        database_names = {
+            i['id']: i['name']
+            for i in session.database_controller.get_list()
+        }
+
+        agent = self.agents_controller.get_agent_by_id(bot.agent_id)
+        agent_obj = agent.as_dict() if agent is not None else None
+        bot_obj = {
+            'id': bot.id,
+            'name': bot.name,
+            'project': self.project_controller.get(bot.project_id).name,
+            'agent': agent_obj,
+            'database_id': bot.database_id,  # TODO remove in future
+            'database': database_names.get(bot.database_id, '?'),
+            'model_name': bot.model_name,
+            'params': bot.params,
+            'created_at': bot.created_at,
+            'is_running': task.active,
+            'last_error': task.last_error,
+            'webhook_token': bot.webhook_token,
+        }
+        return bot_obj
 
     def get_chatbots(self, project_name: str = 'mindsdb') -> List[dict]:
         '''
@@ -228,7 +279,8 @@ class ChatBotController:
             agent_name: str = None,
             database_id: int = None,
             is_running: bool = None,
-            params: Dict[str, str] = None):
+            params: Dict[str, str] = None,
+            webhook_token: str = None) -> db.ChatBots:
         '''
         Updates a chatbot in the database, creating it if it doesn't already exist.
 
@@ -291,6 +343,10 @@ class ChatBotController:
             existing_params = existing_chatbot_rec.params or {}
             params.update(existing_params)
             existing_chatbot_rec.params = params
+
+        if webhook_token is not None:
+            existing_chatbot_rec.webhook_token = webhook_token
+
         db.session.commit()
 
         return existing_chatbot_rec

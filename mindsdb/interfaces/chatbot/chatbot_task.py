@@ -10,7 +10,7 @@ from mindsdb.interfaces.tasks.task import BaseTask
 from mindsdb.utilities import log
 
 from .polling import MessageCountPolling, RealtimePolling, WebhookPolling
-from .memory import DBMemory, HandlerMemory
+from .memory import BaseMemory, DBMemory, HandlerMemory
 from .chatbot_executor import MultiModeBotExecutor, BotExecutor, AgentExecutor
 
 from .types import ChatBotMessage
@@ -129,8 +129,20 @@ class ChatBotTask(BaseTask):
         """
         self.chat_handler.on_webhook(request, self.on_message)
 
-    def get_memory(self):
+    def get_memory(self) -> BaseMemory:
+        """
+        Get the memory of the chatbot task.
+
+        Returns:
+            BaseMemory: The memory of the chatbot task.
+        """
         return self.memory
-    
-    def set_memory(self, memory):
+
+    def set_memory(self, memory: BaseMemory) -> None:
+        """
+        Set the memory of the chatbot task.
+
+        Args:
+            memory (BaseMemory): The memory to set for the chatbot task.
+        """
         self.memory = memory

@@ -1,6 +1,5 @@
 from typing import Dict, List
 
-from flask import Flask
 from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.interfaces.chatbot.chatbot_task import ChatBotTask
 from mindsdb.interfaces.database.projects import ProjectController
@@ -402,6 +401,5 @@ class ChatBotController:
             chat_bot_task.set_memory(chat_bot_memory[webhook_token])
         else:
             chat_bot_memory[webhook_token] = chat_bot_task.get_memory()
-            
-        chat_bot_task.on_webhook(request)
 
+        chat_bot_task.on_webhook(request)

@@ -28,9 +28,6 @@ from mindsdb.integrations.handlers.rag_handler.exceptions import (
 )
 
 DEFAULT_EMBEDDINGS_MODEL = "BAAI/bge-base-en"
-
-DEFAULT_RERANKING_MODEL = "gpt-4o"
-
 SUPPORTED_VECTOR_STORES = ("chromadb", "faiss")
 
 SUPPORTED_LLMS = ("writer", "openai")

@@ -50,9 +50,9 @@ class HistoricalPriceTable(APITable):
             limit_value = query.limit.value
             params['limit'] = limit_value
 
-        historical_price_table = self.get_historical_price_chart(params = params)
+        historical_prices = self.get_historical_price_chart(params = params)
         
-        return historical_price_table
+        return historical_prices
 
     
     def get_historical_price_chart(self, params: Dict = None) -> pd.DataFrame:  

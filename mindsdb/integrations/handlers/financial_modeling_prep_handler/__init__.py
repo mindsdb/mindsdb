@@ -8,8 +8,8 @@ except Exception as e:
     Handler = None
     import_error = e
 
-title = 'Financial_Modeling'
-name = "financial_modeling"
+title = 'Financial_Modeling_Prep'
+name = "financial_modeling_prep"
 type = HANDLER_TYPE.DATA
 icon_path = 'icon.svg'
 

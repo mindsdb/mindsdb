@@ -21,7 +21,7 @@ Now, you can use this established connection to query your database as follows:
 
 ~~~~sql
 SELECT *
-FROM my_table.daily_chart_table
+FROM my_table.historical_prices
 WHERE symbol = 'AAPL'
 ~~~~
 
@@ -36,7 +36,7 @@ WHERE symbol = 'AAPL'
 ### Use LIMIT Clause
 ~~~~sql
 SELECT *
-FROM my_table.daily_chart_table
+FROM my_table.historical_prices
 WHERE symbol = 'AAPL'
 LIMIT 5
 ~~~~
@@ -53,7 +53,7 @@ LIMIT 5
 To customize specified date range, (from_date, to_date): 
 ~~~~sql
 SELECT *
-FROM my_table.daily_chart_table
+FROM my_table.historical_prices
 WHERE symbol = 'AAPL';
 AND from_date = '2023-10-10'
 AND to_date = '2023-12-10'

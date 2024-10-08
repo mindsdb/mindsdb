@@ -19,7 +19,7 @@ logger = log.getLogger(__name__)
 
 class FinancialModelingHandler(APIHandler):
 
-    name = "financial_modeling"
+    name = "financial_modeling_prep"
 
     def __init__(self, name, connection_data: dict,  **kwargs):
         super().__init__(name)
@@ -28,14 +28,14 @@ class FinancialModelingHandler(APIHandler):
         self.connection_data = connection_data
         if "api_key" not in connection_data:
             raise Exception(
-                "FINANCIAL_MODELING engine requires an API key. Retrieve an API key from https://site.financialmodelingprep.com/developer. See financial_modeling_prep_handler/README.MD on how to include API key in query."
+                "FINANCIAL_MODELING_PREP engine requires an API key. Retrieve an API key from https://site.financialmodelingprep.com/developer. See financial_modeling_prep_handler/README.MD on how to include API key in query."
             )
         self.api_key = connection_data['api_key']
         self.client = None
         self.is_connected = False
 
         historical_prices = HistoricalPriceTable(self) 
-        self._register_table('historical_prices', historical_price_table)
+        self._register_table('historical_prices', historical_prices)
 
     def connect(self): 
         self.is_connected = True

@@ -12,13 +12,13 @@ class FinancialModelingHandlerTest(unittest.TestCase):
         cls.handler = FinancialModelingHandler('test_financial_handler', connection_data)
     
     def test_0_select_query(self):
-        query = "SELECT * FROM my_table.daily_chart_table WHERE symbol = 'AAPL'"
+        query = "SELECT * FROM my_table.historical_prices WHERE symbol = 'AAPL'"
         result = self.handler.query(query)
         print(result)
         assert result.type is RESPONSE_TYPE.TABLE
 
     def test_1_select_limit_query(self):
-        query = "SELECT * FROM my_table.daily_chart_table WHERE symbol = 'AAPL' LIMIT 5"
+        query = "SELECT * FROM my_table.historical_prices WHERE symbol = 'AAPL' LIMIT 5"
         result = self.handler.query(query)
         print(result)
         assert result.data_frame.shape[0] == 5 

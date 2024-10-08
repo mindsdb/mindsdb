@@ -49,35 +49,7 @@ class ChatBotController:
             db.Tasks.company_id == ctx.company_id,
         )
 
-        query_result = query.first()
-        if query_result is None:
-            return None
-        bot, task = query_result
-
-        # Include DB, Agent, and Task information in response.
-        session = SessionController()
-        database_names = {
-            i['id']: i['name']
-            for i in session.database_controller.get_list()
-        }
-
-        agent = self.agents_controller.get_agent_by_id(bot.agent_id)
-        agent_obj = agent.as_dict() if agent is not None else None
-        bot_obj = {
-            'id': bot.id,
-            'name': bot.name,
-            'project': project_name,
-            'agent': agent_obj,
-            'database_id': bot.database_id,  # TODO remove in future
-            'database': database_names.get(bot.database_id, '?'),
-            'model_name': bot.model_name,
-            'params': bot.params,
-            'created_at': bot.created_at,
-            'is_running': task.active,
-            'last_error': task.last_error,
-            'webhook_token': bot.webhook_token,
-        }
-        return bot_obj
+        return self._get_chatbot(query, project)
     
     def get_chatbot_by_id(self, chatbot_id: int) -> db.ChatBots:
         '''
@@ -100,6 +72,19 @@ class ChatBotController:
             db.Tasks.company_id == ctx.company_id,
         )
 
+        return self._get_chatbot(query)
+    
+    def _get_chatbot(self, query, project: db.Project = None) -> db.ChatBots:
+        '''
+        Gets a chatbot by query.
+
+        Parameters:
+            query: The query to get the chatbot
+
+        Returns:
+            bot (db.ChatBots): The database chatbot object
+        '''
+
         query_result = query.first()
         if query_result is None:
             return None
@@ -117,7 +102,7 @@ class ChatBotController:
         bot_obj = {
             'id': bot.id,
             'name': bot.name,
-            'project': self.project_controller.get(bot.project_id).name,
+            'project': project.name if project else self.project_controller.get(bot.project_id).name,
             'agent': agent_obj,
             'database_id': bot.database_id,  # TODO remove in future
             'database': database_names.get(bot.database_id, '?'),
@@ -128,6 +113,7 @@ class ChatBotController:
             'last_error': task.last_error,
             'webhook_token': bot.webhook_token,
         }
+
         return bot_obj
 
     def get_chatbots(self, project_name: str = 'mindsdb') -> List[dict]:

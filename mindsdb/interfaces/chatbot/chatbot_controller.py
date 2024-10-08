@@ -375,6 +375,7 @@ class ChatBotController:
         Args:
             webhook_token (str): The token to uniquely identify the webhook.
             request (dict): The incoming webhook request.
+            chat_bot_memory (dict): The memory of the various chat-bots mapped by their webhook tokens.
         """
         query = db.session.query(
             db.ChatBots, db.Tasks

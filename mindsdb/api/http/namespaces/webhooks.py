@@ -6,6 +6,9 @@ from mindsdb.interfaces.chatbot.chatbot_controller import ChatBotController
 from mindsdb.metrics.metrics import api_endpoint_metrics
 
 
+# Stores the memory of the various chat-bots mapped by their webhook tokens.
+# This is required because each time a new request is made, a new instance of the ChatBotTask is created.
+# This causes the memory to be lost.
 chat_bot_memory = {}
 
 

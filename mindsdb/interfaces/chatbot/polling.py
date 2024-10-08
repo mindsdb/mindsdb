@@ -1,10 +1,11 @@
-from functools import reduce
+import secrets
 import time
 
 from mindsdb_sql.parser.ast import Identifier, Select, Insert
 
 from mindsdb.utilities import log
 from mindsdb.utilities.context import context as ctx
+from mindsdb.interfaces.chatbot.chatbot_controller import ChatBotController
 
 from .types import ChatBotMessage, BotException
 
@@ -173,6 +174,22 @@ class RealtimePolling(BasePolling):
 class WebhookPolling(BasePolling):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+    def run(self, stop_event):
+        # If a webhook token is not set for the chatbot, generate a new one.
+        chat_bot_controller = ChatBotController()
+        chat_bot = chat_bot_controller.get_chatbot_by_id(self.chat_task.object_id)
+
+        if not chat_bot.webhook_token:
+            chat_bot_controller.update_chatbot(
+                name=chat_bot.name,
+                project_name=chat_bot.project_name,
+                webhook_token=secrets.token_urlsafe(16),
+            )
+
+        # Do nothing, as the webhook is handled by a task instantiated for each request.
+        while not stop_event.is_set():
+            time.sleep(1)
 
     def send_message(self, message: ChatBotMessage, table_name=None):
         self.chat_task.chat_handler.respond(message)

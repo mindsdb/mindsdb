@@ -50,7 +50,7 @@ class ChatBotController:
         )
 
         return self._get_chatbot(query, project)
-    
+
     def get_chatbot_by_id(self, chatbot_id: int) -> db.ChatBots:
         '''
         Gets a chatbot by id.
@@ -73,7 +73,7 @@ class ChatBotController:
         )
 
         return self._get_chatbot(query)
-    
+
     def _get_chatbot(self, query, project: db.Project = None) -> db.ChatBots:
         '''
         Gets a chatbot by query.
@@ -391,11 +391,10 @@ class ChatBotController:
 
         if chat_bot is None:
             raise Exception(f"No chat bot exists for webhook token: {webhook_token}")
-        
+
         if not task.active:
             raise Exception(f"Chat bot is not running: {chat_bot.name}")
-        
+
         chat_bot_task = ChatBotTask(task_id=task.id, object_id=chat_bot.id)
         chat_bot_task.on_webhook(request)
-        
 

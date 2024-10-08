@@ -185,7 +185,7 @@ class WebhookPolling(BasePolling):
         Then, do nothing, as the webhook is handled by a task instantiated for each request.
 
         Args:
-            stop_event (threading.Event): Event to stop the polling.       
+            stop_event (threading.Event): Event to stop the polling.
         """
         # If a webhook token is not set for the chatbot, generate a new one.
         from mindsdb.interfaces.chatbot.chatbot_controller import ChatBotController

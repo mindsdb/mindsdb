@@ -10,7 +10,6 @@ import sqlalchemy as sa
 import mindsdb.interfaces.storage.db  # noqa
 
 
-
 # revision identifiers, used by Alembic.
 revision = '6c57ed39a82b'
 down_revision = '8e17ff6b75e9'
@@ -26,4 +25,3 @@ def upgrade():
 def downgrade():
     with op.batch_alter_table('chat_bots', schema=None) as batch_op:
         batch_op.drop_column('webhook_token')
-

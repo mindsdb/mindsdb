@@ -45,7 +45,7 @@ class ChatBotTask(BaseTask):
         self.chat_handler = self.session.integration_controller.get_data_handler(database_name)
         if not isinstance(self.chat_handler, APIChatHandler):
             raise Exception(f"Can't use chat database: {database_name}")
-        
+
         # get chat handler info
         self.bot_params = bot_record.params or {}
 
@@ -92,7 +92,7 @@ class ChatBotTask(BaseTask):
     def _on_message(self, message: ChatBotMessage, chat_id, chat_memory, table_name=None):
         # add question to history
         # TODO move it to realtime pooling
-        chat_memory = chat_memory if chat_memory else self.memory.get_chat(chat_id, table_name=table_name) 
+        chat_memory = chat_memory if chat_memory else self.memory.get_chat(chat_id, table_name=table_name)
         chat_memory.add_to_history(message)
 
         logger.debug(f'>>chatbot {chat_memory.chat_id} in: {message.text}')

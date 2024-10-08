@@ -13,9 +13,9 @@ class ChatbotWebhooks(Resource):
     def post(self, webhook_token: str) -> None:
         """
         This endpoint is used to receive messages posted by bots from different platforms.
-        
+
         Args:
-        webhook_token (str): The token of the webhook. It is used to uniquely identify the webhook.        
+        webhook_token (str): The token of the webhook. It is used to uniquely identify the webhook.
         """
         request_data = request.json
 

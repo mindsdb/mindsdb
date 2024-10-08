@@ -128,3 +128,9 @@ class ChatBotTask(BaseTask):
             request (dict): The incoming webhook request.
         """
         self.chat_handler.on_webhook(request, self.on_message)
+
+    def get_memory(self):
+        return self.memory
+    
+    def set_memory(self, memory):
+        self.memory = memory

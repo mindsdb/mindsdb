@@ -1,5 +1,6 @@
 from typing import Dict, List
 
+from flask import Flask
 from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.interfaces.chatbot.chatbot_task import ChatBotTask
 from mindsdb.interfaces.database.projects import ProjectController
@@ -367,7 +368,7 @@ class ChatBotController:
 
         db.session.commit()
 
-    def on_webhook(self, webhook_token: str, request: dict) -> None:
+    def on_webhook(self, webhook_token: str, request: dict, chat_bot_memory: dict):
         """
         Handles incoming webhook requests.
         Finds the chat bot associated with the webhook token and passes the request to the chat bot task.
@@ -396,5 +397,11 @@ class ChatBotController:
             raise Exception(f"Chat bot is not running: {chat_bot.name}")
 
         chat_bot_task = ChatBotTask(task_id=task.id, object_id=chat_bot.id)
+
+        if webhook_token in chat_bot_memory:
+            chat_bot_task.set_memory(chat_bot_memory[webhook_token])
+        else:
+            chat_bot_memory[webhook_token] = chat_bot_task.get_memory()
+            
         chat_bot_task.on_webhook(request)
 

@@ -6,6 +6,9 @@ from mindsdb.interfaces.chatbot.chatbot_controller import ChatBotController
 from mindsdb.metrics.metrics import api_endpoint_metrics
 
 
+chat_bot_memory = {}
+
+
 @ns_conf.route('/chatbots/<webhook_token>')
 class ChatbotWebhooks(Resource):
     @ns_conf.doc('chatbots_webhook')
@@ -20,4 +23,4 @@ class ChatbotWebhooks(Resource):
         request_data = request.json
 
         chat_bot_controller = ChatBotController()
-        return chat_bot_controller.on_webhook(webhook_token, request_data)
+        return chat_bot_controller.on_webhook(webhook_token, request_data, chat_bot_memory)

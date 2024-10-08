@@ -1,5 +1,3 @@
-import pandas as pd
-from typing import Dict
 from urllib.parse import urlencode
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (

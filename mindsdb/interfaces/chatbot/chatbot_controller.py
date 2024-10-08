@@ -75,6 +75,7 @@ class ChatBotController:
             'created_at': bot.created_at,
             'is_running': task.active,
             'last_error': task.last_error,
+            'webhook_token': bot.webhook_token,
         }
         return bot_obj
     
@@ -184,6 +185,7 @@ class ChatBotController:
                     'created_at': bot.created_at,
                     'is_running': task.active,
                     'last_error': task.last_error,
+                    'webhook_token': bot.webhook_token,
                 }
             )
 

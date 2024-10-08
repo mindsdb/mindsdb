@@ -506,7 +506,7 @@ class KnowledgeBaseController:
                 kb.vector_database_table
             )
 
-        # kb exists 
+        # kb exists
         db.session.delete(kb)
         db.session.commit()
 
@@ -521,8 +521,6 @@ class KnowledgeBaseController:
                 self.session.model_controller.delete_model(kb.params['embedding_model'], project_name)
             except EntityNotExistsError:
                 pass
-
-        
 
     def get(self, name: str, project_id: int) -> db.KnowledgeBase:
         """

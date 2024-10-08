@@ -11,7 +11,6 @@ from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.interfaces.chatbot.chatbot_controller import ChatBotController
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.interfaces.storage.db import Predictor
-from mindsdb.interfaces.chatbot.chatbot_task import ChatBotTask
 
 
 def create_chatbot(project_name, name, chatbot):
@@ -288,35 +287,3 @@ class ChatBotResource(Resource):
 
         chatbot_controller.delete_chatbot(chatbot_name, project_name=project_name)
         return '', HTTPStatus.NO_CONTENT
-
-
-@ns_conf.route('/<project_name>/chatbots/<chatbot_name>/messages')
-@ns_conf.param('project_name', 'Name of the project')
-@ns_conf.param('chatbot_name', 'Name of the chatbot')
-class ChatBotMessagesResource(Resource):
-    @ns_conf.doc('post_chatbot_message')
-    def post(self, project_name, chatbot_name):
-        '''Post a message to a chatbot'''
-        # Get the contents of the request.
-        req = request.json
-
-        # Get the chatbot from the controller.
-        chatbot_controller = ChatBotController()
-        try:
-            existing_chatbot = chatbot_controller.get_chatbot(chatbot_name, project_name=project_name)
-            if existing_chatbot is None:
-                return http_error(
-                    HTTPStatus.NOT_FOUND,
-                    'Chatbot not found',
-                    f'Chatbot with name {chatbot_name} does not exist'
-                )
-        except ValueError:
-            # Project needs to exist.
-            return http_error(
-                HTTPStatus.NOT_FOUND,
-                'Project not found',
-                f'Project with name {project_name} does not exist'
-            )
-
-        chatbot_task = ChatBotTask(task_id=None, object_id=existing_chatbot["id"])
-        chatbot_task.on_webhook(req)

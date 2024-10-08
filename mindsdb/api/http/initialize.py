@@ -38,6 +38,7 @@ from mindsdb.api.http.namespaces.tab import ns_conf as tab_ns
 from mindsdb.api.http.namespaces.tree import ns_conf as tree_ns
 from mindsdb.api.http.namespaces.views import ns_conf as views_ns
 from mindsdb.api.http.namespaces.util import ns_conf as utils_ns
+from mindsdb.api.http.namespaces.webhooks import ns_conf as webhooks_ns
 from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.interfaces.file.file_controller import FileController
@@ -246,6 +247,7 @@ def initialize_app(config, no_studio):
         api.add_namespace(ns)
     api.add_namespace(default_ns)
     api.add_namespace(auth_ns)
+    api.add_namespace(webhooks_ns)
 
     @api.errorhandler(Exception)
     def handle_exception(e):

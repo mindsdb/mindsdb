@@ -1,21 +1,16 @@
-import os
 from typing import Text, Dict, Callable
 
-from botframework.connector import ConnectorClient
-from botframework.connector.auth import MicrosoftAppCredentials
 from botbuilder.schema import Activity, ActivityTypes
 from botbuilder.schema import ChannelAccount
+from botframework.connector import ConnectorClient
+from botframework.connector.auth import MicrosoftAppCredentials
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
-from mindsdb.integrations.utilities.handlers.auth_utilities import MSGraphAPIAuthManager
-from mindsdb.integrations.handlers.ms_teams_handler.settings import ms_teams_handler_config
-from mindsdb.integrations.handlers.ms_teams_handler.ms_graph_api_teams_client import MSGraphAPITeamsClient
 
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
 from mindsdb.integrations.libs.api_handler import APIChatHandler
-from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_tables import ChannelsTable, ChannelMessagesTable, ChatsTable, ChatMessagesTable
 from mindsdb.interfaces.chatbot.types import ChatBotMessage
 
 logger = log.getLogger(__name__)
@@ -35,66 +30,19 @@ class MSTeamsHandler(APIChatHandler):
             name (str): name of particular handler instance
             **kwargs: arbitrary keyword arguments.
         """
-
         super().__init__(name)
 
         connection_data = kwargs.get("connection_data", {})
         self.connection_data = connection_data
-        # self.handler_storage = kwargs['handler_storage']
         self.kwargs = kwargs
 
         self.connection = None
         self.is_connected = False
 
-        # channels_data = ChannelsTable(self)
-        # self._register_table("channels", channels_data)
-
-        # channel_messages_data = ChannelMessagesTable(self)
-        # self._register_table("channel_messages", channel_messages_data)
-
-        # chats_data = ChatsTable(self)
-        # self._register_table("chats", chats_data)
-
-        # chat_messages_data = ChatMessagesTable(self)
-        # self._register_table("chat_messages", chat_messages_data)
-
         self.service_url = None
         self.channel_id = None
         self.bot_id = None
         self.conversation_id = None
-
-    # def connect(self) -> MSGraphAPITeamsClient:
-    #     """
-    #     Set up the connection required by the handler.
-
-    #     Returns
-    #     -------
-    #     MSGraphAPITeamsClient
-    #         Client object for accessing the Microsoft Graph API.
-    #     """
-
-    #     if self.is_connected and self.connection.check_connection():
-    #         return self.connection
-
-    #     # initialize the auth manager for the Microsoft Graph API
-    #     ms_graph_api_auth_manager = MSGraphAPIAuthManager(
-    #         handler_storage=self.handler_storage,
-    #         scopes=self.connection_data.get('scopes', ms_teams_handler_config.DEFAULT_SCOPES),
-    #         client_id=self.connection_data["client_id"],
-    #         client_secret=self.connection_data["client_secret"],
-    #         tenant_id=self.connection_data["tenant_id"],
-    #         code=self.connection_data.get('code')
-    #     )
-
-    #     # get access token from the auth manager for the Microsoft Graph API
-    #     access_token = ms_graph_api_auth_manager.get_access_token()
-
-    #     # pass the access token to the client for access to the Microsoft Graph API
-    #     self.connection = MSGraphAPITeamsClient(access_token)
-
-    #     self.is_connected = True
-
-    #     return self.connection
 
     def connect(self) -> MicrosoftAppCredentials:
         """
@@ -105,7 +53,6 @@ class MSTeamsHandler(APIChatHandler):
         MicrosoftAppCredentials
             Client object for interacting with the Microsoft Teams app.
         """
-
         if self.is_connected:
             return self.connection
 
@@ -118,32 +65,6 @@ class MSTeamsHandler(APIChatHandler):
 
         return self.connection
 
-    # def check_connection(self) -> StatusResponse:
-    #     """
-    #     Check connection to the handler.
-
-    #     Returns
-    #     -------
-    #     StatusResponse
-    #         Response object with the status of the connection.
-    #     """
-
-    #     response = StatusResponse(False)
-
-    #     try:
-    #         connection = self.connect()
-    #         connection.check_connection()
-    #         response.success = True
-    #         response.copy_storage = True
-    #     except Exception as e:
-    #         logger.error(f'Error connecting to Microsoft Teams: {e}!')
-    #         response.success = False
-    #         response.error_message = str(e)
-
-    #     self.is_connected = response.success
-
-    #     return response
-
     def check_connection(self) -> StatusResponse:
         """
         Check connection to the handler.
@@ -153,7 +74,6 @@ class MSTeamsHandler(APIChatHandler):
         StatusResponse
             Response object with the status of the connection.
         """
-
         response = StatusResponse(False)
 
         try:
@@ -182,7 +102,6 @@ class MSTeamsHandler(APIChatHandler):
         StatusResponse
             Response object with the result of the query.
         """
-
         ast = parse_sql(query, dialect="mindsdb")
 
         return self.query(ast)
@@ -197,7 +116,6 @@ class MSTeamsHandler(APIChatHandler):
         Dict
             Configuration for the chatbot.
         """
-
         params = {
             'polling': {
                 'type': 'webhook'
@@ -216,7 +134,6 @@ class MSTeamsHandler(APIChatHandler):
         Text
             Name of the signed in user.
         """
-
         return None
     
     def on_webhook(self, request: Dict, callback: Callable) -> None:
@@ -231,7 +148,6 @@ class MSTeamsHandler(APIChatHandler):
         callback: Callable
             Callback function to call after parsing the request.
         """
-
         self.service_url = request["serviceUrl"]
         self.channel_id = request["channelId"]
         self.bot_id = request["from"]["id"]
@@ -258,7 +174,6 @@ class MSTeamsHandler(APIChatHandler):
         message: ChatBotMessage
             The message to send.
         """
-
         credentials = self.connect()
 
         connector = ConnectorClient(credentials, base_url=self.service_url)

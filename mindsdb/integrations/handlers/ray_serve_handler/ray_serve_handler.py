@@ -46,8 +46,14 @@ class RayServeHandler(BaseMLEngine):
         resp = requests.post(args['predict_url'],
                              json={'df': df.to_json(orient='records')},
                              headers={'content-type': 'application/json; format=pandas-records'})
-        answer = resp.json()
-        predictions = pd.DataFrame({args['target']: answer['prediction']})
+        response = resp.json()
+
+        target = args['target']
+        if target != 'prediction':
+            # rename prediction to target
+            response[target] = response.pop('prediction')
+
+        predictions = pd.DataFrame(response)
         return predictions
 
     def describe(self, key: Optional[str] = None) -> pd.DataFrame:

@@ -376,12 +376,26 @@ class ChatBotController:
             webhook_token (str): The token to uniquely identify the webhook.
             request (dict): The incoming webhook request.
         """
-        chat_bot = db.ChatBots.query.filter_by(webhook_token=webhook_token).first()
+        query = db.session.query(
+            db.ChatBots, db.Tasks
+        ).join(
+            db.Tasks, db.ChatBots.id == db.Tasks.object_id
+        ).filter(
+            db.ChatBots.webhook_token == webhook_token,
+            db.Tasks.object_type == self.OBJECT_TYPE,
+            db.Tasks.company_id == ctx.company_id,
+        )
+        result = query.first()
+
+        chat_bot, task = result if result is not None else (None, None)
 
         if chat_bot is None:
             raise Exception(f"No chat bot exists for webhook token: {webhook_token}")
         
-        chat_bot_task = ChatBotTask(task_id=None, object_id=chat_bot.id)
+        if not task.active:
+            raise Exception(f"Chat bot is not running: {chat_bot.name}")
+        
+        chat_bot_task = ChatBotTask(task_id=task.id, object_id=chat_bot.id)
         chat_bot_task.on_webhook(request)
         
 

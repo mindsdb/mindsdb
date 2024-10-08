@@ -76,10 +76,12 @@ class ChatBotTask(BaseTask):
 
         self.chat_pooling.run(stop_event)
 
-    def on_message(self, chat_id, message: ChatBotMessage, table_name=None):
+    def on_message(self, message: ChatBotMessage, chat_id=None, chat_memory=None, table_name=None):
+        if not chat_id and chat_memory:
+            raise Exception('chat_id or chat_memory should be provided')
 
         try:
-            self._on_message(chat_id, message, table_name)
+            self._on_message(message, chat_id, chat_memory, table_name)
         except (SystemExit, KeyboardInterrupt):
             raise
         except Exception:
@@ -87,10 +89,10 @@ class ChatBotTask(BaseTask):
             logger.error(error)
             self.set_error(str(error))
 
-    def _on_message(self, chat_id, message: ChatBotMessage, table_name=None):
+    def _on_message(self, message: ChatBotMessage, chat_id, chat_memory, table_name=None):
         # add question to history
         # TODO move it to realtime pooling
-        chat_memory = self.memory.get_chat(chat_id, table_name=table_name)
+        chat_memory = chat_memory if chat_memory else self.memory.get_chat(chat_id, table_name=table_name) 
         chat_memory.add_to_history(message)
 
         logger.debug(f'>>chatbot {chat_memory.chat_id} in: {message.text}')

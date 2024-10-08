@@ -70,7 +70,7 @@ class MessageCountPolling(BasePolling):
                             message = None
 
                         if message:
-                            self.chat_task.on_message(chat_id, message, table_name=chat_params["chat_table"]["name"])
+                            self.chat_task.on_message(message, chat_memory=chat_memory, table_name=chat_params["chat_table"]["name"])
 
             except Exception as e:
                 logger.error(e)
@@ -158,7 +158,7 @@ class RealtimePolling(BasePolling):
 
         chat_id = row[t_params["chat_id_col"]]
 
-        self.chat_task.on_message(chat_id, message)
+        self.chat_task.on_message(message, chat_id=chat_id)
 
     def run(self, stop_event):
         t_params = self.params["chat_table"]
@@ -201,8 +201,7 @@ class WebhookPolling(BasePolling):
             )
 
         # Do nothing, as the webhook is handled by a task instantiated for each request.
-        while not stop_event.is_set():
-            time.sleep(1)
+        stop_event.wait()
 
     def send_message(self, message: ChatBotMessage, table_name: str = None) -> None:
         """

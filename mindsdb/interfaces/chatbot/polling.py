@@ -197,7 +197,7 @@ class WebhookPolling(BasePolling):
             chat_bot_controller.update_chatbot(
                 chatbot_name=chat_bot["name"],
                 project_name=chat_bot["project"],
-                webhook_token=secrets.token_urlsafe(16),
+                webhook_token=secrets.token_urlsafe(32),
             )
 
         # Do nothing, as the webhook is handled by a task instantiated for each request.

@@ -27,13 +27,21 @@ class ContactsTable(APIResource):
         """
         query.from_table = "Contact"
 
+        column_aliases = {}
+        for column in query.targets:
+            column_aliases[column.parts[-1]] = column.alias.parts[-1]
+            column.alias = None
+
         client = self.handler.connect()
-        results = client.sobjects.query(query.to_string())
+        results = client.sobjects.query(query.to_string(alias=False))
 
         for result in results:
             del result['attributes']
 
-        return pd.DataFrame(results)
+        contacts_df = pd.DataFrame(results)
+        contacts_df.rename(columns=column_aliases, inplace=True)
+
+        return contacts_df
 
     def add(self, contact: Dict) -> None:
         """

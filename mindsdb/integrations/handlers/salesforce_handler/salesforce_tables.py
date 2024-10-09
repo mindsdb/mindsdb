@@ -1,6 +1,6 @@
 from typing import Dict, List, Text
 
-from mindsdb_sql.parser.ast import Select
+from mindsdb_sql.parser.ast import Select, Star, Identifier
 import pandas as pd
 
 from mindsdb.integrations.libs.api_handler import APIResource
@@ -27,13 +27,24 @@ class ContactsTable(APIResource):
         """
         query.from_table = "Contact"
 
+        # SOQL does not support * in SELECT queries. Replace * with column names.
+        if isinstance(query.targets[0], Star):
+            query.targets = [Identifier(column) for column in self.get_columns()]
+
+        # SOQL does not support column aliases. Remove column aliases.
         column_aliases = {}
         for column in query.targets:
-            column_aliases[column.parts[-1]] = column.alias.parts[-1]
-            column.alias = None
+            if column.alias is not None:
+                column_aliases[column.parts[-1]] = column.alias.parts[-1]
+                column.alias = None
 
         client = self.handler.connect()
-        results = client.sobjects.query(query.to_string(alias=False))
+
+        query_str = query.to_string()
+
+        # SOQL does not support backticks. Remove backticks.
+        query_str = query_str.replace("`", "")
+        results = client.sobjects.query(query_str)
 
         for result in results:
             del result['attributes']

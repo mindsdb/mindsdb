@@ -25,7 +25,15 @@ class ContactsTable(APIResource):
         Returns:
             pd.DataFrame: A DataFrame containing the data retrieved from the Salesforce Contacts resource.
         """
-        pass
+        query.from_table = "Contact"
+
+        client = self.handler.connect()
+        results = client.sobjects.query(query.to_string())
+
+        for result in results:
+            del result['attributes']
+
+        return pd.DataFrame(results)
 
     def add(self, contact: Dict) -> None:
         """
@@ -43,4 +51,5 @@ class ContactsTable(APIResource):
         Returns:
             List[Text]: A list of Attributes (columns) of the Salesforce Contacts resource.
         """
-        pass
+        client = self.handler.connect()
+        return [field['name'] for field in client.sobjects.Contact.describe()['fields']]

@@ -7,6 +7,7 @@ from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse
 )
+from mindsdb.integrations.handlers.salesforce_handler.salesforce_tables import ContactsTable
 from mindsdb.utilities import log
 
 
@@ -35,6 +36,8 @@ class SalesforceHandler(APIHandler):
 
         self.connection = None
         self.is_connected = False
+
+        self._register_table("contacts", ContactsTable(self))
 
     def connect(self) -> salesforce_api.client.Client:
         """

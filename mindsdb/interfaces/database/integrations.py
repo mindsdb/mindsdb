@@ -32,6 +32,8 @@ from mindsdb.utilities import log
 from mindsdb.integrations.libs.ml_exec_base import BaseMLEngineExec
 from mindsdb.integrations.libs.base import BaseHandler
 import mindsdb.utilities.profiler as profiler
+from mindsdb.utilities.security import encrypt_object, decrypt_object
+
 
 logger = log.getLogger(__name__)
 
@@ -162,10 +164,14 @@ class IntegrationController:
         self.handlers_cache = HandlersCache()
 
     def _add_integration_record(self, name, engine, connection_args):
+        connection_args = connection_args or {}
+
+        connection_args = encrypt_object(connection_args)
+
         integration_record = db.Integration(
             name=name,
             engine=engine,
-            data=connection_args or {},
+            data=connection_args,
             company_id=ctx.company_id
         )
         db.session.add(integration_record)
@@ -275,7 +281,12 @@ class IntegrationController:
             or isinstance(integration_record.data, dict) is False
         ):
             return None
-        data = deepcopy(integration_record.data)
+
+        data = integration_record.data
+        if isinstance(data, str):
+            data = decrypt_object(data)
+        else:
+            data = deepcopy(data)
 
         bundle_path = data.get('secure_connect_bundle')
         mysql_ssl_ca = data.get('ssl_ca')

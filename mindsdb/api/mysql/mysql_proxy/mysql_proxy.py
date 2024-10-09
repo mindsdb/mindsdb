@@ -161,12 +161,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         super().__init__(request, client_address, server)
 
     def init_session(self):
-        logger.debug(
-            "New connection [{ip}:{port}]".format(
-                ip=self.client_address[0], port=self.client_address[1]
-            )
-        )
-
         if self.server.connection_id >= 65025:
             self.server.connection_id = 0
         self.server.connection_id += 1
@@ -417,29 +411,41 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         except Exception:
             raise ErWrongCharset(f"SQL contains non utf-8 values: {text}")
 
-    def is_cloud_connection(self):
-        """Determine source of connection. Must be call before handshake.
-        Idea based on: real mysql connection does not send anything before server handshake, so
-        soket should be in 'out' state. In opposite, clout connection sends '0000' right after
-        connection. '0000' selected because in real mysql connection it should be lenght of package,
-        and it can not be 0.
+    def is_cloud_connection(self) -> bool:
+        """Determines whether the connection is cloud-based. Must be call before handshake.
+        Real mysql connection does not send anything before server handshake, therefore
+        soket should be in 'out' state. The method reads first 4 bytes of first packet.
+        If first 3 bytes is '000' - then it is cloud connection (real mysql client never
+        send '000' in first packet). Next byte determine 'protocol' version.
+
+        Returns:
+            bool: True if it is cloud connection
         """
-        config = Config()
-        is_cloud = config.get("cloud", False)
+        try:
+            config = Config()
+            is_cloud = config.get("cloud", False)
 
-        if sys.platform != "linux" or is_cloud is False:
-            return {"is_cloud": False}
+            if sys.platform != "linux" or is_cloud is False:
+                return False
 
-        read_poller = select.poll()
-        read_poller.register(self.request, select.POLLIN)
-        events = read_poller.poll(30)
+            read_poller = select.poll()
+            read_poller.register(self.request, select.POLLIN)
+            events = read_poller.poll(3000)  # timeout in ms
 
-        if len(events) == 0:
-            return {"is_cloud": False}
+            if len(events) == 0:
+                raise Exception("There are no packets in 3s")
 
-        first_byte = self.request.recv(4, socket.MSG_PEEK)
-        if first_byte == b"\x00\x00\x00\x00":
-            self.request.recv(4)
+            first_bytes = self.request.recv(3, socket.MSG_PEEK)
+            if first_bytes != b"\x00\x00\x00":
+                Exception(f'First packet starts with: {first_bytes}')
+            self.request.recv(3)
+
+            protocol_byte = self.request.recv(1, socket.MSG_PEEK)
+            if protocol_byte not in (b"\x00", b"\x01"):
+                raise Exception(f"Unknown protocol identifier: {protocol_byte}")
+            self.request.recv(1)
+
+            # region for both protocols \x00 and \x01
             client_capabilities = self.request.recv(8)
             client_capabilities = struct.unpack("L", client_capabilities)[0]
 
@@ -460,16 +466,34 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             if database_name_len > 0:
                 database_name = self.request.recv(database_name_len).decode()
 
-            return {
-                "is_cloud": True,
-                "client_capabilities": client_capabilities,
-                "company_id": company_id,
-                "user_class": user_class,
-                "database": database_name,
-                "email_confirmed": email_confirmed,
-            }
+            ctx.company_id = company_id
+            ctx.user_class = user_class
+            ctx.email_confirmed = email_confirmed
+            # endregion
 
-        return {"is_cloud": False}
+            if protocol_byte == b"\x01":
+                user_id = self.request.recv(4)
+                user_id = struct.unpack("I", user_id)[0]
+                ctx.user_id = user_id
+
+                key_len = self.request.recv(2)
+                key_len = struct.unpack("H", key_len)[0]
+                if key_len > 0:
+                    ctx.encryption_key = base64.b64encode(self.request.recv(key_len)).decode()
+
+            if ctx.encryption_key is None:
+                logger.warn("Got cloud MySQL request with missed encryption key")
+                # TODO Raise exception here after cloud migrations
+        except Exception as e:
+            logger.warn(f"Something went wrong during 'is_cloud' check in mysql API: {e}")
+            raise ValueError("Something went wrong during processing of first packet")
+
+        self.client_capabilities = ClentCapabilities(client_capabilities)
+        self.session.database = database_name
+        self.session.username = "cloud"
+        self.session.auth = True
+
+        return True
 
     def to_mysql_columns(self, columns_list):
         """Converts raw columns data into convinient format(list of lists) for the futher usage.
@@ -653,24 +677,14 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         self.server.hook_before_handle()
 
-        logger.debug("handle new incoming connection")
-        cloud_connection = self.is_cloud_connection()
-
-        ctx.company_id = cloud_connection.get("company_id")
-
+        logger.debug(f"New mysql connection [{self.client_address[0]}:{self.client_address[1]}]")
         self.init_session()
-        if cloud_connection["is_cloud"] is False:
-            if self.handshake() is False:
-                return
-        else:
-            ctx.user_class = cloud_connection["user_class"]
-            ctx.email_confirmed = cloud_connection["email_confirmed"]
-            self.client_capabilities = ClentCapabilities(
-                cloud_connection["client_capabilities"]
-            )
-            self.session.database = cloud_connection["database"]
-            self.session.username = "cloud"
-            self.session.auth = True
+
+        if (
+            self.is_cloud_connection() is False
+            and self.handshake() is False
+        ):
+            return
 
         while True:
             logger.debug("Got a new packet")

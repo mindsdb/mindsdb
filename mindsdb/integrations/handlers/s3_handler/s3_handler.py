@@ -1,4 +1,6 @@
 import re
+from typing import List
+
 import boto3
 import duckdb
 import pandas as pd
@@ -15,11 +17,31 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
+from mindsdb.integrations.libs.api_handler import APIResource
 
 from mindsdb.integrations.libs.base import DatabaseHandler
 
 
 logger = log.getLogger(__name__)
+
+
+class FilesTable(APIResource):
+
+    def list(self, *args, **kwargs) -> pd.DataFrame:
+
+        tables = self.handler._get_tables()
+        data = []
+        for path in tables:
+            path = path.replace('`', '')
+            name = path[path.rfind('/') + 1:]
+            extension = path[path.rfind('.') + 1:]
+            data.append([path, name, extension])
+
+        return pd.DataFrame(data=data, columns=self.get_columns())
+
+    def get_columns(self) -> List[str]:
+
+        return ["path", "name", "extension"]
 
 
 class S3Handler(DatabaseHandler):
@@ -50,6 +72,8 @@ class S3Handler(DatabaseHandler):
         self.connection = None
         self.is_connected = False
         self.thread_safe = True
+
+        self._files_table = FilesTable(self)
 
     def __del__(self):
         if self.is_connected is True:
@@ -262,6 +286,12 @@ class S3Handler(DatabaseHandler):
             self.is_select_query = True
             table = query.from_table
 
+            if table.parts == ['files']:
+                return Response(
+                    RESPONSE_TYPE.TABLE,
+                    data_frame=self._files_table.select(query)
+                )
+
         else:
             table = query.table
 
@@ -298,6 +328,15 @@ class S3Handler(DatabaseHandler):
 
         return self.native_query(query.to_string())
 
+    def _get_tables(self) -> List[str]:
+        boto3_conn = self._connect_boto3()
+        objects = boto3_conn.list_objects_v2(Bucket=self.connection_data["bucket"])['Contents']
+
+        # Get only the supported file formats.
+        # Sorround the object names with backticks to prevent SQL syntax errors.
+        supported_objects = [f"`{obj['Key']}`" for obj in objects if obj['Key'].split('.')[-1] in self.supported_file_formats]
+        return supported_objects
+
     def get_tables(self) -> Response:
         """
         Retrieves a list of tables (objects) in the S3 bucket.
@@ -307,12 +346,10 @@ class S3Handler(DatabaseHandler):
         Returns:
             Response: A response object containing the list of tables and views, formatted as per the `Response` class.
         """
-        boto3_conn = self._connect_boto3()
-        objects = boto3_conn.list_objects_v2(Bucket=self.connection_data["bucket"])['Contents']
+        supported_objects = self._get_tables()
 
-        # Get only the supported file formats.
-        # Sorround the object names with backticks to prevent SQL syntax errors.
-        supported_objects = [f"`{obj['Key']}`" for obj in objects if obj['Key'].split('.')[-1] in self.supported_file_formats]
+        # virtual table with list of files
+        supported_objects.insert(0, 'files')
 
         response = Response(
             RESPONSE_TYPE.TABLE,

@@ -2,6 +2,7 @@ from typing import Dict, Optional
 
 import pandas as pd
 import transformers
+from packaging import version
 from huggingface_hub import HfApi
 
 from mindsdb.integrations.handlers.huggingface_handler.settings import FINETUNE_MAP
@@ -346,38 +347,131 @@ class HuggingFaceHandler(BaseMLEngine):
             tables = ["args", "metadata"]
             return pd.DataFrame(tables, columns=["tables"])
 
-    def finetune(
-        self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None
-    ) -> None:
-        finetune_args = args if args else {}
-        args = self.base_model_storage.json_get("args")
-        args.update(finetune_args)
+    def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+        print("Starting finetune method")
+        self.print_debug_info()
 
-        model_name = args["model_name"]
+        if df is None or df.empty:
+            raise ValueError("No data provided for fine-tuning")
+
+        print("Input DataFrame shape:", df.shape)
+        print("Input DataFrame columns:", df.columns)
+
+        # Retrieve stored args, defaulting to an empty dict if None
+        stored_args = self.model_storage.json_get("args") or {}
+        print("Stored args:", stored_args)
+        
+        # Merge stored args with provided args, prioritizing provided args
+        finetune_args = {**stored_args, **(args or {})}
+        print("Combined finetune args:", finetune_args)
+
+        # Check if 'using' key exists and extract its contents
+        if 'using' in finetune_args:
+            finetune_args.update(finetune_args['using'])
+            del finetune_args['using']
+
+        model_name = finetune_args.get("model_name")
+        if not model_name:
+            raise ValueError("Model name not found in arguments. Please ensure the model was created correctly.")
+
+        print("Model name:", model_name)
+
         model_folder = self.model_storage.folder_get(model_name)
-        args["model_folder"] = model_folder
+        finetune_args["model_folder"] = model_folder
         model_folder_name = model_folder.split("/")[-1]
-        task = args["task"]
+        task = finetune_args.get("task")
+        if not task:
+            raise ValueError("Task not specified in arguments")
 
         if task not in FINETUNE_MAP:
             raise KeyError(
                 f"{task} is not currently supported, please choose a supported task - {', '.join(FINETUNE_MAP)}"
             )
 
-        tokenizer, trainer = FINETUNE_MAP[task](df, args)
+        # Ensure the input column and target column are correctly specified
+        input_column = finetune_args.get("input_column")
+        target_column = finetune_args.get("target")
+
+        if not input_column or not target_column:
+            raise ValueError("Input column or target column not specified in arguments")
+
+        if input_column not in df.columns or target_column not in df.columns:
+            raise ValueError(f"Input column '{input_column}' or target column '{target_column}' not found in the dataset")
+
+        # Prepare the dataset
+        df = df.rename(columns={input_column: "text", target_column: "labels"})
+        
+        # Convert labels to integers if they're not already
+        labels = finetune_args.get("labels")
+        if not labels:
+            raise ValueError("Labels not specified in arguments")
+        
+        # Create labels_map if it doesn't exist
+        if "labels_map" not in finetune_args:
+            finetune_args["labels_map"] = {label: i for i, label in enumerate(labels)}
+        
+        label_map = finetune_args["labels_map"]
+        df["labels"] = df["labels"].map(label_map)
+
+        print("Finetune args after processing:", finetune_args)
+        print("DataFrame head:", df.head())
+        print("DataFrame info:", df.info())
+
+        tokenizer, trainer = FINETUNE_MAP[task](df, finetune_args)
 
         try:
-            trainer.train()
-            trainer.save_model(
-                model_folder
-            )  # TODO: save entire pipeline instead https://huggingface.co/docs/transformers/main_classes/pipelines#transformers.Pipeline.save_pretrained
+            # Checks Transformers version
+            transformers_version = version.parse(transformers.__version__)
+            print(f"Transformers version: {transformers_version}")
+
+            if transformers_version >= version.parse("4.0.0"):
+                # Set up early stopping for newer versions
+                early_stopping = transformers.EarlyStoppingCallback(early_stopping_patience=3)
+                try:
+                    trainer.train(callbacks=[early_stopping])
+                except TypeError:
+                    print("Warning: Callbacks not supported in this version of Transformers. Training without early stopping.")
+                    trainer.train()
+            else:
+                # For older versions, train without callbacks
+                print("Warning: Using an older version of Transformers. Early stopping is not available.")
+                trainer.train()
+            
+            eval_results = trainer.evaluate()
+            print(f"Evaluation results: {eval_results}")
+
+            trainer.save_model(model_folder) 
+            # TODO: save entire pipeline instead https://huggingface.co/docs/transformers/main_classes/
+            # pipelines#transformers.Pipeline.save_pretrained
             tokenizer.save_pretrained(model_folder)
 
+            finetune_args["fine_tuned"] = True
+            finetune_args["eval_results"] = eval_results
             # persist changes
-            self.model_storage.json_set("args", args)
+            self.model_storage.json_set("args", finetune_args)
             self.model_storage.folder_sync(model_folder_name)
+
+            print("Fine-tuning completed successfully")
+            print("Final evaluation results:", eval_results)
 
         except Exception as e:
             err_str = f"Finetune failed with error: {str(e)}"
-            logger.debug(err_str)
+            print(err_str)
+            logger.error(err_str)
             raise Exception(err_str)
+    
+    def print_debug_info(self):
+        stored_args = self.model_storage.json_get("args") or {}
+        print("Stored arguments:", stored_args)
+        print("Model storage type:", type(self.model_storage))
+        print("Engine storage type:", type(self.engine_storage))
+        
+        print("Available methods for model_storage:")
+        for method in dir(self.model_storage):
+            if not method.startswith('__'):
+                print(f"  - {method}")
+        
+        print("Available methods for engine_storage:")
+        for method in dir(self.engine_storage):
+            if not method.startswith('__'):
+                print(f"  - {method}")    

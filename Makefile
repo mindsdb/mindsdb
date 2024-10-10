@@ -8,7 +8,7 @@ install_handler:
 		pip install -e .[$(HANDLER_NAME)];\
 	else\
 		echo 'Please set $$HANDLER_NAME to the handler to install.';\
-	fi	
+	fi
 precommit:
 	pre-commit install
 	pre-commit run --files $$(git diff --cached --name-only)
@@ -22,7 +22,7 @@ check:
 	python tests/scripts/check_print_statements.py
 
 build_docker:
-	docker buildx build -t mdb --load -f docker/mindsdb.Dockerfile .
+	docker buildx build -t mdb --target dev --load -f docker/mindsdb.Dockerfile .
 
 run_docker: build_docker
 	docker run -it -p 47334:47334 mdb

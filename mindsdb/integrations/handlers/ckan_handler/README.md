@@ -30,16 +30,44 @@ PARAMETERS = {
 
 ## Usage
 
-After setting up the connection, you can query CKAN data using SQL. The CKAN handler provides three main tables:
+The CKAN handler provides three main tables:
 
 - `datasets`: Lists all datasets in the CKAN instance.
 - `resources`: Lists all resources metadata across all packages.
 - `datastore`:  Allows querying individual datastore resources.
 
-Here's an example of how to query a CKAN dataset:
+## Example Queries
+
+1. List all datasets:
 
 ```sql
-SELECT * FROM datastore WHERE resource_id = 'your-resource-id';
+SELECT * FROM `your-datasource`.datasets;
+```
+
+2. List all resources:
+
+```sql
+SELECT * FROM `your-datasource`.resources ;
+```
+
+3. Query a specific datastore resource:
+
+```sql
+SELECT * FROM `your-datasource`.datastore WHERE resource_id = 'your-resource-id';
+```
+
+Replace `your-resource-id-here` with the actual resource ID you want to query.
+
+## Querying Large Resources
+
+The CKAN handler supports automatic pagination when querying datastore resources. This allows you to retrieve large datasets without worrying about API limits.
+
+You can still use the `LIMIT` clause to limit the number of rows returned by the query. For example:
+
+```sql
+SELECT * FROM ckan_datasource.datastore 
+WHERE resource_id = 'your-resource-id-here' 
+LIMIT 1000;
 ```
 
 ## Limitations

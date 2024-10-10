@@ -1,5 +1,7 @@
 import pandas as pd
 from ckanapi import RemoteCKAN
+from urllib.parse import urlparse, parse_qs
+
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable
 from mindsdb.integrations.libs.response import (
     HandlerResponse,
@@ -13,13 +15,12 @@ from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditio
 logger = log.getLogger(__name__)
 
 
-class PackageIDsTable(APITable):
-    def select(self, query: ast.Select) -> HandlerResponse:
+class DatasetsTable(APITable):
+    def select(self, query: ast.Select) -> pd.DataFrame:
         conditions = extract_comparison_conditions(query.where) if query.where else []
         limit = query.limit.value if query.limit else 1000
-
         packages = self.list(conditions, limit)
-        return HandlerResponse(RESPONSE_TYPE.TABLE, packages)
+        return pd.DataFrame(packages)
 
     def list(self, conditions=None, limit=1000):
         self.handler.connect()
@@ -57,12 +58,12 @@ class PackageIDsTable(APITable):
 
 
 class ResourceIDsTable(APITable):
-    def select(self, query: ast.Select) -> HandlerResponse:
+    def select(self, query: ast.Select) -> pd.DataFrame:
         conditions = extract_comparison_conditions(query.where) if query.where else []
         limit = query.limit.value if query.limit else 1000
 
         resources = self.list(conditions, limit)
-        return HandlerResponse(RESPONSE_TYPE.TABLE, resources)
+        return pd.DataFrame(resources)
 
     def list(self, conditions=None, limit=1000):
         self.handler.connect()
@@ -103,9 +104,9 @@ class ResourceIDsTable(APITable):
 
 
 class DatastoreTable(APITable):
-    def select(self, query: ast.Select) -> HandlerResponse:
+    def select(self, query: ast.Select) -> pd.DataFrame:
         conditions = extract_comparison_conditions(query.where) if query.where else []
-        limit = query.limit.value if query.limit else 100
+        limit = query.limit.value if query.limit else None
 
         resource_id = None
         other_conditions = []
@@ -118,33 +119,64 @@ class DatastoreTable(APITable):
                     other_conditions.append(condition)
 
         if not resource_id:
-            # We are handling this by design, as we want to the user to provide a resource_id
             message = "Please provide a resource_id in your query. Example: SELECT * FROM datastore WHERE resource_id = 'your_resource_id'"
             df = pd.DataFrame({"message": [message]})
-            return HandlerResponse(RESPONSE_TYPE.TABLE, df)
+            return df
 
         data = self.query_datastore(resource_id, other_conditions, limit)
-        return HandlerResponse(RESPONSE_TYPE.TABLE, data)
+        return pd.DataFrame(data)
 
     def query_datastore(self, resource_id, conditions, limit):
-        params = {"resource_id": resource_id, "limit": limit}
+        params = {
+            "resource_id": resource_id,
+            "limit": 1000,  # Start with default limit of 1000 records
+        }
 
+        # Add filters based on conditions
         filters = {}
         for condition in conditions:
             op, col, val = condition
             if op == "=":
                 filters[col] = val
-
         if filters:
             params["filters"] = filters
 
-        result = self.handler.call_ckan_api("datastore_search", params)
+        all_records = []
+        while True:
+            result = self.handler.call_ckan_api("datastore_search", params)
+            records = result.get("records", [])
+            all_records.extend(records)
 
-        records = result.get("records", [])
-        return pd.DataFrame(records)
+            # Check if we've reached the desired limit
+            if limit and len(all_records) >= limit:
+                logger.info(f"Reached limit of {limit} records")
+                all_records = all_records[:limit]
+                break
+
+            # Check for next page
+            if "_links" in result and "next" in result["_links"]:
+                next_url = result["_links"]["next"]
+                parsed_url = urlparse(next_url)
+                query_params = parse_qs(parsed_url.query)
+                params["offset"] = query_params.get("offset", ["0"])[0]
+                logger.info(f"Fetching next page with offset {params['offset']}")
+            else:
+                logger.info("No more pages to fetch")
+                break  # No more pages
+
+        df = pd.DataFrame(all_records)
+
+        # Include metadata about the resource
+        metadata = self.handler.call_ckan_api("resource_show", {"id": resource_id})
+        df["_resource_id"] = resource_id
+        df["_resource_name"] = metadata.get("name")
+        df["_resource_format"] = metadata.get("format")
+        df["_resource_last_modified"] = metadata.get("last_modified")
+
+        return df
 
     def get_columns(self):
-        return [field['id'] for field in self.fields]
+        return [field["id"] for field in self.fields]
 
 
 class CkanHandler(APIHandler):
@@ -156,7 +188,7 @@ class CkanHandler(APIHandler):
         self.is_connected = False
         self.connection_args = kwargs.get("connection_data", {})
 
-        self.datasets_table = PackageIDsTable(self)
+        self.datasets_table = DatasetsTable(self)
         self.resources_table = ResourceIDsTable(self)
         self.datastore_table = DatastoreTable(self)
 
@@ -206,11 +238,14 @@ class CkanHandler(APIHandler):
         table_name = query.from_table.parts[-1]
 
         if table_name == "datasets":
-            return self.datasets_table.select(query)
+            datasets = self.datasets_table.select(query)
+            return HandlerResponse(RESPONSE_TYPE.TABLE, datasets)
         elif table_name == "resources":
-            return self.resources_table.select(query)
+            resources = self.resources_table.select(query)
+            return HandlerResponse(RESPONSE_TYPE.TABLE, resources)
         elif table_name == "datastore":
-            return self.datastore_table.select(query)
+            datastore = self.datastore_table.select(query)
+            return HandlerResponse(RESPONSE_TYPE.TABLE, datastore)
         else:
             raise ValueError(f"Unknown table: {table_name}")
 
@@ -234,7 +269,8 @@ class CkanHandler(APIHandler):
         parts = query.split(":")
         if len(parts) != 2:
             raise ValueError(
-                "Invalid query format. Expected 'method_name:param1=value1,param2=value2'")
+                "Invalid query format. Expected 'method_name:param1=value1,param2=value2'"
+            )
         method = parts[0].strip()
         params = {}
         if parts[1].strip():

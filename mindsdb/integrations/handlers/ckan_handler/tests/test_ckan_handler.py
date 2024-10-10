@@ -3,7 +3,6 @@ from unittest.mock import patch, MagicMock
 from mindsdb.integrations.handlers.ckan_handler.ckan_handler import CkanHandler
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb_sql.parser import ast
-import pandas as pd
 
 
 class CkanHandlerTest(unittest.TestCase):
@@ -114,7 +113,7 @@ class CkanHandlerTest(unittest.TestCase):
         )
         result = self.handler.query(query)
         self.assertEqual(result.type, RESPONSE_TYPE.TABLE)
-        self.assertEqual(len(result.data_frame), 1)  
+        self.assertEqual(len(result.data_frame), 1)
         self.assertIn("message", result.data_frame.columns)
 
     def test_query_datastore_with_resource_id(self):

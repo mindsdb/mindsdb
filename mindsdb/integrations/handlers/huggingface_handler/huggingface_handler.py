@@ -348,33 +348,34 @@ class HuggingFaceHandler(BaseMLEngine):
             return pd.DataFrame(tables, columns=["tables"])
 
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
-        print("Starting finetune method")
+        logger.info("Starting finetune method")
         self.print_debug_info()
 
         if df is None or df.empty:
             raise ValueError("No data provided for fine-tuning")
 
-        print("Input DataFrame shape:", df.shape)
-        print("Input DataFrame columns:", df.columns)
+        logger.info(f"Input DataFrame - shape: {df.shape}, columns: {df.columns}")
 
         # Retrieve stored args, defaulting to an empty dict if None
         stored_args = self.model_storage.json_get("args") or {}
-        print("Stored args:", stored_args)
         
         # Merge stored args with provided args, prioritizing provided args
         finetune_args = {**stored_args, **(args or {})}
-        print("Combined finetune args:", finetune_args)
-
+        
         # Check if 'using' key exists and extract its contents
         if 'using' in finetune_args:
             finetune_args.update(finetune_args['using'])
             del finetune_args['using']
 
+        logger.debug(
+            f"Arguments:\n"
+            f"  Stored args: {stored_args}\n"
+            f"  Combined finetune args: {finetune_args}"
+        )
+
         model_name = finetune_args.get("model_name")
         if not model_name:
             raise ValueError("Model name not found in arguments. Please ensure the model was created correctly.")
-
-        print("Model name:", model_name)
 
         model_folder = self.model_storage.folder_get(model_name)
         finetune_args["model_folder"] = model_folder
@@ -398,6 +399,15 @@ class HuggingFaceHandler(BaseMLEngine):
         if input_column not in df.columns or target_column not in df.columns:
             raise ValueError(f"Input column '{input_column}' or target column '{target_column}' not found in the dataset")
 
+        logger.info(
+            f"Fine-tuning configuration:\n"
+            f"  Model name: {model_name}\n"
+            f"  Task: {task}\n"
+            f"  Input column: {input_column}\n"
+            f"  Target column: {target_column}\n"
+            f"  Model folder: {model_folder}"
+        )
+
         # Prepare the dataset
         df = df.rename(columns={input_column: "text", target_column: "labels"})
         
@@ -413,16 +423,19 @@ class HuggingFaceHandler(BaseMLEngine):
         label_map = finetune_args["labels_map"]
         df["labels"] = df["labels"].map(label_map)
 
-        print("Finetune args after processing:", finetune_args)
-        print("DataFrame head:", df.head())
-        print("DataFrame info:", df.info())
+        logger.debug(
+            f"Dataset preparation:\n"
+            f"  Finetune args after processing: {finetune_args}\n"
+            f"  DataFrame head: {df.head()}\n"
+            f"  DataFrame info: {df.info()}"
+        )
 
         tokenizer, trainer = FINETUNE_MAP[task](df, finetune_args)
 
         try:
             # Checks Transformers version
             transformers_version = version.parse(transformers.__version__)
-            print(f"Transformers version: {transformers_version}")
+            logger.info(f"Transformers version: {transformers_version}")
 
             if transformers_version >= version.parse("4.0.0"):
                 # Set up early stopping for newer versions
@@ -430,15 +443,15 @@ class HuggingFaceHandler(BaseMLEngine):
                 try:
                     trainer.train(callbacks=[early_stopping])
                 except TypeError:
-                    print("Warning: Callbacks not supported in this version of Transformers. Training without early stopping.")
+                    logger.warning("Callbacks not supported in this version of Transformers. Training without early stopping.")
                     trainer.train()
             else:
                 # For older versions, train without callbacks
-                print("Warning: Using an older version of Transformers. Early stopping is not available.")
+                logger.warning("Using an older version of Transformers. Early stopping is not available.")
                 trainer.train()
             
             eval_results = trainer.evaluate()
-            print(f"Evaluation results: {eval_results}")
+            logger.info(f"Evaluation results: {eval_results}")
 
             trainer.save_model(model_folder) 
             # TODO: save entire pipeline instead https://huggingface.co/docs/transformers/main_classes/
@@ -451,27 +464,26 @@ class HuggingFaceHandler(BaseMLEngine):
             self.model_storage.json_set("args", finetune_args)
             self.model_storage.folder_sync(model_folder_name)
 
-            print("Fine-tuning completed successfully")
-            print("Final evaluation results:", eval_results)
+            logger.info(
+                f"Fine-tuning completed successfully\n"
+                f"Final evaluation results: {eval_results}"
+            )
 
         except Exception as e:
             err_str = f"Finetune failed with error: {str(e)}"
-            print(err_str)
             logger.error(err_str)
             raise Exception(err_str)
-    
+
     def print_debug_info(self):
         stored_args = self.model_storage.json_get("args") or {}
-        print("Stored arguments:", stored_args)
-        print("Model storage type:", type(self.model_storage))
-        print("Engine storage type:", type(self.engine_storage))
+        model_storage_methods = [method for method in dir(self.model_storage) if not method.startswith('__')]
+        engine_storage_methods = [method for method in dir(self.engine_storage) if not method.startswith('__')]
         
-        print("Available methods for model_storage:")
-        for method in dir(self.model_storage):
-            if not method.startswith('__'):
-                print(f"  - {method}")
-        
-        print("Available methods for engine_storage:")
-        for method in dir(self.engine_storage):
-            if not method.startswith('__'):
-                print(f"  - {method}")    
+        logger.debug(
+            f"Debug Information:\n"
+            f"  Stored arguments: {stored_args}\n"
+            f"  Model storage type: {type(self.model_storage)}\n"
+            f"  Engine storage type: {type(self.engine_storage)}\n"
+            f"  Available methods for model_storage: {', '.join(model_storage_methods)}\n"
+            f"  Available methods for engine_storage: {', '.join(engine_storage_methods)}"
+        )

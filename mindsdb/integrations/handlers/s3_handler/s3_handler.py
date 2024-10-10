@@ -9,7 +9,7 @@ from botocore.exceptions import ClientError
 from duckdb import DuckDBPyConnection, CatalogException
 
 from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.parser.ast import Select, Identifier
+from mindsdb_sql.parser.ast import Select, Identifier, Insert
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
@@ -18,6 +18,8 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 from mindsdb.integrations.libs.api_handler import APIResource
+from mindsdb.integrations.utilities.sql_utils import (
+    extract_comparison_conditions, FilterCondition, FilterOperator, SortColumn)
 
 from mindsdb.integrations.libs.base import DatabaseHandler
 
@@ -25,23 +27,63 @@ from mindsdb.integrations.libs.base import DatabaseHandler
 logger = log.getLogger(__name__)
 
 
-class FilesTable(APIResource):
+class ListFilesTable(APIResource):
 
-    def list(self, *args, **kwargs) -> pd.DataFrame:
+    def list(self,
+             targets: List[str] = None,
+             conditions: List[FilterCondition] = None,
+             *args, **kwargs) -> pd.DataFrame:
+
+        # for condition in conditions:
+        #     if (condition.column in ('state', 'assignee', 'creator', 'mentioned', 'milestone')
+        #             and condition.op == FilterOperator.EQUAL):
+        #
+        #         issues_kwargs[condition.column] = condition.value
+        #         condition.applied = True
+        #
+        #     elif condition.column == 'a':
+        #         if condition.op == FilterOperator.IN:
+        #             issues_kwargs['labels'] = condition.value
+        #         elif condition.op == FilterOperator.EQUAL:
+        #             issues_kwargs['labels'] = condition.value.split(",")
+        #         condition.applied = True
 
         tables = self.handler._get_tables()
         data = []
         for path in tables:
             path = path.replace('`', '')
-            name = path[path.rfind('/') + 1:]
-            extension = path[path.rfind('.') + 1:]
-            data.append([path, name, extension])
+            item = {
+                'path': path,
+                'name': path[path.rfind('/') + 1:],
+                'extension': path[path.rfind('.') + 1:]
+            }
+
+            # getting content
+            # if 'content' in targets:
+            #     item['content'] = self.handler._read_as_content(path)
+            data.append(item)
 
         return pd.DataFrame(data=data, columns=self.get_columns())
 
     def get_columns(self) -> List[str]:
 
-        return ["path", "name", "extension"]
+        return ["path", "name", "extension", "content"]
+
+
+class FileTable(APIResource):
+
+    def list(self, targets: List[str] = None, table_name=None, *args, **kwargs) -> pd.DataFrame:
+
+        return self.handler._read_as_table(table_name)
+
+    def add(self, data, table_name=None):
+        df = pd.DataFrame(data)
+        return self.handler._add_data_to_table(table_name, df)
+
+    # def get_columns(self) -> List[str]:
+    #
+    #     return ["path", "name", "extension", "content"]
+
 
 
 class S3Handler(DatabaseHandler):
@@ -65,15 +107,12 @@ class S3Handler(DatabaseHandler):
         super().__init__(name)
         self.connection_data = connection_data
         self.kwargs = kwargs
-        self.is_select_query = False
-        self.key = None
-        self.table_name = None
 
         self.connection = None
         self.is_connected = False
         self.thread_safe = True
 
-        self._files_table = FilesTable(self)
+        self._files_table = ListFilesTable(self)
 
     def __del__(self):
         if self.is_connected is True:
@@ -97,12 +136,15 @@ class S3Handler(DatabaseHandler):
             raise ValueError('Required parameters (aws_access_key_id, aws_secret_access_key, bucket) must be provided.')
 
         # Connect to S3 via DuckDB and configure mandatory credentials.
-        self.connection = self._connect_duckdb()
+        self.connection = self._connect_boto3()
 
         self.is_connected = True
 
         return self.connection
 
+    from contextlib import contextmanager
+
+    @contextmanager
     def _connect_duckdb(self) -> DuckDBPyConnection:
         """
         Establishes a connection to the AWS (S3) account via DuckDB.
@@ -111,9 +153,7 @@ class S3Handler(DatabaseHandler):
             DuckDBPyConnection: A connection object to the AWS (S3) account.
         """
         # Connect to S3 via DuckDB.
-        duckdb_conn = duckdb.connect()
-        duckdb_conn.execute("INSTALL httpfs")
-        duckdb_conn.execute("LOAD httpfs")
+        duckdb_conn = duckdb.connect(":memory:")
 
         # Configure mandatory credentials.
         duckdb_conn.execute(f"SET s3_access_key_id='{self.connection_data['aws_access_key_id']}'")
@@ -126,7 +166,11 @@ class S3Handler(DatabaseHandler):
         if 'region_name' in self.connection_data:
             duckdb_conn.execute(f"SET s3_region='{self.connection_data['region_name']}'")
 
-        return duckdb_conn
+        try:
+            yield duckdb_conn
+        finally:
+            duckdb_conn.close()
+
 
     def _connect_boto3(self) -> boto3.client:
         """
@@ -156,7 +200,7 @@ class S3Handler(DatabaseHandler):
         """
         if not self.is_connected:
             return
-        self.connection.close()
+        # !!self.connection.close()
         self.is_connected = False
 
     def check_connection(self) -> StatusResponse:
@@ -171,7 +215,7 @@ class S3Handler(DatabaseHandler):
 
         # Check connection via boto3.
         try:
-            boto3_conn = self._connect_boto3()
+            boto3_conn = self.connect()
             result = boto3_conn.head_bucket(Bucket=self.connection_data['bucket'])
 
             # Check if the bucket is in the same region as specified: the DuckDB connection will fail otherwise.
@@ -182,8 +226,6 @@ class S3Handler(DatabaseHandler):
             logger.error(f'Error connecting to S3 with the given credentials, {e}!')
             response.error_message = str(e)
 
-        # TODO: Check connection via DuckDB?
-
         if response.success and need_to_close:
             self.disconnect()
 
@@ -192,80 +234,60 @@ class S3Handler(DatabaseHandler):
 
         return response
 
-    def native_query(self, query: Text) -> Response:
-        """
-        Executes a SQL query on the specified table (object) in the S3 bucket.
 
-        Args:
-            query (Text): The SQL query to be executed.
+    def _read_as_table(self, key) -> pd.DataFrame:
 
-        Returns:
-            Response: A response object containing the result of the query or an error message.
-        """
-        need_to_close = not self.is_connected
+        with self._connect_duckdb() as connection:
 
-        connection = self.connect()
-        cursor = connection.cursor()
+            cursor = connection.execute(f"""
+              SELECT * FROM 's3://{self.connection_data['bucket']}/{key}'
+            """)
+            return cursor.fetchdf()
 
-        try:
-            # TODO: Can the creation of tables be avoided for SELECT queries?
-            self._create_table_if_not_exists_from_file()
+    def _read_as_content(self, key) -> None:
 
-            cursor.execute(query)
-            if self.is_select_query:
-                result = cursor.fetchall()
-                response = Response(
-                    RESPONSE_TYPE.TABLE,
-                    data_frame=pd.DataFrame(
-                        result,
-                        columns=[x[0] for x in cursor.description]
-                    )
-                )
+        client = self._connect_boto3()
 
-            else:
-                connection.commit()
-                # TODO: Is it possible to avoid writing the table to a file after each query?
-                self._write_table_to_file()
-                response = Response(RESPONSE_TYPE.OK)
-        except Exception as e:
-            logger.error(f'Error running query: {query} on {self.connection_data["bucket"]}, {e}!')
-            response = Response(
-                RESPONSE_TYPE.ERROR,
-                error_message=str(e)
-            )
+        obj = client.get_object(Bucket=self.connection_data['bucket'], Key=key)
+        content = obj['Body'].read()
+        return content
 
-        if need_to_close is True:
-            self.disconnect()
-
-        return response
-
-    def _create_table_if_not_exists_from_file(self) -> None:
-        """
-        Creates a table from a file in the S3 bucket.
-
-        Raises:
-            CatalogException: If the file does not exist in the S3 bucket.
-        """
-        connection = self.connect()
-        try:
-            connection.execute(f"CREATE TABLE IF NOT EXISTS {self.table_name} AS SELECT * FROM 's3://{self.connection_data['bucket']}/{self.key}'")
-        except CatalogException as e:
-            logger.error(f'Error creating table {self.table_name} from file {self.key} in {self.connection_data["bucket"]}, {e}!')
-            raise e
-
-    def _write_table_to_file(self) -> None:
+    def _add_data_to_table(self, key, df) -> None:
         """
         Writes the table to a file in the S3 bucket.
 
         Raises:
             CatalogException: If the table does not exist in the DuckDB connection.
         """
-        try:
-            connection = self.connect()
-            connection.execute(f"COPY {self.table_name} TO 's3://{self.connection_data['bucket']}/{self.key}'")
-        except CatalogException as e:
-            logger.error(f'Error writing table {self.table_name} to file {self.key} in {self.connection_data["bucket"]}, {e}!')
-            raise e
+
+
+        # Check if the file exists in the S3 bucket.
+        # try:
+        #     boto3_conn = self._connect_boto3()
+        #     boto3_conn.head_object(Bucket=self.connection_data['bucket'], Key=self.key)
+        # except ClientError as e:
+        #     logger.error(f'Error querying the file {self.key} in the bucket {self.connection_data["bucket"]}, {e}!')
+        #     raise e
+
+        with self._connect_duckdb() as connection:
+            # copy
+            connection.execute(f"""
+               CREATE TABLE tmp_table 
+               AS SELECT * FROM 's3://{self.connection_data['bucket']}/{key}'
+            """)
+
+            # insert
+            connection.execute("""
+              INSERT INTO tmp_table BY NAME
+              SELECT * FROM df
+            """)
+
+            # upload
+            connection.execute(f"""
+              COPY tmp_table
+              TO 's3://{self.connection_data['bucket']}/{key}'
+            """)
+
 
     def query(self, query: ASTNode) -> Response:
         """
@@ -282,55 +304,49 @@ class S3Handler(DatabaseHandler):
         """
         # Set the key by getting it from the query.
         # This will be used to create a table from the object in the S3 bucket.
+
+
         if isinstance(query, Select):
-            self.is_select_query = True
-            table = query.from_table
+            table_name = query.from_table.parts[-1]
+            if table_name == 'files':
+                table = self._files_table
+                df = table.select(query)
 
-            if table.parts == ['files']:
-                return Response(
-                    RESPONSE_TYPE.TABLE,
-                    data_frame=self._files_table.select(query)
-                )
+                # add content
+                has_content = False
+                for target in query.targets:
+                    if isinstance(target, Identifier) and target.parts[-1].lower() == 'content':
+                        has_content = True
+                        break
+                if has_content:
+                    df['content'] = df['path'].apply(self._read_as_content)
+            else:
+                extension = table_name.split('.')[-1]
+                if extension not in self.supported_file_formats:
+                    logger.error(f'The file format {extension} is not supported!')
+                    raise ValueError(f'The file format {extension} is not supported!')
 
-        else:
-            table = query.table
+                table = FileTable(self, table_name=table_name)
+                df = table.select(query)
 
-        self.key = table.get_string().replace('`', '')
-
-        # Check if the file format is supported.
-        if self.key.split('.')[-1] not in self.supported_file_formats:
-            logger.error(f'The file format {self.key.split(".")[-1]} is not supported!')
-            raise ValueError(f'The file format {self.key.split(".")[-1]} is not supported!')
-
-        # Check if the file exists in the S3 bucket.
-        try:
-            boto3_conn = self._connect_boto3()
-            boto3_conn.head_object(Bucket=self.connection_data['bucket'], Key=self.key)
-        except ClientError as e:
-            logger.error(f'Error querying the file {self.key} in the bucket {self.connection_data["bucket"]}, {e}!')
-            raise e
-
-        # Replace all special characters in the key with underscores to create a valid table name.
-        self.table_name = re.sub(r'[\W]+', '_', self.key)
-
-        # Replace the key with the name of the table to be created.
-        if self.is_select_query:
-            query.from_table = Identifier(
-                parts=[self.table_name],
-                alias=table.alias
+            response = Response(
+                RESPONSE_TYPE.TABLE,
+                data_frame=df
             )
-
+        elif isinstance(query, Insert):
+            table_name = query.table.parts[-1]
+            table = FileTable(self, table_name=table_name)
+            table.insert(query)
+            response = Response(RESPONSE_TYPE.OK)
         else:
-            query.table = Identifier(
-                parts=[self.table_name],
-                alias=table.alias
-            )
+            raise NotImplementedError
 
-        return self.native_query(query.to_string())
+        return response
+
 
     def _get_tables(self) -> List[str]:
-        boto3_conn = self._connect_boto3()
-        objects = boto3_conn.list_objects_v2(Bucket=self.connection_data["bucket"])['Contents']
+        client = self._connect_boto3()
+        objects = client.list_objects_v2(Bucket=self.connection_data["bucket"])['Contents']
 
         # Get only the supported file formats.
         # Sorround the object names with backticks to prevent SQL syntax errors.

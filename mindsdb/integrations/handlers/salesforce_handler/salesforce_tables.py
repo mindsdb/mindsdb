@@ -75,15 +75,9 @@ class ContactsTable(APIResource):
         """
         client = self.handler.connect()
 
-        # Salesforce API does not support filtering contacts based on attributes other than 'Id'. Raise an error if any other column is used.
-        if len(conditions) != 1 or conditions[0].column != 'Id':
-            raise ValueError("Only the 'Id' column can be used to filter contacts for modification.")
+        ids = self._validate_conditions(conditions)
 
-        # Only the 'equals' and 'in' operators can be used on the 'Id' column for modification. Raise an error if any other operator is used.
-        elif conditions[0].op not in [FilterOperator.EQUAL, FilterOperator.IN]:
-            raise ValueError("Only the 'equals' and 'in' operators can be used on the 'Id' column for modification.")
-
-        for id in conditions[0].value if isinstance(conditions[0].value, list) else [conditions[0].value]:
+        for id in ids:
             client.sobjects.Contact.update(id, values)
 
     def remove(self, conditions: List[FilterCondition]) -> None:
@@ -95,16 +89,27 @@ class ContactsTable(APIResource):
         """
         client = self.handler.connect()
 
+        ids = self._validate_conditions(conditions)
+
+        for id in ids:
+            client.sobjects.Contact.delete(id)
+
+    def _validate_conditions(self, conditions: List[FilterCondition]) -> None:
+        """
+        Validates the conditions used for filtering contacts in the Salesforce Contacts resource.
+
+        Args:
+            conditions (List[FilterCondition]): The conditions to be validated.
+        """
         # Salesforce API does not support filtering contacts based on attributes other than 'Id'. Raise an error if any other column is used.
         if len(conditions) != 1 or conditions[0].column != 'Id':
-            raise ValueError("Only the 'Id' column can be used to filter contacts for deletion.")
+            raise ValueError("Only the 'Id' column can be used to filter contacts.")
 
         # Only the 'equals' and 'in' operators can be used on the 'Id' column for deletion. Raise an error if any other operator is used.
-        elif conditions[0].op not in [FilterOperator.EQUAL, FilterOperator.IN]:
-            raise ValueError("Only the 'equals' and 'in' operators can be used on the 'Id' column for deletion.")
+        if conditions[0].op not in [FilterOperator.EQUAL, FilterOperator.IN]:
+            raise ValueError("Only the 'equals' and 'in' operators can be used on the 'Id' column.")
 
-        for id in conditions[0].value if isinstance(conditions[0].value, list) else [conditions[0].value]:
-            client.sobjects.Contact.delete(id)
+        return conditions[0].value if isinstance(conditions[0].value, list) else [conditions[0].value]
 
     def get_columns(self) -> List[Text]:
         """

@@ -1,5 +1,4 @@
-if False:  # Only used by mypy
-    from typing import List, Dict, Text, Any
+from typing import List, Dict, Text, Any
 
 import pandas as pd
 from hubspot.crm.objects import (

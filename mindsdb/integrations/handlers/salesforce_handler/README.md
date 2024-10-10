@@ -24,7 +24,7 @@ WITH
     PARAMETERS = {
         "username": "demo@example.com",
         "password": "demo_password",
-        "client_id": "3MVG9lKcPoNINVBIPJjdw1J9LLM82HnZz9Yh7ZJnY"
+        "client_id": "3MVG9lKcPoNINVBIPJjdw1J9LLM82HnZz9Yh7ZJnY",
         "client_secret": "5A52C1A1E21DF9012IODC9ISNXXAADDA9"
     };
 ```
@@ -41,12 +41,7 @@ To create a connected app in Salesforce and obtain the client ID and client secr
 1. Log in to your Salesforce account.
 2. Go to `Setup` > `Apps` > `App Manager`.
 3. Click `New Connected App`.
-4. Fill in the required details. Esure that the `Enable OAuth Settings` checkbox is checked, set the `Callback URL` to wherever MindsDB is deployed followed by `/verify-auth` and choose the appropriate OAuth scopes.
-
-<Note>
-If you are using MindsDB locally, set the `Callback URL` to `http://localhost:47334/verify-auth`.
-</Note>
-
+4. Fill in the required details. Esure that the `Enable OAuth Settings` checkbox is checked, set the `Callback URL` to wherever MindsDB is deployed followed by `/verify-auth` (e.g., `http://localhost:47334/verify-auth`), and choose the appropriate OAuth scopes.
 5. Click `Save`.
 6. Copy the `Consumer Key` (client ID) and `Consumer Secret` (client secret) from the connected app details under `Consumer Key and Secret`.
 7. Go to `Setup` > `Apps` > `Connected Apps` > `Manage Connected Apps`.

@@ -95,7 +95,7 @@ class FuncParser:
         raise NotImplementedError(f'Unknown node {node}')
 
 
-class APITable():
+class APITable:
 
     def __init__(self, handler):
         self.handler = handler
@@ -155,6 +155,10 @@ class APITable():
 
 class APIResource(APITable):
 
+    def __init__(self, *args, table_name=None, **kwargs):
+        self.table_name = table_name
+        super().__init__(*args,  **kwargs)
+
     def select(self, query: Select) -> pd.DataFrame:
         """Receive query as AST (abstract syntax tree) and act upon it.
 
@@ -186,11 +190,17 @@ class APIResource(APITable):
             if isinstance(col, Identifier):
                 targets.append(col.parts[-1])
 
+        kwargs = {
+            'conditions': conditions,
+            'limit': limit,
+            'sort': sort,
+            'targets': targets
+        }
+        if self.table_name is not None:
+            kwargs['table_name'] = self.table_name
+
         result = self.list(
-            conditions=conditions,
-            limit=limit,
-            sort=sort,
-            targets=targets
+            **kwargs
         )
 
         filters = []
@@ -209,7 +219,8 @@ class APIResource(APITable):
              conditions: List[FilterCondition] = None,
              limit: int = None,
              sort: List[SortColumn] = None,
-             targets: List[str] = None
+             targets: List[str] = None,
+             **kwargs
              ):
         """
         List items based on specified conditions, limits, sorting, and targets.

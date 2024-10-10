@@ -249,12 +249,17 @@ class APIResource(APITable):
 
         columns = [col.name for col in query.columns]
 
-        for a_row in query.values:
-            row = dict(zip(columns, a_row))
+        data = [
+            dict(zip(columns, a_row))
+            for a_row in query.values
+        ]
+        kwargs = {}
+        if self.table_name is not None:
+            kwargs['table_name'] = self.table_name
 
-            self.add(row)
+        self.add(data, **kwargs)
 
-    def add(self, row: dict):
+    def add(self, row: List[dict], **kwargs) -> None:
         """
         Add a single item to the dataa collection
 

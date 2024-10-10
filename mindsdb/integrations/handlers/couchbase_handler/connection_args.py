@@ -17,9 +17,9 @@ connection_args = OrderedDict(
         "type": ARG_TYPE.STR,
         "description": "The database/bucket name to use when connecting with the Couchbase server.",
     },
-    host={
+    connection_string={
         "type": ARG_TYPE.STR,
-        "description": "--your-instance--.dp.cloud.couchbase.com or IP address of the Couchbase server.",
+        "description": "the Connection string to specify the cluster endpoint.",
     },
     scope={
         "type": ARG_TYPE.STR,
@@ -27,5 +27,5 @@ connection_args = OrderedDict(
     },
 )
 connection_args_example = OrderedDict(
-    host="127.0.0.1", user="root", password="password", bucket="bucket"
+    connection_string="couchbase://localhost", user="root", password="password", bucket="bucket"
 )

@@ -627,7 +627,7 @@ class ExecuteCommands:
         elif type(statement) is CreateKnowledgeBase:
             return self.answer_create_kb(statement, database_name)
         elif type(statement) is DropKnowledgeBase:
-            return self.anwser_drop_kb(statement, database_name)
+            return self.answer_drop_kb(statement, database_name)
         elif type(statement) is CreateSkill:
             return self.answer_create_skill(statement, database_name)
         elif type(statement) is DropSkill:
@@ -1341,7 +1341,7 @@ class ExecuteCommands:
 
         return ExecuteAnswer()
 
-    def anwser_drop_kb(self, statement: DropKnowledgeBase, database_name: str):
+    def answer_drop_kb(self, statement: DropKnowledgeBase, database_name: str):
         name = statement.name.parts[-1]
         project_name = (
             statement.name.parts[0]

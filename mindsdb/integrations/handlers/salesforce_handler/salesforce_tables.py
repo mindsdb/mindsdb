@@ -61,7 +61,8 @@ class ContactsTable(APIResource):
         Args:
             contact (Dict): The data to be inserted into the Salesforce Contacts resource.
         """
-        pass
+        client = self.handler.connect()
+        client.sobjects.Contact.insert(contact)
 
     def get_columns(self) -> List[Text]:
         """

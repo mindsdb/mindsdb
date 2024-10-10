@@ -166,10 +166,7 @@ class APIResource(APITable):
             pd.DataFrame
         """
 
-        conditions = [
-            FilterCondition(i[1], FilterOperator(i[0].upper()), i[2])
-            for i in extract_comparison_conditions(query.where)
-        ]
+        conditions = self._extract_conditions(query.where)
 
         limit = None
         if query.limit:
@@ -265,10 +262,7 @@ class APIResource(APITable):
         Returns:
             None
         """
-        conditions = [
-            FilterCondition(i[1], FilterOperator(i[0].upper()), i[2])
-            for i in extract_comparison_conditions(query.where)
-        ]
+        conditions = self._extract_conditions(query.where)
 
         values = {key: val.value for key, val in query.update_columns.items()}
 
@@ -297,10 +291,7 @@ class APIResource(APITable):
         Returns:
             None
         """
-        conditions = [
-            FilterCondition(i[1], FilterOperator(i[0].upper()), i[2])
-            for i in extract_comparison_conditions(query.where)
-        ]
+        conditions = self._extract_conditions(query.where)
 
         self.remove(conditions)
 
@@ -316,6 +307,12 @@ class APIResource(APITable):
             NotImplementedError: This is an abstract method and should be implemented in a subclass.
         """
         raise NotImplementedError()
+    
+    def _extract_conditions(self, where: ASTNode) -> List[FilterCondition]:
+        return [
+            FilterCondition(i[1], FilterOperator(i[0].upper()), i[2])
+            for i in extract_comparison_conditions(where)
+        ]
 
 
 class APIHandler(BaseHandler):

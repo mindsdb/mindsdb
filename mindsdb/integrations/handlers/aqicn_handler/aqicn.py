@@ -10,7 +10,6 @@ class AQIClient:
     def make_request(self, url, additionalParams={}):
         newParams = {**self.params, **additionalParams}
         resp = requests.get(url, params=newParams)
-        print(resp.url)
         res = resp.json()
         content = {}
         if res["status"] == "ok":

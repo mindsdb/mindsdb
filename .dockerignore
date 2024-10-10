@@ -5,6 +5,9 @@
 .mypy_cache
 .pytest_cache
 .deployment
+.venv
+
+github-actions
 
 docker/db_images
 docker/docker-bake.hcl

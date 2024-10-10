@@ -123,6 +123,8 @@ PACKAGE_NAME_MAP = {
     "auto-ts": ["auto_ts"],
     "llama-index-readers-web": ["llama_index"],
     "llama-index-embeddings-openai": ["llama_index"],
+    "botframework-connector": ["botframework"],
+    "botbuilder-schema": ["botbuilder"],
 }
 
 # We use this to exit with a non-zero status code if any check fails

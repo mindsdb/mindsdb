@@ -291,6 +291,7 @@ class ChatbotsTable(MdbTable):
         "PARAMS",
         "IS_RUNNING",
         "LAST_ERROR",
+        "WEBHOOK_TOKEN",
     ]
 
     @classmethod

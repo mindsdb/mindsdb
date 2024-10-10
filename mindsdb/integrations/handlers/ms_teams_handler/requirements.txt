@@ -1,1 +1,2 @@
-pydantic-settings >= 2.1.0
+botframework-connector
+botbuilder-schema

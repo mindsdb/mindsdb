@@ -1,3 +1,5 @@
+import secrets
+import threading
 import time
 
 from mindsdb_sql.parser.ast import Identifier, Select, Insert
@@ -68,7 +70,7 @@ class MessageCountPolling(BasePolling):
                             message = None
 
                         if message:
-                            self.chat_task.on_message(chat_memory, message, table_name=chat_params["chat_table"]["name"])
+                            self.chat_task.on_message(message, chat_memory=chat_memory, table_name=chat_params["chat_table"]["name"])
 
             except Exception as e:
                 logger.error(e)
@@ -156,8 +158,7 @@ class RealtimePolling(BasePolling):
 
         chat_id = row[t_params["chat_id_col"]]
 
-        chat_memory = self.chat_task.memory.get_chat(chat_id)
-        self.chat_task.on_message(chat_memory, message)
+        self.chat_task.on_message(message, chat_id=chat_id)
 
     def run(self, stop_event):
         t_params = self.params["chat_table"]
@@ -168,3 +169,47 @@ class RealtimePolling(BasePolling):
     # def send_message(self, message: ChatBotMessage):
     #
     #     self.chat_task.chat_handler.realtime_send(message)
+
+
+class WebhookPolling(BasePolling):
+    """
+    Polling class for handling webhooks.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def run(self, stop_event: threading.Event) -> None:
+        """
+        Run the webhook polling.
+        Check if a webhook token is set for the chatbot. If not, generate a new one.
+        Then, do nothing, as the webhook is handled by a task instantiated for each request.
+
+        Args:
+            stop_event (threading.Event): Event to stop the polling.
+        """
+        # If a webhook token is not set for the chatbot, generate a new one.
+        from mindsdb.interfaces.chatbot.chatbot_controller import ChatBotController
+
+        chat_bot_controller = ChatBotController()
+        chat_bot = chat_bot_controller.get_chatbot_by_id(self.chat_task.object_id)
+
+        if not chat_bot["webhook_token"]:
+            chat_bot_controller.update_chatbot(
+                chatbot_name=chat_bot["name"],
+                project_name=chat_bot["project"],
+                webhook_token=secrets.token_urlsafe(32),
+            )
+
+        # Do nothing, as the webhook is handled by a task instantiated for each request.
+        stop_event.wait()
+
+    def send_message(self, message: ChatBotMessage, table_name: str = None) -> None:
+        """
+        Send a message (response) to the chatbot.
+        Pass the message to the chatbot handler to respond.
+
+        Args:
+            message (ChatBotMessage): The message to send.
+            table_name (str): The name of the table to send the message to. Defaults to None.
+        """
+        self.chat_task.chat_handler.respond(message)

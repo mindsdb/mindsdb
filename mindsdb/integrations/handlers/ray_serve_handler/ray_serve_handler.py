@@ -12,7 +12,7 @@ class RayServeHandler(BaseMLEngine):
         - A Ray Serve server should be running
 
     Example:
-        
+
     """  # noqa
     name = 'ray_serve'
 
@@ -29,10 +29,23 @@ class RayServeHandler(BaseMLEngine):
         # TODO: use join_learn_process to notify users when ray has finished the training process
         args = args['using']  # ignore the rest of the problem definition
         args['target'] = target
+
+        # Store the args in model storage for later use
         self.model_storage.json_set('args', args)
+
+        # Prepare the payload for training, including additional parameters
+        payload = {
+            'df': df.to_json(orient='records'),
+            'target': target
+        }
+
+        # Include additional parameters if they exist
+        if 'learn' in args:
+            payload['learn'] = args['learn']
+
         try:
             resp = requests.post(args['train_url'],
-                                 json={'df': df.to_json(orient='records'), 'target': target},
+                                 json=payload,
                                  headers={'content-type': 'application/json; format=pandas-records'})
         except requests.exceptions.InvalidSchema:
             raise Exception("Error: The URL provided for the training endpoint is invalid.")

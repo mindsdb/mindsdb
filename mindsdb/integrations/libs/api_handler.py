@@ -255,7 +255,7 @@ class APIResource(APITable):
             NotImplementedError: This is an abstract method and should be implemented in a subclass.
         """
         raise NotImplementedError()
-    
+
     def update(self, query: Update) -> None:
         """Receive query as AST (abstract syntax tree) and act upon it somehow.
 
@@ -287,7 +287,7 @@ class APIResource(APITable):
             NotImplementedError: This is an abstract method and should be implemented in a subclass.
         """
         raise NotImplementedError
-    
+
     def delete(self, query: Delete) -> None:
         """Receive query as AST (abstract syntax tree) and act upon it somehow.
 
@@ -350,7 +350,7 @@ class APIHandler(BaseHandler):
         if name not in self._tables:
             raise TableNotFound(f'Table not found: {name}')
         return self._tables[name]
-    
+
     def native_query(self, query: str) -> Response:
         """
         Executes a native SQL query on the connected API and returns the result.

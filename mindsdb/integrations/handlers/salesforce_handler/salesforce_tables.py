@@ -84,7 +84,7 @@ class ContactsTable(APIResource):
             raise ValueError("Only the 'equals' and 'in' operators can be used on the 'Id' column for modification.")
 
         for id in conditions[0].value if isinstance(conditions[0].value, list) else [conditions[0].value]:
-            client.sobjects.Contact.update(id, values)        
+            client.sobjects.Contact.update(id, values)
 
     def remove(self, conditions: List[FilterCondition]) -> None:
         """
@@ -102,7 +102,7 @@ class ContactsTable(APIResource):
         # Only the 'equals' and 'in' operators can be used on the 'Id' column for deletion. Raise an error if any other operator is used.
         elif conditions[0].op not in [FilterOperator.EQUAL, FilterOperator.IN]:
             raise ValueError("Only the 'equals' and 'in' operators can be used on the 'Id' column for deletion.")
-        
+
         for id in conditions[0].value if isinstance(conditions[0].value, list) else [conditions[0].value]:
             client.sobjects.Contact.delete(id)
 

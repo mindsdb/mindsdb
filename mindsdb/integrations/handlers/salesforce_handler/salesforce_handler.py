@@ -52,11 +52,11 @@ class SalesforceHandler(APIHandler):
         """
         if self.is_connected is True:
             return self.connection
-        
+
         # Mandatory connection parameters.
         if not all(key in self.connection_data for key in ['username', 'password', 'client_id', 'client_secret']):
             raise ValueError("Required parameters (username, password, client_id, client_secret) must be provided.")
-        
+
         try:
             self.connection = salesforce_api.Salesforce(
                 username=self.connection_data['username'],
@@ -72,7 +72,7 @@ class SalesforceHandler(APIHandler):
         except Exception as unknown_error:
             logger.error(f"Unknwn error connecting to Salesforce, {unknown_error}!")
             raise
-        
+
     def check_connection(self) -> StatusResponse:
         """
         Checks the status of the connection to the Salesforce API.

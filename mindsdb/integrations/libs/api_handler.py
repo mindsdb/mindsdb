@@ -307,7 +307,7 @@ class APIResource(APITable):
             NotImplementedError: This is an abstract method and should be implemented in a subclass.
         """
         raise NotImplementedError()
-    
+
     def _extract_conditions(self, where: ASTNode) -> List[FilterCondition]:
         return [
             FilterCondition(i[1], FilterOperator(i[0].upper()), i[2])

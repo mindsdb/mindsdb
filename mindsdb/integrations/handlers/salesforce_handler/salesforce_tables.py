@@ -4,6 +4,7 @@ from mindsdb_sql.parser.ast import Select, Star, Identifier
 import pandas as pd
 
 from mindsdb.integrations.libs.api_handler import APIResource
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
 from mindsdb.utilities import log
 
 
@@ -63,6 +64,24 @@ class ContactsTable(APIResource):
         """
         client = self.handler.connect()
         client.sobjects.Contact.insert(contact)
+
+    def remove(self, conditions: List[FilterCondition]) -> None:
+        """
+        Removes contacts from the Salesforce Contacts resource based on the specified conditions.
+
+        Args:
+            conditions (List[FilterCondition]): The conditions based on which the contacts are to be removed.
+        """
+        client = self.handler.connect()
+
+        if len(conditions) != 1 or conditions[0].column != 'Id':
+            raise ValueError("Only the 'Id' column can be used to filter contacts for deletion.")
+
+        elif conditions[0].op not in [FilterOperator.EQUAL, FilterOperator.IN]:
+            raise ValueError("Only the 'equals' and 'in' operators can be used on the 'Id' column for deletion.")
+        
+        for id in conditions[0].value if isinstance(conditions[0].value, list) else [conditions[0].value]:
+            client.sobjects.Contact.delete(id)
 
     def get_columns(self) -> List[Text]:
         """

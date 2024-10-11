@@ -103,7 +103,7 @@ def encrypt_object(data: object) -> Union[object]:
 
     message_bytes = pickle.dumps(data)
     return {
-        "MDB_ENC": _encrypt_v1(message_bytes)
+        ENCRYPT_JSON_KEY: _encrypt_v1(message_bytes)
     }
 
 

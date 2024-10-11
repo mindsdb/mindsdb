@@ -296,7 +296,7 @@ class APIHandler(BaseHandler):
 
     def _get_table(self, name: Identifier):
         """
-        Check if the table name was added to the the _register_table
+        Check if the table name was added to the _register_table
         Args:
             name (Identifier): the table name
         """

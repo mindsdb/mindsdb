@@ -18,10 +18,8 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 
-from mindsdb.integrations.libs.api_handler import APIResource
+from mindsdb.integrations.libs.api_handler import APIResource, APIHandler
 from mindsdb.integrations.utilities.sql_utils import FilterCondition
-
-from mindsdb.integrations.libs.base import DatabaseHandler
 
 logger = log.getLogger(__name__)
 
@@ -61,7 +59,7 @@ class FileTable(APIResource):
         return self.handler._add_data_to_table(table_name, df)
 
 
-class S3Handler(DatabaseHandler):
+class S3Handler(APIHandler):
     """
     This handler handles connection and execution of the SQL statements on AWS S3.
     """

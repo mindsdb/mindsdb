@@ -3,13 +3,12 @@
 This handler facilitates integration with [CKAN](https://ckan.org/).
 an open-source data catalog platform for managing and publishing open data. CKAN organizes datasets and stores data in its [DataStore](http://docs.ckan.org/en/2.11/maintaining/datastore.html).To retrieve data from CKAN, the [CKAAPI](https://github.com/ckan/ckanapi) must be used.
 
-## Installation
+# Prerequisites
 
-To use the CKAN handler, you need to have MindsDB installed. If you haven't installed MindsDB yet, you can do so using pip:
+Before proceeding, ensure the following prerequisites are met:
 
-```bash
-pip install mindsdb
-```
+1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
+2. To connect SAP HANA to MindsDB, install the required dependencies following [this instruction](https://docs.mindsdb.com/setup/self-hosted/docker#install-dependencies).
 
 The CKAN handler is included with MindsDB by default, so no additional installation is required.
 
@@ -40,21 +39,21 @@ The CKAN handler provides three main tables:
 
 1. List all datasets:
 
-```sql
-SELECT * FROM `your-datasource`.datasets;
-```
+    ```sql
+    SELECT * FROM `your-datasource`.datasets;
+    ```
 
 2. List all resources:
 
-```sql
-SELECT * FROM `your-datasource`.resources ;
-```
+    ```sql
+    SELECT * FROM `your-datasource`.resources ;
+    ```
 
 3. Query a specific datastore resource:
 
-```sql
-SELECT * FROM `your-datasource`.datastore WHERE resource_id = 'your-resource-id';
-```
+    ```sql
+    SELECT * FROM `your-datasource`.datastore WHERE resource_id = 'your-resource-id';
+    ```
 
 Replace `your-resource-id-here` with the actual resource ID you want to query.
 

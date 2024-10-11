@@ -438,6 +438,12 @@ class Skills(Base):
     type = Column(String, nullable=False)
     params = Column(JSON)
 
+    created_at = Column(DateTime, default=datetime.datetime.now)
+    updated_at = Column(
+        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
+    )
+    deleted_at = Column(DateTime)
+
     def as_dict(self) -> Dict:
         return {
             "id": self.id,
@@ -446,6 +452,7 @@ class Skills(Base):
             "agent_ids": [a.id for a in self.agents],
             "type": self.type,
             "params": self.params,
+            "created_at": self.created_at,
         }
 
 
@@ -469,6 +476,7 @@ class Agents(Base):
         DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
     )
     created_at = Column(DateTime, default=datetime.datetime.now)
+    deleted_at = Column(DateTime)
 
     def as_dict(self) -> Dict:
         return {

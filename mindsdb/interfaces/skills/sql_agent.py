@@ -1,6 +1,7 @@
 from typing import Iterable, List, Optional
 
 import re
+from mindsdb_sql.parser.ast import Select, Show, Describe, Explain
 
 import pandas as pd
 from mindsdb_sql import parse_sql
@@ -41,7 +42,7 @@ class SQLAgent:
         # switch database
 
         ast_query = parse_sql(query.strip('`'))
-        self._check_tables(ast_query)
+        self._check_permissions(ast_query)
 
         if database is None:
             # if we use tables with prefixes it should work for any database
@@ -53,15 +54,23 @@ class SQLAgent:
         )
         return ret
 
-    def _check_tables(self, ast_query):
+    def _check_permissions(self, ast_query):
 
-        def _check_f(node, is_table=None, **kwargs):
-            if is_table and isinstance(node, Identifier):
-                table = node.parts[-1]
-                if table not in self._tables_to_include:
-                    ValueError(f"Table {table} not found. Available tables: {', '.join(self._tables_to_include)}")
+        # check type of query
+        if not isinstance(ast_query, (Select, Show, Describe, Explain)):
+            raise ValueError(f"Query is not allowed: {ast_query.to_string()}")
 
-        query_traversal(ast_query, _check_f)
+        # Check tables
+        if self._tables_to_include:
+            def _check_f(node, is_table=None, **kwargs):
+                if is_table and isinstance(node, Identifier):
+                    name1 = node.to_string()
+                    name2 = '.'.join(node.parts)
+                    name3 = node.parts[-1]
+                    if not {name1, name2, name3}.intersection(self._tables_to_include):
+                        raise ValueError(f"Table {name1} not found. Available tables: {', '.join(self._tables_to_include)}")
+
+            query_traversal(ast_query, _check_f)
 
     def get_usable_table_names(self) -> Iterable[str]:
 
@@ -112,9 +121,11 @@ class SQLAgent:
 
         tables = []
         for table_name in table_names:
+            if not table_name.strip():
+                continue
 
             # Some LLMs (e.g. gpt-4o) may include backticks or quotes when invoking tools.
-            table_name = table_name.strip(' `"\'')
+            table_name = table_name.strip(' `"\'\n\r')
             table = Identifier(table_name)
 
             # resolved table
@@ -239,4 +250,7 @@ class SQLAgent:
         try:
             return self.query(command, fetch)
         except Exception as e:
-            return f"Error: {e}"
+            msg = f"Error: {e}"
+            if 'does not exist' in msg and ' relation ' in msg:
+                msg += '\nAvailable tables: ' + ', '.join(self.get_usable_table_names())
+            return msg

@@ -53,11 +53,7 @@ class MSTeamsHandlerConfig(BaseSettings):
     """
 
     DEFAULT_SCOPES: List = [
-        'https://graph.microsoft.com/User.Read',
-        'https://graph.microsoft.com/Group.Read.All',
-        'https://graph.microsoft.com/ChannelMessage.Send',
-        'https://graph.microsoft.com/Chat.Read',
-        'https://graph.microsoft.com/ChatMessage.Send',
+        "https://graph.microsoft.com/.default",
     ]
 
     CHATS_TABLE_COLUMNS: List = [
@@ -117,6 +113,7 @@ class MSTeamsHandlerConfig(BaseSettings):
         "webUrl",
         "membershipType",
         "teamId",
+        "lastMessagePreview_id"
     ]
 
     CHANNEL_MESSAGES_TABLE_COLUMNS: List = [

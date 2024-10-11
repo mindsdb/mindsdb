@@ -627,7 +627,7 @@ class ExecuteCommands:
         elif type(statement) is CreateKnowledgeBase:
             return self.answer_create_kb(statement, database_name)
         elif type(statement) is DropKnowledgeBase:
-            return self.anwser_drop_kb(statement, database_name)
+            return self.answer_drop_kb(statement, database_name)
         elif type(statement) is CreateSkill:
             return self.answer_create_skill(statement, database_name)
         elif type(statement) is DropSkill:
@@ -1096,7 +1096,7 @@ class ExecuteCommands:
 
         self.session.integration_controller.add(name, engine, connection_args)
         if storage:
-            handler = self.session.integration_controller.get_data_handler(name)
+            handler = self.session.integration_controller.get_data_handler(name, connect=False)
             handler.handler_storage.import_files(storage)
 
     def answer_create_ml_engine(self, name: str, handler: str, params: dict = None, if_not_exists=False):
@@ -1341,7 +1341,7 @@ class ExecuteCommands:
 
         return ExecuteAnswer()
 
-    def anwser_drop_kb(self, statement: DropKnowledgeBase, database_name: str):
+    def answer_drop_kb(self, statement: DropKnowledgeBase, database_name: str):
         name = statement.name.parts[-1]
         project_name = (
             statement.name.parts[0]
@@ -1614,7 +1614,7 @@ class ExecuteCommands:
                     "connection_id": self.context.get('connection_id')
                 }
                 if function_name in functions_results:
-                    return Constant(functions_results[function_name], alias=Identifier(function_name))
+                    return Constant(functions_results[function_name], alias=Identifier(parts=[function_name]))
 
             if isinstance(node, Variable):
                 var_name = node.value
@@ -1624,7 +1624,7 @@ class ExecuteCommands:
                     logger.error(f"Unknown variable: {column_name}")
                     raise Exception(f"Unknown variable '{var_name}'")
                 else:
-                    return Constant(result[0], alias=Identifier(column_name))
+                    return Constant(result[0], alias=Identifier(parts=[column_name]))
 
         query_traversal(statement, adapt_query)
 

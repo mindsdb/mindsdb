@@ -6,28 +6,41 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 connection_args = OrderedDict(
     host={
         "type": ARG_TYPE.STR,
-        "description": "The host name or IP address of the DB2 server/database.",
+        "description": "The hostname, IP address, or URL of the IBM Db2 database.",
+        "required": True,
+        "label": "Host"
     },
     database={
         "type": ARG_TYPE.STR,
-        "description": """
-            The database name to use when connecting with the DB2 server.
-        """,
+        "description": "The name of the IBM Db2 database to connect to.",
+        "required": True,
+        "label": "Database"
     },
     user={
         "type": ARG_TYPE.STR,
-        "description": "The user name used to authenticate with the DB2 server.",
+        "description": "The username for the IBM Db2 database.",
+        "required": True,
+        "label": "User"
     },
     password={
         "type": ARG_TYPE.PWD,
-        "description": "The password to authenticate the user with the DB2 server.",
-        'secret': True
+        "description": "The password for the IBM Db2 database.",
+        'secret': True,
+        "required": True,
+        "label": "Password"
     },
     port={
         "type": ARG_TYPE.INT,
-        "description": "Specify port to connect DB2 through TCP/IP",
+        "description": "The port number for connecting to the IBM Db2 database. Default is `50000`",
+        "required": False,
+        "label": "Port"
     },
-    schemaName={"type": ARG_TYPE.STR, "description": "Specify the schema name "},
+    schema={
+        "type": ARG_TYPE.STR,
+        "description": "The database schema to use within the IBM Db2 database.",
+        "required": False,
+        "label": "Schema"
+    },
 )
 
 connection_args_example = OrderedDict(
@@ -35,6 +48,6 @@ connection_args_example = OrderedDict(
     port="25000",
     password="1234",
     user="db2admin",
-    schemaName="db2admin",
+    schema="db2admin",
     database="BOOKS",
 )

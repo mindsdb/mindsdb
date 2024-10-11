@@ -104,8 +104,8 @@ PARAMETERS =  {
 Send a test message to test the connection.
 
 ```sql
-INSERT INTO customer_reviews_slack_app.channels (channel, text)
-VALUES("customer-reviews", "Testing Slack connection");
+INSERT INTO customer_reviews_slack_app.messages (channel_id, text)
+VALUES("customer-reviews-channel-id", "Testing Slack connection");
 ```
 
 [Create a job](/mindsdb_sql/sql/create/jobs) to send notification every time a negative review is received.
@@ -113,8 +113,8 @@ VALUES("customer-reviews", "Testing Slack connection");
 ```sql
 CREATE JOB customer_reviews_notifications (
 
-    INSERT INTO customer_reviews_slack_app.channels (channel, text)
-        SELECT "customer-reviews" as channel,
+    INSERT INTO customer_reviews_slack_app.messages (channel_id, text)
+        SELECT "customer-reviews-channel-id" as channel_id,
                 concat('Product: ', input.product_name, chr(10), 'Received negative review at: ', input.created_at, chr(10), 'Review: ', input.review) as text
         FROM local_postgres.demo.amazon_reviews AS input
         JOIN sentiment_classifier AS output
@@ -184,8 +184,8 @@ JOIN response_model AS output;
 ```sql
 CREATE JOB customer_reviews_and_reponses_notifications (
 
-    INSERT INTO customer_reviews_slack_app.channels (channel, text)
-        SELECT "customer-reviews" as channel,
+    INSERT INTO customer_reviews_slack_app.messages (channel_id, text)
+        SELECT "customer-reviews-channel-id" as channel_id,
                 concat('---------', chr(10),
                        'Product: ', input.product_name, chr(10), 
                        'Received ', input.sentiment, ' review at: ', input.created_at, chr(10), 

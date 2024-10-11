@@ -33,7 +33,7 @@ class SafeOutputParser(AgentOutputParser):
         Returns:
             output (str): Parsed text to an Agent step.
         '''
-        regex = r'Action: (.*?)[\n]*Action Input: ([\s\S]*)'
+        regex = r'Action: (.*?)[\n]*Action Input:([\s\S]*)'
         match = re.search(regex, text, re.DOTALL)
         if match is not None:
             action = match.group(1)

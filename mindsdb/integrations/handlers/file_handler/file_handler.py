@@ -8,7 +8,7 @@ from io import BytesIO, StringIO
 from pathlib import Path
 from urllib.parse import urlparse
 
-import magic
+import filetype
 import pandas as pd
 import requests
 from charset_normalizer import from_bytes
@@ -210,11 +210,11 @@ class FileHandler(DatabaseHandler):
 
     @staticmethod
     def is_it_xlsx(file_path: str) -> bool:
-        file_type = magic.from_file(file_path, mime=True)
-        if file_type in [
+        file_type = filetype.guess(file_path)
+        if file_type and file_type.mime in {
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "application/vnd.ms-excel",
-        ]:
+        }:
             return True
         return False
 

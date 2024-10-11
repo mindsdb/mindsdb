@@ -1,0 +1,81 @@
+---
+title: Lightwood Embedding Model
+sidebarTitle: Embedding Model
+---
+
+This tutorial uses the [Lightwood handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/lightwood_handler) to create an embedding model.
+
+## Tutorial
+
+The following example shows how to create an embedding model using the Lightwood engine.
+
+Start by creating an engine from the [Lightwood handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/lightwood_handler).
+
+```sql
+CREATE ML_ENGINE lightwood
+FROM lightwood;
+```
+
+Verify that the engine has been created successfully.
+
+```sql
+SHOW ML_ENGINES
+WHERE name='lightwood';
+```
+
+<Tip>
+Connect our sample database to use it for training the model:
+
+```sql
+CREATE DATABASE example_db
+WITH ENGINE = "postgres",
+PARAMETERS = {
+"user": "demo_user",
+"password": "demo_password",
+"host": "samples.mindsdb.com",
+"port": "5432",
+"database": "demo",
+"schema": "demo_data"
+};
+```
+</Tip>
+
+Create a model using this engine:
+
+```sql
+CREATE MODEL home_rentals_model_embeddings
+FROM example_db
+  (SELECT * FROM demo_data.home_rentals)
+PREDICT rental_price
+USING
+    problem_definition.embedding_only = True;
+```
+
+Check the status of the model.
+
+```sql
+DESCRIBE home_rentals_model_embeddings;
+```
+
+Now you can use the model to predict home rental prices for specific criteria and get predictions in the form of embeddings.
+
+```sql
+SELECT rental_price, rental_price_explain
+FROM home_rentals_model_embeddings
+WHERE sqft = 823
+AND location='good'
+AND neighborhood='downtown'
+AND days_on_market=10
+USING
+    return_embedding = True;
+```
+
+Here is the output:
+
+```sql
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| rental_price                                                                                                                                                                                                                 | rental_price_explain                                                                                                                                                                                                                                                                                                                                                             |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| [1,6.712956428527832,1.247057318687439,0,0,1,0,0,0,0,0,1,0,0,0,1,2.3025851249694824,0.5629426836967468,0,1,0,0,0,0,0,0,0.7540000081062317,0.3333333432674408,0.35483869910240173,0.9583333134651184,0.7833333611488342,0.25] | {"predicted_value": [1.0, 6.712956428527832, 1.247057318687439, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 2.3025851249694824, 0.5629426836967468, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.7540000081062317, 0.3333333432674408, 0.35483869910240173, 0.9583333134651184, 0.7833333611488342, 0.25], "confidence": null, "anomaly": null, "truth": null} |
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+```

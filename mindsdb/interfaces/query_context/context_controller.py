@@ -45,10 +45,10 @@ class QueryContextController:
 
         query_str = l_query.to_string()
 
-        rec = self.__get_context_record(context_name, query_str)
+        rec = self._get_context_record(context_name, query_str)
 
         if rec is None or len(rec.values) == 0:
-            values = self.__get_init_last_values(l_query, dn, session)
+            values = self._get_init_last_values(l_query, dn, session)
             if rec is None:
                 self.__add_context_record(context_name, query_str, values)
                 if context_name.startswith('job-if-'):
@@ -147,7 +147,7 @@ class QueryContextController:
             db.session.delete(rec)
         db.session.commit()
 
-    def __get_init_last_values(self, l_query: LastQuery, dn, session) -> dict:
+    def _get_init_last_values(self, l_query: LastQuery, dn, session) -> dict:
         """
         Gets current last values for query.
         Creates and executes query for it:
@@ -254,7 +254,7 @@ class QueryContextController:
         return vars
 
     # DB
-    def __get_context_record(self, context_name: str, query_str: str) -> db.QueryContext:
+    def _get_context_record(self, context_name: str, query_str: str) -> db.QueryContext:
         """
         Find and return record for context and query string
         """
@@ -281,7 +281,7 @@ class QueryContextController:
         """
         Updates context record with new values
         """
-        rec = self.__get_context_record(context_name, query_str)
+        rec = self._get_context_record(context_name, query_str)
         rec.values = values
         db.session.commit()
 

@@ -1,2 +1,1 @@
 pgvector
--r mindsdb/integrations/handlers/postgres_handler/requirements.txt

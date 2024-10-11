@@ -54,7 +54,7 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
     - [x] Support ORDER BY
     - [x] Support column selection
   - [x] Support UPDATE
-  - [x] Support Insert
+  - [x] Support INSERT
   - [x] Support DELETE
 - [x] Shopify Customers Table for a given Store
   - [x] Support SELECT
@@ -73,6 +73,7 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
     - [x] Support ORDER BY
     - [x] Support column selection
   - [x] Support UPDATE
+  - [x] Support INSERT
   - [x] Support DELETE
 - [x] Shopify Customer Reviews Table for a given Store
   - [x] Support SELECT
@@ -108,8 +109,7 @@ Watch this video on creating a Shopify access token [here](https://www.youtube.c
 ## TODO
 
 - [ ] Support UPDATE and DELETE for Customers table
-- [ ] Support INSERT, UPDATE and DELETE for Product
-- [ ] Support INSERT For Orders tables
+- [ ] Support INSERT, UPDATE and DELETE for Product table
 - [ ] Shopify Payments table
 - [ ] Shopify Inventory table
 - [ ] Shopify Discounts table
@@ -154,7 +154,7 @@ ORDER BY id
 LIMIT 5
 ~~~~
 
-It is also possible to INSERT data into your Shopify store. At the moment, only the `customers` and `products` table supports INSERT:
+It is also possible to INSERT data into your Shopify store. At the moment, only the `customers`, `products`, and `orders` tables support INSERT:
 
 ~~~~sql
 INSERT INTO shopify_datasource.customers(first_name, last_name, email)
@@ -162,9 +162,45 @@ VALUES
 ('John', 'Doe', 'john.doe@example.com')
 ~~~~
 
-A limited number of columns are supported for INSERT: 'first_name', 'last_name', 'email', 'phone', 'tags' and 'currency'. Of these either 'first_name', 'last_name', 'email' or 'phone' must be provided. 
+~~~~sql
+INSERT INTO shopify_datasource.products(title, vendor, tags)
+VALUES 
+('Product Name', 'Vendor Name', 'new, sale, winter')
+~~~~
 
-It is also possible to DELETE data into your Shopify store. At the moment, only the `customers` and `products` table supports DELETE:
+~~~~sql
+INSERT INTO shopify_datasource.orders(title_li, price_li, quantity, test)
+VALUES 
+("Product Name", 25.00, 3, true)
+~~~~
+
+A limited number of columns are supported for INSERT for each table: 
+
+The `products` table supports the following columns: 'title', 'body_html', 'vendor', 'product_type', 'tags', and 'status'. Of these, 'title' must be provided.
+
+The `customers` table supports the following columns: 'first_name', 'last_name', 'email', 'phone', 'tags' and 'currency'. Of these, either 'first_name', 'last_name', 'email' or 'phone' must be provided. 
+
+The `orders` table supports the following columns: 'billing_address', 'discount_codes', 'buyer_accepts_marketing', 'currency', 'email', 'financial_status', 'fulfillment_status', 'line_items', 'note', 'note_attributes', 'phone', 'po_number', 'processed_at', 'referring_site', 'shipping_address', 'shipping_lines', 'source_name', 'source_identifier', 'source_url', 'tags', 'taxes_included', 'tax_lines', 'test', 'total_tax', 'total_weight'. 
+
+Of these columns, 'billing_address', 'discount_codes', 'line_items', 'note_attributes', 'shipping_address', 'shipping_lines', and 'tax_lines' are comprised of sub-components as follows:
+
+'billing_address': 'address1_ba', 'address2_ba', 'city_ba', 'company_ba', 'country_ba', 'country_code_ba', 'first_name_ba', 'last_name_ba', 'latitude_ba', 'longitude_ba', 'name_ba', 'phone_ba', 'province_ba', 'province_code_ba', 'zip_ba'
+
+'discount_codes': 'amount_dc', 'code_dc', 'type_dc'
+
+'line_items': 'gift_card_li', 'grams_li', 'price_li', 'quantity_li', 'title_li', 'vendor_li', 'fulfillment_status_li', 'sku_li', 'variant_title_li'
+
+'note_attributes': 'name_na', 'value_na'
+
+'shipping_address': 'address1_sa', 'address2_sa', 'city_sa', 'company_sa', 'country_sa', 'country_code_sa', 'first_name_sa', 'last_name_sa', 'latitude_sa', 'longitude_sa', 'name_sa', 'phone_sa', 'province_sa', 'province_code_sa', 'zip_sa'
+
+'shipping_lines': 'code_sl', 'price_sl', 'discounted_price_sl', 'source_sl', 'title_sl', 'carrier_identifier_sl', 'requested_fulfillment_service_id_sl', 'is_removed_sl'
+
+'tax_lines': 'price_tl', 'rate_tl', 'title_tl', 'channel_liable_tl'
+
+The value fields 'price_li' and 'title_li' must be provided.
+
+It is also possible to DELETE data from your Shopify store. At the moment, only the `customers`, `products`, and `orders` tables support DELETE:
 
 ~~~~sql
 DELETE FROM shopify_datasource.customers
@@ -200,7 +236,7 @@ ORDER BY id
 LIMIT 5
 ~~~~
 
-For `customer_reviews` table, only SELECT is supported.
+For the `customer_reviews` table, only SELECT is supported.
 
 ~~~~sql
 SELECT  *
@@ -210,14 +246,14 @@ ORDER BY id
 LIMIT 5
 ~~~~
 
-For `customers` table, DELETE is supported too. You can delete the customers as follows:
+For the `customers` table, DELETE is supported too. You can delete the customers as follows:
 
 ~~~~sql
 DELETE FROM shopify_datasource.customers
 WHERE verified_email = false;
 ~~~~
 
-For `Orders` table, UPDATE is supported. You can update the orders as follows:
+For the `orders` table, UPDATE is supported. You can update the orders as follows:
 ~~~~sql
 UPDATE shopify_datasource.orders
 SET email="abc@your_domain.com"

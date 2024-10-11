@@ -300,14 +300,9 @@ class LanceDBHandler(VectorStoreHandler):
         """
         try:
             self._client.drop_table(table_name)
-        except ValueError:
-            if if_exists:
-                return Response(resp_type=RESPONSE_TYPE.OK)
-            else:
-                return Response(
-                    resp_type=RESPONSE_TYPE.ERROR,
-                    error_message=f"Table {table_name} does not exist!",
-                )
+        except ValueError as e:
+            if not if_exists:
+                raise e
 
     def get_tables(self) -> HandlerResponse:
         """

@@ -2,7 +2,6 @@ from typing import Any, List
 import ast as py_ast
 
 import pandas as pd
-from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import ASTNode, Select, Insert, Update, Delete, Star
 from mindsdb_sql.parser.ast.select.identifier import Identifier
 
@@ -347,19 +346,6 @@ class APIHandler(BaseHandler):
         if name not in self._tables:
             raise TableNotFound(f'Table not found: {name}')
         return self._tables[name]
-
-    def native_query(self, query: str) -> Response:
-        """
-        Executes a native SQL query on the connected API and returns the result.
-
-        Args:
-            query (Text): The SQL query to be executed.
-
-        Returns:
-            Response: A response object containing the result of the query or an error message.
-        """
-        ast = parse_sql(query, dialect="mindsdb")
-        return self.query(ast)
 
     def query(self, query: ASTNode):
 

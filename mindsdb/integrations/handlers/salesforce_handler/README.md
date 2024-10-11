@@ -33,8 +33,8 @@ Required connection parameters include the following:
 
 * `username`: The username for the Salesforce account.
 * `password`: The password for the Salesforce account.
-* `client_id`: The client ID for from a connected app in Salesforce.
-* `client_secret`: The client secret from a connected app in Salesforce.
+* `client_id`: The client ID (consumer key) from a connected app in Salesforce.
+* `client_secret`: The client secret (consumer secret) from a connected app in Salesforce.
 
 <Tip>
 To create a connected app in Salesforce and obtain the client ID and client secret, follow the steps given below:

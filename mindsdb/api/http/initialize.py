@@ -46,7 +46,7 @@ from mindsdb.metrics.server import init_metrics
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
-from mindsdb.utilities.json_encoder import CustomJSONEncoder
+from mindsdb.utilities.json_encoder import CustomJSONProvider
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.utilities.telemetry import inject_telemetry_to_static
 from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
@@ -354,7 +354,7 @@ def initialize_flask(config, init_static_thread, no_studio):
     app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(days=31)
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 60
     app.config['SWAGGER_HOST'] = 'http://localhost:8000/mindsdb'
-    app.json_encoder = CustomJSONEncoder
+    app.json = CustomJSONProvider()
 
     authorizations = {
         'apikey': {

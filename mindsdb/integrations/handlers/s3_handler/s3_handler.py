@@ -1,12 +1,12 @@
-import re
 from typing import List
+from contextlib import contextmanager
 
 import boto3
 import duckdb
 import pandas as pd
 from typing import Text, Dict, Optional
 from botocore.exceptions import ClientError
-from duckdb import DuckDBPyConnection, CatalogException
+from duckdb import DuckDBPyConnection
 
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.parser.ast import Select, Identifier, Insert
@@ -17,12 +17,11 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
+
 from mindsdb.integrations.libs.api_handler import APIResource
-from mindsdb.integrations.utilities.sql_utils import (
-    extract_comparison_conditions, FilterCondition, FilterOperator, SortColumn)
+from mindsdb.integrations.utilities.sql_utils import FilterCondition
 
 from mindsdb.integrations.libs.base import DatabaseHandler
-
 
 logger = log.getLogger(__name__)
 
@@ -34,20 +33,6 @@ class ListFilesTable(APIResource):
              conditions: List[FilterCondition] = None,
              *args, **kwargs) -> pd.DataFrame:
 
-        # for condition in conditions:
-        #     if (condition.column in ('state', 'assignee', 'creator', 'mentioned', 'milestone')
-        #             and condition.op == FilterOperator.EQUAL):
-        #
-        #         issues_kwargs[condition.column] = condition.value
-        #         condition.applied = True
-        #
-        #     elif condition.column == 'a':
-        #         if condition.op == FilterOperator.IN:
-        #             issues_kwargs['labels'] = condition.value
-        #         elif condition.op == FilterOperator.EQUAL:
-        #             issues_kwargs['labels'] = condition.value.split(",")
-        #         condition.applied = True
-
         tables = self.handler._get_tables()
         data = []
         for path in tables:
@@ -58,32 +43,22 @@ class ListFilesTable(APIResource):
                 'extension': path[path.rfind('.') + 1:]
             }
 
-            # getting content
-            # if 'content' in targets:
-            #     item['content'] = self.handler._read_as_content(path)
             data.append(item)
 
         return pd.DataFrame(data=data, columns=self.get_columns())
 
     def get_columns(self) -> List[str]:
-
         return ["path", "name", "extension", "content"]
 
 
 class FileTable(APIResource):
 
     def list(self, targets: List[str] = None, table_name=None, *args, **kwargs) -> pd.DataFrame:
-
         return self.handler._read_as_table(table_name)
 
     def add(self, data, table_name=None):
         df = pd.DataFrame(data)
         return self.handler._add_data_to_table(table_name, df)
-
-    # def get_columns(self) -> List[str]:
-    #
-    #     return ["path", "name", "extension", "content"]
-
 
 
 class S3Handler(DatabaseHandler):
@@ -120,10 +95,10 @@ class S3Handler(DatabaseHandler):
 
     def connect(self) -> DuckDBPyConnection:
         """
-        Establishes a connection to the AWS (S3) account via DuckDB.
+        Establishes a connection to the AWS (S3) account.
 
         Raises:
-            KeyError: If the required connection parameters are not provided.
+            ValueError: If the required connection parameters are not provided.
 
         Returns:
             boto3.client: A client object to the AWS (S3) account.
@@ -135,22 +110,20 @@ class S3Handler(DatabaseHandler):
         if not all(key in self.connection_data for key in ['aws_access_key_id', 'aws_secret_access_key', 'bucket']):
             raise ValueError('Required parameters (aws_access_key_id, aws_secret_access_key, bucket) must be provided.')
 
-        # Connect to S3 via DuckDB and configure mandatory credentials.
+        # Connect to S3 and configure mandatory credentials.
         self.connection = self._connect_boto3()
-
         self.is_connected = True
 
         return self.connection
 
-    from contextlib import contextmanager
-
     @contextmanager
     def _connect_duckdb(self) -> DuckDBPyConnection:
         """
-        Establishes a connection to the AWS (S3) account via DuckDB.
+        Creates temporal duckdb database which is able to connect to the AWS (S3) account.
+        Have to be used as context manager
 
         Returns:
-            DuckDBPyConnection: A connection object to the AWS (S3) account.
+            DuckDBPyConnection
         """
         # Connect to S3 via DuckDB.
         duckdb_conn = duckdb.connect(":memory:")
@@ -171,10 +144,9 @@ class S3Handler(DatabaseHandler):
         finally:
             duckdb_conn.close()
 
-
     def _connect_boto3(self) -> boto3.client:
         """
-        Establishes a connection to the AWS (S3) account via boto3.
+        Establishes a connection to the AWS (S3) account.
 
         Returns:
             boto3.client: A client object to the AWS (S3) account.
@@ -192,7 +164,16 @@ class S3Handler(DatabaseHandler):
         # DuckDB considers us-east-1 to be the default region.
         config['region_name'] = self.connection_data['region_name'] if 'region_name' in self.connection_data else 'us-east-1'
 
-        return boto3.client('s3', **config)
+        client = boto3.client('s3', **config)
+        try:
+            result = client.head_bucket(Bucket=self.connection_data['bucket'])
+
+            # Check if the bucket is in the same region as specified: the DuckDB connection will fail otherwise.
+            if result['ResponseMetadata']['HTTPHeaders']['x-amz-bucket-region'] != client.meta.region_name:
+                raise ValueError('The bucket is not in the expected region.')
+        except ClientError as e:
+            raise RuntimeError("Can't connect to S3") from e
+        return client
 
     def disconnect(self):
         """
@@ -200,7 +181,7 @@ class S3Handler(DatabaseHandler):
         """
         if not self.is_connected:
             return
-        # !!self.connection.close()
+        self.connection.close()
         self.is_connected = False
 
     def check_connection(self) -> StatusResponse:
@@ -215,12 +196,7 @@ class S3Handler(DatabaseHandler):
 
         # Check connection via boto3.
         try:
-            boto3_conn = self.connect()
-            result = boto3_conn.head_bucket(Bucket=self.connection_data['bucket'])
-
-            # Check if the bucket is in the same region as specified: the DuckDB connection will fail otherwise.
-            if result['ResponseMetadata']['HTTPHeaders']['x-amz-bucket-region'] != boto3_conn.meta.region_name:
-                raise ValueError('The bucket is not in the expected region.')
+            self._connect_boto3()
             response.success = True
         except (ClientError, ValueError) as e:
             logger.error(f'Error connecting to S3 with the given credentials, {e}!')
@@ -234,8 +210,10 @@ class S3Handler(DatabaseHandler):
 
         return response
 
-
     def _read_as_table(self, key) -> pd.DataFrame:
+        """
+        Read object as dataframe. Uses duckdb
+        """
 
         with self._connect_duckdb() as connection:
 
@@ -245,8 +223,11 @@ class S3Handler(DatabaseHandler):
             return cursor.fetchdf()
 
     def _read_as_content(self, key) -> None:
+        """
+        Read object as content
+        """
 
-        client = self._connect_boto3()
+        client = self.connect()
 
         obj = client.get_object(Bucket=self.connection_data['bucket'], Key=key)
         content = obj['Body'].read()
@@ -260,34 +241,32 @@ class S3Handler(DatabaseHandler):
             CatalogException: If the table does not exist in the DuckDB connection.
         """
 
-
         # Check if the file exists in the S3 bucket.
-        # try:
-        #     boto3_conn = self._connect_boto3()
-        #     boto3_conn.head_object(Bucket=self.connection_data['bucket'], Key=self.key)
-        # except ClientError as e:
-        #     logger.error(f'Error querying the file {self.key} in the bucket {self.connection_data["bucket"]}, {e}!')
-        #     raise e
+        try:
+            client = self.connect()
+            client.head_object(Bucket=self.connection_data['bucket'], Key=key)
+        except ClientError as e:
+            logger.error(f'Error querying the file {key} in the bucket {self.connection_data["bucket"]}, {e}!')
+            raise e
 
         with self._connect_duckdb() as connection:
             # copy
             connection.execute(f"""
-               CREATE TABLE tmp_table 
+               CREATE TABLE tmp_table
                AS SELECT * FROM 's3://{self.connection_data['bucket']}/{key}'
             """)
 
             # insert
             connection.execute("""
-              INSERT INTO tmp_table BY NAME
-              SELECT * FROM df
+               INSERT INTO tmp_table BY NAME
+               SELECT * FROM df
             """)
 
             # upload
             connection.execute(f"""
-              COPY tmp_table
-              TO 's3://{self.connection_data['bucket']}/{key}'
+               COPY tmp_table
+               TO 's3://{self.connection_data['bucket']}/{key}'
             """)
-
 
     def query(self, query: ASTNode) -> Response:
         """
@@ -302,9 +281,8 @@ class S3Handler(DatabaseHandler):
         Returns:
             Response: The response from the `native_query` method, containing the result of the SQL query execution.
         """
-        # Set the key by getting it from the query.
-        # This will be used to create a table from the object in the S3 bucket.
 
+        self.connect()
 
         if isinstance(query, Select):
             table_name = query.from_table.parts[-1]
@@ -343,13 +321,12 @@ class S3Handler(DatabaseHandler):
 
         return response
 
-
     def _get_tables(self) -> List[str]:
-        client = self._connect_boto3()
+        client = self.connect()
         objects = client.list_objects_v2(Bucket=self.connection_data["bucket"])['Contents']
 
         # Get only the supported file formats.
-        # Sorround the object names with backticks to prevent SQL syntax errors.
+        # Wrap the object names with backticks to prevent SQL syntax errors.
         supported_objects = [f"`{obj['Key']}`" for obj in objects if obj['Key'].split('.')[-1] in self.supported_file_formats]
         return supported_objects
 

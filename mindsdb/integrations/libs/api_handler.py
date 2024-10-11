@@ -157,7 +157,7 @@ class APIResource(APITable):
 
     def __init__(self, *args, table_name=None, **kwargs):
         self.table_name = table_name
-        super().__init__(*args,  **kwargs)
+        super().__init__(*args, **kwargs)
 
     def select(self, query: Select) -> pd.DataFrame:
         """Receive query as AST (abstract syntax tree) and act upon it.

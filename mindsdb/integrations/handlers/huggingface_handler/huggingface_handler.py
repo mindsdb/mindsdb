@@ -101,6 +101,10 @@ class HuggingFaceHandler(BaseMLEngine):
         args["target"] = target
 
         model_name = args["model_name"]
+        use_auth_token = False
+        if "use_auth_token" in args:
+            use_auth_token = args["use_auth_token"] == "True" or args["use_auth_token"] == "true" or args["use_auth_token"] == True
+        
         hf_model_storage_path = self.engine_storage.folder_get(model_name)  # real
 
         if args["task"] == "translation":
@@ -116,14 +120,14 @@ class HuggingFaceHandler(BaseMLEngine):
         # Check if pipeline has already been downloaded
         try:
             pipeline = transformers.pipeline(task=args['task_proper'], model=hf_model_storage_path,
-                                             tokenizer=hf_model_storage_path)
+                                             tokenizer=hf_model_storage_path,use_auth_token=use_auth_token)
             logger.debug(f'Model already downloaded!')
         ####
         # Otherwise download it
         except (ValueError, OSError):
             try:
                 logger.debug(f"Downloading {model_name}...")
-                pipeline = transformers.pipeline(task=args['task_proper'], model=model_name)
+                pipeline = transformers.pipeline(task=args['task_proper'], model=model_name,use_auth_token=use_auth_token)
 
                 pipeline.save_pretrained(hf_model_storage_path)
 
@@ -259,6 +263,10 @@ class HuggingFaceHandler(BaseMLEngine):
 
         ###### get stuff from model folder
         args = self.model_storage.json_get("args")
+        
+        use_auth_token = False
+        if "use_auth_token" in args:
+            use_auth_token = args["use_auth_token"] == "True" or args["use_auth_token"] == "true" or args["use_auth_token"] == True
 
         task = args["task"]
 
@@ -276,6 +284,7 @@ class HuggingFaceHandler(BaseMLEngine):
                 task=args["task_proper"],
                 model=hf_model_storage_path,
                 tokenizer=hf_model_storage_path,
+                use_auth_token=use_auth_token,
             )
         except (ValueError, OSError):
             # load from engine storage (i.e. 'common' models)
@@ -286,6 +295,7 @@ class HuggingFaceHandler(BaseMLEngine):
                 task=args["task_proper"],
                 model=hf_model_storage_path,
                 tokenizer=hf_model_storage_path,
+                use_auth_token=use_auth_token,
             )
 
         input_column = args["input_column"]

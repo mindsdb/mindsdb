@@ -283,7 +283,8 @@ class S3Handler(APIHandler):
         self.connect()
 
         if isinstance(query, Select):
-            table_name = query.from_table.parts[-1]
+            table_name = query.from_table.parts[-1].replace('`', '')
+
             if table_name == 'files':
                 table = self._files_table
                 df = table.select(query)

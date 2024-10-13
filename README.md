@@ -1,23 +1,28 @@
 <a name="readme-top"></a>
 
 <div align="center">
-
-
   <a href="https://github.com/mindsdb/mindsdb">
     <img src="/docs/assets/mindsdb_logo.jpg" alt="MindsDB" width="300">
   </a>
 
-  	<a href="https://pypi.org/project/MindsDB/" target="_blank"><img src="https://badge.fury.io/py/MindsDB.svg" alt="MindsDB Release"></a>
-	<a href="https://www.python.org/downloads/" target="_blank"><img src="https://img.shields.io/badge/python-3.8.x%7C%203.9.x%7C%203.10.x%7C%203.11.x-brightgreen.svg" alt="Python supported"></a>
-	<a href="https://ossrank.com/p/630"><img src="https://shields.io/endpoint?url=https://ossrank.com/shield/630"></a>
-	<img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dm/Mindsdb">
-	<a href="https://hub.docker.com/u/mindsdb" target="_blank"><img src="https://img.shields.io/docker/pulls/mindsdb/mindsdb" alt="Docker pulls"></a>
+  <a href="https://pypi.org/project/MindsDB/" target="_blank">
+    <img src="https://badge.fury.io/py/MindsDB.svg" alt="MindsDB Release">
+  </a>
+  <a href="https://www.python.org/downloads/" target="_blank">
+    <img src="https://img.shields.io/badge/python-3.8.x%7C%203.9.x%7C%203.10.x%7C%203.11.x-brightgreen.svg" alt="Python supported">
+  </a>
+  <a href="https://ossrank.com/p/630">
+    <img src="https://shields.io/endpoint?url=https://ossrank.com/shield/630" alt="OSS Rank">
+  </a>
+  <img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dm/Mindsdb">
+  <a href="https://hub.docker.com/u/mindsdb" target="_blank">
+    <img src="https://img.shields.io/docker/pulls/mindsdb/mindsdb" alt="Docker pulls">
+  </a>
 
   <br />
   <br />
 
   <p align="center">
-    <br />
     <a href="https://www.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Website</a>
     ·
     <a href="https://docs.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Docs</a>

@@ -26,7 +26,7 @@
 
 ----------------------------------------
 
-[MindsDB](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) is the platform for building AI from enterprise data. You can create, serve, and fine-tune models in real-time from your database, vector store, and application data.
+[MindsDB](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) is the platform for building AI from enterprise data. You can create, serve, and fine-tune models in real-time from your database, vector stores, and application data.
  [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=The%20platform%20for%20building%20AI,%20from%20enterprise%20data&url=https://github.com/mindsdb/mindsdb&via=mindsdb&hashtags=ai,opensource)
 
 ## 📖 About us
@@ -41,7 +41,7 @@ With MindsDB, you can deploy, serve, and fine-tune models in real-time, utilizin
 
 MindsDB integrates with numerous [data sources](https://docs.mindsdb.com/integrations/data-overview?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo), including databases, vector stores, and applications, and popular [AI/ML frameworks](https://docs.mindsdb.com/integrations/ai-overview?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo), including AutoML and LLMs. MindsDB connects data sources with AI/ML frameworks and automates routine workflows between them. By doing so, we bring data and AI together, enabling the intuitive implementation of customized AI systems.
 
-Learn more about [features and use cases of MindsDB here](https://docs.mindsdb.com/what-is-mindsdb?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
+Learn more about the [features and use cases of MindsDB here](https://docs.mindsdb.com/what-is-mindsdb?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
 
 ## 🚀 Get Started
 
@@ -68,7 +68,7 @@ MindsDB enables you to deploy AI/ML models, send predictions to your application
 
 ### AI Workflow Automation
 
-This category of use cases involves tasks that get data from a data source, pass it through an AI/ML model, and write the output to a data destination.
+This category of use cases involves tasks that retrieve data from a data source, pass it through an AI/ML model, and write the output to a data destination.
 
 <p align="center">
   <img src="/docs/assets/ai_workflow_automation.png"/>
@@ -78,7 +78,7 @@ Common use cases are anomaly detection, data indexing/labeling/cleaning, and dat
 
 This example showcases the data enrichment flow, where input data comes from a PostgreSQL database and is passed through an OpenAI model to generate new content which is saved into a data destination.
 
-We take customer reviews from a PostgreSQL database. Then, we deploy an OpenAI model that analyzes all customer reviews and assigns sentiment values. Finally, to automate the workflow for incoming customer reviews, we create a job that generates and saves AI output into a data destination.
+We take customer reviews from a PostgreSQL database. Then, we deploy an OpenAI model that analyzes all customer reviews and assigns sentiment values. Finally, to automate the workflow for incoming customer reviews, we create a job that generates and saves AI output to a data destination.
 
 ```sql
 -- Step 1. Connect a data source to MindsDB
@@ -143,7 +143,7 @@ CREATE JOB ai_automation_flow (
 
 ### AI System Deployment
 
-This category of use cases involves creating AI systems composed of multiple connected parts, including various AI/ML models and data sources, and exposing such AI systems via APIs.
+This category of use cases involves creating AI systems composed of multiple connected parts, including various AI/ML models and data sources, and exposing these AI systems via APIs.
 
 <p align="center">
   <img src="/docs/assets/ai_system_deployment.png"/>
@@ -153,7 +153,7 @@ Common use cases are agents and assistants, recommender systems, forecasting sys
 
 This example showcases AI agents, a feature developed by MindsDB. AI agents can be assigned certain skills, including text-to-SQL skills and knowledge bases. Skills provide an AI agent with input data that can be in the form of a database, a file, or a website.
 
-We create a text-to-SQL skill based on the car sales dataset and deploy a conversational model, which are both components of an agent. Then, we create an agent and assign this skill and this model to it. This agent can be queried to ask questions about data stored in assigned skills.
+We create a text-to-SQL skill based on the car sales dataset and deploy a conversational model, both of which are components of an agent. Then, we create an agent and assign this skill and this model to it. This agent can be queried to ask questions about data stored in assigned skills.
 
 ```sql
 -- Step 1. Connect a data source to MindsDB
@@ -240,7 +240,7 @@ If you’d like to contribute to MindsDB, install MindsDB for development follow
 
 You’ll find the [contribution guide here](https://docs.mindsdb.com/contribute/contribute?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
 
-We are always open to suggestions, so feel free to open new issues with your ideas, and we can guide you!
+We are always open to suggestions, so feel free to open new issues with your ideas, and we'll guide you!
 
 This project is released with a [Contributor Code of Conduct](https://github.com/mindsdb/mindsdb/blob/main/CODE_OF_CONDUCT.md). By participating in this project, you agree to follow its terms.
 
@@ -250,7 +250,7 @@ Also, check out the [rewards and community programs here](https://mindsdb.com/co
 
 If you find a bug, please submit an [issue on GitHub here](https://github.com/mindsdb/mindsdb/issues/new/choose).
 
-Here is how you can get community support:
+Here's how you can get community support:
 
 * Post a question at [MindsDB Slack Community](https://mindsdb.com/joincommunity?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
 * Ask for help at our [GitHub Discussions](https://github.com/mindsdb/mindsdb/discussions).

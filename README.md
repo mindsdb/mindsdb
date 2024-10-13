@@ -1,9 +1,11 @@
 <a name="readme-top"></a>
-
 <div align="center">
-  <a href="https://github.com/mindsdb/mindsdb">
+   <a href="https://github.com/mindsdb/mindsdb">
     <img src="/docs/assets/mindsdb_logo.jpg" alt="MindsDB" width="300">
   </a>
+</div>
+<div align="center">
+
 
   <a href="https://pypi.org/project/MindsDB/" target="_blank">
     <img src="https://badge.fury.io/py/MindsDB.svg" alt="MindsDB Release">

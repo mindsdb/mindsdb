@@ -21,7 +21,7 @@ http_requests_total{environment="development"}
 ```sql
 SELECT
     *
-FROM http_requests_total
+FROM prometheus_source.http_requests_total
 WHERE environment = "development"
 ```
 
@@ -42,7 +42,7 @@ pip install prometheus-api-client
 To setup a connection to Prometheus host, run the following SQL in the MindsDB interface: 
 
 ```sql
-CREATE DATABASE prometheus_sourxe
+CREATE DATABASE prometheus_source
 WITH
   engine = 'prometheus',
   parameters = {

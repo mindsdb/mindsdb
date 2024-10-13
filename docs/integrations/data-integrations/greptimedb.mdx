@@ -1,0 +1,51 @@
+---
+title: GreptimeDB
+sidebarTitle: GreptimeDB
+---
+
+This is the implementation of the GreptimeDB data handler for MindsDB.
+
+[GreptimeDB](https://greptime.com/) is an open-source, cloud-native time series database features analytical capabilities, scalebility and open protocols support.
+
+## Implementation
+
+This handler is implemented by extending the MySQLHandler.
+
+Connect GreptimeDB to MindsDB by providing the following parameters:
+
+* `host` is the host name, IP address, or URL.
+* `port` is the port used to make TCP/IP connection.
+* `database` is the database name.
+* `user` is the database user.
+* `password` is the database password.
+
+There are several optional parameters that can be used as well.
+
+* `ssl` is the `ssl` parameter value that indicates whether SSL is enabled (`True`) or disabled (`False`).
+* `ssl_ca` is the SSL Certificate Authority.
+* `ssl_cert` stores SSL certificates.
+* `ssl_key` stores SSL keys.
+
+## Usage
+
+In order to make use of this handler and connect to the GreptimeDB database in MindsDB, the following syntax can be used:
+
+```sql
+CREATE DATABASE greptimedb_datasource
+WITH
+  engine = 'greptimedb',
+  parameters = {
+    "host": "127.0.0.1",
+    "port": 4002,
+    "database": "public",
+    "user": "username",
+    "password": "password"
+  };
+```
+
+You can use this established connection to query your table as follows.
+
+```sql
+SELECT *
+FROM greptimedb_datasource.example_table;
+```

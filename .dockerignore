@@ -3,7 +3,7 @@
 .gitignore
 .github
 .mypy_cache
-.pytest_cahce
+.pytest_cache
 .deployment
 
 docker/db_images

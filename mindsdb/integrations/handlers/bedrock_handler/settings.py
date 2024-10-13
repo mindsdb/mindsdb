@@ -109,7 +109,7 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
 
     Attributes
     ----------
-    model_id : Text
+    id : Text
         The ID of the model in Amazon Bedrock.
 
     mode : Optional[Text]
@@ -140,7 +140,7 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
         The connection arguments passed required to connect to Amazon Bedrock. These are AWS credentials provided when creating the engine.
     """
     # User-provided Handler Model Prameters: These are parameters specific to the MindsDB handler for Amazon Bedrock provided by the user.
-    model_id: Text = Field(None)
+    id: Text = Field(None)
     mode: Optional[Text] = Field(AmazonBedrockHandlerSettings.DEFAULT_MODE)
     prompt_template: Optional[Text] = Field(None)
     question_column: Optional[Text] = Field(None)
@@ -205,9 +205,9 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
             ValueError: If the model ID provided is invalid or the parameters provided are invalid for the chosen model.
         """
         # TODO: Set the default model ID for other modes.
-        if model.model_id is None:
+        if model.id is None:
             if model.mode in ['default', 'conversational']:
-                model.model_id = AmazonBedrockHandlerSettings.DEFAULT_TEXT_MODEL_ID
+                model.id = AmazonBedrockHandlerSettings.DEFAULT_TEXT_MODEL_ID
 
         bedrock_client = create_amazon_bedrock_client(
             "bedrock",
@@ -216,7 +216,7 @@ class AmazonBedrockHandlerModelConfig(BaseModel):
 
         try:
             # Check if the model ID is valid and accessible.
-            response = bedrock_client.get_foundation_model(modelIdentifier=model.model_id)
+            response = bedrock_client.get_foundation_model(modelIdentifier=model.id)
         except ClientError as e:
             raise ValueError(f"Invalid Amazon Bedrock model ID: {e}!")
 

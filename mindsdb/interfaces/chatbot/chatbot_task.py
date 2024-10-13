@@ -53,6 +53,7 @@ class ChatBotTask(BaseTask):
 
         polling = chat_params['polling']['type']
         if polling == 'message_count':
+            chat_params = chat_params['tables'] if 'tables' in chat_params else [chat_params]
             self.chat_pooling = MessageCountPolling(self, chat_params)
             self.memory = HandlerMemory(self, chat_params)
 
@@ -71,10 +72,10 @@ class ChatBotTask(BaseTask):
 
         self.chat_pooling.run(stop_event)
 
-    def on_message(self, chat_memory, message: ChatBotMessage):
+    def on_message(self, chat_memory, message: ChatBotMessage, table_name=None):
 
         try:
-            self._on_message(chat_memory, message)
+            self._on_message(chat_memory, message, table_name)
         except (SystemExit, KeyboardInterrupt):
             raise
         except Exception:
@@ -82,7 +83,7 @@ class ChatBotTask(BaseTask):
             logger.error(error)
             self.set_error(str(error))
 
-    def _on_message(self, chat_memory, message: ChatBotMessage):
+    def _on_message(self, chat_memory, message: ChatBotMessage, table_name=None):
         # add question to history
         # TODO move it to realtime pooling
         chat_memory.add_to_history(message)
@@ -105,7 +106,7 @@ class ChatBotTask(BaseTask):
         )
 
         # send to chat adapter
-        self.chat_pooling.send_message(response_message)
+        self.chat_pooling.send_message(response_message, table_name=table_name)
         logger.debug(f'>>chatbot {chat_id} out: {response_message.text}')
 
         # send to history

@@ -286,7 +286,8 @@ class BYOMHandler(BaseMLEngine):
             self.engine_storage.json_set('methods', info['methods'])
 
         except Exception as e:
-            model_proxy.remove_venv()
+            if hasattr(model_proxy, 'remove_venv'):
+                model_proxy.remove_venv()
             raise e
 
     def update_engine(self, connection_args: dict) -> None:
@@ -339,7 +340,8 @@ class BYOMHandler(BaseMLEngine):
             self.engine_storage.json_set('methods', methods)
 
         except Exception as e:
-            model_proxy.remove_venv()
+            if hasattr(model_proxy, 'remove_venv'):
+                model_proxy.remove_venv()
             raise e
 
     def function_list(self):
@@ -452,7 +454,7 @@ class ModelWrapperUnsafe:
         func = getattr(self.module, func_name)
         return func(*args)
 
-    def check(self, mode):
+    def check(self, mode: str = None):
         methods = check_module(self.module, mode)
         return methods
 
@@ -609,7 +611,7 @@ class ModelWrapperSafe:
             raise RuntimeError(p.stderr.read())
         return ret
 
-    def check(self, mode):
+    def check(self, mode: str = None):
         params = {
             'method': BYOM_METHOD.CHECK.value,
             'code': self.code,

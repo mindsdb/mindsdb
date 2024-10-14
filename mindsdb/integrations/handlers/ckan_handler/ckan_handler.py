@@ -234,21 +234,6 @@ class CkanHandler(APIHandler):
             logger.error(f"Error calling CKAN API: {e}")
             raise RuntimeError(f"Failed to call CKAN API: {e}")
 
-    # def query(self, query: ast.Select) -> HandlerResponse:
-    #     table_name = query.from_table.parts[-1]
-
-    #     if table_name == "datasets":
-    #         datasets = self.datasets_table.select(query)
-    #         return HandlerResponse(RESPONSE_TYPE.TABLE, datasets)
-    #     elif table_name == "resources":
-    #         resources = self.resources_table.select(query)
-    #         return HandlerResponse(RESPONSE_TYPE.TABLE, resources)
-    #     elif table_name == "datastore":
-    #         datastore = self.datastore_table.select(query)
-    #         return HandlerResponse(RESPONSE_TYPE.TABLE, datastore)
-    #     else:
-    #         raise ValueError(f"Unknown table: {table_name}")
-
     def native_query(self, query: str) -> HandlerResponse:
         method, params = self.parse_native_query(query)
         try:

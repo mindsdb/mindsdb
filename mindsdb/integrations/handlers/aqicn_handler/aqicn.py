@@ -29,7 +29,7 @@ class AQIClient:
     def air_quality_user_location(self):
         url = f'{self.base_endpoint}/here/'
         return self.make_request(url)
-    
+
     def air_quality_station_by_name(self, name):
         url = 'https://api.waqi.info/search/'
         return self.make_request(url, {"keyword": name})

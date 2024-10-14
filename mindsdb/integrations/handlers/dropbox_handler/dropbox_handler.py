@@ -3,6 +3,8 @@ import pandas as pd
 import dropbox
 import requests
 
+from dropbox.exceptions import AuthError, ApiError
+
 from typing import Dict, Optional
 
 from duckdb import DuckDBPyConnection
@@ -55,7 +57,7 @@ class DropboxHandler(DatabaseHandler):
             dropbox: An object to the Dropbox account.
         """
         self.dbx = dropbox.Dropbox(self.connection_args["access_token"])
-        self.logger.info(f"Connected to the Dropbox by {self.dbx.users_get_current_account()}")        
+        self.logger.info(f"Connected to the Dropbox by {self.dbx.users_get_current_account()}")       
 
     def disconnect(self):
         """
@@ -80,9 +82,14 @@ class DropboxHandler(DatabaseHandler):
         try:
             self.connect()
             response.success = True
-        except (requests.exceptions.ConnectionError, ValueError) as e:
+        except (ApiError, ValueError) as e:
             self.logger.error(
                 f"Error connecting to Dropbox with the given credentials, {e}!"
+            )
+            response.error_message = str(e)
+        except AuthError as e:
+            self.logger.error(
+                f"Error connecting to Dropbox because of the wrong credentials, {e}!"
             )
             response.error_message = str(e)
 
@@ -92,4 +99,26 @@ class DropboxHandler(DatabaseHandler):
         elif not response.success and self.is_connected:
             self.is_connected = False
 
+        return response
+    
+    def get_tables(self) -> Response:
+        """
+        Retrieves a list of tables (supported files) in the Dropbox.
+
+        Eachs supported file is considered a table.
+
+        Returns:
+            Response: A response object containing the list of tables and views, formatted as per the `Response` class.
+        """
+        files = self.dbx.file_requests_list_v2()
+        supported_files = []
+
+        response = Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=pd.DataFrame(
+                supported_files,
+                columns=['table_name']
+            )
+        )
+        
         return response

@@ -8,7 +8,7 @@ class AQICNHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {
-            "api_key": "YOUR_API_KEY" # Update this with your aqicn api key
+            "api_key": "c91dc67dc3bc839c898f5a8705ebb782c274ac27" # Update this with your aqicn api key
         }
         cls.handler = AQICNHandler('test_aqicn_handler', connection_data= cls.kwargs)
 

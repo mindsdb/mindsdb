@@ -1,6 +1,7 @@
 from typing import Dict, List
 
 from mindsdb.interfaces.agents.agents_controller import AgentsController
+from mindsdb.interfaces.chatbot.chatbot_task import ChatBotTask
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.storage import db
 
@@ -48,6 +49,42 @@ class ChatBotController:
             db.Tasks.company_id == ctx.company_id,
         )
 
+        return self._get_chatbot(query, project)
+
+    def get_chatbot_by_id(self, chatbot_id: int) -> db.ChatBots:
+        '''
+        Gets a chatbot by id.
+
+        Parameters:
+            chatbot_id (int): The id of the chatbot
+
+        Returns:
+            bot (db.ChatBots): The database chatbot object
+        '''
+
+        query = db.session.query(
+            db.ChatBots, db.Tasks
+        ).join(
+            db.Tasks, db.ChatBots.id == db.Tasks.object_id
+        ).filter(
+            db.ChatBots.id == chatbot_id,
+            db.Tasks.object_type == self.OBJECT_TYPE,
+            db.Tasks.company_id == ctx.company_id,
+        )
+
+        return self._get_chatbot(query)
+
+    def _get_chatbot(self, query, project: db.Project = None) -> db.ChatBots:
+        '''
+        Gets a chatbot by query.
+
+        Parameters:
+            query: The query to get the chatbot
+
+        Returns:
+            bot (db.ChatBots): The database chatbot object
+        '''
+
         query_result = query.first()
         if query_result is None:
             return None
@@ -65,7 +102,7 @@ class ChatBotController:
         bot_obj = {
             'id': bot.id,
             'name': bot.name,
-            'project': project_name,
+            'project': project.name if project else self.project_controller.get(bot.project_id).name,
             'agent': agent_obj,
             'database_id': bot.database_id,  # TODO remove in future
             'database': database_names.get(bot.database_id, '?'),
@@ -74,7 +111,9 @@ class ChatBotController:
             'created_at': bot.created_at,
             'is_running': task.active,
             'last_error': task.last_error,
+            'webhook_token': bot.webhook_token,
         }
+
         return bot_obj
 
     def get_chatbots(self, project_name: str = 'mindsdb') -> List[dict]:
@@ -132,6 +171,7 @@ class ChatBotController:
                     'created_at': bot.created_at,
                     'is_running': task.active,
                     'last_error': task.last_error,
+                    'webhook_token': bot.webhook_token,
                 }
             )
 
@@ -227,7 +267,8 @@ class ChatBotController:
             agent_name: str = None,
             database_id: int = None,
             is_running: bool = None,
-            params: Dict[str, str] = None):
+            params: Dict[str, str] = None,
+            webhook_token: str = None) -> db.ChatBots:
         '''
         Updates a chatbot in the database, creating it if it doesn't already exist.
 
@@ -290,6 +331,10 @@ class ChatBotController:
             existing_params = existing_chatbot_rec.params or {}
             params.update(existing_params)
             existing_chatbot_rec.params = params
+
+        if webhook_token is not None:
+            existing_chatbot_rec.webhook_token = webhook_token
+
         db.session.commit()
 
         return existing_chatbot_rec
@@ -321,3 +366,41 @@ class ChatBotController:
         db.session.delete(bot_rec)
 
         db.session.commit()
+
+    def on_webhook(self, webhook_token: str, request: dict, chat_bot_memory: dict):
+        """
+        Handles incoming webhook requests.
+        Finds the chat bot associated with the webhook token and passes the request to the chat bot task.
+
+        Args:
+            webhook_token (str): The token to uniquely identify the webhook.
+            request (dict): The incoming webhook request.
+            chat_bot_memory (dict): The memory of the various chat-bots mapped by their webhook tokens.
+        """
+        query = db.session.query(
+            db.ChatBots, db.Tasks
+        ).join(
+            db.Tasks, db.ChatBots.id == db.Tasks.object_id
+        ).filter(
+            db.ChatBots.webhook_token == webhook_token,
+            db.Tasks.object_type == self.OBJECT_TYPE,
+            db.Tasks.company_id == ctx.company_id,
+        )
+        result = query.first()
+
+        chat_bot, task = result if result is not None else (None, None)
+
+        if chat_bot is None:
+            raise Exception(f"No chat bot exists for webhook token: {webhook_token}")
+
+        if not task.active:
+            raise Exception(f"Chat bot is not running: {chat_bot.name}")
+
+        chat_bot_task = ChatBotTask(task_id=task.id, object_id=chat_bot.id)
+
+        if webhook_token in chat_bot_memory:
+            chat_bot_task.set_memory(chat_bot_memory[webhook_token])
+        else:
+            chat_bot_memory[webhook_token] = chat_bot_task.get_memory()
+
+        chat_bot_task.on_webhook(request)

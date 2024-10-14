@@ -38,6 +38,7 @@ from mindsdb.api.http.namespaces.tab import ns_conf as tab_ns
 from mindsdb.api.http.namespaces.tree import ns_conf as tree_ns
 from mindsdb.api.http.namespaces.views import ns_conf as views_ns
 from mindsdb.api.http.namespaces.util import ns_conf as utils_ns
+from mindsdb.api.http.namespaces.webhooks import ns_conf as webhooks_ns
 from mindsdb.interfaces.database.integrations import integration_controller
 from mindsdb.interfaces.database.database import DatabaseController
 from mindsdb.interfaces.file.file_controller import FileController
@@ -46,7 +47,7 @@ from mindsdb.metrics.server import init_metrics
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
-from mindsdb.utilities.json_encoder import CustomJSONEncoder
+from mindsdb.utilities.json_encoder import CustomJSONProvider
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.utilities.telemetry import inject_telemetry_to_static
 from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
@@ -246,6 +247,7 @@ def initialize_app(config, no_studio):
         api.add_namespace(ns)
     api.add_namespace(default_ns)
     api.add_namespace(auth_ns)
+    api.add_namespace(webhooks_ns)
 
     @api.errorhandler(Exception)
     def handle_exception(e):
@@ -354,7 +356,7 @@ def initialize_flask(config, init_static_thread, no_studio):
     app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(days=31)
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 60
     app.config['SWAGGER_HOST'] = 'http://localhost:8000/mindsdb'
-    app.json_encoder = CustomJSONEncoder
+    app.json = CustomJSONProvider()
 
     authorizations = {
         'apikey': {

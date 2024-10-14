@@ -42,6 +42,7 @@ class DropboxHandler(DatabaseHandler):
 
         self.connection = None
         self.is_connected = False
+        self.dbx = None
 
     def connect(self):
         """
@@ -53,6 +54,8 @@ class DropboxHandler(DatabaseHandler):
         Returns:
             dropbox: An object to the Dropbox account.
         """
+        self.dbx = dropbox.Dropbox(self.connection_args["access_token"])
+        self.logger.info(f"Connected to the Dropbox by {self.dbx.users_get_current_account()}")        
 
     def disconnect(self):
         """
@@ -61,6 +64,8 @@ class DropboxHandler(DatabaseHandler):
         if not self.is_connected:
             return
         self.is_connected = False
+        self.dbx.close()
+        self.dbx = None
 
     def check_connection(self) -> StatusResponse:
         """

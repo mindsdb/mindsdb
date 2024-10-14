@@ -40,9 +40,7 @@ Please note that `app_token` is an optional parameter. Without providing it, you
 
 One way to connect Slack is to use both bot and app tokens. By following the instructions below, you'll set up the Slack app and be able to message this Slack app directly to chat with the bot.
 
-<Note>
 If you want to use Slack in the [`CREATE CHATBOT`](/agents/chatbot) syntax, use this method of connecting Slack to MindsDB.
-</Note>
 
 <Note>
 Here is how to set up a Slack app and generate both a Slack bot token and a Slack app token:

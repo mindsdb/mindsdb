@@ -19,7 +19,6 @@ class AQICNHandlerTest(unittest.TestCase):
         query = "SELECT * FROM mindsdb_aqicn.air_quality_user_location"
         result = self.handler.native_query(query)
         city_table=AQByCityTable(result)
-        print(city_table.get_columns())
         assert result.type is RESPONSE_TYPE.TABLE
 
     def test_2_native_query_select_by_city(self):

@@ -66,7 +66,7 @@ class Swagger_Api(Api):
 
 
 def custom_output_json(data, code, headers=None):
-    resp = make_response(dumps(data), code)
+    resp = make_response(dumps(data, cls=CustomJSONProvider), code)
     resp.headers.extend(headers or {})
     return resp
 
@@ -294,6 +294,7 @@ def initialize_app(config, no_studio):
 
         company_id = request.headers.get('company-id')
         user_class = request.headers.get('user-class')
+        company_id = None
 
         try:
             email_confirmed = int(request.headers.get('email-confirmed', 1))

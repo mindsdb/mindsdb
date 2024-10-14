@@ -163,14 +163,13 @@ class S3Handler(APIHandler):
         config['region_name'] = self.connection_data['region_name'] if 'region_name' in self.connection_data else 'us-east-1'
 
         client = boto3.client('s3', **config)
-        try:
-            result = client.head_bucket(Bucket=self.connection_data['bucket'])
 
-            # Check if the bucket is in the same region as specified: the DuckDB connection will fail otherwise.
-            if result['ResponseMetadata']['HTTPHeaders']['x-amz-bucket-region'] != client.meta.region_name:
-                raise ValueError('The bucket is not in the expected region.')
-        except ClientError as e:
-            raise RuntimeError("Can't connect to S3") from e
+        result = client.head_bucket(Bucket=self.connection_data['bucket'])
+
+        # Check if the bucket is in the same region as specified: the DuckDB connection will fail otherwise.
+        if result['ResponseMetadata']['HTTPHeaders']['x-amz-bucket-region'] != client.meta.region_name:
+            raise ValueError('The bucket is not in the expected region.')
+
         return client
 
     def disconnect(self):
@@ -215,9 +214,7 @@ class S3Handler(APIHandler):
 
         with self._connect_duckdb() as connection:
 
-            cursor = connection.execute(f"""
-              SELECT * FROM 's3://{self.connection_data['bucket']}/{key}'
-            """)
+            cursor = connection.execute(f"SELECT * FROM 's3://{self.connection_data['bucket']}/{key}'")
             return cursor.fetchdf()
 
     def _read_as_content(self, key) -> None:
@@ -249,22 +246,13 @@ class S3Handler(APIHandler):
 
         with self._connect_duckdb() as connection:
             # copy
-            connection.execute(f"""
-               CREATE TABLE tmp_table
-               AS SELECT * FROM 's3://{self.connection_data['bucket']}/{key}'
-            """)
+            connection.execute(f"CREATE TABLE tmp_table AS SELECT * FROM 's3://{self.connection_data['bucket']}/{key}'")
 
             # insert
-            connection.execute("""
-               INSERT INTO tmp_table BY NAME
-               SELECT * FROM df
-            """)
+            connection.execute("INSERT INTO tmp_table BY NAME SELECT * FROM df")
 
             # upload
-            connection.execute(f"""
-               COPY tmp_table
-               TO 's3://{self.connection_data['bucket']}/{key}'
-            """)
+            connection.execute(f"COPY tmp_table TO 's3://{self.connection_data['bucket']}/{key}'")
 
     def query(self, query: ASTNode) -> Response:
         """

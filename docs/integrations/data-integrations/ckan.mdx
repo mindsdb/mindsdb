@@ -5,7 +5,7 @@ sidebarTitle: Ckan
 
 This is the implementation of the Ckan data handler for MindsDB.
 
-[CKAN](https://ckan.org/) is a Data Catalogue for Open Data. It stores data in a [DataStore](http://docs.ckan.org/en/2.9/maintaining/datastore.html). To retrieve data from CKAN, you need to use the [CKAN API](https://ckan.org/docs/api/). 
+[CKAN](https://ckan.org/) is a Data Catalogue for Open Data. It stores data in a [DataStore](http://docs.ckan.org/en/2.11/maintaining/datastore.html). To retrieve data from CKAN, you need to use the [CKAN API](https://ckan.org/docs/api/). 
 
 ## Prerequisites
 
@@ -20,7 +20,7 @@ Before proceeding, ensure the following prerequisites are met:
 You can connect CKAN by creating a CKAN API client. In this handler, you can create a CKAN API client with [ckanapi](https://github.com/ckan/ckanapi).
 
 <Info>
-Some CKAN instances require you to provide API key. You can find it in the CKAN user panel.
+Some CKAN instances require you to provide API Token. You can find it in the CKAN user panel.
 </Info>
 
 ```python
@@ -28,14 +28,14 @@ from ckanapi import RemoteCKAN
 ckan = RemoteCKAN('https://ckan.example.com/', apikey='YOUR_API_KEY')
 ```
 
-CKAN API client supports all API methods of CKAN. For our handler we use the [DataStore API](http://docs.ckan.org/en/2.9/maintaining/datastore.html#the-datastore-api).
+CKAN API client supports all API methods of CKAN. For our handler we use the [DataStore API](http://docs.ckan.org/en/2.11/maintaining/datastore.html#the-datastore-api).
 
-The [`datastore_search_sql` ](http://docs.ckan.org/en/2.9/maintaining/datastore.html#ckanext.datastore.logic.action.datastore_search_sql) action supports raw SQL commands to be used to search for the data.
+The [`datastore_search` ](http://docs.ckan.org/en/2.11/maintaining/datastore.html#ckanext.datastore.logic.action.datastore_search) action supports raw SQL commands to be used to search for the data.
 
 Here is an example:
 
 ```python
-ckan.action.datastore_search_sql(sql='SELECT * FROM "resource_id"')
+ckan.action.datastore_search id=resource_id
 ```
 
 ## Usage
@@ -47,7 +47,33 @@ CREATE DATABASE ckan_datasource
 WITH
   engine = 'ckan',
   parameters = {
-    "url": "http://demo.ckan.org/api/3/action/",
+    "url": "YOUR_CKAN_URL",
     "apikey": "YOUR_API_KEY"
   };
+```
+
+The handler provides three main tables:
+
+- `datasets`: Lists all datasets in the CKAN instance.
+- `resources`: Lists all resources metadata across all packages.
+- `datastore`: Allows querying individual datastore resources.
+
+## Example Queries
+
+1. List all datasets:
+
+```sql
+SELECT * FROM ckan_datasource.datasets;
+```
+
+2. List all resources:
+
+```sql
+SELECT * FROM ckan_datasource.resources;
+```
+
+3. Query a specific datastore resource:
+
+```sql
+SELECT * FROM ckan_datasource.datastore WHERE resource_id = 'your-resource-id';
 ```

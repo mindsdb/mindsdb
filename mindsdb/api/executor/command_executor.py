@@ -6,6 +6,7 @@ from functools import reduce
 
 import pandas as pd
 from mindsdb_evaluator.accuracy.general import evaluate_accuracy
+from mindsdb_evaluator.helpers.general import is_llm
 from mindsdb_sql import parse_sql
 from mindsdb_sql.planner.utils import query_traversal
 from mindsdb_sql.parser.ast import (
@@ -782,6 +783,10 @@ class ExecuteCommands:
         return ExecuteAnswer()
 
     def answer_evaluate_metric(self, statement, database_name):
+        """
+        Converts the SQL command of EVALUATE to score the output
+        for either LLM output or table output
+        """
         try:
             sqlquery = SQLQuery(statement.data, session=self.session, database=database_name)
         except Exception as e:
@@ -794,26 +799,44 @@ class ExecuteCommands:
             str(t.alias) if hasattr(t, "alias") else str(t.parts[-1])
             for t in statement.data.targets
         ]
-
-        for col in ["actual", "prediction"]:
-            assert (
-                col in df.columns
-            ), f"`{col}` column was not provided, please try again."
-            assert (
-                df[col].isna().sum() == 0
-            ), f"There are missing values in the `{col}` column, please try again."
-
         metric_name = statement.name.parts[-1]
-        target_series = df.pop("prediction")
+
+        if is_llm(metric_name):
+            for col in ["question", "answer", "contexts", "ground_truth"]:
+                assert (
+                    col in df.columns
+                ), f"`{col}` column was not provided, please try again."
+                assert (
+                    df[col].isna().sum() == 0
+                ), f"There are missing values in the `{col}` column, please try again."
+        else:
+            for col in ["actual", "prediction"]:
+                assert (
+                    col in df.columns
+                ), f"`{col}` column was not provided, please try again."
+                assert (
+                    df[col].isna().sum() == 0
+                ), f"There are missing values in the `{col}` column, please try again."
+
         using_clause = statement.using if statement.using is not None else {}
-        metric_value = evaluate_accuracy(
-            df,
-            target_series,
-            metric_name,
-            target="actual",
-            ts_analysis=using_clause.get("ts_analysis", {}),  # will be deprecated soon
-            n_decimals=using_clause.get("n_decimals", 3),
-        )  # 3 decimals by default
+        if is_llm(metric_name):
+            target_series = df.pop("answer")
+            metric_value = evaluate_accuracy(
+                df,
+                target_series,
+                metric_name,
+                n_decimals=using_clause.get("n_decimals", 3),
+            )
+        else:
+            target_series = df.pop("prediction")
+            metric_value = evaluate_accuracy(
+                df,
+                target_series,
+                metric_name,
+                target="actual",
+                ts_analysis=using_clause.get("ts_analysis", {}),  # will be deprecated soon
+                n_decimals=using_clause.get("n_decimals", 3),
+            )  # 3 decimals by default
         return ExecuteAnswer(
             data=ResultSet(
                 columns=[Column(name=metric_name, table_name="", type="str")],

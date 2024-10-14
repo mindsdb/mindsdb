@@ -353,6 +353,7 @@ class ChatBots(Base):
         DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
     )
     created_at = Column(DateTime, default=datetime.datetime.now)
+    webhook_token = Column(String)
 
     def as_dict(self) -> Dict:
         return {
@@ -362,6 +363,7 @@ class ChatBots(Base):
             "agent_id": self.agent_id,
             "model_name": self.model_name,
             "params": self.params,
+            "webhook_token": self.webhook_token,
             "created_at": self.created_at,
             "database_id": self.database_id,
         }

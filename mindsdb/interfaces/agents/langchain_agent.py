@@ -57,8 +57,8 @@ from .constants import (
     ASSISTANT_COLUMN,
     CONTEXT_COLUMN,
 )
-from ..skills.skill_tool import skill_tool
-from ...integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
+from mindsdb.interfaces.skills.skill_tool import skill_tool
+from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
 
 _PARSING_ERROR_PREFIXES = [
     "An output parsing error occurred",
@@ -360,7 +360,7 @@ class LangchainAgent:
 
         tools = []
         skills = self.agent.skills or []
-        tools += self.langchain_tools_from_skills(skills, {}, llm)
+        tools += self.langchain_tools_from_skills(skills, llm)
 
         # Prefer prediction prompt template over original if provided.
         prompt_template = args["prompt_template"]
@@ -409,9 +409,9 @@ class LangchainAgent:
         )
         return agent_executor
 
-    def langchain_tools_from_skills(self, skills, pred_args, llm):
+    def langchain_tools_from_skills(self, skills, llm):
         # Makes Langchain compatible tools from a skill
-        tools_groups = skill_tool.get_tools_from_skills(skills, llm, pred_args, self.embedding_model)
+        tools_groups = skill_tool.get_tools_from_skills(skills, llm, self.embedding_model)
 
         all_tools = []
         for skill_type, tools in tools_groups.items():

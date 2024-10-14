@@ -1,6 +1,8 @@
 import enum
 from collections import defaultdict
 from typing import List, Optional
+from langchain_core.language_models import BaseChatModel
+from langchain.embeddings.base import Embeddings
 
 from mindsdb_sql.parser.ast import Select, BinaryOperation, Identifier, Constant, Star
 
@@ -107,7 +109,7 @@ class SkillToolController:
                 sql_database_tools[i] = tool
         return sql_database_tools
 
-    def _make_retrieval_tools(self, skill: db.Skills, llm, pred_args, embedding_model):
+    def _make_retrieval_tools(self, skill: db.Skills, llm, embedding_model):
         """
         creates advanced retrieval tool i.e. RAG
         """
@@ -125,6 +127,7 @@ class SkillToolController:
                         f'The input should be the exact question the user is asking.',
             type=skill.type
         )
+        pred_args = {}
         pred_args['embedding_model'] = embedding_model
         pred_args['llm'] = llm
 
@@ -167,11 +170,13 @@ class SkillToolController:
             type=skill.type
         )
 
-    def get_tools_from_skills(self, skills: List[db.Skills], llm, pred_args, embedding_model) -> dict:
+    def get_tools_from_skills(self, skills: List[db.Skills], llm: BaseChatModel, embedding_model: Embeddings) -> dict:
         """
             Creates function for skill and metadata (name, description)
         Args:
-            skill (Skills): Skill to make a tool from
+            skills (Skills): Skills to make a tool from
+            llm: LLM which will be used by skills
+            embedding_model: this model is used by retrieval skill
 
         Returns:
             dict with keys: name, description, func
@@ -201,7 +206,7 @@ class SkillToolController:
                 ]
             if skill_type == SkillType.RETRIEVAL:
                 tools[skill_type] = [
-                    self._make_retrieval_tools(skill, llm, pred_args, embedding_model)
+                    self._make_retrieval_tools(skill, llm, embedding_model)
                     for skill in skills
                 ]
         return tools

@@ -18,7 +18,7 @@ except Exception as e:
 title = "Dropbox"
 name = "dropbox"
 type = HANDLER_TYPE.DATA
-# icon_path = "icon.svg"
+icon_path = "icon.svg"
 
 __all__ = [
     "Handler",

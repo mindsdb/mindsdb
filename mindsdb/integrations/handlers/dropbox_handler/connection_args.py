@@ -4,29 +4,14 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 
 
 connection_args = OrderedDict(
-    repository={
+    access_token={
         "type": ARG_TYPE.STR,
-        "description": " Dropbox repository name.",
+        "description": " Dropbox Access Token",
         "required": True,
-        "label": "Repository",
-    },
-    api_key={
-        "type": ARG_TYPE.PWD,
-        "description": "Optional Dropbox API key to use for authentication.",
-        "required": False,
-        "label": "Api key",
-        "secret": True,
-    },
-    dropbox_url={
-        "type": ARG_TYPE.STR,
-        "description": "Optional Dropbox URL to connect to a Dropbox Enterprise instance.",
-        "required": False,
-        "label": "Dropbox url",
+        "label": "Dropbox Access Token",
     },
 )
 
 connection_args_example = OrderedDict(
-    repository="mindsdb/mindsdb",
-    api_key="ghp_xxx",
-    github_url="https://github.com/mindsdb/mindsdb",
+    access_token="ai.L-wqp3eP6r4cSWVklkKAdTNZ3VAuQjWuZMvIs1BzKvZNVW07rKbVNi5HbxvLc9q9D6qSfsf5VTsqYsNPGUkqSJBlpkr88gNboUNuhITmJG9mVw-Olniu4MO3BWVbEIphVxXxxxCd677Y",
 )

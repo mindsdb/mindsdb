@@ -6,5 +6,4 @@ __author__ = "Ton Hoang Nguyen (Bill)"
 __github__ = "https://github.com/mindsdb/mindsdb"
 __pypi__ = "https://pypi.org/project/mindsdb/"
 __license__ = "GPL-3.0"
-__copyright__ = "Copyright 2023 - mindsdb"
-
+__copyright__ = "Copyright 2024 - mindsdb"

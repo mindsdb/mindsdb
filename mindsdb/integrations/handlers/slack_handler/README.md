@@ -44,7 +44,7 @@ One way to connect Slack is to use both bot and app tokens. By following the ins
 If you want to use Slack in the [`CREATE CHATBOT`](/agents/chatbot) syntax, use this method of connecting Slack to MindsDB.
 </Note>
 
-<Info>
+<Note>
 Here is how to set up a Slack app and generate both a Slack bot token and a Slack app token:
 
   1. Follow [this link](https://api.slack.com/apps) and sign in with your Slack account.
@@ -78,7 +78,7 @@ Here is how to set up a Slack app and generate both a Slack bot token and a Slac
       - Under *Subscribe to bot events*, click on *Add Bot User Event* and add `app_mention` and `message.im`.
       - Click on *Save Changes*.
   8. Now you can use tokens from points 3 and 5 to initialize the Slack handler in MindsDB.
-</Info>
+</Note>
 
 <Note>
 This connection method enables you to chat directly with an app via Slack.
@@ -108,7 +108,7 @@ It comes with the `conversations` and `messages` tables.
 
 Another way to connect to Slack is to use the bot token only. By following the instructions below, you'll set up the Slack app and integrate it into one of the channels from which you can directly chat with the bot.
 
-<Info>
+<Note>
 Here is how to set up a Slack app and generate a Slack bot token:
 
   1. Follow [this link](https://api.slack.com/apps) and sign in with your Slack account.
@@ -132,7 +132,7 @@ Here is how to set up a Slack app and generate a Slack bot token:
       - Select *Integrations*.
       - Click on *Add an App*.
   8. Now you can use the token from step 6 to initialize the Slack handler in MindsDB and use the channel name to query and write messages.
-</Info>
+</Note>
 
 Here is how to connect Slack to MindsDB:
 

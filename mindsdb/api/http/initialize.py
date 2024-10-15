@@ -66,7 +66,7 @@ class Swagger_Api(Api):
 
 
 def custom_output_json(data, code, headers=None):
-    resp = make_response(dumps(data), code)
+    resp = make_response(dumps(data, cls=CustomJSONProvider), code)
     resp.headers.extend(headers or {})
     return resp
 

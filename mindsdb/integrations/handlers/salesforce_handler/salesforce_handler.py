@@ -41,7 +41,7 @@ class SalesforceHandler(APIHandler):
         self.is_connected = False
 
         # Register Salesforce tables.
-        self.resource_names = [
+        self.resource_names = {
             'Account',
             'Contact',
             'Opportunity',
@@ -59,9 +59,9 @@ class SalesforceHandler(APIHandler):
             'CampaignMember',
             'Contract',
             'Asset'
-        ]
+        }
 
-        for resource_name in resource_names:
+        for resource_name in self.resource_names:
             table_class = create_table_class(resource_name, resource_name)
             self._register_table(resource_name, table_class(self))
 
@@ -136,12 +136,31 @@ class SalesforceHandler(APIHandler):
 
         try:
             results = connection.sobjects.query(query)
+
+            parsed_results = []
             for result in results:
                 del result['attributes']
 
+                # Check if the result contains any of the other Salesforce resources.
+                if any(key in self.resource_names for key in result.keys()):
+                    # Parse the result to extract the nested resources.
+                    parsed_result = {}
+                    for key, value in result.items():
+                        if key in self.resource_names:
+                            del value['attributes']
+                            parsed_result.update({f'{key}_{sub_key}': sub_value for sub_key, sub_value in value.items()})
+
+                        else:
+                            parsed_result[key] = value
+
+                    parsed_results.append(parsed_result)
+
+                else:
+                    parsed_results.append(result)
+
             response = Response(
                 RESPONSE_TYPE.TABLE,
-                pd.DataFrame(results)
+                pd.DataFrame(parsed_results)
             )
         except RestRequestCouldNotBeUnderstoodError as rest_error:
             logger.error(f'Error running query: {query} on Salesforce, {rest_error}!')

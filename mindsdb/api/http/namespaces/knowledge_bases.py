@@ -181,7 +181,6 @@ class KnowledgeBaseResource(Resource):
     @api_endpoint_metrics('GET', '/knowledge_bases/knowledge_base')
     def get(self, project_name, knowledge_base_name):
         '''Gets a knowledge base by name'''
-        print('GETTING ALL KBS BY NAME\n\n\n')
         session = SessionController()
         project_controller = ProjectController()
         try:
@@ -194,7 +193,6 @@ class KnowledgeBaseResource(Resource):
                 f'Project with name {project_name} does not exist'
             )
 
-        print('ABOUT TO GET KB\n\n\n')
         existing_kb = session.kb_controller.get(knowledge_base_name, project.id)
         if existing_kb is None:
             return http_error(
@@ -202,7 +200,6 @@ class KnowledgeBaseResource(Resource):
                 'Knowledge Base not found',
                 f'Knowledge Base with name {knowledge_base_name} does not exist'
             )
-        print('RETURNING KB\n\n\n')
         return existing_kb.as_dict()
 
     @ns_conf.doc('update_knowledge_base')

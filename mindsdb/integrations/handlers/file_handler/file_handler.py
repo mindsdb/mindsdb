@@ -111,18 +111,25 @@ class FileHandler(DatabaseHandler):
             if query.is_replace:
                 self.file_controller.delete_file(table_name)
 
-            # Create a temp file to save the table
             temp_dir_path = tempfile.mkdtemp(prefix="mindsdb_file_")
-            temp_file_path = os.path.join(temp_dir_path, f"{table_name}.csv")
 
-            # Create an empty file using with the columns in the query
-            df = pd.DataFrame(columns=[col.name for col in query.columns])
-            df.to_csv(temp_file_path, index=False)
+            try:
+                # Create a temp file to save the table
+                temp_file_path = os.path.join(temp_dir_path, f"{table_name}.csv")
 
-            self.file_controller.save_file(table_name, temp_file_path, file_name=f"{table_name}.csv")
+                # Create an empty file using with the columns in the query
+                df = pd.DataFrame(columns=[col.name for col in query.columns])
+                df.to_csv(temp_file_path, index=False)
 
-            # Remove the temp file created
-            shutil.rmtree(temp_dir_path, ignore_errors=True)
+                self.file_controller.save_file(table_name, temp_file_path, file_name=f"{table_name}.csv")
+            except Exception as unknown_error:
+                return Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=f"Error creating table '{table_name}': {unknown_error}",
+                )
+            finally:
+                # Remove the temp dir created
+                shutil.rmtree(temp_dir_path, ignore_errors=True)
 
             return Response(RESPONSE_TYPE.OK)
 

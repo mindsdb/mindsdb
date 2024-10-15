@@ -55,24 +55,27 @@ class DropboxHandler(DatabaseHandler):
         Returns:
             dropbox: An object to the Dropbox account.
         """
+        self.logger.info(f"Connecting to Dropbox...")
         if self.is_connected:
             return self.dbx
         if "access_token" not in self.connection_args:
             raise ValueError("Access token must be provided.")
         self.dbx = dropbox.Dropbox(self.connection_args["access_token"])
         self.logger.info(
-            f"Connected to the Dropbox by {self.dbx.users_get_current_account()}"
+            f"Connected to Dropbox by {self.dbx.users_get_current_account()}"
         )
 
     def disconnect(self):
         """
         Closes the connection to the Dropbox account if it's currently open.
         """
+        self.logger.info(f"Disconnecting from Dropbox...")
         if not self.is_connected:
             return
         self.is_connected = False
         self.dbx.close()
         self.dbx = None
+        self.logger.info(f"Disconnected from Dropbox")
 
     def check_connection(self) -> StatusResponse:
         """
@@ -117,12 +120,47 @@ class DropboxHandler(DatabaseHandler):
         Returns:
             Response: A response object containing the list of tables and views, formatted as per the `Response` class.
         """
-        files = self.dbx.file_requests_list_v2()
-        supported_files = []
+        self.connect()
+        self.logger.info(f"Getting list of tables...")
+        files = self._list_files()
+        table_names = [file["name"] for file in files]
 
         response = Response(
             RESPONSE_TYPE.TABLE,
-            data_frame=pd.DataFrame(supported_files, columns=["table_name"]),
+            data_frame=pd.DataFrame(table_names, columns=["table_name"]),
         )
+        self.logger.info(f"Retrieved all the tables: {table_names}")
 
         return response
+
+    def _list_files(self, path=""):
+        """
+        List all files in the Dropbox account starting from the given path.
+
+        Args:
+            path (str): The path to start listing files from.
+
+        Returns:
+            List[Dict]: A list of files with their metadata.
+        """
+        self.connect()
+        files = []
+        result = self.dbx.files_list_folder(path, recursive=True)
+        while True:
+            for entry in result.entries:
+                if isinstance(entry, dropbox.files.FileMetadata):
+                    extension = entry.name.split(".")[-1].lower()
+                    if extension in self.supported_file_formats:
+                        files.append(
+                            {
+                                "path": entry.path_lower,
+                                "name": entry.name,
+                                "extension": extension,
+                            }
+                        )
+            if result.has_more:
+                result = self.dbx.files_list_folder_continue(result.cursor)
+            else:
+                break
+
+        return files

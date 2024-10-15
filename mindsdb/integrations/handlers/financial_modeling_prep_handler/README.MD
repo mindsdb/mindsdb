@@ -2,14 +2,14 @@
 
 This handler integrates with the [Financial Modeling Prep API](https://site.financialmodelingprep.com/developer/docs) to allow users to use ML for financial analysis and predictions.
 
-### Connect to the Financial Modeling API
+### Connect to the Financial Modeling Prep API
 We start by creating a database to connect to the Financial Modeling API. 
 Retrieve an api key from: (https://site.financialmodelingprep.com/developer/docs)
 
 ~~~~sql
-CREATE DATABASE my_table
+CREATE DATABASE fmp_datasource
 WITH
-  ENGINE = 'FINANCIAL_MODELING'
+  ENGINE = 'FINANCIAL_MODELING_PREP'
   PARAMETERS = {
     "api_key": <api_key>
   };

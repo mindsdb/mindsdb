@@ -2,7 +2,7 @@ import pytest
 import json
 from pymongo import MongoClient
 
-from mindsdb_sql.parser.ast import CreateTable, DropTables, Identifier, Select, Star
+from mindsdb_sql.parser.ast import Identifier, Select, Star
 from mindsdb.integrations.handlers.mongodb_handler.mongodb_handler import MongoDBHandler
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 
@@ -25,11 +25,12 @@ def seed_db():
     creds = HANDLER_KWARGS["connection_data"]
     uri = f"mongodb://{creds['username']}:{creds['password']}@{creds['host']}"
     conn = MongoClient(uri)
-    db = conn[HANDLER_KWARGS["connection_data"]["database"]]
+    db = conn[HANDLER_KWARGS["connection_data"]["database"]]  # noqa
 
     with open("mindsdb/integrations/handlers/mongodb_handler/tests/seed.json", "r") as f:
-        seed = json.load(f)
+        json.load(f)
     conn.close()
+
 
 @pytest.fixture(scope="module")
 def handler(request):
@@ -53,6 +54,7 @@ def check_valid_response(res):
 
 # TODO - Subscribe
 
+
 class TestMongoDBConnection:
     def test_connect(self, handler):
         handler.connect()
@@ -60,7 +62,7 @@ class TestMongoDBConnection:
 
     def test_check_connection(self, handler):
         res = handler.check_connection()
-        assert res.success == True, res.error_message
+        assert res.success is True, res.error_message
 
 
 # TODO - Subscribe
@@ -120,4 +122,4 @@ class TestMongoDBColumns:
 class TestMongoDBDisconnect:
     def test_disconnect(self, handler):
         handler.disconnect()
-        assert handler.is_connected == False, "failed to disconnect"
+        assert handler.is_connected is False, "failed to disconnect"

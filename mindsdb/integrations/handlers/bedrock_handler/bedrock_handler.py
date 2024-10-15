@@ -56,8 +56,14 @@ class AmazonBedrockHandler(BaseMLEngine):
         if 'using' not in args:
             raise MissingConnectionParams("Amazon Bedrock engine requires a USING clause! Refer to its documentation for more details.")
         else:
-            args = args['using']
-            handler_model_config = AmazonBedrockHandlerModelConfig(**args, connection_args=self.engine_storage.get_connection_args())
+            model_args = args['using']
+            # Replace 'model_id' with 'id' to match the Amazon Bedrock handler model configuration.
+            # This is done to avoid the Pydantic warning regarding conflicts with the protected 'model_' namespace.
+            if 'model_id' in model_args:
+                model_args['id'] = model_args['model_id']
+                del model_args['model_id']
+
+            handler_model_config = AmazonBedrockHandlerModelConfig(**model_args, connection_args=self.engine_storage.get_connection_args())
 
             # Save the model configuration to the storage.
             handler_model_params = handler_model_config.model_dump()
@@ -84,7 +90,7 @@ class AmazonBedrockHandler(BaseMLEngine):
         args = self.model_storage.json_get('args')
         handler_model_params = args['handler_model_params']
         mode = handler_model_params['mode']
-        model_id = handler_model_params['model_id']
+        model_id = handler_model_params['id']
         inference_config = handler_model_params.get('inference_config')
         target = args['target']
 
@@ -306,7 +312,7 @@ class AmazonBedrockHandler(BaseMLEngine):
             return pd.DataFrame(args.items(), columns=['key', 'value'])
 
         elif attribute == 'metadata':
-            model_id = args.get('model_id')
+            model_id = args['handler_model_params']['id']
             try:
                 bedrock_client = create_amazon_bedrock_client(
                     'bedrock',

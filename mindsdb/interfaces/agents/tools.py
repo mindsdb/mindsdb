@@ -40,11 +40,20 @@ def _build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
         if not kb:
             raise ValueError(f"Knowledge base not found: {kb_name}")
 
-        rag_params['vector_store_config'] = _build_vector_store_config_from_knowledge_base(rag_params, kb, executor)
+        kb_table = executor.session.kb_controller.get_table(kb.name, kb.project_id)
+
+        rag_params['vector_store_config'] = {
+            'kb_table': kb_table
+        }
 
     # Can run into weird validation errors when unpacking rag_params directly into constructor.
+    if 'embedding_model' in rag_params:
+        embedding_model = rag_params['embedding_model']
+    else:
+        embedding_model = DEFAULT_EMBEDDINGS_MODEL_CLASS()
+
     rag_config = RAGPipelineModel(
-        embedding_model=rag_params.get('embedding_model', DEFAULT_EMBEDDINGS_MODEL_CLASS())
+        embedding_model=embedding_model
     )
     if 'documents' in rag_params:
         rag_config.documents = rag_params['documents']

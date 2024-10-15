@@ -286,7 +286,8 @@ class BYOMHandler(BaseMLEngine):
             self.engine_storage.json_set('methods', info['methods'])
 
         except Exception as e:
-            model_proxy.remove_venv()
+            if hasattr(model_proxy, 'remove_venv'):
+                model_proxy.remove_venv()
             raise e
 
     def update_engine(self, connection_args: dict) -> None:
@@ -339,7 +340,8 @@ class BYOMHandler(BaseMLEngine):
             self.engine_storage.json_set('methods', methods)
 
         except Exception as e:
-            model_proxy.remove_venv()
+            if hasattr(model_proxy, 'remove_venv'):
+                model_proxy.remove_venv()
             raise e
 
     def function_list(self):

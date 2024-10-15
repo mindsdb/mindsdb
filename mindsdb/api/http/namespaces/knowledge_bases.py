@@ -17,6 +17,9 @@ from mindsdb.integrations.utilities.rag.loaders.file_loader import FileLoader
 from mindsdb.integrations.utilities.rag.splitters.file_splitter import FileSplitter, FileSplitterConfig
 from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseTable
 from mindsdb.utilities import log
+from mindsdb.utilities.exception import EntityNotExistsError
+
+from mindsdb_sql.parser.ast import Identifier
 
 logger = log.getLogger(__name__)
 
@@ -80,10 +83,128 @@ def _insert_web_pages_into_knowledge_base(table: KnowledgeBaseTable, urls: List[
     table.insert(docs_df)
 
 
+@ns_conf.route('/<project_name>/knowledge_bases')
+class KnowledgeBasesResource(Resource):
+    @ns_conf.doc('list_knowledge_bases')
+    @api_endpoint_metrics('GET', '/knowledge_bases')
+    def get(self, project_name):
+        '''List all knowledge bases'''
+        session = SessionController()
+        project_controller = ProjectController()
+        try:
+            _ = project_controller.get(name=project_name)
+        except EntityNotExistsError:
+            # Project must exist.
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                'Project not found',
+                f'Project with name {project_name} does not exist'
+            )
+
+        # KB Controller already returns dict.
+        return session.kb_controller.list(project_name)
+
+    @ns_conf.doc('create_knowledge_base')
+    @api_endpoint_metrics('POST', '/knowledge_bases')
+    def post(self, project_name):
+        '''Create a knowledge base'''
+
+        # Check for required parameters.
+        if 'knowledge_base' not in request.json:
+            return http_error(
+                HTTPStatus.BAD_REQUEST,
+                'Missing parameter',
+                'Must provide "knowledge_base" parameter in POST body'
+            )
+
+        knowledge_base = request.json['knowledge_base']
+        # Explicitly require embedding model & vector database.
+        required_fields = ['name', 'model']
+        for field in required_fields:
+            if field not in knowledge_base:
+                return http_error(
+                    HTTPStatus.BAD_REQUEST,
+                    'Missing parameter',
+                    f'Must provide "{field}" field in "knowledge_base"'
+                )
+        if 'storage' in knowledge_base:
+            if 'database' not in knowledge_base['storage'] or 'table' not in knowledge_base['storage']:
+                return http_error(
+                    HTTPStatus.BAD_REQUEST,
+                    'Missing parameter',
+                    'Must provide "database" and "table" field in "storage" param'
+                )
+
+        session = SessionController()
+        project_controller = ProjectController()
+        try:
+            project = project_controller.get(name=project_name)
+        except EntityNotExistsError:
+            # Project must exist.
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                'Project not found',
+                f'Project with name {project_name} does not exist'
+            )
+
+        kb_name = knowledge_base.get('name')
+        existing_kb = session.kb_controller.get(kb_name, project.id)
+        if existing_kb is not None:
+            # Knowledge Base must not exist.
+            return http_error(
+                HTTPStatus.CONFLICT,
+                'Knowledge Base already exists',
+                f'Knowledge Base with name {kb_name} already exists'
+            )
+
+        embedding_model_identifier = Identifier(parts=[knowledge_base['model']])
+        storage = knowledge_base.get('storage')
+        embedding_table_identifier = None
+        if storage is not None:
+            embedding_table_identifier = Identifier(parts=[storage['database'], storage['table']])
+        new_kb = session.kb_controller.add(
+            kb_name,
+            project.name,
+            embedding_model_identifier,
+            embedding_table_identifier,
+            {}
+        )
+
+        return new_kb.as_dict(), HTTPStatus.CREATED
+
+
 @ns_conf.route('/<project_name>/knowledge_bases/<knowledge_base_name>')
 @ns_conf.param('project_name', 'Name of the project')
 @ns_conf.param('knowledge_base_name', 'Name of the knowledge_base')
 class KnowledgeBaseResource(Resource):
+    @ns_conf.doc('get_knowledge_base')
+    @api_endpoint_metrics('GET', '/knowledge_bases/knowledge_base')
+    def get(self, project_name, knowledge_base_name):
+        '''Gets a knowledge base by name'''
+        print('GETTING ALL KBS BY NAME\n\n\n')
+        session = SessionController()
+        project_controller = ProjectController()
+        try:
+            project = project_controller.get(name=project_name)
+        except EntityNotExistsError:
+            # Project must exist.
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                'Project not found',
+                f'Project with name {project_name} does not exist'
+            )
+
+        print('ABOUT TO GET KB\n\n\n')
+        existing_kb = session.kb_controller.get(knowledge_base_name, project.id)
+        if existing_kb is None:
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                'Knowledge Base not found',
+                f'Knowledge Base with name {knowledge_base_name} does not exist'
+            )
+        print('RETURNING KB\n\n\n')
+        return existing_kb.as_dict()
+
     @ns_conf.doc('update_knowledge_base')
     @api_endpoint_metrics('PUT', '/knowledge_bases/knowledge_base')
     def put(self, project_name: str, knowledge_base_name: str):
@@ -99,7 +220,7 @@ class KnowledgeBaseResource(Resource):
         project_controller = ProjectController()
         try:
             project = project_controller.get(name=project_name)
-        except ValueError:
+        except EntityNotExistsError:
             # Project must exist.
             return http_error(
                 HTTPStatus.NOT_FOUND,
@@ -129,3 +250,31 @@ class KnowledgeBaseResource(Resource):
         # Crawl, split, & embed web pages into Knowledge Base.
         _insert_web_pages_into_knowledge_base(table, urls, crawl_depth=crawl_depth, filters=filters)
         return '', HTTPStatus.OK
+
+    @ns_conf.doc('delete_knowledge_base')
+    @api_endpoint_metrics('DELETE', '/knowledge_bases/knowledge_base')
+    def delete(self, project_name: str, knowledge_base_name: str):
+        '''Deletes a knowledge base.'''
+        project_controller = ProjectController()
+        try:
+            project = project_controller.get(name=project_name)
+        except EntityNotExistsError:
+            # Project must exist.
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                'Project not found',
+                f'Project with name {project_name} does not exist'
+            )
+
+        session_controller = SessionController()
+        existing_kb = session_controller.kb_controller.get(knowledge_base_name, project.id)
+        if existing_kb is None:
+            # Knowledge Base must exist.
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                'Knowledge Base not found',
+                f'Knowledge Base with name {knowledge_base_name} does not exist'
+            )
+
+        session_controller.kb_controller.delete(knowledge_base_name, project_name)
+        return '', HTTPStatus.NO_CONTENT

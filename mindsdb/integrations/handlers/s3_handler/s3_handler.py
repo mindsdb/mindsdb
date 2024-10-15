@@ -125,6 +125,8 @@ class S3Handler(APIHandler):
         """
         # Connect to S3 via DuckDB.
         duckdb_conn = duckdb.connect(":memory:")
+        duckdb_conn.execute("INSTALL httpfs")
+        duckdb_conn.execute("LOAD httpfs")
 
         # Configure mandatory credentials.
         duckdb_conn.execute(f"SET s3_access_key_id='{self.connection_data['aws_access_key_id']}'")

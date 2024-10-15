@@ -7,7 +7,7 @@ from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse
 )
-from mindsdb.integrations.handlers.salesforce_handler.salesforce_tables import ContactsTable
+from mindsdb.integrations.handlers.salesforce_handler.salesforce_tables import create_table_class
 from mindsdb.utilities import log
 
 
@@ -37,7 +37,31 @@ class SalesforceHandler(APIHandler):
         self.connection = None
         self.is_connected = False
 
-        self._register_table("contacts", ContactsTable(self))
+        # Register Salesforce tables.
+        resource_names = [
+            'Account',
+            'Contact',
+            'Opportunity',
+            'Lead',
+            'Task',
+            'Event',
+            'User',
+            'Product2',
+            'Pricebook2',
+            'PricebookEntry',
+            'Order',
+            'OrderItem',
+            'Asset',
+            'Case',
+            'Campaign',
+            'CampaignMember',
+            'Contract',
+            'Asset'
+        ]
+        
+        for resource_name in resource_names:
+            table_class = create_table_class(resource_name, resource_name)
+            self._register_table(resource_name, table_class(self))
 
     def connect(self) -> salesforce_api.client.Client:
         """

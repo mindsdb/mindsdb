@@ -11,7 +11,7 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 
-def create_table_class(table_name: Text, resource_name: Text):
+def create_table_class(table_name: Text, resource_name: Text) -> APIResource:
     """
     Creates a table class for the given Salesforce resource.
     """

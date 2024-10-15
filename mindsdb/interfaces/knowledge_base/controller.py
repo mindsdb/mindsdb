@@ -17,8 +17,12 @@ from mindsdb_sql.parser.ast import (
 from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor
 
 import mindsdb.interfaces.storage.db as db
+from mindsdb.integrations.libs.llm.utils import get_llm_config
 from mindsdb.integrations.libs.vectordatabase_handler import TableField
+from mindsdb.interfaces.agents.langchain_agent import create_chat_model
 from mindsdb.interfaces.database.projects import ProjectController
+from mindsdb.interfaces.knowledge_base.settings import SummarizationParams
+from mindsdb.interfaces.knowledge_base.summarisation import generate_summary
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
@@ -133,9 +137,37 @@ class KnowledgeBaseTable:
         df_emb = self._df_to_embeddings(df)
         df = pd.concat([df, df_emb], axis=1)
 
+        # Generate summaries only if summarization is enabled
+        if self.summarization_params:
+            df = self._add_summaries(df)
+
         # send to vector db
         db_handler = self.get_vector_db()
         db_handler.do_upsert(self._kb.vector_database_table, df)
+
+    def _add_summaries(self, df):
+        llm_config = get_llm_config(self.summarization_params.llm_provider, self.summarization_params.dict())
+        llm = create_chat_model(llm_config)
+
+        summaries = df['content'].apply(
+            lambda x: generate_summary(
+                x,
+                llm,
+                chunk_size=self.summarization_params.chunk_size,
+                chunk_overlap=self.summarization_params.chunk_overlap,
+                prompt_template=self.summarization_params.prompt_template
+            )
+        )
+
+        summary_embeddings = self._df_to_embeddings(pd.DataFrame({'content': summaries}))
+
+        # Combine original embeddings with summary embeddings
+        df['embeddings'] = df.apply(
+            lambda row: row['embeddings'] + summary_embeddings.loc[row.name, 'embeddings'],
+            axis=1
+        )
+
+        return df
 
     def _adapt_column_names(self, df: pd.DataFrame) -> pd.DataFrame:
 
@@ -406,13 +438,22 @@ class KnowledgeBaseController:
             vector_table_name
         )
 
+        # Handle summarization parameters
+        if 'summarization' in params or params.get('use_summarization', False):
+            summarization_params = params.get('summarization', {})
+            if isinstance(summarization_params, bool):
+                summarization_params = {}
+            params['summarization'] = SummarizationParams(**summarization_params).dict()
+        else:
+            params.pop('summarization', None)
+
         kb = db.KnowledgeBase(
             name=name,
-            project_id=project_id,
+            project_id=project.id,
             vector_database_id=vector_database_id,
             vector_database_table=vector_table_name,
             embedding_model_id=embedding_model_id,
-            params=params,
+            params=params
         )
         db.session.add(kb)
         db.session.commit()

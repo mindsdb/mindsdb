@@ -16,7 +16,7 @@ from sqlalchemy import (
     UniqueConstraint,
     create_engine,
     text,
-    types
+    types, func
 )
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import (
@@ -28,6 +28,7 @@ from sqlalchemy.orm import (
 )
 from sqlalchemy.sql.schema import ForeignKey
 
+from mindsdb.interfaces.knowledge_base.settings import SummarizationParams
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
 
 
@@ -497,7 +498,7 @@ class KnowledgeBase(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
     project_id = Column(Integer, nullable=False)
-    params = Column(JSON)
+    params = Column(JSON, nullable=False, default={})
 
     vector_database_id = Column(
         ForeignKey("integration.id", name="fk_knowledge_base_vector_database_id"),
@@ -515,21 +516,31 @@ class KnowledgeBase(Base):
         ForeignKey("predictor.id", name="fk_knowledge_base_embedding_model_id"),
         doc="fk to the embedding model",
     )
-
     embedding_model = relationship(
         "Predictor", foreign_keys=[embedding_model_id], doc="embedding model"
     )
 
-    created_at = Column(DateTime, default=datetime.datetime.now)
-    updated_at = Column(
-        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
-    )
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     __table_args__ = (
         UniqueConstraint(
             "name", "project_id", name="unique_knowledge_base_name_project_id"
         ),
     )
+
+    @property
+    def summarization_params(self):
+        if 'summarization' in self.params:
+            return SummarizationParams(**self.params['summarization'])
+        return None
+
+    @summarization_params.setter
+    def summarization_params(self, value):
+        if value is None:
+            self.params.pop('summarization', None)
+        else:
+            self.params['summarization'] = value.dict()
 
 
 class QueryContext(Base):

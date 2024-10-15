@@ -169,10 +169,7 @@ class APIResource(APITable):
             pd.DataFrame
         """
 
-        conditions = [
-            FilterCondition(i[1], FilterOperator(i[0].upper()), i[2])
-            for i in extract_comparison_conditions(query.where)
-        ]
+        conditions = self._extract_conditions(query.where)
 
         limit = None
         if query.limit:
@@ -270,6 +267,67 @@ class APIResource(APITable):
             NotImplementedError: This is an abstract method and should be implemented in a subclass.
         """
         raise NotImplementedError()
+
+    def update(self, query: Update) -> None:
+        """Receive query as AST (abstract syntax tree) and act upon it somehow.
+
+        Args:
+            query (ASTNode): sql query represented as AST. Usually it should be ast.Update
+
+        Returns:
+            None
+        """
+        conditions = self._extract_conditions(query.where)
+
+        values = {key: val.value for key, val in query.update_columns.items()}
+
+        self.modify(conditions, values)
+
+    def modify(self, conditions: List[FilterCondition], values: dict):
+        """
+        Modify items based on specified conditions and values.
+
+        Args:
+            conditions (List[FilterCondition]): A list of conditions to filter the items. Each condition
+                                                should be an instance of the FilterCondition class.
+            values (dict): A dictionary of values to be updated.
+
+        Raises:
+            NotImplementedError: This is an abstract method and should be implemented in a subclass.
+        """
+        raise NotImplementedError
+
+    def delete(self, query: Delete) -> None:
+        """Receive query as AST (abstract syntax tree) and act upon it somehow.
+
+        Args:
+            query (ASTNode): sql query represented as AST. Usually it should be ast.Delete
+
+        Returns:
+            None
+        """
+        conditions = self._extract_conditions(query.where)
+
+        self.remove(conditions)
+
+    def remove(self, conditions: List[FilterCondition]):
+        """
+        Remove items based on specified conditions.
+
+        Args:
+            conditions (List[FilterCondition]): A list of conditions to filter the items. Each condition
+                                                should be an instance of the FilterCondition class.
+
+        Raises:
+            NotImplementedError: This is an abstract method and should be implemented in a subclass.
+        """
+        raise NotImplementedError()
+
+    def _extract_conditions(self, where: ASTNode) -> List[FilterCondition]:
+        return [
+            FilterCondition(i[1], FilterOperator(i[0].upper()), i[2])
+            for i in extract_comparison_conditions(where)
+        ]
 
 
 class APIHandler(BaseHandler):

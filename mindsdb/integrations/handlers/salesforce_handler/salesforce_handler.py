@@ -58,7 +58,7 @@ class SalesforceHandler(APIHandler):
             'Contract',
             'Asset'
         ]
-        
+
         for resource_name in resource_names:
             table_class = create_table_class(resource_name, resource_name)
             self._register_table(resource_name, table_class(self))

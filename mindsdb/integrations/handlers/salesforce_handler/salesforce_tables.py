@@ -59,7 +59,7 @@ def create_table_class(table_name: Text, resource_name: Text) -> APIResource:
             df.rename(columns=column_aliases, inplace=True)
 
             return df
-        
+
         def add(self, item: Dict) -> None:
             """
             Adds a new item to the Salesforce resource.

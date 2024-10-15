@@ -121,7 +121,7 @@ class SalesforceHandler(APIHandler):
         self.is_connected = response.success
 
         return response
-    
+
     def native_query(self, query: Text) -> Response:
         """
         Executes a native SOQL query on Salesforce and returns the result.
@@ -178,4 +178,3 @@ class SalesforceHandler(APIHandler):
             )
 
         return response
-

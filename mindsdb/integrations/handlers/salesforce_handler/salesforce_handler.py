@@ -1,11 +1,14 @@
 from typing import Any, Dict, Text
 
+import pandas as pd
 import salesforce_api
-from salesforce_api.exceptions import AuthenticationError
+from salesforce_api.exceptions import AuthenticationError, RestRequestCouldNotBeUnderstoodError
 
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse
+    HandlerResponse as Response,
+    HandlerStatusResponse as StatusResponse,
+    RESPONSE_TYPE
 )
 from mindsdb.integrations.handlers.salesforce_handler.salesforce_tables import create_table_class
 from mindsdb.utilities import log
@@ -38,7 +41,7 @@ class SalesforceHandler(APIHandler):
         self.is_connected = False
 
         # Register Salesforce tables.
-        resource_names = [
+        self.resource_names = [
             'Account',
             'Contact',
             'Opportunity',
@@ -118,3 +121,42 @@ class SalesforceHandler(APIHandler):
         self.is_connected = response.success
 
         return response
+    
+    def native_query(self, query: Text) -> Response:
+        """
+        Executes a native SOQL query on Salesforce and returns the result.
+
+        Args:
+            query (Text): The SQL query to be executed.
+
+        Returns:
+            Response: A response object containing the result of the query or an error message.
+        """
+        connection = self.connect()
+
+        try:
+            results = connection.sobjects.query(query)
+            for result in results:
+                del result['attributes']
+
+            response = Response(
+                RESPONSE_TYPE.TABLE,
+                pd.DataFrame(results)
+            )
+        except RestRequestCouldNotBeUnderstoodError as rest_error:
+            logger.error(f'Error running query: {query} on Salesforce, {rest_error}!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_code=0,
+                error_message=str(rest_error)
+            )
+        except Exception as unknown_error:
+            logger.error(f'Error running query: {query} on Salesforce, {unknown_error}!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_code=0,
+                error_message=str(unknown_error)
+            )
+
+        return response
+

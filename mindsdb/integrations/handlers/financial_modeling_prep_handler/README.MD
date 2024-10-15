@@ -3,7 +3,7 @@
 This handler integrates with the [Financial Modeling Prep API](https://site.financialmodelingprep.com/developer/docs) to allow users to use ML for financial analysis and predictions.
 
 ### Connect to the Financial Modeling Prep API
-We start by creating a database to connect to the Financial Modeling API. 
+We start by creating a database to connect to the Financial Modeling Prep API. 
 Retrieve an api key from: (https://site.financialmodelingprep.com/developer/docs)
 
 ~~~~sql
@@ -21,7 +21,7 @@ Now, you can use this established connection to query your database as follows:
 
 ~~~~sql
 SELECT *
-FROM my_table.historical_prices
+FROM fmp_datasource.historical_prices
 WHERE symbol = 'AAPL'
 ~~~~
 
@@ -36,7 +36,7 @@ WHERE symbol = 'AAPL'
 ### Use LIMIT Clause
 ~~~~sql
 SELECT *
-FROM my_table.historical_prices
+FROM fmp_datasource.historical_prices
 WHERE symbol = 'AAPL'
 LIMIT 5
 ~~~~
@@ -53,7 +53,7 @@ LIMIT 5
 To customize specified date range, (from_date, to_date): 
 ~~~~sql
 SELECT *
-FROM my_table.historical_prices
+FROM fmp_datasource.historical_prices
 WHERE symbol = 'AAPL';
 AND from_date = '2023-10-10'
 AND to_date = '2023-12-10'

@@ -181,13 +181,6 @@ class AthenaHandler(DatabaseHandler):
         return self.native_query(query)
 
     def _wait_for_query_to_complete(self, query_execution_id: str) -> str:
-        """
-        Wait for the Athena query to complete.
-        Args:
-            query_execution_id (str): ID of the query to wait for
-        Returns:
-            str: Query execution status
-        """
         while True:
             response = self.connection.get_query_execution(QueryExecutionId=query_execution_id)
             status = response['QueryExecution']['Status']['State']
@@ -195,9 +188,15 @@ class AthenaHandler(DatabaseHandler):
                 return status
 
             check_interval = self.connection_data.get('check_interval', 0)
+            if isinstance(check_interval, str):
+                try:
+                    check_interval = int(check_interval)
+                except ValueError:
+                    check_interval = 0
+            
             if check_interval > 0:
                 time.sleep(check_interval)
-
+                
     def _parse_query_result(self, result: dict) -> pd.DataFrame:
         """
         Parse the result of the Athena query into a DataFrame.

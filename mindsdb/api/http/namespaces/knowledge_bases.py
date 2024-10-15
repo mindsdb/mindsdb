@@ -9,13 +9,13 @@ import pandas as pd
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.api.http.utils import http_error
-from mindsdb.metrics.metrics import api_endpoint_metrics
+from mindsdb.interfaces.knowledge_base.settings import SummarizationParams
 from mindsdb.integrations.handlers.web_handler.urlcrawl_helpers import get_all_websites
-from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.integrations.utilities.rag.loaders.file_loader import FileLoader
 from mindsdb.integrations.utilities.rag.splitters.file_splitter import FileSplitter, FileSplitterConfig
 from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseTable
+from mindsdb.interfaces.storage import db
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
@@ -85,47 +85,42 @@ def _insert_web_pages_into_knowledge_base(table: KnowledgeBaseTable, urls: List[
 @ns_conf.param('knowledge_base_name', 'Name of the knowledge_base')
 class KnowledgeBaseResource(Resource):
     @ns_conf.doc('update_knowledge_base')
-    @api_endpoint_metrics('PUT', '/knowledge_bases/knowledge_base')
     def put(self, project_name: str, knowledge_base_name: str):
         '''Updates a knowledge base.'''
-        # Check for required parameters.
-        if 'knowledge_base' not in request.json:
-            return http_error(
-                HTTPStatus.BAD_REQUEST,
-                'Missing parameter',
-                'Must provide "knowledge_base" parameter in PUT body'
-            )
         session = SessionController()
-        project_controller = ProjectController()
-        try:
-            project = project_controller.get(name=project_name)
-        except ValueError:
-            # Project must exist.
-            return http_error(
-                HTTPStatus.NOT_FOUND,
-                'Project not found',
-                f'Project with name {project_name} does not exist'
-            )
-        try:
-            table = session.kb_controller.get_table(knowledge_base_name, project.id)
-        except ValueError:
-            # Knowledge Base must exist.
-            return http_error(
-                HTTPStatus.NOT_FOUND,
-                'Knowledge Base not found',
-                f'Knowledge Base with name {knowledge_base_name} does not exist'
-            )
+        project = session.database_controller.get_project(project_name)
+
+        if 'knowledge_base' not in request.json:
+            return http_error(HTTPStatus.BAD_REQUEST, 'Missing parameter', 'Must provide "knowledge_base" parameter')
 
         kb = request.json['knowledge_base']
         files = kb.get('files', [])
         urls = kb.get('urls', [])
-        # Optional params for web pages.
         crawl_depth = kb.get('crawl_depth', 1)
         filters = kb.get('filters', [])
+
+        # Handle summarization parameters
+        use_summarization = kb.get('use_summarization', False)
+        summarization_params = kb.get('summarization', {})
+
+        # Update knowledge base with new options
+        knowledge_base = session.kb_controller.get(knowledge_base_name, project.id)
+        if use_summarization or summarization_params:
+            if isinstance(summarization_params, bool):
+                summarization_params = {}
+            knowledge_base.params['summarization'] = SummarizationParams(**summarization_params).model_dump()
+        else:
+            knowledge_base.params.pop('summarization', None)
+
+        db.session.commit()
+
+        # Create KnowledgeBaseTable instance
+        table = session.kb_controller.get_table(knowledge_base_name, project.id)
 
         # Load, split, & embed files into Knowledge Base.
         for file_name in files:
             _insert_file_into_knowledge_base(table, file_name)
         # Crawl, split, & embed web pages into Knowledge Base.
         _insert_web_pages_into_knowledge_base(table, urls, crawl_depth=crawl_depth, filters=filters)
+
         return '', HTTPStatus.OK

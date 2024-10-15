@@ -1,7 +1,6 @@
 import duckdb
 import pandas as pd
 import dropbox
-import requests
 
 from dropbox.exceptions import AuthError, ApiError
 
@@ -56,8 +55,14 @@ class DropboxHandler(DatabaseHandler):
         Returns:
             dropbox: An object to the Dropbox account.
         """
+        if self.is_connected:
+            return self.dbx
+        if "access_token" not in self.connection_args:
+            raise ValueError("Access token must be provided.")
         self.dbx = dropbox.Dropbox(self.connection_args["access_token"])
-        self.logger.info(f"Connected to the Dropbox by {self.dbx.users_get_current_account()}")       
+        self.logger.info(
+            f"Connected to the Dropbox by {self.dbx.users_get_current_account()}"
+        )
 
     def disconnect(self):
         """
@@ -92,6 +97,8 @@ class DropboxHandler(DatabaseHandler):
                 f"Error connecting to Dropbox because of the wrong credentials, {e}!"
             )
             response.error_message = str(e)
+        except Exception as e:
+            self.logger.error(f"Error has occured: {e}")
 
         if response.success and need_to_close:
             self.disconnect()
@@ -100,7 +107,7 @@ class DropboxHandler(DatabaseHandler):
             self.is_connected = False
 
         return response
-    
+
     def get_tables(self) -> Response:
         """
         Retrieves a list of tables (supported files) in the Dropbox.
@@ -115,10 +122,7 @@ class DropboxHandler(DatabaseHandler):
 
         response = Response(
             RESPONSE_TYPE.TABLE,
-            data_frame=pd.DataFrame(
-                supported_files,
-                columns=['table_name']
-            )
+            data_frame=pd.DataFrame(supported_files, columns=["table_name"]),
         )
-        
+
         return response

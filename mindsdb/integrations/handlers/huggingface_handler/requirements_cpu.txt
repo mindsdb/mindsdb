@@ -2,4 +2,5 @@ datasets==2.16.1
 evaluate
 nltk
 huggingface-hub
-torch>=2.2.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
+# Needs to be installed with `pip install --extra-index-url https://download.pytorch.org/whl/ .[huggingface_cpu]`
+torch>=2.2.0+cpu

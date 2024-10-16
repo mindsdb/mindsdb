@@ -506,6 +506,10 @@ class KnowledgeBaseController:
                 kb.vector_database_table
             )
 
+        # kb exists
+        db.session.delete(kb)
+        db.session.commit()
+
         # drop objects if they were created automatically
         if 'vector_storage' in kb.params:
             try:
@@ -517,10 +521,6 @@ class KnowledgeBaseController:
                 self.session.model_controller.delete_model(kb.params['embedding_model'], project_name)
             except EntityNotExistsError:
                 pass
-
-        # kb exists
-        db.session.delete(kb)
-        db.session.commit()
 
     def get(self, name: str, project_id: int) -> db.KnowledgeBase:
         """

@@ -932,6 +932,52 @@ Check out the Google BigQuery data handler details [here](/data-integrations/goo
 Check out the Google Sheets data handler details [here](/data-integrations/google-sheets).
 </Info>
 
+## GreptimeDB
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE greptimedb_datasource       --- display name for the database
+    WITH ENGINE = 'greptimedb',                 --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                              --- host IP address or URL
+      "port": ,                                 --- port used to make TCP/IP connection
+      "database": " ",                          --- database name
+      "user": " ",                              --- database user
+      "password": " ",                          --- database password
+      "ssl": ,                                  --- optional, the `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`)
+      "ssl_ca": {                               --- optional, SSL Certificate Authority
+        "path": " "                                 --- either "path" or "url"
+      },
+      "ssl_cert": {                             --- optional, SSL certificates
+        "url": " "                                  --- either "path" or "url"
+      },
+      "ssl_key": {                              --- optional, SSL keys
+        "path": " "                                 --- either "path" or "url"
+      }
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE greptimedb_datasource
+    WITH ENGINE = 'greptimedb',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 4002,
+      "database": "public",
+      "user": "username",
+      "password": "password"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the GreptimeDB data handler details [here](/data-integrations/greptimedb).
+</Info>
+
+
 ## IBM Db2
 
 <Tabs>

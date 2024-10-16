@@ -7,8 +7,9 @@ class AQIClient:
         self.params = {"token": api_key}
         self.base_endpoint = "https://api.waqi.info/feed"
 
-    def make_request(self, url):
-        resp = requests.get(url, params=self.params)
+    def make_request(self, url, additionalParams={}):
+        newParams = {**self.params, **additionalParams}
+        resp = requests.get(url, params=newParams)
         res = resp.json()
         content = {}
         if res["status"] == "ok":
@@ -28,3 +29,7 @@ class AQIClient:
     def air_quality_user_location(self):
         url = f'{self.base_endpoint}/here/'
         return self.make_request(url)
+
+    def air_quality_station_by_name(self, name):
+        url = 'https://api.waqi.info/search/'
+        return self.make_request(url, {"keyword": name})

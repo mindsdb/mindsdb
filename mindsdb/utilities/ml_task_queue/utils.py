@@ -8,6 +8,7 @@ from redis.exceptions import ConnectionError as RedisConnectionError
 
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.ml_task_queue.const import ML_TASK_STATUS
+from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
 
 
 def to_bytes(obj: object) -> bytes:

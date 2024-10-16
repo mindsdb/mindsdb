@@ -222,11 +222,11 @@ class ProcessCache:
         is_cloud = config.get('cloud', False) # noqa
 
         if config['ml_task_queue']['type'] != 'redis':
-            lightwood_handler = integration_controller.get_handler_module('lightwood')
-            if lightwood_handler is not None and lightwood_handler.Handler is not None:
-                preload_handlers[lightwood_handler.Handler] = 4 if is_cloud else 1
-
             if is_cloud:
+                lightwood_handler = integration_controller.get_handler_module('lightwood')
+                if lightwood_handler is not None and lightwood_handler.Handler is not None:
+                    preload_handlers[lightwood_handler.Handler] = 4 if is_cloud else 1
+
                 huggingface_handler = integration_controller.get_handler_module('huggingface')
                 if huggingface_handler is not None and huggingface_handler.Handler is not None:
                     preload_handlers[huggingface_handler.Handler] = 1

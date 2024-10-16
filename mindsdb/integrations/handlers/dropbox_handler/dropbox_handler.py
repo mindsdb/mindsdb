@@ -2,9 +2,11 @@ import duckdb
 import pandas as pd
 import dropbox
 
+
+from utils.timeout import timeout
 from dropbox.exceptions import AuthError, ApiError
 
-from typing import Dict, Optional
+from typing import Dict, Optional, Text
 
 from duckdb import DuckDBPyConnection
 
@@ -18,6 +20,8 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE,
 )
 
+supported_file_formats = ["csv", "tsv", "json"]
+
 
 class DropboxHandler(DatabaseHandler):
     """
@@ -25,9 +29,8 @@ class DropboxHandler(DatabaseHandler):
     """
 
     name = "dropbox"
-    supported_file_formats = ["csv", "tsv", "json"]
 
-    def __init__(self, name: str, connection_args: Optional[Dict], **kwargs):
+    def __init__(self, name: Text, connection_data: Optional[Dict], **kwargs):
         """
         Initializes the handler.
 
@@ -37,7 +40,7 @@ class DropboxHandler(DatabaseHandler):
             kwargs: Arbitrary keyword arguments.
         """
         super().__init__(name)
-        self.connection_args = connection_args
+        self.connection_args = connection_data
         self.kwargs = kwargs
         self.logger = log.getLogger(__name__)
 
@@ -79,7 +82,7 @@ class DropboxHandler(DatabaseHandler):
 
     def check_connection(self) -> StatusResponse:
         """
-        Checks the status of the connection to the S3 bucket.
+        Checks the status of the connection to the Dropbox.
 
         Returns:
             StatusResponse: An object containing the success status and an error message if an error occurs.
@@ -122,8 +125,13 @@ class DropboxHandler(DatabaseHandler):
         """
         self.connect()
         self.logger.info(f"Getting list of tables...")
-        files = self._list_files()
-        table_names = [file["name"] for file in files]
+        try:
+
+            files = self._list_files()
+            table_names = [file["name"] for file in files]
+
+        except TimeoutError as e:
+            self.logger.info(f"Timeout getting list of tables from dropbox: {e}")
 
         response = Response(
             RESPONSE_TYPE.TABLE,
@@ -133,6 +141,7 @@ class DropboxHandler(DatabaseHandler):
 
         return response
 
+    @timeout(60)
     def _list_files(self, path=""):
         """
         List all files in the Dropbox account starting from the given path.

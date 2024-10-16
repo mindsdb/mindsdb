@@ -535,6 +535,19 @@ class KnowledgeBase(Base):
         ),
     )
 
+    def as_dict(self) -> Dict:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "project_id": self.project_id,
+            "embedding_model": None if self.embedding_model is None else self.embedding_model.name,
+            "vector_database": None if self.vector_database is None else self.vector_database.name,
+            "vector_database_table": self.vector_database_table,
+            "updated_at": self.updated_at,
+            "created_at": self.created_at,
+            "params": self.params
+        }
+
 
 class QueryContext(Base):
     __tablename__ = "query_context"

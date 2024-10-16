@@ -20,4 +20,4 @@ jobs:
           # Add path to the CLA here
           path-to-document: 'https://github.com/mindsdb/mindsdb/blob/main/assets/contributions-agreement/individual-contributor.md'
           branch: 'main'
-          allowlist: bot*, ZoranPandovski, torrmal, Stpmax, paxcema, mindsdbadmin, Ricram2, ea-rus, ilia-tsyplenkov, tomhuds
+          allowlist: bot*, ZoranPandovski, torrmal, Stpmax, mindsdbadmin, ea-rus, tmichaeldb, dusvyat, hamishfagg, MinuraPunchihewa, martyna-mindsdb

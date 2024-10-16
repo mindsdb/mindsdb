@@ -24,12 +24,9 @@ WITH
     engine = 'gcs',
     parameters = {
       "bucket": "<bucket-name>",
-      "project_id": "<project-id>",
       "service_account_json_file_path": "/Users/sam/Downloads/svc.json"
     };
 ```
-
-`project_id` is optional. Connection can be established without `project_id` as well.
 
 ```sql
 CREATE DATABASE gcs_datasource
@@ -45,10 +42,6 @@ Required connection parameters include the following:
 
 * `service_account_json_file_path`: The path to the service account JSON file
 * `bucket`: The name of the GCS bucket.
-
-Optional connection parameters include the following:
-
-* `project_id`: 'The GCP project id.
 
 ## Usage
 

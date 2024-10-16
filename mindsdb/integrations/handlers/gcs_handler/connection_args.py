@@ -9,9 +9,14 @@ connection_args = OrderedDict(
         'required': True,
         'label': 'GCS Bucket'
     },
-    service_account_json_file_path={
-        'type': ARG_TYPE.STR,
+    service_account_keys={
+        'type': ARG_TYPE.PATH,
         'description': 'Path to the service account JSON file',
+        'secret': True
+    },
+    service_account_json={
+        'type': ARG_TYPE.DICT,
+        'description': 'Content of service account JSON file',
         'secret': True
     }
 )
@@ -19,5 +24,5 @@ connection_args = OrderedDict(
 
 connection_args_example = OrderedDict(
     bucket='my-bucket',
-    service_account_json_file_path='/Users/sam/Downloads/svc.json'
+    service_account_keys='/Users/sam/Downloads/svc.json'
 )

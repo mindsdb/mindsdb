@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 
+import json
 import duckdb
 import pandas as pd
 import fsspec
@@ -83,8 +84,21 @@ class GcsHandler(APIHandler):
         self.kwargs = kwargs
         self.is_select_query = False
         self.table_name = None
-
+        self.service_account_json = None
         self.connection = None
+
+        if 'service_account_keys' not in self.connection_data and 'service_account_json' not in self.connection_data:
+            raise ValueError('service_account_keys or service_account_json parameter must be provided.')
+        
+        if 'bucket' not in self.connection_data:
+            raise ValueError('bucket parameter must be provided.')
+        
+        if 'service_account_json' in self.connection_data:
+            self.service_account_json = self.connection_data["service_account_json"]
+        
+        if 'service_account_keys' in self.connection_data:
+            self.service_account_json = json.loads(open(self.connection_data["service_account_keys"]))
+        
         self.is_connected = False
 
         self._files_table = ListFilesTable(self)
@@ -106,11 +120,7 @@ class GcsHandler(APIHandler):
         if self.is_connected is True:
             return self.connection
 
-        # Validate mandatory parameters.
-        if not all(key in self.connection_data for key in ['service_account_json_file_path', 'bucket']):
-            raise ValueError('Required parameters (service_account_json_file_path, bucket) must be provided.')
-
-        # Connect to S3 and configure mandatory credentials.
+        # Connect to GCS and configure mandatory credentials.
         self.connection = self._connect_storage_client()
         self.is_connected = True
 
@@ -125,11 +135,11 @@ class GcsHandler(APIHandler):
         Returns:
             DuckDBPyConnection
         """
-        # Connect to S3 via DuckDB.
+        # Connect to GCS via DuckDB.
         duckdb_conn = duckdb.connect(":memory:")
 
         # Configure mandatory credentials.
-        credentials, project_id = google.auth.load_credentials_from_file(self.connection_data["service_account_json_file_path"])
+        credentials, project_id = google.auth.load_credentials_from_dict(self.service_account_json)
         gcs = fsspec.filesystem("gcs", project=project_id, credentials=credentials)
         duckdb_conn = duckdb.connect()
         duckdb_conn.register_filesystem(gcs)
@@ -146,7 +156,7 @@ class GcsHandler(APIHandler):
         Returns:
             storage.Client: A client object to the GCS account.
         """
-        return storage.Client.from_service_account_json(self.connection_data["service_account_json_file_path"])
+        return storage.Client.from_service_account_info(self.service_account_json)
 
     def disconnect(self):
         """

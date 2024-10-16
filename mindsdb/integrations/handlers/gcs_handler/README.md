@@ -24,24 +24,20 @@ WITH
     engine = 'gcs',
     parameters = {
       "bucket": "<bucket-name>",
-      "service_account_json_file_path": "/Users/sam/Downloads/svc.json"
-    };
-```
-
-```sql
-CREATE DATABASE gcs_datasource
-WITH
-    engine = 'gcs',
-    parameters = {
-      "bucket": "<bucket-name>",
-      "service_account_json_file_path": "/Users/sam/Downloads/svc.json"
+      "service_account_keys": "/tmp/keys.json"
     };
 ```
 
 Required connection parameters include the following:
 
-* `service_account_json_file_path`: The path to the service account JSON file
-* `bucket`: The name of the GCS bucket.
+- `bucket`: The globally unique identifier for your project in Google Cloud where BigQuery is located.
+- `service_account_keys`: The full path to the service account key file.
+- `service_account_json`: The content of a JSON file defined by the `service_account_keys` parameter.
+
+<Note>
+  One of `service_account_keys` or `service_account_json` has to be provided to
+  establish a connection to GCS. If both are provided, `service_account_keys` will be considered.
+</Note>
 
 ## Usage
 

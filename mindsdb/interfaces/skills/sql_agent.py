@@ -1,7 +1,6 @@
 from typing import Iterable, List, Optional
 
 import re
-import hashlib
 from mindsdb_sql.parser.ast import Select, Show, Describe, Explain
 
 import pandas as pd
@@ -26,14 +25,13 @@ class SQLAgent:
             sample_rows_in_table_info: int = 3,
             cache: Optional[dict] = None
     ):
-        self._database = database
         self._command_executor = command_executor
 
         self._sample_rows_in_table_info = int(sample_rows_in_table_info)
 
         self._tables_to_include = include_tables
         self._tables_to_ignore = []
-        self._database = database
+        self._databases = database.split(',')
         if not self._tables_to_include:
             # ignore_tables and include_tables should not be used together.
             # include_tables takes priority if it's set.
@@ -47,7 +45,8 @@ class SQLAgent:
         self._check_permissions(ast_query)
 
         if database is None:
-            database = self._database
+            # if we use tables with prefixes it should work for any database
+            database = self._databases[0]
 
         ret = self._command_executor.execute_command(
             ast_query,
@@ -75,7 +74,7 @@ class SQLAgent:
 
     def get_usable_table_names(self) -> Iterable[str]:
 
-        cache_key = f'{ctx.company_id}_{self._database}_tables'
+        cache_key = f'{ctx.company_id}_{",".join(self._databases)}_tables'
 
         # first check cache and return if found
         if self._cache:
@@ -90,7 +89,7 @@ class SQLAgent:
         dbs = [lst[0] for lst in ret.data.to_lists() if lst[0] != 'information_schema']
         usable_tables = []
         for db in dbs:
-            if db != 'mindsdb' and db == self._database:
+            if db != 'mindsdb' and db in self._databases:
                 try:
                     ret = self._call_engine('show tables', database=db)
                     tables = [lst[0] for lst in ret.data.to_lists() if lst[0] != 'information_schema']
@@ -144,61 +143,24 @@ class SQLAgent:
         If `sample_rows_in_table_info`, the specified number of sample rows will be
         appended to each table description. This can increase performance as demonstrated in the paper.
         """
-        try:
-            cache_key = self._generate_cache_key(table_names)
-            tables_info = self._get_info_from_cache(cache_key, table_names)
 
-            if not tables_info:
-                tables_info = self._fetch_table_info(table_names)
-                self._update_cache(cache_key, tables_info)
-
-            return "\n\n".join(tables_info.values())
-        except Exception as e:
-            logger.error(f"Error fetching table info: {e}")
-            return f"Error fetching table info: {e}"
-
-    def _generate_cache_key(self, table_names: Optional[List[str]]) -> str:
-        # Base part of the cache key
-        base_key = f"{ctx.company_id}_{self._database}_table_info"
-
-        # If table names are provided, sort and concatenate them
-        if table_names:
-            sorted_names = "_".join(sorted(table_names))
-            full_key = f"{base_key}_{sorted_names}"
-        else:
-            full_key = base_key
-
-        # Hash the full key to ensure a constant length
-        hashed_key = hashlib.sha256(full_key.encode()).hexdigest()
-
-        return hashed_key
-
-    def _get_info_from_cache(self, cache_key: str, table_names: Optional[List[str]]) -> dict:
-        """Retrieve table information from cache if available."""
-        cached_info = self._cache.get(cache_key) if self._cache else None
-        if cached_info and table_names:
-            # Verify all requested tables are in cache
-            missing_tables = set([name for name in table_names if name not in cached_info])
-            if not missing_tables:
-                return {name: cached_info[name] for name in table_names}
-        return cached_info if not table_names else {}
-
-    def _fetch_table_info(self, table_names: Optional[List[str]]) -> dict:
-        """Fetch table information from the database."""
         all_tables = [Identifier(name) for name in self.get_usable_table_names()]
 
         if table_names is not None:
             all_tables = self._resolve_table_names(table_names, all_tables)
 
-        tables_info = {}
+        tables_info = []
         for table in all_tables:
-            tables_info[table.parts[-1]] = self._get_single_table_info(table)
-        return tables_info
+            key = f"{ctx.company_id}_{table}_info"
+            table_info = self._cache.get(key) if self._cache else None
+            if table_info is None:
+                table_info = self._get_single_table_info(table)
+                if self._cache:
+                    self._cache.set(key, table_info)
 
-    def _update_cache(self, cache_key: str, tables_info: dict) -> None:
-        """Update the cache with the provided table information."""
-        if self._cache:
-            self._cache.set(cache_key, tables_info)
+            tables_info.append(table_info)
+
+        return "\n\n".join(tables_info)
 
     def _get_single_table_info(self, table: Identifier) -> str:
         if len(table.parts) < 2:

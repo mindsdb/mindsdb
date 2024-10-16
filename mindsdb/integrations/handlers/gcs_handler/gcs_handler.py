@@ -6,7 +6,6 @@ import pandas as pd
 import fsspec
 import google.auth
 from google.cloud import storage
-import pandas as pd
 from typing import Text, Dict, Optional, List
 from duckdb import DuckDBPyConnection
 
@@ -67,7 +66,7 @@ class GcsHandler(APIHandler):
     """
 
     name = 'gcs'
-    
+
     supported_file_formats = ['csv', 'tsv', 'json', 'parquet']
 
     def __init__(self, name: Text, connection_data: Optional[Dict], **kwargs):
@@ -89,16 +88,16 @@ class GcsHandler(APIHandler):
 
         if 'service_account_keys' not in self.connection_data and 'service_account_json' not in self.connection_data:
             raise ValueError('service_account_keys or service_account_json parameter must be provided.')
-        
+
         if 'bucket' not in self.connection_data:
             raise ValueError('bucket parameter must be provided.')
-        
+
         if 'service_account_json' in self.connection_data:
             self.service_account_json = self.connection_data["service_account_json"]
-        
+
         if 'service_account_keys' in self.connection_data:
             self.service_account_json = json.loads(open(self.connection_data["service_account_keys"]))
-        
+
         self.is_connected = False
 
         self._files_table = ListFilesTable(self)
@@ -224,7 +223,6 @@ class GcsHandler(APIHandler):
         """
 
         # Check if the file exists in the GCS bucket.
-        
         storage_client = self._connect_storage_client()
         bucket = storage_client.bucket(self.connection_data['bucket'])
         stats = storage.Blob(bucket=bucket, name=key).exists(storage_client)

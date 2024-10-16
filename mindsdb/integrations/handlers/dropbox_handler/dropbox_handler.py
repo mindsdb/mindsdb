@@ -1,12 +1,11 @@
+import io
 import duckdb
 import pandas as pd
 import dropbox
 
-
-from utils.timeout import timeout
 from dropbox.exceptions import AuthError, ApiError
 
-from typing import Dict, Optional, Text
+from typing import Any, Dict, Optional, Text
 
 from duckdb import DuckDBPyConnection
 
@@ -126,10 +125,8 @@ class DropboxHandler(DatabaseHandler):
         self.connect()
         self.logger.info(f"Getting list of tables...")
         try:
-
             files = self._list_files()
             table_names = [file["name"] for file in files]
-
         except TimeoutError as e:
             self.logger.info(f"Timeout getting list of tables from dropbox: {e}")
 
@@ -141,7 +138,6 @@ class DropboxHandler(DatabaseHandler):
 
         return response
 
-    @timeout(60)
     def _list_files(self, path=""):
         """
         List all files in the Dropbox account starting from the given path.
@@ -173,3 +169,29 @@ class DropboxHandler(DatabaseHandler):
                 break
 
         return files
+
+    def _read_file(self, path) -> pd.DataFrame:
+        """
+        Reads a file from Dropbox and returns it as a Pandas DataFrame.
+
+        Args:
+            path (str): The path to the file in Dropbox.
+
+        Returns:
+            pd.DataFrame: The data from the file as a DataFrame.
+        """
+        self.connect()
+        _, res = self.dbx.files_download(path)
+        content = res.content
+        extension = path.split(".")[-1].lower()
+        if extension == "csv":
+            df = pd.read_csv(io.BytesIO(content))
+        elif extension == "tsv":
+            df = pd.read_csv(io.BytesIO(content), sep="\t")
+        elif extension == "json":
+            df = pd.read_json(io.BytesIO(content))
+        elif extension == "parquet":
+            df = pd.read_parquet(io.BytesIO(content))
+        else:
+            raise ValueError(f"Unsupported file format: {extension}")
+        return df

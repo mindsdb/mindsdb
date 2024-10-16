@@ -13,7 +13,7 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 
-def _build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
+def build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
     """
     Builds a retrieval tool i.e RAG
     """

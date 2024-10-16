@@ -188,11 +188,8 @@ class AthenaHandler(DatabaseHandler):
                 return status
 
             check_interval = self.connection_data.get('check_interval', 0)
-            if isinstance(check_interval, str):
-                try:
-                    check_interval = int(check_interval)
-                except ValueError:
-                    check_interval = 0
+            if isinstance(check_interval, str) and check_interval.strip().isdigit():
+                check_interval = int(check_interval)
             
             if check_interval > 0:
                 time.sleep(check_interval)

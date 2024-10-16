@@ -8,11 +8,7 @@ This documentation describes the integration of MindsDB with [Google Cloud Stora
 ## Prerequisites
 
 1. Before proceeding, ensure that MindsDB is installed locally via [Docker](/setup/self-hosted/docker) or [Docker Desktop](/setup/self-hosted/docker-desktop).
-2. Install the dependencies from the `requirements.txt` file. Run the following command
-
-```bash
-pip install requirements.txt
-```
+2. To connect BigQuery to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
 
 ## Connection
 

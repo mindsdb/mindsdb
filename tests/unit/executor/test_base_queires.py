@@ -410,6 +410,39 @@ class TestSelect(BaseExecutorDummyML):
         assert len(ret) == 1
         assert ret.a[0] == 8
 
+    def test_last_coalesce(self):
+        df = pd.DataFrame([
+            {'a': 1, 'b': 'a'},
+            {'a': 2, 'b': 'b'},
+            {'a': 3, 'b': 'c'},
+        ])
+
+        self.set_data('tasks', df)
+
+        sql = '''
+            select * from dummy_data.tasks
+            where a > coalesce(last, 1)
+        '''
+
+        # first call two rows
+        ret = self.run_sql(sql)
+        assert len(ret) == 2
+
+        # second call zero rows
+        ret = self.run_sql(sql)
+        assert len(ret) == 0
+
+        # add rows to dataframe
+        df.loc[len(df.index)] = [4, 'd']  # should be tracked
+        df.loc[len(df.index)] = [0, 'z']  # not tracked
+        self.set_data('tasks', df)
+
+        ret = self.run_sql(sql)
+
+        # have to be one new line
+        assert len(ret) == 1
+        assert ret.a[0] == 4
+
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_interval(self, data_handler):
         df = pd.DataFrame([

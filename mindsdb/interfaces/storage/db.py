@@ -351,6 +351,7 @@ class ChatBots(Base):
         DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
     )
     created_at = Column(DateTime, default=datetime.datetime.now)
+    webhook_token = Column(String)
 
     def as_dict(self) -> Dict:
         return {
@@ -360,6 +361,7 @@ class ChatBots(Base):
             "agent_id": self.agent_id,
             "model_name": self.model_name,
             "params": self.params,
+            "webhook_token": self.webhook_token,
             "created_at": self.created_at,
             "database_id": self.database_id,
         }
@@ -530,6 +532,19 @@ class KnowledgeBase(Base):
             "name", "project_id", name="unique_knowledge_base_name_project_id"
         ),
     )
+
+    def as_dict(self) -> Dict:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "project_id": self.project_id,
+            "embedding_model": None if self.embedding_model is None else self.embedding_model.name,
+            "vector_database": None if self.vector_database is None else self.vector_database.name,
+            "vector_database_table": self.vector_database_table,
+            "updated_at": self.updated_at,
+            "created_at": self.created_at,
+            "params": self.params
+        }
 
 
 class QueryContext(Base):

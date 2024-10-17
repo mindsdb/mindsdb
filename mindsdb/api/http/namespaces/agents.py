@@ -286,6 +286,9 @@ def _completion_event_generator(
         # Have to commit/flush here so DB isn't locked while streaming.
         db.session.commit()
 
+        if 'mode' not in existing_agent.params and any(skill.type == 'retrieval' for skill in existing_agent.skills):
+            existing_agent.params['mode'] = 'retrieval'
+
         completion_stream = session.agents_controller.get_completion(
             existing_agent,
             messages,

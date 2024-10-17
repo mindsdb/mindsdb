@@ -8,13 +8,25 @@ from mindsdb_sql.parser.ast.select.star import Star
 from mindsdb_sql.parser.ast.select.identifier import Identifier
 import pandas as pd
 
-from base_handler_test import BaseHandlerTestSetup, MockCursorContextManager
+from base_handler_test import BaseHandlerTestSetup
 from mindsdb.integrations.handlers.s3_handler.s3_handler import S3Handler
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
     RESPONSE_TYPE
 )
+
+
+def mock_boto3_region(mock_boto3_client_instance):
+    mock_boto3_client_instance.head_bucket.return_value = {
+        'ResponseMetadata': {
+            'HTTPStatusCode': 200,
+            'HTTPHeaders': {
+                'x-amz-bucket-region': 'us-east-2',
+            }
+        }
+    }
+    mock_boto3_client_instance.meta = MagicMock(region_name='us-east-2')
 
 
 class TestS3Handler(BaseHandlerTestSetup, unittest.TestCase):
@@ -36,7 +48,7 @@ class TestS3Handler(BaseHandlerTestSetup, unittest.TestCase):
         return S3Handler('s3', connection_data=self.dummy_connection_data)
 
     def create_patcher(self):
-        return patch('duckdb.connect')
+        return patch('boto3.client')
 
     def test_connect(self):
         """
@@ -46,6 +58,7 @@ class TestS3Handler(BaseHandlerTestSetup, unittest.TestCase):
         The `check_connection` method handles the connection status.
         """
         self.mock_connect.return_value = MagicMock()
+        mock_boto3_region(self.mock_connect.return_value)
         connection = self.handler.connect()
         self.assertIsNotNone(connection)
         self.assertTrue(self.handler.is_connected)
@@ -59,15 +72,7 @@ class TestS3Handler(BaseHandlerTestSetup, unittest.TestCase):
         # Mock the boto3 client object and its methods.
         mock_boto3_client_instance = MagicMock()
         mock_boto3_client.return_value = mock_boto3_client_instance
-        mock_boto3_client_instance.head_bucket.return_value = {
-            'ResponseMetadata': {
-                'HTTPStatusCode': 200,
-                'HTTPHeaders': {
-                    'x-amz-bucket-region': 'us-east-2',
-                }
-            }
-        }
-        mock_boto3_client_instance.meta = MagicMock(region_name='us-east-2')
+        mock_boto3_region(mock_boto3_client_instance)
 
         response = self.handler.check_connection()
 
@@ -124,6 +129,7 @@ class TestS3Handler(BaseHandlerTestSetup, unittest.TestCase):
         self.assertTrue(response.error_message)
 
     @patch('boto3.client')
+    # @patch('duckdb.connect')
     def test_query_select(self, mock_boto3_client):
         """
         Tests the `query` method to ensure it executes a SELECT SQL query using a mock cursor and returns a Response object.
@@ -133,17 +139,12 @@ class TestS3Handler(BaseHandlerTestSetup, unittest.TestCase):
         # Mock the boto3 client object and its methods.
         mock_boto3_client_instance = MagicMock()
         mock_boto3_client.return_value = mock_boto3_client_instance
-        mock_boto3_client_instance.head_object.return_value = MagicMock()
+        mock_boto3_region(mock_boto3_client_instance)
 
-        # Mock the cursor object and its methods; these are used within `native_query`.
-        mock_conn = MagicMock()
-        mock_cursor = MockCursorContextManager()
-
-        self.handler.connect = MagicMock(return_value=mock_conn)
-        mock_conn.cursor = MagicMock(return_value=mock_cursor)
-
-        mock_cursor.execute.return_value = None
-        mock_cursor.description = [('col_2', 'int64')]
+        duckdb_connect = MagicMock()
+        self.handler._connect_duckdb = duckdb_connect
+        duckdb_execute = duckdb_connect().__enter__().execute
+        duckdb_execute().fetchdf.return_value = pd.DataFrame([], columns=['col_2'])
 
         # Craft the SELECT query and execute it.
         object_name = '`my-bucket/my-file.csv`'
@@ -155,12 +156,13 @@ class TestS3Handler(BaseHandlerTestSetup, unittest.TestCase):
                 parts=[object_name]
             )
         )
+
+        duckdb_execute.reset_mock()
         response = self.handler.query(select)
 
-        mock_conn.execute.assert_called_once_with(
-            f"CREATE TABLE IF NOT EXISTS {self.handler.table_name} AS SELECT * FROM 's3://{self.dummy_connection_data['bucket']}/{object_name.replace('`', '')}'"
+        duckdb_execute.assert_called_once_with(
+            f"SELECT * FROM 's3://{self.dummy_connection_data['bucket']}/{object_name.replace('`', '')}'"
         )
-        mock_cursor.execute.assert_called_once_with(f"SELECT * FROM {self.handler.table_name}")
 
         assert isinstance(response, Response)
         self.assertFalse(response.error_code)
@@ -176,16 +178,12 @@ class TestS3Handler(BaseHandlerTestSetup, unittest.TestCase):
         mock_boto3_client_instance = MagicMock()
         mock_boto3_client.return_value = mock_boto3_client_instance
         mock_boto3_client_instance.head_object.return_value = MagicMock()
+        mock_boto3_region(mock_boto3_client_instance)
 
-        # Mock the cursor object and its methods; these are used within `native_query`.
-        mock_conn = MagicMock()
-        mock_cursor = MockCursorContextManager()
-
-        self.handler.connect = MagicMock(return_value=mock_conn)
-        mock_conn.cursor = MagicMock(return_value=mock_cursor)
-
-        mock_cursor.execute.return_value = None
-        mock_cursor.commit.return_value = None
+        duckdb_connect = MagicMock()
+        self.handler._connect_duckdb = duckdb_connect
+        duckdb_execute = duckdb_connect().__enter__().execute
+        duckdb_execute().fetchdf.return_value = None
 
         # Craft the INSERT query and execute it.
         columns = ['col_1', 'col_2']
@@ -197,15 +195,15 @@ class TestS3Handler(BaseHandlerTestSetup, unittest.TestCase):
             columns=columns,
             values=values
         )
+        duckdb_execute.reset_mock()
         response = self.handler.query(insert)
 
-        values_str = ', '.join([f"'{item}'" for item in values[0]])
-        mock_cursor.execute.assert_called_with(
-            f"INSERT INTO {self.handler.table_name}({', '.join(columns)}) VALUES ({values_str})"
-        )
-        mock_conn.execute.assert_called_with(
-            f"COPY {self.handler.table_name} TO 's3://{self.dummy_connection_data['bucket']}/{self.object_name.replace('`', '')}'"
-        )
+        sqls = [i[0][0] for i in duckdb_execute.call_args_list]
+        assert sqls[0] == f"CREATE TABLE tmp_table AS SELECT * FROM 's3://{self.dummy_connection_data['bucket']}/{self.object_name}'"
+
+        assert sqls[1] == "INSERT INTO tmp_table BY NAME SELECT * FROM df"
+
+        assert sqls[2] == f"COPY tmp_table TO 's3://{self.dummy_connection_data['bucket']}/{self.object_name}'"
 
         assert isinstance(response, Response)
         self.assertFalse(response.error_code)
@@ -227,6 +225,7 @@ class TestS3Handler(BaseHandlerTestSetup, unittest.TestCase):
                 {'Key': 'file5.xlsx'},
             ]
         }
+        mock_boto3_region(mock_boto3_client_instance)
 
         response = self.handler.get_tables()
 
@@ -234,7 +233,7 @@ class TestS3Handler(BaseHandlerTestSetup, unittest.TestCase):
         self.assertEqual(response.type, RESPONSE_TYPE.TABLE)
 
         df = response.data_frame
-        self.assertEqual(len(df), 4)
+        self.assertEqual(len(df), 5)  # +1 table is 'files'
         self.assertNotIn('file5.xlsx', df['table_name'].values)
 
     @patch('mindsdb.integrations.handlers.s3_handler.s3_handler.S3Handler.native_query')

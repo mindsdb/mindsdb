@@ -1,11 +1,13 @@
 from http import HTTPStatus
 
-from flask_restx import Resource, abort
+from flask_restx import Resource
 from sqlalchemy.exc import NoResultFound
 
 from mindsdb.metrics.metrics import api_endpoint_metrics
+from mindsdb.api.http.utils import http_error
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
+from mindsdb.utilities.exception import EntityNotExistsError
 
 
 @ns_conf.route('/')
@@ -33,8 +35,11 @@ class ProjectsGet(Resource):
 
         try:
             project = session.database_controller.get_project(project_name)
-        except NoResultFound:
-            abort(HTTPStatus.NOT_FOUND, f'Project name {project_name} does not exist')
+        except (NoResultFound, EntityNotExistsError):
+            return http_error(
+                HTTPStatus.NOT_FOUND, 'Project not exists',
+                f'Project name {project_name} does not exist'
+            )
 
         return {
             'name': project.name

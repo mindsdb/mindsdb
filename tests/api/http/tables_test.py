@@ -32,7 +32,7 @@ def app():
                 'parameters': {
                     "user": "demo_user",
                     "password": "demo_password",
-                    "host": "3.220.66.106",
+                    "host": "samples.mindsdb.com",
                     "port": "5432",
                     "database": "demo"
                 }
@@ -55,7 +55,6 @@ def test_get_tables(client):
     response = client.get('/api/databases/mindsdb/tables', follow_redirects=True)
     all_tables = response.get_json()
     assert any(db['name'] == 'models' for db in all_tables)
-    assert any(db['name'] == 'models_versions' for db in all_tables)
 
 
 def test_get_table(client):

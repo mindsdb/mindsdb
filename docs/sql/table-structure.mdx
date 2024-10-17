@@ -1,203 +1,116 @@
 ---
-title: MindsDB Information Schema
-sidebarTitle: MindsDB Information Schema
+title: MindsDB Schema
+sidebarTitle: MindsDB Schema
 ---
 
-On start-up, MindsDB consists of one system database (`information_schema`), one default project (`mindsdb`), and two base tables (`models` and `models_versions`) that belong to the default project.
+Initially, MindsDB comprises three system databases and one default project, as follows:
 
-You can verify it by running the following SQL commands:
+- `information_schema` stores metadata of all the objects such as handlers, databases, AI engines, models, jobs, and more.
+- `log` stores log data of models and jobs.
+- `files`, which is initially empty, stores all files uploaded to MindsDB.
+- `mindsdb` is the default project for storing models, views, jobs, triggers, and agents.
+
+List all databases by running the following SQL commands:
 
 ```sql
-SHOW DATABASES;
-
-SHOW FULL DATABASES;
+SHOW [FULL] DATABASES;
 ```
 
-On execution, we get:
+Here is the output:
 
 ```sql
 +----------------------+---------+--------+
 | Database             | TYPE    | ENGINE |
 +----------------------+---------+--------+
 | information_schema   | system  | [NULL] |
+| log                  | system  | [NULL] |
 | mindsdb              | project | [NULL] |
 | files                | data    | files  |
 +----------------------+---------+--------+
 ```
 
-And:
-
-```sql
-SHOW TABLES;
-
-SHOW FULL TABLES;
-```
-
-On execution, we get:
-
-```sql
-+----------------------+-------------+
-| Tables_in_mindsdb    | Table_type  |
-+----------------------+-------------+
-| models               | BASE TABLE  |
-| models_versions      | BASE TABLE  |
-+----------------------+-------------+
-```
-
 ## The `information_schema` Database
 
-The `information_schema` database contains all the system tables, such as `databases`, `tables`, `columns`, `ml_engines`, etc.
+The `information_schema` database contains all the system tables that correspond to MindsDB objects as follows:
 
-You can query for any system information using this query template:
+| Name              | Description                                                                                                                           |
+|-------------------|---------------------------------------------------------------------------------------------------------------------------------------|
+| `HANDLERS`        | Stores all (data and AI) handlers, which are [data integrations](/integrations/data-overview) and [AI integrations](/integrations/ai-overview) supported by MindsDB.         |
+| `DATABASES`       | Stores all data sources connected to MindsDB. Note that corresponding handlers are required, and you can connect only the [data sources supported by MindsDB](/integrations/data-overview) after [installing the required handler dependencies](/setup/self-hosted/docker#install-dependencies). |
+| `ML_ENGINES`      | Stores all AI/ML engines configured at MindsDB. Note that corresponding handlers are required, and you can connect only the [AI/ML engines supported by MindsDB](/integrations/ai-overview) after [installing the required handler dependencies](/setup/self-hosted/docker#install-dependencies).  |
+| `MODELS`          | Stores all models deployed within the MindsDB ecosystem. Note that you can create and deploy a model only after configuring the corresponding AI/ML engine.                  |
+| `VIEWS`           | Stores all views created in MindsDB.                                                                                                  |
+| `JOBS`            | Stores all [jobs](/mindsdb_sql/sql/create/jobs) that facilitate workflow automation.                                                  |
+| `TRIGGERS`        | Stores all [triggers](/mindsdb_sql/sql/create/trigger) that facilitate workflow automation.                                            |
+| `AGENTS`          | Stores all [AI agents](/mindsdb_sql/agents/agent) created in MindsDB.                                                                 |
+| `SKILLS`          | Stores all skills that can be assigned to [AI agents](/mindsdb_sql/agents/agent).                                                                                  |
+| `KNOWLEDGE_BASES` | Stores all [knowledge bases](/mindsdb_sql/agents/knowledge-bases) that can be assigned to AI agents as skills.                        |
+| `CHATBOTS`        | Stores all [chatbots](/mindsdb_sql/agents/chatbot) that comprise an AI agent and a chat interface.                                     |
+
+<Tip>
+Some of the objects, including `DATABASES`, `ML_ENGINES`, and `MODELS`, may contain sensitive information in the form of API keys or passwords. MindsDB hides this sensitive information by default.
+
+If you want to expose this sensitive information in the output when querying these objects, set the `show_secrets` flag to `true`.
 
 ```sql
-SELECT *
-FROM information_schema.table_name;
+SET SHOW_SECRETS = TRUE;
 ```
 
-Don't forget to replace *table_name* with the table of your interest.
+And to hide them back, set it to `false`.
 
-Let's query for the following:
+```sql
+SET SHOW_SECRETS = FALSE;
+```
+</Tip>
 
-* All the available handlers, including data and ML handlers, used to create database connections and AI engines.
+Use the `SHOW` command to list all objects as follows:
 
-  ```sql
-  SELECT *
-  FROM information_schema.handlers;
-  ```
+```sql
+SHOW object_name
+[FROM project_name]
+[LIKE 'object_name_part%']
+[WHERE key = value];
+```
 
-  Or, alternatively:
+For instance, list all OpenAI models from the `mindsdb` project that contain `ai` in its name.
 
-  ```sql
-  SHOW HANDLERS;
-  ```
+```sql
+SHOW MODELS
+FROM mindsdb
+LIKE '%ai%'
+WHERE engine = 'openai';
+```
 
-* All the available data handlers used to create database connections.
+Another example of how to query for the available data and AI handlers:
 
-  ```sql
-  SELECT *
-  FROM information_schema.handlers
-  WHERE type = 'data';
-  ```
+```sql
+SHOW HANDLERS
+WHERE type = 'data';
 
-  Or, alternatively:
+SHOW HANDLERS
+WHERE type = 'ml';
+```
 
-  ```sql
-  SHOW HANDLERS
-  WHERE type = 'data';
-  ```
-
-* All the available ML handlers used to create AI engines.
-
-  ```sql
-  SELECT *
-  FROM information_schema.handlers
-  WHERE type = 'ml';
-  ```
-
-  Or, alternatively:
-
-  ```sql
-  SHOW HANDLERS
-  WHERE type = 'ml';
-  ```
-
-* All the created database connections:
-
-  ```sql
-  SELECT *
-  FROM information_schema.databases;
-  ```
-
-  Or, alternatively:
-
-  ```sql
-  SHOW DATABASES;
-
-  SHOW FULL DATABASES;
-  ```
-
-  <Info>
-  Please note that if you modify the connection arguments in the handler's code, the changes are visible in this table.
-  </Info>
-
-* All the created AI engines:
-
-  ```sql
-  SELECT *
-  FROM information_schema.ml_engines;
-  ```
-
-  Or, alternatively:
-
-  ```sql
-  SHOW ML_ENGINES;
-  ```
+<Tip>
+Before you can connect a data source using a data handler or create a model using an AI handler, make sure that the `IMPORT_SUCCESS` column reads *true*. If it reads *false*, then [install the dependencies for this handler](/setup/self-hosted/docker#install-dependencies) before using it.
+</Tip>
 
 ## The `mindsdb` Project
 
-You create models and views within projects. The default project is `mindsdb`. But you can create your projects using the `CREATE DATABASE` statement, as below:
-
-```sql
-CREATE DATABASE my_new_project;
-```
-
-Here is how to create a model within your project:
-
-```sql
-CREATE MODEL my_new_project.my_model
-FROM integration_name
-    (SELECT * FROM table_name)
-PREDICT target;
-```
-
-And here is how to create a view within your project:
-
-```sql
-CREATE VIEW my_new_project.my_view (
-    SELECT *
-    FROM integration_name.table_name
-);
-```
-
-Please replace the *integration_name* and *table_name* placeholders with your database name and your table name respectively.
+MindsDB enables you to group all objects within [projects](/sql/project). Projects can store models, views, jobs, triggers, agents, skills, knowledge bases, and chatbots.
 
 <Note>
-    **What If Names of a Model and a View are the Same?**
-    Please note that if you use the same name for a model and a view stored in one project, then MindsDB adds `_view` to the view name.
+Projects store all objects except for handlers, connected data sources, and configured AI/ML engines.
+
+Note that based on the available handlers, you can connect a data source to MindsDB or configure an AI/ML engine within MindsDB. Having done that, you can, for instance, create a view with data from the connected data source and store it inside the project, or create a model based on the configured AI/ML engine and store it inside the project.
 </Note>
 
-Now you can verify that the model and view are within your project:
+MindsDB provides the default `mindsdb` project where all objects created without defining a project are stored.
 
-```sql
-SHOW FULL TABLES FROM my_new_project;
-```
-
-On execution, we get:
-
-```sql
-+------------------------------+-------------+
-| Tables_in_my_new_project     | Table_type  |
-+------------------------------+-------------+
-| models                       | BASE TABLE  |
-| models_versions              | BASE TABLE  |
-| my_model                     | MODEL       |
-| my_view                      | VIEW        |
-+------------------------------+-------------+
-```
-
-## The `models` and `models_versions` Tables
-
-The `mindsdb` project and every project that you create contain these two tables by default:
-
-* The `models` table stores information about the models within the project, such as `name`, `status`, `accuracy`, and more.
-
-* The `models_versions` table stores information about all present and past versions of each model.
-
-For more information on the `models` and `models_versions` tables, visit our [docs on the `PROJECT` entity](/sql/project/).
+Learn more about how to create and manage [projects here](/sql/project).
 
 ## The `files` Database
 
-It is another default database that stores all the files uploaded by you to MindsDB Cloud.
+It is another default database that stores all the files uploaded to MindsDB.
 
 Here is how you can [upload files to MindsDB](/sql/create/file/).

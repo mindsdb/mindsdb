@@ -6,7 +6,7 @@ import pandas as pd
 from mindsdb_sql.parser import ast
 
 from mindsdb.integrations.libs.api_handler import APIResource
-from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
+from mindsdb.integrations.utilities.handlers.query_utilities import SELECTQueryParser, SELECTQueryExecutor
 from mindsdb.integrations.utilities.sql_utils import (
     extract_comparison_conditions, FilterCondition, FilterOperator, SortColumn)
 from mindsdb.utilities import log
@@ -107,12 +107,12 @@ class GithubIssuesTable(APIResource):
 
         return pd.DataFrame(data, columns=self.get_columns())
 
-    def add(self, issue: dict):
+    def add(self, issues: List[dict]):
         """Inserts data into the GitHub "Create an issue" API
 
         Parameters
         ----------
-        issue : dict
+        issues : list of dict
 
         Raises
         ------
@@ -126,6 +126,10 @@ class GithubIssuesTable(APIResource):
             )
 
         self.handler.connect()
+        for issue in issues:
+            self._add(issue)
+
+    def _add(self, issue: dict):
         current_repo = self.handler.connection.get_repo(self.handler.repository)
 
         insert_kwargs = {}

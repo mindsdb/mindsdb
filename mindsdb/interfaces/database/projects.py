@@ -1,5 +1,6 @@
 import datetime
-from typing import List
+from copy import deepcopy
+from typing import List, Optional
 from collections import OrderedDict
 
 import sqlalchemy as sa
@@ -13,7 +14,7 @@ from mindsdb.utilities.config import Config
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.database.views import ViewController
 from mindsdb.utilities.context import context as ctx
-from mindsdb.utilities.exception import EntityExistsError
+from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 import mindsdb.utilities.profiler as profiler
 
 
@@ -36,6 +37,13 @@ class Project:
         ).first()
         if existing_record is not None:
             raise EntityExistsError('Project already exists', name)
+
+        existing_record = db.Integration.query.filter(
+            sa.func.lower(db.Integration.name) == name,
+            db.Integration.company_id == ctx.company_id
+        ).first()
+        if existing_record is not None:
+            raise EntityExistsError('Database exists with this name ', name)
 
         record = db.Project(
             name=name,
@@ -113,7 +121,9 @@ class Project:
         return view_meta
 
     @staticmethod
-    def _get_model_data(predictor_record, integraion_record):
+    def _get_model_data(predictor_record, integraion_record, with_secrets: bool = True):
+        from mindsdb.interfaces.database.integrations import integration_controller
+
         predictor_data = predictor_record.data or {}
         training_time = None
         if (
@@ -127,6 +137,25 @@ class Project:
             and predictor_record.training_stop_at is not None
         ):
             training_time = round((predictor_record.training_stop_at - predictor_record.training_start_at).total_seconds(), 3)
+
+        # regon Hide sensitive info
+        training_options = predictor_record.learn_args
+        handler_module = integration_controller.get_handler_module(integraion_record.engine)
+
+        if with_secrets is False and handler_module:
+
+            model_using_args = getattr(handler_module, 'model_using_args', None)
+            if (
+                isinstance(model_using_args, dict)
+                and isinstance(training_options, dict)
+                and isinstance(training_options.get('using'), dict)
+            ):
+                training_options['using'] = deepcopy(training_options['using'])
+                for key, value in model_using_args.items():
+                    if key in training_options['using'] and value.get('secret', False):
+                        training_options['using'][key] = '******'
+        # endregion
+
         predictor_meta = {
             'type': 'model',
             'id': predictor_record.id,
@@ -141,7 +170,7 @@ class Project:
             'mindsdb_version': predictor_record.mindsdb_version,
             'error': predictor_data.get('error'),
             'select_data_query': predictor_record.fetch_data_query,
-            'training_options': predictor_record.learn_args,
+            'training_options': training_options,
             'deletable': True,
             'label': predictor_record.label,
             'current_training_phase': predictor_record.training_phase_current,
@@ -191,7 +220,7 @@ class Project:
             return None
         return self._get_model_data(record[0], record[1])
 
-    def get_models(self, active: bool = True):
+    def get_models(self, active: bool = True, with_secrets: bool = True):
         query = db.session.query(db.Predictor, db.Integration).filter_by(
             project_id=self.id,
             deleted_at=sa.null(),
@@ -207,8 +236,34 @@ class Project:
         data = []
 
         for predictor_record, integraion_record in query.all():
-            data.append(self._get_model_data(predictor_record, integraion_record))
+            data.append(
+                self._get_model_data(predictor_record, integraion_record, with_secrets)
+            )
 
+        return data
+
+    def get_agents(self):
+        records = (
+            db.session.query(db.Agents).filter(
+                db.Agents.project_id == self.id,
+                db.Agents.company_id == ctx.company_id,
+                db.Agents.deleted_at == sa.null()
+            )
+            .order_by(db.Agents.name)
+            .all()
+        )
+        data = [
+            {
+                'name': record.name,
+                'query': record.query,
+                'metadata': {
+                    'type': 'agent',
+                    'id': record.id,
+                    'deletable': True
+                }
+            }
+            for record in records
+        ]
         return data
 
     def get_views(self):
@@ -254,10 +309,6 @@ class Project:
     def get_tables(self):
         data = OrderedDict()
         data['models'] = {'type': 'table', 'deletable': False}
-        data['models_versions'] = {'type': 'table', 'deletable': False}
-        data['jobs'] = {'type': 'table', 'deletable': False}
-        data['mdb_triggers'] = {'type': 'table', 'deletable': False}
-        data['chatbots'] = {'type': 'table', 'deletable': False}
 
         models = self.get_models()
         for model in models:
@@ -267,6 +318,10 @@ class Project:
         views = self.get_views()
         for view in views:
             data[view['name']] = view['metadata']
+
+        agents = self.get_agents()
+        for agent in agents:
+            data[agent['name']] = agent['metadata']
 
         return data
 
@@ -286,6 +341,16 @@ class Project:
                 columns = predictor_record.to_predict
                 if not isinstance(columns, list):
                     columns = [columns]
+        else:
+            # is it agent?
+            agent = db.Agents.query.filter_by(
+                company_id=ctx.company_id,
+                project_id=self.id,
+                name=table_name
+            ).first()
+            if agent is not None:
+                from mindsdb.interfaces.agents.constants import ASSISTANT_COLUMN, USER_COLUMN
+                columns = [ASSISTANT_COLUMN, USER_COLUMN]
 
         return columns
 
@@ -302,7 +367,7 @@ class ProjectController:
 
         return [Project.from_record(x) for x in records]
 
-    def get(self, id: int = None, name: str = None, deleted: bool = False) -> Project:
+    def get(self, id: Optional[int] = None, name: Optional[str] = None, deleted: bool = False) -> Project:
         if id is not None and name is not None:
             raise ValueError("Both 'id' and 'name' is None")
 
@@ -323,7 +388,7 @@ class ProjectController:
         record = q.first()
 
         if record is None:
-            raise ValueError(f'Project is not found: {name}/{id}')
+            raise EntityNotExistsError(f'Project not found: {name}')
         return Project.from_record(record)
 
     def add(self, name: str) -> Project:

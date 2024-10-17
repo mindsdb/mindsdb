@@ -9,7 +9,7 @@ info:
     email: admin@mindsdb.com
   license:
     name: GNU General Public License v3.0
-    url: 'https://github.com/mindsdb/mindsdb/blob/staging/LICENSE'
+    url: 'https://github.com/mindsdb/mindsdb/blob/main/LICENSE'
 servers:
   - url: 'https://cloud.mindsdb.com/v1/api'
     description: MindsDB Production cloud server

@@ -1,5 +1,7 @@
-from collections import OrderedDict
+import time
+import json
 
+import pandas as pd
 import psycopg
 from psycopg.postgres import types
 from psycopg.pq import ExecStatus
@@ -10,7 +12,6 @@ from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.integrations.libs.base import DatabaseHandler
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -20,6 +21,8 @@ from mindsdb.integrations.libs.response import (
 import mindsdb.utilities.profiler as profiler
 
 logger = log.getLogger(__name__)
+
+SUBSCRIBE_SLEEP_INTERVAL = 1
 
 
 class PostgresHandler(DatabaseHandler):
@@ -39,10 +42,36 @@ class PostgresHandler(DatabaseHandler):
 
         self.connection = None
         self.is_connected = False
+        self.thread_safe = True
 
     def __del__(self):
         if self.is_connected:
             self.disconnect()
+
+    def _make_connection_args(self):
+        config = {
+            'host': self.connection_args.get('host'),
+            'port': self.connection_args.get('port'),
+            'user': self.connection_args.get('user'),
+            'password': self.connection_args.get('password'),
+            'dbname': self.connection_args.get('database')
+        }
+
+        # https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-PARAMKEYWORDS
+        connection_parameters = self.connection_args.get('connection_parameters')
+        if isinstance(connection_parameters, dict) is False:
+            connection_parameters = {}
+        if 'connect_timeout' not in connection_parameters:
+            connection_parameters['connect_timeout'] = 10
+        config.update(connection_parameters)
+
+        if self.connection_args.get('sslmode'):
+            config['sslmode'] = self.connection_args.get('sslmode')
+
+        # If schema is not provided set public as default one
+        if self.connection_args.get('schema'):
+            config['options'] = f'-c search_path={self.connection_args.get("schema")},public'
+        return config
 
     @profiler.profile()
     def connect(self):
@@ -58,23 +87,9 @@ class PostgresHandler(DatabaseHandler):
         if self.is_connected:
             return self.connection
 
-        config = {
-            'host': self.connection_args.get('host'),
-            'port': self.connection_args.get('port'),
-            'user': self.connection_args.get('user'),
-            'password': self.connection_args.get('password'),
-            'dbname': self.connection_args.get('database')
-        }
-
-        if self.connection_args.get('sslmode'):
-            config['sslmode'] = self.connection_args.get('sslmode')
-
-        # If schema is not provided set public as default one
-        if self.connection_args.get('schema'):
-            config['options'] = f'-c search_path={self.connection_args.get("schema")},public'
-
+        config = self._make_connection_args()
         try:
-            self.connection = psycopg.connect(**config, connect_timeout=10)
+            self.connection = psycopg.connect(**config)
             self.is_connected = True
             return self.connection
         except psycopg.Error as e:
@@ -154,7 +169,7 @@ class PostgresHandler(DatabaseHandler):
                         logger.error(f'Error casting column {col.name} to {types_map[pg_type.name]}: {e}')
 
     @profiler.profile()
-    def native_query(self, query: str) -> Response:
+    def native_query(self, query: str, params=None) -> Response:
         """
         Executes a SQL query on the PostgreSQL database and returns the result.
 
@@ -169,8 +184,11 @@ class PostgresHandler(DatabaseHandler):
         connection = self.connect()
         with connection.cursor() as cur:
             try:
-                cur.execute(query)
-                if ExecStatus(cur.pgresult.status) == ExecStatus.COMMAND_OK:
+                if params is not None:
+                    cur.executemany(query, params)
+                else:
+                    cur.execute(query)
+                if cur.pgresult is None or ExecStatus(cur.pgresult.status) == ExecStatus.COMMAND_OK:
                     response = Response(RESPONSE_TYPE.OK)
                 else:
                     result = cur.fetchall()
@@ -195,7 +213,28 @@ class PostgresHandler(DatabaseHandler):
 
         if need_to_close:
             self.disconnect()
+
         return response
+
+    def insert(self, table_name: str, df: pd.DataFrame):
+        need_to_close = not self.is_connected
+
+        connection = self.connect()
+
+        columns = [f'"{c}"' for c in df.columns]
+        with connection.cursor() as cur:
+            try:
+                with cur.copy(f'copy "{table_name}" ({",".join(columns)}) from STDIN  WITH CSV') as copy:
+                    df.to_csv(copy, index=False, header=False)
+
+                connection.commit()
+            except Exception as e:
+                logger.error(f'Error running insert to {table_name} on {self.database}, {e}!')
+                connection.rollback()
+                raise e
+
+        if need_to_close:
+            self.disconnect()
 
     @profiler.profile()
     def query(self, query: ASTNode) -> Response:
@@ -208,9 +247,9 @@ class PostgresHandler(DatabaseHandler):
         Returns:
             Response: The response from the `native_query` method, containing the result of the SQL query execution.
         """
-        query_str = self.renderer.get_string(query, with_failback=True)
+        query_str, params = self.renderer.get_exec_params(query, with_failback=True)
         logger.debug(f"Executing SQL query: {query_str}")
-        return self.native_query(query_str)
+        return self.native_query(query_str, params)
 
     def get_tables(self) -> Response:
         """
@@ -248,7 +287,6 @@ class PostgresHandler(DatabaseHandler):
 
         if not table_name or not isinstance(table_name, str):
             raise ValueError("Invalid table name provided.")
-
         query = f"""
             SELECT
                 column_name as "Field",
@@ -257,60 +295,93 @@ class PostgresHandler(DatabaseHandler):
                 information_schema.columns
             WHERE
                 table_name = '{table_name}'
+            AND
+                table_schema = current_schema()
         """
         return self.native_query(query)
 
+    def subscribe(self, stop_event, callback, table_name, columns=None, **kwargs):
 
-connection_args = OrderedDict(
-    user={
-        'type': ARG_TYPE.STR,
-        'description': 'The user name used to authenticate with the PostgreSQL server.',
-        'required': True,
-        'label': 'User'
-    },
-    password={
-        'type': ARG_TYPE.PWD,
-        'description': 'The password to authenticate the user with the PostgreSQL server.',
-        'required': True,
-        'label': 'Password'
-    },
-    database={
-        'type': ARG_TYPE.STR,
-        'description': 'The database name to use when connecting with the PostgreSQL server.',
-        'required': True,
-        'label': 'Database'
-    },
-    host={
-        'type': ARG_TYPE.STR,
-        'description': 'The host name or IP address of the PostgreSQL server. NOTE: use \'127.0.0.1\' instead of \'localhost\' to connect to local server.',
-        'required': True,
-        'label': 'Host'
-    },
-    port={
-        'type': ARG_TYPE.INT,
-        'description': 'The TCP/IP port of the PostgreSQL server. Must be an integer.',
-        'required': True,
-        'label': 'Port'
-    },
-    schema={
-        'type': ARG_TYPE.STR,
-        'description': 'The schema in which objects are searched first.',
-        'required': False,
-        'label': 'Schema'
-    },
-    sslmode={
-        'type': ARG_TYPE.STR,
-        'description': 'sslmode that will be used for connection.',
-        'required': False,
-        'label': 'sslmode'
-    }
-)
+        config = self._make_connection_args()
+        config['autocommit'] = True
 
-connection_args_example = OrderedDict(
-    host='127.0.0.1',
-    port=5432,
-    user='root',
-    schema='public',
-    password='password',
-    database='database'
-)
+        conn = psycopg.connect(connect_timeout=10, **config)
+
+        # create db trigger
+        trigger_name = f'mdb_notify_{table_name}'
+
+        before, after = '', ''
+
+        if columns:
+            # check column exist
+            conn.execute(f'select {",".join(columns)} from {table_name} limit 0')
+
+            columns = set(columns)
+            trigger_name += '_' + '_'.join(columns)
+
+            news, olds = [], []
+            for column in columns:
+                news.append(f'NEW.{column}')
+                olds.append(f'OLD.{column}')
+
+            before = f'IF ({", ".join(news)}) IS DISTINCT FROM ({", ".join(olds)}) then\n'
+            after = '\nEND IF;'
+        else:
+            columns = set()
+
+        func_code = f'''
+             CREATE OR REPLACE FUNCTION {trigger_name}()
+               RETURNS trigger AS $$
+             DECLARE
+             BEGIN
+               {before}
+               PERFORM pg_notify( '{trigger_name}', row_to_json(NEW)::text);
+               {after}
+               RETURN NEW;
+             END;
+             $$ LANGUAGE plpgsql;
+         '''
+        conn.execute(func_code)
+
+        # for after update - new and old have the same values
+        conn.execute(f'''
+             CREATE OR REPLACE TRIGGER {trigger_name}
+               BEFORE INSERT OR UPDATE ON {table_name}
+               FOR EACH ROW
+               EXECUTE PROCEDURE {trigger_name}();
+        ''')
+        conn.commit()
+
+        # start listen
+        conn.execute(f"LISTEN {trigger_name};")
+
+        def process_event(event):
+            try:
+                row = json.loads(event.payload)
+            except json.JSONDecoder:
+                return
+
+            # check column in input data
+            if not columns or columns.intersection(row.keys()):
+                callback(row)
+
+        try:
+            conn.add_notify_handler(process_event)
+
+            while True:
+                if stop_event.is_set():
+                    # exit trigger
+                    return
+
+                # trigger getting updates
+                # https://www.psycopg.org/psycopg3/docs/advanced/async.html#asynchronous-notifications
+                conn.execute("SELECT 1").fetchone()
+
+                time.sleep(SUBSCRIBE_SLEEP_INTERVAL)
+
+        finally:
+            conn.execute(f'drop TRIGGER {trigger_name} on {table_name}')
+            conn.execute(f'drop FUNCTION {trigger_name}')
+            conn.commit()
+
+            conn.close()

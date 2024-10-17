@@ -1,51 +1,46 @@
+import os
 import pytest
+import pymssql
 import pandas as pd
-from unittest.mock import MagicMock
 from mindsdb.integrations.handlers.mssql_handler.mssql_handler import SqlServerHandler
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE,
 )
 
+HANDLER_KWARGS = {
+    "connection_data": {
+        "host": os.environ.get("MDB_TEST_MSSQL_HOST", "localhost"),
+        "port": os.environ.get("MDB_TEST_MSSQL_PORT", "1433"),
+        "user": os.environ.get("MDB_TEST_MSSQL_USER", "sa"),
+        "password": os.environ.get("MDB_TEST_MSSQL_PASSWORD", "admin5678@"),
+        "database": os.environ.get("MDB_TEST_MSSQL_DATABASE", "mdb_db_handler_test"),
+    }
+}
+
 
 @pytest.fixture(scope="class")
 def sql_server_handler():
-    HANDLER_KWARGS = {
-        "connection_data": {
-            "host": "localhost",
-            "port": "1433",
-            "user": "sa",
-            "password": "admin5678@",
-            "database": "master",
-        }
-    }
+    seed_db()
     handler = SqlServerHandler("test_sqlserver_handler", **HANDLER_KWARGS)
     yield handler
     handler.disconnect()
 
 
-@pytest.fixture(scope="class")
-def database_connection_and_cursor():
-    connection = MagicMock()
-    cursor = MagicMock()
-    connection.cursor.return_value = cursor
-    return connection, cursor
+def seed_db():
+    """Seed the test DB with some data"""
 
+    # Connect to 'master' while we create our test DB
+    conn_info = HANDLER_KWARGS["connection_data"].copy()
+    conn_info["database"] = "master"
+    db = pymssql.connect(**conn_info, autocommit=True)
+    cursor = db.cursor()
 
-expected_columns = {
-    "Field": ["col_one", "col_two", "col_three", "col_four"],
-    "Type": ["int", "int", "float", "text"],
-}
-
-expected_data = {
-    "col_one": [1, 2, 3],
-    "col_two": [-1, -2, -3],
-    "col_three": [0.1, 0.2, 0.3],
-    "col_four": ["A", "B", "C"],
-}
+    with open("mindsdb/integrations/handlers/mssql_handler/tests/seed.sql", "r") as f:
+        for line in f.readlines():
+            cursor.execute(line)
+    cursor.close()
+    db.close()
 
 
 def check_valid_response(res):
@@ -59,17 +54,42 @@ def check_valid_response(res):
     ), f"expected to have None in error message, but got {res.error_message}"
 
 
-@pytest.mark.usefixtures("sql_server_handler", "database_connection_and_cursor")
-class TestMssqlHandlerConnect:
+def get_table_names(sql_server_handler):
+    res = sql_server_handler.get_tables()
+    tables = res.data_frame
+    assert tables is not None, "expected to have some tables in the db, but got None"
+    assert (
+        "table_name" in tables
+    ), f"expected to get 'table_name' column in the response:\n{tables}"
+    return list(tables["table_name"])
+
+
+@pytest.mark.usefixtures("sql_server_handler")
+class TestMSSQLHandlerConnect:
     def test_connect(self, sql_server_handler):
         sql_server_handler.connect()
         assert sql_server_handler.is_connected, "the handler has failed to connect"
 
+    def test_check_connection(self, sql_server_handler):
+        res = sql_server_handler.check_connection()
+        assert res.success, res.error_message
 
-@pytest.mark.usefixtures("sql_server_handler", "database_connection_and_cursor")
-class TestMssqlHandlerGet:
+
+class TestMSSQLHandlerDisconnect:
+    def test_disconnect(self, sql_server_handler):
+        sql_server_handler.disconnect()
+        assert sql_server_handler.is_connected is False, "failed to disconnect"
+
+    def test_check_connection(self, sql_server_handler):
+        res = sql_server_handler.check_connection()
+        assert res.success, res.error_message
+
+
+@pytest.mark.usefixtures("sql_server_handler")
+class TestMSSQLHandlerTables:
+    table_for_creation = "test_mdb"
+
     def test_get_tables(self, sql_server_handler):
-        tables = sql_server_handler.get_tables()
         res = sql_server_handler.get_tables()
         tables = res.data_frame
         assert (
@@ -78,24 +98,60 @@ class TestMssqlHandlerGet:
         assert (
             "table_name" in tables
         ), f"expected to get 'table_name' in the response but got: {tables}"
+        assert (
+            "test" in tables["table_name"].values
+        ), "expected to have 'test' in the response."
 
     def test_get_columns(self, sql_server_handler):
         response = sql_server_handler.get_columns("test")
-        assert response.type == RESPONSE_TYPE.TABLE, f"expected a TABLE"
+        assert response.type == RESPONSE_TYPE.TABLE, "expected a TABLE"
         assert len(response.data_frame) > 0, "expected > O columns"
+
+        expected_columns = {
+            "Field": ["col_one", "col_two", "col_three", "col_four"],
+            "Type": ["int", "int", "float", "varchar"],
+        }
         expected_df = pd.DataFrame(expected_columns)
         assert response.data_frame.equals(
             expected_df
         ), "response does not contain the expected columns"
 
+    def test_create_table(self, sql_server_handler):
+        query = f"""
+        IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = '{self.table_for_creation}')
+        BEGIN
+            CREATE TABLE {self.table_for_creation} (test_col INT)
+        END
+        """
+        res = sql_server_handler.native_query(query)
+        check_valid_response(res)
+        tables = get_table_names(sql_server_handler)
+        assert (
+            self.table_for_creation in tables
+        ), f"expected to have {self.table_for_creation} in database, but got: {tables}"
 
-@pytest.mark.usefixtures("sql_server_handler", "database_connection_and_cursor")
-class TestMssqlHandlerQuery:
+    def test_drop_table(self, sql_server_handler):
+        query = f"DROP TABLE IF EXISTS {self.table_for_creation}"
+        res = sql_server_handler.native_query(query)
+        check_valid_response(res)
+        tables = get_table_names(sql_server_handler)
+        assert self.table_for_creation not in tables
+
+
+@pytest.mark.usefixtures("sql_server_handler")
+class TestMSSQLHandlerQuery:
     def test_select_native_query(self, sql_server_handler):
         query = "SELECT * FROM test"
         response = sql_server_handler.native_query(query)
         assert type(response) is Response
         assert response.resp_type == RESPONSE_TYPE.TABLE
+
+        expected_data = {
+            "col_one": [1, 2, 3],
+            "col_two": [-1, -2, -3],
+            "col_three": [0.1, 0.2, 0.3],
+            "col_four": ["A", "B", "C"],
+        }
         expected_df = pd.DataFrame(expected_data)
         assert response.data_frame.equals(
             expected_df

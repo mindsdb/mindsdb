@@ -4,13 +4,11 @@ import numpy as np
 import pandas as pd
 import json
 
+from flask.json.provider import DefaultJSONProvider
+
 
 class CustomJSONEncoder(json.JSONEncoder):
     def default(self, obj):
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        if pd.isnull(obj):
-            return None
         if isinstance(obj, timedelta):
             return str(obj)
         if isinstance(obj, datetime):
@@ -23,5 +21,13 @@ class CustomJSONEncoder(json.JSONEncoder):
             return int(obj)
         if isinstance(obj, np.float16) or isinstance(obj, np.float32) or isinstance(obj, np.float64) or isinstance(obj, Decimal):
             return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        if pd.isnull(obj):
+            return None
 
         return str(obj)
+
+
+class CustomJSONProvider(CustomJSONEncoder, DefaultJSONProvider):
+    ...

@@ -75,6 +75,8 @@ class BaseUnitTest:
             mp_patcher = mock.patch("multiprocessing.get_context").__enter__()
             mp_patcher.side_effect = lambda x: dummy
 
+        os.unlink(cfg_file)
+
     @staticmethod
     def teardown_class(cls):
         # remove tmp db file
@@ -95,12 +97,6 @@ class BaseUnitTest:
         self.clear_db(self.db)
         self.reset_prom_collectors()
 
-    def teardown_method(self):
-        try:
-            os.unlink(self._dummy_db_path)
-        except (PermissionError, FileNotFoundError) as e:
-            logger.warning('Unable to clean up temporary database file: %s', str(e))
-
     def clear_db(self, db):
         # drop
         db.session.rollback()
@@ -114,65 +110,7 @@ class BaseUnitTest:
         db.session.add(r)
         r = db.Integration(name="views", data={}, engine="views")
         db.session.add(r)
-        r = db.Integration(name="autokeras", data={}, engine="autokeras")
-        db.session.add(r)
-        r = db.Integration(name="autogluon", data={}, engine="autogluon")
-        db.session.add(r)
-        r = db.Integration(name="huggingface", data={}, engine="huggingface")
-        db.session.add(r)
-        r = db.Integration(name="merlion", data={}, engine="merlion")
-        db.session.add(r)
-        r = db.Integration(name="monkeylearn", data={}, engine="monkeylearn")
-        db.session.add(r)
-        r = db.Integration(name="statsforecast", data={}, engine="statsforecast")
-        db.session.add(r)
-        r = db.Integration(name="dummy_ml", data={}, engine="dummy_ml")
-        db.session.add(r)
-        r = db.Integration(name="neuralforecast", data={}, engine="neuralforecast")
-        db.session.add(r)
-        r = db.Integration(name="popularity_recommender", data={}, engine="popularity_recommender")
-        db.session.add(r)
-        r = db.Integration(name="lightfm", data={}, engine="lightfm")
-        db.session.add(r)
-        r = db.Integration(name="openai", data={}, engine="openai")
-        db.session.add(r)
-        r = db.Integration(name="anomaly_detection", data={}, engine="anomaly_detection")
-        db.session.add(r)
-        r = db.Integration(
-            name="anyscale_endpoints", data={}, engine="anyscale_endpoints"
-        )
-        db.session.add(r)
-        r = db.Integration(
-            name="langchain", data={}, engine="langchain"
-        )
-        db.session.add(r)
-        r = db.Integration(
-            name="langchain_embedding", data={}, engine="langchain_embedding"
-        )
-        db.session.add(r)
-        r = db.Integration(name="writer", data={}, engine="writer")
-        db.session.add(r)
-        r = db.Integration(name="rag", data={}, engine="rag")
-        db.session.add(r)
-        r = db.Integration(name="dummy_llm", data={}, engine="dummy_llm")
-        db.session.add(r)
         r = db.Integration(name="dummy_data", data={'db_path': self._dummy_db_path}, engine="dummy_data")
-        db.session.add(r)
-        r = db.Integration(name="litellm", data={}, engine="litellm")
-        db.session.add(r)
-        r = db.Integration(name="sentence_transformers", data={}, engine="sentence_transformers")
-        db.session.add(r)
-
-        r = db.Integration(name="pycaret", data={}, engine="pycaret")
-        db.session.add(r)
-
-        r = db.Integration(name="vertex", data={}, engine="vertex")
-        db.session.add(r)
-
-        r = db.Integration(name="google_gemini", data={}, engine="google_gemini")
-        db.session.add(r)
-
-        r = db.Integration(name="leonardo_ai", data={}, engine="leonardo_ai")
         db.session.add(r)
 
         # Lightwood should always be last (else tests break, why?)
@@ -195,13 +133,17 @@ class BaseUnitTest:
         con.execute('DROP TABLE IF EXISTS {}'.format(table))
         con.execute('CREATE TABLE {} AS SELECT * FROM data'.format(table))
 
-    def wait_predictor(self, project, name, timeout=100):
+    def wait_predictor(self, project, name, timeout=100, filters=None):
         """
         Wait for the predictor to be created,
         raising an exception if predictor creation fails or exceeds timeout
         """
         for attempt in range(timeout):
-            ret = self.run_sql(f"select * from {project}.models where name='{name}'")
+            sql = f"select * from {project}.models where name='{name}'"
+            if filters is not None:
+                for k, v in filters.items():
+                    sql += f" and {k}='{v}'"
+            ret = self.run_sql(sql)
             if not ret.empty:
                 status = ret["STATUS"][0]
                 if status == "complete":
@@ -216,14 +158,12 @@ class BaseUnitTest:
         ret = self.command_executor.execute_command(parse_sql(sql, dialect="mindsdb"))
         assert ret.error_code is None, f"SQL execution failed with error: {ret.error_code}"
         if ret.data is not None:
-            columns = [col.alias if col.alias else col.name for col in ret.columns]
-            return pd.DataFrame(ret.data, columns=columns)
+            return ret.data.to_df()
 
     @staticmethod
     def ret_to_df(ret):
         # converts executor response to dataframe
-        columns = [col.alias if col.alias is not None else col.name for col in ret.columns]
-        return pd.DataFrame(ret.data, columns=columns)
+        return ret.data.to_df()
 
     def reset_prom_collectors(self) -> None:
         """Resets collectors in the default Prometheus registry.
@@ -244,9 +184,24 @@ class BaseExecutorTest(BaseUnitTest):
     Set up executor: mock data handler
     """
 
-    def setup_method(self):
+    def setup_method(self, import_dummy_ml=False):
         super().setup_method()
-        self.set_executor()
+        self.set_executor(import_dummy_ml=import_dummy_ml)
+
+    def _import_handler(self, integration_controller, handler_name, handler_dir):
+        handler_meta = {
+            'import': {
+                'success': None,
+                'error_message': None,
+                'folder': handler_dir.name,
+                'dependencies': [],
+            },
+            'path': handler_dir,
+            'name': handler_name,
+            'permanent': False,
+        }
+        integration_controller.handlers_import_status[handler_name] = handler_meta
+        integration_controller.import_handler(handler_name, '')
 
     def set_executor(
         self,
@@ -262,6 +217,9 @@ class BaseExecutorTest(BaseUnitTest):
         from mindsdb.api.executor.command_executor import (
             ExecuteCommands,
         )
+        # clear cache of previous test case to apply mocks of current test case
+        from mindsdb.integrations.libs.process_cache import process_cache
+        process_cache.cache = {}
         from mindsdb.interfaces.database.integrations import integration_controller
         from mindsdb.interfaces.file.file_controller import FileController
         from mindsdb.interfaces.model.model_controller import ModelController
@@ -283,19 +241,18 @@ class BaseExecutorTest(BaseUnitTest):
             sys.path.append(test_handler_path)
 
             handler_dir = Path(test_handler_path) / 'dummy_ml_handler'
-            integration_controller.import_handler('', handler_dir)
+            self._import_handler(integration_controller, 'dummy_ml', handler_dir)
 
-            if not integration_controller.handlers_import_status['dummy_ml']['import']['success']:
+            if not integration_controller.get_handler_meta('dummy_ml')['import']['success']:
                 error = integration_controller.handlers_import_status['dummy_ml']['import']['error_message']
                 raise Exception(f"Can not import: {str(handler_dir)}: {error}")
 
         if import_dummy_llm:
-
             test_handler_path = os.path.dirname(__file__)
             sys.path.append(test_handler_path)
 
             handler_dir = Path(test_handler_path) / 'dummy_llm_handler'
-            integration_controller.import_handler('', handler_dir)
+            self._import_handler(integration_controller, 'dummy_llm', handler_dir)
 
             if not integration_controller.handlers_import_status['dummy_llm']['import']['success']:
                 error = integration_controller.handlers_import_status['dummy_llm']['import']['error_message']
@@ -323,6 +280,9 @@ class BaseExecutorTest(BaseUnitTest):
     def teardown_method(self):
         # Don't want cache to pick up a stale version with the wrong duckdb_path.
         self.command_executor.session.integration_controller.delete('dummy_data')
+        if os.path.exists(self._dummy_db_path):
+            os.unlink(self._dummy_db_path)
+        os.rmdir(os.path.dirname(self._dummy_db_path))
 
     def save_file(self, name, df):
         file_path = tempfile.mktemp(prefix="mindsdb_file_")
@@ -337,7 +297,11 @@ class BaseExecutorTest(BaseUnitTest):
             self.db.session.delete(r)
 
         # create
-        r = self.db.Integration(name=name, data={}, engine=engine)
+        r = self.db.Integration(
+            name=name,
+            data={'password': 'secret'},
+            engine=engine
+        )
         self.db.session.add(r)
         self.db.session.commit()
 
@@ -360,15 +324,7 @@ class BaseExecutorTest(BaseUnitTest):
                 )
 
             return handler_response(
-                pd.DataFrame(
-                    [
-                        {
-                            "table_schema": "public",
-                            "table_name": "table1",
-                            "table_type": "BASE TABLE",
-                        }
-                    ]
-                )
+                pd.DataFrame(tables_ar)
             )
 
         mock_handler().get_tables.side_effect = get_tables_f
@@ -437,8 +393,7 @@ class BaseExecutorDummyML(BaseExecutorTest):
     """
 
     def setup_method(self):
-        super().setup_method()
-        self.set_executor(import_dummy_ml=True)
+        super().setup_method(import_dummy_ml=True)
 
     def run_sql(self, sql, throw_error=True, database='mindsdb'):
         self.command_executor.session.database = database
@@ -448,11 +403,13 @@ class BaseExecutorDummyML(BaseExecutorTest):
         if throw_error:
             assert ret.error_code is None
         if ret.data is not None:
-            columns = [
-                col.alias if col.alias is not None else col.name
-                for col in ret.columns
-            ]
-            return pd.DataFrame(ret.data, columns=columns)
+            return ret.data.to_df()
+
+    def get_models(self):
+        models = {}
+        for p in self.db.Predictor.query.all():
+            models[p.id] = p
+        return models
 
 
 class BaseExecutorDummyLLM(BaseExecutorTest):
@@ -503,10 +460,9 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
         self.db.session.add(r)
         self.db.session.commit()
 
-        def predict_f(_model_name, data, pred_format="dict", *args, **kargs):
+        def predict_f(_model_name, df, pred_format="dict", *args, **kargs):
             explain_arr = []
-            if isinstance(data, dict):
-                data = [data]
+            data = df.to_dict('records')
 
             predicted_value = predictor["predicted_value"]
             target = predictor["predict"]
@@ -574,6 +530,6 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
         )
         if ret.error_code is not None:
             raise Exception()
-        if isinstance(ret.data, list):
-            ret.records = self.ret_to_df(ret).to_dict('records')
+        if ret.data is not None:
+            ret.records = ret.data.records
         return ret

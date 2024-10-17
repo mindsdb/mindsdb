@@ -1,7 +1,7 @@
 import pandas as pd
 from typing import List
 from mindsdb.integrations.libs.api_handler import APITable
-from mindsdb.integrations.handlers.utilities.query_utilities import SELECTQueryParser, SELECTQueryExecutor
+from mindsdb.integrations.utilities.handlers.query_utilities import SELECTQueryParser, SELECTQueryExecutor
 from mindsdb.utilities import log
 from mindsdb_sql.parser import ast
 
@@ -385,7 +385,7 @@ class AQByNetworkStationTable(APITable):
 
         self.check_res(res=response)
 
-        df = pd.json_normalize(response["content"])
+        df = pd.json_normalize(response["content"]["data"])
 
         select_statement_executor = SELECTQueryExecutor(
             df,
@@ -413,32 +413,13 @@ class AQByNetworkStationTable(APITable):
         """
 
         return [
-            "status",
-            "data.aqi",
-            "data.idx",
-            "data.attributions",
-            "data.city.geo",
-            "data.city.name",
-            "data.city.url",
-            "data.city.location",
-            "data.dominentpol",
-            "data.iaqi.co.v",
-            "data.iaqi.dew.v",
-            "data.iaqi.h.v",
-            "data.iaqi.no2.v",
-            "data.iaqi.o3.v",
-            "data.iaqi.p.v",
-            "data.iaqi.pm10.v",
-            "data.iaqi.pm25.v",
-            "data.iaqi.so2.v",
-            "data.iaqi.t.v",
-            "data.iaqi.w.v",
-            "data.time.s",
-            "data.time.tz",
-            "data.time.v",
-            "data.time.iso",
-            "data.forecast.daily.o3",
-            "data.forecast.daily.pm10",
-            "data.forecast.daily.pm25",
-            "data.debug.sync"
+            'uid',
+            'aqi',
+            'time.tz',
+            'time.stime',
+            'time.vtime',
+            'station.name',
+            'station.geo',
+            'station.url',
+            'station.country'
         ]

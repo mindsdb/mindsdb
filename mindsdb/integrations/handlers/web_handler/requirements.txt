@@ -1,2 +1,3 @@
-bs4
 pymupdf
+html2text
+bs4

@@ -74,11 +74,11 @@ The dependencies for many of the data or ML integrations are not installed by de
 If you want to use a data or ML integration whose dependencies are not available by default, install it by running this command:
 
 ```
-pip install '.[handler_name]'
+pip install mindsdb[handler_name]
 ```
 
 <Tip>
-You can find all available [handlers here](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers).
+You can find all available [handlers here](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers).
 </Tip>
 
 ## Troubleshooting
@@ -117,14 +117,6 @@ the `starting` phase. But if the server has started and you still get this
 error, please report it on our
 [GitHub repository](https://github.com/mindsdb/mindsdb/issues).
 
-### How to Overcome `ImportError: failed to find libmagic`
-
-If you get the `ImportError: failed to find libmagic` error, you should install the `libmagic` manually by running one of the commands below:
-
-```bash
-pip install python-magic-bin  # for linux and windows
-brew install libmagic  # for macOS
-```
 
 ## Further Issues?
 

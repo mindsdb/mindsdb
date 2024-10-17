@@ -1,38 +1,93 @@
-# MindsDB Individual Contributor License Agreement
+# MindsDB, Inc. Contributor License Agreement
 
-Thank you for your interest in contributing to MindsDB ("We" or "Us").This contributor agreement ("Agreement") documents the rights granted by contributors to Us. To make this document effective, please sign it and send it to Us by email, following the instructions at community@mindsdb.com. This is a legally binding document, so please read it carefully before agreeing to it. The Agreement may cover more than one software project managed by Us.
+By Submitting a Contribution to a Project, you hereby accept and agree to the following terms and
+conditions (this “Agreement”) for your prior, present and future Contributions submitted to MindsDB, Inc.
+(“Company”). Except for the licenses granted herein to Company, you reserve all right, title, and interest
+in and to your Contributions.
 
 1. Definitions
-"You" means the individual who Submits a Contribution to Us."Contribution" means any work of authorship that is Submitted by You to Us in which You own or assert ownership of the Copyright. If You do not own the Copyright in the entire work of authorship, please follow the instructions in community@mindsdb.com."Copyright" means all rights protecting works of authorship owned or controlled by You,including copyright, moral and neighboring rights, as appropriate, for the full term of their existence including any extensions by You.
-"Material" means the work of authorship which is made available by Us to third parties. When this Agreement covers more than one software project, the Material means the work of authorship to which the Contribution was Submitted. After You Submit the Contribution, it may be included in the Material."Submit"  means any form of electronic, verbal, or written communication sent to Us or our representatives, including but not limited to electronic mailing lists, source code control systems,and issue tracking systems that are managed by, or on behalf of, Us for the purpose of discussing and improving the Material, but excluding communication that is conspicuously marked or otherwise designated in writing by You as "Not a Contribution.
-""Submission Date" means the date on which You Submit a Contribution to Us.
-"Effective Date" means the date You execute this Agreement or the date You first Submit aContribution to Us, whichever is earlier."Media" means any portion of a Contribution which is not software.
-2. Grant of Rights
-2.1 Copyright License
-(a) You retain ownership of the Copyright in Your Contribution and have the same rights to use or license the Contribution which You would have had without entering into the Agreement.
-(b) To the maximum extent permitted by the relevant law, You grant to Us a perpetual, worldwide,non-exclusive, transferable, royalty-free, irrevocable license under the Copyright covering the Contribution, with the right to sublicense such rights through multiple tiers of sublicensees, to reproduce, modify, display, perform and distribute the Contribution as part of the Material; providedthat this license is conditioned upon compliance with Section 2.3.
-2.2 Patent License
-For patent claims including, without limitation, method, process, and apparatus claims which You own, control or have the right to grant, now or in the future, You grant to Us a perpetual, worldwide,non-exclusive, transferable, royalty-free, irrevocable patent license, with the right to sublicense theserights to multiple tiers of sublicensees, to make, have made, use, sell, offer for sale, import and otherwise transfer the Contribution and the Contribution in combination with the Material (andportions of such combination). This license is granted only to the extent that the exercise of thelicensed rights infringes such patent claims; and provided that this license is conditioned uponcompliance with Section 2.3.
-2.3 Outbound License
-As a condition on the grant of rights in Sections 2.1 and 2.2, We agree to license the Contribution only under the terms of the license or licenses which We are using on the Submission Date for the Material(including any rights to adopt any future version of a license if permitted).In addition, We may use the following licenses for Media in the Contribution:  (including any right toadopt any future version of a license if permitted).
-2.4 Moral Rights. 
-If moral rights apply to the Contribution, to the maximum extent permitted by law,You waive and agree not to assert such moral rights against Us or our successors in interest, or any ofour licensees, either direct or indirect.
-2.5 Our Rights. 
-You acknowledge that We are not obligated to use Your Contribution as part of the Material and may decide to include any Contribution We consider appropriate.2.6 Reservation of Rights. Any rights not expressly assigned or licensed under this section areexpressly reserved by You.
-3. Agreement
-You confirm that:
-(a) You have the legal authority to enter into this Agreement.
-(b) You own the Copyright and patent claims covering the Contribution which are required to grant the rights under Section 2.
-(c) The grant of rights under Section 2 does not violate any grant of rights which You have made to third parties, including Your employer.  If You are an employee, You have had Your employer approvethis Agreement or sign the Entity version of this document.  If You are less than eighteen years old,please have Your parents or guardian sign the Agreement.
-(d) You have followed the instructions in community@mindsdb.com, if You do not own the Copyright in the entire work of authorship Submitted.
-4. Disclaimer
-EXCEPT FOR THE EXPRESS WARRANTIES IN SECTION 3, THE CONTRIBUTION ISPROVIDED "AS IS". MORE PARTICULARLY, ALL EXPRESS OR IMPLIED WARRANTIESINCLUDING, WITHOUT LIMITATION, ANY IMPLIED WARRANTY OF MERCHANTABILITY,FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT ARE EXPRESSLYDISCLAIMED BY YOU TO US AND BY US TO YOU. TO THE EXTENT THAT ANY SUCHWARRANTIES CANNOT BE DISCLAIMED, SUCH WARRANTY IS LIMITED IN DURATION
-TO THE MINIMUM PERIOD PERMITTED BY LAW.
-5. Consequential Damage Waiver
-TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT WILLYOU OR US BE LIABLE FOR ANY LOSS OF PROFITS, LOSS OF ANTICIPATED SAVINGS,LOSS OF DATA, INDIRECT, SPECIAL, INCIDENTAL, CONSEQUENTIAL AND EXEMPLARY DAMAGES ARISING OUT OF THIS AGREEMENT REGARDLESS OF THE LEGAL OR EQUITABLE THEORY (CONTRACT, TORT OR OTHERWISE) UPON WHICH THE CLAIM IS BASED.
-6. Miscellaneous
-6.1 This Agreement will be governed by and construed in accordance with the laws of California excluding its conflicts of law provisions. Under certain circumstances, the governing law in this section might be superseded by the United Nations Convention on Contracts for the International Saleof Goods ("UN Convention") and the parties intend to avoid the application of the UN Convention to this Agreement and, thus, exclude the application of the UN Convention in its entirety to this Agreement.
-6.2 This Agreement sets out the entire agreement between You and Us for Your Contributions to Usand overrides all other agreements or understandings.
-6.3  If You or We assign the rights or obligations received through this Agreement to a third party, as acondition of the assignment, that third party must agree in writing to abide by all the rights andobligations in the Agreement.
-6.4 The failure of either party to require performance by the other party of any provision of this Agreement in one situation shall not affect the right of a party to require such performance at any timein the future. A waiver of performance under a provision in one situation shall not be considered awaiver of the performance of the provision in the future or a waiver of the provision in its entirety.
-6.5 If any provision of this Agreement is found void and unenforceable, such provision will bereplaced to the extent possible with a provision that comes closest to the meaning of the original provision and which is enforceable.  The terms and conditions set forth in this Agreement shall apply not withstanding any failure of essential purpose of this Agreement or any limited remedy to the maximum extent possible under law.
+   
+    1.1. “Submit” or “Submitting” is the act of uploading, submitting, transmitting, or distributing code or
+other content to any Project, including but not limited to communication on electronic mailing
+lists, source code control systems, and issue tracking systems that are managed by, or on behalf
+of, the Project for the purpose of discussing and improving that Project.
+
+    1.2. “Contribution” shall mean the code, documentation, or other original works of authorship,
+including any modifications or additions to an existing work, that is Submitted by you to
+Company for inclusion in, or documentation of, any of the works, products or projects owned or
+managed by Company (each a “Project”).
+2. Your Employer. References to “employer” in this Agreement include your employer or anyone else
+for whom you are acting in making or Submitting your Contribution, e.g. as a contractor, vendor, or
+agent, and any other entity that controls, is controlled by, or is under common control with that entity.
+For the purposes of this definition, “control” means (i) the power, direct or indirect, to cause the
+direction or management of such entity, whether by contract or otherwise, or (ii) ownership of fifty
+percent (50%) or more of the outstanding shares, or (iii) beneficial ownership of such entity. If your
+Contribution is made in the course of your work for an employer or your employer has
+intellectual property rights in your Contribution by contract or applicable law, you must
+secure permission from your employer to make the Contribution before Submitting the
+Contribution. In that case, the term “you” in this Agreement will refer to you and the employer
+collectively. If you change employers in the future and desire to Submit additional Contributions for
+the new employer, then you agree to secure permission from the new employer before Submitting
+those Contributions.
+3. Originality of Work. You represent and warrant that each of your Contributions is entirely your
+original work, and that the Contribution, whether alone or in combination with the Project, will infringe
+upon or misappropriate the intellectual property or other rights of any third party. Should you wish to
+Submit materials that are not your original work, you may Submit them separately to the Project if you
+(i) retain all copyright and license information that was in the materials as you received them, (ii) in
+the description accompanying your Contribution, include the phrase “Contribution containing
+materials of a third party:” followed by the names of the third party and any licenses or other
+restrictions of which you are aware, and (iii) follow any other instructions in the Project’s written
+guidelines concerning Contributions.
+4. Licenses
+   
+   4.1. Copyright License. You grant Company, and those who receive the Contribution directly or
+indirectly from Company, a perpetual, worldwide, non-exclusive, royalty-free, irrevocable license
+in the Contribution to reproduce, prepare derivative works of, publicly display, publicly perform,
+and distribute the Contribution and such derivative works, and to sublicense any or all of the
+foregoing rights to third parties.
+
+   4.2. Patent License. You grant Company, and those who receive the Contribution directly or indirectly
+from Company, a perpetual, worldwide, non-exclusive, royalty-free, irrevocable license under
+your patent claims that are necessarily infringed by the Contribution or the combination of the
+Contribution with the Project to which it was Submitted to make, have made, use, offer to sell,
+sell and import or otherwise dispose of the Contribution alone or with the Project.
+
+   4.3. Other Rights Reserved. Each party reserves all rights not expressly granted in this Agreement.
+No additional licenses or rights whatsoever (including, without limitation, any implied licenses)
+are granted by implication, exhaustion, estoppel or otherwise.
+
+5. Prior Contributions. You agree that if you submitted a Contribution to a Project prior to the Effective
+Date (each a “Prior Contribution”), then, regardless of whether you had an agreement in place with
+Company governing such Prior Contributions, such Prior Contributions are deemed “Contributions”
+hereunder and are hereby licensed to Company pursuant to Section 4 as of the date you Submitted
+the Prior Contribution.
+6. Representations and Warranties. You represent and warrant that you are legally entitled to grant
+the above licenses. You represent and warrant that each of your Contributions is entirely your original
+work (except as you may have disclosed in accordance with Section 3 ). You represent and warrant
+that you have secured permission from your employer to make the Contribution in cases where your
+Contribution is made in the course of your work for your employer or your employer has intellectual
+property rights in your Contribution (or any portion thereof) by contract or applicable law. If you are
+agreeing to this Agreement on behalf of your employer, you represent and warrant that you have the
+necessary authority to bind the listed employer to the obligations contained in this Agreement. You
+are not expected to provide support for your Contribution unless you choose to do so. UNLESS
+REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING, AND EXCEPT FOR THE
+WARRANTIES EXPRESSLY STATED IN SECTIONS 3 AND 6 , THE CONTRIBUTION PROVIDED
+UNDER THIS AGREEMENT IS PROVIDED WITHOUT WARRANTY OF ANY KIND, INCLUDING,
+BUT NOT LIMITED TO, ANY WARRANTY OF MERCHANTABILITY, OR FITNESS FOR A
+PARTICULAR PURPOSE.
+7. Notice to Company. You agree to notify Company in writing of any facts or circumstances of which
+you later become aware that would make your representations or warranties in this Agreement
+inaccurate in any respect. You may contact Company at [EMAIL].
+8. Information about Contributions. You agree that Contributions to Projects and information about
+Contributions may be maintained indefinitely and disclosed publicly, including your name and other
+information that you submit with your Contribution.
+9. Governing Law/Jurisdiction. This Agreement is governed by the laws of the State of California, and
+the parties consent to exclusive jurisdiction and venue in the federal courts sitting in the City and
+County of San Francisco. The parties waive all defenses of lack of personal jurisdiction and forum
+non-conveniens.
+10. Entire Agreement/Assignment. This Agreement is the entire agreement between the parties, and
+supersedes any and all prior agreements, understandings or communications, written or oral,
+between the parties relating to the subject matter hereof, including any of the foregoing as applicable
+to Prior Contributions. This Agreement may be freely assigned by Company, without notice to you.
+The parties accept and agree to be bound by the terms of this Agreement as of the date of the last
+signature below (the “Effective Date”).

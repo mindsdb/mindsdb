@@ -56,7 +56,7 @@ def configure_logging():
                 "level": mindsdb_level,
             },
             "alembic": {
-                "level": logging.DEBUG,
+                "level": mindsdb_level,
             },
         },
     )

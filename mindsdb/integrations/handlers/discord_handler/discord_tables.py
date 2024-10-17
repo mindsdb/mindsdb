@@ -8,7 +8,7 @@ from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditio
 
 from mindsdb.integrations.libs.response import HandlerResponse as Response
 
-from mindsdb.integrations.handlers.utilities.query_utilities.insert_query_utilities import (
+from mindsdb.integrations.utilities.handlers.query_utilities.insert_query_utilities import (
     INSERTQueryParser
 )
 

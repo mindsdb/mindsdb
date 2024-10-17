@@ -21,23 +21,23 @@ from enum import Enum
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict, Union
-from collections import OrderedDict
 
 import pandas as pd
 from pandas.api import types as pd_types
 
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
+from mindsdb.utilities.fs import safe_extract
 from mindsdb.interfaces.storage import db
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.libs.const import PREDICTOR_STATUS
 from mindsdb.integrations.utilities.utils import format_exception_error
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 import mindsdb.utilities.profiler as profiler
+
 
 from .proc_wrapper import (
     pd_decode, pd_encode, encode, decode, BYOM_METHOD,
-    import_string, find_model_class
+    import_string, find_model_class, check_module
 )
 from .__about__ import __version__
 
@@ -268,6 +268,7 @@ class BYOMHandler(BaseMLEngine):
 
         self.engine_storage.update_connection_args({
             'handler_version': __version__,
+            'mode': connection_args.get('mode'),
             'versions': {
                 '1': {
                     'code': code_path.name,
@@ -281,9 +282,12 @@ class BYOMHandler(BaseMLEngine):
 
         model_proxy = self._get_model_proxy()
         try:
-            model_proxy.check()
+            info = model_proxy.check(connection_args.get('mode'))
+            self.engine_storage.json_set('methods', info['methods'])
+
         except Exception as e:
-            model_proxy.remove_venv()
+            if hasattr(model_proxy, 'remove_venv'):
+                model_proxy.remove_venv()
             raise e
 
     def update_engine(self, connection_args: dict) -> None:
@@ -332,10 +336,20 @@ class BYOMHandler(BaseMLEngine):
 
         model_proxy = self._get_model_proxy(new_version)
         try:
-            model_proxy.check()
+            methods = model_proxy.check()
+            self.engine_storage.json_set('methods', methods)
+
         except Exception as e:
-            model_proxy.remove_venv()
+            if hasattr(model_proxy, 'remove_venv'):
+                model_proxy.remove_venv()
             raise e
+
+    def function_list(self):
+        return self.engine_storage.json_get('methods')
+
+    def function_call(self, name, args):
+        mp = self._get_model_proxy()
+        return mp.func_call(name, args)
 
     def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
         using_args = args.get('using', {})
@@ -396,10 +410,14 @@ class ModelWrapperUnsafe:
     """
 
     def __init__(self, code, modules_str, engine_id, engine_version: int):
-        module = import_string(code)
-        model_class = find_model_class(module)
-        self.model_class = model_class
-        self.model_instance = self.model_class()
+        self.module = import_string(code)
+
+        model_instance = None
+        model_class = find_model_class(self.module)
+        if model_class is not None:
+            model_instance = model_class()
+
+        self.model_instance = model_instance
 
     def train(self, df, target, args):
         self.model_instance.train(df, target, args)
@@ -432,8 +450,13 @@ class ModelWrapperUnsafe:
             return self.model_instance.describe(attribute)
         return pd.DataFrame()
 
-    def check(self):
-        pass
+    def func_call(self, func_name, args):
+        func = getattr(self.module, func_name)
+        return func(*args)
+
+    def check(self, mode: str = None):
+        methods = check_module(self.module, mode)
+        return methods
 
 
 class ModelWrapperSafe:
@@ -475,7 +498,7 @@ class ModelWrapperSafe:
                 tar_path = self.env_storage_path.with_suffix('.tar')
                 if self.env_path.exists() is False and tar_path.exists() is True:
                     with tarfile.open(tar_path) as tar:
-                        tar.extractall(path=bese_env_path)
+                        safe_extract(tar, path=bese_env_path)
             else:
                 self.env_path = self.env_storage_path
 
@@ -548,10 +571,11 @@ class ModelWrapperSafe:
 
         is_pandas = any([m.lower().startswith('pandas') for m in modules])
         if not is_pandas:
-            modules.append('pandas >=2.0.0, <2.1.0')
+            modules.append('pandas>=2.0.0,<2.1.0')
+            modules.append('numpy<2.0.0')
 
         # for dataframe serialization
-        modules.append('pyarrow==11.0.0')
+        modules.append('pyarrow==14.0.1')
         return modules
 
     def install_modules(self, modules, pip_cmd):
@@ -587,10 +611,11 @@ class ModelWrapperSafe:
             raise RuntimeError(p.stderr.read())
         return ret
 
-    def check(self):
+    def check(self, mode: str = None):
         params = {
             'method': BYOM_METHOD.CHECK.value,
             'code': self.code,
+            'mode': mode,
         }
         return self._run_command(params)
 
@@ -598,10 +623,12 @@ class ModelWrapperSafe:
         params = {
             'method': BYOM_METHOD.TRAIN.value,
             'code': self.code,
-            'df': pd_encode(df),
+            'df': None,
             'to_predict': target,
             'args': args,
         }
+        if df is not None:
+            params['df'] = pd_encode(df)
 
         model_state = self._run_command(params)
         return model_state
@@ -636,17 +663,16 @@ class ModelWrapperSafe:
             'model_state': model_state,
             'attribute': attribute
         }
-        df = self._run_command(params)
+        enc_df = self._run_command(params)
+        df = pd_decode(enc_df)
         return df
 
-
-connection_args = OrderedDict(
-    code={
-        'type': ARG_TYPE.PATH,
-        'description': 'The path to model code'
-    },
-    modules={
-        'type': ARG_TYPE.PATH,
-        'description': 'The path to model requirements'
-    }
-)
+    def func_call(self, func_name, args):
+        params = {
+            'method': BYOM_METHOD.FUNC_CALL.value,
+            'code': self.code,
+            'func_name': func_name,
+            'args': args,
+        }
+        result = self._run_command(params)
+        return result

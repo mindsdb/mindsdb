@@ -26,7 +26,7 @@ CREATE DATABASE chroma_dev
 WITH ENGINE = "chromadb",
 PARAMETERS = {
    "host": "localhost",
-   "port": 8000
+   "port": "8000"
     }
 ```
 
@@ -36,7 +36,7 @@ Another option is to use in memory ChromaDB instance, you can do so by using the
 CREATE DATABASE chroma_dev
 WITH ENGINE = "chromadb",
 PARAMETERS = {
-   "persist_directory": <persist_directory>
+   "persist_directory": "<persist_directory>"
     }
 ```
 

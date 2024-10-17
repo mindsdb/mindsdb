@@ -1,0 +1,72 @@
+---
+title: Predict Text Sentiment with Hugging Face and MindsDB
+sidebarTitle: Text Sentiment with Hugging Face
+---
+
+In this tutorial, we'll use a model from the Hugging Faсe hub to predict text sentiment.
+
+## Connect a database
+
+We start by connecting a demo database using the `CREATE DATABASE` statement.
+
+```sql
+CREATE DATABASE example_db
+WITH ENGINE = "postgres",
+PARAMETERS = {
+    "user": "demo_user",
+    "password": "demo_password",
+    "host": "samples.mindsdb.com",
+    "port": "5432",
+    "database": "demo",
+    "schema": "demo_data"
+    };
+```
+
+Let’s preview the `user_comments` table.
+
+```sql
+SELECT *
+FROM example_db.user_comments;
+```
+
+## Create a Hugging Face model
+
+Our Hugging Face integration automatically manages downloading and deploying of pre-trained transformers from Hugging Face's hub. For example, we can download a transformer which has been trained to classify the sentiment of text.
+
+```sql
+CREATE MODEL sentiment_classifier
+PREDICT sentiment
+USING
+   engine='huggingface',
+   model_name= 'cardiffnlp/twitter-roberta-base-sentiment',
+   task='text-classification',
+   input_column = 'comment',
+   labels=['negative','neutral','positive'];
+```
+
+To create a model in MindsDB, we use the `CREATE MODEL` statement. Next, we define the target column using the `PREDICT` clause. Finally, we specify all required parameters in the `USING` clause.
+
+Once the above query is executed, we can check the status of the creation process:
+
+```sql
+DESCRIBE sentiment_classifier;
+```
+
+## Make predictions
+
+Once the status is complete, the behavior is the same as with any other AI table you can query it and provide input data in the `WHERE` clause, like this:
+
+```sql
+SELECT * FROM sentiment_classifier
+WHERE comment='It is really easy to do NLP with MindsDB';
+```
+
+The above query should predict the comment as ‘positive’.
+
+We can also make batch predictions by joining the input data table with the model, like this:
+
+```sql
+SELECT input.comment, model.sentiment
+FROM example_db.user_comments AS input
+JOIN sentiment_classifier AS model;
+```

@@ -162,3 +162,24 @@ def clean_unlinked_process_marks():
                     f"We have mark for process/thread {process_id}/{thread_id} but it does not exists"
                 )
                 file.unlink()
+
+
+def __is_within_directory(directory, target):
+    abs_directory = os.path.abspath(directory)
+    abs_target = os.path.abspath(target)
+    prefix = os.path.commonprefix([abs_directory, abs_target])
+    return prefix == abs_directory
+
+
+def safe_extract(tarfile, path=".", members=None, *, numeric_owner=False):
+    # for py >= 3.12
+    if hasattr(tarfile, 'data_filter'):
+        tarfile.extractall(path, members=members, numeric_owner=numeric_owner, filter='data')
+        return
+
+    # for py < 3.12
+    for member in tarfile.getmembers():
+        member_path = os.path.join(path, member.name)
+        if not __is_within_directory(path, member_path):
+            raise Exception("Attempted Path Traversal in Tar File")
+    tarfile.extractall(path, members=members, numeric_owner=numeric_owner)

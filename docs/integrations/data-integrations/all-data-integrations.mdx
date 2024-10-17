@@ -9,7 +9,7 @@ The list of databases supported by MindsDB keeps growing. Here are the currently
   <img src="/assets/supported_integrations.png" />
 </p>
 
-You can find particular [databases' handler files here](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers) to see their connection arguments. For example, to see the latest updates to the Oracle handler, check [Oracle's `readme.md` file here](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/oracle_handler/README.md).
+You can find particular [databases' handler files here](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers) to see their connection arguments. For example, to see the latest updates to the Oracle handler, check [Oracle's `readme.md` file here](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/integrations/handlers/oracle_handler/README.md).
 
 Let's look at sample codes showing how to connect to each of the supported integrations.
 
@@ -931,6 +931,52 @@ Check out the Google BigQuery data handler details [here](/data-integrations/goo
 <Info>
 Check out the Google Sheets data handler details [here](/data-integrations/google-sheets).
 </Info>
+
+## GreptimeDB
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE greptimedb_datasource       --- display name for the database
+    WITH ENGINE = 'greptimedb',                 --- name of the MindsDB handler
+    PARAMETERS = {
+      "host": " ",                              --- host IP address or URL
+      "port": ,                                 --- port used to make TCP/IP connection
+      "database": " ",                          --- database name
+      "user": " ",                              --- database user
+      "password": " ",                          --- database password
+      "ssl": ,                                  --- optional, the `ssl` parameter value indicates whether SSL is enabled (`True`) or disabled (`False`)
+      "ssl_ca": {                               --- optional, SSL Certificate Authority
+        "path": " "                                 --- either "path" or "url"
+      },
+      "ssl_cert": {                             --- optional, SSL certificates
+        "url": " "                                  --- either "path" or "url"
+      },
+      "ssl_key": {                              --- optional, SSL keys
+        "path": " "                                 --- either "path" or "url"
+      }
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE greptimedb_datasource
+    WITH ENGINE = 'greptimedb',
+    PARAMETERS = {
+      "host": "127.0.0.1",
+      "port": 4002,
+      "database": "public",
+      "user": "username",
+      "password": "password"
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the GreptimeDB data handler details [here](/data-integrations/greptimedb).
+</Info>
+
 
 ## IBM Db2
 

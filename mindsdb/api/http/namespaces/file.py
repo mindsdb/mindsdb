@@ -11,14 +11,16 @@ from flask import request
 from flask_restx import Resource
 
 from mindsdb.api.http.namespaces.configs.files import ns_conf
-from mindsdb.api.http.utils import http_error, safe_extract
+from mindsdb.api.http.utils import http_error
 from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities import log
-from mindsdb.utilities.security import is_private_url, clear_filename
+from mindsdb.utilities.security import is_private_url, clear_filename, validate_urls
+from mindsdb.utilities.fs import safe_extract
 
 logger = log.getLogger(__name__)
+MAX_FILE_SIZE = 1024 * 1024 * 100  # 100Mb
 
 
 @ns_conf.route("/")
@@ -96,9 +98,11 @@ class File(Resource):
 
         if data.get("source_type") == "url":
             url = data["source"]
-            data["file"] = clear_filename(data["name"])
-
             config = Config()
+            allowed_urls = config.get('file_upload_domains', [])
+            if allowed_urls and not validate_urls(url, allowed_urls):
+                return http_error(400, "Invalid File URL source.", f"Allowed hosts are: {', '.join(allowed_urls)}.")
+            data["file"] = clear_filename(data["name"])
             is_cloud = config.get("cloud", False)
             if is_cloud and is_private_url(url):
                 return http_error(
@@ -119,9 +123,9 @@ class File(Resource):
                         "Error getting file info",
                         "Сan't determine remote file size",
                     )
-                if file_size > 1024 * 1024 * 100:
+                if file_size > MAX_FILE_SIZE:
                     return http_error(
-                        400, "File is too big", "Upload limit for file is 100Mb"
+                        400, "File is too big", f"Upload limit for file is {MAX_FILE_SIZE >> 20} MB"
                     )
             with requests.get(url, stream=True) as r:
                 if r.status_code != 200:

@@ -16,17 +16,50 @@ You can create an Vertex engine using this command:
 ```sql
 CREATE ML_ENGINE vertex FROM vertex
 USING 
-    project_id="mindsdb-401709",
+    project_id="vertex-1111",
     location="us-central1",
     staging_bucket="gs://my_staging_bucket",
     experiment="my-experiment",
     experiment_description="my experiment description",
-    service_account = {
-      ...paste service account keys here
-    };
+    service_account_key_json = {
+      "type": "service_account",
+      "project_id": "vertex-1111",
+      "private_key_id": "aaaaaaaaaa",
+      "private_key": "---------BIG STRING WITH KEY-------\n",
+      "client_email": "testvertexvaitest-11111.iam.gserviceaccount.com",
+      "client_id": "1111111111111",
+      "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+      "token_uri": "https://oauth2.googleapis.com/token",
+      "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+      "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/testbigquery%40bgtest-11111.iam.gserviceaccount.com",
+      "universe_domain": "googleapis.com"
+   };
 ```
 
-> Please note that you need to provide your service_account key's here. 
+> Please note that you need to provide your service_account key here. It is also possible to pass your service account key as either a file path or a URL using the 'service_account_key_file` and `service_account_key_url` parameters respectively.
+
+```sql
+CREATE ML_ENGINE vertex FROM vertex
+USING 
+    project_id="vertex-1111",
+    location="us-central1",
+    staging_bucket="gs://my_staging_bucket",
+    experiment="my-experiment",
+    experiment_description="my experiment description",
+    service_account_key_file="/home/user/MyProjects/vertex-1111.json";
+```
+
+```sql
+CREATE ML_ENGINE vertex FROM vertex
+USING 
+    project_id="vertex-1111",
+    location="us-central1",
+    staging_bucket="gs://my_staging_bucket",
+    experiment="my-experiment",
+    experiment_description="my experiment description",
+    service_account_key_url="https://storage.googleapis.com/vertex-1111.json?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=example%40example.iam.gserviceaccount.com%2F20220215%2Fus-central1%2Fstorage%2Fgoog4_request&X-Goog-Date=20220215T000000Z&X-Goog-Expires=3600&X-Goog-SignedHeaders=host&X-Goog-Signature=abcd1234";
+```
+
 
 The name of the engine (here, `vertex`) should be used as a value for the `engine` parameter in the `USING` clause of the `CREATE MODEL` statement.
 

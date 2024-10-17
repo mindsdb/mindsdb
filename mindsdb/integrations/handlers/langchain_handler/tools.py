@@ -1,22 +1,30 @@
 import tiktoken
 
-from typing import Callable
-from mindsdb_sql import parse_sql, Insert
+from typing import Callable, Dict
+
+from mindsdb_sql import parse_sql
+from mindsdb_sql.parser.ast import Insert
 
 from langchain.prompts import PromptTemplate
 from langchain.agents import load_tools, Tool
 
 from langchain_experimental.utilities import PythonREPL
-from langchain_community.tools import WikipediaQueryRun
-from langchain_community.utilities import GoogleSerperAPIWrapper, WikipediaAPIWrapper
+from langchain_community.utilities import GoogleSerperAPIWrapper
 
 from langchain.chains.llm import LLMChain
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 from langchain.chains import ReduceDocumentsChain, MapReduceDocumentsChain
 
-from mindsdb.interfaces.skills.skill_tool import skill_tool
+from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
+from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel, VectorStoreType, DEFAULT_COLLECTION_NAME
+from mindsdb.interfaces.skills.skill_tool import skill_tool, SkillType
+from mindsdb.interfaces.storage import db
+from mindsdb.utilities import log
 
+logger = log.getLogger(__name__)
+from mindsdb.interfaces.storage.db import KnowledgeBase
+from mindsdb.utilities import log
 
 # Individual tools
 # Note: all tools are defined in a closure to pass required args (apart from LLM input) through it, as custom tools don't allow custom field assignment.  # noqa
@@ -27,7 +35,7 @@ def get_exec_call_tool(llm, executor, model_kwargs) -> Callable:
             ret = executor.execute_command(ast_query)
             if ret.data is None and ret.error_code is None:
                 return ''
-            data = ret.data  # list of lists
+            data = ret.data.to_lists()  # list of lists
             data = '\n'.join([  # rows
                 '\t'.join(      # columns
                     str(row) if isinstance(row, str) else [str(value) for value in row]
@@ -101,21 +109,22 @@ def _setup_standard_tools(tools, llm, model_kwargs):
     executor = skill_tool.get_command_executor()
 
     all_standard_tools = []
-    mdb_tool = Tool(
-        name="MindsDB",
-        func=get_exec_call_tool(llm, executor, model_kwargs),
-        description="useful to read from databases or tables connected to the mindsdb machine learning package. the action must be a valid simple SQL query, always ending with a semicolon. For example, you can do `show databases;` to list the available data sources, and `show tables;` to list the available tables within each data source."  # noqa
-    )
-
-    mdb_meta_tool = Tool(
-        name="MDB-Metadata",
-        func=get_exec_metadata_tool(llm, executor, model_kwargs),
-        description="useful to get column names from a mindsdb table or metadata from a mindsdb data source. the command should be either 1) a data source name, to list all available tables that it exposes, or 2) a string with the format `data_source_name.table_name` (for example, `files.my_table`), to get the table name, table type, column names, data types per column, and amount of rows of the specified table."  # noqa
-    )
-    all_standard_tools.append(mdb_tool)
-    all_standard_tools.append(mdb_meta_tool)
     langchain_tools = []
     for tool in tools:
+        if tool == 'mindsdb_read':
+            mdb_tool = Tool(
+                name="MindsDB",
+                func=get_exec_call_tool(llm, executor, model_kwargs),
+                description="useful to read from databases or tables connected to the mindsdb machine learning package. the action must be a valid simple SQL query, always ending with a semicolon. For example, you can do `show databases;` to list the available data sources, and `show tables;` to list the available tables within each data source."  # noqa
+            )
+
+            mdb_meta_tool = Tool(
+                name="MDB-Metadata",
+                func=get_exec_metadata_tool(llm, executor, model_kwargs),
+                description="useful to get column names from a mindsdb table or metadata from a mindsdb data source. the command should be either 1) a data source name, to list all available tables that it exposes, or 2) a string with the format `data_source_name.table_name` (for example, `files.my_table`), to get the table name, table type, column names, data types per column, and amount of rows of the specified table."  # noqa
+            )
+            all_standard_tools.append(mdb_tool)
+            all_standard_tools.append(mdb_meta_tool)
         if tool == 'mindsdb_write':
             mdb_write_tool = Tool(
                 name="MDB-Write",
@@ -138,28 +147,17 @@ def _setup_standard_tools(tools, llm, model_kwargs):
                 description="useful for when you need to ask with search",
             )
             langchain_tools.append(tool)
-        elif tool == 'wikipedia':
-            tool = WikipediaQueryRun(api_wrapper=WikipediaAPIWrapper())
-            langchain_tools.append(tool)
         else:
             raise ValueError(f"Unsupported tool: {tool}")
-    
-    all_standard_tools += load_tools(langchain_tools)
+
+    if langchain_tools:
+        all_standard_tools += load_tools(langchain_tools)
     return all_standard_tools
 
 
-def langchain_tool_from_skill(skill):
-    # Makes Langchain compatible tools from a skill
-    tool = skill_tool.get_tool_from_skill(skill)
-
-    return Tool(
-        name=tool['name'],
-        func=tool['func'],
-        description=tool['description']
-    )
-
 # Collector
 def setup_tools(llm, model_kwargs, pred_args, default_agent_tools):
+
     toolkit = pred_args['tools'] if pred_args.get('tools') is not None else default_agent_tools
 
     standard_tools = []
@@ -173,9 +171,6 @@ def setup_tools(llm, model_kwargs, pred_args, default_agent_tools):
             function_tools.append(tool)
 
     tools = []
-    skills = pred_args.get('skills', [])
-    for skill in skills:
-        tools.append(langchain_tool_from_skill(skill))
 
     if len(tools) == 0:
         tools = _setup_standard_tools(standard_tools, llm, model_kwargs)

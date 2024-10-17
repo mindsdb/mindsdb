@@ -7,6 +7,10 @@ Lightwood is the default AI engine used in MindsDB. It deals mainly with [classi
 
 By providing it with the input data and problem definition, Lightwood generates predictions following three core steps that include *Data pre-processing and cleaning*, *Feature engineering*, and *Model building and training*. The input data ranges from numbers, dates, categories, text, quantities, arrays, matrices, up to images, audios, and videos (passed as URLs).
 
+<Tip>
+We recommend using the `mindsdb/mindsdb:lightwood` Docker image that comes with the Lightwood dependencies pre-installed. Learn more [here](/setup/self-hosted/docker).
+</Tip>
+
 ## How It Works
 
 Here is the algorithm followed by Lightwood starting from the input data setup, through model building and training, up to getting predictions.
@@ -52,7 +56,7 @@ The values vary between 0 and 1, where 1 indicates a perfect predictor, based on
 You can check accuracy values for models using the [`DESCRIBE`](/sql/api/describe) statement.
 </Note>
 
-## Tuning the Lightwood ML Engine Features
+## Tuning the Lightwood ML Engine
 
 ### Description
 
@@ -83,7 +87,7 @@ USING encoders.column_name.module = 'value';
 
 To learn more about `encoders` and their options, visit the [Lightwood documentation page on encoders](https://mindsdb.github.io/lightwood/encoder.html).
 
-#### `model` Key
+#### `model.args` Key
 
 It allows you to specify the type of machine learning algorithm to learn from the encoder data.
 
@@ -115,6 +119,26 @@ Please note that not all mixers are available in our cloud environment. In parti
 
 To learn more about all the `model` options, visit the [Lightwood documentation page on mixers](https://mindsdb.github.io/lightwood/mixer.html).
 
+#### `problem_definition.embedding_only` Key
+
+To train an embedding-only model, use the below parameter when creating the model.
+
+```sql
+CREATE MODEL embedding_only_model
+...
+USING problem_definition.embedding_only = True;
+```
+
+The predictions made by this embedding model come in the form of embeddings by default.
+
+Alternatively, to get predictions in the form of embeddings from a normal model (that is, trained without specifying the `problem_definition.embedding_only` parameter), use the below parameter when querying this model for predictions.
+
+```sql
+SELECT predictions
+...
+USING return_embedding = True;
+```
+
 #### Other Keys Supported by Lightwood in JsonAI
 
 The most common use cases of configuring predictors use `encoders` and `model` keys explained above. To see all the available keys, check out the [Lightwood documentation page on JsonAI](https://mindsdb.github.io/lightwood/api/types.html#api.types.JsonAI).
@@ -141,6 +165,69 @@ USING
                     }
                 ]};
 ```
+
+## Explainability
+
+With Lightwood, you can deploy the following types of models:
+
+- regressions models,
+- classification models,
+- time-series models,
+- embedding models.
+
+Predictions made by each type of model come with an explanation column, as below.
+
+<AccordionGroup>
+
+<Accordion title="Regression">
+In the case of regression models, the `target_explain` column contains the following information:
+
+```
+{"predicted_value": 2951, "confidence": 0.99, "anomaly": null, "truth": null, "confidence_lower_bound": 2795, "confidence_upper_bound": 3107}
+```
+
+<Note>
+The upper and lower bounds are determined via conformal prediction, and correspond to the reported confidence score (which can be modified by the user).
+</Note>
+
+Try it out following [this tutorial](/use-cases/in-database_ml/home-rentals).
+</Accordion>
+
+<Accordion title="Classification">
+In the case of classification models, the `target_explain` column contains the following information:
+
+```
+{"predicted_value": "No", "confidence": 0.6629213483146067, "anomaly": null, "truth": null, "probability_class_No": 0.8561, "probability_class_Yes": 0.1439}
+```
+
+<Note>
+The `confidence` score is produced by the conformal prediction module and is well-calibrated. On the other hand, the `probability_class` comes directly from the model logits, which may be uncalibrated. Therefore, the `probability_class` score may be optimistic or pessimistic, i.e. coverage is not guaranteed to empirically match the reported score.
+</Note>
+
+Try it out following [this tutorial](/use-cases/in-database_ml/customer-churn).
+</Accordion>
+
+<Accordion title="Time-Series">
+In the case of time-series models, the `target_explain` column contains the following information:
+
+```
+{"predicted_value": 501618.3125, "confidence": 0.9991, "anomaly": false, "truth": null, "confidence_lower_bound": 500926.109375, "confidence_upper_bound": 502310.515625}
+```
+
+Try it out following [this tutorial](/use-cases/predictive_analytics/house-sales-forecasting).
+</Accordion>
+
+<Accordion title="Embeddings">
+In the case of embeddings models, the `target_explain` column contains the following information:
+
+```
+{"predicted_value": [1.0, 6.712956428527832, 1.247057318687439, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 2.3025851249694824, 0.5629426836967468, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.7540000081062317, 0.3333333432674408, 0.35483869910240173, 0.9583333134651184, 0.7833333611488342, 0.25], "confidence": null, "anomaly": null, "truth": null}
+```
+
+Try it out following [this tutorial](/use-cases/ai-powered_data_retrieval/embedding-model).
+</Accordion>
+
+</AccordionGroup>
 
 <Note>
 You can visit the comprehensive [Lightwood docs here](https://mindsdb.github.io/lightwood/).

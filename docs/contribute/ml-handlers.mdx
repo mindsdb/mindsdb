@@ -1,6 +1,7 @@
 ---
-title: Building a Machine Learning Handler
-sidebarTitle: Building an ML Handler
+title: Build an AI/ML Handler
+sidebarTitle: Build an AI/ML Handler
+icon: "gear"
 ---
 
 In this section, you'll find how to create new machine learning (ML) handlers within MindsDB.
@@ -8,7 +9,7 @@ In this section, you'll find how to create new machine learning (ML) handlers wi
 <Note>
     **Prerequisite**
 
-    You should have the latest staging version of the MindsDB repository installed locally. Follow [this guide](/contribute/install/) to learn how to install MindsDB for development.
+    You should have the latest version of the MindsDB repository installed locally. Follow [this guide](/contribute/install/) to learn how to install MindsDB for development.
 </Note>
 
 ## What are Machine Learning Handlers?
@@ -48,7 +49,7 @@ Authors can opt for adding private methods, new files and folders, or any combin
     
     Under the `mindsdb.integrations.libs.utils` library, contributors can find various methods that may be useful while implementing new handlers.
 
-    Also, there is a wrapper class for the `BaseMLEngine` instances called [BaseMLEngineExec](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/libs/ml_exec_base.py#L157). It is automatically deployed to take care of modifying the data responses into something that can be used alongside data handlers.
+    Also, there is a wrapper class for the `BaseMLEngine` instances called [BaseMLEngineExec](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/integrations/libs/ml_exec_base.py#L157). It is automatically deployed to take care of modifying the data responses into something that can be used alongside data handlers.
 </Tip>
 
 ### Implementation
@@ -160,7 +161,7 @@ We would appreciate your feedback regarding usage & feature roadmap for the abov
 
         1. Check that you can run the existing handler tests with `python -m pytest tests/unit/ml_handlers/`. If you get the `ModuleNotFoundError` error, try adding the `__init__.py` file to any subdirectory that doesn't have it.
 
-        2. Copy the simple tests from a relevant handler. For regular data, use the [Ludwig](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/ludwig_handler) handler. And for time series data, use the [StatsForecast](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/statsforecast_handler) handler.
+        2. Copy the simple tests from a relevant handler. For regular data, use the [Ludwig](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/ludwig_handler) handler. And for time series data, use the [StatsForecast](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/statsforecast_handler) handler.
         
         3. Change the SQL query to reference your handler. Specifically, set `USING engine={HandlerName}`.
         
@@ -172,7 +173,17 @@ We would appreciate your feedback regarding usage & feature roadmap for the abov
 
         1. Create a new directory in `mindsdb/integrations/handlers/`. You must name the new directory `{HandlerName}_handler/`.
         
-        2. Copy all the `.py` files from the [StatsForecast](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/statsforecast_handler) handler folder. These are: `__about__.py`, `__init__.py`, `setup.py`, and `statsforecast_handler.py`.
+        2. Copy the `.py` files from the [OpenAI handler folder](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/openai_handler), including: `__about__.py`, `__init__.py`, `openai_handler.py`, `creation_args.py`, and `model_using_args.py`.
+
+        <Note>
+        Note that the arguments used at model creation time (stored in `creation_args.py`) and the arguments used at prediction time (stored in `model_using_args.py`) should be stored in separate files in order to be able to hide sensitive information such as API keys.
+
+        By default, when querying for `connection_data` from the `information_schema.ml_engines` table or `training_options` from the `information_schema.models` table, all sensitive information is hidden. To unhide it, use this command:
+
+        ```sql
+        set show_secrets=true;
+        ```
+        </Note>
 
         3. Change the contents of `.py` files to match your new handler. Also, change the name of the `statsforecast_handler.py` file to match your handler.
 
@@ -216,7 +227,7 @@ We would appreciate your feedback regarding usage & feature roadmap for the abov
 
         <Accordion title="Step 6: Open a pull request">
 
-        1. You need to fork the MindsDB repository. Follow [this guide](https://github.com/mindsdb/mindsdb/blob/staging/CONTRIBUTING.md) to start a PR.
+        1. You need to fork the MindsDB repository. Follow [this guide](https://github.com/mindsdb/mindsdb/blob/main/CONTRIBUTING.md) to start a PR.
 
         2. If relevant, add your tests and new dependencies to the CI config. This is at `.github/workflows/mindsdb.yml`.
 
@@ -231,9 +242,9 @@ Please note that `pytest` is the recommended testing package. Use `pytest` to co
 <Tip>
 **Templates for Unit Tests**
 
-If you implement a time-series ML handler, create your unit tests following the structure of the [StatsForecast unit tests](https://github.com/mindsdb/mindsdb/blob/staging/tests/unit/ml_handlers/test_statsforecast.py).
+If you implement a time-series ML handler, create your unit tests following the structure of the [StatsForecast unit tests](https://github.com/mindsdb/mindsdb/blob/main/tests/unit/ml_handlers/test_statsforecast.py).
 
-If you implement an NLP ML handler, create your unit tests following the structure of the [Hugging Face unit tests](https://github.com/mindsdb/mindsdb/blob/staging/tests/unit/ml_handlers/test_huggingface.py).
+If you implement an NLP ML handler, create your unit tests following the structure of the [Hugging Face unit tests](https://github.com/mindsdb/mindsdb/blob/main/tests/unit/ml_handlers/test_huggingface.py).
 </Tip>
 
 
@@ -241,9 +252,9 @@ If you implement an NLP ML handler, create your unit tests following the structu
 
 To see some ML handlers that are currently in use, we encourage you to check out the following ML handlers inside the MindsDB repository:
 
-* [Lightwood](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/lightwood_handler)
-* [HuggingFace](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/huggingface_handler)
-* [Ludwig](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers/ludwig_handler)
-* [OpenAI](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/openai_handler)
+* [Lightwood](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/lightwood_handler)
+* [HuggingFace](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/huggingface_handler)
+* [Ludwig](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/ludwig_handler)
+* [OpenAI](https://github.com/mindsdb/mindsdb/blob/main/mindsdb/integrations/handlers/openai_handler)
 
-And here are [all the handlers available in the MindsDB repository](https://github.com/mindsdb/mindsdb/tree/staging/mindsdb/integrations/handlers).
+And here are [all the handlers available in the MindsDB repository](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers).

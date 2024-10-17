@@ -20,8 +20,8 @@ WITH
     parameters = {
       "aws_access_key_id": "AQAXEQK89OX07YS34OP"
       "aws_secret_access_key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-      "region_name": "us-east-2",
-      "bucket": "my-bucket",
+      "aws_session_token": "",  -- optional
+      "bucket": "my-bucket"  -- optional
     };
 ```
 
@@ -42,9 +42,23 @@ Retrieve data from a specified object (file) in the S3 bucket by providing the i
 
 ```sql
 SELECT *
-FROM s3_datasource.`my-file.csv`;
-LIMIT 10;
+FROM s3_datasource.`my-file.csv` LIMIT 10
 ```
+
+Retrieve list of files (not filtered by extension):
+
+```sql
+SELECT *
+FROM s3_datasource.files LIMIT 10
+```
+
+Getting list of files with content (content column have to be requested in targets):
+
+```sql
+SELECT path, content
+FROM s3_datasource.files LIMIT 10
+```
+
 
 <Tip>
 Wrap the object key in backticks (\`) to avoid any issues parsing the SQL statements provided. This is especially important when the object key contains spaces, special characters or prefixes, such as `my-folder/my-file.csv`.

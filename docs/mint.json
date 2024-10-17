@@ -1024,6 +1024,7 @@
             "integrations/ai-engines/monkeylearn",
             "integrations/ai-engines/ollama",
             "integrations/ai-engines/openai",
+            "integrations/ai-engines/portkey",
             "integrations/ai-engines/replicate-llm",
             "integrations/ai-engines/vertex"       
           ]

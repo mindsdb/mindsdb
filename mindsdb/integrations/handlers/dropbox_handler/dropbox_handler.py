@@ -4,7 +4,7 @@ import dropbox
 import duckdb
 
 from dropbox.exceptions import AuthError, ApiError
-from typing import Any, Dict, Optional, Text
+from typing import Dict, Optional, Text
 
 from mindsdb_sql.parser.ast import ASTNode
 from mindsdb.utilities import log
@@ -105,12 +105,12 @@ class DropboxHandler(DatabaseHandler):
         Load files from Dropbox and register them as tables in DuckDB.
         """
         self.connect()
-        self.connection = duckdb.connect(database=':memory:')
+        self.connection = duckdb.connect(database=":memory:")
         files = self._list_files()
 
         for file in files:
-            df = self._read_file(file['path'])
-            table_name = file['name']  
+            df = self._read_file(file["path"])
+            table_name = file["name"]
             self.connection.register(table_name, df)
 
     def _list_files(self, path=""):
@@ -220,7 +220,7 @@ class DropboxHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-        query_str = query.to_string().replace('`', '"')
+        query_str = query.to_string().replace("`", '"')
         return self.native_query(query_str)
 
     def get_tables(self) -> Response:
@@ -232,7 +232,7 @@ class DropboxHandler(DatabaseHandler):
         """
         self.connect()
         files = self._list_files()
-        table_names = [file['name'] for file in files]
+        table_names = [file["name"] for file in files]
 
         response = Response(
             RESPONSE_TYPE.TABLE,
@@ -254,7 +254,7 @@ class DropboxHandler(DatabaseHandler):
         self.connect()
         self._load_tables()
 
-        table_name_quoted = table_name.replace('`', '"')
+        table_name_quoted = table_name.replace("`", '"')
 
         try:
             result = self.connection.execute(f"DESCRIBE {table_name_quoted}").fetchdf()
@@ -262,10 +262,10 @@ class DropboxHandler(DatabaseHandler):
                 RESPONSE_TYPE.TABLE,
                 data_frame=pd.DataFrame(
                     {
-                        'column_name': result['column_name'],
-                        'data_type': result['column_type']
+                        "column_name": result["column_name"],
+                        "data_type": result["column_type"],
                     }
-                )
+                ),
             )
         except Exception as e:
             self.logger.error(f"Error retrieving columns for table {table_name}: {e}")

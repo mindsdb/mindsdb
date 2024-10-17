@@ -2,13 +2,13 @@
 
 Our tests are organized into several subdirectories, each focusing on different aspects of our application:
 
-* api: Contains tests related to the MindsDB's API endpoints.
-* integration_tests: Contains the integration tests
-* load: Contains the load tests
-* scripts: Scripts and utilitis used for tests
-* unit: This directory contains the unit tests:
+* api: Contains tests related to MindsDB's API endpoints.
+* integration_tests: Contains the integration tests.
+* load: Contains the load tests.
+* scripts: Scripts and utilities used for tests.
+* unit: This directory contains the unit tests, including:
         * handlers: A subset of unit tests specifically targeting data handlers.
-        * ml_handlers: A subset of unit tests specifically targeting ML handlers.
+        * ml_handlers: A subset of unit tests specifically targeting machine learning handlers.
 
 ## Installation
 
@@ -18,15 +18,17 @@ To run the tests, you need to install the necessary dependencies. You can do thi
 pip install -r requirements/requirements.txt -r requirements/requirements-test.txt
 ```
 
-This command will install all the required packages as listed in requirements-test.txt and the requirements.txt files.
+This command will install all the required packages listed in both the `requirements.txt` and `requirements-test.txt` files.
 
-> Note: You will also need to install the dependencies required by any of the integrations that the tests you are running use. This can be done by running `pip install .[<integration_name>]` in the root directory of the repository. 
+> Note: You will also need to install the dependencies required by any integrations that the tests you are running use. This can be done by running `pip install .[<integration_name>]` in the root directory of the repository.
+
 
 ## Runing tests
 
 ### Unit and Integration Tests
 
-To execute unit or integration tests, use the following pytest command:
+To execute unit or integration tests, use the following `pytest` command:
+
 
 ```
 pytest -vx <test_dir>
@@ -50,7 +52,7 @@ Options:
  *   -u: Specifies the total number of users to simulate.
  *   -r: Defines the spawn rate of users, i.e the number of users to spawn per second.
 
- > Note: The load tests require an environment variable called `INTEGRATIONS_CONFIG` to be set containing information related to the testing environments used. These environments will also need be pre-loaded with the necessary data for the tests to run successfully.
+ > Note: The load tests require an environment variable called `INTEGRATIONS_CONFIG` to be set, containing information related to the testing environments used. These environments will also need to be pre-loaded with the necessary data for the tests to run successfully.
 
 ## Generating Test Reports
 
@@ -66,7 +68,7 @@ For example, to run tests for the HTTP API, use the following command:
 pytest --cov=mindsdb/api/http tests/api/http && coveralls
 ```
 
-For the above command to be successful, you need to either have the `COVERALLS_REPO_TOKEN` environment variable set to your Coveralls token or have a `.coveralls.yml` file in the root directory of the repository with the token.
+For the above command to succeed, you need to either have the `COVERALLS_REPO_TOKEN` environment variable set to your Coveralls token or have a `.coveralls.yml` file in the root directory of the repository with the token.
 
 Otherwise, you simply run the following command:
 

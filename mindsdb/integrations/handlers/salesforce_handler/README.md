@@ -71,4 +71,20 @@ The above examples utilize `salesforce_datasource` as the datasource name, which
 
 The Salesforce integration supports the following tables:
 
-* `contacts`: The table containing contact information for people you do business with.
+* `Account`: The table containing account information.
+* `Contact`: The table containing contact information for people you do business with.
+* `Opportunity`: The table containing sales opportunities.
+* `Lead`: The table containing potential sales leads.
+* `Task`: The table containing tasks and activities.
+* `Event`: The table containing calendar events.
+* `User`: The table containing user information.
+* `Product2`: The table containing product information.
+* `Pricebook2`: The table containing price book information.
+* `PricebookEntry`: The table containing price book entries.
+* `Order`: The table containing order information.
+* `OrderItem`: The table containing order items.
+* `Case`: The table containing customer service cases.
+* `Campaign`: The table containing marketing campaigns.
+* `CampaignMember`: The table containing campaign members.
+* `Contract`: The table containing contract information.
+* `Asset`: The table containing asset information.

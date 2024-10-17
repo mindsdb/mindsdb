@@ -9,6 +9,7 @@ defaults:
   run:
     shell: bash
 
+# UV will use the system python by default
 env:
   UV_SYSTEM_PYTHON: 1
 

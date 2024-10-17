@@ -1,36 +1,31 @@
-# syntax=docker/dockerfile:1.7-labs
-# Syntax declaration is for "--exclude" below
+# This stage's objective is to gather ONLY requirements.txt files and anything else needed to install deps.
+# This stage will be run almost every build, but it is fast and the resulting layer hash will be the same
+# unless a deps file changes.
+FROM python:3.10 as deps
+WORKDIR /mindsdb
+ARG EXTRAS
+
+# Copy everything to begin with
+# This will almost always invalidate the cache for this stage
+COPY . .
+# Find every FILE that is not a requirements file and delete it
+RUN find ./ -type f -not -name "requirements*.txt" -print | xargs rm -f \
+# Find every empty directory and delete it
+    && find ./ -type d -empty -delete
+# Copy setup.py and everything else used by setup.py
+COPY setup.py default_handlers.txt README.md ./
+COPY mindsdb/__about__.py mindsdb/
+# Now this stage only contains a few files and the layer hash will be the same if they don't change.
+# Which will mean the next stage can be cached, even if the cache for the above stage was invalidated.
+
+
+
 
 FROM python:3.10 as build
 WORKDIR /mindsdb
 ARG EXTRAS
 
-# Copy everything to get requirements files.
-# Exclude as many other types of files as possible to avoid invalidating the cache
-COPY    --exclude=**/*.py \
-        --exclude=**/*.md \
-        --exclude=**/*.yml \
-        --exclude=**/*.html \
-        --exclude=**/*.pdf \
-        --exclude=**/*.csv \
-        --exclude=**/*.svg \
-        --exclude=**/*.ini \
-        --exclude=**/*.js \
-        --exclude=**/*.json \
-        --exclude=**/*.css \
-        --exclude=**/*.Dockerfile \
-        --exclude=**/*.toml \
-        --exclude=**/*.pem \
-        --exclude=**/*.png \
-        --exclude=**/*.db \
-        --exclude=**/*.ico \
-        . .
-
-# Copy setup.py and everything else used by setup.py
-COPY setup.py default_handlers.txt README.md pyproject.toml ./
-COPY mindsdb/__about__.py mindsdb/
-
-# "rm ... docker-clean" stops docker from removing packages from our cache
+# "rm ... docker-clean" stops apt from removing packages from our cache
 # https://github.com/moby/buildkit/blob/master/frontend/dockerfile/docs/reference.md#example-cache-apt-packages
 RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
 RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
@@ -42,27 +37,31 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     -o APT::Install-Suggests=false \
     freetds-dev  # freetds required to build pymssql on arm64 for mssql_handler. Can be removed when we are on python3.11+
 
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+# Use a specific tag so the file doesn't change
+COPY --from=ghcr.io/astral-sh/uv:0.4.23 /uv /usr/local/bin/uv
+# Copy requirements files from the first stage
+COPY --from=deps /mindsdb .
 
 # - Silence uv complaining about not being able to use hard links,
 # - tell uv to byte-compile packages for faster application startups,
 # - prevent uv from accidentally downloading isolated Python builds,
 # - pick a Python,
-# - and finally declare `/app` as the target for `uv sync`.
+# - and finally declare `/mindsdb` as the target dir.
 ENV UV_LINK_MODE=copy \
     UV_COMPILE_BYTECODE=1 \
     UV_PYTHON_DOWNLOADS=never \
     UV_PYTHON=python3.10 \
     UV_PROJECT_ENVIRONMENT=/mindsdb
 
-# These long-running step should be cached in most cases (unless a requirements file or setup.py etc is changed)
 # Install all requirements for mindsdb and all the default handlers
-RUN --mount=type=cache,target=/root/.cache uv venv
-RUN --mount=type=cache,target=/root/.cache uv pip install "."
+# Installs everything into a venv in /mindsdb so that everything is isolated
+RUN --mount=type=cache,target=/root/.cache uv venv \
+                                        && uv pip install "."
 # Install extras on top of the bare mindsdb
 RUN --mount=type=cache,target=/root/.cache if [ -n "$EXTRAS" ]; then uv pip install $EXTRAS; fi
 
 # Copy all of the mindsdb code over finally
+# Here is where we invalidate the cache again if ANY file has changed
 COPY . .
 # Install the "mindsdb" package now that we have the code for it
 RUN --mount=type=cache,target=/root/.cache uv pip install --no-deps "."
@@ -75,7 +74,7 @@ RUN --mount=type=cache,target=/root/.cache uv pip install --no-deps "."
 FROM build as dev
 WORKDIR /mindsdb
 
-# "rm ... docker-clean" stops docker from removing packages from our cache
+# "rm ... docker-clean" stops apt from removing packages from our cache
 # https://github.com/moby/buildkit/blob/master/frontend/dockerfile/docs/reference.md#example-cache-apt-packages
 RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
 RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
@@ -86,7 +85,10 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     -o APT::Install-Recommends=false \
     -o APT::Install-Suggests=false \
     libpq5 freetds-bin curl
-RUN --mount=type=cache,target=/root/.cache uv pip install -r requirements/requirements-dev.txt
+
+# Install dev requirements and install 'mindsdb' as an editable package
+RUN --mount=type=cache,target=/root/.cache uv pip install -r requirements/requirements-dev.txt \
+                                        && uv pip install --no-deps -e "."
 
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
@@ -105,11 +107,11 @@ ENTRYPOINT [ "bash", "-c", "python -Im mindsdb --config=/root/mindsdb_config.jso
 
 
 # This is the final image for most use-cases
-# Copies the installed pip packages from `build` and installs only what we need
+# Copies the installed pip packages from `build` and installs only what we need to run
 FROM python:3.10-slim
 WORKDIR /mindsdb
 
-# "rm ... docker-clean" stops docker from removing packages from our cache
+# "rm ... docker-clean" stops apt from removing packages from our cache
 # https://github.com/moby/buildkit/blob/master/frontend/dockerfile/docs/reference.md#example-cache-apt-packages
 RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
 RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
@@ -121,6 +123,7 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     -o APT::Install-Suggests=false \
     libpq5 freetds-bin curl direnv
 
+# This makes sure the venv is activated when the container starts
 RUN echo "source .venv/bin/activate" >> .envrc && echo 'eval "$(direnv hook bash)"' >> .envrc
 
 COPY --link --from=build /mindsdb /mindsdb

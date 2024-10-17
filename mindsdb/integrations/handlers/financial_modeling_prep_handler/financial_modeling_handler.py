@@ -1,23 +1,19 @@
 import pandas as pd
 from typing import Dict
-from urllib.parse import urlencode
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
-    HandlerResponse as Response,
-    RESPONSE_TYPE
 )
 from mindsdb.integrations.handlers.financial_modeling_prep_handler.financial_modeling_tables import HistoricalPriceTable
 
-from urllib.request import urlopen
 from mindsdb.utilities import log
-import json
 import requests
 _FINANCIAL_MODELING_URL = 'https://financialmodelingprep.com/api/v3/'
 
 logger = log.getLogger(__name__)
 
 class FinancialModelingHandler(APIHandler):
+
 
     name = "financial_modeling_prep"
 
@@ -37,23 +33,23 @@ class FinancialModelingHandler(APIHandler):
         historical_prices = HistoricalPriceTable(self)
         self._register_table('historical_prices', historical_prices)
 
-    def connect(self): 
+    def connect(self):
         self.is_connected = True
         base_url = "https://financialmodelingprep.com/api/v3/historical-price-full/"
         return base_url
-    
+
     def check_connection(self) -> StatusResponse:
         """ Check connection to the handler
         Returns:
             HandlerStatusResponse
         """
         base_url = 'https://financialmodelingprep.com/api/v3/search'
-        param = { 'query': 'AA',
-            'apikey': self.api_key, 
-            'limit': 5}
+        param = {'query': 'AA',
+                'apikey': self.api_key, 
+                'limit': 5}
 
         response = requests.get(base_url, param)
-        if response.status_code == 200:
+        if response.status_code==200:
             return StatusResponse(success = True)
         else:
             raise Exception(

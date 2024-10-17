@@ -1,21 +1,21 @@
 from mindsdb.integrations.libs.api_handler import APITable
-from mindsdb.integrations.libs.response import HandlerResponse as Response
-from mindsdb.integrations.utilities.date_utils import interval_str_to_duration_ms, utc_date_str_to_timestamp_ms
+from mindsdb.integrations.utilities.date_utils import interval_str_to_duration_ms
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb_sql.parser import ast
 
 from typing import Dict, List
 
 import pandas as pd
-import time
+
 from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
 import requests
 
 class HistoricalPriceTable(APITable):
+
+    
     def _get_historical_price_endpoint_params_from_conditions(self, conditions: List) -> Dict:
         params = {}
         for op, arg1, arg2 in conditions: 

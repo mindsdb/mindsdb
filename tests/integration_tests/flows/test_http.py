@@ -1,4 +1,5 @@
 import json
+import base64
 from typing import List
 from pathlib import Path
 
@@ -461,9 +462,14 @@ class TestHTTP(HTTPHelperMixin):
         assert len(response.json()) == 2
 
     def test_tabs(self):
-        def tabs_requets(method: str, url: str = '', payload: dict = {},
-                         company_id: int = 1, expected_status: int = 200):
-            resp = self.api_request(method, f'/tabs/{url}', payload=payload, headers={'company-id': str(company_id)})
+        def tabs_requets(method: str, url: str = '', payload: dict = None,
+                         company_id: int = 1, expected_status: int = 200, headers: dict = None):
+            resp = self.api_request(
+                method,
+                f'/tabs/{url}',
+                payload=payload or {},
+                headers={'company-id': str(company_id), **(headers or {})}
+            )
             assert resp.status_code == expected_status
             return resp
 
@@ -580,6 +586,23 @@ class TestHTTP(HTTPHelperMixin):
             for tab_dict in tabs:
                 tab_resp = tabs_requets('get', str(tab_dict['id']), company_id=company_id).json()
                 assert compare_tabs(tab_resp, tab_dict)
+
+        # test tab content encryption
+        tab_1_1['content'] = 'encrypted'
+        tabs_requets(
+            'put', str(tab_1_1['id']), {'content': tab_1_1['content']}, company_id=1,
+            headers={'encryption-key': base64.b64encode(b'0' * 32).decode('utf-8')}
+        )
+        tab_resp = tabs_requets(
+            'get', str(tab_1_1['id']), company_id=1,
+            headers={'encryption-key': base64.b64encode(b'0' * 32).decode('utf-8')}
+        ).json()
+        assert tab_resp['content'] == tab_1_1['content']
+        tab_resp = tabs_requets(
+            'get', str(tab_1_1['id']), company_id=1,
+            headers={'encryption-key': base64.b64encode(b'1' * 32).decode('utf-8')},
+            expected_status=500
+        )
 
         # check failures
         tabs_requets('get', '99', company_id=1, expected_status=404)

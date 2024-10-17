@@ -1,7 +1,8 @@
 
-from contextvars import ContextVar
+import base64
 from typing import Any
 from copy import deepcopy
+from contextvars import ContextVar
 
 
 class Context:
@@ -15,7 +16,9 @@ class Context:
 
     def set_default(self) -> None:
         self._storage.set({
+            'user_id': None,
             'company_id': None,
+            'encryption_key': None,
             'user_class': 0,
             'profiling': {
                 'level': 0,
@@ -24,6 +27,13 @@ class Context:
                 'tree': None
             }
         })
+
+    @property
+    def encryption_key_bytes(self) -> bytes:
+        encryption_key = self.encryption_key
+        if encryption_key is None:
+            return None
+        return base64.b64decode(encryption_key.encode('utf-8'))
 
     def __getattr__(self, name: str) -> Any:
         storage = self._storage.get({})

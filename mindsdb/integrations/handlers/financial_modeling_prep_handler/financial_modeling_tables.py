@@ -15,10 +15,10 @@ import requests
 
 class HistoricalPriceTable(APITable):
 
-    
+
     def _get_historical_price_endpoint_params_from_conditions(self, conditions: List) -> Dict:
         params = {}
-        for op, arg1, arg2 in conditions: 
+        for op, arg1, arg2 in conditions:
             if arg1 == 'symbol':
                 if op != '=':
                     raise NotImplementedError
@@ -31,7 +31,6 @@ class HistoricalPriceTable(APITable):
                 if op != '=':
                     raise NotImplementedError
                 params['to'] = arg2
-            
 
         return params
 
@@ -51,11 +50,10 @@ class HistoricalPriceTable(APITable):
             params['limit'] = limit_value
 
         historical_prices = self.get_historical_price_chart(params = params)
-        
-        return historical_prices
 
+        return historical_prices
     
-    def get_historical_price_chart(self, params: Dict = None) -> pd.DataFrame:  
+    def get_historical_price_chart(self, params: Dict = None) -> pd.DataFrame:
         base_url = self.handler.connect()
         if 'symbol' not in params:
             raise ValueError('Missing "symbol" param')
@@ -69,17 +67,16 @@ class HistoricalPriceTable(APITable):
             params.pop('limit')
             limitParam = True
 
-        url = f"{base_url}{symbol}" #https://financialmodelingprep.com/api/v3/historical-price-full/<symbol>
+        url = f"{base_url}{symbol}"  # https://financialmodelingprep.com/api/v3/historical-price-full/<symbol>
         param = {'apikey': self.handler.api_key, **params}
 
         response = requests.get(url, param)
         historical_data = response.json()
         historical = historical_data.get("historical")
-        
 
         if limitParam:
             return pd.DataFrame(historical).head(limit)
-        
+
         response = Response(
             RESPONSE_TYPE.TABLE,
             data_frame=pd.DataFrame(
@@ -90,4 +87,4 @@ class HistoricalPriceTable(APITable):
         if historical:
             return pd.DataFrame(historical)
         else:
-            return pd.DataFrame() 
+            return pd.DataFrame()

@@ -283,8 +283,7 @@ def test_knowledge_base_completions(client):
     # Test successful completion
     completion_request = {
         'query': 'What is the capital of France?',
-        'knowledge_base': 'test_completions_kb',
-        'retrieval_config': {}
+        'knowledge_base': 'test_completions_kb'
     }
     completion_response = client.post('/api/projects/mindsdb/knowledge_bases/test_completions_kb/completions',
                                       json=completion_request, follow_redirects=True)
@@ -297,8 +296,7 @@ def test_knowledge_base_completions(client):
 
     # Test missing query parameter
     invalid_request = {
-        'knowledge_base': 'test_completions_kb',
-        'retrieval_config': {}
+        'knowledge_base': 'test_completions_kb'
     }
     invalid_response = client.post('/api/projects/mindsdb/knowledge_bases/test_completions_kb/completions',
                                    json=invalid_request, follow_redirects=True)
@@ -306,17 +304,7 @@ def test_knowledge_base_completions(client):
 
     # Test missing knowledge_base parameter
     invalid_request = {
-        'query': 'What is the capital of France?',
-        'retrieval_config': {}
-    }
-    invalid_response = client.post('/api/projects/mindsdb/knowledge_bases/test_completions_kb/completions',
-                                   json=invalid_request, follow_redirects=True)
-    assert '400' in invalid_response.status
-
-    # Test missing retrieval_config parameter
-    invalid_request = {
-        'query': 'What is the capital of France?',
-        'knowledge_base': 'test_completions_kb'
+        'query': 'What is the capital of France?'
     }
     invalid_response = client.post('/api/projects/mindsdb/knowledge_bases/test_completions_kb/completions',
                                    json=invalid_request, follow_redirects=True)

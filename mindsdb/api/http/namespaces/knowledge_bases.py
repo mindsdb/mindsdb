@@ -331,14 +331,10 @@ class KnowledgeBaseCompletions(Resource):
                 f'Knowledge Base with name {knowledge_base_name} does not exist'
             )
 
-        # validate that retrieval_config is present
-        retrieval_config = request.json.get('retrieval_config')
-        if retrieval_config is None:
-            return http_error(
-                HTTPStatus.BAD_REQUEST,
-                'Missing parameter',
-                'Must provide "retrieval_config" parameter in POST body'
-            )
+        # Get retrieval config, if set
+        retrieval_config = request.json.get('retrieval_config', {})
+        if not retrieval_config:
+            logger.warn('No retrieval config provided, using default retrieval config')
 
         # add llm model to retrieval config
         if llm_model is not None:

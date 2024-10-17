@@ -195,3 +195,26 @@ class DropboxHandler(DatabaseHandler):
         else:
             raise ValueError(f"Unsupported file format: {extension}")
         return df
+    
+    def query(self, query: ASTNode) -> Response:
+        """Receive query as AST (abstract syntax tree) and act upon it somehow.
+        Args:
+            query (ASTNode): sql query represented as AST. May be any kind
+                of query: SELECT, INSERT, DELETE, etc
+        Returns:
+            HandlerResponse
+        """
+        pass
+
+
+
+    def native_query(self, query: Any) -> Response:
+        """Receive raw query and act upon it somehow.
+        Args:
+            query (Any): query in native format (str for sql databases,
+                dict for mongo, etc)
+        Returns:
+            HandlerResponse
+        """
+        pass
+

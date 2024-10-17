@@ -53,6 +53,18 @@ USING
       labels = ['ham', 'spam'];
 ```
 
+Optionally, provide authentication using `use_auth_token` for private hf models.
+
+```sql
+CREATE MODEL spam_classifier
+PREDICT spam_or_ham
+USING
+      engine = 'huggingface_engine',
+      ...
+      ...
+      use_auth_token = 'True';
+```
+
 Query the model to get predictions.
 
 ```sql

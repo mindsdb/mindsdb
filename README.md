@@ -120,7 +120,7 @@ SELECT input.review, output.sentiment
 FROM data_source.amazon_reviews_job AS input
 JOIN sentiment_classifier AS output;
 
--- Step 4. Automate this workflow to accomodate real-time and dynamic data
+-- Step 4. Automate this workflow to accommodate real-time and dynamic data
 CREATE DATABASE data_destination
 WITH ENGINE = "engine-name",      -- choose the data source you want to connect to save AI output
 PARAMETERS = {                    -- list of available data sources: https://docs.mindsdb.com/integrations/data-overview

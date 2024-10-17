@@ -40,8 +40,6 @@ from mindsdb.interfaces.storage import db
 from .mindsdb_chat_model import ChatMindsdb
 from .callback_handlers import LogCallbackHandler, ContextCaptureCallback
 from .langfuse_callback_handler import LangfuseCallbackHandler, get_metadata, get_tags, get_tool_usage, get_skills
-
-from .tools import _build_retrieval_tool
 from .safe_output_parser import SafeOutputParser
 
 
@@ -59,8 +57,8 @@ from .constants import (
     ASSISTANT_COLUMN,
     CONTEXT_COLUMN,
 )
-from ..skills.skill_tool import skill_tool, SkillType
-from ...integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
+from mindsdb.interfaces.skills.skill_tool import skill_tool
+from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
 
 _PARSING_ERROR_PREFIXES = [
     "An output parsing error occurred",
@@ -362,8 +360,7 @@ class LangchainAgent:
 
         tools = []
         skills = self.agent.skills or []
-        for skill in skills:
-            tools += self.langchain_tools_from_skill(skill, {}, llm)
+        tools += self.langchain_tools_from_skills(skills, llm)
 
         # Prefer prediction prompt template over original if provided.
         prompt_template = args["prompt_template"]
@@ -412,27 +409,20 @@ class LangchainAgent:
         )
         return agent_executor
 
-    def langchain_tools_from_skill(self, skill, pred_args, llm):
+    def langchain_tools_from_skills(self, skills, llm):
         # Makes Langchain compatible tools from a skill
-        tools = skill_tool.get_tools_from_skill(skill, llm)
+        tools_groups = skill_tool.get_tools_from_skills(skills, llm, self.embedding_model)
 
         all_tools = []
-        for tool in tools:
-            if skill.type == SkillType.RETRIEVAL.value:
-                pred_args["embedding_model"] = self.embedding_model
-                pred_args["llm"] = self.llm
-                all_tools.append(_build_retrieval_tool(tool, pred_args, skill))
-                continue
-            if isinstance(tool, dict):
-                all_tools.append(
-                    Tool(
+        for skill_type, tools in tools_groups.items():
+            for tool in tools:
+                if isinstance(tool, dict):
+                    tool = Tool(
                         name=tool["name"],
                         func=tool["func"],
                         description=tool["description"],
                     )
-                )
-                continue
-            all_tools.append(tool)
+                all_tools.append(tool)
         return all_tools
 
     def _get_agent_callbacks(self, args: Dict) -> List:

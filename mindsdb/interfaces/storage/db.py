@@ -16,7 +16,7 @@ from sqlalchemy import (
     UniqueConstraint,
     create_engine,
     text,
-    types
+    types,
 )
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import (
@@ -29,6 +29,8 @@ from sqlalchemy.orm import (
 from sqlalchemy.sql.schema import ForeignKey
 
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
+
+from mindsdb.mind_palace.secret_type import SecretData, SecretStoreType
 
 
 class Base:
@@ -240,7 +242,7 @@ class Integration(Base):
     created_at = Column(DateTime, default=datetime.datetime.now)
     name = Column(String, nullable=False)
     engine = Column(String, nullable=False)
-    data = Column(Json)
+    data = Column(SecretData(SecretStoreType.JSON))
     company_id = Column(Integer)
     __table_args__ = (
         UniqueConstraint(

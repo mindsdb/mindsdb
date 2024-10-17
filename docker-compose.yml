@@ -35,6 +35,9 @@ services:
       - type: bind
         source: .
         target: /mindsdb
+      - type: bind
+        source: /Users/hamishfagg/src/mindsdb/mind_palace
+        target: /mindsdb/mindsdb/mind_palace
     healthcheck:
       test:  ["CMD", "curl", "-f", "http://localhost:47334/api/util/ping"]
       interval: 30s

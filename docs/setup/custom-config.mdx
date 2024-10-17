@@ -52,8 +52,8 @@ First, you should prepare a `config.json` file based on the following template; 
     },
     "auth":{
         "http_auth_enabled": False,
-        "username": "mindsdb",
-        "password": "123"
+        "username": "mindsdb_user",
+        "password": "abc123"
     },
     "api": {
         "http": {
@@ -77,6 +77,10 @@ First, you should prepare a `config.json` file based on the following template; 
     }
 }
 ```
+
+<Tip>
+Configure an HTTP authentication for your MindsDB instance by setting `http_auth_enabled` to `True` and defining the `username` and `password` parameters.
+</Tip>
 
 Now that your `config.json` file is ready, run the command below to start
 MindsDB locally with your custom configuration.

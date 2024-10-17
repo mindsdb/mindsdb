@@ -1,5 +1,5 @@
 from http import HTTPStatus
-from typing import List
+from typing import Dict, List
 
 from flask import request
 from flask_restx import Resource
@@ -8,7 +8,10 @@ import pandas as pd
 
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE as SQL_RESPONSE_TYPE
+from mindsdb.api.executor.exceptions import ExecutorException
 from mindsdb.api.http.utils import http_error
+from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
 from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.integrations.handlers.web_handler.urlcrawl_helpers import get_all_websites
 from mindsdb.interfaces.database.projects import ProjectController
@@ -81,6 +84,29 @@ def _insert_web_pages_into_knowledge_base(table: KnowledgeBaseTable, urls: List[
     docs_df = pd.DataFrame.from_records(doc_objs)
     # Insert documents into KB.
     table.insert(docs_df)
+
+
+def _insert_select_query_result_into_knowledge_base(query: str, table: KnowledgeBaseTable, project_name: str):
+    if not query:
+        return
+    mysql_proxy = FakeMysqlProxy()
+    query_result = mysql_proxy.process_query(query)
+    # Use same project as API request for SQL context.
+    mysql_proxy.set_context({'db': project_name})
+    if query_result.type != SQL_RESPONSE_TYPE.TABLE:
+        raise ExecutorException('Query returned no data')
+
+    # Check column name aliases.
+    column_names = [c.get('alias', c.get('name')) for c in query_result.columns]
+    df_to_insert = pd.DataFrame.from_records(query_result.data, columns=column_names)
+    table.insert(df_to_insert)
+
+
+def _insert_rows_into_knowledge_base(rows: List[Dict], table: KnowledgeBaseTable):
+    if not rows:
+        return
+    df_to_insert = pd.DataFrame.from_records(rows)
+    table.insert(df_to_insert)
 
 
 @ns_conf.route('/<project_name>/knowledge_bases')
@@ -237,6 +263,8 @@ class KnowledgeBaseResource(Resource):
         kb = request.json['knowledge_base']
         files = kb.get('files', [])
         urls = kb.get('urls', [])
+        query = kb.get('query')
+        rows = kb.get('rows', [])
         # Optional params for web pages.
         crawl_depth = kb.get('crawl_depth', 1)
         filters = kb.get('filters', [])
@@ -246,6 +274,18 @@ class KnowledgeBaseResource(Resource):
             _insert_file_into_knowledge_base(table, file_name)
         # Crawl, split, & embed web pages into Knowledge Base.
         _insert_web_pages_into_knowledge_base(table, urls, crawl_depth=crawl_depth, filters=filters)
+
+        # Execute SELECT statement & embed dataframe into Knowledge Base.
+        try:
+            _insert_select_query_result_into_knowledge_base(query, table, project_name)
+        except ExecutorException as e:
+            return http_error(
+                HTTPStatus.BAD_REQUEST,
+                'Invalid SELECT query',
+                f'Executing "query" failed. Needs to be a valid SELECT statement that returns data: {str(e)}'
+            )
+        # Convert rows of records into a dataframe & embed into Knowledge Base.
+        _insert_rows_into_knowledge_base(rows, table)
         return '', HTTPStatus.OK
 
     @ns_conf.doc('delete_knowledge_base')

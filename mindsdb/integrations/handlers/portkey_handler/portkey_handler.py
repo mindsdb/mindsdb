@@ -14,6 +14,7 @@ DEFAULT_METADATA = {
     "_source": "portkey-mindsdb-integration",
 }
 
+
 class PortkeyHandler(BaseMLEngine):
     """
     Integration with the Portkey LLM Python Library

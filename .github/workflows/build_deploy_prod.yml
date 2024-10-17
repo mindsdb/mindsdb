@@ -14,7 +14,7 @@ env:
 # Cancel any existing runs of this workflow on the same branch/pr
 # We always want to build/deploy/test a new commit over an older one
 concurrency:
-  group: ${{ github.workflow_ref }}
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 jobs:

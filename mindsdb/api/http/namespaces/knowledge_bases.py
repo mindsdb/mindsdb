@@ -18,6 +18,8 @@ from mindsdb.integrations.utilities.rag.splitters.file_splitter import FileSplit
 from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseTable
 from mindsdb.utilities import log
 from mindsdb.utilities.exception import EntityNotExistsError
+from mindsdb.integrations.utilities.rag.settings import DEFAULT_LLM_MODEL
+
 
 from mindsdb_sql.parser.ast import Identifier
 
@@ -275,3 +277,89 @@ class KnowledgeBaseResource(Resource):
 
         session_controller.kb_controller.delete(knowledge_base_name, project_name)
         return '', HTTPStatus.NO_CONTENT
+
+
+@ns_conf.route('/<project_name>/knowledge_bases/<knowledge_base_name>/completions')
+@ns_conf.param('project_name', 'Name of the project')
+@ns_conf.param('knowledge_base_name', 'Name of the knowledge_base')
+class KnowledgeBaseCompletions(Resource):
+    @ns_conf.doc('knowledge_base_completions')
+    @api_endpoint_metrics('POST', '/knowledge_bases/knowledge_base/completions')
+    def post(self, project_name, knowledge_base_name):
+        """
+        Add support for LLM generation on the response from knowledge base
+        """
+        # Check for required parameters.
+        if 'knowledge_base' not in request.json:
+            return http_error(
+                HTTPStatus.BAD_REQUEST,
+                'Missing parameter',
+                'Must provide "knowledge_base" parameter in POST body'
+            )
+
+        # Check for required parameters
+        query = request.json.get('query')
+        if query is None:
+            return http_error(
+                HTTPStatus.BAD_REQUEST,
+                'Missing parameter',
+                'Must provide "query" parameter in POST body'
+            )
+
+        llm_model = request.json.get('model')
+        if llm_model is None:
+            logger.warn(f'Missing parameter "model" in POST body, using default llm_model {DEFAULT_LLM_MODEL}')
+
+        session = SessionController()
+        project_controller = ProjectController()
+        try:
+            project = project_controller.get(name=project_name)
+        except EntityNotExistsError:
+            # Project must exist.
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                'Project not found',
+                f'Project with name {project_name} does not exist'
+            )
+
+        # Check if knowledge base exists
+        table = session.kb_controller.get_table(knowledge_base_name, project.id)
+        if table is None:
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                'Knowledge Base not found',
+                f'Knowledge Base with name {knowledge_base_name} does not exist'
+            )
+
+        # validate that retrieval_config is present
+        retrieval_config = request.json.get('retrieval_config')
+        if retrieval_config is None:
+            return http_error(
+                HTTPStatus.BAD_REQUEST,
+                'Missing parameter',
+                'Must provide "retrieval_config" parameter in POST body'
+            )
+
+        # add llm model to retrieval config
+        if llm_model is not None:
+            retrieval_config['llm_model_name'] = llm_model
+
+        # add llm provider to retrieval config if set
+        llm_provider = request.json.get('model_provider')
+        if llm_provider is not None:
+            retrieval_config['llm_provider'] = llm_provider
+
+        # build rag pipeline
+        rag_pipeline = table.build_rag_pipeline(retrieval_config)
+
+        # get response from rag pipeline
+        rag_response = rag_pipeline(query)
+        response = {
+            'message': {
+                'content': rag_response.get('answer'),
+                'context': rag_response.get('context'),
+                'role': 'assistant'
+            }
+        }
+
+        return response

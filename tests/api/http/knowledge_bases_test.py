@@ -267,3 +267,67 @@ def test_delete_knowledge_base_project_not_found(client):
 def test_delete_knowledge_base_not_found(client):
     delete_response = client.delete('/api/projects/mindsdb/knowledge_bases/xiaolongbao_kb', follow_redirects=True)
     assert '404' in delete_response.status
+
+
+def test_knowledge_base_completions(client):
+    # First, create a knowledge base to use in the test
+    create_kb_request = {
+        'knowledge_base': {
+            'name': 'test_completions_kb',
+            'model': 'test_embedding_model'
+        }
+    }
+    create_kb_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_kb_request, follow_redirects=True)
+    assert '201' in create_kb_response.status
+
+    # Test successful completion
+    completion_request = {
+        'query': 'What is the capital of France?',
+        'knowledge_base': 'test_completions_kb',
+        'retrieval_config': {}
+    }
+    completion_response = client.post('/api/projects/mindsdb/knowledge_bases/test_completions_kb/completions',
+                                      json=completion_request, follow_redirects=True)
+    assert '200' in completion_response.status
+    response_data = completion_response.get_json()
+    assert 'message' in response_data
+    assert 'content' in response_data['message']
+    assert 'context' in response_data['message']
+    assert response_data['message']['role'] == 'assistant'
+
+    # Test missing query parameter
+    invalid_request = {
+        'knowledge_base': 'test_completions_kb',
+        'retrieval_config': {}
+    }
+    invalid_response = client.post('/api/projects/mindsdb/knowledge_bases/test_completions_kb/completions',
+                                   json=invalid_request, follow_redirects=True)
+    assert '400' in invalid_response.status
+
+    # Test missing knowledge_base parameter
+    invalid_request = {
+        'query': 'What is the capital of France?',
+        'retrieval_config': {}
+    }
+    invalid_response = client.post('/api/projects/mindsdb/knowledge_bases/test_completions_kb/completions',
+                                   json=invalid_request, follow_redirects=True)
+    assert '400' in invalid_response.status
+
+    # Test missing retrieval_config parameter
+    invalid_request = {
+        'query': 'What is the capital of France?',
+        'knowledge_base': 'test_completions_kb'
+    }
+    invalid_response = client.post('/api/projects/mindsdb/knowledge_bases/test_completions_kb/completions',
+                                   json=invalid_request, follow_redirects=True)
+    assert '400' in invalid_response.status
+
+    # Test non-existent project
+    invalid_response = client.post('/api/projects/nonexistent/knowledge_bases/test_completions_kb/completions',
+                                   json=completion_request, follow_redirects=True)
+    assert '404' in invalid_response.status
+
+    # Test non-existent knowledge base
+    invalid_response = client.post('/api/projects/mindsdb/knowledge_bases/nonexistent_kb/completions',
+                                   json=completion_request, follow_redirects=True)
+    assert '404' in invalid_response.status

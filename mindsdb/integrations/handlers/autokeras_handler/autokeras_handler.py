@@ -16,8 +16,6 @@ from mindsdb.integrations.libs.base import BaseMLEngine
 # Doesn't break things on Mac
 os.environ["XLA_FLAGS"] = "--xla_gpu_cuda_data_dir=/usr/lib/cuda"
 
-trainer_dict = {"regression": ak.StructuredDataRegressor, "classification": ak.StructuredDataClassifier}
-
 DEFAULT_TRIALS = 100
 
 
@@ -35,22 +33,27 @@ def train_model(df, target, max_trials=DEFAULT_TRIALS):
     # Choose regressor of classifier based on target data type
     if np.issubdtype(df[target].dtype, np.number):
         mode = "regression"
-        y_train = df[target]
+        y_train = df[target].to_numpy()
     else:
         mode = "classification"
         lb = preprocessing.LabelBinarizer()
         y_train = lb.fit_transform(df[target])
 
     training_df = df.drop(target, axis=1)
-    trainer = trainer_dict[mode](overwrite=True, max_trials=max_trials)
-
+    trainer = ak.AutoModel(
+        inputs=ak.Input(),
+        outputs=ak.RegressionHead() if mode == "regression" else ak.ClassificationHead(),
+        overwrite=True,
+        max_trials=max_trials
+    )
     # Save the column names of all numeric columns before transforming any categorical columns into dummies
     numeric_column_names = training_df.select_dtypes(include=[np.number]).columns.values.tolist()
     training_df = pd.get_dummies(training_df)
     categorical_dummy_column_names = [
         col for col in training_df.columns.values.tolist() if col not in numeric_column_names
     ]
-    trainer.fit(training_df, y_train, verbose=2)
+    x_train = training_df.to_numpy()
+    trainer.fit(x_train, y_train, verbose=2)
     return trainer.export_model(), categorical_dummy_column_names
 
 
@@ -111,7 +114,8 @@ class AutokerasHandler(BaseMLEngine):
         args["training_data_column_count"] = len(df.columns) - 1  # subtract 1 for target
 
         random_string = "".join(random.choices(string.ascii_uppercase + string.digits, k=24))
-        args["folder_path"] = os.path.join("autokeras", random_string)
+        args["folder_path"] = os.path.join("autokeras", f"{random_string}.keras")
+        os.makedirs(os.path.dirname(args["folder_path"]), exist_ok=True)
 
         model, args["data_column_names"] = train_model(df, target, max_trials)
         model.save(args["folder_path"])

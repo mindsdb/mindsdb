@@ -2,6 +2,7 @@ import codecs
 import csv
 import json
 import os
+import shutil
 import tempfile
 import traceback
 from io import BytesIO, StringIO
@@ -13,7 +14,7 @@ import pandas as pd
 import requests
 from charset_normalizer import from_bytes
 from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import DropTables, Select
+from mindsdb_sql.parser.ast import CreateTable, DropTables, Insert, Select
 from mindsdb_sql.parser.ast.base import ASTNode
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
@@ -89,6 +90,49 @@ class FileHandler(DatabaseHandler):
                         error_message=f"Can't delete table '{table_name}': {e}",
                     )
             return Response(RESPONSE_TYPE.OK)
+
+        if type(query) is CreateTable:
+            # Check if the table already exists or if the table name contains more than one namespace
+            existing_files = self.file_controller.get_files_names()
+
+            if len(query.name.parts) != 1:
+                return Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_message="Table name cannot contain more than one namespace",
+                )
+
+            table_name = query.name.parts[-1]
+            if table_name in existing_files:
+                return Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=f"Table '{table_name}' already exists",
+                )
+
+            if query.is_replace:
+                self.file_controller.delete_file(table_name)
+
+            temp_dir_path = tempfile.mkdtemp(prefix="mindsdb_file_")
+
+            try:
+                # Create a temp file to save the table
+                temp_file_path = os.path.join(temp_dir_path, f"{table_name}.csv")
+
+                # Create an empty file using with the columns in the query
+                df = pd.DataFrame(columns=[col.name for col in query.columns])
+                df.to_csv(temp_file_path, index=False)
+
+                self.file_controller.save_file(table_name, temp_file_path, file_name=f"{table_name}.csv")
+            except Exception as unknown_error:
+                return Response(
+                    RESPONSE_TYPE.ERROR,
+                    error_message=f"Error creating table '{table_name}': {unknown_error}",
+                )
+            finally:
+                # Remove the temp dir created
+                shutil.rmtree(temp_dir_path, ignore_errors=True)
+
+            return Response(RESPONSE_TYPE.OK)
+
         elif type(query) is Select:
             table_name = query.from_table.parts[-1]
             file_path = self.file_controller.get_file_path(table_name)
@@ -101,10 +145,37 @@ class FileHandler(DatabaseHandler):
             )
             result_df = query_df(df, query)
             return Response(RESPONSE_TYPE.TABLE, data_frame=result_df)
+
+        elif type(query) is Insert:
+            table_name = query.table.parts[-1]
+            file_path = self.file_controller.get_file_path(table_name)
+
+            # Load the existing data from the file
+            df, _ = self._handle_source(
+                file_path,
+                self.clean_rows,
+                self.custom_parser,
+                self.chunk_size,
+                self.chunk_overlap,
+            )
+
+            # Create a new dataframe with the values from the query
+            new_df = pd.DataFrame(query.values, columns=[col.name for col in query.columns])
+
+            # Concatenate the new dataframe with the existing one
+            df = pd.concat([df, new_df], ignore_index=True)
+
+            # Write the concatenated data to the file based on its format
+            format = Path(file_path).suffix.strip(".").lower()
+            write_method = getattr(df, f"to_{format}")
+            write_method(file_path, index=False)
+
+            return Response(RESPONSE_TYPE.OK)
+
         else:
             return Response(
                 RESPONSE_TYPE.ERROR,
-                error_message="Only 'select' and 'drop' queries allowed for files",
+                error_message="Only 'select', 'insert', 'create' and 'drop' queries allowed for files",
             )
 
     def native_query(self, query: str) -> Response:

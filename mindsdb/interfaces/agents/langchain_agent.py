@@ -18,6 +18,7 @@ from langchain_community.chat_models import (
     ChatLiteLLM,
     ChatOllama,
 )
+from langchain_core.embeddings import Embeddings
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langchain_core.prompts import PromptTemplate
 from langchain_core.tools import Tool
@@ -109,6 +110,27 @@ def get_chat_model_params(args: Dict) -> Dict:
     config_dict = llm_config.model_dump()
     config_dict = {k: v for k, v in config_dict.items() if v is not None}
     return config_dict
+
+
+def build_embedding_model(args) -> Embeddings:
+    """
+    Build an embeddings model from the given arguments.
+    """
+    # Set up embeddings model if needed.
+    embeddings_args = args.pop("embedding_model_args", {})
+
+    # no embedding model args provided, use default provider.
+    if not embeddings_args:
+        embeddings_provider = get_embedding_model_provider(args)
+        logger.warning(
+            "'embedding_model_args' not found in input params, "
+            f"Trying to use LLM provider: {embeddings_provider}"
+        )
+        embeddings_args["class"] = embeddings_provider
+        # Include API keys if present.
+        embeddings_args.update({k: v for k, v in args.items() if "api_key" in k})
+
+    return construct_model_from_args(embeddings_args)
 
 
 def create_chat_model(args: Dict):
@@ -332,23 +354,10 @@ class LangchainAgent:
         return self.stream_agent(df, agent, args)
 
     def set_embedding_model(self, args):
-        # Set up embeddings model if needed.
-
-        embeddings_args = args.pop("embedding_model_args", {})
-
-        # no embedding model args provided, use default provider.
-        if not embeddings_args:
-            embeddings_provider = get_embedding_model_provider(args)
-            logger.warning(
-                "'embedding_model_args' not found in input params, "
-                f"Trying to use LLM provider: {embeddings_provider}"
-            )
-            embeddings_args["class"] = embeddings_provider
-            # Include API keys if present.
-            embeddings_args.update({k: v for k, v in args.items() if "api_key" in k})
-
-        # create embeddings model
-        self.embedding_model = construct_model_from_args(embeddings_args)
+        """
+        Set the embedding model for the agent.
+        """
+        self.embedding_model = build_embedding_model(args)
 
     def create_agent(self, df: pd.DataFrame, args: Dict = None) -> AgentExecutor:
         # Set up tools.

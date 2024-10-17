@@ -1,2 +1,2 @@
-pycaret
-pycaret[models]
+pycaret[models]==3.3.2
+scikit-learn==1.2.2

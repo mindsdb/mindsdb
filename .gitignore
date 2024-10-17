@@ -34,6 +34,9 @@ structured_data_classifier
 structured_data_regressor
 mindsdb/integrations/handlers/autokeras_handler/structured_data_classifier
 
+# AutoGluon generated files
+AutogluonModels
+
 # VisualStudioCode
 .vscode
 .vscode/*

@@ -54,7 +54,7 @@ class AmazonBedrockHandlerEngineConfig(BaseModel):
     aws_access_key_id: Text
     aws_secret_access_key: Text
     region_name: Text
-    aws_session_token: Optional[Text]
+    aws_session_token: Optional[Text] = None
 
     class Config:
         extra = "forbid"

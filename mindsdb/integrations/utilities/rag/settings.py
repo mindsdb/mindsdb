@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Union
+from typing import List, Union, Any
 
 from langchain_community.vectorstores.chroma import Chroma
 from langchain_community.vectorstores.pgvector import PGVector
@@ -26,6 +26,8 @@ DEFAULT_CONTENT_COLUMN_NAME = "body"
 DEFAULT_DATASET_DESCRIPTION = "email inbox"
 DEFAULT_TEST_TABLE_NAME = "test_email"
 DEFAULT_VECTOR_STORE = Chroma
+DEFAULT_RERANKER_FLAG = False
+DEFAULT_RERANKING_MODEL = "gpt-4o"
 DEFAULT_AUTO_META_PROMPT_TEMPLATE = """
 Below is a json representation of a table with information about {description}.
 Return a JSON list with an entry for each column. Each entry should have
@@ -92,6 +94,7 @@ class VectorStoreConfig(BaseModel):
     persist_directory: str = None
     collection_name: str = DEFAULT_COLLECTION_NAME
     connection_string: str = None
+    kb_table: Any = None
 
     class Config:
         arbitrary_types_allowed = True
@@ -127,6 +130,7 @@ class RAGPipelineModel(BaseModel):
     cardinality_threshold: int = DEFAULT_CARDINALITY_THRESHOLD  # Cardinality threshold
     content_column_name: str = DEFAULT_CONTENT_COLUMN_NAME  # content column name (the column we will get embeddings)
     dataset_description: str = DEFAULT_DATASET_DESCRIPTION  # Description of the dataset
+    reranker: bool = DEFAULT_RERANKER_FLAG
 
     class Config:
         arbitrary_types_allowed = True

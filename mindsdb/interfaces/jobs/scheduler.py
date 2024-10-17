@@ -8,6 +8,7 @@ from mindsdb.interfaces.jobs.jobs_controller import JobsExecutor
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
+from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
 
 logger = log.getLogger(__name__)
 

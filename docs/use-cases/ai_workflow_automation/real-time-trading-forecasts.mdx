@@ -107,8 +107,8 @@ PARAMETERS =  {
 Here is how to send messages to a Slack channel:
 
 ```sql
-INSERT INTO btcusdt_slack_app.channels (channel, text)
-VALUES("slack-channel-name", "BTCUSDT forecasts coming soon.");
+INSERT INTO btcusdt_slack_app.messages (channel_id, text)
+VALUES("slack-channel-id", "BTCUSDT forecasts coming soon.");
 ```
 
 So, let’s put it all together again.
@@ -135,10 +135,10 @@ join_learn_process = true;
 
 -- step 2: make fresh forecasts for the following 10 minutes and insert it into slack --
 
-INSERT INTO btcusdt_slack_app.channels (channel, text)
-VALUES("slack-channel-name", "Here are the BTCUSDT forecasts for the next 10 minutes:");
-INSERT INTO btcusdt_slack_app.channels (channel, text)
-SELECT "slack-channel-name" AS channel, concat('timestamp: ', cast(to_timestamp(cast(m.open_time as bigint)) as string), ' -> open price: ', m.open_price) AS text
+INSERT INTO btcusdt_slack_app.messages (channel_id, text)
+VALUES("slack-channel-id", "Here are the BTCUSDT forecasts for the next 10 minutes:");
+INSERT INTO btcusdt_slack_app.messages (channel_id, text)
+SELECT "slack-channel-id" AS channel_id, concat('timestamp: ', cast(to_timestamp(cast(m.open_time as bigint)) as string), ' -> open price: ', m.open_price) AS text
 FROM btcusdt_recent AS d
 JOIN cryptocurrency_forecast_model AS m
 WHERE d.open_time > LATEST;

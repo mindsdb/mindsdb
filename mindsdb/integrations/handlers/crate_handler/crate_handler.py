@@ -51,18 +51,32 @@ class CrateHandler(DatabaseHandler):
         Returns:
             Connection Object
         """
-        if self.is_connected is True:
+        if self.is_connected:
             return self.connection
 
-        url = "http://{0}:{1}@{2}:{3}".format(
-            self.user, self.password, self.host, self.port
-        )
+
+        if self.host.startswith('localhost') or self.host == '127.0.0.1':
+            # Local connection
+            url = "http://{0}:{1}@{2}:{3}".format(
+                self.user, self.password, self.host, self.port
+            )
+        else:
+            # Cloud connection 
+            url = "https://{0}:{1}@{2}:{3}".format(
+                self.user, self.password, self.host, self.port
+            )
+
         try:
-            self.connection = db.connect(url)
+            if 'localhost' in self.host or self.host == '127.0.0.1':
+                # Connect without SSL for local
+                self.connection = db.connect(url, timeout=30)
+            else:
+                # Connect with SSL for cloud
+                self.connection = db.connect(url, verify_ssl_cert=True, timeout=30)
 
             self.is_connected = True
         except Exception as e:
-            logger.error(f"Error while connecting to CrateDB, {e}")
+            logger.error(f"Error while connecting to CrateDB: {e}")
 
         return self.connection
 

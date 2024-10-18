@@ -23,10 +23,10 @@ class ClipdropHandler(BaseMLEngine):
         available_tasks = ["remove_text", "remove_background", "sketch_to_image", "text_to_image", "replace_background", "reimagine"]
 
         if 'task' not in args:
-            raise Exception('task has to be specified. Available tasks are - ' + available_tasks)
+            raise Exception(f'task has to be specified. Available tasks are - {available_tasks}')
 
         if args['task'] not in available_tasks:
-            raise Exception('Unknown task specified. Available tasks are - ' + available_tasks)
+            raise Exception(f'Unknown task specified. Available tasks are - {available_tasks}')
 
         if 'local_directory_path' not in args:
             raise Exception('local_directory_path has to be specified')
@@ -41,6 +41,7 @@ class ClipdropHandler(BaseMLEngine):
         self.model_storage.json_set('args', args)
 
     def _get_clipdrop_client(self, args):
+        args["using"] = "clipdrop_engine"
         api_key = get_api_key('clipdrop', args["using"], self.engine_storage, strict=False)
 
         local_directory_path = args["local_directory_path"]
@@ -152,12 +153,12 @@ class ClipdropHandler(BaseMLEngine):
 
         def generate_reimagine(conds, client):
             conds = conds.to_dict()
-            return client.reimagine(conds.get("text"))
+            return client.reimagine(conds.get("image_url"))
 
-        supported_params = set(["text"])
+        supported_params = set(["image_url"])
 
-        if "text" not in df.columns:
-            raise Exception("`text` column has to be given in the query.")
+        if "image_url" not in df.columns:
+            raise Exception("`image_url` column has to be given in the query.")
 
         for col in df.columns:
             if col not in supported_params:

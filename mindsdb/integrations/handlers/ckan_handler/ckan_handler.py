@@ -1,4 +1,5 @@
 import pandas as pd
+import json
 from ckanapi import RemoteCKAN
 from urllib.parse import urlparse, parse_qs
 
@@ -109,46 +110,49 @@ class DatastoreTable(APITable):
         limit = query.limit.value if query.limit else None
 
         resource_id = None
-        other_conditions = []
+        filters = {}
         for condition in conditions:
             if isinstance(condition, list) and len(condition) == 3:
                 op, col, val = condition
                 if col == "resource_id" and op == "=":
                     resource_id = val
                 else:
-                    other_conditions.append(condition)
+                    filters[col] = val
 
         if not resource_id:
             message = "Please provide a resource_id in your query. Example: SELECT * FROM datastore WHERE resource_id = 'your_resource_id'"
             df = pd.DataFrame({"message": [message]})
             return df
 
-        data = self.query_datastore(resource_id, other_conditions, limit)
+        data = self.query_datastore(resource_id, filters, limit)
         return pd.DataFrame(data)
 
-    def query_datastore(self, resource_id, conditions, limit):
+    def query_datastore(self, resource_id, filters, limit):
         params = {
             "resource_id": resource_id,
-            "limit": 1000,  # Start with default limit of 1000 records
+            "limit": limit,  # Start with default limit of 1000 records
         }
 
-        # Add filters based on conditions
-        filters = {}
-        for condition in conditions:
-            op, col, val = condition
-            if op == "=":
-                filters[col] = val
         if filters:
-            params["filters"] = filters
+            params["filters"] = json.dumps(filters)
 
         all_records = []
+        total_records = None
         while True:
+            logger.info(f"Calling CKAN API method: datastore_search with params: {params}")
             result = self.handler.call_ckan_api("datastore_search", params)
+            if total_records is None:
+                total_records = result.get("total", 0)
+                logger.info(f"Total records: {total_records}")
+                if limit:
+                    total_records = min(total_records, limit)
+                    logger.info(f"Limiting to {total_records} records due to LIMIT clause")
+
             records = result.get("records", [])
             all_records.extend(records)
 
             # Check if we've reached the desired limit
-            if limit and len(all_records) >= limit:
+            if len(all_records) >= total_records:
                 logger.info(f"Reached limit of {limit} records")
                 all_records = all_records[:limit]
                 break
@@ -228,6 +232,7 @@ class CkanHandler(APIHandler):
         method = getattr(connection.action, method_name)
 
         try:
+            print(f"Calling CKAN API method: {method_name} with params: {params}")
             result = method(**params)
             return result
         except Exception as e:

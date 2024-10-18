@@ -1,6 +1,5 @@
 import pandas as pd
 from ckanapi import RemoteCKAN
-from urllib.parse import urlparse, parse_qs
 
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable
 from mindsdb.integrations.libs.response import (
@@ -45,8 +44,6 @@ class DatasetsTable(APITable):
 
         return pd.DataFrame(data)
 
-    # Define the columns that will be returned by the table
-    # Maybe we can make this dynamic in the future
     def get_columns(self):
         return [
             "id",

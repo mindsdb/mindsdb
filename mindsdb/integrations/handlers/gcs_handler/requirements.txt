@@ -1,0 +1,5 @@
+duckdb
+fsspec
+gcsfs
+google-auth
+google-cloud-storage

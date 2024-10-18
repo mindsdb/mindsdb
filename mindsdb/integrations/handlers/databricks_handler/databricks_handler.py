@@ -233,7 +233,8 @@ class DatabricksHandler(DatabaseHandler):
         result = self.native_query(query)
 
         df = result.data_frame
-        result.data_frame = df.rename(columns={"tableName": "table_name", "database": "schema_name"})
+        if df is not None:
+            result.data_frame = df.rename(columns={"tableName": "table_name", "database": "schema_name"})
         return result
 
     def get_columns(self, table_name: Text) -> Response:

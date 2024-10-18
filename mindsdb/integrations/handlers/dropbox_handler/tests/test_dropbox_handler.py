@@ -13,9 +13,7 @@ class DropboxHandlerTest(unittest.TestCase):
         }
         cls.handler = DropboxHandler("test_dropbox_handler", cls.kwargs)
 
-    @patch(
-        "mindsdb.integrations.handlers.dropbox_handler.dropbox_handler.dropbox.Dropbox"
-    )
+    @patch("dropbox.Dropbox")
     def test_0_check_connection(self, mock_dropbox_class):
         mock_dropbox_instance = MagicMock()
         mock_dropbox_class.return_value = mock_dropbox_instance
@@ -25,9 +23,7 @@ class DropboxHandlerTest(unittest.TestCase):
         status = self.handler.check_connection()
         self.assertTrue(status.success)
 
-    @patch(
-        "mindsdb.integrations.handlers.dropbox_handler.dropbox_handler.dropbox.Dropbox"
-    )
+    @patch("dropbox.Dropbox")
     def test_1_get_tables(self, mock_dropbox_class):
         mock_dropbox_instance = MagicMock()
         mock_dropbox_class.return_value = mock_dropbox_instance

@@ -86,8 +86,20 @@ class YoutubeHandler(APIHandler):
         if self.is_connected is True:
             return self.connection
         
-        google_oauth2_manager = GoogleUserOAuth2Manager(self.handler_storage, self.scopes, self.credentials_file, self.credentials_url, self.connection_data.get('code'))
-        creds = google_oauth2_manager.get_oauth2_credentials()
+        google_oauth2_manager = GoogleUserOAuth2Manager(
+            self.handler_storage, 
+            self.scopes, 
+            self.credentials_file, 
+            self.credentials_url, 
+            self.connection_data.get('code')
+        )
+        try:
+            creds = google_oauth2_manager.get_oauth2_credentials()
+        except Exception as e:
+            auth_url = getattr(e, 'authorization_url', None)
+            if auth_url:
+                raise Exception(f"AUTHORIZATION_REQUIRED: {auth_url}")
+            raise
 
         youtube = build(
             "youtube", "v3", developerKey=self.youtube_api_token, credentials=creds
@@ -111,8 +123,14 @@ class YoutubeHandler(APIHandler):
             response.success = True
             response.copy_storage = True
         except Exception as e:
-            logger.error(f"Error connecting to Youtube API: {e}!")
-            response.error_message = e
+            error_message = str(e)
+            if error_message.startswith("AUTHORIZATION_REQUIRED:"):
+                auth_url = error_message.split("AUTHORIZATION_REQUIRED:")[1].strip()
+                response.error_message = f"Authorization required. Please follow this link: {auth_url}"
+                response.type = "info"  
+            else:
+                logger.error(f"Error connecting to Youtube API: {e}!")
+                response.error_message = str(e)
 
         self.is_connected = response.success
 

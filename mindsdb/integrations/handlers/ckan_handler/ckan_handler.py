@@ -1,5 +1,4 @@
 import pandas as pd
-import json
 from ckanapi import RemoteCKAN
 from urllib.parse import urlparse, parse_qs
 
@@ -107,77 +106,107 @@ class ResourceIDsTable(APITable):
 class DatastoreTable(APITable):
     def select(self, query: ast.Select) -> pd.DataFrame:
         conditions = extract_comparison_conditions(query.where) if query.where else []
-        limit = query.limit.value if query.limit else None
+        resource_id = self.extract_resource_id(conditions)
 
-        resource_id = None
-        filters = {}
-        for condition in conditions:
-            if isinstance(condition, list) and len(condition) == 3:
-                op, col, val = condition
-                if col == "resource_id" and op == "=":
-                    resource_id = val
-                else:
-                    filters[col] = val
-
-        if not resource_id:
+        if resource_id:
+            return self.execute_resource_query(query, resource_id)
+        else:
             message = "Please provide a resource_id in your query. Example: SELECT * FROM datastore WHERE resource_id = 'your_resource_id'"
             df = pd.DataFrame({"message": [message]})
             return df
 
-        data = self.query_datastore(resource_id, filters, limit)
-        return pd.DataFrame(data)
+    def execute_resource_query(
+        self, query: ast.Select, resource_id: str
+    ) -> pd.DataFrame:
+        sql_query = self.ast_to_sql(query, resource_id)
+        result = self.handler.call_ckan_api("datastore_search_sql", {"sql": sql_query})
 
-    def query_datastore(self, resource_id, filters, limit):
-        params = {
-            "resource_id": resource_id,
-            "limit": limit,  # Start with default limit of 1000 records
-        }
+        records = result.get("records", [])
 
-        if filters:
-            params["filters"] = json.dumps(filters)
+        df = pd.DataFrame(records)
 
-        all_records = []
-        total_records = None
-        while True:
-            logger.info(f"Calling CKAN API method: datastore_search with params: {params}")
-            result = self.handler.call_ckan_api("datastore_search", params)
-            if total_records is None:
-                total_records = result.get("total", 0)
-                logger.info(f"Total records: {total_records}")
-                if limit:
-                    total_records = min(total_records, limit)
-                    logger.info(f"Limiting to {total_records} records due to LIMIT clause")
-
-            records = result.get("records", [])
-            all_records.extend(records)
-
-            # Check if we've reached the desired limit
-            if len(all_records) >= total_records:
-                logger.info(f"Reached limit of {limit} records")
-                all_records = all_records[:limit]
-                break
-
-            # Check for next page
-            if "_links" in result and "next" in result["_links"]:
-                next_url = result["_links"]["next"]
-                parsed_url = urlparse(next_url)
-                query_params = parse_qs(parsed_url.query)
-                params["offset"] = query_params.get("offset", ["0"])[0]
-                logger.info(f"Fetching next page with offset {params['offset']}")
-            else:
-                logger.info("No more pages to fetch")
-                break  # No more pages
-
-        df = pd.DataFrame(all_records)
-
-        # Include metadata about the resource
-        metadata = self.handler.call_ckan_api("resource_show", {"id": resource_id})
-        df["_resource_id"] = resource_id
-        df["_resource_name"] = metadata.get("name")
-        df["_resource_format"] = metadata.get("format")
-        df["_resource_last_modified"] = metadata.get("last_modified")
+        df = df.loc[:, ~df.columns.str.startswith("_")]
 
         return df
+
+    def ast_to_sql(self, query: ast.Select, resource_id: str) -> str:
+        sql_parts = [
+            f"SELECT {self.render_columns(query.targets)}",
+            f'FROM "{resource_id}"',
+        ]
+
+        # Handle WHERE clause
+        where_conditions = []
+        if query.where:
+            where_conditions = self.extract_where_conditions(query.where)
+
+        where_conditions = [
+            cond
+            for cond in where_conditions
+            if not (
+                isinstance(cond, ast.BinaryOperation)
+                and cond.args[0].parts[-1] == "resource_id"
+            )
+        ]
+
+        if where_conditions:
+            sql_parts.append(
+                f'WHERE {" AND ".join(self.render_where(cond) for cond in where_conditions)}'
+            )
+
+        # Handle LIMIT
+        if query.limit:
+            sql_parts.append(f"LIMIT {query.limit.value}")
+
+        return " ".join(sql_parts)
+
+    def render_columns(self, targets):
+        if not targets or (len(targets) == 1 and isinstance(targets[0], ast.Star)):
+            return "*"
+        return ", ".join(self.render_column(target) for target in targets)
+
+    def render_column(self, target):
+        if isinstance(target, ast.Identifier):
+            return f'"{target.parts[-1]}"'
+        # Handle other types of targets as needed
+        return str(target)
+
+    def extract_where_conditions(self, where):
+        if isinstance(where, ast.BinaryOperation) and where.op == "and":
+            return self.extract_where_conditions(
+                where.args[0]
+            ) + self.extract_where_conditions(where.args[1])
+        return [where]
+
+    def render_where(self, where):
+        if isinstance(where, ast.BinaryOperation):
+            left = self.render_where(where.args[0])
+            right = self.render_where(where.args[1])
+
+            if where.op == "like":
+                return f"{left} ILIKE {right}"
+            elif where.op in ["=", ">", "<", ">=", "<=", "<>"]:
+                return f"{left} {where.op} {right}"
+            # Add more operators as needed
+
+        elif isinstance(where, ast.Constant):
+            return (
+                f"'{where.value}'" if isinstance(where.value, str) else str(where.value)
+            )
+
+        elif isinstance(where, ast.Identifier):
+            return f'"{where.parts[-1]}"'
+
+        # Handle other types of WHERE conditions as needed
+        return str(where)
+
+    def extract_resource_id(self, conditions):
+        for condition in conditions:
+            if isinstance(condition, list) and len(condition) == 3:
+                op, col, val = condition
+                if col == "resource_id" and op == "=":
+                    return val
+        return None
 
     def get_columns(self):
         return [field["id"] for field in self.fields]
@@ -232,7 +261,6 @@ class CkanHandler(APIHandler):
         method = getattr(connection.action, method_name)
 
         try:
-            print(f"Calling CKAN API method: {method_name} with params: {params}")
             result = method(**params)
             return result
         except Exception as e:

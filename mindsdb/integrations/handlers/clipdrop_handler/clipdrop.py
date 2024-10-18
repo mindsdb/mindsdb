@@ -53,7 +53,7 @@ class ClipdropClient:
         url = f'{self.base_endpoint}sketch-to-image/v1/sketch-to-image'
         img_content = self.download_image(img_url)
         files = {
-            'image_file': ('image.jpg', img_content["content"], f'image/{img_content["img_ext"]}')
+            'sketch_file': ('image.jpg', img_content["content"], f'image/{img_content["img_ext"]}')
         }
         data = {'prompt': prompt}
         return self.make_request(url, files=files, data=data)

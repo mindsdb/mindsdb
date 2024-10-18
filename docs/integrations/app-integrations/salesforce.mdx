@@ -63,6 +63,20 @@ FROM salesforce_datasource.table_name
 LIMIT 10;
 ```
 
+Run [SOQL](https://developer.salesforce.com/docs/atlas.en-us.soql_sosl.meta/soql_sosl/sforce_api_calls_soql.htm) queries directly on the connected Salesforce account:
+
+```sql
+SELECT * FROM salesforce_datasource (
+
+    --Native Query Goes Here
+    SELECT Name, Account.Name, Account.Industry
+    FROM Contact
+    WHERE Account.Industry = 'Technology'
+    LIMIT 5
+
+);
+```
+
 <Note>
 The above examples utilize `salesforce_datasource` as the datasource name, which is defined in the `CREATE DATABASE` command.
 </Note>

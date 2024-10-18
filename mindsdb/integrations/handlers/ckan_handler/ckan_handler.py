@@ -15,6 +15,10 @@ logger = log.getLogger(__name__)
 
 
 class DatasetsTable(APITable):
+    '''
+    Datasets table contains information about CKAN datasets.
+    This table is used to list all datasets available in CKAN that have datastore active resources.
+    '''
     def select(self, query: ast.Select) -> pd.DataFrame:
         conditions = extract_comparison_conditions(query.where) if query.where else []
         limit = query.limit.value if query.limit else 1000
@@ -55,6 +59,10 @@ class DatasetsTable(APITable):
 
 
 class ResourceIDsTable(APITable):
+    '''
+    ResourceIDs table contains information about CKAN resources.
+    This table is used to list all resources available in CKAN that are datastore active.
+    '''
     def select(self, query: ast.Select) -> pd.DataFrame:
         conditions = extract_comparison_conditions(query.where) if query.where else []
         limit = query.limit.value if query.limit else 1000
@@ -101,6 +109,11 @@ class ResourceIDsTable(APITable):
 
 
 class DatastoreTable(APITable):
+    '''
+    Datastore table is used to query CKAN datastore resources.
+    This table is used to query data from CKAN datastore resources.
+    It is using the datastore_search_sql API to execute SQL queries on CKAN datastore resources.
+    '''
     def select(self, query: ast.Select) -> pd.DataFrame:
         conditions = extract_comparison_conditions(query.where) if query.where else []
         resource_id = self.extract_resource_id(conditions)

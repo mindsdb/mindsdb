@@ -12,11 +12,11 @@ The integration allows MindsDB to access data from Zendesk and enhance it with A
 Before proceeding, ensure the following prerequisites are met:
 
 1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
-2. To connect Salesforce to MindsDB, install the required dependencies following [this instruction](https://docs.mindsdb.com/setup/self-hosted/docker#install-dependencies).
+2. To connect Zendesk to MindsDB, install the required dependencies following [this instruction](https://docs.mindsdb.com/setup/self-hosted/docker#install-dependencies).
 
 ## Connection
 
-Establish a connection to Salesforce from MindsDB by executing the following SQL command and providing its [handler name](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/zendesk_handler) as an engine.
+Establish a connection to Zendesk from MindsDB by executing the following SQL command and providing its [handler name](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/zendesk_handler) as an engine.
 
 ```sql
 CREATE DATABASE zendesk_datasource

@@ -39,15 +39,14 @@ class ZendeskHandler(APIHandler):
         self.zen_client = None
         self.is_connected = False
 
-        self._register_table("zendesk_list_users", ZendeskListUsersTable(self))
-        self._register_table("zendesk_get_user_by_id", ZendeskGetUserByIdTable(self))
-        self._register_table("zendesk_list_tickets", ZendeskListTicketsTable(self))
-        self._register_table("zendesk_get_ticket_by_id", ZendeskGetTicketByIdTable(self))
-        self._register_table("zendesk_list_triggers", ZendeskListTriggersTable(self))
-        self._register_table("zendesk_get_trigger_by_id", ZendeskGetTriggerByIdTable(self))
-        self._register_table("zendesk_list_activities", ZendeskListActivitiesTable(self))
-        self._register_table("zendesk_get_activity_by_id", ZendeskGetActivityByIdTable(self))
-
+        self._register_table("list_users", ZendeskListUsersTable(self))
+        self._register_table("get_user_by_id", ZendeskGetUserByIdTable(self))
+        self._register_table("list_tickets", ZendeskListTicketsTable(self))
+        self._register_table("get_ticket_by_id", ZendeskGetTicketByIdTable(self))
+        self._register_table("list_triggers", ZendeskListTriggersTable(self))
+        self._register_table("get_trigger_by_id", ZendeskGetTriggerByIdTable(self))
+        self._register_table("list_activities", ZendeskListActivitiesTable(self))
+        self._register_table("get_activity_by_id", ZendeskGetActivityByIdTable(self))
 
     def connect(self) -> StatusResponse:
         """Set up the connection required by the handler.
@@ -68,7 +67,6 @@ class ZendeskHandler(APIHandler):
             resp.error_message = str(ex)
             self.is_connected = False
         return resp
-        
 
     def check_connection(self) -> StatusResponse:
         """Check connection to the handler.

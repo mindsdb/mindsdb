@@ -3,7 +3,8 @@ title: Zendesk
 sidebarTitle: Zendesk
 ---
 
-This documentation describes the integration of MindsDB with [Zendesk](https://www.zendesk.com/), the world’s most trusted customer relationship management (CRM) platform.
+This documentation describes the integration of MindsDB with [Zendesk](https://www.zendesk.com/), which provides software-as-a-service products related to customer support, sales, and other customer communications.
+
 The integration allows MindsDB to access data from Zendesk and enhance it with AI capabilities.
 
 ## Prerequisites
@@ -35,20 +36,7 @@ Required connection parameters include the following:
 * `email`: The email ID of the account.
 
 <Tip>
-To create a connected app in Salesforce and obtain the client ID and client secret, follow the steps given below:
-1. Log in to your Salesforce account.
-2. Go to `Setup` > `Apps` > `App Manager`.
-3. Click `New Connected App`.
-4. Fill in the required details. Esure that the `Enable OAuth Settings` checkbox is checked, set the `Callback URL` to wherever MindsDB is deployed followed by `/verify-auth` (e.g., `http://localhost:47334/verify-auth`), and choose the appropriate OAuth scopes.
-5. Click `Save`.
-6. Copy the `Consumer Key` (client ID) and `Consumer Secret` (client secret) from the connected app details under `Consumer Key and Secret`.
-7. Go to `Setup` > `Apps` > `Connected Apps` > `Manage Connected Apps`.
-8. Click on the connected app name.
-9. Click `Edit Policies`.
-10. Under `OAuth Policies`, ensure that the `Permitted Users` is set to `All users may self-authorize` and `IP Relaxation` is set to `Relax IP restrictions`.
-11. Click `Save`.
-12. Go to `Setup` > `Identity` > `OAuth and OpenID Connect Settings`.
-13. Ensure that the `Allow OAuth Username-Password Flows` checkbox is checked.
+For enabling, generating and deleting API access, refer [Managing access to the Zendesk API](https://support.zendesk.com/hc/en-us/articles/4408889192858-Managing-access-to-the-Zendesk-API)
 </Tip>
 
 ## Usage
@@ -67,7 +55,13 @@ The above examples utilize `zendesk_datasource` as the datasource name, which is
 
 ## Supported Tables
 
-The Salesforce integration supports the following tables:
+The Zendesk integration supports the following tables:
 
-* ``: The table containing contact information for people you do business with.
-* ``
+* `list_users` : The table lists all the users.
+* `get_user_by_id` : The table to get all info about a single user.
+* `list_tickets` : The table lists all the tickets.
+* `get_ticket_by_id` : The table to get all info about a single ticket.
+* `list_triggers` : The table lists all the triggers.
+* `get_trigger_by_id` : The table to get all info about a single trigger.
+* `list_activities` : The table lists all the activities.
+* `get_activity_by_id` : The table to get all info about a single activity.

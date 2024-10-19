@@ -1,5 +1,4 @@
 import pandas as pd
-import zenpy
 from typing import List
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.utilities.handlers.query_utilities import SELECTQueryParser, SELECTQueryExecutor
@@ -33,7 +32,7 @@ class ZendeskListUsersTable(APITable):
 
         select_statement_parser = SELECTQueryParser(
             query,
-            'zendesk_list_users',
+            'list_users',
             self.get_columns()
         )
 
@@ -88,7 +87,7 @@ class ZendeskGetUserByIdTable(APITable):
         Returns
         -------
         pd.DataFrame
-            Air Quality Data
+            User Data
 
         Raises
         ------
@@ -98,7 +97,7 @@ class ZendeskGetUserByIdTable(APITable):
 
         select_statement_parser = SELECTQueryParser(
             query,
-            'zendesk_get_user_by_id',
+            'get_user_by_id',
             self.get_columns()
         )
 
@@ -184,6 +183,7 @@ class ZendeskGetUserByIdTable(APITable):
             "report_csv"
         ]
 
+
 class ZendeskListTicketsTable(APITable):
     """Zendesk List tickets Table implementation"""
 
@@ -198,7 +198,7 @@ class ZendeskListTicketsTable(APITable):
         Returns
         -------
         pd.DataFrame
-            Air Quality Data
+            Ticket ID Data
 
         Raises
         ------
@@ -208,7 +208,7 @@ class ZendeskListTicketsTable(APITable):
 
         select_statement_parser = SELECTQueryParser(
             query,
-            'zendesk_list_tickets',
+            'list_tickets',
             self.get_columns()
         )
 
@@ -263,7 +263,7 @@ class ZendeskGetTicketByIdTable(APITable):
         Returns
         -------
         pd.DataFrame
-            Air Quality Data
+            Ticket info Data
 
         Raises
         ------
@@ -273,7 +273,7 @@ class ZendeskGetTicketByIdTable(APITable):
 
         select_statement_parser = SELECTQueryParser(
             query,
-            'zendesk_get_ticket_by_id',
+            'get_ticket_by_id',
             self.get_columns()
         )
 
@@ -369,6 +369,7 @@ class ZendeskGetTicketByIdTable(APITable):
             "via.source.rel"
         ]
 
+
 class ZendeskListTriggersTable(APITable):
     """Zendesk List Triggers Table implementation"""
 
@@ -383,7 +384,7 @@ class ZendeskListTriggersTable(APITable):
         Returns
         -------
         pd.DataFrame
-            Air Quality Data
+            Trigger Data
 
         Raises
         ------
@@ -393,7 +394,7 @@ class ZendeskListTriggersTable(APITable):
 
         select_statement_parser = SELECTQueryParser(
             query,
-            'zendesk_list_triggers',
+            'list_triggers',
             self.get_columns()
         )
 
@@ -448,7 +449,7 @@ class ZendeskGetTriggerByIdTable(APITable):
         Returns
         -------
         pd.DataFrame
-            Air Quality Data
+            Trigger info Data
 
         Raises
         ------
@@ -458,7 +459,7 @@ class ZendeskGetTriggerByIdTable(APITable):
 
         select_statement_parser = SELECTQueryParser(
             query,
-            'zendesk_get_trigger_by_id',
+            'get_trigger_by_id',
             self.get_columns()
         )
 
@@ -520,6 +521,7 @@ class ZendeskGetTriggerByIdTable(APITable):
             "conditions.any"
         ]
 
+
 class ZendeskListActivitiesTable(APITable):
     """Zendesk List Activities Table implementation"""
 
@@ -534,7 +536,7 @@ class ZendeskListActivitiesTable(APITable):
         Returns
         -------
         pd.DataFrame
-            Air Quality Data
+            Activity list Data
 
         Raises
         ------
@@ -544,7 +546,7 @@ class ZendeskListActivitiesTable(APITable):
 
         select_statement_parser = SELECTQueryParser(
             query,
-            'zendesk_list_activities',
+            'list_activities',
             self.get_columns()
         )
 
@@ -599,7 +601,7 @@ class ZendeskGetActivityByIdTable(APITable):
         Returns
         -------
         pd.DataFrame
-            Air Quality Data
+            Activity info Data
 
         Raises
         ------
@@ -609,7 +611,7 @@ class ZendeskGetActivityByIdTable(APITable):
 
         select_statement_parser = SELECTQueryParser(
             query,
-            'zendesk_get_activity_by_id',
+            'get_activity_by_id',
             self.get_columns()
         )
 
@@ -777,4 +779,3 @@ class ZendeskGetActivityByIdTable(APITable):
             "target.ticket.url",
             "target.ticket.via"
         ]
-

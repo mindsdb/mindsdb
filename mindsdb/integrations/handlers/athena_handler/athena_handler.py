@@ -192,6 +192,7 @@ class AthenaHandler(DatabaseHandler):
                 check_interval = int(check_interval)
             if check_interval > 0:
                 time.sleep(check_interval)
+                
     def _parse_query_result(self, result: dict) -> pd.DataFrame:
         """
         Parse the result of the Athena query into a DataFrame.

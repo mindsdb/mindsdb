@@ -307,7 +307,7 @@ def test_successful_completion(client, create_test_kb):
     assert response_data['message']['role'] == 'assistant'
 
 
-def test_missing_query_parameter(client, create_test_kb):
+def test_completion_missing_query_parameter(client, create_test_kb):
     kb_name = create_test_kb
     invalid_request = {
         'knowledge_base': kb_name
@@ -317,7 +317,7 @@ def test_missing_query_parameter(client, create_test_kb):
     assert response.status_code == 400
 
 
-def test_missing_knowledge_base_parameter(client, create_test_kb):
+def test_completion_missing_knowledge_base_parameter(client, create_test_kb):
     kb_name = create_test_kb
     invalid_request = {
         'query': 'What is the capital of France?'
@@ -327,7 +327,7 @@ def test_missing_knowledge_base_parameter(client, create_test_kb):
     assert response.status_code == 400
 
 
-def test_non_existent_project(client, create_test_kb):
+def test_completion_non_existent_project(client, create_test_kb):
     kb_name = create_test_kb
     completion_request = {
         'query': 'What is the capital of France?',
@@ -338,7 +338,7 @@ def test_non_existent_project(client, create_test_kb):
     assert response.status_code == 404
 
 
-def test_non_existent_knowledge_base(client):
+def test_completion_non_existent_knowledge_base(client):
     completion_request = {
         'query': 'What is the capital of France?',
         'knowledge_base': 'nonexistent_kb'

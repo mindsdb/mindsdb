@@ -18,7 +18,7 @@ from mindsdb.integrations.utilities.rag.splitters.file_splitter import FileSplit
 from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseTable
 from mindsdb.utilities import log
 from mindsdb.utilities.exception import EntityNotExistsError
-from mindsdb.integrations.utilities.rag.settings import DEFAULT_LLM_MODEL
+from mindsdb.integrations.utilities.rag.settings import DEFAULT_LLM_MODEL, DEFAULT_RAG_PROMPT_TEMPLATE
 
 
 from mindsdb_sql.parser.ast import Identifier
@@ -312,6 +312,10 @@ class KnowledgeBaseCompletions(Resource):
         if llm_model is None:
             logger.warn(f'Missing parameter "llm_model" in POST body, using default llm_model {DEFAULT_LLM_MODEL}')
 
+        prompt_template = request.json.get('prompt_template')
+        if prompt_template is None:
+            logger.warn(f'Missing parameter "prompt_template" in POST body, using default prompt template {DEFAULT_RAG_PROMPT_TEMPLATE}')
+
         session = SessionController()
         project_controller = ProjectController()
         try:
@@ -344,6 +348,10 @@ class KnowledgeBaseCompletions(Resource):
         # add llm model to retrieval config
         if llm_model is not None:
             retrieval_config['llm_model_name'] = llm_model
+
+        # add prompt template to retrieval config
+        if prompt_template is not None:
+            retrieval_config['rag_prompt_template'] = prompt_template
 
         # add llm provider to retrieval config if set
         llm_provider = request.json.get('model_provider')

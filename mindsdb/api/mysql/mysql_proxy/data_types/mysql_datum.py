@@ -8,7 +8,6 @@
  * permission of MindsDB Inc
  *******************************************************
 """
-import math
 import struct
 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
@@ -30,7 +29,6 @@ class Datum:
 
     def __init__(self, var_type, value=None, var_len=None):
         # TODO other types: float, timestamp
-        # self.type = type
         self.value = b""
 
         if var_len is None:

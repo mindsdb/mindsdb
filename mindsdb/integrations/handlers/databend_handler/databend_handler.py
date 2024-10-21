@@ -58,8 +58,13 @@ class DatabendHandler(DatabaseHandler):
         if self.is_connected is True:
             return self.connection
 
+        if self.connection_data['host'] == 'localhost' or self.connection_data['host'] == '127.0.0.1':
+            ssl_mode = 'disable'
+        else:
+            ssl_mode = 'require'
+
         self.connection = connector.connect(
-            f"https://{self.connection_data['user']}:{self.connection_data['password']}@{self.connection_data['host']}:{self.connection_data['port']}/{self.connection_data['database']}?secure=true"
+            f"databend://{self.connection_data['user']}:{self.connection_data['password']}@{self.connection_data['host']}:{self.connection_data['port']}/{self.connection_data['database']}?sslmode={ssl_mode}"
         )
         self.is_connected = True
 
@@ -168,8 +173,9 @@ class DatabendHandler(DatabaseHandler):
         result = self.native_query(query)
         df = result.data_frame
 
-        df = df[[f'Tables_in_{self.connection_data["database"]}']]
-        result.data_frame = df.rename(columns={f'Tables_in_{self.connection_data["database"]}': 'table_name'})
+        if df is not None:
+            df = df[[f'Tables_in_{self.connection_data["database"]}']]
+            result.data_frame = df.rename(columns={f'Tables_in_{self.connection_data["database"]}': 'table_name'})
 
         return result
     

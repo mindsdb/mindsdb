@@ -503,7 +503,13 @@
             "mindsdb_sql/agents/knowledge-bases"
           ]
         },
-        "mindsdb_sql/functions/custom_functions"
+        {
+          "group": "Functions",
+          "pages": [
+            "mindsdb_sql/functions/custom_functions",
+            "mindsdb_sql/functions/llm_function"
+          ]
+        }
       ]
     },
     {

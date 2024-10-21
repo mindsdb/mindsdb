@@ -81,6 +81,8 @@ PACKAGE_NAME_MAP = {
     "google-auth-httplib2": ["google"],
     "google-generativeai": ["google"],
     "google-analytics-admin": ["google"],
+    "google-auth": ["google"],
+    "google-cloud-storage": ["google"],
     "protobuf": ["google"],
     "google-api-python-client": ["googleapiclient"],
     "binance-connector": ["binance"],
@@ -124,7 +126,7 @@ PACKAGE_NAME_MAP = {
     "llama-index-readers-web": ["llama_index"],
     "llama-index-embeddings-openai": ["llama_index"],
     "botframework-connector": ["botframework"],
-    "botbuilder-schema": ["botbuilder"],
+    "botbuilder-schema": ["botbuilder"]
 }
 
 # We use this to exit with a non-zero status code if any check fails

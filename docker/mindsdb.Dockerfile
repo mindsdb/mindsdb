@@ -25,9 +25,9 @@ FROM python:3.10 as build
 WORKDIR /mindsdb
 ARG EXTRAS
 
-# "rm ... docker-clean" stops apt from removing packages from our cache
-# https://github.com/moby/buildkit/blob/master/frontend/dockerfile/docs/reference.md#example-cache-apt-packages
+# Configure apt to retain downloaded packages so we can store them in a cache mount
 RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
+# Install system dependencies, with caching for faster builds
 RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
     apt update -qy \
@@ -55,10 +55,12 @@ ENV UV_LINK_MODE=copy \
 
 # Install all requirements for mindsdb and all the default handlers
 # Installs everything into a venv in /mindsdb so that everything is isolated
-RUN --mount=type=cache,target=/root/.cache uv venv \
-                                        && uv pip install "."
+RUN --mount=type=cache,target=/root/.cache \
+    uv venv \
+    && uv pip install "."
 # Install extras on top of the bare mindsdb
-RUN --mount=type=cache,target=/root/.cache if [ -n "$EXTRAS" ]; then uv pip install $EXTRAS; fi
+RUN --mount=type=cache,target=/root/.cache \
+    if [ -n "$EXTRAS" ]; then uv pip install $EXTRAS; fi
 
 # Copy all of the mindsdb code over finally
 # Here is where we invalidate the cache again if ANY file has changed
@@ -74,9 +76,9 @@ RUN --mount=type=cache,target=/root/.cache uv pip install --no-deps "."
 FROM build as dev
 WORKDIR /mindsdb
 
-# "rm ... docker-clean" stops apt from removing packages from our cache
-# https://github.com/moby/buildkit/blob/master/frontend/dockerfile/docs/reference.md#example-cache-apt-packages
+# Configure apt to retain downloaded packages so we can store them in a cache mount
 RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
+# Install system dependencies, with caching for faster builds
 RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
     apt update -qy \
@@ -111,9 +113,9 @@ ENTRYPOINT [ "bash", "-c", "python -Im mindsdb --config=/root/mindsdb_config.jso
 FROM python:3.10-slim
 WORKDIR /mindsdb
 
-# "rm ... docker-clean" stops apt from removing packages from our cache
-# https://github.com/moby/buildkit/blob/master/frontend/dockerfile/docs/reference.md#example-cache-apt-packages
+# Configure apt to retain downloaded packages so we can store them in a cache mount
 RUN rm -f /etc/apt/apt.conf.d/docker-clean; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
+# Install system dependencies, with caching for faster builds
 RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     --mount=target=/var/cache/apt,type=cache,sharing=locked \
     apt update -qy \
@@ -126,6 +128,7 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
 # This makes sure the venv is activated when the container starts
 RUN echo "source .venv/bin/activate" >> .envrc && echo 'eval "$(direnv hook bash)"' >> .envrc
 
+# Copy installed packages and venv from the build stage
 COPY --link --from=build /mindsdb /mindsdb
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
@@ -137,4 +140,4 @@ EXPOSE 47334/tcp
 EXPOSE 47335/tcp
 EXPOSE 47336/tcp
 
-ENTRYPOINT [ "bash", "-c", "python -Im mindsdb --config=/root/mindsdb_config.json --api=http,mysql,mongodb" ]
+ENTRYPOINT [ "bash", "-c", "python -Im mindsdb --config=/root/mindsdb_config.json --api=http" ]

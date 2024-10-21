@@ -46,10 +46,7 @@ class CohereHandler(BaseMLEngine):
             result_df['predictions'] = df[input_column].apply(self.predict_text_summary)     
 
         elif args['using']['task'] == 'text-generation':
-            result_df['predictions'] = df[input_column].apply(self.predict_text_generation)     
-
-        elif args['using']['task'] == 'language-detection':
-            result_df['predictions'] = df[input_column].apply(self.predict_language)     
+            result_df['predictions'] = df[input_column].apply(self.predict_text_generation)
       
         else:
             raise Exception(f"Task {args['using']['task']} is not supported!")
@@ -89,19 +86,3 @@ class CohereHandler(BaseMLEngine):
         text_generated = response.generations[0].text
 
         return text_generated
-
-    def predict_language(self,text):
-        """    
-        connects with cohere api to predict the input language 
-
-        """
-        args = self.model_storage.json_get('args')
-
-        api_key = get_api_key('cohere', args["using"], self.engine_storage, strict=False)
-        co = cohere.Client(api_key)
-
-        response = co.detect_language([text])
-        language_detected = response.results[0].language_name
-
-        return language_detected
-    

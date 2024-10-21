@@ -341,7 +341,7 @@ class KnowledgeBaseTable:
         model_using = model_rec.learn_args.get('using', {})
         embedding_model_args = {"embedding_model_args": model_using}
 
-        # buidl and set the embedding model in the retrieval_config
+        # build and set the embedding model in the retrieval_config
         embeddings_model = build_embedding_model(embedding_model_args)
         rag_pipeline_model.embedding_model = embeddings_model
 

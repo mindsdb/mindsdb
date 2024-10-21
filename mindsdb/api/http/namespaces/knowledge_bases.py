@@ -306,9 +306,11 @@ class KnowledgeBaseCompletions(Resource):
                 'Must provide "query" parameter in POST body'
             )
 
-        llm_model = request.json.get('model')
+            logger.error('Missing parameter "query" in POST body')
+
+        llm_model = request.json.get('llm_model')
         if llm_model is None:
-            logger.warn(f'Missing parameter "model" in POST body, using default llm_model {DEFAULT_LLM_MODEL}')
+            logger.warn(f'Missing parameter "llm_model" in POST body, using default llm_model {DEFAULT_LLM_MODEL}')
 
         session = SessionController()
         project_controller = ProjectController()
@@ -321,6 +323,7 @@ class KnowledgeBaseCompletions(Resource):
                 'Project not found',
                 f'Project with name {project_name} does not exist'
             )
+            logger.error("Project not found, please check the project name exists")
 
         # Check if knowledge base exists
         table = session.kb_controller.get_table(knowledge_base_name, project.id)
@@ -330,6 +333,8 @@ class KnowledgeBaseCompletions(Resource):
                 'Knowledge Base not found',
                 f'Knowledge Base with name {knowledge_base_name} does not exist'
             )
+
+            logger.error("Knowledge Base not found, please check the knowledge base name exists")
 
         # Get retrieval config, if set
         retrieval_config = request.json.get('retrieval_config', {})

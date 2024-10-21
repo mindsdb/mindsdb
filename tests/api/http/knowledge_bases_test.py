@@ -269,53 +269,80 @@ def test_delete_knowledge_base_not_found(client):
     assert '404' in delete_response.status
 
 
-def test_knowledge_base_completions(client):
-    # First, create a knowledge base to use in the test
+@pytest.fixture
+def create_test_kb(client):
+    kb_name = 'test_completions_kb'
+
+    # First, try to delete the existing knowledge base if it exists
+    client.delete(f'/api/projects/mindsdb/knowledge_bases/{kb_name}', follow_redirects=True)
     create_kb_request = {
         'knowledge_base': {
-            'name': 'test_completions_kb',
+            'name': kb_name,
             'model': 'test_embedding_model'
         }
     }
-    create_kb_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_kb_request, follow_redirects=True)
-    assert '201' in create_kb_response.status
+    create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_kb_request,
+                                  follow_redirects=True)
 
-    # Test successful completion
+    # Check if creation was successful
+    assert create_response.status_code in [201,
+                                           200], f"Failed to create knowledge base. Status: {create_response.status}"
+
+    return kb_name
+
+
+def test_successful_completion(client, create_test_kb):
+    kb_name = create_test_kb
     completion_request = {
         'query': 'What is the capital of France?',
-        'knowledge_base': 'test_completions_kb'
+        'knowledge_base': kb_name
     }
-    completion_response = client.post('/api/projects/mindsdb/knowledge_bases/test_completions_kb/completions',
-                                      json=completion_request, follow_redirects=True)
-    assert '200' in completion_response.status
-    response_data = completion_response.get_json()
+    response = client.post(f'/api/projects/mindsdb/knowledge_bases/{kb_name}/completions',
+                           json=completion_request, follow_redirects=True)
+    assert response.status_code == 200
+    response_data = response.get_json()
     assert 'message' in response_data
     assert 'content' in response_data['message']
     assert 'context' in response_data['message']
     assert response_data['message']['role'] == 'assistant'
 
-    # Test missing query parameter
-    invalid_request = {
-        'knowledge_base': 'test_completions_kb'
-    }
-    invalid_response = client.post('/api/projects/mindsdb/knowledge_bases/test_completions_kb/completions',
-                                   json=invalid_request, follow_redirects=True)
-    assert '400' in invalid_response.status
 
-    # Test missing knowledge_base parameter
+def test_missing_query_parameter(client, create_test_kb):
+    kb_name = create_test_kb
+    invalid_request = {
+        'knowledge_base': kb_name
+    }
+    response = client.post(f'/api/projects/mindsdb/knowledge_bases/{kb_name}/completions',
+                           json=invalid_request, follow_redirects=True)
+    assert response.status_code == 400
+
+
+def test_missing_knowledge_base_parameter(client, create_test_kb):
+    kb_name = create_test_kb
     invalid_request = {
         'query': 'What is the capital of France?'
     }
-    invalid_response = client.post('/api/projects/mindsdb/knowledge_bases/test_completions_kb/completions',
-                                   json=invalid_request, follow_redirects=True)
-    assert '400' in invalid_response.status
+    response = client.post(f'/api/projects/mindsdb/knowledge_bases/{kb_name}/completions',
+                           json=invalid_request, follow_redirects=True)
+    assert response.status_code == 400
 
-    # Test non-existent project
-    invalid_response = client.post('/api/projects/nonexistent/knowledge_bases/test_completions_kb/completions',
-                                   json=completion_request, follow_redirects=True)
-    assert '404' in invalid_response.status
 
-    # Test non-existent knowledge base
-    invalid_response = client.post('/api/projects/mindsdb/knowledge_bases/nonexistent_kb/completions',
-                                   json=completion_request, follow_redirects=True)
-    assert '404' in invalid_response.status
+def test_non_existent_project(client, create_test_kb):
+    kb_name = create_test_kb
+    completion_request = {
+        'query': 'What is the capital of France?',
+        'knowledge_base': kb_name
+    }
+    response = client.post(f'/api/projects/nonexistent/knowledge_bases/{kb_name}/completions',
+                           json=completion_request, follow_redirects=True)
+    assert response.status_code == 404
+
+
+def test_non_existent_knowledge_base(client):
+    completion_request = {
+        'query': 'What is the capital of France?',
+        'knowledge_base': 'nonexistent_kb'
+    }
+    response = client.post('/api/projects/mindsdb/knowledge_bases/nonexistent_kb/completions',
+                           json=completion_request, follow_redirects=True)
+    assert response.status_code == 404

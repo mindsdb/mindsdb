@@ -57,7 +57,7 @@ ENV UV_LINK_MODE=copy \
 # Installs everything into a venv in /mindsdb so that everything is isolated
 RUN --mount=type=cache,target=/root/.cache \
     uv venv \
-    && uv pip install "."
+    && uv pip install pip "."
 # Install extras on top of the bare mindsdb
 RUN --mount=type=cache,target=/root/.cache \
     if [ -n "$EXTRAS" ]; then uv pip install $EXTRAS; fi

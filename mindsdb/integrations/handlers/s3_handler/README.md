@@ -29,12 +29,12 @@ Required connection parameters include the following:
 
 * `aws_access_key_id`: The AWS access key that identifies the user or IAM role.
 * `aws_secret_access_key`: The AWS secret access key that identifies the user or IAM role.
-* `bucket`: The name of the Amazon S3 bucket.
+
 
 Optional connection parameters include the following:
 
 * `aws_session_token`: The AWS session token that identifies the user or IAM role. This becomes necessary when using temporary security credentials.
-* `region_name`: The AWS region to connect to. Default is `us-east-1`.
+* `bucket`: The name of the Amazon S3 bucket. If it is not set: all available buckets will be used (can slow down, getting list of files)
 
 ## Usage
 
@@ -45,14 +45,14 @@ SELECT *
 FROM s3_datasource.`my-file.csv` LIMIT 10
 ```
 
-Retrieve list of files (not filtered by extension):
+Retrieve list of files (without filtering by extension):
 
 ```sql
 SELECT *
 FROM s3_datasource.files LIMIT 10
 ```
 
-Getting list of files with content (content column have to be requested in targets):
+Retrieve a list of files with their content (the content column needs to be requested explicitly):
 
 ```sql
 SELECT path, content

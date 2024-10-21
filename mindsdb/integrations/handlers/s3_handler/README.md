@@ -20,8 +20,8 @@ WITH
     parameters = {
       "aws_access_key_id": "AQAXEQK89OX07YS34OP"
       "aws_secret_access_key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-      "region_name": "us-east-2",
-      "bucket": "my-bucket",
+      "aws_session_token": "",  -- optional
+      "bucket": "my-bucket"  -- optional
     };
 ```
 
@@ -29,12 +29,12 @@ Required connection parameters include the following:
 
 * `aws_access_key_id`: The AWS access key that identifies the user or IAM role.
 * `aws_secret_access_key`: The AWS secret access key that identifies the user or IAM role.
-* `bucket`: The name of the Amazon S3 bucket.
+
 
 Optional connection parameters include the following:
 
 * `aws_session_token`: The AWS session token that identifies the user or IAM role. This becomes necessary when using temporary security credentials.
-* `region_name`: The AWS region to connect to. Default is `us-east-1`.
+* `bucket`: The name of the Amazon S3 bucket. If it is not set: all available buckets will be used (can slow down, getting list of files)
 
 ## Usage
 
@@ -42,9 +42,23 @@ Retrieve data from a specified object (file) in the S3 bucket by providing the i
 
 ```sql
 SELECT *
-FROM s3_datasource.`my-file.csv`;
-LIMIT 10;
+FROM s3_datasource.`my-file.csv` LIMIT 10
 ```
+
+Retrieve list of files (without filtering by extension):
+
+```sql
+SELECT *
+FROM s3_datasource.files LIMIT 10
+```
+
+Retrieve a list of files with their content (the content column needs to be requested explicitly):
+
+```sql
+SELECT path, content
+FROM s3_datasource.files LIMIT 10
+```
+
 
 <Tip>
 Wrap the object key in backticks (\`) to avoid any issues parsing the SQL statements provided. This is especially important when the object key contains spaces, special characters or prefixes, such as `my-folder/my-file.csv`.

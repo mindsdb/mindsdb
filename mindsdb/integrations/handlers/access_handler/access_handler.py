@@ -20,8 +20,6 @@ from mindsdb.integrations.libs.response import (
 logger = log.getLogger(__name__)
 
 
-
-
 class AccessHandler(DatabaseHandler):
     """
     This handler handles connection and execution of the Microsoft Access statements.

@@ -13,8 +13,6 @@ from mindsdb.integrations.utilities.handler_utils import get_api_key
 logger = log.getLogger(__name__)
 
 
-
-
 class AnthropicHandler(BaseMLEngine):
     """
     Integration with the Anthropic LLM Python Library

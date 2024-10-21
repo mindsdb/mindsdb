@@ -18,6 +18,9 @@ from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor
 
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.libs.vectordatabase_handler import TableField
+from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
+from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel
+from mindsdb.interfaces.agents.langchain_agent import build_embedding_model, create_chat_model, get_llm_provider
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
@@ -317,6 +320,50 @@ class KnowledgeBaseTable:
         df = pd.DataFrame([[content]], columns=[TableField.CONTENT.value])
         res = self._df_to_embeddings(df)
         return res[TableField.EMBEDDINGS.value][0]
+
+    def build_rag_pipeline(self, retrieval_config: dict):
+        """
+        Builds a RAG pipeline with returned sources
+
+        :param retrieval_config: dict with retrieval config
+        """
+        # validate that the retrieval_config has the correct parameters
+        rag_pipeline_model = RAGPipelineModel(**retrieval_config)
+
+        # get embedding model on the kb
+        embeddings_model_id = self._kb.embedding_model_id
+        model_rec = db.session.query(db.Predictor).filter_by(id=embeddings_model_id).first()
+
+        if model_rec is None:
+            raise ValueError(f"Model not found: {embeddings_model_id}")
+
+        # get using args used to create embedding model
+        model_using = model_rec.learn_args.get('using', {})
+        embedding_model_args = {"embedding_model_args": model_using}
+
+        # build and set the embedding model in the retrieval_config
+        embeddings_model = build_embedding_model(embedding_model_args)
+        rag_pipeline_model.embedding_model = embeddings_model
+
+        # build and set the llm in the retrieval_config
+        llm_args = {"model_name": rag_pipeline_model.llm_model_name}
+
+        if not rag_pipeline_model.llm_provider:
+            # If llm provider not set by user, we get it from model name
+            llm_args['provider'] = get_llm_provider(llm_args)
+        else:
+            # If llm provider is set by user, we use it
+            llm_args["provider"] = rag_pipeline_model.llm_provider
+
+        rag_pipeline_model.llm = create_chat_model(llm_args)
+
+        # set the kb table name in the retrieval_config
+        rag_pipeline_model.vector_store_config.kb_table = self
+
+        # Build RAG pipeline model
+        rag = RAG(rag_pipeline_model)
+
+        return rag
 
 
 class KnowledgeBaseController:

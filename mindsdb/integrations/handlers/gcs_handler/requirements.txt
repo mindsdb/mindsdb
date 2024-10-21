@@ -1,4 +1,3 @@
-duckdb
 fsspec
 gcsfs
 google-auth

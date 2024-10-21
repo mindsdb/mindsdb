@@ -82,7 +82,7 @@ class BinaryResultsetRowPacket(Packet):
                 raise Exception(f'Column with type {col_type} cant be encripted')
 
             if enc == 'string':
-                self.value.append(Datum('string<lenenc>', str(val)).toStringPacket())
+                self.value.append(Datum('string', val, 'lenenc').toStringPacket())
             else:
                 if env_val is None:
                     env_val = struct.pack(enc, val)

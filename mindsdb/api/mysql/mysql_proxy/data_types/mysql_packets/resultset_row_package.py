@@ -28,7 +28,8 @@ class ResultsetRowPacket(Packet):
             if val is None:
                 self.value.append(NULL_VALUE)
             else:
-                self.value.append(Datum('string<lenenc>', str(val)))
+                self.value.append(Datum('string', str(val), 'lenenc'))
+
 
     @property
     def body(self):

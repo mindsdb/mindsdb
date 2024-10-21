@@ -22,14 +22,23 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
+NULL_VALUE_INT = ord(NULL_VALUE)
+
 
 class Datum:
-    def __init__(self, type, value=None):
+    __slots__ = ['value', 'var_type', 'var_len']
+
+    def __init__(self, var_type, value=None, var_len=None):
         # TODO other types: float, timestamp
-        self.type = type
+        # self.type = type
         self.value = b""
-        self.var_type = self.type.split("<")[0]
-        self.var_len = self.type.split("<")[1].replace(">", "")
+
+        if var_len is None:
+            idx = var_type.find('<')
+            var_len = var_type[idx + 1: -1]
+            var_type = var_type[: idx]
+        self.var_type = var_type
+        self.var_len = var_len
 
         if value is not None:
             self.set(value)
@@ -38,8 +47,6 @@ class Datum:
         self.value = value
 
     def setFromBuff(self, buff):
-        start = 0
-
         if self.var_len == "lenenc":
             start = 1
             ln_enc = buff[0]
@@ -78,7 +85,7 @@ class Datum:
         else:
             length = self.var_len
 
-        if self.type == "string<NUL>":
+        if self.var_type == "string" and self.var_len == "NUL":
             for j, x in enumerate(buff):
                 if int(x) == 0:
                     length = j + 1
@@ -102,12 +109,13 @@ class Datum:
         return buff[end:]
 
     def lenencInt(self, value):
-        byte_count = int(math.ceil(math.log((value + 1), 2) / 8))
+        byte_count = -(value.bit_length() // (-8))
+
         if byte_count == 0:
             return b"\0"
-        if value < NULL_VALUE[0]:
-            return struct.pack("i", value)[:1]
-        if value >= NULL_VALUE[0] and byte_count <= 2:
+        if value < NULL_VALUE_INT:
+            return struct.pack("B", value)
+        if value >= NULL_VALUE_INT and byte_count <= 2:
             return TWO_BYTE_ENC + struct.pack("i", value)[:2]
         if byte_count <= 3:
             return THREE_BYTE_ENC + struct.pack("i", value)[:3]
@@ -115,11 +123,11 @@ class Datum:
             return THREE_BYTE_ENC + struct.pack("Q", value)[:8]
 
     def toStringPacket(self):
-        if self.type == "string<packet>":
+        if self.var_type == "string" and self.var_len == "packet":
             return self.value.get_packet_string()
 
-        if self.type in ["string<EOF>", "byte<EOF>"]:
-            length = int(len(self.value))
+        if self.var_len == "EOF" and self.var_type in ["string", "byte"]:
+            length = len(self.value)
             self.var_len = length
             if length == 0:
                 return b""
@@ -128,7 +136,7 @@ class Datum:
                     "{len}s".format(len=self.var_len), bytes(self.value, "utf-8")
                 )[:length]
 
-        if self.type == "string<NUL>":
+        if self.var_type == "string" and self.var_len == "NUL":
             return bytes(self.value, "utf-8") + struct.pack("b", 0)
 
         if self.var_len.isdigit():
@@ -151,34 +159,36 @@ class Datum:
                 return self.lenencInt(self.value)
 
             if self.var_type in ["byte", "string"]:
-                value = (
-                    self.value.decode() if isinstance(self.value, bytes) else self.value
-                )
-                if isinstance(value, str) is False and value is not None:
-                    value = str(value)
 
-                val_len = len(value.encode("utf8"))
+                if isinstance(self.value, bytes):
+                    value = self.value
+                elif isinstance(self.value, str):
+                    value = self.value.encode("utf8")
+                else:
+                    value = str(self.value).encode("utf8")
 
-                byte_count = int(math.ceil(math.log((val_len + 1), 2) / 8))
-                if val_len < NULL_VALUE[0]:
-                    return self.lenencInt(val_len) + bytes(value, "utf-8")
-                if val_len >= NULL_VALUE[0] and byte_count <= 2:
+                val_len = len(value)
+                byte_count = -(val_len.bit_length() // (-8))
+                if val_len < NULL_VALUE_INT:
+                    a = self.lenencInt(val_len)
+                    return a + value
+                if val_len >= NULL_VALUE_INT and byte_count <= 2:
                     return (
                         TWO_BYTE_ENC
                         + struct.pack("i", val_len)[:2]
-                        + bytes(value, "utf-8")
+                        + value
                     )
                 if byte_count <= 3:
                     return (
                         THREE_BYTE_ENC
                         + struct.pack("i", val_len)[:3]
-                        + bytes(value, "utf-8")
+                        + value
                     )
                 if byte_count <= 8:
                     return (
                         THREE_BYTE_ENC
                         + struct.pack("Q", val_len)[:8]
-                        + bytes(value, "utf-8")
+                        + value
                     )
 
 

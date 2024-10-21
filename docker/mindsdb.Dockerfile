@@ -1,6 +1,6 @@
 # This stage's objective is to gather ONLY requirements.txt files and anything else needed to install deps.
-# This stage will be run almost every build, but it is fast and the resulting layer hash will be the same
-# unless a deps file changes.
+# This stage will be run almost every build, but it is fast and the resulting layer hash will be the same unless a deps file changes.
+# We do it this way because we can't copy all requirements files with a glob pattern in docker while maintaining the folder structure.
 FROM python:3.10 as deps
 WORKDIR /mindsdb
 ARG EXTRAS
@@ -20,7 +20,7 @@ COPY mindsdb/__about__.py mindsdb/
 
 
 
-
+# Use the stage from above to install our deps with as much caching as possible
 FROM python:3.10 as build
 WORKDIR /mindsdb
 ARG EXTRAS

@@ -3,6 +3,7 @@ from mindsdb.integrations.utilities.sql_utils import FilterCondition
 import pandas as pd
 from typing import List
 
+
 class ListFilesTable(APIResource):
 
     def list(self,

@@ -29,7 +29,7 @@ In order to make use of this handler and connect to a Couchbase server in MindsD
 ```sql
 CREATE DATABASE couchbase_vectorsource
 WITH
-engine='couchbase',
+engine='couchbasevector',
 parameters={
     "connection_string": "couchbase://localhost",
     "bucket":"travel-sample",

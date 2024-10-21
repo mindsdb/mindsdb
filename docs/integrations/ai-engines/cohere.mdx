@@ -28,7 +28,7 @@ USING
 Create a model using `cohere_engine` as an engine.
 
 ```sql
-CREATE MODEL mindsdb.cohere_model
+CREATE MODEL cohere_model
 PREDICT target_column
 USING
       engine = 'cohere_engine',  -- engine name as created via CREATE ML_ENGINE
@@ -43,7 +43,7 @@ The following usage examples utilize `cohere_engine` to create a model with the 
 Create a model to predict the answer to a question using the `text-generation` task.
 
 ```sql
-CREATE MODEL mindsdb.cohere_model
+CREATE MODEL cohere_model
 PREDICT answer
 USING
       engine = 'cohere_engine',
@@ -63,7 +63,7 @@ Query the model to get predictions.
 
 ```sql
 SELECT answer
-FROM mindsdb.cohere_model
+FROM cohere_model
 WHERE question = 'What is the capital of France?';
 ```
 

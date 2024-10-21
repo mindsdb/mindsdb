@@ -63,8 +63,11 @@ BYOM_HANLDER_DEPS = ["pyarrow"]
 # The `thrift-sasl` package is required establish a connection via to Hive via `pyhive`, but it is not explicitly imported in the code.
 HIVE_HANDLER_DEPS = ["thrift-sasl"]
 
+# The `gcsfs` package is required to interact with GCS as a file system.
+GCS_HANDLER_DEPS = ["gcsfs"]
+
 HANDLER_RULE_IGNORES = {
-    "DEP002": OPTIONAL_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS + BYOM_HANLDER_DEPS + HIVE_HANDLER_DEPS,
+    "DEP002": OPTIONAL_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS + BYOM_HANLDER_DEPS + HIVE_HANDLER_DEPS + GCS_HANDLER_DEPS,
     "DEP001": ["tests"]  # 'tests' is the mindsdb tests folder in the repo root
 }
 

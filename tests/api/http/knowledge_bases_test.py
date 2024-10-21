@@ -1,8 +1,13 @@
 import os
 import pytest
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
+import pandas as pd
+
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.api.http.initialize import initialize_app
+from mindsdb.api.mysql.mysql_proxy.mysql_proxy import SQLAnswer
 from mindsdb.migrations import migrate
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.config import Config
@@ -267,6 +272,87 @@ def test_delete_knowledge_base_project_not_found(client):
 def test_delete_knowledge_base_not_found(client):
     delete_response = client.delete('/api/projects/mindsdb/knowledge_bases/xiaolongbao_kb', follow_redirects=True)
     assert '404' in delete_response.status
+
+
+def test_put_knowledge_base_rows(client):
+    create_request = {
+        'knowledge_base': {
+            'name': 'test_kb_update_rows',
+            'model': 'test_embedding_model'
+        }
+    }
+
+    create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
+
+    assert '201' in create_response.status
+
+    content_to_embed = '''To begin with a perfect Peking duck recipe at home, firstly choose head on (easy to hang for air drying out), clean and leaner ducks.
+    Add around 1 teaspoon of white vinegar in clean water and soak the duck for 1 hour. Then prepare lines and tie the ducks from the top of the neck.
+    Hang them on hooks. I hang the ducks on the top of kitchen pool.
+    Please note:  I make this peking duck in March when the room temperature is around 13-15 degree C, you will need to hang the duck in fridge or in a room with air conditioner in hot summer days.
+    '''
+    rows_to_insert = [
+        {'id': 0, 'content': content_to_embed}
+    ]
+    update_request = {
+        'knowledge_base': {
+            'rows': rows_to_insert
+        }
+    }
+    with patch('mindsdb.interfaces.knowledge_base.controller.KnowledgeBaseTable') as mock_kb_table:
+        update_response = client.put('/api/projects/mindsdb/knowledge_bases/test_kb_update_rows', json=update_request, follow_redirects=True)
+
+        assert '200' in update_response.status
+
+        last_insert_call_args = mock_kb_table().insert.call_args_list[-1]
+        actual_df_inserted = last_insert_call_args[0][0]
+        expected_df_to_insert = pd.DataFrame.from_records(rows_to_insert)
+        assert actual_df_inserted.equals(expected_df_to_insert)
+
+
+def test_put_knowledge_base_query(client):
+    create_request = {
+        'knowledge_base': {
+            'name': 'test_kb_update_query',
+            'model': 'test_embedding_model'
+        }
+    }
+
+    create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
+
+    assert '201' in create_response.status
+
+    content_to_embed = '''To begin with a perfect Peking duck recipe at home, firstly choose head on (easy to hang for air drying out), clean and leaner ducks.
+    Add around 1 teaspoon of white vinegar in clean water and soak the duck for 1 hour. Then prepare lines and tie the ducks from the top of the neck.
+    Hang them on hooks. I hang the ducks on the top of kitchen pool.
+    Please note:  I make this peking duck in March when the room temperature is around 13-15 degree C, you will need to hang the duck in fridge or in a room with air conditioner in hot summer days.
+    '''
+    update_request = {
+        'knowledge_base': {
+            'query': 'SELECT * FROM mock_db.recipes'
+        }
+    }
+
+    with patch('mindsdb.api.http.namespaces.knowledge_bases.FakeMysqlProxy') as mock_sql_proxy:
+        mock_sql_proxy().process_query.return_value = SQLAnswer(
+            resp_type=RESPONSE_TYPE.TABLE,
+            columns=[{'alias': 'id'}, {'name': 'content'}],
+            data=[(0, content_to_embed)]
+        )
+
+        with patch('mindsdb.interfaces.knowledge_base.controller.KnowledgeBaseTable') as mock_kb_table:
+            update_response = client.put('/api/projects/mindsdb/knowledge_bases/test_kb_update_query', json=update_request, follow_redirects=True)
+
+            assert '200' in update_response.status
+
+            last_insert_call_args = mock_kb_table().insert.call_args_list[-1]
+            actual_df_inserted = last_insert_call_args[0][0]
+
+            rows_to_insert = [
+                {'id': 0, 'content': content_to_embed}
+            ]
+            expected_df_to_insert = pd.DataFrame.from_records(rows_to_insert)
+            assert actual_df_inserted.equals(expected_df_to_insert)
 
 
 @pytest.fixture

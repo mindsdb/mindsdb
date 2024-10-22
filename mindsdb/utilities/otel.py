@@ -11,10 +11,10 @@ logger = log.getLogger(__name__)
 
 
 # Check OpenTelemetry exporter type
-OTEL_EXPORTER_TYPE = os.getenv("OTEL_EXPORTER_TYPE", "console") # console or otlp
+OTEL_EXPORTER_TYPE = os.getenv("OTEL_EXPORTER_TYPE", "console")  # console or otlp
 
 # Define OTLP endpoint. If not set, the default OTLP endpoint will be used
-OTEL_OTLP_ENDPOINT = os.getenv("OTEL_OTLP_ENDPOINT", "http://localhost:4317") 
+OTEL_OTLP_ENDPOINT = os.getenv("OTEL_OTLP_ENDPOINT", "http://localhost:4317")
 
 # Define service name
 OTEL_SERVICE_NAME = os.getenv("OTEL_SERVICE_NAME", "mindsdb")
@@ -31,45 +31,47 @@ OTEL_SDK_DISABLED = os.getenv("OTEL_SDK_DISABLED", "false").lower() == "true" or
 OTEL_SDK_FORCE_RUN = os.getenv("OTEL_SDK_FORCE_RUN", "false").lower() == "true"
 
 # Custom span processor to add global tags to spans
+
+
 class GlobalTaggingSpanProcessor(BatchSpanProcessor):
-  def on_start(self, span: Span, parent_context):
-    # Add environment and release to every span
-    span.set_attribute("environment", OTEL_SERVICE_ENVIRONMENT)
-    span.set_attribute("release", OTEL_SERVICE_RELEASE)
-    super().on_start(span, parent_context)
+    def on_start(self, span: Span, parent_context):
+        # Add environment and release to every span
+        span.set_attribute("environment", OTEL_SERVICE_ENVIRONMENT)
+        span.set_attribute("release", OTEL_SERVICE_RELEASE)
+        super().on_start(span, parent_context)
 
 
 if not OTEL_SDK_DISABLED or OTEL_SDK_FORCE_RUN:
-  logger.info("OpenTelemetry enabled")
-  logger.info(f"OpenTelemetry exporter type: {OTEL_EXPORTER_TYPE}")
-  logger.info(f"OpenTelemetry service name: {OTEL_SERVICE_NAME}")
-  logger.info(f"OpenTelemetry service environment: {OTEL_SERVICE_ENVIRONMENT}")
-  logger.info(f"OpenTelemetry service release: {OTEL_SERVICE_RELEASE}")
+    logger.info("OpenTelemetry enabled")
+    logger.info(f"OpenTelemetry exporter type: {OTEL_EXPORTER_TYPE}")
+    logger.info(f"OpenTelemetry service name: {OTEL_SERVICE_NAME}")
+    logger.info(f"OpenTelemetry service environment: {OTEL_SERVICE_ENVIRONMENT}")
+    logger.info(f"OpenTelemetry service release: {OTEL_SERVICE_RELEASE}")
 
-  # Define OpenTelemetry resources (e.g., service name)
-  resource = Resource(attributes={"service.name": OTEL_SERVICE_NAME})
-  
-  # Set the tracer provider with the custom resource
-  trace.set_tracer_provider(TracerProvider(resource=resource))
+    # Define OpenTelemetry resources (e.g., service name)
+    resource = Resource(attributes={"service.name": OTEL_SERVICE_NAME})
 
-  # Configure the appropriate exporter based on the environment variable
-  if OTEL_EXPORTER_TYPE == "otlp":
-      logger.info("OpenTelemetry is using OTLP exporter")
-      
-      exporter = OTLPSpanExporter(
-          endpoint=OTEL_OTLP_ENDPOINT,  # Default OTLP endpoint
-          insecure=True  # Disable TLS for local testing
-      )
-      # span_processor = BatchSpanProcessor(exporter)
+    # Set the tracer provider with the custom resource
+    trace.set_tracer_provider(TracerProvider(resource=resource))
 
-  else:
-      logger.info("OpenTelemetry is using Console exporter")
-      
-      exporter = ConsoleSpanExporter()
-      # span_processor = SimpleSpanProcessor(exporter)
-      
-  # Create a batch span processor
-  span_processor = BatchSpanProcessor(GlobalTaggingSpanProcessor(exporter))
+    # Configure the appropriate exporter based on the environment variable
+    if OTEL_EXPORTER_TYPE == "otlp":
+        logger.info("OpenTelemetry is using OTLP exporter")
 
-  # Replace the default span processor with the custom one
-  trace.get_tracer_provider().add_span_processor(GlobalTaggingSpanProcessor(exporter))
+        exporter = OTLPSpanExporter(
+            endpoint=OTEL_OTLP_ENDPOINT,  # Default OTLP endpoint
+            insecure=True  # Disable TLS for local testing
+        )
+        # span_processor = BatchSpanProcessor(exporter)
+
+    else:
+        logger.info("OpenTelemetry is using Console exporter")
+
+        exporter = ConsoleSpanExporter()
+        # span_processor = SimpleSpanProcessor(exporter)
+
+    # Create a batch span processor
+    span_processor = BatchSpanProcessor(GlobalTaggingSpanProcessor(exporter))
+
+    # Replace the default span processor with the custom one
+    trace.get_tracer_provider().add_span_processor(GlobalTaggingSpanProcessor(exporter))

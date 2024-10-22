@@ -1,5 +1,4 @@
 from mindsdb.integrations.libs.api_handler import APITable
-from mindsdb.integrations.utilities.date_utils import interval_str_to_duration_ms
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb_sql.parser import ast
 
@@ -13,8 +12,8 @@ from mindsdb.integrations.libs.response import (
 )
 import requests
 
-class HistoricalPriceTable(APITable):
 
+class HistoricalPriceTable(APITable):
 
     def _get_historical_price_endpoint_params_from_conditions(self, conditions: List) -> Dict:
         params = {}
@@ -36,7 +35,7 @@ class HistoricalPriceTable(APITable):
 
     def select(self, query: ast.Select) -> pd.DataFrame:
         """Selects data from the FinancialModeling API and returns it as a pandas DataFrame.
-        
+
         Returns dataframe representing the FinancialModeling API results.
 
         Args:
@@ -49,10 +48,10 @@ class HistoricalPriceTable(APITable):
             limit_value = query.limit.value
             params['limit'] = limit_value
 
-        historical_prices = self.get_historical_price_chart(params = params)
+        historical_prices = self.get_historical_price_chart(params=params)
 
         return historical_prices
-    
+
     def get_historical_price_chart(self, params: Dict = None) -> pd.DataFrame:
         base_url = self.handler.connect()
         if 'symbol' not in params:

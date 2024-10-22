@@ -1,5 +1,3 @@
-import pandas as pd
-from typing import Dict
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
@@ -8,12 +6,11 @@ from mindsdb.integrations.handlers.financial_modeling_prep_handler.financial_mod
 
 from mindsdb.utilities import log
 import requests
-_FINANCIAL_MODELING_URL = 'https://financialmodelingprep.com/api/v3/'
 
 logger = log.getLogger(__name__)
 
-class FinancialModelingHandler(APIHandler):
 
+class FinancialModelingHandler(APIHandler):
 
     name = "financial_modeling_prep"
 
@@ -44,13 +41,15 @@ class FinancialModelingHandler(APIHandler):
             HandlerStatusResponse
         """
         base_url = 'https://financialmodelingprep.com/api/v3/search'
-        param = {'query': 'AA',
-                'apikey': self.api_key, 
-                'limit': 5}
+        param = {
+            'query': 'AA',
+            'apikey': self.api_key,
+            'limit': 5
+        }
 
         response = requests.get(base_url, param)
-        if response.status_code==200:
-            return StatusResponse(success = True)
+        if response.status_code == 200:
+            return StatusResponse(success=True)
         else:
             raise Exception(
                 "API key provided in query is not valid. Retrieve a valid API key from https://site.financialmodelingprep.com/developer. See financial_modeling_prep_handler/README.MD on how to include API key in query."

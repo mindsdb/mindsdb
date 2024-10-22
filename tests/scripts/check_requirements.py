@@ -37,8 +37,11 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.to
 # and not explicitly imported in mindsdb.
 # transformers is required for langchain_core and not explicitly imported by mindsdb.
 MAIN_RULE_IGNORES = {
-    "DEP001": ["torch", "pgvector"],
-    "DEP002": ["psycopg2-binary", "lark", "transformers"],
+    "DEP003": ["torch"],
+    "DEP001": ["torch", "pgvector", "opentelemetry"],
+    "DEP002": ["psycopg2-binary", "lark", "transformers", "opentelemetry-api",
+               "opentelemetry-sdk", "opentelemetry-exporter-otlp",
+               "opentelemetry-instrumentation-requests", "opentelemetry-instrumentation-flask"],
 }
 
 

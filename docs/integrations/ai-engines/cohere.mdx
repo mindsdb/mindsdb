@@ -32,7 +32,7 @@ CREATE MODEL cohere_model
 PREDICT target_column
 USING
       engine = 'cohere_engine',  -- engine name as created via CREATE ML_ENGINE
-      task = 'task_name',        -- choose one of 'language-detection', 'text-summarization', 'text-generation'
+      task = 'task_name',        -- choose one of 'text-summarization', 'text-generation'
       column = 'column_name';    -- column that stores input/question to the model
 ```
 
@@ -40,15 +40,15 @@ USING
 
 The following usage examples utilize `cohere_engine` to create a model with the `CREATE MODEL` statement.
 
-Create a model to detect language of a given input text.
+Create a model to predict the answer to a question using the `text-generation` task.
 
 ```sql
 CREATE MODEL cohere_model
-PREDICT language
+PREDICT answer
 USING
       engine = 'cohere_engine',
-      task = 'language-detection',
-      column = 'text';
+      task = 'text-generation',
+      column = 'question';
 ```
 
 Where:
@@ -62,20 +62,16 @@ Where:
 Query the model to get predictions.
 
 ```sql
-SELECT text, language
+SELECT answer
 FROM cohere_model
-WHERE text = '¿Cómo estás?';
+WHERE question = 'What is the capital of France?';
 ```
 
 Here is the output:
 
-```sql
-+--------------+----------+
-| text         | language |
-+--------------+----------+
-| ¿Cómo estás? | Spanish  |
-+--------------+----------+
-```
+| answer |
+| :------ |
+| The capital of France is Paris. Paris is France's largest city and a major global center for art, culture, fashion, and cuisine. It is renowned for its iconic landmarks such as the Eiffel Tower, Notre-Dame Cathedral, and the Louvre Museum. |
 
 <Tip>
 

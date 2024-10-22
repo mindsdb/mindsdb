@@ -1,0 +1,3 @@
+azure-identity
+azure-storage-blob
+aiohttp

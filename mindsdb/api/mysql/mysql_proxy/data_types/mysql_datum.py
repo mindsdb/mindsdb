@@ -166,11 +166,12 @@ class Datum:
                     value = str(self.value).encode("utf8")
 
                 val_len = len(value)
-                byte_count = -(val_len.bit_length() // (-8))
                 if val_len < NULL_VALUE_INT:
                     a = self.lenencInt(val_len)
                     return a + value
-                if val_len >= NULL_VALUE_INT and byte_count <= 2:
+
+                byte_count = -(val_len.bit_length() // (-8))
+                if byte_count <= 2:
                     return (
                         TWO_BYTE_ENC
                         + struct.pack("i", val_len)[:2]

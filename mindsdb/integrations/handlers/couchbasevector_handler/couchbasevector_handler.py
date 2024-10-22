@@ -31,7 +31,7 @@ class CouchbaseVectorHandler(VectorStoreHandler):
     This handler handles connection and execution of the Couchbase statements.
     """
 
-    name = "couchbase"
+    name = "couchbasevector"
     DEFAULT_TIMEOUT_SECONDS = 5
 
     def __init__(self, name, **kwargs):

@@ -920,6 +920,7 @@
             "integrations/app-integrations/plaid",
             "integrations/app-integrations/pypi",
             "integrations/app-integrations/reddit",
+            "integrations/app-integrations/salesforce",
             "integrations/app-integrations/sendinblue",
             "integrations/app-integrations/shopify",
             "integrations/app-integrations/slack",

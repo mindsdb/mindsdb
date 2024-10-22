@@ -51,9 +51,9 @@ from mindsdb.utilities.json_encoder import CustomJSONProvider
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
 from mindsdb.utilities.telemetry import inject_telemetry_to_static
 from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
-from mindsdb.utilities.otel import trace # noqa: F401
-from opentelemetry.instrumentation.flask import FlaskInstrumentor # noqa: F401
-from opentelemetry.instrumentation.requests import RequestsInstrumentor # noqa: F401
+from mindsdb.utilities.otel import trace  # noqa: F401
+from opentelemetry.instrumentation.flask import FlaskInstrumentor  # noqa: F401
+from opentelemetry.instrumentation.requests import RequestsInstrumentor  # noqa: F401
 
 logger = log.getLogger(__name__)
 
@@ -353,7 +353,7 @@ def initialize_flask(config, init_static_thread, no_studio):
 
     app = Flask(__name__, **kwargs)
     init_metrics(app)
-    
+
     # Instrument Flask app for OpenTelemetry
     FlaskInstrumentor().instrument_app(app)
     RequestsInstrumentor().instrument()

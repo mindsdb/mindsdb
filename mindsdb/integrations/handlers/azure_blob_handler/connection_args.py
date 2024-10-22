@@ -15,10 +15,17 @@ connection_args = OrderedDict(
         'description': 'Account Access Key',
         'required': True,
         'label': 'Account Access Key'
+    },
+    container_name={
+        'type': ARG_TYPE.STR,
+        'description': 'Container Name',
+        'required': True,
+        'label': 'Container Name'
     }
 )
 
 connection_args_example = OrderedDict(
     storage_account_name='',
-    account_access_key=''
+    account_access_key='',
+    container_name=''
 )

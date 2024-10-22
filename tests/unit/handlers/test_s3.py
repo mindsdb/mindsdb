@@ -4,8 +4,8 @@ from unittest.mock import patch, MagicMock
 
 from botocore.client import ClientError
 from mindsdb_sql.parser import ast
-from mindsdb_sql.parser.ast.select.star import Star
-from mindsdb_sql.parser.ast.select.identifier import Identifier
+from mindsdb_sql.parser.ast import Select, Identifier, Star, Constant
+
 import pandas as pd
 
 from base_handler_test import BaseHandlerTestSetup
@@ -15,18 +15,6 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     RESPONSE_TYPE
 )
-
-
-def mock_boto3_region(mock_boto3_client_instance):
-    mock_boto3_client_instance.head_bucket.return_value = {
-        'ResponseMetadata': {
-            'HTTPStatusCode': 200,
-            'HTTPHeaders': {
-                'x-amz-bucket-region': 'us-east-2',
-            }
-        }
-    }
-    mock_boto3_client_instance.meta = MagicMock(region_name='us-east-2')
 
 
 class TestS3Handler(BaseHandlerTestSetup, unittest.TestCase):
@@ -58,7 +46,6 @@ class TestS3Handler(BaseHandlerTestSetup, unittest.TestCase):
         The `check_connection` method handles the connection status.
         """
         self.mock_connect.return_value = MagicMock()
-        mock_boto3_region(self.mock_connect.return_value)
         connection = self.handler.connect()
         self.assertIsNotNone(connection)
         self.assertTrue(self.handler.is_connected)
@@ -72,7 +59,6 @@ class TestS3Handler(BaseHandlerTestSetup, unittest.TestCase):
         # Mock the boto3 client object and its methods.
         mock_boto3_client_instance = MagicMock()
         mock_boto3_client.return_value = mock_boto3_client_instance
-        mock_boto3_region(mock_boto3_client_instance)
 
         response = self.handler.check_connection()
 
@@ -105,31 +91,6 @@ class TestS3Handler(BaseHandlerTestSetup, unittest.TestCase):
         self.assertTrue(response.error_message)
 
     @patch('boto3.client')
-    def test_check_connection_failure_invalid_bucket_region(self, mock_boto3_client):
-        """
-        Test that the `check_connection` method returns a StatusResponse object and accurately reflects the connection status on a failed connection due to invalid bucket region.
-        """
-        # Mock the boto3 client object and its methods.
-        mock_boto3_client_instance = MagicMock()
-        mock_boto3_client.return_value = mock_boto3_client_instance
-        mock_boto3_client_instance.head_bucket.return_value = {
-            'ResponseMetadata': {
-                'HTTPStatusCode': 200,
-                'HTTPHeaders': {
-                    'x-amz-bucket-region': 'us-east-2',
-                }
-            }
-        }
-        mock_boto3_client_instance.meta = MagicMock(region_name='us-east-1')
-
-        response = self.handler.check_connection()
-
-        self.assertFalse(response.success)
-        assert isinstance(response, StatusResponse)
-        self.assertTrue(response.error_message)
-
-    @patch('boto3.client')
-    # @patch('duckdb.connect')
     def test_query_select(self, mock_boto3_client):
         """
         Tests the `query` method to ensure it executes a SELECT SQL query using a mock cursor and returns a Response object.
@@ -139,7 +100,6 @@ class TestS3Handler(BaseHandlerTestSetup, unittest.TestCase):
         # Mock the boto3 client object and its methods.
         mock_boto3_client_instance = MagicMock()
         mock_boto3_client.return_value = mock_boto3_client_instance
-        mock_boto3_region(mock_boto3_client_instance)
 
         duckdb_connect = MagicMock()
         self.handler._connect_duckdb = duckdb_connect
@@ -147,7 +107,7 @@ class TestS3Handler(BaseHandlerTestSetup, unittest.TestCase):
         duckdb_execute().fetchdf.return_value = pd.DataFrame([], columns=['col_2'])
 
         # Craft the SELECT query and execute it.
-        object_name = '`my-bucket/my-file.csv`'
+        object_name = 'my-bucket/my-file.csv'
         select = ast.Select(
             targets=[
                 Star()
@@ -178,7 +138,6 @@ class TestS3Handler(BaseHandlerTestSetup, unittest.TestCase):
         mock_boto3_client_instance = MagicMock()
         mock_boto3_client.return_value = mock_boto3_client_instance
         mock_boto3_client_instance.head_object.return_value = MagicMock()
-        mock_boto3_region(mock_boto3_client_instance)
 
         duckdb_connect = MagicMock()
         self.handler._connect_duckdb = duckdb_connect
@@ -225,7 +184,6 @@ class TestS3Handler(BaseHandlerTestSetup, unittest.TestCase):
                 {'Key': 'file5.xlsx'},
             ]
         }
-        mock_boto3_region(mock_boto3_client_instance)
 
         response = self.handler.get_tables()
 
@@ -236,12 +194,12 @@ class TestS3Handler(BaseHandlerTestSetup, unittest.TestCase):
         self.assertEqual(len(df), 5)  # +1 table is 'files'
         self.assertNotIn('file5.xlsx', df['table_name'].values)
 
-    @patch('mindsdb.integrations.handlers.s3_handler.s3_handler.S3Handler.native_query')
-    def test_get_columns(self, mock_native_query):
+    @patch('mindsdb.integrations.handlers.s3_handler.s3_handler.S3Handler.query')
+    def test_get_columns(self, mock_query):
         """
         Test that the `get_columns` method correctly constructs the SQL query and calls `native_query` with the correct query.
         """
-        mock_native_query.return_value = Response(
+        mock_query.return_value = Response(
             RESPONSE_TYPE.TABLE,
             data_frame=pd.DataFrame(
                 data={
@@ -254,8 +212,12 @@ class TestS3Handler(BaseHandlerTestSetup, unittest.TestCase):
         table_name = 'mock_table'
         response = self.handler.get_columns(table_name)
 
-        expected_query = f"""SELECT * FROM {table_name} LIMIT 5"""
-        self.handler.native_query.assert_called_once_with(expected_query)
+        expected_query = Select(
+            targets=[Star()],
+            from_table=Identifier(parts=[table_name]),
+            limit=Constant(1)
+        )
+        self.handler.query.assert_called_once_with(expected_query)
 
         df = response.data_frame
         self.assertEqual(df.columns.tolist(), ['column_name', 'data_type'])

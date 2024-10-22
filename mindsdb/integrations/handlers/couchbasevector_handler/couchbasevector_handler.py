@@ -369,7 +369,7 @@ class CouchbaseVectorHandler(VectorStoreHandler):
         scope = bucket.scope(self.scope)  
         try:
             bucket.collections().create_collection(
-                scope_name=self.scope, 
+                scope=self.scope, 
                 collection_name=table_name
             )
         except Exception as e:

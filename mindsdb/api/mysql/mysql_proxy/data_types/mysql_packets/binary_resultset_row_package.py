@@ -55,10 +55,10 @@ class BinaryResultsetRowPacket(Packet):
                 val = float(val)
             elif col_type == TYPES.MYSQL_TYPE_LONGLONG:
                 enc = '<q'
-                val = int(float(val))
+                val = int(val)
             elif col_type == TYPES.MYSQL_TYPE_LONG:
                 enc = '<l'
-                val = int(float(val))
+                val = int(val)
             elif col_type == TYPES.MYSQL_TYPE_FLOAT:
                 enc = '<f'
                 val = float(val)

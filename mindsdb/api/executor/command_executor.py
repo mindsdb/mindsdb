@@ -71,7 +71,7 @@ from mindsdb_sql.parser.dialects.mindsdb import (
 
 import mindsdb.utilities.profiler as profiler
 from mindsdb.api.executor import Column, SQLQuery, ResultSet
-from mindsdb.api.executor.data_types.answer import ExecuteAnswer
+from mindsdb.api.executor.data_types.answer import ExecuteAnswer 
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     CHARSET_NUMBERS,
     SERVER_VARIABLES,
@@ -1028,7 +1028,6 @@ class ExecuteCommands:
     def _create_integration(self, name: str, engine: str, connection_args: dict):
         # we have connection checkers not for any db. So do nothing if fail
         # TODO return rich error message
-
         if connection_args is None:
             connection_args = {}
         status = HandlerStatusResponse(success=False)
@@ -1082,7 +1081,12 @@ class ExecuteCommands:
             status.error_message = str(e)
 
         if status.success is False:
-            raise ExecutorException(f"Can't connect to db: {status.error_message}")
+            error_msg = str(status.error_message)
+            if "Authorization required" in error_msg or "Authorisation required" in error_msg:
+                clean_msg = error_msg.replace("Can't connect to db: ", "")
+                raise ExecutorException(f"Info\n{clean_msg}")
+            else:
+                raise ExecutorException(f"Can't connect to db: {status.error_message}")
 
         integration = self.session.integration_controller.get(name)
         if integration is not None:
@@ -1098,7 +1102,8 @@ class ExecuteCommands:
         if storage:
             handler = self.session.integration_controller.get_data_handler(name, connect=False)
             handler.handler_storage.import_files(storage)
-
+            
+        
     def answer_create_ml_engine(self, name: str, handler: str, params: dict = None, if_not_exists=False):
 
         integrations = self.session.integration_controller.get_all()

@@ -1,9 +1,13 @@
 import pandas as pd
 from typing import List
 from mindsdb.integrations.libs.api_handler import APITable
-from mindsdb.integrations.utilities.handlers.query_utilities import SELECTQueryParser, SELECTQueryExecutor
+from mindsdb.integrations.utilities.handlers.query_utilities import (
+    SELECTQueryParser,
+    SELECTQueryExecutor,
+)
 from mindsdb.utilities import log
 from mindsdb_sql.parser import ast
+import zenpy
 
 logger = log.getLogger(__name__)
 
@@ -17,7 +21,7 @@ class ZendeskUsersTable(APITable):
         Parameters
         ----------
         query : ast.Select
-           Given SQL SELECT query
+            Given SQL SELECT query
 
         Returns
         -------
@@ -36,15 +40,26 @@ class ZendeskUsersTable(APITable):
             self.get_columns()
         )
 
-        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+        selected_columns, where_conditions, order_by_conditions, result_limit = (
+            select_statement_parser.parse_query()
+        )
 
-        subset_where_conditions = []
+        subset_where_conditions = {}
         for op, arg1, arg2 in where_conditions:
             if arg1 in self.get_columns():
-                subset_where_conditions.append([op, arg1, arg2])
+                if op != '=':
+                    raise NotImplementedError(f"Unknown op: {op}. Only '=' is supported.")
+                subset_where_conditions[arg1] = arg2
 
-        zen_users = list(self.handler.zen_client.users())
-        response = [user.to_dict() for user in zen_users]
+        count = 0
+        result = self.handler.zen_client.users(**subset_where_conditions)
+        response = []
+        if isinstance(result, zenpy.lib.generator.BaseResultGenerator):
+            while count <= result_limit:
+                response.append(result.next().to_dict())
+                count += 1
+        else:
+            response.append(result.to_dict())
 
         df = pd.DataFrame(response, columns=self.get_columns())
 
@@ -70,55 +85,28 @@ class ZendeskUsersTable(APITable):
         """
 
         return [
-            "active",
-            "alias",
-            "chat_only",
-            "created_at",
-            "custom_role_id",
-            "details",
-            "email",
-            "external_id",
-            "id",
-            "last_login_at",
-            "locale",
-            "locale_id",
-            "moderator",
-            "name",
-            "notes",
-            "only_private_comments",
-            "organization_id",
-            "phone",
-            "photo",
-            "restricted_agent",
-            "role",
-            "shared",
-            "shared_agent",
-            "signature",
-            "suspended",
-            "tags",
-            "ticket_restriction",
-            "time_zone",
-            "two_factor_auth_enabled",
-            "updated_at",
-            "url",
-            "verified",
-            "iana_time_zone",
-            "shared_phone_number",
-            "role_type",
-            "default_group_id",
-            "report_csv"
+            "active", "alias", "chat_only", "created_at", "custom_role_id",
+            "details", "email", "external_id", "id", "last_login_at",
+            "locale", "locale_id", "moderator", "name", "notes",
+            "only_private_comments", "organization_id", "phone", "photo",
+            "restricted_agent", "role", "shared", "shared_agent",
+            "signature", "suspended", "tags", "ticket_restriction",
+            "time_zone", "two_factor_auth_enabled", "updated_at", "url",
+            "verified", "iana_time_zone", "shared_phone_number", "role_type",
+            "default_group_id", "report_csv"
         ]
+
 
 class ZendeskTicketsTable(APITable):
     """Zendesk tickets Table implementation"""
 
     def select(self, query: ast.Select) -> pd.DataFrame:
-        """
+        """Pulls data from the zendesk tickets API
 
         Parameters
         ----------
         query : ast.Select
-           Given SQL SELECT query
+            Given SQL SELECT query
 
         Returns
         -------
@@ -137,15 +125,26 @@ class ZendeskTicketsTable(APITable):
             self.get_columns()
         )
 
-        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+        selected_columns, where_conditions, order_by_conditions, result_limit = (
+            select_statement_parser.parse_query()
+        )
 
-        subset_where_conditions = []
+        subset_where_conditions = {}
         for op, arg1, arg2 in where_conditions:
             if arg1 in self.get_columns():
-                subset_where_conditions.append([op, arg1, arg2])
+                if op != '=':
+                    raise NotImplementedError(f"Unknown op: {op}. Only '=' is supported.")
+                subset_where_conditions[arg1] = arg2
 
-        tickets = list(self.handler.zen_client.tickets())
-        response = [ticket.to_dict() for ticket in tickets]
+        count = 0
+        result = self.handler.zen_client.tickets(**subset_where_conditions)
+        response = []
+        if isinstance(result, zenpy.lib.generator.BaseResultGenerator):
+            while count <= result_limit:
+                response.append(result.next().to_dict())
+                count += 1
+        else:
+            response.append(result.to_dict())
 
         df = pd.DataFrame(response, columns=self.get_columns())
 
@@ -171,54 +170,20 @@ class ZendeskTicketsTable(APITable):
         """
 
         return [
-            "assignee_id",
-            "brand_id",
-            "collaborator_ids",
-            "created_at",
-            "custom_fields",
-            "description",
-            "due_at",
-            "external_id",
-            "fields",
-            "forum_topic_id",
-            "group_id",
-            "has_incidents",
-            "id",
-            "organization_id",
-            "priority",
-            "problem_id",
-            "raw_subject",
-            "recipient",
-            "requester_id",
-            "sharing_agreement_ids",
-            "status",
-            "subject",
-            "submitter_id",
-            "tags",
-            "type",
-            "updated_at",
-            "url",
-            "generated_timestamp",
-            "follower_ids",
-            "email_cc_ids",
-            "is_public",
-            "custom_status_id",
-            "followup_ids",
-            "ticket_form_id",
-            "allow_channelback",
-            "allow_attachments",
-            "from_messaging_channel",
-            "satisfaction_rating.assignee_id",
-            "satisfaction_rating.created_at",
-            "satisfaction_rating.group_id",
-            "satisfaction_rating.id",
-            "satisfaction_rating.requester_id",
-            "satisfaction_rating.score",
-            "satisfaction_rating.ticket_id",
-            "satisfaction_rating.updated_at",
-            "satisfaction_rating.url",
-            "via.channel",
-            "via.source.rel"
+            "assignee_id", "brand_id", "collaborator_ids", "created_at",
+            "custom_fields", "description", "due_at", "external_id",
+            "fields", "forum_topic_id", "group_id", "has_incidents", "id",
+            "organization_id", "priority", "problem_id", "raw_subject",
+            "recipient", "requester_id", "sharing_agreement_ids", "status",
+            "subject", "submitter_id", "tags", "type", "updated_at", "url",
+            "generated_timestamp", "follower_ids", "email_cc_ids", "is_public",
+            "custom_status_id", "followup_ids", "ticket_form_id",
+            "allow_channelback", "allow_attachments", "from_messaging_channel",
+            "satisfaction_rating.assignee_id", "satisfaction_rating.created_at",
+            "satisfaction_rating.group_id", "satisfaction_rating.id",
+            "satisfaction_rating.requester_id", "satisfaction_rating.score",
+            "satisfaction_rating.ticket_id", "satisfaction_rating.updated_at",
+            "satisfaction_rating.url", "via.channel", "via.source.rel"
         ]
 
 
@@ -226,12 +191,12 @@ class ZendeskTriggersTable(APITable):
     """Zendesk Triggers Table implementation"""
 
     def select(self, query: ast.Select) -> pd.DataFrame:
-        """
+        """Pulls data from the zendesk triggers API
 
         Parameters
         ----------
         query : ast.Select
-           Given SQL SELECT query
+            Given SQL SELECT query
 
         Returns
         -------
@@ -250,15 +215,26 @@ class ZendeskTriggersTable(APITable):
             self.get_columns()
         )
 
-        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+        selected_columns, where_conditions, order_by_conditions, result_limit = (
+            select_statement_parser.parse_query()
+        )
 
-        subset_where_conditions = []
+        subset_where_conditions = {}
         for op, arg1, arg2 in where_conditions:
             if arg1 in self.get_columns():
-                subset_where_conditions.append([op, arg1, arg2])
+                if op != '=':
+                    raise NotImplementedError(f"Unknown op: {op}. Only '=' is supported.")
+                subset_where_conditions[arg1] = arg2
 
-        triggers = list(self.handler.zen_client.triggers())
-        response = [trigger.to_dict() for trigger in triggers]
+        count = 0
+        result = self.handler.zen_client.triggers(**subset_where_conditions)
+        response = []
+        if isinstance(result, zenpy.lib.generator.BaseResultGenerator):
+            while count <= result_limit:
+                response.append(result.next().to_dict())
+                count += 1
+        else:
+            response.append(result.to_dict())
 
         df = pd.DataFrame(response, columns=self.get_columns())
 
@@ -284,20 +260,9 @@ class ZendeskTriggersTable(APITable):
         """
 
         return [
-            "actions",
-            "active",
-            "description",
-            "id",
-            "position",
-            "title",
-            "url",
-            "updated_at",
-            "created_at",
-            "default",
-            "raw_title",
-            "category_id",
-            "conditions.all",
-            "conditions.any"
+            "actions", "active", "description", "id", "position", "title",
+            "url", "updated_at", "created_at", "default", "raw_title",
+            "category_id", "conditions.all", "conditions.any"
         ]
 
 
@@ -305,12 +270,12 @@ class ZendeskActivitiesTable(APITable):
     """Zendesk Activities Table implementation"""
 
     def select(self, query: ast.Select) -> pd.DataFrame:
-        """
+        """Pulls data from the zendesk activities API
 
         Parameters
         ----------
         query : ast.Select
-           Given SQL SELECT query
+            Given SQL SELECT query
 
         Returns
         -------
@@ -329,16 +294,27 @@ class ZendeskActivitiesTable(APITable):
             self.get_columns()
         )
 
-        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
+        selected_columns, where_conditions, order_by_conditions, result_limit = (
+            select_statement_parser.parse_query()
+        )
 
-        subset_where_conditions = []
+        subset_where_conditions = {}
         for op, arg1, arg2 in where_conditions:
             if arg1 in self.get_columns():
-                subset_where_conditions.append([op, arg1, arg2])
+                if op != '=':
+                    raise NotImplementedError(f"Unknown op: {op}. Only '=' is supported.")
+                subset_where_conditions[arg1] = arg2
 
-        activities = list(self.handler.zen_client.activities())
-        response = [activity.to_dict() for activity in activities]
-        
+        count = 0
+        result = self.handler.zen_client.activities(**subset_where_conditions)
+        response = []
+        if isinstance(result, zenpy.lib.generator.BaseResultGenerator):
+            while count <= result_limit:
+                response.append(result.next().to_dict())
+                count += 1
+        else:
+            response.append(result.to_dict())
+
         df = pd.DataFrame(response, columns=self.get_columns())
 
         select_statement_executor = SELECTQueryExecutor(

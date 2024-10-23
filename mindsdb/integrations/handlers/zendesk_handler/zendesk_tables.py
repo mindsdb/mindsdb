@@ -8,8 +8,8 @@ from mindsdb_sql.parser import ast
 logger = log.getLogger(__name__)
 
 
-class ZendeskListUsersTable(APITable):
-    """Zendesk List Users Table implementation"""
+class ZendeskUsersTable(APITable):
+    """Zendesk Users Table implementation"""
 
     def select(self, query: ast.Select) -> pd.DataFrame:
         """Pulls data from the zendesk list users API
@@ -32,7 +32,7 @@ class ZendeskListUsersTable(APITable):
 
         select_statement_parser = SELECTQueryParser(
             query,
-            'list_users',
+            'users',
             self.get_columns()
         )
 
@@ -43,84 +43,10 @@ class ZendeskListUsersTable(APITable):
             if arg1 in self.get_columns():
                 subset_where_conditions.append([op, arg1, arg2])
 
-        response = list(self.handler.zen_client.users())
+        zen_users = list(self.handler.zen_client.users())
+        response = [user.to_dict() for user in zen_users]
 
         df = pd.DataFrame(response, columns=self.get_columns())
-
-        select_statement_executor = SELECTQueryExecutor(
-            df,
-            selected_columns,
-            subset_where_conditions,
-            order_by_conditions,
-            result_limit
-        )
-
-        df = select_statement_executor.execute_query()
-
-        return df
-
-    def get_columns(self) -> List[str]:
-        """Gets all columns to be returned in pandas DataFrame responses
-
-        Returns
-        -------
-        List[str]
-            List of columns
-        """
-
-        return [
-            "user_id"
-        ]
-
-
-class ZendeskGetUserByIdTable(APITable):
-    """Zendesk Get User by Id Table implementation"""
-
-    def select(self, query: ast.Select) -> pd.DataFrame:
-        """
-
-        Parameters
-        ----------
-        query : ast.Select
-           Given SQL SELECT query
-
-        Returns
-        -------
-        pd.DataFrame
-            User Data
-
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition
-        """
-
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'get_user_by_id',
-            self.get_columns()
-        )
-
-        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
-
-        search_params = {}
-        subset_where_conditions = []
-        for op, arg1, arg2 in where_conditions:
-            if arg1 == 'user_id':
-                if op != "=":
-                    raise NotImplementedError("Only '=' operator is supported for user_id column.")
-                search_params["user_id"] = arg2
-            elif arg1 in self.get_columns():
-                subset_where_conditions.append([op, arg1, arg2])
-
-        filter_flag = ("user_id" in search_params)
-
-        if not filter_flag:
-            raise NotImplementedError("user_id column has to be present in where clause.")
-
-        df = pd.DataFrame(columns=self.get_columns())
-        response = self.handler.zen_client.users(id=search_params["user_id"])
-        df = pd.json_normalize(response.to_dict())
 
         select_statement_executor = SELECTQueryExecutor(
             df,
@@ -183,9 +109,8 @@ class ZendeskGetUserByIdTable(APITable):
             "report_csv"
         ]
 
-
-class ZendeskListTicketsTable(APITable):
-    """Zendesk List tickets Table implementation"""
+class ZendeskTicketsTable(APITable):
+    """Zendesk tickets Table implementation"""
 
     def select(self, query: ast.Select) -> pd.DataFrame:
         """
@@ -208,7 +133,7 @@ class ZendeskListTicketsTable(APITable):
 
         select_statement_parser = SELECTQueryParser(
             query,
-            'list_tickets',
+            'tickets',
             self.get_columns()
         )
 
@@ -219,83 +144,10 @@ class ZendeskListTicketsTable(APITable):
             if arg1 in self.get_columns():
                 subset_where_conditions.append([op, arg1, arg2])
 
-        response = list(self.handler.zen_client.tickets())
+        tickets = list(self.handler.zen_client.tickets())
+        response = [ticket.to_dict() for ticket in tickets]
 
         df = pd.DataFrame(response, columns=self.get_columns())
-
-        select_statement_executor = SELECTQueryExecutor(
-            df,
-            selected_columns,
-            subset_where_conditions,
-            order_by_conditions,
-            result_limit
-        )
-
-        df = select_statement_executor.execute_query()
-
-        return df
-
-    def get_columns(self) -> List[str]:
-        """Gets all columns to be returned in pandas DataFrame responses
-
-        Returns
-        -------
-        List[str]
-            List of columns
-        """
-
-        return [
-            "ticket_id"
-        ]
-
-
-class ZendeskGetTicketByIdTable(APITable):
-    """Zendesk Get Ticket by Id Table implementation"""
-
-    def select(self, query: ast.Select) -> pd.DataFrame:
-        """
-
-        Parameters
-        ----------
-        query : ast.Select
-           Given SQL SELECT query
-
-        Returns
-        -------
-        pd.DataFrame
-            Ticket info Data
-
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition
-        """
-
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'get_ticket_by_id',
-            self.get_columns()
-        )
-
-        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
-
-        search_params = {}
-        subset_where_conditions = []
-        for op, arg1, arg2 in where_conditions:
-            if arg1 == 'ticket_id':
-                if op != "=":
-                    raise NotImplementedError("Only '=' operator is supported for ticket_id column.")
-                search_params["ticket_id"] = arg2
-            elif arg1 in self.get_columns():
-                subset_where_conditions.append([op, arg1, arg2])
-
-        filter_flag = ("ticket_id" in search_params)
-
-        if not filter_flag:
-            raise NotImplementedError("ticket_id column has to be present in where clause.")
-
-        response = self.handler.zen_client.tickets(id=search_params["ticket_id"])
-        df = pd.json_normalize(response.to_dict())
 
         select_statement_executor = SELECTQueryExecutor(
             df,
@@ -370,8 +222,8 @@ class ZendeskGetTicketByIdTable(APITable):
         ]
 
 
-class ZendeskListTriggersTable(APITable):
-    """Zendesk List Triggers Table implementation"""
+class ZendeskTriggersTable(APITable):
+    """Zendesk Triggers Table implementation"""
 
     def select(self, query: ast.Select) -> pd.DataFrame:
         """
@@ -394,7 +246,7 @@ class ZendeskListTriggersTable(APITable):
 
         select_statement_parser = SELECTQueryParser(
             query,
-            'list_triggers',
+            'triggers',
             self.get_columns()
         )
 
@@ -405,83 +257,10 @@ class ZendeskListTriggersTable(APITable):
             if arg1 in self.get_columns():
                 subset_where_conditions.append([op, arg1, arg2])
 
-        response = list(self.handler.zen_client.triggers())
+        triggers = list(self.handler.zen_client.triggers())
+        response = [trigger.to_dict() for trigger in triggers]
 
         df = pd.DataFrame(response, columns=self.get_columns())
-
-        select_statement_executor = SELECTQueryExecutor(
-            df,
-            selected_columns,
-            subset_where_conditions,
-            order_by_conditions,
-            result_limit
-        )
-
-        df = select_statement_executor.execute_query()
-
-        return df
-
-    def get_columns(self) -> List[str]:
-        """Gets all columns to be returned in pandas DataFrame responses
-
-        Returns
-        -------
-        List[str]
-            List of columns
-        """
-
-        return [
-            "trigger_id"
-        ]
-
-
-class ZendeskGetTriggerByIdTable(APITable):
-    """Zendesk Get Trigger by Id Table implementation"""
-
-    def select(self, query: ast.Select) -> pd.DataFrame:
-        """
-
-        Parameters
-        ----------
-        query : ast.Select
-           Given SQL SELECT query
-
-        Returns
-        -------
-        pd.DataFrame
-            Trigger info Data
-
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition
-        """
-
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'get_trigger_by_id',
-            self.get_columns()
-        )
-
-        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
-
-        search_params = {}
-        subset_where_conditions = []
-        for op, arg1, arg2 in where_conditions:
-            if arg1 == 'trigger_id':
-                if op != "=":
-                    raise NotImplementedError("Only '=' operator is supported for trigger_id column.")
-                search_params["trigger_id"] = arg2
-            elif arg1 in self.get_columns():
-                subset_where_conditions.append([op, arg1, arg2])
-
-        filter_flag = ("trigger_id" in search_params)
-
-        if not filter_flag:
-            raise NotImplementedError("trigger_id column has to be present in where clause.")
-
-        response = self.handler.zen_client.triggers(id=search_params["trigger_id"])
-        df = pd.json_normalize(response.to_dict())
 
         select_statement_executor = SELECTQueryExecutor(
             df,
@@ -522,8 +301,8 @@ class ZendeskGetTriggerByIdTable(APITable):
         ]
 
 
-class ZendeskListActivitiesTable(APITable):
-    """Zendesk List Activities Table implementation"""
+class ZendeskActivitiesTable(APITable):
+    """Zendesk Activities Table implementation"""
 
     def select(self, query: ast.Select) -> pd.DataFrame:
         """
@@ -546,7 +325,7 @@ class ZendeskListActivitiesTable(APITable):
 
         select_statement_parser = SELECTQueryParser(
             query,
-            'list_activities',
+            'activities',
             self.get_columns()
         )
 
@@ -557,83 +336,10 @@ class ZendeskListActivitiesTable(APITable):
             if arg1 in self.get_columns():
                 subset_where_conditions.append([op, arg1, arg2])
 
-        response = list(self.handler.zen_client.activities())
-
+        activities = list(self.handler.zen_client.activities())
+        response = [activity.to_dict() for activity in activities]
+        
         df = pd.DataFrame(response, columns=self.get_columns())
-
-        select_statement_executor = SELECTQueryExecutor(
-            df,
-            selected_columns,
-            subset_where_conditions,
-            order_by_conditions,
-            result_limit
-        )
-
-        df = select_statement_executor.execute_query()
-
-        return df
-
-    def get_columns(self) -> List[str]:
-        """Gets all columns to be returned in pandas DataFrame responses
-
-        Returns
-        -------
-        List[str]
-            List of columns
-        """
-
-        return [
-            "activity_id"
-        ]
-
-
-class ZendeskGetActivityByIdTable(APITable):
-    """Zendesk Get Activity by Id Table implementation"""
-
-    def select(self, query: ast.Select) -> pd.DataFrame:
-        """
-
-        Parameters
-        ----------
-        query : ast.Select
-           Given SQL SELECT query
-
-        Returns
-        -------
-        pd.DataFrame
-            Activity info Data
-
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition
-        """
-
-        select_statement_parser = SELECTQueryParser(
-            query,
-            'get_activity_by_id',
-            self.get_columns()
-        )
-
-        selected_columns, where_conditions, order_by_conditions, result_limit = select_statement_parser.parse_query()
-
-        search_params = {}
-        subset_where_conditions = []
-        for op, arg1, arg2 in where_conditions:
-            if arg1 == 'activity_id':
-                if op != "=":
-                    raise NotImplementedError("Only '=' operator is supported for activity_id column.")
-                search_params["activity_id"] = arg2
-            elif arg1 in self.get_columns():
-                subset_where_conditions.append([op, arg1, arg2])
-
-        filter_flag = ("activity_id" in search_params)
-
-        if not filter_flag:
-            raise NotImplementedError("activity_id column has to be present in where clause.")
-
-        response = self.handler.zen_client.activities(id=search_params["activity_id"])
-        df = pd.json_normalize(response.to_dict(), errors='ignore')
 
         select_statement_executor = SELECTQueryExecutor(
             df,

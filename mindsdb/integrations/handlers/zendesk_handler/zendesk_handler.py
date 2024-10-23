@@ -1,14 +1,10 @@
 from mindsdb_sql import parse_sql
 
 from mindsdb.integrations.handlers.zendesk_handler.zendesk_tables import (
-    ZendeskListUsersTable,
-    ZendeskGetUserByIdTable,
-    ZendeskListTicketsTable,
-    ZendeskGetTicketByIdTable,
-    ZendeskListTriggersTable,
-    ZendeskGetTriggerByIdTable,
-    ZendeskListActivitiesTable,
-    ZendeskGetActivityByIdTable
+    ZendeskUsersTable,
+    ZendeskTicketsTable,
+    ZendeskTriggersTable,
+    ZendeskActivitiesTable
 )
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
@@ -39,14 +35,10 @@ class ZendeskHandler(APIHandler):
         self.zen_client = None
         self.is_connected = False
 
-        self._register_table("list_users", ZendeskListUsersTable(self))
-        self._register_table("get_user_by_id", ZendeskGetUserByIdTable(self))
-        self._register_table("list_tickets", ZendeskListTicketsTable(self))
-        self._register_table("get_ticket_by_id", ZendeskGetTicketByIdTable(self))
-        self._register_table("list_triggers", ZendeskListTriggersTable(self))
-        self._register_table("get_trigger_by_id", ZendeskGetTriggerByIdTable(self))
-        self._register_table("list_activities", ZendeskListActivitiesTable(self))
-        self._register_table("get_activity_by_id", ZendeskGetActivityByIdTable(self))
+        self._register_table("users", ZendeskUsersTable(self))
+        self._register_table("tickets", ZendeskTicketsTable(self))
+        self._register_table("triggers", ZendeskTriggersTable(self))
+        self._register_table("activities", ZendeskActivitiesTable(self))
 
     def connect(self) -> StatusResponse:
         """Set up the connection required by the handler.

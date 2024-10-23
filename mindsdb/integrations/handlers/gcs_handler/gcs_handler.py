@@ -163,7 +163,7 @@ class GcsHandler(APIHandler):
         return response
     
     def _get_bucket(self, key):
-        if self.connection_data['bucket'] is not None:
+        if 'bucket' in self.connection_data:
             return self.connection_data['bucket'], key
 
         # get bucket from first part of the key

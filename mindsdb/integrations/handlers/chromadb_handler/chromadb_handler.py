@@ -300,12 +300,22 @@ class ChromaDBHandler(VectorStoreHandler):
             embeddings = result["embeddings"]
             distances = None
 
+        # Handle embeddings conversion safely
+        if isinstance(embeddings, list):
+            processed_embeddings = embeddings
+        else:
+            try:
+                processed_embeddings = embeddings.tolist()
+            except AttributeError:
+                # If embeddings is None or doesn't support tolist()
+                processed_embeddings = embeddings
+
         # project based on columns
         payload = {
             TableField.ID.value: ids,
             TableField.CONTENT.value: documents,
             TableField.METADATA.value: metadatas,
-            TableField.EMBEDDINGS.value: embeddings.tolist(),
+            TableField.EMBEDDINGS.value: processed_embeddings,
         }
 
         if columns is not None:

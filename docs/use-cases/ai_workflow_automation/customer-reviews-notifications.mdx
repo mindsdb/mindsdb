@@ -182,7 +182,7 @@ JOIN response_model AS output;
 [Create a job](/mindsdb_sql/sql/create/jobs) to send notification, including a sample response, every time a positive review is received.
 
 ```sql
-CREATE JOB customer_reviews_and_reponses_notifications (
+CREATE JOB customer_reviews_and_responses_notifications (
 
     INSERT INTO customer_reviews_slack_app.messages (channel_id, text)
         SELECT "customer-reviews-channel-id" as channel_id,
@@ -204,13 +204,13 @@ EVERY 1 minute;
 These commands are used to monitor the job.
 
 ```sql
-SELECT * FROM mindsdb.jobs WHERE name = 'customer_reviews_and_reponses_notifications';
+SELECT * FROM mindsdb.jobs WHERE name = 'customer_reviews_and_responses_notifications';
 
-SELECT * FROM log.jobs_history WHERE project = 'mindsdb' AND name = 'customer_reviews_and_reponses_notifications';
+SELECT * FROM log.jobs_history WHERE project = 'mindsdb' AND name = 'customer_reviews_and_responses_notifications';
 ```
 
 Use this command to disable the job.
 
 ```sql
-DROP JOB customer_reviews_and_reponses_notifications;
+DROP JOB customer_reviews_and_responses_notifications;
 ```

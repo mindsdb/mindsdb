@@ -206,12 +206,12 @@ class GcsHandler(APIHandler):
         # Check if the file exists in the gcs bucket.
         bucket, key = self._get_bucket(key)
 
-        try:
-            client = self.connect()
-            client.head_object(Bucket=bucket, Key=key)
-        except ClientError as e:
-            logger.error(f'Error querying the file {key} in the bucket {bucket}, {e}!')
-            raise e
+        storage_client = self._connect_storage_client()
+        bucketObj = storage_client.bucket(bucket)
+        stats = storage.Blob(bucket=bucketObj, name=key).exists(storage_client)
+        storage_client.close()
+        if not stats:
+            raise Exception(f'Error querying the file {key} in the bucket {bucket}!')
 
         with self._connect_duckdb() as connection:
             # copy

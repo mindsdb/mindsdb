@@ -176,10 +176,8 @@ class VectorStoreHandler(BaseHandler):
         columns = [column.name for column in query.columns]
 
         if not self._is_columns_allowed(columns):
-            raise Exception(
-                f"Columns {columns} not allowed."
-                f"Allowed columns are {[col['name'] for col in self.SCHEMA]}"
-            )
+            extra_columns = set(columns) - set([col["name"] for col in self.SCHEMA])
+            LOG.warning(f"extra columns {extra_columns} detected, they will be merged and stored in metadata field.")
 
         # get content column if it is present
         if TableField.CONTENT.value in columns:
@@ -216,6 +214,16 @@ class VectorStoreHandler(BaseHandler):
             ]
         else:
             metadata = None
+
+            # check if other columns are present that aren't in the schema, add them to metadata
+            extra_columns = set(columns) - set([col["name"] for col in self.SCHEMA])
+
+            if extra_columns:
+                metadata = [{} for _ in range(len(query.values))]
+                for extra_column in extra_columns:
+                    extra_column_index = columns.index(extra_column)
+                    for i, row in enumerate(query.values):
+                        metadata[i][extra_column] = self._value_or_self(row[extra_column_index])
 
         # create dataframe
         data = {

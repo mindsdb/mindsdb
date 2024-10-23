@@ -1,5 +1,8 @@
 import enum
+from collections import defaultdict
 from typing import List, Optional
+from langchain_core.language_models import BaseChatModel
+from langchain.embeddings.base import Embeddings
 
 from mindsdb_sql.parser.ast import Select, BinaryOperation, Identifier, Constant, Star
 
@@ -7,6 +10,7 @@ from mindsdb.integrations.libs.vectordatabase_handler import TableField
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities import log
 from mindsdb.utilities.cache import get_cache
+
 from .sql_agent import SQLAgent
 
 _DEFAULT_TOP_K_SIMILARITY_SEARCH = 5
@@ -54,7 +58,7 @@ class SkillToolController:
             cache=get_cache('agent', max_size=_MAX_CACHE_SIZE)
         )
 
-    def _make_text_to_sql_tools(self, skill: db.Skills, llm) -> list:
+    def _make_text_to_sql_tools(self, skills: List[db.Skills], llm) -> list:
         '''
            Uses SQLAgent to execute tool
         '''
@@ -66,26 +70,37 @@ class SkillToolController:
         except ImportError:
             raise ImportError(
                 'To use the text-to-SQL skill, please install langchain with `pip install mindsdb[langchain]`')
-        database = skill.params['database']
-        tables = skill.params['tables']
-        tables_to_include = [f'{database}.{table}' for table in tables]
+
+        tables_list = []
+        for skill in skills:
+            database = skill.params['database']
+            for table in skill.params['tables']:
+                tables_list.append(f'{database}.{table}')
+
+        # use list databases
+        database = ','.join(set(s.params['database'] for s in skills))
         db = MindsDBSQL(
             engine=self.get_command_executor(),
             database=database,
             metadata=self.get_command_executor().session.integration_controller,
-            include_tables=tables_to_include
+            include_tables=tables_list
         )
+
         # Users probably don't need to configure this for now.
-        sql_database_tools = MindsDBSQLToolkit(db=db, llm=llm).get_tools(prefix=str(skill.id))
-        description = skill.params.get('description', '')
-        tables_list = ','.join([f'{database}.{table}' for table in tables])
+        sql_database_tools = MindsDBSQLToolkit(db=db, llm=llm).get_tools()
+        descriptions = []
+        for skill in skills:
+            description = skill.params.get('description', '')
+            if description:
+                descriptions.append(description)
+
         for i, tool in enumerate(sql_database_tools):
             if isinstance(tool, QuerySQLDataBaseTool):
                 # Add our own custom description so our agent knows when to query this table.
                 tool.description = (
-                    f'Use this tool if you need data about {description}. '
+                    f'Use this tool if you need data about {" OR ".join(descriptions)}. '
                     'Use the conversation context to decide which table to query. '
-                    f'These are the available tables: {tables_list}.\n'
+                    f'These are the available tables: {",".join(tables_list)}.\n'
                     f'ALWAYS consider these special cases:\n'
                     f'- For TIMESTAMP type columns, make sure you include the time portion in your query (e.g. WHERE date_column = "2020-01-01 12:00:00")'
                     f'Here are the rest of the instructions:\n'
@@ -94,7 +109,7 @@ class SkillToolController:
                 sql_database_tools[i] = tool
         return sql_database_tools
 
-    def _make_retrieval_tools(self, skill: db.Skills, llm) -> dict:
+    def _make_retrieval_tools(self, skill: db.Skills, llm, embedding_model):
         """
         creates advanced retrieval tool i.e. RAG
         """
@@ -103,7 +118,7 @@ class SkillToolController:
         if 'llm' not in config:
             # Set LLM if not explicitly provided in configs.
             config['llm'] = llm
-        return dict(
+        tool = dict(
             name=params.get('name', skill.name),
             source=params.get('source', None),
             config=config,
@@ -112,6 +127,12 @@ class SkillToolController:
                         f'The input should be the exact question the user is asking.',
             type=skill.type
         )
+        pred_args = {}
+        pred_args['embedding_model'] = embedding_model
+        pred_args['llm'] = llm
+
+        from .retrieval_tool import build_retrieval_tool
+        return build_retrieval_tool(tool, pred_args, skill)
 
     def _get_rag_query_function(self, skill: db.Skills):
 
@@ -149,28 +170,46 @@ class SkillToolController:
             type=skill.type
         )
 
-    def get_tools_from_skill(self, skill: db.Skills, llm) -> dict:
+    def get_tools_from_skills(self, skills: List[db.Skills], llm: BaseChatModel, embedding_model: Embeddings) -> dict:
         """
             Creates function for skill and metadata (name, description)
         Args:
-            skill (Skills): Skill to make a tool from
+            skills (Skills): Skills to make a tool from
+            llm: LLM which will be used by skills
+            embedding_model: this model is used by retrieval skill
 
         Returns:
             dict with keys: name, description, func
         """
 
-        try:
-            skill_type = SkillType(skill.type)
-        except ValueError:
-            raise NotImplementedError(
-                f'skill of type {skill.type} is not supported as a tool, supported types are: {list(SkillType._member_names_)}')
+        # group skills by type
+        skills_group = defaultdict(list)
+        for skill in skills:
+            try:
+                skill_type = SkillType(skill.type)
+            except ValueError:
+                raise NotImplementedError(
+                    f'skill of type {skill.type} is not supported as a tool, supported types are: {list(SkillType._member_names_)}')
 
-        if skill_type == SkillType.TEXT2SQL or skill_type == SkillType.TEXT2SQL_LEGACY:
-            return self._make_text_to_sql_tools(skill, llm)
-        if skill_type == SkillType.KNOWLEDGE_BASE:
-            return [self._make_knowledge_base_tools(skill)]
-        if skill_type == SkillType.RETRIEVAL:
-            return [self._make_retrieval_tools(skill, llm)]
+            if skill_type == SkillType.TEXT2SQL_LEGACY:
+                skill_type = SkillType.TEXT2SQL
+            skills_group[skill_type].append(skill)
+
+        tools = {}
+        for skill_type, skills in skills_group.items():
+            if skill_type == SkillType.TEXT2SQL:
+                tools[skill_type] = self._make_text_to_sql_tools(skills, llm)
+            if skill_type == SkillType.KNOWLEDGE_BASE:
+                tools[skill_type] = [
+                    self._make_knowledge_base_tools(skill)
+                    for skill in skills
+                ]
+            if skill_type == SkillType.RETRIEVAL:
+                tools[skill_type] = [
+                    self._make_retrieval_tools(skill, llm, embedding_model)
+                    for skill in skills
+                ]
+        return tools
 
 
 skill_tool = SkillToolController()

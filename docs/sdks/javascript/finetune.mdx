@@ -5,7 +5,7 @@ sidebarTitle: Finetune a Model
 
 ## Description
 
-The `adjust()` fuction lets us finetune the model with specific data.
+The `finetune()` fuction lets us finetune the model with specific data.
 
 ## Syntax
 
@@ -23,7 +23,7 @@ const adjustSelect = 'SELECT * FROM demo_data.home_rentals WHERE days_on_market 
 try {
 
   // Finetuning/adjusting a model with the specified dataset
-  await homeRentalPriceModel.adjust({
+  await homeRentalPriceModel.finetune({
     integration: 'example_db',
     select: adjustSelect
     //using: params

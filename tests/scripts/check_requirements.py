@@ -63,8 +63,11 @@ BYOM_HANLDER_DEPS = ["pyarrow"]
 # The `thrift-sasl` package is required establish a connection via to Hive via `pyhive`, but it is not explicitly imported in the code.
 HIVE_HANDLER_DEPS = ["thrift-sasl"]
 
+# The `gcsfs` package is required to interact with GCS as a file system.
+GCS_HANDLER_DEPS = ["gcsfs"]
+
 HANDLER_RULE_IGNORES = {
-    "DEP002": OPTIONAL_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS + BYOM_HANLDER_DEPS + HIVE_HANDLER_DEPS,
+    "DEP002": OPTIONAL_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS + BYOM_HANLDER_DEPS + HIVE_HANDLER_DEPS + GCS_HANDLER_DEPS,
     "DEP001": ["tests"]  # 'tests' is the mindsdb tests folder in the repo root
 }
 
@@ -81,6 +84,8 @@ PACKAGE_NAME_MAP = {
     "google-auth-httplib2": ["google"],
     "google-generativeai": ["google"],
     "google-analytics-admin": ["google"],
+    "google-auth": ["google"],
+    "google-cloud-storage": ["google"],
     "protobuf": ["google"],
     "google-api-python-client": ["googleapiclient"],
     "binance-connector": ["binance"],
@@ -124,7 +129,7 @@ PACKAGE_NAME_MAP = {
     "llama-index-readers-web": ["llama_index"],
     "llama-index-embeddings-openai": ["llama_index"],
     "botframework-connector": ["botframework"],
-    "botbuilder-schema": ["botbuilder"],
+    "botbuilder-schema": ["botbuilder"]
 }
 
 # We use this to exit with a non-zero status code if any check fails

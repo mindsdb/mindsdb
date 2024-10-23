@@ -83,7 +83,7 @@ class BaseStuff:
                 command=cmd,
                 remove=True,
                 volumes={str(tmpdirname): {'bind': '/temp', 'mode': 'ro'}},
-                environment={"MYSQL_PWD": self.config["auth"]["password"]}
+                environment={"MYSQL_PWD": os.environ.get("MINDSDB_PASSWORD")}
             )
         return self.to_dicts(res.decode(encoding))
 
@@ -169,7 +169,8 @@ class TestMySqlApi(BaseStuff):
         cls.launch_query_tmpl = "mysql --host=%s --port=%s --user=%s --database=mindsdb" % (
             cls.config["api"]["mysql"]["host"],
             cls.config["api"]["mysql"]["port"],
-            cls.config["auth"]["username"])
+            os.environ.get("MINDSDB_USERNAME")
+        )
 
     @classmethod
     def tear_down(cls):

@@ -1,5 +1,5 @@
 from http import HTTPStatus
-from typing import List
+from typing import Dict, List
 
 from flask import request
 from flask_restx import Resource
@@ -8,7 +8,10 @@ import pandas as pd
 
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE as SQL_RESPONSE_TYPE
+from mindsdb.api.executor.exceptions import ExecutorException
 from mindsdb.api.http.utils import http_error
+from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
 from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.integrations.handlers.web_handler.urlcrawl_helpers import get_all_websites
 from mindsdb.interfaces.database.projects import ProjectController
@@ -18,6 +21,8 @@ from mindsdb.integrations.utilities.rag.splitters.file_splitter import FileSplit
 from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseTable
 from mindsdb.utilities import log
 from mindsdb.utilities.exception import EntityNotExistsError
+from mindsdb.integrations.utilities.rag.settings import DEFAULT_LLM_MODEL, DEFAULT_RAG_PROMPT_TEMPLATE
+
 
 from mindsdb_sql.parser.ast import Identifier
 
@@ -81,6 +86,29 @@ def _insert_web_pages_into_knowledge_base(table: KnowledgeBaseTable, urls: List[
     docs_df = pd.DataFrame.from_records(doc_objs)
     # Insert documents into KB.
     table.insert(docs_df)
+
+
+def _insert_select_query_result_into_knowledge_base(query: str, table: KnowledgeBaseTable, project_name: str):
+    if not query:
+        return
+    mysql_proxy = FakeMysqlProxy()
+    query_result = mysql_proxy.process_query(query)
+    # Use same project as API request for SQL context.
+    mysql_proxy.set_context({'db': project_name})
+    if query_result.type != SQL_RESPONSE_TYPE.TABLE:
+        raise ExecutorException('Query returned no data')
+
+    # Check column name aliases.
+    column_names = [c.get('alias', c.get('name')) for c in query_result.columns]
+    df_to_insert = pd.DataFrame.from_records(query_result.data, columns=column_names)
+    table.insert(df_to_insert)
+
+
+def _insert_rows_into_knowledge_base(rows: List[Dict], table: KnowledgeBaseTable):
+    if not rows:
+        return
+    df_to_insert = pd.DataFrame.from_records(rows)
+    table.insert(df_to_insert)
 
 
 @ns_conf.route('/<project_name>/knowledge_bases')
@@ -237,6 +265,8 @@ class KnowledgeBaseResource(Resource):
         kb = request.json['knowledge_base']
         files = kb.get('files', [])
         urls = kb.get('urls', [])
+        query = kb.get('query')
+        rows = kb.get('rows', [])
         # Optional params for web pages.
         crawl_depth = kb.get('crawl_depth', 1)
         filters = kb.get('filters', [])
@@ -246,6 +276,18 @@ class KnowledgeBaseResource(Resource):
             _insert_file_into_knowledge_base(table, file_name)
         # Crawl, split, & embed web pages into Knowledge Base.
         _insert_web_pages_into_knowledge_base(table, urls, crawl_depth=crawl_depth, filters=filters)
+
+        # Execute SELECT statement & embed dataframe into Knowledge Base.
+        try:
+            _insert_select_query_result_into_knowledge_base(query, table, project_name)
+        except ExecutorException as e:
+            return http_error(
+                HTTPStatus.BAD_REQUEST,
+                'Invalid SELECT query',
+                f'Executing "query" failed. Needs to be a valid SELECT statement that returns data: {str(e)}'
+            )
+        # Convert rows of records into a dataframe & embed into Knowledge Base.
+        _insert_rows_into_knowledge_base(rows, table)
         return '', HTTPStatus.OK
 
     @ns_conf.doc('delete_knowledge_base')
@@ -275,3 +317,98 @@ class KnowledgeBaseResource(Resource):
 
         session_controller.kb_controller.delete(knowledge_base_name, project_name)
         return '', HTTPStatus.NO_CONTENT
+
+
+@ns_conf.route('/<project_name>/knowledge_bases/<knowledge_base_name>/completions')
+@ns_conf.param('project_name', 'Name of the project')
+@ns_conf.param('knowledge_base_name', 'Name of the knowledge_base')
+class KnowledgeBaseCompletions(Resource):
+    @ns_conf.doc('knowledge_base_completions')
+    @api_endpoint_metrics('POST', '/knowledge_bases/knowledge_base/completions')
+    def post(self, project_name, knowledge_base_name):
+        """
+        Add support for LLM generation on the response from knowledge base
+        """
+        # Check for required parameters.
+        if 'knowledge_base' not in request.json:
+            return http_error(
+                HTTPStatus.BAD_REQUEST,
+                'Missing parameter',
+                'Must provide "knowledge_base" parameter in POST body'
+            )
+
+        # Check for required parameters
+        query = request.json.get('query')
+        if query is None:
+            return http_error(
+                HTTPStatus.BAD_REQUEST,
+                'Missing parameter',
+                'Must provide "query" parameter in POST body'
+            )
+
+            logger.error('Missing parameter "query" in POST body')
+
+        llm_model = request.json.get('llm_model')
+        if llm_model is None:
+            logger.warn(f'Missing parameter "llm_model" in POST body, using default llm_model {DEFAULT_LLM_MODEL}')
+
+        prompt_template = request.json.get('prompt_template')
+        if prompt_template is None:
+            logger.warn(f'Missing parameter "prompt_template" in POST body, using default prompt template {DEFAULT_RAG_PROMPT_TEMPLATE}')
+
+        session = SessionController()
+        project_controller = ProjectController()
+        try:
+            project = project_controller.get(name=project_name)
+        except EntityNotExistsError:
+            # Project must exist.
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                'Project not found',
+                f'Project with name {project_name} does not exist'
+            )
+            logger.error("Project not found, please check the project name exists")
+
+        # Check if knowledge base exists
+        table = session.kb_controller.get_table(knowledge_base_name, project.id)
+        if table is None:
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                'Knowledge Base not found',
+                f'Knowledge Base with name {knowledge_base_name} does not exist'
+            )
+
+            logger.error("Knowledge Base not found, please check the knowledge base name exists")
+
+        # Get retrieval config, if set
+        retrieval_config = request.json.get('retrieval_config', {})
+        if not retrieval_config:
+            logger.warn('No retrieval config provided, using default retrieval config')
+
+        # add llm model to retrieval config
+        if llm_model is not None:
+            retrieval_config['llm_model_name'] = llm_model
+
+        # add prompt template to retrieval config
+        if prompt_template is not None:
+            retrieval_config['rag_prompt_template'] = prompt_template
+
+        # add llm provider to retrieval config if set
+        llm_provider = request.json.get('model_provider')
+        if llm_provider is not None:
+            retrieval_config['llm_provider'] = llm_provider
+
+        # build rag pipeline
+        rag_pipeline = table.build_rag_pipeline(retrieval_config)
+
+        # get response from rag pipeline
+        rag_response = rag_pipeline(query)
+        response = {
+            'message': {
+                'content': rag_response.get('answer'),
+                'context': rag_response.get('context'),
+                'role': 'assistant'
+            }
+        }
+
+        return response

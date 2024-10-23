@@ -1,8 +1,13 @@
 import os
 import pytest
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
+import pandas as pd
+
+from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.api.http.initialize import initialize_app
+from mindsdb.api.mysql.mysql_proxy.mysql_proxy import SQLAnswer
 from mindsdb.migrations import migrate
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.config import Config
@@ -267,3 +272,163 @@ def test_delete_knowledge_base_project_not_found(client):
 def test_delete_knowledge_base_not_found(client):
     delete_response = client.delete('/api/projects/mindsdb/knowledge_bases/xiaolongbao_kb', follow_redirects=True)
     assert '404' in delete_response.status
+
+
+def test_put_knowledge_base_rows(client):
+    create_request = {
+        'knowledge_base': {
+            'name': 'test_kb_update_rows',
+            'model': 'test_embedding_model'
+        }
+    }
+
+    create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
+
+    assert '201' in create_response.status
+
+    content_to_embed = '''To begin with a perfect Peking duck recipe at home, firstly choose head on (easy to hang for air drying out), clean and leaner ducks.
+    Add around 1 teaspoon of white vinegar in clean water and soak the duck for 1 hour. Then prepare lines and tie the ducks from the top of the neck.
+    Hang them on hooks. I hang the ducks on the top of kitchen pool.
+    Please note:  I make this peking duck in March when the room temperature is around 13-15 degree C, you will need to hang the duck in fridge or in a room with air conditioner in hot summer days.
+    '''
+    rows_to_insert = [
+        {'id': 0, 'content': content_to_embed}
+    ]
+    update_request = {
+        'knowledge_base': {
+            'rows': rows_to_insert
+        }
+    }
+    with patch('mindsdb.interfaces.knowledge_base.controller.KnowledgeBaseTable') as mock_kb_table:
+        update_response = client.put('/api/projects/mindsdb/knowledge_bases/test_kb_update_rows', json=update_request, follow_redirects=True)
+
+        assert '200' in update_response.status
+
+        last_insert_call_args = mock_kb_table().insert.call_args_list[-1]
+        actual_df_inserted = last_insert_call_args[0][0]
+        expected_df_to_insert = pd.DataFrame.from_records(rows_to_insert)
+        assert actual_df_inserted.equals(expected_df_to_insert)
+
+
+def test_put_knowledge_base_query(client):
+    create_request = {
+        'knowledge_base': {
+            'name': 'test_kb_update_query',
+            'model': 'test_embedding_model'
+        }
+    }
+
+    create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
+
+    assert '201' in create_response.status
+
+    content_to_embed = '''To begin with a perfect Peking duck recipe at home, firstly choose head on (easy to hang for air drying out), clean and leaner ducks.
+    Add around 1 teaspoon of white vinegar in clean water and soak the duck for 1 hour. Then prepare lines and tie the ducks from the top of the neck.
+    Hang them on hooks. I hang the ducks on the top of kitchen pool.
+    Please note:  I make this peking duck in March when the room temperature is around 13-15 degree C, you will need to hang the duck in fridge or in a room with air conditioner in hot summer days.
+    '''
+    update_request = {
+        'knowledge_base': {
+            'query': 'SELECT * FROM mock_db.recipes'
+        }
+    }
+
+    with patch('mindsdb.api.http.namespaces.knowledge_bases.FakeMysqlProxy') as mock_sql_proxy:
+        mock_sql_proxy().process_query.return_value = SQLAnswer(
+            resp_type=RESPONSE_TYPE.TABLE,
+            columns=[{'alias': 'id'}, {'name': 'content'}],
+            data=[(0, content_to_embed)]
+        )
+
+        with patch('mindsdb.interfaces.knowledge_base.controller.KnowledgeBaseTable') as mock_kb_table:
+            update_response = client.put('/api/projects/mindsdb/knowledge_bases/test_kb_update_query', json=update_request, follow_redirects=True)
+
+            assert '200' in update_response.status
+
+            last_insert_call_args = mock_kb_table().insert.call_args_list[-1]
+            actual_df_inserted = last_insert_call_args[0][0]
+
+            rows_to_insert = [
+                {'id': 0, 'content': content_to_embed}
+            ]
+            expected_df_to_insert = pd.DataFrame.from_records(rows_to_insert)
+            assert actual_df_inserted.equals(expected_df_to_insert)
+
+
+@pytest.fixture
+def create_test_kb(client):
+    kb_name = 'test_completions_kb'
+
+    # First, try to delete the existing knowledge base if it exists
+    client.delete(f'/api/projects/mindsdb/knowledge_bases/{kb_name}', follow_redirects=True)
+    create_kb_request = {
+        'knowledge_base': {
+            'name': kb_name,
+            'model': 'test_embedding_model'
+        }
+    }
+    create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_kb_request,
+                                  follow_redirects=True)
+
+    # Check if creation was successful
+    assert create_response.status_code in [201,
+                                           200], f"Failed to create knowledge base. Status: {create_response.status}"
+
+    return kb_name
+
+
+def test_successful_completion(client, create_test_kb):
+    kb_name = create_test_kb
+    completion_request = {
+        'query': 'What is the capital of France?',
+        'knowledge_base': kb_name
+    }
+    response = client.post(f'/api/projects/mindsdb/knowledge_bases/{kb_name}/completions',
+                           json=completion_request, follow_redirects=True)
+    assert response.status_code == 200
+    response_data = response.get_json()
+    assert 'message' in response_data
+    assert 'content' in response_data['message']
+    assert 'context' in response_data['message']
+    assert response_data['message']['role'] == 'assistant'
+
+
+def test_completion_missing_query_parameter(client, create_test_kb):
+    kb_name = create_test_kb
+    invalid_request = {
+        'knowledge_base': kb_name
+    }
+    response = client.post(f'/api/projects/mindsdb/knowledge_bases/{kb_name}/completions',
+                           json=invalid_request, follow_redirects=True)
+    assert response.status_code == 400
+
+
+def test_completion_missing_knowledge_base_parameter(client, create_test_kb):
+    kb_name = create_test_kb
+    invalid_request = {
+        'query': 'What is the capital of France?'
+    }
+    response = client.post(f'/api/projects/mindsdb/knowledge_bases/{kb_name}/completions',
+                           json=invalid_request, follow_redirects=True)
+    assert response.status_code == 400
+
+
+def test_completion_non_existent_project(client, create_test_kb):
+    kb_name = create_test_kb
+    completion_request = {
+        'query': 'What is the capital of France?',
+        'knowledge_base': kb_name
+    }
+    response = client.post(f'/api/projects/nonexistent/knowledge_bases/{kb_name}/completions',
+                           json=completion_request, follow_redirects=True)
+    assert response.status_code == 404
+
+
+def test_completion_non_existent_knowledge_base(client):
+    completion_request = {
+        'query': 'What is the capital of France?',
+        'knowledge_base': 'nonexistent_kb'
+    }
+    response = client.post('/api/projects/mindsdb/knowledge_bases/nonexistent_kb/completions',
+                           json=completion_request, follow_redirects=True)
+    assert response.status_code == 404

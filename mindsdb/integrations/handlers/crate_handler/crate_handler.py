@@ -10,7 +10,9 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE,
 )
-from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
+from mindsdb.integrations.libs.const import (
+    HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE,
+)
 
 
 import pandas as pd
@@ -54,21 +56,23 @@ class CrateHandler(DatabaseHandler):
         if self.is_connected:
             return self.connection
 
-        is_local = self.host.startswith('localhost') or self.host == '127.0.0.1'
-        
+        is_local = (
+            self.host.startswith("localhost") or self.host == "127.0.0.1"
+        )
+
         try:
             # Build URL based on connection type
             protocol = "http" if is_local else "https"
             url = f"{protocol}://{self.user}:{self.password}@{self.host}:{self.port}"
-            
+
             # Connect with appropriate settings based on connection type
             self.connection = db.connect(
                 url,
                 timeout=30,
                 # Only verify SSL for cloud connections
-                verify_ssl_cert=not is_local  
+                verify_ssl_cert=not is_local,
             )
-            
+
             self.is_connected = True
         except Exception as e:
             logger.error(f"Error while connecting to CrateDB: {e}")

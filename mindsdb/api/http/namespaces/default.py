@@ -1,3 +1,4 @@
+import os
 import time
 
 from flask import request, session
@@ -34,7 +35,7 @@ def check_auth() -> bool:
 
         return True
 
-    return session.get('username') == config['auth']['username']
+    return session.get('username') == os.environ.get('MINDSDB_USERNAME')
 
 
 @ns_conf.route('/login', methods=['POST'])
@@ -65,13 +66,9 @@ class LoginRoute(Resource):
                 'Username and password should be string'
             )
 
-        config = Config()
-        inline_username = config['auth']['username']
-        inline_password = config['auth']['password']
-
         if (
-            username != inline_username
-            or password != inline_password
+            username != os.environ.get('MINDSDB_USERNAME')
+            or password != os.environ.get('MINDSDB_PASSWORD')
         ):
             return http_error(
                 401, 'Forbidden',

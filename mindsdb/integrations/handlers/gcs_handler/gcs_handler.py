@@ -177,7 +177,7 @@ class GcsHandler(APIHandler):
         
         bucket, key = self._get_bucket(key)
 
-        with self._connect_duckdb(bucket) as connection:
+        with self._connect_duckdb() as connection:
 
             cursor = connection.execute(f"SELECT * FROM 'gs://{bucket}/{key}'")
 
@@ -213,7 +213,7 @@ class GcsHandler(APIHandler):
             logger.error(f'Error querying the file {key} in the bucket {bucket}, {e}!')
             raise e
 
-        with self._connect_duckdb(bucket) as connection:
+        with self._connect_duckdb() as connection:
             # copy
             connection.execute(f"CREATE TABLE tmp_table AS SELECT * FROM 'gs://{bucket}/{key}'")
 

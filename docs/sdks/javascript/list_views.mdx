@@ -3,6 +3,19 @@ title: List Views
 sidebarTitle: List Views
 ---
 
-<Info>
-This feature is in progress.
-</Info>
+## Description
+
+The getAllViews() function lists all available views.
+
+​
+## Syntax
+
+Here is how to list all available views:
+
+```sql
+const allViews = await MindsDB.Views.getAllViews();
+console.log('all views:')
+allViews.forEach(v => {
+  console.log(v.name);
+});
+```

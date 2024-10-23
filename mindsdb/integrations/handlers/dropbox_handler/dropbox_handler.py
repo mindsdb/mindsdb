@@ -230,7 +230,6 @@ class DropboxHandler(DatabaseHandler):
             df = self.native_query(query_str)
             response = Response(RESPONSE_TYPE.TABLE, data_frame=df)
         elif isinstance(query, Insert):
-            print("HEYOO")
             query_str = query.to_string().replace("`", '"')
             self.native_query(query_str)
             response = Response(RESPONSE_TYPE.OK)

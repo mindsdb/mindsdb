@@ -4,31 +4,15 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 
 
 connection_args = OrderedDict(
-    alias={
+    uri={
         "type": ARG_TYPE.STR,
-        "description": "alias of the Milvus connection to construct",
+        "description": "uri of milvus service",
         "required": True,
     },
-    host={
+    token={
         "type": ARG_TYPE.STR,
-        "description": "IP address of the Milvus server",
-        "required": True,
-    },
-    port={
-        "type": ARG_TYPE.INT,
-        "description": "port of the Milvus server",
-        "required": True,
-    },
-    user={
-        "type": ARG_TYPE.STR,
-        "description": "username of the Milvus server",
-        "required": True,
-    },
-    password={
-        "type": ARG_TYPE.PWD,
-        "description": "password of the username of the Milvus server",
-        "required": True,
-        "secret": True
+        "description": "token to support docker or cloud service",
+        "required": False,
     },
     search_default_limit={
         "type": ARG_TYPE.INT,
@@ -108,11 +92,8 @@ connection_args = OrderedDict(
 )
 
 connection_args_example = OrderedDict(
-    alias="default",
-    host="127.0.0.1",
-    port=19530,
-    user="username",
-    password="password",
+    uri="./milvus_local.db",
+    token="",
     search_default_limit=100,
     search_metric_type="L2",
     search_ignore_growing=True,

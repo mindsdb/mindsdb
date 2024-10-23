@@ -33,7 +33,6 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.to
 
 # Torch.multiprocessing is imported in a 'try'. Falls back to multiprocessing so we dont NEED it.
 # Psycopg2 is needed in core codebase for sqlalchemy.
-# Hierarchicalforecast is an optional dep of neural/statsforecast
 # lark is required for auto retrieval (RAG utilities). It is used by langchain
 # and not explicitly imported in mindsdb.
 # transformers is required for langchain_core and not explicitly imported by mindsdb.
@@ -53,7 +52,7 @@ MAIN_RULE_IGNORES = {
 # Or 2) because they are imported in an unusual way. E.g.:
 #   - pysqlite3 in the chromadb handler
 #   - dspy-ai in langchain handler
-OPTIONAL_HANDLER_DEPS = ["pysqlite3", "torch", "openai", "tiktoken", "wikipedia", "anthropic", "pypdf", "openpyxl",
+OPTIONAL_HANDLER_DEPS = ["torch", "tiktoken", "wikipedia", "openpyxl",
                          "sentence-transformers", "faiss-cpu", "litellm", "chromadb", "dspy-ai", "sqlalchemy-solr"]
 
 # List of rules we can ignore for specific packages
@@ -161,7 +160,7 @@ def run_deptry(reqs, rule_ignores, path, extra_args=""):
     errors = []
     try:
         result = subprocess.run(
-            f"deptry -o deptry.json --no-ansi --known-first-party mindsdb --requirements-txt \"{reqs}\" --per-rule-ignores \"{rule_ignores}\" --package-module-name-map \"{get_ignores_str(PACKAGE_NAME_MAP)}\" {extra_args} {path}",
+            f"deptry -o deptry.json --no-ansi --known-first-party mindsdb --requirements-files \"{reqs}\" --per-rule-ignores \"{rule_ignores}\" --package-module-name-map \"{get_ignores_str(PACKAGE_NAME_MAP)}\" {extra_args} {path}",
             shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE
         )
         if result.returncode != 0 and not os.path.exists("deptry.json"):

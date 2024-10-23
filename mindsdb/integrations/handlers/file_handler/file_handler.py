@@ -13,7 +13,7 @@ import pandas as pd
 import requests
 from charset_normalizer import from_bytes
 from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import DropTables, Select, Star
+from mindsdb_sql.parser.ast import DropTables, Select, Star, Identifier
 from mindsdb_sql.parser.ast.base import ASTNode
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
@@ -101,7 +101,7 @@ class FileHandler(DatabaseHandler):
             )
 
             query.targets = [
-                Star() if isinstance(target.parts[-1], Star) else target for target in query.targets
+                Star() if isinstance(target, Identifier) and isinstance(target.parts[-1], Star) else target for target in query.targets
             ]
             result_df = query_df(df, query)
             return Response(RESPONSE_TYPE.TABLE, data_frame=result_df)

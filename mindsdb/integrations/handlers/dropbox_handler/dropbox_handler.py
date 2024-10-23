@@ -2,11 +2,14 @@ import io
 import pandas as pd
 import dropbox
 import duckdb
+import re
 
 from dropbox.exceptions import AuthError, ApiError
 from typing import Dict, Optional, Text
 
 from mindsdb_sql.parser.ast import ASTNode
+from mindsdb_sql.parser.ast import Select, Insert
+
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
@@ -111,6 +114,7 @@ class DropboxHandler(DatabaseHandler):
         for file in files:
             df = self._read_file(file["path"])
             table_name = file["name"]
+            print(f"Table name: {table_name}")
             self.connection.register(table_name, df)
 
     def _list_files(self, path=""):
@@ -200,7 +204,7 @@ class DropboxHandler(DatabaseHandler):
         self._load_tables()
         try:
             result_df = self.connection.execute(query).fetchdf()
-            response = Response(RESPONSE_TYPE.TABLE, data_frame=result_df)
+            response = result_df
         except Exception as e:
             self.logger.error(f"Error executing query: {e}")
             response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
@@ -220,8 +224,19 @@ class DropboxHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
-        query_str = query.to_string().replace("`", '"')
-        return self.native_query(query_str)
+        if isinstance(query, Select):
+            if "FROM" in query_str:
+                query_str = re.sub(r"FROM\s+([^\s]+)", r'FROM "\1"', query_str)
+            df = self.native_query(query_str)
+            response = Response(RESPONSE_TYPE.TABLE, data_frame=df)
+        elif isinstance(query, Insert):
+            print("HEYOO")
+            query_str = query.to_string().replace("`", '"')
+            self.native_query(query_str)
+            response = Response(RESPONSE_TYPE.OK)
+        else:
+            raise NotImplementedError
+        return response
 
     def get_tables(self) -> Response:
         """

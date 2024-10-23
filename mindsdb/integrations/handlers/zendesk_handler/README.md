@@ -49,6 +49,15 @@ FROM zendesk_datasource.table_name
 LIMIT 10;
 ```
 
+Retrieve data for a specific ticket by providing the id:
+
+```sql
+SELECT *
+FROM zendesk_datasource.tickets
+where id="<ticket-id>";
+```
+
+
 <Note>
 The above examples utilize `zendesk_datasource` as the datasource name, which is defined in the `CREATE DATABASE` command.
 </Note>
@@ -57,11 +66,7 @@ The above examples utilize `zendesk_datasource` as the datasource name, which is
 
 The Zendesk integration supports the following tables:
 
-* `list_users` : The table lists all the users.
-* `get_user_by_id` : The table to get all info about a single user.
-* `list_tickets` : The table lists all the tickets.
-* `get_ticket_by_id` : The table to get all info about a single ticket.
-* `list_triggers` : The table lists all the triggers.
-* `get_trigger_by_id` : The table to get all info about a single trigger.
-* `list_activities` : The table lists all the activities.
-* `get_activity_by_id` : The table to get all info about a single activity.
+* `users` : The table lists all the users.
+* `tickets` : The table lists all the tickets.
+* `triggers` : The table lists all the triggers.
+* `activities` : The table lists all the activities.

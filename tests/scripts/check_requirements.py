@@ -38,10 +38,8 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.to
 # transformers is required for langchain_core and not explicitly imported by mindsdb.
 MAIN_RULE_IGNORES = {
     "DEP003": ["torch"],
-    "DEP001": ["torch", "pgvector", "opentelemetry"],
-    "DEP002": ["psycopg2-binary", "lark", "transformers", "opentelemetry-api",
-               "opentelemetry-sdk", "opentelemetry-exporter-otlp",
-               "opentelemetry-instrumentation-requests", "opentelemetry-instrumentation-flask"],
+    "DEP001": ["torch", "pgvector"],
+    "DEP002": ["psycopg2-binary", "lark", "transformers"]
 }
 
 
@@ -130,7 +128,12 @@ PACKAGE_NAME_MAP = {
     "llama-index-readers-web": ["llama_index"],
     "llama-index-embeddings-openai": ["llama_index"],
     "botframework-connector": ["botframework"],
-    "botbuilder-schema": ["botbuilder"]
+    "botbuilder-schema": ["botbuilder"],
+    "opentelemetry-api": ["opentelemetry"],
+    "opentelemetry-sdk": ["opentelemetry"],
+    "opentelemetry-exporter-otlp": ["opentelemetry"],
+    "opentelemetry-instrumentation-requests": ["opentelemetry"],
+    "opentelemetry-instrumentation-flask": ["opentelemetry"],
 }
 
 # We use this to exit with a non-zero status code if any check fails

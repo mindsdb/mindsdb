@@ -106,7 +106,10 @@ class Datum:
             self.value = self.value[:-1]
         return buff[end:]
 
-    def lenencInt(self, value):
+    def serialize_int(self, value):
+        if value is None:
+            return NULL_VALUE
+
         byte_count = -(value.bit_length() // (-8))
 
         if byte_count == 0:
@@ -114,81 +117,88 @@ class Datum:
         if value < NULL_VALUE_INT:
             return struct.pack("B", value)
         if value >= NULL_VALUE_INT and byte_count <= 2:
-            return TWO_BYTE_ENC + struct.pack("i", value)[:2]
+            return TWO_BYTE_ENC + struct.pack("h", value)
         if byte_count <= 3:
             return THREE_BYTE_ENC + struct.pack("i", value)[:3]
         if byte_count <= 8:
-            return THREE_BYTE_ENC + struct.pack("Q", value)[:8]
+            return THREE_BYTE_ENC + struct.pack("Q", value)
 
     def toStringPacket(self):
-        if self.var_type == "string" and self.var_len == "packet":
-            return self.value.get_packet_string()
+        return self.get_serializer()(self.value)
 
-        if self.var_len == "EOF" and self.var_type in ["string", "byte"]:
-            length = len(self.value)
-            self.var_len = length
-            if length == 0:
-                return b""
+    def get_serializer(self):
+        if self.var_type == "string":
+            if self.var_len == "lenenc":
+                if self.value is not None:
+                    if isinstance(self.value, bytes):
+                        return self.serialize_bytes
+                return self.serialize_str
+            if self.var_len == "EOF":
+                return self.serialize_str_eof
+            if self.var_len == "NUL":
+                return lambda v: bytes(v, "utf-8") + struct.pack("b", 0)
+            if self.var_len == "packet":
+                return lambda v: v.get_packet_string()
             else:
-                return struct.pack(
-                    "{len}s".format(len=self.var_len), bytes(self.value, "utf-8")
-                )[:length]
-
-        if self.var_type == "string" and self.var_len == "NUL":
-            return bytes(self.value, "utf-8") + struct.pack("b", 0)
-
-        if self.var_len.isdigit():
-            length = int(self.var_len)
-
-            if self.var_type == "int":
-                # little endian format
-                return struct.pack("Q", self.value)[:length]
-            if self.var_type == "string":
-                return struct.pack(self.var_len + "s", bytes(self.value, "utf-8"))[
-                    :length
+                return lambda v: struct.pack(self.var_len + "s", bytes(v, "utf-8"))[
+                    :int(self.var_len)
                 ]
-            if self.var_type == "byte":
-                return struct.pack(self.var_len + "s", self.value)[:length]
 
-        elif self.var_len == "lenenc":
-            if self.value is None:
-                return NULL_VALUE
-            if self.var_type == "int":
-                return self.lenencInt(self.value)
+        if self.var_type == "int":
+            if self.var_len == "lenenc":
+                return self.serialize_int
+            else:
+                return lambda v: struct.pack("Q", v)[:int(self.var_len)]
 
-            if self.var_type in ["byte", "string"]:
+    def serialize_str_eof(self, value):
+        length = len(value)
+        var_len = length
+        if length == 0:
+            return b""
+        else:
+            return struct.pack(
+                "{len}s".format(len=var_len), bytes(value, "utf-8")
+            )[:length]
 
-                if isinstance(self.value, bytes):
-                    value = self.value
-                elif isinstance(self.value, str):
-                    value = self.value.encode("utf8")
-                else:
-                    value = str(self.value).encode("utf8")
+    # def serialize_obj(self, value):
+    #     return self.serialize_str(str(value))
 
-                val_len = len(value)
-                if val_len < NULL_VALUE_INT:
-                    a = self.lenencInt(val_len)
-                    return a + value
+    def serialize_str(self, value):
+        return self.serialize_bytes(value.encode("utf8"))
 
-                byte_count = -(val_len.bit_length() // (-8))
-                if byte_count <= 2:
-                    return (
-                        TWO_BYTE_ENC
-                        + struct.pack("i", val_len)[:2]
-                        + value
-                    )
-                if byte_count <= 3:
-                    return (
-                        THREE_BYTE_ENC
-                        + struct.pack("i", val_len)[:3]
-                        + value
-                    )
-                if byte_count <= 8:
-                    return (
-                        THREE_BYTE_ENC
-                        + struct.pack("Q", val_len)[:8]
-                        + value
-                    )
+    def serialize_bytes(self, value):
+        if value is None:
+            return NULL_VALUE
+
+        val_len = len(value)
+
+        if val_len == 0:
+            return b"\0"
+
+        if val_len < NULL_VALUE_INT:
+            return struct.pack("B", val_len) + value
+
+        byte_count = -(val_len.bit_length() // (-8))
+        if byte_count <= 2:
+            return (
+                TWO_BYTE_ENC
+                + struct.pack("h", val_len)
+                + value
+            )
+        if byte_count <= 3:
+            return (
+                THREE_BYTE_ENC
+                + struct.pack("i", val_len)[:3]
+                + value
+            )
+        if byte_count <= 8:
+            return (
+                THREE_BYTE_ENC
+                + struct.pack("Q", val_len)
+                + value
+            )
+
+
 
 
 def test():

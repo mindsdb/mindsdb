@@ -18,7 +18,6 @@ class ConfluencePagesTable(APITable):
     def select(self, query: ast.Select) -> pd.DataFrame:
         """Pulls data from the Confluence "get_all_pages_from_space" API endpoint"""
         conditions = extract_comparison_conditions(query.where)
-
         if query.limit:
             total_results = query.limit.value
         else:
@@ -58,22 +57,20 @@ class ConfluencePagesTable(APITable):
             return pd.DataFrame(columns=self.get_columns())
 
         confluence_pages_df = pd.json_normalize(confluence_pages_records)
-
         
         confluence_pages_df.columns = confluence_pages_df.columns.str.replace("body.storage.value", "body")
         confluence_pages_df['space'] = confluence_pages_df['space.key']
         
-        available_columns = set(confluence_pages_df.columns).intersection(set(self.get_columns()))
-        confluence_pages_df = confluence_pages_df[list(available_columns)]
+        confluence_pages_df = confluence_pages_df[self.get_columns()]
 
         selected_columns = []
         for target in query.targets:
             if isinstance(target, ast.Star):
-                selected_columns = list(available_columns)
+                selected_columns = self.get_columns()
                 break
             elif isinstance(target, ast.Identifier):
                 col = target.parts[-1]
-                if col in available_columns:
+                if col in self.get_columns():
                     selected_columns.append(col)
                 else:
                     raise ValueError(f"Unknown column: {col}")
@@ -101,9 +98,6 @@ class ConfluencePagesTable(APITable):
                     by=sort_columns,
                     ascending=sort_ascending
                 )
-
-        if query.limit:
-            confluence_pages_df = confluence_pages_df.head(query.limit.value)
 
         return confluence_pages_df
     

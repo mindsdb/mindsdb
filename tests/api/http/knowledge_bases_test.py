@@ -353,3 +353,82 @@ def test_put_knowledge_base_query(client):
             ]
             expected_df_to_insert = pd.DataFrame.from_records(rows_to_insert)
             assert actual_df_inserted.equals(expected_df_to_insert)
+
+
+@pytest.fixture
+def create_test_kb(client):
+    kb_name = 'test_completions_kb'
+
+    # First, try to delete the existing knowledge base if it exists
+    client.delete(f'/api/projects/mindsdb/knowledge_bases/{kb_name}', follow_redirects=True)
+    create_kb_request = {
+        'knowledge_base': {
+            'name': kb_name,
+            'model': 'test_embedding_model'
+        }
+    }
+    create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_kb_request,
+                                  follow_redirects=True)
+
+    # Check if creation was successful
+    assert create_response.status_code in [201,
+                                           200], f"Failed to create knowledge base. Status: {create_response.status}"
+
+    return kb_name
+
+
+def test_successful_completion(client, create_test_kb):
+    kb_name = create_test_kb
+    completion_request = {
+        'query': 'What is the capital of France?',
+        'knowledge_base': kb_name
+    }
+    response = client.post(f'/api/projects/mindsdb/knowledge_bases/{kb_name}/completions',
+                           json=completion_request, follow_redirects=True)
+    assert response.status_code == 200
+    response_data = response.get_json()
+    assert 'message' in response_data
+    assert 'content' in response_data['message']
+    assert 'context' in response_data['message']
+    assert response_data['message']['role'] == 'assistant'
+
+
+def test_completion_missing_query_parameter(client, create_test_kb):
+    kb_name = create_test_kb
+    invalid_request = {
+        'knowledge_base': kb_name
+    }
+    response = client.post(f'/api/projects/mindsdb/knowledge_bases/{kb_name}/completions',
+                           json=invalid_request, follow_redirects=True)
+    assert response.status_code == 400
+
+
+def test_completion_missing_knowledge_base_parameter(client, create_test_kb):
+    kb_name = create_test_kb
+    invalid_request = {
+        'query': 'What is the capital of France?'
+    }
+    response = client.post(f'/api/projects/mindsdb/knowledge_bases/{kb_name}/completions',
+                           json=invalid_request, follow_redirects=True)
+    assert response.status_code == 400
+
+
+def test_completion_non_existent_project(client, create_test_kb):
+    kb_name = create_test_kb
+    completion_request = {
+        'query': 'What is the capital of France?',
+        'knowledge_base': kb_name
+    }
+    response = client.post(f'/api/projects/nonexistent/knowledge_bases/{kb_name}/completions',
+                           json=completion_request, follow_redirects=True)
+    assert response.status_code == 404
+
+
+def test_completion_non_existent_knowledge_base(client):
+    completion_request = {
+        'query': 'What is the capital of France?',
+        'knowledge_base': 'nonexistent_kb'
+    }
+    response = client.post('/api/projects/mindsdb/knowledge_bases/nonexistent_kb/completions',
+                           json=completion_request, follow_redirects=True)
+    assert response.status_code == 404

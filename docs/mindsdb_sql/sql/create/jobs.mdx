@@ -102,6 +102,32 @@ This query returns:
 +-------+-----------+
 ```
 
+<Tip>
+If you want to specify a concrete value for `LAST` in the first execution of such a query, use the `COALESCE(LAST, <value>)` function.
+
+```sql
+SELECT id, name
+FROM fruit_data
+WHERE id > COALESCE(LAST, 1);
+```
+
+It will result in executing the following query in the first run:
+
+```sql
+SELECT id, name
+FROM fruit_data
+WHERE id > 1;
+```
+
+And the below query at each subsequent run:
+
+```sql
+SELECT id, name
+FROM fruit_data
+WHERE id > LAST;
+```
+</Tip>
+
 Now imagine you inserted a new record into the `fruit_data` table:
 
 ```sql

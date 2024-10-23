@@ -14,7 +14,7 @@ from mindsdb.integrations.handlers.gcs_handler.gcs_tables import (
     FileTable
 )
 from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.parser.ast import Select, Identifier, Insert
+from mindsdb_sql.parser.ast import Select, Identifier, Insert,  Star, Constant
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
@@ -93,7 +93,7 @@ class GcsHandler(APIHandler):
         return self.connection
 
     @contextmanager
-    def _connect_duckdb(self) -> DuckDBPyConnection:
+    def _connect_duckdb(self):
         """
         Creates temporal duckdb database which is able to connect to the GCS account.
         Have to be used as context manager
@@ -146,7 +146,10 @@ class GcsHandler(APIHandler):
         # Check connection via storage client.
         try:
             storage_client = self._connect_storage_client()
-            storage_client.get_bucket(self.connection_data['bucket'])
+            if self.connection_data['bucket'] is not None:
+                storage_client.get_bucket(self.connection_data['bucket'])
+            else:
+                storage_client.list_buckets()
             response.success = True
             storage_client.close()
         except Exception as e:
@@ -160,26 +163,68 @@ class GcsHandler(APIHandler):
             self.is_connected = False
 
         return response
+    
+    def _get_bucket(self, key):
+        if self.connection_data['bucket'] is not None:
+            return self.connection_data['bucket'], key
+
+        # get bucket from first part of the key
+        ar = key.split('/')
+        return ar[0], '/'.join(ar[1:])
 
     def _read_as_table(self, key) -> pd.DataFrame:
         """
         Read object as dataframe. Uses duckdb
         """
+        
+        bucket, key = self._get_bucket(key)
 
-        with self._connect_duckdb() as connection:
+        with self._connect_duckdb(bucket) as connection:
 
-            cursor = connection.execute(f"SELECT * FROM 'gs://{self.connection_data['bucket']}/{key}'")
+            cursor = connection.execute(f"SELECT * FROM 'gs://{bucket}/{key}'")
+
             return cursor.fetchdf()
-
+        
     def _read_as_content(self, key) -> None:
         """
         Read object as content
         """
+        bucket, key = self._get_bucket(key)
 
         client = self.connect()
-        bucket = client.bucket(self.connection_data['bucket'])
+
+        bucket = client.bucket(bucket)
         blob = bucket.blob(key)
         return blob.download_as_string()
+    
+    def add_data_to_table(self, key, df) -> None:
+        """
+        Writes the table to a file in the S3 bucket.
+
+        Raises:
+            CatalogException: If the table does not exist in the DuckDB connection.
+        """
+
+        # Check if the file exists in the S3 bucket.
+        bucket, key = self._get_bucket(key)
+
+        try:
+            client = self.connect()
+            client.head_object(Bucket=bucket, Key=key)
+        except ClientError as e:
+            logger.error(f'Error querying the file {key} in the bucket {bucket}, {e}!')
+            raise e
+
+        with self._connect_duckdb(bucket) as connection:
+            # copy
+            connection.execute(f"CREATE TABLE tmp_table AS SELECT * FROM 's3://{bucket}/{key}'")
+
+            # insert
+            connection.execute("INSERT INTO tmp_table BY NAME SELECT * FROM df")
+
+            # upload
+            connection.execute(f"COPY tmp_table TO 's3://{bucket}/{key}'")
+        
 
     def _add_data_to_table(self, key, df) -> None:
         """
@@ -189,23 +234,26 @@ class GcsHandler(APIHandler):
             CatalogException: If the table does not exist in the DuckDB connection.
         """
 
-        # Check if the file exists in the GCS bucket.
+        # Check if the file exists in the S3 bucket.
+        bucket, key = self._get_bucket(key)
+        
         storage_client = self._connect_storage_client()
-        bucket = storage_client.bucket(self.connection_data['bucket'])
-        stats = storage.Blob(bucket=bucket, name=key).exists(storage_client)
+        bucket_obj = storage_client.bucket(bucket)
+        stats = storage.Blob(bucket=bucket_obj, name=key).exists(storage_client)
         storage_client.close()
         if not stats:
-            raise Exception(f'Error querying the file {key} in the bucket {self.connection_data["bucket"]}!')
+            raise Exception(f'Error querying the file {key} in the bucket {bucket}!')
 
         with self._connect_duckdb() as connection:
             # copy
-            connection.execute(f"CREATE TABLE tmp_table AS SELECT * FROM 'gs://{self.connection_data['bucket']}/{key}'")
+            connection.execute(f"CREATE TABLE tmp_table AS SELECT * FROM 'gs://{bucket}/{key}'")
 
             # insert
             connection.execute("INSERT INTO tmp_table BY NAME SELECT * FROM df")
 
             # upload
-            connection.execute(f"COPY tmp_table TO 'gs://{self.connection_data['bucket']}/{key}'")
+            connection.execute(f"COPY tmp_table TO 'gs://{bucket}/{key}'")
+            
 
     def query(self, query: ASTNode) -> Response:
         """
@@ -222,9 +270,9 @@ class GcsHandler(APIHandler):
         """
 
         self.connect()
-
+        
         if isinstance(query, Select):
-            table_name = query.from_table.parts[-1].replace('`', '')
+            table_name = query.from_table.parts[-1]
 
             if table_name == 'files':
                 table = self._files_table
@@ -270,34 +318,74 @@ class GcsHandler(APIHandler):
         supported_objects = [f"`{obj.name}`" for obj in objects if obj.name.split('.')[-1] in self.supported_file_formats]
 
         return supported_objects
+    
+    def get_objects(self, limit=None, buckets=None) -> List[dict]:
+        storage_client = self._connect_storage_client()
+        if self.connection_data["bucket"] is not None:
+            add_bucket_to_name = False
+            scan_buckets = [self.connection_data["bucket"]]
+        else:
+            add_bucket_to_name = True
+            scan_buckets = [b.name for b in storage_client.list_buckets()]
 
+        objects = []
+        for bucket in scan_buckets:
+            if buckets is not None and bucket not in buckets:
+                continue
+
+            blobs = storage_client.list_blobs(bucket)
+            if not blobs:
+                continue
+
+            for blob in blobs:
+                if blob.storage_class != 'STANDARD':
+                    continue
+
+                obj = {}
+                obj['Bucket'] = bucket
+                if add_bucket_to_name:
+                    # bucket is part of the name
+                    obj['Key'] = f'{bucket}/{blob.name}'
+                objects.append(obj)
+            if limit is not None and len(objects) >= limit:
+                break
+
+        return objects
+    
     def get_tables(self) -> Response:
         """
-        Retrieves a list of tables (objects) in the GCS bucket.
+        Retrieves a list of tables (objects) in the S3 bucket.
 
         Each object is considered a table. Only the supported file formats are considered as tables.
 
         Returns:
             Response: A response object containing the list of tables and views, formatted as per the `Response` class.
         """
-        supported_objects = self._get_tables()
+
+        # Get only the supported file formats.
+        # Wrap the object names with backticks to prevent SQL syntax errors.
+        supported_names = [
+            f"`{obj['Key']}`"
+            for obj in self.get_objects()
+            if obj['Key'].split('.')[-1] in self.supported_file_formats
+        ]
 
         # virtual table with list of files
-        supported_objects.insert(0, 'files')
+        supported_names.insert(0, 'files')
 
         response = Response(
             RESPONSE_TYPE.TABLE,
             data_frame=pd.DataFrame(
-                supported_objects,
+                supported_names,
                 columns=['table_name']
             )
         )
 
         return response
-
-    def get_columns(self, table_name: Text) -> Response:
+    
+    def get_columns(self, table_name: str) -> Response:
         """
-        Retrieves column details for a specified table (object) in the GCS bucket.
+        Retrieves column details for a specified table (object) in the S3 bucket.
 
         Args:
             table_name (Text): The name of the table for which to retrieve column information.
@@ -308,11 +396,13 @@ class GcsHandler(APIHandler):
         Returns:
             Response: A response object containing the column details, formatted as per the `Response` class.
         """
-        if not table_name or not isinstance(table_name, str):
-            raise ValueError("Invalid table name provided.")
+        query = Select(
+            targets=[Star()],
+            from_table=Identifier(parts=[table_name]),
+            limit=Constant(1)
+        )
 
-        query = f"SELECT * FROM {table_name} LIMIT 5"
-        result = self.native_query(query)
+        result = self.query(query)
 
         response = Response(
             RESPONSE_TYPE.TABLE,

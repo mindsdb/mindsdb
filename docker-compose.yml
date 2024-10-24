@@ -2,6 +2,9 @@ services:
 
   mindsdb:
     image: mindsdb/mindsdb:devel
+    depends_on:
+      jaeger:
+        condition: service_started
     # If you want to build the image instead:
     # build:
     #   context: .
@@ -30,6 +33,11 @@ services:
       # LANGFUSE_DEBUG: "True"
       LANGFUSE_TIMEOUT: "10"
       LANGFUSE_SAMPLE_RATE: "1.0"
+      OTEL_EXPORTER_TYPE: "console" # or "console" # Define the exporter type (console/otlp)
+      OTEL_OTLP_ENDPOINT: "http://jaeger:4317" # Define the endpoint for the otlp exporter
+      OTEL_SERVICE_NAME: "mindsdb" # Define the service name
+      OTEL_SERVICE_ENVIRONMENT: "local" # Define the service environment
+      # OTEL_SDK_FORCE_RUN: "true" # Uncomment me to force-start opentelemetry on local development.
 
     volumes:
       - type: bind
@@ -40,3 +48,12 @@ services:
       interval: 30s
       timeout: 4s
       retries: 100
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"
+    environment:
+      COLLECTOR_ZIPKIN_HOST_PORT: ":9411"

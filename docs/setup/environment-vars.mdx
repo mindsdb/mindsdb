@@ -6,6 +6,17 @@ sidebarTitle: Environment Variables
 Most of the MindsDB functionality can be modified by extending the default configuration, but some of the configuration options 
 can be added as environment variables on the server where MindsDB is deployed.
 
+## MindsDB Authentication
+
+MindsDB does not require authentication by default. If you want to enable authentication, you can set the `MINDSDB_USERNAME` and `MINDSDB_PASSWORD` environment variables.
+
+#### Example
+
+```bash
+MINDSDB_USERNAME='mindsdb_user'
+MINDSDB_PASSWORD='mindsdb_password'
+```
+
 ## MindsDB Storage 
 
 By default, MindsDB stores the configuration files by determining appropriate platform-specific directories, e.g. a "user data dir": 
@@ -24,7 +35,6 @@ You can change the default storage location using `MINDSDB_STORAGE_DIR` variable
 MINDSDB_STORAGE_DIR='~/home/mindsdb/var'
 ```
 
-
 ## MindsDB Configuration Storage 
 
 MindsDB uses `sqlite` database by default to store the required configuration as models, projects, files metadata etc. 
@@ -37,7 +47,7 @@ default storage option and use different database by adding the new connection s
 MINDSDB_DB_CON='postgresql://user:secret@localhost'
 ```
 
-## MindsDB server
+## MindsDB Server
 
 By default for the HTTP API, MindsDB uses [Waitress](https://pypi.org/project/waitress/) which is a pure-Python WSGI server. There is an option to change that 
 and use [Flask](https://flask.palletsprojects.com/en/2.2.x/) or [Gunircorn](https://gunicorn.org/)

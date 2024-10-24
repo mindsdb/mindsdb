@@ -65,7 +65,7 @@ def handler():
 
 
 @pytest.mark.skipif(os.environ.get('MDB_TEST_PGVECTOR_HOST') is None, reason='MDB_TEST_PGVECTOR_HOST environment variable not set')
-class TestPostgresConnection:
+class TestPgvectorConnection:
     def test_connect(self, handler):
         handler.connect()
         assert handler.is_connected, 'connection error'
@@ -76,7 +76,7 @@ class TestPostgresConnection:
 
 
 @pytest.mark.skipif(os.environ.get('MDB_TEST_PGVECTOR_HOST') is None, reason='MDB_TEST_PGVECTOR_HOST environment variable not set')
-class TestPostgresQuery:
+class TestPgvectorQuery:
     def test_select(self, handler):
         result = handler.select(TEST_TABLE_NAME)
         assert not result.empty

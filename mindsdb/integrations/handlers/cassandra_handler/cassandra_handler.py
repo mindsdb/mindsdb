@@ -3,7 +3,7 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-import pandas as pd
+from pandas import DataFrame as df
 
 
 class CassandraHandler(ScyllaHandler):
@@ -24,7 +24,16 @@ class CassandraHandler(ScyllaHandler):
 
         :return: List of table names.
         """
-        tables = self.session.execute("SELECT table_name FROM system_schema.tables WHERE keyspace_name = '%s'" % self.keyspace)
+        sql = """
+            SELECT
+                table_name
+            FROM
+                system_schema.tables
+            WHERE
+                keyspace_name = %s
+        """
+        tables = self.session.execute(sql, [self.keyspace])
         response = Response(RESPONSE_TYPE.TABLE,
-                            pd.DataFrame([dict(table_name=row.table_name) for row in tables]))
+                            df([dict(table_name=row.table_name)
+                                for row in tables]))
         return response

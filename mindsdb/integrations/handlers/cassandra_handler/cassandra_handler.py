@@ -3,6 +3,7 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response)
 import pandas as pd
 
+
 class CassandraHandler(ScyllaHandler):
     """
     This handler handles connection and execution of the Cassandra statements.

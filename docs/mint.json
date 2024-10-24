@@ -333,7 +333,7 @@
           "group": "AI Agents",
           "pages": [
             "use-cases/ai_agents/overview",
-            "use-cases/ai_agents/chatbots_agents"
+            "use-cases/ai_agents/build_ai_agents"
           ]
         },
         {
@@ -920,6 +920,7 @@
             "integrations/app-integrations/plaid",
             "integrations/app-integrations/pypi",
             "integrations/app-integrations/reddit",
+            "integrations/app-integrations/salesforce",
             "integrations/app-integrations/sendinblue",
             "integrations/app-integrations/shopify",
             "integrations/app-integrations/slack",

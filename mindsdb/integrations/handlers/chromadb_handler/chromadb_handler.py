@@ -305,7 +305,7 @@ class ChromaDBHandler(VectorStoreHandler):
             TableField.ID.value: ids,
             TableField.CONTENT.value: documents,
             TableField.METADATA.value: metadatas,
-            TableField.EMBEDDINGS.value: embeddings.tolist(),
+            TableField.EMBEDDINGS.value: embeddings,
         }
 
         if columns is not None:

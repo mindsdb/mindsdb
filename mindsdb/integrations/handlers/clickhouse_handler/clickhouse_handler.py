@@ -153,7 +153,10 @@ class ClickHouseHandler(DatabaseHandler):
         q = f"SHOW TABLES FROM {self.connection_data['database']}"
         result = self.native_query(q)
         df = result.data_frame
-        result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
+
+        if df is not None:
+            result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
+
         return result
 
     def get_columns(self, table_name) -> Response:

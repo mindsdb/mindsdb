@@ -1,6 +1,6 @@
 import os
 import copy
-from typing import List
+from typing import List, Optional
 
 import pandas as pd
 
@@ -22,6 +22,7 @@ from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
 from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel
 from mindsdb.interfaces.agents.langchain_agent import build_embedding_model, create_chat_model, get_llm_provider
 from mindsdb.interfaces.database.projects import ProjectController
+from mindsdb.interfaces.knowledge_base.preprocess.models import PreprocessingConfig, PreprocessorFactory
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
@@ -38,6 +39,18 @@ class KnowledgeBaseTable:
         self._kb = kb
         self._vector_db = None
         self.session = session
+
+        # Initialize preprocessor if config exists in params
+        if kb.params and 'preprocessing' in kb.params:
+            self.configure_preprocessing(kb.params['preprocessing'])
+
+    def configure_preprocessing(self, config: Optional[dict] = None):
+        """Configure preprocessing for the knowledge base table"""
+        if config is not None:
+            preprocessing_config = PreprocessingConfig(**config)
+            self._preprocessor = PreprocessorFactory.create_preprocessor(preprocessing_config)
+        else:
+            self._preprocessor = None
 
     def select_query(self, query: Select) -> pd.DataFrame:
         """
@@ -86,6 +99,17 @@ class KnowledgeBaseTable:
         cont_col = TableField.CONTENT.value
         if cont_col in query.update_columns:
             content = query.update_columns[cont_col]
+
+            # Apply preprocessing to content if configured
+            if self._preprocessor:
+                doc = {
+                    'content': content.value,
+                    'metadata': {}  # Empty metadata for content-only updates
+                }
+                processed_chunks = self._preprocessor.process_documents([doc])
+                if processed_chunks:
+                    content.value = processed_chunks[0].content
+
             query.update_columns[emb_col] = Constant(self._content_to_embeddings(content))
 
         # TODO search content in where clause?
@@ -129,6 +153,21 @@ class KnowledgeBaseTable:
         """
         if df.empty:
             return
+
+        if self._preprocessor:
+            # Convert DataFrame to documents for preprocessing
+            raw_documents = []
+            for _, row in df.iterrows():
+                doc = {
+                    'content': row.get(TableField.CONTENT.value, ''),
+                    'id': row.get(TableField.ID.value),
+                    'metadata': row.get(TableField.METADATA.value, {})
+                }
+                raw_documents.append(doc)
+
+            # Apply preprocessing
+            processed_chunks = self._preprocessor.process_documents(raw_documents)
+            df = pd.DataFrame([chunk.model_dump() for chunk in processed_chunks])
 
         df = self._adapt_column_names(df)
 
@@ -376,28 +415,31 @@ class KnowledgeBaseController:
         self.session = session
 
     def add(
-        self,
-        name: str,
-        project_name: str,
-        embedding_model: Identifier,
-        storage: Identifier,
-        params: dict,
-        if_not_exists: bool = False,
+            self,
+            name: str,
+            project_name: str,
+            embedding_model: Identifier,
+            storage: Identifier,
+            params: dict,
+            preprocessing_config: Optional[dict] = None,
+            if_not_exists: bool = False,
     ) -> db.KnowledgeBase:
         """
         Add a new knowledge base to the database
+        :param preprocessing_config: Optional preprocessing configuration to validate and store
         """
-        # check if knowledge base already exists
-
-        # get project id
+        # Add preprocessing config to params if provided
+        if preprocessing_config is not None:
+            # Validate config before storing
+            PreprocessingConfig(**preprocessing_config)
+            params = params or {}
+            params['preprocessing'] = preprocessing_config
 
         project = self.session.database_controller.get_project(project_name)
-
         project_id = project.id
 
-        # not difference between cases in sql
+        # Rest of the method remains the same
         name = name.lower()
-
         kb = self.get(name, project_id)
         if kb is not None:
             if if_not_exists:
@@ -405,15 +447,11 @@ class KnowledgeBaseController:
             raise EntityExistsError("Knowledge base already exists", name)
 
         if embedding_model is None:
-            # create default embedding model
             model_name = self._get_default_embedding_model(project.name, params=params)
-
         else:
-            # get embedding model from input
             model_name = embedding_model.parts[-1]
 
         if embedding_model is not None and len(embedding_model.parts) > 1:
-            # model project is set
             model_project = self.session.database_controller.get_project(embedding_model.parts[-2])
         else:
             model_project = project
@@ -425,21 +463,14 @@ class KnowledgeBaseController:
         model_record = db.Predictor.query.get(model['id'])
         embedding_model_id = model_record.id
 
-        # search for the vector database table
         if storage is None:
-
             cloud_pg_vector = os.environ.get('KB_PGVECTOR_URL')
             if cloud_pg_vector:
                 vector_table_name = name
                 vector_db_name = self._create_persistent_pgvector()
             else:
-                # create chroma db with same name
                 vector_table_name = "default_collection"
-                vector_db_name = self._create_persistent_chroma(
-                    name
-                )
-
-                # memorize to remove it later
+                vector_db_name = self._create_persistent_chroma(name)
                 params['vector_storage'] = vector_db_name
         elif len(storage.parts) != 2:
             raise ValueError('Storage param has to be vector db with table')
@@ -448,7 +479,6 @@ class KnowledgeBaseController:
 
         vector_database_id = self.session.integration_controller.get(vector_db_name)['id']
 
-        # create table in vectordb
         self.session.datahub.get(vector_db_name).integration_handler.create_table(
             vector_table_name
         )

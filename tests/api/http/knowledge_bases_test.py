@@ -3,8 +3,6 @@ import pytest
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-import pandas as pd
-
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.api.http.initialize import initialize_app
 from mindsdb.api.mysql.mysql_proxy.mysql_proxy import SQLAnswer
@@ -283,7 +281,6 @@ def test_put_knowledge_base_rows(client):
     }
 
     create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
-
     assert '201' in create_response.status
 
     content_to_embed = '''To begin with a perfect Peking duck recipe at home, firstly choose head on (easy to hang for air drying out), clean and leaner ducks.
@@ -291,23 +288,36 @@ def test_put_knowledge_base_rows(client):
     Hang them on hooks. I hang the ducks on the top of kitchen pool.
     Please note:  I make this peking duck in March when the room temperature is around 13-15 degree C, you will need to hang the duck in fridge or in a room with air conditioner in hot summer days.
     '''
+
+    test_id = 0
     rows_to_insert = [
-        {'id': 0, 'content': content_to_embed}
+        {'id': test_id, 'content': content_to_embed}
     ]
     update_request = {
         'knowledge_base': {
             'rows': rows_to_insert
         }
     }
-    with patch('mindsdb.interfaces.knowledge_base.controller.KnowledgeBaseTable') as mock_kb_table:
-        update_response = client.put('/api/projects/mindsdb/knowledge_bases/test_kb_update_rows', json=update_request, follow_redirects=True)
+
+    with patch(
+            'mindsdb.interfaces.knowledge_base.preprocess.preprocess.PreprocessingKnowledgeBase') as mock_kb_processor:
+        # Set up the mock to avoid errors
+        mock_instance = mock_kb_processor.return_value
+
+        update_response = client.put(
+            '/api/projects/mindsdb/knowledge_bases/test_kb_update_rows',
+            json=update_request,
+            follow_redirects=True
+        )
 
         assert '200' in update_response.status
 
-        last_insert_call_args = mock_kb_table().insert.call_args_list[-1]
-        actual_df_inserted = last_insert_call_args[0][0]
-        expected_df_to_insert = pd.DataFrame.from_records(rows_to_insert)
-        assert actual_df_inserted.equals(expected_df_to_insert)
+        # Verify process_and_insert_rows was called with correct data
+        mock_instance.process_and_insert_rows.assert_called_once()
+        actual_rows = mock_instance.process_and_insert_rows.call_args[0][0]
+        assert len(actual_rows) == 1
+        assert actual_rows[0]['id'] == test_id
+        assert actual_rows[0]['content'] == content_to_embed
 
 
 def test_put_knowledge_base_query(client):
@@ -319,7 +329,6 @@ def test_put_knowledge_base_query(client):
     }
 
     create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
-
     assert '201' in create_response.status
 
     content_to_embed = '''To begin with a perfect Peking duck recipe at home, firstly choose head on (easy to hang for air drying out), clean and leaner ducks.
@@ -327,32 +336,97 @@ def test_put_knowledge_base_query(client):
     Hang them on hooks. I hang the ducks on the top of kitchen pool.
     Please note:  I make this peking duck in March when the room temperature is around 13-15 degree C, you will need to hang the duck in fridge or in a room with air conditioner in hot summer days.
     '''
+
     update_request = {
         'knowledge_base': {
             'query': 'SELECT * FROM mock_db.recipes'
         }
     }
 
-    with patch('mindsdb.api.http.namespaces.knowledge_bases.FakeMysqlProxy') as mock_sql_proxy:
-        mock_sql_proxy().process_query.return_value = SQLAnswer(
+    # First mock the MySQL proxy
+    with patch('mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy.FakeMysqlProxy') as mock_sql_proxy:
+        mock_sql_proxy.return_value.process_query.return_value = SQLAnswer(
             resp_type=RESPONSE_TYPE.TABLE,
             columns=[{'alias': 'id'}, {'name': 'content'}],
             data=[(0, content_to_embed)]
         )
+        mock_sql_proxy.return_value.set_context = lambda x: None
 
-        with patch('mindsdb.interfaces.knowledge_base.controller.KnowledgeBaseTable') as mock_kb_table:
-            update_response = client.put('/api/projects/mindsdb/knowledge_bases/test_kb_update_query', json=update_request, follow_redirects=True)
+        # Then mock the preprocessing module where it's imported in knowledge_bases.py
+        with patch(
+                'mindsdb.interfaces.knowledge_base.preprocess.preprocess.update_knowledge_base_with_preprocessing') as mock_update:
+            update_response = client.put(
+                '/api/projects/mindsdb/knowledge_bases/test_kb_update_query',
+                json=update_request,
+                follow_redirects=True
+            )
 
             assert '200' in update_response.status
 
-            last_insert_call_args = mock_kb_table().insert.call_args_list[-1]
-            actual_df_inserted = last_insert_call_args[0][0]
+            # Verify update_knowledge_base_with_preprocessing was called with correct args
+            mock_update.assert_called_once()
+            args, kwargs = mock_update.call_args
 
-            rows_to_insert = [
-                {'id': 0, 'content': content_to_embed}
-            ]
-            expected_df_to_insert = pd.DataFrame.from_records(rows_to_insert)
-            assert actual_df_inserted.equals(expected_df_to_insert)
+            # Check that query was passed correctly
+            assert kwargs.get('query') == 'SELECT * FROM mock_db.recipes'
+
+            # Check other parameters
+            assert 'table' in kwargs
+            assert kwargs.get('project_name') is not None
+
+
+def test_put_knowledge_base_query_data_verify(client):
+    """Additional test to verify the actual data transformation"""
+    create_request = {
+        'knowledge_base': {
+            'name': 'test_kb_update_query_data',
+            'model': 'test_embedding_model'
+        }
+    }
+
+    create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
+    assert '201' in create_response.status
+
+    content_to_embed = "Test content"
+    test_id = 0
+
+    update_request = {
+        'knowledge_base': {
+            'query': 'SELECT * FROM test_table'
+        }
+    }
+
+    with patch('mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy.FakeMysqlProxy') as mock_sql_proxy:
+        # Setup mock query result
+        mock_sql_proxy.return_value.process_query.return_value = SQLAnswer(
+            resp_type=RESPONSE_TYPE.TABLE,
+            columns=[{'alias': 'id'}, {'name': 'content'}],
+            data=[(test_id, content_to_embed)]
+        )
+        mock_sql_proxy.return_value.set_context = lambda x: None
+
+        with patch('mindsdb.interfaces.knowledge_base.controller.KnowledgeBaseTable') as mock_kb_table:
+            update_response = client.put(
+                '/api/projects/mindsdb/knowledge_bases/test_kb_update_query_data',
+                json=update_request,
+                follow_redirects=True
+            )
+
+            assert '200' in update_response.status
+
+            # Verify the data transformation
+            insert_calls = mock_kb_table().insert.call_args_list
+            assert len(insert_calls) > 0
+
+            # Get the DataFrame that was passed to insert
+            df_inserted = insert_calls[0][0][0]
+
+            # Verify DataFrame structure and content
+            assert 'content' in df_inserted.columns
+            assert 'id' in df_inserted.columns
+            assert len(df_inserted) == 1
+            assert df_inserted['content'].iloc[0] == content_to_embed
+            assert df_inserted['id'].iloc[0] == test_id
 
 
 @pytest.fixture
@@ -432,3 +506,142 @@ def test_completion_non_existent_knowledge_base(client):
     response = client.post('/api/projects/mindsdb/knowledge_bases/nonexistent_kb/completions',
                            json=completion_request, follow_redirects=True)
     assert response.status_code == 404
+
+
+def test_create_knowledge_base_with_preprocessing(client):
+    """Test creating a knowledge base with preprocessing configuration"""
+    create_request = {
+        'knowledge_base': {
+            'name': 'test_kb_preprocess',
+            'model': 'test_embedding_model',
+            'preprocessing': {
+                'type': 'contextual',
+                'contextual_config': {
+                    'chunk_size': 1000,
+                    'chunk_overlap': 200,
+                    'llm_model': 'gpt-4'
+                }
+            }
+        }
+    }
+
+    create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
+    assert '201' in create_response.status
+
+    created_knowledge_base = create_response.get_json()
+    assert 'preprocessing' in created_knowledge_base['params']
+    assert created_knowledge_base['params']['preprocessing']['type'] == 'contextual'
+
+    # Verify preprocessing config is preserved in GET
+    get_response = client.get('/api/projects/mindsdb/knowledge_bases/test_kb_preprocess')
+    assert '200' in get_response.status
+    kb_data = get_response.get_json()
+    assert 'preprocessing' in kb_data['params']
+    assert kb_data['params']['preprocessing'] == create_request['knowledge_base']['preprocessing']
+
+
+def test_create_knowledge_base_invalid_preprocessing(client):
+    """Test creating a knowledge base with invalid preprocessing configuration"""
+    create_request = {
+        'knowledge_base': {
+            'name': 'test_kb_invalid_preprocess',
+            'model': 'test_embedding_model',
+            'preprocessing': {
+                'type': 'invalid_type',
+                'contextual_config': {
+                    'chunk_size': 'invalid'
+                }
+            }
+        }
+    }
+
+    create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
+    assert '400' in create_response.status
+
+
+def test_put_knowledge_base_with_preprocessing(client):
+    """Test updating knowledge base with preprocessing"""
+    # First create a KB
+    create_request = {
+        'knowledge_base': {
+            'name': 'test_kb_update_preprocess',
+            'model': 'test_embedding_model'
+        }
+    }
+
+    create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
+    assert '201' in create_response.status
+
+    # Update with content and preprocessing
+    content_to_embed = [
+        "First document to be processed and chunked.",
+        "Second document with different content for testing.",
+    ]
+    rows_to_insert = [
+        {'content': content_to_embed[0]},
+        {'content': content_to_embed[1]}
+    ]
+
+    update_request = {
+        'knowledge_base': {
+            'rows': rows_to_insert,
+            'preprocessing': {
+                'type': 'contextual',
+                'contextual_config': {
+                    'chunk_size': 500,
+                    'chunk_overlap': 100,
+                    'llm_model': 'gpt-4'
+                }
+            }
+        }
+    }
+
+    with patch('mindsdb.interfaces.knowledge_base.controller.KnowledgeBaseTable') as mock_kb_table:
+        update_response = client.put(
+            '/api/projects/mindsdb/knowledge_bases/test_kb_update_preprocess',
+            json=update_request,
+            follow_redirects=True
+        )
+
+        assert '200' in update_response.status
+
+        # Verify preprocessing was configured
+        mock_kb_table().configure_preprocessing.assert_called_once()
+        preprocessing_config = mock_kb_table().configure_preprocessing.call_args[0][0]
+        assert preprocessing_config['type'] == 'contextual'
+        assert preprocessing_config['contextual_config']['chunk_size'] == 500
+
+
+def test_put_knowledge_base_invalid_preprocessing(client):
+    """Test updating knowledge base with invalid preprocessing config"""
+    # First create a KB
+    create_request = {
+        'knowledge_base': {
+            'name': 'test_kb_invalid_update_preprocess',
+            'model': 'test_embedding_model'
+        }
+    }
+
+    create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
+    assert '201' in create_response.status
+
+    # Update with invalid preprocessing config
+    update_request = {
+        'knowledge_base': {
+            'rows': [{'content': 'test content'}],
+            'preprocessing': {
+                'type': 'invalid_type',
+                'invalid_config': {
+                    'invalid_param': 'invalid_value'
+                }
+            }
+        }
+    }
+
+    update_response = client.put(
+        '/api/projects/mindsdb/knowledge_bases/test_kb_invalid_update_preprocess',
+        json=update_request,
+        follow_redirects=True
+    )
+
+    assert '400' in update_response.status

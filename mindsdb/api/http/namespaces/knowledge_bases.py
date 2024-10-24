@@ -1,24 +1,16 @@
 from http import HTTPStatus
-from typing import Dict, List
 
 from flask import request
 from flask_restx import Resource
 
-import pandas as pd
-
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
-from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE as SQL_RESPONSE_TYPE
 from mindsdb.api.executor.exceptions import ExecutorException
 from mindsdb.api.http.utils import http_error
-from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
+from mindsdb.interfaces.knowledge_base.preprocess.preprocess import (update_knowledge_base_with_preprocessing,
+                                                                     _insert_select_query_result_into_knowledge_base)
 from mindsdb.metrics.metrics import api_endpoint_metrics
-from mindsdb.integrations.handlers.web_handler.urlcrawl_helpers import get_all_websites
 from mindsdb.interfaces.database.projects import ProjectController
-from mindsdb.interfaces.file.file_controller import FileController
-from mindsdb.integrations.utilities.rag.loaders.file_loader import FileLoader
-from mindsdb.integrations.utilities.rag.splitters.file_splitter import FileSplitter, FileSplitterConfig
-from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseTable
 from mindsdb.utilities import log
 from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_LLM_MODEL, DEFAULT_RAG_PROMPT_TEMPLATE
@@ -27,88 +19,6 @@ from mindsdb.integrations.utilities.rag.settings import DEFAULT_LLM_MODEL, DEFAU
 from mindsdb_sql.parser.ast import Identifier
 
 logger = log.getLogger(__name__)
-
-_DEFAULT_MARKDOWN_HEADERS_TO_SPLIT_ON = [
-    ("#", "Header 1"),
-    ("##", "Header 2"),
-    ("###", "Header 3"),
-]
-
-_DEFAULT_WEB_CRAWL_LIMIT = 100
-
-
-def _insert_file_into_knowledge_base(table: KnowledgeBaseTable, file_name: str):
-    file_controller = FileController()
-    splitter = FileSplitter(FileSplitterConfig())
-    file_path = file_controller.get_file_path(file_name)
-    loader = FileLoader(file_path)
-    split_docs = []
-    for doc in loader.lazy_load():
-        split_docs += splitter.split_documents([doc])
-    doc_objs = []
-    for split_doc in split_docs:
-        doc_objs.append({
-            'content': split_doc.page_content,
-        })
-    docs_df = pd.DataFrame.from_records(doc_objs)
-    # Insert documents into KB
-    table.insert(docs_df)
-
-
-def _insert_web_pages_into_knowledge_base(table: KnowledgeBaseTable, urls: List[str], crawl_depth: int = 1, filters: List[str] = None):
-    try:
-        # To prevent dependency on langchain_text_splitters unless needed.
-        from langchain_text_splitters import MarkdownHeaderTextSplitter
-    except ImportError as e:
-        logger.error(f'Error importing langchain_text_splitters to insert web page into knowledge base: {e}')
-        raise e
-
-    websites_df = get_all_websites(urls, limit=_DEFAULT_WEB_CRAWL_LIMIT, crawl_depth=crawl_depth, filters=filters)
-    # Text content is treated as markdown.
-    markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=_DEFAULT_MARKDOWN_HEADERS_TO_SPLIT_ON)
-
-    def append_row_documents(row, all_docs):
-        docs = markdown_splitter.split_text(row['text_content'])
-        for doc in docs:
-            # Link the URL to each web page chunk.
-            doc.metadata['url'] = row['url']
-        all_docs += docs
-
-    all_docs = []
-    websites_df.apply(lambda row: append_row_documents(row, all_docs), axis=1)
-    # Convert back to a DF.
-    doc_objs = []
-    for doc in all_docs:
-        doc_objs.append({
-            'content': doc.page_content,
-            'url': doc.metadata['url']
-        })
-    docs_df = pd.DataFrame.from_records(doc_objs)
-    # Insert documents into KB.
-    table.insert(docs_df)
-
-
-def _insert_select_query_result_into_knowledge_base(query: str, table: KnowledgeBaseTable, project_name: str):
-    if not query:
-        return
-    mysql_proxy = FakeMysqlProxy()
-    query_result = mysql_proxy.process_query(query)
-    # Use same project as API request for SQL context.
-    mysql_proxy.set_context({'db': project_name})
-    if query_result.type != SQL_RESPONSE_TYPE.TABLE:
-        raise ExecutorException('Query returned no data')
-
-    # Check column name aliases.
-    column_names = [c.get('alias', c.get('name')) for c in query_result.columns]
-    df_to_insert = pd.DataFrame.from_records(query_result.data, columns=column_names)
-    table.insert(df_to_insert)
-
-
-def _insert_rows_into_knowledge_base(rows: List[Dict], table: KnowledgeBaseTable):
-    if not rows:
-        return
-    df_to_insert = pd.DataFrame.from_records(rows)
-    table.insert(df_to_insert)
 
 
 @ns_conf.route('/<project_name>/knowledge_bases')
@@ -190,13 +100,22 @@ class KnowledgeBasesResource(Resource):
         embedding_table_identifier = None
         if storage is not None:
             embedding_table_identifier = Identifier(parts=[storage['database'], storage['table']])
-        new_kb = session.kb_controller.add(
-            kb_name,
-            project.name,
-            embedding_model_identifier,
-            embedding_table_identifier,
-            {}
-        )
+
+        try:
+            new_kb = session.kb_controller.add(
+                kb_name,
+                project.name,
+                embedding_model_identifier,
+                embedding_table_identifier,
+                params=knowledge_base.get('params', {}),
+                preprocessing_config=knowledge_base.get('preprocessing')
+            )
+        except ValueError as e:
+            return http_error(
+                HTTPStatus.BAD_REQUEST,
+                'Invalid preprocessing configuration',
+                str(e)
+            )
 
         return new_kb.as_dict(), HTTPStatus.CREATED
 
@@ -233,7 +152,7 @@ class KnowledgeBaseResource(Resource):
     @ns_conf.doc('update_knowledge_base')
     @api_endpoint_metrics('PUT', '/knowledge_bases/knowledge_base')
     def put(self, project_name: str, knowledge_base_name: str):
-        '''Updates a knowledge base.'''
+        '''Updates a knowledge base with optional preprocessing.'''
         # Check for required parameters.
         if 'knowledge_base' not in request.json:
             return http_error(
@@ -241,17 +160,19 @@ class KnowledgeBaseResource(Resource):
                 'Missing parameter',
                 'Must provide "knowledge_base" parameter in PUT body'
             )
+
         session = SessionController()
         project_controller = ProjectController()
+
         try:
             project = project_controller.get(name=project_name)
         except EntityNotExistsError:
-            # Project must exist.
             return http_error(
                 HTTPStatus.NOT_FOUND,
                 'Project not found',
                 f'Project with name {project_name} does not exist'
             )
+
         try:
             table = session.kb_controller.get_table(knowledge_base_name, project.id)
         except ValueError:
@@ -263,31 +184,49 @@ class KnowledgeBaseResource(Resource):
             )
 
         kb = request.json['knowledge_base']
+
+        # Extract parameters
         files = kb.get('files', [])
         urls = kb.get('urls', [])
         query = kb.get('query')
         rows = kb.get('rows', [])
+
         # Optional params for web pages.
         crawl_depth = kb.get('crawl_depth', 1)
         filters = kb.get('filters', [])
 
-        # Load, split, & embed files into Knowledge Base.
-        for file_name in files:
-            _insert_file_into_knowledge_base(table, file_name)
-        # Crawl, split, & embed web pages into Knowledge Base.
-        _insert_web_pages_into_knowledge_base(table, urls, crawl_depth=crawl_depth, filters=filters)
+        # get chunk preprocessing config
+        preprocessing_config = kb.get('preprocessing', None)
 
-        # Execute SELECT statement & embed dataframe into Knowledge Base.
+        # Handle SQL query if present
+        if query:
+            try:
+                _insert_select_query_result_into_knowledge_base(query, table, project_name)
+            except ExecutorException as e:
+                return http_error(
+                    HTTPStatus.BAD_REQUEST,
+                    'Invalid SELECT query',
+                    f'Executing "query" failed. Needs to be a valid SELECT statement that returns data: {str(e)}'
+                )
+
+        # Process all other inputs with preprocessing support
         try:
-            _insert_select_query_result_into_knowledge_base(query, table, project_name)
-        except ExecutorException as e:
+            update_knowledge_base_with_preprocessing(
+                table=table,
+                files=files,
+                urls=urls,
+                rows=rows,
+                crawl_depth=crawl_depth,
+                filters=filters,
+                preprocessing_config=preprocessing_config
+            )
+        except Exception as e:
             return http_error(
                 HTTPStatus.BAD_REQUEST,
-                'Invalid SELECT query',
-                f'Executing "query" failed. Needs to be a valid SELECT statement that returns data: {str(e)}'
+                'Preprocessing Error',
+                f'Error during preprocessing and insertion: {str(e)}'
             )
-        # Convert rows of records into a dataframe & embed into Knowledge Base.
-        _insert_rows_into_knowledge_base(rows, table)
+
         return '', HTTPStatus.OK
 
     @ns_conf.doc('delete_knowledge_base')

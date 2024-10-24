@@ -1,0 +1,3 @@
+fastapi
+uvicorn
+pymilvus==2.4.8

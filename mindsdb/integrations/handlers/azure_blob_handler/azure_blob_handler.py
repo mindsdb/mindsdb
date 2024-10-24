@@ -167,9 +167,9 @@ class AzureBlobHandler(APIHandler):
         """
         # Connect to Azure Blob via DuckDB.
         duckdb_conn = duckdb.connect(":memory:")
-        duckdb_conn.execute("INSTALL httpfs")
-        duckdb_conn.execute("LOAD httpfs")
-
+        duckdb_conn.execute("INSTALL azure")
+        duckdb_conn.execute("LOAD azure")
+        # duckdb_conn.
         # Configure mandatory credentials.
         # duckdb_conn.execute(f"SET storage_account_name='{self.storage_account_name}'")
         # duckdb_conn.execute(f"SET account_access_key='{self.account_access_key}'")
@@ -186,7 +186,7 @@ class AzureBlobHandler(APIHandler):
 
         with self._connect_duckdb() as connection:
 
-            cursor = connection.execute(f"SELECT * FROM 'azureblob://{self.container_name}/{key}'")
+            cursor = connection.execute(f"SELECT * FROM 'az://{self.container_name}'")
 
             return cursor.fetchdf()
 

@@ -12,6 +12,10 @@ MILVUS_PORT = os.getenv("MILVUS_PORT", 19530)
 EMBEDDING_HOST = "ollama"
 EMBEDDING_PORT = 11434
 OLLAMA_EMBEDDING_URL = f"http://{EMBEDDING_HOST}:{EMBEDDING_PORT}/api/embeddings"
+HNSW_DEFAULT_EF_SEARCH = 20
+HNSW_DEFAULT_EF_CONSTRUCTION = 40
+HNSW_DEFAULT_M = 1024
+MAX_TEXT_LENGTH = 40000
 
 
 # curl command example:
@@ -63,19 +67,21 @@ async def get_collection_info(name: str):
 
 
 @app.post("/search/{collection_name}")
-async def search_collection(collection_name: str, query_vector: list[float]):
+async def search_collection(collection_name: str,
+                            query_vector: list[float],
+                            limit: int = 5):
     if not utility.has_collection(collection_name):
         raise HTTPException(status_code=404, detail="Collection not found")
 
     collection = Collection(collection_name)
     collection.load()
 
-    search_params = {"metric_type": "COSINE", "params": {"ef": 20}}
+    search_params = {"metric_type": "COSINE", "params": {"ef": HNSW_DEFAULT_EF_SEARCH}}
     results = collection.search(
         data=[query_vector],
         anns_field="embedding",  # replace with your vector field name
         param=search_params,
-        limit=5,
+        limit=limit,
         expr=None
     )
 
@@ -140,10 +146,10 @@ async def create_collection(name: str, dimension: int):
         raise HTTPException(status_code=400, detail="Collection already exists")
 
     fields = [
-        FieldSchema(name="id", dtype=DataType.VARCHAR, is_primary=True, max_length=40000),
-        FieldSchema(name="title", dtype=DataType.VARCHAR, max_length=40000),
-        FieldSchema(name="published_at", dtype=DataType.VARCHAR, max_length=40000),
-        FieldSchema(name="text", dtype=DataType.VARCHAR, max_length=40000),
+        FieldSchema(name="id", dtype=DataType.VARCHAR, is_primary=True, max_length=MAX_TEXT_LENGTH),
+        FieldSchema(name="title", dtype=DataType.VARCHAR, max_length=MAX_TEXT_LENGTH),
+        FieldSchema(name="published_at", dtype=DataType.VARCHAR, max_length=MAX_TEXT_LENGTH),
+        FieldSchema(name="text", dtype=DataType.VARCHAR, max_length=MAX_TEXT_LENGTH),
         FieldSchema(name="embedding", dtype=DataType.FLOAT_VECTOR, dim=dimension)
     ]
     schema = CollectionSchema(fields, "A collection for storing vector embeddings")
@@ -155,7 +161,7 @@ async def create_collection(name: str, dimension: int):
     index_params = {
         "index_type": "HNSW",  # Or another suitable type depending on your needs and the size of your dataset
         "metric_type": "COSINE",
-        'params': {'efConstruction': 40, 'M': 1024}
+        'params': {'efConstruction': HNSW_DEFAULT_EF_CONSTRUCTION, 'M': HNSW_DEFAULT_M}
     }
 
     # # Create the index

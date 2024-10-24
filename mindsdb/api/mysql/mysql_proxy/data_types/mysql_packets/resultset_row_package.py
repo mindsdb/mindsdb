@@ -22,23 +22,20 @@ class ResultsetRowPacket(Packet):
     https://mariadb.com/kb/en/resultset-row/
     '''
 
-    @staticmethod
-    def get_serializers(columns):
-        serializers = []
-        for column in columns:
-
-            fnc = Datum('string', None, 'lenenc', is_empty=True).get_serializer()
-            serializers.append(fnc)
-        return serializers
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        serializers = self._kwargs['serializers']
-
         self._body = b''
         for i, item in enumerate(self._kwargs['data']):
-            self._body += serializers[i](str(item))
+            if isinstance(item, str):
+                self._body += Datum.serialize_str(item)
+            elif item is None:
+                self._body += NULL_VALUE
+            elif isinstance(item, bytes):
+                self._body += Datum.serialize_bytes(item)
+            else:
+                self._body += Datum.serialize_str(str(item))
 
         self._length = len(self._body)
 

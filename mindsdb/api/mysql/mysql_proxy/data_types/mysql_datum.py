@@ -107,7 +107,8 @@ class Datum:
             self.value = self.value[:-1]
         return buff[end:]
 
-    def serialize_int(self, value):
+    @classmethod
+    def serialize_int(cls, value):
         if value is None:
             return NULL_VALUE
 
@@ -151,7 +152,8 @@ class Datum:
             else:
                 return lambda v: struct.pack("Q", v)[:int(self.var_len)]
 
-    def serialize_str_eof(self, value):
+    @classmethod
+    def serialize_str_eof(cls, value):
         length = len(value)
         var_len = length
         if length == 0:
@@ -164,12 +166,12 @@ class Datum:
     # def serialize_obj(self, value):
     #     return self.serialize_str(str(value))
 
-    def serialize_str(self, value):
-        return self.serialize_bytes(value.encode("utf8"))
+    @classmethod
+    def serialize_str(cls, value):
+        return cls.serialize_bytes(value.encode("utf8"))
 
-    def serialize_bytes(self, value):
-        if value is None:
-            return NULL_VALUE
+    @classmethod
+    def serialize_bytes(cls, value):
 
         val_len = len(value)
 

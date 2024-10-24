@@ -348,7 +348,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             self.send_tabel_packets(columns=answer.columns, data=answer.data)
 
             packages = []
-            packages += self.get_tabel_packets(columns=answer.columns, data=answer.data)
             if answer.status is not None:
                 packages.append(self.last_packet(status=answer.status))
             else:
@@ -421,10 +420,8 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             packets.append(self.packet(EofPacket, status=status))
         self.send_package_group(packets)
 
-        serializers = ResultsetRowPacket.get_serializers(columns)
-
         string = b"".join([
-            self.packet(packetClass=ResultsetRowPacket, serializers=serializers, data=row).accum()
+            self.packet(packetClass=ResultsetRowPacket, data=row).accum()
             for row in data
         ])
         self.socket.sendall(string)

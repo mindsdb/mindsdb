@@ -1,5 +1,5 @@
 from mindsdb.integrations.libs.api_handler import APIResource
-from mindsdb.integrations.utilities.sql_utils import FilterCondition
+from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
 import pandas as pd
 from typing import List
 

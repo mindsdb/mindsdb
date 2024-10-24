@@ -118,7 +118,7 @@ class Datum:
         if value < NULL_VALUE_INT:
             return struct.pack("B", value)
         if value >= NULL_VALUE_INT and byte_count <= 2:
-            return TWO_BYTE_ENC + struct.pack("h", value)
+            return TWO_BYTE_ENC + struct.pack("H", value)
         if byte_count <= 3:
             return THREE_BYTE_ENC + struct.pack("i", value)[:3]
         if byte_count <= 8:
@@ -183,7 +183,7 @@ class Datum:
         if byte_count <= 2:
             return (
                 TWO_BYTE_ENC
-                + struct.pack("h", val_len)
+                + struct.pack("H", val_len)
                 + value
             )
         if byte_count <= 3:

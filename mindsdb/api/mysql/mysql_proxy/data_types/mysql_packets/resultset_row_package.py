@@ -8,10 +8,11 @@
  * permission of MindsDB Inc
  *******************************************************
 """
-
+import struct
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum import Datum
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import NULL_VALUE
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import TYPES
 
 
 class ResultsetRowPacket(Packet):
@@ -21,26 +22,28 @@ class ResultsetRowPacket(Packet):
     https://mariadb.com/kb/en/resultset-row/
     '''
 
-    def setup(self):
-        data = self._kwargs.get('data', {})
-        self.value = []
-        for val in data:
-            if val is None:
-                self.value.append(NULL_VALUE)
-            else:
-                self.value.append(Datum('string', str(val), 'lenenc'))
+    @staticmethod
+    def get_serializers(columns):
+        serializers = []
+        for column in columns:
 
+            fnc = Datum('string', None, 'lenenc', is_empty=True).get_serializer()
+            serializers.append(fnc)
+        return serializers
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        serializers = self._kwargs['serializers']
+
+        self._body = b''
+        for i, item in enumerate(self._kwargs['data']):
+            self._body += serializers[i](str(item))
+
+        self._length = len(self._body)
 
     @property
     def body(self):
-        string = b''
-        for x in self.value:
-            if x is NULL_VALUE:
-                string += x
-            else:
-                string += x.toStringPacket()
-
-        self.setBody(string)
         return self._body
 
     @staticmethod

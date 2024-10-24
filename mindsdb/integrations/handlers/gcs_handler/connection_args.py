@@ -6,7 +6,6 @@ connection_args = OrderedDict(
     bucket={
         'type': ARG_TYPE.STR,
         'description': 'The name of the GCS bucket.',
-        'required': True,
         'label': 'GCS Bucket'
     },
     service_account_keys={

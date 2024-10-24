@@ -19,16 +19,19 @@ CREATE DATABASE gcs_datasource
 WITH
     engine = 'gcs',
     parameters = {
-      "bucket": "<bucket-name>",
+      "bucket": "<bucket-name>", -- optional
       "service_account_keys": "/tmp/keys.json"
     };
 ```
 
 Required connection parameters include the following:
 
-- `bucket`: The globally unique identifier for your project in Google Cloud where BigQuery is located.
 - `service_account_keys`: The full path to the service account key file.
 - `service_account_json`: The content of a JSON file defined by the `service_account_keys` parameter.
+
+Optional connection parameters include the following:
+
+* `bucket`: The name of the GCS bucket. If it is not set: all available buckets will be used (can slow down, getting list of files)
 
 <Note>
   One of `service_account_keys` or `service_account_json` has to be provided to
@@ -43,6 +46,20 @@ Retrieve data from a specified object (file) in the GCS bucket by providing the 
 SELECT *
 FROM gcs_datasource.`my-file.csv`;
 LIMIT 10;
+```
+
+Retrieve list of files (without filtering by extension):
+
+```sql
+SELECT *
+FROM gcs_datasource.files LIMIT 10
+```
+
+Retrieve a list of files with their content (the content column needs to be requested explicitly):
+
+```sql
+SELECT path, content
+FROM gcs_datasource.files LIMIT 10
 ```
 
 <Tip>

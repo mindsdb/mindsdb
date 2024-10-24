@@ -93,7 +93,7 @@ First, you should prepare a `config.json` file based on the following template; 
 ```
 
 <Tip>
-Configure an HTTP authentication for your MindsDB instance by setting `http_auth_enabled` to `True` and defining the `username` and `password` parameters.
+Configure HTTP authentication for your MindsDB instance by setting the environment variables `MINDSDB_USERNAME` and `MINDSDB_PASSWORD` before starting MindsDB. Alternatively, you can also enable authentication by setting `http_auth_enabled` to `True` and defining the `username` and `password` parameters in the `auth` section of the above configuration file, however, this is not recommended for production environments.
 </Tip>
 
 Now that your `config.json` file is ready, run the command below to start

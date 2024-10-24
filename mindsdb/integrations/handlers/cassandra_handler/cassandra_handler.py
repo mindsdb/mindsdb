@@ -1,10 +1,7 @@
 from mindsdb.integrations.handlers.scylla_handler import Handler as ScyllaHandler
 from mindsdb.integrations.libs.response import (
-    HandlerResponse as Response,
-    RESPONSE_TYPE
-)
-from pandas import DataFrame as df
-
+    HandlerResponse as Response)
+import pandas as pd
 
 class CassandraHandler(ScyllaHandler):
     """
@@ -15,8 +12,6 @@ class CassandraHandler(ScyllaHandler):
 
     def __init__(self, name, **kwargs):
         super().__init__(name, **kwargs)
-        self.connection_data = kwargs.get('connection_data', {})
-        self.keyspace = self.connection_data.get('keyspace')
 
     def get_tables(self) -> Response:
         """
@@ -24,16 +19,12 @@ class CassandraHandler(ScyllaHandler):
 
         :return: List of table names.
         """
-        sql = """
-            SELECT
-                table_name
-            FROM
-                system_schema.tables
-            WHERE
-                keyspace_name = %s
-        """
-        tables = self.session.execute(sql, [self.keyspace])
-        response = Response(RESPONSE_TYPE.TABLE,
-                            df([dict(table_name=row.table_name)
-                                for row in tables]))
-        return response
+        sql = "DESCRIBE TABLES"
+        result = self.native_query(sql)
+        df = result.data_frame
+        table_data = pd.DataFrame(
+            {'table_name': df['name'],
+             'keyspace_name': df['keyspace_name'],
+             'type': df['type']})
+        result.data_frame = table_data
+        return result

@@ -206,10 +206,9 @@ class AzureBlobHandler(APIHandler):
         Read object as content
         """
 
-        coonection = self.connect()
-        client = coonection.get_blob_client(container=self.container_name,blob=key)
-        # bucket = client.bucket(self.connection_data['bucket'])
-        # blob = bucket.blob(key)
+        connection = self.connect()
+        client = connection.get_blob_client(container=self.container_name,blob=key)
+
         return client.download_blob()
 
     def query(self, query: ASTNode) -> Response:

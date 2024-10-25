@@ -39,9 +39,9 @@ Follow the instructions given below to set up the Microsoft Teams app that will 
   1. Follow [this link](https://dev.botframework.com/bots/new) to the Microsoft Bot Framework portal and sign in with your Microsoft account.
   2. Fill out the *Display name*, *Bot handle*, and, optionally, the *Long description*, but leave the *Messaging endpoint* field empty for now.
   3. Set the *App type* to be 'Multi Tenant' and click on *Create Microsoft App ID and password*. This will open a new tab with the Azure portal.
-  4. Click on *New registration* and fill out the *Name* and *Supported account types* fields, and click on *Register*. Record the *Application (client) ID* for later use.
+  4. Click on *New registration* and fill out the *Name* and select the 'Accounts in any organizational directory (Any Azure AD directory - Multitenant)' option under *Supported account types*, and click on *Register*. Record the *Application (client) ID* for later use.
   5. Click on *Certificates & secrets* under *Manage*.
-  6. Click on *New client secret* and fill out the required fields and click on *Add*.
+  6. Click on *New client secret* and fill out the *Description* and select an appropriate *Expires* period, and click on *Add*.
   7. Copy the client secret and save it in a secure location.
   <Tip>
   If you already have an existing app registration, you can use it instead of creating a new one and skip steps 4-6.
@@ -56,16 +56,17 @@ Follow the instructions given below to set up the Microsoft Teams app that will 
   Please note that if you are running MindsDB locally, it will need to be exposed to the internet using a service like [ngrok](https://ngrok.com/).
   </Tip>
 
-  12. Fill out the *Microsoft App ID* using the client ID obtained in the previous steps and click on *Register*.
-  13. Under *More channels*, click on *Microsoft Teams*.
-  14. Navigate to Microsoft Teams and navigate to *Apps*.
+  12. Fill out the *Microsoft App ID* using the client ID obtained in the previous steps, agree to the terms, and click on *Register*.
+  13. Under *Add a featured channel*, click on *Microsoft Teams*, select your Microsoft Teams solution, click on *Save* and agree to the terms when prompted.
+  14. Navigate to Microsoft Teams and then to the *Apps* tab.
   15. Search for the *Developer Portal* app and add it to your workspace.
   16. Open the *Developer Portal*, click on *Apps* and then on *New app*.
   17. Fill out the *Name* for the app and click on *Add*.
-  18. Navigate to *App features* and select *Bot*.
-  19. Choose the *Select an existing bot* option and select the bot you created earlier in the Microsoft Bot Framework portal.
-  20. Select all of the scopes where bot is required to be used and click on *Save*.
-  21. Finally, on the navigation pane, click on *Publish* and then on *Publish to your org*.
+  18. Navigate to *Basic information* and fill out the required fields: *Short description*, *Long description*, *Developer or company name*, *Website*, *Privacy policy*, *Terms of use*, and *Application (client) ID*. You may also provide any additional information you wish.
+  19. Navigate to *App features* and select *Bot*.
+  20. Choose the *Select an existing bot* option and select the bot you created earlier in the Microsoft Bot Framework portal.
+  21. Select all of the scopes where bot is required to be used and click on *Save*.
+  22. Finally, on the navigation pane, click on *Publish* and then on *Publish to your org*.
 
 For the bot to be made available to the users in your organization, you will need to ask your IT administrator to approve the submission at this [link](https://admin.teams.microsoft.com/policies/manage-apps). 
 

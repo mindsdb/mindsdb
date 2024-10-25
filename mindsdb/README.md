@@ -1,4 +1,4 @@
-Welcome to the Quickstart Guide for using MindsDB. This README is designed to provide developers with an efficient and straightforward introduction to integrating and utilizing MindsDB in your projects. To start, follow the steps bellow:
+Welcome to the Quickstart Guide for using MindsDB. This README is designed to provide developers with an efficient and straightforward introduction to integrating and utilizing MindsDB in your projects. To start, follow the steps below:
 
 
 ## 1. Create a MindsDB Cloud Account or Install MindsDB Locally
@@ -207,7 +207,7 @@ Now, we can take this even further. MindsDB includes powerful automation feature
 
 We use the `CREATE JOB` statement to create a Job.
 
-Now, let's use a Job to set the model we've created to be retrained every two days, just like we might in production. You can [retrain](/sql/api/retrain/) the model to improve predictions every time when either new data or new MindsDB version is available. And, if you want to retrain your model considering only new data, then go for [finetuning](/sql/api/finetune/) it.
+Now, let's use a Job to set the model we've created to be retrained every two days, just like we might in production. You can [retrain](/sql/api/retrain/) the model to improve predictions every time when either new data or a new MindsDB version is available. And, if you want to retrain your model considering only new data, then go for [finetuning](/sql/api/finetune/) it.
 
 In the same job, we will create a table and insert these new predictions back into a database so the predictions are ready to be used by our hypothetical application.
 

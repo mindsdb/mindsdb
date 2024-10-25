@@ -72,20 +72,28 @@ class AzureBlobHandler(APIHandler):
             name (str): the handler name
         """
 
+        self.connection = None
+        self.is_connected = False
+
         self._tables = {}
         self.storage_account_name = None
         self.account_access_key = None
-        self.is_connected = False
+        
         self._files_table = ListFilesTable(self)
         self.container_name = None
 
         connection_data = kwargs.get('connection_data')
         if 'storage_account_name' in connection_data:
             self.storage_account_name = connection_data['storage_account_name']
+
         if 'account_access_key' in connection_data:
             self.account_access_key = connection_data['account_access_key']
+
         if 'container_name' in connection_data:
             self.container_name = connection_data['container_name']
+
+        if 'connection_string' in connection_data:
+            self.connection_string = connection_data['connection_string']
         
 
     def connect(self) -> BlobServiceClient:
@@ -95,6 +103,9 @@ class AzureBlobHandler(APIHandler):
         Returns:
             HandlerStatusResponse
         """
+        if self.is_connected is True:
+            return self.connection
+
         sas_token = generate_account_sas(
             account_name=self.storage_account_name,
             account_key=self.account_access_key,
@@ -107,7 +118,8 @@ class AzureBlobHandler(APIHandler):
             account_url=f"https://{self.storage_account_name}.blob.core.windows.net",
             credential=sas_token
         )
-
+        self.connection = blob_service_client
+        self.is_connected = True
         return blob_service_client
 
     def check_connection(self) -> StatusResponse:
@@ -167,12 +179,11 @@ class AzureBlobHandler(APIHandler):
         """
         # Connect to Azure Blob via DuckDB.
         duckdb_conn = duckdb.connect(":memory:")
-        duckdb_conn.execute("INSTALL azure")
-        duckdb_conn.execute("LOAD azure")
-        # duckdb_conn.
+        duckdb_conn.execute('''INSTALL azure''')
+        duckdb_conn.execute('''LOAD azure''')
+
         # Configure mandatory credentials.
-        # duckdb_conn.execute(f"SET storage_account_name='{self.storage_account_name}'")
-        # duckdb_conn.execute(f"SET account_access_key='{self.account_access_key}'")
+        duckdb_conn.execute(f'SET azure_storage_connection_string="{self.connection_string}"')
 
         try:
             yield duckdb_conn
@@ -185,22 +196,21 @@ class AzureBlobHandler(APIHandler):
         """
 
         with self._connect_duckdb() as connection:
-
-            cursor = connection.execute(f"SELECT * FROM 'az://{self.container_name}'")
+            # connection.execute('SET azure_transport_option_type="curl"')
+            cursor = connection.execute(f'SELECT * FROM "azure://{self.container_name}/{key}"')
 
             return cursor.fetchdf()
 
-    # def _read_as_content(self, key) -> None:
-    #     """
-    #     Read object as content
-    #     """
+    def _read_as_content(self, key) -> None:
+        """
+        Read object as content
+        """
 
-    #     client = self.connect()
-    #     client.
-    #     obj = client.get_object()
-    #     content = obj['Body'].read()
-    #     return content
-
+        coonection = self.connect()
+        client = coonection.get_blob_client(container=self.container_name,blob=key)
+        # bucket = client.bucket(self.connection_data['bucket'])
+        # blob = bucket.blob(key)
+        return client.download_blob()
 
     def query(self, query: ASTNode) -> Response:
         """
@@ -219,7 +229,7 @@ class AzureBlobHandler(APIHandler):
         self.connect()
 
         if isinstance(query, Select):
-            table_name = query.from_table.parts[-1]
+            table_name = query.from_table.parts[-1].replace('`', '')
 
             if table_name == 'files':
                 table = self._files_table
@@ -272,6 +282,7 @@ class AzureBlobHandler(APIHandler):
         client = self.connect()
 
         container_client = client.get_container_client(self.container_name)
+
         all_files = container_client.list_blobs()
 
         # Wrap the object names with backticks to prevent SQL syntax errors.
@@ -303,13 +314,13 @@ class AzureBlobHandler(APIHandler):
         Returns:
             Response: A response object containing the column details, formatted as per the `Response` class.
         """
-        query = Select(
-            targets=[Star()],
-            from_table=Identifier(parts=[table_name]),
-            limit=Constant(1)
-        )
+        if not table_name or not isinstance(table_name, str):
+            raise ValueError("Invalid table name provided.")
+
+        query = f"SELECT * FROM {table_name} LIMIT 5"
 
         result = self.query(query)
+        # result = self.native_query(query)
 
         response = Response(
             RESPONSE_TYPE.TABLE,

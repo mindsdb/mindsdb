@@ -49,7 +49,7 @@ class ListFilesTable(APIResource):
 class FileTable(APIResource):
 
     def list(self, targets: List[str] = None, table_name=None, *args, **kwargs) -> pd.DataFrame:
-        return self.handler._read_as_table(table_name)
+        return self.handler.read_as_table(table_name)
 
     def add(self, data, table_name=None):
         df = pd.DataFrame(data)
@@ -190,7 +190,7 @@ class AzureBlobHandler(APIHandler):
         finally:
             duckdb_conn.close()
 
-    def _read_as_table(self, key) -> pd.DataFrame:
+    def read_as_table(self, key) -> pd.DataFrame:
         """
         Read object as dataframe. Uses duckdb
         """

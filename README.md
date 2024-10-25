@@ -39,7 +39,7 @@ With MindsDB, you can deploy, serve, and fine-tune models in real-time, utilizin
   <img src="/docs/assets/mindsdb_homepage_diagram.png"/>
 </p>
 
-MindsDB integrates with numerous [data sources](https://docs.mindsdb.com/integrations/data-overview?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo), including databases, vector stores, and applications, and popular [AI/ML frameworks](https://docs.mindsdb.com/integrations/ai-overview?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo), including AutoML and LLMs. MindsDB connects data sources with AI/ML frameworks and automates routine workflows between them. By doing so, we bring data and AI together, enabling the intuitive implementation of customized AI systems.
+MindsDB integrates with numerous [data sources](https://docs.mindsdb.com/integrations/data-overview?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo), including databases, vector stores, and applications, and popular [AI/ML frameworks](https://docs.mindsdb.com/integrations/ai-overview?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo), including AutoML and LLMs. MindsDB connects data sources with AI/ML frameworks and automates routine workflows between them. Doing so brings data and AI together, enabling the intuitive implementation of customized AI systems.
 
 Learn more about [features and use cases of MindsDB here](https://docs.mindsdb.com/what-is-mindsdb?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
 
@@ -120,7 +120,7 @@ SELECT input.review, output.sentiment
 FROM data_source.amazon_reviews_job AS input
 JOIN sentiment_classifier AS output;
 
--- Step 4. Automate this workflow to accomodate real-time and dynamic data
+-- Step 4. Automate this workflow to accommodate real-time and dynamic data
 CREATE DATABASE data_destination
 WITH ENGINE = "engine-name",      -- choose the data source you want to connect to save AI output
 PARAMETERS = {                    -- list of available data sources: https://docs.mindsdb.com/integrations/data-overview
@@ -213,11 +213,11 @@ SHOW AGENTS;
 -- Step 5. Query an agent
 SELECT *
 FROM my_agent
-WHERE question = 'what is the average price of cars from 2018?';
+WHERE question = 'What is the average price of cars from 2018?';
 
 SELECT *
 FROM my_agent
-WHERE question = 'what is the max mileage of cars from 2017?';
+WHERE question = 'What is the max mileage of cars from 2017?';
 
 SELECT *
 FROM my_agent

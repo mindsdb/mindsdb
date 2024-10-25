@@ -7,8 +7,8 @@ from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.api.executor.exceptions import ExecutorException
 from mindsdb.api.http.utils import http_error
-from mindsdb.interfaces.knowledge_base.preprocess.preprocess import (update_knowledge_base_with_preprocessing,
-                                                                     _insert_select_query_result_into_knowledge_base)
+from mindsdb.interfaces.knowledge_base.preprocess.preprocess import update_knowledge_base_with_preprocessing
+
 from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.utilities import log
@@ -198,29 +198,29 @@ class KnowledgeBaseResource(Resource):
         # get chunk preprocessing config
         preprocessing_config = kb.get('preprocessing', None)
 
-        # Handle SQL query if present
-        if query:
-            try:
-                _insert_select_query_result_into_knowledge_base(query, table, project_name)
-            except ExecutorException as e:
-                return http_error(
-                    HTTPStatus.BAD_REQUEST,
-                    'Invalid SELECT query',
-                    f'Executing "query" failed. Needs to be a valid SELECT statement that returns data: {str(e)}'
-                )
-
-        # Process all other inputs with preprocessing support
         try:
             update_knowledge_base_with_preprocessing(
                 table=table,
                 files=files,
                 urls=urls,
                 rows=rows,
+                query=query,
+                project_name=project_name,  # Required for query processing
                 crawl_depth=crawl_depth,
                 filters=filters,
                 preprocessing_config=preprocessing_config
             )
+        except ExecutorException as e:
+            logger.error(f'Error during preprocessing and insertion: {str(e)}')
+            return http_error(
+                HTTPStatus.BAD_REQUEST,
+                'Invalid SELECT query',
+                f'Executing "query" failed. Needs to be a valid SELECT statement that returns data: {str(e)}'
+            )
+
         except Exception as e:
+
+            logger.error(f'Error during preprocessing and insertion: {str(e)}')
             return http_error(
                 HTTPStatus.BAD_REQUEST,
                 'Preprocessing Error',

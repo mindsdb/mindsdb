@@ -14,7 +14,7 @@ from mindsdb.utilities import log
 from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE as SQL_RESPONSE_TYPE
 from mindsdb.api.executor.exceptions import ExecutorException
-from mindsdb.integrations.libs.vectordatabase_handler import TableField
+
 
 _DEFAULT_MARKDOWN_HEADERS_TO_SPLIT_ON = [
     ("#", "Header 1"),
@@ -61,36 +61,8 @@ class PreprocessingKnowledgeBase:
         column_names = [c.get('alias', c.get('name')) for c in query_result.columns]
         df = pd.DataFrame.from_records(query_result.data, columns=column_names)
 
-        # Convert to documents format
-        raw_documents = []
-        content_col = next((col for col in df.columns if col.lower() == TableField.CONTENT.value), None)
-
-        for _, row in df.iterrows():
-            if content_col:
-                # Use existing content column
-                content = row[content_col]
-                # Use remaining columns as metadata
-                metadata = {
-                    k: v for k, v in row.items()
-                    if k.lower() != TableField.CONTENT.value
-                }
-            else:
-                # Convert all columns to content
-                content = "\n".join(
-                    [f"{field}: {value}" for field, value in row.items()]
-                )
-                metadata = {}
-
-            raw_documents.append({
-                'content': content,
-                'metadata': metadata
-            })
-
-        # Preprocess and insert
-        if raw_documents:
-            processed_chunks = self._preprocess_documents(raw_documents)
-            df = self._chunks_to_dataframe(processed_chunks)
-            self.table.insert(df)
+        # Insert directly without document conversion
+        self.table.insert(df)
 
     def process_and_insert_files(self, file_names: List[str]):
         """Process and insert files with preprocessing"""
@@ -184,20 +156,6 @@ class PreprocessingKnowledgeBase:
         self.table.insert(df)
 
 
-def _insert_select_query_result_into_knowledge_base(query: str, table: KnowledgeBaseTable, project_name: str):
-    """
-    Helper function to insert SQL query results with preprocessing support.
-    Uses PreprocessingKnowledgeBase for consistency.
-    """
-    # Get preprocessing config from table if available
-    preprocessing_config = None
-    if hasattr(table, '_kb') and hasattr(table._kb, 'params'):
-        preprocessing_config = table._kb.params.get('preprocessing')
-
-    kb_processor = PreprocessingKnowledgeBase(table, preprocessing_config)
-    kb_processor.process_and_insert_query_result(query, project_name)
-
-
 def update_knowledge_base_with_preprocessing(
         table: KnowledgeBaseTable,
         files: List[str] = None,
@@ -211,12 +169,12 @@ def update_knowledge_base_with_preprocessing(
 ):
     """Main function to update knowledge base with preprocessing support"""
 
-    # Initialize preprocessing configuration if provided
-    config = None
+    # Need to configure preprocessing on the table first if config exists
     if preprocessing_config:
-        config = PreprocessingConfig(**preprocessing_config)
+        table.configure_preprocessing(preprocessing_config)
 
-    kb_processor = PreprocessingKnowledgeBase(table, config)
+    # Pass preprocessing_config, not undefined 'config'
+    kb_processor = PreprocessingKnowledgeBase(table, preprocessing_config)
 
     # Process files
     if files:

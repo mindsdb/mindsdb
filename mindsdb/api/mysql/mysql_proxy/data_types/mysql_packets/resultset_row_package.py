@@ -30,7 +30,6 @@ class ResultsetRowPacket(Packet):
             else:
                 self.value.append(Datum('string', str(val), 'lenenc'))
 
-
     @property
     def body(self):
         string = b''

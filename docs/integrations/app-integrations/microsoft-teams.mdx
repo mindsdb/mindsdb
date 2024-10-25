@@ -77,3 +77,26 @@ For the bot to be made available to the users in your organization, you will nee
 Once it is approved, users can find it under the *Built for your org* section in the *Apps* tab. They can either chat with the bot directly or add it to a channel. To chat with the bot in a channel, type `@<bot_name>` followed by your message.
 
 While waiting for approval, you can test the chatbot by clicking on *Preview in Teams* in the Developer Portal.
+
+## Troubleshooting Guide
+
+<Warning>
+`No response from the bot`:
+
+* **Symptoms**: The bot does not respond to messages.
+* **Checklist**:
+    1. Ensure the bot is correctly set up in the Microsoft Bot Framework portal.
+    2. Ensure that the client ID and client secret used to create the connection are correct and valid.
+    3. Ensure that the messaging endpoint is correctly set in the Microsoft Bot Framework portal with the correct webhook token.
+    4. Confirm that the bot is added to the Microsoft Teams workspace.
+</Warning>
+
+<Warning>
+`The bot is not available to other users`:
+
+* **Symptoms**: The bot is not available to other users in the organization.
+* **Checklist**:
+    1. Ensure that the bot is published to the organization in the Microsoft Bot Framework portal.
+    2. Ensure that the bot is approved by the IT administrator.
+
+</Warning>

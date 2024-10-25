@@ -1,17 +1,14 @@
 import io
 import pandas as pd
 import dropbox
-import duckdb
-import re
 
 from dropbox.exceptions import AuthError, ApiError
 from typing import Dict, Optional, Text
 
-from mindsdb_sql.parser.ast import ASTNode
-from mindsdb_sql.parser.ast import Select, Insert
+from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql.parser.ast import Select, Identifier, Insert
 
 from mindsdb.utilities import log
-from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -19,39 +16,66 @@ from mindsdb.integrations.libs.response import (
 )
 
 
-class DropboxHandler(DatabaseHandler):
-    """
-    This handler handles connection and execution of SQL statements on files from Dropbox.
-    """
+from mindsdb.integrations.libs.api_handler import APIHandler, APIResource
+
+
+class ListFilesTable(APIResource):
+    def list(self, conditions=None, limit=None, sort=None, targets=None, **kwargs):
+        files = self.handler._list_files()
+        data = []
+        for file in files:
+            item = {
+                "path": file["path"],
+                "name": file["name"],
+                "extension": file["extension"],
+            }
+            data.append(item)
+        df = pd.DataFrame(data)
+        return df
+
+    def get_columns(self):
+        return ["path", "name", "extension"]
+
+
+class FileTable(APIResource):
+    def __init__(self, handler=None, table_name=None, dropbox_path=None):
+        super().__init__(handler, table_name=table_name)
+        self.dropbox_path = dropbox_path
+
+    def list(self, conditions=None, limit=None, sort=None, targets=None, **kwargs):
+        df = self.handler._read_file(self.dropbox_path)
+        return df
+
+    def get_columns(self):
+        df = self.handler._read_file(self.table_name)
+        return df.columns.tolist()
+
+    def insert(self, query: Insert) -> None:
+        columns = [col.name for col in query.columns]
+        data = [dict(zip(columns, row)) for row in query.values]
+        df_new = pd.DataFrame(data)
+        df_existing = self.handler._read_file(self.dropbox_path)
+        df_combined = pd.concat([df_existing, df_new], ignore_index=True)
+        self.handler._write_file(self.dropbox_path, df_combined)
+
+
+class DropboxHandler(APIHandler):
 
     name = "dropbox"
     supported_file_formats = ["csv", "tsv", "json", "parquet"]
 
     def __init__(self, name: Text, connection_data: Optional[Dict], **kwargs):
-        """
-        Initialize the handler.
-        Args:
-            name (Text): The name of the handler instance.
-            connection_data (Dict): The connection data required to connect to the Dropbox account.
-            kwargs: Arbitrary keyword arguments.
-        """
         super().__init__(name)
         self.connection_data = connection_data
         self.kwargs = kwargs
         self.logger = log.getLogger(__name__)
-
-        self.connection = None
-        self.is_connected = False
         self.dbx = None
+        self.is_connected = False
+        self._register_table("files", ListFilesTable(self))
 
     def connect(self):
-        """
-        Establishes a connection to the Dropbox account.
-        Raises:
-            ValueError: If the required connection parameters are not provided.
-        """
         if self.is_connected:
-            return self.dbx
+            return
         if "access_token" not in self.connection_data:
             raise ValueError("Access token must be provided.")
         self.dbx = dropbox.Dropbox(self.connection_data["access_token"])
@@ -60,95 +84,80 @@ class DropboxHandler(DatabaseHandler):
             f"Connected to Dropbox as {self.dbx.users_get_current_account().email}"
         )
 
+    def check_connection(self) -> StatusResponse:
+        response = StatusResponse(False)
+        try:
+            self.connect()
+            response.success = True
+        except (AuthError, ApiError, ValueError) as e:
+            self.logger.error(f"Error connecting to Dropbox: {e}")
+            response.error_message = str(e)
+        return response
+
     def disconnect(self):
-        """
-        Closes the connection to the Dropbox account if it's currently open.
-        """
         if not self.is_connected:
             return
         self.dbx = None
         self.is_connected = False
         self.logger.info("Disconnected from Dropbox")
 
-    def check_connection(self) -> StatusResponse:
-        """
-        Checks the status of the connection to Dropbox.
-        Returns:
-            HandlerStatusResponse
-        """
-        response = StatusResponse(False)
-        need_to_close = not self.is_connected
-
-        try:
-            self.connect()
-            response.success = True
-        except (ApiError, ValueError) as e:
-            self.logger.error(
-                f"Error connecting to Dropbox with the given credentials, {e}!"
+    def query(self, query: ASTNode) -> Response:
+        if isinstance(query, Select):
+            table = self._get_table(query.from_table)
+            result = table.select(query)
+            return Response(RESPONSE_TYPE.TABLE, data_frame=result)
+        elif isinstance(query, Insert):
+            table = self._get_table(query.table)
+            table.insert(query)
+            return Response(RESPONSE_TYPE.OK)
+        else:
+            raise NotImplementedError(
+                "Only SELECT and INSERT operations are supported."
             )
-            response.error_message = str(e)
-        except AuthError as e:
-            self.logger.error(
-                f"Error connecting to Dropbox because of the wrong credentials, {e}!"
-            )
-            response.error_message = str(e)
-        except Exception as e:
-            self.logger.error(f"Error connecting to Dropbox: {e}")
-            response.error_message = str(e)
-        finally:
-            if response.success and need_to_close:
-                self.disconnect()
-            elif not response.success and self.is_connected:
-                self.is_connected = False
 
-        return response
+    def get_tables(self) -> Response:
+        table_names = list(self._tables.keys())
+        df = pd.DataFrame(table_names, columns=["table_name"])
+        return Response(RESPONSE_TYPE.TABLE, data_frame=df)
 
-    def _load_tables(self):
-        """
-        Load files from Dropbox and register them as tables in DuckDB.
-        """
-        self.connect()
-        self.connection = duckdb.connect(database=":memory:")
-        files = self._list_files()
+    def _get_table(self, name: Identifier):
+        table_name = name.parts[-1]
+        if table_name not in self._tables:
+            files = self._list_files()
+            file_dict = {}
+            for file in files:
+                if file["name"] not in file_dict:
+                    file_dict[file["name"]] = file
+            if table_name in file_dict:
+                self._register_table(
+                    table_name,
+                    FileTable(
+                        self,
+                        table_name=table_name,
+                        dropbox_path=file_dict[table_name]["path"],
+                    ),
+                )
+            else:
+                raise Exception(f"Table not found: {table_name}")
+        return self._tables[table_name]
 
-        for file in files:
-            df = self._read_file(file["path"])
-            table_name = file["name"]
-            print(f"Table name: {table_name}")
-            self.connection.register(table_name, df)
+    def get_columns(self, table_name: str) -> Response:
+        table = self._get_table(Identifier(table_name))
+        columns = table.get_columns()
+        df = pd.DataFrame(columns, columns=["column_name"])
+        df["data_type"] = "string"
+        return Response(RESPONSE_TYPE.TABLE, data_frame=df)
 
     def _list_files(self, path=""):
-        """
-        List all files in the Dropbox account starting from the given path.
-
-        Args:
-            path (str): The path to start listing files from.
-
-        Returns:
-            List[Dict]: A list of files with their metadata.
-        """
         files = []
-
         result = self.dbx.files_list_folder(path, recursive=True)
-
         files.extend(self._process_entries(result.entries))
-
         while result.has_more:
             result = self.dbx.files_list_folder_continue(result.cursor)
             files.extend(self._process_entries(result.entries))
-
         return files
 
     def _process_entries(self, entries):
-        """
-        Process a list of entries from Dropbox and filter supported file formats.
-
-        Args:
-            entries (List): List of entries from Dropbox API.
-
-        Returns:
-            List[Dict]: A list of files with their metadata.
-        """
         files = []
         for entry in entries:
             if isinstance(entry, dropbox.files.FileMetadata):
@@ -164,15 +173,6 @@ class DropboxHandler(DatabaseHandler):
         return files
 
     def _read_file(self, path) -> pd.DataFrame:
-        """
-        Reads a file from Dropbox and returns it as a Pandas DataFrame.
-
-        Args:
-            path (str): The path to the file in Dropbox.
-
-        Returns:
-            pd.DataFrame: The data from the file as a DataFrame.
-        """
         _, res = self.dbx.files_download(path)
         content = res.content
         extension = path.split(".")[-1].lower()
@@ -188,104 +188,20 @@ class DropboxHandler(DatabaseHandler):
             raise ValueError(f"Unsupported file format: {extension}")
         return df
 
-    def native_query(self, query: str) -> Response:
-        """
-        Execute a raw SQL query using DuckDB.
-
-        Args:
-            query (str): The SQL query to execute.
-
-        Returns:
-            HandlerResponse
-        """
-        need_to_close = not self.is_connected
-
-        self.connect()
-        self._load_tables()
-        try:
-            result_df = self.connection.execute(query).fetchdf()
-            response = result_df
-        except Exception as e:
-            self.logger.error(f"Error executing query: {e}")
-            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
-        finally:
-            self.connection.close()
-            if need_to_close:
-                self.disconnect()
-        return response
-
-    def query(self, query: ASTNode) -> Response:
-        """
-        Execute a SQL query represented as an ASTNode.
-
-        Args:
-            query (ASTNode): The query AST.
-
-        Returns:
-            HandlerResponse
-        """
-        if isinstance(query, Select):
-            if "FROM" in query_str:
-                query_str = re.sub(r"FROM\s+([^\s]+)", r'FROM "\1"', query_str)
-            df = self.native_query(query_str)
-            response = Response(RESPONSE_TYPE.TABLE, data_frame=df)
-        elif isinstance(query, Insert):
-            query_str = query.to_string().replace("`", '"')
-            self.native_query(query_str)
-            response = Response(RESPONSE_TYPE.OK)
+    def _write_file(self, path, df: pd.DataFrame):
+        extension = path.split(".")[-1].lower()
+        buffer = io.BytesIO()
+        if extension == "csv":
+            df.to_csv(buffer, index=False)
+        elif extension == "tsv":
+            df.to_csv(buffer, index=False, sep="\t")
+        elif extension == "json":
+            df.to_json(buffer, orient="records")
+        elif extension == "parquet":
+            df.to_parquet(buffer, index=False)
         else:
-            raise NotImplementedError
-        return response
-
-    def get_tables(self) -> Response:
-        """
-        Return list of entities that will be accessible as tables.
-
-        Returns:
-            HandlerResponse
-        """
-        self.connect()
-        files = self._list_files()
-        table_names = [file["name"] for file in files]
-
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=pd.DataFrame(table_names, columns=["table_name"]),
+            raise ValueError(f"Unsupported file format: {extension}")
+        buffer.seek(0)
+        self.dbx.files_upload(
+            buffer.read(), path, mode=dropbox.files.WriteMode.overwrite
         )
-
-        return response
-
-    def get_columns(self, table_name: Text) -> Response:
-        """
-        Returns a list of columns for the specified table.
-
-        Args:
-            table_name (str): The name of the table.
-
-        Returns:
-            HandlerResponse
-        """
-        self.connect()
-        self._load_tables()
-
-        table_name_quoted = table_name.replace("`", '"')
-
-        try:
-            result = self.connection.execute(f"DESCRIBE {table_name_quoted}").fetchdf()
-            response = Response(
-                RESPONSE_TYPE.TABLE,
-                data_frame=pd.DataFrame(
-                    {
-                        "column_name": result["column_name"],
-                        "data_type": result["column_type"],
-                    }
-                ),
-            )
-        except Exception as e:
-            self.logger.error(f"Error retrieving columns for table {table_name}: {e}")
-            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
-        finally:
-            self.connection.close()
-            self.disconnect()
-
-        return response

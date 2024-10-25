@@ -25,9 +25,9 @@ NULL_VALUE_INT = ord(NULL_VALUE)
 
 
 class Datum:
-    __slots__ = ['value', 'var_type', 'var_len', 'empty']
+    __slots__ = ['value', 'var_type', 'var_len']
 
-    def __init__(self, var_type, value=None, var_len=None, is_empty=False):
+    def __init__(self, var_type, value=None, var_len=None):
         # TODO other types: float, timestamp
         self.value = b""
 
@@ -38,7 +38,6 @@ class Datum:
         self.var_type = var_type
         self.var_len = var_len
 
-        self.empty = is_empty
         if value is not None:
             self.set(value)
 
@@ -131,9 +130,8 @@ class Datum:
     def get_serializer(self):
         if self.var_type == "string":
             if self.var_len == "lenenc":
-                if not self.empty:
-                    if isinstance(self.value, bytes):
-                        return self.serialize_bytes
+                if isinstance(self.value, bytes):
+                    return self.serialize_bytes
                 return self.serialize_str
             if self.var_len == "EOF":
                 return self.serialize_str_eof
@@ -200,8 +198,6 @@ class Datum:
                 + struct.pack("Q", val_len)
                 + value
             )
-
-
 
 
 def test():

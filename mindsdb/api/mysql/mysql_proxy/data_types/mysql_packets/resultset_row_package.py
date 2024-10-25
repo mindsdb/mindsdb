@@ -8,11 +8,9 @@
  * permission of MindsDB Inc
  *******************************************************
 """
-import struct
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum import Datum
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import NULL_VALUE
-from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import TYPES
 
 
 class ResultsetRowPacket(Packet):
@@ -21,7 +19,6 @@ class ResultsetRowPacket(Packet):
     https://dev.mysql.com/doc/internals/en/com-query-response.html#packet-ProtocolText::ResultsetRow
     https://mariadb.com/kb/en/resultset-row/
     '''
-
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

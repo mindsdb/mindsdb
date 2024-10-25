@@ -10,14 +10,6 @@ from mindsdb.integrations.utilities.rag.splitters.file_splitter import FileSplit
 from mindsdb.interfaces.agents.langchain_agent import create_chat_model
 
 
-class TableField(str, Enum):
-    """Matches VectorStoreHandler schema fields"""
-    ID = "id"
-    CONTENT = "content"
-    EMBEDDINGS = "embeddings"
-    METADATA = "metadata"
-
-
 class PreprocessorType(str, Enum):
     """Types of preprocessors available"""
     CONTEXTUAL = "contextual"

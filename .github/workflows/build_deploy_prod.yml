@@ -95,6 +95,8 @@ jobs:
           path: github-actions
           ssh-key: ${{ secrets.GH_ACTIONS_PULL_SSH }}
       - uses: ./github-actions/docker-bake-cache
+        with:
+          cache-prefix: main
 
 
   # Call our deployment workflow

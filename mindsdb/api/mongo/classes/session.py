@@ -1,4 +1,5 @@
 import base64
+import os
 
 from mindsdb.api.mongo.classes.scram import Scram
 
@@ -13,8 +14,8 @@ class Session():
         self.scram = Scram(method=method, get_salted_password=self.get_salted_password)
 
     def get_salted_password(self, username, method=None):
-        real_user = self.config['auth'].get('username', '')
-        password = self.config['auth'].get('password', '')
+        real_user = os.environ.get('MINDSDB_USERNAME', '')
+        password = os.environ.get('MINDSDB_PASSWORD', '')
         if username != real_user:
             raise Exception(f'Wrong username {username}')
 

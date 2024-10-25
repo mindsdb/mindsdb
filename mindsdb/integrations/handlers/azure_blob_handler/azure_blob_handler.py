@@ -28,7 +28,7 @@ class ListFilesTable(APIResource):
              conditions: List[FilterCondition] = None,
              *args, **kwargs) -> pd.DataFrame:
 
-        tables = self.handler._get_tables()
+        tables = self.handler.get_files()
         data = []
         for path in tables:
             path = path.replace('`', '')
@@ -179,8 +179,8 @@ class AzureBlobHandler(APIHandler):
         """
         # Connect to Azure Blob via DuckDB.
         duckdb_conn = duckdb.connect(":memory:")
-        duckdb_conn.execute('''INSTALL azure''')
-        duckdb_conn.execute('''LOAD azure''')
+        duckdb_conn.execute('INSTALL azure')
+        duckdb_conn.execute('LOAD azure')
 
         # Configure mandatory credentials.
         duckdb_conn.execute(f'SET azure_storage_connection_string="{self.connection_string}"')
@@ -196,9 +196,7 @@ class AzureBlobHandler(APIHandler):
         """
 
         with self._connect_duckdb() as connection:
-            # connection.execute('SET azure_transport_option_type="curl"')
             cursor = connection.execute(f'SELECT * FROM "azure://{self.container_name}/{key}"')
-
             return cursor.fetchdf()
 
     def _read_as_content(self, key) -> None:
@@ -265,6 +263,20 @@ class AzureBlobHandler(APIHandler):
 
         return response
 
+    def get_files(self) -> List[str]:
+        
+        client = self.connect()
+        container_client = client.get_container_client(self.container_name)
+        all_files = container_client.list_blobs()
+
+        # Wrap the object names with backticks to prevent SQL syntax errors.
+        supported_files = [
+            f"`{file.get('name')}`"
+            for file in all_files if file.get('name').split('.')[-1] in self.supported_file_formats
+        ]
+
+        return supported_files
+
     def get_tables(self) -> Response:
         """
         Retrieves a list of tables (objects) in the Azure Containers.
@@ -278,14 +290,7 @@ class AzureBlobHandler(APIHandler):
         # Get only the supported file formats.
         # Wrap the object names with backticks to prevent SQL syntax errors.
 
-        client = self.connect()
-
-        container_client = client.get_container_client(self.container_name)
-
-        all_files = container_client.list_blobs()
-
-        # Wrap the object names with backticks to prevent SQL syntax errors.
-        supported_files = [f"`{file.get('name')}`" for file in all_files if file.get('name').split('.')[-1] in self.supported_file_formats]
+        supported_files = self.get_files()
 
         # virtual table with list of files
         supported_files.insert(0, 'files')

@@ -8,10 +8,11 @@
  * permission of MindsDB Inc
  *******************************************************
 """
-
+import struct
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum import Datum
 from mindsdb.api.mysql.mysql_proxy.data_types.mysql_packet import Packet
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import NULL_VALUE
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import TYPES
 
 
 class ResultsetRowPacket(Packet):
@@ -21,25 +22,25 @@ class ResultsetRowPacket(Packet):
     https://mariadb.com/kb/en/resultset-row/
     '''
 
-    def setup(self):
-        data = self._kwargs.get('data', {})
-        self.value = []
-        for val in data:
-            if val is None:
-                self.value.append(NULL_VALUE)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._body = b''
+        for i, item in enumerate(self._kwargs['data']):
+            if isinstance(item, str):
+                self._body += Datum.serialize_str(item)
+            elif item is None:
+                self._body += NULL_VALUE
+            elif isinstance(item, bytes):
+                self._body += Datum.serialize_bytes(item)
             else:
-                self.value.append(Datum('string', str(val), 'lenenc'))
+                self._body += Datum.serialize_str(str(item))
+
+        self._length = len(self._body)
 
     @property
     def body(self):
-        string = b''
-        for x in self.value:
-            if x is NULL_VALUE:
-                string += x
-            else:
-                string += x.toStringPacket()
-
-        self.setBody(string)
         return self._body
 
     @staticmethod

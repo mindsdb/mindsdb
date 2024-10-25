@@ -55,10 +55,10 @@ class BinaryResultsetRowPacket(Packet):
                 val = float(val)
             elif col_type == TYPES.MYSQL_TYPE_LONGLONG:
                 enc = '<q'
-                val = int(float(val))
+                val = int(val)
             elif col_type == TYPES.MYSQL_TYPE_LONG:
                 enc = '<l'
-                val = int(float(val))
+                val = int(val)
             elif col_type == TYPES.MYSQL_TYPE_FLOAT:
                 enc = '<f'
                 val = float(val)
@@ -82,6 +82,8 @@ class BinaryResultsetRowPacket(Packet):
                 raise Exception(f'Column with type {col_type} cant be encripted')
 
             if enc == 'string':
+                if not isinstance(val, str):
+                    val = str(val)
                 self.value.append(Datum('string', val, 'lenenc').toStringPacket())
             else:
                 if env_val is None:

@@ -99,8 +99,6 @@ class DuckDBHandler(DatabaseHandler):
         Returns:
             Response: The query result.
         """
-        need_to_close = self.is_connected is False
-
         connection = self.connect()
         cursor = connection.cursor()
 
@@ -125,8 +123,7 @@ class DuckDBHandler(DatabaseHandler):
             response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
 
         cursor.close()
-        if need_to_close is True:
-            self.disconnect()
+        self.disconnect()
 
         return response
 
@@ -153,7 +150,10 @@ class DuckDBHandler(DatabaseHandler):
         q = 'SHOW TABLES;'
         result = self.native_query(q)
         df = result.data_frame
-        result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
+
+        if df is not None:
+            result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
+
         return result
 
     def get_columns(self, table_name: str) -> Response:

@@ -11,7 +11,9 @@ class GCSHandlerTest(unittest.TestCase):
         cls.kwargs = {
             "service_account_keys": 'C:/Users/Talaat/Documents/Github/integration/creds/credentials.json',
             "bucket": 'easy_tour_bucket',
-            "prefix": 'ai'
+            "prefix": 'ai',
+            "gcs_access_key_id": 'AKIAIOSFODNN7EXAMPLE',
+            "gcs_secret_access_key": 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY'
         }
         cls.handler = GoogleCloudStorageHandler('test_gcs_handler', cls.kwargs)
 

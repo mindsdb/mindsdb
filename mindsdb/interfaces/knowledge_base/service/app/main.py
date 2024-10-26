@@ -2,7 +2,11 @@ from fastapi import FastAPI, HTTPException
 from pymilvus import connections, Collection, utility, FieldSchema, CollectionSchema, DataType
 from pydantic import BaseModel
 import os
+import fitz
+from fastapi import File, UploadFile
 import aiohttp
+import asyncio
+import hashlib
 
 app = FastAPI()
 
@@ -12,17 +16,12 @@ MILVUS_PORT = os.getenv("MILVUS_PORT", 19530)
 EMBEDDING_HOST = "ollama"
 EMBEDDING_PORT = 11434
 OLLAMA_EMBEDDING_URL = f"http://{EMBEDDING_HOST}:{EMBEDDING_PORT}/api/embeddings"
-HNSW_DEFAULT_EF_SEARCH = 20
-HNSW_DEFAULT_EF_CONSTRUCTION = 40
-HNSW_DEFAULT_M = 1024
+HNSW_DEFAULT_EF_SEARCH = 2000
+HNSW_DEFAULT_EF_CONSTRUCTION = 2000
+HNSW_DEFAULT_M = 100
 MAX_TEXT_LENGTH = 40000
+PDF_CHUNK_SIZE = 35000
 
-
-# curl command example:
-# curl http://ollama:11434/api/embeddings -d '{
-#   "model": "nomic-embed-text",
-#   "prompt": "The sky is blue because of Rayleigh scattering"
-# }'
 
 class IngestibleText(BaseModel):
     id: str
@@ -69,7 +68,9 @@ async def get_collection_info(name: str):
 @app.post("/search/{collection_name}")
 async def search_collection(collection_name: str,
                             query_vector: list[float],
-                            limit: int = 5):
+                            limit: int = 5,
+                            return_text=False
+                            ):
     if not utility.has_collection(collection_name):
         raise HTTPException(status_code=404, detail="Collection not found")
 
@@ -77,22 +78,31 @@ async def search_collection(collection_name: str,
     collection.load()
 
     search_params = {"metric_type": "COSINE", "params": {"ef": HNSW_DEFAULT_EF_SEARCH}}
+    if return_text:
+        output_fields = ["id", "title", "published_at", "text"]
+    else:
+        output_fields = ["id", "title", "published_at"]
     results = collection.search(
         data=[query_vector],
         anns_field="embedding",  # replace with your vector field name
         param=search_params,
         limit=limit,
+        output_fields=output_fields,  # replace with your vector field name
         expr=None
     )
-
-    return {"results": results[0].distances, "ids": results[0].ids}
+    # convert results to list of dictionaries
+    output_results = []
+    for result in results[0]:  # we only search for one embedding
+        result_dict = result.to_dict()
+        output_results.append(result_dict)
+    return output_results
 
 
 # Fetch embeddings from Ollama service and then search in Milvus
 @app.post("/search_text/{collection_name}")
-async def search_text(collection_name: str, text: str):
+async def search_text(collection_name: str, text: str, limit: int = 5, return_text=False):
     embedding = await fetch_embeddings(text)
-    return await search_collection(collection_name, embedding)
+    return await search_collection(collection_name, embedding, limit, return_text)
 
 
 async def fetch_embeddings(text: str) -> list[float]:
@@ -169,4 +179,50 @@ async def create_collection(name: str, dimension: int):
 
     return {"message": f"Collection '{name}' created successfully", "schema": schema.to_dict()}
 
-# Add more endpoints as needed for your specific use case
+
+@app.post("/extract_text/{collection_name}")
+async def extract_text(file: UploadFile = File(...)) -> str:
+    pdf_content = await file.read()
+    pdf_document = fitz.open(stream=pdf_content, filetype="pdf")
+    # Extract text from the PDF
+    extracted_text = []
+    for page_number in range(pdf_document.page_count):
+        page = pdf_document.load_page(page_number)
+        text = page.get_text()
+        extracted_text.append(text)
+
+    # convert to string
+    extracted_text = "\n".join(extracted_text)
+    # Close the document
+    pdf_document.close()
+    return extracted_text
+
+
+def hash_text(text: str) -> str:
+    hash_object = hashlib.md5()
+    hash_object.update(text.encode("utf-8"))
+    return hash_object.hexdigest()
+
+
+@app.post("/ingest_pdf/{collection_name}")
+async def ingest_pdf(collection_name: str,
+                     title: str = "",
+                     published_at: str = "",
+                     file: UploadFile = File(...)):
+    # reuse the extract_text endpoint to get the text from the PDF
+    extracted_text = await extract_text(file)
+    # split text into chunks of MAX_TEXT_LENGTH characters
+    chunks = [extracted_text[i:i + PDF_CHUNK_SIZE] for i in range(0, len(extracted_text), PDF_CHUNK_SIZE)]
+    awaitable_requests = []
+    for chunk in chunks:
+        hash_id = hash_text(chunk)
+        # print len of chunk
+
+        text = IngestibleText(id=hash_id,
+                              title=title,
+                              published_at=published_at,
+                              text=chunk)
+
+        awaitable_requests.append(ingest_text(collection_name, text))
+    await asyncio.gather(*awaitable_requests)
+    return {"message": "PDF ingested successfully"}

@@ -2,3 +2,5 @@ fastapi
 uvicorn
 pymilvus==2.4.8
 aiohttp
+PyMuPDF
+python-multipart

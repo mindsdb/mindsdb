@@ -7,6 +7,9 @@ from fastapi import File, UploadFile
 import aiohttp
 import asyncio
 import hashlib
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
 
@@ -34,13 +37,13 @@ class IngestibleText(BaseModel):
 @app.on_event("startup")
 async def startup_event():
     connections.connect("default", host=MILVUS_HOST, port=MILVUS_PORT)
-    print(f"Connected to Milvus server at {MILVUS_HOST}:{MILVUS_PORT}")
+    logging.info(f"Connected to Milvus server at {MILVUS_HOST}:{MILVUS_PORT}")
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
     connections.disconnect("default")
-    print("Disconnected from Milvus server")
+    logging.info("Disconnected from Milvus server")
 
 
 @app.get("/")
@@ -216,7 +219,7 @@ async def ingest_pdf(collection_name: str,
     awaitable_requests = []
     for chunk in chunks:
         hash_id = hash_text(chunk)
-        # print len of chunk
+        logging.info(f"Ingesting pdf chunk with length {len(chunk)} and hash {hash_id}")
 
         text = IngestibleText(id=hash_id,
                               title=title,

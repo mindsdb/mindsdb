@@ -256,8 +256,6 @@ class KnowledgeBaseResource(Resource):
             )
         try:
             table = session.kb_controller.get_table(knowledge_base_name, project.id)
-            print('GOT TABLE:')
-            print(table)
         except ValueError:
             # Knowledge Base must exist.
             return http_error(

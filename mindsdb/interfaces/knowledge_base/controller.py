@@ -1,6 +1,6 @@
 import os
 import copy
-from typing import List
+from typing import Dict, List
 
 import pandas as pd
 
@@ -17,7 +17,11 @@ from mindsdb_sql.parser.ast import (
 from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor
 
 import mindsdb.interfaces.storage.db as db
-from mindsdb.integrations.libs.vectordatabase_handler import TableField
+from mindsdb.integrations.libs.vectordatabase_handler import (
+    DistanceFunction,
+    TableField,
+    VectorStoreHandler,
+)
 from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
 from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel
 from mindsdb.interfaces.agents.langchain_agent import build_embedding_model, create_chat_model, get_llm_provider
@@ -111,6 +115,28 @@ class KnowledgeBaseTable:
         # send to vectordb
         db_handler = self.get_vector_db()
         db_handler.query(query)
+
+    def hybrid_search(
+        self,
+        query: str,
+        keywords: List[str] = None,
+        metadata: Dict[str, str] = None,
+        distance_function=DistanceFunction.COSINE_DISTANCE
+    ) -> pd.DataFrame:
+        query_df = pd.DataFrame.from_records([{TableField.CONTENT.value: query}])
+        embeddings_df = self._df_to_embeddings(query_df)
+        embeddings = embeddings_df.iloc[0][TableField.EMBEDDINGS.value]
+        keywords_query = None
+        if keywords is not None:
+            keywords_query = ' '.join(keywords)
+        db_handler = self.get_vector_db()
+        return db_handler.hybrid_search(
+            self._kb.vector_database_table,
+            embeddings,
+            query=keywords_query,
+            metadata=metadata,
+            distance_function=distance_function
+        )
 
     def clear(self):
         """
@@ -254,7 +280,7 @@ class KnowledgeBaseTable:
                     node.args[0].parts = [TableField.EMBEDDINGS.value]
                     node.args[1].value = [self._content_to_embeddings(node.args[1].value)]
 
-    def get_vector_db(self):
+    def get_vector_db(self) -> VectorStoreHandler:
         """
         helper to get vector db handler
         """

@@ -381,7 +381,6 @@ def test_successful_completion(client, create_test_kb):
     kb_name = create_test_kb
     completion_request = {
         'query': 'What is the capital of France?',
-        'knowledge_base': kb_name
     }
     response = client.post(f'/api/projects/mindsdb/knowledge_bases/{kb_name}/completions',
                            json=completion_request, follow_redirects=True)
@@ -403,21 +402,10 @@ def test_completion_missing_query_parameter(client, create_test_kb):
     assert response.status_code == 400
 
 
-def test_completion_missing_knowledge_base_parameter(client, create_test_kb):
-    kb_name = create_test_kb
-    invalid_request = {
-        'query': 'What is the capital of France?'
-    }
-    response = client.post(f'/api/projects/mindsdb/knowledge_bases/{kb_name}/completions',
-                           json=invalid_request, follow_redirects=True)
-    assert response.status_code == 400
-
-
 def test_completion_non_existent_project(client, create_test_kb):
     kb_name = create_test_kb
     completion_request = {
         'query': 'What is the capital of France?',
-        'knowledge_base': kb_name
     }
     response = client.post(f'/api/projects/nonexistent/knowledge_bases/{kb_name}/completions',
                            json=completion_request, follow_redirects=True)
@@ -427,7 +415,6 @@ def test_completion_non_existent_project(client, create_test_kb):
 def test_completion_non_existent_knowledge_base(client):
     completion_request = {
         'query': 'What is the capital of France?',
-        'knowledge_base': 'nonexistent_kb'
     }
     response = client.post('/api/projects/mindsdb/knowledge_bases/nonexistent_kb/completions',
                            json=completion_request, follow_redirects=True)

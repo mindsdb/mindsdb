@@ -1,3 +1,4 @@
+import re
 from typing import Text, Dict, Optional, Any
 
 import duckdb
@@ -6,7 +7,8 @@ import pandas as pd
 from google.api_core.exceptions import BadRequest
 from google.cloud.storage import Client
 
-from duckdb import DuckDBPyConnection
+from duckdb import DuckDBPyConnection, CatalogException
+from mindsdb_sql import ASTNode, Select, Identifier
 
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.utilities import log
@@ -106,9 +108,13 @@ class GoogleCloudStorageHandler(DatabaseHandler):
         duckdb_conn.execute("LOAD httpfs")
 
         # Configure mandatory credentials.
-        duckdb_conn.execute(f"CREATE SECRET (TYPE GCS, "
-                            f"KEY_ID '{self.connection_data['gcs_access_key_id']}', "
-                            f"SECRET '{self.connection_data['gcs_secret_access_key']}')")
+        duckdb_conn.execute(f"""
+        CREATE SECRET(
+            TYPE GCS,
+            KEY_ID '{self.connection_data["gcs_access_key_id"]}',
+            SECRET '{self.connection_data["gcs_secret_access_key"]},'
+        );
+        """)
 
         return duckdb_conn
 
@@ -190,6 +196,137 @@ class GoogleCloudStorageHandler(DatabaseHandler):
 
         return response
 
+    def native_query(self, query: Text) -> Response:
+        """
+        Executes a SQL query on the specified table (object) in the GCS bucket.
+
+        Args:
+            query (Text): The SQL query to be executed.
+
+        Returns:
+            Response: A response object containing the result of the query or an error message.
+        """
+        need_to_close = not self.is_connected
+
+        connection = self.connect()
+        cursor = connection.cursor()
+
+        try:
+            # TODO: Can the creation of tables be avoided for SELECT queries?
+            self._create_table_if_not_exists_from_file()
+
+            cursor.execute(query)
+            if self.is_select_query:
+                result = cursor.fetchall()
+                response = Response(
+                    RESPONSE_TYPE.TABLE,
+                    data_frame=pd.DataFrame(
+                        result,
+                        columns=[x[0] for x in cursor.description]
+                    )
+                )
+
+            else:
+                connection.commit()
+                # TODO: Is it possible to avoid writing the table to a file after each query?
+                self._write_table_to_file()
+                response = Response(RESPONSE_TYPE.OK)
+
+        except Exception as e:
+            logger.error(f'Error running query: {query} on {self.bucket}, {e}!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_message=str(e)
+            )
+
+        if need_to_close is True:
+            self.disconnect()
+
+        return response
+
+    def _create_table_if_not_exists_from_file(self) -> None:
+        """
+        Creates a table from a file in the GCS bucket.
+
+        Raises:
+            CatalogException: If the file does not exist in the GCS bucket.
+        """
+        connection = self.connect()
+        try:
+            connection.execute(f"CREATE TABLE IF NOT EXISTS {self.table_name} AS SELECT * FROM 'gcs://{self.bucket}/{self.key}'")
+        except CatalogException as e:
+            logger.error(f'Error creating table {self.table_name} from file {self.key} in {self.bucket}, {e}!')
+            raise e
+
+    def _write_table_to_file(self) -> None:
+        """
+        Writes the table to a file in the GCS bucket.
+
+        Raises:
+            CatalogException: If the table does not exist in the DuckDB connection.
+        """
+        try:
+            connection = self.connect()
+            connection.execute(f"COPY {self.table_name} TO 'gcs://{self.bucket}/{self.key}'")
+        except CatalogException as e:
+            logger.error(f'Error writing table {self.table_name} to file {self.key} in {self.bucket}, {e}!')
+            raise e
+
+    def query(self, query: ASTNode) -> Response:
+        """
+        Executes a SQL query represented by an ASTNode and retrieves the data.
+
+        Args:
+            query (ASTNode): An ASTNode representing the SQL query to be executed.
+
+        Raises:
+            ValueError: If the file format is not supported or the file does not exist in the GCS bucket.
+
+        Returns:
+            Response: The response from the `native_query` method, containing the result of the SQL query execution.
+        """
+        # Set the key by getting it from the query.
+        # This will be used to create a table from the object in the S3 bucket.
+        if isinstance(query, Select):
+            self.is_select_query = True
+            table = query.from_table
+
+        else:
+            table = query.table
+
+        self.key = table.get_string().replace('`', '')
+
+        # Check if the file format is supported.
+        if self.key.split('.')[-1] not in self.supported_file_formats:
+            logger.error(f'The file format {self.key.split(".")[-1]} is not supported!')
+            raise ValueError(f'The file format {self.key.split(".")[-1]} is not supported!')
+
+        # Check if the file exists in the GCS bucket.
+        try:
+            gcs_conn = self._connect_gcs()
+            gcs_conn.get_bucket(self.bucket).get_blob(self.key)
+        except Exception as e:
+            logger.error(f'The file {self.key} not found in the bucket {self.bucket}, {e}!')
+            raise e
+
+        # Replace all special characters in the key with underscores to create a valid table name.
+        self.table_name = re.sub(r'[\W]+', '_', self.key)
+
+        # Replace the key with the name of the table to be created.
+        if self.is_select_query:
+            query.from_table = Identifier(
+                parts=[self.table_name],
+                alias=table.alias
+            )
+
+        else:
+            query.table = Identifier(
+                parts=[self.table_name],
+                alias=table.alias
+            )
+
+        return self.native_query(query.to_string())
+
     def get_tables(self) -> Response:
         """
         Retrieves a list of objects in the GCS bucket.
@@ -199,7 +336,7 @@ class GoogleCloudStorageHandler(DatabaseHandler):
         Returns:
             Response: A response object containing the list of tables and views, formatted as per the `Response` class.
         """
-        client = self.connect()
+        client = self._connect_gcs()
         blobs = client.list_blobs(self.bucket, prefix=self.prefix)
         objects = []
 
@@ -226,5 +363,36 @@ class GoogleCloudStorageHandler(DatabaseHandler):
 
         return response
 
-    def get_columns(self, table_name: str) -> Response:
-        pass
+    def get_columns(self, table_name: Text) -> Response:
+        """
+        Retrieves column details for a specified table (object) in the GCS bucket.
+
+        Args:
+            table_name (Text): The name of the table for which to retrieve column information.
+
+        Raises:
+            ValueError: If the 'table_name' is not a valid string.
+
+        Returns:
+            Response: A response object containing the column details, formatted as per the `Response` class.
+        """
+        if not table_name or not isinstance(table_name, str):
+            raise ValueError("Invalid table name provided.")
+
+        # TODO: Is there a more efficient way to get the column details?
+        # If not, can it be limited to one column?
+        query = f"SELECT * FROM {table_name} LIMIT 5"
+        result = self.native_query(query)
+
+        response = Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=pd.DataFrame(
+                {
+                    'column_name': result.data_frame.columns,
+                    'data_type': [data_type if data_type != 'object' else 'string' for data_type in
+                                  result.data_frame.dtypes]
+                }
+            )
+        )
+
+        return response

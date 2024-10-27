@@ -124,7 +124,7 @@ class GoogleCloudStorageHandler(DatabaseHandler):
         Returns:
             google.cloud.storage.client.Client: The client object for the Google CLoud Storage connection.
         """
-        # # Mandatory connection parameters
+        # Mandatory connection parameters
         if not self.bucket:
             raise ValueError('Required parameters (bucket) must be provided.')
 

@@ -103,7 +103,6 @@ class GoogleCloudStorageHandler(DatabaseHandler):
        """
         # Connect to S3 via DuckDB.
         duckdb_conn = duckdb.connect()
-        duckdb_conn.begin()
         duckdb_conn.execute("INSTALL httpfs")
         duckdb_conn.execute("LOAD httpfs")
 
@@ -112,7 +111,7 @@ class GoogleCloudStorageHandler(DatabaseHandler):
         CREATE SECRET(
             TYPE GCS,
             KEY_ID '{self.connection_data["gcs_access_key_id"]}',
-            SECRET '{self.connection_data["gcs_secret_access_key"]},'
+            SECRET '{self.connection_data["gcs_secret_access_key"]}'
         );
         """)
 

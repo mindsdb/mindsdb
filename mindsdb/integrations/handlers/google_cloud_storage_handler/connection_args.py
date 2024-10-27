@@ -7,14 +7,14 @@ connection_args = OrderedDict(
         'type': ARG_TYPE.STR,
         'description': 'The HMAC access key id.',
         'required': True,
-        'label': 'AWS Access Key'
+        'label': 'GCS Access Key'
     },
     gcs_secret_access_key={
         'type': ARG_TYPE.STR,
         'description': 'The HMAC secret access key.',
         'secret': True,
         'required': True,
-        'label': 'AWS Secret Access Key'
+        'label': 'GCS Secret Access Key'
     },
     service_account_keys={
         'type': ARG_TYPE.PATH,

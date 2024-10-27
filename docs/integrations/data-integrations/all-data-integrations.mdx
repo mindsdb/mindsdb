@@ -903,6 +903,43 @@ Check out the Firebird data handler details [here](/data-integrations/firebird).
 Check out the Google BigQuery data handler details [here](/data-integrations/google-bigquery).
 </Info>
 
+## Google CLoud Storage
+
+<Tabs>
+    <Tab title="Template">
+    ```sql
+    CREATE DATABASE gcs_datasource          --- display name for the database
+    WITH ENGINE = 'gcs',                    --- name of the MindsDB handler
+    PARAMETERS = {
+      "gcs_access_key_id": ' ',             --- the Google HMAC access key id
+      "gcs_secret_access_key": ' ',         --- the Google HMAC secret access key
+      "service_account_keys": ' ',          --- the path to service account json file
+      "bucket": ' ',                        --- name of the GCS bucket
+      "prefix": ' ',                        --- a string to filter you objects (files)
+      "file_type": ' '                      --- the file format of your data
+    };
+    ```
+    </Tab>
+    <Tab title="Example">
+    ```sql
+    CREATE DATABASE gcs_datasource
+    WITH ENGINE = 'gcs',
+    PARAMETERS = {
+      "gcs_access_key_id": 'AQAXEQK89OX07YS34OP',
+      "gcs_secret_access_key": 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
+      "service_account_keys": '/path/to/service_account.json',
+      "bucket": 'my-bucket',
+      "prefix": 'al',
+      "file_type": 'parquet'
+    };
+    ```
+    </Tab>
+</Tabs>
+
+<Info>
+Check out the Google Cloud Storage data handler details [here](/data-integrations/google-cloud-storage).
+</Info>
+
 ## Google Sheets
 
 <Tabs>

@@ -170,7 +170,7 @@ class GcsHandler(APIHandler):
         ar = key.split('/')
         return ar[0], '/'.join(ar[1:])
 
-    def _read_as_table(self, key) -> pd.DataFrame:
+    def read_as_table(self, key) -> pd.DataFrame:
         """
         Read object as dataframe. Uses duckdb
         """

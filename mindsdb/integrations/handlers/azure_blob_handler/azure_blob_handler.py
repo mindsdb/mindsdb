@@ -21,8 +21,8 @@ from mindsdb_sql.parser.ast import Select, Identifier, Insert
 
 logger = log.getLogger(__name__)
 
-class ListFilesTable(APIResource):
 
+class ListFilesTable(APIResource):
 
     def list(self,
              targets: List[str] = None,
@@ -104,10 +104,10 @@ class AzureBlobHandler(APIHandler):
             return self.connection
 
         sas_token = generate_account_sas(
-            account_name=self.storage_account_name, 
-            account_key=self.account_access_key, 
-            resource_types=ResourceTypes(service=True, container=True, object=True), 
-            permission=AccountSasPermissions(read=True, list=True), 
+            account_name=self.storage_account_name,
+            account_key=self.account_access_key,
+            resource_types=ResourceTypes(service=True, container=True, object=True),
+            permission=AccountSasPermissions(read=True, list=True),
             expiry=datetime.now() + timedelta(hours=1)
         )
 
@@ -190,7 +190,7 @@ class AzureBlobHandler(APIHandler):
         """
 
         connection = self.connect()
-        client = connection.get_blob_client(container=self.container_name,blob=key)
+        client = connection.get_blob_client(container=self.container_name, blob=key)
 
         return client.download_blob()
 
@@ -215,8 +215,6 @@ class AzureBlobHandler(APIHandler):
             raise e
 
         with self._connect_duckdb() as connection:
-            cursor = connection.execute(f'SELECT * FROM "azure://{self.container_name}/{key}"')
-
             # copy
             connection.execute(f'CREATE TABLE tmp_table AS SELECT * FROM "azure://{self.container_name}/{key}"')
 
@@ -225,7 +223,6 @@ class AzureBlobHandler(APIHandler):
 
             # upload
             connection.execute(f'COPY tmp_table TO "azure://{self.container_name}/{key}"')
-
 
     def query(self, query: ASTNode) -> Response:
         """

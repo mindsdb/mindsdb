@@ -1,5 +1,4 @@
 import mysql.connector
-import os
 import pytest
 
 from .test_mysql_api import TestMySqlApi, Dlist
@@ -27,8 +26,8 @@ class TestMySqlBinApi(TestMySqlApi):
             host=self.config["api"]["mysql"]["host"],
             port=self.config["api"]["mysql"]["port"],
             database='mindsdb',
-            user=os.environ.get('MINDSDB_USERNAME'),
-            password=os.environ.get('MINDSDB_PASSWORD'),
+            user=self.config["auth"]["username"],
+            password=self.config["auth"]["password"]
         )
         cursor = cnx.cursor(prepared=True)
 

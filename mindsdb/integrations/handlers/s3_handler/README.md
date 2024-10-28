@@ -24,6 +24,10 @@ WITH
     };
 ```
 
+<Note>
+Note that sample parameter values are provided here for reference, and you should replace them with your connection parameters.
+</Note>
+
 Required connection parameters include the following:
 
 * `aws_access_key_id`: The AWS access key that identifies the user or IAM role.

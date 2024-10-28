@@ -9,6 +9,7 @@ import duckdb
 
 # from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient, generate_account_sas, ResourceTypes, AccountSasPermissions
+
 from datetime import datetime, timedelta
 from contextlib import contextmanager
 from typing import List
@@ -124,6 +125,7 @@ class AzureBlobHandler(APIHandler):
             HandlerStatusResponse
         """
         response = StatusResponse(False)
+        need_to_close = self.is_connected is False
 
         try:
             client = self.connect()
@@ -134,26 +136,13 @@ class AzureBlobHandler(APIHandler):
             logger.error(f'Error connecting to Azure Blob: {e}!')
             response.error_message = e
 
-        self.is_connected = response.success
+        if response.success and need_to_close:
+            self.disconnect()
+
+        elif not response.success and self.is_connected:
+            self.is_connected = False
+
         return response
-
-    def native_query(self, query: str = None) -> Response:
-        """Receive raw query and act upon it somehow.
-        Args:
-            query (Any): query in native format (str for sql databases,
-                dict for mongo, api's json etc)
-        Returns:
-            HandlerResponse
-        """
-
-    def call_application_api(self, method_name:str = None, params:dict = None) -> pd.DataFrame:
-        """Receive query as AST (abstract syntax tree) and act upon it somehow.
-        Args:
-            query (ASTNode): sql query represented as AST. Can be any kind
-                of query: SELECT, INSERT, DELETE, etc
-        Returns:
-            DataFrame
-        """
 
     def disconnect(self):
         """
@@ -207,32 +196,35 @@ class AzureBlobHandler(APIHandler):
 
     def add_data_to_table(self, key, df) -> None:
         pass
-    #     """
-    #     Writes the table to a file in the azure container.
+        """
+        Writes the table to a file in the azure container.
 
-    #     Raises:
-    #         CatalogException: If the table does not exist in the DuckDB connection.
-    #     """
+        Raises:
+            CatalogException: If the table does not exist in the DuckDB connection.
+        """
 
-    #     # Check if the file exists in the S3 bucket.
-    #     bucket, key = self._get_bucket(key)
+        # Check if the file exists in the Container.
 
-    #     try:
-    #         client = self.connect()
-    #         client.head_object(Bucket=bucket, Key=key)
-    #     except ClientError as e:
-    #         logger.error(f'Error querying the file {key} in the bucket {bucket}, {e}!')
-    #         raise e
+        try:
+            client = self.connect()
+            blob_client = client.get_blob_client(container=self.container_name, blob=key)
+            blob_client.close()
 
-    #     with self._connect_duckdb(bucket) as connection:
-    #         # copy
-    #         connection.execute(f"CREATE TABLE tmp_table AS SELECT * FROM 's3://{bucket}/{key}'")
+        except Exception as e:
+            logger.error(f'Error querying the file {key} in the container {self.container_name}, {e}!')
+            raise e
 
-    #         # insert
-    #         connection.execute("INSERT INTO tmp_table BY NAME SELECT * FROM df")
+        with self._connect_duckdb() as connection:
+            cursor = connection.execute(f'SELECT * FROM "azure://{self.container_name}/{key}"')
 
-    #         # upload
-    #         connection.execute(f"COPY tmp_table TO 's3://{bucket}/{key}'")
+            # copy
+            connection.execute(f'CREATE TABLE tmp_table AS SELECT * FROM "azure://{self.container_name}/{key}"')
+
+            # insert
+            connection.execute("INSERT INTO tmp_table BY NAME SELECT * FROM df")
+
+            # upload
+            connection.execute(f'COPY tmp_table TO "azure://{self.container_name}/{key}"')
 
 
     def query(self, query: ASTNode) -> Response:

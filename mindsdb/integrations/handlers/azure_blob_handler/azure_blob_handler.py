@@ -7,16 +7,16 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.utilities import log
 import duckdb
-from duckdb import DuckDBPyConnection
-from azure.identity import DefaultAzureCredential
+
+# from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient, generate_account_sas, ResourceTypes, AccountSasPermissions
 from datetime import datetime, timedelta
 from contextlib import contextmanager
-from typing import List,Text, Dict
+from typing import List
 from mindsdb.integrations.libs.api_handler import APIResource, APIHandler
 from mindsdb.integrations.utilities.sql_utils import FilterCondition
 from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.parser.ast import Select, Identifier, Insert, Star, Constant
+from mindsdb_sql.parser.ast import Select, Identifier, Insert
 
 
 logger = log.getLogger(__name__)
@@ -73,11 +73,9 @@ class AzureBlobHandler(APIHandler):
 
         self.connection = None
         self.is_connected = False
-
         self._tables = {}
         self.storage_account_name = None
-        self.account_access_key = None
-        
+        self.account_access_key = None        
         self._files_table = ListFilesTable(self)
         self.container_name = None
 
@@ -106,10 +104,10 @@ class AzureBlobHandler(APIHandler):
             return self.connection
 
         sas_token = generate_account_sas(
-            account_name=self.storage_account_name,
-            account_key=self.account_access_key,
-            resource_types=ResourceTypes(service=True,container=True,object=True),
-            permission=AccountSasPermissions(read=True,list=True),
+            account_name=self.storage_account_name, 
+            account_key=self.account_access_key, 
+            resource_types=ResourceTypes(service=True,container=True,object=True), 
+            permission=AccountSasPermissions(read=True,list=True), 
             expiry=datetime.now() + timedelta(hours=1)
         )
 

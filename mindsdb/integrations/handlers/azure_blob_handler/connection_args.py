@@ -30,7 +30,7 @@ connection_args = OrderedDict(
         'label': 'Connection String',
         'secret': True
     },
-    
+
 )
 
 connection_args_example = OrderedDict(

@@ -2,7 +2,7 @@ import io
 import pandas as pd
 import dropbox
 
-from dropbox.exceptions import AuthError, ApiError
+from dropbox.exceptions import AuthError, ApiError, BadInputError
 from typing import Dict, Optional, Text
 
 from mindsdb_sql.parser.ast.base import ASTNode
@@ -74,23 +74,38 @@ class DropboxHandler(APIHandler):
         self._register_table("files", ListFilesTable(self))
 
     def connect(self):
-        if self.is_connected:
-            return
-        if "access_token" not in self.connection_data:
-            raise ValueError("Access token must be provided.")
-        self.dbx = dropbox.Dropbox(self.connection_data["access_token"])
-        self.is_connected = True
-        self.logger.info(
-            f"Connected to Dropbox as {self.dbx.users_get_current_account().email}"
-        )
+        try:
+            if self.is_connected:
+                return
+            if "access_token" not in self.connection_data:
+                raise ValueError("Access token must be provided.")
+            self.dbx = dropbox.Dropbox(self.connection_data["access_token"])
+            self.is_connected = True
+            self.logger.info(
+                f"Connected to Dropbox as {self.dbx.users_get_current_account().email}"
+            )
+        except ValueError as e:
+            self.logger.error(f"Error connecting to Dropbox: {e}")
+        except AuthError as e:
+            self.logger.error(f"Authentication error with Dropbox: {e}")
+        except BadInputError as e:
+            self.logger.error(f"Bad input error with Dropbox: {e}")
+        except Exception as e:
+            self.logger.error(f"Error with Dropbox: {e}")
 
     def check_connection(self) -> StatusResponse:
         response = StatusResponse(False)
         try:
             self.connect()
             response.success = True
-        except (AuthError, ApiError, ValueError) as e:
-            self.logger.error(f"Error connecting to Dropbox: {e}")
+        except (ApiError, ValueError) as e:
+            self.logger.error(f"Error connecting to Dropbox with Dropbox: {e}")
+            response.error_message = str(e)
+        except AuthError as e:
+            self.logger.error(f"Authentication error with Dropbox: {e}")
+            response.error_message = str(e)
+        except Exception as e:
+            self.logger.error(f"Error with Dropbox Handler: {e}")
             response.error_message = str(e)
         return response
 
@@ -173,35 +188,49 @@ class DropboxHandler(APIHandler):
         return files
 
     def _read_file(self, path) -> pd.DataFrame:
-        _, res = self.dbx.files_download(path)
-        content = res.content
-        extension = path.split(".")[-1].lower()
-        if extension == "csv":
-            df = pd.read_csv(io.BytesIO(content))
-        elif extension == "tsv":
-            df = pd.read_csv(io.BytesIO(content), sep="\t")
-        elif extension == "json":
-            df = pd.read_json(io.BytesIO(content))
-        elif extension == "parquet":
-            df = pd.read_parquet(io.BytesIO(content))
-        else:
-            raise ValueError(f"Unsupported file format: {extension}")
-        return df
+        try:
+            _, res = self.dbx.files_download(path)
+            content = res.content
+            extension = path.split(".")[-1].lower()
+            if extension == "csv":
+                df = pd.read_csv(io.BytesIO(content))
+            elif extension == "tsv":
+                df = pd.read_csv(io.BytesIO(content), sep="\t")
+            elif extension == "json":
+                df = pd.read_json(io.BytesIO(content))
+            elif extension == "parquet":
+                df = pd.read_parquet(io.BytesIO(content))
+            else:
+                raise ValueError(f"Unsupported file format: {extension}")
+            return df
+        except ValueError as e:
+            self.logger.error(f"Error with file extension: {e}")
+        except ApiError as e:
+            self.logger.error(f"Error when downloading a file from Dropbox: {e}")
+        except Exception as e:
+            self.logger.error(f"Error with Dropbox Handler: {e}")
 
     def _write_file(self, path, df: pd.DataFrame):
-        extension = path.split(".")[-1].lower()
-        buffer = io.BytesIO()
-        if extension == "csv":
-            df.to_csv(buffer, index=False)
-        elif extension == "tsv":
-            df.to_csv(buffer, index=False, sep="\t")
-        elif extension == "json":
-            df.to_json(buffer, orient="records")
-        elif extension == "parquet":
-            df.to_parquet(buffer, index=False)
-        else:
-            raise ValueError(f"Unsupported file format: {extension}")
-        buffer.seek(0)
-        self.dbx.files_upload(
-            buffer.read(), path, mode=dropbox.files.WriteMode.overwrite
-        )
+        try:
+            extension = path.split(".")[-1].lower()
+            buffer = io.BytesIO()
+            if extension == "csv":
+                df.to_csv(buffer, index=False)
+            elif extension == "tsv":
+                df.to_csv(buffer, index=False, sep="\t")
+            elif extension == "json":
+                df.to_json(buffer, orient="records")
+            elif extension == "parquet":
+                df.to_parquet(buffer, index=False)
+            else:
+                raise ValueError(f"Unsupported file format: {extension}")
+            buffer.seek(0)
+            self.dbx.files_upload(
+                buffer.read(), path, mode=dropbox.files.WriteMode.overwrite
+            )
+        except ValueError as e:
+            self.logger.error(f"Error with file extension: {e}")
+        except ApiError as e:
+            self.logger.error(f"Error when writing a file to Dropbox: {e}")
+        except Exception as e:
+            self.logger.error(f"Error with Dropbox Handler: {e}")

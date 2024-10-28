@@ -2,7 +2,7 @@ import unittest
 from mindsdb.integrations.handlers.dropbox_handler.dropbox_handler import DropboxHandler
 
 
-class S3HandlerTest(unittest.TestCase):
+class DropboxHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kwargs = {

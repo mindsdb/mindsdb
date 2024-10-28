@@ -63,4 +63,8 @@ The above examples utilize `azureblob_datasource` as the datasource name, which 
 Current workaround is executing the following 2 statements as root:
 mkdir -p /etc/pki/tls/certs
 ln -s /etc/ssl/certs/ca-certificates.crt /etc/pki/tls/certs/ca-bundle.crt
+
+References:
+https://duckdb.org/docs/extensions/azure.html#authentication
+https://medium.com/datamindedbe/quacking-queries-in-the-azure-cloud-with-duckdb-14be50f6e141
 </Warning>

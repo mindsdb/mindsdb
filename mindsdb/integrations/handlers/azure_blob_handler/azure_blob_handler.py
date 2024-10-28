@@ -1,5 +1,4 @@
 import pandas as pd
-from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -22,6 +21,7 @@ from mindsdb_sql.parser.ast import Select, Identifier, Insert
 logger = log.getLogger(__name__)
 
 class ListFilesTable(APIResource):
+
 
     def list(self,
              targets: List[str] = None,
@@ -75,7 +75,7 @@ class AzureBlobHandler(APIHandler):
         self.is_connected = False
         self._tables = {}
         self.storage_account_name = None
-        self.account_access_key = None        
+        self.account_access_key = None
         self._files_table = ListFilesTable(self)
         self.container_name = None
 
@@ -91,7 +91,6 @@ class AzureBlobHandler(APIHandler):
 
         if 'connection_string' in connection_data:
             self.connection_string = connection_data['connection_string']
-        
 
     def connect(self) -> BlobServiceClient:
         """ Set up any connections required by the handler
@@ -106,8 +105,8 @@ class AzureBlobHandler(APIHandler):
         sas_token = generate_account_sas(
             account_name=self.storage_account_name, 
             account_key=self.account_access_key, 
-            resource_types=ResourceTypes(service=True,container=True,object=True), 
-            permission=AccountSasPermissions(read=True,list=True), 
+            resource_types=ResourceTypes(service=True, container=True, object=True), 
+            permission=AccountSasPermissions(read=True, list=True), 
             expiry=datetime.now() + timedelta(hours=1)
         )
 
@@ -291,7 +290,6 @@ class AzureBlobHandler(APIHandler):
         return response
 
     def get_files(self) -> List[str]:
-        
         client = self.connect()
         container_client = client.get_container_client(self.container_name)
         all_files = container_client.list_blobs()

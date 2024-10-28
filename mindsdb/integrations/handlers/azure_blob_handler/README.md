@@ -20,15 +20,17 @@ WITH
     parameters = {
       "storage_account_name": "",
       "account_access_key": "",
-      "container_name":""
+      "container_name":"",
+      "connection_string":""
     };
 ```
 
 Required connection parameters include the following:
 
-* `storage_account_name`: The Storage Account Name.
-* `account_access_key`: The account access key.
-* `container_name`: The container name.
+* `storage_account_name`: The name of your storage account.
+* `account_access_key`: The account access key, you can found it after entering storage account interface, under "Security & Networking" menu >> "Access Keys" >> pick one from 2 available key pairs.
+* `container_name`: The name of your container.
+* `connection_string`: The connection string of your account, you can found it after entering storage account interface, under "Security & Networking" menu >> "Access Keys" >> pick the connection string that under the same key as your account_access_key
 
 
 ## Usage
@@ -50,3 +52,15 @@ At the moment, the supported file formats are CSV, TSV, JSON, and Parquet.
 <Note>
 The above examples utilize `azureblob_datasource` as the datasource name, which is defined in the `CREATE DATABASE` command.
 </Note>
+
+## Known Issue
+<Warning>
+`Problem with the SSL CA cert` (you most likely get this error if your current OS is ubuntu / other linux distro)
+
+* **Symptoms**: Error: Invalid Error: Fail to get a new connection for: https://⟨storage account name⟩.blob.core.windows.net/. Problem with the SSL CA cert (path? access rights?))
+
+* **Solution**:
+Current workaround is executing the following 2 statements as root:
+mkdir -p /etc/pki/tls/certs
+ln -s /etc/ssl/certs/ca-certificates.crt /etc/pki/tls/certs/ca-bundle.crt
+</Warning>

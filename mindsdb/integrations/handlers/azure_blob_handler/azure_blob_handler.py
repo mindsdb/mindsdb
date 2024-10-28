@@ -53,8 +53,7 @@ class FileTable(APIResource):
 
     def add(self, data, table_name=None):
         df = pd.DataFrame(data)
-        return self.handler._add_data_to_table(table_name, df)
-
+        return self.handler.add_data_to_table(table_name, df)
 
 
 class AzureBlobHandler(APIHandler):
@@ -208,6 +207,36 @@ class AzureBlobHandler(APIHandler):
         client = connection.get_blob_client(container=self.container_name,blob=key)
 
         return client.download_blob()
+
+    def add_data_to_table(self, key, df) -> None:
+        pass
+    #     """
+    #     Writes the table to a file in the azure container.
+
+    #     Raises:
+    #         CatalogException: If the table does not exist in the DuckDB connection.
+    #     """
+
+    #     # Check if the file exists in the S3 bucket.
+    #     bucket, key = self._get_bucket(key)
+
+    #     try:
+    #         client = self.connect()
+    #         client.head_object(Bucket=bucket, Key=key)
+    #     except ClientError as e:
+    #         logger.error(f'Error querying the file {key} in the bucket {bucket}, {e}!')
+    #         raise e
+
+    #     with self._connect_duckdb(bucket) as connection:
+    #         # copy
+    #         connection.execute(f"CREATE TABLE tmp_table AS SELECT * FROM 's3://{bucket}/{key}'")
+
+    #         # insert
+    #         connection.execute("INSERT INTO tmp_table BY NAME SELECT * FROM df")
+
+    #         # upload
+    #         connection.execute(f"COPY tmp_table TO 's3://{bucket}/{key}'")
+
 
     def query(self, query: ASTNode) -> Response:
         """

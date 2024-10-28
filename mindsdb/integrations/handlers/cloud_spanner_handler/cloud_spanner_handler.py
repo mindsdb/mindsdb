@@ -20,6 +20,7 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
+
 class CloudSpannerHandler(DatabaseHandler):
     """This handler handles connection and execution of the Cloud Spanner statements."""
 
@@ -189,7 +190,10 @@ class CloudSpannerHandler(DatabaseHandler):
         '''
         result = self.native_query(query)
         df = result.data_frame
-        result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
+
+        if df is not None:
+            result.data_frame = df.rename(columns={df.columns[0]: 'table_name'})
+
         return result
 
     def get_columns(self, table_name: str) -> Response:

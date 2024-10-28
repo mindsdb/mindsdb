@@ -62,16 +62,14 @@ if not OTEL_SDK_DISABLED or OTEL_SDK_FORCE_RUN:
             endpoint=OTEL_OTLP_ENDPOINT,  # Default OTLP endpoint
             insecure=True  # Disable TLS for local testing
         )
-        # span_processor = BatchSpanProcessor(exporter)
 
     else:
         logger.info("OpenTelemetry is using Console exporter")
 
         exporter = ConsoleSpanExporter()
-        # span_processor = SimpleSpanProcessor(exporter)
 
     # Create a batch span processor
     span_processor = BatchSpanProcessor(GlobalTaggingSpanProcessor(exporter))
 
     # Replace the default span processor with the custom one
-    trace.get_tracer_provider().add_span_processor(GlobalTaggingSpanProcessor(exporter))
+    trace.get_tracer_provider().add_span_processor(span_processor)

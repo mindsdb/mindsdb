@@ -23,9 +23,6 @@ class CassandraHandler(ScyllaHandler):
         sql = "DESCRIBE TABLES"
         result = self.native_query(sql)
         df = result.data_frame
-        table_data = pd.DataFrame(
-            {'table_name': df['name'],
-             'keyspace_name': df['keyspace_name'],
-             'type': df['type']})
-        result.data_frame = table_data
+        df = df.rename(columns={'name': 'table_name'})
+        result.data_frame = df
         return result

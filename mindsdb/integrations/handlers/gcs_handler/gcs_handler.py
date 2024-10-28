@@ -14,7 +14,7 @@ from mindsdb.integrations.handlers.gcs_handler.gcs_tables import (
     FileTable
 )
 from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.parser.ast import Select, Identifier, Insert,  Star, Constant
+from mindsdb_sql.parser.ast import Select, Identifier, Insert, Star, Constant
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (
@@ -161,7 +161,7 @@ class GcsHandler(APIHandler):
             self.is_connected = False
 
         return response
-    
+
     def _get_bucket(self, key):
         if 'bucket' in self.connection_data:
             return self.connection_data['bucket'], key
@@ -174,7 +174,7 @@ class GcsHandler(APIHandler):
         """
         Read object as dataframe. Uses duckdb
         """
-        
+
         bucket, key = self._get_bucket(key)
 
         with self._connect_duckdb() as connection:
@@ -182,7 +182,7 @@ class GcsHandler(APIHandler):
             cursor = connection.execute(f"SELECT * FROM 'gs://{bucket}/{key}'")
 
             return cursor.fetchdf()
-        
+
     def _read_as_content(self, key) -> None:
         """
         Read object as content
@@ -194,7 +194,7 @@ class GcsHandler(APIHandler):
         bucket = client.bucket(bucket)
         blob = bucket.blob(key)
         return blob.download_as_string()
-    
+
     def add_data_to_table(self, key, df) -> None:
         """
         Writes the table to a file in the gcs bucket.
@@ -222,7 +222,6 @@ class GcsHandler(APIHandler):
 
             # upload
             connection.execute(f"COPY tmp_table TO 'gs://{bucket}/{key}'")
-            
 
     def query(self, query: ASTNode) -> Response:
         """
@@ -239,7 +238,7 @@ class GcsHandler(APIHandler):
         """
 
         self.connect()
-        
+
         if isinstance(query, Select):
             table_name = query.from_table.parts[-1]
 
@@ -277,7 +276,7 @@ class GcsHandler(APIHandler):
             raise NotImplementedError
 
         return response
-    
+
     def get_objects(self, limit=None, buckets=None) -> List[dict]:
         storage_client = self._connect_storage_client()
         if "bucket" in self.connection_data:
@@ -310,7 +309,7 @@ class GcsHandler(APIHandler):
                 break
 
         return objects
-    
+
     def get_tables(self) -> Response:
         """
         Retrieves a list of tables (objects) in the gcs bucket.
@@ -341,7 +340,7 @@ class GcsHandler(APIHandler):
         )
 
         return response
-    
+
     def get_columns(self, table_name: str) -> Response:
         """
         Retrieves column details for a specified table (object) in the gcs bucket.

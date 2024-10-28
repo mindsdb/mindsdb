@@ -17,6 +17,9 @@ DEFAULT_COLLECTION_NAME = 'default_collection'
 DEFAULT_ID_KEY = "doc_id"
 DEFAULT_MAX_CONCURRENCY = 5
 
+# Vector store specific
+DEFAULT_TOP_K = 20
+
 DEFAULT_CARDINALITY_THRESHOLD = 40
 DEFAULT_CHUNK_SIZE = 1000
 DEFAULT_CHUNK_OVERLAP = 200
@@ -89,11 +92,23 @@ class RetrieverType(Enum):
     MULTI = 'multi'
 
 
+class SearchKwargs(BaseModel):
+    """
+    Search kwargs for vector store.
+    """
+    k: int = DEFAULT_TOP_K
+
+    class Config:
+        arbitrary_types_allowed = True
+        extra = "forbid"
+
+
 class VectorStoreConfig(BaseModel):
     vector_store_type: VectorStoreType = VectorStoreType.CHROMA
     persist_directory: str = None
     collection_name: str = DEFAULT_COLLECTION_NAME
     connection_string: str = None
+    search_kwargs: SearchKwargs = SearchKwargs()
     kb_table: Any = None
 
     class Config:

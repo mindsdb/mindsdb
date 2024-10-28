@@ -28,7 +28,7 @@ class VectorStoreLoader(BaseModel):
         Loads the vector store based on the provided config and embeddings model
         :return:
         """
-        return MDBVectorStore(kb_table=self.config.kb_table)
+        return MDBVectorStore(kb_table=self.config.kb_table, top_k=self.config.search_kwargs.k)
 
 
 class VectorStoreFactory:

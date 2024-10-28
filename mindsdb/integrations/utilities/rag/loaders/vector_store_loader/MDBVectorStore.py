@@ -10,8 +10,9 @@ from langchain_core.vectorstores import VectorStore
 
 class MDBVectorStore(VectorStore):
 
-    def __init__(self, kb_table) -> None:
+    def __init__(self, kb_table, top_k) -> None:
         self.kb_table = kb_table
+        self.top_k = top_k
 
     @property
     def embeddings(self) -> Optional[Embeddings]:
@@ -20,7 +21,6 @@ class MDBVectorStore(VectorStore):
     def similarity_search(
         self,
         query: str,
-        k: int = 4,
         **kwargs: Any,
     ) -> List[Document]:
 
@@ -29,7 +29,7 @@ class MDBVectorStore(VectorStore):
             where=BinaryOperation(op='=', args=[
                 Identifier(TableField.CONTENT.value), Constant(query)
             ]),
-            limit=Constant(k),
+            limit=Constant(self.top_k),
         )
 
         df = self.kb_table.select_query(query)

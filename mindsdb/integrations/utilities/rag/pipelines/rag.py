@@ -86,7 +86,12 @@ class LangChainRAGPipeline:
             vector_store_config=config.vector_store_config
         )
 
-        return cls(vector_store_operator.vector_store.as_retriever(), config.rag_prompt_template, config.llm)
+        search_kwargs = config.vector_store_config.search_kwargs.model_dump()
+
+        return cls(
+            vector_store_operator.vector_store.as_retriever(search_kwargs=search_kwargs),
+            config.rag_prompt_template, config.llm
+        )
 
     @classmethod
     def from_auto_retriever(cls, config: RAGPipelineModel):

@@ -341,7 +341,6 @@ class AzureBlobHandler(APIHandler):
         query = f"SELECT * FROM {table_name} LIMIT 5"
 
         result = self.query(query)
-        # result = self.native_query(query)
 
         response = Response(
             RESPONSE_TYPE.TABLE,

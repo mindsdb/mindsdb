@@ -692,7 +692,7 @@ class OpenAIHandler(BaseMLEngine):
                 return tidy_comps
 
             completions = []
-            if mode != 'conversational':
+            if mode != 'conversational' or 'prompt' not in args:
                 initial_prompt = {
                     "role": "system",
                     "content": "You are a helpful assistant. Your task is to continue the chat.",

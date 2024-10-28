@@ -1,4 +1,3 @@
-import pandas as pd
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
@@ -6,7 +5,7 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.utilities import log
 import duckdb
-
+import pandas as pd
 # from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient, generate_account_sas, ResourceTypes, AccountSasPermissions
 
@@ -17,7 +16,7 @@ from mindsdb.integrations.libs.api_handler import APIResource, APIHandler
 from mindsdb.integrations.utilities.sql_utils import FilterCondition
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.parser.ast import Select, Identifier, Insert
-
+from mindsdb_sql import parse_sql
 
 logger = log.getLogger(__name__)
 
@@ -223,6 +222,19 @@ class AzureBlobHandler(APIHandler):
 
             # upload
             connection.execute(f'COPY tmp_table TO "azure://{self.container_name}/{key}"')
+
+    def native_query(self, query: str) -> Response:
+        """
+        Executes a SQL query and returns the result.
+
+        Args:
+            query (str): The SQL query to be executed.
+
+        Returns:
+            Response: A response object containing the result of the query or an error message.
+        """
+        query_ast = parse_sql(query)
+        return self.query(query_ast)
 
     def query(self, query: ASTNode) -> Response:
         """

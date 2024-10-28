@@ -337,7 +337,7 @@ class S3Handler(APIHandler):
             raise NotImplementedError
 
         return response
-    
+
     def native_query(self, query: str) -> Response:
         """
         Executes a SQL query and returns the result.

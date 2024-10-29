@@ -44,11 +44,15 @@ class FileTable(APIResource):
         self.dropbox_path = dropbox_path
 
     def _get_file_df_and_path(self):
-        if "/" in self.dropbox_path:
-            df = self.handler._read_file(self.dropbox_path)
-            return df, self.dropbox_path
-        else:
-            try:
+        try:
+            if "/" in self.dropbox_path:
+                df = self.handler._read_file(self.dropbox_path)
+                if df is None:
+                    raise Exception(
+                        f"No such file found for the path: {self.dropbox_path}"
+                    )
+                return df, self.dropbox_path
+            else:
                 files = self.handler._list_files()
                 file_path = None
                 for file in files:
@@ -56,12 +60,12 @@ class FileTable(APIResource):
                         file_path = file["path"]
                         break
                 if file_path is None:
-                    raise Exception("No such file found")
+                    raise Exception(f"No such file found: {self.dropbox_path}")
                 else:
                     df = self.handler._read_file(file_path)
                     return df, file["path"]
-            except Exception as e:
-                self.logger(e)
+        except Exception as e:
+            self.handler.logger.error(e)
 
     def list(self, conditions=None, limit=None, sort=None, targets=None, **kwargs):
         return self._get_file_df_and_path()[0]

@@ -20,6 +20,7 @@ from mindsdb.integrations.libs.api_handler import APIHandler, APIResource
 
 
 class ListFilesTable(APIResource):
+
     def list(self, conditions=None, limit=None, sort=None, targets=None, **kwargs):
         files = self.handler._list_files()
         data = []
@@ -42,9 +43,28 @@ class FileTable(APIResource):
         super().__init__(handler, table_name=table_name)
         self.dropbox_path = dropbox_path
 
+    def _get_file_df_and_path(self):
+        if "/" in self.dropbox_path:
+            df = self.handler._read_file(self.dropbox_path)
+            return df, self.dropbox_path
+        else:
+            try:
+                files = self.handler._list_files()
+                file_path = None
+                for file in files:
+                    if file["name"] == self.dropbox_path:
+                        file_path = file["path"]
+                        break
+                if file_path is None:
+                    raise Exception("No such file found")
+                else:
+                    df = self.handler._read_file(file_path)
+                    return df, file["path"]
+            except Exception as e:
+                self.logger(e)
+
     def list(self, conditions=None, limit=None, sort=None, targets=None, **kwargs):
-        df = self.handler._read_file(self.dropbox_path)
-        return df
+        return self._get_file_df_and_path()[0]
 
     def get_columns(self):
         df = self.handler._read_file(self.table_name)
@@ -54,9 +74,9 @@ class FileTable(APIResource):
         columns = [col.name for col in query.columns]
         data = [dict(zip(columns, row)) for row in query.values]
         df_new = pd.DataFrame(data)
-        df_existing = self.handler._read_file(self.dropbox_path)
+        df_existing, file_path = self._get_file_df_and_path()
         df_combined = pd.concat([df_existing, df_new], ignore_index=True)
-        self.handler._write_file(self.dropbox_path, df_combined)
+        self.handler._write_file(file_path, df_combined)
 
 
 class DropboxHandler(APIHandler):
@@ -71,7 +91,8 @@ class DropboxHandler(APIHandler):
         self.logger = log.getLogger(__name__)
         self.dbx = None
         self.is_connected = False
-        self._register_table("files", ListFilesTable(self))
+        self._files_table = ListFilesTable(self)
+        self._register_table("files", self._files_table)
 
     def connect(self):
         try:
@@ -116,13 +137,44 @@ class DropboxHandler(APIHandler):
         self.is_connected = False
         self.logger.info("Disconnected from Dropbox")
 
+    def _read_as_content(self, file_path) -> None:
+        """
+        Read files as content
+        """
+        try:
+            _, res = self.dbx.files_download(file_path)
+            content = res.content
+            return content
+        except ApiError as e:
+            self.logger.error(f"Error when downloading a file from Dropbox: {e}")
+
     def query(self, query: ASTNode) -> Response:
+
         if isinstance(query, Select):
-            table = self._get_table(query.from_table)
-            result = table.select(query)
-            return Response(RESPONSE_TYPE.TABLE, data_frame=result)
+            table_name = query.from_table.parts[-1]
+            if table_name == "files":
+                table = self._files_table
+                df = table.select(query)
+
+                # add content
+                has_content = False
+                for target in query.targets:
+                    if (
+                        isinstance(target, Identifier)
+                        and target.parts[-1].lower() == "content"
+                    ):
+                        has_content = True
+                        break
+                if has_content:
+                    df["content"] = df["path"].apply(self._read_as_content)
+            else:
+                table = FileTable(self, table_name=table_name, dropbox_path=table_name)
+                df = table.select(query)
+
+            return Response(RESPONSE_TYPE.TABLE, data_frame=df)
         elif isinstance(query, Insert):
-            table = self._get_table(query.table)
+            table_name = query.table.parts[-1]
+            table = FileTable(self, table_name=table_name, dropbox_path=table_name)
             table.insert(query)
             return Response(RESPONSE_TYPE.OK)
         else:
@@ -134,27 +186,6 @@ class DropboxHandler(APIHandler):
         table_names = list(self._tables.keys())
         df = pd.DataFrame(table_names, columns=["table_name"])
         return Response(RESPONSE_TYPE.TABLE, data_frame=df)
-
-    def _get_table(self, name: Identifier):
-        table_name = name.parts[-1]
-        if table_name not in self._tables:
-            files = self._list_files()
-            file_dict = {}
-            for file in files:
-                if file["name"] not in file_dict:
-                    file_dict[file["name"]] = file
-            if table_name in file_dict:
-                self._register_table(
-                    table_name,
-                    FileTable(
-                        self,
-                        table_name=table_name,
-                        dropbox_path=file_dict[table_name]["path"],
-                    ),
-                )
-            else:
-                raise Exception(f"Table not found: {table_name}")
-        return self._tables[table_name]
 
     def get_columns(self, table_name: str) -> Response:
         table = self._get_table(Identifier(table_name))

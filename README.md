@@ -273,5 +273,3 @@ Join our [Slack community](https://mindsdb.com/joincommunity?utm_medium=communit
 ## ⚖️ License 
 
 For detailed licensing information, please refer to the [LICENSE file](https://github.com/mindsdb/mindsdb/blob/master/LICENSE).
-
-## Test

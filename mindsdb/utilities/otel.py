@@ -50,14 +50,14 @@ if not OTEL_SDK_DISABLED or OTEL_SDK_FORCE_RUN:
 
     # Define OpenTelemetry resources (e.g., service name)
     resource = Resource(attributes={"service.name": OTEL_SERVICE_NAME})
-  
+
     # Set the tracer provider with the custom resource
     trace.set_tracer_provider(TracerProvider(resource=resource))
 
     # Configure the appropriate exporter based on the environment variable
     if OTEL_EXPORTER_TYPE == "otlp":
         logger.info("OpenTelemetry is using OTLP exporter")
-        
+
         exporter = OTLPSpanExporter(
             endpoint=OTEL_OTLP_ENDPOINT,  # Default OTLP endpoint
             insecure=True  # Disable TLS for local testing
@@ -65,7 +65,7 @@ if not OTEL_SDK_DISABLED or OTEL_SDK_FORCE_RUN:
 
     else:
         logger.info("OpenTelemetry is using Console exporter")
-        
+
         exporter = ConsoleSpanExporter()
 
     # Replace the default span processor with the custom one

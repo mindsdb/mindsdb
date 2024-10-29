@@ -112,7 +112,7 @@ class ChatBotTask(BaseTask):
 
         # send to chat adapter
         self.chat_pooling.send_message(response_message, table_name=table_name)
-        logger.debug(f'>>chatbot {chat_id} out: {response_message.text}')
+        logger.debug(f'>>chatbot {chat_id} out (holding message): {response_message.text}')
 
     def _on_message(self, message: ChatBotMessage, chat_id, chat_memory, table_name=None):
         # add question to history

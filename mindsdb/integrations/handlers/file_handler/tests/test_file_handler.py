@@ -9,7 +9,7 @@ import pandas
 import pytest
 import responses
 from mindsdb_sql.exceptions import ParsingException
-from mindsdb_sql.parser.ast import CreateTable, DropTables, Identifier, Select, Star, Update
+from mindsdb_sql.parser.ast import CreateTable, DropTables, Identifier, Select, Star, TableColumn, Update
 from pytest_lazyfixture import lazy_fixture
 
 from mindsdb.integrations.handlers.file_handler.file_handler import FileHandler
@@ -43,11 +43,17 @@ class MockFileController:
             }
             for record in file_records
         ]
+    
+    def get_files_names(self):
+        return [file["name"] for file in self.get_files()]
 
     def get_file_meta(self, *args, **kwargs):
         return self.get_files()[0]
 
     def delete_file(self, name):
+        return True
+    
+    def save_file(self, name, file_path, file_name=None):
         return True
 
 
@@ -225,6 +231,18 @@ class TestQuery:
         assert response.error_code == 0
         assert response.error_message is None
         assert expected_df.equals(response.data_frame)
+
+    def test_query_create(self):
+        """Test a valid create table query"""
+        file_handler = FileHandler(file_controller=MockFileController())
+        response = file_handler.query(
+            CreateTable(
+                name=Identifier(parts=["someTable"]),
+                columns=[TableColumn(name="col1"), TableColumn(name="col2")],
+            )
+        )
+
+        assert response.type == RESPONSE_TYPE.OK
 
     def test_query_bad_type(self):
         """Test an invalid query type for files"""

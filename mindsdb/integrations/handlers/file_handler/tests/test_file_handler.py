@@ -9,7 +9,7 @@ import pandas
 import pytest
 import responses
 from mindsdb_sql.exceptions import ParsingException
-from mindsdb_sql.parser.ast import CreateTable, DropTables, Identifier, Select, Star
+from mindsdb_sql.parser.ast import CreateTable, DropTables, Identifier, Select, Star, Update
 from pytest_lazyfixture import lazy_fixture
 
 from mindsdb.integrations.handlers.file_handler.file_handler import FileHandler
@@ -229,7 +229,7 @@ class TestQuery:
     def test_query_bad_type(self):
         """Test an invalid query type for files"""
         file_handler = FileHandler(file_controller=MockFileController())
-        response = file_handler.query(CreateTable([Identifier(parts=["someTable"])]))
+        response = file_handler.query(Update([Identifier(parts=["someTable"])]))
 
         assert response.type == RESPONSE_TYPE.ERROR
 

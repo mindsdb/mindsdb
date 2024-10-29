@@ -499,11 +499,13 @@ class KnowledgeBaseController:
             params = params or {}
             params['preprocessing'] = preprocessing_config
 
+        # get project id
         project = self.session.database_controller.get_project(project_name)
         project_id = project.id
 
-        # Rest of the method remains the same
+        # not difference between cases in sql
         name = name.lower()
+        # check if knowledge base already exists
         kb = self.get(name, project_id)
         if kb is not None:
             if if_not_exists:
@@ -511,11 +513,14 @@ class KnowledgeBaseController:
             raise EntityExistsError("Knowledge base already exists", name)
 
         if embedding_model is None:
+            # create default embedding model
             model_name = self._get_default_embedding_model(project.name, params=params)
         else:
+            # get embedding model from input
             model_name = embedding_model.parts[-1]
 
         if embedding_model is not None and len(embedding_model.parts) > 1:
+            # model project is set
             model_project = self.session.database_controller.get_project(embedding_model.parts[-2])
         else:
             model_project = project
@@ -527,14 +532,17 @@ class KnowledgeBaseController:
         model_record = db.Predictor.query.get(model['id'])
         embedding_model_id = model_record.id
 
+        # search for the vector database table
         if storage is None:
             cloud_pg_vector = os.environ.get('KB_PGVECTOR_URL')
             if cloud_pg_vector:
                 vector_table_name = name
                 vector_db_name = self._create_persistent_pgvector()
             else:
+                # create chroma db with same name
                 vector_table_name = "default_collection"
                 vector_db_name = self._create_persistent_chroma(name)
+                # memorize to remove it later
                 params['vector_storage'] = vector_db_name
         elif len(storage.parts) != 2:
             raise ValueError('Storage param has to be vector db with table')
@@ -543,6 +551,7 @@ class KnowledgeBaseController:
 
         vector_database_id = self.session.integration_controller.get(vector_db_name)['id']
 
+        # create table in vectordb
         self.session.datahub.get(vector_db_name).integration_handler.create_table(
             vector_table_name
         )

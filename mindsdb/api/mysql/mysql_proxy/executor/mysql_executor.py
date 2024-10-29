@@ -137,10 +137,6 @@ class Executor:
 
         self.is_executed = True
 
-        if self.sqlserver.session.api_type == 'http':
-            json_types = True
-        else:
-            json_types = False
         if ret.data is not None:
             self.data = ret.data
             self.columns = ret.data.columns

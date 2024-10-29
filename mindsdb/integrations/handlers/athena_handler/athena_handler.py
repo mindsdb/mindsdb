@@ -181,6 +181,13 @@ class AthenaHandler(DatabaseHandler):
         return self.native_query(query)
 
     def _wait_for_query_to_complete(self, query_execution_id: str) -> str:
+        """
+        Wait for the Athena query to complete.
+        Args:
+            query_execution_id (str): ID of the query to wait for
+        Returns:
+            str: Query execution status
+        """
         while True:
             response = self.connection.get_query_execution(QueryExecutionId=query_execution_id)
             status = response['QueryExecution']['Status']['State']

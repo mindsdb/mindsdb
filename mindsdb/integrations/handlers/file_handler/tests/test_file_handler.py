@@ -244,6 +244,19 @@ class TestQuery:
 
         assert response.type == RESPONSE_TYPE.OK
 
+    def test_query_create_or_replace(self):
+        """Test a valid create or replace table query"""
+        file_handler = FileHandler(file_controller=MockFileController())
+        response = file_handler.query(
+            CreateTable(
+                name=Identifier(parts=["someTable"]),
+                columns=[TableColumn(name="col1"), TableColumn(name="col2")],
+                is_replace=True,
+            )
+        )
+
+        assert response.type == RESPONSE_TYPE.OK
+
     def test_query_bad_type(self):
         """Test an invalid query type for files"""
         file_handler = FileHandler(file_controller=MockFileController())

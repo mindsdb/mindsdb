@@ -23,8 +23,12 @@ import traceback
 from functools import partial
 from typing import Dict, List
 
+import numpy as np
 from numpy import dtype as np_dtype
 from pandas.api import types as pd_types
+
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import NULL_VALUE
+from mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum import Datum
 
 import mindsdb.utilities.hooks as hooks
 import mindsdb.utilities.profiler as profiler
@@ -330,7 +334,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 ErrPacket, err_code=answer.error_code, msg=answer.error_message
             ).send()
 
-    def _get_column_defenition_packets(self, columns, data=None):
+    def _get_column_defenition_packets(self, columns, data=None, columns_len=None):
         if data is None:
             data = []
         packets = []
@@ -345,15 +349,18 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             column_name = column.get("name", "column_name")
             column_alias = column.get("alias", column_name)
             flags = column.get("flags", 0)
-            if len(data) == 0:
-                length = 0xFFFF
+            if columns_len is not None:
+                length = columns_len[i]
             else:
-                length = 1
-                for row in data:
-                    if isinstance(row, dict):
-                        length = max(len(str(row[column_alias])), length)
-                    else:
-                        length = max(len(str(row[i])), length)
+                if len(data) == 0:
+                    length = 0xFFFF
+                else:
+                    length = 1
+                    for row in data:
+                        if isinstance(row, dict):
+                            length = max(len(str(row[column_alias])), length)
+                        else:
+                            length = max(len(str(row[i])), length)
 
             packets.append(
                 self.packet(
@@ -383,16 +390,36 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         return packets
 
     def send_tabel_packets(self, columns, data, status=0):
+
+        # text protocol, convert all to string and serialize as packages
+        df = data.get_raw_df()
+
+        def apply_f(v):
+            if v is None:
+                return NULL_VALUE
+            if not isinstance(v, str):
+                v = str(v)
+            return Datum.serialize_str(v)
+
+        df = df.applymap(apply_f)
+
+        # get column max size
+        measurer = np.vectorize(len)
+        columns_len = measurer(df.values.astype(str)).max(axis=0)
+
+        # columns packages
         packets = [self.packet(ColumnCountPacket, count=len(columns))]
-        packets.extend(self._get_column_defenition_packets(columns, data))
+
+        packets.extend(self._get_column_defenition_packets(columns, columns_len=columns_len))
 
         if self.client_capabilities.DEPRECATE_EOF is False:
             packets.append(self.packet(EofPacket, status=status))
         self.send_package_group(packets)
 
+        # body packages
         string = b"".join([
-            self.packet(packetClass=ResultsetRowPacket, data=row).accum()
-            for row in data
+            self.packet(body=body, length=len(body)).accum()
+            for body in df.values.sum(axis=1)
         ])
         self.socket.sendall(string)
 

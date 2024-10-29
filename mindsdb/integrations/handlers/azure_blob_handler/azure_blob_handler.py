@@ -6,7 +6,7 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.utilities import log
 import duckdb
 import pandas as pd
-# from azure.identity import DefaultAzureCredential
+
 from azure.storage.blob import BlobServiceClient, generate_account_sas, ResourceTypes, AccountSasPermissions
 
 from datetime import datetime, timedelta

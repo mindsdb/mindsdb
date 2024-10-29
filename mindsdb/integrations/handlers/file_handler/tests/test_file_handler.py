@@ -9,7 +9,7 @@ import pandas
 import pytest
 import responses
 from mindsdb_sql.exceptions import ParsingException
-from mindsdb_sql.parser.ast import CreateTable, DropTables, Identifier, Select, Star, TableColumn, Update
+from mindsdb_sql.parser.ast import CreateTable, DropTables, Identifier, Insert, Select, Star, TableColumn, Update
 from pytest_lazyfixture import lazy_fixture
 
 from mindsdb.integrations.handlers.file_handler.file_handler import FileHandler
@@ -46,6 +46,9 @@ class MockFileController:
     
     def get_files_names(self):
         return [file["name"] for file in self.get_files()]
+    
+    def get_file_path(self, name):
+        return True
 
     def get_file_meta(self, *args, **kwargs):
         return self.get_files()[0]
@@ -231,6 +234,37 @@ class TestQuery:
         assert response.error_code == 0
         assert response.error_message is None
         assert expected_df.equals(response.data_frame)
+
+    def test_query_insert(self, csv_file, monkeypatch):
+        """Test an invalid insert query"""
+        # Create another temporary file to save the csv file to
+        csv_tmp = os.path.join(tempfile.gettempdir(), "test.csv")
+        if os.path.exists(csv_tmp):
+            os.remove(csv_tmp)
+        shutil.copy(csv_file, csv_tmp)
+
+        mock_get_file_path = lambda self, name: csv_tmp
+        monkeypatch.setattr(MockFileController, "get_file_path", mock_get_file_path)
+
+        file_handler = FileHandler(file_controller=MockFileController())
+        response = file_handler.query(
+            Insert(
+                table=Identifier(parts=["someTable"]),
+                columns=[
+                    "col_one",
+                    "col_two",
+                    "col_three",
+                    "col_four",
+                ],
+                values=[
+                    [1, -1, 0.1, "A"],
+                    [2, -2, 0.2, "B"],
+                    [3, -3, 0.3, "C"],
+                ],
+            )
+        )
+
+        assert response.type == RESPONSE_TYPE.OK
 
     def test_query_create(self):
         """Test a valid create table query"""

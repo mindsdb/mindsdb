@@ -43,10 +43,10 @@ class MockFileController:
             }
             for record in file_records
         ]
-    
+
     def get_files_names(self):
         return [file["name"] for file in self.get_files()]
-    
+
     def get_file_path(self, name):
         return True
 
@@ -55,7 +55,7 @@ class MockFileController:
 
     def delete_file(self, name):
         return True
-    
+
     def save_file(self, name, file_path, file_name=None):
         return True
 
@@ -237,13 +237,14 @@ class TestQuery:
 
     def test_query_insert(self, csv_file, monkeypatch):
         """Test an invalid insert query"""
-        # Create another temporary file to save the csv file to
+        # Create a temporary file to save the csv file to.
         csv_tmp = os.path.join(tempfile.gettempdir(), "test.csv")
         if os.path.exists(csv_tmp):
             os.remove(csv_tmp)
         shutil.copy(csv_file, csv_tmp)
 
-        mock_get_file_path = lambda self, name: csv_tmp
+        def mock_get_file_path(self, name):
+            return csv_tmp
         monkeypatch.setattr(MockFileController, "get_file_path", mock_get_file_path)
 
         file_handler = FileHandler(file_controller=MockFileController())

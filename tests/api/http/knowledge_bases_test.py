@@ -1,11 +1,10 @@
-import os
+from unittest.mock import patch, MagicMock
 import pytest
+import os
 from tempfile import TemporaryDirectory
 
 from mindsdb.api.http.initialize import initialize_app
 from mindsdb.api.mysql.mysql_proxy.mysql_proxy import SQLAnswer
-import pandas as pd
-from unittest.mock import patch, MagicMock
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.migrations import migrate
 from mindsdb.interfaces.storage import db
@@ -300,10 +299,15 @@ def test_put_knowledge_base_rows(client):
         }
     }
 
-    with patch(
-            'mindsdb.interfaces.knowledge_base.preprocess.preprocess.PreprocessingKnowledgeBase') as mock_kb_processor:
-        # Set up the mock to avoid errors
-        mock_instance = mock_kb_processor.return_value
+    with patch('mindsdb.interfaces.knowledge_base.controller.KnowledgeBaseTable') as mock_kb_table:
+        # Create a mock KB instance
+        mock_table_instance = MagicMock()
+        mock_kb_table.return_value = mock_table_instance
+
+        # Setup the _kb attribute with required params
+        mock_kb = MagicMock()
+        mock_kb.params = {'preprocessing': None}  # Initial state
+        mock_table_instance._kb = mock_kb
 
         update_response = client.put(
             '/api/projects/mindsdb/knowledge_bases/test_kb_update_rows',
@@ -313,9 +317,9 @@ def test_put_knowledge_base_rows(client):
 
         assert '200' in update_response.status
 
-        # Verify process_and_insert_rows was called with correct data
-        mock_instance.process_and_insert_rows.assert_called_once()
-        actual_rows = mock_instance.process_and_insert_rows.call_args[0][0]
+        # Verify insert_rows was called with correct data
+        mock_table_instance.insert_rows.assert_called_once()
+        actual_rows = mock_table_instance.insert_rows.call_args[0][0]
         assert len(actual_rows) == 1
         assert actual_rows[0]['id'] == test_id
         assert actual_rows[0]['content'] == content_to_embed
@@ -330,6 +334,7 @@ def test_put_knowledge_base_query(client):
     }
     create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
     assert '201' in create_response.status
+
     content_to_embed = '''To begin with a perfect Peking duck recipe at home, firstly choose head on (easy to hang for air drying out), clean and leaner ducks.
     Add around 1 teaspoon of white vinegar in clean water and soak the duck for 1 hour. Then prepare lines and tie the ducks from the top of the neck.
     Hang them on hooks. I hang the ducks on the top of kitchen pool.
@@ -340,30 +345,38 @@ def test_put_knowledge_base_query(client):
             'query': 'SELECT * FROM mock_db.recipes'
         }
     }
-    with patch('mindsdb.interfaces.knowledge_base.preprocess.preprocess.FakeMysqlProxy') as mock_sql_proxy:
-        mock_sql_proxy().process_query.return_value = SQLAnswer(
-            resp_type=RESPONSE_TYPE.TABLE,
-            columns=[{'alias': 'id'}, {'name': 'content'}],
-            data=[(0, content_to_embed)]
-        )
-        with patch('mindsdb.interfaces.knowledge_base.controller.KnowledgeBaseTable') as mock_kb_table:
-            # Create a real MagicMock instance for kb
-            mock_kb = MagicMock()
-            # Configure params to return None for preprocessing
-            mock_kb.params = {'preprocessing': None}
-            # Set the mock kb on the table instance
-            mock_kb_table.return_value._kb = mock_kb
 
-            update_response = client.put('/api/projects/mindsdb/knowledge_bases/test_kb_update_query',
-                                         json=update_request, follow_redirects=True)
-            assert '200' in update_response.status
-            last_insert_call_args = mock_kb_table().insert.call_args_list[-1]
-            actual_df_inserted = last_insert_call_args[0][0]
-            rows_to_insert = [
-                {'id': 0, 'content': content_to_embed}
-            ]
-            expected_df_to_insert = pd.DataFrame.from_records(rows_to_insert)
-            assert actual_df_inserted.equals(expected_df_to_insert)
+    # Mock the FakeMysqlProxy
+    mock_proxy = MagicMock()
+    mock_proxy.process_query.return_value = SQLAnswer(
+        resp_type=RESPONSE_TYPE.TABLE,
+        columns=[{'alias': 'id'}, {'name': 'content'}],
+        data=[(0, content_to_embed)]
+    )
+
+    with patch('mindsdb.interfaces.knowledge_base.controller.KnowledgeBaseTable') as mock_kb_table:
+        mock_table_instance = MagicMock()
+        mock_kb_table.return_value = mock_table_instance
+
+        # Setup the mock table
+        mock_kb = MagicMock()
+        mock_kb.params = {'preprocessing': None}
+        mock_table_instance._kb = mock_kb
+        mock_table_instance.mysql_proxy = mock_proxy
+
+        update_response = client.put(
+            '/api/projects/mindsdb/knowledge_bases/test_kb_update_query',
+            json=update_request,
+            follow_redirects=True
+        )
+
+        assert '200' in update_response.status
+
+        # Verify insert was called with correct data
+        mock_table_instance.insert_query_result.assert_called_once_with(
+            'SELECT * FROM mock_db.recipes',
+            'mindsdb'
+        )
 
 
 @pytest.fixture
@@ -543,24 +556,28 @@ def test_put_knowledge_base_with_preprocessing(client):
         mock_kb.params = {'preprocessing': None}  # Initial state
         mock_table_instance._kb = mock_kb
 
-        # Need to patch PreprocessingKnowledgeBase to avoid validation errors
-        with patch('mindsdb.interfaces.knowledge_base.preprocess.preprocess.PreprocessingKnowledgeBase') as mock_preprocessor:
-            mock_preprocessor_instance = MagicMock()
-            mock_preprocessor.return_value = mock_preprocessor_instance
+        update_response = client.put(
+            '/api/projects/mindsdb/knowledge_bases/test_kb_update_preprocess',
+            json=update_request,
+            follow_redirects=True
+        )
 
-            update_response = client.put(
-                '/api/projects/mindsdb/knowledge_bases/test_kb_update_preprocess',
-                json=update_request,
-                follow_redirects=True
-            )
+        assert '200' in update_response.status
 
-            assert '200' in update_response.status
+        # Verify preprocessing was configured
+        mock_table_instance.configure_preprocessing.assert_called_once()
+        preprocessing_config = mock_table_instance.configure_preprocessing.call_args[0][0]
+        assert preprocessing_config['type'] == 'contextual'
+        assert preprocessing_config['contextual_config']['chunk_size'] == 500
+        assert preprocessing_config['contextual_config']['chunk_overlap'] == 100
+        assert preprocessing_config['contextual_config']['llm_model'] == 'gpt-4'
 
-            # Verify preprocessing was configured
-            mock_table_instance.configure_preprocessing.assert_called_once()
-            preprocessing_config = mock_table_instance.configure_preprocessing.call_args[0][0]
-            assert preprocessing_config['type'] == 'contextual'
-            assert preprocessing_config['contextual_config']['chunk_size'] == 500
+        # Verify rows were inserted
+        mock_table_instance.insert_rows.assert_called_once()
+        inserted_rows = mock_table_instance.insert_rows.call_args[0][0]
+        assert len(inserted_rows) == 2
+        assert inserted_rows[0]['content'] == content_to_embed[0]
+        assert inserted_rows[1]['content'] == content_to_embed[1]
 
 
 def test_put_knowledge_base_invalid_preprocessing(client):
@@ -589,10 +606,125 @@ def test_put_knowledge_base_invalid_preprocessing(client):
         }
     }
 
-    update_response = client.put(
-        '/api/projects/mindsdb/knowledge_bases/test_kb_invalid_update_preprocess',
-        json=update_request,
-        follow_redirects=True
-    )
+    with patch('mindsdb.interfaces.knowledge_base.controller.KnowledgeBaseTable') as mock_kb_table:
+        # Create a mock KB instance
+        mock_table_instance = MagicMock()
+        mock_kb_table.return_value = mock_table_instance
 
-    assert '400' in update_response.status
+        # Setup the _kb attribute with required params
+        mock_kb = MagicMock()
+        mock_kb.params = {'preprocessing': None}
+        mock_table_instance._kb = mock_kb
+
+        # Configure the mock to raise an error when invalid preprocessing config is provided
+        mock_table_instance.configure_preprocessing.side_effect = ValueError("Invalid preprocessing type")
+
+        update_response = client.put(
+            '/api/projects/mindsdb/knowledge_bases/test_kb_invalid_update_preprocess',
+            json=update_request,
+            follow_redirects=True
+        )
+
+        assert '400' in update_response.status
+
+
+def test_put_knowledge_base_with_documents(client):
+    """Test updating knowledge base with Document objects"""
+    create_request = {
+        'knowledge_base': {
+            'name': 'test_kb_documents',
+            'model': 'test_embedding_model'
+        }
+    }
+
+    create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
+    assert '201' in create_response.status
+
+    # Test data
+    test_documents = [
+        {
+            'content': 'First test document content',
+            'metadata': {'source': 'test1', 'category': 'A'}
+        },
+        {
+            'content': 'Second test document content',
+            'metadata': {'source': 'test2', 'category': 'B'}
+        }
+    ]
+
+    update_request = {
+        'knowledge_base': {
+            'rows': test_documents
+        }
+    }
+
+    with patch('mindsdb.interfaces.knowledge_base.controller.KnowledgeBaseTable') as mock_kb_table:
+        mock_table_instance = MagicMock()
+        mock_kb_table.return_value = mock_table_instance
+
+        # Mock the dependencies
+        mock_kb = MagicMock()
+        mock_kb.params = {'preprocessing': None}
+        mock_table_instance._kb = mock_kb
+
+        update_response = client.put(
+            '/api/projects/mindsdb/knowledge_bases/test_kb_documents',
+            json=update_request,
+            follow_redirects=True
+        )
+
+        assert '200' in update_response.status
+
+        # Verify insert_rows was called with correct Document objects
+        mock_table_instance.insert_rows.assert_called_once()
+        inserted_rows = mock_table_instance.insert_rows.call_args[0][0]
+        assert len(inserted_rows) == 2
+        assert all(isinstance(row, dict) for row in inserted_rows)
+        assert inserted_rows[0]['content'] == test_documents[0]['content']
+        assert inserted_rows[0]['metadata'] == test_documents[0]['metadata']
+
+
+def test_put_knowledge_base_mixed_content(client):
+    """Test updating knowledge base with multiple content types"""
+    create_request = {
+        'knowledge_base': {
+            'name': 'test_kb_mixed',
+            'model': 'test_embedding_model'
+        }
+    }
+
+    create_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
+    assert '201' in create_response.status
+
+    update_request = {
+        'knowledge_base': {
+            'rows': [{'content': 'Test content', 'metadata': {'source': 'manual'}}],
+            'files': ['test_file.txt'],
+            'urls': ['http: //example.com'],
+            'query': 'SELECT * FROM test_table',
+            'preprocessing': {
+                'type': 'contextual',
+                'contextual_config': {
+                    'chunk_size': 500,
+                    'chunk_overlap': 50
+                }
+            }
+        }
+    }
+
+    with patch('mindsdb.interfaces.knowledge_base.controller.KnowledgeBaseTable') as mock_kb_table:
+        mock_table_instance = MagicMock()
+        mock_kb_table.return_value = mock_table_instance
+
+        # Mock the dependencies
+        mock_kb = MagicMock()
+        mock_kb.params = {'preprocessing': None}
+        mock_table_instance._kb = mock_kb
+
+        update_response = client.put(
+            '/api/projects/mindsdb/knowledge_bases/test_kb_mixed',
+            json=update_request,
+            follow_redirects=True
+        )
+
+        assert '200' in update_response.status

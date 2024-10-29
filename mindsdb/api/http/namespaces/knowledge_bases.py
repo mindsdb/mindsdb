@@ -2,13 +2,19 @@ from http import HTTPStatus
 
 from flask import request
 from flask_restx import Resource
+from langchain_text_splitters import MarkdownHeaderTextSplitter
 
 from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.api.executor.exceptions import ExecutorException
 from mindsdb.api.http.utils import http_error
-from mindsdb.interfaces.knowledge_base.preprocess.preprocess import update_knowledge_base_with_preprocessing
 
+from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
+from mindsdb.integrations.utilities.rag.splitters.file_splitter import FileSplitter, FileSplitterConfig
+from mindsdb.interfaces.file.file_controller import FileController
+from mindsdb.interfaces.knowledge_base.preprocessing.constants import DEFAULT_CRAWL_DEPTH, DEFAULT_WEB_FILTERS, \
+    DEFAULT_MARKDOWN_HEADERS, DEFAULT_WEB_CRAWL_LIMIT
+from mindsdb.interfaces.knowledge_base.preprocessing.document_loader import DocumentLoader
 from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.utilities import log
@@ -153,7 +159,8 @@ class KnowledgeBaseResource(Resource):
     @api_endpoint_metrics('PUT', '/knowledge_bases/knowledge_base')
     def put(self, project_name: str, knowledge_base_name: str):
         '''Updates a knowledge base with optional preprocessing.'''
-        # Check for required parameters.
+
+        # Check for required parameters
         if 'knowledge_base' not in request.json:
             return http_error(
                 HTTPStatus.BAD_REQUEST,
@@ -174,42 +181,62 @@ class KnowledgeBaseResource(Resource):
             )
 
         try:
+            # Retrieve the knowledge base table for updates
             table = session.kb_controller.get_table(knowledge_base_name, project.id)
-        except ValueError:
-            # Knowledge Base must exist.
-            return http_error(
-                HTTPStatus.NOT_FOUND,
-                'Knowledge Base not found',
-                f'Knowledge Base with name {knowledge_base_name} does not exist'
+            if table is None:
+                return http_error(
+                    HTTPStatus.NOT_FOUND,
+                    'Knowledge Base not found',
+                    f'Knowledge Base with name {knowledge_base_name} does not exist'
+                )
+
+            kb_data = request.json['knowledge_base']
+
+            # Set up dependencies for DocumentLoader
+            file_controller = FileController()
+            file_splitter_config = FileSplitterConfig()
+            file_splitter = FileSplitter(file_splitter_config)
+            markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=DEFAULT_MARKDOWN_HEADERS)
+
+            # Initialize DocumentLoader with required components
+            document_loader = DocumentLoader(
+                file_controller=file_controller,
+                file_splitter=file_splitter,
+                markdown_splitter=markdown_splitter
             )
 
-        kb = request.json['knowledge_base']
+            # Initialize FakeMysqlProxy
+            mysql_proxy = FakeMysqlProxy()
 
-        # Extract parameters
-        files = kb.get('files', [])
-        urls = kb.get('urls', [])
-        query = kb.get('query')
-        rows = kb.get('rows', [])
+            # Configure table with dependencies
+            table.document_loader = document_loader
+            table.mysql_proxy = mysql_proxy
 
-        # Optional params for web pages.
-        crawl_depth = kb.get('crawl_depth', 1)
-        filters = kb.get('filters', [])
+            # Update preprocessing configuration if provided
+            if 'preprocessing' in kb_data:
+                table.configure_preprocessing(kb_data['preprocessing'])
 
-        # get chunk preprocessing config
-        preprocessing_config = kb.get('preprocessing', None)
+            # Process raw data rows if provided
+            if kb_data.get('rows'):
+                table.insert_rows(kb_data['rows'])
 
-        try:
-            update_knowledge_base_with_preprocessing(
-                table=table,
-                files=files,
-                urls=urls,
-                rows=rows,
-                query=query,
-                project_name=project_name,  # Required for query processing
-                crawl_depth=crawl_depth,
-                filters=filters,
-                preprocessing_config=preprocessing_config
-            )
+            # Process files if specified
+            if kb_data.get('files'):
+                table.insert_files(kb_data['files'])
+
+            # Process web pages if URLs provided
+            if kb_data.get('urls'):
+                table.insert_web_pages(
+                    urls=kb_data['urls'],
+                    limit=kb_data.get('limit', DEFAULT_WEB_CRAWL_LIMIT),
+                    crawl_depth=kb_data.get('crawl_depth', DEFAULT_CRAWL_DEPTH),
+                    filters=kb_data.get('filters', DEFAULT_WEB_FILTERS)
+                )
+
+            # Process query if provided
+            if kb_data.get('query'):
+                table.insert_query_result(kb_data['query'], project_name)
+
         except ExecutorException as e:
             logger.error(f'Error during preprocessing and insertion: {str(e)}')
             return http_error(
@@ -219,7 +246,6 @@ class KnowledgeBaseResource(Resource):
             )
 
         except Exception as e:
-
             logger.error(f'Error during preprocessing and insertion: {str(e)}')
             return http_error(
                 HTTPStatus.BAD_REQUEST,
@@ -279,13 +305,12 @@ class KnowledgeBaseCompletions(Resource):
         # Check for required parameters
         query = request.json.get('query')
         if query is None:
+            logger.error('Missing parameter "query" in POST body')
             return http_error(
                 HTTPStatus.BAD_REQUEST,
                 'Missing parameter',
                 'Must provide "query" parameter in POST body'
             )
-
-            logger.error('Missing parameter "query" in POST body')
 
         llm_model = request.json.get('llm_model')
         if llm_model is None:
@@ -301,23 +326,22 @@ class KnowledgeBaseCompletions(Resource):
             project = project_controller.get(name=project_name)
         except EntityNotExistsError:
             # Project must exist.
+            logger.error("Project not found, please check the project name exists")
             return http_error(
                 HTTPStatus.NOT_FOUND,
                 'Project not found',
                 f'Project with name {project_name} does not exist'
             )
-            logger.error("Project not found, please check the project name exists")
 
         # Check if knowledge base exists
         table = session.kb_controller.get_table(knowledge_base_name, project.id)
         if table is None:
+            logger.error("Knowledge Base not found, please check the knowledge base name exists")
             return http_error(
                 HTTPStatus.NOT_FOUND,
                 'Knowledge Base not found',
                 f'Knowledge Base with name {knowledge_base_name} does not exist'
             )
-
-            logger.error("Knowledge Base not found, please check the knowledge base name exists")
 
         # Get retrieval config, if set
         retrieval_config = request.json.get('retrieval_config', {})

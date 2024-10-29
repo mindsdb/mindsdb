@@ -607,7 +607,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             packages.append(self.packet(EofPacket, status=0x0062))
         else:
             # send all
-            for row in executor.data:
+            for row in executor.data.to_lists():
                 packages.append(
                     self.packet(BinaryResultsetRowPacket, data=row, columns=columns_def)
                 )
@@ -631,7 +631,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         packages = []
         columns = self.to_mysql_columns(executor.columns)
-        for row in executor.data[fetched:limit]:
+        for row in executor.data[fetched:limit].to_lists():
             packages.append(
                 self.packet(BinaryResultsetRowPacket, data=row, columns=columns)
             )

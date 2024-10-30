@@ -41,10 +41,15 @@ langchain==0.1.11
 langchain-core==0.1.46
 langchain-community==0.0.27
 langchain-openai==0.1.6
-langchain-text_splitters==0.0.1
+langchain-text-splitters==0.0.1
 langchain-nvidia-ai-endpoints==0.1.7
 langfuse==2.35.0
 lark
 prometheus-client==0.20.0
 transformers >= 4.42.4
 sentry-sdk[flask] == 2.14.0
+opentelemetry-api==1.27.0
+opentelemetry-sdk==1.27.0
+opentelemetry-exporter-otlp==1.27.0
+opentelemetry-instrumentation-requests==0.48b0
+opentelemetry-instrumentation-flask==0.48b0

@@ -426,6 +426,7 @@ class KnowledgeBaseCompletions(Resource):
         except EntityNotExistsError:
             # Project must exist.
             logger.error("Project not found, please check the project name exists")
+            logger.error("Project not found, please check the project name exists")
             return http_error(
                 HTTPStatus.NOT_FOUND,
                 'Project not found',
@@ -436,6 +437,7 @@ class KnowledgeBaseCompletions(Resource):
         # Check if knowledge base exists
         table = session.kb_controller.get_table(knowledge_base_name, project.id)
         if table is None:
+            logger.error("Knowledge Base not found, please check the knowledge base name exists")
             logger.error("Knowledge Base not found, please check the knowledge base name exists")
             return http_error(
                 HTTPStatus.NOT_FOUND,

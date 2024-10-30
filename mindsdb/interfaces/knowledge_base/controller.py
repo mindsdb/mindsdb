@@ -125,6 +125,8 @@ class KnowledgeBaseTable:
     ) -> pd.DataFrame:
         query_df = pd.DataFrame.from_records([{TableField.CONTENT.value: query}])
         embeddings_df = self._df_to_embeddings(query_df)
+        if embeddings_df.empty:
+            return pd.DataFrame([])
         embeddings = embeddings_df.iloc[0][TableField.EMBEDDINGS.value]
         keywords_query = None
         if keywords is not None:

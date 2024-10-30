@@ -409,7 +409,7 @@ class KnowledgeBaseCompletions(Resource):
     @api_endpoint_metrics('POST', '/knowledge_bases/knowledge_base/completions')
     def post(self, project_name, knowledge_base_name):
         """
-        Add support for LLM generation on the response from knowledge base
+        Add support for LLM generation on the response from knowledge base. Default completion type is 'chat' unless specified.
         """
         if request.json.get('query') is None:
             # "query" is used for semantic search for both completion types.

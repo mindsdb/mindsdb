@@ -178,7 +178,6 @@ class DropboxHandler(APIHandler):
         table = self._get_table(Identifier(table_name))
         columns = table.get_columns()
         df = pd.DataFrame(columns, columns=["column_name"])
-        df["data_type"] = "string"
         return Response(RESPONSE_TYPE.TABLE, data_frame=df)
 
     def _list_files(self, path=""):

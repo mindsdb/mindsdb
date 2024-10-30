@@ -57,3 +57,25 @@ Wrap the file in backticks (\`) to avoid issues parsing the provided SQL stateme
 Currently, the supported file formats are CSV, TSV, JSON, and Parquet.
 
 The above examples utilize `dropbox_datasource` as the data source name defined in the `CREATE DATABASE` command.
+
+## Troubleshooting Guide
+
+<Warning>
+`Database Connection Error`
+
+- **Symptoms**: Failure to connect MindsDB with the Dropbox.
+- **Checklist**:
+
+1. Confirm that provided Dropbox credentials are correct. Try making a direct connection to the Dropbox using your local script with Dropbox Python SDK.
+2. Ensure a stable network between MindsDB and Dropbox.
+   </Warning>
+
+<Warning>
+`SQL statement cannot be parsed by mindsdb_sql`
+
+- **Symptoms**: SQL queries failing or not recognizing object names containing spaces, special characters or prefixes.
+- **Checklist**: 1. Ensure object names with spaces, special characters or prefixes are enclosed in backticks. 2. Examples:
+  _ Incorrect: SELECT _ FROM integration.travel/travel*data.csv
+  * Incorrect: SELECT _ FROM integration.'travel/travel_data.csv'
+  _ Correct: SELECT \_ FROM integration.\`travel/travel_data.csv\`
+  </Warning>

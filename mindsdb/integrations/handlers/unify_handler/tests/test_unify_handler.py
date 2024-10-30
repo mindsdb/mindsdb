@@ -45,7 +45,7 @@ class TestUnify(BaseExecutorTest):
             engine='unify_engine',
             model = 'llama-3-8b-chat',
             provider = 'together-ai',
-            column = 'text';
+            question_column = 'text';
         """
         )
         self.wait_predictor("proj", "test_unify_correct_flow")

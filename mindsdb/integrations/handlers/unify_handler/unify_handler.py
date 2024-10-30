@@ -48,12 +48,12 @@ class UnifyHandler(BaseMLEngine):
         if self.endpoint not in available_endpoints:
             raise Exception("The model, provider or their combination is not supported by Unify! The supported endpoints are: " + str(available_endpoints))
 
-        input_column = args['using']['column']
-        if input_column not in df.columns:
-            raise RuntimeError(f'Column "{input_column}" not found in input data')
+        question_column = args['using']['column']
+        if question_column not in df.columns:
+            raise RuntimeError(f'Column "{question_column}" not found in input data')
         
         result_df = pd.DataFrame() 
-        result_df['predictions'] = df[input_column].apply(self.predict_answer)     
+        result_df['predictions'] = df[question_column].apply(self.predict_answer)     
         result_df = result_df.rename(columns={'predictions': args['target']})
         
         return result_df

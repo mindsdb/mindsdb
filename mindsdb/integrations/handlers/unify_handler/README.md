@@ -34,7 +34,7 @@ USING
       engine = 'unify_engine',      -- engine name as created via CREATE ML_ENGINE
       model = 'model_name',         -- LLM name
       provider = 'provider_name',   -- LLM provider name
-      column = 'column_name';       -- column that stores input/question to the model
+      question_column = 'column_name';       -- column that stores input/question to the model
 ```
 
 ## Usage

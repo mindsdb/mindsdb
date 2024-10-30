@@ -83,9 +83,6 @@ class AzureBlobHandler(APIHandler):
         if 'storage_account_name' in connection_data:
             self.storage_account_name = connection_data['storage_account_name']
 
-        if 'account_access_key' in connection_data:
-            self.account_access_key = connection_data['account_access_key']
-
         if 'container_name' in connection_data:
             self.container_name = connection_data['container_name']
 
@@ -102,18 +99,8 @@ class AzureBlobHandler(APIHandler):
         if self.is_connected is True:
             return self.connection
 
-        sas_token = generate_account_sas(
-            account_name=self.storage_account_name,
-            account_key=self.account_access_key,
-            resource_types=ResourceTypes(service=True, container=True, object=True),
-            permission=AccountSasPermissions(read=True, list=True),
-            expiry=datetime.now() + timedelta(hours=1)
-        )
+        blob_service_client = BlobServiceClient.from_connection_string(conn_str=self.connection_string)
 
-        blob_service_client = BlobServiceClient(
-            account_url=f"https://{self.storage_account_name}.blob.core.windows.net",
-            credential=sas_token
-        )
         self.connection = blob_service_client
         self.is_connected = True
         return blob_service_client

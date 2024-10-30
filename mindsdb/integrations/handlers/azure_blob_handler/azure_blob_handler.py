@@ -7,11 +7,10 @@ from mindsdb.utilities import log
 import duckdb
 import pandas as pd
 
-from azure.storage.blob import BlobServiceClient, generate_account_sas, ResourceTypes, AccountSasPermissions
+from azure.storage.blob import BlobServiceClient
 
-from datetime import datetime, timedelta
 from contextlib import contextmanager
-from typing import List
+from typing import List, Text, Optional, Dict
 from mindsdb.integrations.libs.api_handler import APIResource, APIHandler
 from mindsdb.integrations.utilities.sql_utils import FilterCondition
 from mindsdb_sql.parser.ast.base import ASTNode
@@ -61,10 +60,10 @@ class AzureBlobHandler(APIHandler):
     This handler handles connection and execution of the SQL statements on Azure Blob.
     """
 
-    name = 'azureblob'
+    name = "azureblob"
     supported_file_formats = ['csv', 'tsv', 'json', 'parquet']
 
-    def __init__(self, name: str, **kwargs):
+    def __init__(self, name: Text, connection_data: Optional[Dict], **kwargs):
         super().__init__(name)
         """ constructor
         Args:
@@ -77,7 +76,7 @@ class AzureBlobHandler(APIHandler):
         self._files_table = ListFilesTable(self)
         self.container_name = None
 
-        connection_data = kwargs.get('connection_data')
+        self.connection_data = connection_data
 
         if 'container_name' in connection_data:
             self.container_name = connection_data['container_name']
@@ -204,7 +203,7 @@ class AzureBlobHandler(APIHandler):
             connection.execute("INSERT INTO tmp_table BY NAME SELECT * FROM df")
 
             # upload
-            connection.execute(f'COPY tmp_table TO "azure://{self.container_name}/{key}"')
+            connection.execute(f"COPY tmp_table TO 'azure://{self.container_name}/{key}'")
 
     def native_query(self, query: str) -> Response:
         """

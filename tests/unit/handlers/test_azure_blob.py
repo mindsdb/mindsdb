@@ -31,7 +31,6 @@ class TestAzureBlobHandler(unittest.TestCase):
         self.assertIsNotNone(connection)
         self.assertTrue(self.handler.is_connected)
 
-
     def test_check_connection(self):
         """
         Verifies that the `check_connection` method returns a StatusResponse object and accurately reflects the connection status.

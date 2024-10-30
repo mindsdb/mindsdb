@@ -48,8 +48,8 @@ class ListFilesTable(APIResource):
                 item = {
                     "path": path,
                     "bucket": obj["Bucket"],
-                    "name": path[path.rfind("/") + 1 :],
-                    "extension": path[path.rfind(".") + 1 :],
+                    "name": path[path.rfind("/") + 1:],
+                    "extension": path[path.rfind(".") + 1:],
                 }
 
                 data.append(item)
@@ -170,13 +170,13 @@ class IBMCloudObjectStorageHandler(APIHandler):
 
         endpoint_url = self.connection_data["cos_endpoint_url"]
         if endpoint_url.startswith("https://"):
-            endpoint_url = endpoint_url[len("https://") :]
+            endpoint_url = endpoint_url[len("https://"):]
         elif endpoint_url.startswith("http://"):
-            endpoint_url = endpoint_url[len("http://") :]
+            endpoint_url = endpoint_url[len("http://"):]
 
         duckdb_conn.execute(f"SET s3_endpoint='{endpoint_url}'")
-        duckdb_conn.execute(f"SET s3_url_style='path'")
-        duckdb_conn.execute(f"SET s3_use_ssl=true")
+        duckdb_conn.execute("SET s3_url_style='path'")
+        duckdb_conn.execute("SET s3_use_ssl=true")
 
         try:
             yield duckdb_conn

@@ -338,6 +338,10 @@ class KnowledgeBaseTable:
             metadata_columns = list(set(metadata_columns).intersection(columns))
             # use all unused columns is content
             content_columns = list(set(columns).difference(metadata_columns))
+        elif TableField.METADATA.value in columns:
+            # Use 'metadata' column as a JSON column if passed in explicitly.
+            metadata_columns = [TableField.METADATA.value]
+            content_columns = list(set(columns).difference(metadata_columns))
         else:
             # all columns go to content
             content_columns = columns
@@ -359,6 +363,15 @@ class KnowledgeBaseTable:
                 [f"{field}: {value}" for field, value in zip(fields, values)]
             )
             return document
+        
+        def handle_metadata_row(row: pd.Series) -> str:
+            metadata_dict = dict(row)
+            if TableField.METADATA.value in metadata_dict:
+                # Extract nested metadata in special case where we have a single column named 'metadata'.
+                # Hacky solution to support passing in 'metadata' JSON column instead of passing in
+                # many different named columns representing metadata when inserting into KB.
+                return metadata_dict[TableField.METADATA.value]
+            return str(metadata_dict)
 
         # create dataframe
         if len(content_columns) == 1:
@@ -372,7 +385,7 @@ class KnowledgeBaseTable:
             df_out[TableField.ID.value] = df[id_column]
 
         if metadata_columns and len(metadata_columns) > 0:
-            df_out[TableField.METADATA.value] = df[metadata_columns].apply(lambda row: str(dict(row)), axis=1)
+            df_out[TableField.METADATA.value] = df[metadata_columns].apply(handle_metadata_row, axis=1)
 
         return df_out
 

@@ -1,20 +1,19 @@
 import enum
 from collections import defaultdict
 from typing import List, Optional
+from dataclasses import dataclass
+
 from langchain_core.language_models import BaseChatModel
 from langchain.embeddings.base import Embeddings
-
 from mindsdb_sql.parser.ast import Select, BinaryOperation, Identifier, Constant, Star
 
 from mindsdb.integrations.libs.vectordatabase_handler import TableField
+from mindsdb.interfaces.skills.sql_agent import SQLAgent
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities import log
 from mindsdb.utilities.cache import get_cache
 
-from .sql_agent import SQLAgent
-
 _DEFAULT_TOP_K_SIMILARITY_SEARCH = 5
-_DEFAULT_SQL_LLM_MODEL = 'gpt-3.5-turbo'
 _MAX_CACHE_SIZE = 1000
 
 logger = log.getLogger(__name__)
@@ -25,6 +24,45 @@ class SkillType(enum.Enum):
     TEXT2SQL = 'sql'
     KNOWLEDGE_BASE = 'knowledge_base'
     RETRIEVAL = 'retrieval'
+
+
+@dataclass
+class SkillData:
+    """Storage for skill's data
+
+    Attributes:
+        name (str): name of the skill
+        type (str): skill's type (SkillType)
+        params (dict): skill's attributes
+        agent_tables_list (Optional[List[str]]): the restriction on available tables for an agent using the skill
+    """
+    name: str
+    type: str
+    params: dict
+    agent_tables_list: Optional[List[str]]
+
+    @property
+    def tables_list(self) -> List[str]:
+        """List of tables which may use this skill. If the list is empty, there are no restrictions.
+        The result list is a combination of skill's and agent's tables lists.
+
+        Returns:
+            List[str]: List of tables.
+
+        Raises:
+            ValueError: if there is no intersection between skill's and agent's list.
+                This means that all tables restricted for use.
+        """
+        agent_tables_list = self.agent_tables_list or []
+        skill_tables_list = self.params.get('tables', [])
+        if len(skill_tables_list) > 0 and len(agent_tables_list) > 0:
+            diff = set(skill_tables_list) & set(agent_tables_list)
+            if len(diff) == 0:
+                raise ValueError("There are no tables allowed for use.")
+            return list(diff)
+        if len(skill_tables_list) > 0:
+            return skill_tables_list
+        return agent_tables_list
 
 
 class SkillToolController:
@@ -58,7 +96,7 @@ class SkillToolController:
             cache=get_cache('agent', max_size=_MAX_CACHE_SIZE)
         )
 
-    def _make_text_to_sql_tools(self, skills: List[db.Skills], llm) -> list:
+    def _make_text_to_sql_tools(self, skills: List[db.Skills], llm) -> List["MindsDBSQLToolkit"]:
         '''
            Uses SQLAgent to execute tool
         '''
@@ -74,7 +112,7 @@ class SkillToolController:
         tables_list = []
         for skill in skills:
             database = skill.params['database']
-            for table in skill.params['tables']:
+            for table in skill.tables_list:
                 tables_list.append(f'{database}.{table}')
 
         # use list databases
@@ -100,7 +138,7 @@ class SkillToolController:
                 tool.description = (
                     f'Use this tool if you need data about {" OR ".join(descriptions)}. '
                     'Use the conversation context to decide which table to query. '
-                    f'These are the available tables: {",".join(tables_list)}.\n'
+                    f'These are the available tables: {",".join(tables_list)}.\n' if len(tables_list) > 0 else '\n'
                     f'ALWAYS consider these special cases:\n'
                     f'- For TIMESTAMP type columns, make sure you include the time portion in your query (e.g. WHERE date_column = "2020-01-01 12:00:00")'
                     f'Here are the rest of the instructions:\n'
@@ -170,21 +208,21 @@ class SkillToolController:
             type=skill.type
         )
 
-    def get_tools_from_skills(self, skills: List[db.Skills], llm: BaseChatModel, embedding_model: Embeddings) -> dict:
-        """
-            Creates function for skill and metadata (name, description)
+    def get_tools_from_skills(self, skills_data: List[dict], llm: BaseChatModel, embedding_model: Embeddings) -> dict:
+        """Creates function for skill and metadata (name, description)
+
         Args:
-            skills (Skills): Skills to make a tool from
-            llm: LLM which will be used by skills
-            embedding_model: this model is used by retrieval skill
+            skills (List[db.Skills]): Skills to make a tool from
+            llm (BaseChatModel): LLM which will be used by skills
+            embedding_model (Embeddings): this model is used by retrieval skill
 
         Returns:
-            dict with keys: name, description, func
+            dict: with keys: name, description, func
         """
 
         # group skills by type
         skills_group = defaultdict(list)
-        for skill in skills:
+        for skill in skills_data:
             try:
                 skill_type = SkillType(skill.type)
             except ValueError:
@@ -199,12 +237,12 @@ class SkillToolController:
         for skill_type, skills in skills_group.items():
             if skill_type == SkillType.TEXT2SQL:
                 tools[skill_type] = self._make_text_to_sql_tools(skills, llm)
-            if skill_type == SkillType.KNOWLEDGE_BASE:
+            elif skill_type == SkillType.KNOWLEDGE_BASE:
                 tools[skill_type] = [
                     self._make_knowledge_base_tools(skill)
                     for skill in skills
                 ]
-            if skill_type == SkillType.RETRIEVAL:
+            elif skill_type == SkillType.RETRIEVAL:
                 tools[skill_type] = [
                     self._make_retrieval_tools(skill, llm, embedding_model)
                     for skill in skills

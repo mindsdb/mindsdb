@@ -18,7 +18,6 @@ CREATE DATABASE azureblob_datasource
 WITH
     engine = 'azureblob',
     parameters = {
-      "storage_account_name": "",
       "container_name":"",
       "connection_string":""
     };
@@ -26,7 +25,6 @@ WITH
 
 Required connection parameters include the following:
 
-* `storage_account_name`: The name of your storage account.
 * `container_name`: The name of your container.
 * `connection_string`: The connection string of your account, we prefer connection string from Shared Access Signature as it has expiry date, time, and permission control as well, you can found it under "Security & Networking" menu >> "Shared Access Signature".
 

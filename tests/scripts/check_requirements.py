@@ -71,6 +71,7 @@ HANDLER_RULE_IGNORES = {
 }
 
 PACKAGE_NAME_MAP = {
+    "azure-storage-blob": ["azure"],
     "scylla-driver": ["cassandra"],
     "mysql-connector-python": ["mysql"],
     "snowflake-connector-python": ["snowflake"],

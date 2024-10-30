@@ -35,6 +35,10 @@ Required connection parameters include the following:
 Microsoft Entra ID was previously known as Azure Active Directory (Azure AD).
 </Note>
 
+## Usage
+
+This integration can only be used to create chatbots for Microsoft Teams via the [`CREATE CHATBOT`](https://docs.mindsdb.com/mindsdb_sql/agents/chatbot) syntax. Currently, *it cannot be used as a data source for other workloads*.
+
 Follow the instructions given below to set up the Microsoft Teams app that will act as the chatbot:
 
   1. Follow [this link](https://dev.botframework.com/bots/new) to the Microsoft Bot Framework portal and sign in with your Microsoft account.
@@ -49,7 +53,7 @@ Follow the instructions given below to set up the Microsoft Teams app that will 
   </Tip>
 
   8. Open the MindsDB Editor and create a connection to Microsoft Teams using the client ID and client secret obtained in the previous steps using the SQL command provided above.
-  9. Using this connection, create a chatbot using the [`CREATE CHATBOT`](/agents/chatbot) syntax.
+  9. Using this connection, create a chatbot using the [`CREATE CHATBOT`](/https://docs.mindsdb.com/mindsdb_sql/agents/chatbot) syntax.
   10. Run the `SHOW CHATBOTS` command and record the `webhook_token` of the chatbot you created.
   11. Navigate back to the Microsoft Bot Framework portal and fill out the messaging endpoint in the following format: `<mindsdb_url>/api/webhooks/chatbots/<webhook_token>`.
   <Tip>

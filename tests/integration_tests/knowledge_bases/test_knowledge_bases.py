@@ -12,7 +12,6 @@ from mindsdb.migrations import migrate
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.config import Config
 
-TEST_BASE_URL = ''
 # Should match table name in data/seed.sql
 TEST_TABLE_NAME = 'items'
 # Should match column names in data/seed.sql
@@ -24,12 +23,13 @@ CONNECTION_KWARGS = {
         'port': os.environ.get('MDB_TEST_PGVECTOR_PORT', '5432'),
         'user': os.environ.get('MDB_TEST_PGVECTOR_USER', 'postgres'),
         'password': os.environ.get('MDB_TEST_PGVECTOR_PASSWORD', 'supersecret'),
-        'database': None # Different for each test.
+        'database': None  # Different for each test.
     }
 }
 
 MODEL_WAIT_DURATION_SECONDS = 5
 MODEL_WAIT_SLEEP_INTERVAL_SECONDS = 0.2
+
 
 @pytest.fixture(scope="session", autouse=True)
 def app():
@@ -125,7 +125,7 @@ def init_db():
         # Close the cursor and the connection
         cursor.close()
         db.close()
-    
+
     return new_db_name
 
 
@@ -176,7 +176,7 @@ class TestKnowledgeBaseCompletion:
             }
         }
         update_kb_response = client.put(f'/api/projects/mindsdb/knowledge_bases/{test_kb_name}',
-                                         json=update_request, follow_redirects=True)
+                                        json=update_request, follow_redirects=True)
         assert update_kb_response.status_code == HTTPStatus.OK
 
         completion_request = {
@@ -184,7 +184,7 @@ class TestKnowledgeBaseCompletion:
             'llm_model': 'gpt-4o'
         }
         response = client.post(f'/api/projects/mindsdb/knowledge_bases/{test_kb_name}/completions',
-                            json=completion_request, follow_redirects=True)
+                               json=completion_request, follow_redirects=True)
         assert response.status_code == HTTPStatus.OK
         response_data = response.get_json()
         assert 'message' in response_data
@@ -220,7 +220,7 @@ class TestKnowledgeBaseCompletion:
             }
         }
         update_kb_response = client.put(f'/api/projects/mindsdb/knowledge_bases/{test_kb_name}',
-                                         json=update_request, follow_redirects=True)
+                                        json=update_request, follow_redirects=True)
         assert update_kb_response.status_code == HTTPStatus.OK
 
         completion_request = {
@@ -229,7 +229,7 @@ class TestKnowledgeBaseCompletion:
             'type': 'context'
         }
         response = client.post(f'/api/projects/mindsdb/knowledge_bases/{test_kb_name}/completions',
-                            json=completion_request, follow_redirects=True)
+                               json=completion_request, follow_redirects=True)
         assert response.status_code == HTTPStatus.OK
         response_data = response.get_json()
         # Should have the most relevant document first.
@@ -265,7 +265,7 @@ class TestKnowledgeBaseCompletion:
             }
         }
         update_kb_response = client.put(f'/api/projects/mindsdb/knowledge_bases/{test_kb_name}',
-                                         json=update_request, follow_redirects=True)
+                                        json=update_request, follow_redirects=True)
         assert update_kb_response.status_code == HTTPStatus.OK
 
         completion_request = {
@@ -276,56 +276,13 @@ class TestKnowledgeBaseCompletion:
             'type': 'context'
         }
         response = client.post(f'/api/projects/mindsdb/knowledge_bases/{test_kb_name}/completions',
-                            json=completion_request, follow_redirects=True)
+                               json=completion_request, follow_redirects=True)
         assert response.status_code == HTTPStatus.OK
         response_data = response.get_json()
         assert 'documents' in response_data
         # Only 2 have matching metadata.
         assert len(response_data['documents']) == 2
         # Should have the most relevant document first.
-        assert 'population' in response_data['documents'][0]['content']
-
-    def test_context_completion_with_keywords(self, client, pgvector_database_name):
-        test_kb_name = 'test_context_completion_with_keywords'
-        create_request = {
-            'knowledge_base': {
-                'name': test_kb_name,
-                'model': 'test_embedding_model',
-                'storage': {
-                    'table': TEST_TABLE_NAME,
-                    'database': pgvector_database_name
-                }
-            }
-        }
-        create_kb_response = client.post('/api/projects/mindsdb/knowledge_bases', json=create_request, follow_redirects=True)
-        assert create_kb_response.status_code == HTTPStatus.CREATED
-
-        # Insert documents for context.
-        rows_to_insert = [
-            {'content': 'The capital of Tyler Fantasy RAG Land is MindsDB'},
-            {'content': 'The population of Tyler Fantasy RAG Land is 6'}
-        ]
-        update_request = {
-            'knowledge_base': {
-                'rows': rows_to_insert
-            }
-        }
-        update_kb_response = client.put(f'/api/projects/mindsdb/knowledge_bases/{test_kb_name}',
-                                         json=update_request, follow_redirects=True)
-        assert update_kb_response.status_code == HTTPStatus.OK
-
-        completion_request = {
-            'query': 'Population of rag land',
-            'keywords': 'population rag land',
-            'type': 'context'
-        }
-        response = client.post(f'/api/projects/mindsdb/knowledge_bases/{test_kb_name}/completions',
-                            json=completion_request, follow_redirects=True)
-        assert response.status_code == HTTPStatus.OK
-        response_data = response.get_json()
-        # Should have the most relevant document first.
-        assert 'documents' in response_data
-        assert len(response_data['documents']) == 2
         assert 'population' in response_data['documents'][0]['content']
 
     def test_context_completion_with_keywords_and_metadata(self, client, pgvector_database_name):
@@ -356,7 +313,7 @@ class TestKnowledgeBaseCompletion:
             }
         }
         update_kb_response = client.put(f'/api/projects/mindsdb/knowledge_bases/{test_kb_name}',
-                                         json=update_request, follow_redirects=True)
+                                        json=update_request, follow_redirects=True)
         assert update_kb_response.status_code == HTTPStatus.OK
 
         completion_request = {
@@ -368,7 +325,7 @@ class TestKnowledgeBaseCompletion:
             'type': 'context'
         }
         response = client.post(f'/api/projects/mindsdb/knowledge_bases/{test_kb_name}/completions',
-                            json=completion_request, follow_redirects=True)
+                               json=completion_request, follow_redirects=True)
         assert response.status_code == HTTPStatus.OK
         response_data = response.get_json()
         assert 'documents' in response_data

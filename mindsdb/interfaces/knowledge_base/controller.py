@@ -363,7 +363,7 @@ class KnowledgeBaseTable:
                 [f"{field}: {value}" for field, value in zip(fields, values)]
             )
             return document
-        
+
         def handle_metadata_row(row: pd.Series) -> str:
             metadata_dict = dict(row)
             if TableField.METADATA.value in metadata_dict:

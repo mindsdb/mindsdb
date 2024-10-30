@@ -19,7 +19,6 @@ WITH
     engine = 'azureblob',
     parameters = {
       "storage_account_name": "",
-      "account_access_key": "",
       "container_name":"",
       "connection_string":""
     };
@@ -28,9 +27,14 @@ WITH
 Required connection parameters include the following:
 
 * `storage_account_name`: The name of your storage account.
-* `account_access_key`: The account access key, you can found it after entering storage account interface, under "Security & Networking" menu >> "Access Keys" >> pick one from 2 available key pairs.
 * `container_name`: The name of your container.
-* `connection_string`: The connection string of your account, you can found it after entering storage account interface, under "Security & Networking" menu >> "Access Keys" >> pick the connection string that under the same key as your account_access_key
+* `connection_string`: The connection string of your account, we prefer connection string from Shared Access Signature as it has expiry date, time, and permission control as well, you can found it under "Security & Networking" menu >> "Shared Access Signature".
+
+Inside Shared Access Signature menu:
+* Tick all checkboxes for Allowed services, Allowed resource types, Blob versioning permissions, Allowed blob index permissions.
+(Adjustable based on your needs) For Allowed permissions, tick all except Permanent delete & Immutable storage.
+* Then Finally click "Generate SAS & connection string".
+* Use the generated connection string to connect.
 
 
 ## Usage

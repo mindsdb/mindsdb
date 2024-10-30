@@ -39,36 +39,19 @@ class ListFilesTable(APIResource):
 
 
 class FileTable(APIResource):
-    def __init__(self, handler=None, table_name=None, dropbox_path=None):
-        super().__init__(handler, table_name=table_name)
-        self.dropbox_path = dropbox_path
 
-    def _get_file_df_and_path(self):
+    def _get_file_df(self):
         try:
-            if "/" in self.dropbox_path:
-                df = self.handler._read_file(self.dropbox_path)
-                if df is None:
-                    raise Exception(
-                        f"No such file found for the path: {self.dropbox_path}"
-                    )
-                return df, self.dropbox_path
-            else:
-                files = self.handler._list_files()
-                file_path = None
-                for file in files:
-                    if file["name"] == self.dropbox_path:
-                        file_path = file["path"]
-                        break
-                if file_path is None:
-                    raise Exception(f"No such file found: {self.dropbox_path}")
-                else:
-                    df = self.handler._read_file(file_path)
-                    return df, file["path"]
+            df = self.handler._read_file(self.table_name)
+            if df is None:
+                raise Exception(f"No such file found for the path: {self.dropbox_path}")
+
+            return df
         except Exception as e:
             self.handler.logger.error(e)
 
     def list(self, conditions=None, limit=None, sort=None, targets=None, **kwargs):
-        return self._get_file_df_and_path()[0]
+        return self._get_file_df()
 
     def get_columns(self):
         df = self.handler._read_file(self.table_name)
@@ -78,9 +61,9 @@ class FileTable(APIResource):
         columns = [col.name for col in query.columns]
         data = [dict(zip(columns, row)) for row in query.values]
         df_new = pd.DataFrame(data)
-        df_existing, file_path = self._get_file_df_and_path()
+        df_existing = self._get_file_df()
         df_combined = pd.concat([df_existing, df_new], ignore_index=True)
-        self.handler._write_file(file_path, df_combined)
+        self.handler._write_file(self.table_name, df_combined)
 
 
 class DropboxHandler(APIHandler):
@@ -172,13 +155,13 @@ class DropboxHandler(APIHandler):
                 if has_content:
                     df["content"] = df["path"].apply(self._read_as_content)
             else:
-                table = FileTable(self, table_name=table_name, dropbox_path=table_name)
+                table = FileTable(self, table_name=table_name)
                 df = table.select(query)
 
             return Response(RESPONSE_TYPE.TABLE, data_frame=df)
         elif isinstance(query, Insert):
             table_name = query.table.parts[-1]
-            table = FileTable(self, table_name=table_name, dropbox_path=table_name)
+            table = FileTable(self, table_name=table_name)
             table.insert(query)
             return Response(RESPONSE_TYPE.OK)
         else:

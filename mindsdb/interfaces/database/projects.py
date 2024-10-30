@@ -288,10 +288,10 @@ class Project:
         return data
 
     def get_view(self, name):
-        view_record = db.session.query(db.View).filter_by(
-            project_id=self.id,
-            company_id=ctx.company_id,
-            name=name
+        view_record = db.session.query(db.View).filter(
+            db.View.project_id == self.id,
+            db.View.company_id == ctx.company_id,
+            sa.func.lower(db.View.name) == name.lower(),
         ).one_or_none()
         if view_record is None:
             return view_record

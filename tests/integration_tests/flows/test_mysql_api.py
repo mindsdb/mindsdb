@@ -169,7 +169,8 @@ class TestMySqlApi(BaseStuff):
         cls.launch_query_tmpl = "mysql --host=%s --port=%s --user=%s --database=mindsdb" % (
             cls.config["api"]["mysql"]["host"],
             cls.config["api"]["mysql"]["port"],
-            cls.config["auth"]["username"])
+            cls.config["auth"]["username"]
+        )
 
     @classmethod
     def tear_down(cls):

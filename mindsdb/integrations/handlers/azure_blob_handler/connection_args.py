@@ -4,12 +4,6 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 
 
 connection_args = OrderedDict(
-    storage_account_name={
-        'type': ARG_TYPE.STR,
-        'description': 'The name of your storage service account',
-        'required': True,
-        'label': 'Storage Account Name'
-    },
     container_name={
         'type': ARG_TYPE.STR,
         'description': 'The name of your storage service account Container Name',
@@ -22,12 +16,10 @@ connection_args = OrderedDict(
         'required': True,
         'label': 'Connection String',
         'secret': True
-    },
-
+    }
 )
 
 connection_args_example = OrderedDict(
-    storage_account_name='',
     container_name='',
     connection_string=''
 )

@@ -74,14 +74,10 @@ class AzureBlobHandler(APIHandler):
         self.connection = None
         self.is_connected = False
         self._tables = {}
-        self.storage_account_name = None
-        self.account_access_key = None
         self._files_table = ListFilesTable(self)
         self.container_name = None
 
         connection_data = kwargs.get('connection_data')
-        if 'storage_account_name' in connection_data:
-            self.storage_account_name = connection_data['storage_account_name']
 
         if 'container_name' in connection_data:
             self.container_name = connection_data['container_name']

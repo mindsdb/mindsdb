@@ -68,8 +68,5 @@ if not OTEL_SDK_DISABLED or OTEL_SDK_FORCE_RUN:
 
         exporter = ConsoleSpanExporter()
 
-    # Create a batch span processor
-    span_processor = BatchSpanProcessor(GlobalTaggingSpanProcessor(exporter))
-
     # Replace the default span processor with the custom one
-    trace.get_tracer_provider().add_span_processor(span_processor)
+    trace.get_tracer_provider().add_span_processor(GlobalTaggingSpanProcessor(exporter))

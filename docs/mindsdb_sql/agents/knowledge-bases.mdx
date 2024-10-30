@@ -6,23 +6,17 @@ sidebarTitle: Knowledge Base
 A knowledge base is a batteries-included RAG system that you can create and insert data into, as well as query as if it was a table.
 
 ```sql
--- Create a knowledge base that
--- By default, it uses the OpenAI embedding model and the ChromaDB vector store
-CREATE KNOWLEDGE_BASE world_news_kb;
-
--- Add data into the knowledge base
-INSERT INTO world_news_kb (
-  SELECT id, text as content FROM web_news
-);
-
--- Query the knowledge base
-SELECT *
-FROM world_news_kb
-WHERE content = "Best AI Startups in SF?"
-LIMIT 10;
+CREATE KNOWLEDGE_BASE world_news_kb
+USING
+      model = embedding_model, -- this is an embedding model; note that using OpenAI's embedding model requires OpenAI API key (see examples below)
+      storage = vector_db; -- this is a vector database that stores embedded data; defaults to ChromaDB
 ```
 
-Internally, it uses a vector store and an embedding model. By default, it uses the ChromaDB vector store and the OpenAI embedding model. However, you can define a vector store and an embedding model as you see fit.
+Internally, knowledge bases use a vector store and an embedding model. By default, it uses the ChromaDB vector store and the OpenAI embedding model, which requires an OpenAI API key. However, you can define a vector store and an embedding model as in the examples below.
+
+<p align="center">
+  <img src="https://docs.google.com/drawings/d/e/2PACX-1vTVmUqhoFXLF3ncL0NWwgdPjI7Hj19f-5xU8ED31ntYvlsTM3poM9zZKwcrEwzvxJrOhl2raIFKWlsp/pub?w=1342&h=681" />
+</p>
 
 ## Syntax
 
@@ -46,42 +40,113 @@ Where the following parameters are optional:
 - `content_columns` can list columns to store content (if not set, all columns are content).
 - `id_column` can list a column to store a unique identitifier, which is `id` by default.
 
-## Example
+## Examples
 
-Let's look at an step-by-step example of how to define a knowledge base.
+This section presents examples of how to create knowledge bases and insert data for storage in the form of embeddings.
 
-<p align="center">
-  <img src="https://docs.google.com/drawings/d/e/2PACX-1vTVmUqhoFXLF3ncL0NWwgdPjI7Hj19f-5xU8ED31ntYvlsTM3poM9zZKwcrEwzvxJrOhl2raIFKWlsp/pub?w=1342&h=681" />
-</p>
+### Knowledge Base with OpenAI Embedding Model
 
-Here is how you build a knowledge base specifying the embedding model and the vector store.
+Note that using OpenAI's embedding model requires OpenAI API key.
 
-Create an embedding model for the knowledge base using [OpenAI](/integrations/ai-engines/openai) or [LangChain](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/langchain_embedding_handler) as an engine.
+First, create an engine through which the model is accessed.
 
 ```sql
 CREATE ML_ENGINE embedding
 FROM langchain_embedding;
+```
 
+Next, create an embedding model, providing an OpenAI API key.
+
+```sql
 CREATE MODEL embedding_model
 PREDICT embeddings
 USING
-	engine = "embedding",
-	class = "openai",
-	openai_api_key = "your_api_key_here",
-	input_columns = ["content"];
+      engine = "embedding",
+      class = "openai",
+      openai_api_key = "sk-xxx",
+      input_columns = ["content"];
 ```
 
-Create a connection to the vector store.
+Now that you have an embedding model, create a knowledge base, passing this embedding model.
+
+```sql
+CREATE KNOWLEDGE_BASE kb_custom_model
+USING
+	    model = embedding_model;
+```
+
+After successful creation of a knowledge base, insert data to store it in the form of embeddings.
+
+```sql
+INSERT INTO kb_custom_model (
+      SELECT review as content 
+      FROM example_db.amazon_reviews
+);
+```
+
+Finally, you can verify that the data has been inserted into the knowledge base by querying it.
+
+```sql
+SELECT * FROM kb_custom_model;
+```
+
+### Knowledge Base with Hugging Face Embedding Model
+
+This example uses an open source embedding model.
+
+First, create an engine through which the model is accessed.
+
+```sql
+CREATE ML_ENGINE embedding
+FROM langchain_embedding;
+```
+
+Next, create an embedding model.
+
+```sql
+CREATE MODEL embedding_model
+PREDICT embedding
+USING
+      engine = 'langchain_embedding',
+      class = 'HuggingFaceEmbeddings';
+```
+
+Now that you have an embedding model, create a knowledge base, passing this embedding model.
+
+```sql
+CREATE KNOWLEDGE_BASE kb_custom_model
+USING
+	    model = embedding_model;
+```
+
+After successful creation of a knowledge base, insert data to store it in the form of embeddings.
+
+```sql
+INSERT INTO kb_custom_model (
+      SELECT review as content 
+      FROM example_db.amazon_reviews
+);
+```
+
+Finally, you can verify that the data has been inserted into the knowledge base by querying it.
+
+```sql
+SELECT * FROM kb_custom_model;
+```
+
+### Knowledge Base with Custom Vector Store
+
+This example shows how to create a knowledge base with custom vector database.
+
+First, connect to your vector database. Here, it is ChromaDB.
 
 ```sql
 CREATE DATABASE chroma_dev_local
 WITH ENGINE = "chromadb",
 PARAMETERS = {
-	"persist_directory": "persist path here"
+	    "persist_directory": "persist path here"
 };
 ```
-
-This example uses the `world_news_with_ids` table that contains the `id` and `content` columns.
 
 Create an index in the vector store and insert one example point.
 
@@ -92,22 +157,19 @@ CREATE TABLE chroma_dev_local.world_news_index (
 );
 ```
 
-Query the vector store:
-
-```sql
-SELECT * FROM chroma_dev_local.world_news_index;
-```
-
-Create a knowledge base using all components defined above.
+Next, create a knowledge base, passing this vector database connection.
 
 ```sql
 CREATE KNOWLEDGE_BASE world_news_kb
 USING
-	model = embedding_model,
-	storage = chroma_dev_local.world_news_index;
+      storage = chroma_dev_local.world_news_index;
 ```
 
-Here is how you can automate adding content to this knowledge base every time new data becomes available:
+### Automate Data Sync with Knowledge Base
+
+This example shows how to set up a job that inserts newly available data from your database into a knowledge base.
+
+Here is how you can automate adding content to the knowledge base every time new data becomes available:
 
 ```sql
 CREATE JOB keep_knowledge_base_up_to_date AS (

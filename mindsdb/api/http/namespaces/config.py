@@ -49,9 +49,7 @@ class GetConfig(Resource):
         config = Config()
         return {
             'auth': {
-                'http_auth_enabled': config['auth']['http_auth_enabled'],
-                'username': config['auth']['username'],
-                'password': config['auth']['password']
+                'http_auth_enabled': config['auth']['http_auth_enabled']
             }
         }
 

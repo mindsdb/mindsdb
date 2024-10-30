@@ -20,11 +20,19 @@ class MindsDBSQLParserTool(BaseTool):
         cmd = re.sub(r'```(sql)?', '', query)
         return cmd
 
+    def _query_options(self, query):
+        yield query
+        if '\\_' in query:
+            yield query.replace('\\_', '_')
+
     def _run(self, query: str):
         """Validate the SQL query."""
         clean_query = self._clean_query(query)
-        try:
-            ast_query = parse_sql(clean_query, dialect='mindsdb')
-            return "".join(f"valid query: {ast_query.to_string()}")
-        except Exception as e:
-            return "".join(f"invalid query, with error: {e}")
+        for query in self._query_options(clean_query):
+            try:
+                ast_query = parse_sql(query, dialect='mindsdb')
+                return "".join(f"valid query: {ast_query.to_string()}")
+            except Exception as e:
+                error = "".join(f"invalid query, with error: {e}")
+                continue
+        return error

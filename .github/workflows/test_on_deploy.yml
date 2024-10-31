@@ -2,6 +2,11 @@ name: Test on Deploy
 
 on:
   workflow_call:
+    inputs:
+      git-sha:
+        required: false
+        type: string
+        default: ""
     secrets:
       OPENAI_API_KEY:
         required: true
@@ -38,6 +43,8 @@ jobs:
     if: github.ref_type == 'branch'
     steps:
     - uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.git-sha }}
     - name: Set up Python
       uses: actions/setup-python@v5.1.0
       with:

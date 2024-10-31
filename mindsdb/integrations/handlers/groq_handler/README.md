@@ -33,6 +33,14 @@ USING
       engine = 'groq_engine',   -- engine name as created via CREATE ML_ENGINE
       model_name = 'model-name',              -- choose one of available models
       prompt_template = 'prompt-to-the-model' -- prompt message to be completed by the model
+      question_column = 'question',  -- optional, column name that stores user input
+      context_column = 'context',  -- optional, column that stores context of the user input
+      prompt_template = 'input your query here', -- optional, user provides instructions to the model here
+      user_column = 'user_input', -- optional, stores user input
+      assistant_column = 'conversation_context', -- optional, stores conversation context
+      prompt = 'instruction to the model', -- optional stores instruction to the model
+      max_tokens = 100, -- optional, token limit for answer
+      temperature = 0.3, -- temp
 ```
 
 ## Usage

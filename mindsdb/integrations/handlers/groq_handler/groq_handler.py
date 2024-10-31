@@ -21,8 +21,9 @@ class GroqHandler(OpenAIHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.api_base = groq_handler_config.BASE_URL
-        self.default_model = 'llama3-8b-8192'
-        self.default_mode = 'default'
+        self.default_model = groq_handler_config.DEFAULT_MODEL
+        self.default_mode = groq_handler_config.DEFAULT_MODE
+        self.supported_modes = groq_handler_config.SUPPORTED_MODES
 
     @staticmethod
     def _check_client_connection(client: OpenAI):

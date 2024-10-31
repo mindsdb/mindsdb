@@ -34,11 +34,13 @@ class SkillData:
         name (str): name of the skill
         type (str): skill's type (SkillType)
         params (dict): skill's attributes
+        project_id (int): id of the project
         agent_tables_list (Optional[List[str]]): the restriction on available tables for an agent using the skill
     """
     name: str
     type: str
     params: dict
+    project_id: int
     agent_tables_list: Optional[List[str]]
 
     @property

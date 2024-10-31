@@ -418,7 +418,13 @@ class LangchainAgent:
         agent_tables_list = self.args.get('tables')
 
         skills_data = [
-            SkillData(name=skill.name, type=skill.type, params=skill.params, agent_tables_list=agent_tables_list)
+            SkillData(
+                name=skill.name,
+                type=skill.type,
+                params=skill.params,
+                project_id=skill.project_id,
+                agent_tables_list=agent_tables_list
+            )
             for skill in skills
         ]
         tools_groups = skill_tool.get_tools_from_skills(skills_data, llm, self.embedding_model)

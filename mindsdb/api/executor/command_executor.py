@@ -542,7 +542,7 @@ class ExecuteCommands:
                 # set names utf8;
                 charsets = {
                     "utf8": CHARSET_NUMBERS["utf8_general_ci"],
-                    "utf8mb4": CHARSET_NUMBERS["utf8mb4_general_ci"],
+                    "utf8mb4": CHARSET_NUMBERS["utf8mb4_unicode_ci"],
                 }
                 self.charset = statement.value.value
                 self.charset_text_type = charsets.get(self.charset)

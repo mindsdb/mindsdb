@@ -487,7 +487,7 @@ class CharacterSetsTable(Table):
         data = [
             ["utf8", "UTF-8 Unicode", "utf8_general_ci", 3],
             ["latin1", "cp1252 West European", "latin1_swedish_ci", 1],
-            ["utf8mb4", "UTF-8 Unicode", "utf8mb4_general_ci", 4],
+            ["utf8mb4", "UTF-8 Unicode", "utf8mb4_unicode_ci", 4],
         ]
 
         df = pd.DataFrame(data, columns=cls.columns)

@@ -25,14 +25,14 @@ USING
     aws_access_key_id = 'AQAXEQK89OX07YS34OP',
     aws_secret_access_key = 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
     aws_session_token = 'FwoGZXIvYXdzEJr...',
-    aws_region = 'us-east-1',
+    region_name = 'us-east-1';
 ```
 
 Required parameters for creating an engine include the following:
 
 - `aws_access_key_id`: The AWS access key ID for the user.
 - `aws_secret_access_key`: The AWS secret access key for the user.
-- `aws_region`: The AWS region to use.
+- `region_name`: The AWS region to use.
 
 Optional parameters include the following:
 
@@ -47,7 +47,7 @@ USING
     engine = 'bedrock_engine',
     question_column = 'question',
     max_tokens = 100,
-    temperature = 0.3,
+    temperature = 0.3;
 ```
 
 Required parameters for creating a model include the following:

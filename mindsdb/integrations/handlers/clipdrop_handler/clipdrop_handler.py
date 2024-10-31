@@ -41,8 +41,7 @@ class ClipdropHandler(BaseMLEngine):
         self.model_storage.json_set('args', args)
 
     def _get_clipdrop_client(self, args):
-        args["using"] = "clipdrop_engine"
-        api_key = get_api_key('clipdrop', args["using"], self.engine_storage, strict=False)
+        api_key = get_api_key('clipdrop', args, self.engine_storage, strict=False)
 
         local_directory_path = args["local_directory_path"]
 

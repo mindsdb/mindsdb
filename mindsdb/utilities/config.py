@@ -124,6 +124,8 @@ class Config():
                 self._override_config['auth'] = {}
 
             self._override_config['auth']['http_auth_enabled'] = True
+            self._override_config['auth']['username'] = http_username
+            self._override_config['auth']['password'] = http_password
 
         api_host = "127.0.0.1" if not self.use_docker_env else "0.0.0.0"
         self._default_config = {

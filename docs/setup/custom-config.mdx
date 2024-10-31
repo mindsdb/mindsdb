@@ -37,7 +37,20 @@ First, you should prepare a `config.json` file based on the following template; 
     "permanent_storage": {
         "location": "local"
     },
-    "paths": {},
+    "storage_dir": "/home/mindsdb/var",
+    "paths": {
+        "root": "/home/mindsdb/var",
+        "content": "/home/mindsdb/var/content",
+        "storage": "/home/mindsdb/var/storage",
+        "static": "/home/mindsdb/var/static",
+        "tmp": "/home/mindsdb/var/tmp",
+        "log": "/home/mindsdb/var/log",
+        "cache": "/home/mindsdb/var/cache",
+        "locks": "/home/mindsdb/var/locks",
+    },
+    "auth":{
+        "http_auth_enabled": False
+    },
     "log": {
         "level": {
             "console": "INFO",
@@ -45,16 +58,12 @@ First, you should prepare a `config.json` file based on the following template; 
             "db": "WARNING"
         }
     },
-    "debug": false,
-    "integrations": {},
     "gui": {
         "autoupdate": true
     },
-    "auth":{
-        "http_auth_enabled": False,
-        "username": "mindsdb_user",
-        "password": "abc123"
-    },
+    "debug": false,
+    "environment": "local",
+    "integrations": {},
     "api": {
         "http": {
             "host": "127.0.0.1",
@@ -74,12 +83,17 @@ First, you should prepare a `config.json` file based on the following template; 
     },
     "cache": {
         "type": "local"
-    }
+    },
+    "ml_task_queue": {
+        "type": "local"
+    },
+    "file_upload_domains": [],
+    "web_crawling_allowed_sites": [],
 }
 ```
 
 <Tip>
-Configure an HTTP authentication for your MindsDB instance by setting `http_auth_enabled` to `True` and defining the `username` and `password` parameters.
+Configure HTTP authentication for your MindsDB instance by setting the environment variables `MINDSDB_USERNAME` and `MINDSDB_PASSWORD` before starting MindsDB. Alternatively, you can also enable authentication by setting `http_auth_enabled` to `True` and defining the `username` and `password` parameters in the `auth` section of the above configuration file, however, this is not recommended for production environments.
 </Tip>
 
 Now that your `config.json` file is ready, run the command below to start

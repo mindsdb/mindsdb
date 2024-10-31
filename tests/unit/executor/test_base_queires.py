@@ -18,7 +18,7 @@ class TestSelect(BaseExecutorDummyML):
         self.save_file('tasks', df)
 
         self.run_sql('''
-            create view mindsdb.vtasks (
+            create view mindsdb.vTasks (
                 select * from files.tasks where a=1
             )
         ''')
@@ -27,7 +27,7 @@ class TestSelect(BaseExecutorDummyML):
         self.run_sql(
             '''
                 CREATE model mindsdb.task_model
-                from mindsdb (select * from vtasks)
+                from mindsdb (select * from Vtasks)
                 PREDICT a
                 using engine='dummy_ml'
             '''

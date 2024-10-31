@@ -1,6 +1,6 @@
 import os
 import copy
-from typing import List
+from typing import List, Optional, Dict
 
 import pandas as pd
 
@@ -22,6 +22,8 @@ from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
 from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel
 from mindsdb.interfaces.agents.langchain_agent import build_embedding_model, create_chat_model, get_llm_provider
 from mindsdb.interfaces.database.projects import ProjectController
+from mindsdb.interfaces.knowledge_base.preprocessing.models import PreprocessingConfig, Document
+from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor import PreprocessorFactory
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
@@ -38,6 +40,20 @@ class KnowledgeBaseTable:
         self._kb = kb
         self._vector_db = None
         self.session = session
+        self.document_preprocessor = None
+        self.document_loader = None
+        self.mysql_proxy = None
+
+        # Initialize preprocessor if config exists in params
+        if kb.params and 'preprocessing' in kb.params:
+            self.configure_preprocessing(kb.params['preprocessing'])
+
+    def configure_preprocessing(self, config: Optional[dict] = None):
+        """Configure preprocessing for the knowledge base table"""
+        self.document_preprocessor = None
+        if config is not None:
+            preprocessing_config = PreprocessingConfig(**config)
+            self.document_preprocessor = PreprocessorFactory.create_preprocessor(preprocessing_config)
 
     def select_query(self, query: Select) -> pd.DataFrame:
         """
@@ -72,13 +88,78 @@ class KnowledgeBaseTable:
         resp = db_handler.query(query)
         return resp.data_frame
 
-    def update_query(self, query: Update):
-        """
-        Handles update query to KB table.
-        Replaces content values with embeddings in SET clause. Sends query to vector db
-        :param query: query to KB table
-        """
+    def insert_files(self, file_names: List[str]):
+        """Process and insert files"""
+        if not self.document_loader:
+            raise ValueError("Document loader not configured")
 
+        documents = list(self.document_loader.load_files(file_names))
+        if documents:
+            self.insert_documents(documents)
+
+    def insert_web_pages(
+            self,
+            urls: List[str],
+            crawl_depth: int,
+            limit: int,
+            filters: List[str] = None
+    ):
+        """Process and insert web pages"""
+        if not self.document_loader:
+            raise ValueError("Document loader not configured")
+
+        documents = list(self.document_loader.load_web_pages(
+            urls,
+            limit=limit,
+            crawl_depth=crawl_depth,
+            filters=filters
+        ))
+        if documents:
+            self.insert_documents(documents)
+
+    def insert_query_result(self, query: str, project_name: str):
+        """Process and insert SQL query results"""
+        if not self.mysql_proxy:
+            raise ValueError("MySQL proxy not configured")
+
+        if not query:
+            return
+
+        self.mysql_proxy.set_context({'db': project_name})
+        query_result = self.mysql_proxy.process_query(query)
+
+        if query_result.type != 'table':  # Use enum/constant
+            raise ValueError('Query returned no data')
+
+        column_names = [c.get('alias', c.get('name')) for c in query_result.columns]
+        df = pd.DataFrame.from_records(query_result.data, columns=column_names)
+        self.insert(df)
+
+    def insert_rows(self, rows: List[Dict]):
+        """Process and insert raw data rows"""
+        if not rows:
+            return
+
+        documents = [Document(
+            content=row.get('content', ''),
+            id=row.get('id'),
+            metadata={k: v for k, v in row.items() if k not in ['content', 'id']}
+        ) for row in rows]
+
+        self.insert_documents(documents)
+
+    def insert_documents(self, documents: List[Document]):
+        """Process and insert documents with preprocessing if configured"""
+        if self.document_preprocessor:
+            chunks = self.document_preprocessor.process_documents(documents)
+            df = pd.DataFrame([chunk.model_dump() for chunk in chunks])
+        else:
+            # No preprocessing, convert directly to dataframe
+            df = pd.DataFrame([doc.model_dump() for doc in documents])
+
+        self.insert(df)
+
+    def update_query(self, query: Update):
         # add embeddings to content in updated collumns
         query = copy.deepcopy(query)
 
@@ -86,6 +167,17 @@ class KnowledgeBaseTable:
         cont_col = TableField.CONTENT.value
         if cont_col in query.update_columns:
             content = query.update_columns[cont_col]
+
+            # Apply preprocessing to content if configured
+            if self.document_preprocessor:
+                doc = Document(
+                    content=content.value,
+                    metadata={}  # Empty metadata for content-only updates
+                )
+                processed_chunks = self.document_preprocessor.process_documents([doc])
+                if processed_chunks:
+                    content.value = processed_chunks[0].content
+
             query.update_columns[emb_col] = Constant(self._content_to_embeddings(content))
 
         # TODO search content in where clause?
@@ -125,10 +217,21 @@ class KnowledgeBaseTable:
         Insert dataframe to KB table
         Adds embedding column to dataframe and calls .upsert method of vector db
         :param df: input dataframe
-
         """
         if df.empty:
             return
+
+        if self.document_preprocessor:
+            # Convert DataFrame to documents for preprocessing
+            raw_documents = [Document(
+                content=row.get(TableField.CONTENT.value, ''),
+                id=row.get(TableField.ID.value),
+                metadata=row.get(TableField.METADATA.value, {})
+            ) for _, row in df.iterrows()]
+
+            # Apply preprocessing
+            processed_chunks = self.document_preprocessor.process_documents(raw_documents)
+            df = pd.DataFrame([chunk.model_dump() for chunk in processed_chunks])
 
         df = self._adapt_column_names(df)
 
@@ -376,28 +479,33 @@ class KnowledgeBaseController:
         self.session = session
 
     def add(
-        self,
-        name: str,
-        project_name: str,
-        embedding_model: Identifier,
-        storage: Identifier,
-        params: dict,
-        if_not_exists: bool = False,
+            self,
+            name: str,
+            project_name: str,
+            embedding_model: Identifier,
+            storage: Identifier,
+            params: dict,
+            preprocessing_config: Optional[dict] = None,
+            if_not_exists: bool = False,
     ) -> db.KnowledgeBase:
         """
         Add a new knowledge base to the database
+        :param preprocessing_config: Optional preprocessing configuration to validate and store
         """
-        # check if knowledge base already exists
+        # Add preprocessing config to params if provided
+        if preprocessing_config is not None:
+            # Validate config before storing
+            PreprocessingConfig(**preprocessing_config)
+            params = params or {}
+            params['preprocessing'] = preprocessing_config
 
         # get project id
-
         project = self.session.database_controller.get_project(project_name)
-
         project_id = project.id
 
         # not difference between cases in sql
         name = name.lower()
-
+        # check if knowledge base already exists
         kb = self.get(name, project_id)
         if kb is not None:
             if if_not_exists:
@@ -407,7 +515,6 @@ class KnowledgeBaseController:
         if embedding_model is None:
             # create default embedding model
             model_name = self._get_default_embedding_model(project.name, params=params)
-
         else:
             # get embedding model from input
             model_name = embedding_model.parts[-1]
@@ -427,7 +534,6 @@ class KnowledgeBaseController:
 
         # search for the vector database table
         if storage is None:
-
             cloud_pg_vector = os.environ.get('KB_PGVECTOR_URL')
             if cloud_pg_vector:
                 vector_table_name = name
@@ -435,10 +541,7 @@ class KnowledgeBaseController:
             else:
                 # create chroma db with same name
                 vector_table_name = "default_collection"
-                vector_db_name = self._create_persistent_chroma(
-                    name
-                )
-
+                vector_db_name = self._create_persistent_chroma(name)
                 # memorize to remove it later
                 params['vector_storage'] = vector_db_name
         elif len(storage.parts) != 2:

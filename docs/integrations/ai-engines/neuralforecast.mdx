@@ -100,8 +100,8 @@ CREATE MODEL quarterly_expenditure_forecaster
 FROM mysql_demo_db
   (SELECT * FROM historical_expenditures)
 PREDICT expenditure
-ORDER BY month
 GROUP BY category
+ORDER BY month
 WINDOW 12
 HORIZON 3
 USING ENGINE = 'neuralforecast';

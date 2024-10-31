@@ -131,3 +131,6 @@ class GroqHandler(OpenAIHandler):
         """
         client = openai.OpenAI(api_key=api_key, base_url=base_url, organization=org)
         return client.models.list()
+
+    def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None):
+        raise NotImplementedError("Fine-tuning is not supported for Groq AI engine.")

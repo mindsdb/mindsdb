@@ -35,60 +35,75 @@ Required connection parameters include the following:
 Microsoft Entra ID was previously known as Azure Active Directory (Azure AD).
 </Note>
 
-## Usage
-
-This integration can only be used to create chatbots for Microsoft Teams via the [`CREATE CHATBOT`](/agents/chatbot) syntax. Currently, *it cannot be used as a data source for other workloads*.
+### How to set up Microsoft Teams app
 
 Follow the instructions given below to set up the Microsoft Teams app that will act as the chatbot:
 
-  1. Follow [this link](https://dev.botframework.com/bots/new) to the Microsoft Bot Framework portal and sign in with your Microsoft account.
-  2. Fill out the *Display name*, *Bot handle*, and, optionally, the *Long description*, but leave the *Messaging endpoint* field empty for now.
-  3. Set the *App type* to be `Multi Tenant` and click on *Create Microsoft App ID and password*. This will open a new tab with the Azure portal.
-  4. Click on *New registration* and fill out the *Name* and select the `Accounts in any organizational directory (Any Azure AD directory - Multitenant)` option under *Supported account types*, and click on *Register*. Record the *Application (client) ID* for later use.
-  5. Click on *Certificates & secrets* under *Manage*.
-  6. Click on *New client secret* and fill out the *Description* and select an appropriate *Expires* period, and click on *Add*.
-  7. Copy the client secret and save it in a secure location.
+<Steps>
+  <Step title="Sign in to Microsoft and fill in the bot data">
+    - Follow [this link](https://dev.botframework.com/bots/new) to the Microsoft Bot Framework portal and sign in with your Microsoft account.
+    - Fill out the *Display name*, *Bot handle*, and, optionally, the *Long description*, but leave the *Messaging endpoint* field empty for now.
+    - Set the *App type* to be `Multi Tenant` and click on *Create Microsoft App ID and password*. This will open a new tab with the Azure portal.
+  </Step>
+  <Step title="Set up the Azure portal">
+    - Click on *New registration* and fill out the *Name* and select the `Accounts in any organizational directory (Any Azure AD directory - Multitenant)` option under *Supported account types*, and click on *Register*. **Save the *Application (client) ID* for later use.**
+    - Click on *Certificates & secrets* under *Manage*.
+    - Click on *New client secret* and fill out the *Description* and select an appropriate *Expires* period, and click on *Add*.
+    - Copy and **save the client secret in a secure location.**
+    <Tip>
+    If you already have an existing app registration, you can use it instead of creating a new one and skip the above steps.
+    </Tip>
+  </Step>
+  <Step title="Set up the MindsDB editor">
+    - Open the MindsDB editor and create a connection to Microsoft Teams using the client ID and client secret obtained in the previous steps. Use the `CREATE DATABASE` statement as show above.
+    - Using this connection, create a chatbot with the [`CREATE CHATBOT`](/agents/chatbot) syntax, as shown in the Usage section below.
+    - Run the `SHOW CHATBOTS` command and record the `webhook_token` of the chatbot you created.
+  </Step>
+  <Step title="Set up the Microsoft Bot Framework portal">
+    - Navigate back to the Microsoft Bot Framework portal and fill out the messaging endpoint in the following format: `<mindsdb_url>/api/webhooks/chatbots/<webhook_token>`.
   <Tip>
-  If you already have an existing app registration, you can use it instead of creating a new one and skip steps 4-6.
+  The `<mindsdb_url>` placeholder should be replaced with the URL where MindsDB instance is running. *Note that if you are running MindsDB locally, it will need to be exposed to the internet using a service like [ngrok](https://ngrok.com/).*
   </Tip>
-
-  8. Open the MindsDB Editor and create a connection to Microsoft Teams using the client ID and client secret obtained in the previous steps using the `CREATE DATABASE` command provided above
-  9. Using this connection, create a chatbot using the [`CREATE CHATBOT`](/agents/chatbot) syntax:
-  ```sql
-  CREATE CHATBOT ms_teams_chatbot
-  USING
-      database = 'teams_conn',   -- this must be created with CREATE DATABASE
-      agent = 'agent_name';   -- this must be created with CREATE AGENT
-  ```
-
-  10. Run the `SHOW CHATBOTS` command and record the `webhook_token` of the chatbot you created.
-  11. Navigate back to the Microsoft Bot Framework portal and fill out the messaging endpoint in the following format: `<mindsdb_url>/api/webhooks/chatbots/<webhook_token>`.
+    - Fill out the *Microsoft App ID* using the client ID obtained in the previous steps, agree to the terms, and click on *Register*.
+    - Under *Add a featured channel*, click on *Microsoft Teams*, select your Microsoft Teams solution, click on *Save* and agree to the terms when prompted.
+  </Step>
+  <Step title="Set up the Microsoft Teams">
+    - Navigate to Microsoft Teams and then to the *Apps* tab.
+    - Search for the *Developer Portal* app and add it to your workspace.
+    - Open the *Developer Portal*, click on *Apps* and then on *New app*.
+    - Fill out the *Name* for the app and click on *Add*.
+    - Navigate to *Basic information* and fill out the required fields: *Short description*, *Long description*, *Developer or company name*, *Website*, *Privacy policy*, *Terms of use*, and *Application (client) ID*. You may also provide any additional information if you prefer.
   <Tip>
-  The `<mindsdb_url>` is the URL of where MindsDB is running, which should be replaced with real values
-  Please note that if you are running MindsDB locally, it will need to be exposed to the internet using a service like [ngrok](https://ngrok.com/).
+  Please note that the above fields are required for the bot to be usable in Microsoft Teams. The URLs provided in the *Website*, *Privacy policy*, and *Terms of use* fields must be valid URLs.
   </Tip>
+    - Navigate to *App features* and select *Bot*.
+    - Choose the *Select an existing bot* option and select the bot you created earlier in the Microsoft Bot Framework portal.
+    - Select all of the scopes where bot is required to be used and click on *Save*.
+    - Finally, on the navigation pane, click on *Publish* and then on *Publish to your org*.
+  </Step>
+</Steps>
 
-  12. Fill out the *Microsoft App ID* using the client ID obtained in the previous steps, agree to the terms, and click on *Register*.
-  13. Under *Add a featured channel*, click on *Microsoft Teams*, select your Microsoft Teams solution, click on *Save* and agree to the terms when prompted.
-  14. Navigate to Microsoft Teams and then to the *Apps* tab.
-  15. Search for the *Developer Portal* app and add it to your workspace.
-  16. Open the *Developer Portal*, click on *Apps* and then on *New app*.
-  17. Fill out the *Name* for the app and click on *Add*.
-  18. Navigate to *Basic information* and fill out the required fields: *Short description*, *Long description*, *Developer or company name*, *Website*, *Privacy policy*, *Terms of use*, and *Application (client) ID*. You may also provide any additional information you wish.
-  <Tip>
-  Please note that the above fields are required to be filled out for the bot to be usable in Microsoft Teams. The URLs provided in the *Website*, *Privacy policy*, and *Terms of use* fields must be valid URLs.
-  </Tip>
-
-  19. Navigate to *App features* and select *Bot*.
-  20. Choose the *Select an existing bot* option and select the bot you created earlier in the Microsoft Bot Framework portal.
-  21. Select all of the scopes where bot is required to be used and click on *Save*.
-  22. Finally, on the navigation pane, click on *Publish* and then on *Publish to your org*.
-
+<Info>
 For the bot to be made available to the users in your organization, you will need to ask your IT administrator to approve the submission at this [link](https://admin.teams.microsoft.com/policies/manage-apps). 
 
 Once it is approved, users can find it under the *Built for your org* section in the *Apps* tab. They can either chat with the bot directly or add it to a channel. To chat with the bot in a channel, type `@<bot_name>` followed by your message.
 
 While waiting for approval, you can test the chatbot by clicking on *Preview in Teams* in the Developer Portal.
+</Info>
+
+## Usage
+
+This integration can only be used to create chatbots for Microsoft Teams via the [`CREATE CHATBOT`](/agents/chatbot) syntax. Currently, *it cannot be used as a data source for other workloads*.
+
+```sql
+CREATE CHATBOT teams_chatbot
+USING
+    database = 'teams_datasource',
+    model = 'langchain_model',
+    is_running = true;
+```
+
+Learn more about [chatbots here](/mindsdb_sql/agents/chatbot).
 
 ## Troubleshooting Guide
 

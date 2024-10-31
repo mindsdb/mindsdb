@@ -1920,7 +1920,7 @@ class ExecuteCommands:
                 datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),  # Create_time
                 datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),  # Update_time
                 None,  # Check_time
-                "utf8mb4_0900_ai_ci",  # Collation
+                "utf8_general_ci",  # Collation
                 None,  # Checksum
                 "",  # Create_options
                 "",  # Comment

@@ -35,7 +35,7 @@ class SchemataTable(Table):
 
         databases_meta = inf_schema.session.database_controller.get_list()
         data = [
-            ["def", x["name"], "utf8mb4", "utf8mb4_0900_ai_ci", None]
+            ["def", x["name"], "utf8", "utf8_general_ci", None]
             for x in databases_meta
         ]
 

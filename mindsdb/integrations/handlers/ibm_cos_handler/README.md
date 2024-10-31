@@ -32,7 +32,7 @@ Required connection parameters include the following:
 
 - `cos_hmac_access_key_id`: The IBM COS access key that identifies the user or IAM role.
 - `cos_hmac_secret_access_key`: The IBM COS secret access key that identifies the user or IAM role.
-- `cos_endpoint_url`: The IBM COS session token that identifies the user or IAM role. This becomes necessary when using temporary security credentials.
+- `cos_endpoint_url`: The IBM COS resource ID for your cloud Object Storage.
 
 Optional connection parameters include the following:
 
@@ -93,6 +93,6 @@ This table will return all objects regardless of the file format, however, only 
 - **Symptoms**: SQL queries failing or not recognizing object names containing spaces, special characters or prefixes.
 - **Checklist**: 1. Ensure object names with spaces, special characters or prefixes are enclosed in backticks. 2. Examples:
   _ Incorrect: SELECT _ FROM integration.travel/travel_data.csv
-  _ Incorrect: SELECT _ FROM integration.'travel/travel_data.csv'
-  _ Correct: SELECT _ FROM integration.\`travel/travel_data.csv\`
-  </Warning>
+  - Incorrect: SELECT _ FROM integration.'travel/travel_data.csv'
+    _ Correct: SELECT \_ FROM integration.\`travel/travel_data.csv\`
+    </Warning>

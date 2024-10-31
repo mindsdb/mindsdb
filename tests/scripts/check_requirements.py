@@ -128,6 +128,7 @@ PACKAGE_NAME_MAP = {
     "auto-ts": ["auto_ts"],
     "llama-index-readers-web": ["llama_index"],
     "llama-index-embeddings-openai": ["llama_index"],
+    "unifyai": ["unify"],
     "botframework-connector": ["botframework"],
     "botbuilder-schema": ["botbuilder"],
     "opentelemetry-api": ["opentelemetry"],

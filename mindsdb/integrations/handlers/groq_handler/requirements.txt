@@ -1,0 +1,2 @@
+pydantic-settings >= 2.1.0
+-r mindsdb/integrations/handlers/openai_handler/requirements.txt

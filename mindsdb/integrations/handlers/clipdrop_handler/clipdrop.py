@@ -1,7 +1,5 @@
 import requests
 import uuid
-import os
-from urllib.parse import urlparse
 
 
 class ClipdropClient:
@@ -30,25 +28,14 @@ class ClipdropClient:
             return ext
         raise Exception("Unknown image format. Currently jpg, jpeg & png are supported.")
 
-    def is_url(self, path):
-        """Check if a path is a URL."""
-        parsed = urlparse(path)
-        return parsed.scheme in ('http', 'https')
-
     def download_image(self, path):
-        """Download image from a URL or read from a local file path."""
-        if self.is_url(path):
-            # Download image from URL
-            img_ext = self.image_extension_check(path)
+
+        img_ext = self.image_extension_check(path)
+        try:
             res = requests.get(path)
             return {"img_ext": img_ext, "content": res.content}
-        elif os.path.exists(path):
-            # Read image from local file
-            img_ext = path.split(".")[-1]
-            with open(path, "rb") as img_file:
-                return {"img_ext": img_ext, "content": img_file.read()}
-        else:
-            raise Exception(f"Invalid path: {path} is neither a valid URL nor a local file")
+        except Exception as e:
+            raise Exception(f"Failed to download image: {e}")
 
     def remove_text(self, img_url):
         url = f'{self.base_endpoint}remove-text/v1'

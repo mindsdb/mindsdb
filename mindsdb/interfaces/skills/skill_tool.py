@@ -96,7 +96,7 @@ class SkillToolController:
             cache=get_cache('agent', max_size=_MAX_CACHE_SIZE)
         )
 
-    def _make_text_to_sql_tools(self, skills: List[db.Skills], llm) -> List["MindsDBSQLToolkit"]:
+    def _make_text_to_sql_tools(self, skills: List[db.Skills], llm) -> List:
         '''
            Uses SQLAgent to execute tool
         '''

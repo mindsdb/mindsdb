@@ -12,11 +12,8 @@ This handler uses `pymilvus` python library connect to a Milvus instance.
 
 The required arguments to establish a connection are:
 
-* `alias`: alias of the Milvus connection to construct
-* `host`: IP address of the Milvus server
-* `port`: port of the Milvus server
-* `user`: username of the Milvus server
-* `password`: password of the username of the Milvus server
+* `uri`: uri for milvus database, can be set to local ".db" file or docker or cloud service
+* `token`: token to support docker or cloud service according to uri option
 
 The optional arguments to establish a connection are:
 
@@ -58,11 +55,8 @@ CREATE DATABASE milvus_datasource
 WITH
   ENGINE = 'milvus',
   PARAMETERS = {
-    "alias": "default",
-    "host": "127.0.0.1",
-    "port": 19530,
-    "user": "username",
-    "password": "password",
+    "uri": "./milvus_local.db",
+    "token": "",
     "create_embedding_dim": 3,
     "create_auto_id": true
 };

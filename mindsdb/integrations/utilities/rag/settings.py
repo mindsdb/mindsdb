@@ -19,9 +19,9 @@ DEFAULT_MAX_CONCURRENCY = 5
 
 DEFAULT_CARDINALITY_THRESHOLD = 40
 DEFAULT_CHUNK_SIZE = 1000
-DEFAULT_CHUNK_OVERLAP = 50
+DEFAULT_CHUNK_OVERLAP = 200
 DEFAULT_POOL_RECYCLE = 3600
-DEFAULT_LLM_MODEL = "gpt-3.5-turbo"
+DEFAULT_LLM_MODEL = "gpt-4o"
 DEFAULT_CONTENT_COLUMN_NAME = "body"
 DEFAULT_DATASET_DESCRIPTION = "email inbox"
 DEFAULT_TEST_TABLE_NAME = "test_email"
@@ -107,11 +107,15 @@ class RAGPipelineModel(BaseModel):
     # used for loading an existing vector store
     vector_store_config: VectorStoreConfig = VectorStoreConfig()  # Vector store configuration
 
+    # used for llm generation
+    llm: BaseChatModel = None  # Language model
+    llm_model_name: str = DEFAULT_LLM_MODEL  # Language model name
+    llm_provider: str = None  # Language model provider
+
     vector_store: VectorStore = vector_store_map[vector_store_config.vector_store_type]  # Vector store
     db_connection_string: str = None  # Database connection string
     table_name: str = DEFAULT_TEST_TABLE_NAME  # table name
-    llm: BaseChatModel = None  # Language model
-    embedding_model: Embeddings  # Embedding model
+    embedding_model: Embeddings = None  # Embedding model
     rag_prompt_template: str = DEFAULT_RAG_PROMPT_TEMPLATE  # RAG prompt template
     retriever_prompt_template: Union[str, dict] = None  # Retriever prompt template
     retriever_type: RetrieverType = RetrieverType.VECTOR_STORE  # Retriever type

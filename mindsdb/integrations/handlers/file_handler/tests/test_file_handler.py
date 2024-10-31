@@ -9,7 +9,7 @@ import pandas
 import pytest
 import responses
 from mindsdb_sql.exceptions import ParsingException
-from mindsdb_sql.parser.ast import CreateTable, DropTables, Identifier, Select, Star
+from mindsdb_sql.parser.ast import CreateTable, DropTables, Identifier, Insert, Select, Star, TableColumn, Update
 from pytest_lazyfixture import lazy_fixture
 
 from mindsdb.integrations.handlers.file_handler.file_handler import FileHandler
@@ -44,10 +44,19 @@ class MockFileController:
             for record in file_records
         ]
 
+    def get_files_names(self):
+        return [file["name"] for file in self.get_files()]
+
+    def get_file_path(self, name):
+        return True
+
     def get_file_meta(self, *args, **kwargs):
         return self.get_files()[0]
 
     def delete_file(self, name):
+        return True
+
+    def save_file(self, name, file_path, file_name=None):
         return True
 
 
@@ -226,10 +235,67 @@ class TestQuery:
         assert response.error_message is None
         assert expected_df.equals(response.data_frame)
 
+    def test_query_insert(self, csv_file, monkeypatch):
+        """Test an invalid insert query"""
+        # Create a temporary file to save the csv file to.
+        csv_tmp = os.path.join(tempfile.gettempdir(), "test.csv")
+        if os.path.exists(csv_tmp):
+            os.remove(csv_tmp)
+        shutil.copy(csv_file, csv_tmp)
+
+        def mock_get_file_path(self, name):
+            return csv_tmp
+        monkeypatch.setattr(MockFileController, "get_file_path", mock_get_file_path)
+
+        file_handler = FileHandler(file_controller=MockFileController())
+        response = file_handler.query(
+            Insert(
+                table=Identifier(parts=["someTable"]),
+                columns=[
+                    "col_one",
+                    "col_two",
+                    "col_three",
+                    "col_four",
+                ],
+                values=[
+                    [1, -1, 0.1, "A"],
+                    [2, -2, 0.2, "B"],
+                    [3, -3, 0.3, "C"],
+                ],
+            )
+        )
+
+        assert response.type == RESPONSE_TYPE.OK
+
+    def test_query_create(self):
+        """Test a valid create table query"""
+        file_handler = FileHandler(file_controller=MockFileController())
+        response = file_handler.query(
+            CreateTable(
+                name=Identifier(parts=["someTable"]),
+                columns=[TableColumn(name="col1"), TableColumn(name="col2")],
+            )
+        )
+
+        assert response.type == RESPONSE_TYPE.OK
+
+    def test_query_create_or_replace(self):
+        """Test a valid create or replace table query"""
+        file_handler = FileHandler(file_controller=MockFileController())
+        response = file_handler.query(
+            CreateTable(
+                name=Identifier(parts=["someTable"]),
+                columns=[TableColumn(name="col1"), TableColumn(name="col2")],
+                is_replace=True,
+            )
+        )
+
+        assert response.type == RESPONSE_TYPE.OK
+
     def test_query_bad_type(self):
         """Test an invalid query type for files"""
         file_handler = FileHandler(file_controller=MockFileController())
-        response = file_handler.query(CreateTable([Identifier(parts=["someTable"])]))
+        response = file_handler.query(Update([Identifier(parts=["someTable"])]))
 
         assert response.type == RESPONSE_TYPE.ERROR
 

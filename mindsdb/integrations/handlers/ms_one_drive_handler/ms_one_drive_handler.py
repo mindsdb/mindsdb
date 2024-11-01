@@ -8,7 +8,6 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
 from mindsdb.integrations.libs.api_handler import APIHandler
-from mindsdb.integrations.utilities.handlers.auth_utilities import MSGraphAPIAuthManager
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)

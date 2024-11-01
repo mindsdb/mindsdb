@@ -1,5 +1,9 @@
 from typing import Text, List, Dict
+
 from mindsdb.integrations.utilities.handlers.api_utilities.microsoft.ms_graph_api_utilities import MSGraphAPIBaseClient
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
@@ -11,6 +15,12 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
     def __init__(self, access_token: Text, user_principal_name: Text) -> None:
         super().__init__(access_token)
         self.user_principal_name = user_principal_name
+
+    def check_connection(self) -> None:
+        """
+        Checks the connection to the Microsoft Graph API by fetching the user's profile.
+        """
+        self._fetch_data(f"users/{self.user_principal_name}")
     
     def get_root_drive_items(self) -> List[Dict]:
         """

@@ -1,3 +1,4 @@
+from io import BytesIO
 from typing import List, Text
 
 import pandas as pd
@@ -44,3 +45,27 @@ class ListFilesTable(APIResource):
 
     def get_columns(self):
         return ["name", "path", "extension", "content"]
+    
+
+class FileTable(APIResource):
+
+    def list(self, targets: List[str] = None, table_name=None, *args, **kwargs) -> pd.DataFrame:
+        client = self.handler.connect()
+
+        file_content = BytesIO(client.get_item_content(table_name))
+        file_extension = table_name.split(".")[-1]
+
+        # Read the file content based and return a DataFrame based on the file extension.
+        if file_extension == "csv":
+            df = pd.read_csv(file_content)
+
+        elif file_extension == "tsv":
+            df = pd.read_csv(file_content, sep="\t")
+
+        elif file_extension == "json":
+            df = pd.read_json(file_content)
+
+        elif file_extension == "parquet":
+            df = pd.read_parquet(file_content)
+            
+        return df

@@ -35,7 +35,7 @@ class MSGraphAPIBaseClient:
                 response = requests.get(api_url, headers=headers, params=params)
         if response.status_code not in [200, 201]:
             raise requests.exceptions.RequestException(response.text)
-        if response.headers["Content-Type"] == "application/octet-stream":
+        if response.headers["Content-Type"] in ("application/octet-stream", "text/tab-separated-values"):
             raw_response = response.content
         else:
             raw_response = response.json()

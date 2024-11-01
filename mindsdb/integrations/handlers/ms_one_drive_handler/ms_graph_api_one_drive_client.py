@@ -21,16 +21,54 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
         Checks the connection to the Microsoft Graph API by fetching the user's profile.
         """
         self._fetch_data(f"users/{self.user_principal_name}")
-    
-    def get_root_drive_items(self) -> List[Dict]:
+
+    def get_all_items(self) -> List[Dict]:
         """
-        Retrieves the root items of the signed-in user's OneDrive.
+        Retrieves all items of the user's OneDrive.
+        
+        Returns:
+            List[Dict]: All items of the user's OneDrive.
+        """
+        all_items = []
+        for root_item in self.get_root_items():
+            if "folder" in root_item:
+                all_items.extend(self.get_child_items(root_item["id"]))
+
+            else:
+                all_items.append(root_item)
+
+        return all_items
+    
+    def get_root_items(self) -> List[Dict]:
+        """
+        Retrieves the root items of the user's OneDrive.
         
         Returns:
             List[Dict]: The root items of the user's OneDrive.
         """
-        root_drive_items = []
+        root_items = []
         for items in self._fetch_data(f"users/{self.user_principal_name}/drive/root/children"):
-            root_drive_items.extend(items)
+            root_items.extend(items)
 
-        return root_drive_items
+        return root_items
+    
+    def get_child_items(self, item_id: Text) -> List[Dict]:
+        """
+        Recursively retrieves the child items of the specified item.
+        
+        Args:
+            item_id (Text): The ID of the item whose child items are to be retrieved.
+        
+        Returns:
+            List[Dict]: The child items of the specified item.
+        """
+        child_items = []
+        for items in self._fetch_data(f"users/{self.user_principal_name}/drive/items/{item_id}/children"):
+            for item in items:
+                if "folder" in item:
+                    child_items.extend(self.get_child_items(item["id"]))
+
+                else:
+                    child_items.append(item)
+
+        return child_items

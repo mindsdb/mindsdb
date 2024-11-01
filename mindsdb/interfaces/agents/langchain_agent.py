@@ -362,8 +362,7 @@ class LangchainAgent:
             self.set_embedding_model(args)
             self.args.pop("mode")
 
-        tools = []
-        tools += self._langchain_tools_from_skills(llm)
+        tools = self._langchain_tools_from_skills(llm)
 
         # Prefer prediction prompt template over original if provided.
         prompt_template = args["prompt_template"]

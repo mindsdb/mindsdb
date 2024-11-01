@@ -18,8 +18,10 @@ from langchain_community.chat_models import (
     ChatLiteLLM,
     ChatOllama,
 )
+from langchain_core.agents import AgentAction, AgentStep
 from langchain_core.embeddings import Embeddings
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
+from langchain_core.messages.base import BaseMessage
 from langchain_core.prompts import PromptTemplate
 from langchain_core.tools import Tool
 from langfuse import Langfuse
@@ -638,9 +640,24 @@ AI: {response}"""
     def process_chunk(chunk):
         if isinstance(chunk, dict):
             return {k: LangchainAgent.process_chunk(v) for k, v in chunk.items()}
-        elif isinstance(chunk, list):
+        if isinstance(chunk, list):
             return [LangchainAgent.process_chunk(item) for item in chunk]
-        elif isinstance(chunk, (str, int, float, bool, type(None))):
+        if isinstance(chunk, AgentAction):
+            # Format agent actions properly for streaming.
+            return {
+                'tool': LangchainAgent.process_chunk(chunk.tool),
+                'tool_input': LangchainAgent.process_chunk(chunk.tool_input),
+                'log': LangchainAgent.process_chunk(chunk.log)
+            }
+        if isinstance(chunk, AgentStep):
+            # Format agent steps properly for streaming.
+            return {
+                'action': LangchainAgent.process_chunk(chunk.action),
+                'observation': LangchainAgent.process_chunk(chunk.observation) if chunk.observation else ''
+            }
+        if issubclass(chunk.__class__, BaseMessage):
+            # Extract content from message subclasses properly for streaming.
+            return chunk.content
+        if isinstance(chunk, (str, int, float, bool, type(None))):
             return chunk
-        else:
-            return str(chunk)
+        return str(chunk)

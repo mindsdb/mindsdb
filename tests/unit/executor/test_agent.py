@@ -5,6 +5,7 @@ from unittest.mock import patch
 import pandas as pd
 
 from tests.unit.executor_test_base import BaseExecutorDummyML
+from mindsdb.interfaces.agents.langchain_agent import SkillData
 
 
 def set_openai_completion(mock_openai, response):
@@ -128,8 +129,20 @@ class TestAgent(BaseExecutorDummyML):
 
     @patch('openai.OpenAI')
     def test_agent_with_tables(self, mock_openai):
-        agent_response = 'how can I assist you today?'
-        set_openai_completion(mock_openai, agent_response)
+        skill_data = SkillData(
+            name='', type='', project_id=1,
+            params={'tables': ['table_1', 'table_2']},
+            agent_tables_list=['table_2', 'table_3']
+        )
+        assert skill_data.tables_list == ['table_2']
+
+        skill_data.params = {'tables': ['table_1', 'table_2']}
+        skill_data.agent_tables_list = []
+        assert skill_data.tables_list == ['table_1', 'table_2']
+
+        skill_data.params = {'tables': []}
+        skill_data.agent_tables_list = ['table_2', 'table_3']
+        assert skill_data.tables_list == ['table_2', 'table_3']
 
         self.run_sql('''
             create skill test_skill
@@ -145,6 +158,7 @@ class TestAgent(BaseExecutorDummyML):
             using
             model='gpt-3.5-turbo',
             provider='openai',
+            openai_api_key='--',
             prompt_template='Answer the user input in a helpful way using tools',
             skills=['test_skill'],
             tables=['table_2', 'table_3']
@@ -155,7 +169,9 @@ class TestAgent(BaseExecutorDummyML):
         assert resp['SKILLS'][0] == ['test_skill']
         assert json.loads(resp['PARAMS'][0])['tables'] == ['table_2', 'table_3']
 
-        # usage of agent will call SkillData.tables_list
+        agent_response = 'how can I assist you today?'
+        set_openai_completion(mock_openai, agent_response)
+        # usage of agent will call also SkillData.tables_list
         self.run_sql("select * from test_agent where question = 'test?'")
 
     @patch('openai.OpenAI')

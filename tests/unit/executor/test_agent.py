@@ -1,8 +1,10 @@
 import os
-import pandas as pd
-from tests.unit.executor_test_base import BaseExecutorDummyML
-
+import json
 from unittest.mock import patch
+
+import pandas as pd
+
+from tests.unit.executor_test_base import BaseExecutorDummyML
 
 
 def set_openai_completion(mock_openai, response):
@@ -123,6 +125,38 @@ class TestAgent(BaseExecutorDummyML):
             where t.q = ''
         ''')
         assert len(ret) == 0
+
+    @patch('openai.OpenAI')
+    def test_agent_with_tables(self, mock_openai):
+        agent_response = 'how can I assist you today?'
+        set_openai_completion(mock_openai, agent_response)
+
+        self.run_sql('''
+            create skill test_skill
+            using
+            type = 'text2sql',
+            database = 'example_db',
+            tables = ['table_1', 'table_2'],
+            description = "this is sales data";
+        ''')
+
+        self.run_sql('''
+            create agent test_agent
+            using
+            model='gpt-3.5-turbo',
+            provider='openai',
+            prompt_template='Answer the user input in a helpful way using tools',
+            skills=['test_skill'],
+            tables=['table_2', 'table_3']
+        ''')
+
+        resp = self.run_sql('''select * from information_schema.agents where name = 'test_agent';''')
+        assert len(resp) == 1
+        assert resp['SKILLS'][0] == ['test_skill']
+        assert json.loads(resp['PARAMS'][0])['tables'] == ['table_2', 'table_3']
+
+        # usage of agent will call SkillData.tables_list
+        self.run_sql("select * from test_agent where question = 'test?'")
 
     @patch('openai.OpenAI')
     def test_agent_stream(self, mock_openai):

@@ -28,8 +28,6 @@ class MSOneDriveHandler(APIHandler):
             kwargs: Arbitrary keyword arguments.
         """
         super().__init__(name)
-
-        connection_data = kwargs.get("connection_data", {})
         self.connection_data = connection_data
         self.handler_storage = kwargs['handler_storage']
         self.kwargs = kwargs
@@ -58,7 +56,7 @@ class MSOneDriveHandler(APIHandler):
         # Initialize the auth manager for the Microsoft Graph API.
         ms_graph_api_auth_manager = MSGraphAPIAuthManager(
             handler_storage=self.handler_storage,
-            scopes=self.connection_data.get("scopes", "https://graph.microsoft.com/.default"),
+            scopes=self.connection_data.get("scopes", ["https://graph.microsoft.com/.default"]),
             client_id=self.connection_data["client_id"],
             client_secret=self.connection_data["client_secret"],
             tenant_id=self.connection_data["tenant_id"],

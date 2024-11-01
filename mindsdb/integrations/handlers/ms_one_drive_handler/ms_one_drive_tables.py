@@ -24,7 +24,9 @@ class ListFilesTable(APIResource):
         data = []
         for file in files:
             item = {
-                "name": file["name"]
+                "name": file["name"],
+                "path": file["path"],
+                "extension": file["name"].split(".")[-1]
             }
             data.append(item)
 
@@ -32,4 +34,4 @@ class ListFilesTable(APIResource):
         return df
 
     def get_columns(self):
-        return ["name", "path"]
+        return ["name", "path", "extension"]

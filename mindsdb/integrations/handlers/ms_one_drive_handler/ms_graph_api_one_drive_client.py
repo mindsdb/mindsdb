@@ -91,6 +91,6 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
             bytes: The content of the specified item.
         """
         content = self._make_request(
-            f"users/{self.user_principal_name}/drive/root:/{path}:/content"
+            self._get_api_url(f"users/{self.user_principal_name}/drive/root:/{path}:/content"),
         )
         return content

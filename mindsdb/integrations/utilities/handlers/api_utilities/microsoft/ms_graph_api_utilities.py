@@ -68,10 +68,3 @@ class MSGraphAPIBaseClient:
         user_profile = self._make_request(api_url)
         return user_profile
 
-    def check_connection(self):
-        try:
-            self.get_user_profile()
-            return True
-        except Exception as e:
-            logger.error(f'Error connecting to the Microsoft Graph API: {e}!')
-            return False

@@ -2,7 +2,9 @@ from typing import Any, Dict, Text
 
 import msal
 from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.parser.ast import Select
+from mindsdb_sql.parser.ast import Constant, Identifier, Select, Star
+from mindsdb_sql import parse_sql
+import pandas as pd
 
 from mindsdb.integrations.handlers.ms_one_drive_handler.ms_graph_api_one_drive_client import MSGraphAPIOneDriveClient
 from mindsdb.integrations.handlers.ms_one_drive_handler.ms_one_drive_tables import FileTable, ListFilesTable
@@ -41,9 +43,6 @@ class MSOneDriveHandler(APIHandler):
 
         self.connection = None
         self.is_connected = False
-
-        # Register Microsoft OneDrive tables.
-        self._register_table("files", ListFilesTable(self))
 
     def connect(self):
         """
@@ -115,13 +114,29 @@ class MSOneDriveHandler(APIHandler):
         return response
     
     def query(self, query: ASTNode) -> Response:
+        """
+        Executes a SQL query represented by an ASTNode and retrieves the data.
 
+        Args:
+            query (ASTNode): An ASTNode representing the SQL query to be executed.
+
+        Raises:
+            ValueError: If the file format is not supported.
+            NotImplementedError: If the query type is not supported.
+
+        Returns:
+            Response: A response object containing the result of the query or an error message.
+        """
         if isinstance(query, Select):
             table_name = query.from_table.parts[-1]
+
+            # If the table name is 'files', query the 'files' table.
             if table_name == "files":
                 table = self._files_table
                 df = table.select(query)
 
+            # For any other table name, query the file content via the 'FileTable' class.
+            # Only the supported file formats can be queried.
             else:
                 extension = table_name.split('.')[-1]
                 if extension not in self.supported_file_formats:
@@ -140,3 +155,78 @@ class MSOneDriveHandler(APIHandler):
             raise NotImplementedError(
                 "Only SELECT queries are supported by the Microsoft OneDrive handler."
             )
+        
+    def native_query(self, query: Text) -> Response:
+        """
+        Executes a SQL query and returns the result.
+
+        Args:
+            query (str): The SQL query to be executed.
+
+        Returns:
+            Response: A response object containing the result of the query or an error message.
+        """
+        query_ast = parse_sql(query)
+        return self.query(query_ast)
+        
+    def get_tables(self) -> Response:
+        """
+        Retrieves a list of tables (files) in the user's OneDrive.
+        Each file is considered a table. Only the supported file formats are included in the list.
+
+        Returns:
+            Response: A response object containing the list of tables and views, formatted as per the `Response` class.
+        """
+        connection = self.connect()
+
+        # Get only the supported file formats.
+        # Wrap the file names with backticks to prevent SQL syntax errors.
+        supported_files = [
+            f"`{file['path']}`"
+            for file in connection.get_all_items()
+            if file['path'].split('.')[-1] in self.supported_file_formats
+        ]
+
+        # Add the 'files' table to the list of supported tables.
+        supported_files.insert(0, 'files')
+
+        response = Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=pd.DataFrame(
+                supported_files,
+                columns=['table_name']
+            )
+        )
+
+        return response
+    
+    def get_columns(self, table_name: str) -> Response:
+        """
+        Retrieves column details for a specified table (file) in the user's OneDrive.
+
+        Args:
+            table_name (Text): The name of the table for which to retrieve column information.
+
+        Returns:
+            Response: A response object containing the column details, formatted as per the `Response` class.
+        """
+        # Get the columns (and their data types) by querying a single row from the table.
+        query = Select(
+            targets=[Star()],
+            from_table=Identifier(parts=[table_name]),
+            limit=Constant(1)
+        )
+
+        result = self.query(query)
+
+        response = Response(
+            RESPONSE_TYPE.TABLE,
+            data_frame=pd.DataFrame(
+                {
+                    'column_name': result.data_frame.columns,
+                    'data_type': [data_type if data_type != 'object' else 'string' for data_type in result.data_frame.dtypes]
+                }
+            )
+        )
+
+        return response

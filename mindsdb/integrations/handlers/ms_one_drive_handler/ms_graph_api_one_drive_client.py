@@ -68,6 +68,7 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
         for items in self._fetch_data(f"users/{self.user_principal_name}/drive/items/{item_id}/children"):
             for item in items:
                 path = f"{path}/{item['name']}"
+                # If the item is a folder, get its child items.
                 if "folder" in item:
                     # Recursively get the child items of the folder.
                     child_items.extend(self.get_child_items(item["id"], path))
@@ -78,3 +79,18 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
                     child_items.append(item)
 
         return child_items
+    
+    def get_item_content(self, path: Text) -> bytes:
+        """
+        Retrieves the content of the specified item.
+        
+        Args:
+            path (Text): The path of the item whose content is to be retrieved.
+        
+        Returns:
+            bytes: The content of the specified item.
+        """
+        content = self._make_request(
+            f"users/{self.user_principal_name}/drive/root:/{path}:/content"
+        )
+        return content

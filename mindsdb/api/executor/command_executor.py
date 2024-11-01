@@ -1603,6 +1603,8 @@ class ExecuteCommands:
                 if node.parts[-1].lower() == "session_user":
                     return Constant(self.session.username, alias=node)
                 if node.parts[-1].lower() == '$$':
+                    # NOTE: sinve version 9.0 mysql client sends query 'select $$'.
+                    # Connection can be continued only if answer is parse error.
                     raise ErParseError(
                         "You have an error in your SQL syntax; check the manual that corresponds to your server "
                         "version for the right syntax to use near '$$' at line 1"

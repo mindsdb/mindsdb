@@ -1,11 +1,15 @@
 from typing import Any, Dict, Text
 
 import msal
+from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql.parser.ast import Select
 
 from mindsdb.integrations.handlers.ms_one_drive_handler.ms_graph_api_one_drive_client import MSGraphAPIOneDriveClient
-from mindsdb.integrations.handlers.ms_one_drive_handler.ms_one_drive_tables import ListFilesTable
+from mindsdb.integrations.handlers.ms_one_drive_handler.ms_one_drive_tables import FileTable, ListFilesTable
 from mindsdb.integrations.libs.response import (
+    HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
+    RESPONSE_TYPE
 )
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.utilities import log
@@ -19,6 +23,7 @@ class MSOneDriveHandler(APIHandler):
     """
 
     name = 'one_drive'
+    supported_file_formats = ['csv', 'tsv', 'json', 'parquet']
 
     def __init__(self, name: Text, connection_data: Dict, **kwargs: Any) -> None:
         """
@@ -108,3 +113,30 @@ class MSOneDriveHandler(APIHandler):
         self.is_connected = response.success
 
         return response
+    
+    def query(self, query: ASTNode) -> Response:
+
+        if isinstance(query, Select):
+            table_name = query.from_table.parts[-1]
+            if table_name == "files":
+                table = self._files_table
+                df = table.select(query)
+
+            else:
+                extension = table_name.split('.')[-1]
+                if extension not in self.supported_file_formats:
+                    logger.error(f'The file format {extension} is not supported!')
+                    raise ValueError(f'The file format {extension} is not supported!')
+
+                table = FileTable(self, table_name=table_name)
+                df = table.select(query)
+
+            return Response(
+                RESPONSE_TYPE.TABLE,
+                data_frame=df
+            )
+
+        else:
+            raise NotImplementedError(
+                "Only SELECT queries are supported by the Microsoft OneDrive handler."
+            )

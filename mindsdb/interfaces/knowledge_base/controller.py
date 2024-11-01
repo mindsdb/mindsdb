@@ -1,6 +1,6 @@
 import os
 import copy
-from typing import List, Optional, Dict
+from typing import Dict, List, Optional
 
 import pandas as pd
 
@@ -17,7 +17,11 @@ from mindsdb_sql.parser.ast import (
 from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor
 
 import mindsdb.interfaces.storage.db as db
-from mindsdb.integrations.libs.vectordatabase_handler import TableField
+from mindsdb.integrations.libs.vectordatabase_handler import (
+    DistanceFunction,
+    TableField,
+    VectorStoreHandler,
+)
 from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
 from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel
 from mindsdb.interfaces.agents.langchain_agent import build_embedding_model, create_chat_model, get_llm_provider
@@ -204,6 +208,30 @@ class KnowledgeBaseTable:
         db_handler = self.get_vector_db()
         db_handler.query(query)
 
+    def hybrid_search(
+        self,
+        query: str,
+        keywords: List[str] = None,
+        metadata: Dict[str, str] = None,
+        distance_function=DistanceFunction.COSINE_DISTANCE
+    ) -> pd.DataFrame:
+        query_df = pd.DataFrame.from_records([{TableField.CONTENT.value: query}])
+        embeddings_df = self._df_to_embeddings(query_df)
+        if embeddings_df.empty:
+            return pd.DataFrame([])
+        embeddings = embeddings_df.iloc[0][TableField.EMBEDDINGS.value]
+        keywords_query = None
+        if keywords is not None:
+            keywords_query = ' '.join(keywords)
+        db_handler = self.get_vector_db()
+        return db_handler.hybrid_search(
+            self._kb.vector_database_table,
+            embeddings,
+            query=keywords_query,
+            metadata=metadata,
+            distance_function=distance_function
+        )
+
     def clear(self):
         """
         Clear data in KB table
@@ -310,6 +338,10 @@ class KnowledgeBaseTable:
             metadata_columns = list(set(metadata_columns).intersection(columns))
             # use all unused columns is content
             content_columns = list(set(columns).difference(metadata_columns))
+        elif TableField.METADATA.value in columns:
+            # Use 'metadata' column as a JSON column if passed in explicitly.
+            metadata_columns = [TableField.METADATA.value]
+            content_columns = list(set(columns).difference(metadata_columns))
         else:
             # all columns go to content
             content_columns = columns
@@ -332,6 +364,15 @@ class KnowledgeBaseTable:
             )
             return document
 
+        def handle_metadata_row(row: pd.Series) -> str:
+            metadata_dict = dict(row)
+            if TableField.METADATA.value in metadata_dict:
+                # Extract nested metadata in special case where we have a single column named 'metadata'.
+                # Hacky solution to support passing in 'metadata' JSON column instead of passing in
+                # many different named columns representing metadata when inserting into KB.
+                return metadata_dict[TableField.METADATA.value]
+            return str(metadata_dict)
+
         # create dataframe
         if len(content_columns) == 1:
             c_content = df[content_columns[0]]
@@ -344,7 +385,7 @@ class KnowledgeBaseTable:
             df_out[TableField.ID.value] = df[id_column]
 
         if metadata_columns and len(metadata_columns) > 0:
-            df_out[TableField.METADATA.value] = df[metadata_columns].apply(lambda row: str(dict(row)), axis=1)
+            df_out[TableField.METADATA.value] = df[metadata_columns].apply(handle_metadata_row, axis=1)
 
         return df_out
 
@@ -357,7 +398,7 @@ class KnowledgeBaseTable:
                     node.args[0].parts = [TableField.EMBEDDINGS.value]
                     node.args[1].value = [self._content_to_embeddings(node.args[1].value)]
 
-    def get_vector_db(self):
+    def get_vector_db(self) -> VectorStoreHandler:
         """
         helper to get vector db handler
         """

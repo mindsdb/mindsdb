@@ -32,9 +32,11 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
         all_items = []
         for root_item in self.get_root_items():
             if "folder" in root_item:
-                all_items.extend(self.get_child_items(root_item["id"]), root_item["name"])
+                all_items.extend(self.get_child_items(root_item["id"], root_item["name"]))
 
             else:
+                # Add the path to the item.
+                root_item["path"] = root_item["name"]
                 all_items.append(root_item)
 
         return all_items
@@ -67,11 +69,12 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
             for item in items:
                 path = f"{path}/{item['name']}"
                 if "folder" in item:
-                    child_items.extend(self.get_child_items(item["id"]), path)
+                    # Recursively get the child items of the folder.
+                    child_items.extend(self.get_child_items(item["id"], path))
 
                 else:
                     # Add the path to the item.
-                    item["path"] = f"{path}/{item['name']}"
+                    item["path"] = path
                     child_items.append(item)
 
         return child_items

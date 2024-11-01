@@ -132,7 +132,7 @@ class MSOneDriveHandler(APIHandler):
 
             # If the table name is 'files', query the 'files' table.
             if table_name == "files":
-                table = self._files_table
+                table = ListFilesTable(self)
                 df = table.select(query)
 
             # For any other table name, query the file content via the 'FileTable' class.

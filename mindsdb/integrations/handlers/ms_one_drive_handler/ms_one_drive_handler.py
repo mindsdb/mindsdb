@@ -1,6 +1,7 @@
 from typing import Any, Dict, Text
 
 from mindsdb.integrations.handlers.ms_one_drive_handler.ms_graph_api_one_drive_client import MSGraphAPIOneDriveClient
+from mindsdb.integrations.handlers.ms_one_drive_handler.ms_one_drive_tables import ListFilesTable
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
@@ -34,6 +35,9 @@ class MSOneDriveHandler(APIHandler):
 
         self.connection = None
         self.is_connected = False
+
+        # Register Microsoft OneDrive tables.
+        self._register_table("files", ListFilesTable(self))
 
     def connect(self):
         """

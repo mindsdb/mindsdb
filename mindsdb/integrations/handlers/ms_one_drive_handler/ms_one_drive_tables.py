@@ -19,7 +19,7 @@ class ListFilesTable(APIResource):
         **kwargs
     ):
         client = self.handler.connect()
-        files = client.get_root_drive_items()
+        files = client.get_all_items()
 
         data = []
         for file in files:
@@ -32,4 +32,4 @@ class ListFilesTable(APIResource):
         return df
 
     def get_columns(self):
-        return ["name"]
+        return ["name", "path"]

@@ -1,4 +1,3 @@
-import os
 from typing import Any, Dict, Text
 
 import msal
@@ -6,7 +5,9 @@ from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb_sql.parser.ast import Constant, Identifier, Select, Star
 from mindsdb_sql import parse_sql
 import pandas as pd
+from requests.exceptions import RequestException
 
+from mindsdb.integrations.handlers.ms_one_drive_handler.exceptions import AuthenticationError
 from mindsdb.integrations.handlers.ms_one_drive_handler.ms_graph_api_one_drive_client import MSGraphAPIOneDriveClient
 from mindsdb.integrations.handlers.ms_one_drive_handler.ms_one_drive_tables import FileTable, ListFilesTable
 from mindsdb.integrations.libs.response import (
@@ -51,10 +52,10 @@ class MSOneDriveHandler(APIHandler):
 
         Raises:
             ValueError: If the required connection parameters are not provided.
-            
+            AuthenticationError: If an error occurs during the authentication process.            
 
         Returns:
-            
+            MSGraphAPIOneDriveClient: An instance of the Microsoft Graph API client for Microsoft OneDrive.            
         """
         if self.is_connected and self.connection.check_connection():
             return self.connection
@@ -91,7 +92,7 @@ class MSOneDriveHandler(APIHandler):
             access_token = result['access_token']
 
         else:
-            raise Exception(result.get("error_description"))
+            raise AuthenticationError(result.get("error_description"))
         
         # Save the cache back to file if it has changed.
         if cache.has_state_changed:
@@ -118,10 +119,12 @@ class MSOneDriveHandler(APIHandler):
 
         try:
             connection = self.connect()
-            connection.check_connection()
-            response.success = True
-            response.copy_storage = True
-        except (ValueError) as known_error:
+            if connection.check_connection():
+                response.success = True
+                response.copy_storage = True
+            else:
+                raise RequestException("Connection check failed!")
+        except (ValueError, RequestException) as known_error:
             logger.error(f'Connection check to Microsoft OneDrive failed, {known_error}!')
             response.error_message = str(known_error)
         except Exception as unknown_error:
@@ -190,7 +193,7 @@ class MSOneDriveHandler(APIHandler):
         
     def get_tables(self) -> Response:
         """
-        Retrieves a list of tables (files) in the user's OneDrive.
+        Retrieves a list of tables (files) in the user's Microsoft OneDrive.
         Each file is considered a table. Only the supported file formats are included in the list.
 
         Returns:
@@ -221,7 +224,7 @@ class MSOneDriveHandler(APIHandler):
     
     def get_columns(self, table_name: str) -> Response:
         """
-        Retrieves column details for a specified table (file) in the user's OneDrive.
+        Retrieves column details for a specified table (file) in the user's Microsoft OneDrive.
 
         Args:
             table_name (Text): The name of the table for which to retrieve column information.

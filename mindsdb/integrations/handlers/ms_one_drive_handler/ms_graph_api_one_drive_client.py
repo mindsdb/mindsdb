@@ -1,5 +1,7 @@
 from typing import Text, List, Dict
 
+from requests.exceptions import RequestException
+
 from mindsdb.integrations.utilities.handlers.api_utilities.microsoft.ms_graph_api_utilities import MSGraphAPIBaseClient
 from mindsdb.utilities import log
 
@@ -16,11 +18,19 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
         super().__init__(access_token)
         self.user_principal_name = user_principal_name
 
-    def check_connection(self) -> None:
+    def check_connection(self) -> bool:
         """
         Checks the connection to the Microsoft Graph API by fetching the user's profile.
+
+        Returns:
+            bool: True if the connection is successful, False otherwise.
         """
-        self._fetch_data(f"users/{self.user_principal_name}")
+        try:
+            self._fetch_data(f"users/{self.user_principal_name}")
+            return True
+        except RequestException as request_error:
+            logger.error(f"Error checking connection: {request_error}")
+            return False
 
     def get_all_items(self) -> List[Dict]:
         """

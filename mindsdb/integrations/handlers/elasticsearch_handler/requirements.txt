@@ -1,2 +1,2 @@
-elasticsearch
-elasticsearch-dbapi
+elasticsearch==7.13.4
+elasticsearch-dbapi==0.2.11

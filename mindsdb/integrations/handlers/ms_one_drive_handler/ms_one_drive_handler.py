@@ -1,3 +1,4 @@
+import os
 from typing import Any, Dict, Text
 
 import msal
@@ -61,12 +62,26 @@ class MSOneDriveHandler(APIHandler):
         # Mandatory connection parameters.
         if not all(key in self.connection_data for key in ['client_id', 'client_secret', 'tenant_id']):
             raise ValueError("Required parameters (client_id, client_secret, tenant_id) must be provided.")
+        
+        # Initialize the token cache.
+        cache = msal.SerializableTokenCache()
+
+        # Load the cache from file if it exists.
+        cache_file = 'cache.bin'
+        try:
+            cache_content = self.handler_storage.file_get(cache_file)
+        except FileNotFoundError:
+            cache_content = None
+
+        if cache_content:
+            cache.deserialize(cache_content)
 
         # Initialize the Microsoft Authentication Library (MSAL) app.
         app = msal.ConfidentialClientApplication(
             self.connection_data["client_id"],
             authority=f"https://login.microsoftonline.com/{self.connection_data['tenant_id']}",
             client_credential=self.connection_data["client_secret"],
+            token_cache=cache
         )
 
         # Get the access token from the app.
@@ -77,6 +92,10 @@ class MSOneDriveHandler(APIHandler):
 
         else:
             raise Exception(result.get("error_description"))
+        
+        # Save the cache back to file if it has changed.
+        if cache.has_state_changed:
+            self.handler_storage.file_set(cache_file, cache.serialize().encode('utf-8'))
 
         # Pass the access token to the Microsoft Graph API client for Microsoft OneDrive.
         self.connection = MSGraphAPIOneDriveClient(

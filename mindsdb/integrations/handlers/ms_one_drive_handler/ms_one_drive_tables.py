@@ -11,6 +11,9 @@ from mindsdb.integrations.utilities.sql_utils import (
 
 
 class ListFilesTable(APIResource):
+    """
+    The table abstraction for querying the files (tables) in Microsoft OneDrive.
+    """
 
     def list(self,
         conditions: List[FilterCondition] = None,
@@ -19,6 +22,18 @@ class ListFilesTable(APIResource):
         targets: List[Text] = None,
         **kwargs
     ):
+        """
+        Lists the files in Microsoft OneDrive.
+
+        Args:
+            conditions (List[FilterCondition]): The conditions to filter the files.
+            limit (int): The maximum number of files to return.
+            sort (List[SortColumn]): The columns to sort the files by.
+            targets (List[Text]): The columns to return in the result.
+
+        Returns:
+            pd.DataFrame: The list of files in Microsoft OneDrive based on the specified clauses.
+        """
         client = self.handler.connect()
         files = client.get_all_items()
 
@@ -48,8 +63,21 @@ class ListFilesTable(APIResource):
     
 
 class FileTable(APIResource):
+    """
+    The table abstraction for querying the content of a file (table) in Microsoft OneDrive.
+    """
 
     def list(self, targets: List[str] = None, table_name=None, *args, **kwargs) -> pd.DataFrame:
+        """
+        Retrieves the content of the specified file (table) in Microsoft OneDrive.
+
+        Args:
+            targets (List[str]): The columns to return in the result.
+            table_name (str): The name of the file (table) to retrieve.
+
+        Returns:
+            pd.DataFrame: The content of the specified file (table) in Microsoft OneDrive.
+        """
         client = self.handler.connect()
 
         file_content = client.get_item_content(table_name)

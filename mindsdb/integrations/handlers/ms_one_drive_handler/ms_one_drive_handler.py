@@ -35,7 +35,7 @@ class MSOneDriveHandler(APIHandler):
 
         Args:
             name (Text): The name of the handler instance.
-            connection_data (Dict): The connection data required to connect to the Salesforce API.
+            connection_data (Dict): The connection data required to connect to the Microsoft Graph API.
             kwargs: Arbitrary keyword arguments.
         """
         super().__init__(name)
@@ -52,18 +52,18 @@ class MSOneDriveHandler(APIHandler):
 
         Raises:
             ValueError: If the required connection parameters are not provided.
-            AuthenticationError: If an error occurs during the authentication process.            
+            AuthenticationError: If an error occurs during the authentication process.
 
         Returns:
-            MSGraphAPIOneDriveClient: An instance of the Microsoft Graph API client for Microsoft OneDrive.            
+            MSGraphAPIOneDriveClient: An instance of the Microsoft Graph API client for Microsoft OneDrive.
         """
         if self.is_connected and self.connection.check_connection():
             return self.connection
-        
+
         # Mandatory connection parameters.
         if not all(key in self.connection_data for key in ['client_id', 'client_secret', 'tenant_id']):
             raise ValueError("Required parameters (client_id, client_secret, tenant_id) must be provided.")
-        
+
         # Initialize the token cache.
         cache = msal.SerializableTokenCache()
 
@@ -93,7 +93,7 @@ class MSOneDriveHandler(APIHandler):
 
         else:
             raise AuthenticationError(result.get("error_description"))
-        
+
         # Save the cache back to file if it has changed.
         if cache.has_state_changed:
             self.handler_storage.file_set(cache_file, cache.serialize().encode('utf-8'))
@@ -107,7 +107,7 @@ class MSOneDriveHandler(APIHandler):
         self.is_connected = True
 
         return self.connection
-    
+
     def check_connection(self) -> StatusResponse:
         """
         Checks the status of the connection to the Microsoft Graph API for Microsoft OneDrive.
@@ -134,7 +134,7 @@ class MSOneDriveHandler(APIHandler):
         self.is_connected = response.success
 
         return response
-    
+
     def query(self, query: ASTNode) -> Response:
         """
         Executes a SQL query represented by an ASTNode and retrieves the data.
@@ -177,7 +177,7 @@ class MSOneDriveHandler(APIHandler):
             raise NotImplementedError(
                 "Only SELECT queries are supported by the Microsoft OneDrive handler."
             )
-        
+
     def native_query(self, query: Text) -> Response:
         """
         Executes a SQL query and returns the result.
@@ -190,7 +190,7 @@ class MSOneDriveHandler(APIHandler):
         """
         query_ast = parse_sql(query)
         return self.query(query_ast)
-        
+
     def get_tables(self) -> Response:
         """
         Retrieves a list of tables (files) in the user's Microsoft OneDrive.
@@ -221,7 +221,7 @@ class MSOneDriveHandler(APIHandler):
         )
 
         return response
-    
+
     def get_columns(self, table_name: str) -> Response:
         """
         Retrieves column details for a specified table (file) in the user's Microsoft OneDrive.

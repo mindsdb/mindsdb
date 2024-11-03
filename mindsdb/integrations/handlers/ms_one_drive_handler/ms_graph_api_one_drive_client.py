@@ -35,7 +35,7 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
     def get_all_items(self) -> List[Dict]:
         """
         Retrieves all items of the user's OneDrive.
-        
+
         Returns:
             List[Dict]: All items of the user's OneDrive.
         """
@@ -50,11 +50,11 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
                 all_items.append(root_item)
 
         return all_items
-    
+
     def get_root_items(self) -> List[Dict]:
         """
         Retrieves the root items of the user's OneDrive.
-        
+
         Returns:
             List[Dict]: The root items of the user's OneDrive.
         """
@@ -63,14 +63,14 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
             root_items.extend(items)
 
         return root_items
-    
+
     def get_child_items(self, item_id: Text, path: Text) -> List[Dict]:
         """
         Recursively retrieves the child items of the specified item.
-        
+
         Args:
             item_id (Text): The ID of the item whose child items are to be retrieved.
-        
+
         Returns:
             List[Dict]: The child items of the specified item.
         """
@@ -89,14 +89,14 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
                     child_items.append(item)
 
         return child_items
-    
+
     def get_item_content(self, path: Text) -> bytes:
         """
         Retrieves the content of the specified item.
-        
+
         Args:
             path (Text): The path of the item whose content is to be retrieved.
-        
+
         Returns:
             bytes: The content of the specified item.
         """

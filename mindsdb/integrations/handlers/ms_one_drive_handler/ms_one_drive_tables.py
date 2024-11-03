@@ -5,7 +5,7 @@ import pandas as pd
 
 from mindsdb.integrations.libs.api_handler import APIResource
 from mindsdb.integrations.utilities.sql_utils import (
-    FilterCondition, 
+    FilterCondition,
     SortColumn
 )
 
@@ -15,7 +15,8 @@ class ListFilesTable(APIResource):
     The table abstraction for querying the files (tables) in Microsoft OneDrive.
     """
 
-    def list(self,
+    def list(
+        self,
         conditions: List[FilterCondition] = None,
         limit: int = None,
         sort: List[SortColumn] = None,
@@ -60,7 +61,7 @@ class ListFilesTable(APIResource):
 
     def get_columns(self):
         return ["name", "path", "extension", "content"]
-    
+
 
 class FileTable(APIResource):
     """
@@ -95,5 +96,5 @@ class FileTable(APIResource):
 
         elif file_extension == "parquet":
             df = pd.read_parquet(BytesIO(file_content))
-            
+
         return df

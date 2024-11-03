@@ -43,14 +43,14 @@ class MSGraphAPIBaseClient:
         """
         api_url = f"{self.MICROSOFT_GRAPH_BASE_API_URL}{self.MICROSOFT_GRAPH_API_VERSION}/{endpoint}/"
         return api_url
-    
+
     def _make_request(
-            self,
-            api_url: Text,
-            params: Optional[Dict] = None,
-            data: Optional[Dict] = None,
-            method: Text = "GET"
-        ) -> Union[Dict, object]:
+        self,
+        api_url: Text,
+        params: Optional[Dict] = None,
+        data: Optional[Dict] = None,
+        method: Text = "GET"
+    ) -> Union[Dict, object]:
         """
         Makes a request to the Microsoft Graph API.
 
@@ -80,11 +80,11 @@ class MSGraphAPIBaseClient:
                 pause_time = float(response.headers["Retry-After"])
                 time.sleep(pause_time)
                 response = requests.get(api_url, headers=headers, params=params)
-        
+
         # If the response is not successful, raise an exception.
         if response.status_code not in [200, 201]:
             raise requests.exceptions.RequestException(response.text)
-        
+
         return response
 
     def fetch_paginated_data(self, endpoint: Text, params: Optional[Dict] = {}) -> Generator:

@@ -26,7 +26,7 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
             bool: True if the connection is successful, False otherwise.
         """
         try:
-            self._fetch_data(f"users/{self.user_principal_name}")
+            self.fetch_paginated_data(f"users/{self.user_principal_name}")
             return True
         except RequestException as request_error:
             logger.error(f"Error checking connection: {request_error}")
@@ -59,7 +59,7 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
             List[Dict]: The root items of the user's OneDrive.
         """
         root_items = []
-        for items in self._fetch_data(f"users/{self.user_principal_name}/drive/root/children"):
+        for items in self.fetch_paginated_data(f"users/{self.user_principal_name}/drive/root/children"):
             root_items.extend(items)
 
         return root_items
@@ -75,7 +75,7 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
             List[Dict]: The child items of the specified item.
         """
         child_items = []
-        for items in self._fetch_data(f"users/{self.user_principal_name}/drive/items/{item_id}/children"):
+        for items in self.fetch_paginated_data(f"users/{self.user_principal_name}/drive/items/{item_id}/children"):
             for item in items:
                 path = f"{path}/{item['name']}"
                 # If the item is a folder, get its child items.
@@ -100,7 +100,4 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
         Returns:
             bytes: The content of the specified item.
         """
-        content = self._make_request(
-            self._get_api_url(f"users/{self.user_principal_name}/drive/root:/{path}:/content"),
-        )
-        return content
+        return self.fetch_data(f"users/{self.user_principal_name}/drive/root:/{path}:/content")

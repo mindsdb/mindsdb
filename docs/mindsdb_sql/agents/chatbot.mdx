@@ -28,11 +28,11 @@ USING
 The parameters include the following:
 
 * `database` stores connection to a chat app (like [Slack](/integrations/app-integrations/slack) or [MS Teams](/integrations/app-integrations/microsoft-teams)) that should be created with the `CREATE DATABASE` statement.
-* `agent` is an [AI agent](/mindsdb_sql/agents/agent) created with the `CREATE AGENT` command. It consists of an AI model trained with defined data sets.
+* `agent` is an [AI agent](/mindsdb_sql/agents/agent) created with the `CREATE AGENT` command. It consists of an AI model and a set of skills, that is, defined data sets provided at inference time via RAG-based techniques.
 * `is_running` indicates whether or not to start the chatbot upon creation.
 
 <Tip>
-Here are some tips of you use the Slack integration:
+Here are some tips for using the Slack integration:
 
 1. If you want to use Slack in the [`CREATE CHATBOT`](/agents/chatbot) syntax, use [this method of connecting Slack to MindsDB](/integrations/app-integrations/slack#method-1-chatbot-responds-in-direct-messages-to-a-slack-app).
 
@@ -47,7 +47,7 @@ Here are some tips of you use the Slack integration:
 
 ALternatively, you can create a chatbot that is equivalent to embedding an LLM of your choice into a chat app, like [Slack](/integrations/app-integrations/slack) or [MS Teams](/integrations/app-integrations/microsoft-teams).
 
-Here is how to create a chatbot that integrates an LLM and can be connected to a chat interface to have a conversation with your data.
+Here is how to create a chatbot that integrates an LLM and can be connected to a chat interface.
 
 ```sql
 CREATE CHATBOT my_chatbot
@@ -60,7 +60,7 @@ USING
 The parameters include the following:
 
 * `database` stores connection to a chat app (like [Slack](/integrations/app-integrations/slack) or [MS Teams](/integrations/app-integrations/microsoft-teams)) that should be created with the `CREATE DATABASE` statement.
-* `model` is a conversational model created with the `CREATE MODEL` command.
+* `model` is a conversational model created with the `CREATE MODEL` command using the [LangChain engine](/integrations/ai-engines/langchain).
 * `is_running` indicates whether or not to start the chatbot upon creation.
 
 Here is how to delete a chatbot:

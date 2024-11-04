@@ -106,6 +106,7 @@ from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.functions import mark_process, resolve_model_identifier, get_handler_install_message
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 from mindsdb.utilities import log
+from mindsdb.api.mysql.mysql_proxy.utilities import ErParseError
 
 logger = log.getLogger(__name__)
 
@@ -1601,6 +1602,13 @@ class ExecuteCommands:
             if isinstance(node, Identifier):
                 if node.parts[-1].lower() == "session_user":
                     return Constant(self.session.username, alias=node)
+                if node.parts[-1].lower() == '$$':
+                    # NOTE: sinve version 9.0 mysql client sends query 'select $$'.
+                    # Connection can be continued only if answer is parse error.
+                    raise ErParseError(
+                        "You have an error in your SQL syntax; check the manual that corresponds to your server "
+                        "version for the right syntax to use near '$$' at line 1"
+                    )
 
             if isinstance(node, Function):
                 function_name = node.op.lower()

@@ -116,6 +116,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       # We have to install UV because (for now) these run in GH's runners
       - name: Setup uv
+        if: ${{ needs.changes.outputs.not-docs == 'true' }}
         uses: astral-sh/setup-uv@v3
         with:
           enable-cache: true
@@ -150,6 +151,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       # We have to install UV because (for now) these run in GH's runners
       - name: Setup uv
+        if: ${{ needs.changes.outputs.not-docs == 'true' }}
         uses: astral-sh/setup-uv@v3
         with:
           enable-cache: true

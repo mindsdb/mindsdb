@@ -300,17 +300,17 @@ def initialize_app(config, no_studio):
 
         try:
             email_confirmed = int(request.headers.get('email-confirmed', 1))
-        except Exception as e:
+        except Exception:
             email_confirmed = 1
 
         try:
             user_id = int(request.headers.get('user-id', 0))
-        except Exception as e:
+        except Exception:
             user_id = 0
 
         try:
             session_id = request.cookies.get('session')
-        except Exception as e:
+        except Exception:
             session_id = "unknown"
 
         if company_id is not None:

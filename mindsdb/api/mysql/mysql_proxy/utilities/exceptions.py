@@ -12,3 +12,7 @@ class ErSqlSyntaxError(SqlApiException):
 
 class ErWrongCharset(SqlApiException):
     err_code = ERR.ER_UNKNOWN_CHARACTER_SET
+
+
+class ErParseError(SqlApiException):
+    err_code = ERR.ER_PARSE_ERROR

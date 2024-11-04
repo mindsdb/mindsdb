@@ -1,19 +1,25 @@
 .dockerignore
+.devcontainer
 .git
 .gitignore
 .github
 .mypy_cache
 .pytest_cache
 .deployment
+.venv
+
+MindsDB.egg-info
+github-actions
+assets
 
 docker/db_images
 docker/docker-bake.hcl
-docker/docker-compose.yml
 docker/*.Dockerfile
 docker/docker-compose*
 docker/README.md
 
 build
+dist
 docs
 helm
 var

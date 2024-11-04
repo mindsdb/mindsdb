@@ -39,6 +39,8 @@ from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embeddi
 from mindsdb.utilities import log
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 from mindsdb.interfaces.storage import db
+from mindsdb.utilities.context import context as ctx
+
 
 from .mindsdb_chat_model import ChatMindsdb
 from .callback_handlers import LogCallbackHandler, ContextCaptureCallback
@@ -275,11 +277,20 @@ class LangchainAgent:
             trace_metadata['skills'] = get_skills(self.agent)
             trace_tags = get_tags(trace_metadata)
 
+            # Set our user info to pass into langfuse trace, with fault tolerance in each individual one just incase on purpose
+            trace_metadata['user_id'] = ctx.user_id
+            trace_metadata['session_id'] = ctx.session_id
+            trace_metadata['company_id'] = ctx.company_id
+            trace_metadata['user_class'] = ctx.user_class
+            trace_metadata['email_confirmed'] = ctx.email_confirmed
+
             self.api_trace = self.langfuse.trace(
                 name='api-completion',
                 input=messages,
                 tags=trace_tags,
-                metadata=trace_metadata
+                metadata=trace_metadata,
+                user_id=ctx.user_id,
+                session_id=ctx.session_id,
             )
 
             self.run_completion_span = self.api_trace.span(name='run-completion', input=messages)
@@ -322,6 +333,7 @@ class LangchainAgent:
                 logger.warning(f'Langfuse trace {self.trace_id} not found')
             except Exception as e:
                 logger.error(f'Something went wrong while processing Langfuse trace {self.trace_id}: {str(e)}')
+
         return response
 
     def _get_completion_stream(

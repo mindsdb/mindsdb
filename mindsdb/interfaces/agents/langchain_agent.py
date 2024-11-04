@@ -543,7 +543,7 @@ AI: {response}"""
 
     def run_agent(self, df: pd.DataFrame, agent: AgentExecutor, args: Dict) -> pd.DataFrame:
         base_template = args.get('prompt_template', args['prompt_template'])
-        return_context = args.get('return_context', False)
+        return_context = args.get('return_context', True)
         input_variables = re.findall(r"{{(.*?)}}", base_template)
 
         prompts, empty_prompt_ids = prepare_prompts(df, base_template, input_variables, args.get('user_column', USER_COLUMN))
@@ -614,7 +614,7 @@ AI: {response}"""
     def stream_agent(self, df: pd.DataFrame, agent_executor: AgentExecutor, args: Dict) -> Iterable[Dict]:
         base_template = args.get('prompt_template', args['prompt_template'])
         input_variables = re.findall(r"{{(.*?)}}", base_template)
-        return_context = args.get('return_context', False)
+        return_context = args.get('return_context', True)
 
         prompts, _ = prepare_prompts(df, base_template, input_variables, args.get('user_column', USER_COLUMN))
 

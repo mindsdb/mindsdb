@@ -89,7 +89,9 @@ def build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
         func=rag_wrapper,
         name=tool['name'],
         description=tool['description'],
-        return_direct=False  # Changed to False to allow the agent to use this information
+        response_format='content',
+        # Return directly by default since we already use an LLM against retrieved context to generate a response.
+        return_direct=tools_config.get('return_direct', True)
     )
 
 

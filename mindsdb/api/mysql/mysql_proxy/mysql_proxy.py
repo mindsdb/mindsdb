@@ -404,8 +404,10 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         df = df.applymap(apply_f)
 
         # get column max size
-        measurer = np.vectorize(len)
-        columns_len = measurer(df.values.astype(str)).max(axis=0)
+        columns_len = None
+        if len(df) > 0:
+            measurer = np.vectorize(len)
+            columns_len = measurer(df.values).max(axis=0)
 
         # columns packages
         packets = [self.packet(ColumnCountPacket, count=len(columns))]

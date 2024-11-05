@@ -15,14 +15,16 @@ This documentation describes the integration of MindsDB with [Microsoft OneDrive
     - Enter a name for your application and select the `Accounts in this organizational directory only` option for the **Supported account types** field.
     - Keep the **Redirect URI** field empty and click on **Register**.
     - Click on **API permissions** and then click on **Add a permission**.
-    - Select **Microsoft Graph** and then click on **Application permissions**.
-    - Search for the `User.Read.All` and `Files.Read.All` permissions and select them.
+    - Select **Microsoft Graph** and then click on **Delegated permissions**.
+    - Search for the `Files.Read` permission and select it.
     - Click on **Add permissions**.
     - Request an administrator to grant consent for the above permissions. If you are the administrator, click on **Grant admin consent for [your organization]** and then click on **Yes**.
     - Copy the **Application (client) ID** and record it as the `client_id` parameter, and copy the **Directory (tenant) ID** and record it as the `tenant_id` parameter.
     - Click on **Certificates & secrets** and then click on **New client secret**.
     - Enter a description for your client secret and select an expiration period.
     - Click on **Add** and copy the generated client secret and record it as the `client_secret` parameter.
+    - Click on **Authentication** and then click on **Add a platform**.
+    - Select **Web** and enter URL where MindsDB has been deployed followed by `/verify-auth` in the **Redirect URIs** field. For example, if you are running MindsDB locally (on `http://localhost:47334`), enter `http://localhost:47334/verify-auth` in the **Redirect URIs** field.
 
 ## Connection
 

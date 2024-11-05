@@ -168,6 +168,9 @@ class DerbyHandler(DatabaseHandler):
         else:
             query_str = str(query)
 
+        # Replace backticks with double quotes for Derby compatibility
+        query_str = query_str.replace("`", '"')
+
         return self.native_query(query_str)
 
 

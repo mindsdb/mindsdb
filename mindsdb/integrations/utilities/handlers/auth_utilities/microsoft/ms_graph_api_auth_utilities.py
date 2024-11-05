@@ -8,7 +8,7 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 
-class MSGraphAPIAuthManager:
+class MSGraphAPIDelegatedPermissionsManager:
     def __init__(
         self,
         client_id: Text,

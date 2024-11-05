@@ -9,7 +9,7 @@ from requests.exceptions import RequestException
 
 from mindsdb.integrations.handlers.ms_one_drive_handler.ms_graph_api_one_drive_client import MSGraphAPIOneDriveClient
 from mindsdb.integrations.handlers.ms_one_drive_handler.ms_one_drive_tables import FileTable, ListFilesTable
-from mindsdb.integrations.utilities.handlers.auth_utilities import MSGraphAPIAuthManager
+from mindsdb.integrations.utilities.handlers.auth_utilities import MSGraphAPIDelegatedPermissionsManager
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
@@ -78,7 +78,7 @@ class MSOneDriveHandler(APIHandler):
             cache.deserialize(cache_content)
 
         # Initialize the Microsoft Authentication Library (MSAL) app.
-        auth_manager = MSGraphAPIAuthManager(
+        permissions_manager = MSGraphAPIDelegatedPermissionsManager(
             client_id=self.connection_data['client_id'],
             client_secret=self.connection_data['client_secret'],
             tenant_id=self.connection_data['tenant_id'],
@@ -86,7 +86,7 @@ class MSOneDriveHandler(APIHandler):
             code=self.connection_data.get('code')
         )
 
-        access_token = auth_manager.get_access_token()
+        access_token = permissions_manager.get_access_token()
 
         # Save the cache back to file if it has changed.
         if cache.has_state_changed:

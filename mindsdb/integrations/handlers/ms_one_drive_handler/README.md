@@ -24,7 +24,7 @@ This documentation describes the integration of MindsDB with [Microsoft OneDrive
     - Enter a description for your client secret and select an expiration period.
     - Click on **Add** and copy the generated client secret and record it as the `client_secret` parameter.
     - Click on **Authentication** and then click on **Add a platform**.
-    - Select **Web** and enter URL where MindsDB has been deployed followed by `/verify-auth` in the **Redirect URIs** field. For example, if you are running MindsDB locally (on `http://localhost:47334`), enter `http://localhost:47334/verify-auth` in the **Redirect URIs** field. 
+    - Select **Web** and enter URL where MindsDB has been deployed followed by `/verify-auth` in the **Redirect URIs** field. For example, if you are running MindsDB locally (on `http://localhost:47334`), enter `http://localhost:47334/verify-auth` in the **Redirect URIs** field.
 
 ## Connection
 

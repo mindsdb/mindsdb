@@ -300,8 +300,18 @@ def initialize_app(config, no_studio):
 
         try:
             email_confirmed = int(request.headers.get('email-confirmed', 1))
-        except ValueError:
+        except Exception:
             email_confirmed = 1
+
+        try:
+            user_id = int(request.headers.get('user-id', 0))
+        except Exception:
+            user_id = 0
+
+        try:
+            session_id = request.cookies.get('session')
+        except Exception:
+            session_id = "unknown"
 
         if company_id is not None:
             try:
@@ -323,6 +333,8 @@ def initialize_app(config, no_studio):
         else:
             user_class = 0
 
+        ctx.user_id = user_id
+        ctx.session_id = session_id
         ctx.company_id = company_id
         ctx.user_class = user_class
         ctx.email_confirmed = email_confirmed

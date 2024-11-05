@@ -673,7 +673,6 @@ AI: {response}"""
                         'tool_input': LangchainAgent.process_chunk(observation['action'].get('tool_input')),
                         'log': LangchainAgent.process_chunk(observation['action'].get('log'))
                     }
-            
 
             return {
                 'action': action,

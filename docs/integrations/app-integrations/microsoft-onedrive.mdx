@@ -38,7 +38,6 @@ WITH
         "client_id": "12345678-90ab-cdef-1234-567890abcdef",
         "client_secret": "abcd1234efgh5678ijkl9012mnop3456qrst7890uvwx",
         "tenant_id": "abcdef12-3456-7890-abcd-ef1234567890",
-        "email": "user@example.com"
     };
 ```
 
@@ -51,7 +50,6 @@ Required connection parameters include the following:
 * `client_id`: The client ID of the registered application.
 * `client_secret`: The client secret of the registered application.
 * `tenant_id`: The tenant ID of the registered application.
-* `email`: The email address of the user account.
 
 ## Usage
 
@@ -98,7 +96,7 @@ This table will return all objects regardless of the file format, however, only 
 
 * **Symptoms**: Failure to connect MindsDB with Microsoft OneDrive.
 * **Checklist**:
-    1. Ensure the `client_id`, `client_secret`, `tenant_id`, and `email` parameters are correctly provided.
+    1. Ensure the `client_id`, `client_secret` and `tenant_id, and `email` parameters are correctly provided.
     2. Ensure the registered application has the required permissions.
     3. Ensure the generated client secret is not expired.
 </Warning>

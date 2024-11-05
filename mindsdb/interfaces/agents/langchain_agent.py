@@ -662,6 +662,8 @@ AI: {response}"""
                 'log': LangchainAgent.process_chunk(chunk.log)
             }
         if isinstance(chunk, AgentStep):
+            logger.info(f'Processing agent observation chunk of type {type(chunk.observation)}: {chunk.observation}')
+            logger.info(f'Processing agent action {chunk.action}')
             # Format agent steps properly for streaming.
             return {
                 'action': LangchainAgent.process_chunk(chunk.action),

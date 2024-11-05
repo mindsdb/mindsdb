@@ -663,8 +663,20 @@ AI: {response}"""
             }
         if isinstance(chunk, AgentStep):
             # Format agent steps properly for streaming.
+            action = LangchainAgent.process_chunk(chunk.action)
+            if not chunk.action:
+                # Action is contained within nested observation dict instead.
+                observation = chunk.observation
+                if isinstance(observation, dict) and 'action' in observation and isinstance(observation['action'], dict):
+                    action = {
+                        'tool': LangchainAgent.process_chunk(observation['action'].get('tool')),
+                        'tool_input': LangchainAgent.process_chunk(observation['action'].get('tool_input')),
+                        'log': LangchainAgent.process_chunk(observation['action'].get('log'))
+                    }
+            
+
             return {
-                'action': LangchainAgent.process_chunk(chunk.action),
+                'action': action,
                 'observation': LangchainAgent.process_chunk(chunk.observation) if chunk.observation else ''
             }
         if issubclass(chunk.__class__, BaseMessage):

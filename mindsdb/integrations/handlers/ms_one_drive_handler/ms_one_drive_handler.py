@@ -10,6 +10,7 @@ from requests.exceptions import RequestException
 from mindsdb.integrations.handlers.ms_one_drive_handler.exceptions import AuthenticationError
 from mindsdb.integrations.handlers.ms_one_drive_handler.ms_graph_api_one_drive_client import MSGraphAPIOneDriveClient
 from mindsdb.integrations.handlers.ms_one_drive_handler.ms_one_drive_tables import FileTable, ListFilesTable
+from mindsdb.integrations.utilities.handlers.auth_utilities import MSGraphAPIAuthManager
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
@@ -78,21 +79,15 @@ class MSOneDriveHandler(APIHandler):
             cache.deserialize(cache_content)
 
         # Initialize the Microsoft Authentication Library (MSAL) app.
-        app = msal.ConfidentialClientApplication(
-            self.connection_data["client_id"],
-            authority=f"https://login.microsoftonline.com/{self.connection_data['tenant_id']}",
-            client_credential=self.connection_data["client_secret"],
-            token_cache=cache
+        auth_manager = MSGraphAPIAuthManager(
+            client_id=self.connection_data['client_id'],
+            client_secret=self.connection_data['client_secret'],
+            tenant_id=self.connection_data['tenant_id'],
+            cache=cache,
+            code=self.connection_data.get('code')
         )
 
-        # Get the access token from the app.
-        result = app.acquire_token_for_client(scopes=["https://graph.microsoft.com/.default"])
-
-        if 'access_token' in result:
-            access_token = result['access_token']
-
-        else:
-            raise AuthenticationError(result.get("error_description"))
+        access_token = auth_manager.get_access_token()
 
         # Save the cache back to file if it has changed.
         if cache.has_state_changed:
@@ -101,7 +96,6 @@ class MSOneDriveHandler(APIHandler):
         # Pass the access token to the Microsoft Graph API client for Microsoft OneDrive.
         self.connection = MSGraphAPIOneDriveClient(
             access_token=access_token,
-            user_principal_name=self.connection_data['email']
         )
 
         self.is_connected = True

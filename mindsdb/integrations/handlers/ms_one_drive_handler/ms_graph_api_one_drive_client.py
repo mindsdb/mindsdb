@@ -25,7 +25,7 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
             bool: True if the connection is successful, False otherwise.
         """
         try:
-            self.fetch_paginated_data(f"me/drive")
+            self.fetch_paginated_data("me/drive")
             return True
         except RequestException as request_error:
             logger.error(f"Error checking connection: {request_error}")
@@ -58,7 +58,7 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
             List[Dict]: The root items of the user's OneDrive.
         """
         root_items = []
-        for items in self.fetch_paginated_data(f"me/drive/root/children"):
+        for items in self.fetch_paginated_data("me/drive/root/children"):
             root_items.extend(items)
 
         return root_items

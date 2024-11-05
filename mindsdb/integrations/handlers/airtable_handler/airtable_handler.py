@@ -1,262 +1,117 @@
-from typing import Optional
-
-import pandas as pd
-import duckdb
-
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast.base import ASTNode
-from pyairtable import Api
-
-from mindsdb.integrations.libs.api_handler import APIResource, APIHandler
+from mindsdb.integrations.libs.api_handler import APIHandler, APIResource
 from mindsdb.utilities import log
+from pyairtable import Api
+import pandas as pd
+from typing import Optional, Dict
+from mindsdb_sql.parser.ast.base import ASTNode
+
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
     RESPONSE_TYPE,
 )
 
-logger = log.getLogger(__name__)
 
-
-class ListFilesTable(APIResource):
-
-    def list(
-        self,
-        targets: List[str] = None,
-        conditions: List[FilterCondition] = None,
-        limit: int = None,
-        *args,
-        **kwargs,
-    ) -> pd.DataFrame:
-
-        buckets = None
-        for condition in conditions:
-            if condition.column == "bucket":
-                if condition.op == FilterOperator.IN:
-                    buckets = condition.value
-                elif condition.op == FilterOperator.EQUAL:
-                    buckets = [condition.value]
-                condition.applied = True
-
+class ListTables(APIResource):
+    def list(self, targets=None, conditions=None, limit=None, **kwargs):
         data = []
-        for obj in self.handler.get_objects(limit=limit, buckets=buckets):
-            path = obj["Key"]
-            path = path.replace("`", "")
-            item = {
-                "path": path,
-                "bucket": obj["Bucket"],
-                "name": path[path.rfind("/") + 1 :],
-                "extension": path[path.rfind(".") + 1 :],
-            }
-
-            data.append(item)
-
-        return pd.DataFrame(data=data, columns=self.get_columns())
-
-    def get_columns(self) -> List[str]:
-        return ["path", "name", "extension", "bucket", "content"]
-
-
-class FileTable(APIResource):
-
-    def list(
-        self, targets: List[str] = None, table_name=None, *args, **kwargs
-    ) -> pd.DataFrame:
-        return self.handler.read_as_table(table_name)
-
-    def add(self, data, table_name=None):
+        for table in self.handler.tables_metadata:
+            columns = ", ".join([field["name"] for field in table.fields])
+            data.append({"table_name": table.name, "columns": columns})
         df = pd.DataFrame(data)
-        return self.handler.add_data_to_table(table_name, df)
+        return df
+
+    def get_columns(self):
+        return ["table_name", "columns"]
+
+
+class AirtableTable(APIResource):
+    def list(self, targets=None, conditions=None, limit=None, **kwargs):
+        if not self.handler.is_connected:
+            self.handler.connect()
+        records = self.handler.call_application_api(
+            "all", table_name=self.table_name, limit=limit
+        )
+        df = pd.DataFrame.from_records([record["fields"] for record in records])
+        return df
+
+    def insert(self, query):
+        data = [
+            {col.name: value for col, value in zip(query.columns, row)}
+            for row in query.values
+        ]
+        for record in data:
+            self.handler.api.table(self.handler.base_id, self.table_name).create(record)
 
 
 class AirtableHandler(APIHandler):
-    """
-    This handler handles connection and execution of the Airtable statements.
-    """
-
     name = "airtable"
 
-    def __init__(self, name: str, connection_data: Optional[dict], **kwargs):
-        """
-        Initialize the handler.
-        Args:
-            name (str): name of particular handler instance
-            connection_data (dict): parameters for connecting to the database
-            **kwargs: arbitrary keyword arguments.
-        """
+    def __init__(self, name: str, connection_data: Optional[Dict] = None, **kwargs):
         super().__init__(name)
-        self.parser = parse_sql
-        self.dialect = "airtable"
-        self.connection_data = connection_data
-        self.kwargs = kwargs
-
-        self.connection = None
+        self.connection_data = connection_data or {}
+        self.api_key = self.connection_data.get("api_key")
+        self.base_id = self.connection_data.get("base_id")
         self.is_connected = False
+        self.logger = log.getLogger(__name__)
+        self._tables = {}
+        self._register_table("tables", ListTables(self))
 
-    def __del__(self):
-        if self.is_connected is True:
-            self.disconnect()
-
-    def connect(self) -> StatusResponse:
-        """
-        Set up the connection required by the handler.
-        Returns:
-            HandlerStatusResponse
-        """
-
-        if self.is_connected is True:
+    def connect(self):
+        if self.is_connected:
             return self.connection
-
-        api = Api(self.connection_data["api_key"])
-
-        # response = requests.get(url, headers=headers)
-        # response = response.json()
-        # records = response['records']
-
-        # new_records = True
-        # while new_records:
-        #     try:
-        #         if response['offset']:
-        #             params = {"offset": response['offset']}
-        #             response = requests.get(url, params=params, headers=headers)
-        #             response = response.json()
-
-        #             new_records = response['records']
-        #             records = records + new_records
-        #     except Exception:
-        #         new_records = False
-
-        # rows = [record['fields'] for record in records]
-        # globals()[self.connection_data['table_name']] = pd.DataFrame(rows)
-
-        # self.connection = duckdb.connect()
-        # self.is_connected = True
-
-        # return self.connection
+        try:
+            self.api = Api(self.api_key)
+            self.base = self.api.base(self.base_id)
+            self.tables_metadata = self.base.tables()
+            for table in self.tables_metadata:
+                table_name = table.name
+                self._register_table(
+                    table_name, AirtableTable(self, table_name=table_name)
+                )
+            self.is_connected = True
+        except Exception as e:
+            self.is_connected = False
+            self.logger.error(f"Error with connecting to Airtable: {e}")
+        return self.connection
 
     def disconnect(self):
-        """
-        Close any existing connections.
-        """
-
-        if self.is_connected is False:
+        if not self.is_connected:
             return
-
-        self.connection.close()
+        self.api = None
+        self.base = None
         self.is_connected = False
-        return self.is_connected
+        self.logger.info("Disconnected from Airtable.")
 
     def check_connection(self) -> StatusResponse:
-        """
-        Check connection to the handler.
-        Returns:
-            HandlerStatusResponse
-        """
-
-        response = StatusResponse(False)
-        need_to_close = self.is_connected is False
-
         try:
             self.connect()
-            response.success = True
-        except Exception as e:
-            logger.error(
-                f'Error connecting to Airtable base {self.connection_data["base_id"]}, {e}!'
-            )
-            response.error_message = str(e)
-        finally:
-            if response.success is True and need_to_close:
-                self.disconnect()
-            if response.success is False and self.is_connected is True:
-                self.is_connected = False
-
-        return response
-
-    def native_query(self, query: str) -> StatusResponse:
-        """
-        Receive raw query and act upon it somehow.
-        Args:
-            query (str): query in native format
-        Returns:
-            HandlerResponse
-        """
-
-        need_to_close = self.is_connected is False
-
-        connection = self.connect()
-        cursor = connection.cursor()
-        try:
-            cursor.execute(query)
-            result = cursor.fetchall()
-            if result:
-                response = Response(
-                    RESPONSE_TYPE.TABLE,
-                    data_frame=pd.DataFrame(
-                        result, columns=[x[0] for x in cursor.description]
-                    ),
-                )
-
+            if self.base:
+                return StatusResponse(success=True)
             else:
-                response = Response(RESPONSE_TYPE.OK)
-                connection.commit()
+                return StatusResponse(
+                    success=False, error_message="Unable to connect to Airtable base."
+                )
         except Exception as e:
-            logger.error(
-                f'Error running query: {query} on table {self.connection_data["table_name"]} in base {self.connection_data["base_id"]}!'
-            )
-            response = Response(RESPONSE_TYPE.ERROR, error_message=str(e))
+            self.logger.error(f"Error checking connection to Airtable: {e}")
+            return StatusResponse(success=False, error_message=str(e))
 
-        if need_to_close is True:
-            self.disconnect()
-
-        return response
-
-    def query(self, query: ASTNode) -> StatusResponse:
-        """
-        Receive query as AST (abstract syntax tree) and act upon it somehow.
-        Args:
-            query (ASTNode): sql query represented as AST. May be any kind
-                of query: SELECT, INTSERT, DELETE, etc
-        Returns:
-            HandlerResponse
-        """
-
-        return self.native_query(query.to_string())
-
-    def get_tables(self) -> StatusResponse:
-        """
-        Return list of entities that will be accessible as tables.
-        Returns:
-            HandlerResponse
-        """
-
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=pd.DataFrame(
-                [self.connection_data["table_name"]], columns=["table_name"]
-            ),
-        )
-
-        return response
-
-    def get_columns(self) -> StatusResponse:
-        """
-        Returns a list of entity columns.
-        Args:
-            table_name (str): name of one of tables returned by self.get_tables()
-        Returns:
-            HandlerResponse
-        """
-
-        response = Response(
-            RESPONSE_TYPE.TABLE,
-            data_frame=pd.DataFrame(
-                {
-                    "column_name": list(
-                        globals()[self.connection_data["table_name"]].columns
-                    ),
-                    "data_type": globals()[self.connection_data["table_name"]].dtypes,
-                }
-            ),
-        )
-
-        return response
+    def call_application_api(
+        self,
+        method_name: str,
+        table_name: str = None,
+        formula: str = None,
+        limit: int = None,
+        **kwargs,
+    ):
+        if not self.is_connected:
+            self.connect()
+        table = self.api.table(self.base_id, table_name)
+        try:
+            if method_name == "all":
+                records = table.all(formula=formula, max_records=limit)
+                return records
+            else:
+                raise NotImplementedError(f"Method '{method_name}' is not implemented.")
+        except Exception as e:
+            self.logger.error(f"Error calling an Airtable API: {e}")

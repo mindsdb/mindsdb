@@ -2,11 +2,15 @@ services:
 
   mindsdb:
     image: mindsdb/mindsdb:devel
+   
     depends_on:
-      jaeger:
-        condition: service_started
-      langfuse:
-        condition: service_started
+      postgres:
+        condition: service_healthy
+    # Uncomment the following lines if you want to use the local version of jaeger and langfuse
+    #   jaeger:
+    #     condition: service_started
+    #   langfuse:
+    #     condition: service_started
     # If you want to build the image instead:
     # build:
     #   context: .
@@ -20,6 +24,7 @@ services:
     # watchfiles will reload the app when python files are changed
     entrypoint: bash -c "watchfiles --filter python 'python -m mindsdb' ."
     environment:
+      MINDSDB_DB_CON: "postgresql://postgres:postgres@postgres/mindsdb"
       MINDSDB_DOCKER_ENV: "True"
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
       FLASK_DEBUG: 1  # This will make sure http requests are logged regardless of log level
@@ -36,7 +41,7 @@ services:
       LANGFUSE_TIMEOUT: "10"
       LANGFUSE_SAMPLE_RATE: "1.0"
       OTEL_EXPORTER_TYPE: "console" # or "console" # Define the exporter type (console/otlp)
-      OTEL_OTLP_ENDPOINT: "http://jaeger:4317" # Define the endpoint for the otlp exporter. Uncomment this line if you want to use jaeger.
+      # OTEL_OTLP_ENDPOINT: "http://jaeger:4317" # Define the endpoint for the otlp exporter. Uncomment this line if you want to use jaeger.
       OTEL_SERVICE_NAME: "mindsdb" # Define the service name
       OTEL_SERVICE_ENVIRONMENT: "local" # Define the service environment
       # OTEL_SDK_FORCE_RUN: "true" # Uncomment me to force-start opentelemetry on local development.
@@ -64,7 +69,7 @@ services:
     image: langfuse/langfuse:2.87.0
     restart: always
     depends_on:
-      langfuse_db:
+      postgres:
         condition: service_healthy
     ports:
       - "3000:3000"
@@ -74,7 +79,7 @@ services:
       timeout: 3s
       retries: 10
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@langfuse_db:5432/postgres
+      - DATABASE_URL=postgresql://postgres:postgres@postgres/langfuse
       - NEXTAUTH_SECRET=secret # generate secret with at least 256 entropy using `openssl rand -base64 32`.
       - SALT=salt # generate secret with at least 256 entropy using `openssl rand -base64 32`.
       - ENCRYPTION_KEY=0000000000000000000000000000000000000000000000000000000000000000 # generate secret with at least 256 bits and 64 characters in hex format using `openssl rand -hex 32`.
@@ -89,7 +94,7 @@ services:
       - LANGFUSE_INIT_USER_NAME=User # User name
       - LANGFUSE_INIT_USER_PASSWORD=password # User password
 
-  langfuse_db:
+  postgres:
     image: postgres:16.4
     restart: always
     healthcheck:
@@ -102,11 +107,12 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=postgres
     ports:
-      - "5432:5432"
+      - "15432:5432" # Expose the port to the host. Use 15432 to avoid conflicts with local postgres installations
     volumes:
-      - langfuse_data:/var/lib/postgresql/data
+      - db_data:/var/lib/postgresql/data
+      - ./scripts/init-dbs.sh:/docker-entrypoint-initdb.d/init-dbs.sh
 
 volumes:
-  langfuse_data:
+  db_data:
     driver: local
 

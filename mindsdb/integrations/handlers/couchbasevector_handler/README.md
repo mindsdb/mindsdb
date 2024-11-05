@@ -1,13 +1,27 @@
 # Couchbase Vectore Store Handler
 
-This is the implementation of the Couchbase Vector Store handler for MindsDB.
+This is the implementation of the Couchbase Vector store data handler for MindsDB.
 
 ## Implementation
 
-This handler was implemented using the `couchbase` library, the Python driver for Couchbase.
+In order to make use of this handler and connect to a Couchbase server in MindsDB, the following syntax can be used. Note, that the example uses the default `travel-sample` bucket which can be enabled from the couchbase UI with pre-defined scope and documents. 
 
-The required arguments to establish a connection are:
+```sql
+CREATE DATABASE couchbase_vectorsource
+WITH
+engine='couchbase',
+parameters={
+    "connection_string": "couchbase://localhost",
+    "bucket": "travel-sample",
+    "user": "admin",
+    "password": "password",
+    "scope": "inventory"
+};
+```
 
+This handler is implemented using the `couchbase` library, the Python driver for Couchbase.
+
+The required arguments to establish a connection are as follows:
 * `connection_string`: the connection string for the endpoint of the Couchbase server
 * `bucket`: the bucket name to use when connecting with the Couchbase server
 * `user`: the user to authenticate with the Couchbase server
@@ -16,36 +30,14 @@ The required arguments to establish a connection are:
 
 Note: The connection string expects either the couchbases:// or couchbase:// protocol.
 
-If you are using Couchbase Capella, you can find the `connection_string` under the Connect tab.
-To use vector search, You will need to create a vector index using Search UI on Couchbase Capella or Couchbase Self Managed Server.
+<Tip>
+If you are using Couchbase Capella, you can find the connection_string under the Connect tab.
+It will also be required to whitelist the machine(s) that will be running MindsDB and database credentials will need to be created for the user. These steps can also be taken under the Connect tab.
+</Tip>
 
 ## Usage
 
-In order to make use of this handler and connect to a Couchbase server in MindsDB, the following syntax can be used. Note, the example uses the default `travel-sample` bucket which can be enabled from the couchbase UI with pre-defined scope and documents. 
-
-
-### Creating connection
-
-```sql
-CREATE DATABASE couchbase_vectorsource
-WITH
-engine='couchbase',
-parameters={
-    "connection_string": "couchbase://localhost",
-    "bucket":"travel-sample",
-    "user": "admin",
-    "password": "password",
-    "scope": "inventory"
-};
-```
-
-### Dropping connection
-
-To drop the connection, use this command
-
-```sql
-DROP DATABASE couchbase_vectorsource;
-```
+Now, you can use the established connection to create a collection (or table in the context of MindsDB) in Couchbase and insert data into it:
 
 ### Creating tables
 
@@ -71,7 +63,7 @@ SELECT *
 FROM couchbase_vectorsource.test_embeddings;
 ```
 
-To filter the data in your collection (table) by some filter, you can use the following query:
+To filter the data in your collection (table) by metadata, you can use the following query:
 
 ```sql
 SELECT * 
@@ -100,4 +92,12 @@ You can delete documents using `DELETE` just like in SQL.
 ```sql
 DELETE FROM couchbase_vectorsource.test_embeddings
 WHERE `metadata.test` = 'test1';
+```
+
+### Dropping connection
+
+To drop the connection, use this command
+
+```sql
+DROP DATABASE couchbase_vectorsource;
 ```

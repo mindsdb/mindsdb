@@ -33,14 +33,13 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.to
 
 # Torch.multiprocessing is imported in a 'try'. Falls back to multiprocessing so we dont NEED it.
 # Psycopg2 is needed in core codebase for sqlalchemy.
-# Hierarchicalforecast is an optional dep of neural/statsforecast
 # lark is required for auto retrieval (RAG utilities). It is used by langchain
 # and not explicitly imported in mindsdb.
 # transformers is required for langchain_core and not explicitly imported by mindsdb.
 MAIN_RULE_IGNORES = {
     "DEP003": ["torch"],
     "DEP001": ["torch", "pgvector"],
-    "DEP002": ["psycopg2-binary", "lark", "transformers"],
+    "DEP002": ["psycopg2-binary", "lark", "transformers"]
 }
 
 
@@ -51,7 +50,7 @@ MAIN_RULE_IGNORES = {
 # Or 2) because they are imported in an unusual way. E.g.:
 #   - pysqlite3 in the chromadb handler
 #   - dspy-ai in langchain handler
-OPTIONAL_HANDLER_DEPS = ["pysqlite3", "torch", "openai", "tiktoken", "wikipedia", "anthropic", "pypdf", "openpyxl",
+OPTIONAL_HANDLER_DEPS = ["torch", "tiktoken", "wikipedia", "openpyxl",
                          "sentence-transformers", "faiss-cpu", "litellm", "chromadb", "dspy-ai", "sqlalchemy-solr"]
 
 # List of rules we can ignore for specific packages
@@ -63,12 +62,16 @@ BYOM_HANLDER_DEPS = ["pyarrow"]
 # The `thrift-sasl` package is required establish a connection via to Hive via `pyhive`, but it is not explicitly imported in the code.
 HIVE_HANDLER_DEPS = ["thrift-sasl"]
 
+# The `gcsfs` package is required to interact with GCS as a file system.
+GCS_HANDLER_DEPS = ["gcsfs"]
+
 HANDLER_RULE_IGNORES = {
-    "DEP002": OPTIONAL_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS + BYOM_HANLDER_DEPS + HIVE_HANDLER_DEPS,
+    "DEP002": OPTIONAL_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS + BYOM_HANLDER_DEPS + HIVE_HANDLER_DEPS + GCS_HANDLER_DEPS,
     "DEP001": ["tests"]  # 'tests' is the mindsdb tests folder in the repo root
 }
 
 PACKAGE_NAME_MAP = {
+    "azure-storage-blob": ["azure"],
     "scylla-driver": ["cassandra"],
     "mysql-connector-python": ["mysql"],
     "snowflake-connector-python": ["snowflake"],
@@ -81,8 +84,11 @@ PACKAGE_NAME_MAP = {
     "google-auth-httplib2": ["google"],
     "google-generativeai": ["google"],
     "google-analytics-admin": ["google"],
+    "google-auth": ["google"],
+    "google-cloud-storage": ["google"],
     "protobuf": ["google"],
     "google-api-python-client": ["googleapiclient"],
+    "ibm-cos-sdk": ["ibm_boto3", "ibm_botocore"],
     "binance-connector": ["binance"],
     "pysqlite3": ["pysqlite3"],
     "atlassian-python-api": ["atlassian"],
@@ -123,8 +129,14 @@ PACKAGE_NAME_MAP = {
     "auto-ts": ["auto_ts"],
     "llama-index-readers-web": ["llama_index"],
     "llama-index-embeddings-openai": ["llama_index"],
+    "unifyai": ["unify"],
     "botframework-connector": ["botframework"],
     "botbuilder-schema": ["botbuilder"],
+    "opentelemetry-api": ["opentelemetry"],
+    "opentelemetry-sdk": ["opentelemetry"],
+    "opentelemetry-exporter-otlp": ["opentelemetry"],
+    "opentelemetry-instrumentation-requests": ["opentelemetry"],
+    "opentelemetry-instrumentation-flask": ["opentelemetry"],
 }
 
 # We use this to exit with a non-zero status code if any check fails
@@ -154,7 +166,7 @@ def run_deptry(reqs, rule_ignores, path, extra_args=""):
     errors = []
     try:
         result = subprocess.run(
-            f"deptry -o deptry.json --no-ansi --known-first-party mindsdb --requirements-txt \"{reqs}\" --per-rule-ignores \"{rule_ignores}\" --package-module-name-map \"{get_ignores_str(PACKAGE_NAME_MAP)}\" {extra_args} {path}",
+            f"deptry -o deptry.json --no-ansi --known-first-party mindsdb --requirements-files \"{reqs}\" --per-rule-ignores \"{rule_ignores}\" --package-module-name-map \"{get_ignores_str(PACKAGE_NAME_MAP)}\" {extra_args} {path}",
             shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE
         )
         if result.returncode != 0 and not os.path.exists("deptry.json"):

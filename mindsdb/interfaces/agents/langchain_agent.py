@@ -18,7 +18,10 @@ from langchain_community.chat_models import (
     ChatLiteLLM,
     ChatOllama,
 )
+from langchain_core.agents import AgentAction, AgentStep
+from langchain_core.embeddings import Embeddings
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
+from langchain_core.messages.base import BaseMessage
 from langchain_core.prompts import PromptTemplate
 from langchain_core.tools import Tool
 from langfuse import Langfuse
@@ -36,12 +39,12 @@ from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embeddi
 from mindsdb.utilities import log
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 from mindsdb.interfaces.storage import db
+from mindsdb.utilities.context import context as ctx
+
 
 from .mindsdb_chat_model import ChatMindsdb
 from .callback_handlers import LogCallbackHandler, ContextCaptureCallback
 from .langfuse_callback_handler import LangfuseCallbackHandler, get_metadata, get_tags, get_tool_usage, get_skills
-
-from .tools import _build_retrieval_tool
 from .safe_output_parser import SafeOutputParser
 
 
@@ -59,8 +62,8 @@ from .constants import (
     ASSISTANT_COLUMN,
     CONTEXT_COLUMN,
 )
-from ..skills.skill_tool import skill_tool, SkillType
-from ...integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
+from mindsdb.interfaces.skills.skill_tool import skill_tool
+from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
 
 _PARSING_ERROR_PREFIXES = [
     "An output parsing error occurred",
@@ -111,6 +114,27 @@ def get_chat_model_params(args: Dict) -> Dict:
     config_dict = llm_config.model_dump()
     config_dict = {k: v for k, v in config_dict.items() if v is not None}
     return config_dict
+
+
+def build_embedding_model(args) -> Embeddings:
+    """
+    Build an embeddings model from the given arguments.
+    """
+    # Set up embeddings model if needed.
+    embeddings_args = args.pop("embedding_model_args", {})
+
+    # no embedding model args provided, use default provider.
+    if not embeddings_args:
+        embeddings_provider = get_embedding_model_provider(args)
+        logger.warning(
+            "'embedding_model_args' not found in input params, "
+            f"Trying to use LLM provider: {embeddings_provider}"
+        )
+        embeddings_args["class"] = embeddings_provider
+        # Include API keys if present.
+        embeddings_args.update({k: v for k, v in args.items() if "api_key" in k})
+
+    return construct_model_from_args(embeddings_args)
 
 
 def create_chat_model(args: Dict):
@@ -253,11 +277,20 @@ class LangchainAgent:
             trace_metadata['skills'] = get_skills(self.agent)
             trace_tags = get_tags(trace_metadata)
 
+            # Set our user info to pass into langfuse trace, with fault tolerance in each individual one just incase on purpose
+            trace_metadata['user_id'] = ctx.user_id
+            trace_metadata['session_id'] = ctx.session_id
+            trace_metadata['company_id'] = ctx.company_id
+            trace_metadata['user_class'] = ctx.user_class
+            trace_metadata['email_confirmed'] = ctx.email_confirmed
+
             self.api_trace = self.langfuse.trace(
                 name='api-completion',
                 input=messages,
                 tags=trace_tags,
-                metadata=trace_metadata
+                metadata=trace_metadata,
+                user_id=ctx.user_id,
+                session_id=ctx.session_id,
             )
 
             self.run_completion_span = self.api_trace.span(name='run-completion', input=messages)
@@ -300,6 +333,7 @@ class LangchainAgent:
                 logger.warning(f'Langfuse trace {self.trace_id} not found')
             except Exception as e:
                 logger.error(f'Something went wrong while processing Langfuse trace {self.trace_id}: {str(e)}')
+
         return response
 
     def _get_completion_stream(
@@ -334,23 +368,10 @@ class LangchainAgent:
         return self.stream_agent(df, agent, args)
 
     def set_embedding_model(self, args):
-        # Set up embeddings model if needed.
-
-        embeddings_args = args.pop("embedding_model_args", {})
-
-        # no embedding model args provided, use default provider.
-        if not embeddings_args:
-            embeddings_provider = get_embedding_model_provider(args)
-            logger.warning(
-                "'embedding_model_args' not found in input params, "
-                f"Trying to use LLM provider: {embeddings_provider}"
-            )
-            embeddings_args["class"] = embeddings_provider
-            # Include API keys if present.
-            embeddings_args.update({k: v for k, v in args.items() if "api_key" in k})
-
-        # create embeddings model
-        self.embedding_model = construct_model_from_args(embeddings_args)
+        """
+        Set the embedding model for the agent.
+        """
+        self.embedding_model = build_embedding_model(args)
 
     def create_agent(self, df: pd.DataFrame, args: Dict = None) -> AgentExecutor:
         # Set up tools.
@@ -362,8 +383,7 @@ class LangchainAgent:
 
         tools = []
         skills = self.agent.skills or []
-        for skill in skills:
-            tools += self.langchain_tools_from_skill(skill, {}, llm)
+        tools += self.langchain_tools_from_skills(skills, llm)
 
         # Prefer prediction prompt template over original if provided.
         prompt_template = args["prompt_template"]
@@ -412,27 +432,20 @@ class LangchainAgent:
         )
         return agent_executor
 
-    def langchain_tools_from_skill(self, skill, pred_args, llm):
+    def langchain_tools_from_skills(self, skills, llm):
         # Makes Langchain compatible tools from a skill
-        tools = skill_tool.get_tools_from_skill(skill, llm)
+        tools_groups = skill_tool.get_tools_from_skills(skills, llm, self.embedding_model)
 
         all_tools = []
-        for tool in tools:
-            if skill.type == SkillType.RETRIEVAL.value:
-                pred_args["embedding_model"] = self.embedding_model
-                pred_args["llm"] = self.llm
-                all_tools.append(_build_retrieval_tool(tool, pred_args, skill))
-                continue
-            if isinstance(tool, dict):
-                all_tools.append(
-                    Tool(
+        for skill_type, tools in tools_groups.items():
+            for tool in tools:
+                if isinstance(tool, dict):
+                    tool = Tool(
                         name=tool["name"],
                         func=tool["func"],
                         description=tool["description"],
                     )
-                )
-                continue
-            all_tools.append(tool)
+                all_tools.append(tool)
         return all_tools
 
     def _get_agent_callbacks(self, args: Dict) -> List:
@@ -639,9 +652,24 @@ AI: {response}"""
     def process_chunk(chunk):
         if isinstance(chunk, dict):
             return {k: LangchainAgent.process_chunk(v) for k, v in chunk.items()}
-        elif isinstance(chunk, list):
+        if isinstance(chunk, list):
             return [LangchainAgent.process_chunk(item) for item in chunk]
-        elif isinstance(chunk, (str, int, float, bool, type(None))):
+        if isinstance(chunk, AgentAction):
+            # Format agent actions properly for streaming.
+            return {
+                'tool': LangchainAgent.process_chunk(chunk.tool),
+                'tool_input': LangchainAgent.process_chunk(chunk.tool_input),
+                'log': LangchainAgent.process_chunk(chunk.log)
+            }
+        if isinstance(chunk, AgentStep):
+            # Format agent steps properly for streaming.
+            return {
+                'action': LangchainAgent.process_chunk(chunk.action),
+                'observation': LangchainAgent.process_chunk(chunk.observation) if chunk.observation else ''
+            }
+        if issubclass(chunk.__class__, BaseMessage):
+            # Extract content from message subclasses properly for streaming.
+            return chunk.content
+        if isinstance(chunk, (str, int, float, bool, type(None))):
             return chunk
-        else:
-            return str(chunk)
+        return str(chunk)

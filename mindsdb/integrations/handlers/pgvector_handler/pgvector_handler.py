@@ -1,6 +1,7 @@
 import os
 import json
-from typing import List, Union
+from enum import Enum
+from typing import Dict, List, Union
 from urllib.parse import urlparse
 
 import pandas as pd
@@ -15,6 +16,7 @@ from mindsdb.integrations.libs.response import RESPONSE_TYPE, HandlerResponse as
 from mindsdb.integrations.libs.vectordatabase_handler import (
     FilterCondition,
     VectorStoreHandler,
+    DistanceFunction
 )
 from mindsdb.utilities import log
 from mindsdb.utilities.profiler import profiler
@@ -225,6 +227,112 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
             result["embeddings"] = result["embeddings"].astype(str)
 
         return result
+
+    def hybrid_search(
+        self,
+        table_name: str,
+        embeddings: List[float],
+        query: str = None,
+        metadata: Dict[str, str] = None,
+        distance_function = DistanceFunction.COSINE_DISTANCE,
+        **kwargs
+    ) -> pd.DataFrame:
+        '''
+        Executes a hybrid search, combining semantic search and one or both of keyword/metadata search.
+
+        For insight on the query construction, see: https://docs.pgvecto.rs/use-case/hybrid-search.html#advanced-search-merge-the-results-of-full-text-search-and-vector-search.
+
+        Args:
+            table_name(str): Name of underlying table containing content, embeddings, & metadata
+            embeddings(List[float]): Embedding vector to perform semantic search against
+            query(str): User query to convert into keywords for keyword search
+            metadata(Dict[str, str]): Metadata filters to filter content rows against
+            distance_function(DistanceFunction): Distance function used to compare embeddings vectors for semantic search
+
+        Kwargs:
+            id_column_name(str): Name of ID column in underlying table
+            content_column_name(str): Name of column containing document content in underlying table
+            embeddings_column_name(str): Name of column containing embeddings vectors in underlying table
+            metadata_column_name(str): Name of column containing metadata key-value pairs in underlying table
+
+        Returns:
+            df(pd.DataFrame): Hybrid search result, sorted by hybrid search rank
+        '''
+        if query is None and metadata is None:
+            raise ValueError('Must provide at least one of: query for keyword search, or metadata filters. For only embeddings search, use normal search instead.')
+
+        id_column_name = kwargs.get('id_column_name', 'id')
+        content_column_name = kwargs.get('content_column_name', 'content')
+        embeddings_column_name = kwargs.get('embeddings_column_name', 'embeddings')
+        metadata_column_name = kwargs.get('metadata_column_name', 'metadata')
+        # Filter by given metadata for semantic search & full text search CTEs, if present.
+        where_clause = ' WHERE '
+        if metadata is None:
+            where_clause = ''
+            metadata = {}
+        for i, (k, v) in enumerate(metadata.items()):
+            where_clause += f"{metadata_column_name}->>'{k}' = '{v}'"
+            if i < len(metadata.items()) - 1:
+                where_clause += ' AND '
+
+        # See https://docs.pgvecto.rs/use-case/hybrid-search.html#advanced-search-merge-the-results-of-full-text-search-and-vector-search.
+        #
+        # We can break down the below query as follows:
+        # 
+        # Start with a CTE (Common Table Expression) called semantic_search (https://www.postgresql.org/docs/current/queries-with.html).
+        # This expression calculates rank by the defined distance function, which measures the distance between the
+        # embeddings column and the given embeddings vector. Results are ordered by this rank.
+        #
+        # Next, define another CTE called full_text_search if we are doing keyword search.
+        # This calculates rank using the built-in ts_rank function (https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-RANKING).
+        # We convert the content column to a ts_vector and match rows for the given tsquery in the content column. Results are ordered by this ts_rank.
+        #
+        # For both of these CTEs, we filter by any given metadata fields.
+        #
+        # See https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-PARSING-DOCUMENTS for to_tsvector
+        # See https://www.postgresql.org/docs/current/functions-textsearch.html#FUNCTIONS-TEXTSEARCH for tsquery syntax
+        #
+        # Finally, we use a FULL OUTER JOIN to SELECT from both CTEs defined above.
+        # The COALESCE function is used to handle cases where one CTE has null values.
+        #
+        # Or, if we are only doing metadata search, we leave out the JOIN & full text search CTEs.
+        #
+        # We calculate the final "hybrid" rank by summing the reciprocals of the ranks from each individual CTE.
+        semantic_search_cte = f'''WITH semantic_search AS (
+    SELECT {id_column_name}, {content_column_name}, {embeddings_column_name},
+    RANK () OVER (ORDER BY {embeddings_column_name} {distance_function.value} '{str(embeddings)}') AS rank
+    FROM {table_name}{where_clause}
+    ORDER BY {embeddings_column_name} {distance_function.value} '{str(embeddings)}'::vector
+    )'''
+
+        full_text_search_cte = ''
+        if query is not None:
+            ts_vector_clause = f"WHERE to_tsvector('english', {content_column_name}) @@ plainto_tsquery('english', '{query}')"
+            if metadata:
+                ts_vector_clause = f"AND to_tsvector('english', {content_column_name}) @@ plainto_tsquery('english', '{query}')"
+            full_text_search_cte = f''',
+    full_text_search AS (
+    SELECT {id_column_name}, {content_column_name}, {embeddings_column_name},
+    RANK () OVER (ORDER BY ts_rank(to_tsvector('english', {content_column_name}), plainto_tsquery('english', '{query}')) DESC) AS rank
+    FROM {table_name}{where_clause}
+    {ts_vector_clause}
+    ORDER BY ts_rank(to_tsvector('english', {content_column_name}), plainto_tsquery('english', '{query}')) DESC
+    )'''
+
+        hybrid_select = '''
+    SELECT * FROM semantic_search'''
+        if query is not None:
+            hybrid_select = f'''
+    SELECT
+        COALESCE(semantic_search.{id_column_name}, full_text_search.{id_column_name}) AS id,
+        COALESCE(semantic_search.{content_column_name}, full_text_search.{content_column_name}) AS content,
+        COALESCE(semantic_search.{embeddings_column_name}, full_text_search.{embeddings_column_name}) AS embeddings,
+        COALESCE(1.0 / (1 + semantic_search.rank), 0.0) + COALESCE(1.0 / (1 + full_text_search.rank), 0.0) AS rank
+    FROM semantic_search FULL OUTER JOIN full_text_search USING ({id_column_name}) ORDER BY rank DESC;
+        '''
+
+        full_search_query = f'{semantic_search_cte}{full_text_search_cte}{hybrid_select}'
+        return self.raw_query(full_search_query)
 
     def create_table(self, table_name: str, if_not_exists=True):
         """

@@ -631,7 +631,10 @@ AI: {response}"""
             raise TypeError("The stream method did not return an iterable")
 
         for chunk in stream_iterator:
-            yield self.process_chunk(chunk)
+            logger.info(f'Processing streaming chunk {chunk}')
+            processed_chunk = self.process_chunk(chunk)
+            logger.info(f'Processed chunk: {processed_chunk}')
+            yield processed_chunk
 
         if return_context:
             # Yield context if required
@@ -662,8 +665,6 @@ AI: {response}"""
                 'log': LangchainAgent.process_chunk(chunk.log)
             }
         if isinstance(chunk, AgentStep):
-            logger.info(f'Processing agent observation chunk of type {type(chunk.observation)}: {chunk.observation}')
-            logger.info(f'Processing agent action {chunk.action}')
             # Format agent steps properly for streaming.
             return {
                 'action': LangchainAgent.process_chunk(chunk.action),

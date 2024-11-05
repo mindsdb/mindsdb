@@ -3,59 +3,73 @@ title: Chatbot
 sidebarTitle: Chatbot
 ---
 
-Within MindsDB, chatbots are [agents](/agents/agent) connected to some messaging interface.
+Within MindsDB, chatbots are [agents](/mindsdb_sql/agents/agent) connected to a chat interface.
 
-Creating a chatbot requires an [AI agent](/agents/agent) and a connection to a chat app, like [Slack](/integrations/app-integrations/slack) or [MS Teams](/integrations/app-integrations/microsoft-teams).
-
-<Tip>
-Currently, the recommended chat app is Slack. MS Teams will be fully supported soon.
-</Tip>
+Creating a chatbot requires either an [AI agent](/mindsdb_sql/agents/agent) or an LLM, and a connection to a chat app, like [Slack](/integrations/app-integrations/slack) or [MS Teams](/integrations/app-integrations/microsoft-teams).
 
 <p align="center">
   <img src="/assets/chatbot_diagram.png" />
 </p>
 
-## How to work with chatbots
+## Chatbot with an AI agent
 
-A chatbot can be created, deleted, queried, and updated. Here is how you can do that using SQL API.
+[AI Agents](/mindsdb_sql/agents/agent) are customized AI models that can answer questions over your data. You can connect your data to agents in the form of [skills](/mindsdb_sql/agents/agent#create-skills).
 
-* Creating a chatbot:
+Here is how to create a chatbot that integrates an AI Agent and can be connected to a chat interface to have a conversation with your data.
 
-    ```sql
-    CREATE CHATBOT my_chatbot
-    USING
-        database = 'my_slack',                    -- this must be created with CREATE DATABASE
-        agent = 'customer_support_agent',         -- this must be created with CREATE AGENT
-        is_running = true;                        -- default is true
-    ```
+```sql
+CREATE CHATBOT my_chatbot
+USING
+    database = 'my_slack',   -- created with CREATE DATABASE my_slack
+    agent = 'my_agent',   -- created with CREATE AGENT my_agent
+    is_running = true;   -- default is true
+```
 
-    The parameters include the following:
+The parameters include the following:
 
-    * `database` stores connection to a chat app (like [Slack](/integrations/app-integrations/slack) or [MS Teams](/integrations/app-integrations/microsoft-teams)) that should be created with the `CREATE DATABASE` statement.
-    * `agent` is an [AI agent](/agents/agent) created with the `CREATE AGENT` command. It consists of an AI model trained with defined data sets.
-    * `is_running` indicates whether or not to start the chatbot upon creation.
+* `database` stores connection to a chat app (like [Slack](/integrations/app-integrations/slack) or [MS Teams](/integrations/app-integrations/microsoft-teams)) that should be created with the `CREATE DATABASE` statement.
+* `agent` is an [AI agent](/mindsdb_sql/agents/agent) created with the `CREATE AGENT` command. It consists of an AI model and a set of skills, that is, defined data sets provided at inference time via RAG-based techniques.
+* `is_running` indicates whether or not to start the chatbot upon creation.
 
-    <Note>
-    If you want to use Slack in the [`CREATE CHATBOT`](/agents/chatbot) syntax, use [this method of connecting Slack to MindsDB](/integrations/app-integrations/slack#method-1-chatbot-responds-in-direct-messages-to-a-slack-app).
-    </Note>
+<Tip>
+Here are some tips for using the Slack integration:
 
-    <Tip>
-    **How to connect the chatbot to multiple Slack channels?**
+1. If you want to use Slack in the [`CREATE CHATBOT`](/agents/chatbot) syntax, use [this method of connecting Slack to MindsDB](/integrations/app-integrations/slack#method-1-chatbot-responds-in-direct-messages-to-a-slack-app).
 
-    Open your Slack application and add the App/Bot to one or more channels:
-      - Go to the channel where you want to use the bot.
-      - Right-click on the channel and select *View Channel Details*.
-      - Select *Integrations*.
-      - Click on *Add an App*.
-    </Tip>
+2. If you want to connect the chatbot to multiple Slack channels, open your Slack application and add the App/Bot to one or more channels:
+  - Go to the channel where you want to use the bot.
+  - Right-click on the channel and select *View Channel Details*.
+  - Select *Integrations*.
+  - Click on *Add an App*.
+</Tip>
 
-* Deleting a chatbot:
+## Chatbot with an LLM
+
+ALternatively, you can create a chatbot that is equivalent to embedding an LLM of your choice into a chat app, like [Slack](/integrations/app-integrations/slack) or [MS Teams](/integrations/app-integrations/microsoft-teams).
+
+Here is how to create a chatbot that integrates an LLM and can be connected to a chat interface.
+
+```sql
+CREATE CHATBOT my_chatbot
+USING
+    database = 'my_slack',   -- created with CREATE DATABASE my_slack
+    model = 'my_model',   -- created with CREATE MODEL my_model
+    is_running = true;   -- default is true
+```
+
+The parameters include the following:
+
+* `database` stores connection to a chat app (like [Slack](/integrations/app-integrations/slack) or [MS Teams](/integrations/app-integrations/microsoft-teams)) that should be created with the `CREATE DATABASE` statement.
+* `model` is a conversational model created with the `CREATE MODEL` command using the [LangChain engine](/integrations/ai-engines/langchain).
+* `is_running` indicates whether or not to start the chatbot upon creation.
+
+Here is how to delete a chatbot:
 
     ```sql
     DROP CHATBOT my_chatbot;
     ```
 
-You can query all chatbots using these commands:
+And here is how to query all chatbots:
 
 ```sql
 SHOW CHATBOTS;
@@ -83,7 +97,5 @@ USING
 ```
 
 <Tip>
-To create `my_slack` and be able to talk to the chatbot via DMs, follow [this instruction](https://docs.mindsdb.com/integrations/app-integrations/slack#method-1-chatbot-responds-in-direct-messages-to-a-slack-app).
-
-To see how the agent is created, follow [this example](/agents/agent#example).
+Follow [this tutorial](/use-cases/ai_agents/build_ai_agents) to build your own chatbot.
 </Tip>

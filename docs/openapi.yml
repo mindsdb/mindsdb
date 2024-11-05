@@ -136,12 +136,12 @@ components:
       properties:
         name:
           type: string
-        database:
+        database_id:
           type: string
           description: Connection to a chat app like Slack or MS Teams
-        agent:
+        agent_name:
           type: string
-          description: Agent object created beforehand
+          description: Agent object created beforehand. Alternatively, provide a large language model (LLM) using the `model_name` parameter.
     Job:
       type: object
       properties:
@@ -1956,12 +1956,12 @@ paths:
                   properties:
                     name:
                       type: string
-                    database:
+                    database_id:
                       type: string
                       description: Connection to a chat app like Slack or MS Teams
-                    agent:
+                    agent_name:
                       type: string
-                      description: Agent object created beforehand
+                      description: Agent object created beforehand. Alternatively, provide a large language model (LLM) using the `model_name` parameter.
       responses:
         '200':
           description: Created a chatbot

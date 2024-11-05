@@ -672,7 +672,9 @@ AI: {response}"""
             }
         if issubclass(chunk.__class__, BaseMessage):
             # Extract content from message subclasses properly for streaming.
-            return chunk.content
+            return {
+                'content': chunk.content
+            }
         if isinstance(chunk, (str, int, float, bool, type(None))):
             return chunk
         return str(chunk)

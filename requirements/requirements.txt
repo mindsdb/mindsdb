@@ -43,7 +43,7 @@ langchain-community==0.0.27
 langchain-openai==0.1.6
 langchain-text-splitters==0.0.1
 langchain-nvidia-ai-endpoints==0.1.7
-langfuse==2.35.0
+langfuse==2.53.3  # Latest as of November 4, 2024
 lark
 prometheus-client==0.20.0
 transformers >= 4.42.4

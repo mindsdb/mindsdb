@@ -14,9 +14,8 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
     This client is used for accessing the Microsoft OneDrive specific endpoints of the Microsoft Graph API.
     Several common methods for submitting requests, fetching data, etc. are inherited from the base class.
     """
-    def __init__(self, access_token: Text, user_principal_name: Text) -> None:
+    def __init__(self, access_token: Text) -> None:
         super().__init__(access_token)
-        self.user_principal_name = user_principal_name
 
     def check_connection(self) -> bool:
         """
@@ -26,7 +25,7 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
             bool: True if the connection is successful, False otherwise.
         """
         try:
-            self.fetch_paginated_data(f"users/{self.user_principal_name}")
+            self.fetch_paginated_data(f"me/drive")
             return True
         except RequestException as request_error:
             logger.error(f"Error checking connection: {request_error}")
@@ -59,7 +58,7 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
             List[Dict]: The root items of the user's OneDrive.
         """
         root_items = []
-        for items in self.fetch_paginated_data(f"users/{self.user_principal_name}/drive/root/children"):
+        for items in self.fetch_paginated_data(f"me/drive/root/children"):
             root_items.extend(items)
 
         return root_items
@@ -75,7 +74,7 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
             List[Dict]: The child items of the specified item.
         """
         child_items = []
-        for items in self.fetch_paginated_data(f"users/{self.user_principal_name}/drive/items/{item_id}/children"):
+        for items in self.fetch_paginated_data(f"me/drive/items/{item_id}/children"):
             for item in items:
                 path = f"{path}/{item['name']}"
                 # If the item is a folder, get its child items.
@@ -100,4 +99,4 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
         Returns:
             bytes: The content of the specified item.
         """
-        return self.fetch_data(f"users/{self.user_principal_name}/drive/root:/{path}:/content")
+        return self.fetch_data(f"me/drive/root:/{path}:/content")

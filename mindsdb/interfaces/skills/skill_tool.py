@@ -210,11 +210,11 @@ class SkillToolController:
             type=skill.type
         )
 
-    def get_tools_from_skills(self, skills_data: List[dict], llm: BaseChatModel, embedding_model: Embeddings) -> dict:
+    def get_tools_from_skills(self, skills_data: List[SkillData], llm: BaseChatModel, embedding_model: Embeddings) -> dict:
         """Creates function for skill and metadata (name, description)
 
         Args:
-            skills (List[db.Skills]): Skills to make a tool from
+            skills_data (List[SkillData]): Skills to make a tool from
             llm (BaseChatModel): LLM which will be used by skills
             embedding_model (Embeddings): this model is used by retrieval skill
 

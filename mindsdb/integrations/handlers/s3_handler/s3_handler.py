@@ -3,6 +3,7 @@ from contextlib import contextmanager
 
 import boto3
 import duckdb
+from mindsdb_sql import parse_sql
 import pandas as pd
 from typing import Text, Dict, Optional
 from botocore.exceptions import ClientError
@@ -294,7 +295,7 @@ class S3Handler(APIHandler):
             ValueError: If the file format is not supported or the file does not exist in the S3 bucket.
 
         Returns:
-            Response: The response from the `native_query` method, containing the result of the SQL query execution.
+            Response: A response object containing the result of the query or an error message.
         """
 
         self.connect()
@@ -336,6 +337,19 @@ class S3Handler(APIHandler):
             raise NotImplementedError
 
         return response
+
+    def native_query(self, query: str) -> Response:
+        """
+        Executes a SQL query and returns the result.
+
+        Args:
+            query (str): The SQL query to be executed.
+
+        Returns:
+            Response: A response object containing the result of the query or an error message.
+        """
+        query_ast = parse_sql(query)
+        return self.query(query_ast)
 
     def get_objects(self, limit=None, buckets=None) -> List[dict]:
         client = self.connect()

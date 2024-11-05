@@ -91,19 +91,19 @@ if __name__ == '__main__':
     # ---- CHECK SYSTEM ----
     if not (sys.version_info[0] >= 3 and sys.version_info[1] >= 8):
         print("""
-     MindsDB requires Python >= 3.8 to run
+     MindsDB requires Python >= 3.9 to run
 
-     Once you have Python 3.8 installed you can tun mindsdb as follows:
+     Once you have supported Python version installed you can start mindsdb as follows:
 
      1. create and activate venv:
-     python3.8 -m venv venv
+     python3 -m venv venv
      source venv/bin/activate
 
      2. install MindsDB:
      pip3 install mindsdb
 
      3. Run MindsDB
-     python3.8 -m mindsdb
+     python3 -m mindsdb
 
      More instructions in https://docs.mindsdb.com
          """)

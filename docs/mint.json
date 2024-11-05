@@ -914,6 +914,7 @@
             "integrations/app-integrations/instatus",
             "integrations/app-integrations/intercom",
             "integrations/app-integrations/mediawiki",
+            "integrations/app-integrations/microsoft-onedrive",
             "integrations/app-integrations/microsoft-teams",
             "integrations/app-integrations/newsapi",
             "integrations/app-integrations/paypal",
@@ -1006,6 +1007,7 @@
           "group": "Vector Stores",
           "pages": [
             "integrations/vector-db-integrations/chromadb",
+            "integrations/vector-db-integrations/couchbase",
             "integrations/vector-db-integrations/pgvector",
             "integrations/vector-db-integrations/pinecone",
             "integrations/vector-db-integrations/weaviate"

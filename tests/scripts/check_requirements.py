@@ -37,8 +37,9 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.to
 # and not explicitly imported in mindsdb.
 # transformers is required for langchain_core and not explicitly imported by mindsdb.
 MAIN_RULE_IGNORES = {
+    "DEP003": ["torch"],
     "DEP001": ["torch", "pgvector"],
-    "DEP002": ["psycopg2-binary", "lark", "transformers"],
+    "DEP002": ["psycopg2-binary", "lark", "transformers"]
 }
 
 
@@ -70,6 +71,7 @@ HANDLER_RULE_IGNORES = {
 }
 
 PACKAGE_NAME_MAP = {
+    "azure-storage-blob": ["azure"],
     "scylla-driver": ["cassandra"],
     "mysql-connector-python": ["mysql"],
     "snowflake-connector-python": ["snowflake"],
@@ -86,6 +88,7 @@ PACKAGE_NAME_MAP = {
     "google-cloud-storage": ["google"],
     "protobuf": ["google"],
     "google-api-python-client": ["googleapiclient"],
+    "ibm-cos-sdk": ["ibm_boto3", "ibm_botocore"],
     "binance-connector": ["binance"],
     "pysqlite3": ["pysqlite3"],
     "atlassian-python-api": ["atlassian"],
@@ -126,8 +129,14 @@ PACKAGE_NAME_MAP = {
     "auto-ts": ["auto_ts"],
     "llama-index-readers-web": ["llama_index"],
     "llama-index-embeddings-openai": ["llama_index"],
+    "unifyai": ["unify"],
     "botframework-connector": ["botframework"],
-    "botbuilder-schema": ["botbuilder"]
+    "botbuilder-schema": ["botbuilder"],
+    "opentelemetry-api": ["opentelemetry"],
+    "opentelemetry-sdk": ["opentelemetry"],
+    "opentelemetry-exporter-otlp": ["opentelemetry"],
+    "opentelemetry-instrumentation-requests": ["opentelemetry"],
+    "opentelemetry-instrumentation-flask": ["opentelemetry"],
 }
 
 # We use this to exit with a non-zero status code if any check fails

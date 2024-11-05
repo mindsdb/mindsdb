@@ -75,3 +75,4 @@ LIMIT 1000;
 - Performance may vary depending on the size of the CKAN instance and the complexity of your queries.
 - The handler may not work with all CKAN instances, especially those with custom configurations.
 - The handler does not support all CKAN API features. Some advanced features may not be available.
+- The datastore search will return limited records up to 32000. Please refer to the [CKAN API](https://docs.ckan.org/en/2.11/maintaining/datastore.html#ckanext.datastore.logic.action.datastore_search_sql) documentation for more information.

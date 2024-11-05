@@ -6,6 +6,17 @@ sidebarTitle: Environment Variables
 Most of the MindsDB functionality can be modified by extending the default configuration, but some of the configuration options 
 can be added as environment variables on the server where MindsDB is deployed.
 
+## MindsDB Authentication
+
+MindsDB does not require authentication by default. If you want to enable authentication, you can set the `MINDSDB_USERNAME` and `MINDSDB_PASSWORD` environment variables.
+
+#### Example
+
+```bash
+export MINDSDB_USERNAME='mindsdb_user'
+export MINDSDB_PASSWORD='mindsdb_password'
+```
+
 ## MindsDB Storage 
 
 By default, MindsDB stores the configuration files by determining appropriate platform-specific directories, e.g. a "user data dir": 
@@ -21,9 +32,8 @@ You can change the default storage location using `MINDSDB_STORAGE_DIR` variable
 #### Example
 
 ```
-MINDSDB_STORAGE_DIR='~/home/mindsdb/var'
+export MINDSDB_STORAGE_DIR='~/home/mindsdb/var'
 ```
-
 
 ## MindsDB Configuration Storage 
 
@@ -34,10 +44,10 @@ default storage option and use different database by adding the new connection s
 #### Example
 
 ```
-MINDSDB_DB_CON='postgresql://user:secret@localhost'
+export MINDSDB_DB_CON='postgresql://user:secret@localhost'
 ```
 
-## MindsDB server
+## MindsDB Server
 
 By default for the HTTP API, MindsDB uses [Waitress](https://pypi.org/project/waitress/) which is a pure-Python WSGI server. There is an option to change that 
 and use [Flask](https://flask.palletsprojects.com/en/2.2.x/) or [Gunircorn](https://gunicorn.org/)
@@ -51,7 +61,7 @@ If you want to use Gunicorn as a default server, make sure you run `pip install 
 #### Example
 
 ```
-MINDSDB_DEFAULT_SERVER=flask
+export MINDSDB_DEFAULT_SERVER=flask
 ```
 
 ## MindsDB Updates
@@ -61,5 +71,5 @@ If you use on-premise deployment of MindsDB and you do not use MindsDB SQL edito
 ### Example
 
 ```bash
-CHECK_FOR_UPDATES = 0
+export CHECK_FOR_UPDATES = 0
 ```

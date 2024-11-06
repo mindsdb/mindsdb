@@ -543,7 +543,7 @@ AI: {response}"""
 
     def run_agent(self, df: pd.DataFrame, agent: AgentExecutor, args: Dict) -> pd.DataFrame:
         base_template = args.get('prompt_template', args['prompt_template'])
-        return_context = args.get('return_context', False)
+        return_context = args.get('return_context', True)
         input_variables = re.findall(r"{{(.*?)}}", base_template)
 
         prompts, empty_prompt_ids = prepare_prompts(df, base_template, input_variables, args.get('user_column', USER_COLUMN))
@@ -614,7 +614,7 @@ AI: {response}"""
     def stream_agent(self, df: pd.DataFrame, agent_executor: AgentExecutor, args: Dict) -> Iterable[Dict]:
         base_template = args.get('prompt_template', args['prompt_template'])
         input_variables = re.findall(r"{{(.*?)}}", base_template)
-        return_context = args.get('return_context', False)
+        return_context = args.get('return_context', True)
 
         prompts, _ = prepare_prompts(df, base_template, input_variables, args.get('user_column', USER_COLUMN))
 
@@ -631,7 +631,10 @@ AI: {response}"""
             raise TypeError("The stream method did not return an iterable")
 
         for chunk in stream_iterator:
-            yield self.process_chunk(chunk)
+            logger.info(f'Processing streaming chunk {chunk}')
+            processed_chunk = self.process_chunk(chunk)
+            logger.info(f'Processed chunk: {processed_chunk}')
+            yield processed_chunk
 
         if return_context:
             # Yield context if required
@@ -669,7 +672,9 @@ AI: {response}"""
             }
         if issubclass(chunk.__class__, BaseMessage):
             # Extract content from message subclasses properly for streaming.
-            return chunk.content
+            return {
+                'content': chunk.content
+            }
         if isinstance(chunk, (str, int, float, bool, type(None))):
             return chunk
         return str(chunk)

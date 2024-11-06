@@ -42,7 +42,7 @@ class FileTable(APIResource):
         try:
             df = self.handler._read_file(self.table_name)
             if df is None:
-                raise Exception(f"No such file found for the path: {self.dropbox_path}")
+                raise Exception(f"No such file found for the path: {self.box_path}")
 
             return df
         except Exception as e:

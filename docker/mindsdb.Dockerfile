@@ -100,7 +100,7 @@ COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 ENV PYTHONUNBUFFERED 1
 ENV MINDSDB_DOCKER_ENV 1
 ENV VIRTUAL_ENV /venv
-ENV PATH=/mindsdb/.venv/bin:$PATH
+ENV PATH /venv/bin:$PATH
 
 EXPOSE 47334/tcp
 EXPOSE 47335/tcp
@@ -136,7 +136,7 @@ COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 ENV PYTHONUNBUFFERED 1
 ENV MINDSDB_DOCKER_ENV 1
 ENV VIRTUAL_ENV /venv
-ENV PATH=/mindsdb/.venv/bin:$PATH
+ENV PATH /venv/bin:$PATH
 
 EXPOSE 47334/tcp
 EXPOSE 47335/tcp

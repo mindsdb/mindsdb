@@ -51,12 +51,14 @@ ENV UV_LINK_MODE=copy \
     UV_COMPILE_BYTECODE=1 \
     UV_PYTHON_DOWNLOADS=never \
     UV_PYTHON=python3.10 \
-    UV_PROJECT_ENVIRONMENT=/mindsdb
+    UV_PROJECT_ENVIRONMENT=/mindsdb \
+    VIRTUAL_ENV=/venv \
+    PATH=/venv/bin:$PATH
 
 # Install all requirements for mindsdb and all the default handlers
 # Installs everything into a venv in /mindsdb so that everything is isolated
 RUN --mount=type=cache,target=/root/.cache \
-    uv venv \
+    uv venv /venv \
     && uv pip install pip "."
 # Install extras on top of the bare mindsdb
 RUN --mount=type=cache,target=/root/.cache \
@@ -97,7 +99,8 @@ COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
 ENV PYTHONUNBUFFERED 1
 ENV MINDSDB_DOCKER_ENV 1
-ENV PATH=/mindsdb/.venv/bin:$PATH
+ENV VIRTUAL_ENV /venv
+ENV PATH /venv/bin:$PATH
 
 EXPOSE 47334/tcp
 EXPOSE 47335/tcp
@@ -123,18 +126,17 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     && apt-get install -qy \
     -o APT::Install-Recommends=false \
     -o APT::Install-Suggests=false \
-    libpq5 freetds-bin curl direnv
-
-# This makes sure the venv is activated when the container starts
-RUN echo "source .venv/bin/activate" >> .envrc && echo 'eval "$(direnv hook bash)"' >> .envrc
+    libpq5 freetds-bin curl
 
 # Copy installed packages and venv from the build stage
+COPY --link --from=build /venv /venv
 COPY --link --from=build /mindsdb /mindsdb
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
 ENV PYTHONUNBUFFERED 1
 ENV MINDSDB_DOCKER_ENV 1
-ENV PATH=/mindsdb/.venv/bin:$PATH
+ENV VIRTUAL_ENV /venv
+ENV PATH /venv/bin:$PATH
 
 EXPOSE 47334/tcp
 EXPOSE 47335/tcp

@@ -97,6 +97,7 @@ COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
 ENV PYTHONUNBUFFERED 1
 ENV MINDSDB_DOCKER_ENV 1
+ENV VIRTUAL_ENV /mindsdb/.venv
 ENV PATH=/mindsdb/.venv/bin:$PATH
 
 EXPOSE 47334/tcp
@@ -123,10 +124,7 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     && apt-get install -qy \
     -o APT::Install-Recommends=false \
     -o APT::Install-Suggests=false \
-    libpq5 freetds-bin curl direnv
-
-# This makes sure the venv is activated when the container starts
-RUN echo "source .venv/bin/activate" >> .envrc && echo 'eval "$(direnv hook bash)"' >> .envrc
+    libpq5 freetds-bin curl
 
 # Copy installed packages and venv from the build stage
 COPY --link --from=build /mindsdb /mindsdb
@@ -134,6 +132,7 @@ COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
 ENV PYTHONUNBUFFERED 1
 ENV MINDSDB_DOCKER_ENV 1
+ENV VIRTUAL_ENV /mindsdb/.venv
 ENV PATH=/mindsdb/.venv/bin:$PATH
 
 EXPOSE 47334/tcp

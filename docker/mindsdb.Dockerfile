@@ -129,6 +129,7 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
     libpq5 freetds-bin curl
 
 # Copy installed packages and venv from the build stage
+COPY --link --from=build /venv /venv
 COPY --link --from=build /mindsdb /mindsdb
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 

@@ -173,7 +173,3 @@ class DocumentLoader:
                         content=split_doc.page_content,
                         metadata=metadata
                     )
-
-    def configure_mysql_proxy(self, mysql_proxy):
-        """Configure MySQL proxy for query operations"""
-        self.mysql_proxy = mysql_proxy

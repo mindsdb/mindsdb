@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -47,7 +47,7 @@ class PreprocessingConfig(BaseModel):
 
 class Document(BaseModel):
     """Base document model for knowledge base operations"""
-    id: Optional[str] = Field(default=None, description="Unique identifier for the document")
+    id: Optional[Union[int, str]] = Field(default=None, description="Unique identifier for the document")
     content: str = Field(description="The document content")
     embeddings: Optional[List[float]] = Field(default=None, description="Vector embeddings of the content")
     metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional document metadata")

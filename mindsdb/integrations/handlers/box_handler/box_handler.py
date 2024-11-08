@@ -260,3 +260,13 @@ class BoxHandler(APIHandler):
             self.upload_file(path, buffer)
         except Exception as e:
             self.logger.error(f"Error with Box Handler: {e}")
+
+# SELECT * from box_datasource. `random_kaggle_dataset.csv` LIMIT 10;
+# SELECT from box_datasource. `optiver.parquet`;
+# SELECT from box_datasource. "Category.tsv";
+# SELECT from box_datasource. `/kaggle_datasets/random_kaggle_dataset.csv`;
+# SELECT * FROM box_datasource. ` random_kaggle_dataset.csv`;
+# SELECT * FROM box_datasource. `iris.json` WHERE sepalWidth = 3.5 and petalWidth = 0.2;
+# SELECT path, content FROM box_datasource.files;
+# SELECT * FROM box_datasource. `/json_files/flower/iris.json`;
+# INSERT INTO box_datasource. `iris.json` (SELECT FROM box_datasource. `iris. json` LIMIT 2);

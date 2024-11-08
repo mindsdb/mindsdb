@@ -28,7 +28,7 @@ from langchain_core.outputs import (
     ChatGeneration,
     ChatResult,
 )
-from langchain_core.pydantic_v1 import root_validator
+from pydantic import root_validator
 
 from mindsdb.interfaces.agents.constants import USER_COLUMN
 

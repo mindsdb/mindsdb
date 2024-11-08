@@ -4,7 +4,7 @@ from typing import Callable, Dict
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import Insert
-from langchain.agents import load_tools
+from langchain_community.agent_toolkits.load_tools import load_tools
 
 from langchain_experimental.utilities import PythonREPL
 from langchain_community.utilities import GoogleSerperAPIWrapper

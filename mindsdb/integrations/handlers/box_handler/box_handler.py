@@ -98,7 +98,7 @@ class BoxHandler(APIHandler):
             self.connect()
             response.success = True
         except Exception as e:
-            self.logger.error(f"Error with Box Handler: {e}")
+            self.logger.error(f"Error with Box Handler while establish connection: {e}")
             response.error_message = str(e)
         return response
 
@@ -131,7 +131,7 @@ class BoxHandler(APIHandler):
 
             downloaded_file_content = self.client.downloads.download_file(id)
             buffer = utils.read_byte_stream(downloaded_file_content)
-            return io.BytesIO(buffer)
+            return buffer
         except Exception as e:
             self.logger.error(f"Error when downloading a file from Box: {e}")
 
@@ -142,8 +142,6 @@ class BoxHandler(APIHandler):
             if table_name == "files":
                 table = self._files_table
                 df = table.select(query)
-
-                # add content
                 has_content = False
                 for target in query.targets:
                     if (
@@ -153,6 +151,7 @@ class BoxHandler(APIHandler):
                         has_content = True
                         break
                 if has_content:
+                    print(df["path"])
                     df["content"] = df["path"].apply(self._read_as_content)
             else:
                 table = FileTable(self, table_name=table_name)
@@ -189,7 +188,7 @@ class BoxHandler(APIHandler):
                 extension = item.name.split(".")[-1].lower()
                 if extension in self.supported_file_formats:
                     file = self.client.files.get_file_by_id(item.id)
-                    full_path = [path.name for path in file.path_collection.entries]
+                    full_path = [path.name for path in file.path_collection.entries][1:]
                     full_path.append(item.name)
                     files.append(
                         {
@@ -206,21 +205,21 @@ class BoxHandler(APIHandler):
 
     def _read_file(self, path) -> pd.DataFrame:
         try:
-            content = self._read_as_content(path)
+            buffer = self._read_as_content(path)
             extension = path.split(".")[-1].lower()
             if extension == "csv":
-                df = pd.read_csv(content)
+                df = pd.read_csv(io.BytesIO(buffer))
             elif extension == "tsv":
-                df = pd.read_csv(content, sep="\t")
+                df = pd.read_csv(io.BytesIO(buffer), sep="\t")
             elif extension == "json":
-                df = pd.read_json(content)
+                df = pd.read_json(io.BytesIO(buffer))
             elif extension == "parquet":
-                df = pd.read_parquet(content)
+                df = pd.read_parquet(io.BytesIO(buffer))
             else:
                 raise ValueError(f"Unsupported file format: {extension}")
             return df
         except Exception as e:
-            self.logger.error(f"Error with Box Handler: {e}")
+            self.logger.error(f"Error with Box Handler while reading file: {e}")
 
     def upload_file(self, path, buffer):
         parent_folder_id = "0"
@@ -238,35 +237,22 @@ class BoxHandler(APIHandler):
             else:
                 new_sub_folder = self.client.folders.create_folder(direc, CreateFolderParent(id=parent_folder_id))
                 parent_folder_id = new_sub_folder.id
-                print(f"folder {direc} not available in path. Creating {direc}...")
+                self.logger.debug(f"folder {direc} not available in path. Creating {direc}...")
 
-        self.clientclient.uploads.upload_file(UploadFileAttributes(name=directories[-1], parent=UploadFileAttributesParentField(id=parent_folder_id)), buffer)
+        self.client.uploads.upload_file(UploadFileAttributes(name=directories[-1], parent=UploadFileAttributesParentField(id=parent_folder_id)), buffer)
 
     def _write_file(self, path, df: pd.DataFrame):
-        try:
-            extension = path.split(".")[-1].lower()
-            buffer = io.BytesIO()
-            if extension == "csv":
-                df.to_csv(buffer, index=False)
-            elif extension == "tsv":
-                df.to_csv(buffer, index=False, sep="\t")
-            elif extension == "json":
-                df.to_json(buffer, orient="records")
-            elif extension == "parquet":
-                df.to_parquet(buffer, index=False)
-            else:
-                raise ValueError(f"Unsupported file format: {extension}")
-            buffer.seek(0)
-            self.upload_file(path, buffer)
-        except Exception as e:
-            self.logger.error(f"Error with Box Handler: {e}")
-
-# SELECT * from box_datasource. `random_kaggle_dataset.csv` LIMIT 10;
-# SELECT from box_datasource. `optiver.parquet`;
-# SELECT from box_datasource. "Category.tsv";
-# SELECT from box_datasource. `/kaggle_datasets/random_kaggle_dataset.csv`;
-# SELECT * FROM box_datasource. ` random_kaggle_dataset.csv`;
-# SELECT * FROM box_datasource. `iris.json` WHERE sepalWidth = 3.5 and petalWidth = 0.2;
-# SELECT path, content FROM box_datasource.files;
-# SELECT * FROM box_datasource. `/json_files/flower/iris.json`;
-# INSERT INTO box_datasource. `iris.json` (SELECT FROM box_datasource. `iris. json` LIMIT 2);
+        extension = path.split(".")[-1].lower()
+        buffer = io.BytesIO()
+        if extension == "csv":
+            df.to_csv(buffer, index=False)
+        elif extension == "tsv":
+            df.to_csv(buffer, index=False, sep="\t")
+        elif extension == "json":
+            df.to_json(buffer, orient="records")
+        elif extension == "parquet":
+            df.to_parquet(buffer, index=False)
+        else:
+            raise ValueError(f"Unsupported file format: {extension}")
+        buffer.seek(0)
+        self.upload_file(path, buffer)

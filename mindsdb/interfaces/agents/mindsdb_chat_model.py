@@ -28,7 +28,7 @@ from langchain_core.outputs import (
     ChatGeneration,
     ChatResult,
 )
-from pydantic import root_validator
+from pydantic import model_validator
 
 from mindsdb.interfaces.agents.constants import USER_COLUMN
 
@@ -130,7 +130,7 @@ class ChatMindsdb(BaseChatModel):
             'messages': [result]
         }
 
-    @root_validator(allow_reuse=True)
+    @model_validator(mode='before')
     def validate_environment(cls, values: Dict) -> Dict:
 
         model_name = values['model_name']

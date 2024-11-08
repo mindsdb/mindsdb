@@ -1,6 +1,7 @@
 import io
 import pandas as pd
-from box_sdk_gen import BoxClient, BoxDeveloperTokenAuth
+from box_sdk_gen import BoxClient, BoxDeveloperTokenAuth, CreateFolderParent, UploadFileAttributes, UploadFileAttributesParentField
+from box_sdk_gen.internal import utils
 from typing import Dict, Optional, Text
 
 from mindsdb_sql.parser.ast.base import ASTNode
@@ -12,8 +13,6 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE,
 )
-
-
 from mindsdb.integrations.libs.api_handler import APIHandler, APIResource
 
 
@@ -87,6 +86,7 @@ class BoxHandler(APIHandler):
                 raise ValueError("Developer token must be provided.")
             auth = BoxDeveloperTokenAuth(token=self.connection_data["token"])
             self.client = BoxClient(auth=auth)
+            self.client.folders.get_folder_items("0", limit=1)
             self.is_connected = True
             self.logger.info("Connected to Box")
         except Exception as e:
@@ -108,3 +108,155 @@ class BoxHandler(APIHandler):
         self.dbx = None
         self.is_connected = False
         self.logger.info("Disconnected from Box")
+
+    def _read_as_content(self, file_path) -> None:
+        """
+        Read files as content
+        """
+        try:
+            id = "0"
+
+            items = file_path.strip('/').split('/')
+
+            for item in items:
+                item_id = None
+                for entry in self.client.folders.get_folder_items(id).entries:
+                    if entry.name == item:
+                        item_id = entry.id
+                        break
+                if item_id:
+                    id = item_id
+                else:
+                    raise ValueError(f"{item} not found. Specify the correct path.")
+
+            downloaded_file_content = self.client.downloads.download_file(id)
+            buffer = utils.read_byte_stream(downloaded_file_content)
+            return io.BytesIO(buffer)
+        except Exception as e:
+            self.logger.error(f"Error when downloading a file from Box: {e}")
+
+    def query(self, query: ASTNode) -> Response:
+
+        if isinstance(query, Select):
+            table_name = query.from_table.parts[-1]
+            if table_name == "files":
+                table = self._files_table
+                df = table.select(query)
+
+                # add content
+                has_content = False
+                for target in query.targets:
+                    if (
+                        isinstance(target, Identifier)
+                        and target.parts[-1].lower() == "content"
+                    ):
+                        has_content = True
+                        break
+                if has_content:
+                    df["content"] = df["path"].apply(self._read_as_content)
+            else:
+                table = FileTable(self, table_name=table_name)
+                df = table.select(query)
+
+            return Response(RESPONSE_TYPE.TABLE, data_frame=df)
+        elif isinstance(query, Insert):
+            table_name = query.table.parts[-1]
+            table = FileTable(self, table_name=table_name)
+            table.insert(query)
+            return Response(RESPONSE_TYPE.OK)
+        else:
+            raise NotImplementedError(
+                "Only SELECT and INSERT operations are supported."
+            )
+
+    def get_tables(self) -> Response:
+        table_names = list(self._tables.keys())
+        df = pd.DataFrame(table_names, columns=["table_name"])
+        return Response(RESPONSE_TYPE.TABLE, data_frame=df)
+
+    def get_columns(self, table_name: str) -> Response:
+        table = self._get_table(Identifier(table_name))
+        columns = table.get_columns()
+        df = pd.DataFrame(columns, columns=["column_name"])
+        return Response(RESPONSE_TYPE.TABLE, data_frame=df)
+
+    def list_files_in_folder(self, folder_id, files=[]):
+        items = self.client.folders.get_folder_items(folder_id).entries
+        for item in items:
+            if item.type == 'folder':
+                self.list_files_in_folder(item.id)
+            elif item.type == 'file':
+                extension = item.name.split(".")[-1].lower()
+                if extension in self.supported_file_formats:
+                    file = self.client.files.get_file_by_id(item.id)
+                    full_path = [path.name for path in file.path_collection.entries]
+                    full_path.append(item.name)
+                    files.append(
+                        {
+                            "path": "/".join(full_path),
+                            "name": item.name,
+                            "extension": extension,
+                        }
+                    )
+
+        return files
+
+    def _list_files(self, path=""):
+        return self.list_files_in_folder("0")
+
+    def _read_file(self, path) -> pd.DataFrame:
+        try:
+            content = self._read_as_content(path)
+            extension = path.split(".")[-1].lower()
+            if extension == "csv":
+                df = pd.read_csv(content)
+            elif extension == "tsv":
+                df = pd.read_csv(content, sep="\t")
+            elif extension == "json":
+                df = pd.read_json(content)
+            elif extension == "parquet":
+                df = pd.read_parquet(content)
+            else:
+                raise ValueError(f"Unsupported file format: {extension}")
+            return df
+        except Exception as e:
+            self.logger.error(f"Error with Box Handler: {e}")
+
+    def upload_file(self, path, buffer):
+        parent_folder_id = "0"
+
+        directories = path.strip('/').split('/')
+
+        for direc in directories[:-1]:
+            sub_folder_id = None
+            for item in self.client.folders.get_folder_items(parent_folder_id).entries:
+                if item.type == "folder" and item.name == direc:
+                    sub_folder_id = item.id
+                    break
+            if sub_folder_id:
+                parent_folder_id = sub_folder_id
+            else:
+                new_sub_folder = self.client.folders.create_folder(direc, CreateFolderParent(id=parent_folder_id))
+                parent_folder_id = new_sub_folder.id
+                print(f"folder {direc} not available in path. Creating {direc}...")
+
+        self.clientclient.uploads.upload_file(UploadFileAttributes(name=directories[-1], parent=UploadFileAttributesParentField(id=parent_folder_id)), buffer)
+
+    def _write_file(self, path, df: pd.DataFrame):
+        try:
+            extension = path.split(".")[-1].lower()
+            buffer = io.BytesIO()
+            if extension == "csv":
+                df.to_csv(buffer, index=False)
+            elif extension == "tsv":
+                df.to_csv(buffer, index=False, sep="\t")
+            elif extension == "json":
+                df.to_json(buffer, orient="records")
+            elif extension == "parquet":
+                df.to_parquet(buffer, index=False)
+            else:
+                raise ValueError(f"Unsupported file format: {extension}")
+            buffer.seek(0)
+            self.upload_file(path, buffer)
+        except Exception as e:
+            self.logger.error(f"Error with Box Handler: {e}")

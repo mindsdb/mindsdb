@@ -10,14 +10,10 @@ import pandas as pd
 from langchain.agents import AgentExecutor
 from langchain.agents.initialize import initialize_agent
 from langchain.chains.conversation.memory import ConversationSummaryBufferMemory
-from langchain.schema import SystemMessage
 from langchain_community.chat_models import (
-    ChatAnthropic,
-    ChatOpenAI,
     ChatAnyscale,
     ChatLiteLLM,
-    ChatOllama,
-)
+    ChatOllama)
 from langchain_core.agents import AgentAction, AgentStep
 from langchain_core.embeddings import Embeddings
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
@@ -64,6 +60,9 @@ from .constants import (
 )
 from mindsdb.interfaces.skills.skill_tool import skill_tool
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
+from langchain_anthropic import ChatAnthropic
+from langchain_core.messages import SystemMessage
+from langchain_openai import ChatOpenAI
 
 _PARSING_ERROR_PREFIXES = [
     "An output parsing error occurred",

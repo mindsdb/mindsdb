@@ -105,7 +105,7 @@ class BoxHandler(APIHandler):
     def disconnect(self):
         if not self.is_connected:
             return
-        self.dbx = None
+        self.client = None
         self.is_connected = False
         self.logger.info("Disconnected from Box")
 

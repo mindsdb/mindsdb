@@ -1,6 +1,6 @@
-openai==1.24.0
+openai<2.0.0,>=1.54.0
 wikipedia==1.4.0
-tiktoken==0.5.2
+tiktoken
 anthropic>=0.26.1
 chromadb # Knowledge bases.
 dspy-ai==2.4.12

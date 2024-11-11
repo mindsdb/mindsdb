@@ -8,8 +8,8 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
 from langchain_core.vectorstores import VectorStore
 from langchain_core.stores import BaseStore
-from langchain.text_splitter import TextSplitter
 from pydantic import BaseModel
+from langchain_text_splitters import TextSplitter
 
 DEFAULT_COLLECTION_NAME = 'default_collection'
 

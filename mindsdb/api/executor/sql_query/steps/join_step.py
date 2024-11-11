@@ -3,7 +3,7 @@ import copy
 import numpy as np
 
 from mindsdb_sql.parser.ast import (
-    Identifier,
+    Identifier, BinaryOperation, Constant
 )
 from mindsdb_sql.planner.steps import (
     JoinStep,
@@ -74,7 +74,11 @@ class JoinStepCall(BaseStepCall):
                     return Identifier(parts=['table_b', col_name])
 
             if step.query.condition is None:
-                raise NotSupportedYet('Unable to join table without condition')
+                # prevent memory overflow
+                if len(left_data) * len(right_data) < 10 ** 7:
+                    step.query.condition = BinaryOperation(op='=', args=[Constant(0), Constant(0)])
+                else:
+                    raise NotSupportedYet('Unable to join table without condition')
 
             condition = copy.deepcopy(step.query.condition)
             query_traversal(condition, adapt_condition)

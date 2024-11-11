@@ -1,10 +1,9 @@
 from typing import Any, Dict, List, Union
 import logging
-
-from langchain.schema.output import LLMResult
 from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.messages.base import BaseMessage
+from langchain_core.outputs import LLMResult
 
 
 class ContextCaptureCallback(BaseCallbackHandler):

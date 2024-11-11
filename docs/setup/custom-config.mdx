@@ -28,6 +28,20 @@ python -m mindsdb
 
 Now you can access your MindsDB locally at `127.0.0.1:47334`.
 
+<Tip>
+By default, MindsDB starts the `http` and `mysql` APIs. You can define which APIs to start using the `api` flag as below.
+
+```bash
+python -m mindsdb --api http,mysql,postgres,mongodb
+```
+
+If you want to start MindsDB without the graphical user interface (GUI), use the `--no_studio` flag as below.
+
+```bash
+python -m mindsdb --no_studio
+```
+</Tip>
+
 ## Starting MindsDB with Extended Configuration
 
 First, you should prepare a `config.json` file based on the following template; remember to substitute the values for your custom configuration.

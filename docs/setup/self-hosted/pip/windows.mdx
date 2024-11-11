@@ -40,11 +40,19 @@ To successfully install MindsDB, use **Python 64-bit version**. Also, make sure 
    python -m mindsdb
    ```
 
-   By default, MindsDB will always start the `http` and `mysql` APIs. If you want to use Mongo API, you will need to provide that as a parameter to `--api`. You can do it as following:
+   <Tip>
+   By default, MindsDB starts the `http` and `mysql` APIs. You can define which APIs to start using the `api` flag as below.
 
-      ```bash
-      python -m mindsdb --api=http,mongodb,mysql
-      ```
+   ```bash
+   python -m mindsdb --api http,mysql,postgres,mongodb
+   ```
+
+   If you want to start MindsDB without the graphical user interface (GUI), use the `--no_studio` flag as below.
+
+   ```bash
+   python -m mindsdb --no_studio
+   ```
+   </Tip>
 
 ## Installation using Anaconda
 
@@ -83,11 +91,19 @@ your machine.
    python -m mindsdb
    ```
 
-   By default, MindsDB will always start the `http` and `mysql` APIs. If you want to use Mongo API, you will need to provide that as a parameter to `--api`. You can do it as following:
+   <Tip>
+   By default, MindsDB starts the `http` and `mysql` APIs. You can define which APIs to start using the `api` flag as below.
 
-      ```bash
-      python -m mindsdb --api=http,mongodb,mysql
-      ```
+   ```bash
+   python -m mindsdb --api http,mysql,postgres,mongodb
+   ```
+
+   If you want to start MindsDB without the graphical user interface (GUI), use the `--no_studio` flag as below.
+
+   ```bash
+   python -m mindsdb --no_studio
+   ```
+   </Tip>
 
 ## Dependencies
 

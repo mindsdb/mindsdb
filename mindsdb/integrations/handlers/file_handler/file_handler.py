@@ -16,7 +16,6 @@ from charset_normalizer import from_bytes
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import CreateTable, DropTables, Insert, Select
 from mindsdb_sql.parser.ast.base import ASTNode
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.integrations.libs.base import DatabaseHandler
@@ -24,6 +23,7 @@ from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse as Response
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb.utilities import log
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 logger = log.getLogger(__name__)
 

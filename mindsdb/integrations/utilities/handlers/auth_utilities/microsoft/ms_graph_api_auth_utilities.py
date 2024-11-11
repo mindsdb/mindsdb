@@ -1,14 +1,17 @@
-from typing import List, Text
+from typing import Dict, List, Text
 
 import msal
-from ..exceptions import AuthException
 
+from mindsdb.integrations.utilities.handlers.auth_utilities.exceptions import AuthException
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
 
 class MSGraphAPIDelegatedPermissionsManager:
+    """
+    The class for managing the delegated permissions for the Microsoft Graph API.
+    """
     def __init__(
         self,
         client_id: Text,
@@ -18,6 +21,17 @@ class MSGraphAPIDelegatedPermissionsManager:
         scopes: List = ["https://graph.microsoft.com/.default"],
         code: Text = None,
     ) -> None:
+        """
+        Initializes the delegated permissions manager.
+
+        Args:
+            client_id (Text): The client ID of the application registered in Microsoft Entra ID.
+            client_secret (Text): The client secret of the application registered in Microsoft Entra ID.
+            tenant_id (Text): The tenant ID of the application registered in Microsoft Entra ID.
+            cache (msal.SerializableTokenCache): The token cache for storing the access token.
+            scopes (List): The scopes for the Microsoft Graph API.
+            code (Text): The authentication code for acquiring the access token.
+        """
         self.client_id = client_id
         self.client_secret = client_secret
         self.tenant_id = tenant_id
@@ -25,8 +39,16 @@ class MSGraphAPIDelegatedPermissionsManager:
         self.scopes = scopes
         self.code = code
 
-    def get_access_token(self):
-        # Check if the cache already contains a valid access token
+    def get_access_token(self) -> Text:
+        """
+        Retrieves an access token for the Microsoft Graph API.
+        If a valid access token is found in the cache, it is returned.
+        Otherwise, the authentication flow is executed.
+
+        Returns:
+            Text: The access token for the Microsoft Graph API.
+        """
+        # Check if a valid access token is already in the cache for the signed-in user.
         msal_app = self._get_msal_app()
         accounts = msal_app.get_accounts()
 
@@ -35,18 +57,26 @@ class MSGraphAPIDelegatedPermissionsManager:
             if "access_token" in response:
                 return response['access_token']
 
-        # If no valid access token is found in the cache, run the auth flow
+        # If no valid access token is found in the cache, run the authentication flow.
         response = self._execute_ms_graph_api_auth_flow()
 
         if "access_token" in response:
             return response['access_token']
+        # If no access token is returned, raise an exception.
+        # This is the expected behaviour when the user attempts to authenticate for the first time.
         else:
             raise AuthException(
                 f'Error getting access token: {response.get("error_description")}',
                 auth_url=response.get('auth_url')
             )
 
-    def _get_msal_app(self):
+    def _get_msal_app(self) -> msal.ConfidentialClientApplication:
+        """
+        Returns an instance of the MSAL ConfidentialClientApplication.
+
+        Returns:
+            msal.ConfidentialClientApplication: An instance of the MSAL ConfidentialClientApplication.
+        """
         return msal.ConfidentialClientApplication(
             self.client_id,
             authority=f"https://login.microsoftonline.com/{self.tenant_id}",
@@ -54,9 +84,21 @@ class MSGraphAPIDelegatedPermissionsManager:
             token_cache=self.cache,
         )
 
-    def _execute_ms_graph_api_auth_flow(self):
+    def _execute_ms_graph_api_auth_flow(self) -> Dict:
+        """
+        Executes the authentication flow for the Microsoft Graph API.
+        If the authentication code is provided, the token is acquired by authorization code.
+        Otherwise, the authorization request URL is returned.
+
+        Raises:
+            AuthException: If the authentication code is not provided
+
+        Returns:
+            Dict: The response from the Microsoft Graph API authentication flow.
+        """
         msal_app = self._get_msal_app()
 
+        # If the authentication code is provided, acquire the token by authorization code.
         if self.code:
             response = msal_app.acquire_token_by_authorization_code(
                 code=self.code,
@@ -64,6 +106,8 @@ class MSGraphAPIDelegatedPermissionsManager:
             )
 
             return response
+
+        # If the authentication code is not provided, get the authorization request URL.
         else:
             auth_url = msal_app.get_authorization_request_url(
                 scopes=self.scopes

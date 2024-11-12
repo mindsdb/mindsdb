@@ -66,13 +66,13 @@ class ConfluenceHandler(APIHandler):
         return self.connection
     
     def validate_connection_data(self):
-        if self.connection_data.get('url') == "":
+        if not self.connection_data.get('url'):
             raise ValueError("`url` must be a valid non-empty url")
 
-        if self.connection_data.get('username') == "":
+        if not self.connection_data.get('username'):
             raise ValueError("`username` must be a valid non-empty string")
 
-        if self.connection_data.get('password') == "":
+        if not self.connection_data.get('password'):
             raise ValueError("`password` must be a valid non-empty string")
 
     def check_connection(self) -> StatusResponse:

@@ -89,7 +89,7 @@ if __name__ == '__main__':
     args = args_parse()
 
     # ---- CHECK SYSTEM ----
-    if not (sys.version_info[0] >= 3 and sys.version_info[1] >= 8):
+    if not (sys.version_info[0] >= 3 and sys.version_info[1] >= 9):
         print("""
      MindsDB requires Python >= 3.9 to run
 

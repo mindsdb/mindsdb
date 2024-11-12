@@ -11,18 +11,16 @@ a MySQL database. Find more information on MySQL CLI
 [here](https://dev.mysql.com/doc/refman/8.0/en/mysql.html).
 
 <Tip>
-If you installed MindsDB locally, use the below command to run its MySQL API:
+By default, MindsDB starts the `http` and `mysql` APIs. You can define which APIs to start using the `api` flag as below.
 
 ```bash
-python -m mindsdb --api http,mysql,postgres
+python -m mindsdb --api http,mysql,postgres,mongodb
 ```
-</Tip>
 
-<Tip>
-If you installed MindsDB locally, use the below command to run its MySQL API:
+If you want to start MindsDB without the graphical user interface (GUI), use the `--no_studio` flag as below.
 
 ```bash
-python -m mindsdb --api http,mysql,postgres
+python -m mindsdb --no_studio
 ```
 </Tip>
 

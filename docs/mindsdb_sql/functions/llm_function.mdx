@@ -1,0 +1,54 @@
+---
+title: The LLM() Function
+sidebarTitle: The LLM() Function
+---
+
+MindsDB provides the `LLM()` function that lets users incorporate the LLM-generated output directly into the data queries.
+
+## Prerequisites
+
+The `LLM()` function uses one of the OpenAI models and requires the OpenAI API key.
+
+To use the `LLM()` function with MindsDB, define the model to be used and the OpenAI API key as environment variables.
+
+* The `LLM_FUNCTION_MODEL` environment variable should store the OpenAI model name, like `gpt-4`.
+* The `OPENAI_API_KEY` environment variable should store the OpenAI API key value.
+
+## Usage
+
+You can use the `LLM()` function to simply ask a question and get an answer.
+
+```sql
+SELECT LLM('How many planets are there in the solar system?');
+```
+
+Here is the output:
+
+```sql
++------------------------------------------+
+| llm                                      |
++------------------------------------------+
+| There are 8 planets in the solar system. |
++------------------------------------------+
+```
+
+Moreover, you can the `LLM()` function with your data to swiftly complete tasks such as text generation or summarization.
+
+```sql
+SELECT
+    comment,
+    LLM('Describe the comment''s category in one word: ' || comment) AS category
+FROM example_db.user_comments;
+```
+
+Here is the output:
+
+```sql
++--------------------------+----------+
+| comment                  | category |
++--------------------------+----------+
+| I hate tacos             | Dislike  |
+| I want to dance          | Desire   |
+| Baking is not a big deal | Opinion  |
++--------------------------+----------+
+```

@@ -286,6 +286,9 @@ def _completion_event_generator(
         # Have to commit/flush here so DB isn't locked while streaming.
         db.session.commit()
 
+        if 'mode' not in existing_agent.params and any(skill.type == 'retrieval' for skill in existing_agent.skills):
+            existing_agent.params['mode'] = 'retrieval'
+
         completion_stream = session.agents_controller.get_completion(
             existing_agent,
             messages,
@@ -310,31 +313,8 @@ def _completion_event_generator(
                     # Handle SQL query message
                     yield json_serialize({"type": "sql", "content": chunk.get('content')})
                 else:
-                    # Process and yield other types of chunks
-                    chunk_obj = {}
-                    if 'type' in chunk:
-                        chunk_obj['type'] = chunk['type']
-                    if 'prompt' in chunk:
-                        chunk_obj['prompt'] = chunk['prompt']
-                    if 'output' in chunk:
-                        chunk_obj['output'] = chunk['output']
-                    if 'messages' in chunk:
-                        chunk_obj['messages'] = [{'content': str(m.content) if hasattr(m, 'content') else str(m)} for m
-                                                 in chunk['messages']]
-                    if 'actions' in chunk:
-                        chunk_obj['actions'] = [{
-                            'tool': getattr(a, 'tool', str(a)),
-                            'tool_input': getattr(a, 'tool_input', ''),
-                            'log': getattr(a, 'log', '')
-                        } for a in chunk['actions']]
-                    if 'steps' in chunk:
-                        chunk_obj['steps'] = [{'observation': getattr(s, 'observation', str(s))} for s in chunk['steps']]
-                    if 'context' in chunk:
-                        chunk_obj['context'] = chunk['context']
-                    if 'sql' in chunk:
-                        chunk_obj['sql'] = chunk['sql']
-
-                    yield json_serialize(chunk_obj)
+                    # Chunk should already be formatted by agent stream.
+                    yield json_serialize(chunk)
             else:
                 # For any other unexpected chunk types
                 yield json_serialize({"output": str(chunk)})

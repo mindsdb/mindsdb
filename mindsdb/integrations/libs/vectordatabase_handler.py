@@ -1,7 +1,7 @@
 import ast
 import hashlib
 from enum import Enum
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import pandas as pd
 from mindsdb_sql.parser.ast import (
@@ -39,6 +39,12 @@ class TableField(Enum):
     METADATA = "metadata"
     SEARCH_VECTOR = "search_vector"
     DISTANCE = "distance"
+
+
+class DistanceFunction(Enum):
+    SQUARED_EUCLIDEAN_DISTANCE = '<->',
+    NEGATIVE_DOT_PRODUCT = '<#>',
+    COSINE_DISTANCE = '<=>'
 
 
 class VectorStoreHandler(BaseHandler):
@@ -500,3 +506,29 @@ class VectorStoreHandler(BaseHandler):
             resp_type=RESPONSE_TYPE.DATA,
             data_frame=data,
         )
+
+    def hybrid_search(
+        self,
+        table_name: str,
+        embeddings: List[float],
+        query: str = None,
+        metadata: Dict[str, str] = None,
+        distance_function=DistanceFunction.COSINE_DISTANCE,
+        **kwargs
+    ) -> pd.DataFrame:
+        '''
+        Executes a hybrid search, combining semantic search and one or both of keyword/metadata search.
+
+        For insight on the query construction, see: https://docs.pgvecto.rs/use-case/hybrid-search.html#advanced-search-merge-the-results-of-full-text-search-and-vector-search.
+
+        Args:
+            table_name(str): Name of underlying table containing content, embeddings, & metadata
+            embeddings(List[float]): Embedding vector to perform semantic search against
+            query(str): User query to convert into keywords for keyword search
+            metadata(Dict[str, str]): Metadata filters to filter content rows against
+            distance_function(DistanceFunction): Distance function used to compare embeddings vectors for semantic search
+
+        Returns:
+            df(pd.DataFrame): Hybrid search result, sorted by hybrid search rank
+        '''
+        raise NotImplementedError(f'Hybrid search not supported for VectorStoreHandler {self.name}')

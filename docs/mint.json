@@ -333,7 +333,7 @@
           "group": "AI Agents",
           "pages": [
             "use-cases/ai_agents/overview",
-            "use-cases/ai_agents/chatbots_agents"
+            "use-cases/ai_agents/build_ai_agents"
           ]
         },
         {
@@ -503,7 +503,13 @@
             "mindsdb_sql/agents/knowledge-bases"
           ]
         },
-        "mindsdb_sql/functions/custom_functions"
+        {
+          "group": "Functions",
+          "pages": [
+            "mindsdb_sql/functions/custom_functions",
+            "mindsdb_sql/functions/llm_function"
+          ]
+        }
       ]
     },
     {
@@ -908,12 +914,14 @@
             "integrations/app-integrations/instatus",
             "integrations/app-integrations/intercom",
             "integrations/app-integrations/mediawiki",
+            "integrations/app-integrations/microsoft-onedrive",
             "integrations/app-integrations/microsoft-teams",
             "integrations/app-integrations/newsapi",
             "integrations/app-integrations/paypal",
             "integrations/app-integrations/plaid",
             "integrations/app-integrations/pypi",
             "integrations/app-integrations/reddit",
+            "integrations/app-integrations/salesforce",
             "integrations/app-integrations/sendinblue",
             "integrations/app-integrations/shopify",
             "integrations/app-integrations/slack",
@@ -999,6 +1007,7 @@
           "group": "Vector Stores",
           "pages": [
             "integrations/vector-db-integrations/chromadb",
+            "integrations/vector-db-integrations/couchbase",
             "integrations/vector-db-integrations/pgvector",
             "integrations/vector-db-integrations/pinecone",
             "integrations/vector-db-integrations/weaviate"
@@ -1024,6 +1033,7 @@
             "integrations/ai-engines/monkeylearn",
             "integrations/ai-engines/ollama",
             "integrations/ai-engines/openai",
+            "integrations/ai-engines/portkey",
             "integrations/ai-engines/replicate-llm",
             "integrations/ai-engines/vertex"       
           ]

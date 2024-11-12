@@ -447,7 +447,7 @@ class IntegrationController:
         )
         handler_storage = HandlerStorage(integration_id, root_dir='tmp', is_temporal=True)
 
-        HandlerClass = self.handler_modules[engine].Handler
+        HandlerClass = self.get_handler_module(engine).Handler
         handler_args = self._make_handler_args(
             name=name,
             handler_type=engine,

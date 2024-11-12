@@ -1,3 +1,4 @@
+from sqlalchemy import func
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
 from mindsdb.utilities.context import context as ctx
@@ -6,6 +7,7 @@ from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
 class ViewController:
     def add(self, name, query, project_name):
+        name = name.lower()
         from mindsdb.interfaces.database.database import DatabaseController
 
         database_controller = DatabaseController()
@@ -17,10 +19,10 @@ class ViewController:
         project_id = project_databases_dict[project_name]['id']
         view_record = (
             db.session.query(db.View.id)
-            .filter_by(
-                name=name,
-                company_id=ctx.company_id,
-                project_id=project_id
+            .filter(
+                func.lower(db.View.name) == name,
+                db.View.company_id == ctx.company_id,
+                db.View.project_id == project_id
             ).first()
         )
         if view_record is not None:
@@ -36,13 +38,14 @@ class ViewController:
         db.session.commit()
 
     def update(self, name, query, project_name):
+        name = name.lower()
         project_record = db.session.query(db.Project).filter_by(
             name=project_name,
             company_id=ctx.company_id,
             deleted_at=None
         ).first()
         rec = db.session.query(db.View).filter(
-            db.View.name == name,
+            func.lower(db.View.name) == name,
             db.View.company_id == ctx.company_id,
             db.View.project_id == project_record.id
         ).first()
@@ -52,13 +55,14 @@ class ViewController:
         db.session.commit()
 
     def delete(self, name, project_name):
+        name = name.lower()
         project_record = db.session.query(db.Project).filter_by(
             name=project_name,
             company_id=ctx.company_id,
             deleted_at=None
         ).first()
         rec = db.session.query(db.View).filter(
-            db.View.name == name,
+            func.lower(db.View.name) == name,
             db.View.company_id == ctx.company_id,
             db.View.project_id == project_record.id
         ).first()
@@ -120,10 +124,10 @@ class ViewController:
                 company_id=ctx.company_id
             ).all()
         elif name is not None:
-            records = db.session.query(db.View).filter_by(
-                name=name,
-                project_id=project_record.id,
-                company_id=ctx.company_id
+            records = db.session.query(db.View).filter(
+                func.lower(db.View.name) == name.lower(),
+                db.View.project_id == project_record.id,
+                db.View.company_id == ctx.company_id,
             ).all()
         if len(records) == 0:
             if name is None:

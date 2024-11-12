@@ -9,13 +9,15 @@ from mindsdb.interfaces.tasks.task import BaseTask
 
 from mindsdb.utilities import log
 
-from .polling import MessageCountPolling, RealtimePolling
-from .memory import DBMemory, HandlerMemory
+from .polling import MessageCountPolling, RealtimePolling, WebhookPolling
+from .memory import BaseMemory, DBMemory, HandlerMemory
 from .chatbot_executor import MultiModeBotExecutor, BotExecutor, AgentExecutor
 
 from .types import ChatBotMessage
 
 logger = log.getLogger(__name__)
+
+HOLDING_MESSAGE = "Bot is typing..."
 
 
 class ChatBotTask(BaseTask):
@@ -23,21 +25,22 @@ class ChatBotTask(BaseTask):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.bot_id = self.object_id
-        self.agent_id = None
 
         self.session = SessionController()
-
-    def run(self, stop_event):
-
-        # TODO check deleted, raise errors
-        # TODO checks on delete predictor / project/ integration
 
         bot_record = db.ChatBots.query.get(self.bot_id)
 
         self.base_model_name = bot_record.model_name
-        self.agent_id = bot_record.agent_id
         self.project_name = db.Project.query.get(bot_record.project_id).name
         self.project_datanode = self.session.datahub.get(self.project_name)
+
+        self.agent_id = bot_record.agent_id
+        if self.agent_id is not None:
+            self.bot_executor_cls = AgentExecutor
+        elif self.bot_params.get('modes') is None:
+            self.bot_executor_cls = BotExecutor
+        else:
+            self.bot_executor_cls = MultiModeBotExecutor
 
         database_name = db.Integration.query.get(bot_record.database_id).name
 
@@ -49,8 +52,6 @@ class ChatBotTask(BaseTask):
         self.bot_params = bot_record.params or {}
 
         chat_params = self.chat_handler.get_chat_config()
-        self.bot_params['bot_username'] = self.chat_handler.get_my_user_name()
-
         polling = chat_params['polling']['type']
         if polling == 'message_count':
             chat_params = chat_params['tables'] if 'tables' in chat_params else [chat_params]
@@ -60,22 +61,30 @@ class ChatBotTask(BaseTask):
         elif polling == 'realtime':
             self.chat_pooling = RealtimePolling(self, chat_params)
             self.memory = DBMemory(self, chat_params)
+
+        elif polling == 'webhook':
+            self.chat_pooling = WebhookPolling(self, chat_params)
+            self.memory = DBMemory(self, chat_params)
+
         else:
             raise Exception(f"Not supported polling: {polling}")
 
-        if self.agent_id is not None:
-            self.bot_executor_cls = AgentExecutor
-        elif self.bot_params.get('modes') is None:
-            self.bot_executor_cls = BotExecutor
-        else:
-            self.bot_executor_cls = MultiModeBotExecutor
+        self.bot_params['bot_username'] = self.chat_handler.get_my_user_name()
+
+    def run(self, stop_event):
+
+        # TODO check deleted, raise errors
+        # TODO checks on delete predictor / project/ integration
 
         self.chat_pooling.run(stop_event)
 
-    def on_message(self, chat_memory, message: ChatBotMessage, table_name=None):
+    def on_message(self, message: ChatBotMessage, chat_id=None, chat_memory=None, table_name=None):
+        if not chat_id and chat_memory:
+            raise Exception('chat_id or chat_memory should be provided')
 
         try:
-            self._on_message(chat_memory, message, table_name)
+            self._on_holding_message(chat_id, table_name)
+            self._on_message(message, chat_id, chat_memory, table_name)
         except (SystemExit, KeyboardInterrupt):
             raise
         except Exception:
@@ -83,9 +92,32 @@ class ChatBotTask(BaseTask):
             logger.error(error)
             self.set_error(str(error))
 
-    def _on_message(self, chat_memory, message: ChatBotMessage, table_name=None):
+    def _on_holding_message(self, chat_id: str, table_name: str = None):
+        """
+        Send a message to hold the user's attention while the bot is processing the request.
+        This message will not be saved in the chat memory.
+
+        Args:
+            chat_id (str): The ID of the chat.
+            table_name (str): The name of the table.
+        """
+        response_message = ChatBotMessage(
+            ChatBotMessage.Type.DIRECT,
+            HOLDING_MESSAGE,
+            # In Slack direct messages are treated as channels themselves.
+            user=self.bot_params['bot_username'],
+            destination=chat_id,
+            sent_at=dt.datetime.now()
+        )
+
+        # send to chat adapter
+        self.chat_pooling.send_message(response_message, table_name=table_name)
+        logger.debug(f'>>chatbot {chat_id} out (holding message): {response_message.text}')
+
+    def _on_message(self, message: ChatBotMessage, chat_id, chat_memory, table_name=None):
         # add question to history
         # TODO move it to realtime pooling
+        chat_memory = chat_memory if chat_memory else self.memory.get_chat(chat_id, table_name=table_name)
         chat_memory.add_to_history(message)
 
         logger.debug(f'>>chatbot {chat_memory.chat_id} in: {message.text}')
@@ -111,3 +143,31 @@ class ChatBotTask(BaseTask):
 
         # send to history
         chat_memory.add_to_history(response_message)
+
+    def on_webhook(self, request: dict) -> None:
+        """
+        Handle incoming webhook requests.
+        Passes the request to the chat handler along with the callback method.
+
+        Args:
+            request (dict): The incoming webhook request.
+        """
+        self.chat_handler.on_webhook(request, self.on_message)
+
+    def get_memory(self) -> BaseMemory:
+        """
+        Get the memory of the chatbot task.
+
+        Returns:
+            BaseMemory: The memory of the chatbot task.
+        """
+        return self.memory
+
+    def set_memory(self, memory: BaseMemory) -> None:
+        """
+        Set the memory of the chatbot task.
+
+        Args:
+            memory (BaseMemory): The memory to set for the chatbot task.
+        """
+        self.memory = memory

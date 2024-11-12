@@ -5,10 +5,6 @@ import re
 
 import numpy as np
 import pandas as pd
-from langchain.text_splitter import (
-    Language,
-    RecursiveCharacterTextSplitter,
-)
 
 from mindsdb.integrations.libs.llm.config import (
     AnthropicConfig,
@@ -20,11 +16,12 @@ from mindsdb.integrations.libs.llm.config import (
     NvidiaNIMConfig,
     MindsdbConfig,
 )
+from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
 
 # Default to latest GPT-4 model (https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo)
-DEFAULT_OPENAI_MODEL = "gpt-4-0125-preview"
+DEFAULT_OPENAI_MODEL = "gpt-4o"
 # Requires more than vanilla OpenAI due to ongoing summarization and 3rd party input.
-DEFAULT_OPENAI_MAX_TOKENS = 2048
+DEFAULT_OPENAI_MAX_TOKENS = 8096
 DEFAULT_OPENAI_MAX_RETRIES = 3
 
 DEFAULT_ANTHROPIC_MODEL = "claude-3-haiku-20240307"

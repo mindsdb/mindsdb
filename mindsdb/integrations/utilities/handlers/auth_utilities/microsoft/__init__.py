@@ -1,1 +1,1 @@
-from .ms_graph_api_auth_utilities import MSGraphAPIAuthManager
+from .ms_graph_api_auth_utilities import MSGraphAPIDelegatedPermissionsManager

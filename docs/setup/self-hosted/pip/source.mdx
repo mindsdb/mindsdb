@@ -6,7 +6,7 @@ sidebarTitle: pip from Source
 This section describes how to deploy MindsDB from the source code. It is the preferred way to use MindsDB if you want to contribute to our code or debug MindsDB.
 
 <Tip>
-To successfully install MindsDB, use **Python 64-bit version**. Also, make sure that **Python >= 3.8** and **pip >= 20.3**.
+To successfully install MindsDB, use **Python 64-bit version**. Also, make sure that **Python >= 3.9** and **pip >= 20.3**.
 </Tip>
 
 ## Installation
@@ -47,11 +47,19 @@ Please note that this method of MindsDB installation requires a minimum of 6 GB 
    python -m mindsdb
    ```
 
-By default, MindsDB will always start the `http` and `mysql` APIs. If you want to use Mongo API, you will need to provide that as a parameter to `--api`. You can do it as follows:
+   <Tip>
+   By default, MindsDB starts the `http` and `mysql` APIs. You can define which APIs to start using the `api` flag as below.
 
    ```bash
-   python -m mindsdb --api=http,mongodb,mysql
+   python -m mindsdb --api http,mysql,postgres,mongodb
    ```
+
+   If you want to start MindsDB without the graphical user interface (GUI), use the `--no_studio` flag as below.
+
+   ```bash
+   python -m mindsdb --no_studio
+   ```
+   </Tip>
 
 6. Now, you can access the following:
 
@@ -85,10 +93,10 @@ You can find all available [handlers here](https://github.com/mindsdb/mindsdb/tr
 
 ### Pip and Python Versions
 
-Currently, MindsDB supports Python versions 3.8.x, 3.9.x, 3.10.x, and 3.11.x.
+Currently, MindsDB supports Python versions 3.9.x, 3.10.x, and 3.11.x.
 
 To successfully install MindsDB, use **Python 64-bit version**. Also, make sure
-that **Python >= 3.8** and **pip >= 20.3**. You can check the pip and python
+that **Python >= 3.9** and **pip >= 20.3**. You can check the pip and python
 versions by running the `pip --version` and
 `python --version` commands.
 

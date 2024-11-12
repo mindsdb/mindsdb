@@ -148,7 +148,7 @@ Visit https://replicate.com/{model_name}/versions/{version} to check parameters.
         version = model.versions.get(args['version'])
         schema = version.openapi_schema['components']['schemas']['Input']['properties']
 
-        # returns only list of paramater
+        # returns only list of parameter
         if only_keys:
             return schema.keys()
 

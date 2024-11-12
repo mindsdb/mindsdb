@@ -3,7 +3,7 @@ title: Docker for MindsDB
 sidebarTitle: Docker
 ---
 
-MindsDB provides Docker images that facilitate running MinsdDB in Docker containers.
+MindsDB provides Docker images that facilitate running MindsDB in Docker containers.
 
 <Tip>
 As MindsDB integrates with numerous [data sources](/integrations/data-overview) and [AI frameworks](/integrations/ai-overview), each integration requires a set of dependencies. Hence, MindsDB provides multiple Docker images for different tasks, as outlined below.
@@ -154,34 +154,25 @@ The default configuration for MindsDB's Docker image is stored as a JSON code, a
 
 ```json
 {
-    "config_version": "1.4",
+    "config_version":"1.4",
     "storage_dir": "/root/mdb_storage",
-    "log": {
-        "level": {
-            "console": "ERROR",
-            "file": "WARNING",
-            "db": "WARNING"
-        }
-    },
     "debug": false,
     "integrations": {},
-    "auth": {
-        "username": "mindsdb",
-        "password": "123"
-    },
     "api": {
         "http": {
-            "host": "127.0.0.1",
+            "host": "0.0.0.0",
             "port": "47334"
         },
         "mysql": {
-            "host": "127.0.0.1",
+            "host": "0.0.0.0",
+            "password": "",
             "port": "47335",
+            "user": "mindsdb",
             "database": "mindsdb",
             "ssl": true
         },
-        "mongodb": {
-            "host": "127.0.0.1",
+         "mongodb": {
+            "host": "0.0.0.0",
             "port": "47336",
             "database": "mindsdb"
         }
@@ -194,7 +185,7 @@ The default configuration for MindsDB's Docker image is stored as a JSON code, a
 To override the default configuration, you can mount a config file over `/root/mindsdb_config.json`, as below.
 
 ```bash
-docker run -v mdb_config.json:/root/mindsdb_config.json mindsdb/mindsdb
+docker run --name mindsdb_container -d -p 47334:47334 -p 47335:47335 -v mdb_config.json:/root/mindsdb_config.json mindsdb/mindsdb
 ```
 
 <Tip>

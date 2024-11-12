@@ -90,4 +90,6 @@ jobs:
     name: Run Integration Tests
     needs: [deploy]
     uses: ./.github/workflows/test_on_deploy.yml
+    with:
+      git-sha: ${{ github.event.pull_request.head.sha }}
     secrets: inherit

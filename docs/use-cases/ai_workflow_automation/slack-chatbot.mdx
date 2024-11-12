@@ -201,7 +201,7 @@ Works like a charm!!
 
 ### 5. Let's automate this
 
-We will `CREATE JOB` to schedule periodical execution of SQL statements. Thw job will execute evry hour and do the following:
+We will `CREATE JOB` to schedule periodical execution of SQL statements. The job will execute every hour and do the following:
     1. Check for new messages using the [`LAST` keyword](/mindsdb_sql/sql/create/jobs#last).
     2. Generate an appropriate response with the `whizfizz_model` model.
     3. Insert the response into the channel.
@@ -240,7 +240,7 @@ SELECT * FROM mindsdb.jobs WHERE name = 'gpt4_slack_job';
 SELECT * FROM log.jobs_history WHERE project = 'mindsdb' AND name = 'gpt4_slack_job';
 ```
 
-To stop the sheduled job, we can use the following:
+To stop the scheduled job, we can use the following:
 
 ```sql
 DROP JOB gpt4_slack_job;

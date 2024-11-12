@@ -8,8 +8,8 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
 from langchain_core.vectorstores import VectorStore
 from langchain_core.stores import BaseStore
-from langchain.text_splitter import TextSplitter
 from pydantic import BaseModel
+from langchain_text_splitters import TextSplitter
 
 DEFAULT_COLLECTION_NAME = 'default_collection'
 
@@ -19,7 +19,7 @@ DEFAULT_MAX_CONCURRENCY = 5
 
 DEFAULT_CARDINALITY_THRESHOLD = 40
 DEFAULT_CHUNK_SIZE = 1000
-DEFAULT_CHUNK_OVERLAP = 50
+DEFAULT_CHUNK_OVERLAP = 200
 DEFAULT_POOL_RECYCLE = 3600
 DEFAULT_LLM_MODEL = "gpt-4o"
 DEFAULT_CONTENT_COLUMN_NAME = "body"

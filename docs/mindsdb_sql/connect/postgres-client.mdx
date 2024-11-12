@@ -6,10 +6,16 @@ sidebarTitle: Postgres CLI
 The Postgres API enables users to connect to MindsDB using the PostgreSQL protocol.
 
 <Tip>
-If you installed MindsDB locally, use the below command to run its Postgres API:
+By default, MindsDB starts the `http` and `mysql` APIs. You can define which APIs to start using the `api` flag as below.
 
 ```bash
-python -m mindsdb --api http,mysql,postgres
+python -m mindsdb --api http,mysql,postgres,mongodb
+```
+
+If you want to start MindsDB without the graphical user interface (GUI), use the `--no_studio` flag as below.
+
+```bash
+python -m mindsdb --no_studio
 ```
 </Tip>
 

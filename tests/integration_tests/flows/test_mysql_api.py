@@ -163,13 +163,14 @@ class TestMySqlApi(BaseStuff):
     def setup_class(cls):
 
         cls.docker_client = docker.from_env()
-        cls.mysql_image = 'mysql:8.1.0'
+        cls.mysql_image = 'mysql:9.1.0'
         cls.config = json.loads(Path(os.path.join(TEMP_DIR, "config.json")).read_text())
 
         cls.launch_query_tmpl = "mysql --host=%s --port=%s --user=%s --database=mindsdb" % (
             cls.config["api"]["mysql"]["host"],
             cls.config["api"]["mysql"]["port"],
-            cls.config["auth"]["username"])
+            cls.config["auth"]["username"]
+        )
 
     @classmethod
     def tear_down(cls):

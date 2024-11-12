@@ -17,6 +17,8 @@ from .types import ChatBotMessage
 
 logger = log.getLogger(__name__)
 
+HOLDING_MESSAGE = "Bot is typing..."
+
 
 class ChatBotTask(BaseTask):
 
@@ -81,6 +83,7 @@ class ChatBotTask(BaseTask):
             raise Exception('chat_id or chat_memory should be provided')
 
         try:
+            self._on_holding_message(chat_id, table_name)
             self._on_message(message, chat_id, chat_memory, table_name)
         except (SystemExit, KeyboardInterrupt):
             raise
@@ -88,6 +91,28 @@ class ChatBotTask(BaseTask):
             error = traceback.format_exc()
             logger.error(error)
             self.set_error(str(error))
+
+    def _on_holding_message(self, chat_id: str, table_name: str = None):
+        """
+        Send a message to hold the user's attention while the bot is processing the request.
+        This message will not be saved in the chat memory.
+
+        Args:
+            chat_id (str): The ID of the chat.
+            table_name (str): The name of the table.
+        """
+        response_message = ChatBotMessage(
+            ChatBotMessage.Type.DIRECT,
+            HOLDING_MESSAGE,
+            # In Slack direct messages are treated as channels themselves.
+            user=self.bot_params['bot_username'],
+            destination=chat_id,
+            sent_at=dt.datetime.now()
+        )
+
+        # send to chat adapter
+        self.chat_pooling.send_message(response_message, table_name=table_name)
+        logger.debug(f'>>chatbot {chat_id} out (holding message): {response_message.text}')
 
     def _on_message(self, message: ChatBotMessage, chat_id, chat_memory, table_name=None):
         # add question to history

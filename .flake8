@@ -1,5 +1,5 @@
 [flake8]
-min_python_version = 3.8.0
+min_python_version = 3.9.0
 max-line-length = 120
 ignore =
   # E402
@@ -85,6 +85,7 @@ exclude =
   mindsdb/integrations/handlers/impala_handler/*
   mindsdb/integrations/handlers/tdengine_handler/*
   mindsdb/integrations/handlers/huggingface_api_handler/*
+  mindsdb/integrations/handlers/unify_handler/*
   mindsdb/integrations/handlers/ignite_handler/*
   mindsdb/integrations/handlers/google_books_handler/*
   mindsdb/integrations/handlers/edgelessdb_handler/*

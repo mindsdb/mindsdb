@@ -74,7 +74,7 @@ DESCRIBE PREDICTOR mindsdb.audio_ai.features;
 | voice_a      | -       | random                                                                                        | Selects the voice to use for generation. Use `random` to select a random voice. Use `custom_voice` to use a custom voice.                                                               |
 | voice_b      | -       | disabled                                                                                      | (Optional) Create new voice from averaging the latents for `voice_a`, `voice_b` and `voice_c`. Use `disabled` to disable voice mixing.                                                  |
 | voice_c      | -       | disabled                                                                                      | (Optional) Create new voice from averaging the latents for `voice_a`, `voice_b` and `voice_c`. Use `disabled` to disable voice mixing.                                                  |
-| cvvp_amount  | number  | 0                                                                                             | How much the CVVP model should influence the output. Increasing this can in some cases reduce the likelyhood of multiple speakers. Defaults to 0 (disabled)                             |
+| cvvp_amount  | number  | 0                                                                                             | How much the CVVP model should influence the output. Increasing this can in some cases reduce the likelihood of multiple speakers. Defaults to 0 (disabled)                             |
 | custom_voice | string  | -                                                                                             | (Optional) Create a custom voice based on an mp3 file of a speaker. Audio should be at least 15 seconds, only contain one speaker, and be in mp3 format. Overrides the `voice_a` input. |
 +--------------+---------+-----------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
@@ -100,7 +100,7 @@ OUTPUT
 +------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------+
 | audio                                                                                          | text                                                                                                                                                 |
 +------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------+
-| https://replicate.delivery/pbxt/ffOCXeL4fa5yekAL4ybfFiJBbqENSEjhSLpA2zp1ElsBxxhSE/tortoise.mp3 | This is breaking news that first human are landed on mars and they find something very unusal their ehich is not yet out, by the way this is future  |
+| https://replicate.delivery/pbxt/ffOCXeL4fa5yekAL4ybfFiJBbqENSEjhSLpA2zp1ElsBxxhSE/tortoise.mp3 | This is breaking news that first human are landed on mars and they find something very unusual there which is not yet out, by the way this is future  |
 +------------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 If above predicted url don't work , then use [this](./assets/cloned_audio.mp3)
@@ -124,7 +124,7 @@ USING
 +---------------------------------------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 
-Above predicted url will work , therfore use [this](./assets/generated_audio.wav).
+Above predicted url will work , therefore use [this](./assets/generated_audio.wav).
 
 This is just an one model used in this example there are more with vast variation and usescases.
 Also there is no limit to imagination, how can you use this.

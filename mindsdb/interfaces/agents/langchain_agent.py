@@ -10,15 +10,14 @@ import pandas as pd
 from langchain.agents import AgentExecutor
 from langchain.agents.initialize import initialize_agent
 from langchain.chains.conversation.memory import ConversationSummaryBufferMemory
-from langchain.schema import SystemMessage
 from langchain_community.chat_models import (
-    ChatAnthropic,
-    ChatOpenAI,
     ChatAnyscale,
     ChatLiteLLM,
-    ChatOllama,
-)
+    ChatOllama)
+from langchain_core.agents import AgentAction, AgentStep
+from langchain_core.embeddings import Embeddings
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
+from langchain_core.messages.base import BaseMessage
 from langchain_core.prompts import PromptTemplate
 from langchain_core.tools import Tool
 from langfuse import Langfuse
@@ -36,6 +35,8 @@ from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embeddi
 from mindsdb.utilities import log
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 from mindsdb.interfaces.storage import db
+from mindsdb.utilities.context import context as ctx
+
 
 from .mindsdb_chat_model import ChatMindsdb
 from .callback_handlers import LogCallbackHandler, ContextCaptureCallback
@@ -59,6 +60,9 @@ from .constants import (
 )
 from mindsdb.interfaces.skills.skill_tool import skill_tool
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
+from langchain_anthropic import ChatAnthropic
+from langchain_core.messages import SystemMessage
+from langchain_openai import ChatOpenAI
 
 _PARSING_ERROR_PREFIXES = [
     "An output parsing error occurred",
@@ -109,6 +113,27 @@ def get_chat_model_params(args: Dict) -> Dict:
     config_dict = llm_config.model_dump()
     config_dict = {k: v for k, v in config_dict.items() if v is not None}
     return config_dict
+
+
+def build_embedding_model(args) -> Embeddings:
+    """
+    Build an embeddings model from the given arguments.
+    """
+    # Set up embeddings model if needed.
+    embeddings_args = args.pop("embedding_model_args", {})
+
+    # no embedding model args provided, use default provider.
+    if not embeddings_args:
+        embeddings_provider = get_embedding_model_provider(args)
+        logger.warning(
+            "'embedding_model_args' not found in input params, "
+            f"Trying to use LLM provider: {embeddings_provider}"
+        )
+        embeddings_args["class"] = embeddings_provider
+        # Include API keys if present.
+        embeddings_args.update({k: v for k, v in args.items() if "api_key" in k})
+
+    return construct_model_from_args(embeddings_args)
 
 
 def create_chat_model(args: Dict):
@@ -251,11 +276,20 @@ class LangchainAgent:
             trace_metadata['skills'] = get_skills(self.agent)
             trace_tags = get_tags(trace_metadata)
 
+            # Set our user info to pass into langfuse trace, with fault tolerance in each individual one just incase on purpose
+            trace_metadata['user_id'] = ctx.user_id
+            trace_metadata['session_id'] = ctx.session_id
+            trace_metadata['company_id'] = ctx.company_id
+            trace_metadata['user_class'] = ctx.user_class
+            trace_metadata['email_confirmed'] = ctx.email_confirmed
+
             self.api_trace = self.langfuse.trace(
                 name='api-completion',
                 input=messages,
                 tags=trace_tags,
-                metadata=trace_metadata
+                metadata=trace_metadata,
+                user_id=ctx.user_id,
+                session_id=ctx.session_id,
             )
 
             self.run_completion_span = self.api_trace.span(name='run-completion', input=messages)
@@ -298,6 +332,7 @@ class LangchainAgent:
                 logger.warning(f'Langfuse trace {self.trace_id} not found')
             except Exception as e:
                 logger.error(f'Something went wrong while processing Langfuse trace {self.trace_id}: {str(e)}')
+
         return response
 
     def _get_completion_stream(
@@ -332,23 +367,10 @@ class LangchainAgent:
         return self.stream_agent(df, agent, args)
 
     def set_embedding_model(self, args):
-        # Set up embeddings model if needed.
-
-        embeddings_args = args.pop("embedding_model_args", {})
-
-        # no embedding model args provided, use default provider.
-        if not embeddings_args:
-            embeddings_provider = get_embedding_model_provider(args)
-            logger.warning(
-                "'embedding_model_args' not found in input params, "
-                f"Trying to use LLM provider: {embeddings_provider}"
-            )
-            embeddings_args["class"] = embeddings_provider
-            # Include API keys if present.
-            embeddings_args.update({k: v for k, v in args.items() if "api_key" in k})
-
-        # create embeddings model
-        self.embedding_model = construct_model_from_args(embeddings_args)
+        """
+        Set the embedding model for the agent.
+        """
+        self.embedding_model = build_embedding_model(args)
 
     def create_agent(self, df: pd.DataFrame, args: Dict = None) -> AgentExecutor:
         # Set up tools.
@@ -520,7 +542,7 @@ AI: {response}"""
 
     def run_agent(self, df: pd.DataFrame, agent: AgentExecutor, args: Dict) -> pd.DataFrame:
         base_template = args.get('prompt_template', args['prompt_template'])
-        return_context = args.get('return_context', False)
+        return_context = args.get('return_context', True)
         input_variables = re.findall(r"{{(.*?)}}", base_template)
 
         prompts, empty_prompt_ids = prepare_prompts(df, base_template, input_variables, args.get('user_column', USER_COLUMN))
@@ -591,7 +613,7 @@ AI: {response}"""
     def stream_agent(self, df: pd.DataFrame, agent_executor: AgentExecutor, args: Dict) -> Iterable[Dict]:
         base_template = args.get('prompt_template', args['prompt_template'])
         input_variables = re.findall(r"{{(.*?)}}", base_template)
-        return_context = args.get('return_context', False)
+        return_context = args.get('return_context', True)
 
         prompts, _ = prepare_prompts(df, base_template, input_variables, args.get('user_column', USER_COLUMN))
 
@@ -608,7 +630,10 @@ AI: {response}"""
             raise TypeError("The stream method did not return an iterable")
 
         for chunk in stream_iterator:
-            yield self.process_chunk(chunk)
+            logger.info(f'Processing streaming chunk {chunk}')
+            processed_chunk = self.process_chunk(chunk)
+            logger.info(f'Processed chunk: {processed_chunk}')
+            yield processed_chunk
 
         if return_context:
             # Yield context if required
@@ -629,9 +654,26 @@ AI: {response}"""
     def process_chunk(chunk):
         if isinstance(chunk, dict):
             return {k: LangchainAgent.process_chunk(v) for k, v in chunk.items()}
-        elif isinstance(chunk, list):
+        if isinstance(chunk, list):
             return [LangchainAgent.process_chunk(item) for item in chunk]
-        elif isinstance(chunk, (str, int, float, bool, type(None))):
+        if isinstance(chunk, AgentAction):
+            # Format agent actions properly for streaming.
+            return {
+                'tool': LangchainAgent.process_chunk(chunk.tool),
+                'tool_input': LangchainAgent.process_chunk(chunk.tool_input),
+                'log': LangchainAgent.process_chunk(chunk.log)
+            }
+        if isinstance(chunk, AgentStep):
+            # Format agent steps properly for streaming.
+            return {
+                'action': LangchainAgent.process_chunk(chunk.action),
+                'observation': LangchainAgent.process_chunk(chunk.observation) if chunk.observation else ''
+            }
+        if issubclass(chunk.__class__, BaseMessage):
+            # Extract content from message subclasses properly for streaming.
+            return {
+                'content': chunk.content
+            }
+        if isinstance(chunk, (str, int, float, bool, type(None))):
             return chunk
-        else:
-            return str(chunk)
+        return str(chunk)

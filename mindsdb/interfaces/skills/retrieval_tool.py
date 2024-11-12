@@ -1,5 +1,4 @@
 from typing import Dict
-from langchain.agents import Tool
 
 from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
 from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel, VectorStoreType, DEFAULT_COLLECTION_NAME
@@ -9,6 +8,7 @@ from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS
 from mindsdb.interfaces.storage.db import KnowledgeBase
 from mindsdb.utilities import log
+from langchain_core.tools import Tool
 
 logger = log.getLogger(__name__)
 
@@ -89,7 +89,9 @@ def build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
         func=rag_wrapper,
         name=tool['name'],
         description=tool['description'],
-        return_direct=False  # Changed to False to allow the agent to use this information
+        response_format='content',
+        # Return directly by default since we already use an LLM against retrieved context to generate a response.
+        return_direct=tools_config.get('return_direct', True)
     )
 
 

@@ -251,14 +251,17 @@ class PostgresHandler(DatabaseHandler):
         logger.debug(f"Executing SQL query: {query_str}")
         return self.native_query(query_str, params)
 
-    def get_tables(self) -> Response:
+    def get_tables(self, all: bool = False) -> Response:
         """
         Retrieves a list of all non-system tables and views in the current schema of the PostgreSQL database.
 
         Returns:
             Response: A response object containing the list of tables and views, formatted as per the `Response` class.
         """
-        query = """
+        all_filter = 'and table_schema = current_schema()'
+        if all is True:
+            all_filter = ''
+        query = f"""
             SELECT
                 table_schema,
                 table_name,
@@ -268,7 +271,7 @@ class PostgresHandler(DatabaseHandler):
             WHERE
                 table_schema NOT IN ('information_schema', 'pg_catalog')
                 and table_type in ('BASE TABLE', 'VIEW')
-                and table_schema = current_schema()
+                {all_filter}
         """
         return self.native_query(query)
 

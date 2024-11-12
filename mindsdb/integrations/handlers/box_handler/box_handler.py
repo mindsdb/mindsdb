@@ -109,12 +109,12 @@ class BoxHandler(APIHandler):
         self.is_connected = False
         self.logger.info("Disconnected from Box")
 
-    def _read_as_content(self, file_path) -> None:
+    def _read_as_content(self, file_path) -> Buffer:
         """
         Read files as content
         """
         try:
-            id = "0"
+            id = "0" # Root folder id. The value is always "0".
 
             items = file_path.strip('/').split('/')
 

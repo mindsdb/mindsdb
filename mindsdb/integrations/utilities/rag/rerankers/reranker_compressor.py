@@ -23,7 +23,7 @@ class Ranking(BaseModel):
     is_relevant: bool
 
 
-class OpenAIReranker(BaseDocumentCompressor):
+class LLMReranker(BaseDocumentCompressor):
     _default_model: str = DEFAULT_RERANKING_MODEL
 
     filtering_threshold: float = 0.5  # Default threshold for filtering
@@ -31,6 +31,7 @@ class OpenAIReranker(BaseDocumentCompressor):
     temperature: float = 0.0  # Temperature for the model
     openai_api_key: Optional[str] = None
     remove_irrelevant: bool = True  # New flag to control removal of irrelevant documents,
+    base_url: str = "https://api.openai.com/v1"
 
     _api_key_var: str = "OPENAI_API_KEY"
     client: Optional[Any] = None
@@ -39,7 +40,7 @@ class OpenAIReranker(BaseDocumentCompressor):
         arbitrary_types_allowed = True
 
     def model_post_init(self, __context: Any) -> None:
-        """Initialize the OpenAI client after the model is fully initialized."""
+        """Initialize the LLM client after the model is fully initialized."""
         super().__init__()
         self._initialize_client()
 
@@ -62,7 +63,7 @@ class OpenAIReranker(BaseDocumentCompressor):
         openai_api_key = self.openai_api_key or os.getenv(self._api_key_var)
 
         # Initialize the ChatOpenAI client
-        client = ChatOpenAI(api_key=openai_api_key, model="gpt-4", temperature=0, logprobs=True)
+        client = ChatOpenAI(openai_api_base=self.base_url, api_key=openai_api_key, model="gpt-4o", temperature=0, logprobs=True)
 
         # Create the message history for the conversation
         message_history = [

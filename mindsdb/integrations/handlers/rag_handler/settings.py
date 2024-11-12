@@ -8,13 +8,10 @@ import openai
 import pandas as pd
 import requests
 import writer
-from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
-from langchain.docstore.document import Document
-from langchain.embeddings.base import Embeddings
 from langchain_community.embeddings.huggingface import HuggingFaceEmbeddings
 from langchain_community.llms import Writer
 from langchain_community.document_loaders import DataFrameLoader
-from langchain_community.vectorstores import FAISS, Chroma, VectorStore
+from langchain_community.vectorstores import FAISS, Chroma
 from pydantic import BaseModel, Extra, Field, field_validator, ValidationInfo
 
 
@@ -26,6 +23,10 @@ from mindsdb.integrations.handlers.rag_handler.exceptions import (
     UnsupportedLLM,
     UnsupportedVectorStore,
 )
+from langchain_core.callbacks import StreamingStdOutCallbackHandler
+from langchain_core.documents import Document
+from langchain_core.embeddings import Embeddings
+from langchain_core.vectorstores import VectorStore
 
 DEFAULT_EMBEDDINGS_MODEL = "BAAI/bge-base-en"
 

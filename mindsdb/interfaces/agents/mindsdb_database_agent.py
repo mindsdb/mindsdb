@@ -4,10 +4,9 @@
 """
 from typing import Any, Iterable, List, Optional
 
-from langchain.sql_database import SQLDatabase
-
 from mindsdb.interfaces.skills.skill_tool import skill_tool
 from mindsdb.utilities import log
+from langchain_community.utilities import SQLDatabase
 
 logger = log.getLogger(__name__)
 

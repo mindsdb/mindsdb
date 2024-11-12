@@ -5,15 +5,14 @@ import logging
 import math
 import os
 from typing import Any, Dict, List, Optional, Sequence, Tuple
-
-from langchain.chat_models import ChatOpenAI
 from langchain.retrievers.document_compressors.base import BaseDocumentCompressor
-from langchain.schema import Document
-from langchain.schema import SystemMessage, HumanMessage
 from langchain_core.callbacks import Callbacks
 from pydantic import BaseModel
 
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RERANKING_MODEL
+from langchain_core.documents import Document
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_openai import ChatOpenAI
 
 log = logging.getLogger(__name__)
 

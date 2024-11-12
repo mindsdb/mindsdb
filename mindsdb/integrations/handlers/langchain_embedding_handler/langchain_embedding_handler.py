@@ -3,11 +3,11 @@ import importlib
 from typing import Dict, Union
 
 import pandas as pd
-from langchain.embeddings.base import Embeddings
 from pandas import DataFrame
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities import log
+from langchain_core.embeddings import Embeddings
 
 logger = log.getLogger(__name__)
 

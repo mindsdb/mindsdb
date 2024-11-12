@@ -10,14 +10,10 @@ import pandas as pd
 from langchain.agents import AgentExecutor
 from langchain.agents.initialize import initialize_agent
 from langchain.chains.conversation.memory import ConversationSummaryBufferMemory
-from langchain.schema import SystemMessage
 from langchain_community.chat_models import (
-    ChatAnthropic,
-    ChatOpenAI,
     ChatAnyscale,
     ChatLiteLLM,
-    ChatOllama,
-)
+    ChatOllama)
 from langchain_core.agents import AgentAction, AgentStep
 from langchain_core.embeddings import Embeddings
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
@@ -64,6 +60,9 @@ from .constants import (
 )
 from mindsdb.interfaces.skills.skill_tool import skill_tool, SkillData
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
+from langchain_anthropic import ChatAnthropic
+from langchain_core.messages import SystemMessage
+from langchain_openai import ChatOpenAI
 
 _PARSING_ERROR_PREFIXES = [
     "An output parsing error occurred",
@@ -549,7 +548,7 @@ AI: {response}"""
 
     def run_agent(self, df: pd.DataFrame, agent: AgentExecutor, args: Dict) -> pd.DataFrame:
         base_template = args.get('prompt_template', args['prompt_template'])
-        return_context = args.get('return_context', False)
+        return_context = args.get('return_context', True)
         input_variables = re.findall(r"{{(.*?)}}", base_template)
 
         prompts, empty_prompt_ids = prepare_prompts(df, base_template, input_variables, args.get('user_column', USER_COLUMN))
@@ -620,7 +619,7 @@ AI: {response}"""
     def stream_agent(self, df: pd.DataFrame, agent_executor: AgentExecutor, args: Dict) -> Iterable[Dict]:
         base_template = args.get('prompt_template', args['prompt_template'])
         input_variables = re.findall(r"{{(.*?)}}", base_template)
-        return_context = args.get('return_context', False)
+        return_context = args.get('return_context', True)
 
         prompts, _ = prepare_prompts(df, base_template, input_variables, args.get('user_column', USER_COLUMN))
 
@@ -637,7 +636,10 @@ AI: {response}"""
             raise TypeError("The stream method did not return an iterable")
 
         for chunk in stream_iterator:
-            yield self.process_chunk(chunk)
+            logger.info(f'Processing streaming chunk {chunk}')
+            processed_chunk = self.process_chunk(chunk)
+            logger.info(f'Processed chunk: {processed_chunk}')
+            yield processed_chunk
 
         if return_context:
             # Yield context if required
@@ -675,7 +677,9 @@ AI: {response}"""
             }
         if issubclass(chunk.__class__, BaseMessage):
             # Extract content from message subclasses properly for streaming.
-            return chunk.content
+            return {
+                'content': chunk.content
+            }
         if isinstance(chunk, (str, int, float, bool, type(None))):
             return chunk
         return str(chunk)

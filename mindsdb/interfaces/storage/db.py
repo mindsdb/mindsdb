@@ -242,7 +242,7 @@ class Integration(Base):
     created_at = Column(DateTime, default=datetime.datetime.now)
     name = Column(String, nullable=False)
     engine = Column(String, nullable=False)
-    data = SecretData("hashicorpvault")
+    data = Column(SecretData("hashicorpvault"))
     company_id = Column(Integer)
     __table_args__ = (
         UniqueConstraint(

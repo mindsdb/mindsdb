@@ -9,7 +9,7 @@ from langchain.retrievers.document_compressors.base import BaseDocumentCompresso
 from langchain_core.callbacks import Callbacks
 from pydantic import BaseModel
 
-from mindsdb.integrations.utilities.rag.settings import DEFAULT_RERANKING_MODEL
+from mindsdb.integrations.utilities.rag.settings import DEFAULT_RERANKING_MODEL, DEFAULT_LLM_ENDPOINT
 from langchain_core.documents import Document
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
@@ -27,11 +27,11 @@ class LLMReranker(BaseDocumentCompressor):
     _default_model: str = DEFAULT_RERANKING_MODEL
 
     filtering_threshold: float = 0.5  # Default threshold for filtering
-    model: str = DEFAULT_RERANKING_MODEL  # Model to use for reranking
+    model: str = _default_model  # Model to use for reranking
     temperature: float = 0.0  # Temperature for the model
     openai_api_key: Optional[str] = None
     remove_irrelevant: bool = True  # New flag to control removal of irrelevant documents,
-    base_url: str = "https://api.openai.com/v1"
+    base_url: str = DEFAULT_LLM_ENDPOINT
 
     _api_key_var: str = "OPENAI_API_KEY"
     client: Optional[Any] = None
@@ -63,7 +63,7 @@ class LLMReranker(BaseDocumentCompressor):
         openai_api_key = self.openai_api_key or os.getenv(self._api_key_var)
 
         # Initialize the ChatOpenAI client
-        client = ChatOpenAI(openai_api_base=self.base_url, api_key=openai_api_key, model="gpt-4o", temperature=0, logprobs=True)
+        client = ChatOpenAI(openai_api_base=self.base_url, api_key=openai_api_key, model=self.model, temperature=0, logprobs=True)
 
         # Create the message history for the conversation
         message_history = [
@@ -99,7 +99,11 @@ class LLMReranker(BaseDocumentCompressor):
             # Calculate the score based on the model's response
             if answer == "YES":
                 score = prob
+            elif answer.lower().strip().startswith("y"):
+                score = prob
             elif answer == "NO":
+                score = 1 - prob
+            elif answer.lower().strip().startswith("n"):
                 score = 1 - prob
             else:
                 score = 0.0  # Default if something unexpected happens

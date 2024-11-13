@@ -164,11 +164,12 @@ class IntegrationDataNode(DataNode):
         for col_idx, col in enumerate(result_set.columns):
             column_type = table_columns_meta[col.alias]
 
-            type_name = 'str'
             if column_type == Integer:
                 type_name = 'int'
             elif column_type == Float:
                 type_name = 'float'
+            else:
+                continue
 
             try:
                 result_set.set_col_type(col_idx, type_name)

@@ -1,0 +1,15 @@
+---
+title: SQL Window Functions
+sidebarTitle: Window Functions
+---
+
+MindsDB supports standard SQL syntax, including the SQL window functions.
+
+Window functions in SQL perform calculations across a set of table rows related to the current row, without collapsing rows into a single result like aggregate functions do. These functions are useful for ranking, calculating running totals, and working with moving averages. Common window functions include `ROW_NUMBER()`, `RANK()`, `DENSE_RANK()`, `NTILE(n)`, `LAG()`, `LEAD()`, `SUM()`, and `AVG()`.
+
+```sql
+SELECT
+        a + b * (c-d) as a,
+        AVG(a) OVER (PARTITION BY b)
+FROM table_name;
+```

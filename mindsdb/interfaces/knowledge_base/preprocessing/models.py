@@ -87,7 +87,6 @@ class Document(BaseModel):
     content: str = Field(description="The document content")
     embeddings: Optional[List[float]] = Field(default=None, description="Vector embeddings of the content")
     metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional document metadata")
-    )
 
     @model_validator(mode='after')
     def validate_metadata(self) -> 'Document':

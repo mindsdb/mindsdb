@@ -246,7 +246,8 @@ class ResultSet:
             return df.to_records(index=False).tolist()
 
         # slower but keep timestamp type
-        return self._df.to_dict('split')['data']
+        df = self._df.replace({np.nan: None})
+        return df.to_dict('split')['data']
 
     def get_column_values(self, col_idx):
         # get by column index

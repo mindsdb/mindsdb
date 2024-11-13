@@ -183,7 +183,7 @@ class BoxHandler(APIHandler):
         items = self.client.folders.get_folder_items(folder_id).entries
         for item in items:
             if item.type == 'folder':
-                self.list_files_in_folder(item.id)
+                self.list_files_in_folder(item.id, files)
             elif item.type == 'file':
                 extension = item.name.split(".")[-1].lower()
                 if extension in self.supported_file_formats:

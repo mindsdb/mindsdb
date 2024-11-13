@@ -1,6 +1,6 @@
 packaging
 flask == 3.0.3
-werkzeug == 3.0.3
+werkzeug == 3.0.6
 flask-restx >= 1.3.0, < 2.0.0
 pandas >=2.0.0, <2.1.0
 python-multipart == 0.0.12

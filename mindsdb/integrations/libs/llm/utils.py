@@ -5,10 +5,6 @@ import re
 
 import numpy as np
 import pandas as pd
-from langchain.text_splitter import (
-    Language,
-    RecursiveCharacterTextSplitter,
-)
 
 from mindsdb.integrations.libs.llm.config import (
     AnthropicConfig,
@@ -20,6 +16,7 @@ from mindsdb.integrations.libs.llm.config import (
     NvidiaNIMConfig,
     MindsdbConfig,
 )
+from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
 
 # Default to latest GPT-4 model (https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo)
 DEFAULT_OPENAI_MODEL = "gpt-4o"

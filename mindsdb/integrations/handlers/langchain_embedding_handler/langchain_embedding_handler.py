@@ -3,11 +3,12 @@ import importlib
 from typing import Dict, Union
 
 import pandas as pd
-from langchain.embeddings.base import Embeddings
 from pandas import DataFrame
+from pydantic import BaseModel
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities import log
+from langchain_core.embeddings import Embeddings
 
 logger = log.getLogger(__name__)
 
@@ -73,7 +74,13 @@ def construct_model_from_args(args: Dict) -> Embeddings:
         class_name = EMBEDDING_MODELS[class_name]
     MODEL_CLASS = get_langchain_class(class_name)
     serialized_dict = copy.deepcopy(args)
-    serialized_dict.pop("input_columns", None)
+
+    # Make sure we don't pass in unnecessary arguments.
+    if issubclass(MODEL_CLASS, BaseModel):
+        serialized_dict = {
+            k: v for k, v in serialized_dict.items() if k in MODEL_CLASS.model_fields
+        }
+
     model = MODEL_CLASS(**serialized_dict)
     if target is not None:
         args["target"] = target

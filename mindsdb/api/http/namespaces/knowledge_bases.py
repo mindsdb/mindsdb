@@ -12,11 +12,15 @@ from mindsdb.api.http.utils import http_error
 from mindsdb.api.mysql.mysql_proxy.classes.fake_mysql_proxy import FakeMysqlProxy
 from mindsdb.integrations.utilities.rag.splitters.file_splitter import FileSplitter, FileSplitterConfig
 from mindsdb.interfaces.file.file_controller import FileController
-from mindsdb.interfaces.knowledge_base.preprocessing.constants import DEFAULT_CRAWL_DEPTH, DEFAULT_WEB_FILTERS, \
+from mindsdb.interfaces.knowledge_base.preprocessing.constants import (
+    DEFAULT_CONTEXT_DOCUMENT_LIMIT,
+    DEFAULT_CRAWL_DEPTH, DEFAULT_WEB_FILTERS,
     DEFAULT_MARKDOWN_HEADERS, DEFAULT_WEB_CRAWL_LIMIT
+)
 from mindsdb.interfaces.knowledge_base.preprocessing.document_loader import DocumentLoader
 from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.interfaces.database.projects import ProjectController
+from mindsdb.interfaces.knowledge_base.controller import KnowledgeBaseTable
 from mindsdb.utilities import log
 from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_LLM_MODEL, DEFAULT_RAG_PROMPT_TEMPLATE
@@ -197,20 +201,18 @@ class KnowledgeBaseResource(Resource):
             file_splitter_config = FileSplitterConfig()
             file_splitter = FileSplitter(file_splitter_config)
             markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=DEFAULT_MARKDOWN_HEADERS)
+            mysql_proxy = FakeMysqlProxy()
 
             # Initialize DocumentLoader with required components
             document_loader = DocumentLoader(
                 file_controller=file_controller,
                 file_splitter=file_splitter,
-                markdown_splitter=markdown_splitter
+                markdown_splitter=markdown_splitter,
+                mysql_proxy=mysql_proxy
             )
-
-            # Initialize FakeMysqlProxy
-            mysql_proxy = FakeMysqlProxy()
 
             # Configure table with dependencies
             table.document_loader = document_loader
-            table.mysql_proxy = mysql_proxy
 
             # Update preprocessing configuration if provided
             if 'preprocessing' in kb_data:
@@ -284,6 +286,86 @@ class KnowledgeBaseResource(Resource):
         return '', HTTPStatus.NO_CONTENT
 
 
+def _handle_chat_completion(knowledge_base_table: KnowledgeBaseTable, request):
+    # Check for required parameters
+    query = request.json.get('query')
+
+    llm_model = request.json.get('llm_model')
+    if llm_model is None:
+        logger.warning(f'Missing parameter "llm_model" in POST body, using default llm_model {DEFAULT_LLM_MODEL}')
+
+    prompt_template = request.json.get('prompt_template')
+    if prompt_template is None:
+        logger.warning(f'Missing parameter "prompt_template" in POST body, using default prompt template {DEFAULT_RAG_PROMPT_TEMPLATE}')
+
+    # Get retrieval config, if set
+    retrieval_config = request.json.get('retrieval_config', {})
+    if not retrieval_config:
+        logger.warning('No retrieval config provided, using default retrieval config')
+
+    # add llm model to retrieval config
+    if llm_model is not None:
+        retrieval_config['llm_model_name'] = llm_model
+
+    # add prompt template to retrieval config
+    if prompt_template is not None:
+        retrieval_config['rag_prompt_template'] = prompt_template
+
+    # add llm provider to retrieval config if set
+    llm_provider = request.json.get('model_provider')
+    if llm_provider is not None:
+        retrieval_config['llm_provider'] = llm_provider
+
+    # build rag pipeline
+    rag_pipeline = knowledge_base_table.build_rag_pipeline(retrieval_config)
+
+    # get response from rag pipeline
+    rag_response = rag_pipeline(query)
+    response = {
+        'message': {
+            'content': rag_response.get('answer'),
+            'context': rag_response.get('context'),
+            'role': 'assistant'
+        }
+    }
+
+    return response
+
+
+def _handle_context_completion(knowledge_base_table: KnowledgeBaseTable, request):
+    # Used for semantic search.
+    query = request.json.get('query')
+    # Keyword search.
+    keywords = request.json.get('keywords')
+    # Metadata search.
+    metadata = request.json.get('metadata')
+    # Maximum amount of documents to return as context.
+    limit = request.json.get('limit', DEFAULT_CONTEXT_DOCUMENT_LIMIT)
+
+    # Use default distance function & column names for ID, content, & metadata, to keep things simple.
+    hybrid_search_df = knowledge_base_table.hybrid_search(
+        query,
+        keywords=keywords,
+        metadata=metadata
+    )
+
+    num_documents = len(hybrid_search_df.index)
+    context_documents = []
+    for i in range(limit):
+        if i >= num_documents:
+            break
+        row = hybrid_search_df.iloc[i]
+        context_documents.append({
+            'id': row['id'],
+            'content': row['content'],
+            'rank': row['rank']
+        })
+
+    return {
+        'documents': context_documents
+    }
+
+
 @ns_conf.route('/<project_name>/knowledge_bases/<knowledge_base_name>/completions')
 @ns_conf.param('project_name', 'Name of the project')
 @ns_conf.param('knowledge_base_name', 'Name of the knowledge_base')
@@ -292,19 +374,10 @@ class KnowledgeBaseCompletions(Resource):
     @api_endpoint_metrics('POST', '/knowledge_bases/knowledge_base/completions')
     def post(self, project_name, knowledge_base_name):
         """
-        Add support for LLM generation on the response from knowledge base
+        Add support for LLM generation on the response from knowledge base. Default completion type is 'chat' unless specified.
         """
-        # Check for required parameters.
-        if 'knowledge_base' not in request.json:
-            return http_error(
-                HTTPStatus.BAD_REQUEST,
-                'Missing parameter',
-                'Must provide "knowledge_base" parameter in POST body'
-            )
-
-        # Check for required parameters
-        query = request.json.get('query')
-        if query is None:
+        if request.json.get('query') is None:
+            # "query" is used for semantic search for both completion types.
             logger.error('Missing parameter "query" in POST body')
             return http_error(
                 HTTPStatus.BAD_REQUEST,
@@ -312,15 +385,6 @@ class KnowledgeBaseCompletions(Resource):
                 'Must provide "query" parameter in POST body'
             )
 
-        llm_model = request.json.get('llm_model')
-        if llm_model is None:
-            logger.warn(f'Missing parameter "llm_model" in POST body, using default llm_model {DEFAULT_LLM_MODEL}')
-
-        prompt_template = request.json.get('prompt_template')
-        if prompt_template is None:
-            logger.warn(f'Missing parameter "prompt_template" in POST body, using default prompt template {DEFAULT_RAG_PROMPT_TEMPLATE}')
-
-        session = SessionController()
         project_controller = ProjectController()
         try:
             project = project_controller.get(name=project_name)
@@ -333,6 +397,7 @@ class KnowledgeBaseCompletions(Resource):
                 f'Project with name {project_name} does not exist'
             )
 
+        session = SessionController()
         # Check if knowledge base exists
         table = session.kb_controller.get_table(knowledge_base_name, project.id)
         if table is None:
@@ -343,35 +408,13 @@ class KnowledgeBaseCompletions(Resource):
                 f'Knowledge Base with name {knowledge_base_name} does not exist'
             )
 
-        # Get retrieval config, if set
-        retrieval_config = request.json.get('retrieval_config', {})
-        if not retrieval_config:
-            logger.warn('No retrieval config provided, using default retrieval config')
-
-        # add llm model to retrieval config
-        if llm_model is not None:
-            retrieval_config['llm_model_name'] = llm_model
-
-        # add prompt template to retrieval config
-        if prompt_template is not None:
-            retrieval_config['rag_prompt_template'] = prompt_template
-
-        # add llm provider to retrieval config if set
-        llm_provider = request.json.get('model_provider')
-        if llm_provider is not None:
-            retrieval_config['llm_provider'] = llm_provider
-
-        # build rag pipeline
-        rag_pipeline = table.build_rag_pipeline(retrieval_config)
-
-        # get response from rag pipeline
-        rag_response = rag_pipeline(query)
-        response = {
-            'message': {
-                'content': rag_response.get('answer'),
-                'context': rag_response.get('context'),
-                'role': 'assistant'
-            }
-        }
-
-        return response
+        completion_type = request.json.get('type', 'chat')
+        if completion_type == 'context':
+            return _handle_context_completion(table, request)
+        if completion_type == 'chat':
+            return _handle_chat_completion(table, request)
+        return http_error(
+            HTTPStatus.BAD_REQUEST,
+            'Invalid parameter',
+            f'Completion type must be one of: "context", "chat". Received {completion_type}'
+        )

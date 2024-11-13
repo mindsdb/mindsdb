@@ -84,7 +84,7 @@ def construct_model_from_args(args: Dict) -> Embeddings:
                 keys_to_exclude.append(embedding_model_param)
         for key in keys_to_exclude:
             serialized_dict.pop(key, None)
-        
+
     model = MODEL_CLASS(**serialized_dict)
     if target is not None:
         args["target"] = target

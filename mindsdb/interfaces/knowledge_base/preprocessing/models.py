@@ -1,5 +1,7 @@
 from enum import Enum
-from typing import List, Dict, Any, Optional, Callable
+
+from typing import List, Dict, Any, Optional, Union, Callable
+
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -79,13 +81,12 @@ class PreprocessingConfig(BaseModel):
 
 
 class Document(BaseModel):
+
     """Document model with default metadata handling"""
-    content: str
-    id: Optional[str] = None
-    embeddings: Optional[list] = None
-    metadata: Dict[str, Any] = Field(
-        default_factory=lambda: {'source': 'default'},
-        description="Document metadata, must contain at least one attribute"
+    id: Optional[Union[int, str]] = Field(default=None, description="Unique identifier for the document")
+    content: str = Field(description="The document content")
+    embeddings: Optional[List[float]] = Field(default=None, description="Vector embeddings of the content")
+    metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional document metadata")
     )
 
     @model_validator(mode='after')

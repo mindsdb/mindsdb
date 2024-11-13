@@ -37,12 +37,14 @@ protobuf==3.20.3
 hierarchicalforecast~=0.4.0
 google-auth-oauthlib
 msal
-langchain==0.1.11
-langchain-core==0.1.46
-langchain-community==0.0.27
-langchain-openai==0.1.6
-langchain-text-splitters==0.0.1
-langchain-nvidia-ai-endpoints==0.1.7
+langchain==0.3.7
+langchain-community==0.3.5
+langchain-core==0.3.15
+langchain-experimental==0.3.3
+langchain-nvidia-ai-endpoints==0.3.3
+langchain-openai==0.2.6
+langchain-anthropic==0.2.4
+langchain-text-splitters==0.3.2
 langfuse==2.53.3  # Latest as of November 4, 2024
 lark
 prometheus-client==0.20.0

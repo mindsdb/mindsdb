@@ -4,6 +4,7 @@ from typing import Dict, Union
 
 import pandas as pd
 from pandas import DataFrame
+from pydantic import BaseModel
 
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities import log
@@ -73,7 +74,17 @@ def construct_model_from_args(args: Dict) -> Embeddings:
         class_name = EMBEDDING_MODELS[class_name]
     MODEL_CLASS = get_langchain_class(class_name)
     serialized_dict = copy.deepcopy(args)
-    serialized_dict.pop("input_columns", None)
+
+    # Make sure we don't pass in unnecessary arguments.
+    if issubclass(MODEL_CLASS, BaseModel):
+        keys_to_exclude = []
+        for embedding_model_param in serialized_dict:
+            if embedding_model_param not in MODEL_CLASS.model_fields:
+                # Should not pass extra args.
+                keys_to_exclude.append(embedding_model_param)
+        for key in keys_to_exclude:
+            serialized_dict.pop(key, None)
+        
     model = MODEL_CLASS(**serialized_dict)
     if target is not None:
         args["target"] = target

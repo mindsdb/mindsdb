@@ -48,9 +48,9 @@ After [connecting](https://docs.mindsdb.com/mindsdb_sql/sql/create/database) and
 
 | 🎯 Use Case                 | ⚙️ Description | Python SDK | SQL |
 |---------------------------|-----------|---------| ----- |
-| [RAG](https://docs.mindsdb.com/agents/knowledge-bases?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo)  | Comprehensive RAG that can be populated from numerous data sources | [(Python)](https://docs.mindsdb.com/sdks/python/agents_knowledge_bases) | SQL |
-| [Agents](https://docs.mindsdb.com/agents/agent?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo)  | Equip agents to answer questions over structured and unstructured data in MindsDB | [(Python)](https://docs.mindsdb.com/sdks/python/agents) | SQL |
-| [Automation](https://docs.mindsdb.com/mindsdb_sql/sql/create/jobs) | Automate AI-data workflows using Jobs | [(Python)](https://docs.mindsdb.com/sdks/python/create_job) | SQL |
+| [RAG](https://docs.mindsdb.com/agents/knowledge-bases?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo)  | Comprehensive RAG that can be populated from numerous data sources | [(Python)](https://docs.mindsdb.com/sdks/python/agents_knowledge_bases) | [(SQL)](https://docs.mindsdb.com/mindsdb_sql/agents/knowledge-bases) |
+| [Agents](https://docs.mindsdb.com/agents/agent?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo)  | Equip agents to answer questions over structured and unstructured data in MindsDB | [(Python)](https://docs.mindsdb.com/sdks/python/agents) | [(SQL)](https://docs.mindsdb.com/mindsdb_sql/agents/agent) |
+| [Automation](https://docs.mindsdb.com/mindsdb_sql/sql/create/jobs) | Automate AI-data workflows using Jobs | [(Python)](https://docs.mindsdb.com/sdks/python/create_job) | [(SQL)](https://docs.mindsdb.com/mindsdb_sql/sql/create/jobs) |
 
 ## 💡 Examples
 

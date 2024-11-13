@@ -99,7 +99,7 @@ class AltibaseHandler(DatabaseHandler):
         """
         jar_location = self.connection_args.get('jar_location')
 
-        jdbc_class = self.connection_args.get('jdbcClass', 'Altibase.jdbc.driver.AltibaseDriver')
+        jdbc_class = self.connection_args.get('jdbc_class', 'Altibase.jdbc.driver.AltibaseDriver')
         jdbc_url = f"jdbc:Altibase://{self.host}:{self.port}/{self.database}"
 
         try:

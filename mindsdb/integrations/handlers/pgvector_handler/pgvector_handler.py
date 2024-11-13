@@ -16,7 +16,8 @@ from mindsdb.integrations.libs.response import RESPONSE_TYPE, HandlerResponse as
 from mindsdb.integrations.libs.vectordatabase_handler import (
     FilterCondition,
     VectorStoreHandler,
-    DistanceFunction
+    DistanceFunction,
+    TableField
 )
 from mindsdb.utilities import log
 from mindsdb.utilities.profiler import profiler
@@ -398,6 +399,9 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
             update_columns=update_columns,
             where=where
         )
+
+        if TableField.METADATA.value in data.columns:
+            data = data.astype({TableField.METADATA.value: str})
 
         transposed_data = []
         for _, record in data.iterrows():

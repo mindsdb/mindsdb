@@ -7,6 +7,10 @@ import pandas as pd
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.integrations.libs.llm.utils import get_completed_prompts
 
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
+
 
 class OllamaHandler(BaseMLEngine):
     name = "ollama"
@@ -14,33 +18,44 @@ class OllamaHandler(BaseMLEngine):
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
-        if 'using' not in args:
-            raise Exception("Ollama engine requires a USING clause! Refer to its documentation for more details.")
+        if "using" not in args:
+            raise Exception(
+                "Ollama engine requires a USING clause! Refer to its documentation for more details."
+            )
         else:
-            args = args['using']
+            args = args["using"]
 
-        if 'model_name' not in args:
-            raise Exception('`model_name` must be provided in the USING clause.')
+        if "model_name" not in args:
+            raise Exception("`model_name` must be provided in the USING clause.")
 
         # check ollama service health
-        connection = args.get('ollama_serve_url', OllamaHandler.DEFAULT_SERVE_URL)
-        status = requests.get(connection + '/api/tags').status_code
+        connection = args.get("ollama_serve_url", OllamaHandler.DEFAULT_SERVE_URL)
+        status = requests.get(connection + "/api/tags").status_code
         if status != 200:
-            raise Exception(f"Ollama service is not working (status `{status}`). Please double check it is running and try again.")  # noqa
+            raise Exception(
+                f"Ollama service is not working (status `{status}`). Please double check it is running and try again."
+            )  # noqa
 
-    def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
-        """ Pull LLM artifacts with Ollama API. """
+    def create(
+        self,
+        target: str,
+        df: Optional[pd.DataFrame] = None,
+        args: Optional[Dict] = None,
+    ) -> None:
+        """Pull LLM artifacts with Ollama API."""
         # arg setter
-        args = args['using']
-        args['target'] = target
-        connection = args.get('ollama_serve_url', OllamaHandler.DEFAULT_SERVE_URL)
+        args = args["using"]
+        args["target"] = target
+        connection = args.get("ollama_serve_url", OllamaHandler.DEFAULT_SERVE_URL)
 
         model_payload = {
-                            'model': args['model_name'],
-                            'prompt': 'Hello.',
-                        }
-        if 'system' in args:
-            model_payload['system'] = args['system']
+            "model": args["model_name"],
+            "prompt": "Hello.",
+        }
+        if "system" in args:
+            model_payload["system"] = args["system"]
+
+        logger.info(f"ollama model creation check payload: {model_payload}")
 
         def _model_check():
             """ Checks model has been pulled and that it works correctly. """
@@ -48,12 +63,12 @@ class OllamaHandler(BaseMLEngine):
             for endpoint in ['generate', 'embeddings']:
                 try:
                     code = requests.post(
-                        connection + f'/api/{endpoint}',
-                        json=model_payload
+                        connection + f"/api/{endpoint}", json=model_payload
                     ).status_code
                     responses[endpoint] = code
-                except Exception:
+                except Exception as e:
                     responses[endpoint] = 500
+                    logger.info(f"ollama endpoint {endpoint} error: {print(e)}")
             return responses
 
         # check model for all supported endpoints
@@ -61,13 +76,13 @@ class OllamaHandler(BaseMLEngine):
         if 200 not in responses.values():
             # pull model (blocking operation) and serve
             # TODO: point to the engine storage folder instead of default location
-            connection = args.get('ollama_serve_url', OllamaHandler.DEFAULT_SERVE_URL)
-            requests.post(connection + '/api/pull', json={'name': args['model_name']})
+            connection = args.get("ollama_serve_url", OllamaHandler.DEFAULT_SERVE_URL)
+            requests.post(connection + "/api/pull", json={"name": args["model_name"]})
             # try one last time
             responses = _model_check()
             if 200 not in responses.values():
                 raise Exception(f"Ollama model `{args['model_name']}` is not working correctly. Please try pulling this model manually, check it works correctly and try again.")  # noqa
-        
+
         supported_modes = {k: True if v == 200 else False for k, v in responses.items()}
 
         # check if a mode has been provided and if it is valid
@@ -97,12 +112,13 @@ class OllamaHandler(BaseMLEngine):
                 pd.DataFrame: The DataFrame containing row-wise text completions.
         """
         # setup
-        pred_args = args.get('predict_params', {})
-        args = self.model_storage.json_get('args')
-        system = args['system']
-        model_name, target_col = args['model_name'], args['target']
-        prompt_template = pred_args.get('prompt_template',
-                                        args.get('prompt_template', 'Answer the following question: {{{{text}}}}'))
+        pred_args = args.get("predict_params", {})
+        args = self.model_storage.json_get("args")
+        model_name, target_col = args["model_name"], args["target"]
+        prompt_template = pred_args.get(
+            "prompt_template",
+            args.get("prompt_template", "Answer the following question: {{{{text}}}}"),
+        )
 
         # prepare prompts
         prompts, empty_prompt_ids = get_completed_prompts(prompt_template, df)
@@ -111,23 +127,24 @@ class OllamaHandler(BaseMLEngine):
         # setup endpoint
         endpoint = args.get('mode', 'generate')
 
-        model_payload = {
-            'model': args['model_name']
-        }
-        if 'system' in args:
-            model_payload['system'] = args['system']
+        model_payload = {"model": args["model_name"]}
+        if "system" in args:
+            model_payload["system"] = args["system"]
 
         # call llm
         completions = []
         for i, row in df.iterrows():
             if i not in empty_prompt_ids:
-                model_payload['prompt'] = row['__mdb_prompt']
-                connection = args.get('ollama_serve_url', OllamaHandler.DEFAULT_SERVE_URL)
-                raw_output = requests.post(
-                    connection + f'/api/{endpoint}',
-                    json=model_payload
+                model_payload["prompt"] = row["__mdb_prompt"]
+                connection = args.get(
+                    "ollama_serve_url", OllamaHandler.DEFAULT_SERVE_URL
                 )
-                lines = raw_output.content.decode().split('\n')  # stream of output tokens
+                raw_output = requests.post(
+                    connection + f"/api/{endpoint}", json=model_payload
+                )
+                lines = raw_output.content.decode().split(
+                    "\n"
+                )  # stream of output tokens
 
                 values = []
                 for line in lines:
@@ -143,9 +160,9 @@ class OllamaHandler(BaseMLEngine):
                 if endpoint == 'embeddings':
                     completions.append(values)
                 else:
-                    completions.append(''.join(values))
+                    completions.append("".join(values))
             else:
-                completions.append('')
+                completions.append("")
 
         # consolidate output
         data = pd.DataFrame(completions)
@@ -153,28 +170,39 @@ class OllamaHandler(BaseMLEngine):
         return data
 
     def describe(self, attribute: Optional[str] = None) -> pd.DataFrame:
-        args = self.model_storage.json_get('args')
-        model_name, target_col = args['model_name'], args['target']
-        prompt_template = args.get('prompt_template', 'Answer the following question: {{{{text}}}}')
+        args = self.model_storage.json_get("args")
+        model_name, target_col = args["model_name"], args["target"]
+        prompt_template = args.get(
+            "prompt_template", "Answer the following question: {{{{text}}}}"
+        )
 
         if attribute == "features":
-            return pd.DataFrame([[target_col, prompt_template]], columns=['target_column', 'mindsdb_prompt_template'])
+            return pd.DataFrame(
+                [[target_col, prompt_template]],
+                columns=["target_column", "mindsdb_prompt_template"],
+            )
 
         # get model info
         else:
-            connection = args.get('ollama_serve_url', OllamaHandler.DEFAULT_SERVE_URL)
-            model_info = requests.post(connection + '/api/show', json={'name': model_name}).json()
-            return pd.DataFrame([[
-                model_name,
-                model_info.get('license', 'N/A'),
-                model_info.get('modelfile', 'N/A'),
-                model_info.get('parameters', 'N/A'),
-                model_info.get('template', 'N/A'),
-            ]],
+            connection = args.get("ollama_serve_url", OllamaHandler.DEFAULT_SERVE_URL)
+            model_info = requests.post(
+                connection + "/api/show", json={"name": model_name}
+            ).json()
+            return pd.DataFrame(
+                [
+                    [
+                        model_name,
+                        model_info.get("license", "N/A"),
+                        model_info.get("modelfile", "N/A"),
+                        model_info.get("parameters", "N/A"),
+                        model_info.get("template", "N/A"),
+                    ]
+                ],
                 columns=[
-                    'model_type',
-                    'license',
-                    'modelfile',
-                    'parameters',
-                    'ollama_base_template',
-                ])
+                    "model_type",
+                    "license",
+                    "modelfile",
+                    "parameters",
+                    "ollama_base_template",
+                ],
+            )

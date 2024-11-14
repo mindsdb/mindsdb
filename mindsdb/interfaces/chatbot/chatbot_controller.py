@@ -228,7 +228,7 @@ class ChatBotController:
             raise ValueError('Need to provide either "model_name" or "agent_name" when creating a chatbot')
         if agent_name is not None:
             agent = self.agents_controller.get_agent(agent_name, project_name)
-            model_name = agent.model_name,
+            model_name = agent.model_name
             if agent is None:
                 raise ValueError(f"Agent with name doesn't exist: {agent_name}")
             agent_id = agent.id

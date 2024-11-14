@@ -1,9 +1,11 @@
+from typing import List
 import datetime as dt
 import pandas as pd
 
 from mindsdb.interfaces.storage import db
 
 from .types import BotException
+from .types import ChatBotMessage
 
 
 class ModelExecutor:
@@ -30,7 +32,7 @@ class ModelExecutor:
         # redefined prompt
         self.prompt = None
 
-    def call(self, history, functions):
+    def call(self, history: List[ChatBotMessage], functions):
         model_info = self.model_info
 
         if model_info['mode'] != 'conversational':
@@ -62,15 +64,12 @@ class ModelExecutor:
                 params=params
             )
 
-        elif model_info['engine'] == 'llama_index':
+        else:
             predictions = self.chat_task.project_datanode.predict(
                 model_name=model_info['model_name'],
                 df=pd.DataFrame(messages),
                 params={'prompt': self.prompt}
             )
-
-        else:
-            raise BotException('Not supported')
 
         output_col = model_info['output']
         model_output = predictions.iloc[-1][output_col]

@@ -164,12 +164,16 @@ class LangchainEmbeddingHandler(BaseMLEngine):
             )
 
         # convert each row into a document
-        if user_args["task"] == "embed":
-            df_texts = df[input_columns].apply(self.row_to_document, axis=1)
+        df_texts = df[input_columns].apply(self.row_to_document, axis=1)
+
+        # apply embedding
+        if "task" in user_args:
+            if user_args["task"] == "embed":
+                embeddings = model.embed_documents(df_texts.tolist())
+            elif user_args["task"] == "query":
+                embeddings = model.embed_query(df_texts.tolist())
+        else:
             embeddings = model.embed_documents(df_texts.tolist())
-        elif user_args["task"] == "query":
-            df_texts = df[input_columns].apply(self.row_to_document, axis=1)
-            embeddings = model.embed_query(df_texts.tolist())
 
 
         # create a new dataframe with the embeddings

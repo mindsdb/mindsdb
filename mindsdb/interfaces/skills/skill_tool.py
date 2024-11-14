@@ -2,7 +2,6 @@ import enum
 from collections import defaultdict
 from typing import List, Optional
 from langchain_core.language_models import BaseChatModel
-from langchain.embeddings.base import Embeddings
 
 from mindsdb_sql.parser.ast import Select, BinaryOperation, Identifier, Constant, Star
 
@@ -12,6 +11,7 @@ from mindsdb.utilities import log
 from mindsdb.utilities.cache import get_cache
 
 from .sql_agent import SQLAgent
+from langchain_core.embeddings import Embeddings
 
 _DEFAULT_TOP_K_SIMILARITY_SEARCH = 5
 _DEFAULT_SQL_LLM_MODEL = 'gpt-3.5-turbo'

@@ -1,10 +1,9 @@
 from typing import Any, Dict, List, Union
 import logging
-
-from langchain.schema.output import LLMResult
 from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.messages.base import BaseMessage
+from langchain_core.outputs import LLMResult
 
 
 class ContextCaptureCallback(BaseCallbackHandler):
@@ -113,9 +112,17 @@ class LogCallbackHandler(BaseCallbackHandler):
         '''Run on agent action.'''
         self.logger.debug(f'Running tool {action.tool} with input:')
         self.logger.debug(action.tool_input)
+
+        stop_block = 'Observation: '
+        if stop_block in action.tool_input:
+            action.tool_input = action.tool_input[: action.tool_input.find(stop_block)]
+
         if action.tool.startswith("sql_db_query"):
             # Save the generated SQL query
             self.generated_sql = action.tool_input
+
+        # fix for mistral
+        action.tool = action.tool.replace('\\', '')
 
     def on_agent_finish(self, finish: AgentFinish, **kwargs: Any) -> Any:
         '''Run on agent end.'''

@@ -7,10 +7,14 @@ on:
       - "docs/**"
       - "README.md"
 
+# UV will use the system python by default
+env:
+  UV_SYSTEM_PYTHON: 1
+
 # Cancel any existing runs of this workflow on the same branch/pr
 # We always want to build/deploy/test a new commit over an older one
 concurrency:
-  group: ${{ github.workflow_ref }}
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -44,7 +48,7 @@ jobs:
           python-version: ${{ vars.CI_PYTHON_VERSION }}
       - name: Install dependencies
         run: |
-          pip install -r requirements/requirements-dev.txt
+          uv pip install -r requirements/requirements-dev.txt
       - name: Build and publish
         env:
           TWINE_USERNAME: __token__
@@ -95,6 +99,8 @@ jobs:
           path: github-actions
           ssh-key: ${{ secrets.GH_ACTIONS_PULL_SSH }}
       - uses: ./github-actions/docker-bake-cache
+        with:
+          cache-prefix: main
 
 
   # Call our deployment workflow

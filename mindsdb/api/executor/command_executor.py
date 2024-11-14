@@ -106,6 +106,7 @@ from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.functions import mark_process, resolve_model_identifier, get_handler_install_message
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 from mindsdb.utilities import log
+from mindsdb.api.mysql.mysql_proxy.utilities import ErParseError
 
 logger = log.getLogger(__name__)
 
@@ -627,7 +628,7 @@ class ExecuteCommands:
         elif type(statement) is CreateKnowledgeBase:
             return self.answer_create_kb(statement, database_name)
         elif type(statement) is DropKnowledgeBase:
-            return self.anwser_drop_kb(statement, database_name)
+            return self.answer_drop_kb(statement, database_name)
         elif type(statement) is CreateSkill:
             return self.answer_create_skill(statement, database_name)
         elif type(statement) is DropSkill:
@@ -1096,7 +1097,7 @@ class ExecuteCommands:
 
         self.session.integration_controller.add(name, engine, connection_args)
         if storage:
-            handler = self.session.integration_controller.get_data_handler(name)
+            handler = self.session.integration_controller.get_data_handler(name, connect=False)
             handler.handler_storage.import_files(storage)
 
     def answer_create_ml_engine(self, name: str, handler: str, params: dict = None, if_not_exists=False):
@@ -1341,7 +1342,7 @@ class ExecuteCommands:
 
         return ExecuteAnswer()
 
-    def anwser_drop_kb(self, statement: DropKnowledgeBase, database_name: str):
+    def answer_drop_kb(self, statement: DropKnowledgeBase, database_name: str):
         name = statement.name.parts[-1]
         project_name = (
             statement.name.parts[0]
@@ -1601,6 +1602,13 @@ class ExecuteCommands:
             if isinstance(node, Identifier):
                 if node.parts[-1].lower() == "session_user":
                     return Constant(self.session.username, alias=node)
+                if node.parts[-1].lower() == '$$':
+                    # NOTE: sinve version 9.0 mysql client sends query 'select $$'.
+                    # Connection can be continued only if answer is parse error.
+                    raise ErParseError(
+                        "You have an error in your SQL syntax; check the manual that corresponds to your server "
+                        "version for the right syntax to use near '$$' at line 1"
+                    )
 
             if isinstance(node, Function):
                 function_name = node.op.lower()

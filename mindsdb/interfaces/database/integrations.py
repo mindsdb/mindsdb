@@ -447,7 +447,7 @@ class IntegrationController:
         )
         handler_storage = HandlerStorage(integration_id, root_dir='tmp', is_temporal=True)
 
-        HandlerClass = self.handler_modules[engine].Handler
+        HandlerClass = self.get_handler_module(engine).Handler
         handler_args = self._make_handler_args(
             name=name,
             handler_type=engine,
@@ -505,7 +505,7 @@ class IntegrationController:
         return handler
 
     @profiler.profile()
-    def get_data_handler(self, name: str, case_sensitive: bool = False) -> BaseHandler:
+    def get_data_handler(self, name: str, case_sensitive: bool = False, connect=True) -> BaseHandler:
         """Get DATA handler (DB or API) by name
         Args:
             name (str): name of the handler
@@ -587,7 +587,8 @@ class IntegrationController:
         )
         HandlerClass = self.handler_modules[integration_engine].Handler
         handler = HandlerClass(**handler_ars)
-        self.handlers_cache.set(handler)
+        if connect:
+            self.handlers_cache.set(handler)
 
         return handler
 
@@ -655,28 +656,6 @@ class IntegrationController:
         for attr in module_attrs:
             handler_meta[attr] = getattr(module, attr)
 
-        # region icon
-        if hasattr(module, 'icon_path'):
-            try:
-                icon_path = handler_dir.joinpath(module.icon_path)
-                icon_type = icon_path.name[icon_path.name.rfind('.') + 1:].lower()
-
-                if icon_type == 'svg':
-                    with open(str(icon_path), 'rt') as f:
-                        handler_meta['icon'] = {
-                            'data': f.read()
-                        }
-                else:
-                    with open(str(icon_path), 'rb') as f:
-                        handler_meta['icon'] = {
-                            'data': base64.b64encode(f.read()).decode('utf-8')
-                        }
-
-                handler_meta['icon']['name'] = icon_path.name
-                handler_meta['icon']['type'] = icon_type
-            except Exception as e:
-                logger.error(f'Error reading icon for {handler_folder_name}, {e}!')
-
         # endregion
         if hasattr(module, 'permanent'):
             handler_meta['permanent'] = module.permanent
@@ -687,6 +666,26 @@ class IntegrationController:
                 handler_meta['permanent'] = False
 
         return handler_meta
+
+    def _get_handler_icon(self, handler_dir, icon_path):
+        icon = {}
+        try:
+            icon_path = handler_dir.joinpath(icon_path)
+            icon_type = icon_path.name[icon_path.name.rfind('.') + 1:].lower()
+
+            if icon_type == 'svg':
+                with open(str(icon_path), 'rt') as f:
+                    icon['data'] = f.read()
+            else:
+                with open(str(icon_path), 'rb') as f:
+                    icon['data'] = base64.b64encode(f.read()).decode('utf-8')
+
+            icon['name'] = icon_path.name
+            icon['type'] = icon_type
+
+        except Exception as e:
+            logger.error(f'Error reading icon for {handler_dir}, {e}!')
+        return icon
 
     def _load_handler_modules(self):
         mindsdb_path = Path(importlib.util.find_spec('mindsdb').origin).parent
@@ -719,14 +718,11 @@ class IntegrationController:
                 'name': handler_name,
                 'permanent': handler_info.get('permanent', False),
             }
+            if 'icon_path' in handler_info:
+                icon = self._get_handler_icon(handler_dir, handler_info['icon_path'])
+                if icon:
+                    handler_meta['icon'] = icon
             self.handlers_import_status[handler_name] = handler_meta
-
-        # import all handlers in thread
-        def import_handlers():
-            self.get_handlers_import_status()
-
-        thread = threading.Thread(target=import_handlers)
-        thread.start()
 
     def _get_handler_info(self, handler_dir: Path):
 

@@ -22,13 +22,8 @@ from ray import serve
 import time
 import pandas as pd
 import json
-from sklearn.linear_model import LogisticRegression
-
 
 app = FastAPI()
-ray.init()
-serve.start(detached=True)
-
 
 async def parse_req(request: Request):
     data = await request.json()
@@ -57,15 +52,14 @@ class MyModel:
         df, _ = await parse_req(request)
         X = df.loc[:, self.feature_cols]
         predictions = self.model.predict(X)
-        pred_dict = {'prediction': [float(x) for x in predictions]}
+        index = list(range(len(predictions)))
+        pred_dict = {'prediction': [float(x) for x in predictions], 'index': index}
         return pred_dict
 
-
-MyModel.deploy()
-
-while True:
-    time.sleep(1)
+my_app = MyModel.bind()
 ```
+
+After saving the above code into `rayserve.py`, run it using `serve run rayserve:my_app`.
 
 It is important to have the `/train` and `/predict` endpoints.
 
@@ -80,7 +74,7 @@ The `/predict` endpoint requires one parameter to be sent via POST:
 
 - `df` is a serialized dictionary that can be converted into a pandas dataframe.
 
-It returns a dictionary containing the `prediction` key. It stores the
+It returns a dictionary containing the `prediction` and `index` keys. It stores the
 predictions. Additional keys can be returned for confidence and confidence
 intervals.
 
@@ -119,7 +113,7 @@ AND rental_price=3000;
 Or you can `JOIN` the model wth a data table to get bulk predictions.
 
 ```sql
-SELECT tb.number_of_rooms, t.rental_price
+SELECT tb.number_of_rooms, t.rental_price, tb.index
 FROM mydb.test_data.home_rentals AS t
 JOIN mindsdb.byom_ray_serve AS tb
 WHERE t.rental_price > 5300;

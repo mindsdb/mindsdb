@@ -4,15 +4,12 @@ from typing import Callable, Dict
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast import Insert
-
-from langchain.prompts import PromptTemplate
-from langchain.agents import load_tools, Tool
+from langchain_community.agent_toolkits.load_tools import load_tools
 
 from langchain_experimental.utilities import PythonREPL
 from langchain_community.utilities import GoogleSerperAPIWrapper
 
 from langchain.chains.llm import LLMChain
-from langchain.text_splitter import CharacterTextSplitter
 from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 from langchain.chains import ReduceDocumentsChain, MapReduceDocumentsChain
 
@@ -21,6 +18,9 @@ from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel, Vector
 from mindsdb.interfaces.skills.skill_tool import skill_tool, SkillType
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities import log
+from langchain_core.prompts import PromptTemplate
+from langchain_core.tools import Tool
+from langchain_text_splitters import CharacterTextSplitter
 
 logger = log.getLogger(__name__)
 from mindsdb.interfaces.storage.db import KnowledgeBase

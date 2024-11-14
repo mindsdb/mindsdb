@@ -1,9 +1,16 @@
-version: "3.2"
-
 services:
 
   mindsdb:
     image: mindsdb/mindsdb:devel
+   
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Uncomment the following lines if you want to use the local version of jaeger and langfuse
+    #   jaeger:
+    #     condition: service_started
+    #   langfuse:
+    #     condition: service_started
     # If you want to build the image instead:
     # build:
     #   context: .
@@ -15,13 +22,30 @@ services:
       - '47335:47335'
       - '47336:47336'
     # watchfiles will reload the app when python files are changed
-    command: bash -c "watchfiles --filter python 'python -m mindsdb' ."
+    entrypoint: bash -c "watchfiles --filter python 'python -m mindsdb' ."
     environment:
+      MINDSDB_DB_CON: "postgresql://postgres:postgres@postgres/mindsdb"
       MINDSDB_DOCKER_ENV: "True"
       MINDSDB_STORAGE_DIR: "/mindsdb/var"
       FLASK_DEBUG: 1  # This will make sure http requests are logged regardless of log level
+      SENTRY_IO_DSN: ""
+      SENTRY_IO_ENVIRONMENT: "local"
+      # SENTRY_IO_FORCE_RUN: "true" # Uncomment me to force-start sentry on local development. Good for profiling, but may annoy other devs on sentry.io with the "noise"
       # MINDSDB_LOG_LEVEL: "DEBUG"
       # OPENAI_API_KEY: "..."
+      LANGFUSE_HOST: "http://langfuse:3000" # Define the host for langfuse
+      LANGFUSE_PUBLIC_KEY: "pk-lf-1234567890" # Define the public key for langfuse
+      LANGFUSE_SECRET_KEY: "sk-lf-1234567890" # Define the secret key for langfuse
+      LANGFUSE_RELEASE: "local"
+      # LANGFUSE_DEBUG: "True"
+      LANGFUSE_TIMEOUT: "10"
+      LANGFUSE_SAMPLE_RATE: "1.0"
+      OTEL_EXPORTER_TYPE: "console" # or "console" # Define the exporter type (console/otlp)
+      # OTEL_OTLP_ENDPOINT: "http://jaeger:4317" # Define the endpoint for the otlp exporter. Uncomment this line if you want to use jaeger.
+      OTEL_SERVICE_NAME: "mindsdb" # Define the service name
+      OTEL_SERVICE_ENVIRONMENT: "local" # Define the service environment
+      # OTEL_SDK_FORCE_RUN: "true" # Uncomment me to force-start opentelemetry on local development.
+
     volumes:
       - type: bind
         source: .
@@ -31,3 +55,64 @@ services:
       interval: 30s
       timeout: 4s
       retries: 100
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"
+    environment:
+      COLLECTOR_ZIPKIN_HOST_PORT: ":9411"
+
+  langfuse:
+    image: langfuse/langfuse:2.87.0
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/public/health"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres/langfuse
+      - NEXTAUTH_SECRET=secret # generate secret with at least 256 entropy using `openssl rand -base64 32`.
+      - SALT=salt # generate secret with at least 256 entropy using `openssl rand -base64 32`.
+      - ENCRYPTION_KEY=0000000000000000000000000000000000000000000000000000000000000000 # generate secret with at least 256 bits and 64 characters in hex format using `openssl rand -hex 32`.
+      - NEXTAUTH_URL=http://localhost:3000 # URL of the frontend
+      - LANGFUSE_INIT_ORG_ID=mindsdb # Organization ID
+      - LANGFUSE_INIT_ORG_NAME=MindsDB # Organization name
+      - LANGFUSE_INIT_PROJECT_ID=23152f1d-9604-4629-a69d-27790d47b7fa # Project ID (UUID)
+      - LANGFUSE_INIT_PROJECT_NAME=MindsDB # Project name
+      - LANGFUSE_INIT_PROJECT_PUBLIC_KEY=pk-lf-1234567890 # Project public key
+      - LANGFUSE_INIT_PROJECT_SECRET_KEY=sk-lf-1234567890 # Project secret key
+      - LANGFUSE_INIT_USER_EMAIL=admin@langfuse.com # User email
+      - LANGFUSE_INIT_USER_NAME=User # User name
+      - LANGFUSE_INIT_USER_PASSWORD=password # User password
+
+  postgres:
+    image: postgres:16.4
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    ports:
+      - "15432:5432" # Expose the port to the host. Use 15432 to avoid conflicts with local postgres installations
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./scripts/init-dbs.sh:/docker-entrypoint-initdb.d/init-dbs.sh
+
+volumes:
+  db_data:
+    driver: local
+

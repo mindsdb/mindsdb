@@ -2,6 +2,11 @@ name: Test on Deploy
 
 on:
   workflow_call:
+    inputs:
+      git-sha:
+        required: false
+        type: string
+        default: ""
     secrets:
       OPENAI_API_KEY:
         required: true
@@ -11,11 +16,14 @@ defaults:
   run:
     shell: bash
 
+# UV will use the system python by default
+env:
+  UV_SYSTEM_PYTHON: 1
 
 jobs:
   # Creates a matrix of environments to test against using matrix_includes.json
   matrix_prep:
-    runs-on: ubuntu-latest
+    runs-on: mdb-dev
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
@@ -35,19 +43,25 @@ jobs:
     if: github.ref_type == 'branch'
     steps:
     - uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.git-sha }}
     - name: Set up Python
       uses: actions/setup-python@v5.1.0
       with:
         python-version: ${{ matrix.python-version }}
-        cache: pip
-        cache-dependency-path: '**/requirements*.txt'
+    # We have to install UV because (for now) these run in GH's runners
+    - name: Setup uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        enable-cache: true
+        cache-dependency-glob: "**/requirements*.txt"
     - name: Install dependencies
       run: |
-        pip install .
-        pip install -r requirements/requirements-test.txt
-        pip install .[lightwood]  # TODO: for now some tests rely on lightwood and huggingface
-        pip install .[huggingface]
-        pip freeze  
+        uv pip install .
+        uv pip install -r requirements/requirements-test.txt
+        uv pip install .[lightwood]  # TODO: for now some tests rely on lightwood and huggingface
+        uv pip install .[huggingface]
+        uv pip freeze  
     - name: Run integration api and flow tests
       run: |
 

@@ -34,6 +34,7 @@ from mindsdb.utilities.fs import create_dirs_recursive, clean_process_marks, cle
 from mindsdb.utilities.telemetry import telemetry_file_exists, disable_telemetry
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.auth import register_oauth_client, get_aws_meta_data
+from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
 
 try:
     import torch.multiprocessing as mp
@@ -88,21 +89,21 @@ if __name__ == '__main__':
     args = args_parse()
 
     # ---- CHECK SYSTEM ----
-    if not (sys.version_info[0] >= 3 and sys.version_info[1] >= 8):
+    if not (sys.version_info[0] >= 3 and sys.version_info[1] >= 9):
         print("""
-     MindsDB requires Python >= 3.8 to run
+     MindsDB requires Python >= 3.9 to run
 
-     Once you have Python 3.8 installed you can tun mindsdb as follows:
+     Once you have supported Python version installed you can start mindsdb as follows:
 
      1. create and activate venv:
-     python3.8 -m venv venv
+     python3 -m venv venv
      source venv/bin/activate
 
      2. install MindsDB:
      pip3 install mindsdb
 
      3. Run MindsDB
-     python3.8 -m mindsdb
+     python3 -m mindsdb
 
      More instructions in https://docs.mindsdb.com
          """)

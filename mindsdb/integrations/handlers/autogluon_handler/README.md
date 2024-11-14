@@ -19,7 +19,7 @@ Next, you can create a machine learning model using Autogluon with your dataset:
 
 ```sql
 
-CREATE MODEL mindsdb.autogluconpredictor_8
+CREATE MODEL mindsdb.autoglucon_predictor
 FROM files
     (SELECT * FROM files.red_wine_quality LIMIT 100) 
 PREDICT quality AS quality
@@ -34,7 +34,7 @@ To check the status of your Autogluon model, use the following SQL query:
 ```sql
 SELECT *
 FROM mindsdb.models
-WHERE name = 'autogluon_predictor_8';
+WHERE name = 'autoglucon_predictor';
 ```
 
 And to make predictions using your Autogluon model, you can use SQL queries like this:
@@ -42,7 +42,7 @@ And to make predictions using your Autogluon model, you can use SQL queries like
 ```sql
 SELECT m.quality
 FROM files.red_wine_quality AS t
-JOIN mindsdb.autogluconpredictor_7 AS m;
+JOIN mindsdb.autoglucon_predictor AS m;
 ```
 
 

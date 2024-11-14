@@ -9,7 +9,7 @@ on:
 # Cancel any existing runs of this workflow on the same branch/pr
 # We always want to build/deploy/test a new commit over an older one
 concurrency:
-  group: ${{ github.workflow_ref }}
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -90,4 +90,6 @@ jobs:
     name: Run Integration Tests
     needs: [deploy]
     uses: ./.github/workflows/test_on_deploy.yml
+    with:
+      git-sha: ${{ github.event.pull_request.head.sha }}
     secrets: inherit

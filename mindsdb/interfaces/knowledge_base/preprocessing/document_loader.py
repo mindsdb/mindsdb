@@ -1,3 +1,4 @@
+import os
 from typing import List, Iterator
 from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
 import pandas as pd
@@ -57,7 +58,7 @@ class DocumentLoader:
 
             for doc in loader.lazy_load():
                 # Add file extension to metadata for proper splitting
-                extension = file_path.suffix.lower()
+                extension = os.path.splitext(file_path)[1].lower()
                 doc.metadata['extension'] = extension
                 doc.metadata['source'] = file_name
 

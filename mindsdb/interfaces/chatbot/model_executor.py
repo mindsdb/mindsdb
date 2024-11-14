@@ -38,7 +38,7 @@ class ModelExecutor:
         if model_info['mode'] != 'conversational':
             raise BotException('Not supported')
 
-        messages = self._chat_history_to_conversation(history, model_info)
+        messages, user_name = self._chat_history_to_conversation(history, model_info)
         if model_info['engine'] == 'langchain':
 
             all_tools = []
@@ -68,7 +68,7 @@ class ModelExecutor:
             predictions = self.chat_task.project_datanode.predict(
                 model_name=model_info['model_name'],
                 df=pd.DataFrame(messages),
-                params={'prompt': self.prompt}
+                params={'prompt': self.prompt, 'user_info': {'user_name': user_name}}
             )
 
         output_col = model_info['output']
@@ -78,6 +78,7 @@ class ModelExecutor:
     def _chat_history_to_conversation(self, history, model_info):
 
         bot_username = self.chat_task.bot_params['bot_username']
+        user_name = None
 
         question_col = model_info['user_column']
         answer_col = model_info['bot_column']
@@ -92,6 +93,8 @@ class ModelExecutor:
                 continue
 
             if message.user != bot_username:
+                user_name = message.user
+
                 # create new message row
                 messages.append({question_col: text, answer_col: None})
             else:
@@ -101,4 +104,4 @@ class ModelExecutor:
 
                 # update answer in previous column
                 messages[-1][answer_col] = text
-        return messages
+        return messages, user_name

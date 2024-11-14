@@ -136,6 +136,8 @@ class RAGPipelineModel(BaseModel):
     content_column_name: str = DEFAULT_CONTENT_COLUMN_NAME  # content column name (the column we will get embeddings)
     dataset_description: str = DEFAULT_DATASET_DESCRIPTION  # Description of the dataset
     reranker: bool = DEFAULT_RERANKER_FLAG
+    reranking_model: str = DEFAULT_RERANKING_MODEL
+    llm_endpoint: str = DEFAULT_LLM_ENDPOINT
 
     class Config:
         arbitrary_types_allowed = True

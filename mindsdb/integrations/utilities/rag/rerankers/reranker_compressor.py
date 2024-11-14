@@ -23,6 +23,12 @@ class Ranking(BaseModel):
     is_relevant: bool
 
 
+class RerankerConfig(BaseModel):
+    model: str = DEFAULT_RERANKING_MODEL
+    base_url: str = DEFAULT_LLM_ENDPOINT
+    filtering_threshold: float = 0.5
+
+
 class LLMReranker(BaseDocumentCompressor):
     _default_model: str = DEFAULT_RERANKING_MODEL
 
@@ -63,7 +69,8 @@ class LLMReranker(BaseDocumentCompressor):
         openai_api_key = self.openai_api_key or os.getenv(self._api_key_var)
 
         # Initialize the ChatOpenAI client
-        client = ChatOpenAI(openai_api_base=self.base_url, api_key=openai_api_key, model=self.model, temperature=0, logprobs=True)
+        client = ChatOpenAI(openai_api_base=self.base_url, api_key=openai_api_key, model=self.model, temperature=0,
+                            logprobs=True)
 
         # Create the message history for the conversation
         message_history = [

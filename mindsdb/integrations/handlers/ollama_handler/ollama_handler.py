@@ -35,6 +35,13 @@ class OllamaHandler(BaseMLEngine):
         args['target'] = target
         connection = args.get('ollama_serve_url', OllamaHandler.DEFAULT_SERVE_URL)
 
+        model_payload = {
+                            'model': args['model_name'],
+                            'prompt': 'Hello.',
+                        }
+        if 'system' in args:
+            model_payload['system'] = args['system']
+
         def _model_check():
             """ Checks model has been pulled and that it works correctly. """
             responses = {}
@@ -42,10 +49,7 @@ class OllamaHandler(BaseMLEngine):
                 try:
                     code = requests.post(
                         connection + f'/api/{endpoint}',
-                        json={
-                            'model': args['model_name'],
-                            'prompt': 'Hello.',
-                        }
+                        json=model_payload
                     ).status_code
                     responses[endpoint] = code
                 except Exception:
@@ -95,6 +99,7 @@ class OllamaHandler(BaseMLEngine):
         # setup
         pred_args = args.get('predict_params', {})
         args = self.model_storage.json_get('args')
+        system = args['system']
         model_name, target_col = args['model_name'], args['target']
         prompt_template = pred_args.get('prompt_template',
                                         args.get('prompt_template', 'Answer the following question: {{{{text}}}}'))
@@ -106,17 +111,21 @@ class OllamaHandler(BaseMLEngine):
         # setup endpoint
         endpoint = args.get('mode', 'generate')
 
+        model_payload = {
+            'model': args['model_name']
+        }
+        if 'system' in args:
+            model_payload['system'] = args['system']
+
         # call llm
         completions = []
         for i, row in df.iterrows():
             if i not in empty_prompt_ids:
+                model_payload['prompt'] = row['__mdb_prompt']
                 connection = args.get('ollama_serve_url', OllamaHandler.DEFAULT_SERVE_URL)
                 raw_output = requests.post(
                     connection + f'/api/{endpoint}',
-                    json={
-                        'model': model_name,
-                        'prompt': row['__mdb_prompt'],
-                    }
+                    json=model_payload
                 )
                 lines = raw_output.content.decode().split('\n')  # stream of output tokens
 

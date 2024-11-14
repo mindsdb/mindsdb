@@ -24,7 +24,7 @@ class ChatBotController:
         self.project_controller = project_controller
         self.agents_controller = agents_controller
 
-    def get_chatbot(self, chatbot_name: str, project_name: str = 'mindsdb') -> db.ChatBots:
+    def get_chatbot(self, chatbot_name: str, project_name: str = 'mindsdb') -> dict:
         '''
         Gets a chatbot by name.
 
@@ -51,7 +51,7 @@ class ChatBotController:
 
         return self._get_chatbot(query, project)
 
-    def get_chatbot_by_id(self, chatbot_id: int) -> db.ChatBots:
+    def get_chatbot_by_id(self, chatbot_id: int) -> dict:
         '''
         Gets a chatbot by id.
 
@@ -74,7 +74,7 @@ class ChatBotController:
 
         return self._get_chatbot(query)
 
-    def _get_chatbot(self, query, project: db.Project = None) -> db.ChatBots:
+    def _get_chatbot(self, query, project: db.Project = None) -> dict:
         '''
         Gets a chatbot by query.
 

@@ -151,7 +151,6 @@ class BoxHandler(APIHandler):
                         has_content = True
                         break
                 if has_content:
-                    print(df["path"])
                     df["content"] = df["path"].apply(self._read_as_content)
             else:
                 table = FileTable(self, table_name=table_name)

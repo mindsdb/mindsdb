@@ -24,21 +24,15 @@ def upgrade():
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('company_id', sa.Integer(), nullable=True),
         sa.Column('api_key', sa.String(), nullable=True),
-        sa.Column('model_id', sa.Integer(), nullable=True),
-        sa.Column('model_group', sa.String(), nullable=True),
+        sa.Column('model_id', sa.Integer(), nullable=False),
         sa.Column('input', sa.String(), nullable=True),
         sa.Column('output', sa.String(), nullable=True),
         sa.Column('start_time', sa.DateTime(), nullable=False),
         sa.Column('end_time', sa.DateTime(), nullable=True),
-        sa.Column('cost', sa.Numeric(), nullable=True),
         sa.Column('prompt_tokens', sa.Integer(), nullable=True),
         sa.Column('completion_tokens', sa.Integer(), nullable=True),
         sa.Column('total_tokens', sa.Integer(), nullable=True),
-        sa.Column('success', sa.Boolean(), nullable=False, default=True),
-        sa.Column('exception', sa.String(), nullable=True),
-        sa.Column('traceback', sa.String(), nullable=True),
-        sa.Column('stream', sa.Boolean(), default=False),
-        sa.Column('metadata', sa.JSON(), nullable=True),
+        sa.Column('success', sa.Boolean(), nullable=False),
         sa.PrimaryKeyConstraint('id')
     )
     # ### end Alembic commands ###

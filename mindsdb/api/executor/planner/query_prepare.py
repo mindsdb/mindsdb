@@ -353,7 +353,6 @@ class PreparedStatementPlanner():
                         if col_name in table.columns_map:
                             column.type = table.columns_map[col_name].type
                         else:
-                            # print(col_name, table.name, query.to_string())
                             # continue
                             raise PlanningException(f'Column not found {col_name}')
 
@@ -525,5 +524,4 @@ class PreparedStatementPlanner():
         self.planner.from_query(query)
         step = None
         for step in self.planner.plan.steps:
-            # print(step)
             yield step

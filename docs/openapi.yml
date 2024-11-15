@@ -8,7 +8,7 @@ info:
   contact:
     email: admin@mindsdb.com
   license:
-    name: GNU General Public License v3.0
+    name: Server Side Public License (SSPL v1)
     url: 'https://github.com/mindsdb/mindsdb/blob/main/LICENSE'
 servers:
   - url: 'http://127.0.0.1:47334/'

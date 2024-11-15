@@ -1,5 +1,6 @@
 import os
 from typing import List, Iterator
+from langchain_core.documents import Document as LangchainDocument
 from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
 import pandas as pd
 
@@ -91,8 +92,8 @@ class DocumentLoader:
 
         for _, row in websites_df.iterrows():
             # Create a document with HTML extension for proper splitting
-            doc = Document(
-                content=row['text_content'],
+            doc = LangchainDocument(
+                page_content=row['text_content'],
                 metadata={
                     'extension': '.html',
                     'url': row['url']
@@ -156,8 +157,8 @@ class DocumentLoader:
 
             # Split content using recursive splitter
             if content:
-                doc = Document(
-                    content=content,
+                doc = LangchainDocument(
+                    page_content=content,
                     metadata=metadata
                 )
                 # Use FileSplitter with default recursive splitter

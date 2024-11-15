@@ -1,5 +1,4 @@
 import os
-import json
 from unittest.mock import patch
 
 import pandas as pd
@@ -160,18 +159,18 @@ class TestAgent(BaseExecutorDummyML):
             provider='openai',
             openai_api_key='--',
             prompt_template='Answer the user input in a helpful way using tools',
-            skills=['test_skill'],
-            tables=['table_2', 'table_3']
+            skills=[{
+                'name': 'test_skill',
+                'tables': ['table_2', 'table_3']
+            }];
         ''')
 
         resp = self.run_sql('''select * from information_schema.agents where name = 'test_agent';''')
         assert len(resp) == 1
         assert resp['SKILLS'][0] == ['test_skill']
-        assert json.loads(resp['PARAMS'][0])['tables'] == ['table_2', 'table_3']
 
         agent_response = 'how can I assist you today?'
         set_openai_completion(mock_openai, agent_response)
-        # usage of agent will call also SkillData.tables_list
         self.run_sql("select * from test_agent where question = 'test?'")
 
     @patch('openai.OpenAI')

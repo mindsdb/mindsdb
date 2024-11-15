@@ -164,22 +164,32 @@ class AgentResource(Resource):
         agents_controller = AgentsController()
 
         try:
-            existing_agent = agents_controller.get_agent(agent_name, project_name=project_name)
-        except ValueError:
+            existing_agent_record = agents_controller.get_agent(agent_name, project_name=project_name)
+        except (ValueError, EntityNotExistsError):
             # Project must exist.
             return http_error(
                 HTTPStatus.NOT_FOUND,
                 'Project not found',
                 f'Project with name {project_name} does not exist'
             )
+        if existing_agent_record is None:
+            raise Exception
 
         agent = request.json['agent']
         name = agent.get('name', None)
         model_name = agent.get('model_name', None)
         skills_to_add = agent.get('skills_to_add', [])
         skills_to_remove = agent.get('skills_to_remove', [])
+        skills_to_rewrite = agent.get('skills', [])
         provider = agent.get('provider')
         params = agent.get('params', None)
+
+        if len(skills_to_rewrite) > 0 and (len(skills_to_remove) > 0 or len(skills_to_add) > 0):
+            return http_error(
+                HTTPStatus.BAD_REQUEST,
+                'Wrong arguments',
+                "'skills_to_rewrite' and 'skills_to_add' (or 'skills_to_remove') cannot be used at the same time"
+            )
 
         # Agent must not exist with new name.
         if name is not None and name != agent_name:
@@ -191,7 +201,7 @@ class AgentResource(Resource):
                     f'Agent with name {name} already exists. Please choose a different one.'
                 )
 
-        if existing_agent is None:
+        if existing_agent_record is None:
             # Create
             return create_agent(project_name, name, agent)
 
@@ -204,11 +214,20 @@ class AgentResource(Resource):
             # Check if any of the skills to be added is of type 'retrieval'
             session = SessionController()
             skills_controller = session.skills_controller
-            retrieval_skill_added = any(
-                skills_controller.get_skill(skill_name).type == 'retrieval'
-                for skill_name in skills_to_add
-                if skills_controller.get_skill(skill_name) is not None
-            )
+            retrieval_skill_added = False
+            if len(skills_to_add) > 0:
+                skills_names = [x['name'] if isinstance(x, dict) else x for x in skills_to_add]
+                retrieval_skill_added = any(
+                    skills_controller.get_skill(skill_name).type == 'retrieval'
+                    for skill_name in skills_names
+                    if skills_controller.get_skill(skill_name) is not None
+                )
+            elif len(skills_to_rewrite) > 0:
+                retrieval_skill_added = any(
+                    skills_controller.get_skill(skill_meta['name']).type == 'retrieval'
+                    for skill_meta in skills_to_rewrite
+                    if skills_controller.get_skill(skill_meta['name']) is not None
+                )
 
             if retrieval_skill_added and 'mode' not in params:
                 params['mode'] = 'retrieval'
@@ -220,6 +239,7 @@ class AgentResource(Resource):
                 model_name=model_name,
                 skills_to_add=skills_to_add,
                 skills_to_remove=skills_to_remove,
+                skills_to_rewrite=skills_to_rewrite,
                 provider=provider,
                 params=params
             )
@@ -286,7 +306,10 @@ def _completion_event_generator(
         # Have to commit/flush here so DB isn't locked while streaming.
         db.session.commit()
 
-        if 'mode' not in existing_agent.params and any(skill.type == 'retrieval' for skill in existing_agent.skills):
+        if (
+            'mode' not in existing_agent.params
+            and any(rel.skill.type == 'retrieval' for rel in existing_agent.skills_relationships)
+        ):
             existing_agent.params['mode'] = 'retrieval'
 
         completion_stream = session.agents_controller.get_completion(
@@ -428,7 +451,10 @@ class AgentCompletions(Resource):
         existing_agent.params['openai_api_key'] = existing_agent.params.get('openai_api_key', os.getenv('OPENAI_API_KEY'))
 
         # set mode to `retrieval` if agent has a skill of type `retrieval` and mode is not set
-        if 'mode' not in existing_agent.params and any(skill.type == 'retrieval' for skill in existing_agent.skills):
+        if (
+            'mode' not in existing_agent.params
+            and any(rel.skill.type == 'retrieval' for rel in existing_agent.skills_relationships)
+        ):
             existing_agent.params['mode'] = 'retrieval'
 
         messages = request.json['messages']

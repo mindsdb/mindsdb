@@ -1,5 +1,6 @@
 import datetime
-from typing import Dict, Iterator, List, Union
+from copy import deepcopy
+from typing import Dict, Iterator, List, Union, Tuple
 
 from langchain_core.tools import BaseTool
 from sqlalchemy.orm.attributes import flag_modified
@@ -39,7 +40,7 @@ class AgentsController:
         self.skills_controller = skills_controller
         self.model_controller = model_controller
 
-    def check_model_provider(self, model_name: str, provider: str = None) -> (dict, str):
+    def check_model_provider(self, model_name: str, provider: str = None) -> Tuple[dict, str]:
         '''
         Checks if a model exists, and gets the provider of the model.
 
@@ -139,7 +140,7 @@ class AgentsController:
             name: str,
             project_name: str,
             model_name: str,
-            skills: List[str],
+            skills: List[Union[str, dict]],
             provider: str = None,
             params: Dict[str, str] = {}) -> db.Agents:
         '''
@@ -149,7 +150,8 @@ class AgentsController:
             name (str): The name of the new agent
             project_name (str): The containing project
             model_name (str): The name of the existing ML model the agent will use
-            skills (List[str]): List of existing skill names to add to the new agent
+            skills (List[Union[str, dict]]): List of existing skill names to add to the new agent, or list of dicts
+                 with one of keys is "name", and other is additional parameters for relationship agent<>skill
             provider (str): The provider of the model
             params (Dict[str, str]): Parameters to use when running the agent
 
@@ -179,14 +181,24 @@ class AgentsController:
             provider=provider,
             params=params,
         )
-        skills_to_add = []
-        # Check if given skills exist.
+
         for skill in skills:
-            existing_skill = self.skills_controller.get_skill(skill, project_name)
+            if isinstance(skill, str):
+                skill_name = skill
+                parameters = {}
+            else:
+                parameters = skill.copy()
+                skill_name = parameters.pop('name')
+            existing_skill = self.skills_controller.get_skill(skill_name, project_name)
             if existing_skill is None:
-                raise ValueError(f'Skill with name does not exist: {skill}')
-            skills_to_add.append(existing_skill)
-        agent.skills = skills_to_add
+                db.session.rollback()
+                raise ValueError(f'Skill with name does not exist: {skill_name}')
+            association = db.AgentSkillsAssociation(
+                parameters=parameters,
+                agent=agent,
+                skill=existing_skill
+            )
+            db.session.add(association)
 
         db.session.add(agent)
         db.session.commit()
@@ -199,8 +211,9 @@ class AgentsController:
             project_name: str = 'mindsdb',
             name: str = None,
             model_name: str = None,
-            skills_to_add: List[str] = None,
+            skills_to_add: List[Union[str, dict]] = None,
             skills_to_remove: List[str] = None,
+            skills_to_rewrite: List[Union[str, dict]] = None,
             provider: str = None,
             params: Dict[str, str] = None):
         '''
@@ -211,8 +224,10 @@ class AgentsController:
             project_name (str): The containing project
             name (str): The updated name of the agent
             model_name (str): The name of the existing ML model the agent will use
-            skills_to_add (List[str]): List of skill names to add to the agent
+            skills_to_add (List[Union[str, dict]]): List of skill names to add to the agent, or list of dicts
+                 with one of keys is "name", and other is additional parameters for relationship agent<>skill
             skills_to_remove (List[str]): List of skill names to remove from the agent
+            skills_to_rewrite (List[Union[str, dict]]): 
             provider (str): The provider of the model
             params: (Dict[str, str]): Parameters to use when running the agent
 
@@ -222,6 +237,15 @@ class AgentsController:
         Raises:
             ValueError: Agent with name not found, agent with new name already exists, or model/skill does not exist.
         '''
+
+        skills_to_add = skills_to_add or []
+        skills_to_remove = skills_to_remove or []
+        skills_to_rewrite = skills_to_rewrite or []
+
+        if len(skills_to_rewrite) > 0 and (len(skills_to_remove) > 0 or len(skills_to_add) > 0):
+            raise ValueError(
+                "'skills_to_rewrite' and 'skills_to_add' (or 'skills_to_remove') cannot be used at the same time"
+            )
 
         existing_agent = self.get_agent(agent_name, project_name=project_name)
         if existing_agent is None:
@@ -241,21 +265,61 @@ class AgentsController:
             existing_agent.model_name = model_name
             existing_agent.provider = provider
 
-        # Check if given skills exist.
-        new_skills = []
-        for skill in skills_to_add:
-            existing_skill = self.skills_controller.get_skill(skill, project_name)
-            if existing_skill is None:
-                raise ValueError(f'Skill with name does not exist: {skill}')
-            new_skills.append(existing_skill)
-        existing_agent.skills = list(set(existing_agent.skills + new_skills))
+        # check that all skills exist
+        skill_name_to_record_map = {}
+        for skill_meta in (skills_to_add + skills_to_remove + skills_to_rewrite):
+            skill_name = skill_meta['name'] if isinstance(skill_meta, dict) else skill_meta
+            if skill_name not in skill_name_to_record_map:
+                skill_record = self.skills_controller.get_skill(skill_name, project_name)
+                if skill_record is None:
+                    raise ValueError(f'Skill with name does not exist: {skill_name}')
+                skill_name_to_record_map[skill_name] = skill_record
 
-        removed_skills = []
-        for skill in existing_agent.skills:
-            if skill.name in skills_to_remove:
-                removed_skills.append(skill)
-        for skill_to_remove in removed_skills:
-            existing_agent.skills.remove(skill_to_remove)
+        if len(skills_to_add) > 0 or len(skills_to_remove) > 0:
+            skills_to_add = [{'name': x} if isinstance(x, str) else x for x in skills_to_add]
+            skills_to_add_names = [x['name'] for x in skills_to_add]
+
+            # there are no intersection between lists
+            if not set(skills_to_add_names).isdisjoint(set(skills_to_remove)):
+                raise ValueError('Conflict between skills to add and skills to remove.')
+
+            existing_agent_skills_names = [rel.skill.name for rel in existing_agent.skills_relationships]
+
+            # remove skills
+            for skill_name in skills_to_remove:
+                for rel in existing_agent.skills_relationships:
+                    if rel.skill.name == skill_name:
+                        db.session.delete(rel)
+
+            # add skills
+            for skill_name in (set(skills_to_add_names) - set(existing_agent_skills_names)):
+                skill_parameters = deepcopy(next(x for x in skills_to_add if x['name'] == skill_name))
+                del skill_parameters['name']
+                association = db.AgentSkillsAssociation(
+                    parameters=skill_parameters,
+                    agent=existing_agent,
+                    skill=skill_name_to_record_map[skill_name]
+                )
+                db.session.add(association)
+        elif len(skills_to_rewrite) > 0:
+            skill_name_to_parameters = {x['name']: {
+                k: v for k, v in x.items() if k != 'name'
+            } for x in skills_to_rewrite}
+            existing_skill_names = set()
+            for rel in existing_agent.skills_relationships:
+                if rel.skill.name not in skill_name_to_parameters:
+                    db.session.delete(rel)
+                else:
+                    existing_skill_names.add(rel.skill.name)
+                    rel.parameters = skill_name_to_parameters[rel.skill.name]
+                    flag_modified(rel, 'parameters')
+            for new_skill_name in (set(skill_name_to_parameters) - existing_skill_names):
+                association = db.AgentSkillsAssociation(
+                    parameters=skill_name_to_parameters[new_skill_name],
+                    agent=existing_agent,
+                    skill=skill_name_to_record_map[new_skill_name]
+                )
+                db.session.add(association)
 
         if params is not None:
             # Merge params on update

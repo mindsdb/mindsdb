@@ -401,7 +401,7 @@ class AgentsTable(MdbTable):
                 a.name,
                 project_names[a.project_id],
                 a.model_name,
-                list(map(lambda s: s.name, a.skills)),
+                [rel.skill.name for rel in a.skills_relationships],
                 to_json(a.params)
             )
             for a in all_agents

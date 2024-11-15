@@ -426,19 +426,17 @@ class LangchainAgent:
 
     def _langchain_tools_from_skills(self, llm):
         # Makes Langchain compatible tools from a skill
-        skills = self.agent.skills or []
-        agent_tables_list = self.args.get('tables')
-
         skills_data = [
             SkillData(
-                name=skill.name,
-                type=skill.type,
-                params=skill.params,
-                project_id=skill.project_id,
-                agent_tables_list=agent_tables_list
+                name=rel.skill.name,
+                type=rel.skill.type,
+                params=rel.skill.params,
+                project_id=rel.skill.project_id,
+                agent_tables_list=(rel.parameters or {}).get('tables')
             )
-            for skill in skills
+            for rel in self.agent.skills_relationships
         ]
+
         tools_groups = skill_tool.get_tools_from_skills(skills_data, llm, self.embedding_model)
 
         all_tools = []

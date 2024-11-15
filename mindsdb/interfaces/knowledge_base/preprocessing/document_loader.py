@@ -139,7 +139,6 @@ class DocumentLoader:
             raise ValueError('Query returned no data')
 
         # Convert query result to DataFrame
-        column_names = [c.get('alias', c.get('name')) for c in query_result.columns]
         df = query_result.data.to_df()
 
         # Process each row into a Document

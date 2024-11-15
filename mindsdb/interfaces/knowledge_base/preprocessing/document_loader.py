@@ -140,7 +140,7 @@ class DocumentLoader:
 
         # Convert query result to DataFrame
         column_names = [c.get('alias', c.get('name')) for c in query_result.columns]
-        df = pd.DataFrame.from_records(query_result.data, columns=column_names)
+        df = query_result.data.to_df()
 
         # Process each row into a Document
         for _, row in df.iterrows():

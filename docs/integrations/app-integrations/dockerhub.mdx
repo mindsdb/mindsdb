@@ -33,7 +33,7 @@ Read about creating an account [here](https://hub.docker.com/).
 Here is how to connect to Docker Hub using MindsDB:
 
 ```sql
-CREATE DATABASE dockerhub_datasouce
+CREATE DATABASE dockerhub_datasource
 WITH ENGINE = 'dockerhub',
 PARAMETERS = {
   "username": "username",
@@ -46,7 +46,7 @@ PARAMETERS = {
 Now, you can query Docker Hub as follows:
 
 ```sql
-SELECT * FROM dockerhub_datasouce.repo_images_summary WHERE namespace="docker" AND repository="trusted-registry-nginx";
+SELECT * FROM dockerhub_datasource.repo_images_summary WHERE namespace="docker" AND repository="trusted-registry-nginx";
 ```
 
 <Tip>

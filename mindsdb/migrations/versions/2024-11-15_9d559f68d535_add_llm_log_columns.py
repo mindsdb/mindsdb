@@ -10,7 +10,6 @@ import sqlalchemy as sa
 import mindsdb.interfaces.storage.db  # noqa
 
 
-
 # revision identifiers, used by Alembic.
 revision = '9d559f68d535'
 down_revision = '6c57ed39a82b'
@@ -40,4 +39,3 @@ def downgrade():
         batch_op.drop_column('traceback')
         batch_op.drop_column('stream')
         batch_op.drop_column('metadata')
-

@@ -1,6 +1,4 @@
 from unittest.mock import patch
-import datetime as dt
-import pytest
 
 import pandas as pd
 
@@ -220,4 +218,3 @@ class TestSchema(BaseExecutorDummyML):
         ret = self.run_sql("SELECT * FROM information_schema.columns WHERE table_schema='pg'")
 
         assert list(ret['COLUMN_NAME']) == ['aa', 'bb']
-

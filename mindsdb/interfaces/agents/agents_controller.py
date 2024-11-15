@@ -227,7 +227,7 @@ class AgentsController:
             skills_to_add (List[Union[str, dict]]): List of skill names to add to the agent, or list of dicts
                  with one of keys is "name", and other is additional parameters for relationship agent<>skill
             skills_to_remove (List[str]): List of skill names to remove from the agent
-            skills_to_rewrite (List[Union[str, dict]]): 
+            skills_to_rewrite (List[Union[str, dict]]): new list of skills for the agent
             provider (str): The provider of the model
             params: (Dict[str, str]): Parameters to use when running the agent
 

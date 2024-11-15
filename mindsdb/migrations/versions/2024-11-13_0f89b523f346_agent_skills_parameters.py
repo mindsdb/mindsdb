@@ -9,7 +9,7 @@ from alembic import op
 import sqlalchemy as sa
 import mindsdb.interfaces.storage.db  # noqa
 
-from sqlalchemy.dialects import sqlite
+from sqlalchemy.dialects import sqlite  # noqa
 
 # revision identifiers, used by Alembic.
 revision = '0f89b523f346'

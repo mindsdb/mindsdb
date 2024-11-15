@@ -7,7 +7,7 @@ import numpy as np
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb_sql.planner.utils import query_traversal
+from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb_sql.parser.ast import (
     ASTNode, Select, Identifier,
     Function, Constant

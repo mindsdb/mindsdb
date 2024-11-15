@@ -57,7 +57,7 @@ After [connecting](https://docs.mindsdb.com/mindsdb_sql/sql/create/database) and
 ### Connecting AI Agents to structured and unstructired data
 
 
-A common use case involves connecting agents to data. The following example shows how to create a langchain AI agent capable of searching over structured data:
+A common use case involves connecting agents to data. The following example shows how to connect an AI agent to a database so it can perform search over structured data:
 
 
 First we connect the datasource, in this case we connect a postgres database (you can do this via the SQL editor or SDK)

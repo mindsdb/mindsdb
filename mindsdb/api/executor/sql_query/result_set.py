@@ -36,14 +36,20 @@ class Column:
 
 
 class ResultSet:
-    def __init__(self, columns=None, values: List[List] = None):
+    def __init__(self, columns=None, values: List[List] = None, df: pd.DataFrame = None):
+        '''
+
+        :param columns: list of Columns
+        :param values: data of resultSet, have to be list of lists with length equal to column
+        :param df: injected dataframe, have to have enumerated columns and length equal to columns
+        '''
         if columns is None:
             columns = []
         self._columns = columns
 
         if values is None:
             df = None
-        else:
+        elif df is None:
             df = pd.DataFrame(values)
         self._df = df
 
@@ -58,6 +64,11 @@ class ResultSet:
         if self._df is None:
             return 0
         return len(self._df)
+
+    def __getitem__(self, slice_val):
+        # return resultSet with sliced dataframe
+        df = self._df[slice_val]
+        return ResultSet(columns=self.columns, df=df)
 
     # --- converters ---
 

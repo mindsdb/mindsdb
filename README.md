@@ -34,7 +34,7 @@
 
 ## 📖 About Us
 
-MindsDB MindsDB is a federated query engine designed for AI agents and applications that need to answer questions from one or multiple [data sources](https://docs.mindsdb.com/integrations/data-overview?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo), including both structured and unstructured data..
+MindsDB is a federated query engine designed for AI agents and applications that need to answer questions from one or multiple [data sources](https://docs.mindsdb.com/integrations/data-overview?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo), including both structured and unstructured data..
 
 ## 🚀 Get Started
 
@@ -89,9 +89,10 @@ server = mindsdb_sdk.connect()
 
 # create an agent (lets create one that can answer questions over car_sales table
 agent = server.agents.create('my_agent')
-agent.add_database('demo_postgres_db', ['car_sales'], 'car sales data')
-# you can do it for all tables as follows:
-# agent.add_database('demo_postgres_db', [], 'car sales data')
+agent.add_database(
+    database='demo_postgres_db',
+    tables=['car_sales'], # alternatively, all tables will be taken into account if none specified []
+    description='The table "car_sales" contains car sales data')
 
 # send questions to the agent
 agent = agents.get('my_agent')

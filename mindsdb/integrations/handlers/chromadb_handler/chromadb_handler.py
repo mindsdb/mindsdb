@@ -265,6 +265,9 @@ class ChromaDBHandler(VectorStoreHandler):
                     id_filters.append(condition.value)
                 elif condition.op == FilterOperator.IN:
                     id_filters.extend(condition.value)
+        
+        if id_filters == []:
+            id_filters = None
 
         if vector_filter is not None:
             # similarity search
@@ -314,6 +317,9 @@ class ChromaDBHandler(VectorStoreHandler):
         # always include distance
         if distances is not None:
             payload[TableField.DISTANCE.value] = distances
+            
+        # casting embedding to otherwise pandas give error due to multidimensionality
+        payload['embeddings'] = [str(i) for i in payload['embeddings']]
         return pd.DataFrame(payload)
 
     def insert(self, table_name: str, data: pd.DataFrame):

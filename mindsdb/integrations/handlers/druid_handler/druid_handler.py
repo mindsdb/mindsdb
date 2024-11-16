@@ -147,7 +147,7 @@ class DruidHandler(DatabaseHandler):
                 connection.commit()
                 response = Response(RESPONSE_TYPE.OK)
         except Exception as e:
-            logger.error(f'Error running query: {query} on Pinot!')
+            logger.error(f'Error running query: {query} on D!')
             response = Response(
                 RESPONSE_TYPE.ERROR,
                 error_message=str(e)

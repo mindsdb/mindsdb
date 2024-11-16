@@ -324,7 +324,6 @@ class ChromaDBHandler(VectorStoreHandler):
         collection = self._client.get_or_create_collection(name=table_name)
 
         # drop columns with all None values
-
         data.dropna(axis=1, inplace=True)
 
         def dataframe_metadata_to_chroma_metadata(metadata: Union[Dict[str, str], str]) -> Optional[Dict[str, str]]:
@@ -342,7 +341,6 @@ class ChromaDBHandler(VectorStoreHandler):
             data[TableField.METADATA.value] = data[TableField.METADATA.value].apply(dataframe_metadata_to_chroma_metadata)
 
         # convert to dict
-
         data = data.to_dict(orient="list")
 
         collection.upsert(

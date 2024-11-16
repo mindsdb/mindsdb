@@ -90,6 +90,13 @@ class KnowledgeBaseTable:
         # send to vectordb
         db_handler = self.get_vector_db()
         resp = db_handler.query(query)
+        new_columns = [
+            self._kb.params.get('id_column', TableField.ID.value),
+            self._kb.params.get('content_columns', TableField.CONTENT.value),
+            self._kb.params.get('metadata_columns', TableField.METADATA.value)
+        ]
+
+        resp.data_frame.columns = new_columns
         return resp.data_frame
 
     def insert_files(self, file_names: List[str]):
@@ -296,9 +303,9 @@ class KnowledgeBaseTable:
             # wrong name
             id_column = None
 
-        if id_column is None and TableField.ID.value in columns:
-            # default value
-            id_column = TableField.ID.value
+        # if id_column is None and TableField.ID.value in columns:
+        #     # default value
+        #     id_column = TableField.ID.value
 
         if id_column is not None:
             # remove from lookup list

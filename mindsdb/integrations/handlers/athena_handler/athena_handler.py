@@ -62,7 +62,7 @@ class AthenaHandler(DatabaseHandler):
             return StatusResponse(self.name, True, 'Connected successfully')
         except Exception as e:
             logger.error(f'Failed to connect to Athena: {str(e)}')
-            return StatusResponse(self.name, False, str(e))
+            return StatusResponse(success=False, error_message=str(e))
 
     def disconnect(self):
         """

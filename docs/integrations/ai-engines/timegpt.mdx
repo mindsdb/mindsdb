@@ -25,13 +25,13 @@ CREATE MODEL model_name
 FROM data_source
   (SELECT * FROM table_name)
 PREDICT column_to_be_predicted
-ORDER BY date_column
 GROUP BY column_name, column_name, ...
+ORDER BY date_column
 HORIZON 3 -- model forecasts the next 3 rows
 USING ENGINE = 'timegpt';
 ```
 
-To ensure that the model is created based on the TimeGPT engine, include the `USING` clause at the end, which defines the `engine` and lists all parameters used with time-series models, including `OREDER BY`, `GROUP BY`, `HORIZON`.
+To ensure that the model is created based on the TimeGPT engine, include the `USING` clause at the end, which defines the `engine` and lists all parameters used with time-series models, including `GROUP BY`, `ORDER BY`, `HORIZON`.
 
 What's different about the TimeGPT engine is that it does not expose the `WINDOW` parameter in its API, so as a user you need to send a payload with at least N rows, where N depends on the model and the frequency of the series. This is automatically handled by MindsDB in the [TimeGPT handler code](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/timegpt_handler).
 

@@ -198,7 +198,7 @@ class OpenAIHandler(BaseMLEngine):
         engine_storage = kwargs['handler_storage']
         connection_args = engine_storage.get_connection_args()
         api_key = get_api_key('openai', args, engine_storage=engine_storage)
-        api_base = connection_args.get('api_base') or args.get('api_base') or os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
+        api_base = args.get('api_base') or connection_args.get('api_base') or os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
         org = args.get('api_organization')
         client = OpenAIHandler._get_client(api_key=api_key, base_url=api_base, org=org)
         OpenAIHandler._check_client_connection(client)
@@ -223,7 +223,7 @@ class OpenAIHandler(BaseMLEngine):
         try:
             api_key = get_api_key(self.api_key_name, args, self.engine_storage)
             connection_args = self.engine_storage.get_connection_args()
-            api_base = connection_args.get('api_base') or self.api_base or args.get('api_base') or os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE)
+            api_base = args.get('api_base') or connection_args.get('api_base') or os.environ.get('OPENAI_API_BASE') or self.api_base
             available_models = get_available_models(api_key, api_base)
 
             if not args.get('mode'):
@@ -264,10 +264,11 @@ class OpenAIHandler(BaseMLEngine):
         connection_args = self.engine_storage.get_connection_args()
 
         args['api_base'] = (pred_args.get('api_base')
-                            or self.api_base
-                            or connection_args.get('api_base')
                             or args.get('api_base')
-                            or os.environ.get('OPENAI_API_BASE', OPENAI_API_BASE))
+                            or connection_args.get('api_base')
+                            or os.environ.get('OPENAI_API_BASE')
+                            or self.api_base)
+
         if pred_args.get('api_organization'):
             args['api_organization'] = pred_args['api_organization']
         df = df.reset_index(drop=True)
@@ -692,7 +693,7 @@ class OpenAIHandler(BaseMLEngine):
                 return tidy_comps
 
             completions = []
-            if mode != 'conversational':
+            if mode != 'conversational' or 'prompt' not in args:
                 initial_prompt = {
                     "role": "system",
                     "content": "You are a helpful assistant. Your task is to continue the chat.",

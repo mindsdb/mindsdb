@@ -1,6 +1,6 @@
 import ast
 import sys
-from typing import List, Optional
+from typing import Dict, List, Optional, Union
 
 import pandas as pd
 
@@ -327,11 +327,19 @@ class ChromaDBHandler(VectorStoreHandler):
 
         data.dropna(axis=1, inplace=True)
 
+        def dataframe_metadata_to_chroma_metadata(metadata: Union[Dict[str, str], str]) -> Optional[Dict[str, str]]:
+            if isinstance(metadata, dict):
+                if not metadata:
+                    # ChromaDB does not support empty metadata dicts, but it does support None.
+                    # Related: https://github.com/chroma-core/chroma/issues/791.
+                    return None
+                return metadata
+            # Metadata is a string representation of a dictionary instead.
+            return ast.literal_eval(metadata)
+
         # ensure metadata is a dict, convert to dict if it is a string
         if data.get(TableField.METADATA.value) is not None:
-            data[TableField.METADATA.value] = data[TableField.METADATA.value].apply(
-                lambda x: x if isinstance(x, dict) else ast.literal_eval(x)
-            )
+            data[TableField.METADATA.value] = data[TableField.METADATA.value].apply(dataframe_metadata_to_chroma_metadata)
 
         # convert to dict
 

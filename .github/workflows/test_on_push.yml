@@ -9,10 +9,14 @@ defaults:
   run:
     shell: bash
 
+# UV will use the system python by default
+env:
+  UV_SYSTEM_PYTHON: 1
+
 # Cancel any existing runs of this workflow on the same branch/pr
 # We always want to build/deploy/test a new commit over an older one
 concurrency:
-  group: ${{ github.workflow_ref }}
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -48,8 +52,6 @@ jobs:
         with:
           # I can't work out how to use vars.CI_PYTHON_VERSION for forks here in a nice way, so we have to hardcode it for forks
           python-version: ${{ vars.CI_PYTHON_VERSION || '3.10' }}
-          cache: pip
-          cache-dependency-path: "**/requirements*.txt"
 
       # Checks the codebase for print() statements and fails if any are found
       # We should be using loggers instead
@@ -78,7 +80,7 @@ jobs:
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
           # We don't need to install mindsdb itself here because these are just static code checks
-          pip install -r requirements/requirements-dev.txt
+          uv pip install -r requirements/requirements-dev.txt
 
           python tests/scripts/check_requirements.py
 
@@ -112,19 +114,24 @@ jobs:
         uses: actions/setup-python@v5.1.0
         with:
           python-version: ${{ matrix.python-version }}
-          cache: pip
-          cache-dependency-path: "**/requirements*.txt"
+      # We have to install UV because (for now) these run in GH's runners
+      - name: Setup uv
+        if: ${{ needs.changes.outputs.not-docs == 'true' }}
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/requirements*.txt" 
       - name: Check requirements files are installable
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
           # Install dev requirements and build our pip package
-          pip install -r requirements/requirements-dev.txt
+          uv pip install -r requirements/requirements-dev.txt
           python setup.py sdist
 
           # Install from the pip package
           # If we install from source, we don't know if the pip package is installable.
           cd dist
-          pip install --ignore-installed *.tar.gz
+          uv pip install *.tar.gz
 
   unit_tests:
     name: Run Unit Tests
@@ -142,29 +149,34 @@ jobs:
         uses: actions/setup-python@v5.1.0
         with:
           python-version: ${{ matrix.python-version }}
-          cache: pip
-          cache-dependency-path: "**/requirements*.txt"
+      # We have to install UV because (for now) these run in GH's runners
+      - name: Setup uv
+        if: ${{ needs.changes.outputs.not-docs == 'true' }}
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/requirements*.txt" 
       - name: Install dependencies
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
-          pip install .
-          pip install -r requirements/requirements-test.txt
-          pip install .[lightwood]  # TODO: for now some tests rely on lightwood
-          pip install .[mssql]
-          pip install .[clickhouse]
-          pip install .[snowflake]
-          pip install .[web]
-          pip install .[redshift]
-          pip install .[bigquery]
-          pip install .[elasticsearch]
-          pip install .[databricks]
-          pip install .[oracle]
-          pip install .[db2]
-          pip install .[hive]
-          pip install .[teradata]
-          pip install .[hana]
-          pip install .[minds_endpoint]
-          pip freeze
+          uv pip install .
+          uv pip install -r requirements/requirements-test.txt
+          uv pip install .[lightwood]  # TODO: for now some tests rely on lightwood
+          uv pip install .[mssql]
+          uv pip install .[clickhouse]
+          uv pip install .[snowflake]
+          uv pip install .[web]
+          uv pip install .[redshift]
+          uv pip install .[bigquery]
+          uv pip install .[elasticsearch]
+          uv pip install .[databricks]
+          uv pip install .[oracle]
+          uv pip install .[db2]
+          uv pip install .[hive]
+          uv pip install .[teradata]
+          uv pip install .[hana]
+          uv pip install .[minds_endpoint]
+          uv pip freeze
       - name: Run unit tests
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |

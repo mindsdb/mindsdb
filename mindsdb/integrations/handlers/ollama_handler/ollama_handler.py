@@ -63,8 +63,8 @@ class OllamaHandler(BaseMLEngine):
             responses = _model_check()
             if 200 not in responses.values():
                 raise Exception(f"Ollama model `{args['model_name']}` is not working correctly. Please try pulling this model manually, check it works correctly and try again.")  # noqa
-        else:
-            supported_modes = {k: True if v == 200 else False for k, v in responses.items()}
+        
+        supported_modes = {k: True if v == 200 else False for k, v in responses.items()}
 
         # check if a mode has been provided and if it is valid
         runnable_modes = [mode for mode, supported in supported_modes.items() if supported]

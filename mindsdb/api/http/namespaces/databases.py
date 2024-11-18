@@ -64,10 +64,16 @@ class DatabasesResource(Resource):
             handler = session.integration_controller.create_tmp_handler(name, database['engine'], parameters)
             status = handler.check_connection()
             if status.success is not True:
-                return http_error(
-                    HTTPStatus.BAD_REQUEST, 'Connection error',
-                    status.error_message or 'Connection error'
-                )
+                if hasattr(status, 'redirect_url') and isinstance(status, str):
+                    return {
+                        "status": "redirect_required",
+                        "redirect_url": status.redirect_url,
+                        "detail": status.error_message
+                    }, HTTPStatus.OK
+                return {
+                    "status": "connection_error",
+                    "detail": status.error_message
+                }, HTTPStatus.OK
 
         new_integration_id = session.integration_controller.add(name, database['engine'], parameters)
         new_integration = session.database_controller.get_integration(new_integration_id)

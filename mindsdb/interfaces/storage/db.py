@@ -11,6 +11,7 @@ from sqlalchemy import (
     DateTime,
     Index,
     Integer,
+    Numeric,
     String,
     Table,
     UniqueConstraint,
@@ -351,6 +352,7 @@ class ChatBots(Base):
         DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
     )
     created_at = Column(DateTime, default=datetime.datetime.now)
+    webhook_token = Column(String)
 
     def as_dict(self) -> Dict:
         return {
@@ -360,6 +362,7 @@ class ChatBots(Base):
             "agent_id": self.agent_id,
             "model_name": self.model_name,
             "params": self.params,
+            "webhook_token": self.webhook_token,
             "created_at": self.created_at,
             "database_id": self.database_id,
         }
@@ -531,6 +534,19 @@ class KnowledgeBase(Base):
         ),
     )
 
+    def as_dict(self) -> Dict:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "project_id": self.project_id,
+            "embedding_model": None if self.embedding_model is None else self.embedding_model.name,
+            "vector_database": None if self.vector_database is None else self.vector_database.name,
+            "vector_database_table": self.vector_database_table,
+            "updated_at": self.updated_at,
+            "created_at": self.created_at,
+            "params": self.params
+        }
+
 
 class QueryContext(Base):
     __tablename__ = "query_context"
@@ -550,17 +566,23 @@ class QueryContext(Base):
 class LLMLog(Base):
     __tablename__ = "llm_log"
     id: int = Column(Integer, primary_key=True)
-    company_id: int = Column(Integer, nullable=True)
+    company_id: int = Column(Integer, nullable=False)
     api_key: str = Column(String, nullable=True)
-    model_id: int = Column(Integer, nullable=False)
+    model_id: int = Column(Integer, nullable=True)
+    model_group: str = Column(String, nullable=True)
     input: str = Column(String, nullable=True)
     output: str = Column(String, nullable=True)
     start_time: datetime = Column(DateTime, nullable=False)
     end_time: datetime = Column(DateTime, nullable=True)
+    cost: float = Column(Numeric(5, 2), nullable=True)
     prompt_tokens: int = Column(Integer, nullable=True)
     completion_tokens: int = Column(Integer, nullable=True)
     total_tokens: int = Column(Integer, nullable=True)
     success: bool = Column(Boolean, nullable=False, default=True)
+    exception: str = Column(String, nullable=True)
+    traceback: str = Column(String, nullable=True)
+    stream: bool = Column(Boolean, default=False, comment="Is this completion done in 'streaming' mode")
+    metadata_: dict = Column("metadata", JSON, nullable=True)
 
 
 class LLMData(Base):

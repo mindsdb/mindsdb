@@ -23,8 +23,12 @@ import traceback
 from functools import partial
 from typing import Dict, List
 
+import numpy as np
 from numpy import dtype as np_dtype
 from pandas.api import types as pd_types
+
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import NULL_VALUE
+from mindsdb.api.mysql.mysql_proxy.data_types.mysql_datum import Datum
 
 import mindsdb.utilities.hooks as hooks
 import mindsdb.utilities.profiler as profiler
@@ -75,6 +79,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities import (
 )
 from mindsdb.api.executor import exceptions as exec_exc
 
+from mindsdb.api.common.check_auth import check_auth
 from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
@@ -86,37 +91,6 @@ logger = log.getLogger(__name__)
 
 def empty_fn():
     pass
-
-
-def check_auth(username, password, scramble_func, salt, company_id, config):
-    """ """
-    try:
-        hardcoded_user = config["auth"].get("username")
-        hardcoded_password = config["auth"].get("password")
-        if hardcoded_password is None:
-            hardcoded_password = ""
-        hardcoded_password_hash = scramble_func(hardcoded_password, salt)
-        hardcoded_password = hardcoded_password.encode()
-
-        if password is None:
-            password = ""
-        if isinstance(password, str):
-            password = password.encode()
-
-        if username != hardcoded_user:
-            logger.warning(f"Check auth, user={username}: user mismatch")
-            return {"success": False}
-
-        if password != hardcoded_password and password != hardcoded_password_hash:
-            logger.warning(f"check auth, user={username}: password mismatch")
-            return {"success": False}
-
-        logger.info(f"Check auth, user={username}: Ok")
-        return {"success": True, "username": username}
-    except Exception as e:
-        logger.error(f"Check auth, user={username}: ERROR")
-        logger.error(e)
-        logger.error(traceback.format_exc())
 
 
 class SQLAnswer:
@@ -345,8 +319,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
     def send_query_answer(self, answer: SQLAnswer):
         if answer.type == RESPONSE_TYPE.TABLE:
+            self.send_tabel_packets(columns=answer.columns, data=answer.data)
+
             packages = []
-            packages += self.get_tabel_packets(columns=answer.columns, data=answer.data)
             if answer.status is not None:
                 packages.append(self.last_packet(status=answer.status))
             else:
@@ -359,7 +334,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 ErrPacket, err_code=answer.error_code, msg=answer.error_message
             ).send()
 
-    def _get_column_defenition_packets(self, columns, data=None):
+    def _get_column_defenition_packets(self, columns, data=None, columns_len=None):
         if data is None:
             data = []
         packets = []
@@ -374,15 +349,18 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             column_name = column.get("name", "column_name")
             column_alias = column.get("alias", column_name)
             flags = column.get("flags", 0)
-            if len(data) == 0:
-                length = 0xFFFF
+            if columns_len is not None:
+                length = columns_len[i]
             else:
-                length = 1
-                for row in data:
-                    if isinstance(row, dict):
-                        length = max(len(str(row[column_alias])), length)
-                    else:
-                        length = max(len(str(row[i])), length)
+                if len(data) == 0:
+                    length = 0xFFFF
+                else:
+                    length = 1
+                    for row in data:
+                        if isinstance(row, dict):
+                            length = max(len(str(row[column_alias])), length)
+                        else:
+                            length = max(len(str(row[i])), length)
 
             packets.append(
                 self.packet(
@@ -410,6 +388,42 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         packets += [self.packet(ResultsetRowPacket, data=x) for x in data]
         return packets
+
+    def send_tabel_packets(self, columns, data, status=0):
+
+        # text protocol, convert all to string and serialize as packages
+        df = data.get_raw_df()
+
+        def apply_f(v):
+            if v is None:
+                return NULL_VALUE
+            if not isinstance(v, str):
+                v = str(v)
+            return Datum.serialize_str(v)
+
+        df = df.applymap(apply_f)
+
+        # get column max size
+        columns_len = None
+        if len(df) > 0:
+            measurer = np.vectorize(len)
+            columns_len = measurer(df.values).max(axis=0)
+
+        # columns packages
+        packets = [self.packet(ColumnCountPacket, count=len(columns))]
+
+        packets.extend(self._get_column_defenition_packets(columns, columns_len=columns_len))
+
+        if self.client_capabilities.DEPRECATE_EOF is False:
+            packets.append(self.packet(EofPacket, status=status))
+        self.send_package_group(packets)
+
+        # body packages
+        string = b"".join([
+            self.packet(body=body, length=len(body)).accum()
+            for body in df.values.sum(axis=1)
+        ])
+        self.socket.sendall(string)
 
     def decode_utf(self, text):
         try:
@@ -595,7 +609,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             packages.append(self.packet(EofPacket, status=0x0062))
         else:
             # send all
-            for row in executor.data:
+            for row in executor.data.to_lists():
                 packages.append(
                     self.packet(BinaryResultsetRowPacket, data=row, columns=columns_def)
                 )
@@ -619,7 +633,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         packages = []
         columns = self.to_mysql_columns(executor.columns)
-        for row in executor.data[fetched:limit]:
+        for row in executor.data[fetched:limit].to_lists():
             packages.append(
                 self.packet(BinaryResultsetRowPacket, data=row, columns=columns)
             )

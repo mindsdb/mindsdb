@@ -27,6 +27,9 @@ from mindsdb.integrations.handlers.openai_handler.constants import (
     IMAGE_MODELS,
     FINETUNING_MODELS,
     OPENAI_API_BASE,
+    DEFAULT_CHAT_MODEL,
+    DEFAULT_EMBEDDING_MODEL,
+    DEFAULT_IMAGE_MODEL
 )
 from mindsdb.integrations.libs.llm.utils import get_completed_prompts
 from mindsdb.integrations.utilities.handler_utils import get_api_key
@@ -44,9 +47,9 @@ class OpenAIHandler(BaseMLEngine):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.generative = True
-        self.default_model = 'gpt-3.5-turbo'
-        self.default_embedding_model = 'text-embedding-ada-002'
-        self.default_image_model = 'dall-e-2'
+        self.default_model = DEFAULT_CHAT_MODEL
+        self.default_embedding_model = DEFAULT_EMBEDDING_MODEL
+        self.default_image_model = DEFAULT_IMAGE_MODEL
         self.default_mode = (
             'default'  # can also be 'conversational' or 'conversational-full'
         )

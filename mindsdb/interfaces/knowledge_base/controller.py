@@ -46,18 +46,16 @@ class KnowledgeBaseTable:
         self.session = session
         self.document_preprocessor = None
         self.document_loader = None
-        self.mysql_proxy = None
-
-        # Initialize preprocessor if config exists in params
-        if kb.params and 'preprocessing' in kb.params:
-            self.configure_preprocessing(kb.params['preprocessing'])
 
     def configure_preprocessing(self, config: Optional[dict] = None):
         """Configure preprocessing for the knowledge base table"""
-        self.document_preprocessor = None
+        self.document_preprocessor = None  # Reset existing preprocessor
         if config is not None:
             preprocessing_config = PreprocessingConfig(**config)
             self.document_preprocessor = PreprocessorFactory.create_preprocessor(preprocessing_config)
+        else:
+            # Always create a default preprocessor if none specified
+            self.document_preprocessor = PreprocessorFactory.create_preprocessor()
 
     def select_query(self, query: Select) -> pd.DataFrame:
         """
@@ -130,21 +128,12 @@ class KnowledgeBaseTable:
 
     def insert_query_result(self, query: str, project_name: str):
         """Process and insert SQL query results"""
-        if not self.mysql_proxy:
-            raise ValueError("MySQL proxy not configured")
+        if not self.document_loader:
+            raise ValueError("Document loader not configured")
 
-        if not query:
-            return
-
-        self.mysql_proxy.set_context({'db': project_name})
-        query_result = self.mysql_proxy.process_query(query)
-
-        if query_result.type != 'table':  # Use enum/constant
-            raise ValueError('Query returned no data')
-
-        column_names = [c.get('alias', c.get('name')) for c in query_result.columns]
-        df = pd.DataFrame.from_records(query_result.data, columns=column_names)
-        self.insert(df)
+        documents = list(self.document_loader.load_query_result(query, project_name))
+        if documents:
+            self.insert_documents(documents)
 
     def insert_rows(self, rows: List[Dict]):
         """Process and insert raw data rows"""
@@ -540,10 +529,9 @@ class KnowledgeBaseController:
         Add a new knowledge base to the database
         :param preprocessing_config: Optional preprocessing configuration to validate and store
         """
-        # Add preprocessing config to params if provided
+        # Validate preprocessing config first if provided
         if preprocessing_config is not None:
-            # Validate config before storing
-            PreprocessingConfig(**preprocessing_config)
+            PreprocessingConfig(**preprocessing_config)  # Validate before storing
             params = params or {}
             params['preprocessing'] = preprocessing_config
 
@@ -737,14 +725,22 @@ class KnowledgeBaseController:
 
     def get_table(self, name: str, project_id: int) -> KnowledgeBaseTable:
         """
-        Returns kb table object
+        Returns kb table object with properly configured preprocessing
         :param name: table name
         :param project_id: project id
         :return: kb table object
         """
         kb = self.get(name, project_id)
         if kb is not None:
-            return KnowledgeBaseTable(kb, self.session)
+            table = KnowledgeBaseTable(kb, self.session)
+
+            # Always configure preprocessing - either from params or default
+            if kb.params and 'preprocessing' in kb.params:
+                table.configure_preprocessing(kb.params['preprocessing'])
+            else:
+                table.configure_preprocessing(None)  # This ensures default preprocessor is created
+
+            return table
 
     def list(self, project_name: str = None) -> List[dict]:
         """

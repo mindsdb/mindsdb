@@ -55,11 +55,11 @@ Below are all of the custom configuration parameters that should be set accordin
     },
 ```
 
-The `permanent_storage` parameter defines where MindsDB stores essential user files, such as uploaded files, models, and tab content, providing an active storage mechanism. MindsDB checks the `permanent_storage` location to access the latest version of a file and updates it as needed.
+The `permanent_storage` parameter defines where MindsDB stores copies of user files, such as uploaded files, models, and tab content. MindsDB checks the `permanent_storage` location to access the latest version of a file and updates it as needed.
 
 The `location` specifies the storage type.
 
-* `absent` (default): Disables permanent storage and is not recommended to use.
+* `absent` (default): Disables permanent storage and is recommended to use when MindsDB is running locally.
 * `local`: Stores files in a local directory defined with `config['paths']['storage']`.
 * `s3`: Stores files in an Amazon S3 bucket. This option requires the `bucket` parameter that specifies the name of the S3 bucket where files will be stored.
 
@@ -73,7 +73,7 @@ If this parameter is not set, the path is determined by the `MINDSDB_STORAGE_DIR
 
 ```bash
     "paths": {
-        "root": "/home/mindsdb/var",
+        "root": "/home/mindsdb/var", # optional (alternatively, it can be defined in the MINDSDB_STORAGE_DIR environment variable)
         "content": "/home/mindsdb/var/content", # optional
         "storage": "/home/mindsdb/var/storage", # optional
         "static": "/home/mindsdb/var/static", # optional
@@ -95,7 +95,7 @@ The `static` parameter is used to store files for the graphical user interface (
 
 The `tmp` parameter designates a directory for temporary files. Note that the operating system’s default temporary directory may also be used for some temporary files.
 
-If the `['cache']['type']` is set to `'local'`, then the `cache` parameter stores cached files for the most recent predictions. For example, if a model is queried with identical input, the result will be stored in the cache and returned directly on subsequent queries, instead of recalculating the prediction.
+If the `['cache']['type']` is set to `'local'`, then the `cache` parameter defines the location for storing cached files for the most recent predictions. For example, if a model is queried with identical input, the result will be stored in the cache and returned directly on subsequent queries, instead of recalculating the prediction.
 
 The `locks` parameter is used to store lock files to prevent race conditions when the `content` folder is shared among multiple applications. This directory helps ensure that file access is managed properly using `fcntl` locks. Note that this is not applicable for Windows OS.
 
@@ -124,12 +124,6 @@ To enable authentication for the MongoDB and MySQL APIs, you must define the `us
 The `gui` parameter controls the behavior of the MindsDB graphical user interface (GUI) updates.
 
 The `autoupdate` parameter defines whether MindsDB automatically checks for and updates the GUI to the latest version when the application starts. If set to `True`, MindsDB will attempt to fetch the latest available version of the GUI. If set to `False`, MindsDB will not try to update the GUI on startup.
-
-```bash
-    "environment": "local",
-```
-
-The `environment` parameter is for internal usage and should not be set by the user. It specifies the environment in which the MindsDB is running (e.g., local, cloud, AWS image, or another environment). Based on this value, the app's behavior may vary to optimize for the specific environment.
 
 ```bash
     "api": {
@@ -197,7 +191,7 @@ The `ml_task_queue` parameter manages the queueing system for machine learning t
 The `type` parameter defines the type of task queue to use.
 
 * `local`: Tasks are processed immediately as they appear, without a queue. This is suitable for environments where resource constraints are not a concern.
-* `redis`: Tasks are added to a Redis-based queue. Redis ensures that tasks are executed only when sufficient resources are available.
+* `redis`: Tasks are added to a Redis-based queue, and consumer process (which is run with `--ml_task_consumer`) ensures that tasks are executed only when sufficient resources are available.
     - Using a Redis queue requires additional configuration such as the `host`, `port`, `db`, `username`, and `password` parameters.
     - To use the Redis queue, start MindsDB with the following command to initiate a queue consumer process: `python3 -m mindsdb --ml_task_queue_consumer`. This process will monitor the queue and fetch tasks for execution only when sufficient resources are available.
 

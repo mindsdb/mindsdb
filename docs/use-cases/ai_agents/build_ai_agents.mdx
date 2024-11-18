@@ -1,0 +1,158 @@
+---
+title: Build an AI Agent with MindsDB
+sidebarTitle: Build an AI Agent
+---
+
+MindsDB provides a custom syntax to build AI agents that comprises an AI model augmented with users' data access. AI agents can be connected to a chat interface, like Slack or MS Teams, to create chatbots.
+
+See details following [this link for Agents](/mindsdb_sql/agents/agent) and [this link for Chatbots](/mindsdb_sql/agents/chatbot).
+
+## Step-by-Step Tutorial
+
+This tutorial demonstrates how to build AI agents with MindsDB using MindsDB SQL editor. This can be also accomplished with [APIs](/rest/agents/create-agent) and [Python SDK](/sdks/python/agents).
+
+Let's list all the steps required to build an AI agent.
+
+<Steps>
+  <Step title="Create a conversational model">
+    Create a conversational model using the [LangChain integration](/integrations/ai-engines/langchain).
+  </Step>
+  <Step title="Create skills">
+    Create one or more skills to be assigned to an agent.
+    *Note that skills store data to be passed to an agent, so it is required to connect users' data to MindsDB before creating skills.*
+  </Step>
+  <Step title="Create an AI agent">
+    Create an AI agent providing the conversational model and the set of skills.
+  </Step>
+  <Step title="Create a chatbot">
+    Optionally, connect an agent to a chat interface to create a chatbot.
+  </Step>
+</Steps>
+
+The following sections walk you through the process of building an AI agent.
+
+## Step 1. Create a conversational model
+
+Use the `CREATE MODEL` statement below to create a conversational model. If required, adjust the parameters and prompts to fit your use case.
+
+```sql
+CREATE MODEL conversational_model
+PREDICT answer
+USING
+    engine = 'langchain',
+    openai_api_key = 'YOUR_OPENAI_API_KEY_HERE',
+    model_name = 'gpt-4',
+    mode = 'conversational',
+    user_column = 'question' ,
+    assistant_column = 'answer',
+    max_tokens = 100,
+    temperature = 0,
+    verbose = True,
+    prompt_template = 'Answer the user input in a helpful way';
+```
+
+Ensure that the model status reads `complete` using this command:
+
+```sql
+DESCRIBE conversational_model;
+```
+
+Learn more about [models created with LangChain](/integrations/ai-engines/langchain).
+
+## Step 2. Create skills
+
+A skill is essentially users' data fed to the model, so the model can answer questions over users' data.
+
+First, connect your database to MindsDB. Here the sample database is used.
+
+```sql
+CREATE DATABASE datasource
+WITH ENGINE = "postgres",
+PARAMETERS = {
+    "user": "demo_user",
+    "password": "demo_password",
+    "host": "samples.mindsdb.com",
+    "port": "5432",
+    "database": "demo",
+    "schema": "demo_data"
+};
+```
+
+Create a skill using the connected data.
+
+```sql
+CREATE SKILL text2sql_skill
+USING
+    type = 'text2sql',
+    database = 'datasource', -- connect your database with CREATE DATABASE and pass its name here
+    tables = ['car_sales'], -- list table(s) to be made accessible by an agent
+    description = 'this is car sales data';
+```
+
+Note that there are two types of skills: text-to-SQL and knowledge bases. Learn more about [skills here](/mindsdb_sql/agents/agent#create-skills).
+
+Verify that the skill has been created successully using this command:
+
+```sql
+SHOW SKILLS;
+```
+
+## Step 3. Create an AI agent
+
+Now that both the conversational model and the skill are ready, let's create an AI agent.
+
+```sql
+CREATE AGENT ai_agent
+USING
+    model = 'conversational_model',
+    skills = ['text2sql_skill'];
+```
+
+Verify that the agent has been created successully using this command:
+
+```sql
+SHOW AGENTS;
+```
+
+At this point, you can query an agent to ask questions over the data.
+
+```sql
+SELECT question, answer
+FROM ai_agent
+WHERE question = 'how many cars were sold in 2016?';
+```
+
+## Step 4. Create a chatbot
+
+Optionally, you can create a chatbot by connecitng an AI agent to a chat interface.
+
+First connect a chat interface to MindsDB. Here the Slack connection is made.
+
+```sql
+CREATE DATABASE mindsdb_slack
+WITH
+  ENGINE = 'slack',
+  PARAMETERS = {
+      "token": "xoxb-xxx",
+      "app_token": "xapp-xxx"
+    };
+```
+
+Follow the instructions on how to [connect Slack to MindsDB](/integrations/app-integrations/slack#method-1-chatbot-responds-in-direct-messages-to-a-slack-app) for this use case.
+
+Now create a chatbot providing the AI agent and the Slack connection.
+
+```sql
+CREATE CHATBOT ai_chatbot
+USING
+    database = 'mindsdb_slack', -- connect a chat interface with CREATE DATABASE
+    agent = 'ai_agent'; -- create an agent with with CREATE AGENT
+```
+
+Verify that the chatbot is running using this command:
+
+```sql
+SHOW CHATBOTS;
+```
+
+Now you can go ahead and chat with the AI agent via Slack.

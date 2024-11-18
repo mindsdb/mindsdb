@@ -4,6 +4,8 @@ import numpy as np
 import pandas as pd
 import json
 
+from flask.json.provider import DefaultJSONProvider
+
 
 class CustomJSONEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -25,3 +27,7 @@ class CustomJSONEncoder(json.JSONEncoder):
             return None
 
         return str(obj)
+
+
+class CustomJSONProvider(CustomJSONEncoder, DefaultJSONProvider):
+    ...

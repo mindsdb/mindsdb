@@ -3,58 +3,129 @@ title: Extend the Default MindsDB Configuration
 sidebarTitle: Extend the Default MindsDB Configuration
 ---
 
-<Tip>
-  To follow this guide, please make sure you have a local installation of
-  MindsDB. [Here](/setup/self-hosted/pip/source/), you can find out how to
-  install MindsDB locally.
-</Tip>
+To follow this guide, install MindsDB locally via [Docker](/setup/self-hosted/docker-desktop) or [PyPI](/setup/self-hosted/pip/source).
 
 ## Starting MindsDB with Default Configuration
 
-It is very straightforward to start MindsDB locally with the default config
-file - just run the commands below.
+Start MindsDB locally with the default configuration.
 
-First, activate the virtual environment with this command:
+1. Activate the virtual environment:
 
 ```bash
 source mindsdb/bin/activate
 ```
 
-And then, start MindsDB using this command:
+2. Start MindsDB:
 
 ```bash
 python -m mindsdb
 ```
 
-Now you can access your MindsDB locally at `127.0.0.1:47334`.
+3. Access MindsDB locally at `127.0.0.1:47334`.
+
+<Tip>
+By default, MindsDB starts the `http` and `mysql` APIs. You can define which APIs to start using the `api` flag as below.
+
+```bash
+python -m mindsdb --api http,mysql,postgres,mongodb
+```
+
+If you want to start MindsDB without the graphical user interface (GUI), use the `--no_studio` flag as below.
+
+```bash
+python -m mindsdb --no_studio
+```
+</Tip>
 
 ## Starting MindsDB with Extended Configuration
 
-First, you should prepare a `config.json` file based on the following template; remember to substitute the values for your custom configuration.
+Start MindsDB locally with your custom configuration by providing a path to the `config.json` file that stores custom config parameters listed in this section.
+
+```bash
+python -m mindsdb --config=/path-to-the-extended-config-file/config.json
+```
+
+Below are all of the custom configuration parameters that should be set according to your requirements and saved into the `config.json` file.
 
 ```bash
 {
     "permanent_storage": {
         "location": "local"
+        "bucket": "s3_bucket_name" # optional
     },
-    "paths": {},
-    "log": {
-        "level": {
-            "console": "INFO",
-            "file": "DEBUG",
-            "db": "WARNING"
-        }
+```
+
+The `permanent_storage` parameter defines where MindsDB stores copies of user files, such as uploaded files, models, and tab content. MindsDB checks the `permanent_storage` location to access the latest version of a file and updates it as needed.
+
+The `location` specifies the storage type.
+
+* `absent` (default): Disables permanent storage and is recommended to use when MindsDB is running locally.
+* `local`: Stores files in a local directory defined with `config['paths']['storage']`.
+* `s3`: Stores files in an Amazon S3 bucket. This option requires the `bucket` parameter that specifies the name of the S3 bucket where files will be stored.
+
+```bash
+    "storage_dir": "/home/mindsdb/var",
+```
+
+The `storage_dir` parameter specifies the directory where MindsDB stores all its files, including models, uploaded files, tab content, and the internal SQLite database (if running locally).
+
+If this parameter is not set, the path is determined by the `MINDSDB_STORAGE_DIR` environment variable. MindsDB defaults to creating a `mindsdb` folder in the operating system user's home directory.
+
+```bash
+    "paths": {
+        "root": "/home/mindsdb/var", # optional (alternatively, it can be defined in the MINDSDB_STORAGE_DIR environment variable)
+        "content": "/home/mindsdb/var/content", # optional
+        "storage": "/home/mindsdb/var/storage", # optional
+        "static": "/home/mindsdb/var/static", # optional
+        "tmp": "/home/mindsdb/var/tmp", # optional
+        "cache": "/home/mindsdb/var/cache", # optional
+        "locks": "/home/mindsdb/var/locks", # optional
     },
-    "debug": false,
-    "integrations": {},
+```
+
+The `paths` parameter allows users to redefine the file paths for various groups of MindsDB files. By default, all paths are located within the `storage_dir`. If only the `root` path is defined, all other folders will be created within that directory. If this parameter is absent, the value is determined by the `MINDSDB_STORAGE_DIR` environment variable.
+
+The `root` parameter defines the base directory for storing all MindsDB files. It serves the same purpose as the `storage_dir` parameter.
+
+The `content` parameter specifies the directory where user-related files are stored, such as uploaded files, created models, and tab content. The internal SQLite database (if running locally) is stored in the `root` directory instead.
+
+If the `['permanent_storage']['location']` is set to `'local'`, then the `storage` parameter is used to store copies of user files.
+
+The `static` parameter is used to store files for the graphical user interface (GUI) when MindsDB is run locally.
+
+The `tmp` parameter designates a directory for temporary files. Note that the operating system’s default temporary directory may also be used for some temporary files.
+
+If the `['cache']['type']` is set to `'local'`, then the `cache` parameter defines the location for storing cached files for the most recent predictions. For example, if a model is queried with identical input, the result will be stored in the cache and returned directly on subsequent queries, instead of recalculating the prediction.
+
+The `locks` parameter is used to store lock files to prevent race conditions when the `content` folder is shared among multiple applications. This directory helps ensure that file access is managed properly using `fcntl` locks. Note that this is not applicable for Windows OS.
+
+```bash
+    "auth":{
+        "http_auth_enabled": False,
+        "username": "username", # optional
+        "password": "password" # optional
+    },
+```
+
+The `auth` parameter controls the authentication settings for APIs in MindsDB.
+
+The `http_auth_enabled` enables (`True`) or disables (`False`) authentication for the HTTP API, that is, the MindsDB's GUI. This setting is essential only for local usage.
+
+To enable authentication for the HTTP API, you must set `http_auth_enabled` to `True` in addition to specifying the `username` and `password` parameters.
+
+To enable authentication for the MongoDB and MySQL APIs, you must define the `username` and `password` parameters.
+
+```bash
     "gui": {
         "autoupdate": true
     },
-    "auth":{
-        "http_auth_enabled": False,
-        "username": "mindsdb_user",
-        "password": "abc123"
-    },
+```
+
+The `gui` parameter controls the behavior of the MindsDB graphical user interface (GUI) updates.
+
+The `autoupdate` parameter defines whether MindsDB automatically checks for and updates the GUI to the latest version when the application starts. If set to `True`, MindsDB will attempt to fetch the latest available version of the GUI. If set to `False`, MindsDB will not try to update the GUI on startup.
+
+```bash
     "api": {
         "http": {
             "host": "127.0.0.1",
@@ -72,28 +143,71 @@ First, you should prepare a `config.json` file based on the following template; 
             "database": "mindsdb"
         }
     },
+```
+
+The `api` parameter contains the configuration settings for running MindsDB APIs.
+
+Currently, the supported APIs are:
+
+* `http`: Configures the HTTP API. It requires the `host` and `port` parameters. Alternatively, configure HTTP authentication for your MindsDB instance by setting the environment variables `MINDSDB_USERNAME` and `MINDSDB_PASSWORD` before starting MindsDB, which is a recommended way for the production systems.
+* `mysql`: Configures the MySQL API. It requires the `host` and `port` parameters and additionally the `database` and `ssl` parameters.
+* `mongodb`: Configures the MongoDB API. It requires the `host` and `port` parameters and additionally the `database` parameter.
+
+Connection parameters within each block include:
+
+* `host`: Specifies the IP address or hostname where the API should run. For example, `"127.0.0.1"` indicates the API will run locally.
+* `port`: Defines the port number on which the API will listen for incoming requests. The default ports are `47334` for HTTP, `47335` for MySQL, and `47336` for MongoDB.
+* `database` (for MySQL and MongoDB): Specifies the name of the database that MindsDB uses. Users must connect to this database to interact with MindsDB through the respective API.
+* `ssl` (for MySQL API): Indicates whether SSL support is enabled for the MySQL API.
+
+```bash
     "cache": {
-        "type": "local"
-    }
+        "type": "local",
+        "connection": "redis://localhost:6379" # optional
+    },
+```
+
+The `cache` parameter controls how MindsDB stores the results of recent predictions to avoid recalculating them if the same query is run again. Note that recent predictions are cached for ML models, like Lightwood, but not in the case of large language models (LLMs), like OpenAI.
+
+The `type` parameter specifies the type of caching mechanism to use for storing prediction results.
+
+* `none`: Disables caching. No prediction results are stored.
+* `local` (default): Stores prediction results in the `cache` folder (as defined in the `paths` configuration). This is useful for repeated queries where the result doesn't change.
+* `redis`: Stores prediction results in a Redis instance. This option requires the `connection` parameter, which specifies the Redis connection string.
+
+```bash
+    "ml_task_queue": {
+        "type": "local",
+        "host": "localhost", # required only when type is set to redis
+        "port": 6379, # required only when type is set to redis
+        "db": 0, # required only when type is set to redis
+        "username": "username", # required only when type is set to redis
+        "password": "password" # required only when type is set to redis
+    },
+```
+
+The `ml_task_queue` parameter manages the queueing system for machine learning tasks in MindsDB. ML tasks include operations such as creating, training, predicting, fine-tuning, and retraining models. These tasks can be resource-intensive, and running multiple ML tasks simultaneously may lead to Out of Memory (OOM) errors or performance degradation. To address this, MindsDB uses a task queue to control task execution and optimize resource utilization.
+
+The `type` parameter defines the type of task queue to use.
+
+* `local`: Tasks are processed immediately as they appear, without a queue. This is suitable for environments where resource constraints are not a concern.
+* `redis`: Tasks are added to a Redis-based queue, and consumer process (which is run with `--ml_task_consumer`) ensures that tasks are executed only when sufficient resources are available.
+    - Using a Redis queue requires additional configuration such as the `host`, `port`, `db`, `username`, and `password` parameters.
+    - To use the Redis queue, start MindsDB with the following command to initiate a queue consumer process: `python3 -m mindsdb --ml_task_queue_consumer`. This process will monitor the queue and fetch tasks for execution only when sufficient resources are available.
+
+```bash
+    "file_upload_domains": [],
+```
+
+The `file_upload_domains` parameter restricts file uploads to trusted sources by specifying a list of allowed domains. This ensures that users can only upload files from the defined sources, such as S3 or Google Drive (`"file_upload_domains": ["https://s3.amazonaws.com", "https://drive.google.com"]`).
+
+If this parameter is left empty (`[]`), users can upload files from any URL without restriction.
+
+```bash
+    "web_crawling_allowed_sites": [],
 }
 ```
 
-<Tip>
-Configure an HTTP authentication for your MindsDB instance by setting `http_auth_enabled` to `True` and defining the `username` and `password` parameters.
-</Tip>
+The `web_crawling_allowed_sites` parameter restricts web crawling operations to a specified list of allowed IPs or web addresses. This ensures that the application only accesses pre-approved and safe URLs (`"web_crawling_allowed_sites": ["https://example.com", "https://api.mysite.com"]`).
 
-Now that your `config.json` file is ready, run the command below to start
-MindsDB locally with your custom configuration.
-
-```bash
-python -m mindsdb --config=/path-to-the-extended-config-file/config-file.json
-```
-
-You can access your MindsDB locally at `127.0.0.1:47334`, or any other IP
-address and port combination if you altered them.
-
-<Tip>
-**What's next?** We recommend you follow one of our tutorials or learn more about the
-[MindsDB Database](/sql/table-structure/).
-
-</Tip>
+If left empty (`[]`), the application allows access to all URLs by default (marked with a wildcard in the open-source version).

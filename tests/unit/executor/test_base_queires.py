@@ -18,7 +18,7 @@ class TestSelect(BaseExecutorDummyML):
         self.save_file('tasks', df)
 
         self.run_sql('''
-            create view mindsdb.vtasks (
+            create view mindsdb.vTasks (
                 select * from files.tasks where a=1
             )
         ''')
@@ -27,7 +27,7 @@ class TestSelect(BaseExecutorDummyML):
         self.run_sql(
             '''
                 CREATE model mindsdb.task_model
-                from mindsdb (select * from vtasks)
+                from mindsdb (select * from Vtasks)
                 PREDICT a
                 using engine='dummy_ml'
             '''
@@ -149,6 +149,60 @@ class TestSelect(BaseExecutorDummyML):
         assert row['t3c'] == 1
 
         assert row['t3a'] == 6
+
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_joins_different_db(self, data_handler):
+        df1 = pd.DataFrame([
+            {'a': 1, 'c': 1},
+            {'a': 3, 'c': 2},
+        ])
+        df2 = pd.DataFrame([
+            {'a': 6, 'c': 1},
+            {'a': 4, 'c': 2},
+            {'a': 2, 'c': 3},
+        ])
+
+        self.set_data('tbl1', df1)
+        self.set_handler(data_handler, name='pg', tables={'tbl2': df2})
+
+        # --- test join table-table ---
+        ret = self.run_sql('''
+            SELECT *
+              FROM dummy_data.tbl1 as t1
+              JOIN pg.tbl2 as t2 on t1.c=t2.c
+        ''')
+
+        # must be 2 rows
+        assert len(ret) == 2
+
+        # second table is called with filter
+        calls = data_handler().query.call_args_list
+        sql = calls[0][0][0].to_string()
+        assert sql.strip() == 'SELECT * FROM tbl2 AS t2 WHERE c IN (2, 1)'
+
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_implicit_join(self, data_handler):
+        df1 = pd.DataFrame([
+            {'a': 1, 'c': 1},
+            {'a': 3, 'c': 2},
+        ])
+        df2 = pd.DataFrame([
+            {'a': 6, 'c': 1},
+            {'a': 4, 'c': 2},
+            {'a': 2, 'c': 3},
+        ])
+
+        self.set_data('tbl1', df1)
+        self.set_handler(data_handler, name='pg', tables={'tbl2': df2})
+
+        # --- test join table-table ---
+        ret = self.run_sql('''
+            SELECT * FROM dummy_data.tbl1 as t1, pg.tbl2 as t2
+            where t1.c=t2.c
+        ''')
+
+        # must be 2 rows
+        assert len(ret) == 2
 
     def test_complex_queries(self):
 

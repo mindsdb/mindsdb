@@ -8,8 +8,8 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
 from langchain_core.vectorstores import VectorStore
 from langchain_core.stores import BaseStore
-from langchain.text_splitter import TextSplitter
 from pydantic import BaseModel
+from langchain_text_splitters import TextSplitter
 
 DEFAULT_COLLECTION_NAME = 'default_collection'
 
@@ -19,15 +19,16 @@ DEFAULT_MAX_CONCURRENCY = 5
 
 DEFAULT_CARDINALITY_THRESHOLD = 40
 DEFAULT_CHUNK_SIZE = 1000
-DEFAULT_CHUNK_OVERLAP = 50
+DEFAULT_CHUNK_OVERLAP = 200
 DEFAULT_POOL_RECYCLE = 3600
-DEFAULT_LLM_MODEL = "gpt-3.5-turbo"
+DEFAULT_LLM_MODEL = "gpt-4o"
 DEFAULT_CONTENT_COLUMN_NAME = "body"
 DEFAULT_DATASET_DESCRIPTION = "email inbox"
 DEFAULT_TEST_TABLE_NAME = "test_email"
 DEFAULT_VECTOR_STORE = Chroma
 DEFAULT_RERANKER_FLAG = False
 DEFAULT_RERANKING_MODEL = "gpt-4o"
+DEFAULT_LLM_ENDPOINT = "https://api.openai.com/v1"
 DEFAULT_AUTO_META_PROMPT_TEMPLATE = """
 Below is a json representation of a table with information about {description}.
 Return a JSON list with an entry for each column. Each entry should have
@@ -107,11 +108,15 @@ class RAGPipelineModel(BaseModel):
     # used for loading an existing vector store
     vector_store_config: VectorStoreConfig = VectorStoreConfig()  # Vector store configuration
 
+    # used for llm generation
+    llm: BaseChatModel = None  # Language model
+    llm_model_name: str = DEFAULT_LLM_MODEL  # Language model name
+    llm_provider: str = None  # Language model provider
+
     vector_store: VectorStore = vector_store_map[vector_store_config.vector_store_type]  # Vector store
     db_connection_string: str = None  # Database connection string
     table_name: str = DEFAULT_TEST_TABLE_NAME  # table name
-    llm: BaseChatModel = None  # Language model
-    embedding_model: Embeddings  # Embedding model
+    embedding_model: Embeddings = None  # Embedding model
     rag_prompt_template: str = DEFAULT_RAG_PROMPT_TEMPLATE  # RAG prompt template
     retriever_prompt_template: Union[str, dict] = None  # Retriever prompt template
     retriever_type: RetrieverType = RetrieverType.VECTOR_STORE  # Retriever type
@@ -131,6 +136,8 @@ class RAGPipelineModel(BaseModel):
     content_column_name: str = DEFAULT_CONTENT_COLUMN_NAME  # content column name (the column we will get embeddings)
     dataset_description: str = DEFAULT_DATASET_DESCRIPTION  # Description of the dataset
     reranker: bool = DEFAULT_RERANKER_FLAG
+    reranking_model: str = DEFAULT_RERANKING_MODEL
+    llm_endpoint: str = DEFAULT_LLM_ENDPOINT
 
     class Config:
         arbitrary_types_allowed = True

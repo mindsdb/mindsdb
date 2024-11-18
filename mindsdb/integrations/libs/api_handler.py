@@ -95,7 +95,7 @@ class FuncParser:
         raise NotImplementedError(f'Unknown node {node}')
 
 
-class APITable():
+class APITable:
 
     def __init__(self, handler):
         self.handler = handler
@@ -155,6 +155,10 @@ class APITable():
 
 class APIResource(APITable):
 
+    def __init__(self, *args, table_name=None, **kwargs):
+        self.table_name = table_name
+        super().__init__(*args, **kwargs)
+
     def select(self, query: Select) -> pd.DataFrame:
         """Receive query as AST (abstract syntax tree) and act upon it.
 
@@ -165,10 +169,7 @@ class APIResource(APITable):
             pd.DataFrame
         """
 
-        conditions = [
-            FilterCondition(i[1], FilterOperator(i[0].upper()), i[2])
-            for i in extract_comparison_conditions(query.where)
-        ]
+        conditions = self._extract_conditions(query.where)
 
         limit = None
         if query.limit:
@@ -186,11 +187,17 @@ class APIResource(APITable):
             if isinstance(col, Identifier):
                 targets.append(col.parts[-1])
 
+        kwargs = {
+            'conditions': conditions,
+            'limit': limit,
+            'sort': sort,
+            'targets': targets
+        }
+        if self.table_name is not None:
+            kwargs['table_name'] = self.table_name
+
         result = self.list(
-            conditions=conditions,
-            limit=limit,
-            sort=sort,
-            targets=targets
+            **kwargs
         )
 
         filters = []
@@ -209,7 +216,8 @@ class APIResource(APITable):
              conditions: List[FilterCondition] = None,
              limit: int = None,
              sort: List[SortColumn] = None,
-             targets: List[str] = None
+             targets: List[str] = None,
+             **kwargs
              ):
         """
         List items based on specified conditions, limits, sorting, and targets.
@@ -238,12 +246,17 @@ class APIResource(APITable):
 
         columns = [col.name for col in query.columns]
 
-        for a_row in query.values:
-            row = dict(zip(columns, a_row))
+        data = [
+            dict(zip(columns, a_row))
+            for a_row in query.values
+        ]
+        kwargs = {}
+        if self.table_name is not None:
+            kwargs['table_name'] = self.table_name
 
-            self.add(row)
+        self.add(data, **kwargs)
 
-    def add(self, row: dict):
+    def add(self, row: List[dict], **kwargs) -> None:
         """
         Add a single item to the dataa collection
 
@@ -254,6 +267,67 @@ class APIResource(APITable):
             NotImplementedError: This is an abstract method and should be implemented in a subclass.
         """
         raise NotImplementedError()
+
+    def update(self, query: Update) -> None:
+        """Receive query as AST (abstract syntax tree) and act upon it somehow.
+
+        Args:
+            query (ASTNode): sql query represented as AST. Usually it should be ast.Update
+
+        Returns:
+            None
+        """
+        conditions = self._extract_conditions(query.where)
+
+        values = {key: val.value for key, val in query.update_columns.items()}
+
+        self.modify(conditions, values)
+
+    def modify(self, conditions: List[FilterCondition], values: dict):
+        """
+        Modify items based on specified conditions and values.
+
+        Args:
+            conditions (List[FilterCondition]): A list of conditions to filter the items. Each condition
+                                                should be an instance of the FilterCondition class.
+            values (dict): A dictionary of values to be updated.
+
+        Raises:
+            NotImplementedError: This is an abstract method and should be implemented in a subclass.
+        """
+        raise NotImplementedError
+
+    def delete(self, query: Delete) -> None:
+        """Receive query as AST (abstract syntax tree) and act upon it somehow.
+
+        Args:
+            query (ASTNode): sql query represented as AST. Usually it should be ast.Delete
+
+        Returns:
+            None
+        """
+        conditions = self._extract_conditions(query.where)
+
+        self.remove(conditions)
+
+    def remove(self, conditions: List[FilterCondition]):
+        """
+        Remove items based on specified conditions.
+
+        Args:
+            conditions (List[FilterCondition]): A list of conditions to filter the items. Each condition
+                                                should be an instance of the FilterCondition class.
+
+        Raises:
+            NotImplementedError: This is an abstract method and should be implemented in a subclass.
+        """
+        raise NotImplementedError()
+
+    def _extract_conditions(self, where: ASTNode) -> List[FilterCondition]:
+        return [
+            FilterCondition(i[1], FilterOperator(i[0].upper()), i[2])
+            for i in extract_comparison_conditions(where)
+        ]
 
 
 class APIHandler(BaseHandler):
@@ -280,7 +354,7 @@ class APIHandler(BaseHandler):
 
     def _get_table(self, name: Identifier):
         """
-        Check if the table name was added to the the _register_table
+        Check if the table name was added to the _register_table
         Args:
             name (Identifier): the table name
         """
@@ -296,7 +370,6 @@ class APIHandler(BaseHandler):
             if not hasattr(table, 'list'):
                 # for back compatibility, targets wasn't passed in previous version
                 query.targets = [Star()]
-
             result = self._get_table(query.from_table).select(query)
         elif isinstance(query, Update):
             result = self._get_table(query.table).update(query)

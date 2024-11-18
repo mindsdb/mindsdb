@@ -317,7 +317,7 @@ class OpenAIHandler(BaseMLEngine):
             api_args = {
                 k: v for k, v in api_args.items() if v is not None
             }  # filter out non-specified api args
-            model_name = args.get('model_name', 'dall-e-2')
+            model_name = pred_args.get('model_name') or args.get('model_name')
 
             if args.get('question_column'):
                 prompts = list(df[args['question_column']].apply(lambda x: str(x)))

@@ -74,7 +74,7 @@ jobs:
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
           # We don't need to install mindsdb itself here because these are just static code checks
-          uv pip install -r requirements/requirements-dev.txt
+          uv pip install --prefix $(python -m site --user-base) -r requirements/requirements-dev.txt
 
           python tests/scripts/check_requirements.py
 
@@ -119,7 +119,7 @@ jobs:
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
           # Install dev requirements and build our pip package
-          uv pip install -r requirements/requirements-dev.txt
+          uv pip install --prefix $(python -m site --user-base) -r requirements/requirements-dev.txt
           python setup.py sdist
 
           # Install from the pip package

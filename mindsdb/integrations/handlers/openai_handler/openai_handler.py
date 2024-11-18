@@ -45,6 +45,7 @@ class OpenAIHandler(BaseMLEngine):
         super().__init__(*args, **kwargs)
         self.generative = True
         self.default_model = 'gpt-3.5-turbo'
+        self.default_embedding_model = 'text-embedding-ada-002'
         self.default_image_model = 'dall-e-2'
         self.default_mode = (
             'default'  # can also be 'conversational' or 'conversational-full'
@@ -295,7 +296,7 @@ class OpenAIHandler(BaseMLEngine):
         if args.get('mode', self.default_mode) == 'embedding':
             api_args = {
                 'question_column': pred_args.get('question_column', None),
-                'model': pred_args.get('model_name', 'text-embedding-ada-002'),
+                'model': pred_args.get('model_name') or args.get('model_name') or self.default_embedding_model,
             }
             model_name = 'embedding'
             if args.get('question_column'):

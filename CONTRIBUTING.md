@@ -1,46 +1,73 @@
-# Contributing to Mindsdb
+# Contributing to MindsDB
 
-Being part of the core MindsDB team is accessible to anyone who is motivated and wants to be part of that journey!
+At MindsDB, we believe that collaboration drives innovation, and we welcome contributors of all skill levels to join our journey of democratizing machine learning! Whether you're a seasoned developer, an ML enthusiast, or a newcomer, there's a place for you here. Here's how you can contribute effectively.
 
-Please see below how to contribute to the project, also refer to the contributing documentation.
+---
 
-## How can you help us?
+## 🛠️ How Can You Help?
 
-* Report a bug
-* Improve documentation
-* Discuss the code implementation
-* Submit a bug fix
-* Propose new features
-* Test Mindsdb
+There are many ways to make an impact:
 
-## Code contributions
+- **Report a Bug**: Help us improve by identifying and reporting issues.
+- **Improve Documentation**: Clarify and enhance our guides and resources.
+- **Discuss Code Implementation**: Share feedback or suggestions on our codebase.
+- **Submit a Bug Fix**: Contribute to a more robust MindsDB by fixing issues.
+- **Propose New Features**: Suggest ideas that can enhance MindsDB’s functionality.
+- **Test MindsDB**: Validate and improve the platform through testing.
 
-In general, we follow the "fork-and-pull" Git workflow.
-1. Fork the Mindsdb repository
-2. Clone the repository
-3. Make changes and commit them
-4. Push your local branch to your fork
-5. Submit a Pull request so that we can review your changes
-6. Write a commit message
-7. Make sure that the CI tests are GREEN
+---
 
-> NOTE: Be sure to merge the latest from "upstream" before making a pull request! Also, make the PR to the `main` branch.
+## 🌟 Code Contributions
 
-## Feature and Bug reports
-We use GitHub issues to track bugs and features. Report them by opening a [new issue](https://github.com/mindsdb/mindsdb/issues/new/choose) and fill out all of the required inputs.
+We follow the "fork-and-pull" Git workflow to manage contributions:
 
-## Code review process
+1. **Fork the Repository**: Create a copy of the MindsDB repository on your GitHub account.
+2. **Clone the Repository**: Download your fork to your local machine.
+3. **Make Changes**: Implement your improvements or fixes.
+4. **Commit Your Changes**: Add meaningful commit messages to describe your work.
+5. **Push Your Branch**: Upload your changes to your forked repository.
+6. **Submit a Pull Request (PR)**: Share your contributions with the core team for review.
 
-The Pull Request reviews are done on a regular basis. Please, make sure you respond to our feedback/questions.
+**Important Notes:**
+- Ensure you merge the latest changes from the `upstream` branch before submitting your PR.
+- Always target the `main` branch when creating a PR.
+- Confirm that all CI tests pass (ensure a GREEN status on tests before submission).
 
-## Community
+---
 
-If you have additional questions or you want to chat with the MindsDB core team, please join our [Slack community](https://mindsdb.com/joincommunity) or post at [Github Discussions](https://github.com/mindsdb/mindsdb/discussions).
- 
-To get updates on MindsDB’s latest announcements, releases, and events, sign up for our [Monthly Community Newsletter](https://mindsdb.com/newsletter/?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
+## 🐞 Feature and Bug Reports
 
-Join our mission of democratizing machine learning!
+We use **GitHub Issues** to track bugs and feature requests. You can contribute by:
 
-## Contributor Code of Conduct
-Please note that this project is released with a [Contributor Code of Conduct](https://github.com/mindsdb/mindsdb/blob/main/CODE_OF_CONDUCT.md). By participating in this project, you agree to abide by its terms.
+- Opening a [new issue](https://github.com/mindsdb/mindsdb/issues/new/choose) and providing all necessary details.
+- Checking for existing issues and joining the discussion.
 
+---
+
+## 🔍 Code Review Process
+
+Pull Request reviews are conducted regularly. To ensure a smooth review process:
+
+- Address feedback and questions promptly.
+- Communicate if you need further clarification on requested changes.
+
+---
+
+## 🤝 Community and Support
+
+Join the MindsDB community to connect with other contributors and the core team:
+
+- **Slack Community**: [Join here](https://mindsdb.com/joincommunity) to chat with us.
+- **GitHub Discussions**: Participate in conversations [here](https://github.com/mindsdb/mindsdb/discussions).
+
+Stay updated on MindsDB’s announcements, releases, and events by signing up for our [Monthly Community Newsletter](https://mindsdb.com/newsletter/?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
+
+---
+
+## 📜 Contributor Code of Conduct
+
+We are committed to fostering an inclusive and respectful community. By participating in MindsDB, you agree to adhere to our [Contributor Code of Conduct](https://github.com/mindsdb/mindsdb/blob/main/CODE_OF_CONDUCT.md).
+
+---
+
+Your contributions, whether big or small, drive MindsDB forward. Thank you for being part of our mission! 🎉

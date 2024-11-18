@@ -63,13 +63,13 @@ class DatabasesResource(Resource):
         if check_connection:
             handler = session.integration_controller.create_tmp_handler(name, database['engine'], parameters)
             status = handler.check_connection()
-            if hasattr(status, 'redirect_url'):
-                return {
-                    "status": "redirect_required",
-                    "redirect_url": status.redirect_url,
-                    "detail": status.error_message
-                }, HTTPStatus.OK
             if status.success is not True:
+                if hasattr(status, 'redirect_url') and isinstance(status, str):
+                    return {
+                        "status": "redirect_required",
+                        "redirect_url": status.redirect_url,
+                        "detail": status.error_message
+                    }, HTTPStatus.OK
                 return {
                     "status": "connection_error",
                     "detail": status.error_message

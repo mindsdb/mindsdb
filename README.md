@@ -28,13 +28,13 @@
 
 ----------------------------------------
 
-[MindsDB](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) is a platform for building AI solutions that can learn from and answer questions over federated data.
+[MindsDB](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) is the world’s most widely used platform for building AI that can learn from and answer questions across federated data.
 
 [![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=The%20platform%20for%20building%20AI,%20from%20enterprise%20data&url=https://github.com/mindsdb/mindsdb&via=mindsdb&hashtags=ai,opensource)
 
 ## 📖 About Us
 
-MindsDB is a powerful federated AI query engine that allows developers to connect agents and AI applications to a wide variety of [data sources](https://docs.mindsdb.com/integrations/data-overview?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
+MindsDB is a federated query engine designed for AI agents and applications that need to answer questions from one or multiple [data sources](https://docs.mindsdb.com/integrations/data-overview?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo), including both structured and unstructured data..
 
 ## 🚀 Get Started
 
@@ -52,21 +52,18 @@ After [connecting](https://docs.mindsdb.com/mindsdb_sql/sql/create/database) and
 | [Agents](https://docs.mindsdb.com/agents/agent?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo)  | Equip agents to answer questions over structured and unstructured data in MindsDB | [(Python)](https://docs.mindsdb.com/sdks/python/agents) | [(SQL)](https://docs.mindsdb.com/mindsdb_sql/agents/agent) |
 | [Automation](https://docs.mindsdb.com/mindsdb_sql/sql/create/jobs) | Automate AI-data workflows using Jobs | [(Python)](https://docs.mindsdb.com/sdks/python/create_job) | [(SQL)](https://docs.mindsdb.com/mindsdb_sql/sql/create/jobs) |
 
-## 💡 Examples
+## 💡 Example
 
-### AI System Deployment
+### Connecting AI Agents to structured and unstructired data
 
-Create AI systems composed of multiple connected components and expose them via APIs.
 
-<p align="center">
-  <img src="/docs/assets/ai_system_deployment.png"/>
-</p>
+A common use case involves connecting agents to data. The following example shows how to connect an AI agent to a database so it can perform search over structured data:
 
-A common use case involves connecting agents to data. The following example shows how to create an AI agent capable of searching over structured data:
 
+First we connect the datasource, in this case we connect a postgres database (you can do this via the SQL editor or SDK)
 ```sql
 -- Step 1: Connect a data source to MindsDB
-CREATE DATABASE data_source
+CREATE DATABASE demo_postgres_db
 WITH ENGINE = "postgres",
 PARAMETERS = {
     "user": "demo_user",
@@ -77,50 +74,40 @@ PARAMETERS = {
     "schema": "demo_data"
 };
 
-SELECT * FROM data_source.car_sales;
+-- See some of the data in there
+SELECT * FROM demo_postgres_db.car_sales;
 
--- Step 2: Create a skill
-CREATE SKILL my_skill
-USING
-    type = 'text2sql',
-    database = 'data_source',
-    tables = ['car_sales'],
-    description = 'car sales data of different car types';
-
-SHOW SKILLS;
-
--- Step 3: Deploy a conversational model
-CREATE ML_ENGINE langchain_engine
-FROM langchain
-USING
-      openai_api_key = 'your openai-api-key';
-      
-CREATE MODEL my_conv_model
-PREDICT answer
-USING
-    engine = 'langchain_engine',
-    model_name = 'gpt-4',
-    mode = 'conversational',
-    user_column = 'question',
-    assistant_column = 'answer',
-    max_tokens = 100,
-    temperature = 0,
-    verbose = True,
-    prompt_template = 'Answer the user input in a helpful way';
-
-DESCRIBE my_conv_model;
-
--- Step 4: Create an agent
-CREATE AGENT my_agent
-USING
-    model = 'my_conv_model',
-    skills = ['my_skill'];
-
-SHOW AGENTS;
-
--- Step 5: Query an agent
-SELECT * FROM my_agent WHERE question = 'What is the average price of cars from 2018?';
 ```
+
+Now you can create an egent that can answer questions over unstructued information in this database (let's use the Python SDK)
+
+```python
+import mindsdb_sdk
+
+# connects to the default port (47334) on localhost 
+server = mindsdb_sdk.connect()
+
+# create an agent (lets create one that can answer questions over car_sales table
+agent = server.agents.create('my_agent')
+agent.add_database(
+    database='demo_postgres_db',
+    tables=['car_sales'], # alternatively, all tables will be taken into account if none specified []
+    description='The table "car_sales" contains car sales data')
+
+# send questions to the agent
+agent = agents.get('my_agent')
+answer = agent.completion([{'question': 'What cars do we have with normal transmition and gas?'}])
+print(answer.content)
+```
+
+You add more data to the agent, lets add some unstructured data:
+
+```python
+agent.add_file('./cars_info.pdf', 'Details about the cars')
+answer = agent.completion([{'question': 'What cars do we have with normal transmition and gas and what valuable info do we have for a buyer of these cars?'}])
+print(answer.content)
+```
+
 
 [Agents are also accessible via API endpoints](https://docs.mindsdb.com/rest/agents/agent?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
 

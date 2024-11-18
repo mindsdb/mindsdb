@@ -105,10 +105,12 @@ class DruidHandler(DatabaseHandler):
         need_to_close = self.is_connected is False
 
         try:
-            self.connect()
+            conn=self.connect()
+            conn.cursor().execute('select 1')  # raise exception if provided wrong credentials 
+
             response.success = True
         except Exception as e:
-            logger.error(f'Error connecting to Pinot, {e}!')
+            logger.error(f'Error connecting to Druid, {e}!')
             response.error_message = str(e)
         finally:
             if response.success is True and need_to_close:

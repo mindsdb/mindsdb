@@ -5,9 +5,8 @@ import re
 from langchain.agents import AgentExecutor
 from langchain.agents.initialize import initialize_agent
 from langchain.chains.conversation.memory import ConversationSummaryBufferMemory
-from langchain.schema import SystemMessage
 from langchain_core.prompts import PromptTemplate
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import SystemMessage, HumanMessage
 
 import numpy as np
 import pandas as pd

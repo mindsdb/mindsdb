@@ -11,6 +11,7 @@ from sqlalchemy import (
     DateTime,
     Index,
     Integer,
+    Numeric,
     String,
     Table,
     UniqueConstraint,
@@ -565,17 +566,23 @@ class QueryContext(Base):
 class LLMLog(Base):
     __tablename__ = "llm_log"
     id: int = Column(Integer, primary_key=True)
-    company_id: int = Column(Integer, nullable=True)
+    company_id: int = Column(Integer, nullable=False)
     api_key: str = Column(String, nullable=True)
-    model_id: int = Column(Integer, nullable=False)
+    model_id: int = Column(Integer, nullable=True)
+    model_group: str = Column(String, nullable=True)
     input: str = Column(String, nullable=True)
     output: str = Column(String, nullable=True)
     start_time: datetime = Column(DateTime, nullable=False)
     end_time: datetime = Column(DateTime, nullable=True)
+    cost: float = Column(Numeric(5, 2), nullable=True)
     prompt_tokens: int = Column(Integer, nullable=True)
     completion_tokens: int = Column(Integer, nullable=True)
     total_tokens: int = Column(Integer, nullable=True)
     success: bool = Column(Boolean, nullable=False, default=True)
+    exception: str = Column(String, nullable=True)
+    traceback: str = Column(String, nullable=True)
+    stream: bool = Column(Boolean, default=False, comment="Is this completion done in 'streaming' mode")
+    metadata_: dict = Column("metadata", JSON, nullable=True)
 
 
 class LLMData(Base):

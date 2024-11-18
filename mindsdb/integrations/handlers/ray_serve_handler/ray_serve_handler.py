@@ -1,69 +1,69 @@
 import requests
 from typing import Dict, Optional
-
 import pandas as pd
-
 from mindsdb.integrations.libs.base import BaseMLEngine
 
 
 class RayServeHandler(BaseMLEngine):
     """
-    The Ray Serve integration engine needs to have a working connection to Ray Serve. For this:
-        - A Ray Serve server should be running
-
-    Example:
-
-    """  # noqa
+    The Ray Serve integration engine needs to have a working connection to Ray Serve.
+    """
     name = 'ray_serve'
 
     @staticmethod
     def create_validation(target, args=None, **kwargs):
         if not args.get('using'):
-            raise Exception("Error: This engine requires some parameters via the 'using' clause. Please refer to the documentation of the Ray Serve handler and try again.")  # noqa
+            raise Exception("Error: This engine requires some parameters via the 'using' clause.")
         if not args['using'].get('train_url'):
             raise Exception("Error: Please provide a URL for the training endpoint.")
         if not args['using'].get('predict_url'):
             raise Exception("Error: Please provide a URL for the prediction endpoint.")
 
     def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
-        # TODO: use join_learn_process to notify users when ray has finished the training process
-        args = args['using']  # ignore the rest of the problem definition
-        args['target'] = target
+        args = copy.copy(args['using'])
+        train_url = args.pop('train_url', None)
+        predict_url = args.pop('predict_url', None)
 
-        # Store the args in model storage for later use
-        self.model_storage.json_set('args', args)
+        if not train_url or not predict_url:
+            raise Exception("Error: Both 'train_url' and 'predict_url' must be provided.")
 
-        # Prepare the payload for training, including additional parameters
+        self.model_storage.json_set('args', {
+            'train_url': train_url,
+            'predict_url': predict_url,
+            **args
+        })
+
         payload = {
             'df': df.to_json(orient='records'),
-            'target': target
+            'target': target,
+            'args': args
         }
 
-        # Include additional parameters if they exist
-        if 'learn' in args:
-            payload['learn'] = args['learn']
-
         try:
-            resp = requests.post(args['train_url'],
-                                 json=payload,
-                                 headers={'content-type': 'application/json; format=pandas-records'})
-        except requests.exceptions.InvalidSchema:
-            raise Exception("Error: The URL provided for the training endpoint is invalid.")
+            resp = requests.post(
+                train_url,
+                json=payload,
+                headers={'content-type': 'application/json; format=pandas-records'}
+            )
+            resp.raise_for_status()
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"Error: Failed to communicate with the training endpoint. Details: {str(e)}")
 
-        resp = resp.json()
-        if resp['status'] != 'ok':
-            raise Exception("Error: Training failed: " + resp['status'])
+        response = resp.json()
+        if response.get('status') != 'ok':
+            raise Exception(f"Error: Training failed. Details: {response.get('status', 'Unknown error')}")
 
     def predict(self, df, args=None):
-        args = self.model_storage.json_get('args')  # override any incoming args for now
-        resp = requests.post(args['predict_url'],
-                             json={'df': df.to_json(orient='records')},
-                             headers={'content-type': 'application/json; format=pandas-records'})
+        args = self.model_storage.json_get('args')
+        resp = requests.post(
+            args['predict_url'],
+            json={'df': df.to_json(orient='records')},
+            headers={'content-type': 'application/json; format=pandas-records'}
+        )
         response = resp.json()
 
         target = args['target']
         if target != 'prediction':
-            # rename prediction to target
             response[target] = response.pop('prediction')
 
         predictions = pd.DataFrame(response)

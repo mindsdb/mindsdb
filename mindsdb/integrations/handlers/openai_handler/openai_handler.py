@@ -235,7 +235,9 @@ class OpenAIHandler(BaseMLEngine):
                 )
 
             if not args.get('model_name'):
-                if args['mode'] == 'image':
+                if args['mode'] == 'embedding':
+                    args['model_name'] = self.default_embedding_model
+                elif args['mode'] == 'image':
                     args['model_name'] = self.default_image_model
                 else:
                     args['model_name'] = self.default_model
@@ -296,7 +298,7 @@ class OpenAIHandler(BaseMLEngine):
         if args.get('mode', self.default_mode) == 'embedding':
             api_args = {
                 'question_column': pred_args.get('question_column', None),
-                'model': pred_args.get('model_name') or args.get('model_name') or self.default_embedding_model,
+                'model': pred_args.get('model_name') or args.get('model_name'),
             }
             model_name = 'embedding'
             if args.get('question_column'):

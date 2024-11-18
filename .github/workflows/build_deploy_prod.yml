@@ -26,10 +26,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: FranzDiebold/github-env-vars-action@v2
-      - name: Set up Python
-        uses: actions/setup-python@v5.1.0
-        with:
-          python-version: ${{ vars.CI_PYTHON_VERSION }}
       - name: Check Version
         run: |
           PYTHONPATH=./ python tests/scripts/check_version.py ${{ env.CI_REF_NAME }} ${{ github.event.release.prerelease }}
@@ -42,10 +38,6 @@ jobs:
     if: github.actor != 'mindsdbadmin'
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5.1.0
-        with:
-          python-version: ${{ vars.CI_PYTHON_VERSION }}
       - name: Install dependencies
         run: |
           uv pip install -r requirements/requirements-dev.txt

@@ -46,12 +46,6 @@ jobs:
       - name: Checkout
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         uses: actions/checkout@v4
-      - name: Set up Python
-        if: ${{ needs.changes.outputs.not-docs == 'true' }}
-        uses: actions/setup-python@v5.1.0
-        with:
-          # I can't work out how to use vars.CI_PYTHON_VERSION for forks here in a nice way, so we have to hardcode it for forks
-          python-version: ${{ vars.CI_PYTHON_VERSION || '3.10' }}
 
       # Checks the codebase for print() statements and fails if any are found
       # We should be using loggers instead

@@ -1,8 +1,8 @@
+import os
+import json
 import traceback
 from http import HTTPStatus
 from typing import Dict, Iterable, List
-import json
-import os
 
 from flask import request, Response
 from flask_restx import Resource
@@ -14,7 +14,7 @@ from mindsdb.api.http.namespaces.configs.projects import ns_conf
 from mindsdb.api.executor.controllers.session_controller import SessionController
 from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.utilities.log import getLogger
-from mindsdb.utilities.exception import EntityNotExistsError
+from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
 
 logger = getLogger(__name__)
@@ -184,13 +184,6 @@ class AgentResource(Resource):
         provider = agent.get('provider')
         params = agent.get('params', None)
 
-        if len(skills_to_rewrite) > 0 and (len(skills_to_remove) > 0 or len(skills_to_add) > 0):
-            return http_error(
-                HTTPStatus.BAD_REQUEST,
-                'Wrong arguments',
-                "'skills_to_rewrite' and 'skills_to_add' (or 'skills_to_remove') cannot be used at the same time"
-            )
-
         # Agent must not exist with new name.
         if name is not None and name != agent_name:
             agent_with_new_name = agents_controller.get_agent(name, project_name=project_name)
@@ -245,11 +238,23 @@ class AgentResource(Resource):
             )
 
             return updated_agent.as_dict()
-        except ValueError as e:
-            # Model or skill doesn't exist.
+        except EntityExistsError as e:
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                'Resource should not exists',
+                str(e)
+            )
+        except EntityNotExistsError as e:
+            # Agent or skill doesn't exist.
             return http_error(
                 HTTPStatus.NOT_FOUND,
                 'Resource not found',
+                str(e)
+            )
+        except ValueError as e:
+            return http_error(
+                HTTPStatus.BAD_REQUEST,
+                'Wrong arguments',
                 str(e)
             )
 

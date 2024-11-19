@@ -7,13 +7,14 @@ from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import null
 import pandas as pd
 
-from mindsdb.interfaces.model.functions import PredictorRecordNotFound
+from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.storage.db import Predictor
+from mindsdb.utilities.context import context as ctx
+from mindsdb.interfaces.database.projects import ProjectController
+from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.interfaces.model.model_controller import ModelController
 from mindsdb.interfaces.skills.skills_controller import SkillsController
-from mindsdb.interfaces.storage import db
-from mindsdb.interfaces.database.projects import ProjectController
-from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
 from .constants import ASSISTANT_COLUMN, SUPPORTED_PROVIDERS, PROVIDER_TO_MODELS
 from .langchain_agent import get_llm_provider
@@ -235,7 +236,9 @@ class AgentsController:
             agent (db.Agents): The created or updated agent
 
         Raises:
-            ValueError: Agent with name not found, agent with new name already exists, or model/skill does not exist.
+            EntityExistsError: if agent with new name already exists
+            EntityNotExistsError: if agent with name or skill not found
+            ValueError: if conflict in skills list
         '''
 
         skills_to_add = skills_to_add or []
@@ -249,13 +252,13 @@ class AgentsController:
 
         existing_agent = self.get_agent(agent_name, project_name=project_name)
         if existing_agent is None:
-            raise ValueError(f'Agent with name not found: {agent_name}')
+            raise EntityNotExistsError(f'Agent with name not found: {agent_name}')
 
         if name is not None and name != agent_name:
             # Check to see if updated name already exists
             agent_with_new_name = self.get_agent(name, project_name=project_name)
             if agent_with_new_name is not None:
-                raise ValueError(f'Agent with updated name already exists: {name}')
+                raise EntityExistsError(f'Agent with updated name already exists: {name}')
             existing_agent.name = name
 
         if model_name or provider:
@@ -272,7 +275,7 @@ class AgentsController:
             if skill_name not in skill_name_to_record_map:
                 skill_record = self.skills_controller.get_skill(skill_name, project_name)
                 if skill_record is None:
-                    raise ValueError(f'Skill with name does not exist: {skill_name}')
+                    raise EntityNotExistsError(f'Skill with name does not exist: {skill_name}')
                 skill_name_to_record_map[skill_name] = skill_record
 
         if len(skills_to_add) > 0 or len(skills_to_remove) > 0:

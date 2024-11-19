@@ -58,7 +58,7 @@ from .constants import (
     ASSISTANT_COLUMN,
     CONTEXT_COLUMN,
 )
-from mindsdb.interfaces.skills.skill_tool import skill_tool
+from mindsdb.interfaces.skills.skill_tool import skill_tool, SkillData
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import SystemMessage
@@ -335,16 +335,11 @@ class LangchainAgent:
 
         return response
 
-    def _get_completion_stream(
-        self, messages: List[dict]
-    ) -> Iterable[Dict]:
-        """
-        Gets a completion as a stream of chunks from given messages.
+    def _get_completion_stream(self, messages: List[dict]) -> Iterable[Dict]:
+        """Gets a completion as a stream of chunks from given messages.
 
         Args:
             messages (List[dict]): Messages to get completion chunks for
-            trace_id (str): Langfuse trace ID to use
-            observation_id (str): Langfuse parent observation Id to use
 
         Returns:
             chunks (Iterable[object]): Completion chunks
@@ -380,9 +375,7 @@ class LangchainAgent:
             self.set_embedding_model(args)
             self.args.pop("mode")
 
-        tools = []
-        skills = self.agent.skills or []
-        tools += self.langchain_tools_from_skills(skills, llm)
+        tools = self._langchain_tools_from_skills(llm)
 
         # Prefer prediction prompt template over original if provided.
         prompt_template = args["prompt_template"]
@@ -431,9 +424,20 @@ class LangchainAgent:
         )
         return agent_executor
 
-    def langchain_tools_from_skills(self, skills, llm):
+    def _langchain_tools_from_skills(self, llm):
         # Makes Langchain compatible tools from a skill
-        tools_groups = skill_tool.get_tools_from_skills(skills, llm, self.embedding_model)
+        skills_data = [
+            SkillData(
+                name=rel.skill.name,
+                type=rel.skill.type,
+                params=rel.skill.params,
+                project_id=rel.skill.project_id,
+                agent_tables_list=(rel.parameters or {}).get('tables')
+            )
+            for rel in self.agent.skills_relationships
+        ]
+
+        tools_groups = skill_tool.get_tools_from_skills(skills_data, llm, self.embedding_model)
 
         all_tools = []
         for skill_type, tools in tools_groups.items():

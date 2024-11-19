@@ -320,10 +320,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     def send_query_answer(self, answer: SQLAnswer):
         if answer.type == RESPONSE_TYPE.TABLE:
             packages = []
-            if len(answer.data) < 1000:
-                packages += self.get_tabel_packets(columns=answer.columns, data=answer.data.to_lists())
-            else:
+
+            if len(answer.data) > 1000:
+                # for big responses leverage pandas map function to convert data to packages
                 self.send_tabel_packets(columns=answer.columns, data=answer.data)
+            else:
+                packages += self.get_tabel_packets(columns=answer.columns, data=answer.data.to_lists())
 
             if answer.status is not None:
                 packages.append(self.last_packet(status=answer.status))

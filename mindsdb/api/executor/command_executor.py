@@ -1479,7 +1479,7 @@ class ExecuteCommands:
                 skills_to_remove=skills_to_remove,
                 params=statement.params
             )
-        except ValueError as e:
+        except (EntityExistsError, EntityNotExistsError, ValueError) as e:
             # Project does not exist or agent does not exist.
             raise ExecutorException(str(e))
 

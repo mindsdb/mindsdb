@@ -318,8 +318,6 @@ class ChromaDBHandler(VectorStoreHandler):
         if distances is not None:
             payload[TableField.DISTANCE.value] = distances
 
-        # casting embedding to otherwise pandas give error due to multidimensionality
-        payload['embeddings'] = [str(i) for i in payload['embeddings']]
         return pd.DataFrame(payload)
 
     def insert(self, table_name: str, data: pd.DataFrame):

@@ -417,7 +417,8 @@ class TestOpenAI(unittest.TestCase):
         self.handler.model_storage.json_get.return_value = {
             'question_column': 'text',
             'target': 'image',
-            'mode': 'image'
+            'mode': 'image',
+            'model_name': 'dall-e-2'
         }
 
         # Mock the images.generate method of the OpenAI client
@@ -450,7 +451,8 @@ class TestOpenAI(unittest.TestCase):
         self.handler.model_storage.json_get.return_value = {
             'prompt_template': 'Generate an image of {{text}}',
             'target': 'image',
-            'mode': 'image'
+            'mode': 'image',
+            'model_name': 'dall-e-2'
         }
 
         # Mock the images.generate method of the OpenAI client

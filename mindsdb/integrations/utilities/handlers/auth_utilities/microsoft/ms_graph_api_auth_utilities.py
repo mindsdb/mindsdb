@@ -1,109 +1,116 @@
-import json
-from flask import request
+from typing import Dict, List, Text
 
 import msal
-from ..exceptions import AuthException
 
-from mindsdb.integrations.utilities.handlers.api_utilities import MSGraphAPIBaseClient
-
+from mindsdb.integrations.utilities.handlers.auth_utilities.exceptions import AuthException
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
 
-class MSGraphAPIAuthManager:
-    def __init__(self, handler_storage: str, scopes: list, client_id: str, client_secret: str, tenant_id: str, code: str = None) -> None:
-        self.handler_storage = handler_storage
-        self.scopes = scopes
+class MSGraphAPIDelegatedPermissionsManager:
+    """
+    The class for managing the delegated permissions for the Microsoft Graph API.
+    """
+    def __init__(
+        self,
+        client_id: Text,
+        client_secret: Text,
+        tenant_id: Text,
+        cache: msal.SerializableTokenCache,
+        scopes: List = ["https://graph.microsoft.com/.default"],
+        code: Text = None,
+    ) -> None:
+        """
+        Initializes the delegated permissions manager.
+
+        Args:
+            client_id (Text): The client ID of the application registered in Microsoft Entra ID.
+            client_secret (Text): The client secret of the application registered in Microsoft Entra ID.
+            tenant_id (Text): The tenant ID of the application registered in Microsoft Entra ID.
+            cache (msal.SerializableTokenCache): The token cache for storing the access token.
+            scopes (List): The scopes for the Microsoft Graph API.
+            code (Text): The authentication code for acquiring the access token.
+        """
         self.client_id = client_id
         self.client_secret = client_secret
         self.tenant_id = tenant_id
+        self.cache = cache
+        self.scopes = scopes
         self.code = code
 
-        # get the redirect uri from handler storage if it exists
-        if self.handler_storage.json_get('args'):
-            self.redirect_uri = self.handler_storage.json_get('args').get('redirect_uri')
-        # otherwise, get it from the request headers
-        # this is done because when the chatbot task runs, it doesn't have access to the request headers because it does not come through a request
-        else:
-            self.redirect_uri = request.headers['ORIGIN'] + '/verify-auth'
-            if '127.0.0.1' in self.redirect_uri:
-                self.redirect_uri = self.redirect_uri.replace('127.0.0.1', 'localhost')
+    def get_access_token(self) -> Text:
+        """
+        Retrieves an access token for the Microsoft Graph API.
+        If a valid access token is found in the cache, it is returned.
+        Otherwise, the authentication flow is executed.
 
-            self.handler_storage.json_set('args', {'redirect_uri': self.redirect_uri})
+        Returns:
+            Text: The access token for the Microsoft Graph API.
+        """
+        # Check if a valid access token is already in the cache for the signed-in user.
+        msal_app = self._get_msal_app()
+        accounts = msal_app.get_accounts()
 
-    def get_access_token(self):
-        try:
-            creds = json.loads(self.handler_storage.file_get('creds'))
-            access_token = creds.get('access_token')
+        if accounts:
+            response = msal_app.acquire_token_silent(self.scopes, account=accounts[0])
+            if "access_token" in response:
+                return response['access_token']
 
-            if not self._check_access_token_validity(access_token):
-                logger.info('Access token expired. Refreshing...')
-                response = self._refresh_access_token(creds.get('refresh_token'))
-                self.handler_storage.file_set('creds', json.dumps(response).encode('utf-8'))
-                access_token = response.get('access_token')
-
-            return access_token
-        except Exception as e:
-            logger.error(f'Error getting credentials from storage: {e}!')
-
+        # If no valid access token is found in the cache, run the authentication flow.
         response = self._execute_ms_graph_api_auth_flow()
+
         if "access_token" in response:
-            self.handler_storage.file_set('creds', json.dumps(response).encode('utf-8'))
             return response['access_token']
+        # If no access token is returned, raise an exception.
+        # This is the expected behaviour when the user attempts to authenticate for the first time.
         else:
             raise AuthException(
                 f'Error getting access token: {response.get("error_description")}',
                 auth_url=response.get('auth_url')
             )
 
-    def _get_msal_app(self):
+    def _get_msal_app(self) -> msal.ConfidentialClientApplication:
+        """
+        Returns an instance of the MSAL ConfidentialClientApplication.
+
+        Returns:
+            msal.ConfidentialClientApplication: An instance of the MSAL ConfidentialClientApplication.
+        """
         return msal.ConfidentialClientApplication(
             self.client_id,
             authority=f"https://login.microsoftonline.com/{self.tenant_id}",
             client_credential=self.client_secret,
+            token_cache=self.cache,
         )
 
-    def _save_credentials_to_file(self, creds, creds_file):
-        with open(creds_file, 'w') as f:
-            f.write(json.dumps(creds))
+    def _execute_ms_graph_api_auth_flow(self) -> Dict:
+        """
+        Executes the authentication flow for the Microsoft Graph API.
+        If the authentication code is provided, the token is acquired by authorization code.
+        Otherwise, the authorization request URL is returned.
 
-    def _execute_ms_graph_api_auth_flow(self):
+        Raises:
+            AuthException: If the authentication code is not provided
+
+        Returns:
+            Dict: The response from the Microsoft Graph API authentication flow.
+        """
         msal_app = self._get_msal_app()
 
+        # If the authentication code is provided, acquire the token by authorization code.
         if self.code:
             response = msal_app.acquire_token_by_authorization_code(
                 code=self.code,
-                scopes=self.scopes,
-                redirect_uri=self.redirect_uri,
+                scopes=self.scopes
             )
 
             return response
+
+        # If the authentication code is not provided, get the authorization request URL.
         else:
             auth_url = msal_app.get_authorization_request_url(
-                scopes=self.scopes,
-                redirect_uri=self.redirect_uri,
+                scopes=self.scopes
             )
 
             raise AuthException(f'Authorisation required. Please follow the url: {auth_url}', auth_url=auth_url)
-
-    def _refresh_access_token(self, refresh_token: str):
-        msal_app = self._get_msal_app()
-
-        response = msal_app.acquire_token_by_refresh_token(
-            refresh_token=refresh_token,
-            scopes=self.scopes,
-        )
-
-        return response
-
-    def _check_access_token_validity(self, access_token: str):
-        msal_graph_api_client = MSGraphAPIBaseClient(access_token)
-        try:
-            msal_graph_api_client.get_user_profile()
-            return True
-        except Exception as e:
-            if 'InvalidAuthenticationToken' in str(e):
-                return False
-            else:
-                raise e

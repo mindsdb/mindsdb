@@ -39,7 +39,7 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.to
 MAIN_RULE_IGNORES = {
     "DEP003": ["torch"],
     "DEP001": ["torch", "pgvector"],
-    "DEP002": ["psycopg2-binary", "lark", "transformers"]
+    "DEP002": ["psycopg2-binary", "lark", "transformers", "langchain-experimental", "lxml"]
 }
 
 
@@ -71,6 +71,7 @@ HANDLER_RULE_IGNORES = {
 }
 
 PACKAGE_NAME_MAP = {
+    "azure-storage-blob": ["azure"],
     "scylla-driver": ["cassandra"],
     "mysql-connector-python": ["mysql"],
     "snowflake-connector-python": ["snowflake"],
@@ -87,6 +88,7 @@ PACKAGE_NAME_MAP = {
     "google-cloud-storage": ["google"],
     "protobuf": ["google"],
     "google-api-python-client": ["googleapiclient"],
+    "ibm-cos-sdk": ["ibm_boto3", "ibm_botocore"],
     "binance-connector": ["binance"],
     "pysqlite3": ["pysqlite3"],
     "atlassian-python-api": ["atlassian"],
@@ -127,6 +129,7 @@ PACKAGE_NAME_MAP = {
     "auto-ts": ["auto_ts"],
     "llama-index-readers-web": ["llama_index"],
     "llama-index-embeddings-openai": ["llama_index"],
+    "unifyai": ["unify"],
     "botframework-connector": ["botframework"],
     "botbuilder-schema": ["botbuilder"],
     "opentelemetry-api": ["opentelemetry"],

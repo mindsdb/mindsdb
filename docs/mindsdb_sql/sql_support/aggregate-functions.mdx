@@ -1,0 +1,16 @@
+---
+title: SQL Aggregate Functions
+sidebarTitle: Aggregate Functions
+---
+
+MindsDB supports standard SQL syntax, including the SQL aggregate functions.
+
+SQL aggregate functions perform calculations on a set of values and return a single result, making them useful for summarizing or analyzing data across multiple rows. Common aggregate functions include `COUNT()`, `SUM()`, `AVG()`, `MIN()`, and `MAX()`. These functions are used with `GROUP BY` to organize results by specific categories.
+
+```sql
+SELECT
+        year,
+        SUM(salary) AS annual_salary
+FROM salaries
+GROUP BY year;
+```

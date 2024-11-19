@@ -1,9 +1,8 @@
 from typing import Type
 import re
-
-from langchain.tools import BaseTool
 from mindsdb_sql import parse_sql
 from pydantic import BaseModel, Field
+from langchain_core.tools import BaseTool
 
 
 class _MindsDBSQLParserToolInput(BaseModel):

@@ -1,6 +1,7 @@
 import os
 import copy
-from typing import List, Optional, Dict
+from typing import Dict, List, Optional
+import json
 
 import pandas as pd
 
@@ -17,7 +18,11 @@ from mindsdb_sql.parser.ast import (
 from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor
 
 import mindsdb.interfaces.storage.db as db
-from mindsdb.integrations.libs.vectordatabase_handler import TableField
+from mindsdb.integrations.libs.vectordatabase_handler import (
+    DistanceFunction,
+    TableField,
+    VectorStoreHandler,
+)
 from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
 from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel
 from mindsdb.interfaces.agents.langchain_agent import build_embedding_model, create_chat_model, get_llm_provider
@@ -28,6 +33,9 @@ from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
 from mindsdb.api.executor.command_executor import ExecuteCommands
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 class KnowledgeBaseTable:
@@ -42,18 +50,16 @@ class KnowledgeBaseTable:
         self.session = session
         self.document_preprocessor = None
         self.document_loader = None
-        self.mysql_proxy = None
-
-        # Initialize preprocessor if config exists in params
-        if kb.params and 'preprocessing' in kb.params:
-            self.configure_preprocessing(kb.params['preprocessing'])
 
     def configure_preprocessing(self, config: Optional[dict] = None):
         """Configure preprocessing for the knowledge base table"""
-        self.document_preprocessor = None
+        self.document_preprocessor = None  # Reset existing preprocessor
         if config is not None:
             preprocessing_config = PreprocessingConfig(**config)
             self.document_preprocessor = PreprocessorFactory.create_preprocessor(preprocessing_config)
+        else:
+            # Always create a default preprocessor if none specified
+            self.document_preprocessor = PreprocessorFactory.create_preprocessor()
 
     def select_query(self, query: Select) -> pd.DataFrame:
         """
@@ -119,21 +125,12 @@ class KnowledgeBaseTable:
 
     def insert_query_result(self, query: str, project_name: str):
         """Process and insert SQL query results"""
-        if not self.mysql_proxy:
-            raise ValueError("MySQL proxy not configured")
+        if not self.document_loader:
+            raise ValueError("Document loader not configured")
 
-        if not query:
-            return
-
-        self.mysql_proxy.set_context({'db': project_name})
-        query_result = self.mysql_proxy.process_query(query)
-
-        if query_result.type != 'table':  # Use enum/constant
-            raise ValueError('Query returned no data')
-
-        column_names = [c.get('alias', c.get('name')) for c in query_result.columns]
-        df = pd.DataFrame.from_records(query_result.data, columns=column_names)
-        self.insert(df)
+        documents = list(self.document_loader.load_query_result(query, project_name))
+        if documents:
+            self.insert_documents(documents)
 
     def insert_rows(self, rows: List[Dict]):
         """Process and insert raw data rows"""
@@ -204,6 +201,30 @@ class KnowledgeBaseTable:
         db_handler = self.get_vector_db()
         db_handler.query(query)
 
+    def hybrid_search(
+        self,
+        query: str,
+        keywords: List[str] = None,
+        metadata: Dict[str, str] = None,
+        distance_function=DistanceFunction.COSINE_DISTANCE
+    ) -> pd.DataFrame:
+        query_df = pd.DataFrame.from_records([{TableField.CONTENT.value: query}])
+        embeddings_df = self._df_to_embeddings(query_df)
+        if embeddings_df.empty:
+            return pd.DataFrame([])
+        embeddings = embeddings_df.iloc[0][TableField.EMBEDDINGS.value]
+        keywords_query = None
+        if keywords is not None:
+            keywords_query = ' '.join(keywords)
+        db_handler = self.get_vector_db()
+        return db_handler.hybrid_search(
+            self._kb.vector_database_table,
+            embeddings,
+            query=keywords_query,
+            metadata=metadata,
+            distance_function=distance_function
+        )
+
     def clear(self):
         """
         Clear data in KB table
@@ -214,26 +235,97 @@ class KnowledgeBaseTable:
 
     def insert(self, df: pd.DataFrame):
         """
-        Insert dataframe to KB table
-        Adds embedding column to dataframe and calls .upsert method of vector db
-        :param df: input dataframe
+        Insert dataframe to KB table. For multiple content columns, each column's content
+        becomes a separate document while preserving the relationship via metadata.
         """
         if df.empty:
             return
 
+        # First adapt column names to identify content and metadata columns
+        adapted_df = self._adapt_column_names(df)
+
         if self.document_preprocessor:
-            # Convert DataFrame to documents for preprocessing
-            raw_documents = [Document(
-                content=row.get(TableField.CONTENT.value, ''),
-                id=row.get(TableField.ID.value),
-                metadata=row.get(TableField.METADATA.value, {})
-            ) for _, row in df.iterrows()]
+            # Get content columns that were identified by _adapt_column_names
+            content_columns = self._kb.params.get('content_columns', [TableField.CONTENT.value])
 
-            # Apply preprocessing
+            # Convert DataFrame rows to documents, creating separate documents for each content column
+            raw_documents = []
+            for idx, row in adapted_df.iterrows():
+                base_metadata = row.get(TableField.METADATA.value, {})
+                if isinstance(base_metadata, str):
+                    try:
+                        base_metadata = json.loads(base_metadata)
+                    except json.JSONDecodeError:
+                        base_metadata = {}
+
+                # Get the row ID
+                doc_id = row.get(TableField.ID.value)
+                if doc_id is None:
+                    doc_id = str(idx)
+
+                # Create a separate document for each content column
+                for col in content_columns:
+                    content = row.get(col)
+                    if content and str(content).strip():  # Only create document if content exists
+                        # Create unique ID for each column document
+                        column_doc_id = f"{doc_id}_{col}" if doc_id else None
+
+                        # Add column source to metadata
+                        metadata = {
+                            **base_metadata,
+                            'source_column': col,
+                            'original_row_id': doc_id
+                        }
+
+                        raw_documents.append(Document(
+                            content=str(content),
+                            id=column_doc_id,
+                            metadata=metadata
+                        ))
+
+            # Apply preprocessing to all documents
             processed_chunks = self.document_preprocessor.process_documents(raw_documents)
-            df = pd.DataFrame([chunk.model_dump() for chunk in processed_chunks])
 
-        df = self._adapt_column_names(df)
+            # Convert processed chunks back to DataFrame with standard structure
+            df = pd.DataFrame([{
+                TableField.CONTENT.value: chunk.content,
+                TableField.ID.value: chunk.id,
+                TableField.METADATA.value: chunk.metadata
+            } for chunk in processed_chunks])
+
+        else:
+            # If no preprocessing, we still need to transform multiple columns into separate rows
+            rows = []
+            content_columns = self._kb.params.get('content_columns', [TableField.CONTENT.value])
+
+            for idx, row in adapted_df.iterrows():
+                base_metadata = row.get(TableField.METADATA.value, {})
+                if isinstance(base_metadata, str):
+                    try:
+                        base_metadata = json.loads(base_metadata)
+                    except json.JSONDecodeError:
+                        base_metadata = {}
+
+                doc_id = row.get(TableField.ID.value, str(idx))
+
+                for col in content_columns:
+                    content = row.get(col)
+                    if content and str(content).strip():
+                        rows.append({
+                            TableField.CONTENT.value: str(content),
+                            TableField.ID.value: f"{doc_id}_{col}",
+                            TableField.METADATA.value: {
+                                **base_metadata,
+                                'source_column': col,
+                                'original_row_id': doc_id
+                            }
+                        })
+
+            df = pd.DataFrame(rows)
+
+        if df.empty:
+            logger.warning("No valid content found in any content columns")
+            return
 
         # add embeddings
         df_emb = self._df_to_embeddings(df)
@@ -310,6 +402,10 @@ class KnowledgeBaseTable:
             metadata_columns = list(set(metadata_columns).intersection(columns))
             # use all unused columns is content
             content_columns = list(set(columns).difference(metadata_columns))
+        elif TableField.METADATA.value in columns:
+            # Use 'metadata' column as a JSON column if passed in explicitly.
+            metadata_columns = [TableField.METADATA.value]
+            content_columns = list(set(columns).difference(metadata_columns))
         else:
             # all columns go to content
             content_columns = columns
@@ -332,6 +428,15 @@ class KnowledgeBaseTable:
             )
             return document
 
+        def handle_metadata_row(row: pd.Series) -> str:
+            metadata_dict = dict(row)
+            if TableField.METADATA.value in metadata_dict:
+                # Extract nested metadata in special case where we have a single column named 'metadata'.
+                # Hacky solution to support passing in 'metadata' JSON column instead of passing in
+                # many different named columns representing metadata when inserting into KB.
+                return metadata_dict[TableField.METADATA.value]
+            return str(metadata_dict)
+
         # create dataframe
         if len(content_columns) == 1:
             c_content = df[content_columns[0]]
@@ -344,7 +449,7 @@ class KnowledgeBaseTable:
             df_out[TableField.ID.value] = df[id_column]
 
         if metadata_columns and len(metadata_columns) > 0:
-            df_out[TableField.METADATA.value] = df[metadata_columns].apply(lambda row: str(dict(row)), axis=1)
+            df_out[TableField.METADATA.value] = df[metadata_columns].apply(handle_metadata_row, axis=1)
 
         return df_out
 
@@ -357,7 +462,7 @@ class KnowledgeBaseTable:
                     node.args[0].parts = [TableField.EMBEDDINGS.value]
                     node.args[1].value = [self._content_to_embeddings(node.args[1].value)]
 
-    def get_vector_db(self):
+    def get_vector_db(self) -> VectorStoreHandler:
         """
         helper to get vector db handler
         """
@@ -492,10 +597,9 @@ class KnowledgeBaseController:
         Add a new knowledge base to the database
         :param preprocessing_config: Optional preprocessing configuration to validate and store
         """
-        # Add preprocessing config to params if provided
+        # Validate preprocessing config first if provided
         if preprocessing_config is not None:
-            # Validate config before storing
-            PreprocessingConfig(**preprocessing_config)
+            PreprocessingConfig(**preprocessing_config)  # Validate before storing
             params = params or {}
             params['preprocessing'] = preprocessing_config
 
@@ -689,14 +793,22 @@ class KnowledgeBaseController:
 
     def get_table(self, name: str, project_id: int) -> KnowledgeBaseTable:
         """
-        Returns kb table object
+        Returns kb table object with properly configured preprocessing
         :param name: table name
         :param project_id: project id
         :return: kb table object
         """
         kb = self.get(name, project_id)
         if kb is not None:
-            return KnowledgeBaseTable(kb, self.session)
+            table = KnowledgeBaseTable(kb, self.session)
+
+            # Always configure preprocessing - either from params or default
+            if kb.params and 'preprocessing' in kb.params:
+                table.configure_preprocessing(kb.params['preprocessing'])
+            else:
+                table.configure_preprocessing(None)  # This ensures default preprocessor is created
+
+            return table
 
     def list(self, project_name: str = None) -> List[dict]:
         """

@@ -509,6 +509,15 @@
             "mindsdb_sql/functions/custom_functions",
             "mindsdb_sql/functions/llm_function"
           ]
+        },
+        {
+          "group": "Standard SQL Support",
+          "pages": [
+            "mindsdb_sql/sql_support/cte",
+            "mindsdb_sql/sql_support/case-when",
+            "mindsdb_sql/sql_support/aggregate-functions",
+            "mindsdb_sql/sql_support/window-functions"
+          ]
         }
       ]
     },
@@ -914,6 +923,7 @@
             "integrations/app-integrations/instatus",
             "integrations/app-integrations/intercom",
             "integrations/app-integrations/mediawiki",
+            "integrations/app-integrations/microsoft-onedrive",
             "integrations/app-integrations/microsoft-teams",
             "integrations/app-integrations/newsapi",
             "integrations/app-integrations/paypal",

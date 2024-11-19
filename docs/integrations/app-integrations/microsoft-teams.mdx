@@ -3,11 +3,8 @@ title: Microsoft Teams
 sidebarTitle: Microsoft Teams
 ---
 
-In this section, we present how to connect Microsoft Teams to MindsDB.
-
-[Microsoft Teams](https://www.microsoft.com/en/microsoft-teams/group-chat-software/) is the ultimate messaging app for your organization—a workspace for real-time collaboration and communication, meetings, file and app sharing, and even the occasional emoji! All in one place, all in the open, all accessible to everyone.
-
-The Microsoft Teams handler allows you to read and send messages to a Microsoft Teams channel or chat. It also allows you to create a chatbot that will respond to messages.
+This documentation describes the integration of MindsDB with [Microsoft Teams](https://www.microsoft.com/en-us/microsoft-teams/group-chat-software), the ultimate messaging app for your organization.
+The integration allows MindsDB to create chatbots enhanced with AI capabilities that can respond to messages in Microsoft Teams.
 
 ## Prerequisites
 
@@ -15,177 +12,118 @@ Before proceeding, ensure the following prerequisites are met:
 
 1. Install MindsDB locally via [Docker](/setup/self-hosted/docker) or [Docker Desktop](/setup/self-hosted/docker-desktop).
 2. To connect Microsoft Teams to MindsDB, install the required dependencies following [this instruction](/setup/self-hosted/docker#install-dependencies).
-3. Install or ensure access to Microsoft Teams.
 
 ## Connection
 
-This handler was implemented using [msal](https://github.com/AzureAD/microsoft-authentication-library-for-python) for authentication and [Requests](https://github.com/psf/requests) to submit requests to the Microsoft Graph API.
+Establish a connection to Microsoft Teams from MindsDB by executing the following SQL command and providing its [handler name](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/ms_teams_handler) as an engine.
 
-The Microsoft Teams handler is initialized with the following parameters:
+```sql
+CREATE DATABASE teams_conn
+WITH ENGINE = 'teams', 
+PARAMETERS = {
+  "client_id": "12345678-90ab-cdef-1234-567890abcdef",
+  "client_secret": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+};
+```
 
-- `client_id`: The client ID of the registered Microsoft Entra ID application.
-- `client_secret`: The client secret of the registered Microsoft Entra ID application.
-- `tenant_id`: The tenant ID of the registered Microsoft Entra ID application.
+Required connection parameters include the following:
+
+* `client_id`: The client ID of the registered Microsoft Entra ID application.
+* `client_secret`: The client secret of the registered Microsoft Entra ID application.
 
 <Note>
 Microsoft Entra ID was previously known as Azure Active Directory (Azure AD).
 </Note>
 
-The parameters given above can be obtained by registering an application in Entra ID by following these steps,
-1. Go to the [Azure Portal](https://portal.azure.com/#home) and sign in with your Microsoft account.
-2. Locate the **Microsoft Entra ID** service and click on it.
-3. Click on **App registrations** and then click on **New registration**.
-4. Enter a name for your application and select the **Accounts in this organizational directory only** option for the **Supported account types** field.
-5. Keep the **Redirect URI** field empty and click on **Register**.
-6. Click on **API permissions** and then click on **Add a permission**.
-7. Select **Microsoft Graph** and then click on **Delegated permissions**.
-8. Select the following permissions based on the data you want to access and the operations you want to perform:
-    - Chats:
-        - Chat.ReadBasic
-        - Chat.Read
-        - Chat.ReadWrite
+### How to set up Microsoft Teams app and MindsDB chatbot
 
-    - Chat messages:
-        - Chat.Read
-        -	Chat.ReadWrite
-        - Group.ReadWrite.All
-  
-    - Channels:
-        - ChannelSettings.Read.All
-        - ChannelSettings.ReadWrite.All
-        - Directory.Read.All
-        - Directory.ReadWrite.All
-        - Group.Read.All
-        - Group.ReadWrite.All
+Follow the instructions given below to set up the Microsoft Teams app that will act as the chatbot:
 
-    - Channel messages:
-        - ChannelMessage.Read.All
-        - Group.Read.All
-        - Group.ReadWrite.All
-9. Click on **Add permissions**.
-10. Copy the **Application (client) ID** and record it as the `client_id` parameter, and copy the **Directory (tenant) ID** and record it as the `tenant_id` parameter.
-11. Click on **Certificates & secrets** and then click on **New client secret**.
-12. Enter a description for your client secret and select an expiration period.
-13. Click on **Add** and copy the generated client secret and record it as the `client_secret` parameter.
-14. Click on **Authentication** and then click on **Add a platform**.
-15. Select **Web** and enter URL where MindsDB has been deployed followed by `/verify-auth` in the **Redirect URIs** field. For example, if you are running MindsDB locally (on `http://localhost:47334`), enter `http://localhost:47334/verify-auth` in the **Redirect URIs** field.
+<Steps>
+  <Step title="Register a bot in the Microsoft Bot Framework portal">
+    - Follow [this link](https://dev.botframework.com/bots/new) to the Microsoft Bot Framework portal and sign in with your Microsoft account.
+    - Fill out the *Display name*, *Bot handle*, and, optionally, the *Long description*, but leave the *Messaging endpoint* field empty for now.
+    - Set the *App type* to be `Multi Tenant` and click on *Create Microsoft App ID and password*. This will open a new tab with the Azure portal.
+  </Step>
+  <Step title="Register an application in the Azure portal">
+    - Click on *New registration* and fill out the *Name* and select the `Accounts in any organizational directory (Any Azure AD directory - Multitenant)` option under *Supported account types*, and click on *Register*. **Save the *Application (client) ID* for later use.**
+    - Click on *Certificates & secrets* under *Manage*.
+    - Click on *New client secret* and fill out the *Description* and select an appropriate *Expires* period, and click on *Add*.
+    - Copy and **save the client secret in a secure location.**
+    <Tip>
+    If you already have an existing app registration, you can use it instead of creating a new one and skip the above steps.
+    </Tip>
+  </Step>
+  <Step title="Configure a chatbot in the MindsDB Editor">
+    - Open the MindsDB editor and create a connection to Microsoft Teams using the client ID and client secret obtained in the previous steps. Use the `CREATE DATABASE` statement as show above.
+    - Using this connection, create a chatbot with the [`CREATE CHATBOT`](/agents/chatbot) syntax, as shown in the Usage section below.
+    - Run the `SHOW CHATBOTS` command and record the `webhook_token` of the chatbot you created.
+  </Step>
+  <Step title="Complete the bot setup in the Microsoft Bot Framework portal">
+    - Navigate back to the Microsoft Bot Framework portal and fill out the messaging endpoint in the following format: `<mindsdb_url>/api/webhooks/chatbots/<webhook_token>`.
+  <Tip>
+  The `<mindsdb_url>` placeholder should be replaced with the URL where MindsDB instance is running. *Note that if you are running MindsDB locally, it will need to be exposed to the internet using a service like [ngrok](https://ngrok.com/).*
+  </Tip>
+    - Fill out the *Microsoft App ID* using the client ID obtained in the previous steps, agree to the terms, and click on *Register*.
+    - Under *Add a featured channel*, click on *Microsoft Teams*, select your Microsoft Teams solution, click on *Save* and agree to the terms when prompted.
+  </Step>
+  <Step title="Create an application via the Developer Portal in Microsoft Teams">
+    - Navigate to Microsoft Teams and then to the *Apps* tab.
+    - Search for the *Developer Portal* app and add it to your workspace.
+    - Open the *Developer Portal*, click on *Apps* and then on *New app*.
+    - Fill out the *Name* for the app and click on *Add*.
+    - Navigate to *Basic information* and fill out the required fields: *Short description*, *Long description*, *Developer or company name*, *Website*, *Privacy policy*, *Terms of use*, and *Application (client) ID*. You may also provide any additional information if you prefer.
+  <Tip>
+  Please note that the above fields are required for the bot to be usable in Microsoft Teams. The URLs provided in the *Website*, *Privacy policy*, and *Terms of use* fields must be valid URLs.
+  </Tip>
+    - Navigate to *App features* and select *Bot*.
+    - Choose the *Select an existing bot* option and select the bot you created earlier in the Microsoft Bot Framework portal.
+    - Select all of the scopes where bot is required to be used and click on *Save*.
+    - Finally, on the navigation pane, click on *Publish* and then on *Publish to your org*.
+  </Step>
+</Steps>
 
-<Tip>
-You can find more information about creating app registrations [here](https://docs.microsoft.com/en-us/graph/auth-register-app-v2).
-</Tip>
+<Info>
+For the bot to be made available to the users in your organization, you will need to ask your IT administrator to approve the submission at this [link](https://admin.teams.microsoft.com/policies/manage-apps). 
 
-To connect to Microsoft Teams using MindsDB, the following CREATE DATABASE statement can be used:
+Once it is approved, users can find it under the *Built for your org* section in the *Apps* tab. They can either chat with the bot directly or add it to a channel. To chat with the bot in a channel, type `@<bot_name>` followed by your message.
 
-```sql
-CREATE DATABASE teams_datasource
-WITH ENGINE = 'teams',
-PARAMETERS = {
-  "client_id": "your-client-id",
-  "client_secret": "your-client-secret",
-  "tenant_id": "your-tenant-id"
-};
-```
-
-When the above is statement is executed with the given parameters, the handler will open a browser window and prompt you to sign in with your Microsoft account. 
-
-The handler will then act (via the app registration) as the signed in user and will submit requests to the Microsoft Graph API. This is done using the concept of [delegated permissions](https://docs.microsoft.com/en-us/graph/auth/auth-concepts#delegated-permissions).
+While waiting for approval, you can test the chatbot by clicking on *Preview in Teams* in the Developer Portal.
+</Info>
 
 ## Usage
 
-Now, you can post a message to a chat:
-
-```sql
-INSERT INTO teams_datasource.chat_messages (chatId, body_content)
-VALUES
-('your-chat-id', 'Hello from MindsDB!');
-```
-
-You can also do the same for channels:
-
-```sql
-SELECT * FROM teams_datasource.channels
-```
-
-```sql
-INSERT INTO teams_datasource.channel_messages (channelIdentity_teamId, channelIdentity_channelId, body_content)
-VALUES
-('your-team-id', 'your-channel-id', 'Hello from MindsDB!');
-```
-
-## Supported Tables
-
-The following tables are supported by the Microsoft Teams handler:
-- `chats`: chats that the signed in user is a member of.
-- `chat_messages`: messages sent to the signed in user's chats.
-- `channels`: channels that the signed in user is a member of.
-- `channel_messages`: messages sent to the signed in user's channels.
-
-## Chatbot
-
-While the Microsoft Teams handler allows you to read/send messages to a chat or channel as shown above, it is also possible to create a chat bot that will listen to messages sent to a chat or channel and respond to them.
-
-### Step 1: Create a Microsoft Teams Data Source
-
-As shown above, create a database with the new `teams` engine by passing in the required parameters:
-
-```sql
-CREATE DATABASE teams_datasource
-WITH ENGINE = 'teams',
-PARAMETERS = {
-  "client_id": "your-client-id",
-  "client_secret": "your-client-secret",
-  "tenant_id": "your-tenant-id"
-};
-```
-
-<Note>
-The chat bot will assume the identity of the user who signed in with their Microsoft account when the database was created.
-</Note>
-
-### Step 2: Create an [Agent](https://docs.mindsdb.com/agents/agent)
-
-An agent is created by combining a conversational model, like [LlamaIndex](https://docs.mindsdb.com/integrations/ai-engines/llamaindex), with a set of Skills.
-
-Here, we will create an agent without any skills, however, it is possilbe to create agents with skills such as the ability to answer questions from a knowledge base.
-
-#### Step 2.1: Create a Conversational Model
-
-Create a conversational model using either the [`LangChain`](https://docs.mindsdb.com/integrations/ai-engines/langchain) or [`LlamaIndex`](https://docs.mindsdb.com/integrations/ai-engines/llamaindex) integrations. Given below is an example of a conversational model created using the `LlamaIndex` integration:
-
-```sql
-CREATE ML_ENGINE llama_index_engine
-FROM llama_index
-USING openai_api_key='your-openai-api-key';
-```
-
-```sql
-CREATE MODEL llama_index_convo_model
-PREDICT answer
-USING
-  engine = 'llama_index_engine',
-  mode = 'conversational',
-  prompt = 'answer users questions as a helpful assistant',
-  user_column = 'question',
-  assistant_column = 'answer';
-```
-
-#### Step 2.2: Create an Agent using the Conversational Model
-
-Let's create an agent using the conversational model created above:
-
-```sql
-CREATE AGENT convo_agent
-USING
-    model = 'llama_index_convo_model',
-```
-
-### Step 3: Create a [Chatbot](https://docs.mindsdb.com/agents/chatbot)
-
-Finally, create a chatbot using the agent and the Microsoft Teams data source created above:
+This integration can only be used to create chatbots for Microsoft Teams via the [`CREATE CHATBOT`](/agents/chatbot) syntax. Currently, *it cannot be used as a data source for other workloads*.
 
 ```sql
 CREATE CHATBOT teams_chatbot
 USING
     database = 'teams_datasource',
-    agent = 'convo_agent';
+    agent = 'ai_agent',
+    is_running = true;
 ```
+
+Learn more about [agents and chatbots here](/mindsdb_sql/agents/chatbot). Follow [this tutorial](/use-cases/ai_agents/build_ai_agents) to build your own chatbot.
+
+## Troubleshooting Guide
+
+<Warning>
+`No response from the bot`:
+
+* **Symptoms**: The bot does not respond to messages.
+* **Checklist**:
+    1. Ensure the bot is correctly set up in the Microsoft Bot Framework portal.
+    2. Ensure that the client ID and client secret used to create the connection are correct and valid.
+    3. Ensure that the messaging endpoint is correctly set in the Microsoft Bot Framework portal with the correct webhook token.
+    4. Confirm that the bot is added to the Microsoft Teams workspace.
+</Warning>
+
+<Warning>
+`The bot is not available to other users`:
+
+* **Symptoms**: The bot is not available to other users in the organization.
+* **Checklist**:
+    1. Ensure that the bot is published to the organization in the Microsoft Bot Framework portal.
+    2. Ensure that the bot is approved by the IT administrator.
+
+</Warning>

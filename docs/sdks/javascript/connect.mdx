@@ -16,7 +16,7 @@ Before performing any operations, you must connect to MindsDB. By default, all o
   try {
 
     // No authentication needed for self-hosting
-    await MindsDB.connect({
+    await MindsDB.connect({ // alternative for ES6 module syntax: await MindsDB.default.connect({
       host: 'http://127.0.0.1:47334'
     });
     console.log('connected');

@@ -13,7 +13,6 @@ from sqlalchemy import (
     Integer,
     Numeric,
     String,
-    Table,
     UniqueConstraint,
     create_engine,
     text,
@@ -22,6 +21,7 @@ from sqlalchemy import (
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import (
     Mapped,
+    mapped_column,
     declarative_base,
     relationship,
     scoped_session,
@@ -422,20 +422,21 @@ class Tasks(Base):
     created_at = Column(DateTime, default=datetime.datetime.now)
 
 
-agent_skills_table = Table(
-    "agent_skills",
-    Base.metadata,
-    Column("agent_id", ForeignKey("agents.id"), primary_key=True),
-    Column("skill_id", ForeignKey("skills.id"), primary_key=True),
-)
+class AgentSkillsAssociation(Base):
+    __tablename__ = "agent_skills"
+
+    agent_id: Mapped[int] = mapped_column(ForeignKey("agents.id"), primary_key=True)
+    skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id"), primary_key=True)
+    parameters: Mapped[dict] = mapped_column(JSON, default={}, nullable=True)
+
+    agent = relationship("Agents", back_populates="skills_relationships")
+    skill = relationship("Skills", back_populates="agents_relationships")
 
 
 class Skills(Base):
     __tablename__ = "skills"
     id = Column(Integer, primary_key=True)
-    agents: Mapped[List["Agents"]] = relationship(
-        secondary=agent_skills_table, back_populates="skills"
-    )
+    agents_relationships: Mapped[List["Agents"]] = relationship(AgentSkillsAssociation, back_populates="skill")
     name = Column(String, nullable=False)
     project_id = Column(Integer, nullable=False)
     type = Column(String, nullable=False)
@@ -452,7 +453,7 @@ class Skills(Base):
             "id": self.id,
             "name": self.name,
             "project_id": self.project_id,
-            "agent_ids": [a.id for a in self.agents],
+            "agent_ids": [rel.agent.id for rel in self.agents_relationships],
             "type": self.type,
             "params": self.params,
             "created_at": self.created_at,
@@ -462,9 +463,7 @@ class Skills(Base):
 class Agents(Base):
     __tablename__ = "agents"
     id = Column(Integer, primary_key=True)
-    skills: Mapped[List["Skills"]] = relationship(
-        secondary=agent_skills_table, back_populates="agents"
-    )
+    skills_relationships: Mapped[List["Skills"]] = relationship(AgentSkillsAssociation, back_populates="agent")
     company_id = Column(Integer, nullable=True)
     user_class = Column(Integer, nullable=True)
 
@@ -487,7 +486,8 @@ class Agents(Base):
             "name": self.name,
             "project_id": self.project_id,
             "model_name": self.model_name,
-            "skills": [s.as_dict() for s in self.skills],
+            "skills": [rel.skill.as_dict() for rel in self.skills_relationships],
+            "skills_extra_parameters": {rel.skill.name: (rel.parameters or {}) for rel in self.skills_relationships},
             "provider": self.provider,
             "params": self.params,
             "updated_at": self.updated_at,

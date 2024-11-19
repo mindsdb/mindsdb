@@ -27,6 +27,9 @@ from mindsdb.integrations.handlers.openai_handler.constants import (
     IMAGE_MODELS,
     FINETUNING_MODELS,
     OPENAI_API_BASE,
+    DEFAULT_CHAT_MODEL,
+    DEFAULT_EMBEDDING_MODEL,
+    DEFAULT_IMAGE_MODEL
 )
 from mindsdb.integrations.libs.llm.utils import get_completed_prompts
 from mindsdb.integrations.utilities.handler_utils import get_api_key
@@ -44,8 +47,9 @@ class OpenAIHandler(BaseMLEngine):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.generative = True
-        self.default_model = 'gpt-3.5-turbo'
-        self.default_image_model = 'dall-e-2'
+        self.default_model = DEFAULT_CHAT_MODEL
+        self.default_embedding_model = DEFAULT_EMBEDDING_MODEL
+        self.default_image_model = DEFAULT_IMAGE_MODEL
         self.default_mode = (
             'default'  # can also be 'conversational' or 'conversational-full'
         )
@@ -234,7 +238,9 @@ class OpenAIHandler(BaseMLEngine):
                 )
 
             if not args.get('model_name'):
-                if args['mode'] == 'image':
+                if args['mode'] == 'embedding':
+                    args['model_name'] = self.default_embedding_model
+                elif args['mode'] == 'image':
                     args['model_name'] = self.default_image_model
                 else:
                     args['model_name'] = self.default_model
@@ -296,7 +302,7 @@ class OpenAIHandler(BaseMLEngine):
         if args.get('mode', self.default_mode) == 'embedding':
             api_args = {
                 'question_column': pred_args.get('question_column', None),
-                'model': pred_args.get('model_name', 'text-embedding-ada-002'),
+                'model': pred_args.get('model_name') or args.get('model_name'),
             }
             model_name = 'embedding'
             if args.get('question_column'):
@@ -317,7 +323,7 @@ class OpenAIHandler(BaseMLEngine):
             api_args = {
                 k: v for k, v in api_args.items() if v is not None
             }  # filter out non-specified api args
-            model_name = args.get('model_name', 'dall-e-2')
+            model_name = pred_args.get('model_name') or args.get('model_name')
 
             if args.get('question_column'):
                 prompts = list(df[args['question_column']].apply(lambda x: str(x)))

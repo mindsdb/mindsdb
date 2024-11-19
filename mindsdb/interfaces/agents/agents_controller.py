@@ -1,5 +1,4 @@
 import datetime
-from copy import deepcopy
 from typing import Dict, Iterator, List, Union, Tuple
 
 from langchain_core.tools import BaseTool
@@ -296,7 +295,7 @@ class AgentsController:
 
             # add skills
             for skill_name in (set(skills_to_add_names) - set(existing_agent_skills_names)):
-                skill_parameters = deepcopy(next(x for x in skills_to_add if x['name'] == skill_name))
+                skill_parameters = next(x for x in skills_to_add if x['name'] == skill_name).copy()
                 del skill_parameters['name']
                 association = db.AgentSkillsAssociation(
                     parameters=skill_parameters,

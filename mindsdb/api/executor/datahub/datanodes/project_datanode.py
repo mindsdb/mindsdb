@@ -133,6 +133,8 @@ class ProjectDataNode(DataNode):
                 if result['success'] is False:
                     raise Exception(f"Cant execute view query: {view_meta['query_ast']}")
                 df = result['result']
+                # remove duplicated columns
+                df = df.loc[:, ~df.columns.duplicated()]
 
                 df = query_df(df, query, session=session)
 

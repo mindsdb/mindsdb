@@ -1,15 +1,15 @@
 import unittest
-from mindsdb.integrations.handlers.elasticsearch_handler.elasticsearch_handler import ElasticsearchHandler
+from mindsdb.integrations.handlers.elasticsearch_handler.elasticsearch_handler import (
+    ElasticsearchHandler,
+)
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 
 
 class ElasticsearchHandlerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.kwargs = {
-            "hosts": 'localhost:9200'
-        }
-        cls.handler = ElasticsearchHandler('test_elasticsearch_handler', cls.kwargs)
+        cls.kwargs = {"hosts": "localhost:9200"}
+        cls.handler = ElasticsearchHandler("test_elasticsearch_handler", cls.kwargs)
 
     def test_0_check_connection(self):
         assert self.handler.check_connection()
@@ -24,9 +24,9 @@ class ElasticsearchHandlerTest(unittest.TestCase):
         assert tables.type is not RESPONSE_TYPE.ERROR
 
     def test_3_get_columns(self):
-        columns = self.handler.get_columns('kibana_sample_data_ecommerce')
+        columns = self.handler.get_columns("kibana_sample_data_ecommerce")
         assert columns.type is not RESPONSE_TYPE.ERROR
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

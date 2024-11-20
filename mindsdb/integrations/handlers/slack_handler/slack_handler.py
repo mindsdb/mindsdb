@@ -410,7 +410,7 @@ class SlackThreadsTable(APIResource):
         # Remove null rows from the result.
         result = result[result['text'].notnull()]
 
-        # Add the selected channel to the dataframe
+        # Add the selected channel to the DataFrame.
         result['channel_id'] = params['channel']
         result['channel_name'] = channel['name'] if 'name' in channel else None
 
@@ -419,10 +419,18 @@ class SlackThreadsTable(APIResource):
     def get_columns(self) -> List[str]:
         return [
             "channel_id",
-            "channel",
+            "channel_name",
             "type",
             "user",
-            "text"
+            "text",
+            "ts",
+            "client_msg_id",
+            "thread_ts",
+            "parent_user_id",
+            "reply_count",
+            "reply_users_count",
+            "latest_reply",
+            "reply_users"
         ]
 
 

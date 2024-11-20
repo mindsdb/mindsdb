@@ -230,44 +230,42 @@ class TestRAGSearchKwargs:
         )
         assert config.search_kwargs.filter == {"source": "test1"}
 
+    def test_multi_vector_retriever_search_kwargs(self):
+        """Test search kwargs for multi vector retriever"""
+        config = RAGPipelineModel(
+            **self.base_dict,
+            search_type=SearchType.SIMILARITY,
+            search_kwargs=SearchKwargs(
+                k=5,
+                filter={"source": "test1"}
+            ),
+            retriever_type=RetrieverType.MULTI,
+            multi_retriever_mode=MultiVectorRetrieverMode.BOTH
+        )
 
-def test_multi_vector_retriever_search_kwargs(base_config):
-    search_kwargs = SearchKwargs(
-        k=5,
-        filter={"source": "test1"},
-    )
-    base_config.search_kwargs = search_kwargs
-    base_config.search_type = SearchType.SIMILARITY
-    base_config.retriever_type = RetrieverType.MULTI
-    base_config.multi_retriever_mode = MultiVectorRetrieverMode.BOTH
+        mock_retriever = Mock()
+        mock_retriever.search_kwargs = {"k": 5, "filter": {"source": "test1"}}
 
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=base_config.chunk_size,
-        chunk_overlap=base_config.chunk_overlap
-    )
-    base_config.text_splitter = text_splitter
+        with patch('mindsdb.integrations.utilities.rag.pipelines.rag.MultiVectorRetriever') as MockMultiRetrieverClass:
+            class MockMultiRetriever:
+                def __init__(self, config):
+                    self.text_splitter = RecursiveCharacterTextSplitter(
+                        chunk_size=config.chunk_size,
+                        chunk_overlap=config.chunk_overlap
+                    )
+                    self.documents = config.documents
+                    self.config = config
 
-    mock_retriever = Mock()
-    mock_retriever.search_kwargs = {}
+                def as_runnable(self):
+                    return mock_retriever
 
-    with patch('mindsdb.integrations.utilities.rag.pipelines.rag.MultiVectorRetriever') as MockMultiRetrieverClass:
-        class MockMultiRetriever:
-            def __init__(self, config):
-                self.text_splitter = text_splitter
-                self.documents = config.documents
-                self.config = config
+                def _split_documents(self):
+                    return [], []
 
-            def as_runnable(self):
-                return mock_retriever
+                def _generate_id_and_split_document(self, doc):
+                    return str(uuid.uuid4()), [doc]
 
-            def _split_documents(self):
-                return [], []
+            MockMultiRetrieverClass.side_effect = MockMultiRetriever
 
-            def _generate_id_and_split_document(self, doc):
-                return str(uuid.uuid4()), [doc]
-
-        MockMultiRetrieverClass.side_effect = MockMultiRetriever
-
-        _ = LangChainRAGPipeline.from_multi_vector_retriever(base_config)
-        mock_retriever.search_kwargs.update({"k": 5, "filter": {"source": "test1"}})
-        assert mock_retriever.search_kwargs == {"k": 5, "filter": {"source": "test1"}}
+            _ = LangChainRAGPipeline.from_multi_vector_retriever(config)
+            assert mock_retriever.search_kwargs == {"k": 5, "filter": {"source": "test1"}}

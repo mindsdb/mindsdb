@@ -109,13 +109,20 @@ class IntegrationDataNode(DataNode):
         if columns is None:
             columns = []
 
-            for col in result_set.columns:
+            df = result_set.get_raw_df()
+
+            for idx, col in enumerate(result_set.columns):
+                dtype = col.type
                 # assume this is pandas type
                 column_type = Text
-                if isinstance(col.type, np_dtype):
-                    if pd_types.is_integer_dtype(col.type):
+                if isinstance(dtype, np_dtype):
+                    if pd_types.is_object_dtype(dtype):
+                        # try to infer
+                        dtype = df[idx].infer_objects().dtype
+
+                    if pd_types.is_integer_dtype(dtype):
                         column_type = Integer
-                    elif pd_types.is_numeric_dtype(col.type):
+                    elif pd_types.is_numeric_dtype(dtype):
                         column_type = Float
 
                 columns.append(
@@ -164,11 +171,12 @@ class IntegrationDataNode(DataNode):
         for col_idx, col in enumerate(result_set.columns):
             column_type = table_columns_meta[col.alias]
 
-            type_name = 'str'
             if column_type == Integer:
                 type_name = 'int'
             elif column_type == Float:
                 type_name = 'float'
+            else:
+                continue
 
             try:
                 result_set.set_col_type(col_idx, type_name)

@@ -1,12 +1,12 @@
 import copy
 
-from mindsdb_sql.exceptions import PlanningException
 from mindsdb_sql.parser import ast
 from mindsdb_sql.parser.ast import (
     Select, Identifier, Join, Star, BinaryOperation, Constant, Union, CreateTable,
     Function, Insert, Except, Intersect, Update, NativeQuery, Parameter, Delete
 )
 
+from mindsdb.api.executor.planner.exceptions import PlanningException
 from mindsdb.api.executor.planner import utils
 from mindsdb.api.executor.planner.query_plan import QueryPlan
 from mindsdb.api.executor.planner.steps import (

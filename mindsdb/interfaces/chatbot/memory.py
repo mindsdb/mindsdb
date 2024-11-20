@@ -58,7 +58,11 @@ class BaseMemory:
 
     def add_to_history(self, chat_id, chat_message):
 
-        self._add_to_history(chat_id, chat_message)
+        # If the chat_id is a tuple, convert it to a string when storing the message in the database.
+        self._add_to_history(
+            str(chat_id) if isinstance(chat_id, tuple) else chat_id,
+            chat_message
+        )
         if chat_id in self._cache:
             del self._cache[chat_id]
 
@@ -69,9 +73,14 @@ class BaseMemory:
 
         else:
             if table_name is None:
-                history = self._get_chat_history(chat_id)
+                history = self._get_chat_history(
+                    str(chat_id) if isinstance(chat_id, tuple) else chat_id
+                )
             else:
-                history = self._get_chat_history(chat_id, table_name)
+                history = self._get_chat_history(
+                    str(chat_id) if isinstance(chat_id, tuple) else chat_id,
+                    table_name
+                )
             self._cache[key] = history
 
         history = self._apply_hiding(chat_id, history)

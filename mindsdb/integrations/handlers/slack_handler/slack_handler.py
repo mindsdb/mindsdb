@@ -415,6 +415,31 @@ class SlackThreadsTable(APIResource):
         result['channel_name'] = channel['name'] if 'name' in channel else None
 
         return result
+    
+    def insert(self, query):
+        """
+        Inserts a message into a thread in a Slack conversation.
+        """
+        client = self.handler.connect()
+    
+        # Get column names and values from the query.
+        columns = [col.name for col in query.columns]
+        for row in query.values:
+            params = dict(zip(columns, row))
+
+            # Check if required parameters are provided.
+            if 'channel_id' not in params or 'text' not in params or 'thread_ts' not in params:
+                raise Exception("To insert data into Slack, you need to provide the 'channel_id', 'text', and 'thread_ts' parameters.")
+
+            # Post message to Slack thread.
+            try:
+                response = client.chat_postMessage(
+                    channel=params['channel_id'],
+                    text=params['text'],
+                    thread_ts=params['thread_ts']
+                )
+            except SlackApiError as e:
+                raise Exception(f"Error posting message to Slack channel '{params['channel']}': {e.response['error']}")
 
     def get_columns(self) -> List[str]:
         return [

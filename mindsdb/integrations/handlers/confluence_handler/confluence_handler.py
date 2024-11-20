@@ -65,16 +65,6 @@ class ConfluenceHandler(APIHandler):
         self.connection = conf
         self.is_connected = True
         return self.connection
-    
-    def validate_connection_data(self):
-        if not self.connection_data.get('url'):
-            raise ValueError("`url` must be a valid non-empty url")
-
-        if not self.connection_data.get('username'):
-            raise ValueError("`username` must be a valid non-empty string")
-
-        if not self.connection_data.get('password'):
-            raise ValueError("`password` must be a valid non-empty string")
 
     def check_connection(self) -> StatusResponse:
         """Check connection to the handler.

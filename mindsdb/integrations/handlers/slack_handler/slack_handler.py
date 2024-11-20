@@ -462,6 +462,9 @@ class SlackHandler(APIChatHandler):
         users = SlackUsersTable(self)
         self._register_table('users', users)
 
+        threads = SlackThreadsTable(self)
+        self._register_table('threads', threads)
+
         self._socket_mode_client = None
 
     def get_chat_config(self):

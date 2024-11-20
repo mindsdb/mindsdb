@@ -10,7 +10,7 @@ from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     RESPONSE_TYPE
 )
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
 logger = log.getLogger(__name__)
 

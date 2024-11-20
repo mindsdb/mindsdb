@@ -20,7 +20,7 @@ from mindsdb.api.executor.planner.steps import (
 )
 
 from mindsdb_sql.exceptions import PlanningException
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.api.executor.planner import query_planner
 
 from mindsdb.api.executor.utilities.sql import query_df, get_query_models

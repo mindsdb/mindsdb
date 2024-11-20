@@ -5,7 +5,7 @@ from pyhive import (trino, sqlalchemy_trino)
 from mindsdb_sql import parse_sql, ASTNode
 from trino.auth import KerberosAuthentication, BasicAuthentication
 from trino.dbapi import connect
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (

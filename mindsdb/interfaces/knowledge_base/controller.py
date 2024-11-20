@@ -94,8 +94,8 @@ class KnowledgeBaseTable:
         resp = db_handler.query(query)
         new_columns = [
             self._kb.params.get('id_column', TableField.ID.value),
-            self._kb.params.get('content_columns', TableField.CONTENT.value),
-            self._kb.params.get('metadata_columns', TableField.METADATA.value)
+            TableField.CONTENT.value,
+            TableField.METADATA.value
         ]
 
         resp.data_frame.columns = new_columns

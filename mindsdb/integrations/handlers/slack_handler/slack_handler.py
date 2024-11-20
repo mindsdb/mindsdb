@@ -349,6 +349,81 @@ class SlackMessagesTable(APIResource):
             
         except SlackApiError as e:
             raise Exception(f"Error deleting message from Slack channel '{params['channel']}' with timestamp '{params['ts']}': {e.response['error']}")
+        
+
+class SlackThreadsTable(APIResource):
+
+    def list(
+        self,
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        **kwargs
+    ) -> pd.DataFrame:
+        """
+        Retrieves the messages from a thread in a Slack conversation.
+
+        Returns:
+            pd.DataFrame: The messages in the thread.
+        """
+        client = self.handler.connect()
+
+        params = {}
+
+        # Parse the conditions.
+        for condition in conditions:
+            value = condition.value
+            op = condition.op
+
+            # Handle the column 'channel_id'.
+            if condition.column == 'channel_id':
+                if op != FilterOperator.EQUAL:
+                    raise ValueError(f"Unsupported operator '{op}' for column 'channel_id'")
+
+                # Check if the channel exists.
+                try:
+                    channel = self.handler.get_channel(value)
+                    params['channel'] = value
+                    condition.applied = True
+                except SlackApiError as e:
+                    raise ValueError(f"Channel '{value}' not found")
+
+            # Handle the column 'thread_ts'.
+            elif condition.column == 'thread_ts':
+                if op != FilterOperator.EQUAL:
+                    raise ValueError(f"Unsupported operator '{op}' for column 'thread_ts'")
+
+                params['ts'] = value
+
+        # Set the limit.
+        if limit:
+            params['limit'] = limit
+
+        if 'channel' not in params:
+            raise Exception("To retrieve data from Slack, you need to provide the 'channel_id' parameter.")
+
+        # Retrieve the replies in the thread.
+        result = client.conversations_replies(**params)
+
+        # Convert the result to a DataFrame.
+        result = pd.DataFrame(result['messages'], columns=self.get_columns())
+
+        # Remove null rows from the result.
+        result = result[result['text'].notnull()]
+
+        # Add the selected channel to the dataframe
+        result['channel_id'] = params['channel']
+        result['channel_name'] = channel['name'] if 'name' in channel else None
+
+        return result
+
+    def get_columns(self) -> List[str]:
+        return [
+            "channel_id",
+            "channel",
+            "type",
+            "user",
+            "text"
+        ]
 
 
 class SlackHandler(APIChatHandler):

@@ -1,5 +1,5 @@
 from copy import copy
-from typing import Optional
+from typing import Optional, Any
 
 from langchain_core.output_parsers import StrOutputParser
 from langchain.retrievers import ContextualCompressionRetriever
@@ -10,7 +10,7 @@ from langchain_core.runnables import RunnableParallel, RunnablePassthrough, Runn
 from mindsdb.integrations.utilities.rag.retrievers.auto_retriever import AutoRetriever
 from mindsdb.integrations.utilities.rag.retrievers.multi_vector_retriever import MultiVectorRetriever
 from mindsdb.integrations.utilities.rag.rerankers.reranker_compressor import LLMReranker, RerankerConfig
-from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel, DEFAULT_AUTO_META_PROMPT_TEMPLATE
+from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel, DEFAULT_AUTO_META_PROMPT_TEMPLATE, SearchKwargs, SearchType
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RERANKER_FLAG
 
 from mindsdb.integrations.utilities.rag.vector_store import VectorStoreOperator
@@ -77,11 +77,39 @@ class LangChainRAGPipeline:
         return rag_chain_with_source
 
     @classmethod
+    def _apply_search_kwargs(cls, retriever: Any, search_kwargs: Optional[SearchKwargs] = None, search_type: Optional[SearchType] = None) -> Any:
+        """Apply search kwargs and search type to the retriever if they exist"""
+        if hasattr(retriever, 'search_kwargs') and search_kwargs:
+            # Convert search kwargs to dict, excluding None values
+            kwargs_dict = search_kwargs.model_dump(exclude_none=True)
+
+            # Only include relevant parameters based on search type
+            if search_type == SearchType.SIMILARITY:
+                # Remove MMR and similarity threshold specific params
+                kwargs_dict.pop('fetch_k', None)
+                kwargs_dict.pop('lambda_mult', None)
+                kwargs_dict.pop('score_threshold', None)
+            elif search_type == SearchType.MMR:
+                # Remove similarity threshold specific params
+                kwargs_dict.pop('score_threshold', None)
+            elif search_type == SearchType.SIMILARITY_SCORE_THRESHOLD:
+                # Remove MMR specific params
+                kwargs_dict.pop('fetch_k', None)
+                kwargs_dict.pop('lambda_mult', None)
+
+            retriever.search_kwargs.update(kwargs_dict)
+
+            # Set search type if supported by the retriever
+            if hasattr(retriever, 'search_type') and search_type:
+                retriever.search_type = search_type.value
+
+        return retriever
+
+    @classmethod
     def from_retriever(cls, config: RAGPipelineModel):
         """
         Builds a RAG pipeline with returned sources using a simple vector store retriever
         :param config: RAGPipelineModel
-
         :return:
         """
         vector_store_operator = VectorStoreOperator(
@@ -90,32 +118,21 @@ class LangChainRAGPipeline:
             embedding_model=config.embedding_model,
             vector_store_config=config.vector_store_config
         )
-
-        return cls(vector_store_operator.vector_store.as_retriever(), config.rag_prompt_template, config.llm)
+        retriever = vector_store_operator.vector_store.as_retriever()
+        retriever = cls._apply_search_kwargs(retriever, config.search_kwargs, config.search_type)
+        return cls(retriever, config.rag_prompt_template, config.llm)
 
     @classmethod
     def from_auto_retriever(cls, config: RAGPipelineModel):
-        """
-        Builds a RAG pipeline with returned sources using a AutoRetriever
-
-        :param config: RAGPipelineModel
-
-        :return:
-        """
-
         if not config.retriever_prompt_template:
             config.retriever_prompt_template = DEFAULT_AUTO_META_PROMPT_TEMPLATE
 
-        retriever_runnable = AutoRetriever(config=config).as_runnable()
-        return cls(retriever_runnable, config.rag_prompt_template, config.llm)
+        retriever = AutoRetriever(config=config).as_runnable()
+        retriever = cls._apply_search_kwargs(retriever, config.search_kwargs, config.search_type)
+        return cls(retriever, config.rag_prompt_template, config.llm)
 
     @classmethod
     def from_multi_vector_retriever(cls, config: RAGPipelineModel):
-        """
-        Builds a RAG pipeline with returned sources using a MultiVectorRetriever
-
-        :param config: RAGPipelineModel
-        """
-
-        retriever_runnable = MultiVectorRetriever(config=config).as_runnable()
-        return cls(retriever_runnable, config.rag_prompt_template, config.llm)
+        retriever = MultiVectorRetriever(config=config).as_runnable()
+        retriever = cls._apply_search_kwargs(retriever, config.search_kwargs, config.search_type)
+        return cls(retriever, config.rag_prompt_template, config.llm)

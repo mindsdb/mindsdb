@@ -2,7 +2,7 @@ from typing import Dict
 
 from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
 from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel, VectorStoreType, DEFAULT_COLLECTION_NAME, \
-    RetrieverType, MultiVectorRetrieverMode, VectorStoreConfig
+    RetrieverType, MultiVectorRetrieverMode, VectorStoreConfig, SearchType, SearchKwargs
 from mindsdb.interfaces.skills.skill_tool import skill_tool
 from mindsdb.interfaces.storage import db
 
@@ -52,6 +52,12 @@ def build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
         rag_params['retriever_type'] = RetrieverType(rag_params['retriever_type'])
     if 'multi_retriever_mode' in rag_params:
         rag_params['multi_retriever_mode'] = MultiVectorRetrieverMode(rag_params['multi_retriever_mode'])
+    if 'search_type' in rag_params:
+        rag_params['search_type'] = SearchType(rag_params['search_type'])
+
+    # Handle search kwargs if present
+    if 'search_kwargs' in rag_params and isinstance(rag_params['search_kwargs'], dict):
+        rag_params['search_kwargs'] = SearchKwargs(**rag_params['search_kwargs'])
 
     # Handle defaults for required fields
     if 'embedding_model' not in rag_params:

@@ -246,16 +246,24 @@ class KnowledgeBaseTable:
             return
 
         if self.document_preprocessor:
-            # Convert DataFrame to documents for preprocessing
+            # Convert DataFrame to documents for preprocessing and mapping custom columns to default columns
+            columns=[self._kb.params.get('id_column', TableField.ID.value),
+                     self._kb.params.get('content_columns', TableField.CONTENT.value),
+                     TableField.EMBEDDINGS.value,
+                     self._kb.params.get('metadata_columns', TableField.METADATA.value)]
+            
             raw_documents = [Document(
-                content=row.get(TableField.CONTENT.value, ''),
-                id=row.get(TableField.ID.value),
-                metadata=row.get(TableField.METADATA.value, {})
+                content=row.get(self._kb.params.get('content_columns', TableField.CONTENT.value), ''),
+                id=row.get(self._kb.params.get('id_column', TableField.ID.value)),
+                metadata=row.get(self._kb.params.get('metadata_columns', TableField.METADATA.value), {})
             ) for _, row in df.iterrows()]
 
             # Apply preprocessing
             processed_chunks = self.document_preprocessor.process_documents(raw_documents)
             df = pd.DataFrame([chunk.model_dump() for chunk in processed_chunks])
+            
+            # Apply custom columns to dataframe
+            df.columns=columns
 
         df = self._adapt_column_names(df)
 
@@ -268,119 +276,103 @@ class KnowledgeBaseTable:
         db_handler.do_upsert(self._kb.vector_database_table, df)
 
     def _adapt_column_names(self, df: pd.DataFrame) -> pd.DataFrame:
-
-        '''
-            convert input columns for vector db input
-            - id, content and metadata
-        '''
+        """
+        Convert input columns for vector database input:
+        - Maps input columns into 'id', 'content', and 'metadata'.
+        """
 
         params = self._kb.params
-
         columns = list(df.columns)
 
-        # -- prepare id --
-
-        # if id_column is defined:
-        #     use it as id
-        # elif 'id' column exists:
-        #     use it
-        # else:
-        #     use hash(content) -- it happens inside of vector handler
-
+        # --- Prepare ID ---
         id_column = params.get('id_column')
+        if id_column is None and TableField.ID.value in columns:
+            # Default to the 'id' column if it exists
+            id_column = TableField.ID.value
+
+        # Validate the ID column
         if id_column is not None and id_column not in columns:
-            # wrong name
             id_column = None
 
-        # if id_column is None and TableField.ID.value in columns:
-        #     # default value
-        #     id_column = TableField.ID.value
-
+        # Remove ID and embeddings columns
         if id_column is not None:
-            # remove from lookup list
             columns.remove(id_column)
 
-        # -- prepare content and metadata --
+        if TableField.EMBEDDINGS.value in columns:
+            columns.remove(TableField.EMBEDDINGS.value)
 
-        # if content_columns is defined:
-        #     if len(content_columns) > 1:
-        #          make text from row (col: value\n col: value)
-        #     if metadata_columns is defined:
-        #          use them as metadata
-        #     else:
-        #          use all unused columns is metadata
-        #     elif metadata_columns is defined:
-        #          metadata_columns go to metadata
-        #          use all unused columns  as content (make text if columns>1)
-        # else:
-        #     no metadata
-        #     all unused columns go to content (make text if columns>1)
-
+        # --- Prepare Content and Metadata ---
         content_columns = params.get('content_columns')
         metadata_columns = params.get('metadata_columns')
 
         if content_columns is not None:
+            # Use specified content columns
             content_columns = list(set(content_columns).intersection(columns))
-            if len(content_columns) == 0:
-                raise ValueError(f'Content columns {params.get("content_columns")} not found in dataset: {columns}')
+            if not content_columns:
+                raise ValueError(f"Content columns {params.get('content_columns')} not found in dataset: {columns}")
 
             if metadata_columns is not None:
+                # Use specified metadata columns
                 metadata_columns = list(set(metadata_columns).intersection(columns))
             else:
-                # all the rest columns
+                # Use remaining columns as metadata
                 metadata_columns = list(set(columns).difference(content_columns))
 
         elif metadata_columns is not None:
+            # Use specified metadata columns
             metadata_columns = list(set(metadata_columns).intersection(columns))
-            # use all unused columns is content
+            # Use remaining columns as content
             content_columns = list(set(columns).difference(metadata_columns))
+
         elif TableField.METADATA.value in columns:
-            # Use 'metadata' column as a JSON column if passed in explicitly.
+            # Use 'metadata' column as JSON if it exists
             metadata_columns = [TableField.METADATA.value]
             content_columns = list(set(columns).difference(metadata_columns))
+
         else:
-            # all columns go to content
+            # Default to using all columns as content
             content_columns = columns
 
         if not content_columns:
-            raise ValueError("Can't find content columns")
+            raise ValueError("No valid content columns found.")
 
+        # --- Helper Functions ---
         def row_to_document(row: pd.Series) -> str:
             """
-            Convert a row in the input dataframe into a document
-
-            Default implementation is to concatenate all the columns
-            in the form of
+            Convert a row in the input DataFrame into a document.
+            Concatenates all columns into the format:
             field1: value1\nfield2: value2\n...
             """
             fields = row.index.tolist()
             values = row.values.tolist()
-            document = "\n".join(
-                [f"{field}: {value}" for field, value in zip(fields, values)]
-            )
-            return document
+            return "\n".join([f"{field}: {value}" for field, value in zip(fields, values)])
 
         def handle_metadata_row(row: pd.Series) -> str:
+            """
+            Process a row's metadata. Handles special cases where a single
+            'metadata' column contains nested JSON.
+            """
             metadata_dict = dict(row)
             if TableField.METADATA.value in metadata_dict:
-                # Extract nested metadata in special case where we have a single column named 'metadata'.
-                # Hacky solution to support passing in 'metadata' JSON column instead of passing in
-                # many different named columns representing metadata when inserting into KB.
                 return metadata_dict[TableField.METADATA.value]
             return str(metadata_dict)
 
-        # create dataframe
+        # --- Create Output DataFrame ---
+        # Process content columns
         if len(content_columns) == 1:
             c_content = df[content_columns[0]]
         else:
             c_content = df[content_columns].apply(row_to_document, axis=1)
         c_content.name = TableField.CONTENT.value
+
         df_out = pd.DataFrame(c_content)
 
+        # Add ID column if available
         if id_column is not None:
             df_out[TableField.ID.value] = df[id_column]
 
-        if metadata_columns and len(metadata_columns) > 0:
+        # Add metadata column if applicable
+        if metadata_columns and len(metadata_columns)>0:
             df_out[TableField.METADATA.value] = df[metadata_columns].apply(handle_metadata_row, axis=1)
 
         return df_out

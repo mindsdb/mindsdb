@@ -1,5 +1,5 @@
 from typing import Optional
-
+from datetime import datetime 
 import pandas as pd
 from pydruid.db import connect
 
@@ -170,6 +170,16 @@ class DruidHandler(DatabaseHandler):
         Returns:
             HandlerResponse
         """
+        if query.where:
+            try:
+                dt = datetime.strptime(query.where.args[-1].value
+, "%Y-%m-%dT%H:%M:%S.%fZ")
+                formatted_timestamp = dt.strftime("%Y-%m-%d %H:%M:%S")
+                query.where.args[-1].value=formatted_timestamp 
+                
+            except:
+                pass
+            
         renderer = SqlalchemyRender(DruidDialect)
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)

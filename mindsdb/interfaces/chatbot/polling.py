@@ -147,16 +147,15 @@ class RealtimePolling(BasePolling):
         row.update(key)
 
         t_params = self.params["chat_table"]
+        chat_id = tuple(row[key] for key in t_params["chat_id_col"]) if isinstance(t_params["chat_id_col"], list) else row[t_params["chat_id_col"]]
 
         message = ChatBotMessage(
             ChatBotMessage.Type.DIRECT,
             row[t_params["text_col"]],
             # In Slack direct messages are treated as channels themselves.
             row[t_params["username_col"]],
-            row[t_params["chat_id_col"]],
+            chat_id,
         )
-
-        chat_id = row[t_params["chat_id_col"]]
 
         self.chat_task.on_message(message, chat_id=chat_id)
 

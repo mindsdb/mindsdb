@@ -1,17 +1,17 @@
 import enum
-from collections import defaultdict
-from typing import List, Optional
 from dataclasses import dataclass
+from collections import defaultdict
+from typing import List, Dict, Optional
 
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
 from mindsdb_sql.parser.ast import Select, BinaryOperation, Identifier, Constant, Star
 
-from mindsdb.integrations.libs.vectordatabase_handler import TableField
-from mindsdb.interfaces.skills.sql_agent import SQLAgent
-from mindsdb.interfaces.storage import db
 from mindsdb.utilities import log
 from mindsdb.utilities.cache import get_cache
+from mindsdb.interfaces.storage import db
+from mindsdb.interfaces.skills.sql_agent import SQLAgent
+from mindsdb.integrations.libs.vectordatabase_handler import TableField
 
 
 _DEFAULT_TOP_K_SIMILARITY_SEARCH = 5
@@ -45,27 +45,54 @@ class SkillData:
     agent_tables_list: Optional[List[str]]
 
     @property
-    def tables_list(self) -> List[str]:
-        """List of tables which may use this skill. If the list is empty, there are no restrictions.
-        The result list is a combination of skill's and agent's tables lists.
+    def restriction_on_tables(self) -> Optional[Dict[str, set]]:
+        """Schemas and tables which agent+skill may use. The result is intersections of skill's and agent's tables lists.
 
         Returns:
-            List[str]: List of tables.
+            Optional[Dict[str, set]]: allowed schemas and tables. Schemas - are keys in dict, tables - are values.
+                if result is None, then there are no restrictions
 
         Raises:
             ValueError: if there is no intersection between skill's and agent's list.
                 This means that all tables restricted for use.
         """
-        agent_tables_list = self.agent_tables_list or []
-        skill_tables_list = self.params.get('tables', [])
-        if len(skill_tables_list) > 0 and len(agent_tables_list) > 0:
-            diff = set(skill_tables_list) & set(agent_tables_list)
-            if len(diff) == 0:
-                raise ValueError("There are no tables allowed for use.")
-            return list(diff)
-        if len(skill_tables_list) > 0:
-            return skill_tables_list
-        return agent_tables_list
+        def list_to_map(input: List) -> Dict:
+            agent_tables_map = defaultdict(set)
+            for x in input:
+                if isinstance(x, str):
+                    table_name = x
+                    schema_name = None
+                elif isinstance(x, dict):
+                    table_name = x['table']
+                    schema_name = x.get('schema')
+                else:
+                    raise ValueError(f'Unexpected value in tables list: {x}')
+                agent_tables_map[schema_name].add(table_name)
+            return agent_tables_map
+
+        agent_tables_map = list_to_map(self.agent_tables_list or [])
+        skill_tables_map = list_to_map(self.params.get('tables', []))
+
+        if len(agent_tables_map) > 0 and len(skill_tables_map) > 0:
+            if len(set(agent_tables_map) & set(skill_tables_map)) == 0:
+                raise ValueError("Skill's and agent's allowed tables list have no shared schemas.")
+
+            intersection_tables_map = defaultdict(set)
+            has_intersection = False
+            for schema_name in agent_tables_map:
+                if schema_name not in skill_tables_map:
+                    continue
+                intersection_tables_map[schema_name] = agent_tables_map[schema_name] & skill_tables_map[schema_name]
+                if len(intersection_tables_map[schema_name]) > 0:
+                    has_intersection = True
+            if has_intersection is False:
+                raise ValueError("Skill's and agent's allowed tables list have no shared tables.")
+            return intersection_tables_map
+        if len(skill_tables_map) > 0:
+            return skill_tables_map
+        if len(agent_tables_map) > 0:
+            return agent_tables_map
+        return None
 
 
 class SkillToolController:
@@ -115,12 +142,19 @@ class SkillToolController:
         tables_list = []
         for skill in skills:
             database = skill.params['database']
-            for table in skill.tables_list:
-                tables_list.append(f'{database}.{table}')
+            restriction_on_tables = skill.restriction_on_tables
+            if restriction_on_tables is None:
+                # no restrictions
+                continue
+            for schema_name, tables in restriction_on_tables.items():
+                for table in tables:
+                    tables_list.append(f'{database}.{table}')
 
         # use list databases
         database = ','.join(set(s.params['database'] for s in skills))
+        # !TODO! add schemas
         db = MindsDBSQL(
+            # schema = []
             engine=self.get_command_executor(),
             database=database,
             metadata=self.get_command_executor().session.integration_controller,

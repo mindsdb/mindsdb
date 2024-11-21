@@ -1,7 +1,8 @@
 from typing import Dict
 
 from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
-from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel, VectorStoreType, DEFAULT_COLLECTION_NAME
+from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel, VectorStoreType, DEFAULT_COLLECTION_NAME, \
+    RetrieverType, MultiVectorRetrieverMode, VectorStoreConfig, SearchType, SearchKwargs
 from mindsdb.interfaces.skills.skill_tool import skill_tool
 from mindsdb.interfaces.storage import db
 
@@ -46,29 +47,29 @@ def build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
             'kb_table': kb_table
         }
 
-    # Can run into weird validation errors when unpacking rag_params directly into constructor.
-    if 'embedding_model' in rag_params:
-        embedding_model = rag_params['embedding_model']
-    else:
-        embedding_model = DEFAULT_EMBEDDINGS_MODEL_CLASS()
+    # Handle enums and type conversions
+    if 'retriever_type' in rag_params:
+        rag_params['retriever_type'] = RetrieverType(rag_params['retriever_type'])
+    if 'multi_retriever_mode' in rag_params:
+        rag_params['multi_retriever_mode'] = MultiVectorRetrieverMode(rag_params['multi_retriever_mode'])
+    if 'search_type' in rag_params:
+        rag_params['search_type'] = SearchType(rag_params['search_type'])
 
-    rag_config = RAGPipelineModel(
-        embedding_model=embedding_model
-    )
-    if 'documents' in rag_params:
-        rag_config.documents = rag_params['documents']
+    # Handle search kwargs if present
+    if 'search_kwargs' in rag_params and isinstance(rag_params['search_kwargs'], dict):
+        rag_params['search_kwargs'] = SearchKwargs(**rag_params['search_kwargs'])
+
+    # Handle defaults for required fields
+    if 'embedding_model' not in rag_params:
+        rag_params['embedding_model'] = DEFAULT_EMBEDDINGS_MODEL_CLASS()
+
+    # Handle vector store config separately since it has a nested default
     if 'vector_store_config' in rag_params:
-        rag_config.vector_store_config = rag_params['vector_store_config']
-    if 'db_connection_string' in rag_params:
-        rag_config.db_connection_string = rag_params['db_connection_string']
-    if 'table_name' in rag_params:
-        rag_config.table_name = rag_params['table_name']
-    if 'llm' in rag_params:
-        rag_config.llm = rag_params['llm']
-    if 'rag_prompt_template' in rag_params:
-        rag_config.rag_prompt_template = rag_params['rag_prompt_template']
-    if 'retriever_prompt_template' in rag_params:
-        rag_config.retriever_prompt_template = rag_params['retriever_prompt_template']
+        if isinstance(rag_params['vector_store_config'], dict):
+            rag_params['vector_store_config'] = VectorStoreConfig(**rag_params['vector_store_config'])
+
+    # Create config with filtered params
+    rag_config = RAGPipelineModel(**rag_params)
 
     # build retriever
     rag_pipeline = RAG(rag_config)
@@ -95,12 +96,17 @@ def build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
     )
 
 
-def _get_rag_params(pred_args: Dict) -> Dict:
-    model_config = pred_args.copy()
+def _get_rag_params(tools_config: Dict) -> Dict:
+    """Convert tools config to RAG parameters"""
+    # Get valid fields from RAGPipelineModel
+    valid_fields = RAGPipelineModel.get_field_names()
 
-    supported_rag_params = RAGPipelineModel.get_field_names()
+    # Filter out invalid parameters
+    rag_params = {k: v for k, v in tools_config.items() if k in valid_fields}
 
-    rag_params = {k: v for k, v in model_config.items() if k in supported_rag_params}
+    # Ensure default embedding model is set
+    if 'embedding_model' not in rag_params:
+        rag_params['embedding_model'] = DEFAULT_EMBEDDINGS_MODEL_CLASS()
 
     return rag_params
 

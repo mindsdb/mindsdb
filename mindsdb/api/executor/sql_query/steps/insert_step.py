@@ -1,7 +1,7 @@
 from mindsdb_sql.parser.ast import (
     Identifier,
 )
-from mindsdb_sql.planner.steps import (
+from mindsdb.api.executor.planner.steps import (
     SaveToTable,
     InsertToTable,
     CreateTableStep

@@ -7,7 +7,6 @@ from functools import reduce
 import pandas as pd
 from mindsdb_evaluator.accuracy.general import evaluate_accuracy
 from mindsdb_sql import parse_sql
-from mindsdb_sql.planner.utils import query_traversal
 from mindsdb_sql.parser.ast import (
     Alter,
     ASTNode,
@@ -70,6 +69,8 @@ from mindsdb_sql.parser.dialects.mindsdb import (
 )
 
 import mindsdb.utilities.profiler as profiler
+
+from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.api.executor import Column, SQLQuery, ResultSet
 from mindsdb.api.executor.data_types.answer import ExecuteAnswer
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (

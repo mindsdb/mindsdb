@@ -6,7 +6,7 @@ from mindsdb_sql.parser.ast import (
     UnaryOperation,
     Constant,
 )
-from mindsdb_sql.planner.steps import (
+from mindsdb.api.executor.planner.steps import (
     MapReduceStep,
     FetchDataframeStep,
     MultipleSteps,

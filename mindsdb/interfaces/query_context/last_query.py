@@ -5,7 +5,7 @@ from collections import defaultdict
 from mindsdb_sql.parser.ast import (
     Identifier, Select, BinaryOperation, Last, Constant, Star, ASTNode, NullConstant, OrderBy, Function, TypeCast
 )
-from mindsdb_sql.planner.utils import query_traversal
+from mindsdb.integrations.utilities.query_traversal import query_traversal
 
 
 class LastQuery:

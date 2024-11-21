@@ -5,7 +5,7 @@ import pandas as pd
 from mindsdb_sql.parser.ast import (
     Identifier, BinaryOperation, Last, Constant, ASTNode
 )
-from mindsdb_sql.planner.utils import query_traversal
+from mindsdb.integrations.utilities.query_traversal import query_traversal
 
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.context import context as ctx

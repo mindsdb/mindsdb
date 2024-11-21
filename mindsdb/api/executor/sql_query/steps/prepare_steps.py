@@ -4,7 +4,7 @@ from mindsdb_sql.parser.ast import (
     Select,
     Star,
 )
-from mindsdb_sql.planner.steps import (
+from mindsdb.api.executor.planner.steps import (
     GetPredictorColumns,
     GetTableColumns,
 )

@@ -99,8 +99,8 @@ def get_embedding_model_provider(args: Dict) -> str:
             "No embedding model provider specified. trying to use llm provider."
         )
         llm_provider = get_llm_provider(args)
-        if llm_provider == 'mindsdb':
-            # We aren't an embeddings provider, so use the default instead.
+        # vLLM and mindsdb aren't embeddings providers, use default instead
+        if llm_provider in ('mindsdb', 'vllm'):
             llm_provider = DEFAULT_EMBEDDINGS_MODEL_PROVIDER
         return args.get("embedding_model_provider", llm_provider)
     raise ValueError("Invalid model name. Please define provider")

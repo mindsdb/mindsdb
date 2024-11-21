@@ -2,7 +2,7 @@ from mindsdb_sql.parser import ast
 
 
 def query_traversal(node, callback, is_table=False, is_target=False, parent_query=None):
-    '''
+    """
     :param node: element
     :param callback: function applied to every element
     :param is_table: it is table in query
@@ -11,8 +11,20 @@ def query_traversal(node, callback, is_table=False, is_target=False, parent_quer
     :return:
        new element if it is needed to be replaced
        or None to keep element and traverse over it
-    '''
-    # traversal query tree to find and replace nodes
+
+    Usage:
+    Create callback function to check or replace nodes
+    Example:
+    ```python
+    def remove_predictors(node, is_table, **kwargs):
+        if is_table and isinstance(node, Identifier):
+            if is_predictor(node):
+                return Constant(None)
+
+    utils.query_traversal(ast_query, remove_predictors)
+    ```
+
+    """
 
     res = callback(node, is_table=is_table, is_target=is_target, parent_query=parent_query)
     if res is not None:

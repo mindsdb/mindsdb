@@ -237,7 +237,8 @@ class SlackMessagesTable(APIResource):
             try:
                 response = client.chat_postMessage(
                     channel=params['channel_id'],
-                    text=params['text']
+                    text=params['text'],
+                    thread_ts=params.get('thread_ts', None)
                 )
             except SlackApiError as e:
                 raise Exception(f"Error posting message to Slack channel '{params['channel']}': {e.response['error']}")
@@ -397,7 +398,7 @@ class SlackHandler(APIChatHandler):
             },
             'chat_table': {
                 'name': 'messages',
-                'chat_id_col': 'channel_id',
+                'chat_id_col': ['channel_id', 'thread_ts'],
                 'username_col': 'user',
                 'text_col': 'text',
                 'time_col': 'thread_ts',
@@ -449,11 +450,13 @@ class SlackHandler(APIChatHandler):
 
             key = {
                 'channel_id': payload_event['channel'],
+                'thread_ts': payload_event.get('thread_ts', None)
             }
             row = {
                 'text': payload_event['text'],
                 'user': payload_event['user'],
                 'channel_id': payload_event['channel'],
+                'thread_ts': payload_event.get('thread_ts', None),
                 'created_at': dt.datetime.fromtimestamp(float(payload_event['ts'])).strftime('%Y-%m-%d %H:%M:%S')
             }
 

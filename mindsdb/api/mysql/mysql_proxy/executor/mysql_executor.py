@@ -1,5 +1,5 @@
 from mindsdb_sql import parse_sql
-from mindsdb_sql.planner import utils as planner_utils
+from mindsdb.api.executor.planner import utils as planner_utils
 
 import mindsdb.utilities.profiler as profiler
 from mindsdb.api.executor import Column, SQLQuery

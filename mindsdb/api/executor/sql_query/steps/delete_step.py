@@ -7,8 +7,8 @@ from mindsdb_sql.parser.ast import (
     Parameter,
     Tuple,
 )
-from mindsdb_sql.planner.steps import DeleteStep
-from mindsdb_sql.planner.utils import query_traversal
+from mindsdb.integrations.utilities.query_traversal import query_traversal
+from mindsdb.api.executor.planner.steps import DeleteStep
 
 from mindsdb.api.executor.sql_query.result_set import ResultSet
 

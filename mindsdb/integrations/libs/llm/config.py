@@ -1,6 +1,12 @@
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+
+from mindsdb.interfaces.agents.constants import (
+    DEFAULT_MAX_TOKENS,
+    DEFAULT_TEMPERATURE,
+    DEFAULT_VLLM_SERVER_URL
+)
 
 
 class BaseLLMConfig(BaseModel):
@@ -104,3 +110,10 @@ class NvidiaNIMConfig(BaseLLMConfig):
 class MindsdbConfig(BaseLLMConfig):
     model_name: str
     project_name: str
+
+
+class VLLMConfig(BaseLLMConfig):
+    model_name: str
+    vllm_server_url: Optional[str] = Field(default=DEFAULT_VLLM_SERVER_URL)
+    max_tokens: Optional[int] = Field(default=DEFAULT_MAX_TOKENS)
+    temperature: Optional[float] = Field(default=DEFAULT_TEMPERATURE)

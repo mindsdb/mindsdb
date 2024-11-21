@@ -27,4 +27,18 @@ query_str, params = renderer.get_exec_params(ast_query)
 
 In handler this function could be used for bulk insert (for example executemany in postgres)
 
+## Architecture
+
+Only one renderer is available at the moment: SqlalchemyRender.
+- It converts AST-query to sqlalchemy query. 
+It uses [imperative](https://docs.sqlalchemy.org/en/14/orm/mapping_styles.html#orm-imperative-mapping) mapping for this 
+- Then created sqlalchemy object is compiled inside sqlalchemy using chosen dialect 
+
+Supported dialects at the moment: mysql, postgresql, sqlite, mssql, oracle
+
+Notes:
+- it is not possible to use more than 2 part in table name
+  - it can be (integration.table) or (schema.table)
+  - but can't be (integration.schema.table)
+- sometimes conditions in rendered sql can be slightly changed, for example 'not a=b' to 'a!=b'
 

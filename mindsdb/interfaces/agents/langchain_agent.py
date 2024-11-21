@@ -57,8 +57,6 @@ from .constants import (
     USER_COLUMN,
     ASSISTANT_COLUMN,
     CONTEXT_COLUMN,
-    DEFAULT_TEMPERATURE,
-    DEFAULT_VLLM_SERVER_URL
 )
 from mindsdb.interfaces.skills.skill_tool import skill_tool, SkillData
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
@@ -171,13 +169,7 @@ def create_chat_model(args: Dict):
     if args["provider"] == "mindsdb":
         return ChatMindsdb(**model_kwargs)
     if args["provider"] == "vllm":
-        return ChatOpenAI(
-            model=model_kwargs["model_name"],
-            openai_api_key="EMPTY",
-            openai_api_base=model_kwargs.get("vllm_server_url", DEFAULT_VLLM_SERVER_URL),
-            max_tokens=model_kwargs.get("max_tokens", DEFAULT_MAX_TOKENS),
-            temperature=model_kwargs.get("temperature", DEFAULT_TEMPERATURE),
-        )
+        return ChatOpenAI(**model_kwargs)
     raise ValueError(f'Unknown provider: {args["provider"]}')
 
 

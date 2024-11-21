@@ -50,13 +50,14 @@ from .constants import (
     DEFAULT_EMBEDDINGS_MODEL_PROVIDER,
     DEFAULT_MAX_ITERATIONS,
     DEFAULT_MAX_TOKENS,
+    DEFAULT_TIKTOKEN_MODEL_NAME,
     SUPPORTED_PROVIDERS,
     ANTHROPIC_CHAT_MODELS,
     OLLAMA_CHAT_MODELS,
     NVIDIA_NIM_CHAT_MODELS,
     USER_COLUMN,
     ASSISTANT_COLUMN,
-    CONTEXT_COLUMN,
+    CONTEXT_COLUMN
 )
 from mindsdb.interfaces.skills.skill_tool import skill_tool, SkillData
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
@@ -144,20 +145,17 @@ def build_embedding_model(args) -> Embeddings:
 def create_chat_model(args: Dict):
     model_kwargs = get_chat_model_params(args)
 
-    def _get_tiktoken_model_name(model: str) -> str:
-        if model.startswith("gpt-4"):
-            return "gpt-4"
-        return model
-
     if args["provider"] == "anthropic":
         return ChatAnthropic(**model_kwargs)
-    if args["provider"] == "openai":
+    if args["provider"] == "openai" or args["provider"] == "vllm":
+        chat_open_ai = ChatOpenAI(**model_kwargs)
         # Some newer GPT models (e.g. gpt-4o when released) don't have token counting support yet.
         # By setting this manually in ChatOpenAI, we count tokens like compatible GPT models.
-        model_kwargs["tiktoken_model_name"] = _get_tiktoken_model_name(
-            model_kwargs.get("model_name")
-        )
-        return ChatOpenAI(**model_kwargs)
+        try:
+            chat_open_ai.get_num_tokens_from_messages([])
+        except NotImplementedError:
+            chat_open_ai.tiktoken_model_name = DEFAULT_TIKTOKEN_MODEL_NAME
+        return chat_open_ai
     if args["provider"] == "anyscale":
         return ChatAnyscale(**model_kwargs)
     if args["provider"] == "litellm":
@@ -168,8 +166,6 @@ def create_chat_model(args: Dict):
         return ChatNVIDIA(**model_kwargs)
     if args["provider"] == "mindsdb":
         return ChatMindsdb(**model_kwargs)
-    if args["provider"] == "vllm":
-        return ChatOpenAI(**model_kwargs)
     raise ValueError(f'Unknown provider: {args["provider"]}')
 
 

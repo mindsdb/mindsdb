@@ -5,6 +5,7 @@ from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
 import pandas as pd
 import pyodbc
+import pyodbc
 import numpy as np
 
 from mindsdb.integrations.libs.base import DatabaseHandler
@@ -96,14 +97,14 @@ class AltibaseHandler(DatabaseHandler):
         Returns:
             connection
         """
-        jar_location = self.connection_args.get('jdbcJarLocation')
+        jar_location = self.connection_args.get('jar_location')
 
-        jdbc_class = self.connection_args.get('jdbcClass', 'Altibase.jdbc.driver.AltibaseDriver')
+        jdbc_class = self.connection_args.get('jdbc_class', 'Altibase.jdbc.driver.AltibaseDriver')
         jdbc_url = f"jdbc:Altibase://{self.host}:{self.port}/{self.database}"
 
         try:
             if self.user and self.password and jar_location: 
-                connection = jdbcconnector.connect(jclassname=jdbc_class, url=jdbc_url, driver_args=[self.user, self.password], jars=jar_location.split(","))
+                connection = jdbcconnector.connect(jclassname=jdbc_class, url=jdbc_url, driver_args=[self.user, self.password], jars=str(jar_location).split(","))
             elif self.user and self.password: 
                 connection = jdbcconnector.connect(jclassname=jdbc_class, url=jdbc_url, driver_args=[self.user, self.password])
             elif jar_location: 
@@ -115,6 +116,7 @@ class AltibaseHandler(DatabaseHandler):
             self.is_connected = True
         except Exception as e:
             logger.error(f"Error while connecting to {self.database}, {e}")
+            raise e
         
         return self.connection
 

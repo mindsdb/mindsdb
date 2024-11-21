@@ -15,7 +15,6 @@ from mindsdb.integrations.libs.llm.config import (
     OpenAIConfig,
     NvidiaNIMConfig,
     MindsdbConfig,
-    VLLMConfig,
 )
 from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
 
@@ -42,6 +41,7 @@ DEFAULT_NVIDIA_NIM_BASE_URL = (
     "http://localhost:8000/v1"  # Assumes local port forwarding through ssh
 )
 DEFAULT_NVIDIA_NIM_MODEL = "meta/llama-3_1-8b-instruct"
+DEFAULT_VLLM_SERVER_URL = "http://localhost:8000/v1"
 
 
 def get_completed_prompts(
@@ -209,12 +209,17 @@ def get_llm_config(provider: str, args: Dict) -> BaseLLMConfig:
             project_name=args.get("project_name", "mindsdb"),
         )
     if provider == "vllm":
-        return VLLMConfig(
-            model_name=args["model_name"],
-            vllm_server_url=args.get("vllm_server_url"),
-            max_tokens=args.get("max_tokens"),
-            temperature=args.get("temperature")
+        return OpenAIConfig(
+            model_name=args.get("model_name"),
+            temperature=temperature,
+            max_retries=args.get("max_retries", DEFAULT_OPENAI_MAX_RETRIES),
+            max_tokens=args.get("max_tokens", DEFAULT_OPENAI_MAX_TOKENS),
+            openai_api_base=args.get("base_url", DEFAULT_VLLM_SERVER_URL),
+            openai_api_key=args["api_keys"].get("vllm", "EMPTY`"),
+            openai_organization=args.get("api_organization", None),
+            request_timeout=args.get("request_timeout", None),
         )
+
     raise ValueError(f"Provider {provider} is not supported.")
 
 

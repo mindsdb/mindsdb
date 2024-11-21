@@ -57,6 +57,8 @@ from .constants import (
     USER_COLUMN,
     ASSISTANT_COLUMN,
     CONTEXT_COLUMN,
+    DEFAULT_TEMPERATURE,
+    DEFAULT_VLLM_SERVER_URL
 )
 from mindsdb.interfaces.skills.skill_tool import skill_tool, SkillData
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
@@ -73,8 +75,11 @@ logger = log.getLogger(__name__)
 
 
 def get_llm_provider(args: Dict) -> str:
+    # If provider is explicitly specified, use that
     if "provider" in args:
         return args["provider"]
+
+    # Check for known model names from other providers first
     if args["model_name"] in ANTHROPIC_CHAT_MODELS:
         return "anthropic"
     if args["model_name"] in OPEN_AI_CHAT_MODELS:
@@ -83,6 +88,8 @@ def get_llm_provider(args: Dict) -> str:
         return "ollama"
     if args["model_name"] in NVIDIA_NIM_CHAT_MODELS:
         return "nvidia_nim"
+
+    # For vLLM, require explicit provider specification
     raise ValueError("Invalid model name. Please define a supported llm provider")
 
 
@@ -163,6 +170,14 @@ def create_chat_model(args: Dict):
         return ChatNVIDIA(**model_kwargs)
     if args["provider"] == "mindsdb":
         return ChatMindsdb(**model_kwargs)
+    if args["provider"] == "vllm":
+        return ChatOpenAI(
+            model=model_kwargs["model_name"],
+            openai_api_key="EMPTY",
+            openai_api_base=model_kwargs.get("vllm_server_url", DEFAULT_VLLM_SERVER_URL),
+            max_tokens=model_kwargs.get("max_tokens", DEFAULT_MAX_TOKENS),
+            temperature=model_kwargs.get("temperature", DEFAULT_TEMPERATURE),
+        )
     raise ValueError(f'Unknown provider: {args["provider"]}')
 
 

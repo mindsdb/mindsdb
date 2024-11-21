@@ -73,8 +73,11 @@ logger = log.getLogger(__name__)
 
 
 def get_llm_provider(args: Dict) -> str:
+    # If provider is explicitly specified, use that
     if "provider" in args:
         return args["provider"]
+
+    # Check for known model names from other providers first
     if args["model_name"] in ANTHROPIC_CHAT_MODELS:
         return "anthropic"
     if args["model_name"] in OPEN_AI_CHAT_MODELS:
@@ -83,6 +86,8 @@ def get_llm_provider(args: Dict) -> str:
         return "ollama"
     if args["model_name"] in NVIDIA_NIM_CHAT_MODELS:
         return "nvidia_nim"
+
+    # For vLLM, require explicit provider specification
     raise ValueError("Invalid model name. Please define a supported llm provider")
 
 
@@ -94,8 +99,8 @@ def get_embedding_model_provider(args: Dict) -> str:
             "No embedding model provider specified. trying to use llm provider."
         )
         llm_provider = get_llm_provider(args)
-        if llm_provider == 'mindsdb':
-            # We aren't an embeddings provider, so use the default instead.
+        # vLLM and mindsdb aren't embeddings providers, use default instead
+        if llm_provider in ('mindsdb', 'vllm'):
             llm_provider = DEFAULT_EMBEDDINGS_MODEL_PROVIDER
         return args.get("embedding_model_provider", llm_provider)
     raise ValueError("Invalid model name. Please define provider")
@@ -163,6 +168,8 @@ def create_chat_model(args: Dict):
         return ChatNVIDIA(**model_kwargs)
     if args["provider"] == "mindsdb":
         return ChatMindsdb(**model_kwargs)
+    if args["provider"] == "vllm":
+        return ChatOpenAI(**model_kwargs)
     raise ValueError(f'Unknown provider: {args["provider"]}')
 
 

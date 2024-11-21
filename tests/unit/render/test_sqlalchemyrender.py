@@ -3,7 +3,7 @@ import datetime as dt
 from mindsdb_sql.parser.ast import (
     Identifier, Select, Star, Constant, Tuple, BinaryOperation, CreateTable, TableColumn, Insert
 )
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
 
 class TestRender:

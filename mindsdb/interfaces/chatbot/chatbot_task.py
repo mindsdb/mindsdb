@@ -34,6 +34,9 @@ class ChatBotTask(BaseTask):
         self.project_name = db.Project.query.get(bot_record.project_id).name
         self.project_datanode = self.session.datahub.get(self.project_name)
 
+        # get chat handler info
+        self.bot_params = bot_record.params or {}
+
         self.agent_id = bot_record.agent_id
         if self.agent_id is not None:
             self.bot_executor_cls = AgentExecutor
@@ -47,9 +50,6 @@ class ChatBotTask(BaseTask):
         self.chat_handler = self.session.integration_controller.get_data_handler(database_name)
         if not isinstance(self.chat_handler, APIChatHandler):
             raise Exception(f"Can't use chat database: {database_name}")
-
-        # get chat handler info
-        self.bot_params = bot_record.params or {}
 
         chat_params = self.chat_handler.get_chat_config()
         polling = chat_params['polling']['type']

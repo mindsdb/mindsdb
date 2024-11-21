@@ -9,7 +9,7 @@ from mindsdb.api.executor.planner.steps import (
     JoinStep,
 )
 from mindsdb.integrations.utilities.query_traversal import query_traversal
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
 from mindsdb.api.executor.sql_query.result_set import ResultSet
 from mindsdb.api.executor.utilities.sql import query_df_with_type_infer_fallback

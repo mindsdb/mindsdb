@@ -92,7 +92,11 @@ Please give a short succinct context to situate this chunk within the overall do
             chunk_size=config.chunk_size,
             chunk_overlap=config.chunk_overlap
         ))
-        self.llm = create_chat_model({"model_name": config.llm_model})
+        self.llm = create_chat_model({
+            "model_name": self.config.llm_config.model_name,
+            "provider": self.config.llm_config.provider,
+            **self.config.llm_config.params
+        })
         self.context_template = config.context_template or self.DEFAULT_CONTEXT_TEMPLATE
 
     def _generate_context(self, chunk_content: str, full_document: str) -> str:

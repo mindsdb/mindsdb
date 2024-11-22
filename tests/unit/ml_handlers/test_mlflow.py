@@ -5,7 +5,7 @@ import time
 import pytest
 from unittest.mock import patch
 
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 
 from tests.unit.executor_test_base import BaseExecutorTest
 from mindsdb.integrations.handlers.mlflow_handler.mlflow_handler import MLflowHandler
@@ -15,7 +15,7 @@ from mindsdb.integrations.handlers.mlflow_handler.mlflow_handler import MLflowHa
 class TestMLFlow(BaseExecutorTest):
     def run_sql(self, sql):
         return self.command_executor.execute_command(
-            parse_sql(sql, dialect='mindsdb')
+            parse_sql(sql)
         )
 
     @patch('mlflow.tracking.MlflowClient')

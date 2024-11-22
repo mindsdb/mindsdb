@@ -2,11 +2,11 @@ import copy
 
 import pytest
 
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import (
+from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser.ast import (
     Identifier, Select, Join, Constant, Star, Parameter, BinaryOperation, OrderBy, Function
 )
-from mindsdb_sql.parser.utils import JoinType
+from mindsdb_sql_parser.utils import JoinType
 
 from mindsdb.api.executor.planner.exceptions import PlanningException
 from mindsdb.api.executor.planner import plan_query
@@ -430,7 +430,7 @@ class TestPlanJoinTables:
                     join pred m
                     left join tbl3 on tbl3.id=t1.id
                     where t1.a=1 and t2.b=2 and 1=1
-                ''', dialect='mindsdb'
+                '''
         )
 
         subquery = copy.deepcopy(query)
@@ -504,7 +504,7 @@ class TestPlanJoinTables:
                         select * from int2.tbl3
                         join pred m
                     ) t2 on t1.id = t2.id
-                ''', dialect='mindsdb'
+                '''
         )
 
         plan = plan_query(
@@ -558,7 +558,7 @@ class TestPlanJoinTables:
                         )
                     ) t1
                     join pred m
-                ''', dialect='mindsdb'
+                '''
         )
 
         plan = plan_query(
@@ -599,7 +599,7 @@ class TestPlanJoinTables:
                         select raw query
                     ) t1
                     join pred m
-                ''', dialect='mindsdb'
+                '''
         )
 
         plan = plan_query(

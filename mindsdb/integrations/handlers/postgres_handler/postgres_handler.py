@@ -7,9 +7,9 @@ from psycopg.postgres import types
 from psycopg.pq import ExecStatus
 from pandas import DataFrame
 
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.utilities import log

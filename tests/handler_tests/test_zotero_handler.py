@@ -1,8 +1,8 @@
 import unittest
 from unittest.mock import Mock, patch
 import pandas as pd
-from mindsdb_sql.parser import ast
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import ast
+from mindsdb_sql_parser import parse_sql
 from mindsdb.integrations.handlers.zotero_handler.zotero_handler import ZoteroHandler
 from mindsdb.integrations.handlers.zotero_handler.zotero_tables import AnnotationsTable
 

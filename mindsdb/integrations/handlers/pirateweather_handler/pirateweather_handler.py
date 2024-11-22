@@ -3,8 +3,8 @@ from typing import Any
 
 import pandas as pd
 import requests
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser import ast
+from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser import ast
 
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.integrations.utilities.handlers.query_utilities import SELECTQueryParser, SELECTQueryExecutor
@@ -183,7 +183,7 @@ class PirateWeatherAPIHandler(APIHandler):
         return response
 
     def native_query(self, query: Any):
-        ast = parse_sql(query, dialect="mindsdb")
+        ast = parse_sql(query)
         table = str(ast.from_table)
         data = self._tables[table].select(ast)
         return HandlerResponse(RESPONSE_TYPE.TABLE, data_frame=data)

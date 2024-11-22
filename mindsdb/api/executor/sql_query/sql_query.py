@@ -12,7 +12,7 @@ import re
 import inspect
 from textwrap import dedent
 
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 from mindsdb.api.executor.planner.steps import (
     ApplyTimeseriesPredictorStep,
     ApplyPredictorRowStep,
@@ -76,7 +76,7 @@ class SQLQuery:
                     self.outer_query = sql.replace(subquery, 'dataframe')
                     sql = subquery.strip('()')
             # endregion
-            self.query = parse_sql(sql, dialect='mindsdb')
+            self.query = parse_sql(sql)
             self.context['query_str'] = sql
         else:
             self.query = sql

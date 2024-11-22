@@ -2,8 +2,8 @@ from typing import List
 import copy
 from dataclasses import dataclass, field
 
-from mindsdb_sql.parser import ast
-from mindsdb_sql.parser.ast import (
+from mindsdb_sql_parser import ast
+from mindsdb_sql_parser.ast import (
     Select, Identifier, BetweenOperation, Join, Star, BinaryOperation, Constant,
     NativeQuery, Parameter
 )

@@ -1,4 +1,4 @@
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 import pandas as pd
 from mendeley import Mendeley
 from mindsdb.integrations.libs.api_handler import APIHandler, FuncParser
@@ -84,7 +84,7 @@ class MendeleyHandler(APIHandler):
             Returns:
                 HandlerResponse
         """
-        ast = parse_sql(query_string, dialect="mindsdb")
+        ast = parse_sql(query_string)
         return self.query(ast)
     
     def get_authors(self,data):

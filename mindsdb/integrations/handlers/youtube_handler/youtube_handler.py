@@ -8,7 +8,7 @@ from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
 from mindsdb.utilities import log
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 
 from collections import OrderedDict
 from mindsdb.utilities.config import Config
@@ -129,7 +129,7 @@ class YoutubeHandler(APIHandler):
         StatusResponse
             Request status
         """
-        ast = parse_sql(query, dialect="mindsdb")
+        ast = parse_sql(query)
         return self.query(ast)
 
 

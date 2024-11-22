@@ -2,7 +2,7 @@ import copy
 
 import numpy as np
 
-from mindsdb_sql.parser.ast import (
+from mindsdb_sql_parser.ast import (
     Identifier, BinaryOperation, Constant
 )
 from mindsdb.api.executor.planner.steps import (

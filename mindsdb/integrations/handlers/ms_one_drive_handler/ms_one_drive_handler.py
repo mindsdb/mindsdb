@@ -1,9 +1,9 @@
 from typing import Any, Dict, Text
 
 import msal
-from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.parser.ast import Constant, Identifier, Select, Star
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser.ast.base import ASTNode
+from mindsdb_sql_parser.ast import Constant, Identifier, Select, Star
+from mindsdb_sql_parser import parse_sql
 import pandas as pd
 from requests.exceptions import RequestException
 

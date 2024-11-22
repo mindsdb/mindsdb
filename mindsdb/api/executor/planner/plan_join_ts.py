@@ -1,7 +1,7 @@
 import copy
 
-from mindsdb_sql.parser.dialects.mindsdb import Latest
-from mindsdb_sql.parser.ast import (
+from mindsdb_sql_parser.ast.mindsdb import Latest
+from mindsdb_sql_parser.ast import (
     Select, Identifier, BetweenOperation, Join, Star, BinaryOperation, Constant,
     OrderBy, NullConstant
 )

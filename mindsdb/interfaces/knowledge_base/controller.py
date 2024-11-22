@@ -5,7 +5,7 @@ import json
 
 import pandas as pd
 
-from mindsdb_sql.parser.ast import (
+from mindsdb_sql_parser.ast import (
     BinaryOperation,
     Constant,
     Identifier,
@@ -14,7 +14,7 @@ from mindsdb_sql.parser.ast import (
     Delete,
     Star
 )
-from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor
+from mindsdb_sql_parser.ast.mindsdb import CreatePredictor
 
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 

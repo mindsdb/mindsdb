@@ -1,5 +1,5 @@
 
-from mindsdb_sql.parser.ast import Identifier, Select, BinaryOperation, Constant, OrderBy
+from mindsdb_sql_parser.ast import Identifier, Select, BinaryOperation, Constant, OrderBy
 
 from mindsdb.interfaces.storage import db
 

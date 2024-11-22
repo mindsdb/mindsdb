@@ -1,4 +1,4 @@
-from mindsdb_sql.parser.ast import Identifier, Operation, BinaryOperation, BetweenOperation, OrderBy
+from mindsdb_sql_parser.ast import Identifier, Operation, BinaryOperation, BetweenOperation, OrderBy
 
 from mindsdb.api.executor.planner.exceptions import PlanningException
 

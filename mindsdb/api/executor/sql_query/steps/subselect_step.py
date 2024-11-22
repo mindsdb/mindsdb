@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from mindsdb_sql.parser.ast import (
+from mindsdb_sql_parser.ast import (
     Identifier,
     Select,
     Star,

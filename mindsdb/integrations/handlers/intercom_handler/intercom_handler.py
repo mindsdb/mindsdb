@@ -1,7 +1,7 @@
 from mindsdb.integrations.handlers.intercom_handler.intercom_tables import Articles
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 import requests
 import pandas as pd
 from collections import OrderedDict
@@ -87,7 +87,7 @@ class IntercomHandler(APIHandler):
         StatusResponse
             Request status
         """
-        ast = parse_sql(query, dialect="mindsdb")
+        ast = parse_sql(query)
         return self.query(ast)
 
     def call_intercom_api(self, endpoint: str, method: str = 'GET', params: dict = {}, data=None) -> pd.DataFrame:

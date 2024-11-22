@@ -1,8 +1,8 @@
 from typing import Optional
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.utilities import log
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,

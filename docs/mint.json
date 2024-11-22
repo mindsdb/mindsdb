@@ -1095,6 +1095,7 @@
             {
               "group": "Image Models",
               "pages": [
+                "integrations/ai-engines/clipdrop",
                 "integrations/ai-engines/replicate-text2img",
                 "integrations/ai-engines/replicate-img2text"
               ]

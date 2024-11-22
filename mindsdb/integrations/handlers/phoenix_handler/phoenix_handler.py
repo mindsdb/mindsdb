@@ -4,7 +4,7 @@ import pandas as pd
 import phoenixdb
 
 from mindsdb_sql import parse_sql
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.base import DatabaseHandler
 from pyphoenix.sqlalchemy_phoenix import PhoenixDialect
 

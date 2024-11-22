@@ -1,7 +1,7 @@
 from typing import Any, Dict, Text
 
 from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from pandas import DataFrame
 import teradatasql
 from teradatasql import OperationalError

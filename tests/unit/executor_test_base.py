@@ -13,7 +13,7 @@ import duckdb
 import numpy as np
 import pandas as pd
 from mindsdb.utilities import log
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql import parse_sql
 
 logger = log.getLogger(__name__)

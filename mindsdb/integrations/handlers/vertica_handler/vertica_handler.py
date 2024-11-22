@@ -4,7 +4,7 @@ import pandas as pd
 import vertica_python as vp
 
 from mindsdb_sql import parse_sql
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.utilities import log

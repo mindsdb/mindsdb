@@ -5,7 +5,7 @@ import sqlalchemy_sqlany.base as sqlany_dialect
 
 from mindsdb_sql import parse_sql
 from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import DatabaseHandler

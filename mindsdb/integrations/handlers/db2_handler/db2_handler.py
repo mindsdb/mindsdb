@@ -4,7 +4,7 @@ import ibm_db_dbi
 from ibm_db_dbi import OperationalError, ProgrammingError
 from ibm_db_sa.ibm_db import DB2Dialect_ibm_db as DB2Dialect
 from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 import pandas as pd
 
 from mindsdb.integrations.libs.base import DatabaseHandler

@@ -23,7 +23,6 @@ import traceback
 from functools import partial
 from typing import Dict, List
 
-import numpy as np
 from numpy import dtype as np_dtype
 from pandas.api import types as pd_types
 
@@ -390,7 +389,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         return packets
 
     def send_tabel_packets(self, columns, data, status=0):
-
         # text protocol, convert all to string and serialize as packages
         df = data.get_raw_df()
 
@@ -401,13 +399,18 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 v = str(v)
             return Datum.serialize_str(v)
 
-        df = df.applymap(apply_f)
-
         # get column max size
+        # column_len is used by mysql client to determine width of columns, so it is not mandatory
+        # to get exactly max value. We can approximate them by sample.
         columns_len = None
         if len(df) > 0:
-            measurer = np.vectorize(len)
-            columns_len = measurer(df.values).max(axis=0)
+            sample = df.head(100)
+            columns_len = []
+            for column in sample.columns:
+                try:
+                    columns_len.append(sample[column].astype(str).str.len().max())
+                except Exception:
+                    columns_len.append(1)
 
         # columns packages
         packets = [self.packet(ColumnCountPacket, count=len(columns))]
@@ -418,12 +421,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             packets.append(self.packet(EofPacket, status=status))
         self.send_package_group(packets)
 
-        # body packages
-        string = b"".join([
-            self.packet(body=body, length=len(body)).accum()
-            for body in df.values.sum(axis=1)
-        ])
-        self.socket.sendall(string)
+        chunk_size = 100
+        for start in range(0, len(df), chunk_size):
+            string = b"".join([
+                self.packet(body=body, length=len(body)).accum()
+                for body in df[start:start + chunk_size].applymap(apply_f).values.sum(axis=1)
+            ])
+            self.socket.sendall(string)
 
     def decode_utf(self, text):
         try:

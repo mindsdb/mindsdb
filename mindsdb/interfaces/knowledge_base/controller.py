@@ -148,12 +148,7 @@ class KnowledgeBaseTable:
 
     def insert_documents(self, documents: List[Document]):
         """Process and insert documents with preprocessing if configured"""
-        if self.document_preprocessor:
-            chunks = self.document_preprocessor.process_documents(documents)
-            df = pd.DataFrame([chunk.model_dump() for chunk in chunks])
-        else:
-            # No preprocessing, convert directly to dataframe
-            df = pd.DataFrame([doc.model_dump() for doc in documents])
+        df = pd.DataFrame([doc.model_dump() for doc in documents])
 
         self.insert(df)
 

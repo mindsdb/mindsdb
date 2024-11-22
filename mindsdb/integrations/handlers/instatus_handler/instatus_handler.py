@@ -2,7 +2,7 @@ from mindsdb.integrations.handlers.instatus_handler.instatus_tables import Statu
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb.utilities import log
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 import requests
 import pandas as pd
 from collections import OrderedDict
@@ -89,7 +89,7 @@ class InstatusHandler(APIHandler):
         StatusResponse
             Request status
         """
-        ast = parse_sql(query, dialect="mindsdb")
+        ast = parse_sql(query)
         return self.query(ast)
 
     def call_instatus_api(self, endpoint: str, method: str = 'GET', params: dict = None, json_data: dict = {}) -> pd.DataFrame:

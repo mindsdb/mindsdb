@@ -96,7 +96,7 @@ agent.add_database(
 
 # send questions to the agent
 agent = agents.get('my_agent')
-answer = agent.completion([{'question': 'What cars do we have with normal transmition and gas?'}])
+answer = agent.completion([{'question': 'What cars do we have with normal transmission and gas?'}])
 print(answer.content)
 ```
 
@@ -104,7 +104,7 @@ You add more data to the agent, lets add some unstructured data:
 
 ```python
 agent.add_file('./cars_info.pdf', 'Details about the cars')
-answer = agent.completion([{'question': 'What cars do we have with normal transmition and gas and what valuable info do we have for a buyer of these cars?'}])
+answer = agent.completion([{'question': 'What cars do we have with normal transmission and gas? also include valuable info for a buyer of these cars?'}])
 print(answer.content)
 ```
 

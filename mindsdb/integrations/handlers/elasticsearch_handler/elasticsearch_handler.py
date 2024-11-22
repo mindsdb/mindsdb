@@ -9,8 +9,8 @@ from elasticsearch.exceptions import (
 )
 from es.elastic.sqlalchemy import ESDialect
 from pandas import DataFrame
-from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb_sql_parser.ast.base import ASTNode
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (

@@ -1,4 +1,4 @@
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 
 from mindsdb.integrations.handlers.npm_handler.api import NPM
 from mindsdb.integrations.handlers.npm_handler.npm_tables import (
@@ -49,5 +49,5 @@ class NPMHandler(APIHandler):
 
     def native_query(self, query: str) -> StatusResponse:
         """Receive and process a raw query"""
-        ast = parse_sql(query, dialect="mindsdb")
+        ast = parse_sql(query)
         return self.query(ast)

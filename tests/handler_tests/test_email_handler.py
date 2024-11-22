@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 from unittest.mock import MagicMock
 
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 from mindsdb.integrations.handlers.email_handler.email_tables import EmailsTable
 from mindsdb.integrations.handlers.email_handler.email_handler import EmailHandler
 

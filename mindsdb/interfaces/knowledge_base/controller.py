@@ -1,11 +1,11 @@
 import os
 import copy
 from typing import Dict, List, Optional
+import json
 
 import pandas as pd
 
-import mindsdb_sql.planner.utils as utils
-from mindsdb_sql.parser.ast import (
+from mindsdb_sql_parser.ast import (
     BinaryOperation,
     Constant,
     Identifier,
@@ -14,7 +14,9 @@ from mindsdb_sql.parser.ast import (
     Delete,
     Star
 )
-from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor
+from mindsdb_sql_parser.ast.mindsdb import CreatePredictor
+
+from mindsdb.integrations.utilities.query_traversal import query_traversal
 
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.libs.vectordatabase_handler import (
@@ -32,6 +34,9 @@ from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 
 from mindsdb.api.executor.command_executor import ExecuteCommands
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 class KnowledgeBaseTable:
@@ -67,7 +72,7 @@ class KnowledgeBaseTable:
 
         # replace content with embeddings
 
-        utils.query_traversal(query.where, self._replace_query_content)
+        query_traversal(query.where, self._replace_query_content)
 
         # set table name
         query.from_table = Identifier(parts=[self._kb.vector_database_table])
@@ -188,7 +193,7 @@ class KnowledgeBaseTable:
         Replaces content values with embeddings in WHERE clause. Sends query to vector db
         :param query: query to KB table
         """
-        utils.query_traversal(query.where, self._replace_query_content)
+        query_traversal(query.where, self._replace_query_content)
 
         # set table name
         query.table = Identifier(parts=[self._kb.vector_database_table])
@@ -231,26 +236,97 @@ class KnowledgeBaseTable:
 
     def insert(self, df: pd.DataFrame):
         """
-        Insert dataframe to KB table
-        Adds embedding column to dataframe and calls .upsert method of vector db
-        :param df: input dataframe
+        Insert dataframe to KB table. For multiple content columns, each column's content
+        becomes a separate document while preserving the relationship via metadata.
         """
         if df.empty:
             return
 
+        # First adapt column names to identify content and metadata columns
+        adapted_df = self._adapt_column_names(df)
+
         if self.document_preprocessor:
-            # Convert DataFrame to documents for preprocessing
-            raw_documents = [Document(
-                content=row.get(TableField.CONTENT.value, ''),
-                id=row.get(TableField.ID.value),
-                metadata=row.get(TableField.METADATA.value, {})
-            ) for _, row in df.iterrows()]
+            # Get content columns that were identified by _adapt_column_names
+            content_columns = self._kb.params.get('content_columns', [TableField.CONTENT.value])
 
-            # Apply preprocessing
+            # Convert DataFrame rows to documents, creating separate documents for each content column
+            raw_documents = []
+            for idx, row in adapted_df.iterrows():
+                base_metadata = row.get(TableField.METADATA.value, {})
+                if isinstance(base_metadata, str):
+                    try:
+                        base_metadata = json.loads(base_metadata)
+                    except json.JSONDecodeError:
+                        base_metadata = {}
+
+                # Get the row ID
+                doc_id = row.get(TableField.ID.value)
+                if doc_id is None:
+                    doc_id = str(idx)
+
+                # Create a separate document for each content column
+                for col in content_columns:
+                    content = row.get(col)
+                    if content and str(content).strip():  # Only create document if content exists
+                        # Create unique ID for each column document
+                        column_doc_id = f"{doc_id}_{col}" if doc_id else None
+
+                        # Add column source to metadata
+                        metadata = {
+                            **base_metadata,
+                            'source_column': col,
+                            'original_row_id': doc_id
+                        }
+
+                        raw_documents.append(Document(
+                            content=str(content),
+                            id=column_doc_id,
+                            metadata=metadata
+                        ))
+
+            # Apply preprocessing to all documents
             processed_chunks = self.document_preprocessor.process_documents(raw_documents)
-            df = pd.DataFrame([chunk.model_dump() for chunk in processed_chunks])
 
-        df = self._adapt_column_names(df)
+            # Convert processed chunks back to DataFrame with standard structure
+            df = pd.DataFrame([{
+                TableField.CONTENT.value: chunk.content,
+                TableField.ID.value: chunk.id,
+                TableField.METADATA.value: chunk.metadata
+            } for chunk in processed_chunks])
+
+        else:
+            # If no preprocessing, we still need to transform multiple columns into separate rows
+            rows = []
+            content_columns = self._kb.params.get('content_columns', [TableField.CONTENT.value])
+
+            for idx, row in adapted_df.iterrows():
+                base_metadata = row.get(TableField.METADATA.value, {})
+                if isinstance(base_metadata, str):
+                    try:
+                        base_metadata = json.loads(base_metadata)
+                    except json.JSONDecodeError:
+                        base_metadata = {}
+
+                doc_id = row.get(TableField.ID.value, str(idx))
+
+                for col in content_columns:
+                    content = row.get(col)
+                    if content and str(content).strip():
+                        rows.append({
+                            TableField.CONTENT.value: str(content),
+                            TableField.ID.value: f"{doc_id}_{col}",
+                            TableField.METADATA.value: {
+                                **base_metadata,
+                                'source_column': col,
+                                'original_row_id': doc_id
+                            }
+                        })
+
+            df = pd.DataFrame(rows)
+
+        if df.empty:
+            logger.warning("No valid content found in any content columns")
+            return
 
         # add embeddings
         df_emb = self._df_to_embeddings(df)

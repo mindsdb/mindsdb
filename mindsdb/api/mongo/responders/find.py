@@ -1,6 +1,6 @@
 from bson.int64 import Int64
 
-from mindsdb_sql.parser.ast import Join, Select, Identifier, Describe, Show, Constant
+from mindsdb_sql_parser.ast import Join, Select, Identifier, Describe, Show, Constant
 import mindsdb.api.mongo.functions as helpers
 from mindsdb.api.mongo.classes import Responder
 from mindsdb.api.mongo.utilities.mongodb_ast import MongoToAst

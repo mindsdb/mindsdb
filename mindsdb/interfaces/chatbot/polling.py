@@ -2,7 +2,7 @@ import secrets
 import threading
 import time
 
-from mindsdb_sql.parser.ast import Identifier, Select, Insert
+from mindsdb_sql_parser.ast import Identifier, Select, Insert
 
 from mindsdb.utilities import log
 from mindsdb.utilities.context import context as ctx

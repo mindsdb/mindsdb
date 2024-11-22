@@ -1,6 +1,6 @@
 from typing import Type
 import re
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 from pydantic import BaseModel, Field
 from langchain_core.tools import BaseTool
 
@@ -29,7 +29,7 @@ class MindsDBSQLParserTool(BaseTool):
         clean_query = self._clean_query(query)
         for query in self._query_options(clean_query):
             try:
-                ast_query = parse_sql(query, dialect='mindsdb')
+                ast_query = parse_sql(query)
                 return "".join(f"valid query: {ast_query.to_string()}")
             except Exception as e:
                 error = "".join(f"invalid query, with error: {e}")

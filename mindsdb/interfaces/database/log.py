@@ -5,11 +5,11 @@ from collections import OrderedDict
 
 import pandas as pd
 
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import Select, Identifier, Star, BinaryOperation, Constant, Join, Function
-from mindsdb_sql.parser.utils import JoinType
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb_sql.planner.utils import query_traversal
+from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser.ast import Select, Identifier, Star, BinaryOperation, Constant, Join, Function
+from mindsdb_sql_parser.utils import JoinType
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.integrations.utilities.query_traversal import query_traversal
 
 from mindsdb.utilities.functions import resolve_table_identifier
 from mindsdb.api.executor.utilities.sql import get_query_tables

@@ -2,7 +2,7 @@ from typing import Optional, Union
 
 import requests
 from atlassian import Confluence
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 
 from mindsdb.integrations.handlers.confluence_handler.confluence_table import (
     ConfluencePagesTable,
@@ -11,7 +11,7 @@ from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
 )
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 from mindsdb.utilities import log
 
 from atlassian import Confluence
@@ -53,6 +53,10 @@ class ConfluenceHandler(APIHandler):
         """
         if self.is_connected is True:
             return self.connection
+        
+        if not all(key in self.connection_data and self.connection_data.get(key) for key in ['url', 'username', 'password']):
+            raise ValueError('Required parameters (url, username, password) must be provided and should not be empty.')
+        
         conf = Confluence(
             url=self.connection_data.get('url'),
             username=self.connection_data.get('username'),
@@ -94,5 +98,5 @@ class ConfluenceHandler(APIHandler):
         StatusResponse
             Request status
         """
-        ast = parse_sql(query, dialect="mindsdb")
+        ast = parse_sql(query)
         return self.query(ast)

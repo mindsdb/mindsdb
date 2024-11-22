@@ -5,7 +5,6 @@ import json
 
 import pandas as pd
 
-import mindsdb_sql.planner.utils as utils
 from mindsdb_sql.parser.ast import (
     BinaryOperation,
     Constant,
@@ -16,6 +15,8 @@ from mindsdb_sql.parser.ast import (
     Star
 )
 from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor
+
+from mindsdb.integrations.utilities.query_traversal import query_traversal
 
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.libs.vectordatabase_handler import (
@@ -71,7 +72,7 @@ class KnowledgeBaseTable:
 
         # replace content with embeddings
 
-        utils.query_traversal(query.where, self._replace_query_content)
+        query_traversal(query.where, self._replace_query_content)
 
         # set table name
         query.from_table = Identifier(parts=[self._kb.vector_database_table])
@@ -192,7 +193,7 @@ class KnowledgeBaseTable:
         Replaces content values with embeddings in WHERE clause. Sends query to vector db
         :param query: query to KB table
         """
-        utils.query_traversal(query.where, self._replace_query_content)
+        query_traversal(query.where, self._replace_query_content)
 
         # set table name
         query.table = Identifier(parts=[self._kb.vector_database_table])

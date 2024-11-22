@@ -7,7 +7,7 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores import VectorStore
 
 from mindsdb.integrations.utilities.rag.loaders.vector_store_loader.vector_store_loader import VectorStoreLoader
-from mindsdb.integrations.utilities.rag.settings import VectorStoreConfig
+from mindsdb.integrations.utilities.rag.settings import VectorStoreConfig, SearchKwargs
 
 # gpt-3.5-turbo
 _DEFAULT_TPM_LIMIT = 60000
@@ -27,6 +27,7 @@ class VectorStoreOperator:
                  vector_store_config: VectorStoreConfig = None,
                  token_per_minute_limit: int = _DEFAULT_TPM_LIMIT,
                  rate_limit_interval: timedelta = _DEFAULT_RATE_LIMIT_INTERVAL,
+                 search_kwargs: SearchKwargs = None
 
                  ):
 
@@ -37,6 +38,7 @@ class VectorStoreOperator:
         self.current_token_usage = _INITIAL_TOKEN_USAGE
         self._vector_store = None
         self.vector_store_config = vector_store_config
+        self.search_kwargs = search_kwargs or SearchKwargs()
 
         self.verify_vector_store(vector_store, documents)
 

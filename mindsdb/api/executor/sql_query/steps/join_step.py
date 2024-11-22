@@ -5,11 +5,11 @@ import numpy as np
 from mindsdb_sql.parser.ast import (
     Identifier, BinaryOperation, Constant
 )
-from mindsdb_sql.planner.steps import (
+from mindsdb.api.executor.planner.steps import (
     JoinStep,
 )
-from mindsdb_sql.planner.utils import query_traversal
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.integrations.utilities.query_traversal import query_traversal
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
 from mindsdb.api.executor.sql_query.result_set import ResultSet
 from mindsdb.api.executor.utilities.sql import query_df_with_type_infer_fallback

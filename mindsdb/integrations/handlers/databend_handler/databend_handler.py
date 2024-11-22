@@ -4,7 +4,7 @@ import pandas as pd
 from databend_sqlalchemy import connector
 
 from mindsdb_sql import parse_sql
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.libs.base import DatabaseHandler
 from databend_sqlalchemy.databend_dialect import DatabendDialect
 

@@ -1,5 +1,6 @@
 from typing import List, Dict, Optional, Any
 import pandas as pd
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from mindsdb.integrations.utilities.rag.splitters.file_splitter import FileSplitter, FileSplitterConfig
 from mindsdb.interfaces.agents.langchain_agent import create_chat_model
@@ -8,7 +9,7 @@ from mindsdb.interfaces.knowledge_base.preprocessing.models import (
     ProcessedChunk,
     PreprocessorType,
     ContextualConfig,
-    Document
+    Document, TextChunkingConfig
 )
 from mindsdb.utilities import log
 
@@ -91,7 +92,11 @@ Please give a short succinct context to situate this chunk within the overall do
             chunk_size=config.chunk_size,
             chunk_overlap=config.chunk_overlap
         ))
-        self.llm = create_chat_model({"model_name": config.llm_model})
+        self.llm = create_chat_model({
+            "model_name": self.config.llm_config.model_name,
+            "provider": self.config.llm_config.provider,
+            **self.config.llm_config.params
+        })
         self.context_template = config.context_template or self.DEFAULT_CONTEXT_TEMPLATE
 
     def _generate_context(self, chunk_content: str, full_document: str) -> str:
@@ -138,17 +143,67 @@ Please give a short succinct context to situate this chunk within the overall do
         return processed_chunks
 
 
+class TextChunkingPreprocessor(DocumentPreprocessor):
+    """Default text chunking preprocessor using RecursiveCharacterTextSplitter"""
+
+    def __init__(self, config: Optional[TextChunkingConfig] = None):
+        """Initialize with text chunking configuration"""
+        super().__init__()
+        self.config = config or TextChunkingConfig()
+        self.splitter = RecursiveCharacterTextSplitter(
+            chunk_size=self.config.chunk_size,
+            chunk_overlap=self.config.chunk_overlap,
+            length_function=self.config.length_function,
+            separators=self.config.separators
+        )
+
+    def _split_document(self, doc: Document) -> List[Document]:
+        """Split document into chunks while preserving metadata"""
+        langchain_doc = LangchainDocument(
+            page_content=doc.content,
+            metadata=doc.metadata or {}
+        )
+        split_docs = self.splitter.split_documents([langchain_doc])
+        return [Document(
+            content=split_doc.page_content,
+            metadata=split_doc.metadata
+        ) for split_doc in split_docs]
+
+    def process_documents(self, documents: List[Document]) -> List[ProcessedChunk]:
+        """Process documents by splitting them into chunks"""
+        processed_chunks = []
+
+        for doc in documents:
+            chunk_docs = self._split_document(doc)
+
+            for chunk_doc in chunk_docs:
+                processed_chunks.append(ProcessedChunk(
+                    id=doc.id,
+                    content=chunk_doc.content,
+                    embeddings=doc.embeddings,
+                    metadata=chunk_doc.metadata or doc.metadata
+                ))
+
+        return processed_chunks
+
+
 class PreprocessorFactory:
     """Factory for creating preprocessors based on configuration"""
 
     @staticmethod
-    def create_preprocessor(config: PreprocessingConfig) -> DocumentPreprocessor:
+    def create_preprocessor(config: Optional[PreprocessingConfig] = None) -> DocumentPreprocessor:
         """
         Create appropriate preprocessor based on configuration
         : param config: Preprocessing configuration
         : return: Configured preprocessor instance
         : raises ValueError: If unknown preprocessor type specified
         """
+        if config is None:
+            return TextChunkingPreprocessor()
+
         if config.type == PreprocessorType.CONTEXTUAL:
             return ContextualPreprocessor(config.contextual_config or ContextualConfig())
+        elif config.type == PreprocessorType.TEXT_CHUNKING:
+            return TextChunkingPreprocessor(config.text_chunking_config)
+
         raise ValueError(f"Unknown preprocessor type: {config.type}")

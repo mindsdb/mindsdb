@@ -1,5 +1,5 @@
 from mindsdb_sql import parse_sql
-from mindsdb_sql.planner import utils as planner_utils
+from mindsdb.api.executor.planner import utils as planner_utils
 
 import mindsdb.utilities.profiler as profiler
 from mindsdb.api.executor import Column, SQLQuery
@@ -137,12 +137,8 @@ class Executor:
 
         self.is_executed = True
 
-        if self.sqlserver.session.api_type == 'http':
-            json_types = True
-        else:
-            json_types = False
         if ret.data is not None:
-            self.data = ret.data.to_lists(json_types=json_types)
+            self.data = ret.data
             self.columns = ret.data.columns
 
         self.state_track = ret.state_track

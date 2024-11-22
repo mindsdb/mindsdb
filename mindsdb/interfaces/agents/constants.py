@@ -1,3 +1,5 @@
+import os
+
 from langchain.agents import AgentType
 from langchain_openai import OpenAIEmbeddings
 
@@ -13,6 +15,7 @@ SUPPORTED_PROVIDERS = {
     "litellm",
     "ollama",
     "nvidia_nim",
+    "vllm"
 }
 # Chat models
 ANTHROPIC_CHAT_MODELS = (
@@ -169,6 +172,8 @@ DEFAULT_AGENT_TYPE = AgentType.CONVERSATIONAL_REACT_DESCRIPTION
 DEFAULT_MAX_ITERATIONS = 10
 DEFAULT_MAX_TOKENS = 8096
 DEFAULT_MODEL_NAME = "gpt-4o"
+DEFAULT_TEMPERATURE = 0.0
 USER_COLUMN = "question"
 DEFAULT_EMBEDDINGS_MODEL_PROVIDER = "openai"
 DEFAULT_EMBEDDINGS_MODEL_CLASS = OpenAIEmbeddings
+DEFAULT_TIKTOKEN_MODEL_NAME = os.getenv('DEFAULT_TIKTOKEN_MODEL_NAME', 'gpt-4')

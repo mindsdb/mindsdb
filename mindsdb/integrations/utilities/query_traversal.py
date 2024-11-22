@@ -1,4 +1,4 @@
-from mindsdb_sql.parser import ast
+from mindsdb_sql_parser import ast
 
 
 def query_traversal(node, callback, is_table=False, is_target=False, parent_query=None):

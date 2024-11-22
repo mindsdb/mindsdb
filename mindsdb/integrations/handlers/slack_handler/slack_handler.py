@@ -12,8 +12,8 @@ from slack_sdk.socket_mode.response import SocketModeResponse
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 
-from mindsdb_sql.parser import ast
-from mindsdb_sql.parser.ast import ASTNode
+from mindsdb_sql_parser import ast
+from mindsdb_sql_parser.ast import ASTNode
 from mindsdb.integrations.libs.api_handler import APIChatHandler, APIResource, FuncParser
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
 

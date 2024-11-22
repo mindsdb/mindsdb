@@ -4,7 +4,7 @@ from sqlalchemy_bigquery.base import BigQueryDialect
 from google.cloud.bigquery import Client, QueryJobConfig
 
 from mindsdb.utilities import log
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb.integrations.utilities.handlers.auth_utilities import GoogleServiceAccountOAuth2Manager

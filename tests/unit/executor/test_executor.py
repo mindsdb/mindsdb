@@ -799,7 +799,7 @@ class TestComplexQueries(BaseExecutorMockPredictor):
     #     '''
     #     from mindsdb.api.mysql.mysql_proxy.utilities import ErSqlWrongArguments
     #     with pytest.raises(ErSqlWrongArguments):
-    #         self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
+    #         self.command_executor.execute_command(parse_sql(sql))
 
 
 class TestTableau(BaseExecutorMockPredictor):

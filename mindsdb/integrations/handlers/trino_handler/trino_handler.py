@@ -2,7 +2,7 @@ import re
 from typing import Dict
 import pandas as pd
 from pyhive import (trino, sqlalchemy_trino)
-from mindsdb_sql import parse_sql, ASTNode
+from mindsdb_sql_parser import parse_sql, ASTNode
 from trino.auth import KerberosAuthentication, BasicAuthentication
 from trino.dbapi import connect
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender

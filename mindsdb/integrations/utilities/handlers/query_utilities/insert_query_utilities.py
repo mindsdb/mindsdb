@@ -1,4 +1,4 @@
-from mindsdb_sql.parser import ast
+from mindsdb_sql_parser import ast
 from typing import Text, List, Dict, Any, Optional
 
 from .exceptions import UnsupportedColumnException, MandatoryColumnException, ColumnCountMismatchException

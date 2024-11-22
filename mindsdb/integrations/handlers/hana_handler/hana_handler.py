@@ -2,7 +2,7 @@ from typing import Any, Dict, Text
 
 from hdbcli import dbapi
 from hdbcli.dbapi import Error, ProgrammingError
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from pandas import DataFrame
 import sqlalchemy_hana.dialect as hana_dialect

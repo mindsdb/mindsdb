@@ -1,4 +1,4 @@
-from mindsdb_sql.parser.ast import (Identifier, Select, NullConstant, Constant, Function, BinaryOperation)
+from mindsdb_sql_parser.ast import (Identifier, Select, NullConstant, Constant, Function, BinaryOperation)
 
 from mindsdb.api.executor.planner import plan_query
 from mindsdb.api.executor.planner.query_plan import QueryPlan

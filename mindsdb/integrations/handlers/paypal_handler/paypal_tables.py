@@ -2,7 +2,7 @@ import paypalrestsdk
 import pandas as pd
 from typing import Text, List, Dict
 
-from mindsdb_sql.parser import ast
+from mindsdb_sql_parser import ast
 from mindsdb.integrations.libs.api_handler import APITable
 
 from mindsdb.integrations.utilities.handlers.query_utilities import SELECTQueryParser, SELECTQueryExecutor

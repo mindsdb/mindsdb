@@ -2,9 +2,9 @@ import copy
 
 import pytest
 
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import (Identifier, Select, Join, Constant, Star, Parameter, BinaryOperation)
-from mindsdb_sql.parser.utils import JoinType
+from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser.ast import (Identifier, Select, Join, Constant, Star, Parameter, BinaryOperation)
+from mindsdb_sql_parser.utils import JoinType
 
 from mindsdb.api.executor.planner.exceptions import PlanningException
 from mindsdb.api.executor.planner import plan_query

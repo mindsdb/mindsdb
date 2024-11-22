@@ -2,10 +2,10 @@ import copy
 
 import pytest
 
-from mindsdb_sql import parse_sql, NativeQuery, OrderBy, NullConstant
-from mindsdb_sql.parser.ast import Select, Star, Identifier, Join, Constant, BinaryOperation, Update, BetweenOperation
-from mindsdb_sql.parser.dialects.mindsdb.latest import Latest
-from mindsdb_sql.parser.utils import JoinType
+from mindsdb_sql_parser import parse_sql, NativeQuery, OrderBy, NullConstant
+from mindsdb_sql_parser.ast import Select, Star, Identifier, Join, Constant, BinaryOperation, Update, BetweenOperation
+from mindsdb_sql_parser.ast.mindsdb import Latest
+from mindsdb_sql_parser.utils import JoinType
 
 from mindsdb.api.executor.planner.exceptions import PlanningException
 from mindsdb.api.executor.planner import plan_query
@@ -525,7 +525,7 @@ class TestJoinTimeseriesPredictor:
 
         sql = "select * from mysql.data.ny_output as ta left join mindsdb.tp3 as tb where ta.pickup_hour > 10 and ta.vendor_id = 1"
 
-        query = parse_sql(sql, dialect='mindsdb')
+        query = parse_sql(sql)
 
         expected_plan = QueryPlan(
             steps=[
@@ -605,7 +605,7 @@ class TestJoinTimeseriesPredictor:
         sql = "select * from mysql.data.ny_output as ta left join mindsdb.tp3 as tb\
             where ta.pickup_hour > 10 and ta.vendor_id = 1 and ta.type = 2"
 
-        query = parse_sql(sql, dialect='mindsdb')
+        query = parse_sql(sql)
 
         expected_plan = QueryPlan(
             steps=[
@@ -687,7 +687,7 @@ class TestJoinTimeseriesPredictor:
 
         sql = "select * from mysql.data.ny_output as ta left join mindsdb.tp3 as tb where ta.pickup_hour >= 10 and ta.vendor_id = 1"
 
-        query = parse_sql(sql, dialect='mindsdb')
+        query = parse_sql(sql)
 
         expected_plan = QueryPlan(
             steps=[
@@ -767,7 +767,7 @@ class TestJoinTimeseriesPredictor:
 
         sql = "select * from mysql.data.ny_output as ta join mindsdb.tp3 as tb where ta.pickup_hour < 10 and ta.vendor_id = 1"
 
-        query = parse_sql(sql, dialect='mindsdb')
+        query = parse_sql(sql)
 
         expected_plan = QueryPlan(
             steps=[
@@ -834,7 +834,7 @@ class TestJoinTimeseriesPredictor:
 
         sql = "select * from mysql.data.ny_output as ta left join mindsdb.tp3 as tb where ta.pickup_hour <= 10 and ta.vendor_id = 1"
 
-        query = parse_sql(sql, dialect='mindsdb')
+        query = parse_sql(sql)
 
         expected_plan = QueryPlan(
             steps=[
@@ -908,7 +908,7 @@ class TestJoinTimeseriesPredictor:
                 and ta.vendor_id = 1
         """
 
-        query = parse_sql(sql, dialect='mindsdb')
+        query = parse_sql(sql)
 
         expected_plan = QueryPlan(
             steps=[
@@ -1172,7 +1172,7 @@ class TestJoinTimeseriesPredictor:
 
     def test_timeseries_planner_not_changes_query(self):
         sql = "select * from ds.data as ta left join mindsdb.pr as tb where ta.f2 in ('a') and ta.f1 > LATEST"
-        query = parse_sql(sql, dialect='mindsdb')
+        query = parse_sql(sql)
 
         query_tree = query.to_tree()
 
@@ -1189,7 +1189,7 @@ class TestJoinTimeseriesPredictor:
 
     def test_timeseries_without_group(self):
         sql = "select * from ds.data.ny_output as ta join mindsdb.pr as tb where ta.f1 > LATEST"
-        query = parse_sql(sql, dialect='mindsdb')
+        query = parse_sql(sql)
 
         predictor_window = 3
         expected_plan = QueryPlan(
@@ -1253,7 +1253,7 @@ class TestJoinTimeseriesPredictor:
 
     def _test_timeseries_with_between_operator(self, sql):
 
-        query = parse_sql(sql, dialect='mindsdb')
+        query = parse_sql(sql)
 
         predictor_window = 3
         expected_plan = QueryPlan(
@@ -1316,7 +1316,7 @@ class TestJoinTimeseriesPredictor:
         sql = "select * from ds.data.ny_output as ta \
                left join mindsdb.pr as tb \
                where ta.f2 > '2020-11-01' and ta.f1 > LATEST"
-        query = parse_sql(sql, dialect='mindsdb')
+        query = parse_sql(sql)
 
         predictor_window = 3
         expected_plan = QueryPlan(
@@ -1553,7 +1553,7 @@ class TestJoinTimeseriesPredictor:
 
     def _test_timeseries_no_group(self, sql, expected_plan):
         predictor_window = 3
-        query = parse_sql(sql, dialect='mindsdb')
+        query = parse_sql(sql)
 
         plan = plan_query(
             query,
@@ -1583,7 +1583,7 @@ class TestJoinTimeseriesPredictor:
              USING param1 = 1, param2 = 'a';
         '''
         predictor_window = 3
-        query = parse_sql(sql, dialect='mindsdb')
+        query = parse_sql(sql)
 
         plan = plan_query(
             query,
@@ -1669,7 +1669,7 @@ class TestJoinTimeseriesPredictor:
           WHERE t1.saledate > LATEST
         '''
         predictor_window = 3
-        query = parse_sql(sql, dialect='mindsdb')
+        query = parse_sql(sql)
 
         plan = plan_query(
             query,

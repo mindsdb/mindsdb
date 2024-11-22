@@ -3,16 +3,16 @@ title: Knowledge Base
 sidebarTitle: Knowledge Base
 ---
 
-A knowledge base is a batteries-included RAG system that you can create and insert data into, as well as query as if it was a table.
+A knowledge base is a batteries-included RAG system that you can create and insert data into, as well as query as if it were a table.
 
 ```sql
 CREATE KNOWLEDGE_BASE world_news_kb
 USING
       model = embedding_model, -- this is an embedding model; note that using OpenAI's embedding model requires OpenAI API key (see examples below)
-      storage = vector_db; -- this is a vector database that stores embedded data; defaults to ChromaDB
+      storage = vector_db; -- 
 ```
 
-Internally, knowledge bases use a vector store and an embedding model. By default, it uses the ChromaDB vector store and the OpenAI embedding model, which requires an OpenAI API key. However, you can define a vector store and an embedding model as in the examples below.
+Internally, knowledge bases use a vector store and an embedding model. By default, it uses the ChromaDB vector store and the OpenAI embedding model, which requires an OpenAI API key. You can define a vector store and an embedding model as in the examples below.
 
 <p align="center">
   <img src="https://docs.google.com/drawings/d/e/2PACX-1vTVmUqhoFXLF3ncL0NWwgdPjI7Hj19f-5xU8ED31ntYvlsTM3poM9zZKwcrEwzvxJrOhl2raIFKWlsp/pub?w=1342&h=681" />
@@ -24,21 +24,21 @@ Here is a general syntax for creating a knowledge base:
 
 ```sql
 CREATE KNOWLEDGE_BASE my_kb
-[USING
-   [model = embedding_model,]
-   [storage = vector_database.storage_table,]
-   [metadata_columns = ['date', 'creator'],]
-   [content_columns = ['review'],]
-   [id_column='index'];]
+USING
+   model = embedding_model, -- required
+   storage = vector_database.storage_table, -- optional
+   metadata_columns = ['date', 'creator', ...], -- optional
+   content_columns = ['review', 'content', ...], -- optional
+   id_column = 'index'; -- optional
 ```
 
-Where the following parameters are optional:
+Where:
 
-- `model` can store an embedding model.
-- `storage` can store a table from a vector database.
-- `metadata_columns` can list columns to store metadata (if not set, there are no metadata columns).
-- `content_columns` can list columns to store content (if not set, all columns are content).
-- `id_column` can list a column to store a unique identitifier, which is `id` by default.
+- `model`: This is an embedding model created within MindsDB with `CREATE MODEL embedding_model`.
+- `storage`: This is a vector database that stores embedded data. It defaults to ChromaDB, or you can connect your vector store to MindsDB with `CREATE DATABASE vector_database`.
+- `metadata_columns`: The list of column names that will store metadata in the knowledge base. If not set, there are no metadata columns.
+- `content_columns`: The list of column names that will store actual content in the knowledge base. If not set, all columns are considered to be content columns.
+- `id_column`: The column name that will store unique identitifiers in the knowledge base. It defaults to `id`.
 
 ## Examples
 

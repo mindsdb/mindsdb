@@ -1,3 +1,5 @@
+import os
+
 from langchain.agents import AgentType
 from langchain_openai import OpenAIEmbeddings
 
@@ -174,3 +176,4 @@ DEFAULT_TEMPERATURE = 0.0
 USER_COLUMN = "question"
 DEFAULT_EMBEDDINGS_MODEL_PROVIDER = "openai"
 DEFAULT_EMBEDDINGS_MODEL_CLASS = OpenAIEmbeddings
+DEFAULT_TIKTOKEN_MODEL_NAME = os.getenv('DEFAULT_TIKTOKEN_MODEL_NAME', 'gpt-4')

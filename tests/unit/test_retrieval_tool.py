@@ -31,7 +31,7 @@ def test_rag_params_conversion():
         'retriever_type': 'vector_store',
         'multi_retriever_mode': 'both',
     }
-    rag_params = _get_rag_params(tools_config)
+    rag_params = _get_rag_params(tools_config, {})
     rag_config = RAGPipelineModel(**rag_params)
     assert rag_config.retriever_type == RetrieverType.VECTOR_STORE
     assert rag_config.multi_retriever_mode == MultiVectorRetrieverMode.BOTH
@@ -43,7 +43,7 @@ def test_invalid_enum_values():
         'retriever_type': 'invalid_type',
     }
     with pytest.raises(ValueError):
-        rag_params = _get_rag_params(tools_config)
+        rag_params = _get_rag_params(tools_config, {})
         RAGPipelineModel(**rag_params)
 
 
@@ -55,7 +55,7 @@ def test_vector_store_config_conversion():
             'collection_name': 'test'
         }
     }
-    rag_params = _get_rag_params(tools_config)
+    rag_params = _get_rag_params(tools_config, {})
     rag_config = RAGPipelineModel(**rag_params)
     assert isinstance(rag_config.vector_store_config, VectorStoreConfig)
     assert rag_config.vector_store_config.collection_name == 'test'
@@ -64,7 +64,7 @@ def test_vector_store_config_conversion():
 def test_default_values():
     """Test that default values are properly set"""
     tools_config = {}
-    rag_params = _get_rag_params(tools_config)
+    rag_params = _get_rag_params(tools_config, {})
     rag_config = RAGPipelineModel(**rag_params)
     # Test default enum values
     assert rag_config.retriever_type == RetrieverType.VECTOR_STORE
@@ -84,7 +84,7 @@ def test_default_values():
 def test_field_assignments(field, value, expected):
     """Test various field assignments"""
     tools_config = {field: value}
-    rag_params = _get_rag_params(tools_config)
+    rag_params = _get_rag_params(tools_config, {})
     rag_config = RAGPipelineModel(**rag_params)
     assert getattr(rag_config, field) == expected
 
@@ -95,6 +95,6 @@ def test_filtering_invalid_params():
         'invalid_param': 'should_be_filtered',
         'retriever_type': 'vector_store'
     }
-    rag_params = _get_rag_params(tools_config)
+    rag_params = _get_rag_params(tools_config, {})
     assert 'invalid_param' not in rag_params
     RAGPipelineModel(**rag_params)  # Should not raise any errors

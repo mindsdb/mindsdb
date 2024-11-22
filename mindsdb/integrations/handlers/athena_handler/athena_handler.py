@@ -49,7 +49,7 @@ class AthenaHandler(DatabaseHandler):
         """
 
         if self.is_connected:
-            return StatusResponse( success=True )
+            return StatusResponse(success=True)
 
         try:
             self.connection = client(
@@ -59,7 +59,7 @@ class AthenaHandler(DatabaseHandler):
                 region_name=self.connection_data['region_name'],
             )
             self.is_connected = True
-            return StatusResponse( success=True )
+            return StatusResponse(success=True)
         except Exception as e:
             logger.error(f'Failed to connect to Athena: {str(e)}')
             return StatusResponse(success=False, error_message=str(e))
@@ -79,7 +79,7 @@ class AthenaHandler(DatabaseHandler):
             HandlerStatusResponse
         """
         if self.is_connected:
-            return StatusResponse( success=True )
+            return StatusResponse(success=True)
         else:
             return self.connect()
 

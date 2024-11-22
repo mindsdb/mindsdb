@@ -28,10 +28,14 @@ class ClipdropClient:
             return ext
         raise Exception("Unknown image format. Currently jpg, jpeg & png are supported.")
 
-    def download_image(self, url):
-        img_ext = self.image_extension_check(url)
-        res = requests.get(url)
-        return {"img_ext": img_ext, "content": res.content}
+    def download_image(self, path):
+
+        img_ext = self.image_extension_check(path)
+        try:
+            res = requests.get(path)
+            return {"img_ext": img_ext, "content": res.content}
+        except Exception as e:
+            raise Exception(f"Failed to download image: {e}")
 
     def remove_text(self, img_url):
         url = f'{self.base_endpoint}remove-text/v1'
@@ -53,7 +57,7 @@ class ClipdropClient:
         url = f'{self.base_endpoint}sketch-to-image/v1/sketch-to-image'
         img_content = self.download_image(img_url)
         files = {
-            'image_file': ('image.jpg', img_content["content"], f'image/{img_content["img_ext"]}')
+            'sketch_file': ('image.jpg', img_content["content"], f'image/{img_content["img_ext"]}')
         }
         data = {'prompt': prompt}
         return self.make_request(url, files=files, data=data)

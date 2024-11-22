@@ -78,6 +78,12 @@ services:
       - "4318:4318"
     environment:
       COLLECTOR_ZIPKIN_HOST_PORT: ":9411"
+    healthcheck:
+      test: ["CMD-SHELL", "/go/bin/all-in-one-linux status"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+      
 
   langfuse:
     <<: *autoRestartOnFailure

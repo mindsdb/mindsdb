@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Union, Any
+from typing import List, Union, Any, Optional, Dict
 
 from langchain_community.vectorstores.chroma import Chroma
 from langchain_community.vectorstores.pgvector import PGVector
@@ -8,7 +8,7 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
 from langchain_core.vectorstores import VectorStore
 from langchain_core.stores import BaseStore
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from langchain_text_splitters import TextSplitter
 
 DEFAULT_COLLECTION_NAME = 'default_collection'
@@ -16,18 +16,21 @@ DEFAULT_COLLECTION_NAME = 'default_collection'
 # Multi retriever specific
 DEFAULT_ID_KEY = "doc_id"
 DEFAULT_MAX_CONCURRENCY = 5
+DEFAULT_K = 20
 
 DEFAULT_CARDINALITY_THRESHOLD = 40
 DEFAULT_CHUNK_SIZE = 1000
 DEFAULT_CHUNK_OVERLAP = 200
 DEFAULT_POOL_RECYCLE = 3600
 DEFAULT_LLM_MODEL = "gpt-4o"
+DEFAULT_LLM_MODEL_PROVIDER = "openai"
 DEFAULT_CONTENT_COLUMN_NAME = "body"
 DEFAULT_DATASET_DESCRIPTION = "email inbox"
 DEFAULT_TEST_TABLE_NAME = "test_email"
 DEFAULT_VECTOR_STORE = Chroma
 DEFAULT_RERANKER_FLAG = False
 DEFAULT_RERANKING_MODEL = "gpt-4o"
+DEFAULT_LLM_ENDPOINT = "https://api.openai.com/v1"
 DEFAULT_AUTO_META_PROMPT_TEMPLATE = """
 Below is a json representation of a table with information about {description}.
 Return a JSON list with an entry for each column. Each entry should have
@@ -83,12 +86,6 @@ vector_store_map = {
 }
 
 
-class RetrieverType(Enum):
-    VECTOR_STORE = 'vector_store'
-    AUTO = 'auto'
-    MULTI = 'multi'
-
-
 class VectorStoreConfig(BaseModel):
     vector_store_type: VectorStoreType = VectorStoreType.CHROMA
     persist_directory: str = None
@@ -101,45 +98,222 @@ class VectorStoreConfig(BaseModel):
         extra = "forbid"
 
 
+class RetrieverType(Enum):
+    VECTOR_STORE = 'vector_store'
+    AUTO = 'auto'
+    MULTI = 'multi'
+
+
+class SearchType(Enum):
+    """
+    Enum for vector store search types.
+    """
+    SIMILARITY = "similarity"
+    MMR = "mmr"
+    SIMILARITY_SCORE_THRESHOLD = "similarity_score_threshold"
+
+
+class SearchKwargs(BaseModel):
+    k: int = Field(
+        default=DEFAULT_K,
+        description="Amount of documents to return",
+        ge=1
+    )
+    filter: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Filter by document metadata"
+    )
+    # For similarity_score_threshold search type
+    score_threshold: Optional[float] = Field(
+        default=None,
+        description="Minimum relevance threshold for similarity_score_threshold search",
+        ge=0.0,
+        le=1.0
+    )
+    # For MMR search type
+    fetch_k: Optional[int] = Field(
+        default=None,
+        description="Amount of documents to pass to MMR algorithm",
+        ge=1
+    )
+    lambda_mult: Optional[float] = Field(
+        default=None,
+        description="Diversity of results returned by MMR (1=min diversity, 0=max)",
+        ge=0.0,
+        le=1.0
+    )
+
+    def model_dump(self, *args, **kwargs):
+        # Override model_dump to exclude None values by default
+        kwargs['exclude_none'] = True
+        return super().model_dump(*args, **kwargs)
+
+
 class RAGPipelineModel(BaseModel):
-    documents: List[Document] = None  # List of documents
+    documents: Optional[List[Document]] = Field(
+        default=None,
+        description="List of documents"
+    )
 
-    # used for loading an existing vector store
-    vector_store_config: VectorStoreConfig = VectorStoreConfig()  # Vector store configuration
+    vector_store_config: VectorStoreConfig = Field(
+        default_factory=VectorStoreConfig,
+        description="Vector store configuration"
+    )
 
-    # used for llm generation
-    llm: BaseChatModel = None  # Language model
-    llm_model_name: str = DEFAULT_LLM_MODEL  # Language model name
-    llm_provider: str = None  # Language model provider
+    llm: Optional[BaseChatModel] = Field(
+        default=None,
+        description="Language model"
+    )
+    llm_model_name: str = Field(
+        default=DEFAULT_LLM_MODEL,
+        description="Language model name"
+    )
+    llm_provider: Optional[str] = Field(
+        default=None,
+        description="Language model provider"
+    )
 
-    vector_store: VectorStore = vector_store_map[vector_store_config.vector_store_type]  # Vector store
-    db_connection_string: str = None  # Database connection string
-    table_name: str = DEFAULT_TEST_TABLE_NAME  # table name
-    embedding_model: Embeddings = None  # Embedding model
-    rag_prompt_template: str = DEFAULT_RAG_PROMPT_TEMPLATE  # RAG prompt template
-    retriever_prompt_template: Union[str, dict] = None  # Retriever prompt template
-    retriever_type: RetrieverType = RetrieverType.VECTOR_STORE  # Retriever type
+    vector_store: VectorStore = Field(
+        default_factory=lambda: vector_store_map[VectorStoreConfig().vector_store_type],
+        description="Vector store"
+    )
+    db_connection_string: Optional[str] = Field(
+        default=None,
+        description="Database connection string"
+    )
+    table_name: str = Field(
+        default=DEFAULT_TEST_TABLE_NAME,
+        description="Table name"
+    )
+    embedding_model: Optional[Embeddings] = Field(
+        default=None,
+        description="Embedding model"
+    )
+    rag_prompt_template: str = Field(
+        default=DEFAULT_RAG_PROMPT_TEMPLATE,
+        description="RAG prompt template"
+    )
+    retriever_prompt_template: Optional[Union[str, dict]] = Field(
+        default=None,
+        description="Retriever prompt template"
+    )
+    retriever_type: RetrieverType = Field(
+        default=RetrieverType.VECTOR_STORE,
+        description="Retriever type"
+    )
+    search_type: SearchType = Field(
+        default=SearchType.SIMILARITY,
+        description="Type of search to perform"
+    )
+    search_kwargs: SearchKwargs = Field(
+        default_factory=SearchKwargs,
+        description="Search configuration for the retriever"
+    )
 
     # Multi retriever specific
-    multi_retriever_mode: MultiVectorRetrieverMode = MultiVectorRetrieverMode.BOTH  # Multi retriever mode
-    max_concurrency: int = DEFAULT_MAX_CONCURRENCY  # Maximum concurrency
-    id_key: int = DEFAULT_ID_KEY  # ID key
-    parent_store: BaseStore = None  # Parent store
-    text_splitter: TextSplitter = None  # Text splitter
-    chunk_size: int = DEFAULT_CHUNK_SIZE  # Chunk size
-    chunk_overlap: int = DEFAULT_CHUNK_OVERLAP  # Chunk overlap
+    multi_retriever_mode: MultiVectorRetrieverMode = Field(
+        default=MultiVectorRetrieverMode.BOTH,
+        description="Multi retriever mode"
+    )
+    max_concurrency: int = Field(
+        default=DEFAULT_MAX_CONCURRENCY,
+        description="Maximum concurrency"
+    )
+    id_key: int = Field(
+        default=DEFAULT_ID_KEY,
+        description="ID key"
+    )
+    parent_store: Optional[BaseStore] = Field(
+        default=None,
+        description="Parent store"
+    )
+    text_splitter: Optional[TextSplitter] = Field(
+        default=None,
+        description="Text splitter"
+    )
+    chunk_size: int = Field(
+        default=DEFAULT_CHUNK_SIZE,
+        description="Chunk size"
+    )
+    chunk_overlap: int = Field(
+        default=DEFAULT_CHUNK_OVERLAP,
+        description="Chunk overlap"
+    )
 
     # Auto retriever specific
-    auto_retriever_filter_columns: List[str] = None  # Filter columns
-    cardinality_threshold: int = DEFAULT_CARDINALITY_THRESHOLD  # Cardinality threshold
-    content_column_name: str = DEFAULT_CONTENT_COLUMN_NAME  # content column name (the column we will get embeddings)
-    dataset_description: str = DEFAULT_DATASET_DESCRIPTION  # Description of the dataset
-    reranker: bool = DEFAULT_RERANKER_FLAG
+    auto_retriever_filter_columns: Optional[List[str]] = Field(
+        default=None,
+        description="Filter columns"
+    )
+    cardinality_threshold: int = Field(
+        default=DEFAULT_CARDINALITY_THRESHOLD,
+        description="Cardinality threshold"
+    )
+    content_column_name: str = Field(
+        default=DEFAULT_CONTENT_COLUMN_NAME,
+        description="Content column name (the column we will get embeddings)"
+    )
+    dataset_description: str = Field(
+        default=DEFAULT_DATASET_DESCRIPTION,
+        description="Description of the dataset"
+    )
+    reranker: bool = Field(
+        default=DEFAULT_RERANKER_FLAG,
+        description="Whether to use reranker"
+    )
+    reranking_model: str = Field(
+        default=DEFAULT_RERANKING_MODEL,
+        description="Reranking model name"
+    )
+    llm_endpoint: str = Field(
+        default=DEFAULT_LLM_ENDPOINT,
+        description="LLM endpoint URL"
+    )
 
     class Config:
         arbitrary_types_allowed = True
         extra = "forbid"
 
+        json_schema_extra = {
+            "example": {
+                "retriever_type": RetrieverType.VECTOR_STORE.value,
+                "multi_retriever_mode": MultiVectorRetrieverMode.BOTH.value,
+                # add more examples here
+            }
+        }
+
     @classmethod
     def get_field_names(cls):
         return list(cls.model_fields.keys())
+
+    @field_validator('search_kwargs')
+    @classmethod
+    def validate_search_kwargs(cls, v: SearchKwargs, info) -> SearchKwargs:
+        search_type = info.data.get('search_type', SearchType.SIMILARITY)
+
+        # Validate MMR-specific parameters
+        if search_type == SearchType.MMR:
+            if v.fetch_k is not None and v.fetch_k <= v.k:
+                raise ValueError("fetch_k must be greater than k")
+            if v.lambda_mult is not None and (v.lambda_mult < 0 or v.lambda_mult > 1):
+                raise ValueError("lambda_mult must be between 0 and 1")
+            if v.fetch_k is None and v.lambda_mult is not None:
+                raise ValueError("fetch_k is required when using lambda_mult with MMR search type")
+            if v.lambda_mult is None and v.fetch_k is not None:
+                raise ValueError("lambda_mult is required when using fetch_k with MMR search type")
+        elif search_type != SearchType.MMR:
+            if v.fetch_k is not None:
+                raise ValueError("fetch_k is only valid for MMR search type")
+            if v.lambda_mult is not None:
+                raise ValueError("lambda_mult is only valid for MMR search type")
+
+        # Validate similarity_score_threshold parameters
+        if search_type == SearchType.SIMILARITY_SCORE_THRESHOLD:
+            if v.score_threshold is not None and (v.score_threshold < 0 or v.score_threshold > 1):
+                raise ValueError("score_threshold must be between 0 and 1")
+            if v.score_threshold is None:
+                raise ValueError("score_threshold is required for similarity_score_threshold search type")
+        elif search_type != SearchType.SIMILARITY_SCORE_THRESHOLD and v.score_threshold is not None:
+            raise ValueError("score_threshold is only valid for similarity_score_threshold search type")
+
+        return v

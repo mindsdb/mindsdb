@@ -1,0 +1,31 @@
+---
+title: Common Table Expressions
+sidebarTitle: CTEs
+---
+
+MindsDB supports standard SQL syntax, including Common Table Expressions (CTEs).
+
+CTEs are used to create temporary, named result sets that simplify complex queries, enhance readability, and allow for modular query design by breaking down large queries into manageable parts.
+
+```sql
+WITH table_name1 AS (
+    
+    SELECT columns
+    FROM table1 t1
+    JOIN table2 t2
+    ON t1.col = t2.col
+),
+
+table_name2 AS (
+    
+    SELECT columns
+    FROM table1 t1
+    JOIN table2 t2
+    ON t1.col = t2.col
+)
+
+SELECT columns
+FROM table_name1 t1
+JOIN table_name2 t2
+ON t1.col - t2.col;
+```

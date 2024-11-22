@@ -8,7 +8,7 @@ from psycopg.pq import ExecStatus
 from pandas import DataFrame
 
 from mindsdb_sql import parse_sql
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.parser.ast.base import ASTNode
 
 from mindsdb.integrations.libs.base import DatabaseHandler
@@ -133,7 +133,7 @@ class PostgresHandler(DatabaseHandler):
 
         return response
 
-    def _cast_dtypes(self, df: DataFrame, description: list) -> None:
+    def _cast_dtypes(self, df: DataFrame, description: list) -> DataFrame:
         """
         Cast df dtypes basing on postgres types
             Note:
@@ -157,16 +157,19 @@ class PostgresHandler(DatabaseHandler):
             'float4': 'float32',
             'float8': 'float64'
         }
-        for column_index, _ in enumerate(df.columns):
-            col = df.iloc[:, column_index]  # column names could be duplicated
+        columns = df.columns
+        df = df.set_axis(range(len(columns)), axis=1)
+        for column_index, column_name in enumerate(df.columns):
+            col = df[column_name]
             if str(col.dtype) == 'object':
                 pg_type = types.get(description[column_index].type_code)
                 if pg_type is not None and pg_type.name in types_map:
                     col = col.fillna(0)
                     try:
-                        df.iloc[:, column_index] = col.astype(types_map[pg_type.name])
+                        df[column_name] = col.astype(types_map[pg_type.name])
                     except ValueError as e:
                         logger.error(f'Error casting column {col.name} to {types_map[pg_type.name]}: {e}')
+        return df.set_axis(columns, axis=1)
 
     @profiler.profile()
     def native_query(self, query: str, params=None) -> Response:
@@ -196,7 +199,7 @@ class PostgresHandler(DatabaseHandler):
                         result,
                         columns=[x.name for x in cur.description]
                     )
-                    self._cast_dtypes(df, cur.description)
+                    df = self._cast_dtypes(df, cur.description)
                     response = Response(
                         RESPONSE_TYPE.TABLE,
                         df

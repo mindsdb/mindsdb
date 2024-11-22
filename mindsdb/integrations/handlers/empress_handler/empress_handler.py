@@ -3,7 +3,7 @@ import pyodbc
 import pandas as pd
 from mindsdb_sql import parse_sql
 
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 from mindsdb_sql.parser.ast.base import ASTNode
 from mindsdb.integrations.libs.base import DatabaseHandler
 

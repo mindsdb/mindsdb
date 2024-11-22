@@ -7,12 +7,134 @@ MindsDB provides the `LLM()` function that lets users incorporate the LLM-genera
 
 ## Prerequisites
 
-The `LLM()` function uses one of the OpenAI models and requires the OpenAI API key.
+To use the `LLM()` function with MindsDB, choosing one of the available model providers and define the following environment variables.
 
-To use the `LLM()` function with MindsDB, define the model to be used and the OpenAI API key as environment variables.
+<AccordionGroup>
 
-* The `LLM_FUNCTION_MODEL` environment variable should store the OpenAI model name, like `gpt-4`.
-* The `OPENAI_API_KEY` environment variable should store the OpenAI API key value.
+  <Accordion title="OpenAI">
+    Here are the environment variables for the OpenAI provider:
+
+    ```
+    LLM_FUNCTION_MODEL_NAME
+    LLM_FUNCTION_TEMPERATURE
+    LLM_FUNCTION_MAX_RETRIES
+    LLM_FUNCTION_MAX_TOKENS
+    LLM_FUNCTION_OPENAI_API_BASE
+    LLM_FUNCTION_OPENAI_API_KEY
+    LLM_FUNCTION_OPENAI_ORGANIZATION
+    LLM_FUNCTION_REQUEST_TIMEOUT
+    ```
+
+    Note that the values stored in the environment variables are specific for each provider.
+  </Accordion>
+
+  <Accordion title="Anthropic">
+    Here are the environment variables for the Anthropic provider:
+
+    ```
+    LLM_FUNCTION_MODEL
+    LLM_FUNCTION_TEMPERATURE
+    LLM_FUNCTION_MAX_TOKENS
+    LLM_FUNCTION_TOP_P
+    LLM_FUNCTION_TOP_K
+    LLM_FUNCTION_DEFAULT_REQUEST_TIMEOUT
+    LLM_FUNCTION_ANTHROPIC_API_KEY
+    LLM_FUNCTION_ANTHROPIC_API_URL
+    ```
+
+    Note that the values stored in the environment variables are specific for each provider.
+  </Accordion>
+
+  <Accordion title="Anyscale">
+    Here are the environment variables for the Anyscale provider:
+
+    ```
+    LLM_FUNCTION_MODEL_NAME
+    LLM_FUNCTION_TEMPERATURE
+    LLM_FUNCTION_MAX_RETRIES
+    LLM_FUNCTION_MAX_TOKENS
+    LLM_FUNCTION_ANYSCALE_API_BASE
+    LLM_FUNCTION_ANYSCALE_API_KEY
+    LLM_FUNCTION_ANYSCALE_PROXY
+    LLM_FUNCTION_REQUEST_TIMEOUT
+    ```
+
+    Note that the values stored in the environment variables are specific for each provider.
+  </Accordion>
+
+  <Accordion title="LiteLLM">
+    Here are the environment variables for the LiteLLM provider:
+
+    ```
+    LLM_FUNCTION_MODEL
+    LLM_FUNCTION_TEMPERATURE
+    LLM_FUNCTION_API_BASE
+    LLM_FUNCTION_MAX_RETRIES
+    LLM_FUNCTION_MAX_TOKENS
+    LLM_FUNCTION_TOP_P
+    LLM_FUNCTION_TOP_K
+    ```
+
+    Note that the values stored in the environment variables are specific for each provider.
+  </Accordion>
+
+  <Accordion title="Ollama">
+    Here are the environment variables for the Ollama provider:
+
+    ```
+    LLM_FUNCTION_BASE_URL
+    LLM_FUNCTION_MODEL
+    LLM_FUNCTION_TEMPERATURE
+    LLM_FUNCTION_TOP_P
+    LLM_FUNCTION_TOP_K
+    LLM_FUNCTION_TIMEOUT
+    LLM_FUNCTION_FORMAT
+    LLM_FUNCTION_HEADERS
+    LLM_FUNCTION_NUM_PREDICT
+    LLM_FUNCTION_NUM_CTX
+    LLM_FUNCTION_NUM_GPU
+    LLM_FUNCTION_REPEAT_PENALTY
+    LLM_FUNCTION_STOP
+    LLM_FUNCTION_TEMPLATE
+    ```
+
+    Note that the values stored in the environment variables are specific for each provider.
+  </Accordion>
+
+  <Accordion title="Nvidia NIMs">
+    Here are the environment variables for the Nvidia NIMs provider:
+
+    ```
+    LLM_FUNCTION_BASE_URL
+    LLM_FUNCTION_MODEL
+    LLM_FUNCTION_TEMPERATURE
+    LLM_FUNCTION_TOP_P
+    LLM_FUNCTION_TIMEOUT
+    LLM_FUNCTION_FORMAT
+    LLM_FUNCTION_HEADERS
+    LLM_FUNCTION_NUM_PREDICT
+    LLM_FUNCTION_NUM_CTX
+    LLM_FUNCTION_NUM_GPU
+    LLM_FUNCTION_REPEAT_PENALTY
+    LLM_FUNCTION_STOP
+    LLM_FUNCTION_TEMPLATE
+    LLM_FUNCTION_NVIDIA_API_KEY
+    ```
+
+    Note that the values stored in the environment variables are specific for each provider.
+  </Accordion>
+
+  <Accordion title="MindsDB">
+    Here are the environment variables for the MindsDB provider:
+
+    ```
+    LLM_FUNCTION_MODEL_NAME
+    LLM_FUNCTION_PROJECT_NAME
+    ```
+
+    To use MindsDB as a provider, create a model in a project within MindsDB and use its name in the `LLM_FUNCTION_MODEL_NAME` environment variable and the project name in the `LLM_FUNCTION_PROJECT_NAME` environment variable. 
+  </Accordion>
+</AccordionGroup>
 
 ## Usage
 

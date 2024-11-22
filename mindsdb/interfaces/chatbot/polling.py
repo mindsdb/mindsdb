@@ -179,7 +179,6 @@ class RealtimePolling(BasePolling):
         )
 
     def run(self, stop_event):
-        # t_params = self.params["chat_table"]
         self.chat_task.chat_handler.subscribe(
             stop_event,
             self._callback

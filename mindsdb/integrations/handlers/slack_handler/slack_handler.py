@@ -504,15 +504,27 @@ class SlackHandler(APIChatHandler):
         params = {
             'polling': {
                 'type': 'realtime',
-                'table_name': 'messages'
             },
-            'chat_table': {
-                'name': 'messages',
-                'chat_id_col': 'channel_id',
-                'username_col': 'user',
-                'text_col': 'text',
-                'time_col': 'thread_ts',
-            }
+            'tables': [
+                {
+                    'chat_table': {
+                        'name': 'messages',
+                        'chat_id_col': 'channel_id',
+                        'username_col': 'user',
+                        'text_col': 'text',
+                        'time_col': 'thread_ts',
+                    }
+                },
+                {
+                    'chat_table': {
+                        'name': 'threads',
+                        'chat_id_col': ['channel_id', 'thread_ts'],
+                        'username_col': 'user',
+                        'text_col': 'text',
+                        'time_col': 'thread_ts',
+                    }
+                }
+            ]
         }
         return params
 
@@ -521,10 +533,7 @@ class SlackHandler(APIChatHandler):
         user_info = api.auth_test().data
         return user_info['bot_id']
 
-    def subscribe(self, stop_event, callback, table_name, **kwargs):
-        if table_name != 'messages':
-            raise RuntimeError(f'Table not supported: {table_name}')
-
+    def subscribe(self, stop_event, callback, **kwargs):
         self._socket_mode_client = SocketModeClient(
             # This app-level token will be used only for establishing a connection
             app_token=self.connection_args['app_token'],  # xapp-A111-222-xyz
@@ -561,12 +570,19 @@ class SlackHandler(APIChatHandler):
             key = {
                 'channel_id': payload_event['channel'],
             }
+
             row = {
                 'text': payload_event['text'],
                 'user': payload_event['user'],
                 'channel_id': payload_event['channel'],
                 'created_at': dt.datetime.fromtimestamp(float(payload_event['ts'])).strftime('%Y-%m-%d %H:%M:%S')
             }
+
+            # Add thread_ts to the key and row if it is a thread message. This is used to identify threads.
+            # This message should be handled via the threads table.
+            if 'thread_ts' in payload_event:
+                key['thread_ts'] = payload_event['thread_ts']
+                row['thread_ts'] = payload_event['thread_ts']
 
             callback(row, key)
 

@@ -25,14 +25,7 @@ def build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
     # we update the config with the pred_args to allow for custom config
     tools_config.update(pred_args)
 
-    rag_params = _get_rag_params(tools_config)
-
-    if 'vector_store_config' not in rag_params:
-        rag_params['vector_store_config'] = {}
-        logger.warning(f'No collection_name specified for the retrieval tool, '
-                       f"using default collection_name: '{DEFAULT_COLLECTION_NAME}'"
-                       f'\nWarning: If this collection does not exist, no data will be retrieved')
-
+    kb_params = {}
     if 'source' in tool:
         kb_name = tool['source']
         executor = skill_tool.get_command_executor()
@@ -42,10 +35,19 @@ def build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
             raise ValueError(f"Knowledge base not found: {kb_name}")
 
         kb_table = executor.session.kb_controller.get_table(kb.name, kb.project_id)
-
-        rag_params['vector_store_config'] = {
+        if kb.params is not None:
+            kb_params = kb.params
+        kb_params['vector_store_config'] = {
             'kb_table': kb_table
         }
+
+    rag_params = _get_rag_params(tools_config, kb_params)
+
+    if 'vector_store_config' not in rag_params:
+        rag_params['vector_store_config'] = {}
+        logger.warning(f'No collection_name specified for the retrieval tool, '
+                       f"using default collection_name: '{DEFAULT_COLLECTION_NAME}'"
+                       f'\nWarning: If this collection does not exist, no data will be retrieved')
 
     # Handle enums and type conversions
     if 'retriever_type' in rag_params:
@@ -96,13 +98,18 @@ def build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
     )
 
 
-def _get_rag_params(tools_config: Dict) -> Dict:
+def _get_rag_params(tools_config: Dict, knowledge_base_params: Dict) -> Dict:
     """Convert tools config to RAG parameters"""
     # Get valid fields from RAGPipelineModel
     valid_fields = RAGPipelineModel.get_field_names()
 
     # Filter out invalid parameters
     rag_params = {k: v for k, v in tools_config.items() if k in valid_fields}
+
+    knowledge_base_rag_params = {k: v for k, v in knowledge_base_params.items() if k in valid_fields}
+
+    # Prioritize knowledge base params over tool config.
+    rag_params.update(knowledge_base_rag_params)
 
     # Ensure default embedding model is set
     if 'embedding_model' not in rag_params:

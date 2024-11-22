@@ -27,6 +27,9 @@ PARAMETERS = {
     "database": "demo"
     };
 """
+    delete_db = """
+DROP DATABASE example_db;
+"""
 
     check_db_created = """
 SELECT *
@@ -45,6 +48,12 @@ GROUP BY bedrooms, type
 WINDOW 8
 HORIZON 4;
 """
+
+    delete_model = """
+DROP MODEL
+  mindsdb.house_sales_model;
+"""
+
     check_status = """
 SELECT *
 FROM mindsdb.models
@@ -60,29 +69,39 @@ SELECT m.saledate as date, m.ma as forecast
 """
 
 
-@pytest.mark.usefixtures("mindsdb_app")
+
+# @pytest.mark.usefixtures("mindsdb_app")
 class TestForecastQuaterlyHouseSales(HTTPHelperMixin):
 
     @classmethod
     def setup_class(cls):
-        cls.config = json.loads(
-            Path(CONFIG_PATH).read_text()
-        )
+        pass
+        # cls.config = json.loads(
+        #     Path(CONFIG_PATH).read_text()
+        # )
 
-        cls.initial_integrations_names = list(cls.config['integrations'].keys())
+        # cls.initial_integrations_names = list(cls.config['integrations'].keys())
 
-    def test_create_db(self):
-        sql = QueryStorage.create_db
-        self.sql_via_http(sql, RESPONSE_TYPE.OK)
+    @pytest.fixture
+    def demo_db_def(self):
+        self.sql_via_http(QueryStorage.delete_db)
+        return QueryStorage.create_db
+    
+    @pytest.fixture
+    def demo_model_def(self):
+        self.sql_via_http(QueryStorage.delete_model)
+        return QueryStorage.create_model
+
+    def test_create_db(self, demo_db_def):
+        self.sql_via_http(demo_db_def, RESPONSE_TYPE.OK)
 
     def test_db_created(self):
         sql = QueryStorage.check_db_created
         resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
         assert len(resp['data']) == 10
 
-    def test_create_model(self):
-        sql = QueryStorage.create_model
-        resp = self.sql_via_http(sql, RESPONSE_TYPE.TABLE)
+    def test_create_model(self, demo_model_def):
+        resp = self.sql_via_http(demo_model_def, RESPONSE_TYPE.TABLE)
 
         assert len(resp['data']) == 1
         print(f"CREATE_MODEL_REPONSE - {resp}")

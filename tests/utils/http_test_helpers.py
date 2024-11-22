@@ -26,6 +26,9 @@ class HTTPHelperMixin:
 
         if headers is None:
             headers = {}
+
+        headers["Cookie"] = "MY_BROWSER_COOKIE"
+
         if company_id is not None:
             headers['company-id'] = str(company_id)
 

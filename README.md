@@ -54,7 +54,7 @@ After [connecting](https://docs.mindsdb.com/mindsdb_sql/sql/create/database) and
 
 ## 💡 Example
 
-### Connecting AI Agents to structured and unstructired data
+### Connecting AI Agents to structured and unstructured data
 
 
 A common use case involves connecting agents to data. The following example shows how to connect an AI agent to a database so it can perform search over structured data:

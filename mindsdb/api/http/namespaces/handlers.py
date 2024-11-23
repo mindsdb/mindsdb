@@ -8,8 +8,8 @@ from http import HTTPStatus
 from flask import request, send_file, current_app as ca
 from flask_restx import Resource
 
-from mindsdb_sql.parser.ast import Identifier
-from mindsdb_sql.parser.dialects.mindsdb import CreateMLEngine
+from mindsdb_sql_parser.ast import Identifier
+from mindsdb_sql_parser.ast.mindsdb import CreateMLEngine
 
 from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.integrations.libs.ml_exec_base import process_cache

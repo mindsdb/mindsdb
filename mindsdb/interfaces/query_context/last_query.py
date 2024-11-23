@@ -2,7 +2,7 @@ from typing import Union, List
 import copy
 from collections import defaultdict
 
-from mindsdb_sql.parser.ast import (
+from mindsdb_sql_parser.ast import (
     Identifier, Select, BinaryOperation, Last, Constant, Star, ASTNode, NullConstant, OrderBy, Function, TypeCast
 )
 from mindsdb.integrations.utilities.query_traversal import query_traversal

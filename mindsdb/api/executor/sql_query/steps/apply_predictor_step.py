@@ -4,14 +4,14 @@ import re
 import dateinfer
 import pandas as pd
 
-from mindsdb_sql.parser.ast import (
+from mindsdb_sql_parser.ast import (
     BinaryOperation,
     Identifier,
     Constant,
     BetweenOperation,
     Parameter,
 )
-from mindsdb_sql.parser.dialects.mindsdb.latest import Latest
+from mindsdb_sql_parser.ast.mindsdb import Latest
 
 from mindsdb.api.executor.planner.step_result import Result
 from mindsdb.api.executor.planner.steps import (

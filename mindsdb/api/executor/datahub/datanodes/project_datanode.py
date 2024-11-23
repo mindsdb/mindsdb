@@ -1,8 +1,8 @@
 from copy import deepcopy
 
 import pandas as pd
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import (
+from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser.ast import (
     BinaryOperation,
     Identifier,
     Constant,
@@ -69,7 +69,7 @@ class ProjectDataNode(DataNode):
 
     def query(self, query=None, native_query=None, session=None):
         if query is None and native_query is not None:
-            query = parse_sql(native_query, dialect='mindsdb')
+            query = parse_sql(native_query)
 
         if isinstance(query, Update):
             query_table = query.table.parts[0].lower()

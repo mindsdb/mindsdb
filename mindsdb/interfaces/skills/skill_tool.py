@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
-from mindsdb_sql.parser.ast import Select, BinaryOperation, Identifier, Constant, Star
+from mindsdb_sql_parser.ast import Select, BinaryOperation, Identifier, Constant, Star
 
 from mindsdb.integrations.libs.vectordatabase_handler import TableField
 from mindsdb.interfaces.skills.sql_agent import SQLAgent

@@ -1,7 +1,7 @@
 from typing import Text, Dict, Optional
 
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql_parser.ast.base import ASTNode
 import pandas as pd
 from pyhive import (hive, sqlalchemy_hive)
 from pyhive.exc import OperationalError

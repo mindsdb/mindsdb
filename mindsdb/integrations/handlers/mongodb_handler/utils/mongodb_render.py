@@ -2,8 +2,8 @@ import datetime as dt
 from typing import Dict, Union, Any
 
 from bson.objectid import ObjectId
-from mindsdb_sql.parser.ast import Select, Update, Identifier, Star, Constant, Tuple, BinaryOperation, Latest, TypeCast
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql_parser.ast import Select, Update, Identifier, Star, Constant, Tuple, BinaryOperation, Latest, TypeCast
+from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.api.mongo.utilities.mongodb_query import MongoQuery
 

@@ -1,11 +1,11 @@
 import pytest
 
-from mindsdb_sql.parser.ast import (
+from mindsdb_sql_parser.ast import (
     Identifier, Select, NullConstant, Constant,
     Star, Parameter, BinaryOperation, Function,
     TableColumn, OrderBy
 )
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 
 from mindsdb.api.executor.planner.exceptions import PlanningException
 from mindsdb.api.executor.planner import plan_query
@@ -266,7 +266,7 @@ class TestPlanIntegrationSelect:
     def test_integration_select_table_alias_full_query(self):
         sql = 'select ta.sqft from int.test_data.home_rentals as ta'
 
-        query = parse_sql(sql, dialect='sqlite')
+        query = parse_sql(sql)
 
         expected_plan = QueryPlan(
             integrations=['int'],
@@ -531,7 +531,7 @@ class TestPlanIntegrationSelect:
 
     def test_integration_select_3_level(self):
         sql = "select * from xxx.yyy.zzz where x > 1"
-        query = parse_sql(sql, dialect='mindsdb')
+        query = parse_sql(sql)
 
         expected_plan = QueryPlan(
             integrations=['int'],
@@ -561,7 +561,7 @@ class TestPlanIntegrationSelect:
 
         # Just select to integration
         sql = "select * from integration1 (select * from task_items)"
-        query = parse_sql(sql, dialect='mindsdb')
+        query = parse_sql(sql)
 
         plan = plan_query(query, integrations=['integration1'])
 
@@ -579,7 +579,7 @@ class TestPlanIntegrationSelect:
         # select on results after select to integration
 
         sql = "select date_trunc('m', last_date) from integration1 (select * from task_items  )  a limit 1"
-        query = parse_sql(sql, dialect='mindsdb')
+        query = parse_sql(sql)
 
         plan = plan_query(query, integrations=['integration1'])
 
@@ -602,7 +602,7 @@ class TestPlanIntegrationSelect:
         # select on results after select to integration
 
         sql = "update integration1.direct_messages set a=1 where b=2"
-        query = parse_sql(sql, dialect='mindsdb')
+        query = parse_sql(sql)
 
         plan = plan_query(query, integrations=['integration1'])
 
@@ -623,7 +623,7 @@ class TestPlanIntegrationSelect:
             '''
                         select * from int2.tab1
                         where x1 in (select id from int1.tab1)
-                    ''', dialect='mindsdb'
+                    '''
         )
 
         expected_plan = QueryPlan(
@@ -664,7 +664,7 @@ class TestPlanIntegrationSelect:
                         select x from int1.tab2
                         where x1 in (select id from int1.tab1)
                         limit 1
-                    ''', dialect='mindsdb'
+                    '''
         )
 
         expected_plan = QueryPlan(
@@ -715,7 +715,7 @@ class TestPlanIntegrationSelect:
             '''
                     select * from int1.tab1
                     where x1 in (select id from int1.tab1)
-                ''', dialect='mindsdb'
+                '''
         )
 
         expected_plan = QueryPlan(
@@ -762,7 +762,7 @@ class TestPlanIntegrationSelect:
                 limit 1
             )
         '''
-        query = parse_sql(sql_parsed, dialect='mindsdb')
+        query = parse_sql(sql_parsed)
 
         expected_plan = QueryPlan(
             predictor_namespace='mindsdb',
@@ -788,7 +788,7 @@ class TestPlanIntegrationSelect:
             '''
                         delete from int1.tab1
                         where x1 in (select id from int1.tab1)
-                    ''', dialect='mindsdb'
+                    '''
         )
 
         expected_plan = QueryPlan(
@@ -829,7 +829,7 @@ class TestPlanIntegrationSelect:
             '''
                         delete from int1.tab1
                         where x1 in (select id from int1.tab1)
-                    ''', dialect='mindsdb'
+                    '''
         )
 
         subselect = parse_sql('select id as id from tab1')
@@ -863,7 +863,7 @@ class TestPlanIntegrationSelect:
             '''
                         delete from int1.tab1
                         where x1 in (select id from int2.tab1)
-                    ''', dialect='mindsdb'
+                    '''
         )
 
         expected_plan = QueryPlan(
@@ -933,7 +933,7 @@ class TestPlanIntegrationSelect:
                     where x1 > my.fnc2(b)
                     order by x
                     limit 2
-                ''', dialect='mindsdb'
+                '''
         )
 
         sub_query = parse_sql("select my.fnc(a, 1) from tab1 where x1 > my.fnc2(b)")

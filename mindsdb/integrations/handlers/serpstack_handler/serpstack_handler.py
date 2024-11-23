@@ -1,7 +1,7 @@
 import requests
 
 from mindsdb.utilities import log
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 
 from mindsdb.integrations.libs.api_handler import APIHandler
 
@@ -119,5 +119,5 @@ class SerpstackHandler(APIHandler):
         StatusResponse
             Request status
         """
-        ast = parse_sql(query, dialect='mindsdb')
+        ast = parse_sql(query)
         return self.query(ast)

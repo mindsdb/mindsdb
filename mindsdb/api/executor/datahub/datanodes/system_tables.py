@@ -1,7 +1,7 @@
 
 import pandas as pd
-from mindsdb_sql.parser.ast import BinaryOperation, Constant, Identifier, Select
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql_parser.ast import BinaryOperation, Constant, Identifier, Select
+from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 
 from mindsdb.api.executor.datahub.classes.tables_row import (

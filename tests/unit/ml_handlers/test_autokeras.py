@@ -3,7 +3,7 @@ from unittest.mock import patch
 import pandas as pd
 import numpy as np
 
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 
 
 from mindsdb.integrations.handlers.autokeras_handler.autokeras_handler import (
@@ -39,7 +39,7 @@ class TestAutokeras(BaseExecutorTest):
             raise RuntimeError("predictor wasn't created")
 
     def run_sql(self, sql):
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect="mindsdb"))
+        ret = self.command_executor.execute_command(parse_sql(sql))
         assert ret.error_code is None
         if ret.data is not None:
             return ret.data.to_df()

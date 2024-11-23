@@ -1,6 +1,6 @@
 import datetime as dt
 
-from mindsdb_sql.parser.ast import (
+from mindsdb_sql_parser.ast import (
     Identifier, Select, Star, Constant, Tuple, BinaryOperation, CreateTable, TableColumn, Insert
 )
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender

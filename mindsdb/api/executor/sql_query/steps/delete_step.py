@@ -1,6 +1,6 @@
 import copy
 
-from mindsdb_sql.parser.ast import (
+from mindsdb_sql_parser.ast import (
     Identifier,
     Constant,
     Delete,

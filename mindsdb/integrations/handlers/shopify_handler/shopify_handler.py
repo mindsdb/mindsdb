@@ -8,7 +8,7 @@ from mindsdb.integrations.libs.response import (
 )
 
 from mindsdb.utilities import log
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 from mindsdb.integrations.libs.api_handler_exceptions import InvalidNativeQuery, ConnectionFailed, MissingConnectionParams
 
 logger = log.getLogger(__name__)
@@ -137,7 +137,7 @@ class ShopifyHandler(APIHandler):
             Request status
         """
         try:
-            ast = parse_sql(query, dialect="mindsdb")
+            ast = parse_sql(query)
         except Exception as e:
             raise InvalidNativeQuery(f"The query {query} is invalid.")
         return self.query(ast)

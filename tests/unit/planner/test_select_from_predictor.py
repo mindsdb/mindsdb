@@ -1,7 +1,7 @@
 import pytest
 
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import (Identifier, Select, Constant, Star, Parameter, BinaryOperation)
+from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser.ast import (Identifier, Select, Constant, Star, Parameter, BinaryOperation)
 
 from mindsdb.api.executor.planner.exceptions import PlanningException
 from mindsdb.api.executor.planner import plan_query
@@ -246,7 +246,7 @@ class TestPlanSelectFromPredictor:
 
     def test_select_from_predictor_get_columns(self):
         sql = 'SELECT GDP_per_capita_USD FROM hdi_predictor_external WHERE 1 = 0'
-        query = parse_sql(sql, dialect='mindsdb')
+        query = parse_sql(sql)
 
         expected_query = Select(
             targets=[Identifier('GDP_per_capita_USD')],
@@ -282,7 +282,7 @@ class TestPlanSelectFromPredictor:
             '''
                         select * from mindsdb.pred.21
                         where x1 = 1
-                    ''', dialect='mindsdb'
+                    '''
         )
 
         expected_plan = QueryPlan(
@@ -304,7 +304,7 @@ class TestPlanSelectFromPredictor:
             '''
                         select * from mindsdb.pred.21
                         where x1 = (select id from int1.t1)
-                    ''', dialect='mindsdb'
+                    '''
         )
 
         expected_plan = QueryPlan(
@@ -335,7 +335,7 @@ class TestPlanSelectFromPredictor:
             '''
                         select * from v1
                         where x1 in (select id from int1.tab1)
-                    ''', dialect='mindsdb'
+                    '''
         )
 
         expected_plan = QueryPlan(
@@ -376,7 +376,7 @@ class TestPlanSelectFromPredictor:
             '''
                         select * from v1
                         where x1 in (select v2.id from v2)
-                    ''', dialect='mindsdb'
+                    '''
         )
 
         expected_plan = QueryPlan(

@@ -1,6 +1,6 @@
 from typing import Text, Dict, Optional
 
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 import oracledb
 from oracledb import connect, Connection, DatabaseError

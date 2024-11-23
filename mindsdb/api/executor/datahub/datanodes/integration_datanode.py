@@ -8,7 +8,7 @@ from sqlalchemy.types import (
     Integer, Float, Text
 )
 
-from mindsdb_sql.parser.ast import Insert, Identifier, CreateTable, TableColumn, DropTables
+from mindsdb_sql_parser.ast import Insert, Identifier, CreateTable, TableColumn, DropTables
 
 from mindsdb.api.executor.datahub.datanodes.datanode import DataNode
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE

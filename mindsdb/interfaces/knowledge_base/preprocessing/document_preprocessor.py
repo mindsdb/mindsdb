@@ -1,4 +1,5 @@
 from typing import List, Dict, Optional, Any
+from uuid import uuid4
 import pandas as pd
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -133,11 +134,14 @@ Please give a short succinct context to situate this chunk within the overall do
                 context = self._generate_context(chunk_doc.content, doc.content)
                 processed_content = f"{context}\n\n{chunk_doc.content}"
 
+                # Need a unique ID for each document. Can track source ID in metadata.
+                metadata = chunk_doc.metadata or doc.metadata or {}
+                metadata['doc_id'] = doc.id
                 processed_chunks.append(ProcessedChunk(
-                    id=doc.id,
+                    id=uuid4().hex,
                     content=processed_content,
                     embeddings=doc.embeddings,
-                    metadata=chunk_doc.metadata or doc.metadata
+                    metadata=metadata
                 ))
 
         return processed_chunks
@@ -177,11 +181,14 @@ class TextChunkingPreprocessor(DocumentPreprocessor):
             chunk_docs = self._split_document(doc)
 
             for chunk_doc in chunk_docs:
+                # Need a unique ID for each document. Can track source ID in metadata.
+                metadata = chunk_doc.metadata or doc.metadata or {}
+                metadata['doc_id'] = doc.id
                 processed_chunks.append(ProcessedChunk(
-                    id=doc.id,
+                    id=uuid4().hex,
                     content=chunk_doc.content,
                     embeddings=doc.embeddings,
-                    metadata=chunk_doc.metadata or doc.metadata
+                    metadata=metadata
                 ))
 
         return processed_chunks

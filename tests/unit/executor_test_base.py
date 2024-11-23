@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 from mindsdb.utilities import log
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 
 logger = log.getLogger(__name__)
 
@@ -155,7 +155,7 @@ class BaseUnitTest:
 
     def run_sql(self, sql):
         """Execute SQL and return a DataFrame, raising an AssertionError if an error occurs"""
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect="mindsdb"))
+        ret = self.command_executor.execute_command(parse_sql(sql))
         assert ret.error_code is None, f"SQL execution failed with error: {ret.error_code}"
         if ret.data is not None:
             return ret.data.to_df()
@@ -398,7 +398,7 @@ class BaseExecutorDummyML(BaseExecutorTest):
     def run_sql(self, sql, throw_error=True, database='mindsdb'):
         self.command_executor.session.database = database
         ret = self.command_executor.execute_command(
-            parse_sql(sql, dialect='mindsdb')
+            parse_sql(sql)
         )
         if throw_error:
             assert ret.error_code is None
@@ -526,7 +526,7 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
 
     def execute(self, sql):
         ret = self.command_executor.execute_command(
-            parse_sql(sql, dialect='mindsdb')
+            parse_sql(sql)
         )
         if ret.error_code is not None:
             raise Exception()

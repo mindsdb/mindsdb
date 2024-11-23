@@ -10,7 +10,7 @@ from sqlalchemy.schema import CreateTable, DropTable
 from sqlalchemy.sql import ColumnElement
 from sqlalchemy.sql import functions as sa_fnc
 
-from mindsdb_sql.parser import ast
+from mindsdb_sql_parser import ast
 
 
 sa_type_names = [

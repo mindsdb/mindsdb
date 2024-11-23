@@ -1,7 +1,7 @@
 import copy
 
-from mindsdb_sql.parser import ast
-from mindsdb_sql.parser.ast import (
+from mindsdb_sql_parser import ast
+from mindsdb_sql_parser.ast import (
     Select, Identifier, Join, Star, BinaryOperation, Constant, Union, CreateTable,
     Function, Insert, Except, Intersect, Update, NativeQuery, Parameter, Delete
 )

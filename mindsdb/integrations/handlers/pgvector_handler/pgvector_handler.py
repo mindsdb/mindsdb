@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 
 import pandas as pd
 import psycopg
-from mindsdb_sql.parser.ast import Parameter, Identifier, Update, BinaryOperation
+from mindsdb_sql_parser.ast import Parameter, Identifier, Update, BinaryOperation
 from pgvector.psycopg import register_vector
 
 from mindsdb.integrations.handlers.postgres_handler.postgres_handler import (

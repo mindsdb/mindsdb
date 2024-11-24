@@ -1,13 +1,12 @@
 import pathlib
 from typing import Iterator, List
-
-from langchain_community.document_loaders.base import BaseLoader
 from langchain_community.document_loaders.csv_loader import CSVLoader
 from langchain_community.document_loaders import PyMuPDFLoader
 from langchain_community.document_loaders import TextLoader
 from langchain_community.document_loaders import UnstructuredHTMLLoader
 from langchain_community.document_loaders import UnstructuredMarkdownLoader
 from langchain_core.documents.base import Document
+from langchain_core.document_loaders import BaseLoader
 
 
 class FileLoader(BaseLoader):

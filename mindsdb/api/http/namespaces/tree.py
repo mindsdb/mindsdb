@@ -1,6 +1,7 @@
+import inspect
 from collections import defaultdict
 
-from flask import current_app as ca
+from flask import current_app as ca, request
 from flask_restx import Resource
 
 from mindsdb.api.http.utils import http_error
@@ -31,6 +32,11 @@ class GetLeaf(Resource):
     @ns_conf.doc('get_tree_leaf')
     @api_endpoint_metrics('GET', '/tree/database')
     def get(self, db_name):
+        with_schemas = request.args.get('all_schemas')
+        if isinstance(with_schemas, str):
+            with_schemas = with_schemas.lower() in ('1', 'true')
+        else:
+            with_schemas = False
         db_name = db_name.lower()
         databases = ca.database_controller.get_dict()
         if db_name not in databases:
@@ -53,7 +59,10 @@ class GetLeaf(Resource):
             } for key, val in tables.items()]
         elif db['type'] == 'data':
             handler = ca.integration_controller.get_data_handler(db_name)
-            response = handler.get_tables()
+            if 'all' in inspect.signature(handler.get_tables).parameters:
+                response = handler.get_tables(all=with_schemas)
+            else:
+                response = handler.get_tables()
             if response.type != 'table':
                 return []
             table_types = {

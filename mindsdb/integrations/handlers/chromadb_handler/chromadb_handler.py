@@ -328,14 +328,25 @@ class ChromaDBHandler(VectorStoreHandler):
         data.dropna(axis=1, inplace=True)
 
         def dataframe_metadata_to_chroma_metadata(metadata: Union[Dict[str, str], str]) -> Optional[Dict[str, str]]:
+            """Convert DataFrame metadata to ChromaDB compatible metadata format"""
+            if pd.isna(metadata) or metadata is None:
+                return None
             if isinstance(metadata, dict):
                 if not metadata:
                     # ChromaDB does not support empty metadata dicts, but it does support None.
                     # Related: https://github.com/chroma-core/chroma/issues/791.
                     return None
-                return metadata
+                # Filter out None values from the metadata dict
+                return {k: v for k, v in metadata.items() if pd.notna(v) and v is not None}
             # Metadata is a string representation of a dictionary instead.
-            return ast.literal_eval(metadata)
+            try:
+                parsed = ast.literal_eval(metadata)
+                if isinstance(parsed, dict):
+                    # Filter out None values from the parsed dict
+                    return {k: v for k, v in parsed.items() if pd.notna(v) and v is not None}
+                return None
+            except (ValueError, SyntaxError):
+                return None
 
         # ensure metadata is a dict, convert to dict if it is a string
         if data.get(TableField.METADATA.value) is not None:

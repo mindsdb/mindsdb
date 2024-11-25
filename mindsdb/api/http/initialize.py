@@ -221,6 +221,15 @@ def initialize_app(config, no_studio):
                 'Not found',
                 'The endpoint you are trying to access does not exist on the server.'
             )
+        
+        # Check for directory traversal attacks.
+        if not (static_root / path).resolve().is_relative_to(static_root):
+            return http_error(
+                HTTPStatus.FORBIDDEN,
+                'Forbidden',
+                'You are not allowed to access the requested resource.'
+            )
+
         if static_root.joinpath(path).is_file():
             return send_from_directory(static_root, path)
         else:

@@ -239,24 +239,59 @@ class KnowledgeBaseTable:
         adapted_df = self._adapt_column_names(df)
         content_columns = self._kb.params.get('content_columns', [TableField.CONTENT.value])
 
-        rows = []
+        # Convert DataFrame rows to documents, creating separate documents for each content column
+        raw_documents = []
         for idx, row in adapted_df.iterrows():
-            # Get or generate document ID
-            content_dict = {col: str(row[col]) for col in content_columns if col in adapted_df.columns}
-            metadata = row.get(TableField.METADATA.value, {})
+            # Parse and sanitize base metadata
+            base_metadata = self._parse_metadata(row.get(TableField.METADATA.value, {}))
 
-            # Use existing ID or generate from content
-            doc_id = row.get(TableField.ID.value) or self._generate_content_hash(content_dict, metadata)
+            # Get the row ID
+            doc_id = row.get(TableField.ID.value)
+            if doc_id is None:
+                doc_id = str(idx)
 
-            # Create document row
-            doc_row = {
-                TableField.CONTENT.value: json.dumps(content_dict),  # Store all content columns
-                TableField.ID.value: doc_id,
-                TableField.METADATA.value: metadata
-            }
-            rows.append(doc_row)
+            # Create a separate document for each content column
+            for col in content_columns:
+                content = row.get(col)
+                if content and str(content).strip():  # Only create document if content exists
+                    content_str = str(content)
 
-        df = pd.DataFrame(rows)
+                    # Create metadata with type conversion and validation
+                    metadata = {
+                        **base_metadata,
+                        'source_column': col,
+                        'original_row_id': doc_id
+                    }
+
+                    # Convert metadata values to appropriate types
+                    metadata = {
+                        k: self._convert_metadata_value(v)
+                        for k, v in metadata.items()
+                        if v is not None and not pd.isna(v)  # Skip None/NaN values
+                    }
+
+                    # Generate hash-based ID if not provided
+                    column_doc_id = f"{doc_id}_{col}" if doc_id else self._generate_content_hash(content_str, metadata)
+
+                    raw_documents.append(Document(
+                        content=content_str,
+                        id=column_doc_id,
+                        metadata=metadata
+                    ))
+
+        # Apply preprocessing to all documents if preprocessor exists
+        if self.document_preprocessor:
+            processed_chunks = self.document_preprocessor.process_documents(raw_documents)
+        else:
+            processed_chunks = raw_documents  # Use raw documents if no preprocessing
+
+        # Convert processed chunks back to DataFrame with standard structure
+        df = pd.DataFrame([{
+            TableField.CONTENT.value: chunk.content,
+            TableField.ID.value: chunk.id or self._generate_content_hash(chunk.content, chunk.metadata),
+            TableField.METADATA.value: chunk.metadata
+        } for chunk in processed_chunks])
+
         if df.empty:
             logger.warning("No valid content found in any content columns")
             return

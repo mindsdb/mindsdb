@@ -1,7 +1,7 @@
 import os
 import copy
 from typing import Dict, List, Optional
-import json
+
 
 import pandas as pd
 
@@ -247,37 +247,32 @@ class KnowledgeBaseTable:
             # Convert DataFrame rows to documents, creating separate documents for each content column
             raw_documents = []
             for idx, row in adapted_df.iterrows():
+                # Get metadata - should already be a dict from _adapt_column_names
                 base_metadata = row.get(TableField.METADATA.value, {})
                 if isinstance(base_metadata, str):
-                    try:
-                        base_metadata = json.loads(base_metadata)
-                    except json.JSONDecodeError:
-                        base_metadata = {}
-
-                # Get the row ID
-                doc_id = row.get(TableField.ID.value)
-                if doc_id is None:
-                    doc_id = str(idx)
+                    base_metadata = self._parse_metadata(base_metadata)
+                doc_id = row.get(TableField.ID.value)  # Get ID if specified
 
                 # Create a separate document for each content column
                 for col in content_columns:
-                    content = row.get(col)
-                    if content and str(content).strip():  # Only create document if content exists
-                        # Create unique ID for each column document
-                        column_doc_id = f"{doc_id}_{col}" if doc_id else None
+                    # Use direct column access since the columns retain their original names
+                    content = row[col] if col in adapted_df.columns else None
 
-                        # Add column source to metadata
+                    if content and str(content).strip():
                         metadata = {
                             **base_metadata,
-                            'source_column': col,
-                            'original_row_id': doc_id
+                            'source_column': col
                         }
 
                         raw_documents.append(Document(
                             content=str(content),
-                            id=column_doc_id,
+                            id=doc_id,
                             metadata=metadata
                         ))
+
+            if not raw_documents:
+                logger.warning(f"No valid content found in columns: {content_columns}")
+                return
 
             # Apply preprocessing to all documents
             processed_chunks = self.document_preprocessor.process_documents(raw_documents)
@@ -297,23 +292,18 @@ class KnowledgeBaseTable:
             for idx, row in adapted_df.iterrows():
                 base_metadata = row.get(TableField.METADATA.value, {})
                 if isinstance(base_metadata, str):
-                    try:
-                        base_metadata = json.loads(base_metadata)
-                    except json.JSONDecodeError:
-                        base_metadata = {}
-
-                doc_id = row.get(TableField.ID.value, str(idx))
+                    base_metadata = self._parse_metadata(base_metadata)
+                doc_id = row.get(TableField.ID.value)
 
                 for col in content_columns:
-                    content = row.get(col)
+                    content = row[col] if col in adapted_df.columns else None
                     if content and str(content).strip():
                         rows.append({
                             TableField.CONTENT.value: str(content),
-                            TableField.ID.value: f"{doc_id}_{col}",
+                            TableField.ID.value: doc_id,
                             TableField.METADATA.value: {
                                 **base_metadata,
-                                'source_column': col,
-                                'original_row_id': doc_id
+                                'source_column': col
                             }
                         })
 
@@ -332,56 +322,67 @@ class KnowledgeBaseTable:
         db_handler.do_upsert(self._kb.vector_database_table, df)
 
     def _adapt_column_names(self, df: pd.DataFrame) -> pd.DataFrame:
-
         '''
-            convert input columns for vector db input
-            - id, content and metadata
+        Convert input columns for vector db input
+        - id, content and metadata
         '''
+        # Debug incoming data
+        logger.debug(f"Input DataFrame columns: {df.columns}")
+        logger.debug(f"Input DataFrame first row: {df.iloc[0].to_dict()}")
 
         params = self._kb.params
-
         columns = list(df.columns)
 
         # -- prepare id --
-
-        # if id_column is defined:
-        #     use it as id
-        # elif 'id' column exists:
-        #     use it
-        # else:
-        #     use hash(content) -- it happens inside of vector handler
-
         id_column = params.get('id_column')
         if id_column is not None and id_column not in columns:
-            # wrong name
             id_column = None
 
         if id_column is None and TableField.ID.value in columns:
-            # default value
             id_column = TableField.ID.value
 
+        # Also check for case-insensitive 'id' column
+        if id_column is None:
+            column_map = {col.lower(): col for col in columns}
+            if 'id' in column_map:
+                id_column = column_map['id']
+
         if id_column is not None:
-            # remove from lookup list
             columns.remove(id_column)
+            logger.debug(f"Using ID column: {id_column}")
+
+        # Create output dataframe
+        df_out = pd.DataFrame()
+
+        # Add ID if present
+        if id_column is not None:
+            df_out[TableField.ID.value] = df[id_column]
+            logger.debug(f"Added IDs: {df_out[TableField.ID.value].tolist()}")
 
         # -- prepare content and metadata --
-
-        # if content_columns is defined:
-        #     if len(content_columns) > 1:
-        #          make text from row (col: value\n col: value)
-        #     if metadata_columns is defined:
-        #          use them as metadata
-        #     else:
-        #          use all unused columns is metadata
-        #     elif metadata_columns is defined:
-        #          metadata_columns go to metadata
-        #          use all unused columns  as content (make text if columns>1)
-        # else:
-        #     no metadata
-        #     all unused columns go to content (make text if columns>1)
-
         content_columns = params.get('content_columns')
         metadata_columns = params.get('metadata_columns')
+
+        logger.debug(f"Processing with: content_columns={content_columns}, metadata_columns={metadata_columns}")
+
+        # Handle SQL query result columns
+        if content_columns:
+            # Ensure content columns are case-insensitive
+            column_map = {col.lower(): col for col in columns}
+            content_columns = [
+                column_map.get(col.lower(), col)
+                for col in content_columns
+            ]
+            logger.debug(f"Mapped content columns: {content_columns}")
+
+        if metadata_columns:
+            # Ensure metadata columns are case-insensitive
+            column_map = {col.lower(): col for col in columns}
+            metadata_columns = [
+                column_map.get(col.lower(), col)
+                for col in metadata_columns
+            ]
+            logger.debug(f"Mapped metadata columns: {metadata_columns}")
 
         if content_columns is not None:
             content_columns = list(set(content_columns).intersection(columns))
@@ -399,53 +400,41 @@ class KnowledgeBaseTable:
             # use all unused columns is content
             content_columns = list(set(columns).difference(metadata_columns))
         elif TableField.METADATA.value in columns:
-            # Use 'metadata' column as a JSON column if passed in explicitly.
             metadata_columns = [TableField.METADATA.value]
             content_columns = list(set(columns).difference(metadata_columns))
         else:
             # all columns go to content
             content_columns = columns
 
-        if not content_columns:
-            raise ValueError("Can't find content columns")
+        # Add content columns directly (don't combine them)
+        for col in content_columns:
+            df_out[col] = df[col]
 
-        def row_to_document(row: pd.Series) -> str:
-            """
-            Convert a row in the input dataframe into a document
-
-            Default implementation is to concatenate all the columns
-            in the form of
-            field1: value1\nfield2: value2\n...
-            """
-            fields = row.index.tolist()
-            values = row.values.tolist()
-            document = "\n".join(
-                [f"{field}: {value}" for field, value in zip(fields, values)]
-            )
-            return document
-
-        def handle_metadata_row(row: pd.Series) -> str:
-            metadata_dict = dict(row)
-            if TableField.METADATA.value in metadata_dict:
-                # Extract nested metadata in special case where we have a single column named 'metadata'.
-                # Hacky solution to support passing in 'metadata' JSON column instead of passing in
-                # many different named columns representing metadata when inserting into KB.
-                return metadata_dict[TableField.METADATA.value]
-            return str(metadata_dict)
-
-        # create dataframe
-        if len(content_columns) == 1:
-            c_content = df[content_columns[0]]
-        else:
-            c_content = df[content_columns].apply(row_to_document, axis=1)
-        c_content.name = TableField.CONTENT.value
-        df_out = pd.DataFrame(c_content)
-
-        if id_column is not None:
-            df_out[TableField.ID.value] = df[id_column]
-
+        # Add metadata
         if metadata_columns and len(metadata_columns) > 0:
-            df_out[TableField.METADATA.value] = df[metadata_columns].apply(handle_metadata_row, axis=1)
+            def convert_row_to_metadata(row):
+                metadata = {}
+                for col in metadata_columns:
+                    value = row[col]
+                    # Convert numpy/pandas types to Python native types
+                    if pd.api.types.is_datetime64_any_dtype(value) or isinstance(value, pd.Timestamp):
+                        value = str(value)
+                    elif pd.api.types.is_integer_dtype(value):
+                        value = int(value)
+                    elif pd.api.types.is_float_dtype(value):
+                        value = float(value)
+                    elif pd.api.types.is_bool_dtype(value):
+                        value = bool(value)
+                    else:
+                        value = str(value)
+                    metadata[col] = value
+                return metadata
+
+            metadata_dict = df[metadata_columns].apply(convert_row_to_metadata, axis=1)
+            df_out[TableField.METADATA.value] = metadata_dict
+
+        logger.debug(f"Output DataFrame columns: {df_out.columns}")
+        logger.debug(f"Output DataFrame first row: {df_out.iloc[0].to_dict() if not df_out.empty else 'Empty'}")
 
         return df_out
 
@@ -568,6 +557,19 @@ class KnowledgeBaseTable:
         rag = RAG(rag_pipeline_model)
 
         return rag
+
+    def _parse_metadata(self, base_metadata):
+        """Helper function to robustly parse metadata string to dict"""
+        if isinstance(base_metadata, dict):
+            return base_metadata
+        if isinstance(base_metadata, str):
+            try:
+                import ast
+                return ast.literal_eval(base_metadata)
+            except (SyntaxError, ValueError):
+                logger.warning(f"Could not parse metadata: {base_metadata}. Using empty dict.")
+                return {}
+        return {}
 
 
 class KnowledgeBaseController:

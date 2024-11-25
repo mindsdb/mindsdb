@@ -103,16 +103,14 @@ class ChromaDBHandler(VectorStoreHandler):
             )
 
     def _sync(self):
-        # if handler storage is used: sync on every change write operation
+        """Sync the database to disk if using persistent storage"""
         if self.persist_directory:
             self.handler_storage.folder_sync(self.persist_directory)
 
     def __del__(self):
-        """Close the database connection."""
-
-        if self.is_connected is True:
+        """Ensure proper cleanup when the handler is destroyed"""
+        if self.is_connected:
             self._sync()
-
             self.disconnect()
 
     def connect(self):
@@ -130,12 +128,11 @@ class ChromaDBHandler(VectorStoreHandler):
 
     def disconnect(self):
         """Close the database connection."""
-
-        if self.is_connected is False:
-            return
-
-        self._client = None
-        self.is_connected = False
+        if self.is_connected:
+            if hasattr(self._client, 'close'):
+                self._client.close()  # Some ChromaDB clients have a close method
+            self._client = None
+            self.is_connected = False
 
     def check_connection(self):
         """Check the connection to the ChromaDB database."""
@@ -316,51 +313,53 @@ class ChromaDBHandler(VectorStoreHandler):
             payload[TableField.DISTANCE.value] = distances
         return pd.DataFrame(payload)
 
-    def insert(self, table_name: str, data: pd.DataFrame):
-        """
-        Insert data into the ChromaDB database.
-        """
-
-        collection = self._client.get_or_create_collection(name=table_name)
-
-        # drop columns with all None values
-
-        data.dropna(axis=1, inplace=True)
-
-        def dataframe_metadata_to_chroma_metadata(metadata: Union[Dict[str, str], str]) -> Optional[Dict[str, str]]:
-            """Convert DataFrame metadata to ChromaDB compatible metadata format"""
-            if pd.isna(metadata) or metadata is None:
+    def _dataframe_metadata_to_chroma_metadata(self, metadata: Union[Dict[str, str], str]) -> Optional[Dict[str, str]]:
+        """Convert DataFrame metadata to ChromaDB compatible metadata format"""
+        if pd.isna(metadata) or metadata is None:
+            return None
+        if isinstance(metadata, dict):
+            if not metadata:
+                # ChromaDB does not support empty metadata dicts, but it does support None.
+                # Related: https://github.com/chroma-core/chroma/issues/791.
                 return None
-            if isinstance(metadata, dict):
-                if not metadata:
-                    # ChromaDB does not support empty metadata dicts, but it does support None.
-                    # Related: https://github.com/chroma-core/chroma/issues/791.
-                    return None
-                # Filter out None values from the metadata dict
-                return {k: v for k, v in metadata.items() if pd.notna(v) and v is not None}
-            # Metadata is a string representation of a dictionary instead.
-            try:
-                parsed = ast.literal_eval(metadata)
-                if isinstance(parsed, dict):
-                    # Filter out None values from the parsed dict
-                    return {k: v for k, v in parsed.items() if pd.notna(v) and v is not None}
-                return None
-            except (ValueError, SyntaxError):
-                return None
+            # Filter out None values from the metadata dict
+            return {k: v for k, v in metadata.items() if pd.notna(v) and v is not None}
+        # Metadata is a string representation of a dictionary instead.
+        try:
+            parsed = ast.literal_eval(metadata)
+            if isinstance(parsed, dict):
+                # Filter out None values from the parsed dict
+                return {k: v for k, v in parsed.items() if pd.notna(v) and v is not None}
+            return None
+        except (ValueError, SyntaxError):
+            return None
 
-        # ensure metadata is a dict, convert to dict if it is a string
-        if data.get(TableField.METADATA.value) is not None:
-            data[TableField.METADATA.value] = data[TableField.METADATA.value].apply(dataframe_metadata_to_chroma_metadata)
+    def insert(self, table_name: str, data: pd.DataFrame) -> None:
+        """Insert data into ChromaDB collection"""
+        collection = self._client.get_or_create_collection(table_name)
 
-        # convert to dict
+        # Convert DataFrame metadata to ChromaDB compatible format
+        metadatas = []
+        for metadata in data[TableField.METADATA.value]:
+            chroma_metadata = self._dataframe_metadata_to_chroma_metadata(metadata)
+            metadatas.append(chroma_metadata)
 
-        data = data.to_dict(orient="list")
+        # Prepare data for ChromaDB
+        ids = [str(id_) for id_ in data[TableField.ID.value]]  # Ensure IDs are strings
+        embeddings = data[TableField.EMBEDDINGS.value].tolist()
+        documents = data[TableField.CONTENT.value].astype(str).tolist()
 
+        # First delete existing IDs to ensure proper upsert behavior
+        existing_ids = collection.get(ids=ids)['ids']
+        if existing_ids:
+            collection.delete(ids=existing_ids)
+
+        # Then insert new data
         collection.upsert(
-            ids=data[TableField.ID.value],
-            documents=data.get(TableField.CONTENT.value),
-            embeddings=data[TableField.EMBEDDINGS.value],
-            metadatas=data.get(TableField.METADATA.value),
+            ids=ids,
+            embeddings=embeddings,
+            documents=documents,
+            metadatas=metadatas
         )
         self._sync()
 

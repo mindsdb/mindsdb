@@ -49,7 +49,7 @@ class AthenaHandler(DatabaseHandler):
         """
 
         if self.is_connected:
-            return StatusResponse(self.name, True, 'Already connected')
+            return StatusResponse(success=True)
 
         try:
             self.connection = client(
@@ -59,10 +59,10 @@ class AthenaHandler(DatabaseHandler):
                 region_name=self.connection_data['region_name'],
             )
             self.is_connected = True
-            return StatusResponse(self.name, True, 'Connected successfully')
+            return StatusResponse(success=True)
         except Exception as e:
             logger.error(f'Failed to connect to Athena: {str(e)}')
-            return StatusResponse(self.name, False, str(e))
+            return StatusResponse(success=False, error_message=str(e))
 
     def disconnect(self):
         """
@@ -79,11 +79,11 @@ class AthenaHandler(DatabaseHandler):
             HandlerStatusResponse
         """
         if self.is_connected:
-            return StatusResponse(self.name, True, 'Connection is alive')
+            return StatusResponse(success=True)
         else:
             return self.connect()
 
-    def native_query(self, query: str) -> StatusResponse:
+    def native_query(self, query: str) -> Response:
         """
         Receive raw query and act upon it somehow.
         Args:
@@ -124,7 +124,7 @@ class AthenaHandler(DatabaseHandler):
 
         return response
 
-    def query(self, query: ASTNode) -> StatusResponse:
+    def query(self, query: ASTNode) -> Response:
         """
         Receive query as AST (abstract syntax tree) and act upon it somehow.
         Args:
@@ -136,7 +136,7 @@ class AthenaHandler(DatabaseHandler):
 
         return self.native_query(query.to_string())
 
-    def get_tables(self) -> StatusResponse:
+    def get_tables(self) -> Response:
         """
         Return list of entities that will be accessible as tables.
         Returns:
@@ -156,7 +156,7 @@ class AthenaHandler(DatabaseHandler):
         """
         return self.native_query(query)
 
-    def get_columns(self, table_name: str) -> StatusResponse:
+    def get_columns(self, table_name: str) -> Response:
         """
         Returns a list of entity columns.
         Args:

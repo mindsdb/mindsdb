@@ -1,4 +1,5 @@
 from typing import List, Dict, Optional, Any
+from uuid import uuid4
 import pandas as pd
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -92,7 +93,11 @@ Please give a short succinct context to situate this chunk within the overall do
             chunk_size=config.chunk_size,
             chunk_overlap=config.chunk_overlap
         ))
-        self.llm = create_chat_model({"model_name": config.llm_model})
+        self.llm = create_chat_model({
+            "model_name": self.config.llm_config.model_name,
+            "provider": self.config.llm_config.provider,
+            **self.config.llm_config.params
+        })
         self.context_template = config.context_template or self.DEFAULT_CONTEXT_TEMPLATE
 
     def _generate_context(self, chunk_content: str, full_document: str) -> str:
@@ -129,11 +134,14 @@ Please give a short succinct context to situate this chunk within the overall do
                 context = self._generate_context(chunk_doc.content, doc.content)
                 processed_content = f"{context}\n\n{chunk_doc.content}"
 
+                # Need a unique ID for each document. Can track source ID in metadata.
+                metadata = chunk_doc.metadata or doc.metadata or {}
+                metadata['doc_id'] = doc.id
                 processed_chunks.append(ProcessedChunk(
-                    id=doc.id,
+                    id=uuid4().hex,
                     content=processed_content,
                     embeddings=doc.embeddings,
-                    metadata=chunk_doc.metadata or doc.metadata
+                    metadata=metadata
                 ))
 
         return processed_chunks
@@ -173,11 +181,14 @@ class TextChunkingPreprocessor(DocumentPreprocessor):
             chunk_docs = self._split_document(doc)
 
             for chunk_doc in chunk_docs:
+                # Need a unique ID for each document. Can track source ID in metadata.
+                metadata = chunk_doc.metadata or doc.metadata or {}
+                metadata['doc_id'] = doc.id
                 processed_chunks.append(ProcessedChunk(
-                    id=doc.id,
+                    id=uuid4().hex,
                     content=chunk_doc.content,
                     embeddings=doc.embeddings,
-                    metadata=chunk_doc.metadata or doc.metadata
+                    metadata=metadata
                 ))
 
         return processed_chunks

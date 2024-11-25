@@ -2,7 +2,7 @@ import re
 import ast as py_ast
 import typing as t
 
-from mindsdb_sql.parser.ast import OrderBy, Identifier, Star, Select, Constant, BinaryOperation, Tuple, Latest
+from mindsdb_sql_parser.ast import OrderBy, Identifier, Star, Select, Constant, BinaryOperation, Tuple, Latest
 
 
 class MongoToAst:

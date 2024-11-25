@@ -1,4 +1,4 @@
-from mindsdb_sql.parser import ast
+from mindsdb_sql_parser import ast
 
 from mindsdb.integrations.utilities.handlers.query_utilities.base_query_utilities import BaseQueryParser
 from mindsdb.integrations.utilities.handlers.query_utilities.base_query_utilities import BaseQueryExecutor

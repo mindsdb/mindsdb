@@ -181,6 +181,8 @@ jobs:
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
+            env PYTHONPATH=./ pytest tests/unit/planner/ -x
+            env PYTHONPATH=./ pytest tests/unit/render/ -x
             env PYTHONPATH=./ pytest tests/unit/executor/ -x
             env PYTHONPATH=./ pytest tests/unit/test_llm_utils.py
             env PYTHONPATH=./ pytest tests/unit/ml_handlers/test_minds_endpoint.py

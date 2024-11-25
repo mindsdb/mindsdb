@@ -318,9 +318,14 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
     def send_query_answer(self, answer: SQLAnswer):
         if answer.type == RESPONSE_TYPE.TABLE:
-            self.send_table_packets(columns=answer.columns, data=answer.data)
-
             packages = []
+
+            if len(answer.data) > 1000:
+                # for big responses leverage pandas map function to convert data to packages
+                self.send_table_packets(columns=answer.columns, data=answer.data)
+            else:
+                packages += self.get_table_packets(columns=answer.columns, data=answer.data.to_lists())
+
             if answer.status is not None:
                 packages.append(self.last_packet(status=answer.status))
             else:
@@ -375,6 +380,17 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                     flags=flags,
                 )
             )
+        return packets
+
+    def get_table_packets(self, columns, data, status=0):
+        # TODO remove columns order
+        packets = [self.packet(ColumnCountPacket, count=len(columns))]
+        packets.extend(self._get_column_defenition_packets(columns, data))
+
+        if self.client_capabilities.DEPRECATE_EOF is False:
+            packets.append(self.packet(EofPacket, status=status))
+
+        packets += [self.packet(ResultsetRowPacket, data=x) for x in data]
         return packets
 
     def send_table_packets(self, columns, data, status=0):

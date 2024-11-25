@@ -7,7 +7,7 @@ import json
 import pandas as pd
 import numpy as np
 
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
 from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
@@ -799,7 +799,7 @@ class TestComplexQueries(BaseExecutorMockPredictor):
     #     '''
     #     from mindsdb.api.mysql.mysql_proxy.utilities import ErSqlWrongArguments
     #     with pytest.raises(ErSqlWrongArguments):
-    #         self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
+    #         self.command_executor.execute_command(parse_sql(sql))
 
 
 class TestTableau(BaseExecutorMockPredictor):

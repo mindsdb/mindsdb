@@ -1,6 +1,6 @@
 import pandas as pd
-from mindsdb_sql.parser.ast import Constant, Identifier, Insert, OrderBy, TableColumn
-from mindsdb_sql.parser.dialects.mindsdb import (
+from mindsdb_sql_parser.ast import Constant, Identifier, Insert, OrderBy, TableColumn
+from mindsdb_sql_parser.ast.mindsdb import (
     CreateJob,
     CreateMLEngine,
     CreatePredictor,

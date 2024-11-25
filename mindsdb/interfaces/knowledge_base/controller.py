@@ -5,8 +5,7 @@ import json
 
 import pandas as pd
 
-import mindsdb_sql.planner.utils as utils
-from mindsdb_sql.parser.ast import (
+from mindsdb_sql_parser.ast import (
     BinaryOperation,
     Constant,
     Identifier,
@@ -15,7 +14,9 @@ from mindsdb_sql.parser.ast import (
     Delete,
     Star
 )
-from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor
+from mindsdb_sql_parser.ast.mindsdb import CreatePredictor
+
+from mindsdb.integrations.utilities.query_traversal import query_traversal
 
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.libs.vectordatabase_handler import (
@@ -71,7 +72,7 @@ class KnowledgeBaseTable:
 
         # replace content with embeddings
 
-        utils.query_traversal(query.where, self._replace_query_content)
+        query_traversal(query.where, self._replace_query_content)
 
         # set table name
         query.from_table = Identifier(parts=[self._kb.vector_database_table])
@@ -147,12 +148,7 @@ class KnowledgeBaseTable:
 
     def insert_documents(self, documents: List[Document]):
         """Process and insert documents with preprocessing if configured"""
-        if self.document_preprocessor:
-            chunks = self.document_preprocessor.process_documents(documents)
-            df = pd.DataFrame([chunk.model_dump() for chunk in chunks])
-        else:
-            # No preprocessing, convert directly to dataframe
-            df = pd.DataFrame([doc.model_dump() for doc in documents])
+        df = pd.DataFrame([doc.model_dump() for doc in documents])
 
         self.insert(df)
 
@@ -192,7 +188,7 @@ class KnowledgeBaseTable:
         Replaces content values with embeddings in WHERE clause. Sends query to vector db
         :param query: query to KB table
         """
-        utils.query_traversal(query.where, self._replace_query_content)
+        query_traversal(query.where, self._replace_query_content)
 
         # set table name
         query.table = Identifier(parts=[self._kb.vector_database_table])

@@ -1,6 +1,6 @@
 import github
 
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 
 from mindsdb.integrations.handlers.github_handler.github_tables import (
     GithubIssuesTable,
@@ -120,5 +120,5 @@ class GithubHandler(APIHandler):
         StatusResponse
             Request status
         """
-        ast = parse_sql(query, dialect="mindsdb")
+        ast = parse_sql(query)
         return self.query(ast)

@@ -1,12 +1,12 @@
 from collections import defaultdict
 
-from mindsdb_sql.parser.ast import (
+from mindsdb_sql_parser.ast import (
     Identifier,
     Select,
     Star,
 )
-from mindsdb_sql.planner.steps import ProjectStep
-from mindsdb_sql.planner.utils import query_traversal
+from mindsdb.api.executor.planner.steps import ProjectStep
+from mindsdb.integrations.utilities.query_traversal import query_traversal
 
 from mindsdb.api.executor.sql_query.result_set import ResultSet
 from mindsdb.api.executor.utilities.sql import query_df

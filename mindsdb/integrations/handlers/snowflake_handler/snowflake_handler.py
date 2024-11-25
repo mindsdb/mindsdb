@@ -1,6 +1,9 @@
+import psutil
+import pandas
 from pandas import DataFrame
 from snowflake.sqlalchemy import snowdialect
 from snowflake import connector
+from snowflake.connector.errors import NotSupportedError
 
 from mindsdb.utilities import log
 from mindsdb_sql.parser.ast.base import ASTNode
@@ -128,17 +131,46 @@ class SnowflakeHandler(DatabaseHandler):
         with connection.cursor(connector.DictCursor) as cur:
             try:
                 cur.execute(query)
-                result = cur.fetchall()
-                if result:
+                try:
+                    batches = []
+                    for batch_df in cur.fetch_pandas_batches():
+                        # region check the size of first batch (if it is big enough) to get an estimate of the full
+                        # dataset size. If i does not fit in memory - raise an error.
+                        # NOTE batch size cannot be set on client side. Also, Snowflake will download
+                        # 'CLIENT_PREFETCH_THREADS' count of chunks in parallel (by default 4), therefore this check
+                        # can not work in some cases.
+                        if len(batches) == 0 and len(batch_df) > 1000:
+                            free_memory_kb = psutil.virtual_memory().available >> 10
+                            first_batch_size_kb = batch_df.memory_usage(index=True, deep=True).sum() >> 10
+                            first_batch_rowcount = len(batch_df)
+                            total_rowcount = cur.rowcount
+                            rest_rowcount = total_rowcount - first_batch_rowcount
+                            rest_estimated_size_kb = int((rest_rowcount / first_batch_rowcount) * first_batch_size_kb)
+                            print(f'rest_estimated_size_kb={rest_estimated_size_kb}, first_batch_size_kb={first_batch_size_kb}, free_memory_kb={free_memory_kb}')
+                            if (free_memory_kb * 0.9) < rest_estimated_size_kb:
+                                raise MemoryError('Not enought memory')
+                        # endregion
+                        batches.append(batch_df)
                     response = Response(
                         RESPONSE_TYPE.TABLE,
-                        DataFrame(
-                            result,
-                            columns=[x[0] for x in cur.description]
-                        )
+                        pandas.concat(batches, ignore_index=True)
                     )
-                else:
-                    response = Response(RESPONSE_TYPE.OK)
+                except NotSupportedError:
+                    # Fallback fo CREATE/DELETE/UPDATE. These commands returns table with single column,
+                    # but it cannot be getched as pandas DataFrame.
+                    result = cur.fetchall()
+                    if result:
+                        response = Response(
+                            RESPONSE_TYPE.TABLE,
+                            DataFrame(
+                                result,
+                                columns=[x[0] for x in cur.description]
+                            )
+                        )
+                    else:
+                        # Looks like SnowFlake always returns something in response, so this is suspicious
+                        logger.warning('Snowflake did not return any data in response.')
+                        response = Response(RESPONSE_TYPE.OK)
             except Exception as e:
                 logger.error(f"Error running query: {query} on {self.connection_data.get('database')}, {e}!")
                 response = Response(

@@ -29,9 +29,13 @@ Where all the parameters are optional:
 
 - `model`: This is an embedding model created within MindsDB with `CREATE MODEL embedding_model`. If you do not provide the `model` parameter, then the OpenAI's text-embedding-ada-002 model is used by default, provided that the `OPENAI_API_KEY` environment variable is defined.
 - `storage`: This is a vector database that stores embedded data. It defaults to ChromaDB, or you can connect your vector store to MindsDB with `CREATE DATABASE vector_database`.
-- `metadata_columns`: The list of column names that will store metadata in the knowledge base. If not set, there are no metadata columns.
-- `content_columns`: The list of column names that will store actual content in the knowledge base. If not set, all columns are considered to be content columns.
-- `id_column`: The column name that will store unique identitifiers in the knowledge base. It defaults to `id`.
+- `metadata_columns`: The list of column names that will be stored in the `metadata` column of the knowledge base. If not set, the `metadata` column is not used.
+- `content_columns`: The list of column names that will be stored in the `content` column of the knowledge base. If not set, all columns are stored in the `content` column.
+- `id_column`: The column name that will be stored in the `id` column of the knowledge base for unique identitification.
+
+<Note>
+The knowledge base comprises the `id`, `content`, and `metadata` columns that store data defined in the parameters.
+</Note>
 
 ## Examples
 

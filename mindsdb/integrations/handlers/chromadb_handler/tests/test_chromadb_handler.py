@@ -135,7 +135,21 @@ class TestChromaDBHandler(BaseExecutorTest):
                 ],  # different dimensions
             }
         )
-        self.set_handler(postgres_handler_mock, "pg", tables={"df": df, "df2": df2})
+
+        df3 = pd.DataFrame(
+            {
+                "id": ["id1", "id2", "id3"],
+                "content": ["this is a test", "this is a test", "this is a test"],
+                "test": ["test1", "test2", "test3"],
+                "embeddings": [
+                    [1.0, 2.0, 3.0],
+                    [1.0, 2.0, 3.0],
+                    [1.0, 2.0, 3.0],
+                ],
+            }
+        )
+
+        self.set_handler(postgres_handler_mock, "pg", tables={"df": df, "df2": df2, "df3": df3})
         num_record = df.shape[0]
 
         # create a table
@@ -198,6 +212,25 @@ class TestChromaDBHandler(BaseExecutorTest):
         """
         ret = self.run_sql(sql)
         assert ret.shape[0] == num_record + 3  # only one unique record was added
+
+        # insert into a table with a select statement, passing in metadata as extra named column e.g. test
+
+        sql = """
+            INSERT INTO chroma_test.test_table (
+            SELECT
+                content,embeddings, test
+            FROM
+                pg.df3
+                )
+        """
+        self.run_sql(sql)
+
+        # check if the data is inserted
+        sql = """
+            SELECT * FROM chroma_test.test_table
+        """
+        ret = self.run_sql(sql)
+        assert ret.shape[0] == num_record + 3  # three unique records were added
 
         # insert into a table with a select statement, but wrong columns
         with pytest.raises(Exception):

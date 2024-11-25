@@ -1,9 +1,10 @@
 import os
 import copy
-from typing import Dict, List, Optional
-
+from typing import Dict, List, Optional, Union
+import json
 
 import pandas as pd
+import hashlib
 
 from mindsdb_sql_parser.ast import (
     BinaryOperation,
@@ -230,94 +231,39 @@ class KnowledgeBaseTable:
         db_handler.delete(self._kb.vector_database_table)
 
     def insert(self, df: pd.DataFrame):
-        """
-        Insert dataframe to KB table. For multiple content columns, each column's content
-        becomes a separate document while preserving the relationship via metadata.
-        """
+        """Insert dataframe to KB table."""
         if df.empty:
             return
 
         # First adapt column names to identify content and metadata columns
         adapted_df = self._adapt_column_names(df)
+        content_columns = self._kb.params.get('content_columns', [TableField.CONTENT.value])
 
-        if self.document_preprocessor:
-            # Get content columns that were identified by _adapt_column_names
-            content_columns = self._kb.params.get('content_columns', [TableField.CONTENT.value])
+        rows = []
+        for idx, row in adapted_df.iterrows():
+            # Get or generate document ID
+            content_dict = {col: str(row[col]) for col in content_columns if col in adapted_df.columns}
+            metadata = row.get(TableField.METADATA.value, {})
 
-            # Convert DataFrame rows to documents, creating separate documents for each content column
-            raw_documents = []
-            for idx, row in adapted_df.iterrows():
-                # Get metadata - should already be a dict from _adapt_column_names
-                base_metadata = row.get(TableField.METADATA.value, {})
-                if isinstance(base_metadata, str):
-                    base_metadata = self._parse_metadata(base_metadata)
-                doc_id = row.get(TableField.ID.value)  # Get ID if specified
+            # Use existing ID or generate from content
+            doc_id = row.get(TableField.ID.value) or self._generate_content_hash(content_dict, metadata)
 
-                # Create a separate document for each content column
-                for col in content_columns:
-                    # Use direct column access since the columns retain their original names
-                    content = row[col] if col in adapted_df.columns else None
+            # Create document row
+            doc_row = {
+                TableField.CONTENT.value: json.dumps(content_dict),  # Store all content columns
+                TableField.ID.value: doc_id,
+                TableField.METADATA.value: metadata
+            }
+            rows.append(doc_row)
 
-                    if content and str(content).strip():
-                        metadata = {
-                            **base_metadata,
-                            'source_column': col
-                        }
-
-                        raw_documents.append(Document(
-                            content=str(content),
-                            id=doc_id,
-                            metadata=metadata
-                        ))
-
-            if not raw_documents:
-                logger.warning(f"No valid content found in columns: {content_columns}")
-                return
-
-            # Apply preprocessing to all documents
-            processed_chunks = self.document_preprocessor.process_documents(raw_documents)
-
-            # Convert processed chunks back to DataFrame with standard structure
-            df = pd.DataFrame([{
-                TableField.CONTENT.value: chunk.content,
-                TableField.ID.value: chunk.id,
-                TableField.METADATA.value: chunk.metadata
-            } for chunk in processed_chunks])
-
-        else:
-            # If no preprocessing, we still need to transform multiple columns into separate rows
-            rows = []
-            content_columns = self._kb.params.get('content_columns', [TableField.CONTENT.value])
-
-            for idx, row in adapted_df.iterrows():
-                base_metadata = row.get(TableField.METADATA.value, {})
-                if isinstance(base_metadata, str):
-                    base_metadata = self._parse_metadata(base_metadata)
-                doc_id = row.get(TableField.ID.value)
-
-                for col in content_columns:
-                    content = row[col] if col in adapted_df.columns else None
-                    if content and str(content).strip():
-                        rows.append({
-                            TableField.CONTENT.value: str(content),
-                            TableField.ID.value: doc_id,
-                            TableField.METADATA.value: {
-                                **base_metadata,
-                                'source_column': col
-                            }
-                        })
-
-            df = pd.DataFrame(rows)
-
+        df = pd.DataFrame(rows)
         if df.empty:
             logger.warning("No valid content found in any content columns")
             return
 
-        # add embeddings
+        # add embeddings and send to vector db
         df_emb = self._df_to_embeddings(df)
         df = pd.concat([df, df_emb], axis=1)
-
-        # send to vector db
         db_handler = self.get_vector_db()
         db_handler.do_upsert(self._kb.vector_database_table, df)
 
@@ -570,6 +516,30 @@ class KnowledgeBaseTable:
                 logger.warning(f"Could not parse metadata: {base_metadata}. Using empty dict.")
                 return {}
         return {}
+
+    def _generate_content_hash(self, content: Union[str, Dict], metadata: Optional[Dict] = None) -> str:
+        """
+        Generate a deterministic hash from content and metadata.
+
+        Args:
+            content: The content to hash (can be string or dict for multiple columns)
+            metadata: Optional metadata to include in hash
+        Returns:
+            SHA-256 hash as hex string
+        """
+        # Convert content to a consistent string representation
+        if isinstance(content, dict):
+            # Sort keys to ensure consistent ordering
+            content_str = json.dumps(content, sort_keys=True)
+        else:
+            content_str = str(content)
+
+        # Include metadata in hash if provided
+        if metadata:
+            metadata_str = json.dumps(metadata, sort_keys=True)
+            content_str = f"{content_str}:{metadata_str}"
+
+        return hashlib.sha256(content_str.encode()).hexdigest()
 
 
 class KnowledgeBaseController:

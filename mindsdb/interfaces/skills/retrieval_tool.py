@@ -1,8 +1,17 @@
 from typing import Dict
 
 from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
-from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel, VectorStoreType, DEFAULT_COLLECTION_NAME, \
-    RetrieverType, MultiVectorRetrieverMode, VectorStoreConfig, SearchType, SearchKwargs
+from mindsdb.integrations.utilities.rag.settings import (
+    DEFAULT_COLLECTION_NAME,
+    MultiVectorRetrieverMode,
+    RAGPipelineModel,
+    RetrieverType,
+    SearchType,
+    SearchKwargs,
+    SummarizationConfig,
+    VectorStoreConfig,
+    VectorStoreType
+)
 from mindsdb.interfaces.skills.skill_tool import skill_tool
 from mindsdb.interfaces.storage import db
 
@@ -61,6 +70,11 @@ def build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
     if 'search_kwargs' in rag_params and isinstance(rag_params['search_kwargs'], dict):
         rag_params['search_kwargs'] = SearchKwargs(**rag_params['search_kwargs'])
 
+    # Handle summarization config if present
+    summarization_config = rag_params.get('summarization_config')
+    if summarization_config is not None and isinstance(summarization_config, dict):
+        rag_params['summarization_config'] = SummarizationConfig(**summarization_config)
+
     # Handle defaults for required fields
     if 'embedding_model' not in rag_params:
         rag_params['embedding_model'] = DEFAULT_EMBEDDINGS_MODEL_CLASS()
@@ -85,6 +99,8 @@ def build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
             return result['answer']
         except Exception as e:
             logger.error(f"Error in RAG pipeline: {str(e)}")
+            from traceback import format_exc
+            logger.error(format_exc())
             return f"Error in retrieval: {str(e)}"
 
     # Create RAG tool

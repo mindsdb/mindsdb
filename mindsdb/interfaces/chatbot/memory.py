@@ -87,10 +87,10 @@ class BaseMemory:
         history = self._apply_hiding(chat_id, history)
         return history
 
-    def _add_to_history(self, chat_id, chat_message):
+    def _add_to_history(self, chat_id, chat_message, table_name=None):
         raise NotImplementedError
 
-    def _get_chat_history(self, chat_id):
+    def _get_chat_history(self, chat_id, table_name=None):
         raise NotImplementedError
 
 

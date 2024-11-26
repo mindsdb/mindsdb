@@ -156,10 +156,19 @@ class SnowflakeHandler(DatabaseHandler):
                                 raise MemoryError('Not enought memory')
                         # endregion
                         batches.append(batch_df)
-                    response = Response(
-                        RESPONSE_TYPE.TABLE,
-                        pandas.concat(batches, ignore_index=True)
-                    )
+                    if len(batches) > 0:
+                        response = Response(
+                            RESPONSE_TYPE.TABLE,
+                            pandas.concat(batches, ignore_index=True)
+                        )
+                    else:
+                        response = Response(
+                            RESPONSE_TYPE.TABLE,
+                            DataFrame(
+                                [],
+                                columns=[x[0] for x in cur.description]
+                            )
+                        )
                 except NotSupportedError:
                     # Fallback fo CREATE/DELETE/UPDATE. These commands returns table with single column,
                     # but it cannot be getched as pandas DataFrame.

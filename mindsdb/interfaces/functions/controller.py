@@ -128,6 +128,9 @@ class FunctionController(BYOMFunctionsController):
     def llm_call_function(self, node):
         name = node.op.lower()
 
+        if name in self.callbacks:
+            return self.callbacks[name]
+
         param_prefix = 'LLM_FUNCTION_'
         chat_model_params = {}
         for k, v in os.environ.items():
@@ -138,23 +141,17 @@ class FunctionController(BYOMFunctionsController):
                 else:
                     chat_model_params[param_name.lower()] = v
 
-        if 'model_name' not in chat_model_params:
-            return
-
         if 'provider' not in chat_model_params:
             chat_model_params['provider'] = 'openai'
 
         try:
             from langchain_core.messages import HumanMessage
             from mindsdb.interfaces.agents.langchain_agent import create_chat_model
-        except ImportError:
-            return
-
-        if name in self.callbacks:
-            return self.callbacks[name]
+            llm = create_chat_model(chat_model_params)
+        except Exception as e:
+            raise RuntimeError(f'Unable to use LLM function, check ENV variables: {e}')
 
         def callback(question):
-            llm = create_chat_model(chat_model_params)
             resp = llm([HumanMessage(question)])
             return resp.content
 

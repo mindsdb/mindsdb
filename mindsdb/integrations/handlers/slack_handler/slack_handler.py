@@ -574,7 +574,6 @@ class SlackHandler(APIChatHandler):
             row = {
                 'text': payload_event['text'],
                 'user': payload_event['user'],
-                'channel_id': payload_event['channel'],
                 'created_at': dt.datetime.fromtimestamp(float(payload_event['ts'])).strftime('%Y-%m-%d %H:%M:%S')
             }
 
@@ -582,7 +581,6 @@ class SlackHandler(APIChatHandler):
             # This message should be handled via the threads table.
             if 'thread_ts' in payload_event:
                 key['thread_ts'] = payload_event['thread_ts']
-                row['thread_ts'] = payload_event['thread_ts']
 
             callback(row, key)
 

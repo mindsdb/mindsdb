@@ -56,9 +56,14 @@ class BaseMemory:
     def set_mode(self, chat_id, mode):
         self._modes[chat_id] = mode
 
-    def add_to_history(self, chat_id, chat_message):
+    def add_to_history(self, chat_id, chat_message, table_name=None):
 
-        self._add_to_history(chat_id, chat_message)
+        # If the chat_id is a tuple, convert it to a string when storing the message in the database.
+        self._add_to_history(
+            str(chat_id) if isinstance(chat_id, tuple) else chat_id,
+            chat_message,
+            table_name=table_name
+        )
         if chat_id in self._cache:
             del self._cache[chat_id]
 
@@ -68,19 +73,19 @@ class BaseMemory:
             history = self._cache[key]
 
         else:
-            if table_name is None:
-                history = self._get_chat_history(chat_id)
-            else:
-                history = self._get_chat_history(chat_id, table_name)
+            history = self._get_chat_history(
+                str(chat_id) if isinstance(chat_id, tuple) else chat_id,
+                table_name
+            )
             self._cache[key] = history
 
         history = self._apply_hiding(chat_id, history)
         return history
 
-    def _add_to_history(self, chat_id, chat_message):
+    def _add_to_history(self, chat_id, chat_message, table_name=None):
         raise NotImplementedError
 
-    def _get_chat_history(self, chat_id):
+    def _get_chat_history(self, chat_id, table_name=None):
         raise NotImplementedError
 
 
@@ -89,7 +94,7 @@ class HandlerMemory(BaseMemory):
     Uses handler's database to store and retrieve messages
     '''
 
-    def _add_to_history(self, chat_id, chat_message):
+    def _add_to_history(self, chat_id, chat_message, table_name=None):
         # do nothing. sent message will be stored by handler db
         pass
 
@@ -146,25 +151,28 @@ class DBMemory(BaseMemory):
     uses mindsdb database to store messages
     '''
 
-    def _add_to_history(self, chat_id, message):
-
+    def _add_to_history(self, chat_id, message, table_name=None):
         chat_bot_id = self.chat_task.bot_id
+        destination = str((chat_id, table_name)) if table_name else chat_id
+
         message = db.ChatBotsHistory(
             chat_bot_id=chat_bot_id,
             type=message.type.name,
             text=message.text,
             user=message.user,
-            destination=chat_id,
+            destination=destination,
         )
         db.session.add(message)
         db.session.commit()
 
-    def _get_chat_history(self, chat_id):
+    def _get_chat_history(self, chat_id, table_name=None):
         chat_bot_id = self.chat_task.bot_id
+        destination = str((chat_id, table_name)) if table_name else chat_id
+
         query = db.ChatBotsHistory.query\
             .filter(
                 db.ChatBotsHistory.chat_bot_id == chat_bot_id,
-                db.ChatBotsHistory.destination == chat_id
+                db.ChatBotsHistory.destination == destination
             )\
             .order_by(db.ChatBotsHistory.sent_at.desc())\
             .limit(self.MAX_DEPTH)
@@ -194,16 +202,13 @@ class ChatMemory:
         self.cached = False
 
     def get_history(self, cached=True):
-        if self.table_name:
-            result = self.memory.get_chat_history(self.chat_id, self.table_name, cached=cached and self.cached)
-        else:
-            result = self.memory.get_chat_history(self.chat_id, cached=cached and self.cached)
+        result = self.memory.get_chat_history(self.chat_id, self.table_name, cached=cached and self.cached)
 
         self.cached = True
         return result
 
     def add_to_history(self, message):
-        self.memory.add_to_history(self.chat_id, message)
+        self.memory.add_to_history(self.chat_id, message, table_name=self.table_name)
 
     def get_mode(self):
         return self.memory.get_mode(self.chat_id)

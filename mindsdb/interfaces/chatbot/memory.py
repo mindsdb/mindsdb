@@ -73,15 +73,10 @@ class BaseMemory:
             history = self._cache[key]
 
         else:
-            if table_name is None:
-                history = self._get_chat_history(
-                    str(chat_id) if isinstance(chat_id, tuple) else chat_id
-                )
-            else:
-                history = self._get_chat_history(
-                    str(chat_id) if isinstance(chat_id, tuple) else chat_id,
-                    table_name
-                )
+            history = self._get_chat_history(
+                str(chat_id) if isinstance(chat_id, tuple) else chat_id,
+                table_name
+            )
             self._cache[key] = history
 
         history = self._apply_hiding(chat_id, history)

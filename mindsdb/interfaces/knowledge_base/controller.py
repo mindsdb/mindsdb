@@ -552,13 +552,12 @@ class KnowledgeBaseTable:
                 return {}
         return {}
 
-    def _generate_content_hash(self, content: Union[str, Dict], metadata: Optional[Dict] = None) -> str:
+    def _generate_content_hash(self, content: Union[str, Dict]) -> str:
         """
-        Generate a deterministic hash from content and metadata.
+        Generate a deterministic hash from content only.
 
         Args:
             content: The content to hash (can be string or dict for multiple columns)
-            metadata: Optional metadata to include in hash
         Returns:
             SHA-256 hash as hex string
         """
@@ -569,12 +568,37 @@ class KnowledgeBaseTable:
         else:
             content_str = str(content)
 
-        # Include metadata in hash if provided
-        if metadata:
-            metadata_str = json.dumps(metadata, sort_keys=True)
-            content_str = f"{content_str}:{metadata_str}"
-
         return hashlib.sha256(content_str.encode()).hexdigest()
+
+    def _convert_metadata_value(self, value):
+        """
+        Convert metadata value to appropriate Python type.
+
+        Args:
+            value: The value to convert
+
+        Returns:
+            Converted value in appropriate Python type
+        """
+        if pd.isna(value):
+            return None
+
+        # Handle pandas/numpy types
+        if pd.api.types.is_datetime64_any_dtype(value) or isinstance(value, pd.Timestamp):
+            return str(value)
+        elif pd.api.types.is_integer_dtype(type(value)):
+            return int(value)
+        elif pd.api.types.is_float_dtype(type(value)):
+            return float(value)
+        elif pd.api.types.is_bool_dtype(type(value)):
+            return bool(value)
+
+        # Handle basic Python types
+        if isinstance(value, (int, float, bool)):
+            return value
+
+        # Convert everything else to string
+        return str(value)
 
 
 class KnowledgeBaseController:

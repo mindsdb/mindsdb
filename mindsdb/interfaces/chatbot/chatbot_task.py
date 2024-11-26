@@ -59,6 +59,7 @@ class ChatBotTask(BaseTask):
             self.memory = HandlerMemory(self, chat_params)
 
         elif polling == 'realtime':
+            chat_params = chat_params['tables'] if 'tables' in chat_params else [chat_params]
             self.chat_pooling = RealtimePolling(self, chat_params)
             self.memory = DBMemory(self, chat_params)
 

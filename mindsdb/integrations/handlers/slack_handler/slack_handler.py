@@ -349,6 +349,114 @@ class SlackMessagesTable(APIResource):
             
         except SlackApiError as e:
             raise Exception(f"Error deleting message from Slack channel '{params['channel']}' with timestamp '{params['ts']}': {e.response['error']}")
+        
+
+class SlackThreadsTable(APIResource):
+
+    def list(
+        self,
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        **kwargs
+    ) -> pd.DataFrame:
+        """
+        Retrieves the messages from a thread in a Slack conversation.
+
+        Returns:
+            pd.DataFrame: The messages in the thread.
+        """
+        client = self.handler.connect()
+
+        params = {}
+
+        # Parse the conditions.
+        for condition in conditions:
+            value = condition.value
+            op = condition.op
+
+            # Handle the column 'channel_id'.
+            if condition.column == 'channel_id':
+                if op != FilterOperator.EQUAL:
+                    raise ValueError(f"Unsupported operator '{op}' for column 'channel_id'")
+
+                # Check if the channel exists.
+                try:
+                    channel = self.handler.get_channel(value)
+                    params['channel'] = value
+                    condition.applied = True
+                except SlackApiError as e:
+                    raise ValueError(f"Channel '{value}' not found")
+
+            # Handle the column 'thread_ts'.
+            elif condition.column == 'thread_ts':
+                if op != FilterOperator.EQUAL:
+                    raise ValueError(f"Unsupported operator '{op}' for column 'thread_ts'")
+
+                params['ts'] = value
+
+        # Set the limit.
+        if limit:
+            params['limit'] = limit
+
+        if 'channel' not in params:
+            raise Exception("To retrieve data from Slack, you need to provide the 'channel_id' parameter.")
+
+        # Retrieve the replies in the thread.
+        result = client.conversations_replies(**params)
+
+        # Convert the result to a DataFrame.
+        result = pd.DataFrame(result['messages'], columns=self.get_columns())
+
+        # Remove null rows from the result.
+        result = result[result['text'].notnull()]
+
+        # Add the selected channel to the DataFrame.
+        result['channel_id'] = params['channel']
+        result['channel_name'] = channel['name'] if 'name' in channel else None
+
+        return result
+    
+    def insert(self, query):
+        """
+        Inserts a message into a thread in a Slack conversation.
+        """
+        client = self.handler.connect()
+    
+        # Get column names and values from the query.
+        columns = [col.name for col in query.columns]
+        for row in query.values:
+            params = dict(zip(columns, row))
+
+            # Check if required parameters are provided.
+            if 'channel_id' not in params or 'text' not in params or 'thread_ts' not in params:
+                raise Exception("To insert data into Slack, you need to provide the 'channel_id', 'text', and 'thread_ts' parameters.")
+
+            # Post message to Slack thread.
+            try:
+                response = client.chat_postMessage(
+                    channel=params['channel_id'],
+                    text=params['text'],
+                    thread_ts=params['thread_ts']
+                )
+            except SlackApiError as e:
+                raise Exception(f"Error posting message to Slack channel '{params['channel']}': {e.response['error']}")
+
+    def get_columns(self) -> List[str]:
+        return [
+            "channel_id",
+            "channel_name",
+            "type",
+            "user",
+            "text",
+            "ts",
+            "client_msg_id",
+            "thread_ts",
+            "parent_user_id",
+            "reply_count",
+            "reply_users_count",
+            "latest_reply",
+            "reply_users"
+        ]
 
 
 class SlackHandler(APIChatHandler):
@@ -387,21 +495,36 @@ class SlackHandler(APIChatHandler):
         users = SlackUsersTable(self)
         self._register_table('users', users)
 
+        threads = SlackThreadsTable(self)
+        self._register_table('threads', threads)
+
         self._socket_mode_client = None
 
     def get_chat_config(self):
         params = {
             'polling': {
                 'type': 'realtime',
-                'table_name': 'messages'
             },
-            'chat_table': {
-                'name': 'messages',
-                'chat_id_col': 'channel_id',
-                'username_col': 'user',
-                'text_col': 'text',
-                'time_col': 'thread_ts',
-            }
+            'tables': [
+                {
+                    'chat_table': {
+                        'name': 'messages',
+                        'chat_id_col': 'channel_id',
+                        'username_col': 'user',
+                        'text_col': 'text',
+                        'time_col': 'thread_ts',
+                    }
+                },
+                {
+                    'chat_table': {
+                        'name': 'threads',
+                        'chat_id_col': ['channel_id', 'thread_ts'],
+                        'username_col': 'user',
+                        'text_col': 'text',
+                        'time_col': 'thread_ts',
+                    }
+                }
+            ]
         }
         return params
 
@@ -410,10 +533,7 @@ class SlackHandler(APIChatHandler):
         user_info = api.auth_test().data
         return user_info['bot_id']
 
-    def subscribe(self, stop_event, callback, table_name, **kwargs):
-        if table_name != 'messages':
-            raise RuntimeError(f'Table not supported: {table_name}')
-
+    def subscribe(self, stop_event, callback, **kwargs):
         self._socket_mode_client = SocketModeClient(
             # This app-level token will be used only for establishing a connection
             app_token=self.connection_args['app_token'],  # xapp-A111-222-xyz
@@ -450,12 +570,17 @@ class SlackHandler(APIChatHandler):
             key = {
                 'channel_id': payload_event['channel'],
             }
+
             row = {
                 'text': payload_event['text'],
                 'user': payload_event['user'],
-                'channel_id': payload_event['channel'],
                 'created_at': dt.datetime.fromtimestamp(float(payload_event['ts'])).strftime('%Y-%m-%d %H:%M:%S')
             }
+
+            # Add thread_ts to the key and row if it is a thread message. This is used to identify threads.
+            # This message should be handled via the threads table.
+            if 'thread_ts' in payload_event:
+                key['thread_ts'] = payload_event['thread_ts']
 
             callback(row, key)
 

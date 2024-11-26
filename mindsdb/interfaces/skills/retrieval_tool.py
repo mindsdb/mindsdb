@@ -99,8 +99,6 @@ def build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
             return result['answer']
         except Exception as e:
             logger.error(f"Error in RAG pipeline: {str(e)}")
-            from traceback import format_exc
-            logger.error(format_exc())
             return f"Error in retrieval: {str(e)}"
 
     # Create RAG tool

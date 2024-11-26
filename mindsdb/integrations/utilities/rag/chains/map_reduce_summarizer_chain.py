@@ -17,11 +17,14 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 
-def create_map_reduce_documents_chain(summarization_config: SummarizationConfig):
+def create_map_reduce_documents_chain(summarization_config: SummarizationConfig) -> MapReduceDocumentsChain:
     '''Creats a chain that map reduces documents into a single consolidated summary
 
     Args:
         summarization_config (SummarizationConfig): Configuration for how to perform summarization
+
+    Returns:
+        chain (MapReduceDocumentsChain): Chain that map reduces documents.
     '''
     summarization_llm = create_chat_model({
         'model_name': summarization_config.llm_config.model_name,

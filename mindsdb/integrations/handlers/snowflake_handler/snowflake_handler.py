@@ -170,7 +170,7 @@ class SnowflakeHandler(DatabaseHandler):
                             )
                         )
                 except NotSupportedError:
-                    # Fallback fo CREATE/DELETE/UPDATE. These commands returns table with single column,
+                    # Fallback for CREATE/DELETE/UPDATE. These commands returns table with single column,
                     # but it cannot be getched as pandas DataFrame.
                     result = cur.fetchall()
                     if result:

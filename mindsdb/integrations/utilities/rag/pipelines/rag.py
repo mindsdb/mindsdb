@@ -43,8 +43,12 @@ class LangChainRAGPipeline:
         if reranker:
             if reranker_config is None:
                 reranker_config = RerankerConfig()
-            self.reranker = LLMReranker(model=reranker_config.model, base_url=reranker_config.base_url,
-                                        filtering_threshold=reranker_config.filtering_threshold)
+            self.reranker = LLMReranker(
+                model=reranker_config.model,
+                base_url=reranker_config.base_url,
+                filtering_threshold=reranker_config.filtering_threshold,
+                num_docs_to_keep=reranker_config.num_docs_to_keep
+            )
         else:
             self.reranker = None
         self.summarizer = None

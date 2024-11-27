@@ -616,16 +616,16 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         if self.client_capabilities.DEPRECATE_EOF is False:
             packages.append(self.packet(EofPacket, status=0x0062))
-        else:
-            # send all
-            for row in executor.data.to_lists():
-                packages.append(
-                    self.packet(BinaryResultsetRowPacket, data=row, columns=columns_def)
-                )
 
-            server_status = executor.server_status or 0x0002
-            packages.append(self.last_packet(status=server_status))
-            prepared_stmt["fetched"] += len(executor.data)
+        # send all
+        for row in executor.data.to_lists():
+            packages.append(
+                self.packet(BinaryResultsetRowPacket, data=row, columns=columns_def)
+            )
+
+        server_status = executor.server_status or 0x0002
+        packages.append(self.last_packet(status=server_status))
+        prepared_stmt["fetched"] += len(executor.data)
 
         return self.send_package_group(packages)
 

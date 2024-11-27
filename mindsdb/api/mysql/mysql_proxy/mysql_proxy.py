@@ -23,7 +23,6 @@ import traceback
 from functools import partial
 from typing import Dict, List
 
-import numpy as np
 from numpy import dtype as np_dtype
 from pandas.api import types as pd_types
 
@@ -323,9 +322,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
             if len(answer.data) > 1000:
                 # for big responses leverage pandas map function to convert data to packages
-                self.send_tabel_packets(columns=answer.columns, data=answer.data)
+                self.send_table_packets(columns=answer.columns, data=answer.data)
             else:
-                packages += self.get_tabel_packets(columns=answer.columns, data=answer.data.to_lists())
+                packages += self.get_table_packets(columns=answer.columns, data=answer.data.to_lists())
 
             if answer.status is not None:
                 packages.append(self.last_packet(status=answer.status))
@@ -383,7 +382,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             )
         return packets
 
-    def get_tabel_packets(self, columns, data, status=0):
+    def get_table_packets(self, columns, data, status=0):
         # TODO remove columns order
         packets = [self.packet(ColumnCountPacket, count=len(columns))]
         packets.extend(self._get_column_defenition_packets(columns, data))
@@ -394,8 +393,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         packets += [self.packet(ResultsetRowPacket, data=x) for x in data]
         return packets
 
-    def send_tabel_packets(self, columns, data, status=0):
-
+    def send_table_packets(self, columns, data, status=0):
         # text protocol, convert all to string and serialize as packages
         df = data.get_raw_df()
 
@@ -406,13 +404,18 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 v = str(v)
             return Datum.serialize_str(v)
 
-        df = df.applymap(apply_f)
-
         # get column max size
+        # column_len is used by mysql client to determine width of columns, so it is not mandatory
+        # to get exactly max value. We can approximate them by sample.
         columns_len = None
         if len(df) > 0:
-            measurer = np.vectorize(len)
-            columns_len = measurer(df.values).max(axis=0)
+            sample = df.head(100)
+            columns_len = []
+            for column in sample.columns:
+                try:
+                    columns_len.append(sample[column].astype(str).str.len().max())
+                except Exception:
+                    columns_len.append(1)
 
         # columns packages
         packets = [self.packet(ColumnCountPacket, count=len(columns))]
@@ -423,12 +426,13 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             packets.append(self.packet(EofPacket, status=status))
         self.send_package_group(packets)
 
-        # body packages
-        string = b"".join([
-            self.packet(body=body, length=len(body)).accum()
-            for body in df.values.sum(axis=1)
-        ])
-        self.socket.sendall(string)
+        chunk_size = 100
+        for start in range(0, len(df), chunk_size):
+            string = b"".join([
+                self.packet(body=body, length=len(body)).accum()
+                for body in df[start:start + chunk_size].applymap(apply_f).values.sum(axis=1)
+            ])
+            self.socket.sendall(string)
 
     def decode_utf(self, text):
         try:
@@ -612,16 +616,16 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
 
         if self.client_capabilities.DEPRECATE_EOF is False:
             packages.append(self.packet(EofPacket, status=0x0062))
-        else:
-            # send all
-            for row in executor.data.to_lists():
-                packages.append(
-                    self.packet(BinaryResultsetRowPacket, data=row, columns=columns_def)
-                )
 
-            server_status = executor.server_status or 0x0002
-            packages.append(self.last_packet(status=server_status))
-            prepared_stmt["fetched"] += len(executor.data)
+        # send all
+        for row in executor.data.to_lists():
+            packages.append(
+                self.packet(BinaryResultsetRowPacket, data=row, columns=columns_def)
+            )
+
+        server_status = executor.server_status or 0x0002
+        packages.append(self.last_packet(status=server_status))
+        prepared_stmt["fetched"] += len(executor.data)
 
         return self.send_package_group(packages)
 

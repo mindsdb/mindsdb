@@ -72,7 +72,17 @@ class TestRender:
         """
 
         query = parse_sql(sql)
+        rendered = SqlalchemyRender('postgres').get_string(query, with_failback=False)
 
+        # check queries are the same after render
+        assert str(query) == str(parse_sql(rendered))
+
+    def test_extra_cast_in_division(self):
+        sql = """
+           select a / b from table1
+        """
+
+        query = parse_sql(sql)
         rendered = SqlalchemyRender('postgres').get_string(query, with_failback=False)
 
         # check queries are the same after render

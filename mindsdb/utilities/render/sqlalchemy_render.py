@@ -153,7 +153,6 @@ class SqlalchemyRender:
             methods = {
                 "+": "__add__",
                 "-": "__sub__",
-                "/": "__truediv__",
                 "*": "__mul__",
                 "%": "__mod__",
                 "=": "__eq__",
@@ -185,7 +184,10 @@ class SqlalchemyRender:
                     raise NotImplementedError(f'Required list argument for: {op}')
 
             method = methods.get(op)
-            if method is not None:
+            if op == '/':
+                # sqlalchemy adds cast for __truediv__ and round for __floordiv__
+                col = sa.text(f'{arg0.compile(dialect=self.dialect)} / {arg1.compile(dialect=self.dialect)}')
+            elif method is not None:
                 sa_op = getattr(arg0, method)
 
                 col = sa_op(arg1)

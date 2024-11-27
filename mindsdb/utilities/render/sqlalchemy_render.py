@@ -80,10 +80,20 @@ class SqlalchemyRender:
 
         for i in parts:
             if isinstance(i, ast.Star):
-                p = '*'
+                part = '*'
             else:
-                p = str(sa.column(i).compile(dialect=self.dialect))
-            parts2.append(p)
+                part = str(sa.column(i).compile(dialect=self.dialect))
+
+                if not i.islower():
+                    # if lower value is not be quoted
+                    #   then it is quoted only because of mixed case
+                    #   in that case use origin string
+
+                    part_lower = str(sa.column(i.lower()).compile(dialect=self.dialect))
+                    if part.lower() != part_lower:
+                        part = i
+
+            parts2.append(part)
 
         return sa.column('.'.join(parts2), is_literal=True)
 

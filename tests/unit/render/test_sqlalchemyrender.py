@@ -87,3 +87,13 @@ class TestRender:
 
         # check queries are the same after render
         assert str(query) == str(parse_sql(rendered))
+
+    def test_quoted_case(self):
+
+        query = Select(targets=[Identifier('Test')])
+        rendered = SqlalchemyRender('postgres').get_string(query, with_failback=False)
+        assert rendered == 'SELECT Test'
+
+        query = Select(targets=[Identifier('table')])
+        rendered = SqlalchemyRender('postgres').get_string(query, with_failback=False)
+        assert rendered == 'SELECT "table"'

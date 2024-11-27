@@ -3,7 +3,7 @@ import tempfile
 import threading
 import time
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 
 import psutil
 from appdirs import user_data_dir
@@ -122,17 +122,23 @@ def clean_process_marks():
             file.unlink()
 
 
-def clean_unlinked_process_marks():
-    """delete marks that does not have corresponded processes/threads"""
+def clean_unlinked_process_marks() -> List[int]:
+    """delete marks that does not have corresponded processes/threads
+
+    Returns:
+        List[int]: list with ids of unexisting processes
+    """
+    deleted_pids = []
+
     if os.name != "posix":
-        return
+        return deleted_pids
 
     p = Path(tempfile.gettempdir()).joinpath("mindsdb/processes/")
     if p.exists() is False:
-        return
+        return deleted_pids
     for path in p.iterdir():
         if path.is_dir() is False:
-            return
+            return deleted_pids
         for file in path.iterdir():
             parts = file.name.split("-")
             process_id = int(parts[0])
@@ -150,6 +156,7 @@ def clean_unlinked_process_marks():
                     logger.warning(
                         f"We have mark for process/thread {process_id}/{thread_id} but it does not exists"
                     )
+                    deleted_pids.append(process_id)
                     file.unlink()
 
             except psutil.AccessDenied:
@@ -161,7 +168,9 @@ def clean_unlinked_process_marks():
                 logger.warning(
                     f"We have mark for process/thread {process_id}/{thread_id} but it does not exists"
                 )
+                deleted_pids.append(process_id)
                 file.unlink()
+    return deleted_pids
 
 
 def __is_within_directory(directory, target):

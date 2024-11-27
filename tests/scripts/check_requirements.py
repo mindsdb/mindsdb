@@ -38,7 +38,7 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.to
 # transformers is required for langchain_core and not explicitly imported by mindsdb.
 MAIN_RULE_IGNORES = {
     "DEP003": ["torch"],
-    "DEP001": ["torch", "pgvector"],
+    "DEP001": ["torch", "pgvector", "pyopenssl"],
     "DEP002": ["psycopg2-binary", "lark", "transformers", "langchain-experimental", "lxml"]
 }
 

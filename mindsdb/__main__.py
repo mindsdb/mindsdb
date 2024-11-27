@@ -19,6 +19,8 @@ from packaging import version
 from dataclasses import dataclass
 from typing import Callable, Tuple, Optional
 
+from sqlalchemy.orm.attributes import flag_modified
+
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
@@ -123,8 +125,32 @@ def close_api_gracefully(trunc_processes_struct):
 
 
 def do_clean_process_marks():
+    config = Config()
+    is_cloud = config.get("cloud", False)
     while _stop_event.wait(timeout=5) is False:
-        clean_unlinked_process_marks()
+        unexisting_pids = clean_unlinked_process_marks()
+        if not is_cloud and len(unexisting_pids) > 0:
+            predictor_records = (
+                db.session.query(db.Predictor)
+                .filter(
+                    db.Predictor.deleted_at.is_(None),
+                    db.Predictor.status.not_in([
+                        db.PREDICTOR_STATUS.COMPLETE,
+                        db.PREDICTOR_STATUS.ERROR
+                    ])
+                )
+                .all()
+            )
+            for predictor_record in predictor_records:
+                predictor_process_id = (predictor_records.training_metadata or {}).get('process_id')
+                if predictor_process_id in unexisting_pids:
+                    predictor_record.status = db.PREDICTOR_STATUS.ERROR
+                    if isinstance(predictor_record.data, dict) is False:
+                        predictor_record.data = {}
+                    if 'error' not in predictor_record.data:
+                        predictor_record.data['error'] = 'The training process was terminated for unknown reasons'
+                        flag_modified(predictor_record, 'data')
+                    db.session.commit()
 
 
 if __name__ == '__main__':

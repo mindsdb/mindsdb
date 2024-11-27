@@ -264,12 +264,8 @@ class IntegrationDataNode(DataNode):
             df = df.to_frame()
 
         try:
-            df = df.replace(np.NaN, pd.NA)
-        except Exception as e:
-            logger.error(f"Issue with clearing DF from NaN values: {e}")
-
-        try:
-            df = df.where(pd.notnull(df), None)
+            # replace python's Nan, np.NaN, np.nan and pd.NA to None
+            df.replace([np.NaN, pd.NA], None, inplace=True)
         except Exception as e:
             logger.error(f"Issue with clearing DF from NaN values: {e}")
         # endregion

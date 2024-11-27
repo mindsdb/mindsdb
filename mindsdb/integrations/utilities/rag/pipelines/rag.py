@@ -7,10 +7,11 @@ from langchain.retrievers import ContextualCompressionRetriever
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableParallel, RunnablePassthrough, RunnableSerializable
 
+from mindsdb.integrations.utilities.rag.chains.map_reduce_summarizer_chain import create_map_reduce_documents_chain, MapReduceSummarizerChain
 from mindsdb.integrations.utilities.rag.retrievers.auto_retriever import AutoRetriever
 from mindsdb.integrations.utilities.rag.retrievers.multi_vector_retriever import MultiVectorRetriever
 from mindsdb.integrations.utilities.rag.rerankers.reranker_compressor import LLMReranker, RerankerConfig
-from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel, DEFAULT_AUTO_META_PROMPT_TEMPLATE, SearchKwargs, SearchType
+from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel, DEFAULT_AUTO_META_PROMPT_TEMPLATE, SearchKwargs, SearchType, SummarizationConfig, VectorStoreConfig
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RERANKER_FLAG
 
 from mindsdb.integrations.utilities.rag.vector_store import VectorStoreOperator
@@ -21,8 +22,16 @@ class LangChainRAGPipeline:
     Builds a RAG pipeline using langchain LCEL components
     """
 
-    def __init__(self, retriever_runnable, prompt_template, llm, reranker: bool = DEFAULT_RERANKER_FLAG,
-                 reranker_config: Optional[RerankerConfig] = None):
+    def __init__(
+            self,
+            retriever_runnable,
+            prompt_template,
+            llm,
+            reranker: bool = DEFAULT_RERANKER_FLAG,
+            reranker_config: Optional[RerankerConfig] = None,
+            vector_store_config: Optional[VectorStoreConfig] = None,
+            summarization_config: Optional[SummarizationConfig] = None
+    ):
 
         self.retriever_runnable = retriever_runnable
         self.prompt_template = prompt_template
@@ -34,6 +43,16 @@ class LangChainRAGPipeline:
                                         filtering_threshold=reranker_config.filtering_threshold)
         else:
             self.reranker = None
+        self.summarizer = None
+        self.vector_store_config = vector_store_config
+        knowledge_base_table = self.vector_store_config.kb_table if self.vector_store_config is not None else None
+        if summarization_config is not None and knowledge_base_table is not None:
+            map_reduce_documents_chain = create_map_reduce_documents_chain(summarization_config)
+            self.summarizer = MapReduceSummarizerChain(
+                vector_store_handler=knowledge_base_table.get_vector_db(),
+                table_name=knowledge_base_table.get_vector_db_table_name(),
+                map_reduce_documents_chain=map_reduce_documents_chain
+            )
 
     def with_returned_sources(self) -> RunnableSerializable:
         """
@@ -73,7 +92,8 @@ class LangChainRAGPipeline:
         rag_chain_with_source = RunnableParallel(
             {"context": self.retriever_runnable, "question": RunnablePassthrough()}
         ).assign(answer=rag_chain_from_docs)
-
+        if self.summarizer is not None:
+            return rag_chain_with_source | self.summarizer
         return rag_chain_with_source
 
     @classmethod
@@ -120,7 +140,13 @@ class LangChainRAGPipeline:
         )
         retriever = vector_store_operator.vector_store.as_retriever()
         retriever = cls._apply_search_kwargs(retriever, config.search_kwargs, config.search_type)
-        return cls(retriever, config.rag_prompt_template, config.llm)
+        return cls(
+            retriever,
+            config.rag_prompt_template,
+            config.llm,
+            vector_store_config=config.vector_store_config,
+            summarization_config=config.summarization_config
+        )
 
     @classmethod
     def from_auto_retriever(cls, config: RAGPipelineModel):
@@ -129,10 +155,22 @@ class LangChainRAGPipeline:
 
         retriever = AutoRetriever(config=config).as_runnable()
         retriever = cls._apply_search_kwargs(retriever, config.search_kwargs, config.search_type)
-        return cls(retriever, config.rag_prompt_template, config.llm)
+        return cls(
+            retriever,
+            config.rag_prompt_template,
+            config.llm,
+            vector_store_config=config.vector_store_config,
+            summarization_config=config.summarization_config
+        )
 
     @classmethod
     def from_multi_vector_retriever(cls, config: RAGPipelineModel):
         retriever = MultiVectorRetriever(config=config).as_runnable()
         retriever = cls._apply_search_kwargs(retriever, config.search_kwargs, config.search_type)
-        return cls(retriever, config.rag_prompt_template, config.llm)
+        return cls(
+            retriever,
+            config.rag_prompt_template,
+            config.llm,
+            vector_store_config=config.vector_store_config,
+            summarization_config=config.summarization_config
+        )

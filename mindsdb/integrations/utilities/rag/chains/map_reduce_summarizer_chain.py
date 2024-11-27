@@ -79,11 +79,11 @@ class MapReduceSummarizerChain(Chain):
 
     @property
     def input_keys(self) -> List[str]:
-        return [self.context_key, 'question', 'answer']
+        return [self.context_key, 'question']
 
     @property
     def output_keys(self) -> List[str]:
-        return [self.context_key, 'question', 'answer']
+        return [self.context_key, 'question']
 
     def _get_document_ids_from_chunks(self, chunks: List[Document]) -> List[str]:
         unique_document_ids = set()

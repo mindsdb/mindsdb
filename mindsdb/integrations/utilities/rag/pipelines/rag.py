@@ -65,7 +65,22 @@ class LangChainRAGPipeline:
                 # this is to handle the case where the retriever returns a string
                 # instead of a list of documents e.g. SQLRetriever
                 return docs
-            return "\n\n".join(doc.page_content for doc in docs)
+            if not docs:
+                return ''
+            # Sort by original document so we can group source summaries together.
+            docs.sort(key=lambda d: d.metadata.get('original_row_id') if d.metadata else 0)
+            original_document_id = None
+            summary_prepended_text = 'Summary of the original document that the below context was taken from:\n'
+            document_content = ''
+            for d in docs:
+                metadata = d.metadata or {}
+                if metadata.get('original_row_id') != original_document_id and metadata.get('summary'):
+                    # We have a summary of a new document to prepend.
+                    original_document_id = metadata.get('original_row_id')
+                    summary = f"{summary_prepended_text}{metadata.get('summary')}\n"
+                    document_content += summary
+                document_content += f'{d.page_content}\n\n'
+            return document_content
 
         prompt = ChatPromptTemplate.from_template(self.prompt_template)
 
@@ -89,11 +104,14 @@ class LangChainRAGPipeline:
                 | StrOutputParser()
         )
 
-        rag_chain_with_source = RunnableParallel(
-            {"context": self.retriever_runnable, "question": RunnablePassthrough()}
-        ).assign(answer=rag_chain_from_docs)
+        retrieval_chain = RunnableParallel(
+            context=self.retriever_runnable,
+            question=RunnablePassthrough()
+        )
         if self.summarizer is not None:
-            return rag_chain_with_source | self.summarizer
+            retrieval_chain = retrieval_chain | self.summarizer
+
+        rag_chain_with_source = retrieval_chain.assign(answer=rag_chain_from_docs)
         return rag_chain_with_source
 
     @classmethod

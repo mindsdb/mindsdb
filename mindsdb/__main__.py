@@ -416,8 +416,8 @@ if __name__ == '__main__':
                 logger.error(f"ERROR: {api_name} API cant start on {port}")
 
     async def join_process(trunc_process_data: TrunkProcessData):
-        final = False
-        while not final:
+        finish = False
+        while not finish:
             process = trunc_process_data.process
             try:
                 while process.is_alive():
@@ -429,7 +429,7 @@ if __name__ == '__main__':
             finally:
                 if trunc_process_data.should_restart:
                     if trunc_process_data.is_max_restart_count_exceeded:
-                        final = True
+                        finish = True
                         logger.error(
                             f'After {trunc_process_data.restart_count} attempts, '
                             f'the "{trunc_process_data.name}" process fails to start.'
@@ -452,7 +452,7 @@ if __name__ == '__main__':
                         else:
                             logger.error(f"ERROR: {api_name} API cant start on {port}")
                 else:
-                    final = True
+                    finish = True
                     logger.info(f"{trunc_process_data.name} API: stopped")
 
     async def gather_apis():

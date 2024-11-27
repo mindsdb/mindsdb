@@ -133,29 +133,31 @@ class SnowflakeHandler(DatabaseHandler):
                 cur.execute(query)
                 try:
                     batches = []
+                    memory_estimation_check_done = False
                     for batch_df in cur.fetch_pandas_batches():
+                        batches.append(batch_df)
                         # region check the size of first batch (if it is big enough) to get an estimate of the full
                         # dataset size. If i does not fit in memory - raise an error.
                         # NOTE batch size cannot be set on client side. Also, Snowflake will download
                         # 'CLIENT_PREFETCH_THREADS' count of chunks in parallel (by default 4), therefore this check
                         # can not work in some cases.
-                        if len(batches) == 0 and len(batch_df) > 1000:
+                        batches_rowcount = sum([len(x) for x in batches])
+                        if memory_estimation_check_done is False and batches_rowcount > 1000:
+                            memory_estimation_check_done = True
                             available_memory_kb = psutil.virtual_memory().available >> 10
-                            first_batch_size_kb = batch_df.memory_usage(index=True, deep=True).sum() >> 10
-                            first_batch_rowcount = len(batch_df)
+                            batches_size_kb = sum([(x.memory_usage(index=True, deep=True).sum() >> 10) for x in batches])
                             total_rowcount = cur.rowcount
-                            rest_rowcount = total_rowcount - first_batch_rowcount
-                            rest_estimated_size_kb = int((rest_rowcount / first_batch_rowcount) * first_batch_size_kb)
+                            rest_rowcount = total_rowcount - batches_rowcount
+                            rest_estimated_size_kb = int((rest_rowcount / batches_rowcount) * batches_size_kb)
                             if (available_memory_kb * 0.9) < rest_estimated_size_kb:
                                 logger.error(
                                     'Attempt to get too large dataset:\n'
-                                    f'first_batch_rowcount={first_batch_rowcount}, size_kb={first_batch_size_kb}\n'
+                                    f'batches_rowcount={batches_rowcount}, size_kb={batches_size_kb}\n'
                                     f'total_rowcount={total_rowcount}, estimated_size_kb={rest_estimated_size_kb}\n'
                                     f'available_memory_kb={available_memory_kb}'
                                 )
                                 raise MemoryError('Not enought memory')
                         # endregion
-                        batches.append(batch_df)
                     if len(batches) > 0:
                         response = Response(
                             RESPONSE_TYPE.TABLE,

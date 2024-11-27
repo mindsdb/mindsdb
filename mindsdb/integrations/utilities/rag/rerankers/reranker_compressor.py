@@ -86,7 +86,7 @@ class LLMReranker(BaseDocumentCompressor):
 
         return ranked_results
 
-    async def compress_documents(
+    def compress_documents(
             self,
             documents: Sequence[Document],
             query: str,
@@ -100,7 +100,16 @@ class LLMReranker(BaseDocumentCompressor):
 
         doc_contents = [doc.page_content for doc in documents]
         query_documents_pairs = [(query, doc) for doc in doc_contents]
-        rankings = await self._rank(query_documents_pairs)
+
+        # Create event loop and run async code
+        import asyncio
+        try:
+            rankings = asyncio.get_event_loop().run_until_complete(self._rank(query_documents_pairs))
+        except RuntimeError:
+            # If no event loop is available, create a new one
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            rankings = loop.run_until_complete(self._rank(query_documents_pairs))
 
         compressed = []
         for ind, ranking in enumerate(rankings):

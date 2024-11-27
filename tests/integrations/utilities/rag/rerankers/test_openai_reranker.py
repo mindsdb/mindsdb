@@ -8,7 +8,6 @@ from mindsdb.integrations.utilities.rag.settings import RerankerConfig
 @pytest.mark.asyncio
 async def test_openai_reranker():
     openai_reranker = LLMReranker()
-    openai_reranker.model_post_init(None)
     results = await openai_reranker.compress_documents(
         documents=[Document(page_content="Jack declared that he likes cats more than dogs"),
                    Document(page_content="Jack declared that he likes AI")],

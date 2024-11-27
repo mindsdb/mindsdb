@@ -35,7 +35,6 @@ class TestMapReduceSummarizerChain:
                 Document(page_content='Chunk 3', metadata={'original_row_id': '2'})
             ],
             'question': 'What is the answer to life?',
-            'answer': '42'
         }
         actual_chain_output = test_summarizer_chain.invoke(chain_input)
 
@@ -73,7 +72,6 @@ class TestMapReduceSummarizerChain:
                 Document(page_content='Chunk 3', metadata={'original_row_id': '2', 'summary': 'Final summary 2'})
             ],
             'question': 'What is the answer to life?',
-            'answer': '42'
         }
 
         assert actual_chain_output == expected_chain_output

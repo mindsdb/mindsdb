@@ -86,8 +86,8 @@ def build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
         if isinstance(rag_params['vector_store_config'], dict):
             rag_params['vector_store_config'] = VectorStoreConfig(**rag_params['vector_store_config'])
 
-    if 'rerank_config' in rag_params:
-        rag_params['rerank_config'] = RerankerConfig(**rag_params['rerank_config'])
+    if 'reranker_config' in rag_params:
+        rag_params['reranker_config'] = RerankerConfig(**rag_params['reranker_config'])
 
     # Create config with filtered params
     rag_config = RAGPipelineModel(**rag_params)

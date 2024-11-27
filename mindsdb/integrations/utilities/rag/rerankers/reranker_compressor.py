@@ -5,6 +5,7 @@ import logging
 import math
 import os
 from typing import Any, Dict, List, Optional, Sequence, Tuple
+from uuid import uuid4
 from langchain.retrievers.document_compressors.base import BaseDocumentCompressor
 from langchain_core.callbacks import Callbacks
 
@@ -24,6 +25,7 @@ class LLMReranker(BaseDocumentCompressor):
     openai_api_key: Optional[str] = None
     remove_irrelevant: bool = True  # New flag to control removal of irrelevant documents,
     base_url: str = DEFAULT_LLM_ENDPOINT
+    num_docs_to_keep: Optional[int] = None # How many of the top documents to keep after reranking & compressing.
 
     _api_key_var: str = "OPENAI_API_KEY"
     client: Optional[Any] = None
@@ -127,6 +129,21 @@ class LLMReranker(BaseDocumentCompressor):
         if not compressed:
             log.warning("No documents found after compression")
 
+        if self.num_docs_to_keep is not None:
+            # Sort by relevance score with highest first.
+            compressed.sort(
+                key= lambda d: d.metadata.get('relevance_score', 0) if d.metadata else 0,
+                reverse=True
+            )
+            compressed = compressed[:self.num_docs_to_keep]
+
+        # Handle retrieval callbacks to account for reranked & compressed docs.
+        callbacks = callbacks if callbacks else []
+        run_id = uuid4().hex
+        if not isinstance(callbacks, list):
+            callbacks = callbacks.handlers
+        for callback in callbacks:
+            callback.on_retriever_end(compressed, run_id=run_id)
         return compressed
 
     @property

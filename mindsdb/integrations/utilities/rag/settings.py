@@ -189,6 +189,7 @@ class RerankerConfig(BaseModel):
     model: str = DEFAULT_RERANKING_MODEL
     base_url: str = DEFAULT_LLM_ENDPOINT
     filtering_threshold: float = 0.99
+    num_docs_to_keep: Optional[int] = None
 
 
 class RAGPipelineModel(BaseModel):

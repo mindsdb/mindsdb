@@ -159,7 +159,6 @@ class Predictor(Base):
     integration_id = Column(ForeignKey("integration.id", name="fk_integration_id"))
     data_integration_ref = Column(Json)
     fetch_data_query = Column(String)
-    is_custom = Column(Boolean)
     learn_args = Column(Json)
     update_status = Column(String, default="up_to_date")
     status = Column(String)
@@ -170,7 +169,6 @@ class Predictor(Base):
     training_stop_at = Column(DateTime)
     label = Column(String, nullable=True)
     version = Column(Integer, default=1)
-
     code = Column(String, nullable=True)
     lightwood_version = Column(String, nullable=True)
     dtype_dict = Column(Json, nullable=True)
@@ -180,7 +178,7 @@ class Predictor(Base):
     training_phase_current = Column(Integer)
     training_phase_total = Column(Integer)
     training_phase_name = Column(String)
-    hostname = Column(String)
+    training_metadata = Column(JSON, default={}, nullable=False)
 
     @staticmethod
     def get_name_and_version(full_name):

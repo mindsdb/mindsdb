@@ -9,8 +9,11 @@ from langchain_core.runnables import RunnableParallel, RunnablePassthrough, Runn
 
 from mindsdb.integrations.utilities.rag.retrievers.auto_retriever import AutoRetriever
 from mindsdb.integrations.utilities.rag.retrievers.multi_vector_retriever import MultiVectorRetriever
-from mindsdb.integrations.utilities.rag.rerankers.reranker_compressor import LLMReranker, RerankerConfig
-from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel, DEFAULT_AUTO_META_PROMPT_TEMPLATE, SearchKwargs, SearchType
+from mindsdb.integrations.utilities.rag.rerankers.reranker_compressor import LLMReranker
+from mindsdb.integrations.utilities.rag.settings import (RAGPipelineModel,
+                                                         DEFAULT_AUTO_META_PROMPT_TEMPLATE,
+                                                         SearchKwargs, SearchType,
+                                                         RerankerConfig)
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RERANKER_FLAG
 
 from mindsdb.integrations.utilities.rag.vector_store import VectorStoreOperator
@@ -120,6 +123,13 @@ class LangChainRAGPipeline:
         )
         retriever = vector_store_operator.vector_store.as_retriever()
         retriever = cls._apply_search_kwargs(retriever, config.search_kwargs, config.search_type)
+        if config.reranker:
+            config.reranker_config = RerankerConfig(
+                model=config.reranker_config.model,
+                base_url=config.reranker_config.base_url,
+                filtering_threshold=config.reranker_config.filtering_threshold
+            )
+            return cls(retriever, config.rag_prompt_template, config.llm, reranker=True, reranker_config=config.reranker_config)
         return cls(retriever, config.rag_prompt_template, config.llm)
 
     @classmethod

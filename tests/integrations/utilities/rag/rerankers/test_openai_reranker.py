@@ -1,7 +1,8 @@
 from langchain.schema import Document
 import pytest
 
-from mindsdb.integrations.utilities.rag.rerankers.reranker_compressor import LLMReranker, RerankerConfig
+from mindsdb.integrations.utilities.rag.rerankers.reranker_compressor import LLMReranker
+from mindsdb.integrations.utilities.rag.settings import RerankerConfig
 
 
 @pytest.mark.asyncio

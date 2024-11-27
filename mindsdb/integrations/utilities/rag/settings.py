@@ -29,8 +29,8 @@ DEFAULT_DATASET_DESCRIPTION = "email inbox"
 DEFAULT_TEST_TABLE_NAME = "test_email"
 DEFAULT_VECTOR_STORE = Chroma
 DEFAULT_RERANKER_FLAG = False
-DEFAULT_RERANKING_MODEL = "gpt-4o"
-DEFAULT_LLM_ENDPOINT = "https://api.openai.com/v1"
+DEFAULT_RERANKING_MODEL = "neuralmagic/Llama-3.2-11B-Vision-Instruct-FP8-dynamic"
+DEFAULT_LLM_ENDPOINT = "http://localhost:8000/v1"
 DEFAULT_AUTO_META_PROMPT_TEMPLATE = """
 Below is a json representation of a table with information about {description}.
 Return a JSON list with an entry for each column. Each entry should have
@@ -149,6 +149,12 @@ class SearchKwargs(BaseModel):
         return super().model_dump(*args, **kwargs)
 
 
+class RerankerConfig(BaseModel):
+    model: str = DEFAULT_RERANKING_MODEL
+    base_url: str = DEFAULT_LLM_ENDPOINT
+    filtering_threshold: float = 0.99
+
+
 class RAGPipelineModel(BaseModel):
     documents: Optional[List[Document]] = Field(
         default=None,
@@ -261,13 +267,9 @@ class RAGPipelineModel(BaseModel):
         default=DEFAULT_RERANKER_FLAG,
         description="Whether to use reranker"
     )
-    reranking_model: str = Field(
-        default=DEFAULT_RERANKING_MODEL,
-        description="Reranking model name"
-    )
-    llm_endpoint: str = Field(
-        default=DEFAULT_LLM_ENDPOINT,
-        description="LLM endpoint URL"
+    reranker_config: RerankerConfig = Field(
+        default_factory=RerankerConfig,
+        description="Reranker configuration"
     )
 
     class Config:

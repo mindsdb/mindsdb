@@ -185,6 +185,12 @@ class SummarizationConfig(BaseModel):
     )
 
 
+class RerankerConfig(BaseModel):
+    model: str = DEFAULT_RERANKING_MODEL
+    base_url: str = DEFAULT_LLM_ENDPOINT
+    filtering_threshold: float = 0.99
+
+
 class RAGPipelineModel(BaseModel):
     documents: Optional[List[Document]] = Field(
         default=None,
@@ -301,13 +307,9 @@ class RAGPipelineModel(BaseModel):
         default=DEFAULT_RERANKER_FLAG,
         description="Whether to use reranker"
     )
-    reranking_model: str = Field(
-        default=DEFAULT_RERANKING_MODEL,
-        description="Reranking model name"
-    )
-    llm_endpoint: str = Field(
-        default=DEFAULT_LLM_ENDPOINT,
-        description="LLM endpoint URL"
+    reranker_config: RerankerConfig = Field(
+        default_factory=RerankerConfig,
+        description="Reranker configuration"
     )
 
     class Config:

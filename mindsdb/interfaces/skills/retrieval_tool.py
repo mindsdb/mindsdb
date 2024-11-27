@@ -1,6 +1,7 @@
 from typing import Dict
 
 from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
+
 from mindsdb.integrations.utilities.rag.settings import (
     DEFAULT_COLLECTION_NAME,
     MultiVectorRetrieverMode,
@@ -8,6 +9,7 @@ from mindsdb.integrations.utilities.rag.settings import (
     RetrieverType,
     SearchType,
     SearchKwargs,
+    RerankerConfig,
     SummarizationConfig,
     VectorStoreConfig,
     VectorStoreType
@@ -83,6 +85,9 @@ def build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
     if 'vector_store_config' in rag_params:
         if isinstance(rag_params['vector_store_config'], dict):
             rag_params['vector_store_config'] = VectorStoreConfig(**rag_params['vector_store_config'])
+
+    if 'rerank_config' in rag_params:
+        rag_params['rerank_config'] = RerankerConfig(**rag_params['rerank_config'])
 
     # Create config with filtered params
     rag_config = RAGPipelineModel(**rag_params)

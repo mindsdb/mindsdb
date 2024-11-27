@@ -10,8 +10,12 @@ from langchain_core.runnables import RunnableParallel, RunnablePassthrough, Runn
 from mindsdb.integrations.utilities.rag.chains.map_reduce_summarizer_chain import create_map_reduce_documents_chain, MapReduceSummarizerChain
 from mindsdb.integrations.utilities.rag.retrievers.auto_retriever import AutoRetriever
 from mindsdb.integrations.utilities.rag.retrievers.multi_vector_retriever import MultiVectorRetriever
-from mindsdb.integrations.utilities.rag.rerankers.reranker_compressor import LLMReranker, RerankerConfig
-from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel, DEFAULT_AUTO_META_PROMPT_TEMPLATE, SearchKwargs, SearchType, SummarizationConfig, VectorStoreConfig
+from mindsdb.integrations.utilities.rag.rerankers.reranker_compressor import LLMReranker
+from mindsdb.integrations.utilities.rag.settings import (RAGPipelineModel,
+                                                         DEFAULT_AUTO_META_PROMPT_TEMPLATE,
+                                                         SearchKwargs, SearchType,
+                                                         RerankerConfig,
+                                                         SummarizationConfig, VectorStoreConfig)
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RERANKER_FLAG
 
 from mindsdb.integrations.utilities.rag.vector_store import VectorStoreOperator
@@ -158,11 +162,14 @@ class LangChainRAGPipeline:
         )
         retriever = vector_store_operator.vector_store.as_retriever()
         retriever = cls._apply_search_kwargs(retriever, config.search_kwargs, config.search_type)
+
         return cls(
             retriever,
             config.rag_prompt_template,
             config.llm,
             vector_store_config=config.vector_store_config,
+            reranker=config.reranker,
+            reranker_config=config.reranker_config,
             summarization_config=config.summarization_config
         )
 
@@ -177,6 +184,8 @@ class LangChainRAGPipeline:
             retriever,
             config.rag_prompt_template,
             config.llm,
+            reranker_config=config.reranker_config,
+            reranker=config.reranker,
             vector_store_config=config.vector_store_config,
             summarization_config=config.summarization_config
         )
@@ -189,6 +198,8 @@ class LangChainRAGPipeline:
             retriever,
             config.rag_prompt_template,
             config.llm,
+            reranker_config=config.reranker_config,
+            reranker=config.reranker,
             vector_store_config=config.vector_store_config,
             summarization_config=config.summarization_config
         )

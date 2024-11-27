@@ -25,7 +25,7 @@ class LLMReranker(BaseDocumentCompressor):
     openai_api_key: Optional[str] = None
     remove_irrelevant: bool = True  # New flag to control removal of irrelevant documents,
     base_url: str = DEFAULT_LLM_ENDPOINT
-    num_docs_to_keep: Optional[int] = None # How many of the top documents to keep after reranking & compressing.
+    num_docs_to_keep: Optional[int] = None  # How many of the top documents to keep after reranking & compressing.
 
     _api_key_var: str = "OPENAI_API_KEY"
     client: Optional[Any] = None
@@ -132,7 +132,7 @@ class LLMReranker(BaseDocumentCompressor):
         if self.num_docs_to_keep is not None:
             # Sort by relevance score with highest first.
             compressed.sort(
-                key= lambda d: d.metadata.get('relevance_score', 0) if d.metadata else 0,
+                key=lambda d: d.metadata.get('relevance_score', 0) if d.metadata else 0,
                 reverse=True
             )
             compressed = compressed[:self.num_docs_to_keep]

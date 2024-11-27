@@ -1,6 +1,7 @@
 import ast
 import sys
 from typing import Dict, List, Optional, Union
+import uuid
 
 import pandas as pd
 
@@ -334,36 +335,65 @@ class ChromaDBHandler(VectorStoreHandler):
         except (ValueError, SyntaxError):
             return None
 
-    def insert(self, table_name: str, data: pd.DataFrame) -> None:
-        """Insert data into ChromaDB collection"""
-        collection = self._client.get_or_create_collection(table_name)
+    def insert(self, collection_name: str, df: pd.DataFrame):
+        """
+        Insert/Upsert data into ChromaDB collection.
+        If records with same IDs exist, they will be updated.
+        """
+        collection = self._client.get_or_create_collection(collection_name)
 
-        # Convert DataFrame metadata to ChromaDB compatible format
-        metadatas = []
-        for metadata in data[TableField.METADATA.value]:
-            chroma_metadata = self._dataframe_metadata_to_chroma_metadata(metadata)
-            metadatas.append(chroma_metadata)
+        # Convert metadata from string to dict if needed
+        if TableField.METADATA.value in df.columns:
+            df[TableField.METADATA.value] = df[TableField.METADATA.value].apply(
+                self._dataframe_metadata_to_chroma_metadata
+            )
+            # Drop rows where metadata conversion failed
+            df = df.dropna(subset=[TableField.METADATA.value])
 
-        # Prepare data for ChromaDB
-        ids = [str(id_) for id_ in data[TableField.ID.value]]  # Ensure IDs are strings
-        embeddings = data[TableField.EMBEDDINGS.value].tolist()
-        documents = data[TableField.CONTENT.value].astype(str).tolist()
+        # Convert embeddings from string to list only if they are strings
+        if TableField.EMBEDDINGS.value in df.columns and df[TableField.EMBEDDINGS.value].dtype == 'object':
+            df[TableField.EMBEDDINGS.value] = df[TableField.EMBEDDINGS.value].apply(
+                lambda x: ast.literal_eval(x) if isinstance(x, str) else x
+            )
 
-        # First delete existing IDs to ensure proper upsert behavior
-        existing_ids = collection.get(ids=ids)['ids']
-        if existing_ids:
-            collection.delete(ids=existing_ids)
+        # Validate embedding dimensions
+        if TableField.EMBEDDINGS.value in df.columns:
+            embedding_dims = [len(emb) for emb in df[TableField.EMBEDDINGS.value]]
+            if len(set(embedding_dims)) > 1:
+                raise Exception("All embeddings must have the same dimension")
 
-        # Then insert new data
-        collection.upsert(
-            ids=ids,
-            embeddings=embeddings,
-            documents=documents,
-            metadatas=metadatas
-        )
-        self._sync()
+            # Get existing collection dimension if any records exist
+            if collection.count() > 0:
+                existing = collection.get(include=['embeddings'])
+                if existing and existing['embeddings']:
+                    existing_dim = len(existing['embeddings'][0])
+                    if existing_dim != embedding_dims[0]:
+                        raise Exception(f"Embedding dimension {embedding_dims[0]} does not match collection dimensionality {existing_dim}")
+
+        # For SELECT statements without IDs, deduplicate based on content
+        if TableField.ID.value not in df.columns:
+            df = df.drop_duplicates(subset=[TableField.CONTENT.value])
+            df[TableField.ID.value] = [str(uuid.uuid4()) for _ in range(len(df))]
+
+        # Extract data from DataFrame
+        data_dict = df.to_dict(orient="list")
+
+        try:
+            collection.upsert(
+                ids=data_dict[TableField.ID.value],
+                documents=data_dict[TableField.CONTENT.value],
+                embeddings=data_dict.get(TableField.EMBEDDINGS.value),
+                metadatas=data_dict.get(TableField.METADATA.value)
+            )
+            self._sync()
+        except Exception as e:
+            logger.error(f"Error during upsert operation: {str(e)}")
+            raise Exception(f"Failed to insert/update data: {str(e)}")
 
     def upsert(self, table_name: str, data: pd.DataFrame):
+        """
+        Alias for insert since insert handles upsert functionality
+        """
         return self.insert(table_name, data)
 
     def update(

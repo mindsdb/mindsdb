@@ -1,7 +1,6 @@
 import os
 import copy
-from typing import Dict, List, Optional, Union
-import json
+from typing import Dict, List, Optional
 
 import pandas as pd
 import hashlib
@@ -242,41 +241,33 @@ class KnowledgeBaseTable:
         # Convert DataFrame rows to documents, creating separate documents for each content column
         raw_documents = []
         for idx, row in adapted_df.iterrows():
-            # Parse and sanitize base metadata
             base_metadata = self._parse_metadata(row.get(TableField.METADATA.value, {}))
+            provided_id = row.get(TableField.ID.value)
 
-            # Get the row ID
-            doc_id = row.get(TableField.ID.value)
-            if doc_id is None:
-                doc_id = str(idx)
-
-            # Create a separate document for each content column
             for col in content_columns:
                 content = row.get(col)
-                if content and str(content).strip():  # Only create document if content exists
+                if content and str(content).strip():
                     content_str = str(content)
 
-                    # Create metadata with type conversion and validation
+                    # Generate deterministic document ID using only content and column
+                    doc_id = self._generate_document_id(
+                        content_str,
+                        col,
+                        provided_id
+                    )
+
+                    # Create metadata with doc_id matching the generated ID
                     metadata = {
                         **base_metadata,
-                        'source_column': col,
-                        'original_row_id': doc_id
+                        'doc_id': doc_id,  # Set doc_id to match the generated ID
+                        'content_column': col,
+                        'content_type': col.split('_')[-1] if '_' in col else 'text'
                     }
-
-                    # Convert metadata values to appropriate types
-                    metadata = {
-                        k: self._convert_metadata_value(v)
-                        for k, v in metadata.items()
-                        if v is not None and not pd.isna(v)  # Skip None/NaN values
-                    }
-
-                    # Generate hash-based ID if not provided
-                    column_doc_id = f"{doc_id}_{col}" if doc_id else self._generate_content_hash(content_str, metadata)
 
                     raw_documents.append(Document(
                         content=content_str,
-                        id=column_doc_id,
-                        metadata=metadata
+                        id=doc_id,  # This will be used as the primary ID
+                        metadata=metadata  # Metadata including doc_id
                     ))
 
         # Apply preprocessing to all documents if preprocessor exists
@@ -288,7 +279,7 @@ class KnowledgeBaseTable:
         # Convert processed chunks back to DataFrame with standard structure
         df = pd.DataFrame([{
             TableField.CONTENT.value: chunk.content,
-            TableField.ID.value: chunk.id or self._generate_content_hash(chunk.content, chunk.metadata),
+            TableField.ID.value: chunk.id,  # Use the generated ID as the primary ID
             TableField.METADATA.value: chunk.metadata
         } for chunk in processed_chunks])
 
@@ -552,23 +543,25 @@ class KnowledgeBaseTable:
                 return {}
         return {}
 
-    def _generate_content_hash(self, content: Union[str, Dict]) -> str:
+    def _generate_document_id(self, content: str, content_column: str, provided_id: str = None) -> str:
         """
-        Generate a deterministic hash from content only.
+        Generate a deterministic document ID from content and column name only.
 
         Args:
-            content: The content to hash (can be string or dict for multiple columns)
+            content: The content string
+            content_column: Name of the content column
+            provided_id: Optional user-provided ID
         Returns:
-            SHA-256 hash as hex string
+            Deterministic document ID
         """
-        # Convert content to a consistent string representation
-        if isinstance(content, dict):
-            # Sort keys to ensure consistent ordering
-            content_str = json.dumps(content, sort_keys=True)
-        else:
-            content_str = str(content)
+        if provided_id is not None:
+            return f"{provided_id}_{content_column}"
 
-        return hashlib.sha256(content_str.encode()).hexdigest()
+        # Generate hash from content and column only
+        id_string = f"content={content}_column={content_column}"
+        base_id = hashlib.sha256(id_string.encode()).hexdigest()
+
+        return base_id
 
     def _convert_metadata_value(self, value):
         """

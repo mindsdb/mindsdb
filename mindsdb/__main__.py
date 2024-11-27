@@ -83,7 +83,7 @@ class TrunkProcessData:
     @property
     def is_max_restart_count_exceeded(self) -> bool:
         return (
-            self.restart_count > 0
+            self.max_restart_count > 0
             and self.restart_count >= self.max_restart_count
         )
 

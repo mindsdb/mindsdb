@@ -123,6 +123,9 @@ class BaseMLEngineExec:
                     deleted_at=null()
                 ).scalar_subquery()),
             active=(not is_retrain),  # if create then active
+            training_metadata={
+                'reason': 'retrain' if is_retrain else 'learn'
+            }
         )
 
         db.serializable_insert(predictor_record)
@@ -395,7 +398,10 @@ class BaseMLEngineExec:
                     deleted_at=null()
                 ).scalar_subquery()
             ),
-            active=False
+            active=False,
+            training_metadata={
+                'reason': 'finetune'
+            }
         )
         db.serializable_insert(predictor_record)
 

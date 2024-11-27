@@ -3,6 +3,7 @@ import datetime as dt
 from mindsdb_sql_parser.ast import (
     Identifier, Select, Star, Constant, Tuple, BinaryOperation, CreateTable, TableColumn, Insert
 )
+from mindsdb_sql_parser import parse_sql
 from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
 
@@ -64,3 +65,15 @@ class TestRender:
 
         assert sql == '''INSERT INTO tbl1 (a, b) VALUES (%s, %s)'''
         assert params == values
+
+    def test_alias_in_case(self):
+        sql = """
+           select case mean when 0 then null else stdev/mean end cov from table1
+        """
+
+        query = parse_sql(sql)
+
+        rendered = SqlalchemyRender('postgres').get_string(query, with_failback=False)
+
+        # check queries are the same after render
+        assert str(query) == str(parse_sql(rendered))

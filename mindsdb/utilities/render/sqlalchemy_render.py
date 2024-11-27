@@ -303,7 +303,10 @@ class SqlalchemyRender:
         if t.arg is not None:
             value = self.to_expression(t.arg)
 
-        return sa.case(*conditions, else_=default, value=value)
+        col = sa.case(*conditions, else_=default, value=value)
+        if t.alias:
+            col = col.label(self.get_alias(t.alias))
+        return col
 
     def to_function(self, t):
         op = getattr(sa.func, t.op)

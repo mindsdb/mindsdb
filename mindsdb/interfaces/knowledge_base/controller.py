@@ -470,6 +470,12 @@ class KnowledgeBaseTable:
             self._vector_db = self.session.integration_controller.get_data_handler(database_name)
         return self._vector_db
 
+    def get_vector_db_table_name(self) -> str:
+        """
+        helper to get underlying table name used for embeddings
+        """
+        return self._kb.vector_database_table
+
     def _df_to_embeddings(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Returns embeddings for input dataframe.

@@ -19,6 +19,7 @@ DEFAULT_MAX_CONCURRENCY = 5
 DEFAULT_K = 20
 
 DEFAULT_CARDINALITY_THRESHOLD = 40
+DEFAULT_MAX_SUMMARIZATION_TOKENS = 4000
 DEFAULT_CHUNK_SIZE = 1000
 DEFAULT_CHUNK_OVERLAP = 200
 DEFAULT_POOL_RECYCLE = 3600
@@ -30,7 +31,7 @@ DEFAULT_TEST_TABLE_NAME = "test_email"
 DEFAULT_VECTOR_STORE = Chroma
 DEFAULT_RERANKER_FLAG = False
 DEFAULT_RERANKING_MODEL = "gpt-4o"
-DEFAULT_LLM_ENDPOINT = "https://api.openai.com"
+DEFAULT_LLM_ENDPOINT = "https://api.openai.com/v1"
 DEFAULT_AUTO_META_PROMPT_TEMPLATE = """
 Below is a json representation of a table with information about {description}.
 Return a JSON list with an entry for each column. Each entry should have
@@ -64,6 +65,22 @@ in the specified JSON format no matter what.
 Document: {document}
 Metadata: {metadata}
 Answer:'''
+
+DEFAULT_MAP_PROMPT_TEMPLATE = '''The following is a set of documents
+{docs}
+Based on this list of docs, please identify the main themes
+Helpful Answer:'''
+
+DEFAULT_REDUCE_PROMPT_TEMPLATE = '''The following is set of summaries:
+{docs}
+Take these and distill it into a final, consolidated summary of the main themes.
+Helpful Answer:'''
+
+
+class LLMConfig(BaseModel):
+    model_name: str = Field(default=DEFAULT_LLM_MODEL, description='LLM model to use for generation')
+    provider: str = Field(default=DEFAULT_LLM_MODEL_PROVIDER, description='LLM model provider to use for generation')
+    params: Dict[str, Any] = {}
 
 
 class MultiVectorRetrieverMode(Enum):
@@ -149,6 +166,25 @@ class SearchKwargs(BaseModel):
         return super().model_dump(*args, **kwargs)
 
 
+class SummarizationConfig(BaseModel):
+    llm_config: LLMConfig = Field(
+        default_factory=LLMConfig,
+        description="LLM configuration to use for summarization"
+    )
+    map_prompt_template: str = Field(
+        default=DEFAULT_MAP_PROMPT_TEMPLATE,
+        description="Prompt for an LLM to summarize a single document"
+    )
+    reduce_prompt_template: str = Field(
+        default=DEFAULT_REDUCE_PROMPT_TEMPLATE,
+        description="Prompt for an LLM to summarize a set of summaries of documents into one"
+    )
+    max_summarization_tokens: int = Field(
+        default=DEFAULT_MAX_SUMMARIZATION_TOKENS,
+        description="Max number of tokens for summarized documents"
+    )
+
+
 class RerankerConfig(BaseModel):
     model: str = DEFAULT_RERANKING_MODEL
     base_url: str = DEFAULT_LLM_ENDPOINT
@@ -214,6 +250,10 @@ class RAGPipelineModel(BaseModel):
     search_kwargs: SearchKwargs = Field(
         default_factory=SearchKwargs,
         description="Search configuration for the retriever"
+    )
+    summarization_config: Optional[SummarizationConfig] = Field(
+        default=None,
+        description="Configuration for summarizing retrieved documents as context"
     )
 
     # Multi retriever specific

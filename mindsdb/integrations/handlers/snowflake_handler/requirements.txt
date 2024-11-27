@@ -1,2 +1,3 @@
 snowflake-connector-python>=2.7.12
 snowflake-sqlalchemy>=1.6.1
+pyopenssl==24.2.1

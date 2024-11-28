@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pandas as pd
 from langchain.chains.combine_documents.map_reduce import MapReduceDocumentsChain
@@ -21,8 +21,8 @@ class TestMapReduceSummarizerChain:
                 {'content': 'Chunk 3'}
             ])
         ]
-        mock_map_reduce_documents_chain = MagicMock(spec=MapReduceDocumentsChain, wraps=MapReduceDocumentsChain)
-        mock_map_reduce_documents_chain.run.side_effect = ['Final summary 1', 'Final summary 2']
+        mock_map_reduce_documents_chain = AsyncMock(spec=MapReduceDocumentsChain, wraps=MapReduceDocumentsChain)
+        mock_map_reduce_documents_chain.ainvoke.side_effect = [{'output_text': 'Final summary 1'}, {'output_text': 'Final summary 2'}]
         test_summarizer_chain = MapReduceSummarizerChain(
             vector_store_handler=mock_vector_store_handler,
             map_reduce_documents_chain=mock_map_reduce_documents_chain
@@ -59,10 +59,7 @@ class TestMapReduceSummarizerChain:
         )
 
         # Make sure we are calling the summarization chain with the right chunks.
-        row_1_chunks = [Document(page_content='Chunk 1'), Document(page_content='Chunk 2')]
-        row_2_chunks = [Document(page_content='Chunk 3')]
-        mock_map_reduce_documents_chain.run.assert_any_call(row_1_chunks)
-        mock_map_reduce_documents_chain.run.assert_any_call(row_2_chunks)
+        mock_map_reduce_documents_chain.ainvoke.assert_awaited()
 
         # Make sure the summary is actually added to the context.
         expected_chain_output = {

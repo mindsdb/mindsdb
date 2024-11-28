@@ -1,3 +1,5 @@
+import asyncio
+from collections import namedtuple
 from typing import Any, Dict, List, Optional
 
 from mindsdb.interfaces.agents.langchain_agent import create_chat_model
@@ -8,6 +10,7 @@ from langchain.chains.combine_documents.map_reduce import MapReduceDocumentsChai
 from langchain_core.callbacks.manager import CallbackManagerForChainRun
 from langchain_core.documents import Document
 from langchain_core.prompts import PromptTemplate
+from pandas import DataFrame
 
 from mindsdb.integrations.libs.vectordatabase_handler import VectorStoreHandler
 from mindsdb.integrations.utilities.rag.settings import SummarizationConfig
@@ -15,6 +18,9 @@ from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOper
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
+
+
+Summary = namedtuple('Summary', ['source_id', 'content'])
 
 
 def create_map_reduce_documents_chain(summarization_config: SummarizationConfig) -> MapReduceDocumentsChain:
@@ -97,21 +103,35 @@ class MapReduceSummarizerChain(Chain):
             unique_document_ids.add(doc_id)
         return document_ids
 
-    def _get_all_chunks_for_document(self, id: str) -> List[Document]:
+    def _select_chunks_from_vector_store(self, conditions: List[FilterCondition]) -> DataFrame:
+        return self.vector_store_handler.select(
+            self.table_name,
+            columns=[self.content_column_name],
+            conditions=conditions
+        )
+
+    async def _get_all_chunks_for_document(self, id: str) -> List[Document]:
         id_filter_condition = FilterCondition(
             f"{self.metadata_column_name}->>'{self.doc_id_key}'",
             FilterOperator.EQUAL,
             id
         )
-        all_source_chunks = self.vector_store_handler.select(
-            self.table_name,
-            columns=[self.content_column_name],
-            conditions=[id_filter_condition]
-        )
+        all_source_chunks = await asyncio.get_event_loop().run_in_executor(None, self._select_chunks_from_vector_store, [id_filter_condition])
         document_chunks = []
         for _, row in all_source_chunks.iterrows():
             document_chunks.append(Document(page_content=row[self.content_column_name]))
         return document_chunks
+
+    async def _get_source_summary(self, source_id: str) -> Summary:
+        source_chunks = await self._get_all_chunks_for_document(source_id)
+        summary = await self.map_reduce_documents_chain.ainvoke(source_chunks)
+        return Summary(source_id=source_id, content=summary.get('output_text', ''))
+
+    async def _get_source_summaries(self, source_ids: List[str]) -> List[Summary]:
+        summaries = await asyncio.gather(
+            *[self._get_source_summary(source_id) for source_id in source_ids]
+        )
+        return summaries
 
     def _call(
         self,
@@ -123,10 +143,17 @@ class MapReduceSummarizerChain(Chain):
 
         # For each document ID associated with one or more chunks, build the full document by
         # geting ALL chunks associated with that ID. Then, map reduce summarize the complete document.
+        try:
+            summaries = asyncio.get_event_loop().run_until_complete(self._get_source_summaries(unique_document_ids))
+        except RuntimeError:
+            # If no event loop is available, create a new one
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            summaries = loop.run_until_complete(self._get_source_summaries(unique_document_ids))
+
         source_id_to_summary = {}
-        for source_id in unique_document_ids:
-            document_chunks = self._get_all_chunks_for_document(source_id)
-            source_id_to_summary[source_id] = self.map_reduce_documents_chain.run(document_chunks)
+        for summary in summaries:
+            source_id_to_summary[summary.source_id] = summary.content
 
         # Update context chunks with document summaries.
         for chunk in context_chunks:

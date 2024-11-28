@@ -1,6 +1,7 @@
 import ast
 import sys
 from typing import Dict, List, Optional, Union
+import hashlib
 
 import pandas as pd
 
@@ -103,16 +104,14 @@ class ChromaDBHandler(VectorStoreHandler):
             )
 
     def _sync(self):
-        # if handler storage is used: sync on every change write operation
+        """Sync the database to disk if using persistent storage"""
         if self.persist_directory:
             self.handler_storage.folder_sync(self.persist_directory)
 
     def __del__(self):
-        """Close the database connection."""
-
-        if self.is_connected is True:
+        """Ensure proper cleanup when the handler is destroyed"""
+        if self.is_connected:
             self._sync()
-
             self.disconnect()
 
     def connect(self):
@@ -130,12 +129,11 @@ class ChromaDBHandler(VectorStoreHandler):
 
     def disconnect(self):
         """Close the database connection."""
-
-        if self.is_connected is False:
-            return
-
-        self._client = None
-        self.is_connected = False
+        if self.is_connected:
+            if hasattr(self._client, 'close'):
+                self._client.close()  # Some ChromaDB clients have a close method
+            self._client = None
+            self.is_connected = False
 
     def check_connection(self):
         """Check the connection to the ChromaDB database."""
@@ -316,44 +314,96 @@ class ChromaDBHandler(VectorStoreHandler):
             payload[TableField.DISTANCE.value] = distances
         return pd.DataFrame(payload)
 
-    def insert(self, table_name: str, data: pd.DataFrame):
+    def _dataframe_metadata_to_chroma_metadata(self, metadata: Union[Dict[str, str], str]) -> Optional[Dict[str, str]]:
+        """Convert DataFrame metadata to ChromaDB compatible metadata format"""
+        if pd.isna(metadata) or metadata is None:
+            return None
+        if isinstance(metadata, dict):
+            if not metadata:
+                # ChromaDB does not support empty metadata dicts, but it does support None.
+                # Related: https://github.com/chroma-core/chroma/issues/791.
+                return None
+            # Filter out None values from the metadata dict
+            return {k: v for k, v in metadata.items() if pd.notna(v) and v is not None}
+        # Metadata is a string representation of a dictionary instead.
+        try:
+            parsed = ast.literal_eval(metadata)
+            if isinstance(parsed, dict):
+                # Filter out None values from the parsed dict
+                return {k: v for k, v in parsed.items() if pd.notna(v) and v is not None}
+            return None
+        except (ValueError, SyntaxError):
+            return None
+
+    def _process_document_ids(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Insert data into the ChromaDB database.
+        Process document IDs for ChromaDB insertion/update.
+        Only generates IDs if none are provided, otherwise ensures IDs are strings.
+
+        Args:
+            df (pd.DataFrame): Input DataFrame containing document data
+
+        Returns:
+            pd.DataFrame: DataFrame with processed IDs
         """
+        df = df.copy()  # Create a copy to avoid modifying the original
 
-        collection = self._client.get_or_create_collection(name=table_name)
+        if TableField.ID.value not in df.columns:
+            # No IDs provided - generate hash-based IDs from content
+            df = df.drop_duplicates(subset=[TableField.CONTENT.value])
+            df[TableField.ID.value] = df[TableField.CONTENT.value].apply(
+                lambda content: hashlib.sha256(content.encode()).hexdigest()
+            )
+        else:
+            # Convert IDs to strings and remove any duplicates
+            df[TableField.ID.value] = df[TableField.ID.value].astype(str)
+            df = df.drop_duplicates(subset=[TableField.ID.value], keep='last')
 
-        # drop columns with all None values
+        return df
 
-        data.dropna(axis=1, inplace=True)
+    def insert(self, collection_name: str, df: pd.DataFrame):
+        """
+        Insert/Upsert data into ChromaDB collection.
+        If records with same IDs exist, they will be updated.
+        """
+        collection = self._client.get_or_create_collection(collection_name)
 
-        def dataframe_metadata_to_chroma_metadata(metadata: Union[Dict[str, str], str]) -> Optional[Dict[str, str]]:
-            if isinstance(metadata, dict):
-                if not metadata:
-                    # ChromaDB does not support empty metadata dicts, but it does support None.
-                    # Related: https://github.com/chroma-core/chroma/issues/791.
-                    return None
-                return metadata
-            # Metadata is a string representation of a dictionary instead.
-            return ast.literal_eval(metadata)
+        # Convert metadata from string to dict if needed
+        if TableField.METADATA.value in df.columns:
+            df[TableField.METADATA.value] = df[TableField.METADATA.value].apply(
+                self._dataframe_metadata_to_chroma_metadata
+            )
+            # Drop rows where metadata conversion failed
+            df = df.dropna(subset=[TableField.METADATA.value])
 
-        # ensure metadata is a dict, convert to dict if it is a string
-        if data.get(TableField.METADATA.value) is not None:
-            data[TableField.METADATA.value] = data[TableField.METADATA.value].apply(dataframe_metadata_to_chroma_metadata)
+        # Convert embeddings from string to list if they are strings
+        if TableField.EMBEDDINGS.value in df.columns and df[TableField.EMBEDDINGS.value].dtype == 'object':
+            df[TableField.EMBEDDINGS.value] = df[TableField.EMBEDDINGS.value].apply(
+                lambda x: ast.literal_eval(x) if isinstance(x, str) else x
+            )
 
-        # convert to dict
+        # Process document IDs
+        df = self._process_document_ids(df)
 
-        data = data.to_dict(orient="list")
+        # Extract data from DataFrame
+        data_dict = df.to_dict(orient="list")
 
-        collection.upsert(
-            ids=data[TableField.ID.value],
-            documents=data.get(TableField.CONTENT.value),
-            embeddings=data[TableField.EMBEDDINGS.value],
-            metadatas=data.get(TableField.METADATA.value),
-        )
-        self._sync()
+        try:
+            collection.upsert(
+                ids=data_dict[TableField.ID.value],
+                documents=data_dict[TableField.CONTENT.value],
+                embeddings=data_dict.get(TableField.EMBEDDINGS.value),
+                metadatas=data_dict.get(TableField.METADATA.value)
+            )
+            self._sync()
+        except Exception as e:
+            logger.error(f"Error during upsert operation: {str(e)}")
+            raise Exception(f"Failed to insert/update data: {str(e)}")
 
     def upsert(self, table_name: str, data: pd.DataFrame):
+        """
+        Alias for insert since insert handles upsert functionality
+        """
         return self.insert(table_name, data)
 
     def update(

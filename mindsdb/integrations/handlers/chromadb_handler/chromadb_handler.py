@@ -370,10 +370,15 @@ class ChromaDBHandler(VectorStoreHandler):
                     if existing_dim != embedding_dims[0]:
                         raise Exception(f"Embedding dimension {embedding_dims[0]} does not match collection dimensionality {existing_dim}")
 
-        # For SELECT statements without IDs, deduplicate based on content
+        # Only generate IDs if they're not provided
         if TableField.ID.value not in df.columns:
             df = df.drop_duplicates(subset=[TableField.CONTENT.value])
             df[TableField.ID.value] = [str(uuid.uuid4()) for _ in range(len(df))]
+        else:
+            # Ensure IDs are strings
+            df[TableField.ID.value] = df[TableField.ID.value].astype(str)
+            # Drop duplicates based on ID to handle upserts properly
+            df = df.drop_duplicates(subset=[TableField.ID.value], keep='last')
 
         # Extract data from DataFrame
         data_dict = df.to_dict(orient="list")

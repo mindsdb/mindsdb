@@ -112,7 +112,6 @@ class BaseMLEngineExec:
             training_start_at=dt.datetime.now(),
             status=PREDICTOR_STATUS.GENERATING,
             label=label,
-            hostname=socket.gethostname(),
             version=(
                 db.session.query(
                     coalesce(func.max(db.Predictor.version), 1) + (1 if is_retrain else 0)
@@ -124,6 +123,7 @@ class BaseMLEngineExec:
                 ).scalar_subquery()),
             active=(not is_retrain),  # if create then active
             training_metadata={
+                'hostname': socket.gethostname(),
                 'reason': 'retrain' if is_retrain else 'learn'
             }
         )
@@ -387,7 +387,6 @@ class BaseMLEngineExec:
             training_start_at=dt.datetime.now(),
             status=PREDICTOR_STATUS.GENERATING,
             label=label,
-            hostname=socket.gethostname(),
             version=(
                 db.session.query(
                     coalesce(func.max(db.Predictor.version), 1) + 1
@@ -400,6 +399,7 @@ class BaseMLEngineExec:
             ),
             active=False,
             training_metadata={
+                'hostname': socket.gethostname(),
                 'reason': 'finetune'
             }
         )

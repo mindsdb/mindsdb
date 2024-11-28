@@ -3,7 +3,7 @@ import tempfile
 import threading
 import time
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Tuple
 
 import psutil
 from appdirs import user_data_dir
@@ -16,11 +16,6 @@ logger = log.getLogger(__name__)
 def create_directory(path):
     path = Path(path)
     path.mkdir(mode=0o777, exist_ok=True, parents=True)
-
-
-def get_root_path():
-    mindsdb_path = user_data_dir("mindsdb", "mindsdb")
-    return os.path.join(mindsdb_path, "var/")
 
 
 def get_or_create_data_dir():
@@ -122,6 +117,25 @@ def clean_process_marks():
             file.unlink()
 
 
+def get_processes_dir_files_generator() -> Tuple[Path, int, int]:
+    """Get files from processes dir
+
+    Yields:
+        Tuple[Path, int, int]: file object, process is and thread id
+    """
+    p = Path(tempfile.gettempdir()).joinpath("mindsdb/processes/")
+    if p.exists() is False:
+        return
+    for path in p.iterdir():
+        if path.is_dir() is False:
+            continue
+        for file in path.iterdir():
+            parts = file.name.split("-")
+            process_id = int(parts[0])
+            thread_id = int(parts[1])
+            yield file, process_id, thread_id
+
+
 def clean_unlinked_process_marks() -> List[int]:
     """delete marks that does not have corresponded processes/threads
 
@@ -133,43 +147,33 @@ def clean_unlinked_process_marks() -> List[int]:
     if os.name != "posix":
         return deleted_pids
 
-    p = Path(tempfile.gettempdir()).joinpath("mindsdb/processes/")
-    if p.exists() is False:
-        return deleted_pids
-    for path in p.iterdir():
-        if path.is_dir() is False:
-            return deleted_pids
-        for file in path.iterdir():
-            parts = file.name.split("-")
-            process_id = int(parts[0])
-            thread_id = int(parts[1])
+    for file, process_id, thread_id in get_processes_dir_files_generator():
+        try:
+            process = psutil.Process(process_id)
+            if process.status() in (psutil.STATUS_ZOMBIE, psutil.STATUS_DEAD):
+                raise psutil.NoSuchProcess(process_id)
 
+            threads = process.threads()
             try:
-                process = psutil.Process(process_id)
-                if process.status() in (psutil.STATUS_ZOMBIE, psutil.STATUS_DEAD):
-                    raise psutil.NoSuchProcess(process_id)
-
-                threads = process.threads()
-                try:
-                    next(t for t in threads if t.id == thread_id)
-                except StopIteration:
-                    logger.warning(
-                        f"We have mark for process/thread {process_id}/{thread_id} but it does not exists"
-                    )
-                    deleted_pids.append(process_id)
-                    file.unlink()
-
-            except psutil.AccessDenied:
-                logger.warning(f"access to {process_id} denied")
-
-                continue
-
-            except psutil.NoSuchProcess:
+                next(t for t in threads if t.id == thread_id)
+            except StopIteration:
                 logger.warning(
                     f"We have mark for process/thread {process_id}/{thread_id} but it does not exists"
                 )
                 deleted_pids.append(process_id)
                 file.unlink()
+
+        except psutil.AccessDenied:
+            logger.warning(f"access to {process_id} denied")
+
+            continue
+
+        except psutil.NoSuchProcess:
+            logger.warning(
+                f"We have mark for process/thread {process_id}/{thread_id} but it does not exists"
+            )
+            deleted_pids.append(process_id)
+            file.unlink()
     return deleted_pids
 
 

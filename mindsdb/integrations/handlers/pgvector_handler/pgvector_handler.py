@@ -401,6 +401,11 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         )
 
         if TableField.METADATA.value in data.columns:
+            def fnc(v):
+                if isinstance(v, dict):
+                    return json.dumps(v)
+            data[TableField.METADATA.value] = data[TableField.METADATA.value].apply(fnc)
+
             data = data.astype({TableField.METADATA.value: str})
 
         transposed_data = []

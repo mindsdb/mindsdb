@@ -156,12 +156,16 @@ Please give a short succinct context to situate this chunk within the overall do
                 context = self._generate_context(chunk_docs[0].content, doc.content)
                 processed_content = f"{context}\n\n{chunk_docs[0].content}"
 
+                id = doc.id or self._generate_chunk_id(processed_content)
+                metadata = self._prepare_chunk_metadata(doc.id, None, chunk_docs[0].metadata or doc.metadata)
+                # Keep track of chunk UUID.
+                metadata['chunk_id'] = id
                 processed_chunks.append(ProcessedChunk(
                     # Use original doc ID since there's only one chunk
-                    id=doc.id or self._generate_chunk_id(processed_content),
+                    id=id,
                     content=processed_content,
                     embeddings=doc.embeddings,
-                    metadata=self._prepare_chunk_metadata(doc.id, None, chunk_docs[0].metadata or doc.metadata)
+                    metadata=metadata
                 ))
             else:
                 # Multiple chunks case
@@ -171,12 +175,14 @@ Please give a short succinct context to situate this chunk within the overall do
 
                     # Append chunk index to original doc ID
                     chunk_id = f"{doc.id}_chunk_{i}" if doc.id else self._generate_chunk_id(processed_content, i)
-
+                    metadata = self._prepare_chunk_metadata(doc.id, i, chunk_doc.metadata or doc.metadata)
+                    # Keep track of chunk UUID.
+                    metadata['chunk_id'] = chunk_id
                     processed_chunks.append(ProcessedChunk(
                         id=chunk_id,
                         content=processed_content,
                         embeddings=doc.embeddings,
-                        metadata=self._prepare_chunk_metadata(doc.id, i, chunk_doc.metadata or doc.metadata)
+                        metadata=metadata
                     ))
 
         return processed_chunks
@@ -228,8 +234,11 @@ class TextChunkingPreprocessor(DocumentPreprocessor):
                 if doc.metadata:
                     metadata.update(doc.metadata)
 
+                id = doc.id or self._generate_chunk_id(chunk_doc.content)
+                # Keep track of chunk UUID.
+                metadata['chunk_id'] = id
                 processed_chunks.append(ProcessedChunk(
-                    id=doc.id or self._generate_chunk_id(chunk_doc.content),
+                    id=id,
                     content=chunk_doc.content,
                     embeddings=doc.embeddings,
                     metadata=self._prepare_chunk_metadata(doc.id, None, metadata)
@@ -245,7 +254,8 @@ class TextChunkingPreprocessor(DocumentPreprocessor):
                         metadata.update(doc.metadata)
 
                     chunk_id = f"{doc.id}_chunk_{i}" if doc.id else self._generate_chunk_id(chunk_doc.content, i)
-
+                    # Keep track of chunk UUID in metadata.
+                    metadata['chunk_id'] = chunk_id
                     processed_chunks.append(ProcessedChunk(
                         id=chunk_id,
                         content=chunk_doc.content,

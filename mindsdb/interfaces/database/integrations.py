@@ -447,7 +447,7 @@ class IntegrationController:
         )
         handler_storage = HandlerStorage(integration_id, root_dir='tmp', is_temporal=True)
 
-        HandlerClass = self.handler_modules[engine].Handler
+        HandlerClass = self.get_handler_module(engine).Handler
         handler_args = self._make_handler_args(
             name=name,
             handler_type=engine,
@@ -507,6 +507,7 @@ class IntegrationController:
     @profiler.profile()
     def get_data_handler(self, name: str, case_sensitive: bool = False, connect=True) -> BaseHandler:
         """Get DATA handler (DB or API) by name
+
         Args:
             name (str): name of the handler
             case_sensitive (bool): should case be taken into account when searching by name

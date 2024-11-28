@@ -1,14 +1,26 @@
 from typing import Dict
-from langchain.agents import Tool
 
 from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
-from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel, VectorStoreType, DEFAULT_COLLECTION_NAME
+
+from mindsdb.integrations.utilities.rag.settings import (
+    DEFAULT_COLLECTION_NAME,
+    MultiVectorRetrieverMode,
+    RAGPipelineModel,
+    RetrieverType,
+    SearchType,
+    SearchKwargs,
+    RerankerConfig,
+    SummarizationConfig,
+    VectorStoreConfig,
+    VectorStoreType
+)
 from mindsdb.interfaces.skills.skill_tool import skill_tool
 from mindsdb.interfaces.storage import db
 
 from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS
 from mindsdb.interfaces.storage.db import KnowledgeBase
 from mindsdb.utilities import log
+from langchain_core.tools import Tool
 
 logger = log.getLogger(__name__)
 
@@ -24,14 +36,7 @@ def build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
     # we update the config with the pred_args to allow for custom config
     tools_config.update(pred_args)
 
-    rag_params = _get_rag_params(tools_config)
-
-    if 'vector_store_config' not in rag_params:
-        rag_params['vector_store_config'] = {}
-        logger.warning(f'No collection_name specified for the retrieval tool, '
-                       f"using default collection_name: '{DEFAULT_COLLECTION_NAME}'"
-                       f'\nWarning: If this collection does not exist, no data will be retrieved')
-
+    kb_params = {}
     if 'source' in tool:
         kb_name = tool['source']
         executor = skill_tool.get_command_executor()
@@ -41,34 +46,51 @@ def build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
             raise ValueError(f"Knowledge base not found: {kb_name}")
 
         kb_table = executor.session.kb_controller.get_table(kb.name, kb.project_id)
-
-        rag_params['vector_store_config'] = {
+        if kb.params is not None:
+            kb_params = kb.params
+        kb_params['vector_store_config'] = {
             'kb_table': kb_table
         }
 
-    # Can run into weird validation errors when unpacking rag_params directly into constructor.
-    if 'embedding_model' in rag_params:
-        embedding_model = rag_params['embedding_model']
-    else:
-        embedding_model = DEFAULT_EMBEDDINGS_MODEL_CLASS()
+    rag_params = _get_rag_params(tools_config, kb_params)
 
-    rag_config = RAGPipelineModel(
-        embedding_model=embedding_model
-    )
-    if 'documents' in rag_params:
-        rag_config.documents = rag_params['documents']
+    if 'vector_store_config' not in rag_params:
+        rag_params['vector_store_config'] = {}
+        logger.warning(f'No collection_name specified for the retrieval tool, '
+                       f"using default collection_name: '{DEFAULT_COLLECTION_NAME}'"
+                       f'\nWarning: If this collection does not exist, no data will be retrieved')
+
+    # Handle enums and type conversions
+    if 'retriever_type' in rag_params:
+        rag_params['retriever_type'] = RetrieverType(rag_params['retriever_type'])
+    if 'multi_retriever_mode' in rag_params:
+        rag_params['multi_retriever_mode'] = MultiVectorRetrieverMode(rag_params['multi_retriever_mode'])
+    if 'search_type' in rag_params:
+        rag_params['search_type'] = SearchType(rag_params['search_type'])
+
+    # Handle search kwargs if present
+    if 'search_kwargs' in rag_params and isinstance(rag_params['search_kwargs'], dict):
+        rag_params['search_kwargs'] = SearchKwargs(**rag_params['search_kwargs'])
+
+    # Handle summarization config if present
+    summarization_config = rag_params.get('summarization_config')
+    if summarization_config is not None and isinstance(summarization_config, dict):
+        rag_params['summarization_config'] = SummarizationConfig(**summarization_config)
+
+    # Handle defaults for required fields
+    if 'embedding_model' not in rag_params:
+        rag_params['embedding_model'] = DEFAULT_EMBEDDINGS_MODEL_CLASS()
+
+    # Handle vector store config separately since it has a nested default
     if 'vector_store_config' in rag_params:
-        rag_config.vector_store_config = rag_params['vector_store_config']
-    if 'db_connection_string' in rag_params:
-        rag_config.db_connection_string = rag_params['db_connection_string']
-    if 'table_name' in rag_params:
-        rag_config.table_name = rag_params['table_name']
-    if 'llm' in rag_params:
-        rag_config.llm = rag_params['llm']
-    if 'rag_prompt_template' in rag_params:
-        rag_config.rag_prompt_template = rag_params['rag_prompt_template']
-    if 'retriever_prompt_template' in rag_params:
-        rag_config.retriever_prompt_template = rag_params['retriever_prompt_template']
+        if isinstance(rag_params['vector_store_config'], dict):
+            rag_params['vector_store_config'] = VectorStoreConfig(**rag_params['vector_store_config'])
+
+    if 'reranker_config' in rag_params:
+        rag_params['reranker_config'] = RerankerConfig(**rag_params['reranker_config'])
+
+    # Create config with filtered params
+    rag_config = RAGPipelineModel(**rag_params)
 
     # build retriever
     rag_pipeline = RAG(rag_config)
@@ -95,12 +117,22 @@ def build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
     )
 
 
-def _get_rag_params(pred_args: Dict) -> Dict:
-    model_config = pred_args.copy()
+def _get_rag_params(tools_config: Dict, knowledge_base_params: Dict) -> Dict:
+    """Convert tools config to RAG parameters"""
+    # Get valid fields from RAGPipelineModel
+    valid_fields = RAGPipelineModel.get_field_names()
 
-    supported_rag_params = RAGPipelineModel.get_field_names()
+    # Filter out invalid parameters
+    rag_params = {k: v for k, v in tools_config.items() if k in valid_fields}
 
-    rag_params = {k: v for k, v in model_config.items() if k in supported_rag_params}
+    knowledge_base_rag_params = {k: v for k, v in knowledge_base_params.items() if k in valid_fields}
+
+    # Prioritize knowledge base params over tool config.
+    rag_params.update(knowledge_base_rag_params)
+
+    # Ensure default embedding model is set
+    if 'embedding_model' not in rag_params:
+        rag_params['embedding_model'] = DEFAULT_EMBEDDINGS_MODEL_CLASS()
 
     return rag_params
 

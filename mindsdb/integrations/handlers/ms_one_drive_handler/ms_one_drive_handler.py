@@ -1,15 +1,16 @@
 from typing import Any, Dict, Text
 
 import msal
-from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.parser.ast import Constant, Identifier, Select, Star
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser.ast.base import ASTNode
+from mindsdb_sql_parser.ast import Constant, Identifier, Select, Star
+from mindsdb_sql_parser import parse_sql
 import pandas as pd
 from requests.exceptions import RequestException
 
 from mindsdb.integrations.handlers.ms_one_drive_handler.ms_graph_api_one_drive_client import MSGraphAPIOneDriveClient
 from mindsdb.integrations.handlers.ms_one_drive_handler.ms_one_drive_tables import FileTable, ListFilesTable
 from mindsdb.integrations.utilities.handlers.auth_utilities import MSGraphAPIDelegatedPermissionsManager
+from mindsdb.integrations.utilities.handlers.auth_utilities.exceptions import AuthException
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
@@ -120,6 +121,10 @@ class MSOneDriveHandler(APIHandler):
         except (ValueError, RequestException) as known_error:
             logger.error(f'Connection check to Microsoft OneDrive failed, {known_error}!')
             response.error_message = str(known_error)
+        except AuthException as error:
+            response.error_message = str(error)
+            response.redirect_url = error.auth_url
+            return response
         except Exception as unknown_error:
             logger.error(f'Connection check to Microsoft OneDrive failed due to an unknown error, {unknown_error}!')
             response.error_message = str(unknown_error)

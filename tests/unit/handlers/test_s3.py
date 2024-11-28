@@ -3,8 +3,8 @@ import unittest
 from unittest.mock import patch, MagicMock
 
 from botocore.client import ClientError
-from mindsdb_sql.parser import ast
-from mindsdb_sql.parser.ast import Select, Identifier, Star, Constant
+from mindsdb_sql_parser import ast
+from mindsdb_sql_parser.ast import Select, Identifier, Star, Constant
 
 import pandas as pd
 

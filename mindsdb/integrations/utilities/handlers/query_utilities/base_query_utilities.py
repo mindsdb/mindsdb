@@ -1,6 +1,6 @@
 import pandas as pd
 from typing import Text, List
-from mindsdb_sql.parser import ast
+from mindsdb_sql_parser import ast
 from abc import ABC, abstractmethod
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions, filter_dataframe
 

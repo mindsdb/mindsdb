@@ -2,9 +2,6 @@ import time
 from typing import List
 
 import pandas as pd
-from langchain.schema import Document
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import VectorStore
 
 from mindsdb.integrations.handlers.rag_handler.settings import (
     PersistedVectorStoreSaver,
@@ -17,6 +14,9 @@ from mindsdb.integrations.handlers.rag_handler.settings import (
     url_to_documents,
 )
 from mindsdb.utilities import log
+from langchain_core.documents import Document
+from langchain_core.vectorstores import VectorStore
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 logger = log.getLogger(__name__)
 

@@ -1,8 +1,8 @@
 import json
 
 import pandas as pd
-from mindsdb_sql.parser.ast import BinaryOperation, Constant, Select
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql_parser.ast import BinaryOperation, Constant, Select
+from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.interfaces.agents.agents_controller import AgentsController
 from mindsdb.interfaces.jobs.jobs_controller import JobsController
@@ -401,7 +401,7 @@ class AgentsTable(MdbTable):
                 a.name,
                 project_names[a.project_id],
                 a.model_name,
-                list(map(lambda s: s.name, a.skills)),
+                [rel.skill.name for rel in a.skills_relationships],
                 to_json(a.params)
             )
             for a in all_agents

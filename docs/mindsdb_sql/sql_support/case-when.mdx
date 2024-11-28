@@ -1,0 +1,19 @@
+---
+title: The CASE WHEN Statement
+sidebarTitle: CASE WHEN
+---
+
+MindsDB supports standard SQL syntax, including the `CASE WHEN` statement.
+
+The `CASE WHEN` statement is used for conditional logic within queries. It evaluates conditions and returns specific values based on whether each condition is true or false, allowing for conditional output within `SELECT`, `WHERE`, and other clauses.
+
+```sql
+SELECT
+        CASE
+            WHEN a=1 THEN a+b
+            WHEN 1+2=b*2 THEN 0
+            WHEN (a+b>2 or b<c+3) AND a>b THEN b
+            ELSE c
+        END
+FROM table_name;
+```

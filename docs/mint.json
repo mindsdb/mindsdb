@@ -509,6 +509,15 @@
             "mindsdb_sql/functions/custom_functions",
             "mindsdb_sql/functions/llm_function"
           ]
+        },
+        {
+          "group": "Standard SQL Support",
+          "pages": [
+            "mindsdb_sql/sql_support/cte",
+            "mindsdb_sql/sql_support/case-when",
+            "mindsdb_sql/sql_support/aggregate-functions",
+            "mindsdb_sql/sql_support/window-functions"
+          ]
         }
       ]
     },
@@ -1086,6 +1095,7 @@
             {
               "group": "Image Models",
               "pages": [
+                "integrations/ai-engines/clipdrop",
                 "integrations/ai-engines/replicate-text2img",
                 "integrations/ai-engines/replicate-img2text"
               ]

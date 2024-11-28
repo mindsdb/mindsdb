@@ -5,10 +5,6 @@ import re
 
 import numpy as np
 import pandas as pd
-from langchain.text_splitter import (
-    Language,
-    RecursiveCharacterTextSplitter,
-)
 
 from mindsdb.integrations.libs.llm.config import (
     AnthropicConfig,
@@ -20,6 +16,8 @@ from mindsdb.integrations.libs.llm.config import (
     NvidiaNIMConfig,
     MindsdbConfig,
 )
+from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
+
 
 # Default to latest GPT-4 model (https://platform.openai.com/docs/models/gpt-4-and-gpt-4-turbo)
 DEFAULT_OPENAI_MODEL = "gpt-4o"
@@ -43,6 +41,7 @@ DEFAULT_NVIDIA_NIM_BASE_URL = (
     "http://localhost:8000/v1"  # Assumes local port forwarding through ssh
 )
 DEFAULT_NVIDIA_NIM_MODEL = "meta/llama-3_1-8b-instruct"
+DEFAULT_VLLM_SERVER_URL = "http://localhost:8000/v1"
 
 
 def get_completed_prompts(
@@ -105,7 +104,7 @@ def get_completed_prompts(
     return prompts, empty_prompt_ids
 
 
-def get_llm_config(provider: str, config: Dict) -> BaseLLMConfig:
+def get_llm_config(provider: str, args: Dict) -> BaseLLMConfig:
     """
     Helper method that returns the configuration for a given LLM provider.
 
@@ -114,101 +113,113 @@ def get_llm_config(provider: str, config: Dict) -> BaseLLMConfig:
 
     :return: LLMConfig object with the configuration for the provider.
     """
-    temperature = min(1.0, max(0.0, config.get("temperature", 0.0)))
+    temperature = min(1.0, max(0.0, args.get("temperature", 0.0)))
     if provider == "openai":
         return OpenAIConfig(
-            model_name=config.get("model_name", DEFAULT_OPENAI_MODEL),
+            model_name=args.get("model_name", DEFAULT_OPENAI_MODEL),
             temperature=temperature,
-            max_retries=config.get("max_retries", DEFAULT_OPENAI_MAX_RETRIES),
-            max_tokens=config.get("max_tokens", DEFAULT_OPENAI_MAX_TOKENS),
-            openai_api_base=config.get("base_url", None),
-            openai_api_key=config["api_keys"].get("openai", None),
-            openai_organization=config.get("api_organization", None),
-            request_timeout=config.get("request_timeout", None),
+            max_retries=args.get("max_retries", DEFAULT_OPENAI_MAX_RETRIES),
+            max_tokens=args.get("max_tokens", DEFAULT_OPENAI_MAX_TOKENS),
+            openai_api_base=args.get("base_url", None),
+            openai_api_key=args["api_keys"].get("openai", None),
+            openai_organization=args.get("api_organization", None),
+            request_timeout=args.get("request_timeout", None),
         )
     if provider == "anthropic":
         return AnthropicConfig(
-            model=config.get("model_name", DEFAULT_ANTHROPIC_MODEL),
+            model=args.get("model_name", DEFAULT_ANTHROPIC_MODEL),
             temperature=temperature,
-            max_tokens=config.get("max_tokens", None),
-            top_p=config.get("top_p", None),
-            top_k=config.get("top_k", None),
-            default_request_timeout=config.get("default_request_timeout", None),
-            anthropic_api_key=config["api_keys"].get("anthropic", None),
-            anthropic_api_url=config.get("base_url", None),
+            max_tokens=args.get("max_tokens", None),
+            top_p=args.get("top_p", None),
+            top_k=args.get("top_k", None),
+            default_request_timeout=args.get("default_request_timeout", None),
+            anthropic_api_key=args["api_keys"].get("anthropic", None),
+            anthropic_api_url=args.get("base_url", None),
         )
     if provider == "anyscale":
         return AnyscaleConfig(
-            model_name=config.get("model_name", DEFAULT_ANYSCALE_MODEL),
+            model_name=args.get("model_name", DEFAULT_ANYSCALE_MODEL),
             temperature=temperature,
-            max_retries=config.get("max_retries", DEFAULT_OPENAI_MAX_RETRIES),
-            max_tokens=config.get("max_tokens", DEFAULT_OPENAI_MAX_TOKENS),
-            anyscale_api_base=config.get("base_url", DEFAULT_ANYSCALE_BASE_URL),
-            anyscale_api_key=config["api_keys"].get("anyscale", None),
-            anyscale_proxy=config.get("proxy", None),
-            request_timeout=config.get("request_timeout", None),
+            max_retries=args.get("max_retries", DEFAULT_OPENAI_MAX_RETRIES),
+            max_tokens=args.get("max_tokens", DEFAULT_OPENAI_MAX_TOKENS),
+            anyscale_api_base=args.get("base_url", DEFAULT_ANYSCALE_BASE_URL),
+            anyscale_api_key=args["api_keys"].get("anyscale", None),
+            anyscale_proxy=args.get("proxy", None),
+            request_timeout=args.get("request_timeout", None),
         )
     if provider == "litellm":
         model_kwargs = {
-            "api_key": config["api_keys"].get("litellm", None),
-            "top_p": config.get("top_p", None),
-            "request_timeout": config.get("request_timeout", None),
-            "frequency_penalty": config.get("frequency_penalty", None),
-            "presence_penalty": config.get("presence_penalty", None),
-            "logit_bias": config.get("logit_bias", None),
+            "api_key": args["api_keys"].get("litellm", None),
+            "top_p": args.get("top_p", None),
+            "request_timeout": args.get("request_timeout", None),
+            "frequency_penalty": args.get("frequency_penalty", None),
+            "presence_penalty": args.get("presence_penalty", None),
+            "logit_bias": args.get("logit_bias", None),
         }
         return LiteLLMConfig(
-            model=config.get("model_name", DEFAULT_LITELLM_MODEL),
+            model=args.get("model_name", DEFAULT_LITELLM_MODEL),
             temperature=temperature,
-            api_base=config.get("base_url", DEFAULT_LITELLM_BASE_URL),
-            max_retries=config.get("max_retries", DEFAULT_OPENAI_MAX_RETRIES),
-            max_tokens=config.get("max_tokens", DEFAULT_OPENAI_MAX_TOKENS),
-            top_p=config.get("top_p", None),
-            top_k=config.get("top_k", None),
-            custom_llm_provider=config.get(
+            api_base=args.get("base_url", DEFAULT_LITELLM_BASE_URL),
+            max_retries=args.get("max_retries", DEFAULT_OPENAI_MAX_RETRIES),
+            max_tokens=args.get("max_tokens", DEFAULT_OPENAI_MAX_TOKENS),
+            top_p=args.get("top_p", None),
+            top_k=args.get("top_k", None),
+            custom_llm_provider=args.get(
                 "custom_llm_provider", DEFAULT_LITELLM_PROVIDER
             ),
             model_kwargs=model_kwargs,
         )
     if provider == "ollama":
         return OllamaConfig(
-            base_url=config.get("base_url", DEFAULT_OLLAMA_BASE_URL),
-            model=config.get("model_name", DEFAULT_OLLAMA_MODEL),
+            base_url=args.get("base_url", DEFAULT_OLLAMA_BASE_URL),
+            model=args.get("model_name", DEFAULT_OLLAMA_MODEL),
             temperature=temperature,
-            top_p=config.get("top_p", None),
-            top_k=config.get("top_k", None),
-            timeout=config.get("request_timeout", None),
-            format=config.get("format", None),
-            headers=config.get("headers", None),
-            num_predict=config.get("num_predict", None),
-            num_ctx=config.get("num_ctx", None),
-            num_gpu=config.get("num_gpu", None),
-            repeat_penalty=config.get("repeat_penalty", None),
-            stop=config.get("stop", None),
-            template=config.get("template", None),
+            top_p=args.get("top_p", None),
+            top_k=args.get("top_k", None),
+            timeout=args.get("request_timeout", None),
+            format=args.get("format", None),
+            headers=args.get("headers", None),
+            num_predict=args.get("num_predict", None),
+            num_ctx=args.get("num_ctx", None),
+            num_gpu=args.get("num_gpu", None),
+            repeat_penalty=args.get("repeat_penalty", None),
+            stop=args.get("stop", None),
+            template=args.get("template", None),
         )
     if provider == "nvidia_nim":
         return NvidiaNIMConfig(
-            base_url=config.get("base_url", DEFAULT_NVIDIA_NIM_BASE_URL),
-            model=config.get("model_name", DEFAULT_NVIDIA_NIM_MODEL),
+            base_url=args.get("base_url", DEFAULT_NVIDIA_NIM_BASE_URL),
+            model=args.get("model_name", DEFAULT_NVIDIA_NIM_MODEL),
             temperature=temperature,
-            top_p=config.get("top_p", None),
-            timeout=config.get("request_timeout", None),
-            format=config.get("format", None),
-            headers=config.get("headers", None),
-            num_predict=config.get("num_predict", None),
-            num_ctx=config.get("num_ctx", None),
-            num_gpu=config.get("num_gpu", None),
-            repeat_penalty=config.get("repeat_penalty", None),
-            stop=config.get("stop", None),
-            template=config.get("template", None),
-            nvidia_api_key=config["api_keys"].get("nvidia_nim", None),
+            top_p=args.get("top_p", None),
+            timeout=args.get("request_timeout", None),
+            format=args.get("format", None),
+            headers=args.get("headers", None),
+            num_predict=args.get("num_predict", None),
+            num_ctx=args.get("num_ctx", None),
+            num_gpu=args.get("num_gpu", None),
+            repeat_penalty=args.get("repeat_penalty", None),
+            stop=args.get("stop", None),
+            template=args.get("template", None),
+            nvidia_api_key=args["api_keys"].get("nvidia_nim", None),
         )
     if provider == "mindsdb":
         return MindsdbConfig(
-            model_name=config["model_name"],
-            project_name=config.get("project_name", "mindsdb"),
+            model_name=args["model_name"],
+            project_name=args.get("project_name", "mindsdb"),
         )
+    if provider == "vllm":
+        return OpenAIConfig(
+            model_name=args.get("model_name"),
+            temperature=temperature,
+            max_retries=args.get("max_retries", DEFAULT_OPENAI_MAX_RETRIES),
+            max_tokens=args.get("max_tokens", DEFAULT_OPENAI_MAX_TOKENS),
+            openai_api_base=args.get("base_url", DEFAULT_VLLM_SERVER_URL),
+            openai_api_key=args["api_keys"].get("vllm", "EMPTY`"),
+            openai_organization=args.get("api_organization", None),
+            request_timeout=args.get("request_timeout", None),
+        )
+
     raise ValueError(f"Provider {provider} is not supported.")
 
 

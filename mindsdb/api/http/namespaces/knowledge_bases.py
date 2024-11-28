@@ -26,7 +26,7 @@ from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_LLM_MODEL, DEFAULT_RAG_PROMPT_TEMPLATE
 
 
-from mindsdb_sql.parser.ast import Identifier
+from mindsdb_sql_parser.ast import Identifier
 
 logger = log.getLogger(__name__)
 
@@ -201,20 +201,18 @@ class KnowledgeBaseResource(Resource):
             file_splitter_config = FileSplitterConfig()
             file_splitter = FileSplitter(file_splitter_config)
             markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=DEFAULT_MARKDOWN_HEADERS)
+            mysql_proxy = FakeMysqlProxy()
 
             # Initialize DocumentLoader with required components
             document_loader = DocumentLoader(
                 file_controller=file_controller,
                 file_splitter=file_splitter,
-                markdown_splitter=markdown_splitter
+                markdown_splitter=markdown_splitter,
+                mysql_proxy=mysql_proxy
             )
-
-            # Initialize FakeMysqlProxy
-            mysql_proxy = FakeMysqlProxy()
 
             # Configure table with dependencies
             table.document_loader = document_loader
-            table.mysql_proxy = mysql_proxy
 
             # Update preprocessing configuration if provided
             if 'preprocessing' in kb_data:

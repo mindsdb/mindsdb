@@ -10,9 +10,9 @@ from mindsdb.integrations.libs.response import (
 
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable
-from mindsdb_sql.parser import ast
+from mindsdb_sql_parser import ast
 from mindsdb.utilities import log
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 from mindsdb.utilities.config import Config
 
 import os
@@ -405,7 +405,7 @@ class GmailHandler(APIHandler):
         return response
 
     def native_query(self, query_string: str = None) -> Response:
-        ast = parse_sql(query_string, dialect="mindsdb")
+        ast = parse_sql(query_string)
 
         return self.query(ast)
 

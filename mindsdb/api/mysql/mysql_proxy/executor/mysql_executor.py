@@ -1,5 +1,5 @@
-from mindsdb_sql import parse_sql
-from mindsdb_sql.planner import utils as planner_utils
+from mindsdb_sql_parser import parse_sql
+from mindsdb.api.executor.planner import utils as planner_utils
 
 import mindsdb.utilities.profiler as profiler
 from mindsdb.api.executor import Column, SQLQuery
@@ -109,20 +109,17 @@ class Executor:
         self.sql_lower = sql_lower.replace("`", "")
 
         try:
-            self.query = parse_sql(sql, dialect="mindsdb")
+            self.query = parse_sql(sql)
         except Exception as mdb_error:
-            try:
-                self.query = parse_sql(sql, dialect="mysql")
-            except Exception:
-                # not all statements are parsed by parse_sql
-                logger.warning(f"SQL statement is not parsed by mindsdb_sql: {sql}")
+            # not all statements are parsed by parse_sql
+            logger.warning(f"SQL statement is not parsed by mindsdb_sql_parser: {sql}")
 
-                raise ErSqlSyntaxError(
-                    f"SQL statement cannot be parsed by mindsdb_sql - {sql}: {mdb_error}"
-                ) from mdb_error
+            raise ErSqlSyntaxError(
+                f"SQL statement cannot be parsed by mindsdb_sql_parser - {sql}: {mdb_error}"
+            ) from mdb_error
 
-                # == a place for workarounds ==
-                # or run sql in integration without parsing
+            # == a place for workarounds ==
+            # or run sql in integration without parsing
 
     @profiler.profile()
     def do_execute(self):
@@ -137,12 +134,8 @@ class Executor:
 
         self.is_executed = True
 
-        if self.sqlserver.session.api_type == 'http':
-            json_types = True
-        else:
-            json_types = False
         if ret.data is not None:
-            self.data = ret.data.to_lists(json_types=json_types)
+            self.data = ret.data
             self.columns = ret.data.columns
 
         self.state_track = ret.state_track

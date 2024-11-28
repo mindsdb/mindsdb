@@ -1,5 +1,5 @@
 import unittest
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 
 from mindsdb.integrations.handlers.mongodb_handler.utils.mongodb_render import MongodbRender
 from mindsdb.api.mongo.utilities.mongodb_parser import MongodbParser
@@ -20,7 +20,7 @@ class TestMongoDBConverters(unittest.TestCase):
         '''
 
         # sql to ast
-        query = parse_sql(sql, 'mindsdb')
+        query = parse_sql(sql)
         mql = MongodbRender().to_mongo_query(query)
 
         expected_mql = '''
@@ -50,7 +50,7 @@ class TestMongoDBConverters(unittest.TestCase):
            offset 3
         '''
 
-        query = parse_sql(sql, 'mindsdb')
+        query = parse_sql(sql)
         mql = MongodbRender().to_mongo_query(query)
 
         expected_mql = '''

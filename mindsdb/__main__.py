@@ -14,7 +14,10 @@ import asyncio
 import secrets
 import traceback
 import threading
+from enum import Enum
 from packaging import version
+from dataclasses import dataclass
+from typing import Callable, Tuple, Optional
 
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.api.http.start import start as start_http
@@ -49,12 +52,60 @@ except RuntimeError:
 _stop_event = threading.Event()
 
 
-def close_api_gracefully(apis):
+class TrunkProcessEnum(Enum):
+    HTTP = 'http'
+    MYSQL = 'mysql'
+    MONGODB = 'mongodb'
+    POSTGRES = 'postgres'
+    JOBS = 'jobs'
+    TASKS = 'tasks'
+    ML_TASK_QUEUE = 'ml_task_queue'
+
+    @classmethod
+    def _missing_(cls, value):
+        print(f'"{value}" is not a valid name of subprocess')
+        sys.exit(1)
+
+
+@dataclass
+class TrunkProcessData:
+    name: str
+    entrypoint: Callable
+    need_to_run: bool = False
+    port: Optional[int] = None
+    process: Optional[mp.Process] = None
+    started: bool = False
+    args: Optional[Tuple] = None
+    restart_on_failure: bool = False
+    max_restart_count: int = 3
+    restart_count: int = 0
+
+    @property
+    def is_max_restart_count_exceeded(self) -> bool:
+        return (
+            self.max_restart_count > 0
+            and self.restart_count >= self.max_restart_count
+        )
+
+    @property
+    def should_restart(self) -> bool:
+        """In case of OOM, OS kill the process with code 9
+        """
+        return (
+            sys.platform in ('linux', 'darwin')
+            and self.restart_on_failure
+            and self.process.exitcode == -signal.SIGKILL.value
+        )
+
+
+def close_api_gracefully(trunc_processes_struct):
     _stop_event.set()
     try:
-        for api in apis.values():
+        for trunc_processes_data in trunc_processes_struct.values():
+            process = trunc_processes_data.process
+            if process is None:
+                continue
             try:
-                process = api['process']
                 childs = get_child_pids(process.pid)
                 for p in childs:
                     try:
@@ -89,7 +140,7 @@ if __name__ == '__main__':
     args = args_parse()
 
     # ---- CHECK SYSTEM ----
-    if not (sys.version_info[0] >= 3 and sys.version_info[1] >= 8):
+    if not (sys.version_info[0] >= 3 and sys.version_info[1] >= 9):
         print("""
      MindsDB requires Python >= 3.9 to run
 
@@ -172,6 +223,13 @@ if __name__ == '__main__':
         except Exception as e:
             logger.error(f"Error! Something went wrong during DB migrations: {e}")
 
+    if args.api is None:  # If "--api" option is not specified, start the default APIs
+        api_arr = [TrunkProcessEnum.HTTP, TrunkProcessEnum.MYSQL]
+    elif args.api == "":  # If "--api=" (blank) is specified, don't start any APIs
+        api_arr = []
+    else:  # The user has provided a list of APIs to start
+        api_arr = [TrunkProcessEnum(name) for name in args.api.split(',')]
+
     if args.verbose is True:
         # Figure this one out later
         pass
@@ -201,19 +259,6 @@ if __name__ == '__main__':
     logger.info(f"Configuration file: {config.config_path}")
     logger.info(f"Storage path: {config['paths']['root']}")
     logger.debug(f"User config: {user_config}")
-
-#     TODO keep it?
-#     for (
-#         handler_name,
-#         handler_meta,
-#     ) in integration_controller.get_handlers_import_status().items():
-#         import_meta = handler_meta.get("import", {})
-#         if import_meta.get("success", False) is not True:
-#             logger.info(
-#                 """Some handlers cannot be imported. You can check list of available handlers by execute command in sql editor:
-# select * from information_schema.handlers;"""
-#             )
-#             break
 
     if not is_cloud:
         # region creating permanent integrations
@@ -263,68 +308,86 @@ if __name__ == '__main__':
             db.session.commit()
         # endregion
 
-    if args.api is None:  # If "--api" option is not specified, start the default APIs
-        api_arr = ['http', 'mysql']
-    elif args.api == "":  # If "--api=" (blank) is specified, don't start any APIs
-        api_arr = []
-    else:  # The user has provided a list of APIs to start
-        api_arr = args.api.split(',')
-
-    apis = {
-        api: {
-            'port': config['api'][api]['port'],
-            'process': None,
-            'started': False
-        } for api in api_arr
+    trunc_processes_struct = {
+        TrunkProcessEnum.HTTP: TrunkProcessData(
+            name=TrunkProcessEnum.HTTP.value,
+            entrypoint=start_http,
+            port=config['api']['http']['port'],
+            args=(args.verbose, args.no_studio),
+            restart_on_failure=config['api']['http'].get('restart_on_failure', False)
+        ),
+        TrunkProcessEnum.MYSQL: TrunkProcessData(
+            name=TrunkProcessEnum.MYSQL.value,
+            entrypoint=start_mysql,
+            port=config['api']['mysql']['port'],
+            args=(args.verbose,),
+            restart_on_failure=config['api']['mysql'].get('restart_on_failure', False)
+        ),
+        TrunkProcessEnum.MONGODB: TrunkProcessData(
+            name=TrunkProcessEnum.MONGODB.value,
+            entrypoint=start_mongo,
+            port=config['api']['mongodb']['port'],
+            args=(args.verbose,)
+        ),
+        TrunkProcessEnum.POSTGRES: TrunkProcessData(
+            name=TrunkProcessEnum.POSTGRES.value,
+            entrypoint=start_postgres,
+            port=config['api']['postgres']['port'],
+            args=(args.verbose,)
+        ),
+        TrunkProcessEnum.JOBS: TrunkProcessData(
+            name=TrunkProcessEnum.JOBS.value,
+            entrypoint=start_scheduler,
+            args=(args.verbose,)
+        ),
+        TrunkProcessEnum.TASKS: TrunkProcessData(
+            name=TrunkProcessEnum.TASKS.value,
+            entrypoint=start_tasks,
+            args=(args.verbose,)
+        ),
+        TrunkProcessEnum.ML_TASK_QUEUE: TrunkProcessData(
+            name=TrunkProcessEnum.ML_TASK_QUEUE.value,
+            entrypoint=start_ml_task_queue,
+            args=(args.verbose,)
+        )
     }
 
-    start_functions = {
-        'http': start_http,
-        'mysql': start_mysql,
-        'mongodb': start_mongo,
-        'postgres': start_postgres,
-        'jobs': start_scheduler,
-        'tasks': start_tasks,
-        'ml_task_queue': start_ml_task_queue
-    }
+    for api_enum in api_arr:
+        trunc_processes_struct[api_enum].need_to_run = True
 
     if config.get("jobs", {}).get("disable") is not True:
-        apis["jobs"] = {"process": None, "started": False}
+        trunc_processes_struct[TrunkProcessEnum.JOBS].need_to_run = True
 
-    # disabled on cloud
     if config.get('tasks', {}).get('disable') is not True:
-        apis['tasks'] = {
-            'process': None,
-            'started': False
-        }
+        trunc_processes_struct[TrunkProcessEnum.TASKS].need_to_run = True
 
     if args.ml_task_queue_consumer is True:
-        apis['ml_task_queue'] = {
-            'process': None,
-            'started': False
-        }
+        trunc_processes_struct[TrunkProcessEnum.ML_TASK_QUEUE].need_to_run = True
 
-    # TODO this 'ctx' is eclipsing 'context' class imported as 'ctx'
-    ctx = mp.get_context("spawn")
-    for api_name, api_data in apis.items():
-        if api_data["started"]:
-            continue
-        logger.info(f"{api_name} API: starting...")
+    def start_process(trunc_process_data):
+        # TODO this 'ctx' is eclipsing 'context' class imported as 'ctx'
+        ctx = mp.get_context("spawn")
+        logger.info(f"{trunc_process_data.name} API: starting...")
         try:
-            process_args = (args.verbose,)
-            if api_name == 'http':
-                process_args = (args.verbose, args.no_studio)
-            p = ctx.Process(target=start_functions[api_name], args=process_args, name=api_name)
-            p.start()
-            api_data["process"] = p
+            trunc_process_data.process = ctx.Process(
+                target=trunc_process_data.entrypoint,
+                args=trunc_process_data.args,
+                name=trunc_process_data.name
+            )
+            trunc_process_data.process.start()
         except Exception as e:
             logger.error(
-                f"Failed to start {api_name} API with exception {e}\n{traceback.format_exc()}"
+                f"Failed to start {trunc_process_data.name} API with exception {e}\n{traceback.format_exc()}"
             )
-            close_api_gracefully(apis)
+            close_api_gracefully(trunc_processes_struct)
             raise e
 
-    atexit.register(close_api_gracefully, apis=apis)
+    for trunc_process_data in trunc_processes_struct.values():
+        if trunc_process_data.started is True or trunc_process_data.need_to_run is False:
+            continue
+        start_process(trunc_process_data)
+
+    atexit.register(close_api_gracefully, trunc_processes_struct=trunc_processes_struct)
 
     async def wait_api_start(api_name, pid, port):
         timeout = 60
@@ -337,31 +400,68 @@ if __name__ == '__main__':
 
     async def wait_apis_start():
         futures = [
-            wait_api_start(api_name, api_data["process"].pid, api_data["port"])
-            for api_name, api_data in apis.items()
-            if "port" in api_data
+            wait_api_start(
+                trunc_process_data.name,
+                trunc_process_data.process.pid,
+                trunc_process_data.port
+            )
+            for trunc_process_data in trunc_processes_struct.values()
+            if trunc_process_data.port is not None and trunc_process_data.need_to_run is True
         ]
-        for i, future in enumerate(asyncio.as_completed(futures)):
+        for future in asyncio.as_completed(futures):
             api_name, port, started = await future
             if started:
                 logger.info(f"{api_name} API: started on {port}")
             else:
                 logger.error(f"ERROR: {api_name} API cant start on {port}")
 
-    async def join_process(process, name):
-        try:
-            while process.is_alive():
-                process.join(1)
-                await asyncio.sleep(0)
-        except KeyboardInterrupt:
-            logger.info("Got keyboard interrupt, stopping APIs")
-            close_api_gracefully(apis)
-        finally:
-            logger.info(f"{name} API: stopped")
+    async def join_process(trunc_process_data: TrunkProcessData):
+        finish = False
+        while not finish:
+            process = trunc_process_data.process
+            try:
+                while process.is_alive():
+                    process.join(1)
+                    await asyncio.sleep(0)
+            except KeyboardInterrupt:
+                logger.info("Got keyboard interrupt, stopping APIs")
+                close_api_gracefully(trunc_processes_struct)
+            finally:
+                if trunc_process_data.should_restart:
+                    if trunc_process_data.is_max_restart_count_exceeded:
+                        finish = True
+                        logger.error(
+                            f'After {trunc_process_data.restart_count} attempts, '
+                            f'the "{trunc_process_data.name}" process fails to start.'
+                        )
+                    else:
+                        logger.warning(f"{trunc_process_data.name} API: stopped unexpectedly, restarting")
+                        trunc_process_data.restart_count += 1
+                        trunc_process_data.process = None
+                        if trunc_process_data.name == TrunkProcessEnum.HTTP.value:
+                            # do not open GUI on HTTP API restart
+                            trunc_process_data.args = (args.verbose, True)
+                        start_process(trunc_process_data)
+                        api_name, port, started = await wait_api_start(
+                            trunc_process_data.name,
+                            trunc_process_data.process.pid,
+                            trunc_process_data.port
+                        )
+                        if started:
+                            logger.info(f"{api_name} API: started on {port}")
+                        else:
+                            logger.error(f"ERROR: {api_name} API cant start on {port}")
+                else:
+                    finish = True
+                    logger.info(f"{trunc_process_data.name} API: stopped")
 
     async def gather_apis():
         await asyncio.gather(
-            *[join_process(api_data['process'], api_name) for api_name, api_data in apis.items()],
+            *[
+                join_process(trunc_process_data)
+                for trunc_process_data in trunc_processes_struct.values()
+                if trunc_process_data.need_to_run is True
+            ],
             return_exceptions=False
         )
 

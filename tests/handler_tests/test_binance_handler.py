@@ -1,8 +1,8 @@
 from mindsdb.integrations.handlers.binance_handler.binance_tables import BinanceAggregatedTradesTable
 from mindsdb.integrations.handlers.binance_handler.binance_handler import BinanceHandler
-from mindsdb_sql.parser import ast
-from mindsdb_sql.parser.ast.select.star import Star
-from mindsdb_sql.parser.ast.select.identifier import Identifier
+from mindsdb_sql_parser import ast
+from mindsdb_sql_parser.ast.select.star import Star
+from mindsdb_sql_parser.ast.select.identifier import Identifier
 
 from unittest.mock import Mock
 

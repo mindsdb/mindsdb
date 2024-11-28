@@ -5,33 +5,27 @@ import logging
 import math
 import os
 from typing import Any, Dict, List, Optional, Sequence, Tuple
-
-from langchain.chat_models import ChatOpenAI
+from uuid import uuid4
 from langchain.retrievers.document_compressors.base import BaseDocumentCompressor
-from langchain.schema import Document
-from langchain.schema import SystemMessage, HumanMessage
 from langchain_core.callbacks import Callbacks
-from pydantic import BaseModel
 
-from mindsdb.integrations.utilities.rag.settings import DEFAULT_RERANKING_MODEL
+from mindsdb.integrations.utilities.rag.settings import DEFAULT_RERANKING_MODEL, DEFAULT_LLM_ENDPOINT
+from langchain_core.documents import Document
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_openai import ChatOpenAI
+
 
 log = logging.getLogger(__name__)
 
 
-class Ranking(BaseModel):
-    index: int
-    relevance_score: float
-    is_relevant: bool
-
-
-class OpenAIReranker(BaseDocumentCompressor):
-    _default_model: str = DEFAULT_RERANKING_MODEL
-
+class LLMReranker(BaseDocumentCompressor):
     filtering_threshold: float = 0.5  # Default threshold for filtering
     model: str = DEFAULT_RERANKING_MODEL  # Model to use for reranking
     temperature: float = 0.0  # Temperature for the model
     openai_api_key: Optional[str] = None
     remove_irrelevant: bool = True  # New flag to control removal of irrelevant documents,
+    base_url: str = DEFAULT_LLM_ENDPOINT
+    num_docs_to_keep: Optional[int] = None  # How many of the top documents to keep after reranking & compressing.
 
     _api_key_var: str = "OPENAI_API_KEY"
     client: Optional[Any] = None
@@ -39,31 +33,12 @@ class OpenAIReranker(BaseDocumentCompressor):
     class Config:
         arbitrary_types_allowed = True
 
-    def model_post_init(self, __context: Any) -> None:
-        """Initialize the OpenAI client after the model is fully initialized."""
-        super().__init__()
-        self._initialize_client()
-
-    def _initialize_client(self) -> None:
-        """Initialize the OpenAI client if not already initialized."""
-        if not self.client:
-            api_key = self.openai_api_key or os.getenv(self._api_key_var)
-            if not api_key:
-                raise ValueError(
-                    f"OpenAI API key must be provided either through the 'openai_api_key' parameter or the {self._api_key_var} environment variable."
-                )
-
-    def _get_client(self) -> Any:
-        """Ensure client is initialized and return it."""
-        if not self.client:
-            self._initialize_client()
-        return self.client
-
     async def search_relevancy(self, query: str, document: str) -> Any:
         openai_api_key = self.openai_api_key or os.getenv(self._api_key_var)
 
         # Initialize the ChatOpenAI client
-        client = ChatOpenAI(api_key=openai_api_key, model="gpt-4", temperature=0, logprobs=True)
+        client = ChatOpenAI(openai_api_base=self.base_url, api_key=openai_api_key, model=self.model, temperature=0,
+                            logprobs=True)
 
         # Create the message history for the conversation
         message_history = [
@@ -99,7 +74,11 @@ class OpenAIReranker(BaseDocumentCompressor):
             # Calculate the score based on the model's response
             if answer == "YES":
                 score = prob
+            elif answer.lower().strip().startswith("y"):
+                score = prob
             elif answer == "NO":
+                score = 1 - prob
+            elif answer.lower().strip().startswith("n"):
                 score = 1 - prob
             else:
                 score = 0.0  # Default if something unexpected happens
@@ -109,7 +88,7 @@ class OpenAIReranker(BaseDocumentCompressor):
 
         return ranked_results
 
-    async def compress_documents(
+    def compress_documents(
             self,
             documents: Sequence[Document],
             query: str,
@@ -123,7 +102,16 @@ class OpenAIReranker(BaseDocumentCompressor):
 
         doc_contents = [doc.page_content for doc in documents]
         query_documents_pairs = [(query, doc) for doc in doc_contents]
-        rankings = await self._rank(query_documents_pairs)
+
+        # Create event loop and run async code
+        import asyncio
+        try:
+            rankings = asyncio.get_event_loop().run_until_complete(self._rank(query_documents_pairs))
+        except RuntimeError:
+            # If no event loop is available, create a new one
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            rankings = loop.run_until_complete(self._rank(query_documents_pairs))
 
         compressed = []
         for ind, ranking in enumerate(rankings):
@@ -141,6 +129,21 @@ class OpenAIReranker(BaseDocumentCompressor):
         if not compressed:
             log.warning("No documents found after compression")
 
+        if self.num_docs_to_keep is not None:
+            # Sort by relevance score with highest first.
+            compressed.sort(
+                key=lambda d: d.metadata.get('relevance_score', 0) if d.metadata else 0,
+                reverse=True
+            )
+            compressed = compressed[:self.num_docs_to_keep]
+
+        # Handle retrieval callbacks to account for reranked & compressed docs.
+        callbacks = callbacks if callbacks else []
+        run_id = uuid4().hex
+        if not isinstance(callbacks, list):
+            callbacks = callbacks.handlers
+        for callback in callbacks:
+            callback.on_retriever_end(compressed, run_id=run_id)
         return compressed
 
     @property

@@ -40,7 +40,7 @@ class Packet:
             self.load_from_params(length, session.packet_sequence_number, body)
 
     def setup(self, length=0, seq=0, body=None):
-        self.load_from_params(length=length, seq=seq, body=body)
+        ...
 
     def load_from_params(self, length, seq, body):
         self._length = length
@@ -96,8 +96,6 @@ class Packet:
 
     def accum(self):
         string = self.get_packet_string()
-        self.session.logging.debug(f"Accumulating packet: {self.__class__.__name__}")
-        self.session.logging.debug(string)
         return string
 
     def pprintPacket(self, body=None):

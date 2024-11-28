@@ -157,10 +157,11 @@ Please give a short succinct context to situate this chunk within the overall do
                 processed_content = f"{context}\n\n{chunk_docs[0].content}"
 
                 processed_chunks.append(ProcessedChunk(
-                    id=self._generate_chunk_id(processed_content),
+                    # Use original doc ID since there's only one chunk
+                    id=doc.id or self._generate_chunk_id(processed_content),
                     content=processed_content,
                     embeddings=doc.embeddings,
-                    metadata=chunk_docs[0].metadata or doc.metadata or {}
+                    metadata=self._prepare_chunk_metadata(doc.id, None, chunk_docs[0].metadata or doc.metadata)
                 ))
             else:
                 # Multiple chunks case
@@ -168,11 +169,14 @@ Please give a short succinct context to situate this chunk within the overall do
                     context = self._generate_context(chunk_doc.content, doc.content)
                     processed_content = f"{context}\n\n{chunk_doc.content}"
 
+                    # Append chunk index to original doc ID
+                    chunk_id = f"{doc.id}_chunk_{i}" if doc.id else self._generate_chunk_id(processed_content, i)
+
                     processed_chunks.append(ProcessedChunk(
-                        id=self._generate_chunk_id(processed_content, i),
+                        id=chunk_id,
                         content=processed_content,
                         embeddings=doc.embeddings,
-                        metadata=chunk_doc.metadata or doc.metadata or {}
+                        metadata=self._prepare_chunk_metadata(doc.id, i, chunk_doc.metadata or doc.metadata)
                     ))
 
         return processed_chunks
@@ -213,22 +217,41 @@ class TextChunkingPreprocessor(DocumentPreprocessor):
                 continue
 
             chunk_docs = self._split_document(doc)
-            for i, chunk_doc in enumerate(chunk_docs):
-                # Skip any chunks that might be empty after splitting
+
+            # Single chunk case - use original ID
+            if len(chunk_docs) == 1:
+                chunk_doc = chunk_docs[0]
                 if not chunk_doc.content or not chunk_doc.content.strip():
                     continue
 
-                # Prepare metadata with defaults
                 metadata = {"source": "default"}
                 if doc.metadata:
                     metadata.update(doc.metadata)
 
                 processed_chunks.append(ProcessedChunk(
-                    id=self._generate_chunk_id(chunk_doc.content, i if len(chunk_docs) > 1 else None),
+                    id=doc.id or self._generate_chunk_id(chunk_doc.content),
                     content=chunk_doc.content,
                     embeddings=doc.embeddings,
-                    metadata=metadata
+                    metadata=self._prepare_chunk_metadata(doc.id, None, metadata)
                 ))
+            else:
+                # Multiple chunks case - append chunk index to original ID
+                for i, chunk_doc in enumerate(chunk_docs):
+                    if not chunk_doc.content or not chunk_doc.content.strip():
+                        continue
+
+                    metadata = {"source": "default"}
+                    if doc.metadata:
+                        metadata.update(doc.metadata)
+
+                    chunk_id = f"{doc.id}_chunk_{i}" if doc.id else self._generate_chunk_id(chunk_doc.content, i)
+
+                    processed_chunks.append(ProcessedChunk(
+                        id=chunk_id,
+                        content=chunk_doc.content,
+                        embeddings=doc.embeddings,
+                        metadata=self._prepare_chunk_metadata(doc.id, i, metadata)
+                    ))
 
         return processed_chunks
 

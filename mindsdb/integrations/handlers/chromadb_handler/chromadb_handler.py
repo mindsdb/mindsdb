@@ -1,7 +1,7 @@
 import ast
 import sys
 from typing import Dict, List, Optional, Union
-import uuid
+import hashlib
 
 import pandas as pd
 
@@ -335,6 +335,32 @@ class ChromaDBHandler(VectorStoreHandler):
         except (ValueError, SyntaxError):
             return None
 
+    def _process_document_ids(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Process document IDs for ChromaDB insertion/update.
+        Only generates IDs if none are provided, otherwise ensures IDs are strings.
+
+        Args:
+            df (pd.DataFrame): Input DataFrame containing document data
+
+        Returns:
+            pd.DataFrame: DataFrame with processed IDs
+        """
+        df = df.copy()  # Create a copy to avoid modifying the original
+
+        if TableField.ID.value not in df.columns:
+            # No IDs provided - generate hash-based IDs from content
+            df = df.drop_duplicates(subset=[TableField.CONTENT.value])
+            df[TableField.ID.value] = df[TableField.CONTENT.value].apply(
+                lambda content: hashlib.sha256(content.encode()).hexdigest()
+            )
+        else:
+            # Convert IDs to strings and remove any duplicates
+            df[TableField.ID.value] = df[TableField.ID.value].astype(str)
+            df = df.drop_duplicates(subset=[TableField.ID.value], keep='last')
+
+        return df
+
     def insert(self, collection_name: str, df: pd.DataFrame):
         """
         Insert/Upsert data into ChromaDB collection.
@@ -350,35 +376,14 @@ class ChromaDBHandler(VectorStoreHandler):
             # Drop rows where metadata conversion failed
             df = df.dropna(subset=[TableField.METADATA.value])
 
-        # Convert embeddings from string to list only if they are strings
+        # Convert embeddings from string to list if they are strings
         if TableField.EMBEDDINGS.value in df.columns and df[TableField.EMBEDDINGS.value].dtype == 'object':
             df[TableField.EMBEDDINGS.value] = df[TableField.EMBEDDINGS.value].apply(
                 lambda x: ast.literal_eval(x) if isinstance(x, str) else x
             )
 
-        # Validate embedding dimensions
-        if TableField.EMBEDDINGS.value in df.columns:
-            embedding_dims = [len(emb) for emb in df[TableField.EMBEDDINGS.value]]
-            if len(set(embedding_dims)) > 1:
-                raise Exception("All embeddings must have the same dimension")
-
-            # Get existing collection dimension if any records exist
-            if collection.count() > 0:
-                existing = collection.get(include=['embeddings'])
-                if existing and existing['embeddings']:
-                    existing_dim = len(existing['embeddings'][0])
-                    if existing_dim != embedding_dims[0]:
-                        raise Exception(f"Embedding dimension {embedding_dims[0]} does not match collection dimensionality {existing_dim}")
-
-        # Only generate IDs if they're not provided
-        if TableField.ID.value not in df.columns:
-            df = df.drop_duplicates(subset=[TableField.CONTENT.value])
-            df[TableField.ID.value] = [str(uuid.uuid4()) for _ in range(len(df))]
-        else:
-            # Ensure IDs are strings
-            df[TableField.ID.value] = df[TableField.ID.value].astype(str)
-            # Drop duplicates based on ID to handle upserts properly
-            df = df.drop_duplicates(subset=[TableField.ID.value], keep='last')
+        # Process document IDs
+        df = self._process_document_ids(df)
 
         # Extract data from DataFrame
         data_dict = df.to_dict(orient="list")

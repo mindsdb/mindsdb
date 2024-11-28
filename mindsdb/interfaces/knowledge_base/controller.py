@@ -249,25 +249,19 @@ class KnowledgeBaseTable:
                 if content and str(content).strip():
                     content_str = str(content)
 
-                    # Generate deterministic document ID using only content and column
-                    doc_id = self._generate_document_id(
-                        content_str,
-                        col,
-                        provided_id
-                    )
+                    # Use provided_id directly if it exists, otherwise generate one
+                    doc_id = self._generate_document_id(content_str, col, provided_id)
 
-                    # Create metadata with doc_id matching the generated ID
                     metadata = {
                         **base_metadata,
-                        'doc_id': doc_id,  # Set doc_id to match the generated ID
                         'content_column': col,
                         'content_type': col.split('_')[-1] if '_' in col else 'text'
                     }
 
                     raw_documents.append(Document(
                         content=content_str,
-                        id=doc_id,  # This will be used as the primary ID
-                        metadata=metadata  # Metadata including doc_id
+                        id=doc_id,
+                        metadata=metadata
                     ))
 
         # Apply preprocessing to all documents if preprocessor exists
@@ -279,7 +273,7 @@ class KnowledgeBaseTable:
         # Convert processed chunks back to DataFrame with standard structure
         df = pd.DataFrame([{
             TableField.CONTENT.value: chunk.content,
-            TableField.ID.value: chunk.id,  # Use the generated ID as the primary ID
+            TableField.ID.value: chunk.id,
             TableField.METADATA.value: chunk.metadata
         } for chunk in processed_chunks])
 
@@ -551,7 +545,8 @@ class KnowledgeBaseTable:
 
     def _generate_document_id(self, content: str, content_column: str, provided_id: str = None) -> str:
         """
-        Generate a deterministic document ID from content and column name only.
+        Generate a deterministic document ID from content and column name.
+        If provided_id exists, combines it with content_column.
 
         Args:
             content: The content string
@@ -563,11 +558,8 @@ class KnowledgeBaseTable:
         if provided_id is not None:
             return f"{provided_id}_{content_column}"
 
-        # Generate hash from content and column only
         id_string = f"content={content}_column={content_column}"
-        base_id = hashlib.sha256(id_string.encode()).hexdigest()
-
-        return base_id
+        return hashlib.sha256(id_string.encode()).hexdigest()
 
     def _convert_metadata_value(self, value):
         """

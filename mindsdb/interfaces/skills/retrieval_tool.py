@@ -1,8 +1,19 @@
 from typing import Dict
 
 from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
-from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel, VectorStoreType, DEFAULT_COLLECTION_NAME, \
-    RetrieverType, MultiVectorRetrieverMode, VectorStoreConfig, SearchType, SearchKwargs
+
+from mindsdb.integrations.utilities.rag.settings import (
+    DEFAULT_COLLECTION_NAME,
+    MultiVectorRetrieverMode,
+    RAGPipelineModel,
+    RetrieverType,
+    SearchType,
+    SearchKwargs,
+    RerankerConfig,
+    SummarizationConfig,
+    VectorStoreConfig,
+    VectorStoreType
+)
 from mindsdb.interfaces.skills.skill_tool import skill_tool
 from mindsdb.interfaces.storage import db
 
@@ -61,6 +72,11 @@ def build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
     if 'search_kwargs' in rag_params and isinstance(rag_params['search_kwargs'], dict):
         rag_params['search_kwargs'] = SearchKwargs(**rag_params['search_kwargs'])
 
+    # Handle summarization config if present
+    summarization_config = rag_params.get('summarization_config')
+    if summarization_config is not None and isinstance(summarization_config, dict):
+        rag_params['summarization_config'] = SummarizationConfig(**summarization_config)
+
     # Handle defaults for required fields
     if 'embedding_model' not in rag_params:
         rag_params['embedding_model'] = DEFAULT_EMBEDDINGS_MODEL_CLASS()
@@ -69,6 +85,9 @@ def build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
     if 'vector_store_config' in rag_params:
         if isinstance(rag_params['vector_store_config'], dict):
             rag_params['vector_store_config'] = VectorStoreConfig(**rag_params['vector_store_config'])
+
+    if 'reranker_config' in rag_params:
+        rag_params['reranker_config'] = RerankerConfig(**rag_params['reranker_config'])
 
     # Create config with filtered params
     rag_config = RAGPipelineModel(**rag_params)

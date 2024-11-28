@@ -1,5 +1,5 @@
 import datetime as dt
-from typing import List
+from typing import Dict, List
 import pandas as pd
 from slack_sdk.errors import SlackApiError
 
@@ -41,7 +41,7 @@ class SlackConversationsTable(APIResource):
                     
                 if op == FilterOperator.IN:
                     try:
-                        channels = self.handler.get_channels(
+                        channels = self.get_channels(
                             value if isinstance(value, list) else [value]
                         )
                         condition.applied = True
@@ -49,13 +49,73 @@ class SlackConversationsTable(APIResource):
                         raise
 
         if not channels:
-            channels = self.handler.get_limited_channels(limit)
+            channels = self.get_limited_channels(limit)
 
         for channel in channels:
             channel['created_at'] = dt.datetime.fromtimestamp(channel['created'])
             channel['updated_at'] = dt.datetime.fromtimestamp(channel['updated'] / 1000)
 
         return pd.DataFrame(channels, columns=self.get_columns())
+    
+    def get_channels(self, channel_ids: List[str]) -> List[Dict]:
+        """
+        Get the channel data by channel ids.
+
+        Args:
+            channel_ids: List[str]
+                The channel ids.
+
+        Returns:
+            List[dict]
+                The channel data.
+        """
+        # TODO: Handle rate limiting
+        channels = []
+        for channel_id in channel_ids:
+            try:
+                channel = self.get_channel(channel_id)
+                channels.append(channel)
+            except SlackApiError:
+                logger.error(f"Channel '{channel_id}' not found")
+                raise ValueError(f"Channel '{channel_id}' not found")
+                
+        return channels
+
+    def get_limited_channels(self, limit: int = None) -> List[Dict]:
+        """
+        Get the list of channels with a limit.
+        If the provided limit is greater than 1000, provide no limit to the API call and paginate the results until the limit is reached.
+
+        Args:
+            limit: int
+                The limit of the channels to return.
+
+        Returns:
+            List[dict]
+                The list of channels.
+        """
+        client = self.connect()
+
+        try:
+            if limit and limit > 1000:
+                response = client.conversations_list()
+                channels = response['channels']
+
+                while response['response_metadata']['next_cursor']:
+                    response = client.conversations_list(cursor=response['response_metadata']['next_cursor'])
+                    channels.extend(response['channels'])
+                    if len(channels) >= limit:
+                        break
+
+                channels = channels[:limit]
+            else:
+                response = client.conversations_list(limit=limit if limit else 1000)
+                channels = response['channels']
+        except SlackApiError as e:
+            logger.error(f"Error getting channels: {e.response['error']}")
+            raise ValueError(f"Error getting channels: {e.response['error']}")
+
+        return channels
 
     def get_columns(self) -> List[str]:
         return [

@@ -57,4 +57,4 @@ opentelemetry-sdk==1.27.0
 opentelemetry-exporter-otlp==1.27.0
 opentelemetry-instrumentation-requests==0.48b0
 opentelemetry-instrumentation-flask==0.48b0
-mind-castle==0.3.0
+mind-castle==0.3.1

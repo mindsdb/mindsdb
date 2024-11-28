@@ -155,6 +155,31 @@ def set_error_model_status_by_pids(unexisting_pids: List[int]):
             db.session.commit()
 
 
+def set_error_model_status_for_unfinished():
+    """Set error status to any model if status not in 'complete' or 'error'
+    Note: only for local usage.
+    """
+    predictor_records = (
+        db.session.query(db.Predictor)
+        .filter(
+            db.Predictor.deleted_at.is_(None),
+            db.Predictor.status.not_in([
+                db.PREDICTOR_STATUS.COMPLETE,
+                db.PREDICTOR_STATUS.ERROR
+            ])
+        )
+        .all()
+    )
+    for predictor_record in predictor_records:
+        predictor_record.status = db.PREDICTOR_STATUS.ERROR
+        if isinstance(predictor_record.data, dict) is False:
+            predictor_record.data = {}
+        if 'error' not in predictor_record.data:
+            predictor_record.data['error'] = 'Unknown error'
+            flag_modified(predictor_record, 'data')
+        db.session.commit()
+
+
 def do_clean_process_marks():
     """delete unexisting 'process marks'
     """
@@ -302,6 +327,8 @@ if __name__ == '__main__':
     if not is_cloud:
         if len(unexisting_pids) > 0:
             set_error_model_status_by_pids(unexisting_pids)
+        set_error_model_status_for_unfinished()
+
         # region creating permanent integrations
         for (
             integration_name,

@@ -1,42 +1,45 @@
-import os
 import datetime as dt
-from typing import List
+import os
+import threading
+from typing import Any, Callable, Dict, List, Text
+
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from slack_sdk.socket_mode import SocketModeClient
-from slack_sdk.socket_mode.request import SocketModeRequest
 from slack_sdk.socket_mode.response import SocketModeResponse
+from slack_sdk.socket_mode.request import SocketModeRequest
 
-from mindsdb.utilities import log
-from mindsdb.utilities.config import Config
-
+from mindsdb.integrations.handlers.slack_handler.slack_tables import (
+    SlackConversationsTable,
+    SlackMessagesTable,
+    SlackThreadsTable,
+    SlackUsersTable
+)
 from mindsdb.integrations.libs.api_handler import APIChatHandler, FuncParser
-
 from mindsdb.integrations.libs.response import (
-    HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response,
+    HandlerStatusResponse as StatusResponse,
     RESPONSE_TYPE
 )
-from mindsdb.integrations.handlers.slack_handler.slack_tables import (
-    SlackMessagesTable,
-    SlackConversationsTable,
-    SlackUsersTable,
-    SlackThreadsTable
-)
+from mindsdb.utilities.config import Config
+from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
 
 class SlackHandler(APIChatHandler):
     """
-    A class for handling connections and interactions with Slack API.
-    Agrs:
-        bot_token(str): The bot token for the Slack app.
+    This handler handles the connection and execution of SQL statements on Slack.
+    Additionally, it allows the setup of a real-time connection to the Slack API using the Socket Mode for chat-bots.
     """
 
-    def __init__(self, name=None, **kwargs):
+    def __init__(self, name: Text, connection_data: Dict, **kwargs: Any) -> None:
         """
-        Initializes the connection by checking all the params are provided by the user.
+        Initializes the handler.
+        Args:
+            name (Text): The name of the handler instance.
+            connection_data (Dict): The connection data required to connect to the SAP HANA database.
+            kwargs: Arbitrary keyword arguments.
         """
         super().__init__(name)
 
@@ -54,22 +57,21 @@ class SlackHandler(APIChatHandler):
         self.api = None
         self.is_connected = False
         
-        channels = SlackMessagesTable(self)
-        self._register_table('messages', channels)
-
-        channel_lists = SlackConversationsTable(self)
-        self._register_table('conversations', channel_lists)
-
-        users = SlackUsersTable(self)
-        self._register_table('users', users)
-
-        threads = SlackThreadsTable(self)
-        self._register_table('threads', threads)
+        self._register_table('conversations', SlackConversationsTable(self))
+        self._register_table('messages', SlackMessagesTable(self))
+        self._register_table('threads', SlackThreadsTable(self))
+        self._register_table('users', SlackUsersTable(self))
 
         self._socket_mode_client = None
 
-    def get_chat_config(self):
-        params = {
+    def get_chat_config(self) -> Dict:
+        """
+        Returns the chat configuration for the Slack handler.
+
+        Returns:
+            Dict: The chat configuration.
+        """
+        return {
             'polling': {
                 'type': 'realtime',
             },
@@ -94,14 +96,28 @@ class SlackHandler(APIChatHandler):
                 }
             ]
         }
-        return params
 
-    def get_my_user_name(self):
+    def get_my_user_name(self) -> Text:
+        """
+        Get the name of the bot user.
+
+        Returns:
+            Text: The name of the bot user.
+        """
         api = self.connect()
         user_info = api.auth_test().data
         return user_info['bot_id']
 
-    def subscribe(self, stop_event, callback, **kwargs):
+    def subscribe(self, stop_event: threading.Event, callback: Callable, table_name: Text, **kwargs: Any) -> None:
+        """
+        Subscribes to the Slack API using the Socket Mode for real-time responses to messages.
+
+        Args:
+            stop_event (threading.Event): The event to stop the subscription.
+            callback (Callable): The callback function to process the messages.
+            table_name (Text): The name of the table to subscribe to.
+            kwargs: Arbitrary keyword arguments.     
+        """
         self._socket_mode_client = SocketModeClient(
             # This app-level token will be used only for establishing a connection
             app_token=self.connection_args['app_token'],  # xapp-A111-222-xyz
@@ -109,7 +125,14 @@ class SlackHandler(APIChatHandler):
             web_client=WebClient(token=self.connection_args['token']),  # xoxb-111-222-xyz
         )
 
-        def _process_websocket_message(client: SocketModeClient, request: SocketModeRequest):
+        def _process_websocket_message(client: SocketModeClient, request: SocketModeRequest) -> None:
+            """
+            Pre-processes the incoming WebSocket message from the Slack API and calls the callback function to process the message.
+    
+            Args:
+                client (SocketModeClient): The client object to send the response.
+                request (SocketModeRequest): The request object containing the payload.
+            """
             # Acknowledge the request
             response = SocketModeResponse(envelope_id=request.envelope_id)
             client.send_socket_mode_response(response)
@@ -158,28 +181,29 @@ class SlackHandler(APIChatHandler):
         stop_event.wait()
 
         self._socket_mode_client.close()
-
-    def create_connection(self):
-        """
-        Creates a WebClient object to connect to the Slack API token stored in the connection_args attribute.
-        """
-
-        client = WebClient(token=self.connection_args['token'])
-        return client
     
-    def connect(self):
+    def connect(self) -> WebClient:
         """
-        Authenticate with the Slack API using the token stored in the `token` attribute.
+        Establishes a connection to the Slack API using the WebClient.
+
+        Returns:
+            WebClient: The WebClient object to interact with the Slack API.
         """
         if self.is_connected is True:
             return self.api
 
-        self.api = self.create_connection()
+        self.api = WebClient(token=self.connection_args['token'])
         return self.api
 
-    def check_connection(self):
+    def check_connection(self) -> StatusResponse:
         """
-        Checks the connection by calling auth_test()
+        Checks the status of the connection to the Slack API.
+
+        Raises:
+            SlackApiError: If an error occurs while connecting to the Slack API.
+
+        Returns:
+            StatusResponse: An object containing the success status and an error message if an error occurs.
         """
         response = StatusResponse(False)
 
@@ -208,11 +232,17 @@ class SlackHandler(APIChatHandler):
 
         return response
 
-    def native_query(self, query_string: str = None):
+    def native_query(self, query: Text = None) -> Response:
         """
-        Parses the query with FuncParser and calls call_slack_api and returns the result of the query as a Response object.
+        Executes native Slack SDK methods as specified in the query string.
+
+        Args:
+            query: The query string containing the method name and parameters.
+
+        Returns:
+            Response: A response object containing the result of the query.
         """
-        method_name, params = FuncParser().from_string(query_string)
+        method_name, params = FuncParser().from_string(query)
 
         df = self.call_slack_api(method_name, params)
 
@@ -221,16 +251,19 @@ class SlackHandler(APIChatHandler):
             data_frame=df
         )
 
-    def call_slack_api(self, method_name: str = None, params: dict = None):
+    def call_slack_api(self, method_name: Text = None, params: Dict = None) -> List[Dict]:
         """
-        Calls specific method specified.
+        Calls the Slack SDK method with the specified method name and parameters.
 
         Args:
-            method_name: to call specific method
-            params: parameters to call the method
+            method_name (Text): The name of the method to call.
+            params (Dict): The parameters to pass to the method.
+
+        Raises:
+            SlackApiError: If an error occurs while calling the Slack SDK method
 
         Returns:
-            List of dictionaries as a result of the method call
+            List[Dict]: The result from running the Slack SDK method.
         """
         api = self.connect()
         method = getattr(api, method_name)
@@ -248,17 +281,15 @@ class SlackHandler(APIChatHandler):
 
         return [result]
     
-    def get_channel(self, channel_id: str):
+    def get_channel(self, channel_id: Text) -> Dict:
         """
-        Get the channel data by channel id.
+        Get the channel data for the specified channel id.
 
         Args:
-            channel_id: str
-                The channel id.
+            channel_id (Text): The channel id.
 
         Returns:
-            dict
-                The channel data.
+            Dict: The channel data.
         """
         client = self.connect()
 
@@ -269,78 +300,17 @@ class SlackHandler(APIChatHandler):
             raise ValueError(f"Channel '{channel_id}' not found")
 
         return response['channel']
-    
-    def get_channels(self, channel_ids: List[str]):
-        """
-        Get the channel data by channel ids.
 
-        Args:
-            channel_ids: List[str]
-                The channel ids.
-
-        Returns:
-            List[dict]
-                The channel data.
-        """
-        # TODO: Handle rate limiting
-        channels = []
-        for channel_id in channel_ids:
-            try:
-                channel = self.get_channel(channel_id)
-                channels.append(channel)
-            except SlackApiError:
-                logger.error(f"Channel '{channel_id}' not found")
-                raise ValueError(f"Channel '{channel_id}' not found")
-                
-        return channels
-
-    def get_limited_channels(self, limit: int = None):
-        """
-        Get the list of channels with a limit.
-        If the provided limit is greater than 1000, provide no limit to the API call and paginate the results until the limit is reached.
-
-        Args:
-            limit: int
-                The limit of the channels to return.
-
-        Returns:
-            List[dict]
-                The list of channels.
-        """
-        client = self.connect()
-
-        try:
-            if limit and limit > 1000:
-                response = client.conversations_list()
-                channels = response['channels']
-
-                while response['response_metadata']['next_cursor']:
-                    response = client.conversations_list(cursor=response['response_metadata']['next_cursor'])
-                    channels.extend(response['channels'])
-                    if len(channels) >= limit:
-                        break
-
-                channels = channels[:limit]
-            else:
-                response = client.conversations_list(limit=limit if limit else 1000)
-                channels = response['channels']
-        except SlackApiError as e:
-            logger.error(f"Error getting channels: {e.response['error']}")
-            raise ValueError(f"Error getting channels: {e.response['error']}")
-
-        return channels
-
-    def convert_channel_data(self, channels: List[dict]):
+    def convert_channel_data(self, channels: List[Dict]) -> List[Dict]:
         """
         Convert the list of channel dictionaries to a format that can be easily used in the data pipeline.
 
         Args:
-            channels: A list of channel dictionaries.
+            channels (List[Dict]): The channel data to convert.
 
         Returns:
-            A list of channel dictionaries with modified keys and values.
+            List[Dict]: The converted channel data.
         """
-
         new_channels = []
         for channel in channels:
             new_channel = {
@@ -349,4 +319,5 @@ class SlackHandler(APIChatHandler):
                 'created': dt.datetime.fromtimestamp(float(channel['created']))
             }
             new_channels.append(new_channel)
+
         return new_channels

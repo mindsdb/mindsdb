@@ -132,29 +132,27 @@ def set_error_model_status_by_pids(unexisting_pids: List[int]):
     Args:
         unexisting_pids (List[int]): list of 'pids' that do not exist.
     """
-    unexisting_pids = clean_unlinked_process_marks()
-    if not is_cloud and len(unexisting_pids) > 0:
-        predictor_records = (
-            db.session.query(db.Predictor)
-            .filter(
-                db.Predictor.deleted_at.is_(None),
-                db.Predictor.status.not_in([
-                    db.PREDICTOR_STATUS.COMPLETE,
-                    db.PREDICTOR_STATUS.ERROR
-                ])
-            )
-            .all()
+    predictor_records = (
+        db.session.query(db.Predictor)
+        .filter(
+            db.Predictor.deleted_at.is_(None),
+            db.Predictor.status.not_in([
+                db.PREDICTOR_STATUS.COMPLETE,
+                db.PREDICTOR_STATUS.ERROR
+            ])
         )
-        for predictor_record in predictor_records:
-            predictor_process_id = (predictor_record.training_metadata or {}).get('process_id')
-            if predictor_process_id in unexisting_pids:
-                predictor_record.status = db.PREDICTOR_STATUS.ERROR
-                if isinstance(predictor_record.data, dict) is False:
-                    predictor_record.data = {}
-                if 'error' not in predictor_record.data:
-                    predictor_record.data['error'] = 'The training process was terminated for unknown reasons'
-                    flag_modified(predictor_record, 'data')
-                db.session.commit()
+        .all()
+    )
+    for predictor_record in predictor_records:
+        predictor_process_id = (predictor_record.training_metadata or {}).get('process_id')
+        if predictor_process_id in unexisting_pids:
+            predictor_record.status = db.PREDICTOR_STATUS.ERROR
+            if isinstance(predictor_record.data, dict) is False:
+                predictor_record.data = {}
+            if 'error' not in predictor_record.data:
+                predictor_record.data['error'] = 'The training process was terminated for unknown reasons'
+                flag_modified(predictor_record, 'data')
+            db.session.commit()
 
 
 def do_clean_process_marks():

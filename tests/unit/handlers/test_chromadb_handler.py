@@ -1,5 +1,3 @@
-# check if chroma_db is installed
-import importlib
 import shutil
 import tempfile
 from unittest.mock import patch
@@ -8,6 +6,9 @@ import pandas as pd
 import pytest
 
 from tests.unit.executor_test_base import BaseExecutorTest
+
+# check if chroma_db is installed
+import importlib
 
 try:
     importlib.import_module("chromadb")
@@ -482,3 +483,47 @@ class TestChromaDBHandler(BaseExecutorTest):
         """
         with pytest.raises(Exception):
             self.run_sql(sql)
+
+    @patch("mindsdb.integrations.handlers.postgres_handler.Handler")
+    def test_insert_upsert_behavior(self, postgres_handler_mock):
+        # Initial data with IDs
+        df1 = pd.DataFrame({
+            "id": ["id1", "id2"],
+            "content": ["content1", "content2"],
+            "metadata": [{"test": "test1"}, {"test": "test2"}],
+            "embeddings": [[1.0, 2.0], [2.0, 3.0]]
+        })
+
+        # Same IDs, different metadata
+        df2 = pd.DataFrame({
+            "id": ["id1", "id2"],
+            "content": ["content1", "content2"],
+            "metadata": [{"test": "updated1"}, {"test": "updated2"}],
+            "embeddings": [[1.0, 2.0], [2.0, 3.0]]
+        })
+
+        self.set_handler(postgres_handler_mock, "pg", tables={"df1": df1, "df2": df2})
+
+        # Create table and insert initial data
+        self.run_sql("""
+            CREATE TABLE chroma_test.test_table (
+                SELECT * FROM pg.df1
+            )
+        """)
+
+        # Verify initial insert
+        result = self.run_sql("SELECT * FROM chroma_test.test_table")
+        assert result.shape[0] == 2
+        assert result.iloc[0].metadata == {"test": "test1"}
+
+        # Insert same IDs with different metadata (should update)
+        self.run_sql("""
+            INSERT INTO chroma_test.test_table (
+                SELECT * FROM pg.df2
+            )
+        """)
+
+        # Verify update
+        result = self.run_sql("SELECT * FROM chroma_test.test_table")
+        assert result.shape[0] == 2  # Should still have 2 rows
+        assert result.iloc[0].metadata == {"test": "updated1"}  # Metadata should be updated

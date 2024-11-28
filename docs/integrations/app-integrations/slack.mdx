@@ -145,7 +145,7 @@ WITH
     };
 ```
 
-It comes with the `conversations` and `messages` tables.
+It comes with the `conversations`, `messages` and `threads` tables.
 
 ## Usage
 
@@ -210,6 +210,23 @@ FROM mindsdb_slack.messages
 WHERE channel_id = "<channel-id>"
 ORDER BY created_at ASC;
 LIMIT 5;
+```
+
+If you want to view the messages in a thread, you can use the `threads` table:
+
+```sql
+SELECT *
+FROM mindsdb_slack.threads
+WHERE channel_id = "<channel-id>" and thread_ts = "<thread-ts>";
+```
+
+`thread_ts` is the timestamp of the message that started the thread. You can find it in the `messages` table.
+
+It is also possible to post messages in a thread:
+
+```sql
+INSERT INTO mindsdb_slack.threads (channel_id, thread_ts, text)
+VALUES ("<channel-id>", "<thread-ts>", "Hey MindsDB, I can also respond to threads!");
 ```
 
 List all conversations by selecting from the `conversations` table.

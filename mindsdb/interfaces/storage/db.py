@@ -31,7 +31,7 @@ from sqlalchemy.sql.schema import ForeignKey
 
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
 
-from mind_castle.sqlalchemy import SecretData
+from mind_castle.sqlalchemy_type import SecretData
 
 
 class Base:

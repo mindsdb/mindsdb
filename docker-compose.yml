@@ -22,7 +22,7 @@ services:
       - '47335:47335'
       - '47336:47336'
     # watchfiles will reload the app when python files are changed
-    entrypoint: bash -c "watchfiles --filter python 'python -m mindsdb' ."
+    entrypoint: bash -c "cd /mind-castle && pip install -e . && cd /mindsdb && watchfiles --filter python 'python -m mindsdb' ."
     environment:
       MINDSDB_DB_CON: "postgresql://postgres:postgres@postgres/mindsdb"
       MINDSDB_DOCKER_ENV: "True"
@@ -45,11 +45,19 @@ services:
       OTEL_SERVICE_NAME: "mindsdb" # Define the service name
       OTEL_SERVICE_ENVIRONMENT: "local" # Define the service environment
       # OTEL_SDK_FORCE_RUN: "true" # Uncomment me to force-start opentelemetry on local development.
+      MIND_CASTLE_VAULT_HOST: "http://vault:8200"
+      MIND_CASTLE_VAULT_TOKEN: "OMITTED"
 
     volumes:
       - type: bind
         source: .
         target: /mindsdb
+      - type: bind
+        source: /Users/hamishfagg/src/mindsdb/mind-castle
+        target: /mind-castle
+      - type: bind
+        source: /Users/hamishfagg/src/mindsdb/mind-castle
+        target: /mindsdb/mind-castle
     healthcheck:
       test:  ["CMD", "curl", "-f", "http://localhost:47334/api/util/ping"]
       interval: 30s
@@ -115,4 +123,3 @@ services:
 volumes:
   db_data:
     driver: local
-

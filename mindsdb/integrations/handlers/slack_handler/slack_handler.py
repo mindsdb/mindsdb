@@ -1,8 +1,10 @@
+from copy import deepcopy
 import datetime as dt
 import os
 import threading
 from typing import Any, Callable, Dict, List, Text
 
+import pandas as pd
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from slack_sdk.socket_mode import SocketModeClient
@@ -161,38 +163,61 @@ class SlackHandler(APIChatHandler):
         web_connection = self.connect()
         method = getattr(web_connection, method_name)
 
+        items = []
         try:
-            result = method(**params)
-        except SlackApiError as e:
-            error = f"Error calling method '{method_name}' with params '{params}': {e.response['error']}"
+            response = method(**params)
+            response_data = deepcopy(response.data)
+
+            # Get only the data items from the response data.
+            items.extend(self._extract_data_from_response(response_data))            
+
+            # If the response contains a cursor, fetch the next page of results.
+            if 'response_metadata' in response and 'next_cursor' in response['response_metadata']:
+                while response['response_metadata']['next_cursor']:
+                    response = method(cursor=response['response_metadata']['next_cursor'], **params)
+                    response_data = deepcopy(response.data)
+
+                    # Get only the data items from the response data.
+                    items.extend(self._extract_data_from_response(response_data))
+        except SlackApiError as slack_error:
+            error = f"Error calling method '{method_name}' with params '{params}': {slack_error.response['error']}"
             logger.error(error)
-            raise e
+            raise
 
-        if 'channels' in result:
-            result['channels'] = self._parse_channel_data(result['channels'])
+        if items:
+            df = pd.DataFrame(items)
 
-        return [result]
+        return df
     
-    def _parse_channel_data(self, channels: List[Dict]) -> List[Dict]:
+    def _extract_data_from_response(self, response_data: Dict) -> List[Dict]:
         """
-        Parses the list of channel dictionaries to a format that can be easily used in the data pipeline.
+        Extracts the data items from the response object.
 
         Args:
-            channels (List[Dict]): The channel data to convert.
+            response_data (Dict): The response object containing the data items.
+
+        Raises:
+            ValueError: If the response data could not be parsed.
 
         Returns:
-            List[Dict]: The converted channel data.
+            List[Dict]: The data items extracted from the response object.
         """
-        parsed_channels = []
-        for channel in channels:
-            new_channel = {
-                'id': channel['id'],
-                'name': channel['name'],
-                'created': dt.datetime.fromtimestamp(float(channel['created']))
-            }
-            parsed_channels.append(new_channel)
+        # Remove the metadata from the response.
+        for key in ['ok', 'response_metadata', 'cache_ts', 'latest', 'pin_count', 'has_more']:
+            if key in response_data:
+                response_data.pop(key)
 
-        return parsed_channels
+        # If the response contains only one key, return the value of that key as a list.
+        if len(response_data) == 1:
+            key = list(response_data.keys())[0]
+            if isinstance(response_data[key], list):
+                return response_data[key]
+            
+            else:
+                return [response_data[key]]
+
+        # Otherwise, raise an error.
+        raise ValueError('Response data could not be parsed.')
 
     def get_chat_config(self) -> Dict:
         """
@@ -311,4 +336,3 @@ class SlackHandler(APIChatHandler):
         stop_event.wait()
 
         self._socket_connection.close()
-

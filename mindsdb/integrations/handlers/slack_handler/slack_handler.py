@@ -73,9 +73,18 @@ class SlackHandler(APIChatHandler):
         """
         if self.is_connected is True:
             return self.web_connection
+        
+        # Check if the mandatory connection parameter (token) is available.
+        if 'token' not in self.connection_data:
+            raise ValueError('Required parameter (token) must be provided.')
 
-        self.web_connection = WebClient(token=self.connection_data['token'])
-        return self.web_connection
+        try:
+            self.web_connection = WebClient(token=self.connection_data['token'])
+            self.is_connected = True
+            return self.web_connection
+        except Exception as unknown_error:
+            logger.error(f'Unknown error connecting to Slack API: {unknown_error}')
+            raise
 
     def check_connection(self) -> StatusResponse:
         """
@@ -104,9 +113,12 @@ class SlackHandler(APIChatHandler):
                 _socket_connection.disconnect()
             
             response.success = True
-        except SlackApiError as e:
-            response.error_message = f'Error connecting to Slack Api: {e.response["error"]}. Check token.'
-            logger.error(response.error_message)
+        except (SlackApiError, ValueError) as known_error:
+            logger.error(f'Connection check to the Slack API failed, {known_error}!')
+            response.error_message = str(known_error)
+        except Exception as unknown_error:
+            logger.error(f'Connection check to the Slack API failed due to an unknown error, {unknown_error}!')
+            response.error_message = str(unknown_error)
 
         if response.success is False and self.is_connected is True:
             self.is_connected = False

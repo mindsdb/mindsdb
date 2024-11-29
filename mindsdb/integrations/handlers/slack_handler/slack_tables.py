@@ -1,5 +1,5 @@
 import datetime as dt
-from typing import Dict, List
+from typing import Dict, List, Text
 import pandas as pd
 from slack_sdk.errors import SlackApiError
 
@@ -34,14 +34,14 @@ class SlackConversationsTable(APIResource):
                 
                 if op == FilterOperator.EQUAL:
                     try:
-                        channels = [self.handler.get_channel(value)]
+                        channels = [SlackConversationsTable(self.handler).get_channel(value)]
                         condition.applied = True
                     except ValueError:
                         raise
                     
                 if op == FilterOperator.IN:
                     try:
-                        channels = self.get_channels(
+                        channels = self._get_channels(
                             value if isinstance(value, list) else [value]
                         )
                         condition.applied = True
@@ -56,6 +56,26 @@ class SlackConversationsTable(APIResource):
             channel['updated_at'] = dt.datetime.fromtimestamp(channel['updated'] / 1000)
 
         return pd.DataFrame(channels, columns=self.get_columns())
+    
+    def get_channel(self, channel_id: Text) -> Dict:
+        """
+        Get the channel data for the specified channel id.
+
+        Args:
+            channel_id (Text): The channel id.
+
+        Returns:
+            Dict: The channel data.
+        """
+        client = self.connect()
+
+        try:
+            response = client.conversations_info(channel=channel_id)
+        except SlackApiError as e:
+            logger.error(f"Error getting channel '{channel_id}': {e.response['error']}")
+            raise ValueError(f"Channel '{channel_id}' not found")
+
+        return response['channel']
     
     def get_channels(self, channel_ids: List[str]) -> List[Dict]:
         """
@@ -196,7 +216,7 @@ class SlackMessagesTable(APIResource):
 
                 # Check if the channel exists
                 try:
-                    channel = self.handler.get_channel(value)
+                    channel = SlackConversationsTable(self.handler).get_channel(value)
                     params['channel'] = value
                     condition.applied = True
                 except SlackApiError as e:
@@ -314,7 +334,7 @@ class SlackMessagesTable(APIResource):
             if arg1 == 'channel_id':
                 # Check if the channel exists
                 try:
-                    self.handler.get_channel(arg2)
+                    SlackConversationsTable(self.handler).get_channel(arg2)
                     params['channel'] = arg2
                 except SlackApiError as e:
                     raise ValueError(f"Channel '{arg2}' not found")
@@ -367,7 +387,7 @@ class SlackMessagesTable(APIResource):
             if arg1 == 'channel_id':
                 # Check if the channel exists
                 try:
-                    self.handler.get_channel(arg2)
+                    SlackConversationsTable(self.handler).get_channel(arg2)
                     params['channel'] = arg2
                 except SlackApiError as e:
                     raise ValueError(f"Channel '{arg2}' not found")
@@ -426,7 +446,7 @@ class SlackThreadsTable(APIResource):
 
                 # Check if the channel exists.
                 try:
-                    channel = self.handler.get_channel(value)
+                    channel = SlackConversationsTable(self.handler).get_channel(value)
                     params['channel'] = value
                     condition.applied = True
                 except SlackApiError as e:

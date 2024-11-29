@@ -280,26 +280,6 @@ class SlackHandler(APIChatHandler):
             result['channels'] = self.convert_channel_data(result['channels'])
 
         return [result]
-    
-    def get_channel(self, channel_id: Text) -> Dict:
-        """
-        Get the channel data for the specified channel id.
-
-        Args:
-            channel_id (Text): The channel id.
-
-        Returns:
-            Dict: The channel data.
-        """
-        client = self.connect()
-
-        try:
-            response = client.conversations_info(channel=channel_id)
-        except SlackApiError as e:
-            logger.error(f"Error getting channel '{channel_id}': {e.response['error']}")
-            raise ValueError(f"Channel '{channel_id}' not found")
-
-        return response['channel']
 
     def convert_channel_data(self, channels: List[Dict]) -> List[Dict]:
         """

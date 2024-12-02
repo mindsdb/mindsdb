@@ -1,6 +1,19 @@
 services:
 
+  # Auto-restarts containers that are unhealthy
+  autoheal:
+    container_name: autoheal
+    image: willfarrell/autoheal
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    <<: &autoRestartOnFailure
+      deploy:
+        restart_policy:
+          condition: on-failure
+          max_attempts: 10
+
   mindsdb:
+    <<: *autoRestartOnFailure
     image: mindsdb/mindsdb:devel
    
     depends_on:
@@ -57,6 +70,7 @@ services:
       retries: 100
 
   jaeger:
+    <<: *autoRestartOnFailure
     image: jaegertracing/all-in-one:1.62.0
     ports:
       - "16686:16686"
@@ -64,8 +78,15 @@ services:
       - "4318:4318"
     environment:
       COLLECTOR_ZIPKIN_HOST_PORT: ":9411"
+    healthcheck:
+      test: ["CMD-SHELL", "/go/bin/all-in-one-linux status"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+      
 
   langfuse:
+    <<: *autoRestartOnFailure
     image: langfuse/langfuse:2.87.0
     restart: always
     depends_on:
@@ -95,6 +116,7 @@ services:
       - LANGFUSE_INIT_USER_PASSWORD=password # User password
 
   postgres:
+    <<: *autoRestartOnFailure
     image: postgres:16.4
     restart: always
     healthcheck:

@@ -141,7 +141,7 @@ class KnowledgeBaseTable:
         documents = [Document(
             content=row.get('content', ''),
             id=row.get('id'),
-            metadata={k: v for k, v in row.items() if k not in ['content', 'id']}
+            metadata=row.get('metadata', {})
         ) for row in rows]
 
         self.insert_documents(documents)
@@ -252,8 +252,12 @@ class KnowledgeBaseTable:
                     # Use provided_id directly if it exists, otherwise generate one
                     doc_id = self._generate_document_id(content_str, col, provided_id)
 
+                    # Need provided ID to link chunks back to original source (e.g. database row).
+                    row_id = provided_id if provided_id else idx
+
                     metadata = {
                         **base_metadata,
+                        'original_row_id': str(row_id),
                         'content_column': col,
                         'content_type': col.split('_')[-1] if '_' in col else 'text'
                     }

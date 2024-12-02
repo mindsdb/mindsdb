@@ -1,8 +1,8 @@
 """predictor_training_metadata
 
 Revision ID: f6dc924079fa
-Revises: 0f89b523f346
-Create Date: 2024-11-27 15:06:47.269229
+Revises: a8a3fac369e7
+Create Date: 2024-11-29 15:06:47.269229
 
 """
 from alembic import op
@@ -11,7 +11,7 @@ import mindsdb.interfaces.storage.db  # noqa
 
 # revision identifiers, used by Alembic.
 revision = 'f6dc924079fa'
-down_revision = '0f89b523f346'
+down_revision = 'a8a3fac369e7'
 branch_labels = None
 depends_on = None
 

@@ -7,7 +7,6 @@ import time
 import tempfile
 import importlib
 import threading
-import inspect
 from pathlib import Path
 from copy import deepcopy
 from typing import Optional
@@ -299,15 +298,14 @@ class IntegrationController:
                 base_dir=integrations_dir
             )
 
-        handler_meta = self.get_handler_meta(integration_record.engine)
+        handler_meta = self.get_handler_metadata(integration_record.engine)
         integration_type = None
         if isinstance(handler_meta, dict):
             # in other cases, the handler directory is likely not exist.
             integration_type = handler_meta.get('type')
-        integration_module = self.get_handler_module(integration_record.engine)
 
         if show_secrets is False:
-            connection_args = getattr(integration_module, 'connection_args', None)
+            connection_args = handler_meta.get('connection_args', None)
             if isinstance(connection_args, dict):
                 if integration_type == HANDLER_TYPE.DATA:
                     for key, value in connection_args.items():
@@ -333,22 +331,13 @@ class IntegrationController:
                     data['connection'] = None
                 # endregion
 
-        class_type = None
-        if integration_module is not None and inspect.isclass(integration_module.Handler):
-            if issubclass(integration_module.Handler, DatabaseHandler):
-                class_type = 'sql'
-            if issubclass(integration_module.Handler, APIHandler):
-                class_type = 'api'
-            if issubclass(integration_module.Handler, BaseMLEngine):
-                class_type = 'ml'
-
         return {
             'id': integration_record.id,
             'name': integration_record.name,
             'type': integration_type,
-            'class_type': class_type,
+            'class_type': handler_meta.get('class_type'),
             'engine': integration_record.engine,
-            'permanent': getattr(integration_module, 'permanent', False),
+            'permanent': handler_meta.get('permanent', False),
             'date_last_update': deepcopy(integration_record.updated_at),  # to del ?
             'connection_data': data
         }
@@ -630,10 +619,19 @@ class IntegrationController:
             handler_meta['import']['error_message'] = str(import_error)
 
         handler_type = getattr(module, 'type', None)
+        handler_class = None
+        if hasattr(module, 'Handler'):
+            handler_class = module.Handler
+            if issubclass(handler_class, BaseMLEngine):
+                handler_meta['class_type'] = 'ml'
+            elif issubclass(handler_class, DatabaseHandler):
+                handler_meta['class_type'] = 'sql'
+            if issubclass(handler_class, APIHandler):
+                handler_meta['class_type'] = 'api'
+
         if handler_type == HANDLER_TYPE.ML:
             # for ml engines, patch the connection_args from the argument probing
-            if hasattr(module, 'Handler'):
-                handler_class = module.Handler
+            if handler_class:
                 try:
                     prediction_args = handler_class.prediction_args()
                     creation_args = getattr(module, 'creation_args', handler_class.creation_args())
@@ -646,6 +644,7 @@ class IntegrationController:
                 except Exception as e:
                     # do nothing
                     logger.debug("Failed to patch connection_args for %s, reason: %s", handler_folder_name, str(e))
+
         module_attrs = [attr for attr in [
             'connection_args_example',
             'connection_args',
@@ -717,13 +716,72 @@ class IntegrationController:
                     'dependencies': dependencies,
                 },
                 'name': handler_name,
-                'permanent': handler_info.get('permanent', False),
+                'connection_args': handler_info.get('connection_args', False),
+                'class_type': handler_info.get('class_type', None),
+                'type': handler_info.get('type')
             }
             if 'icon_path' in handler_info:
                 icon = self._get_handler_icon(handler_dir, handler_info['icon_path'])
                 if icon:
                     handler_meta['icon'] = icon
             self.handlers_import_status[handler_name] = handler_meta
+
+    def _get_connection_args(self, code, param_name):
+        # extract connection_args dict from code
+        args = {}
+        for item in code.body:
+            if not isinstance(item, ast.Assign):
+                continue
+            if not item.targets[0].id == param_name:
+                continue
+            if hasattr(item.value, 'keywords'):
+                for keyword in item.value.keywords:
+                    name = keyword.arg
+                    params = keyword.value
+                    if isinstance(params, ast.Dict):
+                        # get dict value
+                        info = {}
+                        for i, k in enumerate(params.keys):
+                            if not isinstance(k, ast.Constant):
+                                continue
+                            v = params.values[i]
+                            if isinstance(v, ast.Constant):
+                                v = v.value
+                            elif isinstance(v, ast.Attribute):
+                                # assume it is ARG_TYPE
+                                v = getattr(ARG_TYPE, v.attr, None)
+                            else:
+                                v = None
+                            info[k.value] = v
+                    args[name] = info
+        return args
+
+    def _get_base_class_type(self, code, handler_dir):
+        # try to find import inside try-except
+        module_file = None
+        for block in code.body:
+            if not isinstance(block, ast.Try):
+                continue
+            for item in block.body:
+                if isinstance(item, ast.ImportFrom):
+                    module_file = item.module
+                    break
+        if module_file is None:
+            return
+
+        path = handler_dir / f'{module_file}.py'
+
+        if not path.exists():
+            return
+        code = ast.parse(open(path).read())
+        # find base class of handler.
+        #  TODO trace inheritance (is used only for sql handler)
+        for item in code.body:
+            if isinstance(item, ast.ClassDef):
+                bases = [base.id for base in item.bases]
+                if 'APIHandler' in bases:
+                    return 'api'
+        return 'sql'
 
     def _get_handler_info(self, handler_dir: Path):
 
@@ -736,8 +794,33 @@ class IntegrationController:
         for item in code.body:
             if not isinstance(item, ast.Assign):
                 continue
-            if isinstance(item.targets[0], ast.Name) and isinstance(item.value, ast.Constant):
-                info[item.targets[0].id] = item.value.value
+            if isinstance(item.targets[0], ast.Name):
+                name = item.targets[0].id
+                if isinstance(item.value, ast.Constant):
+                    info[name] = item.value.value
+                if isinstance(item.value, ast.Attribute) and name == 'type':
+                    if item.value.attr == 'ML':
+                        info[name] = HANDLER_TYPE.ML
+                        info['class_type'] = 'ml'
+                    else:
+                        info[name] = HANDLER_TYPE.DATA
+                        info['class_type'] = self._get_base_class_type(code, handler_dir) or 'sql'
+
+        # connection args
+        if info['type'] == HANDLER_TYPE.ML:
+            args_file = handler_dir / 'creation_args.py'
+            if args_file.exists():
+                code = ast.parse(open(args_file).read())
+
+                info['connection_args'] = {
+                    "prediction": {},
+                    "creation_args": self._get_connection_args(code, 'creation_args')
+                }
+        else:
+            args_file = handler_dir / 'connection_args.py'
+            if args_file.exists():
+                code = ast.parse(open(args_file).read())
+                info['connection_args'] = self._get_connection_args(code, 'connection_args')
 
         return info
 
@@ -774,7 +857,12 @@ class IntegrationController:
     def get_handlers_metadata(self):
         return self.handlers_import_status
 
+    def get_handler_metadata(self, handler_name):
+        # returns metadata
+        return self.handlers_import_status.get(handler_name)
+
     def get_handler_meta(self, handler_name):
+        # returns metadata and tries to import it
         handler_meta = self.handlers_import_status.get(handler_name)
         if handler_meta is None:
             return

@@ -150,6 +150,10 @@ Please give a short succinct context to situate this chunk within the overall do
         processed_chunks = []
 
         for doc in documents:
+            # Skip empty or whitespace-only content
+            if not doc.content or not doc.content.strip():
+                continue
+
             chunk_docs = self._split_document(doc)
 
             # Single chunk case

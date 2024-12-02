@@ -341,7 +341,7 @@ class IntegrationController:
             'id': integration_record.id,
             'name': integration_record.name,
             'type': integration_type,
-            'class_type':class_type,
+            'class_type': class_type,
             'engine': integration_record.engine,
             'permanent': permanent,
             'date_last_update': deepcopy(integration_record.updated_at),  # to del ?
@@ -626,7 +626,7 @@ class IntegrationController:
 
         handler_type = getattr(module, 'type', None)
         handler_class = None
-        if hasattr(module, 'Handler') and  inspect.isclass(module.Handler):
+        if hasattr(module, 'Handler') and inspect.isclass(module.Handler):
             handler_class = module.Handler
             if issubclass(handler_class, BaseMLEngine):
                 handler_meta['class_type'] = 'ml'

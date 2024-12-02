@@ -14,7 +14,7 @@ from mindsdb.integrations.libs.response import (
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 from collections import OrderedDict
 
 logger = log.getLogger(__name__)
@@ -113,7 +113,7 @@ class PayPalHandler(APIHandler):
         StatusResponse
             Request status
         """
-        ast = parse_sql(query, dialect="mindsdb")
+        ast = parse_sql(query)
         return self.query(ast)
 
 

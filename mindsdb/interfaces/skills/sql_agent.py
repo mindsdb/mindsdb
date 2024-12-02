@@ -1,12 +1,12 @@
 from typing import Iterable, List, Optional
 
 import re
-from mindsdb_sql.parser.ast import Select, Show, Describe, Explain
+from mindsdb_sql_parser.ast import Select, Show, Describe, Explain
 
 import pandas as pd
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import Identifier
-from mindsdb_sql.planner.utils import query_traversal
+from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser.ast import Identifier
+from mindsdb.integrations.utilities.query_traversal import query_traversal
 
 from mindsdb.utilities import log
 from mindsdb.utilities.context import context as ctx

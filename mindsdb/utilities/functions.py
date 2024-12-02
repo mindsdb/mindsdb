@@ -9,8 +9,7 @@ from cryptography.fernet import Fernet
 from collections.abc import Callable
 
 import requests
-from mindsdb_sql import get_lexer_parser
-from mindsdb_sql.parser.ast import Identifier
+from mindsdb_sql_parser.ast import Identifier
 
 from mindsdb.utilities.fs import create_process_mark, delete_process_mark, set_process_mark
 from mindsdb.utilities import log
@@ -121,7 +120,9 @@ def get_versions_where_predictors_become_obsolete():
 
 
 def init_lexer_parsers():
-    get_lexer_parser('mindsdb')
+    from mindsdb_sql_parser.lexer import MindsDBLexer
+    from mindsdb_sql_parser.parser import MindsDBParser
+    return MindsDBLexer(), MindsDBParser()
 
 
 def resolve_table_identifier(identifier: Identifier, default_database: str = None) -> tuple:

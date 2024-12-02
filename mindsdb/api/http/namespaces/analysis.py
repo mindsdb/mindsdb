@@ -3,8 +3,8 @@ import time
 import pandas as pd
 from flask import request
 from flask_restx import Resource
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import Constant
+from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser.ast import Constant
 from pandas.core.frame import DataFrame
 
 from mindsdb.api.http.namespaces.configs.analysis import ns_conf

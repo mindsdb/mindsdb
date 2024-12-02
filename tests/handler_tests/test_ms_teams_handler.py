@@ -1,11 +1,11 @@
 import unittest
 from unittest.mock import Mock, patch
 
-from mindsdb_sql.parser import ast
-from mindsdb_sql.parser.ast import Constant, BinaryOperation
+from mindsdb_sql_parser import ast
+from mindsdb_sql_parser.ast import Constant, BinaryOperation
 
-from mindsdb_sql.parser.ast.select.star import Star
-from mindsdb_sql.parser.ast.select.identifier import Identifier
+from mindsdb_sql_parser.ast.select.star import Star
+from mindsdb_sql_parser.ast.select.identifier import Identifier
 
 from mindsdb.integrations.handlers.ms_teams_handler.ms_teams_handler import MSTeamsHandler
 from mindsdb.integrations.handlers.ms_teams_handler.settings import ms_teams_handler_config

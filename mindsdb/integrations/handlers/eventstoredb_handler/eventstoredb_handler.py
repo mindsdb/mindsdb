@@ -1,5 +1,5 @@
-from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.parser.ast import Select
+from mindsdb_sql_parser.ast.base import ASTNode
+from mindsdb_sql_parser.ast import Select
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.integrations.libs.response import (
@@ -11,7 +11,6 @@ from mindsdb.integrations.libs.response import (
 from .utils.helpers import *
 import requests
 import pandas as pd
-from mindsdb_sql import parse_sql, get_lexer_parser
 
 logger = log.getLogger(__name__)
 
@@ -137,7 +136,7 @@ class EventStoreDB(DatabaseHandler):
             )
 
     def native_query(self, query: str) -> Response:
-        ast = self.parser(query, dialect='mindsdb')
+        ast = self.parser(query)
         return self.query(ast)
 
     def get_tables(self) -> Response:
@@ -208,7 +207,10 @@ def parse_sql(sql, dialect='sqlite'):
     # remove ending semicolon and spaces
     sql = re.sub(r'[\s;]+$', '', sql)
 
-    lexer, parser = get_lexer_parser(dialect)
+    from mindsdb_sql_parser.lexer import MindsDBLexer
+    from mindsdb_sql_parser.parser import MindsDBParser
+    lexer, parser = MindsDBLexer(), MindsDBParser()
+
     tokens = lexer.tokenize(sql)
     ast = parser.parse(tokens)
     return ast

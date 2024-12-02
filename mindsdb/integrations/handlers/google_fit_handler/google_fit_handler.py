@@ -11,7 +11,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import Resource
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 
 from mindsdb.utilities import log
 from mindsdb.integrations.handlers.google_fit_handler.google_fit_tables import GoogleFitTable
@@ -118,7 +118,7 @@ class GoogleFitHandler(APIHandler):
         Returns:
             HandlerResponse
         """
-        ast = parse_sql(query, dialect='mindsdb')
+        ast = parse_sql(query)
         return self.query(ast)
     
     def get_steps(self, start_time_millis, end_time_millis) -> pd.DataFrame:

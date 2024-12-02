@@ -1,6 +1,6 @@
 import pandas as pd
 from mindsdb.integrations.libs.response import HandlerStatusResponse
-from mindsdb_sql.parser import ast
+from mindsdb_sql_parser import ast
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable
 from mindsdb.utilities.config import Config
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions, project_dataframe

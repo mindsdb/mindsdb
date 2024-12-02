@@ -12,6 +12,7 @@ from copy import deepcopy
 from typing import Optional
 from textwrap import dedent
 from collections import OrderedDict
+import inspect
 
 from sqlalchemy import func
 
@@ -304,7 +305,7 @@ class IntegrationController:
             # in other cases, the handler directory is likely not exist.
             integration_type = handler_meta.get('type')
 
-        if show_secrets is False:
+        if show_secrets is False and handler_meta is not None:
             connection_args = handler_meta.get('connection_args', None)
             if isinstance(connection_args, dict):
                 if integration_type == HANDLER_TYPE.DATA:
@@ -331,13 +332,18 @@ class IntegrationController:
                     data['connection'] = None
                 # endregion
 
+        class_type, permanent = None, False
+        if handler_meta is not None:
+            class_type = handler_meta.get('class_type')
+            permanent = handler_meta.get('permanent', False)
+
         return {
             'id': integration_record.id,
             'name': integration_record.name,
             'type': integration_type,
-            'class_type': handler_meta.get('class_type'),
+            'class_type':class_type,
             'engine': integration_record.engine,
-            'permanent': handler_meta.get('permanent', False),
+            'permanent': permanent,
             'date_last_update': deepcopy(integration_record.updated_at),  # to del ?
             'connection_data': data
         }
@@ -620,7 +626,7 @@ class IntegrationController:
 
         handler_type = getattr(module, 'type', None)
         handler_class = None
-        if hasattr(module, 'Handler'):
+        if hasattr(module, 'Handler') and  inspect.isclass(module.Handler):
             handler_class = module.Handler
             if issubclass(handler_class, BaseMLEngine):
                 handler_meta['class_type'] = 'ml'
@@ -716,7 +722,7 @@ class IntegrationController:
                     'dependencies': dependencies,
                 },
                 'name': handler_name,
-                'connection_args': handler_info.get('connection_args', False),
+                'connection_args': handler_info.get('connection_args', None),
                 'class_type': handler_info.get('class_type', None),
                 'type': handler_info.get('type')
             }

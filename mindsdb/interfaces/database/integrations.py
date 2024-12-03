@@ -732,8 +732,17 @@ class IntegrationController:
                     handler_meta['icon'] = icon
             self.handlers_import_status[handler_name] = handler_meta
 
-    def _get_connection_args(self, code, param_name):
-        # extract connection_args dict from code
+    def _get_connection_args(self, args_file: Path, param_name: str) -> dict:
+        """
+        Extract connection args dict from connection args file of a handler
+
+        :param args_file: path to file with connection args
+        :param param_name: the name of variable which contains connection args
+        :return: extracted connection arguments
+        """
+
+        code = ast.parse(args_file.read_text())
+
         args = {}
         for item in code.body:
             if not isinstance(item, ast.Assign):
@@ -762,8 +771,17 @@ class IntegrationController:
                     args[name] = info
         return args
 
-    def _get_base_class_type(self, code, handler_dir):
-        # try to find import inside try-except
+    def _get_base_class_type(self, code, handler_dir: Path) -> Optional[str]:
+        """
+        Find base class of data handler: sql or api
+        It tries to find import inside try-except of init file
+        They parsed this import in order to find base class of data handler
+
+        :param code: parsed code of __init__ file of a handler
+        :param handler_dir: folder of a handler
+        :return: base class type
+        """
+
         module_file = None
         for block in code.body:
             if not isinstance(block, ast.Try):
@@ -779,7 +797,7 @@ class IntegrationController:
 
         if not path.exists():
             return
-        code = ast.parse(open(path).read())
+        code = ast.parse(path.read_text())
         # find base class of handler.
         #  TODO trace inheritance (is used only for sql handler)
         for item in code.body:
@@ -789,12 +807,19 @@ class IntegrationController:
                     return 'api'
         return 'sql'
 
-    def _get_handler_info(self, handler_dir: Path):
+    def _get_handler_info(self, handler_dir: Path) -> dict:
+        """
+        Get handler info without importing it
+        :param handler_dir: folder of handler
+        :return: Extracted params:
+          - defined constants in init file
+          - connection arguments
+        """
 
         init_file = handler_dir / '__init__.py'
         if not init_file.exists():
             return {}
-        code = ast.parse(open(init_file).read())
+        code = ast.parse(init_file.read_text())
 
         info = {}
         for item in code.body:
@@ -816,17 +841,14 @@ class IntegrationController:
         if info['type'] == HANDLER_TYPE.ML:
             args_file = handler_dir / 'creation_args.py'
             if args_file.exists():
-                code = ast.parse(open(args_file).read())
-
                 info['connection_args'] = {
                     "prediction": {},
-                    "creation_args": self._get_connection_args(code, 'creation_args')
+                    "creation_args": self._get_connection_args(args_file, 'creation_args')
                 }
         else:
             args_file = handler_dir / 'connection_args.py'
             if args_file.exists():
-                code = ast.parse(open(args_file).read())
-                info['connection_args'] = self._get_connection_args(code, 'connection_args')
+                info['connection_args'] = self._get_connection_args(args_file, 'connection_args')
 
         return info
 

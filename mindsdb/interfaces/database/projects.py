@@ -140,7 +140,10 @@ class Project:
 
         # regon Hide sensitive info
         training_options = predictor_record.learn_args
-        handler_module = integration_controller.get_handler_module(integraion_record.engine)
+        try:
+            handler_module = integration_controller.get_handler_module(integraion_record.engine)
+        except ImportError:
+            handler_module = None
 
         if with_secrets is False and handler_module:
 

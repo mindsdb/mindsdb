@@ -551,7 +551,7 @@ class Test(BaseExecutorMockPredictor):
         # > latest with CTE
         ret = self.execute("""
             WITH trainingdata AS (
-                select a.* from files.tasks a  
+                select a.* from files.tasks a
             )
             select t.t as t0, p.* from trainingdata t
             join mindsdb.task_model p

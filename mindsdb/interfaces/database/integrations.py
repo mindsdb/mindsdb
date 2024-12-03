@@ -304,10 +304,9 @@ class IntegrationController:
         if isinstance(handler_meta, dict):
             # in other cases, the handler directory is likely not exist.
             integration_type = handler_meta.get('type')
-        integration_module = self.get_handler_module(integration_record.engine)
 
         if show_secrets is False:
-            connection_args = getattr(integration_module, 'connection_args', None)
+            connection_args = handler_meta.get('connection_args', None)
             if isinstance(connection_args, dict):
                 if integration_type == HANDLER_TYPE.DATA:
                     for key, value in connection_args.items():
@@ -333,6 +332,10 @@ class IntegrationController:
                     data['connection'] = None
                 # endregion
 
+        try:
+            integration_module = self.get_handler_module(integration_record.engine)
+        except ImportError:
+            integration_module = None
         class_type = None
         if integration_module is not None and inspect.isclass(integration_module.Handler):
             if issubclass(integration_module.Handler, DatabaseHandler):

@@ -789,7 +789,7 @@ class IntegrationController:
         handler_meta = self.get_handler_meta(handler_name)
         if handler_meta is None:
             return
-        
+
         # If the handler has been imported successfully, return the handler module.
         if handler_meta["import"]["success"]:
             return self.handler_modules[handler_name]

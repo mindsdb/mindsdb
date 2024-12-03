@@ -788,6 +788,8 @@ class IntegrationController:
             return
         if handler_meta["import"]["success"]:
             return self.handler_modules[handler_name]
+        else:
+            raise ImportError(f"Handler '{handler_name}' cannot be imported: {handler_meta['import']['error_message']}")
 
 
 integration_controller = IntegrationController()

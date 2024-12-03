@@ -1,6 +1,6 @@
 from bson.int64 import Int64
 
-from mindsdb_sql.parser.ast import Identifier, Insert, CreateTable
+from mindsdb_sql_parser.ast import Identifier, Insert, CreateTable
 
 from mindsdb.api.mongo.classes import Responder
 import mindsdb.api.mongo.functions as helpers

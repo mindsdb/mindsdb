@@ -2,7 +2,7 @@ import time
 from unittest.mock import patch
 
 import pandas as pd
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 from tests.unit.executor_test_base import BaseExecutorTest
 
 # How to run:
@@ -12,7 +12,7 @@ from tests.unit.executor_test_base import BaseExecutorTest
 
 class TestHuggingface(BaseExecutorTest):
     def run_sql(self, sql):
-        return self.command_executor.execute_command(parse_sql(sql, dialect="mindsdb"))
+        return self.command_executor.execute_command(parse_sql(sql))
 
     def hf_test_run(self, mock_handler, model_name, create_sql, predict_sql):
         # prepare table
@@ -56,7 +56,7 @@ class TestHuggingface(BaseExecutorTest):
 
         # use predictor
         ret = self.command_executor.execute_command(
-            parse_sql(predict_sql, dialect="mindsdb")
+            parse_sql(predict_sql)
         )
         assert ret.error_code is None
 
@@ -91,7 +91,7 @@ class TestHuggingface(BaseExecutorTest):
         """
         # use predictor
         ret = self.command_executor.execute_command(
-            parse_sql(predict_sql, dialect="mindsdb")
+            parse_sql(predict_sql)
         )
         assert ret.error_code is None
 
@@ -245,7 +245,7 @@ class TestHuggingface(BaseExecutorTest):
                """
         # use predictor
         ret = self.command_executor.execute_command(
-            parse_sql(predict_sql, dialect="mindsdb")
+            parse_sql(predict_sql)
         )
         assert ret.error_code is None
 
@@ -261,7 +261,7 @@ class TestHuggingface(BaseExecutorTest):
         """
 
         ret = self.command_executor.execute_command(
-            parse_sql(fine_tune_sql, dialect="mindsdb")
+            parse_sql(fine_tune_sql)
         )
 
         assert ret.error_code is None
@@ -298,7 +298,7 @@ class TestHuggingface(BaseExecutorTest):
         """
 
         ret = self.command_executor.execute_command(
-            parse_sql(fine_tune_sql, dialect="mindsdb")
+            parse_sql(fine_tune_sql)
         )
 
         assert ret.error_code is None
@@ -336,7 +336,7 @@ class TestHuggingface(BaseExecutorTest):
         """
 
         ret = self.command_executor.execute_command(
-            parse_sql(fine_tune_sql, dialect="mindsdb")
+            parse_sql(fine_tune_sql)
         )
 
         assert ret.error_code is None
@@ -375,7 +375,7 @@ class TestHuggingface(BaseExecutorTest):
         """
 
         ret = self.command_executor.execute_command(
-            parse_sql(fine_tune_sql, dialect="mindsdb")
+            parse_sql(fine_tune_sql)
         )
 
         assert ret.error_code is None

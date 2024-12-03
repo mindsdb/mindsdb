@@ -51,9 +51,10 @@ class Query(Resource):
                 if result.type == SQL_RESPONSE_TYPE.OK:
                     query_response = {"type": SQL_RESPONSE_TYPE.OK}
                 elif result.type == SQL_RESPONSE_TYPE.TABLE:
+                    data = result.data.to_lists(json_types=True)
                     query_response = {
                         "type": SQL_RESPONSE_TYPE.TABLE,
-                        "data": result.data,
+                        "data": data,
                         "column_names": [
                             x["alias"] or x["name"] if "alias" in x else x["name"]
                             for x in result.columns

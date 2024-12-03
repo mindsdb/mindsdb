@@ -31,6 +31,10 @@ def get_api_key(
         4. api key env variable
         5. api_key setting in config.json
     """
+    # Special case for vLLM - always return dummy key
+    if api_name == "vllm":
+        return "EMPTY"
+
     # 1
     if "using" in create_args and f"{api_name.lower()}_api_key" in create_args["using"]:
         return create_args["using"][f"{api_name.lower()}_api_key"]

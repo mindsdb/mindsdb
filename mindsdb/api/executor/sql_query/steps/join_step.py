@@ -2,14 +2,14 @@ import copy
 
 import numpy as np
 
-from mindsdb_sql.parser.ast import (
-    Identifier,
+from mindsdb_sql_parser.ast import (
+    Identifier, BinaryOperation, Constant
 )
-from mindsdb_sql.planner.steps import (
+from mindsdb.api.executor.planner.steps import (
     JoinStep,
 )
-from mindsdb_sql.planner.utils import query_traversal
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.integrations.utilities.query_traversal import query_traversal
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
 from mindsdb.api.executor.sql_query.result_set import ResultSet
 from mindsdb.api.executor.utilities.sql import query_df_with_type_infer_fallback
@@ -74,7 +74,11 @@ class JoinStepCall(BaseStepCall):
                     return Identifier(parts=['table_b', col_name])
 
             if step.query.condition is None:
-                raise NotSupportedYet('Unable to join table without condition')
+                # prevent memory overflow
+                if len(left_data) * len(right_data) < 10 ** 7:
+                    step.query.condition = BinaryOperation(op='=', args=[Constant(0), Constant(0)])
+                else:
+                    raise NotSupportedYet('Unable to join table without condition')
 
             condition = copy.deepcopy(step.query.condition)
             query_traversal(condition, adapt_condition)

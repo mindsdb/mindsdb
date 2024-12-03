@@ -1,6 +1,6 @@
 
 import pandas as pd
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.api.executor.datahub.datanodes.datanode import DataNode
 from mindsdb.api.executor.datahub.datanodes.integration_datanode import (

@@ -10,7 +10,7 @@ from hubspot.crm.objects import (
     BatchInputSimplePublicObjectInputForCreate as HubSpotBatchObjectInputCreate,
 
 )
-from mindsdb_sql.parser import ast
+from mindsdb_sql_parser import ast
 
 from mindsdb.integrations.utilities.handlers.query_utilities import (
     INSERTQueryParser,

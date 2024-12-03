@@ -50,15 +50,16 @@ from .constants import (
     DEFAULT_EMBEDDINGS_MODEL_PROVIDER,
     DEFAULT_MAX_ITERATIONS,
     DEFAULT_MAX_TOKENS,
+    DEFAULT_TIKTOKEN_MODEL_NAME,
     SUPPORTED_PROVIDERS,
     ANTHROPIC_CHAT_MODELS,
     OLLAMA_CHAT_MODELS,
     NVIDIA_NIM_CHAT_MODELS,
     USER_COLUMN,
     ASSISTANT_COLUMN,
-    CONTEXT_COLUMN,
+    CONTEXT_COLUMN
 )
-from mindsdb.interfaces.skills.skill_tool import skill_tool
+from mindsdb.interfaces.skills.skill_tool import skill_tool, SkillData
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import SystemMessage
@@ -73,8 +74,11 @@ logger = log.getLogger(__name__)
 
 
 def get_llm_provider(args: Dict) -> str:
+    # If provider is explicitly specified, use that
     if "provider" in args:
         return args["provider"]
+
+    # Check for known model names from other providers first
     if args["model_name"] in ANTHROPIC_CHAT_MODELS:
         return "anthropic"
     if args["model_name"] in OPEN_AI_CHAT_MODELS:
@@ -83,6 +87,8 @@ def get_llm_provider(args: Dict) -> str:
         return "ollama"
     if args["model_name"] in NVIDIA_NIM_CHAT_MODELS:
         return "nvidia_nim"
+
+    # For vLLM, require explicit provider specification
     raise ValueError("Invalid model name. Please define a supported llm provider")
 
 
@@ -94,8 +100,8 @@ def get_embedding_model_provider(args: Dict) -> str:
             "No embedding model provider specified. trying to use llm provider."
         )
         llm_provider = get_llm_provider(args)
-        if llm_provider == 'mindsdb':
-            # We aren't an embeddings provider, so use the default instead.
+        # vLLM and mindsdb aren't embeddings providers, use default instead
+        if llm_provider in ('mindsdb', 'vllm'):
             llm_provider = DEFAULT_EMBEDDINGS_MODEL_PROVIDER
         return args.get("embedding_model_provider", llm_provider)
     raise ValueError("Invalid model name. Please define provider")
@@ -139,20 +145,17 @@ def build_embedding_model(args) -> Embeddings:
 def create_chat_model(args: Dict):
     model_kwargs = get_chat_model_params(args)
 
-    def _get_tiktoken_model_name(model: str) -> str:
-        if model.startswith("gpt-4"):
-            return "gpt-4"
-        return model
-
     if args["provider"] == "anthropic":
         return ChatAnthropic(**model_kwargs)
-    if args["provider"] == "openai":
+    if args["provider"] == "openai" or args["provider"] == "vllm":
+        chat_open_ai = ChatOpenAI(**model_kwargs)
         # Some newer GPT models (e.g. gpt-4o when released) don't have token counting support yet.
         # By setting this manually in ChatOpenAI, we count tokens like compatible GPT models.
-        model_kwargs["tiktoken_model_name"] = _get_tiktoken_model_name(
-            model_kwargs.get("model_name")
-        )
-        return ChatOpenAI(**model_kwargs)
+        try:
+            chat_open_ai.get_num_tokens_from_messages([])
+        except NotImplementedError:
+            chat_open_ai.tiktoken_model_name = DEFAULT_TIKTOKEN_MODEL_NAME
+        return chat_open_ai
     if args["provider"] == "anyscale":
         return ChatAnyscale(**model_kwargs)
     if args["provider"] == "litellm":
@@ -335,16 +338,11 @@ class LangchainAgent:
 
         return response
 
-    def _get_completion_stream(
-        self, messages: List[dict]
-    ) -> Iterable[Dict]:
-        """
-        Gets a completion as a stream of chunks from given messages.
+    def _get_completion_stream(self, messages: List[dict]) -> Iterable[Dict]:
+        """Gets a completion as a stream of chunks from given messages.
 
         Args:
             messages (List[dict]): Messages to get completion chunks for
-            trace_id (str): Langfuse trace ID to use
-            observation_id (str): Langfuse parent observation Id to use
 
         Returns:
             chunks (Iterable[object]): Completion chunks
@@ -380,9 +378,7 @@ class LangchainAgent:
             self.set_embedding_model(args)
             self.args.pop("mode")
 
-        tools = []
-        skills = self.agent.skills or []
-        tools += self.langchain_tools_from_skills(skills, llm)
+        tools = self._langchain_tools_from_skills(llm)
 
         # Prefer prediction prompt template over original if provided.
         prompt_template = args["prompt_template"]
@@ -431,9 +427,20 @@ class LangchainAgent:
         )
         return agent_executor
 
-    def langchain_tools_from_skills(self, skills, llm):
+    def _langchain_tools_from_skills(self, llm):
         # Makes Langchain compatible tools from a skill
-        tools_groups = skill_tool.get_tools_from_skills(skills, llm, self.embedding_model)
+        skills_data = [
+            SkillData(
+                name=rel.skill.name,
+                type=rel.skill.type,
+                params=rel.skill.params,
+                project_id=rel.skill.project_id,
+                agent_tables_list=(rel.parameters or {}).get('tables')
+            )
+            for rel in self.agent.skills_relationships
+        ]
+
+        tools_groups = skill_tool.get_tools_from_skills(skills_data, llm, self.embedding_model)
 
         all_tools = []
         for skill_type, tools in tools_groups.items():

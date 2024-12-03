@@ -129,6 +129,7 @@ class ModelController():
             version=version,
             name=name,
             ml_handler_name=ml_handler_name,
+            except_absent=True,
             project_name=project_name)
         data = self.get_reduced_model_data(predictor_record=model_record)
         integration_record = db.Integration.query.get(model_record.integration_id)

@@ -1,4 +1,6 @@
+import os
 from typing import List, Iterator
+from langchain_core.documents import Document as LangchainDocument
 from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
 import pandas as pd
 
@@ -57,7 +59,7 @@ class DocumentLoader:
 
             for doc in loader.lazy_load():
                 # Add file extension to metadata for proper splitting
-                extension = file_path.suffix.lower()
+                extension = os.path.splitext(file_path)[1].lower()
                 doc.metadata['extension'] = extension
                 doc.metadata['source'] = file_name
 
@@ -90,8 +92,8 @@ class DocumentLoader:
 
         for _, row in websites_df.iterrows():
             # Create a document with HTML extension for proper splitting
-            doc = Document(
-                content=row['text_content'],
+            doc = LangchainDocument(
+                page_content=row['text_content'],
                 metadata={
                     'extension': '.html',
                     'url': row['url']
@@ -137,8 +139,7 @@ class DocumentLoader:
             raise ValueError('Query returned no data')
 
         # Convert query result to DataFrame
-        column_names = [c.get('alias', c.get('name')) for c in query_result.columns]
-        df = pd.DataFrame.from_records(query_result.data, columns=column_names)
+        df = query_result.data.to_df()
 
         # Process each row into a Document
         for _, row in df.iterrows():
@@ -155,8 +156,8 @@ class DocumentLoader:
 
             # Split content using recursive splitter
             if content:
-                doc = Document(
-                    content=content,
+                doc = LangchainDocument(
+                    page_content=content,
                     metadata=metadata
                 )
                 # Use FileSplitter with default recursive splitter

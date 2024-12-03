@@ -6,9 +6,8 @@ from functools import reduce
 
 import pandas as pd
 from mindsdb_evaluator.accuracy.general import evaluate_accuracy
-from mindsdb_sql import parse_sql
-from mindsdb_sql.planner.utils import query_traversal
-from mindsdb_sql.parser.ast import (
+from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser.ast import (
     Alter,
     ASTNode,
     BinaryOperation,
@@ -40,7 +39,7 @@ from mindsdb_sql.parser.ast import (
 )
 
 # typed models
-from mindsdb_sql.parser.dialects.mindsdb import (
+from mindsdb_sql_parser.ast.mindsdb import (
     CreateAgent,
     CreateAnomalyDetectionModel,
     CreateChatBot,
@@ -70,6 +69,8 @@ from mindsdb_sql.parser.dialects.mindsdb import (
 )
 
 import mindsdb.utilities.profiler as profiler
+
+from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.api.executor import Column, SQLQuery, ResultSet
 from mindsdb.api.executor.data_types.answer import ExecuteAnswer
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
@@ -642,7 +643,7 @@ class ExecuteCommands:
         elif type(statement) is UpdateAgent:
             return self.answer_update_agent(statement, database_name)
         elif type(statement) is Evaluate:
-            statement.data = parse_sql(statement.query_str, dialect="mindsdb")
+            statement.data = parse_sql(statement.query_str)
             return self.answer_evaluate_metric(statement, database_name)
         else:
             logger.warning(f"Unknown SQL statement: {sql}")
@@ -1254,7 +1255,7 @@ class ExecuteCommands:
             project_name = parts[0]
 
         query_str = statement.query_str
-        query = parse_sql(query_str, dialect="mindsdb")
+        query = parse_sql(query_str)
 
         if isinstance(statement.from_table, Identifier):
             query = Select(
@@ -1479,7 +1480,7 @@ class ExecuteCommands:
                 skills_to_remove=skills_to_remove,
                 params=statement.params
             )
-        except ValueError as e:
+        except (EntityExistsError, EntityNotExistsError, ValueError) as e:
             # Project does not exist or agent does not exist.
             raise ExecutorException(str(e))
 

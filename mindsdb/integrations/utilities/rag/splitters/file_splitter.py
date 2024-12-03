@@ -68,7 +68,7 @@ class FileSplitter:
         split_documents = []
         document: Document
         for document in documents:
-            extension = document.metadata['extension']
+            extension = document.metadata.get('extension')
             split_func = self._split_func_by_extension(extension=extension)
             try:
                 split_documents += split_func(document.page_content)

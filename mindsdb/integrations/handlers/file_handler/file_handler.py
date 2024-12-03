@@ -13,9 +13,9 @@ import filetype
 import pandas as pd
 import requests
 from charset_normalizer import from_bytes
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import CreateTable, DropTables, Insert, Select
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser.ast import CreateTable, DropTables, Insert, Select
+from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.integrations.libs.base import DatabaseHandler
@@ -179,7 +179,7 @@ class FileHandler(DatabaseHandler):
             )
 
     def native_query(self, query: str) -> Response:
-        ast = self.parser(query, dialect="mindsdb")
+        ast = self.parser(query)
         return self.query(ast)
 
     @staticmethod

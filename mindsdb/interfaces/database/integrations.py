@@ -507,6 +507,7 @@ class IntegrationController:
     @profiler.profile()
     def get_data_handler(self, name: str, case_sensitive: bool = False, connect=True) -> BaseHandler:
         """Get DATA handler (DB or API) by name
+
         Args:
             name (str): name of the handler
             case_sensitive (bool): should case be taken into account when searching by name

@@ -1,6 +1,6 @@
 from typing import Optional
 
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import DatabaseHandler

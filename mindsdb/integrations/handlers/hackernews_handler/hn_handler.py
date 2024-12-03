@@ -2,7 +2,7 @@ import requests
 import pandas as pd
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
-from mindsdb_sql.parser import ast
+from mindsdb_sql_parser import ast
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse, HandlerResponse as Response, RESPONSE_TYPE
 from .hn_table import StoriesTable, CommentsTable , HNStoriesTable ,JobStoriesTable, ShowStoriesTable

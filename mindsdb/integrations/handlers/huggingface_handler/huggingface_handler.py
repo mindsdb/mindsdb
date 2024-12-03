@@ -347,143 +347,74 @@ class HuggingFaceHandler(BaseMLEngine):
             tables = ["args", "metadata"]
             return pd.DataFrame(tables, columns=["tables"])
 
-    def finetune(self, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
-        logger.info("Starting finetune method")
-        self.print_debug_info()
+    def finetune(self, df: pd.DataFrame, args: Optional[Dict] = None) -> None:
+        logger.info("Starting fine-tuning process...")
 
         if df is None or df.empty:
             raise ValueError("No data provided for fine-tuning")
 
-        logger.info(f"Input DataFrame - shape: {df.shape}, columns: {df.columns}")
-
         # Retrieve stored args, defaulting to an empty dict if None
-        stored_args = self.model_storage.json_get("args") or {}
-        
+        stored_args = self.model_storage.json_get("args")
+
         # Merge stored args with provided args, prioritizing provided args
-        finetune_args = {**stored_args, **(args or {})}
-        
-        # Check if 'using' key exists and extract its contents
-        if 'using' in finetune_args:
-            finetune_args.update(finetune_args['using'])
-            del finetune_args['using']
+        finetune_args = {**stored_args, **(args.get('using', {}) if args else {})}
 
-        logger.debug(
-            f"Arguments:\n"
-            f"  Stored args: {stored_args}\n"
-            f"  Combined finetune args: {finetune_args}"
-        )
 
-        model_name = finetune_args.get("model_name")
-        if not model_name:
-            raise ValueError("Model name not found in arguments. Please ensure the model was created correctly.")
-
+        model_name = stored_args["model_name"]
         model_folder = self.model_storage.folder_get(model_name)
         finetune_args["model_folder"] = model_folder
-        model_folder_name = model_folder.split("/")[-1]
-        task = finetune_args.get("task")
-        if not task:
-            raise ValueError("Task not specified in arguments")
+        task = stored_args["task"]
 
         if task not in FINETUNE_MAP:
-            raise KeyError(
-                f"{task} is not currently supported, please choose a supported task - {', '.join(FINETUNE_MAP)}"
-            )
-
+            raise KeyError(f"Unsupported task: {task}. Choose from: {', '.join(FINETUNE_MAP)}")
+        
         # Ensure the input column and target column are correctly specified
-        input_column = finetune_args.get("input_column")
-        target_column = finetune_args.get("target")
+        input_column = stored_args["input_column"]
+        target_column = stored_args["target"]
+        labels = stored_args.get('labels')
 
-        if not input_column or not target_column:
-            raise ValueError("Input column or target column not specified in arguments")
+        if labels is None:
+            raise ValueError("Labels are required for fine-tuning but not found")
 
-        if input_column not in df.columns or target_column not in df.columns:
-            raise ValueError(f"Input column '{input_column}' or target column '{target_column}' not found in the dataset")
-
-        logger.info(
-            f"Fine-tuning configuration:\n"
-            f"  Model name: {model_name}\n"
-            f"  Task: {task}\n"
-            f"  Input column: {input_column}\n"
-            f"  Target column: {target_column}\n"
-            f"  Model folder: {model_folder}"
-        )
-
-        # Prepare the dataset
+         # Prepare the dataset
         df = df.rename(columns={input_column: "text", target_column: "labels"})
-        
-        # Convert labels to integers if they're not already
-        labels = finetune_args.get("labels")
-        if not labels:
-            raise ValueError("Labels not specified in arguments")
-        
-        # Create labels_map if it doesn't exist
-        if "labels_map" not in finetune_args:
+        # if it does not exist during create add it now
+        if "labels_map" not in finetune_args: 
             finetune_args["labels_map"] = {label: i for i, label in enumerate(labels)}
-        
-        label_map = finetune_args["labels_map"]
-        df["labels"] = df["labels"].map(label_map)
 
-        logger.debug(
-            f"Dataset preparation:\n"
-            f"  Finetune args after processing: {finetune_args}\n"
-            f"  DataFrame head: {df.head()}\n"
-            f"  DataFrame info: {df.info()}"
-        )
+        label_map = finetune_args["labels_map"]
+        df["labels"] = df["labels"].map(label_map).astype(int)
 
         tokenizer, trainer = FINETUNE_MAP[task](df, finetune_args)
 
         try:
             # Checks Transformers version
             transformers_version = version.parse(transformers.__version__)
-            logger.info(f"Transformers version: {transformers_version}")
+            logger.info(f"Using Transformers version: {transformers_version}")  
 
-            if transformers_version >= version.parse("4.0.0"):
+            if transformers_version >= version.parse("4.2.0"):
                 # Set up early stopping for newer versions
-                early_stopping = transformers.EarlyStoppingCallback(early_stopping_patience=3)
-                try:
-                    trainer.train(callbacks=[early_stopping])
-                except TypeError:
-                    logger.warning("Callbacks not supported in this version of Transformers. Training without early stopping.")
-                    trainer.train()
+                early_stopping_callback = transformers.EarlyStoppingCallback(early_stopping_patience=3)
+                trainer.train(callbacks=[early_stopping_callback])
             else:
                 # For older versions, train without callbacks
-                logger.warning("Using an older version of Transformers. Early stopping is not available.")
                 trainer.train()
-            
+
             eval_results = trainer.evaluate()
             logger.info(f"Evaluation results: {eval_results}")
 
-            trainer.save_model(model_folder) 
-            # TODO: save entire pipeline instead https://huggingface.co/docs/transformers/main_classes/
-            # pipelines#transformers.Pipeline.save_pretrained
+
+            trainer.save_model(model_folder)
             tokenizer.save_pretrained(model_folder)
+
 
             finetune_args["fine_tuned"] = True
             finetune_args["eval_results"] = eval_results
-            # persist changes
             self.model_storage.json_set("args", finetune_args)
-            self.model_storage.folder_sync(model_folder_name)
+            self.model_storage.folder_sync(model_name)
 
-            logger.info(
-                f"Fine-tuning completed successfully\n"
-                f"Final evaluation results: {eval_results}"
-            )
+            logger.info("Fine-tuning completed successfully.")
 
         except Exception as e:
-            err_str = f"Finetune failed with error: {str(e)}"
-            logger.error(err_str)
-            raise Exception(err_str)
-
-    def print_debug_info(self):
-        stored_args = self.model_storage.json_get("args") or {}
-        model_storage_methods = [method for method in dir(self.model_storage) if not method.startswith('__')]
-        engine_storage_methods = [method for method in dir(self.engine_storage) if not method.startswith('__')]
-        
-        logger.debug(
-            f"Debug Information:\n"
-            f"  Stored arguments: {stored_args}\n"
-            f"  Model storage type: {type(self.model_storage)}\n"
-            f"  Engine storage type: {type(self.engine_storage)}\n"
-            f"  Available methods for model_storage: {', '.join(model_storage_methods)}\n"
-            f"  Available methods for engine_storage: {', '.join(engine_storage_methods)}"
-        )
+            logger.exception(f"Fine-tuning failed: {e}")  
+            raise

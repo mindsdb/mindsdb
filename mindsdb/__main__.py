@@ -16,8 +16,8 @@ import traceback
 import threading
 from enum import Enum
 from packaging import version
-from dataclasses import dataclass
-from typing import Callable, Tuple, Optional
+from dataclasses import dataclass, field
+from typing import Callable, Optional, Tuple, List
 
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.api.http.start import start as start_http
@@ -78,24 +78,48 @@ class TrunkProcessData:
     args: Optional[Tuple] = None
     restart_on_failure: bool = False
     max_restart_count: int = 3
-    restart_count: int = 0
+    max_restart_interval_seconds: int = 60
 
-    @property
-    def is_max_restart_count_exceeded(self) -> bool:
-        return (
-            self.max_restart_count > 0
-            and self.restart_count >= self.max_restart_count
-        )
+    _restart_count: int = 0
+    _restarts_time: List[int] = field(default_factory=list)
+
+    def request_restart_attempt(self) -> bool:
+        """Check if the process may be restarted.
+        If `max_restart_count` == 0, then there are not restrictions on restarts count or interval.
+        If `max_restart_interval_seconds` == 0, then there are no time limit for restarts count.
+
+        Returns:
+            bool: `True` if the number of restarts in the interval does not exceed
+        """
+        if self.max_restart_count == 0:
+            return True
+        current_time_seconds = int(time.time())
+        self._restarts_time.append(current_time_seconds)
+        if self.max_restart_interval_seconds > 0:
+            self._restarts_time = [
+                x for x in self._restarts_time
+                if x >= (current_time_seconds - self.max_restart_interval_seconds)
+            ]
+        if len(self._restarts_time) > self.max_restart_count:
+            return False
+        return True
 
     @property
     def should_restart(self) -> bool:
-        """In case of OOM, OS kill the process with code 9
+        """In case of OOM we want to restart the process. OS kill the process with code 9 on linux when an OOM occurs.
+        On other OS process will be restarted regardless the code.
+
+        Returns:
+            bool: `True` if the process need to be restarted on failure
         """
-        return (
-            sys.platform in ('linux', 'darwin')
-            and self.restart_on_failure
-            and self.process.exitcode == -signal.SIGKILL.value
-        )
+        if sys.platform in ('linux', 'darwin'):
+            return self.restart_on_failure and self.process.exitcode == -signal.SIGKILL.value
+        else:
+            if self.max_restart_count == 0:
+                # to prevent infinity restarts, max_restart_count should be > 0
+                logger.warning('In the current OS, it is not possible to use `max_restart_count=0`')
+                return False
+            return self.restart_on_failure
 
 
 def close_api_gracefully(trunc_processes_struct):
@@ -428,15 +452,8 @@ if __name__ == '__main__':
                 close_api_gracefully(trunc_processes_struct)
             finally:
                 if trunc_process_data.should_restart:
-                    if trunc_process_data.is_max_restart_count_exceeded:
-                        finish = True
-                        logger.error(
-                            f'After {trunc_process_data.restart_count} attempts, '
-                            f'the "{trunc_process_data.name}" process fails to start.'
-                        )
-                    else:
+                    if trunc_process_data.request_restart_attempt():
                         logger.warning(f"{trunc_process_data.name} API: stopped unexpectedly, restarting")
-                        trunc_process_data.restart_count += 1
                         trunc_process_data.process = None
                         if trunc_process_data.name == TrunkProcessEnum.HTTP.value:
                             # do not open GUI on HTTP API restart
@@ -451,6 +468,12 @@ if __name__ == '__main__':
                             logger.info(f"{api_name} API: started on {port}")
                         else:
                             logger.error(f"ERROR: {api_name} API cant start on {port}")
+                    else:
+                        finish = True
+                        logger.error(
+                            f'The "{trunc_process_data.name}" process could not restart after failure. '
+                            'There will be no further attempts to restart.'
+                        )
                 else:
                     finish = True
                     logger.info(f"{trunc_process_data.name} API: stopped")

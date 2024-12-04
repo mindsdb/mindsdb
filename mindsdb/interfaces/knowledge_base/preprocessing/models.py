@@ -31,6 +31,10 @@ class ContextualConfig(BasePreprocessingConfig):
         default=None,
         description="Custom template for context generation"
     )
+    summarize: Optional[bool] = Field(
+        default=False,
+        description="Whether to return chunks as summarizations"
+    )
 
 
 class TextChunkingConfig(BaseModel):

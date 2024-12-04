@@ -527,6 +527,9 @@ class IntegrationController:
 
         integration_meta = self.get_handler_meta(integration_engine)
 
+        if integration_meta is None:
+            raise Exception(f"Handler '{name}' does not exists")
+
         if integration_meta.get('type') != HANDLER_TYPE.DATA:
             raise Exception(f"Handler '{name}' must be DATA type")
 

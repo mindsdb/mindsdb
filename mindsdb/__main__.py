@@ -17,7 +17,9 @@ import threading
 from enum import Enum
 from packaging import version
 from dataclasses import dataclass
-from typing import Callable, Tuple, Optional
+from typing import Callable, Tuple, Optional, List
+
+from sqlalchemy.orm.attributes import flag_modified
 
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.api.http.start import start as start_http
@@ -122,9 +124,71 @@ def close_api_gracefully(trunc_processes_struct):
         sys.exit(0)
 
 
+def set_error_model_status_by_pids(unexisting_pids: List[int]):
+    """Models have id of its traiing process in the 'training_metadata' field.
+    If the pid does not exist, we should set the model status to "error".
+    Note: only for local usage.
+
+    Args:
+        unexisting_pids (List[int]): list of 'pids' that do not exist.
+    """
+    predictor_records = (
+        db.session.query(db.Predictor)
+        .filter(
+            db.Predictor.deleted_at.is_(None),
+            db.Predictor.status.not_in([
+                db.PREDICTOR_STATUS.COMPLETE,
+                db.PREDICTOR_STATUS.ERROR
+            ])
+        )
+        .all()
+    )
+    for predictor_record in predictor_records:
+        predictor_process_id = (predictor_record.training_metadata or {}).get('process_id')
+        if predictor_process_id in unexisting_pids:
+            predictor_record.status = db.PREDICTOR_STATUS.ERROR
+            if isinstance(predictor_record.data, dict) is False:
+                predictor_record.data = {}
+            if 'error' not in predictor_record.data:
+                predictor_record.data['error'] = 'The training process was terminated for unknown reasons'
+                flag_modified(predictor_record, 'data')
+            db.session.commit()
+
+
+def set_error_model_status_for_unfinished():
+    """Set error status to any model if status not in 'complete' or 'error'
+    Note: only for local usage.
+    """
+    predictor_records = (
+        db.session.query(db.Predictor)
+        .filter(
+            db.Predictor.deleted_at.is_(None),
+            db.Predictor.status.not_in([
+                db.PREDICTOR_STATUS.COMPLETE,
+                db.PREDICTOR_STATUS.ERROR
+            ])
+        )
+        .all()
+    )
+    for predictor_record in predictor_records:
+        predictor_record.status = db.PREDICTOR_STATUS.ERROR
+        if isinstance(predictor_record.data, dict) is False:
+            predictor_record.data = {}
+        if 'error' not in predictor_record.data:
+            predictor_record.data['error'] = 'Unknown error'
+            flag_modified(predictor_record, 'data')
+        db.session.commit()
+
+
 def do_clean_process_marks():
+    """delete unexisting 'process marks'
+    """
+    config = Config()
+    is_cloud = config.get("cloud", False)
     while _stop_event.wait(timeout=5) is False:
-        clean_unlinked_process_marks()
+        unexisting_pids = clean_unlinked_process_marks()
+        if not is_cloud and len(unexisting_pids) > 0:
+            set_error_model_status_by_pids(unexisting_pids)
 
 
 if __name__ == '__main__':
@@ -135,7 +199,6 @@ if __name__ == '__main__':
             + 'This may impact the stability and performance of the program.'
         )
 
-    clean_process_marks()
     ctx.set_default()
     args = args_parse()
 
@@ -260,7 +323,12 @@ if __name__ == '__main__':
     logger.info(f"Storage path: {config['paths']['root']}")
     logger.debug(f"User config: {user_config}")
 
+    unexisting_pids = clean_unlinked_process_marks()
     if not is_cloud:
+        if len(unexisting_pids) > 0:
+            set_error_model_status_by_pids(unexisting_pids)
+        set_error_model_status_for_unfinished()
+
         # region creating permanent integrations
         for (
             integration_name,
@@ -307,6 +375,8 @@ if __name__ == '__main__':
         if is_modified is True:
             db.session.commit()
         # endregion
+
+    clean_process_marks()
 
     trunc_processes_struct = {
         TrunkProcessEnum.HTTP: TrunkProcessData(

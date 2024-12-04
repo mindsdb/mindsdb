@@ -96,7 +96,10 @@ class MapReduceSummarizerChain(Chain):
         document_ids = []
         logger.debug(f"Processing {len(chunks)} chunks to extract document IDs")
         for chunk in chunks:
-            metadata = chunk.metadata or {}
+            if not chunk.metadata:
+                chunk.metadata = {}
+                logger.warning("Chunk metadata was empty, creating new metadata dictionary")
+            metadata = chunk.metadata
             doc_id = str(metadata.get(self.doc_id_key, ''))
             logger.debug(f"Processing chunk with metadata: {metadata}, extracted doc_id: {doc_id}")
             if doc_id and doc_id not in unique_document_ids:

@@ -23,39 +23,34 @@ class DocumentPreprocessor:
     """Base class for document preprocessing"""
     RESERVED_METADATA_FIELDS = {'content', 'id', 'embeddings', 'original_doc_id', 'chunk_index'}
 
-    def __init__(self, preprocessing_config: Optional[PreprocessingConfig] = None):
-        """Initialize preprocessor with optional configuration"""
-        self.preprocessor = PreprocessorFactory.create_preprocessor(
-            preprocessing_config) if preprocessing_config else None
+    def __init__(self):
+        """Initialize preprocessor"""
+        self.splitter = None  # Will be set by child classes
 
     def process_documents(self, documents: List[Document]) -> List[ProcessedChunk]:
-        """
-        Process documents through configured preprocessor
-        : param documents: List of Document objects to process
-        : return: List of processed chunks
-        """
-        if self.preprocessor:
-            return self.preprocessor.process_documents(documents)
-        # If no preprocessor configured, return documents as ProcessedChunks
-        return [ProcessedChunk(
-            id=doc.id,
-            content=doc.content,
-            embeddings=doc.embeddings,
-            metadata=doc.metadata
-        ) for doc in documents]
+        """Base implementation - should be overridden by child classes"""
+        raise NotImplementedError("Subclasses must implement process_documents")
 
-    def _prepare_metadata(self, doc: Dict[str, Any]) -> Dict[str, Any]:
-        """Extract and prepare metadata from document dictionary"""
-        base_metadata = {
-            'source': doc.get('source'),
-            'url': doc.get('url')
-        }
-        custom_metadata = {
-            k: v for k, v in doc.items()
-            if k not in self.RESERVED_METADATA_FIELDS and k not in base_metadata
-        }
-        base_metadata.update(custom_metadata)
-        return {k: v for k, v in base_metadata.items() if v is not None}
+    def _split_document(self, doc: Document) -> List[Document]:
+        """Split document into chunks while preserving metadata"""
+        if self.splitter is None:
+            raise ValueError("Splitter not configured")
+
+        # Convert to langchain Document for splitting
+        langchain_doc = LangchainDocument(
+            page_content=doc.content,
+            metadata=doc.metadata or {}
+        )
+        # Split and convert back to our Document type
+        split_docs = self.splitter.split_documents([langchain_doc])
+        return [Document(
+            content=split_doc.page_content,
+            metadata=split_doc.metadata
+        ) for split_doc in split_docs]
+
+    def _get_source(self) -> str:
+        """Get the source identifier for this preprocessor"""
+        return self.__class__.__name__
 
     def to_dataframe(self, chunks: List[ProcessedChunk]) -> pd.DataFrame:
         """Convert processed chunks to dataframe format"""
@@ -71,18 +66,20 @@ class DocumentPreprocessor:
             metadata=data.get('metadata', {})
         )
 
-    @staticmethod
-    def _generate_deterministic_id(content: str, content_column: str = None) -> str:
+    def _generate_deterministic_id(self, content: str, content_column: str = None, provided_id: str = None) -> str:
         """Generate a deterministic ID based on content and column"""
-        hash_input = f"{content_column}:{content}" if content_column else content
-        return hashlib.sha256(hash_input.encode()).hexdigest()
+        if provided_id is not None:
+            return f"{provided_id}_{content_column}"
 
-    def _generate_chunk_id(self, content: str, chunk_index: Optional[int] = None, content_column: str = None) -> str:
+        id_string = f"content={content}_column={content_column}"
+        return hashlib.sha256(id_string.encode()).hexdigest()
+
+    def _generate_chunk_id(self, content: str, chunk_index: Optional[int] = None, content_column: str = None, provided_id: str = None) -> str:
         """Generate deterministic ID for a chunk"""
-        base_id = self._generate_deterministic_id(content, content_column)
-        if chunk_index is None:
-            return base_id
-        return f"{base_id}_chunk_{chunk_index}"
+        base_id = self._generate_deterministic_id(content, content_column, provided_id)
+        chunk_id = f"{base_id}_chunk_{chunk_index}" if chunk_index is not None else base_id
+        logger.debug(f"Generated chunk ID: {chunk_id} for content hash: {base_id}")
+        return chunk_id
 
     def _prepare_chunk_metadata(self,
                                 doc_id: Optional[str],
@@ -90,9 +87,18 @@ class DocumentPreprocessor:
                                 base_metadata: Optional[Dict] = None) -> Dict:
         """Centralized method for preparing chunk metadata"""
         metadata = base_metadata or {}
-        if chunk_index is not None:
+
+        # Always preserve original document ID
+        if doc_id is not None:
             metadata['original_doc_id'] = doc_id
+
+        # Add chunk index only for multi-chunk cases
+        if chunk_index is not None:
             metadata['chunk_index'] = chunk_index
+
+        # Always set source
+        metadata['source'] = self._get_source()
+
         return metadata
 
 
@@ -134,22 +140,20 @@ Please give a short succinct context to situate this chunk within the overall do
 
     def _split_document(self, doc: Document) -> List[Document]:
         """Split document into chunks while preserving metadata"""
-        # Convert to langchain Document for splitting
-        langchain_doc = LangchainDocument(
-            page_content=doc.content,
-            metadata=doc.metadata or {}
-        )
-        # Split and convert back to our Document type
-        split_docs = self.splitter.split_documents([langchain_doc])
-        return [Document(
-            content=split_doc.page_content,
-            metadata=split_doc.metadata
-        ) for split_doc in split_docs]
+        # Use base class implementation
+        return super()._split_document(doc)
 
     def process_documents(self, documents: List[Document]) -> List[ProcessedChunk]:
         processed_chunks = []
 
         for doc in documents:
+            # Get content_column from metadata if available
+            content_column = doc.metadata.get('content_column') if doc.metadata else None
+
+            # Ensure document has an ID
+            if doc.id is None:
+                doc.id = self._generate_deterministic_id(doc.content, content_column)
+
             # Skip empty or whitespace-only content
             if not doc.content or not doc.content.strip():
                 continue
@@ -158,42 +162,49 @@ Please give a short succinct context to situate this chunk within the overall do
 
             # Single chunk case
             if len(chunk_docs) == 1:
-                context = self._generate_context(chunk_docs[0].content, doc.content)
-                if self.summarize:
-                    processed_content = context
-                else:
-                    processed_content = f"{context}\n\n{chunk_docs[0].content}"
+                chunk_doc = chunk_docs[0]
+                if not chunk_doc.content or not chunk_doc.content.strip():
+                    continue
 
-                id = doc.id or self._generate_chunk_id(processed_content)
-                metadata = self._prepare_chunk_metadata(doc.id, None, chunk_docs[0].metadata or doc.metadata)
-                # Keep track of chunk UUID.
-                metadata['chunk_id'] = id
+                # Generate context
+                context = self._generate_context(chunk_doc.content, doc.content)
+                processed_content = context if self.summarize else f"{context}\n\n{chunk_doc.content}"
+
+                # Initialize metadata
+                metadata = {}
+                if doc.metadata:
+                    metadata.update(doc.metadata)
+
+                # Pass through doc.id and content_column
+                id = self._generate_chunk_id(processed_content, content_column=content_column, provided_id=doc.id)
                 processed_chunks.append(ProcessedChunk(
-                    # Use original doc ID since there's only one chunk
                     id=id,
-                    content=processed_content,
+                    content=processed_content,  # Use the content with context
                     embeddings=doc.embeddings,
-                    metadata=metadata
+                    metadata=self._prepare_chunk_metadata(doc.id, None, metadata)
                 ))
             else:
                 # Multiple chunks case
                 for i, chunk_doc in enumerate(chunk_docs):
-                    context = self._generate_context(chunk_doc.content, doc.content)
-                    if self.summarize:
-                        processed_content = context
-                    else:
-                        processed_content = f"{context}\n\n{chunk_doc.content}"
+                    if not chunk_doc.content or not chunk_doc.content.strip():
+                        continue
 
-                    # Append chunk index to original doc ID
-                    chunk_id = f"{doc.id}_chunk_{i}" if doc.id else self._generate_chunk_id(processed_content, i)
-                    metadata = self._prepare_chunk_metadata(doc.id, i, chunk_doc.metadata or doc.metadata)
-                    # Keep track of chunk UUID.
-                    metadata['chunk_id'] = chunk_id
+                    # Generate context
+                    context = self._generate_context(chunk_doc.content, doc.content)
+                    processed_content = context if self.summarize else f"{context}\n\n{chunk_doc.content}"
+
+                    # Initialize metadata
+                    metadata = {}
+                    if doc.metadata:
+                        metadata.update(doc.metadata)
+
+                    # Pass through doc.id and content_column
+                    chunk_id = self._generate_chunk_id(processed_content, i, content_column=content_column, provided_id=doc.id)
                     processed_chunks.append(ProcessedChunk(
                         id=chunk_id,
-                        content=processed_content,
+                        content=processed_content,  # Use the content with context
                         embeddings=doc.embeddings,
-                        metadata=metadata
+                        metadata=self._prepare_chunk_metadata(doc.id, i, metadata)
                     ))
 
         return processed_chunks
@@ -215,39 +226,39 @@ class TextChunkingPreprocessor(DocumentPreprocessor):
 
     def _split_document(self, doc: Document) -> List[Document]:
         """Split document into chunks while preserving metadata"""
-        langchain_doc = LangchainDocument(
-            page_content=doc.content,
-            metadata=doc.metadata or {}
-        )
-        split_docs = self.splitter.split_documents([langchain_doc])
-        return [Document(
-            content=split_doc.page_content,
-            metadata=split_doc.metadata
-        ) for split_doc in split_docs]
+        # Use base class implementation
+        return super()._split_document(doc)
 
     def process_documents(self, documents: List[Document]) -> List[ProcessedChunk]:
         processed_chunks = []
 
         for doc in documents:
+            # Get content_column from metadata if available
+            content_column = doc.metadata.get('content_column') if doc.metadata else None
+
+            # Ensure document has an ID
+            if doc.id is None:
+                doc.id = self._generate_deterministic_id(doc.content, content_column)
+
             # Skip empty or whitespace-only content
             if not doc.content or not doc.content.strip():
                 continue
 
             chunk_docs = self._split_document(doc)
 
-            # Single chunk case - use original ID
+            # Single chunk case
             if len(chunk_docs) == 1:
                 chunk_doc = chunk_docs[0]
                 if not chunk_doc.content or not chunk_doc.content.strip():
                     continue
 
-                metadata = {"source": "default"}
+                # Initialize metadata
+                metadata = {}
                 if doc.metadata:
                     metadata.update(doc.metadata)
 
-                id = doc.id or self._generate_chunk_id(chunk_doc.content)
-                # Keep track of chunk UUID.
-                metadata['chunk_id'] = id
+                # Pass through doc.id and content_column
+                id = self._generate_chunk_id(chunk_doc.content, content_column=content_column, provided_id=doc.id)
                 processed_chunks.append(ProcessedChunk(
                     id=id,
                     content=chunk_doc.content,
@@ -255,18 +266,18 @@ class TextChunkingPreprocessor(DocumentPreprocessor):
                     metadata=self._prepare_chunk_metadata(doc.id, None, metadata)
                 ))
             else:
-                # Multiple chunks case - append chunk index to original ID
+                # Multiple chunks case
                 for i, chunk_doc in enumerate(chunk_docs):
                     if not chunk_doc.content or not chunk_doc.content.strip():
                         continue
 
-                    metadata = {"source": "default"}
+                    # Initialize metadata
+                    metadata = {}
                     if doc.metadata:
                         metadata.update(doc.metadata)
 
-                    chunk_id = f"{doc.id}_chunk_{i}" if doc.id else self._generate_chunk_id(chunk_doc.content, i)
-                    # Keep track of chunk UUID in metadata.
-                    metadata['chunk_id'] = chunk_id
+                    # Pass through doc.id and content_column
+                    chunk_id = self._generate_chunk_id(chunk_doc.content, i, content_column=content_column, provided_id=doc.id)
                     processed_chunks.append(ProcessedChunk(
                         id=chunk_id,
                         content=chunk_doc.content,

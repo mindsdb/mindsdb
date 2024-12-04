@@ -182,7 +182,11 @@ class MapReduceSummarizerChain(Chain):
 
         # Update context chunks with document summaries.
         for chunk in context_chunks:
-            metadata = chunk.metadata or {}
+            if not chunk.metadata:
+                chunk.metadata = {}
+                logger.warning("Chunk metadata was empty, creating new metadata dictionary")
+
+            metadata = chunk.metadata
             doc_id = str(metadata.get(self.doc_id_key, ''))
             logger.debug(f"Updating chunk with doc_id {doc_id}")
             if doc_id in source_id_to_summary:

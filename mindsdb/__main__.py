@@ -114,6 +114,10 @@ class TrunkProcessData:
         Returns:
             bool: `True` if the process need to be restarted on failure
         """
+        config = Config()
+        is_cloud = config.get("cloud", False)
+        if is_cloud:
+            return False
         if sys.platform in ('linux', 'darwin'):
             return self.restart_on_failure and self.process.exitcode == -signal.SIGKILL.value
         else:
@@ -402,20 +406,30 @@ if __name__ == '__main__':
 
     clean_process_marks()
 
+    http_api_config = config['api']['http']
+    mysql_api_config = config['api']['mysql']
     trunc_processes_struct = {
         TrunkProcessEnum.HTTP: TrunkProcessData(
             name=TrunkProcessEnum.HTTP.value,
             entrypoint=start_http,
-            port=config['api']['http']['port'],
+            port=http_api_config['port'],
             args=(args.verbose, args.no_studio),
-            restart_on_failure=config['api']['http'].get('restart_on_failure', False)
+            restart_on_failure=http_api_config.get('restart_on_failure', False),
+            max_restart_count=http_api_config.get('max_restart_count', TrunkProcessData.max_restart_count),
+            max_restart_interval_seconds=http_api_config.get(
+                'max_restart_interval_seconds', TrunkProcessData.max_restart_interval_seconds
+            )
         ),
         TrunkProcessEnum.MYSQL: TrunkProcessData(
             name=TrunkProcessEnum.MYSQL.value,
             entrypoint=start_mysql,
-            port=config['api']['mysql']['port'],
+            port=mysql_api_config['port'],
             args=(args.verbose,),
-            restart_on_failure=config['api']['mysql'].get('restart_on_failure', False)
+            restart_on_failure=mysql_api_config.get('restart_on_failure', False),
+            max_restart_count=mysql_api_config.get('max_restart_count', TrunkProcessData.max_restart_count),
+            max_restart_interval_seconds=mysql_api_config.get(
+                'max_restart_interval_seconds', TrunkProcessData.max_restart_interval_seconds
+            )
         ),
         TrunkProcessEnum.MONGODB: TrunkProcessData(
             name=TrunkProcessEnum.MONGODB.value,

@@ -306,7 +306,7 @@ class IntegrationController:
             integration_type = handler_meta.get('type')
 
         if show_secrets is False:
-            connection_args = handler_meta.get('connection_args', None)
+            connection_args = handler_meta.get('connection_args') if handler_meta is not None else None
             if isinstance(connection_args, dict):
                 if integration_type == HANDLER_TYPE.DATA:
                     for key, value in connection_args.items():

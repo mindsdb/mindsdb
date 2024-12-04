@@ -38,6 +38,7 @@ class SlackHandler(APIChatHandler):
     def __init__(self, name: Text, connection_data: Dict, **kwargs: Any) -> None:
         """
         Initializes the handler.
+
         Args:
             name (Text): The name of the handler instance.
             connection_data (Dict): The connection data required to connect to the SAP HANA database.

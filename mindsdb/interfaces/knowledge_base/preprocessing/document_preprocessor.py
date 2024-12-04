@@ -123,6 +123,7 @@ Please give a short succinct context to situate this chunk within the overall do
             **self.config.llm_config.params
         })
         self.context_template = config.context_template or self.DEFAULT_CONTEXT_TEMPLATE
+        self.summarize = self.config.summarize
 
     def _generate_context(self, chunk_content: str, full_document: str) -> str:
         """Generate contextual description for a chunk using LLM"""
@@ -149,12 +150,19 @@ Please give a short succinct context to situate this chunk within the overall do
         processed_chunks = []
 
         for doc in documents:
+            # Skip empty or whitespace-only content
+            if not doc.content or not doc.content.strip():
+                continue
+
             chunk_docs = self._split_document(doc)
 
             # Single chunk case
             if len(chunk_docs) == 1:
                 context = self._generate_context(chunk_docs[0].content, doc.content)
-                processed_content = f"{context}\n\n{chunk_docs[0].content}"
+                if self.summarize:
+                    processed_content = context
+                else:
+                    processed_content = f"{context}\n\n{chunk_docs[0].content}"
 
                 id = doc.id or self._generate_chunk_id(processed_content)
                 metadata = self._prepare_chunk_metadata(doc.id, None, chunk_docs[0].metadata or doc.metadata)
@@ -171,7 +179,10 @@ Please give a short succinct context to situate this chunk within the overall do
                 # Multiple chunks case
                 for i, chunk_doc in enumerate(chunk_docs):
                     context = self._generate_context(chunk_doc.content, doc.content)
-                    processed_content = f"{context}\n\n{chunk_doc.content}"
+                    if self.summarize:
+                        processed_content = context
+                    else:
+                        processed_content = f"{context}\n\n{chunk_doc.content}"
 
                     # Append chunk index to original doc ID
                     chunk_id = f"{doc.id}_chunk_{i}" if doc.id else self._generate_chunk_id(processed_content, i)

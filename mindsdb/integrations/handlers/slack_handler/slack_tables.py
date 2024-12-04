@@ -131,6 +131,7 @@ class SlackConversationsTable(APIResource):
                 response = client.conversations_list()
                 channels = response['channels']
 
+                # Paginate the results until the limit is reached.
                 while response['response_metadata']['next_cursor']:
                     response = client.conversations_list(cursor=response['response_metadata']['next_cursor'])
                     channels.extend(response['channels'])
@@ -202,6 +203,7 @@ class SlackMessagesTable(APIResource):
             value = condition.value
             op = condition.op
 
+            # Handle the column 'channel_id'.
             if condition.column == 'channel_id':
                 if op != FilterOperator.EQUAL:
                     raise ValueError(f"Unsupported operator '{op}' for column 'channel_id'")
@@ -233,17 +235,14 @@ class SlackMessagesTable(APIResource):
         if 'channel' not in params:
             raise Exception("To retrieve data from Slack, you need to provide the 'channel_id' parameter.")
 
-        # Retrieve the conversation history.
         # TODO: Add support for pagination.
         result = client.conversations_history(**params)
 
-        # Convert the SlackResponse object to a DataFrame.
         result = pd.DataFrame(result['messages'], columns=self.get_columns())
 
-        # Remove null rows from the result.
         result = result[result['text'].notnull()]
 
-        # Add the selected channel name to the response.
+        # Add the channel ID and name to the result.
         result['channel_id'] = params['channel']
         result['channel_name'] = channel['name'] if 'name' in channel else None
 
@@ -297,6 +296,7 @@ class SlackMessagesTable(APIResource):
         # Build the parameters for the call to the Slack API.
         params = {}
         for op, arg1, arg2 in conditions:
+            # Handle the column 'channel_id'.
             if arg1 == 'channel_id':
                 # Check if the provided channel exists.
                 try:
@@ -306,6 +306,7 @@ class SlackMessagesTable(APIResource):
                     logger.error(f"Error getting channel '{arg2}': {slack_error.response['error']}")
                     raise ValueError(f"Channel '{arg2}' not found")
 
+            # Handle the columns 'text' and 'ts'.
             if arg1 in ['text', 'ts']:
                 if op == '=':
                     params[arg1] = arg2
@@ -343,6 +344,7 @@ class SlackMessagesTable(APIResource):
         # Build the parameters for the call to the Slack API.
         params = {}
         for op, arg1, arg2 in conditions:
+            # Handle the column 'channel_id'.
             if arg1 == 'channel_id':
                 # Check if the provided channel exists.
                 try:
@@ -352,6 +354,7 @@ class SlackMessagesTable(APIResource):
                     logger.error(f"Error getting channel '{arg2}': {slack_error.response['error']}")
                     raise ValueError(f"Channel '{arg2}' not found")
 
+            # Handle the columns 'ts'.
             if arg1 == 'ts':
                 if op == '=':
                     params['ts'] = float(arg2)

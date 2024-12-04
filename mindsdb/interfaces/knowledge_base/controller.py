@@ -568,6 +568,13 @@ class KnowledgeBaseTable:
         """
         Generate a deterministic document ID from content and column name.
         If provided_id exists, combines it with content_column.
+
+        Args:
+            content: The content string
+            content_column: Name of the content column
+            provided_id: Optional user-provided ID
+        Returns:
+            Deterministic document ID
         """
         if provided_id is not None:
             return f"{provided_id}_{content_column}"

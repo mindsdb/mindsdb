@@ -61,7 +61,7 @@ class SlackHandler(APIChatHandler):
         self.web_connection = None
         self._socket_connection = None
         self.is_connected = False
-        
+
         self._register_table('conversations', SlackConversationsTable(self))
         self._register_table('messages', SlackMessagesTable(self))
         self._register_table('threads', SlackThreadsTable(self))
@@ -76,7 +76,7 @@ class SlackHandler(APIChatHandler):
         """
         if self.is_connected is True:
             return self.web_connection
-        
+
         # Check if the mandatory connection parameter (token) is available.
         if 'token' not in self.connection_data:
             raise ValueError('Required parameter (token) must be provided.')
@@ -114,7 +114,7 @@ class SlackHandler(APIChatHandler):
                 )
                 _socket_connection.connect()
                 _socket_connection.disconnect()
-            
+
             response.success = True
         except (SlackApiError, ValueError) as known_error:
             logger.error(f'Connection check to the Slack API failed, {known_error}!')
@@ -127,7 +127,7 @@ class SlackHandler(APIChatHandler):
             self.is_connected = False
 
         return response
-    
+
     def native_query(self, query: Text = None) -> Response:
         """
         Executes native Slack SDK methods as specified in the query string.
@@ -170,7 +170,7 @@ class SlackHandler(APIChatHandler):
             response_data = deepcopy(response.data)
 
             # Get only the data items from the response data.
-            items.extend(self._extract_data_from_response(response_data))            
+            items.extend(self._extract_data_from_response(response_data))
 
             # If the response contains a cursor, fetch the next page of results.
             if 'response_metadata' in response and 'next_cursor' in response['response_metadata']:
@@ -189,7 +189,7 @@ class SlackHandler(APIChatHandler):
             df = pd.DataFrame(items)
 
         return df
-    
+
     def _extract_data_from_response(self, response_data: Dict) -> List[Dict]:
         """
         Extracts the data items from the response object.
@@ -213,7 +213,7 @@ class SlackHandler(APIChatHandler):
             key = list(response_data.keys())[0]
             if isinstance(response_data[key], list):
                 return response_data[key]
-            
+
             else:
                 return [response_data[key]]
 
@@ -272,7 +272,7 @@ class SlackHandler(APIChatHandler):
             stop_event (threading.Event): The event to stop the subscription.
             callback (Callable): The callback function to process the messages.
             table_name (Text): The name of the table to subscribe to.
-            kwargs: Arbitrary keyword arguments.     
+            kwargs: Arbitrary keyword arguments.
         """
         self._socket_connection = SocketModeClient(
             # This app-level token will be used only for establishing a connection.
@@ -284,7 +284,7 @@ class SlackHandler(APIChatHandler):
         def _process_websocket_message(client: SocketModeClient, request: SocketModeRequest) -> None:
             """
             Pre-processes the incoming WebSocket message from the Slack API and calls the callback function to process the message.
-    
+
             Args:
                 client (SocketModeClient): The client object to send the response.
                 request (SocketModeRequest): The request object containing the payload.

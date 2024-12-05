@@ -39,7 +39,7 @@ class SlackConversationsTable(APIResource):
             kwargs(Any): Arbitrary keyword arguments.
 
         Raises:
-            ValueError: 
+            ValueError:
                 - If an unsupported operator is used for the column 'id'.
                 - If the channel ID(s) provided are not found.
             SlackApiError: If an error occurs when getting the channels from the Slack API.
@@ -56,14 +56,14 @@ class SlackConversationsTable(APIResource):
             if condition.column == 'id':
                 if op not in [FilterOperator.EQUAL, FilterOperator.IN]:
                     raise ValueError(f"Unsupported operator '{op}' for column 'id'")
-                
+
                 if op == FilterOperator.EQUAL:
                     try:
                         channels = [self.get_channel(value)]
                         condition.applied = True
                     except ValueError:
                         raise
-                    
+
                 if op == FilterOperator.IN:
                     try:
                         channels = self._get_channels(
@@ -82,7 +82,7 @@ class SlackConversationsTable(APIResource):
             channel['updated_at'] = dt.datetime.fromtimestamp(channel['updated'] / 1000)
 
         return pd.DataFrame(channels, columns=self.get_columns())
-    
+
     def get_channel(self, channel_id: Text) -> Dict:
         """
         Gets the channel data for the specified channel id.
@@ -105,7 +105,7 @@ class SlackConversationsTable(APIResource):
             raise ValueError(f"Channel '{channel_id}' not found")
 
         return response['channel']
-    
+
     def get_channels(self, channel_ids: List[Text]) -> List[Dict]:
         """
         Gets the channel data for multiple channel ids.
@@ -124,7 +124,7 @@ class SlackConversationsTable(APIResource):
         for channel_id in channel_ids:
             channel = self.get_channel(channel_id)
             channels.append(channel)
-                
+
         return channels
 
     def get_all_channels(self, limit: int = None) -> List[Dict]:
@@ -199,7 +199,8 @@ class SlackMessagesTable(APIResource):
     This is the table abstraction for interacting with messages via the Slack API.
     """
 
-    def list(self,
+    def list(
+        self,
         conditions: List[FilterCondition] = None,
         limit: int = None,
         **kwargs: Any
@@ -224,7 +225,7 @@ class SlackMessagesTable(APIResource):
             kwargs (Any): Arbitrary keyword arguments.
 
         Raises:
-            ValueError: 
+            ValueError:
                 - If the 'channel_id' parameter is not provided.
                 - If an unsupported operator is used for the column 'channel_id'.
                 - If the channel ID provided is not found.
@@ -319,7 +320,7 @@ class SlackMessagesTable(APIResource):
             SlackApiError: If an error occurs when posting the message to the Slack channel.
         """
         client = self.handler.connect()
-    
+
         # Get column names and values from the query.
         columns = [col.name for col in query.columns]
         for row in query.values:
@@ -330,7 +331,7 @@ class SlackMessagesTable(APIResource):
                 raise ValueError("To insert data into Slack, you need to provide the 'channel_id' and 'text' parameters.")
 
             try:
-                response = client.chat_postMessage(
+                client.chat_postMessage(
                     channel=params['channel_id'],
                     text=params['text']
                 )
@@ -346,7 +347,7 @@ class SlackMessagesTable(APIResource):
             query (Update): An ASTNode object representing the SQL query to be executed.
 
         Raises:
-            ValueError: 
+            ValueError:
                 - If the 'channel_id', 'ts', or 'text' parameters are not provided.
                 - If an unsupported operator is used for the columns.
                 - If an unsupported column is used.
@@ -376,7 +377,7 @@ class SlackMessagesTable(APIResource):
                     params[arg1] = arg2
                 else:
                     raise ValueError(f"Unsupported operator '{op}' for column '{arg1}'")
-                
+
             else:
                 raise ValueError(f"Unsupported column '{arg1}'")
 
@@ -445,10 +446,10 @@ class SlackMessagesTable(APIResource):
                 channel=params['channel'],
                 ts=params['ts']
             )
-            
+
         except SlackApiError as slack_error:
             logger.error(f"Error deleting message in Slack channel '{params['channel']}' with timestamp '{params['ts']}': {slack_error.response['error']}")
-            raise 
+            raise
 
     def get_columns(self) -> List[Text]:
         """
@@ -476,7 +477,7 @@ class SlackMessagesTable(APIResource):
             'latest_reply',
             'reply_users'
         ]
-        
+
 
 class SlackThreadsTable(APIResource):
     """
@@ -583,7 +584,7 @@ class SlackThreadsTable(APIResource):
         result['channel_name'] = channel['name'] if 'name' in channel else None
 
         return result
-    
+
     def insert(self, query: Insert):
         """
         Executes an INSERT SQL query represented by an ASTNode object and posts a message to a Slack thread.
@@ -595,7 +596,7 @@ class SlackThreadsTable(APIResource):
             ValueError: If the 'channel_id', 'text', or 'thread_ts' parameters are not provided.
         """
         client = self.handler.connect()
-    
+
         # Get column names and values from the query.
         columns = [col.name for col in query.columns]
         for row in query.values:
@@ -637,7 +638,7 @@ class SlackThreadsTable(APIResource):
             "latest_reply",
             "reply_users"
         ]
-    
+
 
 class SlackUsersTable(APIResource):
     """

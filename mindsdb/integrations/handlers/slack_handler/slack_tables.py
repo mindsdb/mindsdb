@@ -39,7 +39,7 @@ class SlackConversationsTable(APIResource):
             value = condition.value
             op = condition.op
 
-            # If a conversation id is provided, get the channel data for the ID(s).
+            # Handle the column 'id'.
             if condition.column == 'id':
                 if op not in [FilterOperator.EQUAL, FilterOperator.IN]:
                     raise ValueError(f"Unsupported operator '{op}' for column 'id'")
@@ -80,7 +80,7 @@ class SlackConversationsTable(APIResource):
         Returns:
             Dict: The channel data.
         """
-        client = self.connect()
+        client = self.handler.connect()
 
         try:
             response = client.conversations_info(channel=channel_id)
@@ -103,12 +103,8 @@ class SlackConversationsTable(APIResource):
         """
         channels = []
         for channel_id in channel_ids:
-            try:
-                channel = self.get_channel(channel_id)
-                channels.append(channel)
-            except SlackApiError as slack_error:
-                logger.error(f"Error getting channel '{channel_id}': {slack_error.response['error']}")
-                raise ValueError(f"Channel '{channel_id}' not found")
+            channel = self.get_channel(channel_id)
+            channels.append(channel)
                 
         return channels
 
@@ -124,7 +120,7 @@ class SlackConversationsTable(APIResource):
         Returns:
             List[Dict]: The list of channels.
         """
-        client = self.connect()
+        client = self.handler.connect()
 
         try:
             if limit and limit > 1000:
@@ -144,7 +140,7 @@ class SlackConversationsTable(APIResource):
                 channels = response['channels']
         except SlackApiError as slack_error:
             logger.error(f"Error getting channels: {slack_error.response['error']}")
-            raise ValueError(f"Error getting channels: {slack_error.response['error']}")
+            raise
 
         return channels
 

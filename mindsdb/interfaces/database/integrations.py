@@ -332,10 +332,7 @@ class IntegrationController:
                     data['connection'] = None
                 # endregion
 
-        try:
-            integration_module = self.get_handler_module(integration_record.engine)
-        except ImportError:
-            integration_module = None
+        integration_module = self.get_handler_module(integration_record.engine)
         class_type = None
         if integration_module is not None and inspect.isclass(integration_module.Handler):
             if issubclass(integration_module.Handler, DatabaseHandler):
@@ -450,7 +447,13 @@ class IntegrationController:
         )
         handler_storage = HandlerStorage(integration_id, root_dir='tmp', is_temporal=True)
 
-        HandlerClass = self.get_handler_module(engine).Handler
+        handler_meta = self.get_handler_meta(engine + '123')
+        if handler_meta is None:
+            raise ImportError(f"Handler '{engine}' does not exists")
+        if handler_meta["import"]["success"] is False:
+            raise ImportError(f"Handler '{engine}' cannot be imported: {handler_meta['import']['error_message']}")
+        HandlerClass = self.handler_modules[engine].Handler
+
         handler_args = self._make_handler_args(
             name=name,
             handler_type=engine,
@@ -796,9 +799,6 @@ class IntegrationController:
         # If the handler has been imported successfully, return the handler module.
         if handler_meta["import"]["success"]:
             return self.handler_modules[handler_name]
-        # Otherwise, raise an ImportError.
-        else:
-            raise ImportError(f"Handler '{handler_name}' cannot be imported: {handler_meta['import']['error_message']}")
 
 
 integration_controller = IntegrationController()

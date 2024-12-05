@@ -12,16 +12,16 @@ import re
 import inspect
 from textwrap import dedent
 
-from mindsdb_sql import parse_sql
-from mindsdb_sql.planner.steps import (
+from mindsdb_sql_parser import parse_sql
+from mindsdb.api.executor.planner.steps import (
     ApplyTimeseriesPredictorStep,
     ApplyPredictorRowStep,
     ApplyPredictorStep,
 )
 
-from mindsdb_sql.exceptions import PlanningException
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb_sql.planner import query_planner
+from mindsdb.api.executor.planner.exceptions import PlanningException
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.api.executor.planner import query_planner
 
 from mindsdb.api.executor.utilities.sql import query_df, get_query_models
 from mindsdb.interfaces.model.functions import get_model_record
@@ -76,7 +76,7 @@ class SQLQuery:
                     self.outer_query = sql.replace(subquery, 'dataframe')
                     sql = subquery.strip('()')
             # endregion
-            self.query = parse_sql(sql, dialect='mindsdb')
+            self.query = parse_sql(sql)
             self.context['query_str'] = sql
         else:
             self.query = sql

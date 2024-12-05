@@ -5,7 +5,7 @@ from typing import List, Dict, Optional
 
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
-from mindsdb_sql.parser.ast import Select, BinaryOperation, Identifier, Constant, Star
+from mindsdb_sql_parser.ast import Select, BinaryOperation, Identifier, Constant, Star
 
 from mindsdb.utilities import log
 from mindsdb.utilities.cache import get_cache

@@ -2,7 +2,7 @@ from pandas import DataFrame
 
 from mindsdb.utilities import log
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
-from mindsdb_sql.parser.ast import ASTNode
+from mindsdb_sql_parser.ast import ASTNode
 
 
 logger = log.getLogger(__name__)

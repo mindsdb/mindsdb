@@ -5,7 +5,7 @@ from _ast import AnnAssign, AugAssign
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb.utilities import log
 
 from mindsdb.integrations.libs.response import HandlerResponse, HandlerStatusResponse

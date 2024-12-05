@@ -2,7 +2,7 @@ import pytest
 import json
 from pymongo import MongoClient
 
-from mindsdb_sql.parser.ast import Identifier, Select, Star
+from mindsdb_sql_parser.ast import Identifier, Select, Star
 from mindsdb.integrations.handlers.mongodb_handler.mongodb_handler import MongoDBHandler
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 

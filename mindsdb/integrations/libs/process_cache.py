@@ -223,24 +223,15 @@ class ProcessCache:
 
         if config['ml_task_queue']['type'] != 'redis':
             if is_cloud:
-                try:
-                    lightwood_handler = integration_controller.get_handler_module('lightwood')
-                except ImportError:
-                    lightwood_handler = None
+                lightwood_handler = integration_controller.get_handler_module('lightwood')
                 if lightwood_handler is not None and lightwood_handler.Handler is not None:
                     preload_handlers[lightwood_handler.Handler] = 4 if is_cloud else 1
 
-                try:
-                    huggingface_handler = integration_controller.get_handler_module('huggingface')
-                except ImportError:
-                    huggingface_handler = None
-                    if huggingface_handler is not None and huggingface_handler.Handler is not None:
-                        preload_handlers[huggingface_handler.Handler] = 1
+                huggingface_handler = integration_controller.get_handler_module('huggingface')
+                if huggingface_handler is not None and huggingface_handler.Handler is not None:
+                    preload_handlers[huggingface_handler.Handler] = 1
 
-                try:
-                    openai_handler = integration_controller.get_handler_module('openai')
-                except ImportError:
-                    openai_handler = None
+                openai_handler = integration_controller.get_handler_module('openai')
                 if openai_handler is not None and openai_handler.Handler is not None:
                     preload_handlers[openai_handler.Handler] = 1
 

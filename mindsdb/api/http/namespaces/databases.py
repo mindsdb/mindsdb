@@ -63,10 +63,10 @@ class DatabasesResource(Resource):
         if check_connection:
             try:
                 handler = session.integration_controller.create_tmp_handler(name, database['engine'], parameters)
-            except ImportError as imort_error:
+            except ImportError as import_error:
                 return http_error(
                     HTTPStatus.BAD_REQUEST, 'Error',
-                    f'Could not create database handler: {str(imort_error)}'
+                    f'Could not create database handler: {str(import_error)}'
                 )
 
             status = handler.check_connection()
@@ -168,10 +168,10 @@ class DatabaseResource(Resource):
                 handler = session.integration_controller.create_tmp_handler(
                     temp_name, existing_integration['engine'], parameters
                 )
-            except ImportError as imort_error:
+            except ImportError as import_error:
                 return http_error(
                     HTTPStatus.BAD_REQUEST, 'Error',
-                    f'Could not create database handler: {str(imort_error)}'
+                    f'Could not create database handler: {str(import_error)}'
                 )
 
             status = handler.check_connection()

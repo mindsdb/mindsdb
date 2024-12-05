@@ -134,17 +134,44 @@ class FileHandler(DatabaseHandler):
             return Response(RESPONSE_TYPE.OK)
 
         elif type(query) is Select:
-            table_name = query.from_table.parts[-1]
+            table_name_parts = query.from_table.parts
+            table_name = table_name_parts[-1]
+
+            # Check if it's a multi-part name (e.g., `files.file_name.sheet_name`)
+            if len(table_name_parts) > 1:
+                table_name = table_name_parts[-2]
+                sheet_name = table_name_parts[-1]  # Get the sheet name
+            else:
+                sheet_name = None
             file_path = self.file_controller.get_file_path(table_name)
-            df, _columns = self._handle_source(
-                file_path,
-                self.clean_rows,
-                self.custom_parser,
-                self.chunk_size,
-                self.chunk_overlap,
-            )
+
+            # Handle Excel files with multiple sheets
+            if file_path.endswith(('.xlsx', '.xls')):
+                with pd.ExcelFile(file_path) as xls:
+                    if sheet_name is None:
+                        # No sheet specified: Return list of sheets
+                        sheet_list = xls.sheet_names
+                        df = pd.DataFrame(sheet_list, columns=["Sheet_Name"])
+                        return Response(RESPONSE_TYPE.TABLE, data_frame=df)
+                    else:
+                        # Specific sheet requested: Load that sheet
+                        df = pd.read_excel(xls, sheet_name=sheet_name)
+
+            # Handle other file types as usual
+            else:
+                df, _columns = self._handle_source(
+                    file_path,
+                    self.clean_rows,
+                    self.custom_parser,
+                    self.chunk_size,
+                    self.chunk_overlap,
+                )
+
+            # Process the SELECT query
             result_df = query_df(df, query)
             return Response(RESPONSE_TYPE.TABLE, data_frame=result_df)
+
+            
 
         elif type(query) is Insert:
             table_name = query.table.parts[-1]

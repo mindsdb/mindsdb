@@ -261,7 +261,7 @@ FROM slack_datasource.conversations
 LIMIT 2000;
 ```
 
-When using the LIMIT clause to query additional users, you may encounter Slack API rate limits.
+When using the LIMIT clause to query additional records, you may encounter Slack API rate limits.
 
 ## Next Steps
 

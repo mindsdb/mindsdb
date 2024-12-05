@@ -80,10 +80,20 @@ class SqlalchemyRender:
 
         for i in parts:
             if isinstance(i, ast.Star):
-                p = '*'
+                part = '*'
             else:
-                p = str(sa.column(i).compile(dialect=self.dialect))
-            parts2.append(p)
+                part = str(sa.column(i).compile(dialect=self.dialect))
+
+                if not i.islower():
+                    # if lower value is not be quoted
+                    #   then it is quoted only because of mixed case
+                    #   in that case use origin string
+
+                    part_lower = str(sa.column(i.lower()).compile(dialect=self.dialect))
+                    if part.lower() != part_lower:
+                        part = i
+
+            parts2.append(part)
 
         return sa.column('.'.join(parts2), is_literal=True)
 
@@ -153,7 +163,6 @@ class SqlalchemyRender:
             methods = {
                 "+": "__add__",
                 "-": "__sub__",
-                "/": "__truediv__",
                 "*": "__mul__",
                 "%": "__mod__",
                 "=": "__eq__",
@@ -185,7 +194,10 @@ class SqlalchemyRender:
                     raise NotImplementedError(f'Required list argument for: {op}')
 
             method = methods.get(op)
-            if method is not None:
+            if op == '/':
+                # sqlalchemy adds cast for __truediv__ and round for __floordiv__
+                col = sa.text(f'{arg0.compile(dialect=self.dialect)} / {arg1.compile(dialect=self.dialect)}')
+            elif method is not None:
                 sa_op = getattr(arg0, method)
 
                 col = sa_op(arg1)
@@ -303,7 +315,10 @@ class SqlalchemyRender:
         if t.arg is not None:
             value = self.to_expression(t.arg)
 
-        return sa.case(*conditions, else_=default, value=value)
+        col = sa.case(*conditions, else_=default, value=value)
+        if t.alias:
+            col = col.label(self.get_alias(t.alias))
+        return col
 
     def to_function(self, t):
         op = getattr(sa.func, t.op)

@@ -447,9 +447,9 @@ class IntegrationController:
         )
         handler_storage = HandlerStorage(integration_id, root_dir='tmp', is_temporal=True)
 
-        handler_meta = self.get_handler_meta(engine + '123')
+        handler_meta = self.get_handler_meta(engine)
         if handler_meta is None:
-            raise ImportError(f"Handler '{engine}' does not exists")
+            raise ImportError(f"Handler '{engine}' does not exist")
         if handler_meta["import"]["success"] is False:
             raise ImportError(f"Handler '{engine}' cannot be imported: {handler_meta['import']['error_message']}")
         HandlerClass = self.handler_modules[engine].Handler
@@ -531,7 +531,7 @@ class IntegrationController:
         integration_meta = self.get_handler_meta(integration_engine)
 
         if integration_meta is None:
-            raise Exception(f"Handler '{name}' does not exists")
+            raise Exception(f"Handler '{name}' does not exist")
 
         if integration_meta.get('type') != HANDLER_TYPE.DATA:
             raise Exception(f"Handler '{name}' must be DATA type")
@@ -795,8 +795,6 @@ class IntegrationController:
         handler_meta = self.get_handler_meta(handler_name)
         if handler_meta is None:
             return
-
-        # If the handler has been imported successfully, return the handler module.
         if handler_meta["import"]["success"]:
             return self.handler_modules[handler_name]
 

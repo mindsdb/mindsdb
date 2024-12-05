@@ -75,7 +75,6 @@ exclude =
   mindsdb/integrations/handlers/email_handler/*
   mindsdb/integrations/handlers/reddit_handler/*
   mindsdb/integrations/handlers/timegpt_handler/*
-  mindsdb/integrations/handlers/slack_handler/*
   mindsdb/integrations/handlers/quickbooks_handler/*
   mindsdb/integrations/handlers/strava_handler/*
   mindsdb/integrations/handlers/strava_handler/*

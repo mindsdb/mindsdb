@@ -61,7 +61,14 @@ class DatabasesResource(Resource):
             )
 
         if check_connection:
-            handler = session.integration_controller.create_tmp_handler(name, database['engine'], parameters)
+            try:
+                handler = session.integration_controller.create_tmp_handler(name, database['engine'], parameters)
+            except ImportError as imort_error:
+                return http_error(
+                    HTTPStatus.BAD_REQUEST, 'Error',
+                    f'Could not create database handler: {str(imort_error)}'
+                )
+
             status = handler.check_connection()
             if status.success is not True:
                 if hasattr(status, 'redirect_url') and isinstance(status, str):
@@ -157,9 +164,16 @@ class DatabaseResource(Resource):
         if check_connection:
             existing_integration = session.integration_controller.get(database_name)
             temp_name = f'{database_name}_{time.time()}'.replace('.', '')
-            handler = session.integration_controller.create_tmp_handler(
-                temp_name, existing_integration['engine'], parameters
+            try:
+                handler = session.integration_controller.create_tmp_handler(
+                    temp_name, existing_integration['engine'], parameters
+                )
+            except ImportError as imort_error:
+                return http_error(
+                HTTPStatus.BAD_REQUEST, 'Error',
+                f'Could not create database handler: {str(imort_error)}'
             )
+
             status = handler.check_connection()
             if status.success is not True:
                 return http_error(

@@ -337,10 +337,6 @@ class SlackMessagesTable(APIResource):
             except SlackApiError as slack_error:
                 logger.error(f"Error posting message to Slack channel '{params['channel_id']}': {slack_error.response['error']}")
                 raise
-            
-            # TODO: Is this necessary?
-            inserted_id = response['ts']
-            params['ts'] = inserted_id
 
     def update(self, query: Update):
         """

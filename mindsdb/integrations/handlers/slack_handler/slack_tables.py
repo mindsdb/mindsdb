@@ -25,6 +25,13 @@ class SlackConversationsTable(APIResource):
     ) -> pd.DataFrame:
         """
         Retrieves a list of Slack conversations based on the specified conditions.
+        If no channel ID(s) are provided, all channels are retrieved as follows:
+        - If the provided limit is greater than 1000, no limit to the API call is provided and the results are paginated until the limit is reached.
+        - Otherwise, the provided limit or a default limit of 1000 is used when making the API call.
+
+        Therefore, if a user is to retrieve more than 1000 channels, the limit should be set to a value greater than 1000.
+
+        The above is designed to prevent rate limiting by the Slack API.
 
         Args:
             conditions (List[FilterCondition]): The conditions to filter the conversations.
@@ -72,7 +79,7 @@ class SlackConversationsTable(APIResource):
     
     def get_channel(self, channel_id: Text) -> Dict:
         """
-        Get the channel data for the specified channel id.
+        Gets the channel data for the specified channel id.
 
         Args:
             channel_id (Text): The channel id.
@@ -92,7 +99,7 @@ class SlackConversationsTable(APIResource):
     
     def get_channels(self, channel_ids: List[Text]) -> List[Dict]:
         """
-        Get the channel data for multiple channel ids.
+        Gets the channel data for multiple channel ids.
         As it is unlikely that a large number of channels will be provided, the API rate limits are ignored here.
 
         Args:
@@ -110,9 +117,9 @@ class SlackConversationsTable(APIResource):
 
     def get_all_channels(self, limit: int = None) -> List[Dict]:
         """
-        Get the list of channels with a limit.
-        If the provided limit is greater than 1000, provide no limit to the API call and paginate the results until the limit is reached.
-        Otherwise, provide the limit or a default limit of 1000 to the API call.
+        Gets the list of channels with a limit.
+        If the provided limit is greater than 1000, no limit to the API call is provided and the results are paginated until the limit is reached.
+        Otherwise, the provided limit or a default limit of 1000 is used when making the API call.
 
         Args:
             limit (int): The limit of channels to return.
@@ -123,6 +130,7 @@ class SlackConversationsTable(APIResource):
         client = self.handler.connect()
 
         try:
+            # If the limit is greater than 1000, paginate the results until the limit is reached.
             if limit and limit > 1000:
                 response = client.conversations_list()
                 channels = response['channels']
@@ -135,6 +143,7 @@ class SlackConversationsTable(APIResource):
                         break
 
                 channels = channels[:limit]
+            # Otherwise, use the provided limit or a default limit of 1000.
             else:
                 response = client.conversations_list(limit=limit if limit else 1000)
                 channels = response['channels']
@@ -183,6 +192,17 @@ class SlackMessagesTable(APIResource):
         """
         Retrieves a list of messages from Slack conversations based on the specified conditions.
 
+        `channel_id` is a required parameter to retrieve messages from a conversation.
+
+        Messages are retrieved as follows for a given conversation:
+        - If the provided limit is greater than 999, no limit to the API call is provided and the results are paginated until the limit is reached.
+        - Otherwise, the provided limit or a default limit of 999 is used when making the API call.
+
+        Therefore, if a user is to retrieve more than 999 messages, the limit should be set to a value greater than 999.
+        The above is dependent on the other parameters provided in the conditions.
+
+        The above is designed to prevent rate limiting by the Slack API.
+
         Args:
             conditions (List[FilterCondition]): The conditions to filter the messages.
             limit (int): The limit of the messages to return.
@@ -225,16 +245,34 @@ class SlackMessagesTable(APIResource):
                     continue
                 condition.applied = True
 
-        if limit:
-            params['limit'] = limit
-
         if 'channel' not in params:
             raise Exception("To retrieve data from Slack, you need to provide the 'channel_id' parameter.")
 
-        # TODO: Add support for pagination.
-        result = client.conversations_history(**params)
+        # Retrieve the messages from the Slack API.
+        try:
+            # If the limit is greater than 999, paginate the results until the limit is reached.
+            if limit and limit > 999:
+                response = client.conversations_history(**params)
+                messages = response['messages']
 
-        result = pd.DataFrame(result['messages'], columns=self.get_columns())
+                # Paginate the results until the limit is reached.
+                while response['response_metadata']['next_cursor']:
+                    response = client.conversations_history(cursor=response['response_metadata']['next_cursor'])
+                    messages.extend(response['messages'])
+                    if len(messages) >= limit:
+                        break
+
+                    messages = messages[:limit]
+            # Otherwise, use the provided limit or a default limit of 999.
+                else:
+                    params['limit'] = limit if limit else 999
+                    response = client.conversations_history(**params)
+                    messages = response['messages']
+        except SlackApiError as slack_error:
+            logger.error(f"Error getting messages: {slack_error.response['error']}")
+            raise
+
+        result = pd.DataFrame(messages, columns=self.get_columns())
 
         result = result[result['text'].notnull()]
 
@@ -416,6 +454,16 @@ class SlackThreadsTable(APIResource):
         """
         Retrieves a list of messages in a thread based on the specified conditions.
 
+        `channel_id` and `thread_ts` are required parameters to retrieve messages from a thread.
+
+        Messages are retrieved as follows for a given thread:
+        - If the provided limit is greater than 1000, no limit to the API call is provided and the results are paginated until the limit is reached.
+        - Otherwise, the provided limit or a default limit of 1000 is used when making the API call.
+
+        Therefore, if a user is to retrieve more than 1000 messages, the limit should be set to a value greater than 1000.
+
+        The above is designed to prevent rate limiting by the Slack API.
+
         Args:
             conditions (List[FilterCondition]): The conditions to filter the messages.
             limit (int): The limit of the messages to return.
@@ -453,23 +501,38 @@ class SlackThreadsTable(APIResource):
 
                 params['ts'] = value
 
-        if limit:
-            params['limit'] = limit
-
         if 'channel' not in params:
             raise Exception("To retrieve data from Slack, you need to provide the 'channel_id' parameter.")
 
-        # Retrieve the replies in the thread.
-        # TODO: Add support for pagination.
-        result = client.conversations_replies(**params)
+        # Retrieve the messages from the Slack API.
+        try:
+            # If the limit is greater than 1000, paginate the results until the limit is reached.
+            if limit and limit > 1000:
+                response = client.conversations_replies(**params)
+                messages = response['messages']
 
-        # Convert the result to a DataFrame.
-        result = pd.DataFrame(result['messages'], columns=self.get_columns())
+                # Paginate the results until the limit is reached.
+                while response['response_metadata']['next_cursor']:
+                    response = client.conversations_replies(cursor=response['response_metadata']['next_cursor'])
+                    messages.extend(response['messages'])
+                    if len(messages) >= limit:
+                        break
 
-        # Remove null rows from the result.
+                    messages = messages[:limit]
+            # Otherwise, use the provided limit or a default limit of 1000.
+                else:
+                    params['limit'] = limit if limit else 1000
+                    response = client.conversations_replies(**params)
+                    messages = response['messages']
+        except SlackApiError as slack_error:
+            logger.error(f"Error getting messages: {slack_error.response['error']}")
+            raise
+
+        result = pd.DataFrame(messages, columns=self.get_columns())
+
         result = result[result['text'].notnull()]
 
-        # Add the selected channel to the DataFrame.
+        # Add the channel ID and name to the result.
         result['channel_id'] = params['channel']
         result['channel_name'] = channel['name'] if 'name' in channel else None
 
@@ -543,6 +606,13 @@ class SlackUsersTable(APIResource):
     ) -> pd.DataFrame:
         """
         Retrieves a list of users based on the specified conditions.
+        Users are retrieved as follows:
+        - If the provided limit is greater than 1000, no limit to the API call is provided and the results are paginated until the limit is reached.
+        - Otherwise, the provided limit or a default limit of 1000 is used when making the API call.
+
+        Therefore, if a user is to retrieve more than 1000 users, the limit should be set to a value greater than 1000.
+
+        The above is designed to prevent rate limiting by the Slack API.
 
         Args:
             conditions (List[FilterCondition]): The conditions to filter the users.
@@ -551,8 +621,28 @@ class SlackUsersTable(APIResource):
         """
         client = self.handler.connect()
 
-        # TODO: Add support for pagination.
-        users = client.users_list(limit=limit).data['members']
+        # Retrieve the users from the Slack API.
+        try:
+            # If the limit is greater than 1000, paginate the results until the limit is reached.
+            if limit and limit > 1000:
+                response = client.users_list()
+                users = response['members']
+
+                # Paginate the results until the limit is reached.
+                while response['response_metadata']['next_cursor']:
+                    response = client.users_list(cursor=response['response_metadata']['next_cursor'])
+                    users.extend(response['members'])
+                    if len(users) >= limit:
+                        break
+
+                    users = users[:limit]
+            # Otherwise, use the provided limit or a default limit of 1000.
+                else:
+                    response = client.users_list(limit=limit if limit else 1000)
+                    users = response['members']
+        except SlackApiError as slack_error:
+            logger.error(f"Error getting users: {slack_error.response['error']}")
+            raise
 
         return pd.DataFrame(users, columns=self.get_columns())
 

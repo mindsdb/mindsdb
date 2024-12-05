@@ -38,6 +38,12 @@ class SlackConversationsTable(APIResource):
             limit (int): The limit of the conversations to return.
             kwargs(Any): Arbitrary keyword arguments.
 
+        Raises:
+            ValueError: 
+                - If an unsupported operator is used for the column 'id'.
+                - If the channel ID(s) provided are not found.
+            SlackApiError: If an error occurs when getting the channels from the Slack API.
+
         Returns:
             pd.DataFrame: The list of conversations.
         """
@@ -84,6 +90,9 @@ class SlackConversationsTable(APIResource):
         Args:
             channel_id (Text): The channel id.
 
+        Raises:
+            ValueError: If the channel ID is not found.
+
         Returns:
             Dict: The channel data.
         """
@@ -105,6 +114,9 @@ class SlackConversationsTable(APIResource):
         Args:
             channel_ids (List[Text]): The list of channel ids.
 
+        Raises:
+            ValueError: If a channel ID is not found.
+
         Returns:
             List[Dict]: The list of channel data.
         """
@@ -123,6 +135,9 @@ class SlackConversationsTable(APIResource):
 
         Args:
             limit (int): The limit of channels to return.
+
+        Raises:
+            SlackApiError: If an error occurs when getting the channels from the Slack API.
 
         Returns:
             List[Dict]: The list of channels.
@@ -208,6 +223,13 @@ class SlackMessagesTable(APIResource):
             limit (int): The limit of the messages to return.
             kwargs (Any): Arbitrary keyword arguments.
 
+        Raises:
+            ValueError: 
+                - If the 'channel_id' parameter is not provided.
+                - If an unsupported operator is used for the column 'channel_id'.
+                - If the channel ID provided is not found.
+            SlackApiError: If an error occurs when getting the messages from the Slack API.
+
         Returns:
             pd.DataFrame: The list of messages.
         """
@@ -246,7 +268,7 @@ class SlackMessagesTable(APIResource):
                 condition.applied = True
 
         if 'channel' not in params:
-            raise Exception("To retrieve data from Slack, you need to provide the 'channel_id' parameter.")
+            raise ValueError("To retrieve data from Slack, you need to provide the 'channel_id' parameter.")
 
         # Retrieve the messages from the Slack API.
         try:
@@ -291,6 +313,10 @@ class SlackMessagesTable(APIResource):
 
         Args:
             query (Insert): An ASTNode object representing the SQL query to be executed.
+
+        Raises:
+            ValueError: If the 'channel_id' or 'text' parameters are not provided.
+            SlackApiError: If an error occurs when posting the message to the Slack channel.
         """
         client = self.handler.connect()
     
@@ -310,7 +336,7 @@ class SlackMessagesTable(APIResource):
                 )
             except SlackApiError as slack_error:
                 logger.error(f"Error posting message to Slack channel '{params['channel_id']}': {slack_error.response['error']}")
-                raise Exception(f"Error posting message to Slack channel '{params['channel_id']}': {slack_error.response['error']}")
+                raise
             
             # TODO: Is this necessary?
             inserted_id = response['ts']
@@ -322,6 +348,14 @@ class SlackMessagesTable(APIResource):
 
         Args:
             query (Update): An ASTNode object representing the SQL query to be executed.
+
+        Raises:
+            ValueError: 
+                - If the 'channel_id', 'ts', or 'text' parameters are not provided.
+                - If an unsupported operator is used for the columns.
+                - If an unsupported column is used.
+                - If the channel ID provided is not found.
+            SlackApiError: If an error occurs when updating the message in the Slack channel.
         """
         client = self.handler.connect()
 
@@ -352,7 +386,7 @@ class SlackMessagesTable(APIResource):
 
         # Check if required parameters are provided.
         if 'channel' not in params or 'ts' not in params or 'text' not in params:
-            raise Exception("To update a message in Slack, you need to provide the 'channel', 'ts', and 'text' parameters.")
+            raise ValueError("To update a message in Slack, you need to provide the 'channel', 'ts', and 'text' parameters.")
 
         try:
             client.chat_update(
@@ -362,7 +396,7 @@ class SlackMessagesTable(APIResource):
             )
         except SlackApiError as slack_error:
             logger.error(f"Error updating message in Slack channel '{params['channel']}' with timestamp '{params['ts']}': {slack_error.response['error']}")
-            raise Exception(f"Error updating message in Slack channel '{params['channel']}' with timestamp '{params['ts']}': {slack_error.response['error']}")
+            raise
 
     def delete(self, query: Delete):
         """
@@ -370,6 +404,14 @@ class SlackMessagesTable(APIResource):
 
         Args:
             query (Delete): An ASTNode object representing the SQL query to be executed.
+
+        Raises:
+            ValueError:
+                - If the 'channel_id' or 'ts' parameters are not provided.
+                - If an unsupported operator is used for the columns.
+                - If an unsupported column is used.
+                - If the channel ID provided is not found.
+            SlackApiError: If an error occurs when deleting the message from the Slack channel.
         """
         client = self.handler.connect()
 
@@ -400,7 +442,7 @@ class SlackMessagesTable(APIResource):
 
         # Check if required parameters are provided.
         if 'channel' not in params or 'ts' not in params:
-            raise Exception("To delete a message from Slack, you need to provide the 'channel' and 'ts' parameters.")
+            raise ValueError("To delete a message from Slack, you need to provide the 'channel' and 'ts' parameters.")
 
         try:
             client.chat_delete(
@@ -410,8 +452,8 @@ class SlackMessagesTable(APIResource):
             
         except SlackApiError as slack_error:
             logger.error(f"Error deleting message in Slack channel '{params['channel']}' with timestamp '{params['ts']}': {slack_error.response['error']}")
-            raise Exception(f"Error deleting message in Slack channel '{params['channel']}' with timestamp '{params['ts']}': {slack_error.response['error']}")
-        
+            raise 
+
     def get_columns(self) -> List[Text]:
         """
         Retrieves the attributes (columns) of the Slack messages.
@@ -469,6 +511,14 @@ class SlackThreadsTable(APIResource):
             limit (int): The limit of the messages to return.
             kwargs (Any): Arbitrary keyword arguments.
 
+        Raises:
+            ValueError:
+                - If the 'channel_id' or 'thread_ts' parameters are not provided.
+                - If an unsupported operator is used for the columns.
+                - If an unsupported column is used.
+                - If the channel ID provided is not found.
+            SlackApiError: If an error occurs when getting the messages from the Slack API.
+
         Returns:
             pd.DataFrame: The messages in the thread.
         """
@@ -501,8 +551,8 @@ class SlackThreadsTable(APIResource):
 
                 params['ts'] = value
 
-        if 'channel' not in params:
-            raise Exception("To retrieve data from Slack, you need to provide the 'channel_id' parameter.")
+        if 'channel' not in params or 'ts' not in params:
+            raise ValueError("To retrieve data from Slack, you need to provide the 'channel_id' and 'thread_ts' parameters.")
 
         # Retrieve the messages from the Slack API.
         try:
@@ -567,7 +617,7 @@ class SlackThreadsTable(APIResource):
                 )
             except SlackApiError as slack_error:
                 logger.error(f"Error posting message to Slack channel '{params['channel_id']}': {slack_error.response['error']}")
-                raise Exception(f"Error posting message to Slack channel '{params['channel_id']}': {slack_error.response['error']}")
+                raise
 
     def get_columns(self) -> List[Text]:
         """
@@ -618,6 +668,9 @@ class SlackUsersTable(APIResource):
             conditions (List[FilterCondition]): The conditions to filter the users.
             limit (int): The limit of the users to return.
             kwargs (Any): Arbitrary keyword arguments.
+
+        Raises:
+            SlackApiError: If an error occurs when getting the users from the Slack API.
         """
         client = self.handler.connect()
 

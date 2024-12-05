@@ -37,16 +37,9 @@ class FileSplitterConfig:
     # How many characters each chunk should overlap. Not all splitters will adhere exactly to this (it's more of a guideline)
     chunk_overlap: int = DEFAULT_CHUNK_OVERLAP
     # Chunking parameters are passed as a TextChunkingConfig
-    text_chunking_config: TextChunkingConfig = TextChunkingConfig(
-        chunk_size=DEFAULT_CHUNK_SIZE, chunk_overlap=DEFAULT_CHUNK_OVERLAP
-    )
+    text_chunking_config: TextChunkingConfig = None
     # Default recursive splitter to use for text files, or unsupported files
-    recursive_splitter: RecursiveCharacterTextSplitter = RecursiveCharacterTextSplitter(
-        chunk_size=text_chunking_config.chunk_size,
-        chunk_overlap=text_chunking_config.chunk_overlap,
-        length_function=text_chunking_config.length_function,
-        separators=text_chunking_config.separators,
-    )
+    recursive_splitter: RecursiveCharacterTextSplitter = None
     # Splitter to use for MD splitting
     markdown_splitter: MarkdownHeaderTextSplitter = MarkdownHeaderTextSplitter(
         headers_to_split_on=DEFAULT_MARKDOWN_HEADERS_TO_SPLIT_ON
@@ -55,6 +48,20 @@ class FileSplitterConfig:
     html_splitter: HTMLHeaderTextSplitter = HTMLHeaderTextSplitter(
         headers_to_split_on=DEFAULT_HTML_HEADERS_TO_SPLIT_ON
     )
+
+    def __post_init__(self):
+        if self.text_chunking_config is None:
+            self.text_chunking_config = TextChunkingConfig(
+                chunk_size=self.chunk_size, chunk_overlap=self.chunk_overlap
+            )
+
+        if self.recursive_splitter is None:
+            self.recursive_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=self.text_chunking_config.chunk_size,
+                chunk_overlap=self.text_chunking_config.chunk_overlap,
+                length_function=self.text_chunking_config.length_function,
+                separators=self.text_chunking_config.separators,
+            )
 
 
 class FileSplitter:

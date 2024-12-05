@@ -7,8 +7,11 @@ from mindsdb.integrations.utilities.rag.splitters.file_splitter import (
     FileSplitter,
     FileSplitterConfig,
 )
-from langchain_openai.llms.base import OpenAI
+
 from mindsdb.interfaces.agents.langchain_agent import create_chat_model
+
+# def create_chat_model(): pass # for unit testing
+
 from mindsdb.interfaces.knowledge_base.preprocessing.models import (
     PreprocessingConfig,
     ProcessedChunk,
@@ -147,7 +150,6 @@ Please give a short succinct context to situate this chunk within the overall do
                 chunk_size=config.chunk_size, chunk_overlap=config.chunk_overlap
             )
         )
-        OpenAI()
         self.llm = create_chat_model(
             {
                 "model_name": self.config.llm_config.model_name,
@@ -158,21 +160,28 @@ Please give a short succinct context to situate this chunk within the overall do
         self.context_template = config.context_template or self.DEFAULT_CONTEXT_TEMPLATE
         self.summarize = self.config.summarize
 
-    def _generate_context(
+    def _prepare_prompts(
         self, chunk_contents: list[str], full_documents: list[str]
     ) -> list[str]:
-        """Generate contextual description for a chunk using LLM"""
         prompts = [
             self.context_template.replace("{{WHOLE_DOCUMENT}}", full_document)
             for full_document in full_documents
         ]
         prompts = [
-            prompts.replace("{{CHUNK_CONTENT}}", chunk_content)
-            for chunk_content in chunk_contents
+            prompt.replace("{{CHUNK_CONTENT}}", chunk_content)
+            for prompt, chunk_content in zip(prompts, chunk_contents)
         ]
 
-        response = self.llm.abatch(prompts)
-        return response.content
+        return prompts
+
+    def _generate_context(
+        self, chunk_contents: list[str], full_documents: list[str]
+    ) -> list[str]:
+        """Generate contextual description for a chunk using LLM"""
+        prompts = self._prepare_prompts(chunk_contents, full_documents)
+
+        response = [resp.content for resp in self.llm.abatch(prompts)]
+        return response
 
     def _split_document(self, doc: Document) -> List[Document]:
         """Split document into chunks while preserving metadata"""
@@ -232,6 +241,7 @@ Please give a short succinct context to situate this chunk within the overall do
             processed_content = (
                 context if self.summarize else f"{context}\n\n{chunk_doc.content}"
             )
+            doc = documents[doc_index]
 
             # Initialize metadata
             metadata = {}
@@ -240,9 +250,7 @@ Please give a short succinct context to situate this chunk within the overall do
 
             # Pass through doc.id and content_column
             content_column = (
-                documents[doc_index].metadata.get("content_column")
-                if doc.metadata
-                else None
+                doc.metadata.get("content_column") if doc.metadata else None
             )
             chunk_id = self._generate_chunk_id(
                 processed_content,

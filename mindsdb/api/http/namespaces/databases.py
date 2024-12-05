@@ -170,9 +170,9 @@ class DatabaseResource(Resource):
                 )
             except ImportError as imort_error:
                 return http_error(
-                HTTPStatus.BAD_REQUEST, 'Error',
-                f'Could not create database handler: {str(imort_error)}'
-            )
+                    HTTPStatus.BAD_REQUEST, 'Error',
+                    f'Could not create database handler: {str(imort_error)}'
+                )
 
             status = handler.check_connection()
             if status.success is not True:

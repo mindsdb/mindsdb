@@ -33,9 +33,15 @@ class INTERVAL(ColumnElement):
 @compiles(INTERVAL)
 def _compile_interval(element, compiler, **kw):
     items = element.info.split(' ', maxsplit=1)
-    # quote first element
-    items[0] = f"'{items[0]}'"
-    return "INTERVAL " + " ".join(items)
+    if compiler.dialect.driver in ['snowflake']:
+        # quote all
+        args = " ".join(map(str, items))
+        args = f"'{args}'"
+    else:
+        # quote first element
+        items[0] = f"'{items[0]}'"
+        args = " ".join(items)
+    return "INTERVAL " + args
 
 
 class SqlalchemyRender:

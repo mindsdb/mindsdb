@@ -1,12 +1,9 @@
 from collections import OrderedDict
-import datetime as dt
-import threading
 import unittest
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
 from slack_sdk.errors import SlackApiError
-from slack_sdk.socket_mode.request import SocketModeRequest
 from slack_sdk.web.slack_response import SlackResponse
 
 from base_handler_test import BaseAPIChatHandlerTest
@@ -39,7 +36,7 @@ class TestSlackHandler(BaseAPIChatHandlerTest, unittest.TestCase):
 
     def create_patcher(self):
         return patch('mindsdb.integrations.handlers.slack_handler.slack_handler.WebClient')
-    
+
     @patch('mindsdb.integrations.handlers.slack_handler.slack_handler.SocketModeClient')
     def test_check_connection_success(self, mock_socket_mode_client):
         """
@@ -51,7 +48,7 @@ class TestSlackHandler(BaseAPIChatHandlerTest, unittest.TestCase):
         assert isinstance(response, StatusResponse)
         self.assertTrue(response.success)
         self.assertFalse(response.error_message)
-    
+
     def test_get_my_user_name(self):
         """
         Tests the `get_my_user_name` method to ensure it correctly returns a username.
@@ -138,7 +135,7 @@ class TestSlackHandler(BaseAPIChatHandlerTest, unittest.TestCase):
             status_code=200,
             data=mock_response_page_1
         )
-    
+
         mock_response_page_2 = {
             "ok": True,
             "channels": [
@@ -165,19 +162,19 @@ class TestSlackHandler(BaseAPIChatHandlerTest, unittest.TestCase):
             status_code=200,
             data=mock_response_page_2
         )
-    
+
         self.mock_connect.return_value.conversations_list.side_effect = [
             slack_response_page_1,
             slack_response_page_2
         ]
-    
+
         query = "conversations_list()"
         response = self.handler.native_query(query)
-    
+
         self.assertEqual(self.mock_connect.return_value.conversations_list.call_count, 2)
         self.mock_connect.return_value.conversations_list.assert_any_call()
         self.mock_connect.return_value.conversations_list.assert_any_call(cursor="dGVhbTpDMDYxRkE1UEI=")
-    
+
         assert isinstance(response, Response)
         expected_df = pd.DataFrame(mock_response_page_1['channels'] + mock_response_page_2['channels'])
         pd.testing.assert_frame_equal(response.data_frame, expected_df)

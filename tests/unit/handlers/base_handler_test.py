@@ -245,24 +245,27 @@ class BaseAPIChatHandlerTest(BaseAPIHandlerTest):
         """
         Tests if the `get_chat_config` method returns a chat configuration in the form of a dictionary.
         The dictionary should contain the keys `polling` and optionally, either `chat_table` or `tables`.
+        If either `chat_table` or `tables` is present, they should contain the keys `name`, `chat_id_col`, `username_col`, `text_col`, and `time_col`.
         """
         response = self.handler.get_chat_config()
 
         assert isinstance(response, dict)
         assert 'polling' in response and isinstance(response['polling'], dict) and 'type' in response['polling'] and response['polling']['type'] in ['realtime', 'message_count', 'webhook']
 
+        required_keys = ['name', 'chat_id_col', 'username_col', 'text_col', 'time_col']
         if 'chat_table' in response:
             assert isinstance(response['chat_table'], dict)
+            assert all(key in list(response['chat_table'].keys()) for key in required_keys)
 
         if 'tables' in response:
             assert isinstance(response['tables'], list)
             assert all(isinstance(table, dict) for table in response['tables'])
-            required_keys = ['name', 'chat_id_col', 'username_col', 'text_col', 'time_col']
             assert all(all(key in list(table['chat_table'].keys()) for key in required_keys) for table in response['tables'])
 
     @abstractmethod
     def test_get_my_user_name(self):
         """
         Tests if the `get_my_user_name` method returns the name of the user.
+        This should be overridden in subclasses to provide the specific test.
         """
         pass

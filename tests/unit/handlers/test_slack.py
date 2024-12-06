@@ -2,11 +2,16 @@ from collections import OrderedDict
 import unittest
 from unittest.mock import MagicMock, patch
 
+import pandas as pd
 from slack_sdk.errors import SlackApiError
+from slack_sdk.web.slack_response import SlackResponse
 
 from base_handler_test import BaseAPIChatHandlerTest
 from mindsdb.integrations.handlers.slack_handler.slack_handler import SlackHandler
-from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
+from mindsdb.integrations.libs.response import (
+    HandlerStatusResponse as StatusResponse,
+    HandlerResponse as Response
+)
 
 
 class TestSlackHandler(BaseAPIChatHandlerTest, unittest.TestCase):
@@ -60,6 +65,119 @@ class TestSlackHandler(BaseAPIChatHandlerTest, unittest.TestCase):
 
         response = self.handler.get_my_user_name()
         assert response == "BZYBOTHED"
+
+    def test_native_query(self):
+        """
+        Tests the `native_query` method to ensure it executes a Slack API method and returns a Response object.
+        """
+        mock_response = {
+            "ok": True,
+            "channel": {
+                "id": "C012AB3CD",
+                "name": "general",
+                "is_channel": True,
+                "is_group": False,
+                "is_im": False,
+                "is_mpim": False,
+                "is_private": False,
+            }
+        }
+        slack_response = SlackResponse(
+            client=MagicMock(),
+            http_verb="GET",
+            api_url="https://slack.com/api/conversations.info",
+            req_args=MagicMock(),
+            headers=MagicMock(),
+            status_code=200,
+            data=mock_response
+        )
+        self.mock_connect.return_value.conversations_info.return_value = slack_response
+
+        query = "conversations_info(channel='C1234567890')"
+        response = self.handler.native_query(query)
+
+        self.mock_connect.return_value.conversations_info.assert_called_once_with(channel='C1234567890')
+        assert isinstance(response, Response)
+        pd.testing.assert_frame_equal(
+            response.data_frame,
+            pd.DataFrame(
+                [mock_response['channel']],
+            )
+        )
+
+    def test_native_query_with_pagination(self):
+        """
+        Tests the `native_query` method to ensure it executes a Slack API method with pagination and returns a Response object.
+        """
+        mock_response_page_1 = {
+            "ok": True,
+            "channels": [
+                {
+                    "id": "C012AB3CD",
+                    "name": "general",
+                    "is_channel": True,
+                    "is_group": False,
+                    "is_im": False,
+                    "is_mpim": False,
+                    "is_private": False,
+                }
+            ],
+            "response_metadata": {
+                "next_cursor": "dGVhbTpDMDYxRkE1UEI="
+            }
+        }
+        slack_response_page_1 = SlackResponse(
+            client=MagicMock(),
+            http_verb="GET",
+            api_url="https://slack.com/api/conversations.list",
+            req_args=MagicMock(),
+            headers=MagicMock(),
+            status_code=200,
+            data=mock_response_page_1
+        )
+    
+        mock_response_page_2 = {
+            "ok": True,
+            "channels": [
+                {
+                    "id": "C012AB3CE",
+                    "name": "random",
+                    "is_channel": True,
+                    "is_group": False,
+                    "is_im": False,
+                    "is_mpim": False,
+                    "is_private": False,
+                }
+            ],
+            "response_metadata": {
+                "next_cursor": ""
+            }
+        }
+        slack_response_page_2 = SlackResponse(
+            client=MagicMock(),
+            http_verb="GET",
+            api_url="https://slack.com/api/conversations.list",
+            req_args=MagicMock(),
+            headers=MagicMock(),
+            status_code=200,
+            data=mock_response_page_2
+        )
+    
+        self.mock_connect.return_value.conversations_list.side_effect = [
+            slack_response_page_1,
+            slack_response_page_2
+        ]
+    
+        query = "conversations_list()"
+        response = self.handler.native_query(query)
+    
+        self.assertEqual(self.mock_connect.return_value.conversations_list.call_count, 2)
+        self.mock_connect.return_value.conversations_list.assert_any_call()
+        self.mock_connect.return_value.conversations_list.assert_any_call(cursor="dGVhbTpDMDYxRkE1UEI=")
+    
+        assert isinstance(response, Response)
+        expected_df = pd.DataFrame(mock_response_page_1['channels'] + mock_response_page_2['channels'])
+        pd.testing.assert_frame_equal(response.data_frame, expected_df)
 
 
 if __name__ == '__main__':

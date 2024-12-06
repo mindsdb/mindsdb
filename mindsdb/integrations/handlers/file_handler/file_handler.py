@@ -151,13 +151,10 @@ class FileHandler(DatabaseHandler):
                 self.chunk_size,
                 self.chunk_overlap,
                 sheet_name=sheet_name
-                )
-
+            )
             # Process the SELECT query
             result_df = query_df(df, query)
             return Response(RESPONSE_TYPE.TABLE, data_frame=result_df)
-
-            
 
         elif type(query) is Insert:
             table_name = query.table.parts[-1]

@@ -132,9 +132,17 @@ class SnowflakeHandler(DatabaseHandler):
             try:
                 cur.execute(query)
                 try:
+
+                    try:
+                        batches_iter = cur.fetch_pandas_batches()
+                    except ValueError:
+                        # duplicated columns raises ValueError
+                        raise NotSupportedError()
+
                     batches = []
                     memory_estimation_check_done = False
-                    for batch_df in cur.fetch_pandas_batches():
+
+                    for batch_df in batches_iter:
                         batches.append(batch_df)
                         # region check the size of first batch (if it is big enough) to get an estimate of the full
                         # dataset size. If i does not fit in memory - raise an error.

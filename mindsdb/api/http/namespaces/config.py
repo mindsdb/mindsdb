@@ -19,6 +19,8 @@ from mindsdb.utilities import log
 from mindsdb.utilities.functions import decrypt, encrypt
 from mindsdb.utilities.log_controller import get_logs
 from mindsdb.utilities.config import Config
+from mindsdb.integrations.libs.response import HandlerStatusResponse
+
 
 logger = log.getLogger(__name__)
 
@@ -147,8 +149,11 @@ class Integration(Resource):
             del params['test']
             handler_type = params.pop('type', None)
             params.pop('publish', None)
-            handler = ca.integration_controller.create_tmp_handler(name, handler_type, params)
-            status = handler.check_connection()
+            try:
+                handler = ca.integration_controller.create_tmp_handler(name, handler_type, params)
+                status = handler.check_connection()
+            except ImportError as e:
+                status = HandlerStatusResponse(success=False, error_message=str(e))
             if temp_dir is not None:
                 shutil.rmtree(temp_dir)
 

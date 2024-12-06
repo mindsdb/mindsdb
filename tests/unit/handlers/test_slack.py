@@ -179,8 +179,7 @@ class TestSlackHandler(BaseAPIChatHandlerTest, unittest.TestCase):
         expected_df = pd.DataFrame(mock_response_page_1['channels'] + mock_response_page_2['channels'])
         pd.testing.assert_frame_equal(response.data_frame, expected_df)
 
-    @patch('mindsdb.integrations.handlers.slack_handler.slack_handler.SocketModeClient')
-    def test_subscribe(self, mock_socket_mode_client):
+    def test_subscribe(self):
         """
         Tests the `subscribe` method to ensure it processes Slack events correctly.
         """

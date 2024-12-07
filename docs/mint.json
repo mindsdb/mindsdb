@@ -1019,7 +1019,8 @@
             "integrations/vector-db-integrations/couchbase",
             "integrations/vector-db-integrations/pgvector",
             "integrations/vector-db-integrations/pinecone",
-            "integrations/vector-db-integrations/weaviate"
+            "integrations/vector-db-integrations/weaviate",
+            "integrations/vector-db-integrations/upstash"
           ]
         }
       ]

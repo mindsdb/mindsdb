@@ -11,6 +11,7 @@ class HANDLER_CONNECTION_ARG_TYPE:
     __slots__ = ()
     STR = 'str'
     INT = 'int'
+    FLOAT = 'float'
     BOOL = 'bool'
     URL = 'url'
     PATH = 'path'

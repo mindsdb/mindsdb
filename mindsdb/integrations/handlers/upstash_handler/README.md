@@ -10,7 +10,7 @@ Upstash Vector is a serverless vector database for managing vector embeddings, e
 
 This handler uses `upstash-vector` SDK which simplifies interaction with Upstash Vector through the [Upstash Vector API](https://upstash.com/docs/vector/api/get-started).
 
-Before using `upstash-vector`, you’ll need to set up a vector database on [Upstash](https://console.upstash.com/vector/12eb0ca4-37a8-414d-a03d-18cbbbf47084). Once created, grab your URL and TOKEN from the Upstash console.
+Before using `upstash-vector`, you’ll need to set up a vector database on [Upstash Console](https://console.upstash.com/vector/12eb0ca4-37a8-414d-a03d-18cbbbf47084). Once created, grab your URL and TOKEN from the Upstash console.
 
 * `url`: The UPSTASH_VECTOR_REST_URL that can be found in the Upstash Console.
 * `token`: The UPSTASH_VECTOR_REST_TOKEN that can be found in the Upstash Console.
@@ -22,7 +22,7 @@ These optional arguments are used with `CREATE` statements:
 
 ## Limitations
 
-- [ ] `DROP TABLE` support: You can only delete the index from the Upstash console. In this handler, the namespace is deleted, but the index is not.
+- [ ] `DROP TABLE` support: You can only delete the index from the Upstash console. In this handler, only the namespace is deleted, but the index is not.
 - [ ] Deleting vectors based on metadata or content is not supported since Upstash Vector does not support these features.
 - [ ] `OR` operator is not supported while filtering based on metadata.
 

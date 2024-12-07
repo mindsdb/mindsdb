@@ -309,3 +309,6 @@ class UpstashHandler(VectorStoreHandler):
 
         vectors_df = pd.DataFrame(vectors_data)
         return vectors_df
+
+    def get_columns(self, table_name: str) -> HandlerResponse:
+        return super().get_columns(table_name)

@@ -8,7 +8,7 @@ connection_args = OrderedDict(
         "type": ARG_TYPE.STR,
         "description": "The URL of the Upstash Vector REST API. (Accesable from the Upstash Console)",
         "required": True,
-        "secret": True
+        "secret": True,
     },
     token={
         "type": ARG_TYPE.STR,

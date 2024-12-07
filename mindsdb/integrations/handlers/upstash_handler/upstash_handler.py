@@ -150,14 +150,12 @@ class UpstashHandler(VectorStoreHandler):
             index.info()
         except Exception as e:
             logger.error(f"Error while creating table '{table_name}': {e}")
-            logger.info(
-                f"Use the Upstash Console to create an index if it doesn't exist."
-            )
+            logger.info("Use the Upstash Console to create an index if it doesn't exist.")
 
     # You can only delete an index in the Upstash Console
     def drop_table(self, table_name: str):
         """Clear all vectors and metadata from a particular namespace"""
-        logger.info(f"Use the Upstash Console to delete the your entire index.")
+        logger.info("Use the Upstash Console to delete the your entire index.")
         index = self._get_index_handle(
             self._client_config["url"], self._client_config["token"]
         )
@@ -205,7 +203,7 @@ class UpstashHandler(VectorStoreHandler):
 
         # Split the data into batches for upsert
         for batch_start in range(0, len(data), upsert_batch_size):
-            batch = data.iloc[batch_start : batch_start + upsert_batch_size]
+            batch = data.iloc[batch_start: batch_start + upsert_batch_size]
 
             # Convert the batch rows into Vector objects
             vectors = [

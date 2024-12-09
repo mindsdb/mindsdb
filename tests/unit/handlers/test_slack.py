@@ -226,7 +226,7 @@ class TestSlackConversationsTable(BaseAPIResourceTestSetup, unittest.TestCase):
 
     def create_resource(self):
         return SlackConversationsTable(self.handler)
-    
+
     def _get_expected_df_for_conv_info_1(self):
         """
         Returns the expected DataFrame for a single call to the `conversations_info` method.
@@ -236,7 +236,7 @@ class TestSlackConversationsTable(BaseAPIResourceTestSetup, unittest.TestCase):
         mock_response_conv_info['channel']['updated_at'] = dt.datetime.fromtimestamp(mock_response_conv_info['channel']['updated'] / 1000)
 
         return pd.DataFrame([mock_response_conv_info['channel']], columns=self.resource.get_columns())
-    
+
     def _get_expected_df_for_conv_info_2(self):
         """
         Returns the expected DataFrame for multiple(2) calls to the `conversations_info` method.
@@ -259,7 +259,7 @@ class TestSlackConversationsTable(BaseAPIResourceTestSetup, unittest.TestCase):
         mock_response_conv_list['channels'][0]['updated_at'] = dt.datetime.fromtimestamp(mock_response_conv_list['channels'][0]['updated'] / 1000)
 
         return pd.DataFrame([mock_response_conv_list['channels'][0]], columns=self.resource.get_columns())
-    
+
     def _get_expected_df_for_conv_list_2(self):
         """
         Returns the expected DataFrame for multiple(2) calls to the `conversations_list` method.

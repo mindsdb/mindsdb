@@ -13,9 +13,10 @@ from mindsdb.api.executor.controllers.session_controller import SessionControlle
 from mindsdb.api.executor.datahub.classes.tables_row import TablesRow
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.metrics.metrics import api_endpoint_metrics
-from mindsdb_sql import parse_sql, ParsingException
-from mindsdb_sql.parser.ast import CreateTable, DropTables
+from mindsdb_sql_parser import parse_sql, ParsingException
+from mindsdb_sql_parser.ast import CreateTable, DropTables
 from mindsdb.utilities.exception import EntityNotExistsError
+from mindsdb.integrations.libs.response import HandlerStatusResponse
 
 
 @ns_conf.route('/')
@@ -61,15 +62,19 @@ class DatabasesResource(Resource):
             )
 
         if check_connection:
-            handler = session.integration_controller.create_tmp_handler(name, database['engine'], parameters)
-            status = handler.check_connection()
-            if hasattr(status, 'redirect_url'):
-                return {
-                    "status": "redirect_required",
-                    "redirect_url": status.redirect_url,
-                    "detail": status.error_message
-                }, HTTPStatus.OK
+            try:
+                handler = session.integration_controller.create_tmp_handler(name, database['engine'], parameters)
+                status = handler.check_connection()
+            except ImportError as import_error:
+                status = HandlerStatusResponse(success=False, error_message=str(import_error))
+
             if status.success is not True:
+                if hasattr(status, 'redirect_url') and isinstance(status, str):
+                    return {
+                        "status": "redirect_required",
+                        "redirect_url": status.redirect_url,
+                        "detail": status.error_message
+                    }, HTTPStatus.OK
                 return {
                     "status": "connection_error",
                     "detail": status.error_message
@@ -157,10 +162,14 @@ class DatabaseResource(Resource):
         if check_connection:
             existing_integration = session.integration_controller.get(database_name)
             temp_name = f'{database_name}_{time.time()}'.replace('.', '')
-            handler = session.integration_controller.create_tmp_handler(
-                temp_name, existing_integration['engine'], parameters
-            )
-            status = handler.check_connection()
+            try:
+                handler = session.integration_controller.create_tmp_handler(
+                    temp_name, existing_integration['engine'], parameters
+                )
+                status = handler.check_connection()
+            except ImportError as import_error:
+                status = HandlerStatusResponse(success=False, error_message=str(import_error))
+
             if status.success is not True:
                 return http_error(
                     HTTPStatus.BAD_REQUEST, 'Connection error',
@@ -270,7 +279,7 @@ class TablesList(Resource):
                 )
 
         try:
-            select_ast = parse_sql(select_query, dialect='mindsdb')
+            select_ast = parse_sql(select_query)
         except ParsingException:
             return http_error(
                 HTTPStatus.BAD_REQUEST, 'Error',

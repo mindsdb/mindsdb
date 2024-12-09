@@ -136,7 +136,7 @@ def get_metadata(model_using: Dict) -> Dict:
 
 def get_skills(agent: db.Agents) -> List:
     """ Retrieve skills from agent `skills` attribute. Specific to agent endpoints. """
-    return [s.type for s in agent.skills]
+    return [rel.skill.type for rel in agent.skills_relationships]
 
 
 def get_tags(metadata: Dict) -> List:

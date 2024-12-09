@@ -24,7 +24,7 @@ class ChatBotController:
         self.project_controller = project_controller
         self.agents_controller = agents_controller
 
-    def get_chatbot(self, chatbot_name: str, project_name: str = 'mindsdb') -> db.ChatBots:
+    def get_chatbot(self, chatbot_name: str, project_name: str = 'mindsdb') -> dict:
         '''
         Gets a chatbot by name.
 
@@ -51,7 +51,7 @@ class ChatBotController:
 
         return self._get_chatbot(query, project)
 
-    def get_chatbot_by_id(self, chatbot_id: int) -> db.ChatBots:
+    def get_chatbot_by_id(self, chatbot_id: int) -> dict:
         '''
         Gets a chatbot by id.
 
@@ -74,7 +74,7 @@ class ChatBotController:
 
         return self._get_chatbot(query)
 
-    def _get_chatbot(self, query, project: db.Project = None) -> db.ChatBots:
+    def _get_chatbot(self, query, project: db.Project = None) -> dict:
         '''
         Gets a chatbot by query.
 
@@ -99,6 +99,7 @@ class ChatBotController:
 
         agent = self.agents_controller.get_agent_by_id(bot.agent_id)
         agent_obj = agent.as_dict() if agent is not None else None
+
         bot_obj = {
             'id': bot.id,
             'name': bot.name,
@@ -227,17 +228,19 @@ class ChatBotController:
             raise ValueError('Need to provide either "model_name" or "agent_name" when creating a chatbot')
         if agent_name is not None:
             agent = self.agents_controller.get_agent(agent_name, project_name)
+            model_name = agent.model_name
             if agent is None:
                 raise ValueError(f"Agent with name doesn't exist: {agent_name}")
+            agent_id = agent.id
         else:
             # Create a new agent with the given model name.
-            agent = self.agents_controller.add_agent(name, project_name, model_name, [])
+            agent_id = None
 
         bot = db.ChatBots(
             name=name,
             project_id=project.id,
-            agent_id=agent.id,
-            model_name=agent.model_name,
+            agent_id=agent_id,
+            model_name=model_name,
             database_id=database_id,
             params=params,
         )

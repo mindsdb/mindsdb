@@ -3,13 +3,13 @@ from contextlib import contextmanager
 
 import boto3
 import duckdb
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 import pandas as pd
 from typing import Text, Dict, Optional
 from botocore.exceptions import ClientError
 
-from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.parser.ast import Select, Identifier, Insert, Star, Constant
+from mindsdb_sql_parser.ast.base import ASTNode
+from mindsdb_sql_parser.ast import Select, Identifier, Insert, Star, Constant
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (

@@ -2,7 +2,7 @@
 import time
 
 import pandas as pd
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 
 from tests.unit.executor_test_base import BaseExecutorTest
 
@@ -25,7 +25,7 @@ class TestSentenceTransformers(BaseExecutorTest):
             raise RuntimeError("predictor wasn't created")
 
     def run_sql(self, sql):
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect="mindsdb"))
+        ret = self.command_executor.execute_command(parse_sql(sql))
         assert ret.error_code is None
         if ret.data is not None:
             return ret.data.to_df()

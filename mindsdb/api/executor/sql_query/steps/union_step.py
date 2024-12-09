@@ -1,6 +1,6 @@
 import hashlib
 
-from mindsdb_sql.planner.steps import UnionStep
+from mindsdb.api.executor.planner.steps import UnionStep
 
 from mindsdb.api.executor.sql_query.result_set import ResultSet
 from mindsdb.api.executor.exceptions import WrongArgumentError

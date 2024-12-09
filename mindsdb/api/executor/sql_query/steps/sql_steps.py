@@ -1,6 +1,6 @@
 import pandas as pd
 
-from mindsdb_sql.planner.steps import (
+from mindsdb.api.executor.planner.steps import (
     LimitOffsetStep,
     DataStep,
 )

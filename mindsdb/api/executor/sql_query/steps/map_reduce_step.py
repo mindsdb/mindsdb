@@ -1,12 +1,12 @@
 import os
 import copy
 
-from mindsdb_sql.parser.ast import (
+from mindsdb_sql_parser.ast import (
     BinaryOperation,
     UnaryOperation,
     Constant,
 )
-from mindsdb_sql.planner.steps import (
+from mindsdb.api.executor.planner.steps import (
     MapReduceStep,
     FetchDataframeStep,
     MultipleSteps,

@@ -25,11 +25,11 @@ connection_args = OrderedDict(
         'type': ARG_TYPE.STR,
         'description': 'The database name to use when connecting with the Altibase server.'
     },
-    jdbcClass = {
+    jdbc_class = {
         'type': ARG_TYPE.STR,
         'description': 'The driver class of the Altibase JDBC driver'
     },
-    jdbcJarLocation = {
+    jar_location = {
         'type': ARG_TYPE.PATH,
         'description': 'The location of the Altibase JDBC driver jar file'
     },
@@ -45,6 +45,6 @@ connection_args_example = OrderedDict(
     user = 'sys',
     password = 'manager',
     database = 'mydb',
-    jdbcClass='Altibase.jdbc.driver.AltibaseDriver',
-    jdbcJarLocation='/data/altibase_home/lib/Altibase.jar'
+    jdbc_class='Altibase.jdbc.driver.AltibaseDriver',
+    jar_location='/data/altibase_home/lib/Altibase.jar'
 )

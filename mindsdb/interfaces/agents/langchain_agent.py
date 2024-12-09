@@ -93,16 +93,42 @@ def get_llm_provider(args: Dict) -> str:
 
 
 def get_embedding_model_provider(args: Dict) -> str:
+    """Get the embedding model provider from args.
+
+    For VLLM, this will return 'openai' since VLLM uses the OpenAI embeddings interface.
+    """
     if "embedding_model_provider" in args:
-        return args["embedding_model_provider"]
+        provider = args["embedding_model_provider"]
+        # If using VLLM embeddings, ensure base_url is provided
+        if provider == 'vllm':
+            if not args.get('embedding_base_url'):
+                raise ValueError(
+                    "VLLM embeddings configuration error:\n"
+                    "- Missing required 'embedding_base_url'\n"
+                    "- Example: embedding_base_url='http://vllm_embeddings:8001/v1'"
+                )
+            logger.info("Using VLLM with OpenAI embeddings interface")
+            return 'openai'  # Use OpenAI interface for VLLM
+        return provider
+
     if "embedding_model_provider" not in args:
-        logger.warning(
-            "No embedding model provider specified. trying to use llm provider."
-        )
+        logger.warning("No embedding model provider specified. trying to use llm provider.")
         llm_provider = get_llm_provider(args)
-        # vLLM and mindsdb aren't embeddings providers, use default instead
-        if llm_provider in ('mindsdb', 'vllm'):
+        # vLLM requires explicit embedding_base_url
+        if llm_provider == 'vllm':
+            if not args.get('embedding_base_url'):
+                raise ValueError(
+                    "VLLM embeddings configuration error:\n"
+                    "- Missing required 'embedding_base_url'\n"
+                    "- When using VLLM as LLM provider, you must specify the embeddings endpoint\n"
+                    "- Example: embedding_base_url='http://vllm_embeddings:8001/v1'"
+                )
+            logger.info("Using VLLM with OpenAI embeddings interface")
+            return 'openai'  # Use OpenAI interface for VLLM
+        # mindsdb isn't an embeddings provider, use default instead
+        if llm_provider == 'mindsdb':
             llm_provider = DEFAULT_EMBEDDINGS_MODEL_PROVIDER
+            logger.info(f"MindsDB provider detected, using {DEFAULT_EMBEDDINGS_MODEL_PROVIDER} for embeddings")
         return args.get("embedding_model_provider", llm_provider)
     raise ValueError("Invalid model name. Please define provider")
 
@@ -122,24 +148,59 @@ def get_chat_model_params(args: Dict) -> Dict:
 
 
 def build_embedding_model(args) -> Embeddings:
-    """
-    Build an embeddings model from the given arguments.
+    """Build an embeddings model from the given arguments.
+
+    For VLLM embeddings, this will configure the OpenAI embeddings interface
+    to use the VLLM server's endpoint.
     """
     # Set up embeddings model if needed.
     embeddings_args = args.pop("embedding_model_args", {})
+
+    # Log the current embedding configuration attempt
+    logger.debug(f"Raw embedding configuration: {embeddings_args}")
 
     # no embedding model args provided, use default provider.
     if not embeddings_args:
         embeddings_provider = get_embedding_model_provider(args)
         logger.warning(
             "'embedding_model_args' not found in input params, "
-            f"Trying to use LLM provider: {embeddings_provider}"
+            f"Using embedding provider: {embeddings_provider}"
         )
         embeddings_args["class"] = embeddings_provider
-        # Include API keys if present.
-        embeddings_args.update({k: v for k, v in args.items() if "api_key" in k})
 
-    return construct_model_from_args(embeddings_args)
+        # For VLLM or OpenAI interface, configure embeddings
+        is_vllm = (embeddings_provider == 'openai' and args.get('provider') == 'vllm') or args.get('embedding_model_provider') == 'vllm'
+        if is_vllm:
+            # Get model name with clear fallback chain
+            model_name = args.get('embedding_model_name')
+            if not model_name:
+                model_name = args.get('model_name')
+                if model_name:
+                    logger.warning(f"No embedding_model_name specified, falling back to model_name: {model_name}")
+                else:
+                    model_name = 'text-embedding-ada-002'
+                    logger.warning(f"No embedding model specified, using default: {model_name}")
+
+            embeddings_args.update({
+                'base_url': args['embedding_base_url'],
+                'model': model_name,
+                'openai_api_key': 'dummy-key'  # OpenAI embeddings require an API key
+            })
+            logger.info(f"Configured VLLM embeddings via OpenAI interface at {args['embedding_base_url']} using model {model_name}")
+
+        # Include API keys if present.
+        api_keys = {k: v for k, v in args.items() if "api_key" in k}
+        if api_keys:
+            logger.debug(f"Including API keys: {list(api_keys.keys())}")
+        embeddings_args.update(api_keys)
+
+    try:
+        model = construct_model_from_args(embeddings_args)
+        logger.info(f"Successfully initialized embedding model: {type(model).__name__}")
+        return model
+    except Exception as e:
+        logger.error(f"Failed to initialize embedding model: {embeddings_args.get('class')} - {str(e)}")
+        raise
 
 
 def create_chat_model(args: Dict):

@@ -269,3 +269,24 @@ class BaseAPIChatHandlerTest(BaseAPIHandlerTest):
         This should be overridden in subclasses to provide the specific test.
         """
         pass
+
+
+class BaseAPIResourceTestSetup(BaseHandlerTestSetup):
+    """
+    The base class that provides setup and teardown methods for testing implementations of the `APIResource` class.
+    """
+
+    def setUp(self):
+        """
+        Sets up the test environment by creating an instance of the resource along with the patcher and handler from the parent class.
+        """
+        super().setUp()
+        self.resource = self.create_resource()
+
+    @abstractmethod
+    def create_resource(self):
+        """
+        Create and return an instance of the resource.
+        This method should be overridden in subclasses to provide the specific resource.
+        """
+        pass

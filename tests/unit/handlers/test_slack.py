@@ -18,6 +18,105 @@ from mindsdb.integrations.libs.response import (
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
 
 
+# Mock response for the first call to the `conversations.info` method.
+MOCK_RESPONSE_CONV_INFO_1 = {
+    "ok": True,
+    "channel": {
+        "id": "C012AB3CD",
+        "name": "general",
+        "is_channel": True,
+        "is_group": False,
+        "is_im": False,
+        "is_mpim": False,
+        "is_private": False,
+        "created": 1449252889,
+        "updated": 1678229664302,
+    }
+}
+
+# Mock SlackResponse object for the first call to the `conversations.info` method.
+MOCK_SLACK_RESPONSE_CONV_INFO_1 = SlackResponse(
+    client=MagicMock(),
+    http_verb="GET",
+    api_url="https://slack.com/api/conversations.info",
+    req_args=MagicMock(),
+    headers=MagicMock(),
+    status_code=200,
+    data=deepcopy(MOCK_RESPONSE_CONV_INFO_1)
+)
+
+# Mock response for the second call to the `conversations.info` method.
+MOCK_RESPONSE_CONV_INFO_2 = {
+    "ok": True,
+    "channel": {
+        "id": "C012AB3CE",
+        "name": "random",
+        "is_channel": True,
+        "is_group": False,
+        "is_im": False,
+        "is_mpim": False,
+        "is_private": False,
+        "created": 1449252889,
+        "updated": 1678229664302,
+    }
+}
+
+# Mock SlackResponse object for the second call to the `conversations.info` method.
+MOCK_SLACK_RESPONSE_CONV_INFO_2 = SlackResponse(
+    client=MagicMock(),
+    http_verb="GET",
+    api_url="https://slack.com/api/conversations.info",
+    req_args=MagicMock(),
+    headers=MagicMock(),
+    status_code=200,
+    data=deepcopy(MOCK_RESPONSE_CONV_INFO_2)
+)
+
+# Mock response for the first call to the `conversations.list` method.
+MOCK_RESPONSE_CONV_LIST_1 = {
+    "ok": True,
+    "channels": [
+        MOCK_RESPONSE_CONV_INFO_1['channel']
+    ],
+    "response_metadata": {
+        "next_cursor": "dGVhbTpDMDYxRkE1UEI="
+    }
+}
+
+# Mock SlackResponse object for the first call to the `conversations.list` method.
+MOCK_SLACK_RESPONSE_CONV_LIST_1 = SlackResponse(
+    client=MagicMock(),
+    http_verb="GET",
+    api_url="https://slack.com/api/conversations.list",
+    req_args=MagicMock(),
+    headers=MagicMock(),
+    status_code=200,
+    data=deepcopy(MOCK_RESPONSE_CONV_LIST_1)
+)
+
+# Mock response for the second call to the `conversations.list` method.
+MOCK_RESPONSE_CONV_LIST_2 = {
+    "ok": True,
+    "channels": [
+        MOCK_RESPONSE_CONV_INFO_2['channel']
+    ],
+    "response_metadata": {
+        "next_cursor": ""
+    }
+}
+
+# Mock SlackResponse object for the second call to the `conversations.list` method.
+MOCK_SLACK_RESPONSE_CONV_LIST_2 = SlackResponse(
+    client=MagicMock(),
+    http_verb="GET",
+    api_url="https://slack.com/api/conversations.list",
+    req_args=MagicMock(),
+    headers=MagicMock(),
+    status_code=200,
+    data=deepcopy(MOCK_RESPONSE_CONV_LIST_2)
+)
+
+
 class TestSlackHandler(BaseAPIChatHandlerTest, unittest.TestCase):
 
     @property
@@ -74,102 +173,23 @@ class TestSlackHandler(BaseAPIChatHandlerTest, unittest.TestCase):
         """
         Tests the `native_query` method to ensure it executes a Slack API method and returns a Response object.
         """
-        mock_response = {
-            "ok": True,
-            "channel": {
-                "id": "C012AB3CD",
-                "name": "general",
-                "is_channel": True,
-                "is_group": False,
-                "is_im": False,
-                "is_mpim": False,
-                "is_private": False,
-            }
-        }
-        slack_response = SlackResponse(
-            client=MagicMock(),
-            http_verb="GET",
-            api_url="https://slack.com/api/conversations.info",
-            req_args=MagicMock(),
-            headers=MagicMock(),
-            status_code=200,
-            data=mock_response
-        )
-        self.mock_connect.return_value.conversations_info.return_value = slack_response
+        self.mock_connect.return_value.conversations_info.return_value = deepcopy(MOCK_SLACK_RESPONSE_CONV_INFO_1)
 
         query = "conversations_info(channel='C1234567890')"
         response = self.handler.native_query(query)
 
         self.mock_connect.return_value.conversations_info.assert_called_once_with(channel='C1234567890')
         assert isinstance(response, Response)
-        pd.testing.assert_frame_equal(
-            response.data_frame,
-            pd.DataFrame(
-                [mock_response['channel']],
-            )
-        )
+        expected_df = pd.DataFrame([MOCK_RESPONSE_CONV_INFO_1['channel']])
+        pd.testing.assert_frame_equal(response.data_frame, expected_df)
 
     def test_native_query_with_pagination(self):
         """
         Tests the `native_query` method to ensure it executes a Slack API method with pagination and returns a Response object.
         """
-        mock_response_page_1 = {
-            "ok": True,
-            "channels": [
-                {
-                    "id": "C012AB3CD",
-                    "name": "general",
-                    "is_channel": True,
-                    "is_group": False,
-                    "is_im": False,
-                    "is_mpim": False,
-                    "is_private": False,
-                }
-            ],
-            "response_metadata": {
-                "next_cursor": "dGVhbTpDMDYxRkE1UEI="
-            }
-        }
-        slack_response_page_1 = SlackResponse(
-            client=MagicMock(),
-            http_verb="GET",
-            api_url="https://slack.com/api/conversations.list",
-            req_args=MagicMock(),
-            headers=MagicMock(),
-            status_code=200,
-            data=mock_response_page_1
-        )
-
-        mock_response_page_2 = {
-            "ok": True,
-            "channels": [
-                {
-                    "id": "C012AB3CE",
-                    "name": "random",
-                    "is_channel": True,
-                    "is_group": False,
-                    "is_im": False,
-                    "is_mpim": False,
-                    "is_private": False,
-                }
-            ],
-            "response_metadata": {
-                "next_cursor": ""
-            }
-        }
-        slack_response_page_2 = SlackResponse(
-            client=MagicMock(),
-            http_verb="GET",
-            api_url="https://slack.com/api/conversations.list",
-            req_args=MagicMock(),
-            headers=MagicMock(),
-            status_code=200,
-            data=mock_response_page_2
-        )
-
         self.mock_connect.return_value.conversations_list.side_effect = [
-            slack_response_page_1,
-            slack_response_page_2
+            deepcopy(MOCK_SLACK_RESPONSE_CONV_LIST_1),
+            deepcopy(MOCK_SLACK_RESPONSE_CONV_LIST_2)
         ]
 
         query = "conversations_list()"
@@ -180,7 +200,7 @@ class TestSlackHandler(BaseAPIChatHandlerTest, unittest.TestCase):
         self.mock_connect.return_value.conversations_list.assert_any_call(cursor="dGVhbTpDMDYxRkE1UEI=")
 
         assert isinstance(response, Response)
-        expected_df = pd.DataFrame(mock_response_page_1['channels'] + mock_response_page_2['channels'])
+        expected_df = pd.DataFrame(MOCK_RESPONSE_CONV_LIST_1['channels'] + MOCK_RESPONSE_CONV_LIST_2['channels'])
         pd.testing.assert_frame_equal(response.data_frame, expected_df)
 
     def test_subscribe(self):
@@ -206,36 +226,58 @@ class TestSlackConversationsTable(BaseAPIResourceTestSetup, unittest.TestCase):
 
     def create_resource(self):
         return SlackConversationsTable(self.handler)
+    
+    def _get_expected_df_for_conv_info_1(self):
+        """
+        Returns the expected DataFrame for a single call to the `conversations_info` method.
+        """
+        mock_response_conv_info = deepcopy(MOCK_RESPONSE_CONV_INFO_1)
+        mock_response_conv_info['channel']['created_at'] = dt.datetime.fromtimestamp(mock_response_conv_info['channel']['created'])
+        mock_response_conv_info['channel']['updated_at'] = dt.datetime.fromtimestamp(mock_response_conv_info['channel']['updated'] / 1000)
+
+        return pd.DataFrame([mock_response_conv_info['channel']], columns=self.resource.get_columns())
+    
+    def _get_expected_df_for_conv_info_2(self):
+        """
+        Returns the expected DataFrame for multiple(2) calls to the `conversations_info` method.
+        """
+        mock_response_conv_info = deepcopy(MOCK_RESPONSE_CONV_INFO_2)
+        mock_response_conv_info['channel']['created_at'] = dt.datetime.fromtimestamp(mock_response_conv_info['channel']['created'])
+        mock_response_conv_info['channel']['updated_at'] = dt.datetime.fromtimestamp(mock_response_conv_info['channel']['updated'] / 1000)
+
+        expected_df_conv_info_1 = self._get_expected_df_for_conv_info_1()
+        expected_df_conv_info_2 = pd.DataFrame([mock_response_conv_info['channel']], columns=self.resource.get_columns())
+
+        return pd.concat([expected_df_conv_info_1, expected_df_conv_info_2], ignore_index=True)
+
+    def _get_expected_df_for_conv_list_1(self):
+        """
+        Returns the expected DataFrame for a single call to the `conversations_list` method.
+        """
+        mock_response_conv_list = deepcopy(MOCK_RESPONSE_CONV_LIST_1)
+        mock_response_conv_list['channels'][0]['created_at'] = dt.datetime.fromtimestamp(mock_response_conv_list['channels'][0]['created'])
+        mock_response_conv_list['channels'][0]['updated_at'] = dt.datetime.fromtimestamp(mock_response_conv_list['channels'][0]['updated'] / 1000)
+
+        return pd.DataFrame([mock_response_conv_list['channels'][0]], columns=self.resource.get_columns())
+    
+    def _get_expected_df_for_conv_list_2(self):
+        """
+        Returns the expected DataFrame for multiple(2) calls to the `conversations_list` method.
+        """
+        mock_response_conv_list = deepcopy(MOCK_RESPONSE_CONV_LIST_2)
+        mock_response_conv_list['channels'][0]['created_at'] = dt.datetime.fromtimestamp(mock_response_conv_list['channels'][0]['created'])
+        mock_response_conv_list['channels'][0]['updated_at'] = dt.datetime.fromtimestamp(mock_response_conv_list['channels'][0]['updated'] / 1000)
+
+        expected_df_conv_list_1 = self._get_expected_df_for_conv_list_1()
+        expected_df_conv_list_2 = pd.DataFrame([mock_response_conv_list['channels'][0]], columns=self.resource.get_columns())
+
+        return pd.concat([expected_df_conv_list_1, expected_df_conv_list_2], ignore_index=True)
 
     def test_list_with_channel_id(self):
         """
         Tests the `list` method of the SlackConversationsTable class to ensure it correctly fetches the details of a specific conversation.
         """
-        mock_response = {
-            "ok": True,
-            "channel": {
-                "id": "C012AB3CD",
-                "name": "general",
-                "is_channel": True,
-                "is_group": False,
-                "is_im": False,
-                "is_mpim": False,
-                "is_private": False,
-                "created": 1449252889,
-                "updated": 1678229664302,
-            }
-        }
-        slack_response = SlackResponse(
-            client=MagicMock(),
-            http_verb="GET",
-            api_url="https://slack.com/api/conversations.info",
-            req_args=MagicMock(),
-            headers=MagicMock(),
-            status_code=200,
-            data=mock_response
-        )
-
-        self.mock_connect.return_value.conversations_info.return_value = slack_response
+        self.mock_connect.return_value.conversations_info.return_value = deepcopy(MOCK_SLACK_RESPONSE_CONV_INFO_1)
 
         response = self.resource.list(
             conditions=[
@@ -247,70 +289,20 @@ class TestSlackConversationsTable(BaseAPIResourceTestSetup, unittest.TestCase):
             ]
         )
 
+        self.assertEqual(self.mock_connect.return_value.conversations_info.call_count, 1)
+        self.mock_connect.return_value.conversations_info.assert_any_call(channel=MOCK_RESPONSE_CONV_INFO_1['channel']['id'])
+
         assert isinstance(response, pd.DataFrame)
-        mock_response['channel']['created_at'] = dt.datetime.fromtimestamp(mock_response['channel']['created'])
-        mock_response['channel']['updated_at'] = dt.datetime.fromtimestamp(mock_response['channel']['updated'] / 1000)
-        expected_df = pd.DataFrame([mock_response['channel']], columns=self.resource.get_columns())
-        pd.testing.assert_frame_equal(
-            response,
-            expected_df
-        )
+        expected_df = self._get_expected_df_for_conv_info_1()
+        pd.testing.assert_frame_equal(response, expected_df)
 
     def test_list_with_multiple_channel_ids(self):
         """
         Tests the `list` method of the SlackConversationsTable class to ensure it correctly fetches the details of multiple conversations.
         """
-        mock_response_page_1 = {
-            "ok": True,
-            "channel": {
-                "id": "C012AB3CD",
-                "name": "general",
-                "is_channel": True,
-                "is_group": False,
-                "is_im": False,
-                "is_mpim": False,
-                "is_private": False,
-                "created": 1449252889,
-                "updated": 1678229664302,
-            }
-        }
-        slack_response_page_1 = SlackResponse(
-            client=MagicMock(),
-            http_verb="GET",
-            api_url="https://slack.com/api/conversations.info",
-            req_args=MagicMock(),
-            headers=MagicMock(),
-            status_code=200,
-            data=mock_response_page_1
-        )
-
-        mock_response_page_2 = {
-            "ok": True,
-            "channel": {
-                "id": "C012AB3CE",
-                "name": "random",
-                "is_channel": True,
-                "is_group": False,
-                "is_im": False,
-                "is_mpim": False,
-                "is_private": False,
-                "created": 1449252889,
-                "updated": 1678229664302,
-            }
-        }
-        slack_response_page_2 = SlackResponse(
-            client=MagicMock(),
-            http_verb="GET",
-            api_url="https://slack.com/api/conversations.info",
-            req_args=MagicMock(),
-            headers=MagicMock(),
-            status_code=200,
-            data=mock_response_page_2
-        )
-
         self.mock_connect.return_value.conversations_info.side_effect = [
-            slack_response_page_1,
-            slack_response_page_2
+            deepcopy(MOCK_SLACK_RESPONSE_CONV_INFO_1),
+            deepcopy(MOCK_SLACK_RESPONSE_CONV_INFO_2)
         ]
 
         response = self.resource.list(
@@ -318,60 +310,24 @@ class TestSlackConversationsTable(BaseAPIResourceTestSetup, unittest.TestCase):
                 FilterCondition(
                     column='id',
                     op=FilterOperator.IN,
-                    value=['C012AB3CD', 'C012AB3CE']
+                    value=[MOCK_RESPONSE_CONV_INFO_1['channel']['id'], MOCK_RESPONSE_CONV_INFO_2['channel']['id']]
                 )
             ]
         )
 
         self.assertEqual(self.mock_connect.return_value.conversations_info.call_count, 2)
-        self.mock_connect.return_value.conversations_info.assert_any_call(channel='C012AB3CD')
-        self.mock_connect.return_value.conversations_info.assert_any_call(channel='C012AB3CE')
+        self.mock_connect.return_value.conversations_info.assert_any_call(channel=MOCK_RESPONSE_CONV_INFO_1['channel']['id'])
+        self.mock_connect.return_value.conversations_info.assert_any_call(channel=MOCK_RESPONSE_CONV_INFO_2['channel']['id'])
 
         assert isinstance(response, pd.DataFrame)
-        mock_response_page_1['channel']['created_at'] = dt.datetime.fromtimestamp(mock_response_page_1['channel']['created'])
-        mock_response_page_1['channel']['updated_at'] = dt.datetime.fromtimestamp(mock_response_page_1['channel']['updated'] / 1000)
-        mock_response_page_2['channel']['created_at'] = dt.datetime.fromtimestamp(mock_response_page_2['channel']['created'])
-        mock_response_page_2['channel']['updated_at'] = dt.datetime.fromtimestamp(mock_response_page_2['channel']['updated'] / 1000)
-        expected_df = pd.DataFrame([mock_response_page_1['channel'], mock_response_page_2['channel']], columns=self.resource.get_columns())
-        pd.testing.assert_frame_equal(
-            response,
-            expected_df
-        )
+        expected_df = self._get_expected_df_for_conv_info_2()
+        pd.testing.assert_frame_equal(response, expected_df)
 
     def test_list_with_no_conditions_and_no_limit(self):
         """
         Tests the `list` method of the SlackConversationsTable class to ensure it correctly fetches a list of conversations without any conditions or limits.
         """
-        mock_response = {
-            "ok": True,
-            "channels": [
-                {
-                    "id": "C012AB3CD",
-                    "name": "general",
-                    "is_channel": True,
-                    "is_group": False,
-                    "is_im": False,
-                    "is_mpim": False,
-                    "is_private": False,
-                    "created": 1449252889,
-                    "updated": 1678229664302,
-                }
-            ],
-            "response_metadata": {
-                "next_cursor": "dGVhbTpDMDYxRkE1UEI="
-            }
-        }
-        slack_response = SlackResponse(
-            client=MagicMock(),
-            http_verb="GET",
-            api_url="https://slack.com/api/conversations.list",
-            req_args=MagicMock(),
-            headers=MagicMock(),
-            status_code=200,
-            data=mock_response
-        )
-
-        self.mock_connect.return_value.conversations_list.return_value = slack_response
+        self.mock_connect.return_value.conversations_list.return_value = deepcopy(MOCK_SLACK_RESPONSE_CONV_LIST_1)
 
         response = self.resource.list(
             conditions=[]
@@ -379,46 +335,16 @@ class TestSlackConversationsTable(BaseAPIResourceTestSetup, unittest.TestCase):
 
         self.assertEqual(self.mock_connect.return_value.conversations_list.call_count, 1)
         self.mock_connect.return_value.conversations_list.assert_any_call(limit=1000)
+
         assert isinstance(response, pd.DataFrame)
-        mock_response['channels'][0]['created_at'] = dt.datetime.fromtimestamp(mock_response['channels'][0]['created'])
-        mock_response['channels'][0]['updated_at'] = dt.datetime.fromtimestamp(mock_response['channels'][0]['updated'] / 1000)
-        expected_df = pd.DataFrame(mock_response['channels'], columns=self.resource.get_columns())
-        pd.testing.assert_frame_equal(
-            response,
-            expected_df
-        )
+        expected_df = self._get_expected_df_for_conv_list_1()
+        pd.testing.assert_frame_equal(response, expected_df)
 
     def test_list_with_no_conditions_and_limit_less_than_1000(self):
         """
         Tests the `list` method of the SlackConversationsTable class to ensure it correctly fetches a list of conversations without any conditions and with a limit less than 1000.
         """
-        mock_response = {
-            "ok": True,
-            "channels": [
-                {
-                    "id": "C012AB3CD",
-                    "name": "general",
-                    "is_channel": True,
-                    "is_group": False,
-                    "is_im": False,
-                    "is_mpim": False,
-                    "is_private": False,
-                    "created": 1449252889,
-                    "updated": 1678229664302,
-                }
-            ]
-        }
-        slack_response = SlackResponse(
-            client=MagicMock(),
-            http_verb="GET",
-            api_url="https://slack.com/api/conversations.list",
-            req_args=MagicMock(),
-            headers=MagicMock(),
-            status_code=200,
-            data=mock_response
-        )
-
-        self.mock_connect.return_value.conversations_list.return_value = slack_response
+        self.mock_connect.return_value.conversations_list.return_value = deepcopy(MOCK_SLACK_RESPONSE_CONV_LIST_1)
 
         response = self.resource.list(
             conditions=[],
@@ -427,80 +353,18 @@ class TestSlackConversationsTable(BaseAPIResourceTestSetup, unittest.TestCase):
 
         self.assertEqual(self.mock_connect.return_value.conversations_list.call_count, 1)
         self.mock_connect.return_value.conversations_list.assert_any_call(limit=999)
+
         assert isinstance(response, pd.DataFrame)
-        mock_response['channels'][0]['created_at'] = dt.datetime.fromtimestamp(mock_response['channels'][0]['created'])
-        mock_response['channels'][0]['updated_at'] = dt.datetime.fromtimestamp(mock_response['channels'][0]['updated'] / 1000)
-        expected_df = pd.DataFrame(mock_response['channels'], columns=self.resource.get_columns())
-        pd.testing.assert_frame_equal(
-            response,
-            expected_df
-        )
+        expected_df = self._get_expected_df_for_conv_list_1()
+        pd.testing.assert_frame_equal(response, expected_df)
 
     def test_list_with_no_conditions_and_limit_more_than_1000(self):
         """
         Tests the `list` method of the SlackConversationsTable class to ensure it correctly fetches a list of conversations without any conditions and with a limit more than 1000.
         """
-        mock_response_page_1 = {
-            "ok": True,
-            "channels": [
-                {
-                    "id": "C012AB3CD",
-                    "name": "general",
-                    "is_channel": True,
-                    "is_group": False,
-                    "is_im": False,
-                    "is_mpim": False,
-                    "is_private": False,
-                    "created": 1449252889,
-                    "updated": 1678229664302,
-                }
-            ],
-            "response_metadata": {
-                "next_cursor": "dGVhbTpDMDYxRkE1UEI="
-            }
-        }
-        slack_response_page_1 = SlackResponse(
-            client=MagicMock(),
-            http_verb="GET",
-            api_url="https://slack.com/api/conversations.list",
-            req_args=MagicMock(),
-            headers=MagicMock(),
-            status_code=200,
-            data=deepcopy(mock_response_page_1)
-        )
-
-        mock_response_page_2 = {
-            "ok": True,
-            "channels": [
-                {
-                    "id": "C012AB3CE",
-                    "name": "random",
-                    "is_channel": True,
-                    "is_group": False,
-                    "is_im": False,
-                    "is_mpim": False,
-                    "is_private": False,
-                    "created": 1449252889,
-                    "updated": 1678229664302,
-                }
-            ],
-            "response_metadata": {
-                "next_cursor": ""
-            }
-        }
-        slack_response_page_2 = SlackResponse(
-            client=MagicMock(),
-            http_verb="GET",
-            api_url="https://slack.com/api/conversations.list",
-            req_args=MagicMock(),
-            headers=MagicMock(),
-            status_code=200,
-            data=deepcopy(mock_response_page_2)
-        )
-
         self.mock_connect.return_value.conversations_list.side_effect = [
-            slack_response_page_1,
-            slack_response_page_2
+            deepcopy(MOCK_SLACK_RESPONSE_CONV_LIST_1),
+            deepcopy(MOCK_SLACK_RESPONSE_CONV_LIST_2)
         ]
 
         response = self.resource.list(
@@ -513,15 +377,8 @@ class TestSlackConversationsTable(BaseAPIResourceTestSetup, unittest.TestCase):
         self.mock_connect.return_value.conversations_list.assert_any_call(cursor="dGVhbTpDMDYxRkE1UEI=")
 
         assert isinstance(response, pd.DataFrame)
-        mock_response_page_1['channels'][0]['created_at'] = dt.datetime.fromtimestamp(mock_response_page_1['channels'][0]['created'])
-        mock_response_page_1['channels'][0]['updated_at'] = dt.datetime.fromtimestamp(mock_response_page_1['channels'][0]['updated'] / 1000)
-        mock_response_page_2['channels'][0]['created_at'] = dt.datetime.fromtimestamp(mock_response_page_2['channels'][0]['created'])
-        mock_response_page_2['channels'][0]['updated_at'] = dt.datetime.fromtimestamp(mock_response_page_2['channels'][0]['updated'] / 1000)
-        expected_df = pd.DataFrame(mock_response_page_1['channels'] + mock_response_page_2['channels'], columns=self.resource.get_columns())
-        pd.testing.assert_frame_equal(
-            response,
-            expected_df
-        )
+        expected_df = self._get_expected_df_for_conv_list_2()
+        pd.testing.assert_frame_equal(response, expected_df)
 
 
 if __name__ == '__main__':

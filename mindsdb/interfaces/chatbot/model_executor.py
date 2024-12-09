@@ -1,9 +1,11 @@
+from typing import List
 import datetime as dt
 import pandas as pd
 
 from mindsdb.interfaces.storage import db
 
 from .types import BotException
+from .types import ChatBotMessage
 
 
 class ModelExecutor:
@@ -30,13 +32,13 @@ class ModelExecutor:
         # redefined prompt
         self.prompt = None
 
-    def call(self, history, functions):
+    def call(self, history: List[ChatBotMessage], functions):
         model_info = self.model_info
 
         if model_info['mode'] != 'conversational':
             raise BotException('Not supported')
 
-        messages = self._chat_history_to_conversation(history, model_info)
+        messages, user_name = self._chat_history_to_conversation(history, model_info)
         if model_info['engine'] == 'langchain':
 
             all_tools = []
@@ -62,15 +64,12 @@ class ModelExecutor:
                 params=params
             )
 
-        elif model_info['engine'] == 'llama_index':
+        else:
             predictions = self.chat_task.project_datanode.predict(
                 model_name=model_info['model_name'],
                 df=pd.DataFrame(messages),
-                params={'prompt': self.prompt}
+                params={'prompt': self.prompt, 'user_info': {'user_name': user_name}}
             )
-
-        else:
-            raise BotException('Not supported')
 
         output_col = model_info['output']
         model_output = predictions.iloc[-1][output_col]
@@ -79,6 +78,7 @@ class ModelExecutor:
     def _chat_history_to_conversation(self, history, model_info):
 
         bot_username = self.chat_task.bot_params['bot_username']
+        user_name = None
 
         question_col = model_info['user_column']
         answer_col = model_info['bot_column']
@@ -93,6 +93,8 @@ class ModelExecutor:
                 continue
 
             if message.user != bot_username:
+                user_name = message.user
+
                 # create new message row
                 messages.append({question_col: text, answer_col: None})
             else:
@@ -102,4 +104,4 @@ class ModelExecutor:
 
                 # update answer in previous column
                 messages[-1][answer_col] = text
-        return messages
+        return messages, user_name

@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 
 from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_TYPE
 from mindsdb.integrations.handlers.sap_erp_handler.api import SAPERP
@@ -135,7 +135,7 @@ class SAPERPHandler(APIHandler):
         return self.connection
 
     def native_query(self, query: str) -> StatusResponse:
-        ast = parse_sql(query, dialect="mindsdb")
+        ast = parse_sql(query)
         return self.query(ast)
 
 

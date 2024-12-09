@@ -4,8 +4,8 @@ import pandas as pd
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 from clickhouse_sqlalchemy.drivers.base import ClickHouseDialect
-from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb_sql_parser.ast.base import ASTNode
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.base import DatabaseHandler

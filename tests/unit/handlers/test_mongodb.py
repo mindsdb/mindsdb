@@ -3,8 +3,8 @@ from collections import OrderedDict
 from unittest.mock import patch, MagicMock
 
 from bson import ObjectId
-from mindsdb_sql.parser import ast
-from mindsdb_sql.parser.ast.select.star import Star
+from mindsdb_sql_parser import ast
+from mindsdb_sql_parser.ast.select.star import Star
 import pymongo
 from pymongo.errors import InvalidURI, OperationFailure
 import pymongo.results

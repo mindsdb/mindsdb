@@ -1,4 +1,4 @@
-from mindsdb_sql.planner.steps import MultipleSteps
+from mindsdb.api.executor.planner.steps import MultipleSteps
 
 from mindsdb.api.executor.exceptions import NotSupportedYet
 

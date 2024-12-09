@@ -6,8 +6,8 @@ from collections import OrderedDict
 import sqlalchemy as sa
 import numpy as np
 
-from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser.ast.base import ASTNode
+from mindsdb_sql_parser import parse_sql
 
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.config import Config
@@ -117,7 +117,7 @@ class Project:
             name=view_name,
             project_name=self.name
         )
-        view_meta['query_ast'] = parse_sql(view_meta['query'], dialect='mindsdb')
+        view_meta['query_ast'] = parse_sql(view_meta['query'])
         return view_meta
 
     @staticmethod

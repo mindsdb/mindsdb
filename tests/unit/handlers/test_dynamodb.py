@@ -3,9 +3,9 @@ from collections import OrderedDict
 from botocore.client import ClientError
 from unittest.mock import patch, MagicMock, Mock
 
-from mindsdb_sql.parser import ast
-from mindsdb_sql.parser.ast.select.star import Star
-from mindsdb_sql.parser.ast.select.identifier import Identifier
+from mindsdb_sql_parser import ast
+from mindsdb_sql_parser.ast.select.star import Star
+from mindsdb_sql_parser.ast.select.identifier import Identifier
 
 from base_handler_test import BaseHandlerTestSetup
 from mindsdb.integrations.libs.response import (

@@ -1,7 +1,7 @@
 from typing import Union
 
-from mindsdb_sql import parse_sql
-from mindsdb_sql.planner import utils as planner_utils
+from mindsdb_sql_parser import parse_sql
+from mindsdb.api.executor.planner import utils as planner_utils
 
 from numpy import dtype as np_dtype
 from pandas.api import types as pd_types
@@ -43,17 +43,14 @@ class Executor:
         self.sql_lower = sql_lower.replace("`", "")
 
         try:
-            self.query = parse_sql(sql, dialect="mindsdb")
+            self.query = parse_sql(sql)
         except Exception as mdb_error:
-            try:
-                self.query = parse_sql(sql, dialect="mysql")
-            except Exception:
-                # not all statements are parsed by parse_sql
-                self.logger.warning(f"SQL statement is not parsed by mindsdb_sql: {sql}")
+            # not all statements are parsed by parse_sql
+            self.logger.warning(f"SQL statement is not parsed by mindsdb_sql_parser: {sql}")
 
-                raise SqlApiException(
-                    f"SQL statement cannot be parsed by mindsdb_sql - {sql}: {mdb_error}"
-                ) from mdb_error
+            raise SqlApiException(
+                f"SQL statement cannot be parsed by mindsdb_sql_parser - {sql}: {mdb_error}"
+            ) from mdb_error
 
     def stmt_execute(self, param_values):
         if self.is_executed:

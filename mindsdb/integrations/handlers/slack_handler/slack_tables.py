@@ -75,7 +75,7 @@ class SlackConversationsTable(APIResource):
 
         # If no channel ID(s) are provided, get all channels with the specified limit.
         if not channels:
-            channels = self.get_all_channels(limit)
+            channels = self._get_all_channels(limit)
 
         for channel in channels:
             channel['created_at'] = dt.datetime.fromtimestamp(channel['created'])
@@ -106,7 +106,7 @@ class SlackConversationsTable(APIResource):
 
         return response['channel']
 
-    def get_channels(self, channel_ids: List[Text]) -> List[Dict]:
+    def _get_channels(self, channel_ids: List[Text]) -> List[Dict]:
         """
         Gets the channel data for multiple channel ids.
         As it is unlikely that a large number of channels will be provided, the API rate limits are ignored here.
@@ -127,7 +127,7 @@ class SlackConversationsTable(APIResource):
 
         return channels
 
-    def get_all_channels(self, limit: int = None) -> List[Dict]:
+    def _get_all_channels(self, limit: int = None) -> List[Dict]:
         """
         Gets the list of channels with a limit.
         If the provided limit is greater than 1000, no limit to the API call is provided and the results are paginated until the limit is reached.

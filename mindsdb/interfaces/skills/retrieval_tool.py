@@ -61,7 +61,6 @@ def build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
         if hasattr(kb_table, 'embedding_model') and kb_table.embedding_model:
             # Extract embedding model args from knowledge base table
             embedding_args = {
-                'class': kb_table.embedding_model.provider,
                 **kb_table.embedding_model.learn_args.get('using', {})  # Get args from the 'using' section of learn_args
             }
             rag_params['embedding_model_args'] = embedding_args

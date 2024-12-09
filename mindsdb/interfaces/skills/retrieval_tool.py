@@ -65,10 +65,15 @@ def build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
             # Construct the embedding model directly
             from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
             rag_params['embedding_model'] = construct_model_from_args(embedding_args)
+            logger.debug(f"Using knowledge base embedding model with args: {embedding_args}")
         else:
             rag_params['embedding_model'] = DEFAULT_EMBEDDINGS_MODEL_CLASS()
+            logger.debug("Using default embedding model as knowledge base has no embedding model")
     elif 'embedding_model' not in rag_params:
         rag_params['embedding_model'] = DEFAULT_EMBEDDINGS_MODEL_CLASS()
+        logger.debug("Using default embedding model as no knowledge base provided")
+
+    logger.debug(f"Final RAG configuration: {rag_params}")
 
     # Handle enums and type conversions
     if 'retriever_type' in rag_params:

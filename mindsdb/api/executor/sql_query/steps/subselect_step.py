@@ -126,6 +126,10 @@ class QueryStepCall(BaseStepCall):
                     key = (table_name, col_name)
 
                 if key not in col_idx:
+                    if len(node.parts) == 1:
+                        # it can be local alias of a query
+                        return
+
                     raise KeyColumnDoesNotExist(f'Table not found for column: {key}')
 
                 new_name = col_idx[key]

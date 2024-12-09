@@ -436,8 +436,9 @@ class LangchainAgent:
         # Set up tools.
         llm = create_chat_model(args)
         self.llm = llm
+
+        # Don't set embedding model for retrieval mode - let the knowledge base handle it
         if args.get("mode") == "retrieval":
-            self.set_embedding_model(args)
             self.args.pop("mode")
 
         tools = self._langchain_tools_from_skills(llm)

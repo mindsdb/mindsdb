@@ -55,15 +55,16 @@ def build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
 
     rag_params = _get_rag_params(tools_config, kb_params)
 
-    # Handle defaults for required fields
-    if 'embedding_model' not in rag_params and kb_table is not None:
+    # use knowledge base table embedding model by default, even if already set
+    if kb_table is not None:
         # Get embedding model from knowledge base table
-        if hasattr(kb_table, 'embedding_model') and kb_table.embedding_model:
+        kb_embedding_model = kb_table._kb.embedding_model
+        if kb_embedding_model:
             # Extract embedding model args from knowledge base table
-            embedding_args = {
-                **kb_table.embedding_model.learn_args.get('using', {})  # Get args from the 'using' section of learn_args
-            }
-            rag_params['embedding_model_args'] = embedding_args
+            embedding_args = kb_embedding_model.learn_args.get('using', {})
+            # Construct the embedding model directly
+            from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
+            rag_params['embedding_model'] = construct_model_from_args(embedding_args)
         else:
             rag_params['embedding_model'] = DEFAULT_EMBEDDINGS_MODEL_CLASS()
     elif 'embedding_model' not in rag_params:

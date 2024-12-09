@@ -169,7 +169,6 @@ class SkillToolController:
             type=skill.type
         )
         pred_args = {}
-        pred_args['embedding_model'] = embedding_model
         pred_args['llm'] = llm
 
         from .retrieval_tool import build_retrieval_tool

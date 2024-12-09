@@ -1038,6 +1038,9 @@ class ExecuteCommands:
         storage = None
         try:
             handler_meta = self.session.integration_controller.get_handler_meta(engine)
+            if handler_meta is None:
+                raise ExecutorException(f"There is no engine '{engine}'")
+
             if handler_meta.get("import", {}).get("success") is not True:
                 raise ExecutorException(f"The '{engine}' handler isn't installed.\n" + get_handler_install_message(engine))
 

@@ -1,3 +1,5 @@
+import logging
+
 from mindsdb_sql_parser import parse_sql
 from mindsdb.api.executor.planner import utils as planner_utils
 
@@ -96,14 +98,11 @@ class Executor:
 
     @profiler.profile()
     def query_execute(self, sql):
-        logger.info("%s.query_execute: sql - %s", self.__class__.__name__, sql)
-
         self.parse(sql)
         self.do_execute()
 
     @profiler.profile()
     def parse(self, sql):
-        logger.info("%s.parse: sql - %s", self.__class__.__name__, sql)
         self.sql = sql
         sql_lower = sql.lower()
         self.sql_lower = sql_lower.replace("`", "")
@@ -112,7 +111,10 @@ class Executor:
             self.query = parse_sql(sql)
         except Exception as mdb_error:
             # not all statements are parsed by parse_sql
-            logger.warning(f"SQL statement is not parsed by mindsdb_sql_parser: {sql}")
+            message = 'SQL statement is not parsed by mindsdb_sql_parser'
+            if logger.isEnabledFor(logging.DEBUG):
+                message += f': {sql}'
+            logger.warning(message)
 
             raise ErSqlSyntaxError(
                 f"SQL statement cannot be parsed by mindsdb_sql_parser - {sql}: {mdb_error}"
@@ -124,7 +126,6 @@ class Executor:
     @profiler.profile()
     def do_execute(self):
         # it can be already run at prepare state
-        logger.info("%s.do_execute", self.__class__.__name__)
         if self.is_executed:
             return
 

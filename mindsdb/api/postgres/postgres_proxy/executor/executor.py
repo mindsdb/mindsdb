@@ -1,3 +1,4 @@
+import logging
 from typing import Union
 
 from mindsdb_sql_parser import parse_sql
@@ -46,7 +47,10 @@ class Executor:
             self.query = parse_sql(sql)
         except Exception as mdb_error:
             # not all statements are parsed by parse_sql
-            self.logger.warning(f"SQL statement is not parsed by mindsdb_sql_parser: {sql}")
+            message = 'SQL statement is not parsed by mindsdb_sql_parser'
+            if self.logger.isEnabledFor(logging.DEBUG):
+                message += f': {sql}'
+            self.logger.warning(message)
 
             raise SqlApiException(
                 f"SQL statement cannot be parsed by mindsdb_sql_parser - {sql}: {mdb_error}"

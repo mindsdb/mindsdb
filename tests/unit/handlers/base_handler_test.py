@@ -197,3 +197,96 @@ class BaseDatabaseHandlerTest(BaseHandlerTest):
         self.handler.get_tables()
 
         self.handler.native_query.assert_called_once_with(self.get_tables_query)
+
+
+class BaseAPIHandlerTest(BaseHandlerTest):
+    """
+    The Base class for testing API handlers. This class provides methods to test the `get_tables` and `get_columns` methods of a handler.
+    The 'native_query' should be tested in the individual subclasses because not all API handlers support it.
+    """
+
+    @property
+    @abstractmethod
+    def registered_tables(self):
+        """
+        A list of tables that are registered to the handler.
+        This attribute should be overridden in subclasses to provide the specific list of tables.
+        """
+        pass
+
+    def test_get_columns(self):
+        """
+        Tests if the `get_columns` method returns the list of columns of a table.
+        """
+        response = self.handler.get_columns(self.registered_tables[0])
+
+        assert isinstance(response, Response)
+        assert response.data_frame.columns.tolist() == ['Field', 'Type']
+
+    def test_get_tables(self):
+        """
+        Tests if the `get_tables` method returns the list of registered tables.
+        """
+        response = self.handler.get_tables()
+
+        assert isinstance(response, Response)
+        assert all(col in response.data_frame.columns.tolist() for col in ['table_name', 'table_type'])
+        assert response.data_frame['table_type'].unique().tolist() == ['BASE TABLE']
+        assert response.data_frame['table_name'].tolist() == self.registered_tables
+
+
+class BaseAPIChatHandlerTest(BaseAPIHandlerTest):
+    """
+    The Base class for testing chat handlers. This class provides methods to test `get_chat_config` and `get_my_user_name` methods of a handler.
+    If a `subscribe` method is implemented, it should be tested in the individual subclass.
+    """
+
+    def test_get_chat_config(self):
+        """
+        Tests if the `get_chat_config` method returns a chat configuration in the form of a dictionary.
+        The dictionary should contain the keys `polling` and optionally, either `chat_table` or `tables`.
+        If either `chat_table` or `tables` is present, they should contain the keys `name`, `chat_id_col`, `username_col`, `text_col`, and `time_col`.
+        """
+        response = self.handler.get_chat_config()
+
+        assert isinstance(response, dict)
+        assert 'polling' in response and isinstance(response['polling'], dict) and 'type' in response['polling'] and response['polling']['type'] in ['realtime', 'message_count', 'webhook']
+
+        required_keys = ['name', 'chat_id_col', 'username_col', 'text_col', 'time_col']
+        if 'chat_table' in response:
+            assert isinstance(response['chat_table'], dict)
+            assert all(key in list(response['chat_table'].keys()) for key in required_keys)
+
+        if 'tables' in response:
+            assert isinstance(response['tables'], list)
+            assert all(isinstance(table, dict) for table in response['tables'])
+            assert all(all(key in list(table['chat_table'].keys()) for key in required_keys) for table in response['tables'])
+
+    @abstractmethod
+    def test_get_my_user_name(self):
+        """
+        Tests if the `get_my_user_name` method returns the name of the user.
+        This should be overridden in subclasses to provide the specific test.
+        """
+        pass
+
+
+class BaseAPIResourceTestSetup(BaseHandlerTestSetup):
+    """
+    The base class that provides setup and teardown methods for testing implementations of the `APIResource` class.
+    """
+
+    def setUp(self):
+        """
+        Sets up the test environment by creating an instance of the resource along with the patcher and handler from the parent class.
+        """
+        super().setUp()
+        self.resource = self.create_resource()
+
+    @abstractmethod
+    def create_resource(self):
+        """
+        Create and return an instance of the resource.
+        This method should be overridden in subclasses to provide the specific resource.
+        """
+        pass

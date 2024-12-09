@@ -10,6 +10,7 @@ from mindsdb.api.executor.planner.steps import (
     MapReduceStep,
     FetchDataframeStep,
     MultipleSteps,
+    SubSelectStep,
 )
 
 from mindsdb.api.executor.sql_query.result_set import ResultSet
@@ -172,7 +173,7 @@ class MapReduceStepCall(BaseStepCall):
         if isinstance(step, MultipleSteps):
             for substep in step.steps:
                 self._fill_vars(substep, var_group)
-        if isinstance(step, FetchDataframeStep):
+        elif isinstance(step, (FetchDataframeStep, SubSelectStep)):
             markQueryVar(step.query.where)
             for name, value in var_group.items():
                 replaceQueryVar(step.query.where, value, name)

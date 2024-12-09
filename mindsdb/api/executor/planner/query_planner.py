@@ -167,10 +167,13 @@ class QueryPlanner:
             integration_name, table = self.resolve_database_table(select.from_table)
 
             # is it CTE?
-            table_name = table.parts[-1]
+            table_name = table_alias = table.parts[-1]
+            if table.alias is not None:
+                table_alias = table.alias.parts[-1]
+
             if integration_name == self.default_namespace and table_name in self.cte_results:
                 select.from_table = None
-                return SubSelectStep(select, self.cte_results[table_name], table_name=table_name)
+                return SubSelectStep(select, self.cte_results[table_name], table_name=table_alias)
 
         fetch_df_select = copy.deepcopy(select)
         self.prepare_integration_select(integration_name, fetch_df_select)

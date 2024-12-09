@@ -37,6 +37,7 @@ def build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
     tools_config.update(pred_args)
 
     kb_params = {}
+    kb_table = None
     if 'source' in tool:
         kb_name = tool['source']
         executor = skill_tool.get_command_executor()
@@ -54,11 +55,20 @@ def build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
 
     rag_params = _get_rag_params(tools_config, kb_params)
 
-    if 'vector_store_config' not in rag_params:
-        rag_params['vector_store_config'] = {}
-        logger.warning(f'No collection_name specified for the retrieval tool, '
-                       f"using default collection_name: '{DEFAULT_COLLECTION_NAME}'"
-                       f'\nWarning: If this collection does not exist, no data will be retrieved')
+    # Handle defaults for required fields
+    if 'embedding_model' not in rag_params and kb_table is not None:
+        # Get embedding model from knowledge base table
+        if hasattr(kb_table, 'embedding_model') and kb_table.embedding_model:
+            # Extract embedding model args from knowledge base table
+            embedding_args = {
+                'class': kb_table.embedding_model.provider,
+                **kb_table.embedding_model.learn_args.get('using', {})  # Get args from the 'using' section of learn_args
+            }
+            rag_params['embedding_model_args'] = embedding_args
+        else:
+            rag_params['embedding_model'] = DEFAULT_EMBEDDINGS_MODEL_CLASS()
+    elif 'embedding_model' not in rag_params:
+        rag_params['embedding_model'] = DEFAULT_EMBEDDINGS_MODEL_CLASS()
 
     # Handle enums and type conversions
     if 'retriever_type' in rag_params:
@@ -77,10 +87,6 @@ def build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
     if summarization_config is not None and isinstance(summarization_config, dict):
         rag_params['summarization_config'] = SummarizationConfig(**summarization_config)
 
-    # Handle defaults for required fields
-    if 'embedding_model' not in rag_params:
-        rag_params['embedding_model'] = DEFAULT_EMBEDDINGS_MODEL_CLASS()
-
     # Handle vector store config separately since it has a nested default
     if 'vector_store_config' in rag_params:
         if isinstance(rag_params['vector_store_config'], dict):
@@ -88,6 +94,12 @@ def build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
 
     if 'reranker_config' in rag_params:
         rag_params['reranker_config'] = RerankerConfig(**rag_params['reranker_config'])
+
+    if 'vector_store_config' not in rag_params:
+        rag_params['vector_store_config'] = {}
+        logger.warning(f'No collection_name specified for the retrieval tool, '
+                       f"using default collection_name: '{DEFAULT_COLLECTION_NAME}'"
+                       f'\nWarning: If this collection does not exist, no data will be retrieved')
 
     # Create config with filtered params
     rag_config = RAGPipelineModel(**rag_params)

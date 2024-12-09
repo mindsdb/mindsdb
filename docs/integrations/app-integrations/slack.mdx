@@ -165,7 +165,7 @@ LIMIT 10;
 
 The Slack integration supports the following tables:
 
-### `conversations`
+### `conversations` Table
 
 The `conversations` virtual table is used to query conversations (channels, DMs, and groups) in the connected Slack workspace.
 
@@ -185,7 +185,7 @@ FROM slack_datasource.conversations
 WHERE name = "<channel-name>";
 ```
 
-### `messages`
+### `messages` Table
 
 The `messages` virtual table is used to query, post, update, and delete messages in specific conversations within the connected Slack workspace.
 
@@ -217,7 +217,7 @@ WHERE channel_id = "<channel-id>" AND ts = "<timestamp>";
 You can also find the channel ID by right-clicking on the conversation in Slack, selecting 'View conversation details' or 'View channel details,' and copying the channel ID from the bottom of the 'About' tab.
 </Tip>
 
-### `threads`
+### `threads` Table
 
 The `threads` virtual table is used to query and post messages in threads within the connected Slack workspace.
 
@@ -234,7 +234,7 @@ INSERT INTO slack_datasource.threads (channel_id, thread_ts, text)
 VALUES("<channel-id>", "<thread-ts>", "Replying to the thread!");
 ```
 
-### `users`
+### `users` Table
 
 The `users` virtual table is used to query user information in the connected Slack workspace.
 

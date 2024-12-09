@@ -54,13 +54,16 @@ class KnowledgeBaseTable:
 
     def configure_preprocessing(self, config: Optional[dict] = None):
         """Configure preprocessing for the knowledge base table"""
+        logger.debug(f"Configuring preprocessing with config: {config}")
         self.document_preprocessor = None  # Reset existing preprocessor
         if config is not None:
             preprocessing_config = PreprocessingConfig(**config)
             self.document_preprocessor = PreprocessorFactory.create_preprocessor(preprocessing_config)
+            logger.debug(f"Created preprocessor of type: {type(self.document_preprocessor)}")
         else:
             # Always create a default preprocessor if none specified
             self.document_preprocessor = PreprocessorFactory.create_preprocessor()
+            logger.debug("Created default preprocessor")
 
     def select_query(self, query: Select) -> pd.DataFrame:
         """
@@ -69,13 +72,15 @@ class KnowledgeBaseTable:
         :param query: query to KB table
         :return: dataframe with the result table
         """
+        logger.debug(f"Processing select query: {query}")
 
         # replace content with embeddings
-
         query_traversal(query.where, self._replace_query_content)
+        logger.debug("Replaced content with embeddings in where clause")
 
         # set table name
         query.from_table = Identifier(parts=[self._kb.vector_database_table])
+        logger.debug(f"Set table name to: {self._kb.vector_database_table}")
 
         # remove embeddings from result
         targets = []
@@ -89,10 +94,22 @@ class KnowledgeBaseTable:
             elif isinstance(target, Identifier) and target.parts[-1].lower() != TableField.EMBEDDINGS.value:
                 targets.append(target)
         query.targets = targets
+        logger.debug(f"Modified query targets: {targets}")
 
-        # send to vectordb
+        # Get response from vector db
         db_handler = self.get_vector_db()
+        logger.debug(f"Using vector db handler: {type(db_handler)}")
         resp = db_handler.query(query)
+
+        if resp.data_frame is not None:
+            logger.debug(f"Query returned {len(resp.data_frame)} rows")
+            logger.debug(f"Columns in response: {resp.data_frame.columns.tolist()}")
+            # Log a sample of IDs to help diagnose issues
+            if not resp.data_frame.empty:
+                logger.debug(f"Sample of IDs in response: {resp.data_frame['id'].head().tolist()}")
+        else:
+            logger.warning("Query returned no data")
+
         return resp.data_frame
 
     def insert_files(self, file_names: List[str]):

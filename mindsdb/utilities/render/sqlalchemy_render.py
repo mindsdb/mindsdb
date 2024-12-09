@@ -2,6 +2,7 @@ import re
 import datetime as dt
 
 import sqlalchemy as sa
+from sqlalchemy.sql import operators
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import aliased
@@ -33,9 +34,15 @@ class INTERVAL(ColumnElement):
 @compiles(INTERVAL)
 def _compile_interval(element, compiler, **kw):
     items = element.info.split(' ', maxsplit=1)
-    # quote first element
-    items[0] = f"'{items[0]}'"
-    return "INTERVAL " + " ".join(items)
+    if compiler.dialect.driver in ['snowflake']:
+        # quote all
+        args = " ".join(map(str, items))
+        args = f"'{args}'"
+    else:
+        # quote first element
+        items[0] = f"'{items[0]}'"
+        args = " ".join(items)
+    return "INTERVAL " + args
 
 
 class SqlalchemyRender:
@@ -59,6 +66,7 @@ class SqlalchemyRender:
         # remove double percent signs
         # https://docs.sqlalchemy.org/en/14/faq/sqlexpressions.html#why-are-percent-signs-being-doubled-up-when-stringifying-sql-statements
         self.dialect = dialect(paramstyle="named")
+        self.dialect.div_is_floordiv = False
 
         if dialect_name == 'mssql':
             # update version to MS_2008_VERSION for supports_multivalues_insert
@@ -160,25 +168,26 @@ class SqlalchemyRender:
                 alias = str(t.op)
             col = fnc.label(alias)
         elif isinstance(t, ast.BinaryOperation):
-            methods = {
-                "+": "__add__",
-                "-": "__sub__",
-                "*": "__mul__",
-                "%": "__mod__",
-                "=": "__eq__",
-                "!=": "__ne__",
-                "<>": "__ne__",
-                ">": "__gt__",
-                "<": "__lt__",
-                ">=": "__ge__",
-                "<=": "__le__",
-                "is": "is_",
-                "is not": "is_not",
-                "like": "like",
-                "not like": "notlike",
-                "in": "in_",
-                "not in": "notin_",
-                "||": "concat",
+            ops = {
+                "+": operators.add,
+                "-": operators.sub,
+                "*": operators.mul,
+                "/": operators.truediv,
+                "%": operators.mod,
+                "=": operators.eq,
+                "!=": operators.ne,
+                "<>": operators.ne,
+                ">": operators.gt,
+                "<": operators.lt,
+                ">=": operators.ge,
+                "<=": operators.le,
+                "is": operators.is_,
+                "is not": operators.is_not,
+                "like": operators.like_op,
+                "not like": operators.not_like_op,
+                "in": operators.in_op,
+                "not in": operators.not_in_op,
+                "||": operators.concat_op,
             }
             functions = {
                 "and": sa.and_,
@@ -193,14 +202,18 @@ class SqlalchemyRender:
                 if isinstance(arg1, sa.sql.selectable.ColumnClause):
                     raise NotImplementedError(f'Required list argument for: {op}')
 
-            method = methods.get(op)
-            if op == '/':
-                # sqlalchemy adds cast for __truediv__ and round for __floordiv__
-                col = sa.text(f'{arg0.compile(dialect=self.dialect)} / {arg1.compile(dialect=self.dialect)}')
-            elif method is not None:
-                sa_op = getattr(arg0, method)
+            sa_op = ops.get(op)
 
-                col = sa_op(arg1)
+            if sa_op is not None:
+                if isinstance(arg0, sa.TextClause):
+                    # text doesn't have operate method, reverse operator
+                    col = arg1.reverse_operate(sa_op, arg0)
+                elif isinstance(arg1, sa.TextClause):
+                    # both args are text, return text
+                    col = sa.text(f'{arg0.compile(dialect=self.dialect)} {op} {arg1.compile(dialect=self.dialect)}')
+                else:
+                    col = arg0.operate(sa_op, arg1)
+
             elif t.op.lower() in functions:
                 func = functions[t.op.lower()]
                 col = func(arg0, arg1)

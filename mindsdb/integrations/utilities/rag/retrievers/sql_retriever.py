@@ -108,7 +108,17 @@ Columns:
     }},
     "ComponentFailureCauseId": {{
         "type": "int",
-        "description": "The ID of component failure"
+        "description": "The ID of component failure.",
+        "values": {{
+            1: "Personnel Error",
+            2: "Design, Manufacturing, Construction/Installation",
+            3: "External Cause",
+            4: "Defective Procedure",
+            5: "Management/Quality Assurance Deficiency",
+            6: "Other",
+            7: "UNSPECIFIED",
+            8: "UNSPECIFIED"
+        }}
     }},
     "ComponentManufacturer": {{
         "type": "string",
@@ -124,7 +134,15 @@ Columns:
     }},
     "DocketTypeId": {{
         "type": "int",
-        "description": "The type of regulatory docket"
+        "description": "The type of regulatory docket",
+        "values": {{
+            1: "Combined Operating License",
+            2: "Design Certification",
+            3: "Early Site Permit",
+            4: "Operating Reactor",
+            5: "Decommissioning/Decommissioned",
+            6: "Cancelled"
+        }}
     }},
     "DocumentCategory": {{
         "type": "int",
@@ -162,13 +180,9 @@ Columns:
         "type": "bool",
         "description": "Indicates if this is the current version of the document"
     }},
-    "isRetracted": {{
+    "IsRetracted": {{
         "type": "bool",
         "description": "Indicates if the document has been retracted"
-    }},
-    "Keywords": {{
-        "type": "text",
-        "description": "The keywords associated with the document"
     }},
     "LicenseNumbers": {{
         "type": "int",
@@ -200,7 +214,7 @@ Columns:
     }},
     "ReactorOperatingModelId": {{
         "type": "int",
-        "description": "The operating mode of the reactor"
+        "description": "The operating model ID of the reactor"
     }},
     "ReferenceNumber": {{
         "type": "string",
@@ -248,7 +262,16 @@ Columns:
     }},
     "SubjectArea": {{
         "type": "int",
-        "description": "The subject area of the document"
+        "description": "The subject area of the document",
+        "values": {{
+            0: "TRENDS",
+            1: "Licensing Actions",
+            2: "Operating Experience",
+            3: "Advantage",
+            4: "License Renewal",
+            5: "Regulatory Changes",
+            6: "NUREG"
+        }}
     }},
     "SubPart": {{
         "type": "string",
@@ -260,7 +283,116 @@ Columns:
     }},
     "Type": {{
         "type": "int",
-        "description": "The NRS scientech document type"
+        "description": "The NRS scientech document type",
+        "values": {{
+            0: "UNKNOWN",
+            5: "ADAMS Document",
+            6: "Licensee Event Report",
+            8: "OE - Event Notification",
+            9: "OE - Part 21 Report",
+            10: "RAI Letter",
+            12: "Question",
+            13: "Answer",
+            14: "RAI Response Letter",
+            17: "ADV - COL Application",
+            18: "ADV - ESP Application",
+            19: "Safety Evaluation Report",
+            20: "SECY",
+            21: "Regulatory Audit",
+            22: "Site Audit",
+            23: "Review Schedule",
+            24: "ACRS - related Document",
+            25: "ASLB - related Document",
+            26: "Commission Meeting Transcript",
+            27: "ADV-Design Control Document",
+            28: "Environmental Impact Statement",
+            29: "Inspection Report-Part 52",
+            30: "Response To Inspection Report",
+            31: "ITAAC - related Document",
+            32: "10 CFR Part 1-199",
+            33: "Federal Register",
+            34: "FR - Table Of Content",
+            35: "FR - Proposed Rules",
+            37: "FR - Notice",
+            38: "FR - Meeting",
+            39: "FR - Final Rules",
+            40: "FR - BiWeekly Notice",
+            42: "License Amendment",
+            43: "AR Rai",
+            44: "AR RaiR",
+            45: "AR Acceptance",
+            46: "AR Denial",
+            48: "Withdrawal",
+            49: "Denial",
+            52: "Statements of Consideration",
+            54: "Lic Action - Exemption",
+            55: "Initial Relief Request",
+            56: "Lic Action - Relief Request",
+            57: "NRC - Review Standards",
+            58: "NRC - Enforcement Manual",
+            59: "NUREG",
+            60: "NUREG/BR",
+            61: "NUREG/CP",
+            62: "NUREG/CR",
+            63: "NUREG/GR",
+            64: "NUREG/IA",
+            65: "Nuclear Regulations",
+            66: "NRC - Office Instruction",
+            67: "QA Program Change",
+            68: "NRC - Speech",
+            69: "Task Interface Agreement",
+            70: "Vendor Inspection Report",
+            71: "Assessment - Annual",
+            72: "Assessment - Midcycle/Updated IP",
+            73: "NRC - Management Directive",
+            74: "NRC - Policy Statement",
+            75: "Regulatory Guide",
+            76: "NRC - Interim Staff Guidance",
+            77: "Standard Review Plan",
+            78: "All Generic Communication",
+            79: "Gen Com - Generic Letter",
+            80: "Gen Com - Information Notice",
+            81: "Gen Com - Bulletin",
+            82: "Gen Com - Regulatory Issue Summary",
+            83: "Gen Com - Administrative Letter",
+            84: "Gen Com - Circular",
+            85: "SECY - SRM",
+            86: "SECY - Vote Record",
+            87: "SECY - ComSECY",
+            88: "NRC - Inspection Manual",
+            89: "LER Component Failure",
+            90: "Notice of Enforcement Discretion (NOED)",
+            91: "NEI Technical Report",
+            92: "Current Technical Specification",
+            93: "Supplement",
+            94: "Correction",
+            95: "LIS Meeting Summaries",
+            96: "Web-Docket",
+            97: "TS Bases",
+            98: "EIS and Comments",
+            99: "FSAR",
+            101: "NRC - Order",
+            102: "Allegation Guidance Memorandum",
+            103: "NRC - Organization Charts",
+            104: "Original Plant SERs",
+            105: "NUREG/KM",
+            106: "NRC - Review Standards – Design-Specific",
+            107: "Research Information Letter",
+            108: "Inspection Report – Other",
+            109: "Inspection Report – Integrated",
+            110: "Inspection Report – CDBI",
+            111: "Inspection Report – FPT",
+            112: "Inspection Report – PI&R",
+            113: "Inspection Report – Response",
+            114: "Inspection Report – Security",
+            115: "Inspection Report – EP",
+            116: "Inspection Report – ISFSI",
+            117: "Inspection Report – 95001",
+            118: "Inspection Report – 95002",
+            119: "Inspection Report – 95003",
+            120: "Inspection Report - DBA",
+            121: "NRC - OIG Reports"
+        }}
     }}
 }}
 ```
@@ -308,6 +440,28 @@ Columns:
         "type": "int",
         "description": "The ID of the plant the unit belongs to"
     }},
+    "PeerGroupKey": {{
+        "type": "int",
+        "description": The peer group the unit belongs to, if any.",
+        "values": {{
+            1: "CE Plants without CPCs",
+            2: "ISFSI",
+            3: "CE Plants with CPCs",
+            4: "GE BWR2 BWR3 Older PreTMI BWR4",
+            5: "GE Newer BWR4 BWR5 BWR6",
+            6: "Babcock and Wilcox",
+            7: "Westinghouse Small 2 3 and 4 Loop",
+            8: "Westinghouse Older 3 Loop",
+            9: "Westinghouse Older 4 Loop",
+            10: "Westinghouse Newer 3 and 4 Loop",
+            11: "Construction",
+            12: "Not Defined",
+            13: "Retired",
+            14: "New Build",
+            15: "Decommissioning",
+            16: "Decommission Complete"
+        }}
+    }}
     "UnitName": {{
         "type": "string",
         "description": "The name of the unit"
@@ -318,7 +472,30 @@ Columns:
     }},
     "ReactorTypeId": {{
         "type": "int",
-        "description": "The type of the reactor in this unit"
+        "description": "The type of the reactor in this unit",
+        "values": {{
+            1: "Advanced Boiling Water Reactor by General Electric (GE) Nuclear Energy (code ABWR)",
+            2: "System 80+ by Westinghouse Electric Company (code S-80+)",
+            3: "Advanced Passive 600 by Westinghouse Electric Company (code AP600)",
+            4: "Advanced Passive 1000 by Westinghouse Electric Company (code AP1000)",
+            5: "Economic Simplified Boiling-Water Reactor by GE-Hitachi Nuclear Energy (code ESBWR)",
+            6: "U.S. Evolutionary Power Reactor by AREVA Nuclear Power (code US-EPR)",
+            7: "U.S. Advanced Pressurized-Water Reactor by Mitsubishi Heavy Industries, Ltd. (code US-APWR)",
+            9: "Boiling Water Reactor by General Electric (code BWR-GE)",
+            10: "Pressurized Water Reactor by Babcock & Wilcox (code PWR-B&W)",
+            11: "Pressurized Water Reactor by Combustion Engineering (code PWR-CE)",
+            12: "Pressurized Water Reactor by Westinghouse (code PWR-W)",
+            13: "Advanced CANDU Reactor by Atomic Energy of Canada Limited (code ACR-700)",
+            14: "International Reactor Innovative and Secure by Westinghouse (code IRIS)",
+            15: "Pebble Bed Modular Reactor by PBMR (Pty) Ltd (code PBMR)",
+            19: "Super Safe, Small and Simple reactor by Toshiba (code Toshiba 4s)",
+            20: "Simplified Boiling Water Reactor by AREVA (code SWR-1000)",
+            21: "Gas Turbine-Modular Helium Reactor  by General Atomics (code GT-MHR)",
+            22: "Small Modular Reactor by Babcock & Wilcox (code mPower)",
+            23: "Westinghouse Small Modular Reactor (code SMR-W)",
+            24: "APR1400 (code APR1400)",
+            25: "NuScale SMR (code SMR-NSC)"
+        }}
     }},
     "UnitNumber": {{
         "type": "int",
@@ -459,31 +636,16 @@ Here is the user input:
 {input}
 '''
 
-SEMANTIC_PROMPT_TEMPLATE = '''Your goal is to output a text string given the user's input which will be used to compare to document contents.
-The output should contain only text that is expected to match the contents of documents. Any conditions in the original query should not be mentioned in the output as well.
+SEMANTIC_PROMPT_TEMPLATE = '''Provide a better search query for web search engine to answer the given question.
 
-<< EXAMPLES >>
-1. User input: "I want all documents for the Beaver Valley Plant for nuclear fuel waste."
-Output: "nuclear fuel waste"
+<< EXAMPLES >> 
+1. Input: "Looking for License amendment request associated with changes to emergency plan staff augmentation"
+Output: "Emergency plan staff augmentation license amendment request"
 
+2. Input: "Show me plants and documents that requested an extension to Type A leak rate test frequencies?"
+Output: "Type A leak rate test frequency extension"
 
-Here is the user input: {input}
-'''
-
-CONDITION_PROMPT_TEMPLATE = '''Your goal is to rewrite the user's input to only contain logical conditions for filtering documents.
-The output should not contain any text that is expected to match the contents of documents.
-The output should not contain ANY semantic information, only logical conditions, if there are any.
-
-<< EXAMPLES >>
-1. User input: "I want all documents for the Beaver Valley Plant for nuclear fuel waste."
-Output: "I want all documents for the Beaver Valley Plant."
-
-2. User input: "What plants filed for TSTF-404 & got approved in 2024?"
-Output: "What plants got approved in 2024?"
-
-3. User input: "License amendments associated with 24 month fuel cycle transition"
-Output: "License amendments"
-
+Output only a single better search query and nothing else like in the examples.
 
 Here is the user input: {input}
 '''
@@ -513,18 +675,18 @@ class SQLRetriever(BaseRetriever):
         print('############# REWROTE QUERY FOR RETRIEVAL ##############')
         print(retrieval_query)
         print('\n\n')
-        # Rewrite for SQL.
-        condition_prompt = PromptTemplate(
-            input_variables=['input'],
-            template=CONDITION_PROMPT_TEMPLATE
-        )
-        condition_chain = LLMChain(llm=self.llm, prompt=condition_prompt)
-        condition_query = condition_chain.predict(
-            input=query
-        )
-        print('################### REWROTE QUERY FOR SQL #################3')
-        print(condition_query)
-        print('\n\n')
+        # # Rewrite for SQL.
+        # condition_prompt = PromptTemplate(
+        #     input_variables=['input'],
+        #     template=CONDITION_PROMPT_TEMPLATE
+        # )
+        # condition_chain = LLMChain(llm=self.llm, prompt=condition_prompt)
+        # condition_query = condition_chain.predict(
+        #     input=query
+        # )
+        # print('################### REWROTE QUERY FOR SQL #################3')
+        # print(condition_query)
+        # print('\n\n')
         sql_prompt = PromptTemplate(
             input_variables=['dialect', 'input', 'embeddings_table', 'embeddings', 'distance_function'],
             template=SQL_PROMPT_TEMPLATE
@@ -532,7 +694,7 @@ class SQLRetriever(BaseRetriever):
         sql_chain = LLMChain(llm=self.llm, prompt=sql_prompt)
         sql_query = sql_chain.predict(
             dialect='postgres',
-            input=condition_query,
+            input=query,
             embeddings_table='doc_vec_c1_t42',
             distance_function='<->',
             k=5,

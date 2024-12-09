@@ -155,7 +155,8 @@ class Config():
                     "host": api_host,
                     "port": "47334",
                     "restart_on_failure": True,
-                    "max_restart_count": 0
+                    "max_restart_count": 1,
+                    "max_restart_interval_seconds": 60
                 },
                 "mysql": {
                     "host": api_host,
@@ -164,7 +165,8 @@ class Config():
                     "database": "mindsdb",
                     "ssl": True,
                     "restart_on_failure": True,
-                    "max_restart_count": 0
+                    "max_restart_count": 1,
+                    "max_restart_interval_seconds": 60
                 },
                 "mongodb": {
                     "host": api_host,

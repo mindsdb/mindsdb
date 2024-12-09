@@ -120,7 +120,7 @@ jobs:
         uses: astral-sh/setup-uv@v3
         with:
           enable-cache: true
-          cache-dependency-glob: "**/requirements*.txt" 
+          cache-dependency-glob: "**/requirements*.txt"
       - name: Check requirements files are installable
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
@@ -155,7 +155,7 @@ jobs:
         uses: astral-sh/setup-uv@v3
         with:
           enable-cache: true
-          cache-dependency-glob: "**/requirements*.txt" 
+          cache-dependency-glob: "**/requirements*.txt"
       - name: Install dependencies
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
@@ -176,6 +176,7 @@ jobs:
           uv pip install .[teradata]
           uv pip install .[hana]
           uv pip install .[minds_endpoint]
+          uv pip install .[slack]
           uv pip freeze
       - name: Run unit tests
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
@@ -192,7 +193,7 @@ jobs:
       - name: Run Handlers tests and submit Coverage to coveralls
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |
-          handlers=("mysql" "postgres" "mssql" "clickhouse" "snowflake" "web" "redshift" "bigquery" "elasticsearch" "s3" "databricks" "dynamodb" "mariadb" "oracle" "mongodb" "db2" "hive" "teradata" "hana")
+          handlers=("mysql" "postgres" "mssql" "clickhouse" "snowflake" "web" "redshift" "bigquery" "elasticsearch" "s3" "databricks" "dynamodb" "mariadb" "oracle" "mongodb" "db2" "hive" "teradata" "hana" "slack")
           for handler in "${handlers[@]}"
           do
             pytest --cov=mindsdb/integrations/handlers/${handler}_handler tests/unit/handlers/test_${handler}.py 

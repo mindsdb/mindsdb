@@ -178,7 +178,7 @@ jobs:
           uv pip install .[minds_endpoint]
           uv pip install .[slack]
           uv pip freeze
-          git clone git@github.com:mindsdb/mindsdb_sql_parser.git parser_tests
+          git clone https://github.com/mindsdb/mindsdb_sql_parser.git parser_tests
       - name: Run unit tests
         if: ${{ needs.changes.outputs.not-docs == 'true' }}
         run: |

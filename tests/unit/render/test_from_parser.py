@@ -124,7 +124,7 @@ class TestFromParser:
 
         except ImportError:
             raise RuntimeError("Unable to import render's tests. Make sure they are in PYTHONPATH. It can be done by:"
-                               "- git clone git@github.com:mindsdb/mindsdb_sql_parser.git parser_tests"
+                               "- git clone https://github.com/mindsdb/mindsdb_sql_parser.git parser_tests"
                                "- env PYTHONPATH=./:parser_tests/tests pytest")
 
         modules = (

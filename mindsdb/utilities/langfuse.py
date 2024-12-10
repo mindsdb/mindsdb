@@ -89,7 +89,7 @@ class LangfuseClientWrapper:
 
         logger.info("Langfuse enabled")
         logger.debug(f"LANGFUSE_PUBLIC_KEY: {LANGFUSE_PUBLIC_KEY}")
-        logger.debug(f"LANGFUSE_SECRET_KEY: {LANGFUSE_SECRET_KEY}")
+        logger.debug(f"LANGFUSE_SECRET_KEY: {'*' * len(LANGFUSE_SECRET_KEY)}")
         logger.debug(f"LANGFUSE_HOST: {LANGFUSE_HOST}")
         logger.debug(f"LANGFUSE_ENVIRONMENT: {LANGFUSE_ENVIRONMENT}")
         logger.debug(f"LANGFUSE_RELEASE: {LANGFUSE_RELEASE}")

@@ -357,6 +357,7 @@ class LangchainAgent:
                 session_id=ctx.session_id,
             )
 
+            # test comment
             self.run_completion_span = self.api_trace.span(name='run-completion', input=messages)
             trace_id = self.api_trace.id
             observation_id = self.run_completion_span.id

@@ -436,7 +436,7 @@ class SlackMessagesTable(APIResource):
                     raise ValueError(f"Channel '{arg2}' not found")
 
             # Handle the columns 'ts'.
-            if arg1 == 'ts':
+            elif arg1 == 'ts':
                 if op == '=':
                     params['ts'] = float(arg2)
                 else:

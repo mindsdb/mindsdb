@@ -1,9 +1,14 @@
 import os
 import json
+import datetime
 from copy import deepcopy
 from pathlib import Path
 
+from mindsdb.utilities import log
 from mindsdb.utilities.fs import create_directory, get_or_create_data_dir
+
+
+logger = log.getLogger(__name__)
 
 
 def _merge_key_recursive(target_dict, source_dict, key):
@@ -127,6 +132,19 @@ class Config():
             self._override_config['auth']['username'] = http_username
             self._override_config['auth']['password'] = http_password
 
+        # region permanent session lifetime
+        permanent_session_lifetime = datetime.timedelta(days=31)
+        for env_name in ('MINDSDB_HTTP_PERMANENT_SESSION_LIFETIME', 'FLASK_PERMANENT_SESSION_LIFETIME'):
+            env_value = os.environ.get(env_name)
+            if isinstance(env_value, str):
+                try:
+                    permanent_session_lifetime = int(env_value)
+                except Exception:
+                    logger.warning(f'Can\'t cast env var {env_name} value to int: {env_value}')
+                    continue
+                break
+        # endregion
+
         api_host = "127.0.0.1" if not self.use_docker_env else "0.0.0.0"
         self._default_config = {
             'permanent_storage': {
@@ -136,6 +154,7 @@ class Config():
             'paths': paths,
             'auth': {
                 'http_auth_enabled': False,
+                "http_permanent_session_lifetime": permanent_session_lifetime
             },
             "log": {
                 "level": {

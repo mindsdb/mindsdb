@@ -170,6 +170,8 @@ class MapReduceSummarizerChain(Chain):
         inputs: Dict[str, Any],
         run_manager: Optional[CallbackManagerForChainRun] = None
     ) -> Dict[str, Any]:
+        # Explicitly connect to make sure vectors are registered.
+        _ = self.vector_store_handler.connect()
         logger.debug(f"Processing inputs with keys: {list(inputs.keys())}")
         context_chunks = inputs.get(self.context_key, [])
         logger.debug(f"Found {len(context_chunks)} context chunks")

@@ -375,7 +375,7 @@ class SlackMessagesTable(APIResource):
             # Handle the column'ts'.
             elif arg1 =='ts':
                 if op == '=':
-                    params[arg1] = float(arg2)
+                    params[arg1] = str(arg2)
                 else:
                     raise ValueError(f"Unsupported operator '{op}' for column '{arg1}'")
 
@@ -396,7 +396,7 @@ class SlackMessagesTable(APIResource):
         try:
             client.chat_update(
                 channel=params['channel'],
-                ts=str(params['ts']),
+                ts=params['ts'],
                 text=params['text'].strip()
             )
         except SlackApiError as slack_error:

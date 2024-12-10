@@ -4,6 +4,7 @@ import datetime as dt
 import unittest
 from unittest.mock import MagicMock, patch
 
+from mindsdb_sql_parser.ast import BinaryOperation, Constant, Delete, Identifier, Insert, Update
 import pandas as pd
 from slack_sdk.errors import SlackApiError
 from slack_sdk.web.slack_response import SlackResponse
@@ -596,6 +597,259 @@ class TestSlackMessagesTable(SlackAPIResourceTestSetup, unittest.TestCase):
                         value=[MOCK_RESPONSE_CONV_INFO_1['channel']['id']]
                     )
                 ]
+            )
+
+    def test_insert_with_channel_id_and_text(self):
+        """
+        Tests the `insert` method of the SlackMessagesTable class to ensure it correctly sends a message to a specific conversation.
+        """
+        self.mock_connect.return_value.chat_postMessage.return_value = MagicMock()
+
+        self.resource.insert(
+            query=Insert(
+                table='messages',
+                columns=[
+                    'channel_id',
+                    'text'
+                ],
+                values=[
+                    [
+                        'C012AB3CD',
+                        'Hello, World!'
+                    ]
+                ]
+            )
+        )
+
+        self.assertEqual(self.mock_connect.return_value.chat_postMessage.call_count, 1)
+        self.mock_connect.return_value.chat_postMessage.assert_any_call(
+            channel='C012AB3CD',
+            text='Hello, World!'
+        )
+
+    def test_insert_without_channel_id(self):
+        """
+        Tests the `insert` method raises a ValueError when the `channel_id` column is not included in the columns.
+        """
+        with self.assertRaises(ValueError):
+            self.resource.insert(
+                query=Insert(
+                    table='messages',
+                    columns=[
+                        'text'
+                    ],
+                    values=[
+                        [
+                            'Hello, World!'
+                        ]
+                    ]
+                )
+            )
+
+    def test_insert_without_text(self):
+        """
+        Tests the `insert` method raises a ValueError when the `text` column is not included in the columns.
+        """
+        with self.assertRaises(ValueError):
+            self.resource.insert(
+                query=Insert(
+                    table='messages',
+                    columns=[
+                        'channel_id'
+                    ],
+                    values=[
+                        [
+                            'C012AB3CD'
+                        ]
+                    ]
+                )
+            )
+
+    def test_update_with_channel_id_text_and_ts(self):
+        """
+        Tests the `update` method of the SlackMessagesTable class to ensure it correctly updates a message in a specific conversation.
+        """
+        self.mock_connect.return_value.chat_update.return_value = MagicMock()
+
+        self.resource.update(
+            query=Update(
+                table='messages',
+                update_columns={
+                    'text': 'Hello, World!'
+                },
+                where=BinaryOperation(
+                    op='and',
+                    args=[
+                        BinaryOperation(
+                            op='=',
+                            args=[
+                                Identifier('channel_id'),
+                                Constant('C012AB3CD')
+                            ]
+                        ),
+                        BinaryOperation(
+                            op='=',
+                            args=[
+                                Identifier('ts'),
+                                Constant('1512085950.000216')
+                            ]
+                        )
+                    ]
+                )
+            )
+        )
+
+        self.assertEqual(self.mock_connect.return_value.chat_update.call_count, 1)
+        self.mock_connect.return_value.chat_update.assert_any_call(
+            channel='C012AB3CD',
+            text='Hello, World!',
+            ts='1512085950.000216'
+        )
+
+    def test_update_without_channel_id(self):
+        """
+        Tests the `update` method raises a ValueError when the `channel_id` column is not included in the conditions.
+        """
+        with self.assertRaises(ValueError):
+            self.resource.update(
+                query=Update(
+                    table='messages',
+                    update_columns={
+                        'text': 'Hello, World!'
+                    },
+                    where=BinaryOperation(
+                        op='=',
+                        args=[
+                            Identifier('ts'),
+                            Constant('1512085950.000216')
+                        ]
+                    )
+                )
+            )
+
+    def test_update_without_ts(self):
+        """
+        Tests the `update` method raises a ValueError when the `ts` column is not included in the conditions.
+        """
+        with self.assertRaises(ValueError):
+            self.resource.update(
+                query=Update(
+                    table='messages',
+                    update_columns={
+                        'text': 'Hello, World!'
+                    },
+                    where=BinaryOperation(
+                        op='=',
+                        args=[
+                            Identifier('channel_id'),
+                            Constant('C012AB3CD')
+                        ]
+                    )
+                )
+            )
+
+    def test_update_without_text(self):
+        """
+        Tests the `update` method raises a ValueError when the `text` column is not included in the update_columns.
+        """
+        with self.assertRaises(ValueError):
+            self.resource.update(
+                query=Update(
+                    table='messages',
+                    update_columns={},
+                    where=BinaryOperation(
+                        op='and',
+                        args=[
+                            BinaryOperation(
+                                op='=',
+                                args=[
+                                    Identifier('channel_id'),
+                                    Constant('C012AB3CD')
+                                ]
+                            ),
+                            BinaryOperation(
+                                op='=',
+                                args=[
+                                    Identifier('ts'),
+                                    Constant('1512085950.000216')
+                                ]
+                            )
+                        ]
+                    )
+                )
+            )
+
+    def test_delete_with_channel_id_and_ts(self):
+        """
+        Tests the `delete` method of the SlackMessagesTable class to ensure it correctly deletes a message in a specific conversation.
+        """
+        self.mock_connect.return_value.chat_delete.return_value = MagicMock()
+
+        self.resource.delete(
+            query=Delete(
+                table='messages',
+                where=BinaryOperation(
+                    op='and',
+                    args=[
+                        BinaryOperation(
+                            op='=',
+                            args=[
+                                Identifier('channel_id'),
+                                Constant('C012AB3CD')
+                            ]
+                        ),
+                        BinaryOperation(
+                            op='=',
+                            args=[
+                                Identifier('ts'),
+                                Constant('1512085950.000216')
+                            ]
+                        )
+                    ]
+                )
+            )
+        )
+
+        self.assertEqual(self.mock_connect.return_value.chat_delete.call_count, 1)
+        self.mock_connect.return_value.chat_delete.assert_any_call(
+            channel=MOCK_RESPONSE_CONV_INFO_1['channel']['id'],
+            ts=float('1512085950.000216')
+        )
+
+    def test_delete_without_channel_id(self):
+        """
+        Tests the `delete` method raises a ValueError when the `channel_id` column is not included in the conditions.
+        """
+        with self.assertRaises(ValueError):
+            self.resource.delete(
+                query=Delete(
+                    table='messages',
+                    where=BinaryOperation(
+                        op='=',
+                        args=[
+                            Identifier('ts'),
+                            Constant('1512085950.000216')
+                        ]
+                    )
+                )
+            )
+
+    def test_delete_without_ts(self):
+        """
+        Tests the `delete` method raises a ValueError when the `ts` column is not included in the conditions.
+        """
+        with self.assertRaises(ValueError):
+            self.resource.delete(
+                query=Delete(
+                    table='messages',
+                    where=BinaryOperation(
+                        op='=',
+                        args=[
+                            Identifier('channel_id'),
+                            Constant('C012AB3CD')
+                        ]
+                    )
+                )
             )
 
 

@@ -137,27 +137,3 @@ def get_metadata(model_using: Dict) -> Dict:
 def get_skills(agent: db.Agents) -> List:
     """ Retrieve skills from agent `skills` attribute. Specific to agent endpoints. """
     return [rel.skill.type for rel in agent.skills_relationships]
-
-
-def get_tags(metadata: Dict) -> List:
-    """ Retrieves tags from existing langfuse metadata (built using `get_metadata` and `get_skills`), and environment variables. """
-    trace_tags = []
-    if os.getenv('FLASK_ENV'):
-        trace_tags.append(os.getenv('FLASK_ENV'))  # Fix: use something other than flask_env
-    if 'provider' in metadata:
-        trace_tags.append(metadata['provider'])
-    return trace_tags
-
-
-def get_tool_usage(trace) -> Dict:
-    """ Retrieves tool usage information from a langfuse trace.
-    Note: assumes trace marks an action with string `AgentAction` """
-    tool_usage = {}
-    steps = [s.name for s in trace.observations]
-    for step in steps:
-        if 'AgentAction' in step:
-            tool_name = step.split('-')[1]
-            if tool_name not in tool_usage:
-                tool_usage[tool_name] = 0
-            tool_usage[tool_name] += 1
-    return tool_usage

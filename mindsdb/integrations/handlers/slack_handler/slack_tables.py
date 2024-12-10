@@ -287,10 +287,10 @@ class SlackMessagesTable(APIResource):
 
                     messages = messages[:limit]
             # Otherwise, use the provided limit or a default limit of 999.
-                else:
-                    params['limit'] = limit if limit else 999
-                    response = client.conversations_history(**params)
-                    messages = response['messages']
+            else:
+                params['limit'] = limit if limit else 999
+                response = client.conversations_history(**params)
+                messages = response['messages']
         except SlackApiError as slack_error:
             logger.error(f"Error getting messages: {slack_error.response['error']}")
             raise
@@ -567,10 +567,10 @@ class SlackThreadsTable(APIResource):
 
                     messages = messages[:limit]
             # Otherwise, use the provided limit or a default limit of 1000.
-                else:
-                    params['limit'] = limit if limit else 1000
-                    response = client.conversations_replies(**params)
-                    messages = response['messages']
+            else:
+                params['limit'] = limit if limit else 1000
+                response = client.conversations_replies(**params)
+                messages = response['messages']
         except SlackApiError as slack_error:
             logger.error(f"Error getting messages: {slack_error.response['error']}")
             raise
@@ -687,9 +687,9 @@ class SlackUsersTable(APIResource):
 
                     users = users[:limit]
             # Otherwise, use the provided limit or a default limit of 1000.
-                else:
-                    response = client.users_list(limit=limit if limit else 1000)
-                    users = response['members']
+            else:
+                response = client.users_list(limit=limit if limit else 1000)
+                users = response['members']
         except SlackApiError as slack_error:
             logger.error(f"Error getting users: {slack_error.response['error']}")
             raise

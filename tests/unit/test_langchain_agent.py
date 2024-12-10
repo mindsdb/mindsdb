@@ -60,7 +60,7 @@ def test_build_embedding_model_vllm(mock_construct):
     # Verify OpenAI interface configuration
     call_args = mock_construct.call_args[0][0]
     assert call_args['class'] == 'openai'
-    assert call_args['base_url'] == 'http://vllm_embeddings:8001/v1'
+    assert call_args['openai_api_base'] == 'http://vllm_embeddings:8001/v1'
     assert call_args['model'] == 'test-model'
     assert 'openai_api_key' in call_args
 

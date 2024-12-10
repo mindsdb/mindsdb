@@ -79,7 +79,7 @@ class TestRender:
 
     def test_extra_cast_in_division(self):
         sql = """
-           select a / b from table1
+           select a / b as col1 from table1
         """
 
         query = parse_sql(sql)
@@ -106,3 +106,12 @@ class TestRender:
 
         # check queries are the same after render
         assert str(query) == str(parse_sql(rendered))
+
+        def test_div(self):
+
+        sql0 = 'select 1 / 2 - (9 / 4 - 1) * 3 as x'
+        query = parse_sql(sql0)
+
+        sql = SqlalchemyRender('postgres').get_string(query, with_failback=False)
+
+        assert sql.lower() == sql0

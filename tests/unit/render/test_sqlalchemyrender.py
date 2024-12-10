@@ -107,7 +107,7 @@ class TestRender:
         # check queries are the same after render
         assert str(query) == str(parse_sql(rendered))
 
-        def test_div(self):
+    def test_div(self):
 
         sql0 = 'select 1 / 2 - (9 / 4 - 1) * 3 as x'
         query = parse_sql(sql0)

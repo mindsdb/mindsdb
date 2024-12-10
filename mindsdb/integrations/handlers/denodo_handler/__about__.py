@@ -1,0 +1,5 @@
+__title__ = 'Denodo Handler'
+__version__ = '0.1.0'
+__description__ = 'A handler for integrating Denodo with MindsDB'
+__author__ = 'MindsDB'
+__license__ = 'MIT'

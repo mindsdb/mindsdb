@@ -159,40 +159,41 @@ def build_embedding_model(args) -> Embeddings:
     # Log the current embedding configuration attempt
     logger.debug(f"Raw embedding configuration: {embeddings_args}")
 
-    # no embedding model args provided, use default provider.
+    # Get the embeddings provider, either from args or default
+    embeddings_provider = embeddings_args.get('class') or get_embedding_model_provider(args)
     if not embeddings_args:
-        embeddings_provider = get_embedding_model_provider(args)
         logger.warning(
             "'embedding_model_args' not found in input params, "
             f"Using embedding provider: {embeddings_provider}"
         )
         embeddings_args["class"] = embeddings_provider
 
-        # For VLLM or OpenAI interface, configure embeddings
-        is_vllm = (embeddings_provider == 'openai' and args.get('provider') == 'vllm') or args.get('embedding_model_provider') == 'vllm'
-        if is_vllm:
-            # Get model name with clear fallback chain
-            model_name = args.get('embedding_model_name')
-            if not model_name:
-                model_name = args.get('model_name')
-                if model_name:
-                    logger.warning(f"No embedding_model_name specified, falling back to model_name: {model_name}")
-                else:
-                    model_name = 'text-embedding-ada-002'
-                    logger.warning(f"No embedding model specified, using default: {model_name}")
+    # For VLLM or OpenAI interface, configure embeddings
+    is_vllm = (embeddings_provider == 'openai' and args.get('provider') == 'vllm') or args.get('embedding_model_provider') == 'vllm'
+    if is_vllm:
+        # Get model name with clear fallback chain
+        model_name = args.get('embedding_model_name')
+        if not model_name:
+            model_name = args.get('model_name')
+            if model_name:
+                logger.warning(f"No embedding_model_name specified, falling back to model_name: {model_name}")
+            else:
+                model_name = 'text-embedding-ada-002'
+                logger.warning(f"No embedding model specified, using default: {model_name}")
 
-            embeddings_args.update({
-                'base_url': args['embedding_base_url'],
-                'model': model_name,
-                'openai_api_key': 'dummy-key'  # OpenAI embeddings require an API key
-            })
-            logger.info(f"Configured VLLM embeddings via OpenAI interface at {args['embedding_base_url']} using model {model_name}")
+        # Configure all vLLM settings in embeddings_args
+        embeddings_args.update({
+            'model': model_name,
+            'openai_api_base': args.get('openai_api_base', args.get('embedding_base_url')),  # Support both param names
+            'openai_api_key': 'dummy-key',  # OpenAI embeddings require an API key
+        })
+        logger.info(f"Configured VLLM embeddings via OpenAI interface at {embeddings_args['openai_api_base']} using model {model_name}")
 
-        # Include API keys if present.
-        api_keys = {k: v for k, v in args.items() if "api_key" in k}
-        if api_keys:
-            logger.debug(f"Including API keys: {list(api_keys.keys())}")
-        embeddings_args.update(api_keys)
+    # Include API keys if present.
+    api_keys = {k: v for k, v in args.items() if "api_key" in k}
+    if api_keys:
+        logger.debug(f"Including API keys: {list(api_keys.keys())}")
+    embeddings_args.update(api_keys)
 
     try:
         model = construct_model_from_args(embeddings_args)
@@ -435,8 +436,9 @@ class LangchainAgent:
         # Set up tools.
         llm = create_chat_model(args)
         self.llm = llm
+
+        # Don't set embedding model for retrieval mode - let the knowledge base handle it
         if args.get("mode") == "retrieval":
-            self.set_embedding_model(args)
             self.args.pop("mode")
 
         tools = self._langchain_tools_from_skills(llm)

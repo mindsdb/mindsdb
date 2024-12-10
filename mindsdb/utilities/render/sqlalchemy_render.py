@@ -141,15 +141,16 @@ class SqlalchemyRender:
             # sql functions
             col = None
             if len(t.parts) == 1:
-                name = t.parts[0].upper()
-                if name == 'CURRENT_DATE':
-                    col = sa_fnc.current_date()
-                elif name == 'CURRENT_TIME':
-                    col = sa_fnc.current_time()
-                elif name == 'CURRENT_TIMESTAMP':
-                    col = sa_fnc.current_timestamp()
-                elif name == 'CURRENT_USER':
-                    col = sa_fnc.current_user()
+                if isinstance(t.parts[0], str):
+                    name = t.parts[0].upper()
+                    if name == 'CURRENT_DATE':
+                        col = sa_fnc.current_date()
+                    elif name == 'CURRENT_TIME':
+                        col = sa_fnc.current_time()
+                    elif name == 'CURRENT_TIMESTAMP':
+                        col = sa_fnc.current_timestamp()
+                    elif name == 'CURRENT_USER':
+                        col = sa_fnc.current_user()
             if col is None:
                 col = self.to_column(t.parts)
             if t.alias:

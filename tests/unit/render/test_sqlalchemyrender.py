@@ -98,6 +98,15 @@ class TestRender:
         rendered = SqlalchemyRender('postgres').get_string(query, with_failback=False)
         assert rendered == 'SELECT "table"'
 
+    def test_star_in_path(self):
+        sql = "select t.* from table t"
+
+        query = parse_sql(sql)
+        rendered = SqlalchemyRender('postgres').get_string(query, with_failback=False)
+
+        # check queries are the same after render
+        assert str(query) == str(parse_sql(rendered))
+
     def test_div(self):
 
         sql0 = 'select 1 / 2 - (9 / 4 - 1) * 3 as x'

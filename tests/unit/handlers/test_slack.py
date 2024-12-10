@@ -10,7 +10,12 @@ from slack_sdk.web.slack_response import SlackResponse
 
 from base_handler_test import BaseAPIChatHandlerTest, BaseAPIResourceTestSetup
 from mindsdb.integrations.handlers.slack_handler.slack_handler import SlackHandler
-from mindsdb.integrations.handlers.slack_handler.slack_tables import SlackConversationsTable
+from mindsdb.integrations.handlers.slack_handler.slack_tables import (
+    SlackConversationsTable,
+    SlackMessagesTable,
+    SlackThreadsTable,
+    SlackUsersTable
+)
 from mindsdb.integrations.libs.response import (
     HandlerStatusResponse as StatusResponse,
     HandlerResponse as Response
@@ -114,6 +119,70 @@ MOCK_SLACK_RESPONSE_CONV_LIST_2 = SlackResponse(
     headers=MagicMock(),
     status_code=200,
     data=deepcopy(MOCK_RESPONSE_CONV_LIST_2)
+)
+
+# Mock response for the first call to the `conversations.history` method.
+MOCK_RESPONSE_CONV_HISTORY_1 = {
+    "ok": True,
+    "messages": [
+        {
+            "type": "message",
+            "user": "U123ABC456",
+            "text": "I find you punny and would like to smell your nose letter",
+            "ts": "1512085950.000216"
+        },
+        {
+            "type": "message",
+            "user": "U222BBB222",
+            "text": "What, you want to smell my shoes better?",
+            "ts": "1512104434.000490"
+        }
+    ],
+    "has_more": True,
+    "pin_count": 0,
+    "response_metadata": {
+        "next_cursor": "bmV4dF90czoxNTEyMDg1ODYxMDAwNTQz"
+    }
+}
+
+# Mock SlackResponse object for the first call to the `conversations.history` method.
+MOCK_SLACK_RESPONSE_CONV_HISTORY_1 = SlackResponse(
+    client=MagicMock(),
+    http_verb="GET",
+    api_url="https://slack.com/api/conversations.history",
+    req_args=MagicMock(),
+    headers=MagicMock(),
+    status_code=200,
+    data=deepcopy(MOCK_RESPONSE_CONV_HISTORY_1)
+)
+
+# Mock response for the second call to the `conversations.history` method.
+MOCK_RESPONSE_CONV_HISTORY_2 = {
+    "ok": True,
+    "messages": [
+        {
+            "type": "message",
+            "user": "U222BBB222",
+            "text": "Isn't this whether dreadful?",
+            "ts": "1512104434.000490"
+        },
+    ],
+    "has_more": False,
+    "pin_count": 0,
+    "response_metadata": {
+        "next_cursor": ""
+    }
+}
+
+# Mock SlackResponse object for the second call to the `conversations.history` method.
+MOCK_SLACK_RESPONSE_CONV_HISTORY_2 = SlackResponse(
+    client=MagicMock(),
+    http_verb="GET",
+    api_url="https://slack.com/api/conversations.history",
+    req_args=MagicMock(),
+    headers=MagicMock(),
+    status_code=200,
+    data=deepcopy(MOCK_RESPONSE_CONV_HISTORY_2)
 )
 
 
@@ -286,7 +355,7 @@ class TestSlackConversationsTable(SlackAPIResourceTestSetup, unittest.TestCase):
                 FilterCondition(
                     column='id',
                     op=FilterOperator.EQUAL,
-                    value='C012AB3CD'
+                    value=MOCK_RESPONSE_CONV_INFO_1['channel']['id']
                 )
             ]
         )
@@ -381,6 +450,153 @@ class TestSlackConversationsTable(SlackAPIResourceTestSetup, unittest.TestCase):
         assert isinstance(response, pd.DataFrame)
         expected_df = self._get_expected_df_for_conv_list_2()
         pd.testing.assert_frame_equal(response, expected_df)
+
+
+class TestSlackMessagesTable(SlackAPIResourceTestSetup, unittest.TestCase):
+    def create_resource(self):
+        return SlackMessagesTable(self.handler)
+    
+    def _get_expected_df_for_conv_history_1(self):
+        """
+        Returns the expected DataFrame for a single call to the `conversations_history` method.
+        """
+        mock_response_conv_history = deepcopy(MOCK_RESPONSE_CONV_HISTORY_1)
+        
+        expected_df_conv_history = pd.DataFrame(mock_response_conv_history['messages'], columns=self.resource.get_columns())
+        expected_df_conv_history['created_at'] = pd.to_datetime(expected_df_conv_history['ts'].astype(float), unit='s').dt.strftime('%Y-%m-%d %H:%M:%S')
+
+        expected_df_conv_history['channel_name'] = MOCK_RESPONSE_CONV_INFO_1['channel']['name']
+        expected_df_conv_history['channel_id'] = MOCK_RESPONSE_CONV_INFO_1['channel']['id']
+
+        return expected_df_conv_history
+    
+    def _get_expected_df_for_conv_history_2(self):
+        """
+        Returns the expected DataFrame for multiple(2) calls to the `conversations_history` method.
+        """
+        mock_response_conv_history_1 = deepcopy(MOCK_RESPONSE_CONV_HISTORY_1)
+        mock_response_conv_history_2 = deepcopy(MOCK_RESPONSE_CONV_HISTORY_2)
+
+        expected_df_conv_history_1 = self._get_expected_df_for_conv_history_1()
+        expected_df_conv_history_2 = pd.DataFrame(mock_response_conv_history_2['messages'], columns=self.resource.get_columns())
+        expected_df_conv_history_2['created_at'] = pd.to_datetime(expected_df_conv_history_2['ts'].astype(float), unit='s').dt.strftime('%Y-%m-%d %H:%M:%S')
+
+        expected_df_conv_history_2['channel_name'] = MOCK_RESPONSE_CONV_INFO_1['channel']['name']
+        expected_df_conv_history_2['channel_id'] = MOCK_RESPONSE_CONV_INFO_1['channel']['id']
+
+        return pd.concat([expected_df_conv_history_1, expected_df_conv_history_2], ignore_index=True)
+
+    def test_list_with_channel_id_and_no_limit(self):
+        """
+        Tests the `list` method of the SlackMessagesTable class to ensure it correctly fetches the messages of a specific conversation without any limit.
+        """
+        self.mock_connect.return_value.conversations_history.return_value = deepcopy(MOCK_SLACK_RESPONSE_CONV_HISTORY_1)
+        self.mock_connect.return_value.conversations_info.return_value = deepcopy(MOCK_SLACK_RESPONSE_CONV_INFO_1)
+
+        response = self.resource.list(
+            conditions=[
+                FilterCondition(
+                    column='channel_id',
+                    op=FilterOperator.EQUAL,
+                    value=MOCK_RESPONSE_CONV_INFO_1['channel']['id']
+                )
+            ]
+        )
+
+        self.assertEqual(self.mock_connect.return_value.conversations_history.call_count, 1)
+        self.mock_connect.return_value.conversations_history.assert_any_call(
+            channel=MOCK_RESPONSE_CONV_INFO_1['channel']['id'],
+            limit=999
+        )
+
+        assert isinstance(response, pd.DataFrame)
+        expected_df = self._get_expected_df_for_conv_history_1()
+        pd.testing.assert_frame_equal(response, expected_df)
+
+    def test_list_with_channel_id_and_limit_less_than_999(self):
+        """
+        Tests the `list` method of the SlackMessagesTable class to ensure it correctly fetches the messages of a specific conversation with a limit less than 999.
+        """
+        self.mock_connect.return_value.conversations_history.return_value = deepcopy(MOCK_SLACK_RESPONSE_CONV_HISTORY_1)
+                                                                                     
+        self.mock_connect.return_value.conversations_info.return_value = deepcopy(MOCK_SLACK_RESPONSE_CONV_INFO_1)
+
+        response = self.resource.list(
+            conditions=[
+                FilterCondition(
+                    column='channel_id',
+                    op=FilterOperator.EQUAL,
+                    value=MOCK_RESPONSE_CONV_INFO_1['channel']['id']
+                )
+            ],
+            limit=998
+        )
+
+        self.assertEqual(self.mock_connect.return_value.conversations_history.call_count, 1)
+        self.mock_connect.return_value.conversations_history.assert_any_call(
+            channel=MOCK_RESPONSE_CONV_INFO_1['channel']['id'],
+            limit=998
+        )
+
+        assert isinstance(response, pd.DataFrame)
+        expected_df = self._get_expected_df_for_conv_history_1()
+        pd.testing.assert_frame_equal(response, expected_df)
+
+    def test_list_with_channel_id_and_limit_more_than_999(self):
+        """
+        Tests the `list` method of the SlackMessagesTable class to ensure it correctly fetches the messages of a specific conversation with a limit more than 999.
+        """
+        self.mock_connect.return_value.conversations_history.side_effect = [
+            deepcopy(MOCK_SLACK_RESPONSE_CONV_HISTORY_1),
+            deepcopy(MOCK_SLACK_RESPONSE_CONV_HISTORY_2)
+        ]
+                                                                                     
+        self.mock_connect.return_value.conversations_info.return_value = deepcopy(MOCK_SLACK_RESPONSE_CONV_INFO_1)
+
+        response = self.resource.list(
+            conditions=[
+                FilterCondition(
+                    column='channel_id',
+                    op=FilterOperator.EQUAL,
+                    value=MOCK_RESPONSE_CONV_INFO_1['channel']['id']
+                )
+            ],
+            limit=1000
+        )
+
+        self.assertEqual(self.mock_connect.return_value.conversations_history.call_count, 2)
+        self.mock_connect.return_value.conversations_history.assert_any_call(
+            channel=MOCK_RESPONSE_CONV_INFO_1['channel']['id'],
+        )
+        self.mock_connect.return_value.conversations_history.assert_any_call(
+            cursor=MOCK_RESPONSE_CONV_HISTORY_1['response_metadata']['next_cursor']
+        )
+
+        assert isinstance(response, pd.DataFrame)
+        expected_df = self._get_expected_df_for_conv_history_2()
+        pd.testing.assert_frame_equal(response, expected_df)
+
+    def test_list_without_channel_id(self):
+        """
+        Tests the `list` method raises a ValueError when the `channel_id` column is not included in the conditions.
+        """
+        with self.assertRaises(ValueError):
+            self.resource.list(conditions=[])
+
+    def test_list_with_channel_id_and_unsupported_operator(self):
+        """
+        Tests the `list` method raises a ValueError when an unsupported operator is used with the `channel_id` column.
+        """
+        with self.assertRaises(ValueError):
+            self.resource.list(
+                conditions=[
+                    FilterCondition(
+                        column='channel_id',
+                        op=FilterOperator.IN,
+                        value=[MOCK_RESPONSE_CONV_INFO_1['channel']['id']]
+                    )
+                ]
+            )
 
 
 if __name__ == '__main__':

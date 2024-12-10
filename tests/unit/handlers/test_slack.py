@@ -210,7 +210,7 @@ class TestSlackHandler(BaseAPIChatHandlerTest, unittest.TestCase):
         pass
 
 
-class TestSlackConversationsTable(BaseAPIResourceTestSetup, unittest.TestCase):
+class SlackAPIResourceTestSetup(BaseAPIResourceTestSetup):
     @property
     def dummy_connection_data(self):
         return OrderedDict(
@@ -224,6 +224,8 @@ class TestSlackConversationsTable(BaseAPIResourceTestSetup, unittest.TestCase):
     def create_patcher(self):
         return patch('mindsdb.integrations.handlers.slack_handler.slack_handler.WebClient')
 
+
+class TestSlackConversationsTable(SlackAPIResourceTestSetup, unittest.TestCase):
     def create_resource(self):
         return SlackConversationsTable(self.handler)
 

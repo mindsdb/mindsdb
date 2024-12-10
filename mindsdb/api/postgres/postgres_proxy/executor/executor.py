@@ -1,4 +1,3 @@
-import logging
 from typing import Union
 
 from mindsdb_sql_parser import parse_sql

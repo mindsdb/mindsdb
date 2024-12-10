@@ -186,6 +186,85 @@ MOCK_SLACK_RESPONSE_CONV_HISTORY_2 = SlackResponse(
     data=deepcopy(MOCK_RESPONSE_CONV_HISTORY_2)
 )
 
+# Mock response for the first call to the `conversations.replies` method.
+MOCK_RESPONSE_CONV_REPLIES_1 = {
+    "messages": [
+        {
+            "type": "message",
+            "user": "U061F7AUR",
+            "text": "island",
+            "thread_ts": "1482960137.003543",
+            "reply_count": 3,
+            "subscribed": True,
+            "last_read": "1484678597.521003",
+            "unread_count": 0,
+            "ts": "1482960137.003543"
+        },
+        {
+            "type": "message",
+            "user": "U061F7AUR",
+            "text": "one island",
+            "thread_ts": "1482960137.003543",
+            "parent_user_id": "U061F7AUR",
+            "ts": "1483037603.017503"
+        }
+    ],
+    "has_more": True,
+    "ok": True,
+    "response_metadata": {
+        "next_cursor": "bmV4dF90czoxNDg0Njc4MjkwNTE3MDkx"
+    }
+}
+
+# Mock SlackResponse object for the first call to the `conversations.replies` method.
+MOCK_SLACK_RESPONSE_CONV_REPLIES_1 = SlackResponse(
+    client=MagicMock(),
+    http_verb="GET",
+    api_url="https://slack.com/api/conversations.replies",
+    req_args=MagicMock(),
+    headers=MagicMock(),
+    status_code=200,
+    data=deepcopy(MOCK_RESPONSE_CONV_REPLIES_1)
+)
+
+# Mock response for the second call to the `conversations.replies` method.
+MOCK_RESPONSE_CONV_REPLIES_2 = {
+    "messages": [
+        {
+            "type": "message",
+            "user": "U061F7AUR",
+            "text": "two island",
+            "thread_ts": "1482960137.003543",
+            "parent_user_id": "U061F7AUR",
+            "ts": "1483051909.018632"
+        },
+        {
+            "type": "message",
+            "user": "U061F7AUR",
+            "text": "three for the land",
+            "thread_ts": "1482960137.003543",
+            "parent_user_id": "U061F7AUR",
+            "ts": "1483125339.020269"
+        }
+    ],
+    "has_more": False,
+    "ok": True,
+    "response_metadata": {
+        "next_cursor": ""
+    }
+}
+
+# Mock SlackResponse object for the second call to the `conversations.replies` method.
+MOCK_SLACK_RESPONSE_CONV_REPLIES_2 = SlackResponse(
+    client=MagicMock(),
+    http_verb="GET",
+    api_url="https://slack.com/api/conversations.replies",
+    req_args=MagicMock(),
+    headers=MagicMock(),
+    status_code=200,
+    data=deepcopy(MOCK_RESPONSE_CONV_REPLIES_2)
+)
+
 
 class TestSlackHandler(BaseAPIChatHandlerTest, unittest.TestCase):
 
@@ -475,7 +554,6 @@ class TestSlackMessagesTable(SlackAPIResourceTestSetup, unittest.TestCase):
         """
         Returns the expected DataFrame for multiple(2) calls to the `conversations_history` method.
         """
-        mock_response_conv_history_1 = deepcopy(MOCK_RESPONSE_CONV_HISTORY_1)
         mock_response_conv_history_2 = deepcopy(MOCK_RESPONSE_CONV_HISTORY_2)
 
         expected_df_conv_history_1 = self._get_expected_df_for_conv_history_1()
@@ -851,6 +929,219 @@ class TestSlackMessagesTable(SlackAPIResourceTestSetup, unittest.TestCase):
                     )
                 )
             )
+
+
+class TestSlackThreadsTable(SlackAPIResourceTestSetup, unittest.TestCase):
+    def create_resource(self):
+        return SlackThreadsTable(self.handler)
+    
+    def _get_expected_df_for_conv_replies_1(self):
+        """
+        Returns the expected DataFrame for a single call to the `conversations_replies` method.
+        """
+        mock_response_conv_replies = deepcopy(MOCK_RESPONSE_CONV_REPLIES_1)
+        
+        expected_df_conv_replies = pd.DataFrame(mock_response_conv_replies['messages'], columns=self.resource.get_columns())
+
+        expected_df_conv_replies['channel_name'] = MOCK_RESPONSE_CONV_INFO_1['channel']['name']
+        expected_df_conv_replies['channel_id'] = MOCK_RESPONSE_CONV_INFO_1['channel']['id']
+
+        return expected_df_conv_replies
+    
+    def _get_expected_df_for_conv_replies_2(self):
+        """
+        Returns the expected DataFrame for multiple(2) calls to the `conversations_replies` method.
+        """
+        mock_response_conv_replies_2 = deepcopy(MOCK_RESPONSE_CONV_REPLIES_2)
+
+        expected_df_conv_replies_1 = self._get_expected_df_for_conv_replies_1()
+        expected_df_conv_replies_2 = pd.DataFrame(mock_response_conv_replies_2['messages'], columns=self.resource.get_columns())
+
+        expected_df_conv_replies_2['channel_name'] = MOCK_RESPONSE_CONV_INFO_1['channel']['name']
+        expected_df_conv_replies_2['channel_id'] = MOCK_RESPONSE_CONV_INFO_1['channel']['id']
+
+        return pd.concat([expected_df_conv_replies_1, expected_df_conv_replies_2], ignore_index=True)
+    
+    def test_list_with_channel_id_thread_ts_and_no_limit(self):
+        """
+        Tests the `list` method of the SlackThreadsTable class to ensure it correctly fetches the replies of a specific thread without any limit.
+        """
+        self.mock_connect.return_value.conversations_replies.return_value = deepcopy(MOCK_SLACK_RESPONSE_CONV_REPLIES_1)
+        self.mock_connect.return_value.conversations_info.return_value = deepcopy(MOCK_SLACK_RESPONSE_CONV_INFO_1)
+
+        response = self.resource.list(
+            conditions=[
+                FilterCondition(
+                    column='channel_id',
+                    op=FilterOperator.EQUAL,
+                    value=MOCK_RESPONSE_CONV_INFO_1['channel']['id']
+                ),
+                FilterCondition(
+                    column='thread_ts',
+                    op=FilterOperator.EQUAL,
+                    value='1482960137.003543'
+                )
+            ]
+        )
+
+        self.assertEqual(self.mock_connect.return_value.conversations_replies.call_count, 1)
+        self.mock_connect.return_value.conversations_replies.assert_any_call(
+            channel=MOCK_RESPONSE_CONV_INFO_1['channel']['id'],
+            ts='1482960137.003543',
+            limit=1000
+        )
+    
+        assert isinstance(response, pd.DataFrame)
+        expected_df = self._get_expected_df_for_conv_replies_1()
+        pd.testing.assert_frame_equal(response, expected_df)
+
+    def test_list_with_channel_id_thread_ts_and_limit_less_than_1000(self):
+        """
+        Tests the `list` method of the SlackThreadsTable class to ensure it correctly fetches the replies of a specific thread with a limit less than 1000.
+        """
+        self.mock_connect.return_value.conversations_replies.return_value = deepcopy(MOCK_SLACK_RESPONSE_CONV_REPLIES_1)
+        self.mock_connect.return_value.conversations_info.return_value = deepcopy(MOCK_SLACK_RESPONSE_CONV_INFO_1)
+
+        response = self.resource.list(
+            conditions=[
+                FilterCondition(
+                    column='channel_id',
+                    op=FilterOperator.EQUAL,
+                    value=MOCK_RESPONSE_CONV_INFO_1['channel']['id']
+                ),
+                FilterCondition(
+                    column='thread_ts',
+                    op=FilterOperator.EQUAL,
+                    value='1482960137.003543'
+                )
+            ],
+            limit=999
+        )
+
+        self.assertEqual(self.mock_connect.return_value.conversations_replies.call_count, 1)
+        self.mock_connect.return_value.conversations_replies.assert_any_call(
+            channel=MOCK_RESPONSE_CONV_INFO_1['channel']['id'],
+            ts='1482960137.003543',
+            limit=999
+        )
+
+        assert isinstance(response, pd.DataFrame)
+        expected_df = self._get_expected_df_for_conv_replies_1()
+        pd.testing.assert_frame_equal(response, expected_df)
+
+    def test_list_with_channel_id_thread_ts_and_limit_more_than_1000(self):
+        """
+        Tests the `list` method of the SlackThreadsTable class to ensure it correctly fetches the replies of a specific thread with a limit more than 1000.
+        """
+        self.mock_connect.return_value.conversations_replies.side_effect = [
+            deepcopy(MOCK_SLACK_RESPONSE_CONV_REPLIES_1),
+            deepcopy(MOCK_SLACK_RESPONSE_CONV_REPLIES_2)
+        ]
+
+        self.mock_connect.return_value.conversations_info.return_value = deepcopy(MOCK_SLACK_RESPONSE_CONV_INFO_1)
+
+        response = self.resource.list(
+            conditions=[
+                FilterCondition(
+                    column='channel_id',
+                    op=FilterOperator.EQUAL,
+                    value=MOCK_RESPONSE_CONV_INFO_1['channel']['id']
+                ),
+                FilterCondition(
+                    column='thread_ts',
+                    op=FilterOperator.EQUAL,
+                    value='1482960137.003543'
+                )
+            ],
+            limit=1001
+        )
+
+        self.assertEqual(self.mock_connect.return_value.conversations_replies.call_count, 2)
+        self.mock_connect.return_value.conversations_replies.assert_any_call(
+            channel=MOCK_RESPONSE_CONV_INFO_1['channel']['id'],
+            ts='1482960137.003543'
+        )
+        self.mock_connect.return_value.conversations_replies.assert_any_call(
+            cursor=MOCK_RESPONSE_CONV_REPLIES_1['response_metadata']['next_cursor']
+        )
+
+        assert isinstance(response, pd.DataFrame)
+        expected_df = self._get_expected_df_for_conv_replies_2()
+        pd.testing.assert_frame_equal(response, expected_df)
+
+    def test_list_without_channel_id(self):
+        """
+        Tests the `list` method raises a ValueError when the `channel_id` column is not included in the conditions.
+        """
+        with self.assertRaises(ValueError):
+            self.resource.list(conditions=[
+                FilterCondition(
+                    column='thread_ts',
+                    op=FilterOperator.EQUAL,
+                    value='1482960137.003543'
+                )
+            ])
+
+    def test_list_with_channel_id_and_unsupported_operator(self):
+        """
+        Tests the `list` method raises a ValueError when an unsupported operator is used with the `channel_id` column.
+        """
+        with self.assertRaises(ValueError):
+            self.resource.list(
+                conditions=[
+                    FilterCondition(
+                        column='channel_id',
+                        op=FilterOperator.IN,
+                        value=[MOCK_RESPONSE_CONV_INFO_1['channel']['id']]
+                    )
+                ]
+            )
+            
+    def test_list_without_thread_ts(self):
+        """
+        Tests the `list` method raises a ValueError when the `thread_ts` column is not included in the conditions.
+        """
+        with self.assertRaises(ValueError):
+            self.resource.list(
+                conditions=[
+                    FilterCondition(
+                        column='channel_id',
+                        op=FilterOperator.EQUAL,
+                        value=MOCK_RESPONSE_CONV_INFO_1['channel']['id']
+                    )
+                ]
+            )
+
+    def test_insert_with_channel_id_thread_ts_and_text(self):
+        """
+        Tests the `insert` method of the SlackThreadsTable class to ensure it correctly sends a reply to a specific thread.
+        """
+        self.mock_connect.return_value.chat_postMessage.return_value = MagicMock()
+
+        self.resource.insert(
+            query=Insert(
+                table='threads',
+                columns=[
+                    'channel_id',
+                    'thread_ts',
+                    'text'
+                ],
+                values=[
+                    [
+                        'C012AB3CD',
+                        '1482960137.003543',
+                        'Hello, World!'
+                    ]
+                ]
+            )
+        )
+
+        self.assertEqual(self.mock_connect.return_value.chat_postMessage.call_count, 1)
+        self.mock_connect.return_value.chat_postMessage.assert_any_call(
+            channel='C012AB3CD',
+            thread_ts='1482960137.003543',
+            text='Hello, World!'
+        )
 
 
 if __name__ == '__main__':

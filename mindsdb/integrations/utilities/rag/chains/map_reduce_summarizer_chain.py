@@ -23,7 +23,7 @@ logger = log.getLogger(__name__)
 Summary = namedtuple('Summary', ['source_id', 'content'])
 
 
-def create_map_reduce_documents_chain(summarization_config: SummarizationConfig) -> MapReduceDocumentsChain:
+def create_map_reduce_documents_chain(summarization_config: SummarizationConfig, input: str) -> MapReduceDocumentsChain:
     '''Creats a chain that map reduces documents into a single consolidated summary
 
     Args:
@@ -39,11 +39,17 @@ def create_map_reduce_documents_chain(summarization_config: SummarizationConfig)
     })
     map_prompt_template = summarization_config.map_prompt_template
     map_prompt = PromptTemplate.from_template(map_prompt_template)
+    # Langchain needs a template with only a variable for docs so we use a partial.
+    if 'input' in map_prompt.input_variables:
+        map_prompt = map_prompt.partial(input=input)
     # Handles summarization of individual chunks.
     map_chain = LLMChain(llm=summarization_llm, prompt=map_prompt)
 
     reduce_prompt_template = summarization_config.reduce_prompt_template
     reduce_prompt = PromptTemplate.from_template(reduce_prompt_template)
+    # Langchain needs a template with only a variable for docs so we use a partial.
+    if 'input' in reduce_prompt.input_variables:
+        reduce_prompt = reduce_prompt.partial(input=input)
     # Combines summarizations from multiple chunks into a consolidated summary.
     reduce_chain = LLMChain(llm=summarization_llm, prompt=reduce_prompt)
 
@@ -74,6 +80,7 @@ class MapReduceSummarizerChain(Chain):
     context_key: str = 'context'
     metadata_key: str = 'metadata'
     doc_id_key: str = 'original_row_id'
+    question_key: str = 'question'
 
     vector_store_handler: VectorStoreHandler
     table_name: str = 'embeddings'
@@ -81,15 +88,16 @@ class MapReduceSummarizerChain(Chain):
     content_column_name: str = 'content'
     metadata_column_name: str = 'metadata'
 
-    map_reduce_documents_chain: MapReduceDocumentsChain
+    summarization_config: SummarizationConfig
+    map_reduce_documents_chain: Optional[MapReduceDocumentsChain] = None
 
     @property
     def input_keys(self) -> List[str]:
-        return [self.context_key, 'question']
+        return [self.context_key, self.question_key]
 
     @property
     def output_keys(self) -> List[str]:
-        return [self.context_key, 'question']
+        return [self.context_key, self.question_key]
 
     def _get_document_ids_from_chunks(self, chunks: List[Document]) -> List[str]:
         unique_document_ids = set()
@@ -112,7 +120,7 @@ class MapReduceSummarizerChain(Chain):
     def _select_chunks_from_vector_store(self, conditions: List[FilterCondition]) -> DataFrame:
         return self.vector_store_handler.select(
             self.table_name,
-            columns=[self.content_column_name],
+            columns=[self.content_column_name, self.metadata_column_name],
             conditions=conditions
         )
 
@@ -126,11 +134,14 @@ class MapReduceSummarizerChain(Chain):
         all_source_chunks = await asyncio.get_event_loop().run_in_executor(None, self._select_chunks_from_vector_store, [id_filter_condition])
         document_chunks = []
         for _, row in all_source_chunks.iterrows():
-            document_chunks.append(Document(page_content=row[self.content_column_name]))
+            metadata = row.get(self.metadata_column_name, {})
+            document_chunks.append(Document(page_content=row[self.content_column_name], metadata=metadata))
+        # Sort by chunk index if present in metadata so the full document is in its original order.
+        document_chunks.sort(key=lambda doc: doc.metadata.get('chunk_index', 0) if doc.metadata else 0)
         logger.debug(f"Found {len(document_chunks)} chunks for document ID {id}")
         return document_chunks
 
-    async def _get_source_summary(self, source_id: str) -> Summary:
+    async def _get_source_summary(self, source_id: str, map_reduce_documents_chain: MapReduceDocumentsChain) -> Summary:
         if not source_id:
             logger.warning("Received empty source_id, returning empty summary")
             return Summary(source_id='', content='')
@@ -143,14 +154,14 @@ class MapReduceSummarizerChain(Chain):
             return Summary(source_id=source_id, content='')
 
         logger.debug(f"Summarizing {len(source_chunks)} chunks for source ID: {source_id}")
-        summary = await self.map_reduce_documents_chain.ainvoke(source_chunks)
+        summary = await map_reduce_documents_chain.ainvoke(source_chunks)
         content = summary.get('output_text', '')
         logger.debug(f"Generated summary for source ID {source_id}: {content[:100]}...")
         return Summary(source_id=source_id, content=content)
 
-    async def _get_source_summaries(self, source_ids: List[str]) -> List[Summary]:
+    async def _get_source_summaries(self, source_ids: List[str], map_reduce_documents_chain: MapReduceDocumentsChain) -> List[Summary]:
         summaries = await asyncio.gather(
-            *[self._get_source_summary(source_id) for source_id in source_ids]
+            *[self._get_source_summary(source_id, map_reduce_documents_chain) for source_id in source_ids]
         )
         return summaries
 
@@ -166,17 +177,21 @@ class MapReduceSummarizerChain(Chain):
         unique_document_ids = self._get_document_ids_from_chunks(context_chunks)
         logger.debug(f"Extracted {len(unique_document_ids)} unique document IDs")
 
+        question = inputs.get(self.question_key, '')
+        map_reduce_documents_chain = self.map_reduce_documents_chain
+        if map_reduce_documents_chain is None:
+            map_reduce_documents_chain = create_map_reduce_documents_chain(self.summarization_config, question)
         # For each document ID associated with one or more chunks, build the full document by
         # getting ALL chunks associated with that ID. Then, map reduce summarize the complete document.
         try:
             logger.debug("Starting async summary generation")
-            summaries = asyncio.get_event_loop().run_until_complete(self._get_source_summaries(unique_document_ids))
+            summaries = asyncio.get_event_loop().run_until_complete(self._get_source_summaries(unique_document_ids, map_reduce_documents_chain))
         except RuntimeError:
             logger.info("No event loop available, creating new one")
             # If no event loop is available, create a new one
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-            summaries = loop.run_until_complete(self._get_source_summaries(unique_document_ids))
+            summaries = loop.run_until_complete(self._get_source_summaries(unique_document_ids, map_reduce_documents_chain))
 
         source_id_to_summary = {}
         for summary in summaries:

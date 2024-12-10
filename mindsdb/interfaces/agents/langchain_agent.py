@@ -361,9 +361,6 @@ class LangchainAgent:
             name='run-completion',
             input=messages)
 
-        self.trace_id = self.langfuse_client_wrapper.trace.id
-        self.observation_id = self.run_completion_span.id
-
         if stream:
             return self._get_completion_stream(messages)
 
@@ -529,7 +526,9 @@ class LangchainAgent:
 
         # custom tracer
         if self.mdb_langfuse_callback_handler is None:
-            trace_id = args.get("trace_id", self.langfuse_client_wrapper.trace.id)
+            trace_id = None
+            if self.langfuse_client_wrapper.trace is not None:
+                trace_id = args.get("trace_id", self.langfuse_client_wrapper.trace.id)
 
             span_id = None
             if self.run_completion_span is not None:

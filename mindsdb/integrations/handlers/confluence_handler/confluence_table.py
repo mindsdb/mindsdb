@@ -1,13 +1,13 @@
 from typing import List
 
 import pandas as pd
-from mindsdb_sql.parser import ast
+from mindsdb_sql_parser import ast
 
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 from mindsdb.utilities import log
 
-from mindsdb_sql.parser import ast
+from mindsdb_sql_parser import ast
 
 logger = log.getLogger(__name__)
 
@@ -16,91 +16,52 @@ class ConfluencePagesTable(APITable):
     """Confluence Pages Table implementation"""
 
     def select(self, query: ast.Select) -> pd.DataFrame:
-        """Pulls data from the Confluence "get_all_pages_from_space" API endpoint
-        Parameters
-        ----------
-        query : ast.Select
-           Given SQL SELECT query
-        Returns
-        -------
-        pd.DataFrame
-            confluence "get_all_pages_from_space" matching the query
-        Raises
-        ------
-        ValueError
-            If the query contains an unsupported condition
-        """
+        """Pulls data from the Confluence "get_all_pages_from_space" API endpoint"""
         conditions = extract_comparison_conditions(query.where)
-
         if query.limit:
             total_results = query.limit.value
         else:
             total_results = 50
 
-        pages_kwargs = {}
-        order_by_conditions = {}
-
-        if query.order_by and len(query.order_by) > 0:
-            order_by_conditions["columns"] = []
-            order_by_conditions["ascending"] = []
-
-            for an_order in query.order_by:
-                if an_order.field.parts[0] != "":
-                    next
-                if an_order.field.parts[1] in self.get_columns():
-                    order_by_conditions["columns"].append(an_order.field.parts[1])
-
-                    if an_order.direction == "ASC":
-                        order_by_conditions["ascending"].append(True)
-                    else:
-                        order_by_conditions["ascending"].append(False)
-                else:
-                    raise ValueError(
-                        f"Order by unknown column {an_order.field.parts[1]}"
-                    )
+        space_name = None
+        page_id = None
 
         for a_where in conditions:
             if a_where[1] == "space":
                 space_name = a_where[2]
                 if a_where[0] != "=":
                     raise ValueError("Unsupported where operation for space")
-                pages_kwargs["space"] = space_name
+            elif a_where[1] == "id":
+                page_id = a_where[2]
+                if a_where[0] != "=":
+                    raise ValueError("Unsupported where operation for id")
             elif a_where[1] not in ["id", "space"]:
                 raise ValueError(f"Unsupported where argument {a_where[1]}")
 
-        confluence_pages_records = self.handler.connect().get_all_pages_from_space(
-            space_name, start=0, limit=total_results, expand="body.storage"
-        )
+        if space_name is None:
+            raise ValueError("Space name must be provided in the WHERE clause")
+
+        if page_id is not None:
+            try:
+                page = self.handler.connect().get_page_by_id(page_id, expand='body.storage,space')
+                confluence_pages_records = [page] if page['space']['key'] == space_name else []
+            except Exception as e:
+                logger.error(f"Error fetching page with ID {page_id}: {str(e)}")
+                confluence_pages_records = []
+        else:
+            confluence_pages_records = self.handler.connect().get_all_pages_from_space(
+                space_name, start=0, limit=total_results, expand="body.storage,space"
+            )
+
+        if not confluence_pages_records:
+            return pd.DataFrame(columns=self.get_columns())
+
         confluence_pages_df = pd.json_normalize(confluence_pages_records)
-
-        for a_where in conditions:
-            if a_where[1] == "id":
-                id = a_where[2]
-                if a_where[0] != "=":
-                    raise ValueError("Unsupported where operation for id")
-                confluence_pages_df = confluence_pages_df[
-                    confluence_pages_df.id == id
-                ]
-                
-
-        def extract_space(input_string):
-            parts = input_string.split('/')
-            return parts[-1]
-
-        confluence_pages_df["space"] = confluence_pages_df["_expandable.space"].apply(
-            extract_space
-        )
-
-        confluence_pages_df.columns = confluence_pages_df.columns.str.replace(
-            "body.storage.value", "body"
-        )
-
+        
+        confluence_pages_df.columns = confluence_pages_df.columns.str.replace("body.storage.value", "body")
+        confluence_pages_df['space'] = confluence_pages_df['space.key']
+        
         confluence_pages_df = confluence_pages_df[self.get_columns()]
-
-        if "space" in pages_kwargs:
-            confluence_pages_df = confluence_pages_df[
-                confluence_pages_df.space == pages_kwargs["space"]
-            ]
 
         selected_columns = []
         for target in query.targets:
@@ -108,27 +69,39 @@ class ConfluencePagesTable(APITable):
                 selected_columns = self.get_columns()
                 break
             elif isinstance(target, ast.Identifier):
-                selected_columns.append(target.parts[-1])
+                col = target.parts[-1]
+                if col in self.get_columns():
+                    selected_columns.append(col)
+                else:
+                    raise ValueError(f"Unknown column: {col}")
             else:
                 raise ValueError(f"Unknown query target {type(target)}")
 
-        if len(confluence_pages_df) == 0:
-            confluence_pages_df = pd.DataFrame([], columns=selected_columns)
-        else:
-            confluence_pages_df.columns = self.get_columns()
-            for col in set(confluence_pages_df.columns).difference(
-                set(selected_columns)
-            ):
-                confluence_pages_df = confluence_pages_df.drop(col, axis=1)
+        confluence_pages_df = confluence_pages_df[selected_columns]
 
-            if len(order_by_conditions.get("columns", [])) > 0:
+        if query.order_by and len(query.order_by) > 0:
+            sort_columns = []
+            sort_ascending = []
+            for an_order in query.order_by:
+                if isinstance(an_order.field, ast.Identifier):
+                    column = an_order.field.parts[-1]
+                    if column in selected_columns:
+                        sort_columns.append(column)
+                        sort_ascending.append(an_order.direction == "ASC")
+                    else:
+                        raise ValueError(f"Order by unknown column {column}")
+                else:
+                    raise ValueError(f"Unsupported order by clause: {an_order}")
+            
+            if sort_columns:
                 confluence_pages_df = confluence_pages_df.sort_values(
-                    by=order_by_conditions["columns"],
-                    ascending=order_by_conditions["ascending"],
+                    by=sort_columns,
+                    ascending=sort_ascending
                 )
 
         return confluence_pages_df
-
+    
+    
     def get_columns(self) -> List[str]:
         """Gets all columns to be returned in pandas DataFrame responses
         Returns

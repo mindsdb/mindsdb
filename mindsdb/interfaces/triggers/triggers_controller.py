@@ -1,6 +1,6 @@
-from mindsdb_sql.parser.ast import Identifier
+from mindsdb_sql_parser.ast import Identifier
 
-from mindsdb_sql import parse_sql, ParsingException
+from mindsdb_sql_parser import parse_sql, ParsingException
 
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.database.projects import ProjectController
@@ -58,7 +58,7 @@ class TriggersController:
 
         # check sql
         try:
-            parse_sql(query_str, dialect='mindsdb')
+            parse_sql(query_str)
         except ParsingException as e:
             raise ParsingException(f'Unable to parse: {query_str}: {e}')
 

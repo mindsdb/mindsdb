@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, model_validator
 
 
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_CHUNK_OVERLAP, DEFAULT_CHUNK_SIZE
-from mindsdb.integrations.utilities.rag.settings import DEFAULT_LLM_MODEL
+from mindsdb.integrations.utilities.rag.settings import LLMConfig
 
 
 class PreprocessorType(Enum):
@@ -23,10 +23,17 @@ class BasePreprocessingConfig(BaseModel):
 
 class ContextualConfig(BasePreprocessingConfig):
     """Configuration specific to contextual preprocessing"""
-    llm_model: str = Field(default=DEFAULT_LLM_MODEL, description="LLM model to use for context generation")
+    llm_config: LLMConfig = Field(
+        default_factory=LLMConfig,
+        description="LLM configuration to use for context generation"
+    )
     context_template: Optional[str] = Field(
         default=None,
         description="Custom template for context generation"
+    )
+    summarize: Optional[bool] = Field(
+        default=False,
+        description="Whether to return chunks as summarizations"
     )
 
 

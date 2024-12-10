@@ -3,8 +3,8 @@ import urllib
 from typing import Any
 
 import pandas as pd
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser import ast
+from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser import ast
 from newsapi import NewsApiClient
 
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
@@ -173,7 +173,7 @@ class NewsAPIHandler(APIHandler):
         return response
 
     def native_query(self, query: Any):
-        ast = parse_sql(query, dialect="mindsdb")
+        ast = parse_sql(query)
         table = self.get_table("article")
         data = table.select(ast)
         return HandlerResponse(RESPONSE_TYPE.TABLE, data_frame=data)

@@ -1,9 +1,12 @@
+import os
 import importlib
 import traceback
 import datetime as dt
 
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.ast import Identifier, Select, Star, NativeQuery
+from sqlalchemy.orm.attributes import flag_modified
+
+from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser.ast import Identifier, Select, Star, NativeQuery
 
 from mindsdb.api.executor import SQLQuery
 import mindsdb.utilities.profiler as profiler
@@ -37,6 +40,11 @@ def learn_process(data_integration_ref: dict, problem_definition: dict, fetch_da
         from mindsdb.interfaces.database.database import DatabaseController
 
         try:
+            predictor_record = db.Predictor.query.with_for_update().get(model_id)
+            predictor_record.training_metadata['process_id'] = os.getpid()
+            flag_modified(predictor_record, 'training_metadata')
+            db.session.commit()
+
             target = problem_definition.get('target', None)
             training_data_df = None
             if data_integration_ref is not None:
@@ -63,11 +71,11 @@ def learn_process(data_integration_ref: dict, problem_definition: dict, fetch_da
                     sqlquery = SQLQuery(query, session=sql_session)
                 elif data_integration_ref['type'] == 'view':
                     project = database_controller.get_project(project_name)
-                    query_ast = parse_sql(fetch_data_query, dialect='mindsdb')
+                    query_ast = parse_sql(fetch_data_query)
                     view_meta = project.query_view(query_ast)
                     sqlquery = SQLQuery(view_meta['query_ast'], session=sql_session)
                 elif data_integration_ref['type'] == 'project':
-                    query_ast = parse_sql(fetch_data_query, dialect='mindsdb')
+                    query_ast = parse_sql(fetch_data_query)
                     sqlquery = SQLQuery(query_ast, session=sql_session)
 
                 result = sqlquery.fetch(view='dataframe')
@@ -78,7 +86,6 @@ def learn_process(data_integration_ref: dict, problem_definition: dict, fetch_da
                 training_data_columns_count = len(training_data_df.columns)
                 training_data_rows_count = len(training_data_df)
 
-            predictor_record = db.Predictor.query.with_for_update().get(model_id)
             predictor_record.training_data_columns_count = training_data_columns_count
             predictor_record.training_data_rows_count = training_data_rows_count
             db.session.commit()

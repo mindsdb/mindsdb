@@ -13,8 +13,8 @@ from mindsdb.integrations.handlers.gcs_handler.gcs_tables import (
     ListFilesTable,
     FileTable
 )
-from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.parser.ast import Select, Identifier, Insert, Star, Constant
+from mindsdb_sql_parser.ast.base import ASTNode
+from mindsdb_sql_parser.ast import Select, Identifier, Insert, Star, Constant
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (

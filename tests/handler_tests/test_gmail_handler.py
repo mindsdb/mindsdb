@@ -2,7 +2,7 @@ from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.integrations.handlers.gmail_handler.gmail_handler import GmailHandler
 from mindsdb.integrations.handlers.gmail_handler.gmail_handler import EmailsTable
 from google.oauth2.credentials import Credentials
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 import unittest
 from unittest.mock import Mock, patch
 from unittest import mock
@@ -226,14 +226,14 @@ class EmailsTableTest(unittest.TestCase):
     def test_delete_method(self):
         gmail_handler = Mock(GmailHandler)
         gmail_table = EmailsTable(gmail_handler)
-        query = parse_sql('delete from gmail where id=1', dialect='mindsdb')
+        query = parse_sql('delete from gmail where id=1')
         gmail_table.delete(query)
         gmail_handler.call_gmail_api.assert_called_once_with('delete_message', {'id': 1})
 
     def test_update_method(self):
         gmail_handler = Mock(GmailHandler)
         gmail_table = EmailsTable(gmail_handler)
-        query = parse_sql('update gmail set addLabel="test1",removeLabel = "test" where id=1', dialect='mindsdb')
+        query = parse_sql('update gmail set addLabel="test1",removeLabel = "test" where id=1')
         gmail_table.update(query)
         gmail_handler.call_gmail_api.assert_called_once_with('modify_message', {'id': 1,
                                                                                 'body': {'addLabelIds': ['test1'],

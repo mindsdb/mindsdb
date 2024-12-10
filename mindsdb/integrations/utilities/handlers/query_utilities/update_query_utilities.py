@@ -1,4 +1,4 @@
-from mindsdb_sql.parser import ast
+from mindsdb_sql_parser import ast
 from typing import Text, List, Optional
 
 from .exceptions import UnsupportedColumnException

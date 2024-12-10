@@ -174,7 +174,6 @@ class LangfuseClientWrapper:
 
         return self.trace.span(name=name, input=input)
 
-
     def end_span_stream(self,
                         span: typing.Optional[StatefulSpanClient] = None):
         """
@@ -219,7 +218,6 @@ class LangfuseClientWrapper:
         except Exception as e:
             logger.error(f'Something went wrong while processing Langfuse trace {self.trace.id}: {str(e)}')
 
-
     def get_langchain_handler(self):
         """
         Get Langchain handler. If Langfuse is disabled, returns None.
@@ -230,7 +228,6 @@ class LangfuseClientWrapper:
             return None
 
         return self.trace.get_langchain_handler()
-
 
     def set_metadata(self, custom_metadata: dict = None):
         """

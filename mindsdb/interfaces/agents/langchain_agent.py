@@ -2,7 +2,6 @@ import json
 from concurrent.futures import as_completed, TimeoutError
 from typing import Dict, Iterable, List, Optional
 from uuid import uuid4
-import os
 import re
 import numpy as np
 import pandas as pd
@@ -20,9 +19,6 @@ from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langchain_core.messages.base import BaseMessage
 from langchain_core.prompts import PromptTemplate
 from langchain_core.tools import Tool
-from langfuse import Langfuse
-from langfuse.api.resources.commons.errors.not_found_error import NotFoundError as TraceNotFoundError
-from langfuse.callback import CallbackHandler
 
 from mindsdb.integrations.handlers.openai_handler.constants import (
     CHAT_MODELS as OPEN_AI_CHAT_MODELS,
@@ -39,7 +35,7 @@ from mindsdb.utilities.context import context as ctx
 
 from .mindsdb_chat_model import ChatMindsdb
 from .callback_handlers import LogCallbackHandler, ContextCaptureCallback
-from .langfuse_callback_handler import LangfuseCallbackHandler, get_metadata, get_skills
+from .langfuse_callback_handler import LangfuseCallbackHandler, get_skills
 from .safe_output_parser import SafeOutputParser
 
 from .constants import (

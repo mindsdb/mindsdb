@@ -656,13 +656,13 @@ class TestSlackConversationsTable(SlackAPIResourceTestSetup, unittest.TestCase):
 class TestSlackMessagesTable(SlackAPIResourceTestSetup, unittest.TestCase):
     def create_resource(self):
         return SlackMessagesTable(self.handler)
-    
+
     def _get_expected_df_for_conv_history_1(self):
         """
         Returns the expected DataFrame for a single call to the `conversations_history` method.
         """
         mock_response_conv_history = deepcopy(MOCK_RESPONSE_CONV_HISTORY_1)
-        
+
         expected_df_conv_history = pd.DataFrame(mock_response_conv_history['messages'], columns=self.resource.get_columns())
         expected_df_conv_history['created_at'] = pd.to_datetime(expected_df_conv_history['ts'].astype(float), unit='s').dt.strftime('%Y-%m-%d %H:%M:%S')
 
@@ -670,7 +670,7 @@ class TestSlackMessagesTable(SlackAPIResourceTestSetup, unittest.TestCase):
         expected_df_conv_history['channel_id'] = MOCK_RESPONSE_CONV_INFO_1['channel']['id']
 
         return expected_df_conv_history
-    
+
     def _get_expected_df_for_conv_history_2(self):
         """
         Returns the expected DataFrame for multiple(2) calls to the `conversations_history` method.
@@ -718,7 +718,7 @@ class TestSlackMessagesTable(SlackAPIResourceTestSetup, unittest.TestCase):
         Tests the `list` method of the SlackMessagesTable class to ensure it correctly fetches the messages of a specific conversation with a limit less than 999.
         """
         self.mock_connect.return_value.conversations_history.return_value = deepcopy(MOCK_SLACK_RESPONSE_CONV_HISTORY_1)
-                                                                                     
+
         self.mock_connect.return_value.conversations_info.return_value = deepcopy(MOCK_SLACK_RESPONSE_CONV_INFO_1)
 
         response = self.resource.list(
@@ -750,7 +750,7 @@ class TestSlackMessagesTable(SlackAPIResourceTestSetup, unittest.TestCase):
             deepcopy(MOCK_SLACK_RESPONSE_CONV_HISTORY_1),
             deepcopy(MOCK_SLACK_RESPONSE_CONV_HISTORY_2)
         ]
-                                                                                     
+
         self.mock_connect.return_value.conversations_info.return_value = deepcopy(MOCK_SLACK_RESPONSE_CONV_INFO_1)
 
         response = self.resource.list(
@@ -1055,20 +1055,20 @@ class TestSlackMessagesTable(SlackAPIResourceTestSetup, unittest.TestCase):
 class TestSlackThreadsTable(SlackAPIResourceTestSetup, unittest.TestCase):
     def create_resource(self):
         return SlackThreadsTable(self.handler)
-    
+
     def _get_expected_df_for_conv_replies_1(self):
         """
         Returns the expected DataFrame for a single call to the `conversations_replies` method.
         """
         mock_response_conv_replies = deepcopy(MOCK_RESPONSE_CONV_REPLIES_1)
-        
+
         expected_df_conv_replies = pd.DataFrame(mock_response_conv_replies['messages'], columns=self.resource.get_columns())
 
         expected_df_conv_replies['channel_name'] = MOCK_RESPONSE_CONV_INFO_1['channel']['name']
         expected_df_conv_replies['channel_id'] = MOCK_RESPONSE_CONV_INFO_1['channel']['id']
 
         return expected_df_conv_replies
-    
+
     def _get_expected_df_for_conv_replies_2(self):
         """
         Returns the expected DataFrame for multiple(2) calls to the `conversations_replies` method.
@@ -1082,7 +1082,7 @@ class TestSlackThreadsTable(SlackAPIResourceTestSetup, unittest.TestCase):
         expected_df_conv_replies_2['channel_id'] = MOCK_RESPONSE_CONV_INFO_1['channel']['id']
 
         return pd.concat([expected_df_conv_replies_1, expected_df_conv_replies_2], ignore_index=True)
-    
+
     def test_list_with_channel_id_thread_ts_and_no_limit(self):
         """
         Tests the `list` method of the SlackThreadsTable class to ensure it correctly fetches the replies of a specific thread without any limit.
@@ -1111,7 +1111,7 @@ class TestSlackThreadsTable(SlackAPIResourceTestSetup, unittest.TestCase):
             ts='1482960137.003543',
             limit=1000
         )
-    
+
         assert isinstance(response, pd.DataFrame)
         expected_df = self._get_expected_df_for_conv_replies_1()
         pd.testing.assert_frame_equal(response, expected_df)
@@ -1217,7 +1217,7 @@ class TestSlackThreadsTable(SlackAPIResourceTestSetup, unittest.TestCase):
                     )
                 ]
             )
-            
+
     def test_list_without_thread_ts(self):
         """
         Tests the `list` method raises a ValueError when the `thread_ts` column is not included in the conditions.
@@ -1331,17 +1331,17 @@ class TestSlackThreadsTable(SlackAPIResourceTestSetup, unittest.TestCase):
 class TestSlackUsersTable(SlackAPIResourceTestSetup, unittest.TestCase):
     def create_resource(self):
         return SlackUsersTable(self.handler)
-    
+
     def _get_expected_df_for_users_list_1(self):
         """
         Returns the expected DataFrame for a single call to the `users_list` method.
         """
         mock_response_users_list = deepcopy(MOCK_RESPONSE_USERS_LIST_1)
-        
+
         expected_df_users_list = pd.DataFrame(mock_response_users_list['members'], columns=self.resource.get_columns())
 
         return expected_df_users_list
-    
+
     def _get_expected_df_for_users_list_2(self):
         """
         Returns the expected DataFrame for multiple(2) calls to the `users_list` method.
@@ -1352,7 +1352,7 @@ class TestSlackUsersTable(SlackAPIResourceTestSetup, unittest.TestCase):
         expected_df_users_list_2 = pd.DataFrame(mock_response_users_list_2['members'], columns=self.resource.get_columns())
 
         return pd.concat([expected_df_users_list_1, expected_df_users_list_2], ignore_index=True)
-    
+
     def test_list_with_no_limit(self):
         """
         Tests the `list` method of the SlackUsersTable class to ensure it correctly fetches the details of all users without any limit.

@@ -265,6 +265,127 @@ MOCK_SLACK_RESPONSE_CONV_REPLIES_2 = SlackResponse(
     data=deepcopy(MOCK_RESPONSE_CONV_REPLIES_2)
 )
 
+# Mock response for the first call to the `users.info` method.
+MOCK_RESPONSE_USERS_LIST_1 = {
+    "ok": True,
+    "members": [
+        {
+            "id": "W012A3CDE",
+            "team_id": "T012AB3C4",
+            "name": "spengler",
+            "deleted": False,
+            "color": "9f69e7",
+            "real_name": "spengler",
+            "tz": "America/Los_Angeles",
+            "tz_label": "Pacific Daylight Time",
+            "tz_offset": -25200,
+            "profile": {
+                "avatar_hash": "ge3b51ca72de",
+                "status_text": "Print is dead",
+                "status_emoji": ":books:",
+                "real_name": "Egon Spengler",
+                "display_name": "spengler",
+                "real_name_normalized": "Egon Spengler",
+                "display_name_normalized": "spengler",
+                "email": "spengler@ghostbusters.example.com",
+                "image_24": "https://.../avatar/e3b51ca72dee4ef87916ae2b9240df50.jpg",
+                "image_32": "https://.../avatar/e3b51ca72dee4ef87916ae2b9240df50.jpg",
+                "image_48": "https://.../avatar/e3b51ca72dee4ef87916ae2b9240df50.jpg",
+                "image_72": "https://.../avatar/e3b51ca72dee4ef87916ae2b9240df50.jpg",
+                "image_192": "https://.../avatar/e3b51ca72dee4ef87916ae2b9240df50.jpg",
+                "image_512": "https://.../avatar/e3b51ca72dee4ef87916ae2b9240df50.jpg",
+                "team": "T012AB3C4"
+            },
+            "is_admin": True,
+            "is_owner": False,
+            "is_primary_owner": False,
+            "is_restricted": False,
+            "is_ultra_restricted": False,
+            "is_bot": False,
+            "updated": 1502138686,
+            "is_app_user": False,
+            "has_2fa": False
+        }
+    ],
+    "cache_ts": 1498777272,
+    "response_metadata": {
+        "next_cursor": "dXNlcjpVMEc5V0ZYTlo="
+    }
+}
+
+# Mock SlackResponse object for the first call to the `users.info` method.
+MOCK_SLACK_RESPONSE_USERS_LIST_1 = SlackResponse(
+    client=MagicMock(),
+    http_verb="GET",
+    api_url="https://slack.com/api/users.list",
+    req_args=MagicMock(),
+    headers=MagicMock(),
+    status_code=200,
+    data=deepcopy(MOCK_RESPONSE_USERS_LIST_1)
+)
+
+# Mock response for the second call to the `users.info` method.
+MOCK_RESPONSE_USERS_LIST_2 = {
+    "ok": True,
+    "members": [
+        {
+            "id": "W07QCRPA4",
+            "team_id": "T0G9PQBBK",
+            "name": "glinda",
+            "deleted": False,
+            "color": "9f69e7",
+            "real_name": "Glinda Southgood",
+            "tz": "America/Los_Angeles",
+            "tz_label": "Pacific Daylight Time",
+            "tz_offset": -25200,
+            "profile": {
+                "avatar_hash": "8fbdd10b41c6",
+                "image_24": "https://a.slack-edge.com...png",
+                "image_32": "https://a.slack-edge.com...png",
+                "image_48": "https://a.slack-edge.com...png",
+                "image_72": "https://a.slack-edge.com...png",
+                "image_192": "https://a.slack-edge.com...png",
+                "image_512": "https://a.slack-edge.com...png",
+                "image_1024": "https://a.slack-edge.com...png",
+                "image_original": "https://a.slack-edge.com...png",
+                "first_name": "Glinda",
+                "last_name": "Southgood",
+                "title": "Glinda the Good",
+                "phone": "",
+                "skype": "",
+                "real_name": "Glinda Southgood",
+                "real_name_normalized": "Glinda Southgood",
+                "display_name": "Glinda the Fairly Good",
+                "display_name_normalized": "Glinda the Fairly Good",
+                "email": "glenda@south.oz.coven"
+            },
+            "is_admin": True,
+            "is_owner": False,
+            "is_primary_owner": False,
+            "is_restricted": False,
+            "is_ultra_restricted": False,
+            "is_bot": False,
+            "updated": 1480527098,
+            "has_2fa": False
+        }
+    ],
+    "cache_ts": 1498777272,
+    "response_metadata": {
+        "next_cursor": ""
+    }
+}
+
+# Mock SlackResponse object for the second call to the `users.info` method.
+MOCK_SLACK_RESPONSE_USERS_LIST_2 = SlackResponse(
+    client=MagicMock(),
+    http_verb="GET",
+    api_url="https://slack.com/api/users.list",
+    req_args=MagicMock(),
+    headers=MagicMock(),
+    status_code=200,
+    data=deepcopy(MOCK_RESPONSE_USERS_LIST_2)
+)
+
 
 class TestSlackHandler(BaseAPIChatHandlerTest, unittest.TestCase):
 
@@ -1142,6 +1263,144 @@ class TestSlackThreadsTable(SlackAPIResourceTestSetup, unittest.TestCase):
             thread_ts='1482960137.003543',
             text='Hello, World!'
         )
+
+    def test_insert_without_channel_id(self):
+        """
+        Tests the `insert` method raises a ValueError when the `channel_id` column is not included in the columns.
+        """
+        with self.assertRaises(ValueError):
+            self.resource.insert(
+                query=Insert(
+                    table='threads',
+                    columns=[
+                        'thread_ts',
+                        'text'
+                    ],
+                    values=[
+                        [
+                            '1482960137.003543',
+                            'Hello, World!'
+                        ]
+                    ]
+                )
+            )
+
+    def test_insert_without_thread_ts(self):
+        """
+        Tests the `insert` method raises a ValueError when the `thread_ts` column is not included in the columns.
+        """
+        with self.assertRaises(ValueError):
+            self.resource.insert(
+                query=Insert(
+                    table='threads',
+                    columns=[
+                        'channel_id',
+                        'text'
+                    ],
+                    values=[
+                        [
+                            'C012AB3CD',
+                            'Hello, World!'
+                        ]
+                    ]
+                )
+            )
+
+    def test_insert_without_text(self):
+        """
+        Tests the `insert` method raises a ValueError when the `text` column is not included in the columns.
+        """
+        with self.assertRaises(ValueError):
+            self.resource.insert(
+                query=Insert(
+                    table='threads',
+                    columns=[
+                        'channel_id',
+                        'thread_ts'
+                    ],
+                    values=[
+                        [
+                            'C012AB3CD',
+                            '1482960137.003543'
+                        ]
+                    ]
+                )
+            )
+
+
+class TestSlackUsersTable(SlackAPIResourceTestSetup, unittest.TestCase):
+    def create_resource(self):
+        return SlackUsersTable(self.handler)
+    
+    def _get_expected_df_for_users_list_1(self):
+        """
+        Returns the expected DataFrame for a single call to the `users_list` method.
+        """
+        mock_response_users_list = deepcopy(MOCK_RESPONSE_USERS_LIST_1)
+        
+        expected_df_users_list = pd.DataFrame(mock_response_users_list['members'], columns=self.resource.get_columns())
+
+        return expected_df_users_list
+    
+    def _get_expected_df_for_users_list_2(self):
+        """
+        Returns the expected DataFrame for multiple(2) calls to the `users_list` method.
+        """
+        mock_response_users_list_2 = deepcopy(MOCK_RESPONSE_USERS_LIST_2)
+
+        expected_df_users_list_1 = self._get_expected_df_for_users_list_1()
+        expected_df_users_list_2 = pd.DataFrame(mock_response_users_list_2['members'], columns=self.resource.get_columns())
+
+        return pd.concat([expected_df_users_list_1, expected_df_users_list_2], ignore_index=True)
+    
+    def test_list_with_no_limit(self):
+        """
+        Tests the `list` method of the SlackUsersTable class to ensure it correctly fetches the details of all users without any limit.
+        """
+        self.mock_connect.return_value.users_list.return_value = deepcopy(MOCK_SLACK_RESPONSE_USERS_LIST_1)
+
+        response = self.resource.list()
+
+        self.assertEqual(self.mock_connect.return_value.users_list.call_count, 1)
+        self.mock_connect.return_value.users_list.assert_any_call(limit=1000)
+
+        assert isinstance(response, pd.DataFrame)
+        expected_df = self._get_expected_df_for_users_list_1()
+        pd.testing.assert_frame_equal(response, expected_df)
+
+    def test_list_with_limit_less_than_1000(self):
+        """
+        Tests the `list` method of the SlackUsersTable class to ensure it correctly fetches the details of all users with a limit less than 1000.
+        """
+        self.mock_connect.return_value.users_list.return_value = deepcopy(MOCK_SLACK_RESPONSE_USERS_LIST_1)
+
+        response = self.resource.list(limit=999)
+
+        self.assertEqual(self.mock_connect.return_value.users_list.call_count, 1)
+        self.mock_connect.return_value.users_list.assert_any_call(limit=999)
+
+        assert isinstance(response, pd.DataFrame)
+        expected_df = self._get_expected_df_for_users_list_1()
+        pd.testing.assert_frame_equal(response, expected_df)
+
+    def test_list_with_limit_more_than_1000(self):
+        """
+        Tests the `list` method of the SlackUsersTable class to ensure it correctly fetches the details of all users with a limit more than 1000.
+        """
+        self.mock_connect.return_value.users_list.side_effect = [
+            deepcopy(MOCK_SLACK_RESPONSE_USERS_LIST_1),
+            deepcopy(MOCK_SLACK_RESPONSE_USERS_LIST_2)
+        ]
+
+        response = self.resource.list(limit=1001)
+
+        self.assertEqual(self.mock_connect.return_value.users_list.call_count, 2)
+        self.mock_connect.return_value.users_list.assert_any_call()
+        self.mock_connect.return_value.users_list.assert_any_call(cursor=MOCK_RESPONSE_USERS_LIST_1['response_metadata']['next_cursor'])
+
+        assert isinstance(response, pd.DataFrame)
+        expected_df = self._get_expected_df_for_users_list_2()
+        pd.testing.assert_frame_equal(response, expected_df)
 
 
 if __name__ == '__main__':

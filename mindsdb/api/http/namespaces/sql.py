@@ -95,7 +95,7 @@ class Query(Resource):
                     "error_code": 0,
                     "error_message": str(e),
                 }
-                logger.error(f"Error profiling query: \n{traceback.format_exc()}")
+                logger.debug(f"Error query processing: \n{traceback.format_exc()}")
 
             if query_response.get("type") == SQL_RESPONSE_TYPE.ERROR:
                 error_type = "expected"

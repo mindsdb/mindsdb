@@ -47,13 +47,12 @@ class Executor:
             self.query = parse_sql(sql)
         except Exception as mdb_error:
             # not all statements are parsed by parse_sql
-            message = 'SQL statement is not parsed by mindsdb_sql_parser'
-            if self.logger.isEnabledFor(logging.DEBUG):
-                message += f': {sql}'
+            message = 'Failed to parse SQL query'
             self.logger.warning(message)
+            self.logger.debug(f'Query that cannot be parsed: {sql}')
 
             raise SqlApiException(
-                f"SQL statement cannot be parsed by mindsdb_sql_parser - {sql}: {mdb_error}"
+                f"The SQL statement cannot be parsed - {sql}: {mdb_error}"
             ) from mdb_error
 
     def stmt_execute(self, param_values):

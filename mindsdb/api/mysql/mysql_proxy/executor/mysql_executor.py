@@ -1,5 +1,3 @@
-import logging
-
 from mindsdb_sql_parser import parse_sql
 from mindsdb.api.executor.planner import utils as planner_utils
 

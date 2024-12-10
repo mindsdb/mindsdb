@@ -182,6 +182,10 @@ class LangfuseClientWrapper:
             span (Any): Span object.
         """
 
+        if self.client is None:
+            logger.debug("Langfuse is disabled.")
+            return None
+
         span.end()
         self.trace.update()
 

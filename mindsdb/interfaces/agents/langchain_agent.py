@@ -37,12 +37,10 @@ from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities.context import context as ctx
 
-
 from .mindsdb_chat_model import ChatMindsdb
 from .callback_handlers import LogCallbackHandler, ContextCaptureCallback
 from .langfuse_callback_handler import LangfuseCallbackHandler, get_metadata, get_tags, get_tool_usage, get_skills
 from .safe_output_parser import SafeOutputParser
-
 
 from .constants import (
     DEFAULT_AGENT_TIMEOUT_SECONDS,
@@ -169,7 +167,8 @@ def build_embedding_model(args) -> Embeddings:
         embeddings_args["class"] = embeddings_provider
 
     # For VLLM or OpenAI interface, configure embeddings
-    is_vllm = (embeddings_provider == 'openai' and args.get('provider') == 'vllm') or args.get('embedding_model_provider') == 'vllm'
+    is_vllm = (embeddings_provider == 'openai' and args.get('provider') == 'vllm') or args.get(
+        'embedding_model_provider') == 'vllm'
     if is_vllm:
         # Get model name with clear fallback chain
         model_name = args.get('embedding_model_name')
@@ -187,7 +186,8 @@ def build_embedding_model(args) -> Embeddings:
             'openai_api_base': args.get('openai_api_base', args.get('embedding_base_url')),  # Support both param names
             'openai_api_key': 'dummy-key',  # OpenAI embeddings require an API key
         })
-        logger.info(f"Configured VLLM embeddings via OpenAI interface at {embeddings_args['openai_api_base']} using model {model_name}")
+        logger.info(
+            f"Configured VLLM embeddings via OpenAI interface at {embeddings_args['openai_api_base']} using model {model_name}")
 
     # Include API keys if present.
     api_keys = {k: v for k, v in args.items() if "api_key" in k}
@@ -274,9 +274,13 @@ def process_chunk(chunk):
 class LangchainAgent:
     def __init__(self, agent: db.Agents, model):
 
+        self.api_trace = None
+        self.run_completion_span = None
+        self.provider = None
         self.llm = None
         self.embedding_model = None
         self.agent = agent
+
         args = agent.params.copy()
         args["model_name"] = agent.model_name
         args["provider"] = agent.provider
@@ -322,31 +326,31 @@ class LangchainAgent:
             None  # custom (see langfuse_callback_handler.py)
         )
 
+    def get_metadata(self):
+
+        metadata = {
+            'provider': self.args["provider"],
+            'model_name': self.args["model_name"],
+            'embedding_model_provider': self.args.get('embedding_model_provider',
+                                                      get_embedding_model_provider(self.args)),
+            'skills': get_skills(self.agent),
+            'user_id': ctx.user_id,
+            'session_id': ctx.session_id,
+            'company_id': ctx.company_id,
+            'user_class': ctx.user_class,
+            'email_confirmed': ctx.email_confirmed
+        }
+
+        return metadata
+
     def get_completion(self, messages, stream: bool = False):
 
         self.run_completion_span = None
         self.api_trace = None
         if self.langfuse:
+            trace_metadata = self.get_metadata()
 
-            # todo we need to fix this as this assumes that the model is always langchain
-            # since decoupling the model from langchain, we need to find a way to get the model name
-            # this breaks retrieval agents
-
-            # metadata retrieval
-            trace_metadata = {
-                'provider': self.args["provider"],
-                'model_name': self.args["model_name"],
-                'embedding_model_provider': self.args.get('embedding_model_provider', get_embedding_model_provider(self.args))
-            }
-            trace_metadata['skills'] = get_skills(self.agent)
             trace_tags = get_tags(trace_metadata)
-
-            # Set our user info to pass into langfuse trace, with fault tolerance in each individual one just incase on purpose
-            trace_metadata['user_id'] = ctx.user_id
-            trace_metadata['session_id'] = ctx.session_id
-            trace_metadata['company_id'] = ctx.company_id
-            trace_metadata['user_class'] = ctx.user_class
-            trace_metadata['email_confirmed'] = ctx.email_confirmed
 
             self.api_trace = self.langfuse.trace(
                 name='api-completion',
@@ -390,7 +394,7 @@ class LangchainAgent:
             try:
                 # Ensure all batched traces are sent before fetching.
                 self.langfuse.flush()
-                trace = self.langfuse.get_trace(self.trace_id)
+                trace = self.langfuse.fetch_trace(self.trace_id)
                 trace_metadata['tool_usage'] = get_tool_usage(trace)
                 self.api_trace.update(metadata=trace_metadata)
             except TraceNotFoundError:
@@ -532,12 +536,15 @@ class LangchainAgent:
         )
         langfuse_host = args.get("langfuse_host", os.getenv("LANGFUSE_HOST"))
         are_langfuse_args_present = (
-            bool(langfuse_public_key)
-            and bool(langfuse_secret_key)
-            and bool(langfuse_host)
+                bool(langfuse_public_key)
+                and bool(langfuse_secret_key)
+                and bool(langfuse_host)
         )
 
         if are_langfuse_args_present:
+            if self.api_trace is not None:
+                self.langfuse_callback_handler = self.api_trace.get_langchain_handler()
+
             if self.langfuse_callback_handler is None:
                 trace_name = args.get(
                     "trace_id",
@@ -615,13 +622,14 @@ AI: {response}"""
         return_context = args.get('return_context', True)
         input_variables = re.findall(r"{{(.*?)}}", base_template)
 
-        prompts, empty_prompt_ids = prepare_prompts(df, base_template, input_variables, args.get('user_column', USER_COLUMN))
+        prompts, empty_prompt_ids = prepare_prompts(df, base_template, input_variables,
+                                                    args.get('user_column', USER_COLUMN))
 
         def _invoke_agent_executor_with_prompt(agent_executor, prompt):
             if not prompt:
                 return {CONTEXT_COLUMN: [], ASSISTANT_COLUMN: ""}
             try:
-                callbacks, context_callback = prepare_callbacks(self, args)
+                callbacks, context_callback = prepare_callbacks(self, args)  # ? call callbacks here
                 result = agent_executor.invoke(prompt, config={'callbacks': callbacks})
                 captured_context = context_callback.get_contexts()
                 output = result['output'] if isinstance(result, dict) and 'output' in result else str(result)
@@ -687,14 +695,15 @@ AI: {response}"""
 
         prompts, _ = prepare_prompts(df, base_template, input_variables, args.get('user_column', USER_COLUMN))
 
-        callbacks, context_callback = prepare_callbacks(self, args)
+        callbacks, context_callback = prepare_callbacks(self, args)  # call callbacks here
 
         yield {"type": "start", "prompt": prompts[0]}
 
         if not hasattr(agent_executor, 'stream') or not callable(agent_executor.stream):
             raise AttributeError("The agent_executor does not have a 'stream' method")
 
-        stream_iterator = agent_executor.stream(prompts[0], config={'callbacks': callbacks})
+        stream_iterator = agent_executor.stream(prompts[0],
+                                                config={'callbacks': callbacks})  # send callbacks to langchain
 
         if not hasattr(stream_iterator, '__iter__'):
             raise TypeError("The stream method did not return an iterable")

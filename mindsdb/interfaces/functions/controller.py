@@ -144,6 +144,10 @@ class FunctionController(BYOMFunctionsController):
         if 'provider' not in chat_model_params:
             chat_model_params['provider'] = 'openai'
 
+        if 'api_key' in chat_model_params:
+            # move to api_keys dict
+            chat_model_params["api_keys"] = {chat_model_params['provider']: chat_model_params['api_key']}
+
         try:
             from langchain_core.messages import HumanMessage
             from mindsdb.interfaces.agents.langchain_agent import create_chat_model

@@ -1,7 +1,7 @@
 import os
+import time
 import tempfile
 import threading
-import time
 from pathlib import Path
 from typing import Optional, List, Tuple
 
@@ -60,12 +60,10 @@ def _get_process_mark_id(unified: bool = False) -> str:
 
 
 def create_process_mark(folder="learn"):
-    mark = None
-    if os.name == "posix":
-        p = Path(tempfile.gettempdir()).joinpath(f"mindsdb/processes/{folder}/")
-        p.mkdir(parents=True, exist_ok=True)
-        mark = _get_process_mark_id()
-        p.joinpath(mark).touch()
+    p = Path(tempfile.gettempdir()).joinpath(f"mindsdb/processes/{folder}/")
+    p.mkdir(parents=True, exist_ok=True)
+    mark = _get_process_mark_id()
+    p.joinpath(mark).touch()
     return mark
 
 
@@ -79,8 +77,6 @@ def set_process_mark(folder: str, mark: str) -> None:
     Returns:
         str: process mark
     """
-    if os.name != "posix":
-        return
     p = Path(tempfile.gettempdir()).joinpath(f"mindsdb/processes/{folder}/")
     p.mkdir(parents=True, exist_ok=True)
     mark = f"{os.getpid()}-{threading.get_native_id()}-{mark}"
@@ -91,21 +87,17 @@ def set_process_mark(folder: str, mark: str) -> None:
 def delete_process_mark(folder: str = "learn", mark: Optional[str] = None):
     if mark is None:
         mark = _get_process_mark_id()
-    if os.name == "posix":
-        p = (
-            Path(tempfile.gettempdir())
-            .joinpath(f"mindsdb/processes/{folder}/")
-            .joinpath(mark)
-        )
-        if p.exists():
-            p.unlink()
+    p = (
+        Path(tempfile.gettempdir())
+        .joinpath(f"mindsdb/processes/{folder}/")
+        .joinpath(mark)
+    )
+    if p.exists():
+        p.unlink()
 
 
 def clean_process_marks():
     """delete all existing processes marks"""
-    if os.name != "posix":
-        return
-
     logger.debug("Deleting PIDs..")
     p = Path(tempfile.gettempdir()).joinpath("mindsdb/processes/")
     if p.exists() is False:
@@ -143,9 +135,6 @@ def clean_unlinked_process_marks() -> List[int]:
         List[int]: list with ids of unexisting processes
     """
     deleted_pids = []
-
-    if os.name != "posix":
-        return deleted_pids
 
     for file, process_id, thread_id in get_processes_dir_files_generator():
         try:

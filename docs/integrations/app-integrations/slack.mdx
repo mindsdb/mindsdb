@@ -19,7 +19,7 @@ Before proceeding, ensure the following prerequisites are met:
 Establish a connection to Slack from MindsDB by executing the following SQL command and providing its [handler name](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/slack_handler) as an engine.
 
 ```sql
-CREATE DATABASE slack_conn
+CREATE DATABASE slack_datasource
 WITH ENGINE = 'slack', 
 PARAMETERS = {
    "token": "values",     -- required parameter
@@ -93,7 +93,7 @@ Alternatively, you can connect an app to the Slack channel:
 Here is how to connect Slack to MindsDB:
 
 ```sql
-CREATE DATABASE mindsdb_slack
+CREATE DATABASE slack_datasource
 WITH
   ENGINE = 'slack',
   PARAMETERS = {
@@ -137,15 +137,13 @@ Here is how to set up a Slack app and generate a Slack bot token:
 Here is how to connect Slack to MindsDB:
 
 ```sql
-CREATE DATABASE mindsdb_slack
+CREATE DATABASE slack_datasource
 WITH
   ENGINE = 'slack',
   PARAMETERS = {
       "token": "xoxb-..."
     };
 ```
-
-It comes with the `conversations`, `messages` and `threads` tables.
 
 ## Usage
 
@@ -155,111 +153,116 @@ The following usage applies when **Connection Method 2** was used to connect Sla
 See the usage for **Connection Method 1** [via the `CREATE CHATBOT` syntax](/sql/tutorials/create-chatbot).
 </Warning>
 
-You can select all messages from a conversation using the below query.
+Retrieve data from a specified table by providing the integration and table names:
 
 ```sql
 SELECT *
-FROM mindsdb_slack.messages
-WHERE channel_id="<channel-id>";
-```
-
-<Tip>
-To find the channel ID of a conversation, you can use the `conversations` table:
-
-```sql
-SELECT *
-FROM mindsdb_slack.conversations
-WHERE name = "<channel-name>";
-```
-
-Please note that if your workspace has more than 1000 conversations, you may need to use the `LIMIT` clause to retrieve all conversations. More information on this can be found below.
-
-You can also find the channel ID by right-clicking on the conversation in Slack, selecting 'View conversation details' or 'View channel details,' and copying the channel ID from the bottom of the 'About' tab.
-</Tip>
-
-Also, you can post messages to the conversation like this:
-
-```sql
-INSERT INTO mindsdb_slack.messages (channel_id, text)
-VALUES("<channel-id>", "Hey MindsDB, Thanks to you! Now I can respond to my Slack messages through SQL Queries.");
-```
-
-And you can delete messages, but only the ones posted by the bot.
-
-```sql
-DELETE FROM mindsdb_slack.messages
-WHERE channel_id = "<channel-id>"
-AND ts = "1688863707.197229";
-```
-
-Let's select 10 messages created after the specified timestamp:
-
-```sql
-SELECT *
-FROM mindsdb_slack.messages
-WHERE channel_id = "<channel-id>"
-AND message_created_at > '2023-07-25 00:13:07'
+FROM slack_datasource.table_name
 LIMIT 10;
 ```
 
-We can also order the selected messages:
+## Supported Tables
+
+The Slack integration supports the following tables:
+
+### `conversations` Table
+
+The `conversations` virtual table is used to query conversations (channels, DMs, and groups) in the connected Slack workspace.
 
 ```sql
-SELECT *
-FROM mindsdb_slack.messages
-WHERE channel_id = "<channel-id>"
-ORDER BY created_at ASC;
-LIMIT 5;
-```
+-- Retrieve all conversations in the workspace
+SELECT * 
+FROM slack_datasource.conversations;
 
-If you want to view the messages in a thread, you can use the `threads` table:
-
-```sql
-SELECT *
-FROM mindsdb_slack.threads
-WHERE channel_id = "<channel-id>" and thread_ts = "<thread-ts>";
-```
-
-`thread_ts` is the timestamp of the message that started the thread. You can find it in the `messages` table.
-
-It is also possible to post messages in a thread:
-
-```sql
-INSERT INTO mindsdb_slack.threads (channel_id, thread_ts, text)
-VALUES ("<channel-id>", "<thread-ts>", "Hey MindsDB, I can also respond to threads!");
-```
-
-List all conversations by selecting from the `conversations` table.
-
-```sql
-SELECT *
-FROM mindsdb_slack.conversations;
-```
-
-<Note>
-The `conversations` table will return the first 1000 conversations by default. To retrieve more, use the `LIMIT` clause.
-
-When using the `LIMIT` clause to query additional conversations, you may encounter Slack API rate limits.
-</Note>
-
-You can also filter conversations by providing the channel ID:
-  
-```sql
-SELECT *
-FROM mindsdb_slack.conversations
+-- Retrieve a specific conversation using its ID
+SELECT * 
+FROM slack_datasource.conversations 
 WHERE channel_id = "<channel-id>";
+
+-- Retrieve a specific conversation using its name
+SELECT *
+FROM slack_datasource.conversations
+WHERE name = "<channel-name>";
 ```
 
-To select multiple conversations, provide a list of channel IDs in an `IN` clause:
+### `messages` Table
+
+The `messages` virtual table is used to query, post, update, and delete messages in specific conversations within the connected Slack workspace.
 
 ```sql
-SELECT *
-FROM mindsdb_slack.conversations
-WHERE channel_id IN ("<channel-id-1>", "<channel-id-2>");
+-- Retrieve all messages from a specific conversation
+-- channel_id is a required parameter and can be found in the conversations table
+SELECT * 
+FROM slack_datasource.messages 
+WHERE channel_id = "<channel-id>";
+
+-- Post a new message
+-- channel_id and text are required parameters
+INSERT INTO slack_datasource.messages (channel_id, text)
+VALUES("<channel-id>", "Hello from SQL!");
+
+-- Update a bot-posted message
+-- channel_id, ts, and text are required parameters
+UPDATE slack_datasource.messages
+SET text = "Updated message content"
+WHERE channel_id = "<channel-id>" AND ts = "<timestamp>";
+
+-- Delete a bot-posted message
+-- channel_id and ts are required parameters
+DELETE FROM slack_datasource.messages
+WHERE channel_id = "<channel-id>" AND ts = "<timestamp>";
 ```
 
 <Tip>
-**Next Steps**
+You can also find the channel ID by right-clicking on the conversation in Slack, selecting 'View conversation details' or 'View channel details,' and copying the channel ID from the bottom of the 'About' tab.
+</Tip>
+
+### `threads` Table
+
+The `threads` virtual table is used to query and post messages in threads within the connected Slack workspace.
+
+```sql
+-- Retrieve all messages in a specific thread
+-- channel_id and thread_ts are required parameters
+-- thread_ts is the timestamp of the parent message and can be found in the messages table
+SELECT * 
+FROM slack_datasource.threads 
+WHERE channel_id = "<channel-id>" AND thread_ts = "<thread-ts>";
+
+-- Post a message to a thread
+INSERT INTO slack_datasource.threads (channel_id, thread_ts, text)
+VALUES("<channel-id>", "<thread-ts>", "Replying to the thread!");
+```
+
+### `users` Table
+
+The `users` virtual table is used to query user information in the connected Slack workspace.
+
+```sql
+-- Retrieve all users in the workspace
+SELECT * 
+FROM slack_datasource.users;
+
+-- Retrieve a specific user by name
+SELECT * 
+FROM slack_datasource.users 
+WHERE name = "John Doe";
+```
+
+## Rate Limit Considerations
+
+The Slack API enforces rate limits on data retrieval. Therefore, when querying the above tables, by default, the first 1000 (999 for `messages`) records are returned.
+
+To retrieve more records, use the `LIMIT` clause in your SQL queries. For example:
+
+```sql
+SELECT *
+FROM slack_datasource.conversations
+LIMIT 2000;
+```
+
+When using the LIMIT clause to query additional records, you may encounter Slack API rate limits.
+
+## Next Steps
 
 Follow [this tutorial](use-cases/ai_agents/build_ai_agents) to build an AI agent with MindsDB.
-</Tip>

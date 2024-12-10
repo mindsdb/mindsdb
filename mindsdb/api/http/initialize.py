@@ -302,7 +302,7 @@ def initialize_app(config, no_studio):
             and check_auth() is False
         ):
             return http_error(
-                HTTPStatus.UNAUTHORIZED, 'Forbidden',
+                HTTPStatus.UNAUTHORIZED, 'Unauthorized',
                 'Authorization is required to complete the request'
             )
         # endregion
@@ -384,21 +384,7 @@ def initialize_flask(config, init_static_thread, no_studio):
 
     app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', secrets.token_hex(32))
     app.config['SESSION_COOKIE_NAME'] = 'session'
-
-    # region permanent session lifetime
-    permanent_session_lifetime = datetime.timedelta(days=31)
-    for env_name in ('MINDSDB_HTTP_PERMANENT_SESSION_LIFETIME', 'FLASK_PERMANENT_SESSION_LIFETIME'):
-        env_value = os.environ.get(env_name)
-        if isinstance(env_value, str):
-            try:
-                permanent_session_lifetime = int(env_value)
-            except Exception:
-                logger.warning(f'Can\'t cast env var {env_name} value to int: {env_value}')
-                continue
-            break
-    app.config['PERMANENT_SESSION_LIFETIME'] = permanent_session_lifetime
-    # endregion
-
+    app.config['PERMANENT_SESSION_LIFETIME'] = config['auth']['http_permanent_session_lifetime']
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 60
     app.config['SWAGGER_HOST'] = 'http://localhost:8000/mindsdb'
     app.json = CustomJSONProvider()

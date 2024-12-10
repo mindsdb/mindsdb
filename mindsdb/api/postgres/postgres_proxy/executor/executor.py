@@ -46,8 +46,7 @@ class Executor:
             self.query = parse_sql(sql)
         except Exception as mdb_error:
             # not all statements are parsed by parse_sql
-            message = 'Failed to parse SQL query'
-            self.logger.warning(message)
+            self.logger.warning('Failed to parse SQL query')
             self.logger.debug(f'Query that cannot be parsed: {sql}')
 
             raise SqlApiException(

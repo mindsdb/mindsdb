@@ -109,8 +109,7 @@ class Executor:
             self.query = parse_sql(sql)
         except Exception as mdb_error:
             # not all statements are parsed by parse_sql
-            message = 'Failed to parse SQL query'
-            logger.warning(message)
+            logger.warning('Failed to parse SQL query')
             logger.debug(f'Query that cannot be parsed: {sql}')
 
             raise ErSqlSyntaxError(

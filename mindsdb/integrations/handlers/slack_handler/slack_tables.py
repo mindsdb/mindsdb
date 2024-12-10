@@ -287,10 +287,10 @@ class SlackMessagesTable(APIResource):
 
                     messages = messages[:limit]
             # Otherwise, use the provided limit or a default limit of 999.
-                else:
-                    params['limit'] = limit if limit else 999
-                    response = client.conversations_history(**params)
-                    messages = response['messages']
+            else:
+                params['limit'] = limit if limit else 999
+                response = client.conversations_history(**params)
+                messages = response['messages']
         except SlackApiError as slack_error:
             logger.error(f"Error getting messages: {slack_error.response['error']}")
             raise
@@ -360,6 +360,7 @@ class SlackMessagesTable(APIResource):
 
         # Build the parameters for the call to the Slack API.
         params = {}
+        # Extract the parameters from the conditions.
         for op, arg1, arg2 in conditions:
             # Handle the column 'channel_id'.
             if arg1 == 'channel_id':
@@ -371,15 +372,22 @@ class SlackMessagesTable(APIResource):
                     logger.error(f"Error getting channel '{arg2}': {slack_error.response['error']}")
                     raise ValueError(f"Channel '{arg2}' not found")
 
-            # Handle the columns 'text' and 'ts'.
-            if arg1 in ['text', 'ts']:
+            # Handle the column'ts'.
+            elif arg1 == 'ts':
                 if op == '=':
-                    params[arg1] = arg2
+                    params[arg1] = str(arg2)
                 else:
                     raise ValueError(f"Unsupported operator '{op}' for column '{arg1}'")
 
             else:
                 raise ValueError(f"Unsupported column '{arg1}'")
+
+        # Extract the update columns and values.
+        for col, val in query.update_columns.items():
+            if col == 'text':
+                params[col] = str(val).strip("'")
+            else:
+                raise ValueError(f"Unsupported column '{col}'")
 
         # Check if required parameters are provided.
         if 'channel' not in params or 'ts' not in params or 'text' not in params:
@@ -388,7 +396,7 @@ class SlackMessagesTable(APIResource):
         try:
             client.chat_update(
                 channel=params['channel'],
-                ts=str(params['ts']),
+                ts=params['ts'],
                 text=params['text'].strip()
             )
         except SlackApiError as slack_error:
@@ -428,7 +436,7 @@ class SlackMessagesTable(APIResource):
                     raise ValueError(f"Channel '{arg2}' not found")
 
             # Handle the columns 'ts'.
-            if arg1 == 'ts':
+            elif arg1 == 'ts':
                 if op == '=':
                     params['ts'] = float(arg2)
                 else:
@@ -567,10 +575,10 @@ class SlackThreadsTable(APIResource):
 
                     messages = messages[:limit]
             # Otherwise, use the provided limit or a default limit of 1000.
-                else:
-                    params['limit'] = limit if limit else 1000
-                    response = client.conversations_replies(**params)
-                    messages = response['messages']
+            else:
+                params['limit'] = limit if limit else 1000
+                response = client.conversations_replies(**params)
+                messages = response['messages']
         except SlackApiError as slack_error:
             logger.error(f"Error getting messages: {slack_error.response['error']}")
             raise
@@ -687,9 +695,9 @@ class SlackUsersTable(APIResource):
 
                     users = users[:limit]
             # Otherwise, use the provided limit or a default limit of 1000.
-                else:
-                    response = client.users_list(limit=limit if limit else 1000)
-                    users = response['members']
+            else:
+                response = client.users_list(limit=limit if limit else 1000)
+                users = response['members']
         except SlackApiError as slack_error:
             logger.error(f"Error getting users: {slack_error.response['error']}")
             raise

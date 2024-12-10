@@ -373,7 +373,7 @@ class SlackMessagesTable(APIResource):
                     raise ValueError(f"Channel '{arg2}' not found")
 
             # Handle the column'ts'.
-            elif arg1 =='ts':
+            elif arg1 == 'ts':
                 if op == '=':
                     params[arg1] = str(arg2)
                 else:
@@ -381,7 +381,7 @@ class SlackMessagesTable(APIResource):
 
             else:
                 raise ValueError(f"Unsupported column '{arg1}'")
-            
+
         # Extract the update columns and values.
         for col, val in query.update_columns.items():
             if col == 'text':

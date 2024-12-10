@@ -13,7 +13,7 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE,
 )
 
-from mindsdb_sql.parser import ast
+from mindsdb_sql_parser import ast
 
 from pyairtable.formulas import AND, OR, Field
 

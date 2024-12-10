@@ -120,6 +120,7 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
             return self.langfuse.auth_check()
         return False
 
+
 def get_skills(agent: db.Agents) -> List:
     """ Retrieve skills from agent `skills` attribute. Specific to agent endpoints. """
     return [rel.skill.type for rel in agent.skills_relationships]

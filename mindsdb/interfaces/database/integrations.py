@@ -726,6 +726,7 @@ class IntegrationController:
                     'dependencies': dependencies,
                 },
                 'name': handler_name,
+                'permanent': handler_info.get('permanent', False),
                 'connection_args': handler_info.get('connection_args', None),
                 'class_type': handler_info.get('class_type', None),
                 'type': handler_info.get('type')

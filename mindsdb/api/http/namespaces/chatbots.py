@@ -121,7 +121,7 @@ def get_or_create_database_for_chatbot(chatbot: dict, session_controller: Sessio
             return database_record['id']
         else:
             raise ValueError(f"Database with ID {chatbot['database_id']} not found")
-    
+
     elif 'database_name' in chatbot:
         database_record = session_controller.integration_controller.get(chatbot['database_name'])
         if database_record:
@@ -228,7 +228,7 @@ class ChatBotResource(Resource):
                 'Project not found',
                 f'Project with name {project_name} does not exist'
             )
-        
+
         session = SessionController()
 
         chatbot = request.json['chatbot']

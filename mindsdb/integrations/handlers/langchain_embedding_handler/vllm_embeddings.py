@@ -25,10 +25,14 @@ class VLLMEmbeddings(Embeddings):
         self.batch_size = batch_size
 
         # Initialize OpenAI client
+        openai_kwargs = kwargs.copy()
+        if 'input_columns' in openai_kwargs:
+            del openai_kwargs['input_columns']
+
         self.client = OpenAI(
             api_key="EMPTY",  # vLLM doesn't need an API key
             base_url=openai_api_base,
-            **kwargs
+            **openai_kwargs
         )
 
     def _chunk_list(self, texts: List[str], chunk_size: int) -> List[List[str]]:

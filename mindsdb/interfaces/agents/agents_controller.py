@@ -362,24 +362,22 @@ class AgentsController:
             project_name: str = 'mindsdb',
             tools: List[BaseTool] = None,
             stream: bool = False) -> Union[Iterator[object], pd.DataFrame]:
-        '''
+        """
         Queries an agent to get a completion.
 
         Parameters:
             agent (db.Agents): Existing agent to get completion from
             messages (List[Dict[str, str]]): Chat history to send to the agent
-            trace_id (str): ID of Langfuse trace to use
-            observation_id (str): ID of parent Langfuse observation to use
             project_name (str): Project the agent belongs to (default mindsdb)
             tools (List[BaseTool]): Tools to use while getting the completion
-            stream (bool): Whether or not to stream the response
+            stream (bool): Whether to stream the response
 
         Returns:
             response (Union[Iterator[object], pd.DataFrame]): Completion as a DataFrame or iterator of completion chunks
 
         Raises:
             ValueError: Agent's model does not exist.
-        '''
+        """
         if stream:
             return self._get_completion_stream(
                 agent,

@@ -1,7 +1,6 @@
 from typing import Any, Dict, Union, Optional, List
 from uuid import uuid4
 import datetime
-import os
 
 from langchain_core.callbacks.base import BaseCallbackHandler
 
@@ -122,42 +121,6 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
         return False
 
 
-def get_metadata(model_using: Dict) -> Dict:
-    """ Generates initial metadata mapping from information provided in a model's `using` clause.
-    Includes providers and model name.
-    """
-    metadata_keys = ['provider', 'model_name', 'embedding_model_provider']  # keeps keys relevant for tracing
-    trace_metadata = {}
-    for key in metadata_keys:
-        if key in model_using:
-            trace_metadata[key] = model_using.get(key)
-    return trace_metadata
-
-
 def get_skills(agent: db.Agents) -> List:
     """ Retrieve skills from agent `skills` attribute. Specific to agent endpoints. """
     return [rel.skill.type for rel in agent.skills_relationships]
-
-
-def get_tags(metadata: Dict) -> List:
-    """ Retrieves tags from existing langfuse metadata (built using `get_metadata` and `get_skills`), and environment variables. """
-    trace_tags = []
-    if os.getenv('FLASK_ENV'):
-        trace_tags.append(os.getenv('FLASK_ENV'))  # Fix: use something other than flask_env
-    if 'provider' in metadata:
-        trace_tags.append(metadata['provider'])
-    return trace_tags
-
-
-def get_tool_usage(trace) -> Dict:
-    """ Retrieves tool usage information from a langfuse trace.
-    Note: assumes trace marks an action with string `AgentAction` """
-    tool_usage = {}
-    steps = [s.name for s in trace.observations]
-    for step in steps:
-        if 'AgentAction' in step:
-            tool_name = step.split('-')[1]
-            if tool_name not in tool_usage:
-                tool_usage[tool_name] = 0
-            tool_usage[tool_name] += 1
-    return tool_usage

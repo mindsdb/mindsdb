@@ -144,7 +144,7 @@ class S3Handler(APIHandler):
         except HTTPException as http_error:
             logger.debug(f"Error installing the httpfs extension, {http_error}! Forcing installation.")
             duckdb_conn.execute("FORCE INSTALL httpfs")
-            
+
         duckdb_conn.execute("LOAD httpfs")
 
         # Configure mandatory credentials.

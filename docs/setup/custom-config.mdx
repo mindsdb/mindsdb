@@ -101,7 +101,8 @@ The `locks` parameter is used to store lock files to prevent race conditions whe
 
 ```bash
     "auth":{
-        "http_auth_enabled": False,
+        "http_auth_enabled": true,
+        "http_permanent_session_lifetime": 86400,
         "username": "username", # optional
         "password": "password" # optional
     },
@@ -109,11 +110,11 @@ The `locks` parameter is used to store lock files to prevent race conditions whe
 
 The `auth` parameter controls the authentication settings for APIs in MindsDB.
 
-The `http_auth_enabled` enables (`True`) or disables (`False`) authentication for the HTTP API, that is, the MindsDB's GUI. This setting is essential only for local usage.
+In local instances of MindsDB, users can enable simple HTTP authentication based on Flask sessions, as follows:
 
-To enable authentication for the HTTP API, you must set `http_auth_enabled` to `True` in addition to specifying the `username` and `password` parameters.
+1. Enable the authentication for the HTTP API by setting the `http_auth_enabled` parameter to `true` and providing values for the `username` and `password` parameters.
 
-To enable authentication for the MongoDB and MySQL APIs, you must define the `username` and `password` parameters.
+2. The default lifetime of a session is set to 31 days. It can be modified by providing a value in seconds to the `http_permanent_session_lifetime` parameter. Alternatively, users can set one of the environment variables - `MINDSDB_HTTP_PERMANENT_SESSION_LIFETIME` or `FLASK_PERMANENT_SESSION_LIFETIME` - to store this value.
 
 ```bash
     "gui": {

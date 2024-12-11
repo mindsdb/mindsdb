@@ -4,8 +4,9 @@ import datetime
 from copy import deepcopy
 from pathlib import Path
 
+from appdirs import user_data_dir
+
 from mindsdb.utilities import log
-from mindsdb.utilities.fs import create_directory, get_or_create_data_dir
 
 
 logger = log.getLogger(__name__)
@@ -26,6 +27,29 @@ def _merge_configs(original_config, override_config):
     for key in list(override_config.keys()):
         _merge_key_recursive(original_config, override_config, key)
     return original_config
+
+
+def create_directory(path):
+    path = Path(path)
+    path.mkdir(mode=0o777, exist_ok=True, parents=True)
+
+
+def get_or_create_data_dir():
+    data_dir = user_data_dir("mindsdb", "mindsdb")
+    mindsdb_data_dir = os.path.join(data_dir, "var/")
+
+    if os.path.exists(mindsdb_data_dir) is False:
+        create_directory(mindsdb_data_dir)
+
+    try:
+        assert os.path.exists(mindsdb_data_dir)
+        assert os.access(mindsdb_data_dir, os.W_OK) is True
+    except Exception:
+        raise Exception(
+            "MindsDB storage directory does not exist and could not be created"
+        )
+
+    return mindsdb_data_dir
 
 
 config = None

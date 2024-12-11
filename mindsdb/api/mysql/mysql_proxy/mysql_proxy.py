@@ -343,7 +343,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
             data = []
         packets = []
         for i, column in enumerate(columns):
-            logger.info(
+            logger.debug(
                 "%s._get_column_defenition_packets: handling column - %s of %s type",
                 self.__class__.__name__,
                 column,
@@ -737,7 +737,7 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 if p.type.value == COMMANDS.COM_QUERY:
                     sql = self.decode_utf(p.sql.value)
                     sql = SqlStatementParser.clear_sql(sql)
-                    logger.debug(f"COM_QUERY: {sql}")
+                    logger.debug(f'Incoming query: {sql}')
                     profiler.set_meta(
                         query=sql, api="mysql", environment=Config().get("environment")
                     )

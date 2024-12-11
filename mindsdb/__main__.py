@@ -357,23 +357,7 @@ if __name__ == '__main__':
             set_error_model_status_by_pids(unexisting_pids)
         set_error_model_status_for_unfinished()
 
-        # region creating permanent integrations
-        for (
-            integration_name,
-            handler,
-        ) in integration_controller.get_handlers_metadata().items():
-            if handler.get("permanent"):
-                integration_meta = integration_controller.get(name=integration_name)
-                if integration_meta is None:
-                    integration_record = db.Integration(
-                        name=integration_name,
-                        data={},
-                        engine=integration_name,
-                        company_id=None,
-                    )
-                    db.session.add(integration_record)
-                    db.session.commit()
-        # endregion
+        integration_controller.create_permanent_integrations()
 
         # region Mark old predictors as outdated
         is_modified = False

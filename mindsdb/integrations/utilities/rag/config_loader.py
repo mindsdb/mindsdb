@@ -33,11 +33,7 @@ def load_rag_config(base_config: Dict[str, Any], kb_params: Optional[Dict[str, A
 
     # Merge with knowledge base params if provided
     if kb_params:
-        # Create a shallow copy of kb_params to avoid modifying the original
-        kb_params_copy = kb_params.copy()
-        # Remove vector_storage since it's not part of RAGPipelineModel
-        kb_params_copy.pop('vector_storage', None)
-        rag_params.update(kb_params_copy)
+        rag_params.update(kb_params)
 
     # Set embedding model if provided
     if embedding_model is not None:

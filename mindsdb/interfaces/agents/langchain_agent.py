@@ -218,7 +218,6 @@ class LangchainAgent:
         self.model = model
         self.llm = None
         self.embedding_model = None
-        self.memory = None
         args = agent.params.copy()
         args["model_name"] = agent.model_name
         args["provider"] = agent.provider

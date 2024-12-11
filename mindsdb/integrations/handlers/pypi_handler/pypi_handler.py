@@ -1,4 +1,4 @@
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 
 from mindsdb.integrations.handlers.pypi_handler.api import PyPI
 from mindsdb.integrations.handlers.pypi_handler.pypi_tables import (
@@ -69,5 +69,5 @@ class PyPIHandler(APIHandler):
         StatusResponse
             Request status
         """
-        ast = parse_sql(query, dialect="mindsdb")
+        ast = parse_sql(query)
         return self.query(ast)

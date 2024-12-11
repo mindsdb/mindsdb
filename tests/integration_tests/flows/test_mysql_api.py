@@ -31,6 +31,8 @@ class Dlist(list):
     """Service class for convenient work with list of dicts(db response)"""
 
     def __contains__(self, item):
+        if len(self) == 0:
+            return False
         if item in self.__getitem__(0):
             return True
         return False
@@ -83,7 +85,8 @@ class BaseStuff:
                 command=cmd,
                 remove=True,
                 volumes={str(tmpdirname): {'bind': '/temp', 'mode': 'ro'}},
-                environment={"MYSQL_PWD": self.config["auth"]["password"]}
+                environment={"MYSQL_PWD": self.config["auth"]["password"]},
+                network="host"
             )
         return self.to_dicts(res.decode(encoding))
 

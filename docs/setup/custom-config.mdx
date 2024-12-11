@@ -101,7 +101,8 @@ The `locks` parameter is used to store lock files to prevent race conditions whe
 
 ```bash
     "auth":{
-        "http_auth_enabled": False,
+        "http_auth_enabled": true,
+        "http_permanent_session_lifetime": 86400,
         "username": "username", # optional
         "password": "password" # optional
     },
@@ -109,11 +110,11 @@ The `locks` parameter is used to store lock files to prevent race conditions whe
 
 The `auth` parameter controls the authentication settings for APIs in MindsDB.
 
-The `http_auth_enabled` enables (`True`) or disables (`False`) authentication for the HTTP API, that is, the MindsDB's GUI. This setting is essential only for local usage.
+In local instances of MindsDB, users can enable simple HTTP authentication based on Flask sessions, as follows:
 
-To enable authentication for the HTTP API, you must set `http_auth_enabled` to `True` in addition to specifying the `username` and `password` parameters.
+1. Enable the authentication for the HTTP API by setting the `http_auth_enabled` parameter to `true` and providing values for the `username` and `password` parameters.
 
-To enable authentication for the MongoDB and MySQL APIs, you must define the `username` and `password` parameters.
+2. The default lifetime of a session is set to 31 days. It can be modified by providing a value in seconds to the `http_permanent_session_lifetime` parameter. Alternatively, users can set one of the environment variables - `MINDSDB_HTTP_PERMANENT_SESSION_LIFETIME` or `FLASK_PERMANENT_SESSION_LIFETIME` - to store this value.
 
 ```bash
     "gui": {
@@ -129,13 +130,19 @@ The `autoupdate` parameter defines whether MindsDB automatically checks for and 
     "api": {
         "http": {
             "host": "127.0.0.1",
-            "port": "47334"
+            "port": "47334",
+            "restart_on_failure": True,
+            "max_restart_count": 1,
+            "max_restart_interval_seconds": 60
         },
         "mysql": {
             "host": "127.0.0.1",
             "port": "47335",
             "database": "mindsdb",
-            "ssl": true
+            "ssl": true,
+            "restart_on_failure": True,
+            "max_restart_count": 1,
+            "max_restart_interval_seconds": 60
         },
         "mongodb": {
             "host": "127.0.0.1",
@@ -159,6 +166,26 @@ Connection parameters within each block include:
 * `port`: Defines the port number on which the API will listen for incoming requests. The default ports are `47334` for HTTP, `47335` for MySQL, and `47336` for MongoDB.
 * `database` (for MySQL and MongoDB): Specifies the name of the database that MindsDB uses. Users must connect to this database to interact with MindsDB through the respective API.
 * `ssl` (for MySQL API): Indicates whether SSL support is enabled for the MySQL API.
+
+Additional setup for the HTTP API and the MySQL API:
+
+* `restart_on_failure`: If it is set to `True` (and `max_restart_count` is not reached), the restart of MindsDB will be attempted after the MindsDB process was killed - with code 9 on Linux and MacOS, or for any reason on Windows.
+* `max_restart_count`: This defines how many times the restart attempts can be made. Note that 0 stands for no limit.
+* `max_restart_interval_seconds`: This defines the time limit during which there can be no more than `max_restart_count` restart attempts. Note that 0 stands for no time limit, which means there would be a maximum of `max_restart_count` restart attempts allowed.
+
+<Note>
+Here is a usage example of the restart features:
+
+Assume the following values:
+    max_restart_count = 2
+    max_restart_interval_seconds = 30 seconds
+
+Assume the following scenario:
+    MindsDB fails at 1000s of its work - the restart attempt succeeds as there were no restarts in the past 30 seconds.
+    MindsDB fails at 1010s of its work - the restart attempt succeeds as there was only 1 restart (at 1000s) in the past 30 seconds.
+    MindsDB fails at 1020s of its work - the restart attempt fails as there were already max_restart_count=2 restarts (at 1000s and 1010s) in the past 30 seconds.
+    MindsDB fails at 1031s of its work - the restart attempt succeeds as there was only 1 restart (at 1010s) in the past 30 seconds.
+</Note>
 
 ```bash
     "cache": {

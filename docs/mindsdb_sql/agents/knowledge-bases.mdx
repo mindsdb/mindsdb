@@ -3,16 +3,9 @@ title: Knowledge Base
 sidebarTitle: Knowledge Base
 ---
 
-A knowledge base is a batteries-included RAG system that you can create and insert data into, as well as query as if it was a table.
+A knowledge base is a batteries-included RAG system that you can create and insert data into, as well as query as if it were a table.
 
-```sql
-CREATE KNOWLEDGE_BASE world_news_kb
-USING
-      model = embedding_model, -- this is an embedding model; note that using OpenAI's embedding model requires OpenAI API key (see examples below)
-      storage = vector_db; -- this is a vector database that stores embedded data; defaults to ChromaDB
-```
-
-Internally, knowledge bases use a vector store and an embedding model. By default, it uses the ChromaDB vector store and the OpenAI embedding model, which requires an OpenAI API key. However, you can define a vector store and an embedding model as in the examples below.
+Internally, knowledge bases use a vector store and an embedding model. By default, it uses the ChromaDB vector store and the OpenAI embedding model, which requires an OpenAI API key set as an evironment variable. You can define a vector store and an embedding model as in the examples below.
 
 <p align="center">
   <img src="https://docs.google.com/drawings/d/e/2PACX-1vTVmUqhoFXLF3ncL0NWwgdPjI7Hj19f-5xU8ED31ntYvlsTM3poM9zZKwcrEwzvxJrOhl2raIFKWlsp/pub?w=1342&h=681" />
@@ -24,21 +17,25 @@ Here is a general syntax for creating a knowledge base:
 
 ```sql
 CREATE KNOWLEDGE_BASE my_kb
-[USING
-   [model = embedding_model,]
-   [storage = vector_database.storage_table,]
-   [metadata_columns = ['date', 'creator'],]
-   [content_columns = ['review'],]
-   [id_column='index'];]
+USING
+   model = embedding_model, -- optional
+   storage = vector_database.storage_table, -- optional
+   metadata_columns = ['date', 'creator', ...], -- optional
+   content_columns = ['review', 'content', ...], -- optional
+   id_column = 'index'; -- optional
 ```
 
-Where the following parameters are optional:
+Where all the parameters are optional:
 
-- `model` can store an embedding model.
-- `storage` can store a table from a vector database.
-- `metadata_columns` can list columns to store metadata (if not set, there are no metadata columns).
-- `content_columns` can list columns to store content (if not set, all columns are content).
-- `id_column` can list a column to store a unique identitifier, which is `id` by default.
+- `model`: This is an embedding model created within MindsDB with `CREATE MODEL embedding_model`. If you do not provide the `model` parameter, then the OpenAI's text-embedding-ada-002 model is used by default, provided that the `OPENAI_API_KEY` environment variable is defined.
+- `storage`: This is a vector database that stores embedded data. It defaults to ChromaDB, or you can connect your vector store to MindsDB with `CREATE DATABASE vector_database`.
+- `metadata_columns`: The list of column names that will be stored in the `metadata` column of the knowledge base. If not set, the `metadata` column is not used.
+- `content_columns`: The list of column names that will be stored in the `content` column of the knowledge base. If not set, all columns are stored in the `content` column.
+- `id_column`: The column name that will be stored in the `id` column of the knowledge base to uniquely identitify the data.
+
+<Note>
+Each knowledge base comprises the `id`, `content`, and `metadata` columns that store data defined in the parameters.
+</Note>
 
 ## Examples
 
@@ -63,24 +60,48 @@ PREDICT embeddings
 USING
       engine = "embedding",
       class = "openai",
+      model = "text-embedding-ada-002",
       openai_api_key = "sk-xxx",
       input_columns = ["content"];
 ```
 
-Now that you have an embedding model, create a knowledge base, passing this embedding model.
+Analyze the data that you want to insert into a knowledge base:
+
+```sql
+SELECT *
+FROM example_db.home_rentals;
+```
+
+Here is the output:
+
+```sql
++-------------------+-------------------+------+----------+----------------+----------------+--------------+----------------------------+
+| number_of_rooms   | number_of_bathrooms | sqft | location | days_on_market | neighborhood   | rental_price | created_at                 |
++-------------------+-------------------+------+----------+----------------+----------------+--------------+----------------------------+
+| 2                 | 1                 | 917  | great    | 13             | berkeley_hills | 3901         | 2024-02-24 02:28:21.746167 |
+| 0                 | 1                 | 194  | great    | 10             | berkeley_hills | 2042         | 2024-02-19 06:10:59.693052 |
+| 1                 | 1                 | 543  | poor     | 18             | westbrae       | 1871         | 2024-02-12 07:53:45.914146 |
++-------------------+-------------------+------+----------+----------------+----------------+--------------+----------------------------+
+```
+
+Decide which columns to use as `content` and which ones as `metadata`. For example, we use the `days_on_market` and `neighborhood` columns as `metadata` and the `location` and `rental_price` columns as `content`.
+
+Now that you have an embedding model, create a knowledge base, passing this embedding model and defining the `content` and `metadata` columns.
 
 ```sql
 CREATE KNOWLEDGE_BASE kb_custom_model
 USING
-	    model = embedding_model;
+	model = embedding_model,
+      metadata_columns = ['days_on_market', 'neighborhood'],
+      content_columns = ['location', 'rental_price'];
 ```
 
 After successful creation of a knowledge base, insert data to store it in the form of embeddings.
 
 ```sql
 INSERT INTO kb_custom_model (
-      SELECT review as content 
-      FROM example_db.amazon_reviews
+      SELECT *
+      FROM example_db.home_rentals
 );
 ```
 
@@ -88,6 +109,21 @@ Finally, you can verify that the data has been inserted into the knowledge base 
 
 ```sql
 SELECT * FROM kb_custom_model;
+```
+
+Here is the output:
+
+```sql
++----+------------------------------+----------------------------------------+
+| id | content                      | metadata                               |
++----+------------------------------+----------------------------------------+
+| 1  | days_on_market: 13           | {"location":great,"rental_price":3901} |
+|    | neighborhood: berkeley_hills |                                        |
+| 2  | days_on_market: 10           | {"location":great,"rental_price":2042} |
+|    | neighborhood: berkeley_hills |                                        |
+| 3  | days_on_market: 18           | {"location":poor,"rental_price":1871}  |
+|    | neighborhood: westbrae       |                                        |
++----+------------------------------+----------------------------------------+
 ```
 
 ### Knowledge Base with Hugging Face Embedding Model
@@ -108,7 +144,8 @@ CREATE MODEL embedding_model
 PREDICT embedding
 USING
       engine = 'langchain_embedding',
-      class = 'HuggingFaceEmbeddings';
+      class = 'HuggingFaceEmbeddings',
+      model_name = "sentence-transformers/all-mpnet-base-v2";
 ```
 
 Now that you have an embedding model, create a knowledge base, passing this embedding model.
@@ -116,7 +153,7 @@ Now that you have an embedding model, create a knowledge base, passing this embe
 ```sql
 CREATE KNOWLEDGE_BASE kb_custom_model
 USING
-	    model = embedding_model;
+	model = embedding_model;
 ```
 
 After successful creation of a knowledge base, insert data to store it in the form of embeddings.

@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import Mock
 
 import pandas as pd
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 
 from mindsdb.integrations.handlers.webz_handler.webz_handler import WebzHandler
 from mindsdb.integrations.handlers.webz_handler.webz_tables import (
@@ -81,7 +81,6 @@ class WebzPostsTableTest(unittest.TestCase):
         posts_table = WebzPostsTable(webz_handler)
         query = parse_sql(
             "SELECT * FROM posts WHERE query='language:english' ORDER BY posts.relevancy LIMIT 10",
-            dialect="mindsdb",
         )
         results = posts_table.select(query)
         first_result = results.iloc[0]
@@ -105,7 +104,6 @@ class WebzPostsTableTest(unittest.TestCase):
         target_field = "thread__uuid"
         query = parse_sql(
             f"SELECT {target_field} FROM posts",
-            dialect="mindsdb",
         )
         results = posts_table.select(query)
         first_result = results.iloc[0]
@@ -122,7 +120,6 @@ class WebzPostsTableTest(unittest.TestCase):
         posts_table = WebzPostsTable(webz_handler)
         query = parse_sql(
             "SELECT thread__uuid FROM posts ORDER BY posts.invalid_field",
-            dialect="mindsdb",
         )
         with self.assertRaises(ValueError) as context:
             posts_table.select(query)
@@ -183,7 +180,6 @@ class WebzReviewsTableTest(unittest.TestCase):
         reviews_table = WebzReviewsTable(webz_handler)
         query = parse_sql(
             "SELECT * FROM reviews WHERE query='language:english' ORDER BY reviews.reviews_count LIMIT 10",
-            dialect="mindsdb",
         )
         results = reviews_table.select(query)
         first_result = results.iloc[0]
@@ -207,7 +203,6 @@ class WebzReviewsTableTest(unittest.TestCase):
         target_field = "uuid"
         query = parse_sql(
             f"SELECT {target_field} FROM reviews",
-            dialect="mindsdb",
         )
         results = reviews_table.select(query)
         first_result = results.iloc[0]
@@ -224,7 +219,6 @@ class WebzReviewsTableTest(unittest.TestCase):
         reviews_table = WebzReviewsTable(webz_handler)
         query = parse_sql(
             "SELECT item__uuid FROM reviews ORDER BY reviews.invalid_field",
-            dialect="mindsdb",
         )
         with self.assertRaises(ValueError) as context:
             reviews_table.select(query)

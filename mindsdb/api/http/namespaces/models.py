@@ -13,8 +13,8 @@ from mindsdb.api.executor.controllers.session_controller import SessionControlle
 from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.interfaces.model.functions import PredictorRecordNotFound
 from mindsdb.interfaces.storage.db import Predictor
-from mindsdb_sql import parse_sql
-from mindsdb_sql.parser.dialects.mindsdb import CreatePredictor
+from mindsdb_sql_parser import parse_sql
+from mindsdb_sql_parser.ast.mindsdb import CreatePredictor
 
 
 @ns_conf.route('/<project_name>/models')
@@ -56,7 +56,7 @@ class ModelsList(Resource):
                 f'Project name {project_name} does not exist')
 
         try:
-            create_statement = parse_sql(query, dialect='mindsdb')
+            create_statement = parse_sql(query)
         except Exception:
             return http_error(
                 HTTPStatus.BAD_REQUEST,

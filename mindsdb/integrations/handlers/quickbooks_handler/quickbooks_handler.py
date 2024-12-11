@@ -9,7 +9,7 @@ from mindsdb.integrations.libs.response import (
 )
 from mindsdb.utilities.config import Config
 from mindsdb.utilities import log
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 from .quickbooks_table import AccountsTable, PurchasesTable, BillPaymentsTable, VendorsTable, BillsTable, EmployeesTable
 
 logger = log.getLogger(__name__)
@@ -93,5 +93,5 @@ class QuickbooksHandler(APIHandler):
         StatusResponse
             Request status
         """
-        ast = parse_sql(query, dialect="mindsdb")
+        ast = parse_sql(query)
         return self.query(ast)

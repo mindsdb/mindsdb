@@ -2,7 +2,7 @@ import time
 from unittest.mock import patch
 import pandas as pd
 
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 
 # How to run:
 #   env PYTHONPATH=./ pytest tests/unit/test_merlion_handler.py
@@ -56,7 +56,7 @@ class TestMerlion(BaseExecutorTest):
 
     def run_mindsdb_sql(self, sql):
         return self.command_executor.execute_command(
-            parse_sql(sql, dialect='mindsdb')
+            parse_sql(sql)
         )
 
     def test_merlion_forecaster(self):

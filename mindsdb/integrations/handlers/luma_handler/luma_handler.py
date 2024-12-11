@@ -1,4 +1,4 @@
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 
 from mindsdb.integrations.handlers.luma_handler.luma_tables import (
     LumaEventsTable
@@ -73,5 +73,5 @@ class LumaHandler(APIHandler):
         StatusResponse
             Request status
         """
-        ast = parse_sql(query, dialect="mindsdb")
+        ast = parse_sql(query)
         return self.query(ast)

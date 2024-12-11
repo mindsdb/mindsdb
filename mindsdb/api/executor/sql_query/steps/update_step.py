@@ -1,11 +1,11 @@
-from mindsdb_sql.parser.ast import (
+from mindsdb_sql_parser.ast import (
     BinaryOperation,
     Identifier,
     Constant,
     Update,
 )
-from mindsdb_sql.planner.steps import UpdateToTable
-from mindsdb_sql.planner.utils import query_traversal
+from mindsdb.api.executor.planner.steps import UpdateToTable
+from mindsdb.integrations.utilities.query_traversal import query_traversal
 
 from mindsdb.api.executor.sql_query.result_set import ResultSet
 from mindsdb.api.executor.exceptions import WrongArgumentError

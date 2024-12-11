@@ -8,7 +8,7 @@ import pandas as pd
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 
-from mindsdb_sql.parser import ast
+from mindsdb_sql_parser import ast
 from mindsdb.integrations.utilities.date_utils import parse_local_date
 
 from mindsdb.integrations.libs.api_handler import APIHandler, APITable

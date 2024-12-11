@@ -1,14 +1,14 @@
 """Utility functions for RAG pipeline configuration"""
 from typing import Dict, Any, Optional
 
-from mindsdb.utilities import log
+from mindsdb.utilities.log import getLogger
 from mindsdb.integrations.utilities.rag.settings import (
     RetrieverType, MultiVectorRetrieverMode, SearchType,
     SearchKwargs, SummarizationConfig, VectorStoreConfig,
     RerankerConfig, RAGPipelineModel, DEFAULT_COLLECTION_NAME
 )
 
-logger = log.getlogger(__name__)
+logger = getLogger(__name__)
 
 
 def load_rag_config(base_config: Dict[str, Any], kb_params: Optional[Dict[str, Any]] = None, embedding_model: Any = None) -> RAGPipelineModel:

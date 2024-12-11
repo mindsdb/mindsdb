@@ -1,8 +1,7 @@
 from unittest.mock import Mock
-
 from mindsdb.integrations.utilities.rag.settings import (
     RetrieverType, MultiVectorRetrieverMode, SearchType,
-    RAGPipelineModel
+    RAGPipelineModel, Embeddings
 )
 from mindsdb.integrations.utilities.rag.config_loader import load_rag_config
 
@@ -45,7 +44,16 @@ def test_load_rag_config_with_embedding_model():
         'retriever_type': RetrieverType.VECTOR_STORE.value,
         'search_type': SearchType.SIMILARITY.value
     }
-    embedding_model = Mock()
+
+    # Create a mock that's a subclass of Embeddings
+    class MockEmbeddings(Embeddings):
+        def embed_documents(self, texts):
+            return [[0.0] * 10] * len(texts)
+
+        def embed_query(self, text):
+            return [0.0] * 10
+
+    embedding_model = MockEmbeddings()
     config = load_rag_config(base_config, embedding_model=embedding_model)
 
     assert isinstance(config, RAGPipelineModel)
@@ -57,12 +65,14 @@ def test_load_rag_config_with_multi_vector_mode():
     base_config = {
         'retriever_type': RetrieverType.VECTOR_STORE.value,
         'search_type': SearchType.SIMILARITY.value,
-        'multi_vector_mode': MultiVectorRetrieverMode.CONCATENATE.value
+        'multi_retriever_mode': MultiVectorRetrieverMode.SPLIT.value  # Use correct enum value
     }
     config = load_rag_config(base_config)
 
     assert isinstance(config, RAGPipelineModel)
-    assert config.multi_retriever_mode == MultiVectorRetrieverMode.CONCATENATE
+    assert config.retriever_type == RetrieverType.VECTOR_STORE
+    assert config.search_type == SearchType.SIMILARITY
+    assert config.multi_retriever_mode == MultiVectorRetrieverMode.SPLIT
 
 
 def test_load_rag_config_with_kb_params():

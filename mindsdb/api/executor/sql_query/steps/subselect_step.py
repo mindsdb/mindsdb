@@ -101,6 +101,12 @@ class QueryStepCall(BaseStepCall):
             if col.table_name != col.table_alias:
                 tbl_idx[col.table_alias].append(name)
 
+        # get aliases of first level
+        aliases = []
+        for col in query.targets:
+            if col.alias is not None:
+                aliases.append(col.alias.parts[0])
+
         # analyze condition and change name of columns
         def check_fields(node, is_target=None, **kwargs):
 
@@ -121,11 +127,18 @@ class QueryStepCall(BaseStepCall):
 
                 if len(node.parts) == 1:
                     key = col_name
+                    if key in aliases:
+                        # key is defined as alias
+                        return
                 else:
                     table_name = node.parts[-2]
                     key = (table_name, col_name)
 
                 if key not in col_idx:
+                    if len(node.parts) == 1:
+                        # it can be local alias of a query
+                        return
+
                     raise KeyColumnDoesNotExist(f'Table not found for column: {key}')
 
                 new_name = col_idx[key]

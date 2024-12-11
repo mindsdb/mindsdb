@@ -1,5 +1,4 @@
 import os
-import datetime
 import secrets
 import mimetypes
 import threading
@@ -291,7 +290,7 @@ def initialize_app(config, no_studio):
 
     @app.before_request
     def before_request():
-        logger.debug(f"HTTP: {request.path}")
+        logger.debug(f"HTTP {request.method}: {request.path}")
         ctx.set_default()
         config = Config()
 
@@ -302,7 +301,7 @@ def initialize_app(config, no_studio):
             and check_auth() is False
         ):
             return http_error(
-                403, 'Forbidden',
+                HTTPStatus.UNAUTHORIZED, 'Unauthorized',
                 'Authorization is required to complete the request'
             )
         # endregion
@@ -384,7 +383,7 @@ def initialize_flask(config, init_static_thread, no_studio):
 
     app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', secrets.token_hex(32))
     app.config['SESSION_COOKIE_NAME'] = 'session'
-    app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(days=31)
+    app.config['PERMANENT_SESSION_LIFETIME'] = config['auth']['http_permanent_session_lifetime']
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 60
     app.config['SWAGGER_HOST'] = 'http://localhost:8000/mindsdb'
     app.json = CustomJSONProvider()

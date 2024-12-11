@@ -15,7 +15,7 @@ from langchain_community.chat_models import (
     ChatLiteLLM,
     ChatOllama)
 from langchain_core.agents import AgentAction, AgentStep
-from langchain_core.embeddings import Embeddings
+
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langchain_core.messages.base import BaseMessage
 from langchain_core.prompts import PromptTemplate
@@ -29,9 +29,7 @@ from mindsdb.integrations.handlers.openai_handler.constants import (
 )
 from mindsdb.integrations.libs.llm.utils import get_llm_config
 from mindsdb.integrations.utilities.handler_utils import get_api_key
-from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import (
-    construct_model_from_args,
-)
+from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
 from mindsdb.utilities import log
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 from mindsdb.interfaces.storage import db
@@ -60,7 +58,6 @@ from .constants import (
     CONTEXT_COLUMN
 )
 from mindsdb.interfaces.skills.skill_tool import skill_tool, SkillData
-from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import SystemMessage
 from langchain_openai import ChatOpenAI
@@ -95,42 +92,37 @@ def get_llm_provider(args: Dict) -> str:
 def get_embedding_model_provider(args: Dict) -> str:
     """Get the embedding model provider from args.
 
-    For VLLM, this will return 'openai' since VLLM uses the OpenAI embeddings interface.
+    For VLLM, this will use our custom VLLMEmbeddings class from langchain_embedding_handler.
     """
+    # Check for explicit embedding model provider
     if "embedding_model_provider" in args:
         provider = args["embedding_model_provider"]
-        # If using VLLM embeddings, ensure base_url is provided
         if provider == 'vllm':
-            if not args.get('embedding_base_url'):
+            if not (args.get('openai_api_base') and args.get('model')):
                 raise ValueError(
                     "VLLM embeddings configuration error:\n"
-                    "- Missing required 'embedding_base_url'\n"
-                    "- Example: embedding_base_url='http://vllm_embeddings:8001/v1'"
+                    "- Missing required parameters: 'openai_api_base' and/or 'model'\n"
+                    "- Example: openai_api_base='http://localhost:8003/v1', model='your-model-name'"
                 )
-            logger.info("Using VLLM with OpenAI embeddings interface")
-            return 'openai'  # Use OpenAI interface for VLLM
+            logger.info("Using custom VLLMEmbeddings class")
+            return 'vllm'
         return provider
 
-    if "embedding_model_provider" not in args:
-        logger.warning("No embedding model provider specified. trying to use llm provider.")
-        llm_provider = get_llm_provider(args)
-        # vLLM requires explicit embedding_base_url
-        if llm_provider == 'vllm':
-            if not args.get('embedding_base_url'):
-                raise ValueError(
-                    "VLLM embeddings configuration error:\n"
-                    "- Missing required 'embedding_base_url'\n"
-                    "- When using VLLM as LLM provider, you must specify the embeddings endpoint\n"
-                    "- Example: embedding_base_url='http://vllm_embeddings:8001/v1'"
-                )
-            logger.info("Using VLLM with OpenAI embeddings interface")
-            return 'openai'  # Use OpenAI interface for VLLM
-        # mindsdb isn't an embeddings provider, use default instead
-        if llm_provider == 'mindsdb':
-            llm_provider = DEFAULT_EMBEDDINGS_MODEL_PROVIDER
-            logger.info(f"MindsDB provider detected, using {DEFAULT_EMBEDDINGS_MODEL_PROVIDER} for embeddings")
-        return args.get("embedding_model_provider", llm_provider)
-    raise ValueError("Invalid model name. Please define provider")
+    # Check if LLM provider is vLLM
+    llm_provider = args.get('provider', DEFAULT_EMBEDDINGS_MODEL_PROVIDER)
+    if llm_provider == 'vllm':
+        if not (args.get('openai_api_base') and args.get('model')):
+            raise ValueError(
+                "VLLM embeddings configuration error:\n"
+                "- Missing required parameters: 'openai_api_base' and/or 'model'\n"
+                "- When using VLLM as LLM provider, you must specify the embeddings server location and model\n"
+                "- Example: openai_api_base='http://localhost:8003/v1', model='your-model-name'"
+            )
+        logger.info("Using custom VLLMEmbeddings class")
+        return 'vllm'
+
+    # Default to LLM provider
+    return llm_provider
 
 
 def get_chat_model_params(args: Dict) -> Dict:
@@ -145,63 +137,6 @@ def get_chat_model_params(args: Dict) -> Dict:
     config_dict = llm_config.model_dump()
     config_dict = {k: v for k, v in config_dict.items() if v is not None}
     return config_dict
-
-
-def build_embedding_model(args) -> Embeddings:
-    """Build an embeddings model from the given arguments.
-
-    For VLLM embeddings, this will configure the OpenAI embeddings interface
-    to use the VLLM server's endpoint.
-    """
-    # Set up embeddings model if needed.
-    embeddings_args = args.pop("embedding_model_args", {})
-
-    # Log the current embedding configuration attempt
-    logger.debug(f"Raw embedding configuration: {embeddings_args}")
-
-    # Get the embeddings provider, either from args or default
-    embeddings_provider = embeddings_args.get('class') or get_embedding_model_provider(args)
-    if not embeddings_args:
-        logger.warning(
-            "'embedding_model_args' not found in input params, "
-            f"Using embedding provider: {embeddings_provider}"
-        )
-        embeddings_args["class"] = embeddings_provider
-
-    # For VLLM or OpenAI interface, configure embeddings
-    is_vllm = (embeddings_provider == 'openai' and args.get('provider') == 'vllm') or args.get('embedding_model_provider') == 'vllm'
-    if is_vllm:
-        # Get model name with clear fallback chain
-        model_name = args.get('embedding_model_name')
-        if not model_name:
-            model_name = args.get('model_name')
-            if model_name:
-                logger.warning(f"No embedding_model_name specified, falling back to model_name: {model_name}")
-            else:
-                model_name = 'text-embedding-ada-002'
-                logger.warning(f"No embedding model specified, using default: {model_name}")
-
-        # Configure all vLLM settings in embeddings_args
-        embeddings_args.update({
-            'model': model_name,
-            'openai_api_base': args.get('openai_api_base', args.get('embedding_base_url')),  # Support both param names
-            'openai_api_key': 'dummy-key',  # OpenAI embeddings require an API key
-        })
-        logger.info(f"Configured VLLM embeddings via OpenAI interface at {embeddings_args['openai_api_base']} using model {model_name}")
-
-    # Include API keys if present.
-    api_keys = {k: v for k, v in args.items() if "api_key" in k}
-    if api_keys:
-        logger.debug(f"Including API keys: {list(api_keys.keys())}")
-    embeddings_args.update(api_keys)
-
-    try:
-        model = construct_model_from_args(embeddings_args)
-        logger.info(f"Successfully initialized embedding model: {type(model).__name__}")
-        return model
-    except Exception as e:
-        logger.error(f"Failed to initialize embedding model: {embeddings_args.get('class')} - {str(e)}")
-        raise
 
 
 def create_chat_model(args: Dict):
@@ -272,11 +207,11 @@ def process_chunk(chunk):
 
 
 class LangchainAgent:
-    def __init__(self, agent: db.Agents, model):
-
+    def __init__(self, agent: db.Agents, model: dict = None):
+        self.agent = agent
+        self.model = model
         self.llm = None
         self.embedding_model = None
-        self.agent = agent
         args = agent.params.copy()
         args["model_name"] = agent.model_name
         args["provider"] = agent.provider
@@ -417,20 +352,12 @@ class LangchainAgent:
         # Back compatibility for old models
         self.provider = args.get("provider", get_llm_provider(args))
 
-        self.embedding_model_provider = args.get('embedding_model_provider', get_embedding_model_provider(args))
-
         df = df.reset_index(drop=True)
         agent = self.create_agent(df, args)
         # Use last message as prompt, remove other questions.
         user_column = args.get("user_column", USER_COLUMN)
         df.iloc[:-1, df.columns.get_loc(user_column)] = None
         return self.stream_agent(df, agent, args)
-
-    def set_embedding_model(self, args):
-        """
-        Set the embedding model for the agent.
-        """
-        self.embedding_model = build_embedding_model(args)
 
     def create_agent(self, df: pd.DataFrame, args: Dict = None) -> AgentExecutor:
         # Set up tools.

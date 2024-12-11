@@ -25,8 +25,9 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
     VectorStoreHandler,
 )
 from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
-from mindsdb.integrations.utilities.rag.settings import RAGPipelineModel
-from mindsdb.interfaces.agents.langchain_agent import build_embedding_model, create_chat_model, get_llm_provider
+from mindsdb.integrations.utilities.rag.config_loader import load_rag_config
+from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS
+from mindsdb.interfaces.agents.langchain_agent import create_chat_model, get_llm_provider
 from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.interfaces.knowledge_base.preprocessing.models import PreprocessingConfig, Document
 from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor import PreprocessorFactory
@@ -511,45 +512,56 @@ class KnowledgeBaseTable:
         """
         Builds a RAG pipeline with returned sources
 
-        :param retrieval_config: dict with retrieval config
+        Args:
+            retrieval_config: dict with retrieval config
+
+        Returns:
+            RAG: Configured RAG pipeline instance
+
+        Raises:
+            ValueError: If the configuration is invalid or required components are missing
         """
-        # validate that the retrieval_config has the correct parameters
-        rag_pipeline_model = RAGPipelineModel(**retrieval_config)
-
-        # get embedding model on the kb
-        embeddings_model_id = self._kb.embedding_model_id
-        model_rec = db.session.query(db.Predictor).filter_by(id=embeddings_model_id).first()
-
-        if model_rec is None:
-            raise ValueError(f"Model not found: {embeddings_model_id}")
-
-        # get using args used to create embedding model
-        model_using = model_rec.learn_args.get('using', {})
-        embedding_model_args = {"embedding_model_args": model_using}
-
-        # build and set the embedding model in the retrieval_config
-        embeddings_model = build_embedding_model(embedding_model_args)
-        rag_pipeline_model.embedding_model = embeddings_model
-
-        # build and set the llm in the retrieval_config
-        llm_args = {"model_name": rag_pipeline_model.llm_model_name}
-
-        if not rag_pipeline_model.llm_provider:
-            # If llm provider not set by user, we get it from model name
-            llm_args['provider'] = get_llm_provider(llm_args)
+        # Get embedding model from knowledge base
+        embeddings_model = None
+        if self._kb.embedding_model:
+            # Extract embedding model args from knowledge base table
+            embedding_args = self._kb.embedding_model.learn_args.get('using', {})
+            # Construct the embedding model directly
+            from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
+            embeddings_model = construct_model_from_args(embedding_args)
+            logger.debug(f"Using knowledge base embedding model with args: {embedding_args}")
         else:
-            # If llm provider is set by user, we use it
-            llm_args["provider"] = rag_pipeline_model.llm_provider
+            embeddings_model = DEFAULT_EMBEDDINGS_MODEL_CLASS()
+            logger.debug("Using default embedding model as knowledge base has no embedding model")
 
-        rag_pipeline_model.llm = create_chat_model(llm_args)
+        # Update retrieval config with knowledge base parameters
+        kb_params = {
+            'vector_store_config': {
+                'kb_table': self
+            }
+        }
 
-        # set the kb table name in the retrieval_config
-        rag_pipeline_model.vector_store_config.kb_table = self
+        # Load and validate config
+        try:
+            rag_config = load_rag_config(retrieval_config, kb_params, embeddings_model)
 
-        # Build RAG pipeline model
-        rag = RAG(rag_pipeline_model)
+            # Build LLM if specified
+            if 'llm_model_name' in rag_config:
+                llm_args = {"model_name": rag_config.llm_model_name}
+                if not rag_config.llm_provider:
+                    llm_args['provider'] = get_llm_provider(llm_args)
+                else:
+                    llm_args["provider"] = rag_config.llm_provider
+                rag_config.llm = create_chat_model(llm_args)
 
-        return rag
+            # Create RAG pipeline
+            rag = RAG(rag_config)
+            logger.debug(f"RAG pipeline created with config: {rag_config}")
+            return rag
+
+        except Exception as e:
+            logger.error(f"Error building RAG pipeline: {str(e)}")
+            raise ValueError(f"Failed to build RAG pipeline: {str(e)}")
 
     def _parse_metadata(self, base_metadata):
         """Helper function to robustly parse metadata string to dict"""

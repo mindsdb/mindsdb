@@ -211,7 +211,7 @@ class ChatBotResource(Resource):
         name = chatbot.get('name', None)
         agent_name = chatbot.get('agent_name', None)
         model_name = chatbot.get('model_name', None)
-        database_id = chatbot.get('database_id', None)
+        database_id = get_or_create_database_for_chatbot(chatbot)
         is_running = chatbot.get('is_running', None)
         params = chatbot.get('params', None)
 
@@ -250,19 +250,6 @@ class ChatBotResource(Resource):
             # Create
             return create_chatbot(project_name, name, chatbot)
 
-        if 'db_params' in chatbot and 'db_engine' in chatbot:
-            session_controller = SessionController()
-
-            db_name = chatbot['name'] + '_db'
-
-            # try to drop
-            existing_db = session_controller.integration_controller.get(db_name)
-            if existing_db:
-                # drop
-                session_controller.integration_controller.delete(db_name)
-
-            database_id = session_controller.integration_controller.add(db_name, chatbot['db_engine'],
-                                                                        chatbot['db_params'])
         # Update
         updated_chatbot = chatbot_controller.update_chatbot(
             chatbot_name,

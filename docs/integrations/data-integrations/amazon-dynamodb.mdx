@@ -5,6 +5,10 @@ sidebarTitle: Amazon DynamoDB
 
 This documentation describes the integration of MindsDB with [Amazon DynamoDB](https://aws.amazon.com/dynamodb/), a serverless, NoSQL database service that enables you to develop modern applications at any scale.
 
+<Tip>
+This data source integration is thread-safe, utilizing a connection pool where each thread is assigned its own connection. When handling requests in parallel, threads retrieve connections from the pool as needed.
+</Tip>
+
 ## Prerequisites
 
 Before proceeding, ensure that MindsDB is installed locally via [Docker](/setup/self-hosted/docker) or [Docker Desktop](/setup/self-hosted/docker-desktop).

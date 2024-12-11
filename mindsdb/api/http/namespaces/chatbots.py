@@ -109,6 +109,45 @@ def create_chatbot(project_name, name, chatbot):
     return created_chatbot.as_dict(), HTTPStatus.CREATED
 
 
+def get_or_create_database_for_chatbot(chatbot: dict, session_controller: SessionController) -> int:
+    """
+    Get or create a database for a chatbot, based on the chatbot configuration provided in the request.
+
+    Args:
+        chatbot (dict): The chatbot configuration.
+        session_controller (SessionController): The session controller.
+
+    Returns:
+        int: The database ID.
+    """
+    if 'database_id' in chatbot:
+        database_record = session_controller.integration_controller.get_by_id(chatbot['database_id'])
+        if database_record:
+            return database_record['id']
+        else:
+            raise ValueError(f"Database with ID {chatbot['database_id']} not found")
+    
+    elif 'database_name' in chatbot:
+        database_record = session_controller.integration_controller.get(chatbot['database_name'])
+        if database_record:
+            return database_record['id']
+        else:
+            raise ValueError(f"Database with name {chatbot['database_name']} not found")
+
+    if 'db_params' in chatbot and 'db_engine' in chatbot:
+        db_name = chatbot['name'] + '_db'
+
+        # try to drop
+        existing_db = session_controller.integration_controller.get(db_name)
+        if existing_db:
+            # drop
+            session_controller.integration_controller.delete(db_name)
+
+        return session_controller.integration_controller.add(db_name, chatbot['db_engine'], chatbot['db_params'])
+
+    return None
+
+
 @ns_conf.route('/<project_name>/chatbots')
 class ChatBotsResource(Resource):
     @ns_conf.doc('list_chatbots')

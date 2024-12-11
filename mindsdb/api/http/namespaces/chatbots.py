@@ -32,23 +32,9 @@ def create_chatbot(project_name, name, chatbot):
 
     session_controller = SessionController()
 
-    if 'database_id' in chatbot:
-        database_id = chatbot['database_id']
-    elif 'database_name' in chatbot:
-        database_id = session_controller.integration_controller.get(chatbot['database_name'])['id']
-    elif 'db_params' in chatbot and 'db_engine' in chatbot:
-            db_name = chatbot['name'] + '_db'
+    database_id = get_or_create_database_for_chatbot(chatbot)
 
-            # try to drop
-            existing_db = session_controller.integration_controller.get(db_name)
-            if existing_db:
-                # drop
-                session_controller.integration_controller.delete(db_name)
-
-            database_id = session_controller.integration_controller.add(db_name, chatbot['db_engine'],
-                                                                        chatbot['db_params'])
-
-    else:
+    if database_id is None:
         return http_error(
             HTTPStatus.BAD_REQUEST,
             'Missing field',
@@ -108,6 +94,31 @@ def create_chatbot(project_name, name, chatbot):
         params=params
     )
     return created_chatbot.as_dict(), HTTPStatus.CREATED
+
+
+def get_or_create_database_for_chatbot(chatbot):
+    database_id = None
+
+    if 'database_id' in chatbot:
+        database_id = chatbot['database_id']
+    elif 'database_name' in chatbot:
+        database_id = SessionController().integration_controller.get(chatbot['database_name'])['id']
+    elif 'db_params' in chatbot and 'db_engine' in chatbot:
+        db_name = chatbot['name'] + '_db'
+
+        # try to drop
+        existing_db = SessionController().integration_controller.get(db_name)
+        if existing_db:
+            # drop
+            SessionController().integration_controller.delete(db_name)
+
+        database_id = SessionController().integration_controller.add(
+            db_name,
+            chatbot['db_engine'],
+            chatbot['db_params']
+        )
+
+    return database_id
 
 
 @ns_conf.route('/<project_name>/chatbots')

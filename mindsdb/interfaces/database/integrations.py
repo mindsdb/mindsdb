@@ -585,11 +585,6 @@ class IntegrationController:
             handler_storage=handler_storage
         )
 
-        logger.info(
-            "%s.get_handler: create a client to db service of %s type, args - %s",
-            self.__class__.__name__,
-            integration_engine, handler_ars
-        )
         HandlerClass = self.handler_modules[integration_engine].Handler
         handler = HandlerClass(**handler_ars)
         if connect:

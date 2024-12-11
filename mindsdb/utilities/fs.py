@@ -6,34 +6,10 @@ from pathlib import Path
 from typing import Optional, List, Tuple
 
 import psutil
-from appdirs import user_data_dir
 
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
-
-
-def create_directory(path):
-    path = Path(path)
-    path.mkdir(mode=0o777, exist_ok=True, parents=True)
-
-
-def get_or_create_data_dir():
-    data_dir = user_data_dir("mindsdb", "mindsdb")
-    mindsdb_data_dir = os.path.join(data_dir, "var/")
-
-    if os.path.exists(mindsdb_data_dir) is False:
-        create_directory(mindsdb_data_dir)
-
-    try:
-        assert os.path.exists(mindsdb_data_dir)
-        assert os.access(mindsdb_data_dir, os.W_OK) is True
-    except Exception:
-        raise Exception(
-            "MindsDB storage directory does not exist and could not be created"
-        )
-
-    return mindsdb_data_dir
 
 
 def create_dirs_recursive(path):
@@ -41,7 +17,7 @@ def create_dirs_recursive(path):
         for p in path.values():
             create_dirs_recursive(p)
     elif isinstance(path, str):
-        create_directory(path)
+        Path(path).mkdir(mode=0o777, exist_ok=True, parents=True)
     else:
         raise ValueError(f"Wrong path: {path}")
 

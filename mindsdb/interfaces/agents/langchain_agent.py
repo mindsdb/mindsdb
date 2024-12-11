@@ -92,43 +92,37 @@ def get_llm_provider(args: Dict) -> str:
 def get_embedding_model_provider(args: Dict) -> str:
     """Get the embedding model provider from args.
 
-    For VLLM, this will return 'openai' since VLLM uses the OpenAI embeddings interface.
+    For VLLM, this will use our custom VLLMEmbeddings class from langchain_embedding_handler.
     """
-
+    # Check for explicit embedding model provider
     if "embedding_model_provider" in args:
         provider = args["embedding_model_provider"]
-        # If using VLLM embeddings, ensure base_url is provided
         if provider == 'vllm':
-            if not args.get('embedding_base_url'):
+            if not (args.get('openai_api_base') and args.get('model')):
                 raise ValueError(
                     "VLLM embeddings configuration error:\n"
-                    "- Missing required 'embedding_base_url'\n"
-                    "- Example: embedding_base_url='http://vllm_embeddings:8001/v1'"
+                    "- Missing required parameters: 'openai_api_base' and/or 'model'\n"
+                    "- Example: openai_api_base='http://localhost:8003/v1', model='your-model-name'"
                 )
-            logger.info("Using VLLM with OpenAI embeddings interface")
-            return 'openai'  # Use OpenAI interface for VLLM
+            logger.info("Using custom VLLMEmbeddings class")
+            return 'vllm'
         return provider
 
-    if "embedding_model_provider" not in args:
-        logger.warning("No embedding model provider specified. trying to use llm provider.")
-        llm_provider = get_llm_provider(args)
-        # vLLM requires explicit embedding_base_url
-        if llm_provider == 'vllm':
-            if not args.get('embedding_base_url'):
-                raise ValueError(
-                    "VLLM embeddings configuration error:\n"
-                    "- Missing required 'embedding_base_url'\n"
-                    "- When using VLLM as LLM provider, you must specify the embeddings endpoint\n"
-                    "- Example: embedding_base_url='http://vllm_embeddings:8001/v1'"
-                )
-            logger.info("Using VLLM with OpenAI embeddings interface")
-            return 'openai'  # Use OpenAI interface for VLLM
-        # mindsdb isn't an embeddings provider, use default instead
-        if llm_provider == 'mindsdb':
-            llm_provider = DEFAULT_EMBEDDINGS_MODEL_PROVIDER
-            logger.info(f"MindsDB provider detected, using {DEFAULT_EMBEDDINGS_MODEL_PROVIDER} for embeddings")
-        return args.get("embedding_model_provider", llm_provider)
-    raise ValueError("Invalid model name. Please define provider")
+    # Check if LLM provider is vLLM
+    llm_provider = args.get('provider', DEFAULT_EMBEDDINGS_MODEL_PROVIDER)
+    if llm_provider == 'vllm':
+        if not (args.get('openai_api_base') and args.get('model')):
+            raise ValueError(
+                "VLLM embeddings configuration error:\n"
+                "- Missing required parameters: 'openai_api_base' and/or 'model'\n"
+                "- When using VLLM as LLM provider, you must specify the embeddings server location and model\n"
+                "- Example: openai_api_base='http://localhost:8003/v1', model='your-model-name'"
+            )
+        logger.info("Using custom VLLMEmbeddings class")
+        return 'vllm'
+
+    # Default to LLM provider
+    return llm_provider
 
 
 def get_chat_model_params(args: Dict) -> Dict:

@@ -32,7 +32,11 @@ def create_chatbot(project_name, name, chatbot):
 
     session_controller = SessionController()
 
-    if 'database_id' not in chatbot:
+    if 'database_id' in chatbot:
+        database_id = chatbot['database_id']
+    elif 'database_name' in chatbot:
+        database_id = session_controller.integration_controller.get(chatbot['database_name'])['id']
+    else:
         if 'db_params' in chatbot and 'db_engine' in chatbot:
             db_name = chatbot['name'] + '_db'
 
@@ -51,8 +55,6 @@ def create_chatbot(project_name, name, chatbot):
                 'Missing field',
                 'Missing "database_id" or ("db_engine" and "database_param") fields for chatbot'
             )
-    else:
-        database_id = chatbot.get('database_id', None)
 
     is_running = chatbot.get('is_running', False)
     params = chatbot.get('params', {})

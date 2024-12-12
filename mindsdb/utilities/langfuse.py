@@ -184,7 +184,7 @@ class LangfuseClientWrapper:
 
         if self.client is None:
             logger.debug("Langfuse is disabled.")
-            return None
+            return
 
         span.end()
         self.trace.update()

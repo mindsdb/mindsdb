@@ -60,7 +60,7 @@ class BaseMemory:
 
         # If the chat_id is a tuple, convert it to a string when storing the message in the database.
         self._add_to_history(
-            str(chat_id) if isinstance(chat_id, tuple) else chat_id,
+            chat_id,
             chat_message,
             table_name=table_name
         )
@@ -74,7 +74,7 @@ class BaseMemory:
 
         else:
             history = self._get_chat_history(
-                str(chat_id) if isinstance(chat_id, tuple) else chat_id,
+                chat_id,
                 table_name
             )
             self._cache[key] = history
@@ -151,9 +151,16 @@ class DBMemory(BaseMemory):
     uses mindsdb database to store messages
     '''
 
+    def _get_chat_id(self, chat_id, table_name=None):
+        if isinstance(chat_id, tuple):
+            return "_".join(str(val) for val in chat_id)
+        
+        if table_name:
+            return f"{chat_id}_{table_name}"
+
     def _add_to_history(self, chat_id, message, table_name=None):
         chat_bot_id = self.chat_task.bot_id
-        destination = str((chat_id, table_name)) if table_name else chat_id
+        destination = self._get_chat_id(chat_id, table_name)
 
         message = db.ChatBotsHistory(
             chat_bot_id=chat_bot_id,
@@ -167,7 +174,7 @@ class DBMemory(BaseMemory):
 
     def _get_chat_history(self, chat_id, table_name=None):
         chat_bot_id = self.chat_task.bot_id
-        destination = str((chat_id, table_name)) if table_name else chat_id
+        destination = self._get_chat_id(chat_id, table_name)
 
         query = db.ChatBotsHistory.query\
             .filter(

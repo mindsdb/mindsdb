@@ -17,7 +17,7 @@ jobs:
         id: enhance_notes
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Prepare the LLM API payload
           payload=$(cat <<EOF

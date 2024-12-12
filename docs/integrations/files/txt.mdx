@@ -3,7 +3,7 @@ title: Upload TXT files to MindsDB
 sidebarTitle: TXT
 ---
 
-You can upload TXT files of up to 500MB in size to MindsDB. Note that this limit is imposed when uploading a file via MindsDB SQL Editor. If you [upload a file via APIs](https://docs.mindsdb.com/rest/files/upload), this limit does not persist.
+You can upload TXT files of any size to MindsDB that runs locally via [Docker](/setup/self-hosted/docker) or [pip](/contribute/install).
 
 TXT files are divided into chunks and stored in multiple table cells. MindsDB uses the [TextLoader from LangChain](https://api.python.langchain.com/en/latest/document_loaders/langchain_community.document_loaders.text.TextLoader.html) to load TXT files.
 

@@ -21,6 +21,8 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
+          echo ${{ toJSON(github.event.release.body) }}
+
           # Prepare the LLM API payload
           payload=$(cat <<EOF
           {
@@ -32,7 +34,7 @@ jobs:
               },
               {
                 "role": "user",
-                "content": "${{ github.event.release.body }}"
+                "content": ${{ toJSON(github.event.release.body) }}
               }
             ]
           }

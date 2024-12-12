@@ -53,19 +53,23 @@ class ChatBotTask(BaseTask):
 
         chat_params = self.chat_handler.get_chat_config()
         polling = chat_params['polling']['type']
+
+        memory = chat_params['memory']['type'] if 'memory' in chat_params else None
+        memory_cls = None
+        if memory:
+            memory_cls = DBMemory if memory == 'db' else HandlerMemory
+
         if polling == 'message_count':
             chat_params = chat_params['tables'] if 'tables' in chat_params else [chat_params]
             self.chat_pooling = MessageCountPolling(self, chat_params)
-            self.memory = HandlerMemory(self, chat_params)
+            # The default type for message count polling is HandlerMemory if not specified.
+            self.memory = HandlerMemory(self, chat_params) if memory_cls is None else memory_cls(self, chat_params)
 
         elif polling == 'realtime':
             chat_params = chat_params['tables'] if 'tables' in chat_params else [chat_params]
             self.chat_pooling = RealtimePolling(self, chat_params)
-            self.memory = DBMemory(self, chat_params)
-
-        elif polling == 'webhook':
-            self.chat_pooling = WebhookPolling(self, chat_params)
-            self.memory = DBMemory(self, chat_params)
+            # The default type for real-time polling is DBMemory if not specified.
+            self.memory = DBMemory(self, chat_params) if memory_cls is None else memory_cls(self, chat_params)
 
         else:
             raise Exception(f"Not supported polling: {polling}")

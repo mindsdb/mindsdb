@@ -31,7 +31,7 @@ jobs:
             "messages": [
               {
                 "role": "system",
-                "content": "Follow the instructions to update the GitHub release notes provided below. 1. Write a section titled "TL;DR" that describes everything contained in the "What's Changed" section. Make this "TL;DR" section informative and divide information into sections of related items. 2. The input comes in the Markdown format as below. Generate the output in the Markdown format as well. 3. Final format should adhere to the following: - start with the "TL;DR" section, which is a summary of the "What's Changed" section, - follow it with the "What's Changed" section, and DO NOT change the provided "What's Changed" section, - generate a Markdown format output that concatenates these two sections."
+                "content": "Follow the instructions to update the GitHub release notes provided below. 1. Write a section titled \"TL;DR\" that describes everything contained in the \"What's Changed\" section. Make this \"TL;DR\" section informative and divide information into sections of related items. 2. The input comes in the Markdown format as below. Generate the output in the Markdown format as well. 3. Final format should adhere to the following: - start with the \"TL;DR\" section, which is a summary of the \"What's Changed\" section, - follow it with the \"What's Changed\" section, and DO NOT change the provided \"What's Changed\" section, - generate a Markdown format output that concatenates these two sections."
               },
               {
                 "role": "user",

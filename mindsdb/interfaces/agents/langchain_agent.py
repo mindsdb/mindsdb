@@ -59,7 +59,7 @@ from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import SystemMessage
 from langchain_openai import ChatOpenAI
 
-from ...utilities.langfuse import LangfuseClientWrapper
+from mindsdb.utilities.langfuse import LangfuseClientWrapper
 
 _PARSING_ERROR_PREFIXES = [
     "An output parsing error occurred",

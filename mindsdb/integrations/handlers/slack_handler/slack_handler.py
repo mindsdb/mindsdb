@@ -231,6 +231,9 @@ class SlackHandler(APIChatHandler):
             'polling': {
                 'type': 'realtime',
             },
+            'memory': {
+                'type': 'handler',
+            },
             'tables': [
                 {
                     'chat_table': {

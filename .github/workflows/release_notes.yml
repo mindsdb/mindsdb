@@ -5,6 +5,9 @@ on:
     types:
       - published
 
+permissions:
+    contents: write
+
 jobs:
   get-release-notes:
     runs-on: ubuntu-latest
@@ -17,7 +20,6 @@ jobs:
         id: enhance_notes
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Prepare the LLM API payload
           payload=$(cat <<EOF

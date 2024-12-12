@@ -177,7 +177,7 @@ class LangfuseClientWrapper:
     def end_span_stream(self,
                         span: typing.Optional[StatefulSpanClient] = None):
         """
-        End span. If Langfuse is disabled
+        End span. If Langfuse is disabled, nothing will happen.
         Args:
             span (Any): Span object.
         """

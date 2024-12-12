@@ -108,6 +108,8 @@ class HandlerMemory(BaseMemory):
         time_col = t_params['time_col']
         chat_id_cols = t_params['chat_id_col'] if isinstance(t_params['chat_id_col'], list) else [t_params['chat_id_col']]
 
+        chat_id = chat_id if isinstance(chat_id, tuple) else (chat_id,)
+
         ast_query = Select(
             targets=[Identifier(text_col),
                      Identifier(username_col),

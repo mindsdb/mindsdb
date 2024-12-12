@@ -20,6 +20,7 @@ jobs:
         id: enhance_notes
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           echo ${{ toJSON(github.event.release.body) }}
 

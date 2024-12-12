@@ -25,7 +25,7 @@ class Context:
                 'pointer': None,
                 'tree': None
             },
-            'email_confirmed': 1,
+            'email_confirmed': 0,
         })
 
     def __getattr__(self, name: str) -> Any:

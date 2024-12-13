@@ -21,7 +21,7 @@ logger = log.getLogger("mindsdb")
 logger.debug("Starting MindsDB...")
 
 from mindsdb.__about__ import __version__ as mindsdb_version
-from mindsdb.utilities.config import Config
+from mindsdb.utilities.config import config
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
@@ -113,9 +113,7 @@ class TrunkProcessData:
         Returns:
             bool: `True` if the process need to be restarted on failure
         """
-        config = Config()
-        is_cloud = config.get("cloud", False)
-        if is_cloud:
+        if config.is_cloud:
             return False
         if sys.platform in ('linux', 'darwin'):
             return self.restart_on_failure and self.process.exitcode == -signal.SIGKILL.value
@@ -210,11 +208,9 @@ def set_error_model_status_for_unfinished():
 def do_clean_process_marks():
     """delete unexisting 'process marks'
     """
-    config = Config()
-    is_cloud = config.get("cloud", False)
     while _stop_event.wait(timeout=5) is False:
         unexisting_pids = clean_unlinked_process_marks()
-        if not is_cloud and len(unexisting_pids) > 0:
+        if not config.is_cloud and len(unexisting_pids) > 0:
             set_error_model_status_by_pids(unexisting_pids)
 
 
@@ -227,7 +223,6 @@ if __name__ == '__main__':
         )
 
     ctx.set_default()
-    config = Config()
 
     # ---- CHECK SYSTEM ----
     if not (sys.version_info[0] >= 3 and sys.version_info[1] >= 9):
@@ -257,7 +252,7 @@ if __name__ == '__main__':
     if telemetry_file_exists(config.paths['root']):
         os.environ['CHECK_FOR_UPDATES'] = '0'
         logger.info('\n x telemetry disabled! \n')
-    elif os.getenv('CHECK_FOR_UPDATES', '1').lower() in ['0', 'false', 'False'] or config.get('cloud', False):
+    elif os.getenv('CHECK_FOR_UPDATES', '1').lower() in ['0', 'false', 'False'] or config.is_cloud:
         disable_telemetry(config.paths['root'])
         logger.info('\n x telemetry disabled! \n')
     else:
@@ -284,7 +279,7 @@ if __name__ == '__main__':
         except Exception:
             pass
 
-    is_cloud = config["cloud"]
+    is_cloud = config.is_cloud
 
     if not is_cloud:
         logger.debug("Applying database migrations")
@@ -425,10 +420,10 @@ if __name__ == '__main__':
     for api_enum in api_arr:
         trunc_processes_struct[api_enum].need_to_run = True
 
-    if config.get("jobs", {}).get("disable") is not True:
+    if config['jobs']['disable'] is False:
         trunc_processes_struct[TrunkProcessEnum.JOBS].need_to_run = True
 
-    if config.get('tasks', {}).get('disable') is not True:
+    if config['tasks']['disable'] is False:
         trunc_processes_struct[TrunkProcessEnum.TASKS].need_to_run = True
 
     if config.cmd_args.ml_task_queue_consumer is True:

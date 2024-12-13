@@ -182,7 +182,13 @@ class Config:
             },
             "file_upload_domains": [],
             "web_crawling_allowed_sites": [],
-            "cloud": False
+            "cloud": False,
+            "jobs": {
+                "disable": False
+            },
+            "tasks": {
+                "disable": False
+            }
         }
         # endregion
 
@@ -413,6 +419,10 @@ class Config:
     @property
     def env_config(self):
         return self._env_config
+
+    @property
+    def is_cloud(self):
+        return self._config.get("cloud", False)
 
 
 config = Config()

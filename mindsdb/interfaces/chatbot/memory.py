@@ -1,9 +1,9 @@
 
+from typing import Union
+
 from mindsdb_sql_parser.ast import Identifier, Select, BinaryOperation, Constant, OrderBy
 
 from mindsdb.interfaces.storage import db
-
-
 from .types import ChatBotMessage
 
 
@@ -169,7 +169,7 @@ class DBMemory(BaseMemory):
     uses mindsdb database to store messages
     '''
 
-    def _generate_chat_id_for_db(self, chat_id: str | tuple, table_name: str = None) -> str:
+    def _generate_chat_id_for_db(self, chat_id: Union[str, tuple], table_name: str = None) -> str:
         """
         Generate an ID for the chat to store in the database.
         The ID is a string that includes the components of the chat ID and the table name (if provided) separated by underscores.

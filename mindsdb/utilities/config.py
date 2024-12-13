@@ -109,7 +109,6 @@ class Config:
                 + str(self.storage_root_path / 'mindsdb.sqlite3.db')
                 + '?check_same_thread=False&timeout=30'
             ),
-            # 'storage_dir': os.environ['MINDSDB_STORAGE_DIR'], # TODO del
             'paths': {
                 'root': self.storage_root_path,
                 'content': self.storage_root_path / 'content',

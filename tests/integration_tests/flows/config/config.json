@@ -80,5 +80,7 @@
             "file": "DEBUG"
         }
     },
-    "storage_dir": "/tmp/mindsdb_storage"
+    "paths": {
+        "root": "/tmp/mindsdb_storage"
+    }
 }

@@ -242,7 +242,7 @@ class Config:
         for env_name in ('MINDSDB_HTTP_PERMANENT_SESSION_LIFETIME', 'FLASK_PERMANENT_SESSION_LIFETIME'):
             env_value = os.environ.get(env_name)
             if isinstance(env_value, str):
-                try:_cmd_args
+                try:
                     permanent_session_lifetime = int(env_value)
                 except Exception:
                     raise ValueError(f'Warning: Can\'t cast env var {env_name} value to int: {env_value}')

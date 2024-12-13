@@ -182,7 +182,7 @@ class DBMemory(BaseMemory):
             char_id_str = "_".join(str(val) for val in chat_id)
         else:
             char_id_str = str(chat_id)
-        
+
         if table_name:
             chat_id_str = f"{table_name}_{char_id_str}"
 

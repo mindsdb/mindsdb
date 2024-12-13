@@ -1,8 +1,3 @@
-from mindsdb.utilities import log
-
-logger = log.getLogger("mindsdb")
-logger.debug("Starting MindsDB...")
-
 import os
 import sys
 import time
@@ -19,6 +14,11 @@ from dataclasses import dataclass, field
 from typing import Callable, Optional, Tuple, List
 
 from sqlalchemy.orm.attributes import flag_modified
+
+from mindsdb.utilities import log
+
+logger = log.getLogger("mindsdb")
+logger.debug("Starting MindsDB...")
 
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.utilities.config import Config
@@ -323,7 +323,7 @@ if __name__ == '__main__':
         sys.exit(0)
 
     logger.info(f"Version: {mindsdb_version}")
-    logger.info(f"Configuration file: {Config.config_path or 'absent'}")
+    logger.info(f"Configuration file: {config.config_path or 'absent'}")
     logger.info(f"Storage path: {config.paths['root']}")
     logger.debug(f"User config: {config.user_config}")
     logger.debug(f"System config: {config.auto_config}")

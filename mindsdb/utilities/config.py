@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import argparse
 import datetime
@@ -241,7 +242,7 @@ class Config:
         for env_name in ('MINDSDB_HTTP_PERMANENT_SESSION_LIFETIME', 'FLASK_PERMANENT_SESSION_LIFETIME'):
             env_value = os.environ.get(env_name)
             if isinstance(env_value, str):
-                try:
+                try:_cmd_args
                     permanent_session_lifetime = int(env_value)
                 except Exception:
                     raise ValueError(f'Warning: Can\'t cast env var {env_name} value to int: {env_value}')
@@ -258,6 +259,10 @@ class Config:
         if self._cmd_args is not None:
             return
 
+        # if it is not mindsdb run, then set args to empty
+        if sys.modules['__main__'].__package__.lower() != 'mindsdb':
+            self._cmd_args = argparse.Namespace()
+
         parser = argparse.ArgumentParser(description='CL argument for mindsdb server')
         parser.add_argument('--api', type=str, default=None)
         parser.add_argument('--config', type=str, default=None)
@@ -266,7 +271,7 @@ class Config:
         parser.add_argument('--no_studio', action='store_true')
         parser.add_argument('-v', '--version', action='store_true')
         parser.add_argument('--ml_task_queue_consumer', action='store_true', default=None)
-        self._cmd_args, _ = parser.parse_known_args()
+        self._cmd_args = parser.parse_args()
 
     def fetch_auto_config(self) -> bool:
         """Set global variable `auto_config` to dict readed from config.auto.json.

@@ -74,12 +74,6 @@
             "user": "postgres"
         }
     },
-    "log": {
-        "level": {
-            "console": "INFO",
-            "file": "DEBUG"
-        }
-    },
     "paths": {
         "root": "/tmp/mindsdb_storage"
     }

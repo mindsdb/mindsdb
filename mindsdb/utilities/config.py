@@ -124,11 +124,19 @@ class Config:
                 'http_auth_enabled': False,
                 "http_permanent_session_lifetime": datetime.timedelta(days=31)
             },
-            "log": {
-                "level": {
-                    "console": "INFO",
-                    "file": "DEBUG",
-                    "db": "WARNING"
+            "logging": {
+                "handlers": {
+                    "console": {
+                        "enabled": True,
+                        "level": "INFO"     # MINDSDB_CONSOLE_LOG_LEVEL or MINDSDB_LOG_LEVEL (obsolete)
+                    },
+                    "file": {
+                        "enabled": False,
+                        "level": "INFO",    # MINDSDB_FILE_LOG_LEVEL
+                        "filename": "app.log",
+                        "maxBytes": 1 << 19,    # 0.5 Mb
+                        "backupCount": 3
+                    }
                 }
             },
             "gui": {
@@ -194,7 +202,16 @@ class Config:
         return cls.__instance
 
     def prepare_env_config(self):
-        self._env_config = {}
+        self._env_config = {
+            'logging': {
+                'console': {},
+                'file': {}
+            },
+            'auth': {},
+            'paths': {},
+            'permanent_storage': {},
+            'ml_task_queue': {}
+        }
 
         # region storage root path
         if os.environ.get('MINDSDB_STORAGE_DIR', '') != '':
@@ -231,11 +248,9 @@ class Config:
 
         # If both username and password are set, enable HTTP auth.
         if http_username and http_password:
-            self._env_config['auth'] = {
-                'http_auth_enabled': True,
-                'username': http_username,
-                'password': http_password
-            }
+            self._env_config['auth']['http_auth_enabled'] = True
+            self._env_config['auth']['username'] = http_username
+            self._env_config['auth']['password'] = http_password
         # endregion
 
         # region permanent session lifetime
@@ -246,10 +261,20 @@ class Config:
                     permanent_session_lifetime = int(env_value)
                 except Exception:
                     raise ValueError(f'Warning: Can\'t cast env var {env_name} value to int: {env_value}')
-                if 'auth' not in self._env_config:
-                    self._env_config['auth'] = {}
                 self._env_config['auth']['http_permanent_session_lifetime'] = permanent_session_lifetime
                 break
+        # endregion
+
+        # region logging
+        if os.environ.get('MINDSDB_LOG_LEVEL', '') != '':
+            self._env_config['logging']['console']['level'] = os.environ['MINDSDB_LOG_LEVEL']
+            self._env_config['logging']['console']['level']['enabled'] = True
+        if os.environ.get('MINDSDB_CONSOLE_LOG_LEVEL', '') != '':
+            self._env_config['logging']['console']['level'] = os.environ['MINDSDB_LOG_LEVEL']
+            self._env_config['logging']['console']['level']['enabled'] = True
+        if os.environ.get('MINDSDB_FILE_LOG_LEVEL', '') != '':
+            self._env_config['logging']['file']['level'] = os.environ['MINDSDB_FILE_LOG_LEVEL']
+            self._env_config['logging']['file']['enabled'] = True
         # endregion
 
         if os.environ.get('MINDSDB_DB_CON', '') != '':
@@ -260,8 +285,12 @@ class Config:
             return
 
         # if it is not mindsdb run, then set args to empty
-        if sys.modules['__main__'].__package__.lower() != 'mindsdb':
-            self._cmd_args = argparse.Namespace()
+        if (sys.modules['__main__'].__package__ or '').lower() != 'mindsdb':
+            self._cmd_args = argparse.Namespace(
+                api=None, config=None, install_handlers=None, verbose=False,
+                no_studio=False, version=False, ml_task_queue_consumer=None
+            )
+            return
 
         parser = argparse.ArgumentParser(description='CL argument for mindsdb server')
         parser.add_argument('--api', type=str, default=None)

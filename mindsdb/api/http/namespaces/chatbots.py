@@ -32,27 +32,22 @@ def create_chatbot(project_name, name, chatbot):
 
     session_controller = SessionController()
 
-    if 'database_id' not in chatbot:
-        if 'db_params' in chatbot and 'db_engine' in chatbot:
-            db_name = chatbot['name'] + '_db'
-
-            # try to drop
-            existing_db = session_controller.integration_controller.get(db_name)
-            if existing_db:
-                # drop
-                session_controller.integration_controller.delete(db_name)
-
-            database_id = session_controller.integration_controller.add(db_name, chatbot['db_engine'],
-                                                                        chatbot['db_params'])
-
-        else:
+    if 'database_id' in chatbot or 'database_name' in chatbot or ('db_engine' in chatbot and 'db_params' in chatbot):
+        try:
+            database_id = get_or_create_database_for_chatbot(chatbot, session_controller)
+        except ValueError as value_error:
             return http_error(
-                HTTPStatus.BAD_REQUEST,
-                'Missing field',
-                'Missing "database_id" or ("db_engine" and "database_param") fields for chatbot'
+                HTTPStatus.NOT_FOUND,
+                'Database not found',
+                str(value_error)
             )
+
     else:
-        database_id = chatbot.get('database_id', None)
+        return http_error(
+            HTTPStatus.BAD_REQUEST,
+            'Missing field',
+            'Missing "database_id" or ("db_engine" and "database_param") fields for chatbot'
+        )
 
     is_running = chatbot.get('is_running', False)
     params = chatbot.get('params', {})
@@ -107,6 +102,45 @@ def create_chatbot(project_name, name, chatbot):
         params=params
     )
     return created_chatbot.as_dict(), HTTPStatus.CREATED
+
+
+def get_or_create_database_for_chatbot(chatbot: dict, session_controller: SessionController) -> int:
+    """
+    Get or create a database for a chatbot, based on the chatbot configuration provided in the request.
+
+    Args:
+        chatbot (dict): The chatbot configuration.
+        session_controller (SessionController): The session controller.
+
+    Returns:
+        int: The database ID.
+    """
+    if 'database_id' in chatbot:
+        database_record = session_controller.integration_controller.get_by_id(chatbot['database_id'])
+        if database_record:
+            return database_record['id']
+        else:
+            raise ValueError(f"Database with ID {chatbot['database_id']} not found")
+
+    elif 'database_name' in chatbot:
+        database_record = session_controller.integration_controller.get(chatbot['database_name'])
+        if database_record:
+            return database_record['id']
+        else:
+            raise ValueError(f"Database with name {chatbot['database_name']} not found")
+
+    if 'db_params' in chatbot and 'db_engine' in chatbot:
+        db_name = chatbot['name'] + '_db'
+
+        # try to drop
+        existing_db = session_controller.integration_controller.get(db_name)
+        if existing_db:
+            # drop
+            session_controller.integration_controller.delete(db_name)
+
+        return session_controller.integration_controller.add(db_name, chatbot['db_engine'], chatbot['db_params'])
+
+    return None
 
 
 @ns_conf.route('/<project_name>/chatbots')
@@ -195,16 +229,24 @@ class ChatBotResource(Resource):
                 f'Project with name {project_name} does not exist'
             )
 
+        session = SessionController()
+
         chatbot = request.json['chatbot']
         name = chatbot.get('name', None)
         agent_name = chatbot.get('agent_name', None)
         model_name = chatbot.get('model_name', None)
-        database_id = chatbot.get('database_id', None)
+        try:
+            database_id = get_or_create_database_for_chatbot(chatbot, session)
+        except ValueError as value_error:
+            return http_error(
+                HTTPStatus.NOT_FOUND,
+                'Database not found',
+                str(value_error)
+            )
         is_running = chatbot.get('is_running', None)
         params = chatbot.get('params', None)
 
         # Model needs to exist.
-        session = SessionController()
         if model_name is not None:
             model_name_no_version, version = Predictor.get_name_and_version(model_name)
             try:
@@ -238,19 +280,6 @@ class ChatBotResource(Resource):
             # Create
             return create_chatbot(project_name, name, chatbot)
 
-        if 'db_params' in chatbot and 'db_engine' in chatbot:
-            session_controller = SessionController()
-
-            db_name = chatbot['name'] + '_db'
-
-            # try to drop
-            existing_db = session_controller.integration_controller.get(db_name)
-            if existing_db:
-                # drop
-                session_controller.integration_controller.delete(db_name)
-
-            database_id = session_controller.integration_controller.add(db_name, chatbot['db_engine'],
-                                                                        chatbot['db_params'])
         # Update
         updated_chatbot = chatbot_controller.update_chatbot(
             chatbot_name,

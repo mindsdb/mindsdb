@@ -68,6 +68,9 @@ class PostgresHandler(DatabaseHandler):
         if self.connection_args.get('sslmode'):
             config['sslmode'] = self.connection_args.get('sslmode')
 
+        if self.connection_args.get('autocommit'):
+            config['autocommit'] = self.connection_args.get('autocommit')
+
         # If schema is not provided set public as default one
         if self.connection_args.get('schema'):
             config['options'] = f'-c search_path={self.connection_args.get("schema")},public'

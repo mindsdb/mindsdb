@@ -1,6 +1,5 @@
-import datetime
 import json
-import os
+import datetime
 from typing import Dict, List
 
 import numpy as np

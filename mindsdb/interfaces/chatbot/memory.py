@@ -169,16 +169,28 @@ class DBMemory(BaseMemory):
     uses mindsdb database to store messages
     '''
 
-    def _get_chat_id(self, chat_id, table_name=None):
+    def _generate_chat_id_for_db(self, chat_id: str | tuple, table_name: str = None) -> str:
+        """
+        Generate an ID for the chat to store in the database.
+        The ID is a string that includes the components of the chat ID and the table name (if provided) separated by underscores.
+
+        Args:
+            chat_id (str | tuple): The ID of the chat.
+            table_name (str): The name of the table the chat belongs to.
+        """
         if isinstance(chat_id, tuple):
-            return "_".join(str(val) for val in chat_id)
+            char_id_str = "_".join(str(val) for val in chat_id)
+        else:
+            char_id_str = str(chat_id)
         
         if table_name:
-            return f"{chat_id}_{table_name}"
+            chat_id_str = f"{table_name}_{char_id_str}"
+
+        return chat_id_str
 
     def _add_to_history(self, chat_id, message, table_name=None):
         chat_bot_id = self.chat_task.bot_id
-        destination = self._get_chat_id(chat_id, table_name)
+        destination = self._generate_chat_id_for_db(chat_id, table_name)
 
         message = db.ChatBotsHistory(
             chat_bot_id=chat_bot_id,
@@ -192,7 +204,7 @@ class DBMemory(BaseMemory):
 
     def _get_chat_history(self, chat_id, table_name=None):
         chat_bot_id = self.chat_task.bot_id
-        destination = self._get_chat_id(chat_id, table_name)
+        destination = self._generate_chat_id_for_db(chat_id, table_name)
 
         query = db.ChatBotsHistory.query\
             .filter(

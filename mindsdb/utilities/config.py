@@ -266,7 +266,7 @@ class Config:
         parser.add_argument('--no_studio', action='store_true')
         parser.add_argument('-v', '--version', action='store_true')
         parser.add_argument('--ml_task_queue_consumer', action='store_true', default=None)
-        self._cmd_args = parser.parse_args()
+        self._cmd_args, _ = parser.parse_known_args()
 
     def fetch_auto_config(self) -> bool:
         """Set global variable `auto_config` to dict readed from config.auto.json.

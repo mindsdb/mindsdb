@@ -315,6 +315,8 @@ class ColumnsTable(Table):
                         column_type = 'float'
                     elif column_type in ('integer', 'smallint', 'bigint'):
                         column_type = 'float'
+                    elif column_type in ('timestamp without time zone', 'timestamp with time zone', 'date'):
+                        column_type = 'timestamp'
                     elif column_type not in row_templates:
                         column_type = 'text'
                     result_row = row_templates[column_type].copy()

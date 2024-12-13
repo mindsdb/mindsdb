@@ -23,6 +23,7 @@ class VLLMEmbeddings(Embeddings):
         super().__init__()
         self.model = model
         self.batch_size = batch_size
+        self.is_nomic = "nomic-embed-text" in model.lower()
 
         # Initialize OpenAI client
         openai_kwargs = kwargs.copy()
@@ -35,9 +36,16 @@ class VLLMEmbeddings(Embeddings):
             **openai_kwargs
         )
 
-    def _chunk_list(self, texts: List[str], chunk_size: int) -> List[List[str]]:
-        """Split list into chunks of specified size."""
-        return [texts[i:i + chunk_size] for i in range(0, len(texts), chunk_size)]
+    def _format_text(self, text: str, is_query: bool = False) -> str:
+        """
+        Format text according to nomic-embed requirements if using nomic model.
+        e.g. see here for more details: https://huggingface.co/nomic-ai/nomic-embed-text-v1.5#task-instruction-prefixes
+        """
+
+        if not self.is_nomic:
+            return text
+        prefix = "search_query: " if is_query else "search_document: "
+        return prefix + text
 
     def _get_embeddings(self, texts: List[str]) -> List[List[float]]:
         """Get embeddings for a batch of texts."""
@@ -60,7 +68,8 @@ class VLLMEmbeddings(Embeddings):
         Returns:
             List of embeddings, one for each document
         """
-        return self._get_embeddings(texts)
+        formatted_texts = [self._format_text(text) for text in texts]
+        return self._get_embeddings(formatted_texts)
 
     def embed_query(self, text: str) -> List[float]:
         """Embed a single query text using vLLM.
@@ -71,4 +80,5 @@ class VLLMEmbeddings(Embeddings):
         Returns:
             Query embedding
         """
-        return self._get_embeddings([text])[0]
+        formatted_text = self._format_text(text, is_query=True)
+        return self._get_embeddings([formatted_text])[0]

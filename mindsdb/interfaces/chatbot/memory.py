@@ -109,19 +109,35 @@ class HandlerMemory(BaseMemory):
         chat_id_cols = t_params['chat_id_col'] if isinstance(t_params['chat_id_col'], list) else [t_params['chat_id_col']]
 
         chat_id = chat_id if isinstance(chat_id, tuple) else (chat_id,)
+        # Add a WHERE clause for each chat_id column.
+        where_conditions = [
+            BinaryOperation(
+                op='=',
+                args=[
+                    Identifier(chat_id_col),
+                    Constant(chat_id[idx])
+                ]
+            ) for idx, chat_id_col in enumerate(chat_id_cols)
+        ]
+        # Add a WHERE clause to ignore holding messages from the bot.
+        from .chatbot_task import HOLDING_MESSAGE
+
+        where_conditions.append(
+            BinaryOperation(
+                op='!=',
+                args=[
+                    Identifier(text_col),
+                    Constant(HOLDING_MESSAGE)
+                ]
+            )
+        )
 
         ast_query = Select(
             targets=[Identifier(text_col),
                      Identifier(username_col),
                      Identifier(time_col)],
             from_table=Identifier(t_params['name']),
-            where=[BinaryOperation(
-                op='=',
-                args=[
-                    Identifier(chat_id_col),
-                    Constant(chat_id[idx])
-                ]
-            ) for idx, chat_id_col in enumerate(chat_id_cols)],
+            where=where_conditions,
             order_by=[OrderBy(Identifier(time_col))],
             limit=Constant(self.MAX_DEPTH),
         )

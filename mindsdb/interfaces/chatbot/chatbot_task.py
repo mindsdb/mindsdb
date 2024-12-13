@@ -71,6 +71,10 @@ class ChatBotTask(BaseTask):
             # The default type for real-time polling is DBMemory if not specified.
             self.memory = DBMemory(self, chat_params) if memory_cls is None else memory_cls(self, chat_params)
 
+        elif polling == 'webhook':
+            self.chat_pooling = WebhookPolling(self, chat_params)
+            self.memory = DBMemory(self, chat_params)
+
         else:
             raise Exception(f"Not supported polling: {polling}")
 

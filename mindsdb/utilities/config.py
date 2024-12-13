@@ -268,10 +268,10 @@ class Config:
         # region logging
         if os.environ.get('MINDSDB_LOG_LEVEL', '') != '':
             self._env_config['logging']['console']['level'] = os.environ['MINDSDB_LOG_LEVEL']
-            self._env_config['logging']['console']['level']['enabled'] = True
+            self._env_config['logging']['console']['enabled'] = True
         if os.environ.get('MINDSDB_CONSOLE_LOG_LEVEL', '') != '':
             self._env_config['logging']['console']['level'] = os.environ['MINDSDB_LOG_LEVEL']
-            self._env_config['logging']['console']['level']['enabled'] = True
+            self._env_config['logging']['console']['enabled'] = True
         if os.environ.get('MINDSDB_FILE_LOG_LEVEL', '') != '':
             self._env_config['logging']['file']['level'] = os.environ['MINDSDB_FILE_LOG_LEVEL']
             self._env_config['logging']['file']['enabled'] = True

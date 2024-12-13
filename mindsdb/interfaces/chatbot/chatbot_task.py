@@ -84,11 +84,11 @@ class ChatBotTask(BaseTask):
         self.chat_pooling.run(stop_event)
 
     def on_message(self, message: ChatBotMessage, chat_id=None, chat_memory=None, table_name=None):
-        if not chat_id and chat_memory:
+        if not chat_id and not chat_memory:
             raise Exception('chat_id or chat_memory should be provided')
 
         try:
-            self._on_holding_message(chat_id, table_name)
+            self._on_holding_message(chat_id, chat_memory, table_name)
             self._on_message(message, chat_id, chat_memory, table_name)
         except (SystemExit, KeyboardInterrupt):
             raise
@@ -97,15 +97,18 @@ class ChatBotTask(BaseTask):
             logger.error(error)
             self.set_error(str(error))
 
-    def _on_holding_message(self, chat_id: str, table_name: str = None):
+    def _on_holding_message(self, chat_id: str = None, chat_memory: BaseMemory = None, table_name: str = None):
         """
         Send a message to hold the user's attention while the bot is processing the request.
         This message will not be saved in the chat memory.
 
         Args:
             chat_id (str): The ID of the chat.
+            chat_memory (BaseMemory): The memory of the chat.
             table_name (str): The name of the table.
         """
+        chat_id = chat_id if chat_id else chat_memory.chat_id
+
         response_message = ChatBotMessage(
             ChatBotMessage.Type.DIRECT,
             HOLDING_MESSAGE,

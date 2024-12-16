@@ -99,7 +99,7 @@ class TestKnowledgeBase(BaseExecutorTest):
 
     def teardown_method(self, method):
         # drop the vector database
-        self.run_sql(f"DROP KNOWLEDGE_BASE IF EXISTS test_kb")
+        self.run_sql("DROP KNOWLEDGE_BASE IF EXISTS test_kb")
         self.run_sql(f"DROP TABLE {self.vector_database_name}.{self.vector_database_table_name}")
         self.run_sql(f"DROP DATABASE {self.vector_database_name}")
 

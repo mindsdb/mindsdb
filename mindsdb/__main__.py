@@ -22,6 +22,7 @@ from typing import Callable, Optional, Tuple, List
 from sqlalchemy.orm.attributes import flag_modified
 
 from mindsdb.__about__ import __version__ as mindsdb_version
+from mindsdb.utilities.config import Config
 from mindsdb.api.http.start import start as start_http
 from mindsdb.api.mysql.start import start as start_mysql
 from mindsdb.api.mongo.start import start as start_mongo
@@ -29,7 +30,6 @@ from mindsdb.api.postgres.start import start as start_postgres
 from mindsdb.interfaces.tasks.task_monitor import start as start_tasks
 from mindsdb.utilities.ml_task_queue.consumer import start as start_ml_task_queue
 from mindsdb.interfaces.jobs.scheduler import start as start_scheduler
-from mindsdb.utilities.config import Config
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 from mindsdb.utilities.functions import args_parse, get_versions_where_predictors_become_obsolete
 from mindsdb.interfaces.database.integrations import integration_controller
@@ -357,23 +357,7 @@ if __name__ == '__main__':
             set_error_model_status_by_pids(unexisting_pids)
         set_error_model_status_for_unfinished()
 
-        # region creating permanent integrations
-        for (
-            integration_name,
-            handler,
-        ) in integration_controller.get_handlers_metadata().items():
-            if handler.get("permanent"):
-                integration_meta = integration_controller.get(name=integration_name)
-                if integration_meta is None:
-                    integration_record = db.Integration(
-                        name=integration_name,
-                        data={},
-                        engine=integration_name,
-                        company_id=None,
-                    )
-                    db.session.add(integration_record)
-                    db.session.commit()
-        # endregion
+        integration_controller.create_permanent_integrations()
 
         # region Mark old predictors as outdated
         is_modified = False

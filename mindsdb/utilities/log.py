@@ -1,12 +1,11 @@
-import logging
 import os
+import logging
 from logging.config import dictConfig
 
 logging_initialized = False
 
 
 class ColorFormatter(logging.Formatter):
-
     green = "\x1b[32;20m"
     default = "\x1b[39;20m"
     yellow = "\x1b[33;20m"
@@ -29,7 +28,8 @@ class ColorFormatter(logging.Formatter):
 
 
 def configure_logging():
-    mindsdb_level = os.environ.get("MINDSDB_LOG_LEVEL", None)
+    mindsdb_level = os.environ.get("MINDSDB_LOG_LEVEL")
+
     if mindsdb_level is not None:
         mindsdb_level = getattr(logging, mindsdb_level)
     else:
@@ -37,11 +37,14 @@ def configure_logging():
 
     logging_config = dict(
         version=1,
-        formatters={"f": {"()": ColorFormatter}},
+        formatters={
+            "f": {"()": ColorFormatter}
+        },
         handlers={
             "console": {
                 "class": "logging.StreamHandler",
                 "formatter": "f",
+                "level": mindsdb_level
             }
         },
         loggers={

@@ -68,12 +68,18 @@ Answer:'''
 
 DEFAULT_MAP_PROMPT_TEMPLATE = '''The following is a set of documents
 {docs}
-Based on this list of docs, please identify the main themes
+Based on this list of docs, please summarize based on the user input.
+
+User input: {input}
+
 Helpful Answer:'''
 
 DEFAULT_REDUCE_PROMPT_TEMPLATE = '''The following is set of summaries:
 {docs}
-Take these and distill it into a final, consolidated summary of the main themes.
+Take these and distill it into a final, consolidated summary related to the user input.
+
+User input: {input}
+
 Helpful Answer:'''
 
 

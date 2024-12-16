@@ -5,6 +5,10 @@ sidebarTitle: Amazon S3
 
 This documentation describes the integration of MindsDB with [Amazon S3](https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html), an object storage service that offers industry-leading scalability, data availability, security, and performance.
 
+<Tip>
+This data source integration is thread-safe, utilizing a connection pool where each thread is assigned its own connection. When handling requests in parallel, threads retrieve connections from the pool as needed.
+</Tip>
+
 ## Prerequisites
 
 Before proceeding, ensure that MindsDB is installed locally via [Docker](/setup/self-hosted/docker) or [Docker Desktop](/setup/self-hosted/docker-desktop).
@@ -18,9 +22,9 @@ CREATE DATABASE s3_datasource
 WITH
     engine = 's3',
     parameters = {
-      "aws_access_key_id": "AQAXEQK89OX07YS34OP"
+      "aws_access_key_id": "AQAXEQK89OX07YS34OP",
       "aws_secret_access_key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-      "bucket": "my-bucket",
+      "bucket": "my-bucket"
     };
 ```
 

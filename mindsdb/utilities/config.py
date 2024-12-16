@@ -1,9 +1,15 @@
 import os
 import json
+import datetime
 from copy import deepcopy
 from pathlib import Path
 
-from mindsdb.utilities.fs import create_directory, get_or_create_data_dir
+from appdirs import user_data_dir
+
+from mindsdb.utilities import log
+
+
+logger = log.getLogger(__name__)
 
 
 def _merge_key_recursive(target_dict, source_dict, key):
@@ -21,6 +27,29 @@ def _merge_configs(original_config, override_config):
     for key in list(override_config.keys()):
         _merge_key_recursive(original_config, override_config, key)
     return original_config
+
+
+def create_directory(path):
+    path = Path(path)
+    path.mkdir(mode=0o777, exist_ok=True, parents=True)
+
+
+def get_or_create_data_dir():
+    data_dir = user_data_dir("mindsdb", "mindsdb")
+    mindsdb_data_dir = os.path.join(data_dir, "var/")
+
+    if os.path.exists(mindsdb_data_dir) is False:
+        create_directory(mindsdb_data_dir)
+
+    try:
+        assert os.path.exists(mindsdb_data_dir)
+        assert os.access(mindsdb_data_dir, os.W_OK) is True
+    except Exception:
+        raise Exception(
+            "MindsDB storage directory does not exist and could not be created"
+        )
+
+    return mindsdb_data_dir
 
 
 config = None
@@ -127,6 +156,19 @@ class Config():
             self._override_config['auth']['username'] = http_username
             self._override_config['auth']['password'] = http_password
 
+        # region permanent session lifetime
+        permanent_session_lifetime = datetime.timedelta(days=31)
+        for env_name in ('MINDSDB_HTTP_PERMANENT_SESSION_LIFETIME', 'FLASK_PERMANENT_SESSION_LIFETIME'):
+            env_value = os.environ.get(env_name)
+            if isinstance(env_value, str):
+                try:
+                    permanent_session_lifetime = int(env_value)
+                except Exception:
+                    logger.warning(f'Can\'t cast env var {env_name} value to int: {env_value}')
+                    continue
+                break
+        # endregion
+
         api_host = "127.0.0.1" if not self.use_docker_env else "0.0.0.0"
         self._default_config = {
             'permanent_storage': {
@@ -136,6 +178,7 @@ class Config():
             'paths': paths,
             'auth': {
                 'http_auth_enabled': False,
+                "http_permanent_session_lifetime": permanent_session_lifetime
             },
             "log": {
                 "level": {

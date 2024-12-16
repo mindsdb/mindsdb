@@ -106,8 +106,9 @@ class BaseUnitTest:
         db.Base.metadata.create_all(db.engine)
 
         # fill with data
-        r = db.Integration(name="files", data={}, engine="files")
-        db.session.add(r)
+        from mindsdb.interfaces.database.integrations import integration_controller
+        integration_controller.create_permanent_integrations()
+
         r = db.Integration(name="dummy_data", data={'db_path': self._dummy_db_path}, engine="dummy_data")
         db.session.add(r)
 

@@ -907,6 +907,7 @@
       "group": "Data Sources",
       "pages": [
         "integrations/data-overview",
+        "integrations/sample-database",
         {
           "group": "Applications",
           "pages": [
@@ -1020,6 +1021,16 @@
             "integrations/vector-db-integrations/pgvector",
             "integrations/vector-db-integrations/pinecone",
             "integrations/vector-db-integrations/weaviate"
+          ]
+        },
+        {
+          "group": "Files",
+          "pages": [
+            "integrations/files/csv-xlsx-xls",
+            "integrations/files/json",
+            "integrations/files/txt",
+            "integrations/files/pdf",
+            "integrations/files/parquet"
           ]
         }
       ]

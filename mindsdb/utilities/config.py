@@ -231,8 +231,10 @@ class Config:
         """
         self._env_config = {
             'logging': {
-                'console': {},
-                'file': {}
+                'handlers': {
+                    'console': {},
+                    'file': {}
+                }
             },
             'auth': {},
             'paths': {},
@@ -294,14 +296,14 @@ class Config:
 
         # region logging
         if os.environ.get('MINDSDB_LOG_LEVEL', '') != '':
-            self._env_config['logging']['console']['level'] = os.environ['MINDSDB_LOG_LEVEL']
-            self._env_config['logging']['console']['enabled'] = True
+            self._env_config['logging']['handlers']['console']['level'] = os.environ['MINDSDB_LOG_LEVEL']
+            self._env_config['logging']['handlers']['console']['enabled'] = True
         if os.environ.get('MINDSDB_CONSOLE_LOG_LEVEL', '') != '':
-            self._env_config['logging']['console']['level'] = os.environ['MINDSDB_LOG_LEVEL']
-            self._env_config['logging']['console']['enabled'] = True
+            self._env_config['logging']['handlers']['console']['level'] = os.environ['MINDSDB_LOG_LEVEL']
+            self._env_config['logging']['handlers']['console']['enabled'] = True
         if os.environ.get('MINDSDB_FILE_LOG_LEVEL', '') != '':
-            self._env_config['logging']['file']['level'] = os.environ['MINDSDB_FILE_LOG_LEVEL']
-            self._env_config['logging']['file']['enabled'] = True
+            self._env_config['logging']['handlers']['file']['level'] = os.environ['MINDSDB_FILE_LOG_LEVEL']
+            self._env_config['logging']['handlers']['file']['enabled'] = True
         # endregion
 
         if os.environ.get('MINDSDB_DB_CON', '') != '':

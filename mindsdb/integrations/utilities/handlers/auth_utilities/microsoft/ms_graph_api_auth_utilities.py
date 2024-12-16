@@ -60,11 +60,13 @@ class MSGraphAPIDelegatedPermissionsManager:
         accounts = msal_app.get_accounts()
 
         if accounts:
+            logger.info(f'Found an account in the cache: {accounts[0]}. Getting access token from the cache..')
             response = msal_app.acquire_token_silent(self.scopes, account=accounts[0])
             if "access_token" in response:
                 return response['access_token']
 
         # If no valid access token is found in the cache, run the authentication flow.
+        logger.info('No valid access token found in the cache. Running the authentication flow..')
         response = self._execute_ms_graph_api_auth_flow()
 
         if "access_token" in response:
@@ -107,6 +109,7 @@ class MSGraphAPIDelegatedPermissionsManager:
 
         # If the authentication code is provided, acquire the token by authorization code.
         if self.code:
+            logger.info('Acquiring token by authorization code..')
             response = msal_app.acquire_token_by_authorization_code(
                 code=self.code,
                 scopes=self.scopes,
@@ -117,6 +120,7 @@ class MSGraphAPIDelegatedPermissionsManager:
 
         # If the authentication code is not provided, get the authorization request URL.
         else:
+            logger.info('Getting authorization request URL..')
             auth_url = msal_app.get_authorization_request_url(
                 scopes=self.scopes,
                 redirect_uri=self.redirect_uri

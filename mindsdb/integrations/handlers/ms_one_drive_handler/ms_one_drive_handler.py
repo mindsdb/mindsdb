@@ -72,7 +72,8 @@ class MSOneDriveHandler(APIHandler):
         cache_file = 'cache.bin'
         try:
             cache_content = self.handler_storage.file_get(cache_file)
-        except FileNotFoundError:
+        except FileNotFoundError as file_not_found_error:
+            logger.debug(f'Cache file not found, {file_not_found_error}! Initializing a new cache..')
             cache_content = None
 
         if cache_content:

@@ -313,8 +313,8 @@ class ColumnsTable(Table):
                     column_type = column.get('type', 'text')
                     if column_type in ('double precision', 'real', 'numeric'):
                         column_type = 'float'
-                    elif column_type in ('integer', 'smallint', 'bigint'):
-                        column_type = 'float'
+                    elif column_type in ('integer', 'smallint', 'int'):
+                        column_type = 'bigint'
                     elif column_type in ('timestamp without time zone', 'timestamp with time zone', 'date'):
                         column_type = 'timestamp'
                     elif column_type not in row_templates:

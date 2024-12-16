@@ -106,7 +106,7 @@ class Config:
         # region determine root path
         if self.storage_root_path is None:
             if isinstance(os.environ.get('MINDSDB_STORAGE_DIR'), str):
-                self.storage_root_path = os.environ.get['MINDSDB_STORAGE_DIR']
+                self.storage_root_path = os.environ['MINDSDB_STORAGE_DIR']
             elif 'root' in self._user_config.get('paths', {}):
                 self.storage_root_path = self.user_config['paths']['root']
             else:
@@ -245,7 +245,7 @@ class Config:
         # region storage root path
         if os.environ.get('MINDSDB_STORAGE_DIR', '') != '':
             self._env_config['paths'] = {
-                'root': Path(os.environ.get['MINDSDB_STORAGE_DIR'])
+                'root': Path(os.environ['MINDSDB_STORAGE_DIR'])
             }
         # endregion
 

@@ -27,26 +27,43 @@ def _merge_configs(original_config: dict, override_config: dict) -> dict:
     return original_config
 
 
-def get_or_create_data_dir():
-    data_dir = user_data_dir("mindsdb", "mindsdb")
-    mindsdb_data_dir = os.path.join(data_dir, "var/")
+def create_data_dir(path: Path) -> None:
+    """Create a directory and checks that it is writable.
 
-    if os.path.exists(mindsdb_data_dir) is False:
-        Path(mindsdb_data_dir).mkdir(mode=0o777, exist_ok=True, parents=True)
+    Args:
+        path (Path): path to create and check
+
+    Raises:
+        NotADirectoryError: if path exists, but it is not a directory
+        PermissionError: if path exists/created, but it is not writable
+        Exception: if directory could not be created
+    """
+    if path.exists() and not path.is_dir():
+        raise NotADirectoryError(f"The path is not a directory: {path}")
 
     try:
-        assert os.path.exists(mindsdb_data_dir)
-        assert os.access(mindsdb_data_dir, os.W_OK) is True
-    except Exception:
+        path.mkdir(mode=0o777, exist_ok=True, parents=True)
+    except Exception as e:
         raise Exception(
-            "MindsDB storage directory does not exist and could not be created"
-        )
+            "MindsDB storage directory could not be created"
+        ) from e
 
-    return mindsdb_data_dir
+    if not os.access(path, os.W_OK):
+        raise PermissionError(
+            f"The directory is not allowed for writing: {path}"
+        )
 
 
 class Config:
-    """
+    """Application config. Singletone, initialized just once. Re-initialyze if `config.auto.json` is changed.
+    The class loads multiple configs and merge then in one. If a config option defined in multiple places (config file,
+    env var, cmd arg, etc), then it will be resolved in following order of priority:
+     - default config values (lowest priority)
+     - `config.json` provided by the user
+     - `config.auto.json`
+     - config values collected from env vars
+     - values from cmd args (most priority)
+
     Attributes:
         __instance (Config): instance of 'Config' to make it singleton
         _config (dict): application config, the result of merging other configs
@@ -75,8 +92,8 @@ class Config:
     _cmd_args: argparse.Namespace = None
     use_docker_env: bool = os.environ.get('MINDSDB_DOCKER_ENV', False) is not False
 
-    def __new__(cls, *args, **kwargs):
-        """Make class singletone
+    def __new__(cls, *args, **kwargs) -> 'Config':
+        """Make class singletone and initialize config.
         """
         if cls.__instance is not None:
             return cls.__instance
@@ -93,10 +110,12 @@ class Config:
             elif 'root' in self._user_config.get('paths', {}):
                 self.storage_root_path = self.user_config['paths']['root']
             else:
-                self.storage_root_path = get_or_create_data_dir()
+                self.storage_root_path = os.path.join(
+                    user_data_dir("mindsdb", "mindsdb"),
+                    "var/"
+                )
             self.storage_root_path = Path(self.storage_root_path)
-            if self.storage_root_path.exists() is False:
-                self.storage_root_path.mkdir(mode=0o777, exist_ok=True, parents=True)
+            create_data_dir(self.storage_root_path)
         # endregion
 
         # region prepare default config
@@ -207,7 +226,9 @@ class Config:
 
         return cls.__instance
 
-    def prepare_env_config(self):
+    def prepare_env_config(self) -> None:
+        """Collect config values from env vars to self._env_config
+        """
         self._env_config = {
             'logging': {
                 'console': {},
@@ -286,7 +307,9 @@ class Config:
         if os.environ.get('MINDSDB_DB_CON', '') != '':
             self._env_config['storage_db'] = os.environ['MINDSDB_DB_CON']
 
-    def parse_cmd_args(self):
+    def parse_cmd_args(self) -> None:
+        """Collect cmd args to self._cmd_args (accessable as self.cmd_args)
+        """
         if self._cmd_args is not None:
             return
 
@@ -309,11 +332,11 @@ class Config:
         self._cmd_args = parser.parse_args()
 
     def fetch_auto_config(self) -> bool:
-        """Set global variable `auto_config` to dict readed from config.auto.json.
-        Do it only if `user_config` was not loaded before or been changed.
+        """Load dict readed from config.auto.json to `auto_config`.
+        Do it only if `auto_config` was not loaded before or config.auto.json been changed.
 
         Returns:
-            bool: True if config was loaded or updated, False if config was not changed.
+            bool: True if config was loaded or updated
         """
 
         if self.auto_config_mtime != self.auto_config_path.stat().st_mtime:
@@ -326,10 +349,10 @@ class Config:
         return False
 
     def fetch_user_config(self) -> bool:
-        """Set `_user_config` to config provided by the user. Do it only if `_user_config` was not loaded before.
+        """Read config provided by the user to `user_config`. Do it only if `user_config` was not loaded before.
 
         Returns:
-            bool: True if config was loaded, False if it was loaded before.
+            bool: True if config was loaded
         """
         if self._user_config is None:
             cmd_args_config = self.cmd_args.config
@@ -352,7 +375,16 @@ class Config:
             return True
         return False
 
+    def ensure_auto_config_is_relevant(self) -> None:
+        """Check if auto config has not been changed. If changed - reload main config.
+        """
+        updated = self.fetch_auto_config()
+        if updated:
+            self.init_config()
+
     def merge_configs(self) -> None:
+        """Merge multiple configs to one.
+        """
         new_config = deepcopy(self._default_config)
         _merge_configs(new_config, self._user_config)
         _merge_configs(new_config, self._auto_config)
@@ -364,30 +396,28 @@ class Config:
                 new_config['paths'][key] = Path(value)
             elif isinstance(value, Path) is False:
                 raise ValueError(f"Unexpected path value: {value}")
-            new_config['paths'][key].mkdir(mode=0o777, exist_ok=True, parents=True)
+            create_data_dir(new_config['paths'][key])
         # endregion
 
         self._config = new_config
 
     def __getitem__(self, key):
-        updated = self.fetch_auto_config()
-        if updated:
-            self.init_config()
+        self.ensure_auto_config_is_relevant()
         return self._config[key]
 
     def get(self, key, default=None):
-        updated = self.fetch_auto_config()
-        if updated:
-            self.init_config()
+        self.ensure_auto_config_is_relevant()
         return self._config.get(key, default)
 
     def get_all(self):
-        updated = self.fetch_auto_config()
-        if updated:
-            self.init_config()
+        self.ensure_auto_config_is_relevant()
         return self._config
 
-    def update(self, data: dict):
+    def update(self, data: dict) -> None:
+        """Update calues in `auto` config
+        """
+        self.ensure_auto_config_is_relevant()
+
         _merge_configs(self._auto_config, data)
 
         self.auto_config_path.write_text(

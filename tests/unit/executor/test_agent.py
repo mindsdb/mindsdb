@@ -2,6 +2,7 @@ import os
 from unittest.mock import patch
 
 import pandas as pd
+import pytest
 
 from tests.unit.executor_test_base import BaseExecutorDummyML
 from mindsdb.interfaces.agents.langchain_agent import SkillData
@@ -128,20 +129,45 @@ class TestAgent(BaseExecutorDummyML):
 
     @patch('openai.OpenAI')
     def test_agent_with_tables(self, mock_openai):
-        skill_data = SkillData(
-            name='', type='', project_id=1,
-            params={'tables': ['table_1', 'table_2']},
-            agent_tables_list=['table_2', 'table_3']
+        sd = SkillData(
+            name='test', type='', project_id=1,
+            params={'tables': []},
+            agent_tables_list=[]
         )
-        assert skill_data.tables_list == ['table_2']
 
-        skill_data.params = {'tables': ['table_1', 'table_2']}
-        skill_data.agent_tables_list = []
-        assert skill_data.tables_list == ['table_1', 'table_2']
+        sd.params = {'tables': ['x', 'y']}
+        sd.agent_tables_list = ['x', 'y']
+        assert sd.tables_list == {None: {'x', 'y'}}
 
-        skill_data.params = {'tables': []}
-        skill_data.agent_tables_list = ['table_2', 'table_3']
-        assert skill_data.tables_list == ['table_2', 'table_3']
+        sd.params = {'tables': ['x', 'y']}
+        sd.agent_tables_list = ['x', 'y', 'z']
+        assert sd.tables_list == {None: {'x', 'y'}}
+
+        sd.params = {'tables': ['x', 'y']}
+        sd.agent_tables_list = ['x']
+        assert sd.tables_list == {None: {'x'}}
+
+        sd.params = {'tables': ['x', 'y']}
+        sd.agent_tables_list = ['z']
+        with pytest.raises(ValueError):
+            print(sd.tables_list)
+
+        sd.params = {'tables': ['x', {'schema': 'S', 'table': 'y'}]}
+        sd.agent_tables_list = ['x']
+        assert sd.tables_list == {None: {'x'}}
+
+        sd.params = {'tables': ['x', {'schema': 'S', 'table': 'y'}]}
+        sd.agent_tables_list = ['x', {'schema': 'S', 'table': 'y'}]
+        assert sd.tables_list == {None: {'x'}, 'S': {'y'}}
+
+        sd.params = {'tables': [{'schema': 'S', 'table': 'x'}, {'schema': 'S', 'table': 'y'}, {'schema': 'S', 'table': 'z'}]}
+        sd.agent_tables_list = [{'schema': 'S', 'table': 'y'}, {'schema': 'S', 'table': 'z'}, {'schema': 'S', 'table': 'f'}]
+        assert sd.tables_list == {'S': {'y', 'z'}}
+
+        sd.params = {'tables': [{'schema': 'S', 'table': 'x'}, {'schema': 'S', 'table': 'y'}]}
+        sd.agent_tables_list = [{'schema': 'S', 'table': 'z'}]
+        with pytest.raises(ValueError):
+            print(sd.tables_list)
 
         self.run_sql('''
             create skill test_skill

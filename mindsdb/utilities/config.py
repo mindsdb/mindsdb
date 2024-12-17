@@ -316,7 +316,10 @@ class Config:
             return
 
         # if it is not mindsdb run, then set args to empty
-        if (sys.modules['__main__'].__package__ or '').lower() != 'mindsdb':
+        if (
+            (sys.modules['__main__'].__package__ or '').lower() != 'mindsdb'
+            and os.environ.get('MINDSDB_RUNTIME') != "1"
+        ):
             self._cmd_args = argparse.Namespace(
                 api=None, config=None, install_handlers=None, verbose=False,
                 no_studio=False, version=False, ml_task_queue_consumer=None

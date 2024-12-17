@@ -250,6 +250,7 @@ if __name__ == '__main__':
         sys.exit(0)
 
     config.raise_warnings(logger=logger)
+    os.environ["MINDSDB_RUNTIME"] = "1"
 
     if telemetry_file_exists(config.paths['root']):
         os.environ['CHECK_FOR_UPDATES'] = '0'

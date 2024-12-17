@@ -249,6 +249,8 @@ if __name__ == '__main__':
         print(f'MindsDB {mindsdb_version}')
         sys.exit(0)
 
+    config.raise_warnings(logger=logger)
+
     if telemetry_file_exists(config.paths['root']):
         os.environ['CHECK_FOR_UPDATES'] = '0'
         logger.info('\n x telemetry disabled! \n')

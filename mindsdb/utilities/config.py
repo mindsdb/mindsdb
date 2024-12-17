@@ -430,6 +430,13 @@ class Config:
 
         self.merge_configs()
 
+    def raise_warnings(self, logger) -> None:
+        """Show warnings about config options
+        """
+
+        if 'storage_dir' in self._config:
+            logger.warning("The 'storage_dir' config option is no longer supported. Use 'paths.root' instead.")
+
     @property
     def cmd_args(self):
         if self._cmd_args is None:

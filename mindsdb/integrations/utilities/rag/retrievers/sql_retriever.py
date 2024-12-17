@@ -15,7 +15,20 @@ from mindsdb.integrations.utilities.rag.settings import LLMExample, MetadataSche
 
 
 class SQLRetriever(BaseRetriever):
+    '''Retriever that uses a LLM to generate pgvector queries to do similarity search with metadata filters.
 
+    How it works:
+
+    1. Use a LLM to rewrite the user input to something more suitable for retrieval. For example:
+    "Show me documents containing how to finetune a LLM please" --> "how to finetune a LLM"
+
+    2. Use a LLM to generate a pgvector query with metadata filters based on the user input. Provided
+    metadata schemas & examples are used as additional context to generate the query.
+
+    3. Use a LLM to double check the generated pgvector query is correct.
+
+    4. Actually execute the query against our vector database to retrieve documents & return them.
+    '''
     vector_store_handler: VectorStoreHandler
     metadata_schemas: Optional[List[MetadataSchema]] = None
     examples: Optional[List[LLMExample]] = None
@@ -119,6 +132,9 @@ Output:
         # Embed the rewritten retrieval query & include it in the similarity search pgvector query.
         embedded_query = self.embeddings_model.embed_query(retrieval_query)
         checked_sql_query_with_embeddings = checked_sql_query.format(embeddings=str(embedded_query))
+        # Handle LLM output that has the ```sql delimiter possibly.
+        checked_sql_query_with_embeddings = checked_sql_query_with_embeddings.replace('```sql', '')
+        checked_sql_query_with_embeddings = checked_sql_query_with_embeddings.replace('```', '')
         # Actually execute the similarity search with metadata filters.
         document_response = self.vector_store_handler.native_query(checked_sql_query_with_embeddings)
         if document_response.resp_type == RESPONSE_TYPE.ERROR:
@@ -128,6 +144,6 @@ Output:
         for _, document_row in document_df.iterrows():
             retrieved_documents.append(Document(
                 document_row.get('content', ''),
-                metadata=document_row.get('metadata', '')
+                metadata=document_row.get('metadata', {})
             ))
         return retrieved_documents

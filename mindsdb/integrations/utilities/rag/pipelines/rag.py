@@ -235,8 +235,8 @@ class LangChainRAGPipeline:
             rewrite_prompt_template=retriever_config.rewrite_prompt_template,
             sql_prompt_template=retriever_config.sql_prompt_template,
             query_checker_template=retriever_config.query_checker_template,
-            embeddings_table=config.table_name,
-            source_table=config.source_table,
+            embeddings_table=knowledge_base_table._kb.vector_database_table,
+            source_table=retriever_config.source_table,
             # Currently only similarity search is supported.
             distance_function=DistanceFunction.SQUARED_EUCLIDEAN_DISTANCE,
             search_kwargs=config.search_kwargs,
@@ -248,6 +248,6 @@ class LangChainRAGPipeline:
             config.llm,
             reranker_config=config.reranker_config,
             reranker=config.reranker,
-            reranker_config=config.reranker_config,
+            vector_store_config=config.vector_store_config,
             summarization_config=config.summarization_config
         )

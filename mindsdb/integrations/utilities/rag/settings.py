@@ -111,6 +111,7 @@ ORDER BY v.embeddings {distance_function} '{{embeddings}}' LIMIT {k};
 
 << TABLES YOU HAVE ACCESS TO >>
 1. {embeddings_table} - Contains document chunks, vector embeddings, and metadata for documents.
+You MUST always include the metadata column in your SELECT statement.
 You MUST always join with the {embeddings_table} table containing vector embeddings for the documents.
 You MUST always order by the provided embeddings vector using the {distance_function} comparator.
 You MUST always limit by {k} returned documents.
@@ -132,7 +133,7 @@ Columns:
     }},
     "metadata": {{
         "type": "jsonb",
-        "description": "Metadata for the document chunk. Always join with the {source_table} table on the string metadata field 'original_row_id'"
+        "description": "Metadata for the document chunk. Always select metadata and always join with the {source_table} table on the string metadata field 'original_row_id'"
     }}
 }}
 ```
@@ -143,7 +144,7 @@ Columns:
 
 {examples}
 
-Output the {dialect} SQL query that is ready to be executed only and NOTHING ELSE.
+Output the {dialect} SQL query that is ready to be executed only WITHOUT ANY DELIMITERS. Make sure to properly quote identifiers.
 
 Here is the user input:
 {input}

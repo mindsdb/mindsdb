@@ -47,6 +47,7 @@ class MSGraphAPIDelegatedPermissionsManager:
         if not request_origin:
             raise AuthException('Request origin could not be determined!')
         request_origin = request_origin.replace('127.0.0.1', 'localhost') if 'http://127.0.0.1' in request_origin else request_origin
+
         self.redirect_uri = request_origin + '/verify-auth'
 
     def get_access_token(self) -> Text:

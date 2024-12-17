@@ -80,7 +80,7 @@ class DatabasesResource(Resource):
                     "status": "connection_error",
                     "detail": status.error_message
                 }, HTTPStatus.OK
-            
+
             if status.copy_storage:
                 storage = handler.handler_storage.export_files()
 

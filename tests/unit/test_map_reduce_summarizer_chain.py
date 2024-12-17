@@ -6,6 +6,7 @@ from langchain_core.documents import Document
 
 from mindsdb.integrations.libs.vectordatabase_handler import VectorStoreHandler
 from mindsdb.integrations.utilities.rag.chains.map_reduce_summarizer_chain import MapReduceSummarizerChain
+from mindsdb.integrations.utilities.rag.settings import SummarizationConfig
 from mindsdb.integrations.utilities.sql_utils import FilterCondition, FilterOperator
 
 
@@ -25,7 +26,8 @@ class TestMapReduceSummarizerChain:
         mock_map_reduce_documents_chain.ainvoke.side_effect = [{'output_text': 'Final summary 1'}, {'output_text': 'Final summary 2'}]
         test_summarizer_chain = MapReduceSummarizerChain(
             vector_store_handler=mock_vector_store_handler,
-            map_reduce_documents_chain=mock_map_reduce_documents_chain
+            map_reduce_documents_chain=mock_map_reduce_documents_chain,
+            summarization_config=SummarizationConfig()
         )
 
         chain_input = {
@@ -41,7 +43,7 @@ class TestMapReduceSummarizerChain:
         # Make sure we select from the vector store correctly.
         mock_vector_store_handler.select.assert_any_call(
             'embeddings',
-            columns=['content'],
+            columns=['content', 'metadata'],
             conditions=[FilterCondition(
                 "metadata->>'original_row_id'",
                 FilterOperator.EQUAL,
@@ -50,7 +52,7 @@ class TestMapReduceSummarizerChain:
         )
         mock_vector_store_handler.select.assert_any_call(
             'embeddings',
-            columns=['content'],
+            columns=['content', 'metadata'],
             conditions=[FilterCondition(
                 "metadata->>'original_row_id'",
                 FilterOperator.EQUAL,

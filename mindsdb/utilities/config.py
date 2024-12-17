@@ -437,6 +437,9 @@ class Config:
         if 'storage_dir' in self._config:
             logger.warning("The 'storage_dir' config option is no longer supported. Use 'paths.root' instead.")
 
+        if 'log' in self._config:
+            logger.warning("The 'log' config option is no longer supported. Use 'logging' instead.")
+
     @property
     def cmd_args(self):
         if self._cmd_args is None:

@@ -907,6 +907,7 @@
       "group": "Data Sources",
       "pages": [
         "integrations/data-overview",
+        "integrations/sample-database",
         {
           "group": "Applications",
           "pages": [

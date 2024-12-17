@@ -7,7 +7,7 @@ from langchain.retrievers import ContextualCompressionRetriever
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableParallel, RunnablePassthrough, RunnableSerializable
 
-from mindsdb.integrations.utilities.rag.chains.map_reduce_summarizer_chain import create_map_reduce_documents_chain, MapReduceSummarizerChain
+from mindsdb.integrations.utilities.rag.chains.map_reduce_summarizer_chain import MapReduceSummarizerChain
 from mindsdb.integrations.utilities.rag.retrievers.auto_retriever import AutoRetriever
 from mindsdb.integrations.utilities.rag.retrievers.multi_vector_retriever import MultiVectorRetriever
 from mindsdb.integrations.utilities.rag.rerankers.reranker_compressor import LLMReranker
@@ -55,11 +55,10 @@ class LangChainRAGPipeline:
         self.vector_store_config = vector_store_config
         knowledge_base_table = self.vector_store_config.kb_table if self.vector_store_config is not None else None
         if summarization_config is not None and knowledge_base_table is not None:
-            map_reduce_documents_chain = create_map_reduce_documents_chain(summarization_config)
             self.summarizer = MapReduceSummarizerChain(
                 vector_store_handler=knowledge_base_table.get_vector_db(),
                 table_name=knowledge_base_table.get_vector_db_table_name(),
-                map_reduce_documents_chain=map_reduce_documents_chain
+                summarization_config=summarization_config
             )
 
     def with_returned_sources(self) -> RunnableSerializable:

@@ -103,8 +103,8 @@ class Telemetry(Resource):
     @ns_conf.doc('get_telemetry_status')
     @api_endpoint_metrics('GET', '/util/telemetry')
     def get(self):
-        storage_dir = ca.config_obj['storage_dir']
-        status = "enabled" if telemetry_file_exists(storage_dir) else "disabled"
+        root_storage_path = ca.config_obj['paths']['root']
+        status = "enabled" if telemetry_file_exists(root_storage_path) else "disabled"
         return {"status": status}
 
     @ns_conf.doc('set_telemetry')
@@ -113,9 +113,9 @@ class Telemetry(Resource):
         data = request.json
         action = data['action']
         if str(action).lower() in ["true", "enable", "on"]:
-            enable_telemetry(ca.config_obj['storage_dir'])
+            enable_telemetry(ca.config_obj['paths']['root'])
         else:
-            disable_telemetry(ca.config_obj['storage_dir'])
+            disable_telemetry(ca.config_obj['paths']['root'])
         inject_telemetry_to_static(ca.config_obj.paths['static'])
         return '', 200
 

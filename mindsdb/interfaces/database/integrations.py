@@ -585,11 +585,6 @@ class IntegrationController:
             handler_storage=handler_storage
         )
 
-        logger.info(
-            "%s.get_handler: create a client to db service of %s type, args - %s",
-            self.__class__.__name__,
-            integration_engine, handler_ars
-        )
         HandlerClass = self.handler_modules[integration_engine].Handler
         handler = HandlerClass(**handler_ars)
         if connect:
@@ -731,6 +726,7 @@ class IntegrationController:
                     'dependencies': dependencies,
                 },
                 'name': handler_name,
+                'permanent': handler_info.get('permanent', False),
                 'connection_args': handler_info.get('connection_args', None),
                 'class_type': handler_info.get('class_type', None),
                 'type': handler_info.get('type')
@@ -913,6 +909,23 @@ class IntegrationController:
             return
         if handler_meta["import"]["success"]:
             return self.handler_modules[handler_name]
+
+    def create_permanent_integrations(self):
+        for (
+            integration_name,
+            handler,
+        ) in self.get_handlers_metadata().items():
+            if handler.get("permanent"):
+                integration_meta = integration_controller.get(name=integration_name)
+                if integration_meta is None:
+                    integration_record = db.Integration(
+                        name=integration_name,
+                        data={},
+                        engine=integration_name,
+                        company_id=None,
+                    )
+                    db.session.add(integration_record)
+        db.session.commit()
 
 
 integration_controller = IntegrationController()

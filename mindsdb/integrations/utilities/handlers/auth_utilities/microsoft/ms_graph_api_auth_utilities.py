@@ -1,6 +1,5 @@
 from typing import Dict, List, Text
 
-from flask import request
 import msal
 
 from mindsdb.integrations.utilities.handlers.auth_utilities.exceptions import AuthException

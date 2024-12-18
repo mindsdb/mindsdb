@@ -18,6 +18,10 @@ from mindsdb_sql_parser.ast import CreateTable, DropTables
 from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.integrations.libs.response import HandlerStatusResponse
 
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
+
 
 @ns_conf.route('/')
 class DatabasesResource(Resource):
@@ -32,6 +36,9 @@ class DatabasesResource(Resource):
     @api_endpoint_metrics('POST', '/databases')
     def post(self):
         '''Create a database'''
+        logger.info(f"Create Database API: Request headers: {request.headers}")
+        logger.info(f"Create Database API: Request ORIGIN header: {request.headers.get('ORIGIN')}")
+        logger.info(f"Create Database API: Request host: {request.host}")
         if 'database' not in request.json:
             return http_error(
                 HTTPStatus.BAD_REQUEST, 'Wrong argument',

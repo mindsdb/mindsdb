@@ -1,6 +1,5 @@
-import datetime
 import json
-import os
+import datetime
 from typing import Dict, List
 
 import numpy as np
@@ -30,6 +29,7 @@ from sqlalchemy.orm import (
 from sqlalchemy.sql.schema import ForeignKey
 
 from mindsdb.utilities.json_encoder import CustomJSONEncoder
+from mindsdb.utilities.config import config
 
 
 class Base:
@@ -44,7 +44,7 @@ session, engine = None, None
 def init(connection_str: str = None):
     global Base, session, engine
     if connection_str is None:
-        connection_str = os.environ["MINDSDB_DB_CON"]
+        connection_str = config['storage_db']
     base_args = {
         "pool_size": 30,
         "max_overflow": 200,

@@ -67,3 +67,11 @@ else:
     ]
 }
 ```
+
+## Test
+
+To run test
+
+```bash
+    python -m pytest linkup_handler/tests/
+```

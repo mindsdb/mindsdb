@@ -234,7 +234,7 @@ class ResultSet:
             self._df = pd.concat([self._df, df], ignore_index=True)
 
     def add_raw_values(self, values):
-        # If some values are None, the DataFrame could have incorrect integer types, since 'NaN' is technically a float, so it will convert ints to floats automatically. 
+        # If some values are None, the DataFrame could have incorrect integer types, since 'NaN' is technically a float, so it will convert ints to floats automatically.
         df = pd.DataFrame(values).convert_dtypes(
             convert_integer=True,
             convert_floating=True,

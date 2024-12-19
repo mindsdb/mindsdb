@@ -12,16 +12,6 @@ from mindsdb.utilities import log
 logger = log.getLogger(__name__)
 
 
-def create_dirs_recursive(path):
-    if isinstance(path, dict):
-        for p in path.values():
-            create_dirs_recursive(p)
-    elif isinstance(path, str):
-        Path(path).mkdir(mode=0o777, exist_ok=True, parents=True)
-    else:
-        raise ValueError(f"Wrong path: {path}")
-
-
 def _get_process_mark_id(unified: bool = False) -> str:
     """Creates a text that can be used to identify process+thread
     Args:

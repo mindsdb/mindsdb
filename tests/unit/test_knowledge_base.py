@@ -99,6 +99,8 @@ class TestKnowledgeBase(BaseExecutorTest):
 
     def teardown_method(self, method):
         # drop the vector database
+        self.run_sql("DROP KNOWLEDGE_BASE IF EXISTS test_kb")
+        self.run_sql(f"DROP TABLE {self.vector_database_name}.{self.vector_database_table_name}")
         self.run_sql(f"DROP DATABASE {self.vector_database_name}")
 
     def test_create_kb(self):
@@ -181,12 +183,14 @@ class TestKnowledgeBase(BaseExecutorTest):
         # verify the knowledge base is created
         kb_obj = self.db.session.query(KnowledgeBase).filter_by(name="test_kb6").first()
         assert kb_obj is not None
-        assert kb_obj.embedding_model.name == "test_kb6_default_model"
+        assert kb_obj.embedding_model.name == "kb_default_embedding_model"
+        # clean up
+        self.run_sql("DROP KNOWLEDGE BASE test_kb6")
 
     def test_drop_kb(self):
         # create a knowledge base
         sql = f"""
-            CREATE KNOWLEDGE BASE test_kb
+            CREATE KNOWLEDGE BASE test_kb_delete
             USING
             MODEL = {self.embedding_model_name},
             STORAGE = {self.vector_database_name}.{self.vector_database_table_name}
@@ -194,12 +198,12 @@ class TestKnowledgeBase(BaseExecutorTest):
         self.run_sql(sql)
 
         # verify the knowledge base is created
-        kb_obj = self.db.session.query(KnowledgeBase).filter_by(name="test_kb").first()
+        kb_obj = self.db.session.query(KnowledgeBase).filter_by(name="test_kb_delete").first()
         assert kb_obj is not None
 
         # drop a knowledge base
         sql = """
-            DROP KNOWLEDGE BASE test_kb
+            DROP KNOWLEDGE BASE test_kb_delete
         """
         self.run_sql(sql)
 
@@ -255,6 +259,7 @@ class TestKnowledgeBase(BaseExecutorTest):
         df = self.run_sql(sql)
         assert df.shape[0] == 1
 
+    @pytest.mark.skip(reason="need to cleanly mock embedding model predict")
     def test_insert_into_kb(self):
         # create the knowledge base
         sql = f"""
@@ -376,6 +381,7 @@ class TestKnowledgeBase(BaseExecutorTest):
         df = self.run_sql(sql)
         assert df.shape[0] == 1
 
+    @pytest.mark.skip(reason="need to cleanly mock embedding model predict")
     def test_kb_params(self):
 
         df = pd.DataFrame([
@@ -386,7 +392,7 @@ class TestKnowledgeBase(BaseExecutorTest):
         self.save_file('stock', df)
 
         # ---- default ----
-        self.run_sql('create knowledge base kb_test')
+        self.run_sql(f'create knowledge base kb_test USING MODEL = {self.embedding_model_name}')
         self.run_sql('INSERT INTO kb_test select * from files.stock')
         ret = self.run_sql("select * from kb_test where content='msft'")
         self.run_sql('drop knowledge base kb_test')  # have to drop KB with model and vector sore before assertions

@@ -3,6 +3,7 @@ from typing import List, Union, Any, Optional, Dict
 
 from langchain_community.vectorstores.chroma import Chroma
 from langchain_community.vectorstores.pgvector import PGVector
+from langchain_community.tools.sql_database.prompt import QUERY_CHECKER as DEFAULT_QUERY_CHECKER_PROMPT_TEMPLATE
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
@@ -82,6 +83,73 @@ User input: {input}
 
 Helpful Answer:'''
 
+DEFAULT_SEMANTIC_PROMPT_TEMPLATE = '''Provide a better search query for web search engine to answer the given question.
+
+<< EXAMPLES >>
+1. Input: "Show me documents containing how to finetune a LLM please"
+Output: "how to finetune a LLM"
+
+Output only a single better search query and nothing else like in the example.
+
+Here is the user input: {input}
+'''
+
+DEFAULT_SQL_PROMPT_TEMPLATE = '''
+Construct a valid {dialect} SQL query to select documents relevant to the user input.
+Source documents are found in the {source_table} table. You may need to join with other tables to get additional document metadata.
+
+The JSON col "metadata" in the {embeddings_table} has a string field called "original_row_id". This "original_row_id" string field in the
+"metadata" col is the document ID associated with a row in the {embeddings_table} table.
+You MUST always join with the {embeddings_table} table containing vector embeddings for the documents. For example, for a table named sd with an id column "Id":
+JOIN {embeddings_table} v ON (v."metadata"->>'original_row_id')::int = sd."Id"
+
+You MUST always order the embeddings by the {distance_function} comparator with '{{embeddings}}'.
+You MUST always limit by {k} returned documents.
+For example:
+ORDER BY v.embeddings {distance_function} '{{embeddings}}' LIMIT {k};
+
+
+<< TABLES YOU HAVE ACCESS TO >>
+1. {embeddings_table} - Contains document chunks, vector embeddings, and metadata for documents.
+You MUST always include the metadata column in your SELECT statement.
+You MUST always join with the {embeddings_table} table containing vector embeddings for the documents.
+You MUST always order by the provided embeddings vector using the {distance_function} comparator.
+You MUST always limit by {k} returned documents.
+
+Columns:
+```json
+{{
+    "id": {{
+        "type": "string",
+        "description": "Unique ID for this document chunk"
+    }},
+    "content": {{
+        "type": "string",
+        "description": "A document chunk (subset of the original document)"
+    }},
+    "embeddings": {{
+        "type": "vector",
+        "description": "Vector embeddings for the document chunk. ALWAYS order by the provided embeddings vector using the {distance_function} comparator."
+    }},
+    "metadata": {{
+        "type": "jsonb",
+        "description": "Metadata for the document chunk. Always select metadata and always join with the {source_table} table on the string metadata field 'original_row_id'"
+    }}
+}}
+```
+
+{schema}
+
+<< EXAMPLES >>
+
+{examples}
+
+Output the {dialect} SQL query that is ready to be executed only WITHOUT ANY DELIMITERS. Make sure to properly quote identifiers.
+
+Here is the user input:
+{input}
+'''
+
 
 class LLMConfig(BaseModel):
     model_name: str = Field(default=DEFAULT_LLM_MODEL, description='LLM model to use for generation')
@@ -125,6 +193,7 @@ class RetrieverType(Enum):
     VECTOR_STORE = 'vector_store'
     AUTO = 'auto'
     MULTI = 'multi'
+    SQL = 'sql'
 
 
 class SearchType(Enum):
@@ -170,6 +239,75 @@ class SearchKwargs(BaseModel):
         # Override model_dump to exclude None values by default
         kwargs['exclude_none'] = True
         return super().model_dump(*args, **kwargs)
+
+
+class ColumnSchema(BaseModel):
+    name: str = Field(
+        description="Name of the column in the database"
+    )
+    type: str = Field(
+        description="Type of the column (e.g. int, string, datetime)"
+    )
+    description: str = Field(
+        description="Description of what the column represents"
+    )
+    values: Optional[Dict[Any, Any]] = Field(
+        default=None,
+        description="Mapping of values the column can be with the description of what the value means"
+    )
+
+
+class MetadataSchema(BaseModel):
+    table: str = Field(
+        description="Name of table in the database"
+    )
+    description: str = Field(
+        description="Description of what the table represents"
+    )
+    columns: List[ColumnSchema] = Field(
+        description="List of column schemas describing the metadata columns available for the table"
+    )
+
+
+class LLMExample(BaseModel):
+    input: str = Field(
+        description="User input for the example"
+    )
+    output: str = Field(
+        description="What the LLM should generate for this example's input"
+    )
+
+
+class SQLRetrieverConfig(BaseModel):
+    llm_config: LLMConfig = Field(
+        default_factory=LLMConfig,
+        description="LLM configuration to use for generating the final SQL query for retrieval"
+    )
+    sql_prompt_template: str = Field(
+        default=DEFAULT_SQL_PROMPT_TEMPLATE,
+        description="""Prompt template to generate the SQL query to execute against the vector database. Currently only pgvector is supported.
+        Has 'dialect', 'input', 'embeddings_table', 'source_table', 'embeddings', 'distance_function', 'schema', and 'examples' input variables.
+        """
+    )
+    query_checker_template: str = Field(
+        default=DEFAULT_QUERY_CHECKER_PROMPT_TEMPLATE,
+        description="Prompt template to use for double checking SQL queries before execution. Has 'query' and 'dialect' input variables."
+    )
+    rewrite_prompt_template: str = Field(
+        default=DEFAULT_SEMANTIC_PROMPT_TEMPLATE,
+        description="Prompt template to rewrite user input to be better suited for retrieval. Has 'input' input variable."
+    )
+    source_table: str = Field(
+        description="Name of the source table containing the original documents that were embedded"
+    )
+    metadata_schemas: Optional[List[MetadataSchema]] = Field(
+        default=None,
+        description="Optional list of table schemas containing document metadata to potentially join with."
+    )
+    examples: Optional[List[LLMExample]] = Field(
+        default=None,
+        description="Optional examples of final generated pgvector queries based on user input."
+    )
 
 
 class SummarizationConfig(BaseModel):
@@ -261,6 +399,11 @@ class RAGPipelineModel(BaseModel):
     summarization_config: Optional[SummarizationConfig] = Field(
         default=None,
         description="Configuration for summarizing retrieved documents as context"
+    )
+    # SQL retriever specific.
+    sql_retriever_config: Optional[SQLRetrieverConfig] = Field(
+        default=None,
+        description="Configuration for retrieving documents by generating SQL to filter by metadata & order by distance function"
     )
 
     # Multi retriever specific

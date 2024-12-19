@@ -1,6 +1,8 @@
-import os
 import logging
 from logging.config import dictConfig
+
+from mindsdb.utilities.config import config as app_config
+
 
 logging_initialized = False
 
@@ -28,41 +30,55 @@ class ColorFormatter(logging.Formatter):
 
 
 def configure_logging():
-    mindsdb_level = os.environ.get("MINDSDB_LOG_LEVEL")
+    handlers_config = {}
+    console_handler_config = app_config['logging']['handlers']['console']
+    console_handler_config_level = getattr(logging, console_handler_config["level"])
+    if console_handler_config['enabled'] is True:
+        handlers_config['console'] = {
+            "class": "logging.StreamHandler",
+            "formatter": "f",
+            "level": console_handler_config_level
+        }
+    file_handler_config = app_config['logging']['handlers']['file']
+    file_handler_config_level = getattr(logging, file_handler_config["level"])
+    if file_handler_config['enabled'] is True:
+        handlers_config['file'] = {
+            "class": "logging.handlers.RotatingFileHandler",
+            "formatter": "file",
+            "level": file_handler_config_level,
+            "filename": app_config.paths["log"] / file_handler_config["filename"],
+            "maxBytes": file_handler_config["maxBytes"],  # 0.5 Mb
+            "backupCount": file_handler_config["backupCount"]
+        }
 
-    if mindsdb_level is not None:
-        mindsdb_level = getattr(logging, mindsdb_level)
-    else:
-        mindsdb_level = logging.INFO
+    mindsdb_log_level = min(console_handler_config_level, file_handler_config_level)
 
     logging_config = dict(
         version=1,
         formatters={
-            "f": {"()": ColorFormatter}
-        },
-        handlers={
-            "console": {
-                "class": "logging.StreamHandler",
-                "formatter": "f",
-                "level": mindsdb_level
+            "f": {"()": ColorFormatter},
+            "file": {
+                "format": "%(asctime)s %(processName)15s %(levelname)-8s %(name)s: %(message)s"
             }
         },
+        handlers=handlers_config,
         loggers={
             "": {  # root logger
-                "handlers": ["console"],
+                "handlers": list(handlers_config.keys()),
                 "level": logging.WARNING,
             },
             "__main__": {
-                "level": mindsdb_level,
+                "level": mindsdb_log_level,
             },
             "mindsdb": {
-                "level": mindsdb_level,
+                "level": mindsdb_log_level,
             },
             "alembic": {
-                "level": mindsdb_level,
+                "level": mindsdb_log_level,
             },
         },
     )
+
     dictConfig(logging_config)
 
 

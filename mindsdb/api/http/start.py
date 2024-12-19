@@ -10,7 +10,7 @@ from waitress import serve
 from mindsdb.api.http.initialize import initialize_app
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities import log
-from mindsdb.utilities.config import Config
+from mindsdb.utilities.config import config
 from mindsdb.utilities.functions import init_lexer_parsers
 from mindsdb.integrations.libs.ml_exec_base import process_cache
 
@@ -18,8 +18,6 @@ logger = log.getLogger(__name__)
 
 
 def start(verbose, no_studio, app: Flask = None):
-    config = Config()
-
     server = os.environ.get('MINDSDB_DEFAULT_SERVER', 'waitress')
     db.init()
     init_lexer_parsers()

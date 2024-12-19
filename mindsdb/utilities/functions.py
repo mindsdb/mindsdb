@@ -1,14 +1,13 @@
-import argparse
-import datetime
-from functools import wraps
-import hashlib
-import base64
 import os
+import base64
+import hashlib
+import datetime
 import textwrap
-from cryptography.fernet import Fernet
+from functools import wraps
 from collections.abc import Callable
 
 import requests
+from cryptography.fernet import Fernet
 from mindsdb_sql_parser.ast import Identifier
 
 from mindsdb.utilities.fs import create_process_mark, delete_process_mark, set_process_mark
@@ -17,18 +16,6 @@ from mindsdb.utilities.config import Config
 
 
 logger = log.getLogger(__name__)
-
-
-def args_parse():
-    parser = argparse.ArgumentParser(description='CL argument for mindsdb server')
-    parser.add_argument('--api', type=str, default=None)
-    parser.add_argument('--config', type=str, default=None)
-    parser.add_argument('--install-handlers', type=str, default=None)
-    parser.add_argument('--verbose', action='store_true')
-    parser.add_argument('--no_studio', action='store_true')
-    parser.add_argument('-v', '--version', action='store_true')
-    parser.add_argument('--ml_task_queue_consumer', action='store_true', default=None)
-    return parser.parse_args()
 
 
 def get_handler_install_message(handler_name):

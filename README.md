@@ -34,7 +34,7 @@
 
 ## 📖 About Us
 
-MindsDB is a federated query engine designed for AI agents and applications that need to answer questions from one or multiple [data sources](https://docs.mindsdb.com/integrations/data-overview?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo), including both structured and unstructured data..
+MindsDB is a federated query engine designed for AI agents and applications that need to answer questions from one or multiple [data sources](https://docs.mindsdb.com/integrations/data-overview?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo), including both structured and unstructured data.
 
 ## 🚀 Get Started
 
@@ -54,11 +54,9 @@ After [connecting](https://docs.mindsdb.com/mindsdb_sql/sql/create/database) and
 
 ## 💡 Example
 
-### Connecting AI Agents to structured and unstructired data
-
+### Connecting AI Agents to structured and unstructured data
 
 A common use case involves connecting agents to data. The following example shows how to connect an AI agent to a database so it can perform search over structured data:
-
 
 First we connect the datasource, in this case we connect a postgres database (you can do this via the SQL editor or SDK)
 ```sql
@@ -79,7 +77,7 @@ SELECT * FROM demo_postgres_db.car_sales;
 
 ```
 
-Now you can create an egent that can answer questions over unstructued information in this database (let's use the Python SDK)
+Now you can create an agent that can answer questions over unstructured information in this database (let's use the Python SDK)
 
 ```python
 import mindsdb_sdk
@@ -87,7 +85,7 @@ import mindsdb_sdk
 # connects to the default port (47334) on localhost 
 server = mindsdb_sdk.connect()
 
-# create an agent (lets create one that can answer questions over car_sales table
+# create an agent (let's create one that can answer questions over car_sales table
 agent = server.agents.create('my_agent')
 agent.add_database(
     database='demo_postgres_db',
@@ -100,14 +98,13 @@ answer = agent.completion([{'question': 'What cars do we have with normal transm
 print(answer.content)
 ```
 
-You add more data to the agent, lets add some unstructured data:
+You add more data to the agent, let's add some unstructured data:
 
 ```python
 agent.add_file('./cars_info.pdf', 'Details about the cars')
 answer = agent.completion([{'question': 'What cars do we have with normal transmission and gas? also include valuable info for a buyer of these cars?'}])
 print(answer.content)
 ```
-
 
 [Agents are also accessible via API endpoints](https://docs.mindsdb.com/rest/agents/agent?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
 

@@ -1,6 +1,8 @@
 {
     "config_version":"1.4",
-    "storage_dir": "/root/mdb_storage",
+    "paths": {
+        "root": "/root/mdb_storage"
+    },
     "debug": false,
     "integrations": {},
     "api": {

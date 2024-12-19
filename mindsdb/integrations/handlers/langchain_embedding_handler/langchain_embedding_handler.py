@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities import log
 from langchain_core.embeddings import Embeddings
+from mindsdb.integrations.handlers.langchain_embedding_handler.vllm_embeddings import VLLMEmbeddings
 
 logger = log.getLogger(__name__)
 
@@ -17,7 +18,10 @@ logger = log.getLogger(__name__)
 # for each class, we get a more user friendly name for it
 # E.g. OpenAIEmbeddings -> OpenAI
 # This is used for the user to select the embedding model
-EMBEDDING_MODELS = {}
+EMBEDDING_MODELS = {
+    'VLLM': 'VLLMEmbeddings',
+    'vllm': 'VLLMEmbeddings'
+}
 
 try:
     module = importlib.import_module("langchain_community.embeddings")
@@ -47,6 +51,11 @@ def get_langchain_class(class_name: str) -> Embeddings:
     Returns:
         langchain.embeddings.BaseEmbedding: The class object
     """
+    # First check if it's our custom VLLMEmbeddings
+    if class_name == "VLLMEmbeddings":
+        return VLLMEmbeddings
+
+    # Then try langchain_community.embeddings
     try:
         module = importlib.import_module("langchain_community.embeddings")
         class_ = getattr(module, class_name)

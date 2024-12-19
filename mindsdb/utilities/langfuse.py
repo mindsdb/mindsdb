@@ -107,17 +107,6 @@ class LangfuseClientWrapper:
             sample_rate=sample_rate
         )
 
-        # Check if Langfuse credentials are correct.
-        # try:
-        #     if not self._client.auth_check():
-        #         logger.error(
-        #             f"Incorrect Langfuse credentials provided to Langchain handler."
-        #         )
-        #         self._client = None
-        # except Exception as e:
-        #     logger.error(f'Something went wrong while running auth_check {str(e)}')
-        #     self._client = None
-
     def setup_trace(self,
                     name: str,
                     input: typing.Optional[typing.Any] = None,

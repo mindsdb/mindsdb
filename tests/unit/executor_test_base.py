@@ -87,7 +87,8 @@ class BaseUnitTest:
             logger.warning('Unable to clean up temporary database file: %s', str(e))
 
         # remove environ for next tests
-        del os.environ["MINDSDB_DB_CON"]
+        if 'MINDSDB_DB_CON' in os.environ:
+            del os.environ["MINDSDB_DB_CON"]
 
         # remove import of mindsdb for next tests
         unload_module("mindsdb")

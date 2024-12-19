@@ -39,7 +39,14 @@ class InsertToTableCall(BaseStepCall):
 
             records = []
             for row in step.query.values:
-                record = [v.value for v in row]
+                record = []
+                for v in row:
+                    if isinstance(v, Identifier) and v.parts[0] == 'None':
+                        # Allow explicitly inserting NULL values.
+                        record.append(None)
+                        continue
+                    # Value is a constant
+                    record.append(v.value)
                 records.append(record)
 
             data.add_raw_values(records)

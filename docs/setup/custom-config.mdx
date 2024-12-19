@@ -63,12 +63,6 @@ The `location` specifies the storage type.
 * `local`: Stores files in a local directory defined with `config['paths']['storage']`.
 * `s3`: Stores files in an Amazon S3 bucket. This option requires the `bucket` parameter that specifies the name of the S3 bucket where files will be stored.
 
-```bash
-    "storage_dir": "/home/mindsdb/var",
-```
-
-The `storage_dir` parameter specifies the directory where MindsDB stores all its files, including models, uploaded files, tab content, and the internal SQLite database (if running locally).
-
 If this parameter is not set, the path is determined by the `MINDSDB_STORAGE_DIR` environment variable. MindsDB defaults to creating a `mindsdb` folder in the operating system user's home directory.
 
 ```bash
@@ -83,9 +77,9 @@ If this parameter is not set, the path is determined by the `MINDSDB_STORAGE_DIR
     },
 ```
 
-The `paths` parameter allows users to redefine the file paths for various groups of MindsDB files. By default, all paths are located within the `storage_dir`. If only the `root` path is defined, all other folders will be created within that directory. If this parameter is absent, the value is determined by the `MINDSDB_STORAGE_DIR` environment variable.
+The `paths` parameter allows users to redefine the file paths for various groups of MindsDB files. If only the `root` path is defined, all other folders will be created within that directory. If this parameter is absent, the value is determined by the `MINDSDB_STORAGE_DIR` environment variable.
 
-The `root` parameter defines the base directory for storing all MindsDB files. It serves the same purpose as the `storage_dir` parameter.
+The `root` parameter defines the base directory for storing all MindsDB files, including models, uploaded files, tab content, and the internal SQLite database (if running locally).
 
 The `content` parameter specifies the directory where user-related files are stored, such as uploaded files, created models, and tab content. The internal SQLite database (if running locally) is stored in the `root` directory instead.
 

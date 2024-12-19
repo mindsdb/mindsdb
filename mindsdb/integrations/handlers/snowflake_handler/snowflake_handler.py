@@ -68,6 +68,7 @@ class SnowflakeHandler(DatabaseHandler):
 
         try:
             self.connection = connector.connect(**config)
+            self.connection.telemetry_enabled = False
             self.is_connected = True
             return self.connection
         except connector.errors.Error as e:

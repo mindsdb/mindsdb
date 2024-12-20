@@ -173,7 +173,7 @@ class Config:
                     "max_restart_count": 1,
                     "max_restart_interval_seconds": 60,
                     "server": {
-                        "type": "waitress",     # MINDSDB_DEFAULT_SERVER
+                        "type": "waitress",     # MINDSDB_HTTP_SERVER_TYPE MINDSDB_DEFAULT_SERVER
                         "config": {
                             "threads": 16,
                             "max_request_body_size": (1 << 30) * 10,    # 10GB
@@ -321,7 +321,9 @@ class Config:
         # endregion
 
         # region server type
-        server_type = os.environ.get('MINDSDB_DEFAULT_SERVER', '').lower()
+        server_type = os.environ.get('MINDSDB_HTTP_SERVER_TYPE', '').lower()
+        if server_type != '':
+            server_type = os.environ.get('MINDSDB_DEFAULT_SERVER', '').lower()
         if server_type != '':
             if server_type == 'waitress':
                 self._env_config['api']['http']['server']['type'] = 'waitress'
@@ -483,6 +485,12 @@ class Config:
 
         if 'log' in self._config:
             logger.warning("The 'log' config option is no longer supported. Use 'logging' instead.")
+
+        if os.environ.get('MINDSDB_HTTP_SERVER_TYPE', '') != '':
+            logger.warning(
+                "Env variable 'MINDSDB_HTTP_SERVER_TYPE' is going to be deprecated soon. "
+                "Use 'MINDSDB_HTTP_SERVER_TYPE' instead."
+            )
 
     @property
     def cmd_args(self):

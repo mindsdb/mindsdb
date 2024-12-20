@@ -125,7 +125,7 @@ class SQLAgent:
                 continue
 
             # Some LLMs (e.g. gpt-4o) may include backticks or quotes when invoking tools.
-            table_name = table_name.strip(' `"\'\n\r')
+            table_name = table_name.strip(' "\'\n\r')
             table = Identifier(table_name)
 
             # resolved table

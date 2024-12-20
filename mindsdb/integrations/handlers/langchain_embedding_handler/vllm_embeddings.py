@@ -1,6 +1,6 @@
 from typing import Any, List
 from langchain_core.embeddings import Embeddings
-from openai import AsyncOpenAI
+from openai import OpenAI
 import asyncio
 
 
@@ -31,7 +31,7 @@ class VLLMEmbeddings(Embeddings):
         if "input_columns" in openai_kwargs:
             del openai_kwargs["input_columns"]
 
-        self.client = AsyncOpenAI(
+        self.client = OpenAI(
             api_key="EMPTY",  # vLLM doesn't need an API key
             base_url=openai_api_base,
             **openai_kwargs,
@@ -51,21 +51,29 @@ class VLLMEmbeddings(Embeddings):
     def _get_embeddings(self, texts: List[str]) -> List[List[float]]:
         """Get embeddings for a batch of texts."""
 
-        async def await_openai_call(batch):
-            await self.client.embeddings.create(model=self.model, input=batch)
+        async def embed_call_wrapper(batch):
+            # Send the openai request to its own thread and await its response
+            response = await asyncio.to_thread(
+                self.client.embeddings.create, model=self.model, input=batch
+            )
+
+            return response
 
         embeddings = []
         embedding_coroutines = []
         chunk_start_indices = range(0, len(texts), self.batch_size)
         for i in chunk_start_indices:
-
-            batch = texts[i: i + self.batch_size]
-            embedding_coroutines.append(await_openai_call(batch))
-
+            # fill to max concurrency
+            if len(embedding_coroutines) < 511:
+                batch = texts[i:i + self.batch_size]
+                embedding_coroutines.append(embed_call_wrapper(batch))
             # if at max-concurrency, then run with gather
-            if len(embedding_coroutines) == 512 or len(embedding_coroutines) == len(
+            elif len(embedding_coroutines) == 512 or len(embedding_coroutines) == len(
                 chunk_start_indices
             ):
+                # add the 512th batch to the coroutine list
+                batch = texts[i:i + self.batch_size]
+                embedding_coroutines.append(embed_call_wrapper(batch))
 
                 openai_responses = []
 

@@ -6,7 +6,7 @@ from mindsdb_sql_parser.ast import ASTNode, Select, Insert, Update, Delete, Star
 from mindsdb_sql_parser.ast.select.identifier import Identifier
 
 from mindsdb.integrations.utilities.sql_utils import (
-    extract_comparison_conditions, filter_dataframe,
+    extract_comparison_conditions, filter_dataframe, sort_dataframe,
     FilterCondition, FilterOperator, SortColumn
 )
 from mindsdb.integrations.libs.base import BaseHandler
@@ -206,6 +206,14 @@ class APIResource(APITable):
                 filters.append([cond.op.value, cond.column, cond.value])
 
         result = filter_dataframe(result, filters)
+
+        if sort:
+            sort_columns = []
+            for idx, a_sort in enumerate(sort):
+                if not a_sort.applied:
+                    sort_columns.append(query.order_by[idx])
+
+            result = sort_dataframe(result, sort_columns)
 
         if limit is not None and len(result) > limit:
             result = result[:int(limit)]

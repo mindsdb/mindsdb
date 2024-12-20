@@ -46,6 +46,7 @@ class GithubIssuesTable(APIResource):
                 if col.column in ('created', 'updated', 'comments'):
                     issues_kwargs['sort'] = col.column
                     issues_kwargs['direction'] = 'asc' if col.ascending else 'desc'
+                    sort.applied = True
 
                     # supported only 1 column
                     break
@@ -274,6 +275,7 @@ class GithubPullRequestsTable(APIResource):
                 if col.column in ('created', 'updated', 'popularity'):
                     issues_kwargs['sort'] = col.column
                     issues_kwargs['direction'] = 'asc' if col.ascending else 'desc'
+                    sort.applied = True
 
                     # supported only 1 column
                     break
@@ -418,6 +420,7 @@ class GithubCommitsTable(APIResource):
                 if col.column in ("author", "date", "message"):
                     commits_kwargs['sort'] = col.column
                     commits_kwargs['direction'] = 'asc' if col.ascending else 'desc'
+                    sort.applied = True
 
                     # supported only 1 column
                     break

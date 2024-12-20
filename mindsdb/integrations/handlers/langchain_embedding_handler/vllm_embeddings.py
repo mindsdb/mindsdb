@@ -51,28 +51,25 @@ class VLLMEmbeddings(Embeddings):
     def _get_embeddings(self, texts: List[str]) -> List[List[float]]:
         """Get embeddings for a batch of texts."""
 
-        async def embed_call_wrapper(batch):
-            # Send the openai request to its own thread and await its response
-            response = await self.client.embeddings.create(
-                model=self.model, input=batch
-            )
-            return response
-
         embeddings = []
         embedding_coroutines = []
         chunk_start_indices = range(0, len(texts), self.batch_size)
         for i in chunk_start_indices:
             # fill to max concurrency
             if len(embedding_coroutines) < 511:
-                batch = texts[i:i + self.batch_size]
-                embedding_coroutines.append(embed_call_wrapper(batch))
+                batch = texts[i: i + self.batch_size]
+                embedding_coroutines.append(
+                    self.client.embeddings.create(model=self.model, input=batch)
+                )
             # if at max-concurrency, then run with gather
             elif len(embedding_coroutines) == 512 or len(embedding_coroutines) == len(
                 chunk_start_indices
             ):
                 # add the 512th batch to the coroutine list
-                batch = texts[i:i + self.batch_size]
-                embedding_coroutines.append(embed_call_wrapper(batch))
+                batch = texts[i: i + self.batch_size]
+                embedding_coroutines.append(
+                    self.client.embeddings.create(model=self.model, input=batch)
+                )
 
                 openai_responses = []
 

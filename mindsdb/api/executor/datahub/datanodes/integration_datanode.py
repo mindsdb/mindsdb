@@ -78,7 +78,7 @@ class IntegrationDataNode(DataNode):
                 if col in columns:
                     types = df[df.columns[columns.index(col)]]
                     break
-            
+
             # If not found, return None for all types.
             if types is None:
                 types = [None] * len(names)

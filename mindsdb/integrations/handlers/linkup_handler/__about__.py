@@ -1,0 +1,9 @@
+__title__ = 'Linkup API SDK'
+__package_name__ = 'linkup_sdk'
+__version__ = '1.0.0'
+__description__ = "SDK for integrating Linkup API with Python applications"
+__author__ = 'Juliette Sivan'
+__github__ = 'https://github.com/linkup-so/linkup-sdk'
+__pypi__ = 'https://pypi.org/project/linkup-sdk/'
+__license__ = 'MIT'
+__copyright__ = 'Copyright 2024- mindsdb'

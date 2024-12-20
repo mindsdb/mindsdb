@@ -1,6 +1,5 @@
 from typing import Dict, List, Text
 
-from flask import request
 import msal
 
 from mindsdb.integrations.utilities.handlers.auth_utilities.exceptions import AuthException
@@ -39,15 +38,6 @@ class MSGraphAPIDelegatedPermissionsManager:
         self.cache = cache
         self.scopes = scopes
         self.code = code
-
-        # Set the redirect URI based on the request origin.
-        # If the request origin is 127.0.0.1 (localhost), replace it with localhost.
-        # This is done because the only HTTP origin allowed in Microsoft Entra ID app registration is localhost.
-        request_origin = request.headers.get('ORIGIN') or (request.scheme + '://' + request.host)
-        if not request_origin:
-            raise AuthException('Request origin could not be determined!')
-        request_origin = request_origin.replace('127.0.0.1', 'localhost') if 'http://127.0.0.1' in request_origin else request_origin
-        self.redirect_uri = request_origin + '/verify-auth'
 
     def get_access_token(self) -> Text:
         """
@@ -112,8 +102,7 @@ class MSGraphAPIDelegatedPermissionsManager:
         if self.code:
             response = msal_app.acquire_token_by_authorization_code(
                 code=self.code,
-                scopes=self.scopes,
-                redirect_uri=self.redirect_uri
+                scopes=self.scopes
             )
 
             return response
@@ -121,8 +110,7 @@ class MSGraphAPIDelegatedPermissionsManager:
         # If the authentication code is not provided, get the authorization request URL.
         else:
             auth_url = msal_app.get_authorization_request_url(
-                scopes=self.scopes,
-                redirect_uri=self.redirect_uri
+                scopes=self.scopes
             )
 
             raise AuthException(f'Authorisation required. Please follow the url: {auth_url}', auth_url=auth_url)

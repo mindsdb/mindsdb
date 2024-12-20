@@ -208,8 +208,8 @@ class APIResource(APITable):
         result = filter_dataframe(result, filters)
 
         sort_columns = []
-        for idx, _ in enumerate(sort):
-            if not sort.applied:
+        for idx, a_sort in enumerate(sort):
+            if not a_sort.applied:
                 sort_columns.append(query.order_by[idx])
 
         result = sort_dataframe(result, sort_columns)

@@ -15,6 +15,12 @@ from mindsdb.integrations.libs.response import (
     RESPONSE_TYPE
 )
 
+try:
+    import pyarrow as pa
+    memory_pool = pa.memory_pool()
+except Exception:
+    memory_pool = None
+
 
 logger = log.getLogger(__name__)
 
@@ -68,6 +74,7 @@ class SnowflakeHandler(DatabaseHandler):
 
         try:
             self.connection = connector.connect(**config)
+            self.connection.telemetry_enabled = False
             self.is_connected = True
             return self.connection
         except connector.errors.Error as e:
@@ -205,6 +212,12 @@ class SnowflakeHandler(DatabaseHandler):
 
         if need_to_close is True:
             self.disconnect()
+
+        if memory_pool is not None and memory_pool.backend_name == 'jemalloc':
+            # This reduce memory consumption, but will slow down next query slightly.
+            # Except pool type 'jemalloc': memory consumption do not change significantly
+            # and next query processing time may be even lower.
+            memory_pool.release_unused()
 
         return response
 

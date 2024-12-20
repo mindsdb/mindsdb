@@ -264,6 +264,21 @@ if __name__ == '__main__':
     if os.environ.get("FLASK_SECRET_KEY") is None:
         os.environ["FLASK_SECRET_KEY"] = secrets.token_hex(32)
 
+    if os.environ.get('ARROW_DEFAULT_MEMORY_POOL') is None:
+        try:
+            """It seems like snowflake handler have memory issue that related to pyarrow. Memory usage keep growing with
+            requests. This is related to 'memory pool' that is 'mimalloc' by default: it is fastest but use a lot of ram
+            """
+            import pyarrow as pa
+            try:
+                pa.jemalloc_memory_pool()
+                os.environ['ARROW_DEFAULT_MEMORY_POOL'] = 'jemalloc'
+            except NotImplementedError:
+                pa.system_memory_pool()
+                os.environ['ARROW_DEFAULT_MEMORY_POOL'] = 'system'
+        except Exception:
+            pass
+
     db.init()
     mp.freeze_support()
 

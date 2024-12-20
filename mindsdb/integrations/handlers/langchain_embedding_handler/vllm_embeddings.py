@@ -1,6 +1,6 @@
 from typing import Any, List
 from langchain_core.embeddings import Embeddings
-from openai import OpenAI
+from openai import AsyncOpenAI
 import asyncio
 
 
@@ -31,7 +31,7 @@ class VLLMEmbeddings(Embeddings):
         if "input_columns" in openai_kwargs:
             del openai_kwargs["input_columns"]
 
-        self.client = OpenAI(
+        self.client = AsyncOpenAI(
             api_key="EMPTY",  # vLLM doesn't need an API key
             base_url=openai_api_base,
             **openai_kwargs,
@@ -53,10 +53,9 @@ class VLLMEmbeddings(Embeddings):
 
         async def embed_call_wrapper(batch):
             # Send the openai request to its own thread and await its response
-            response = await asyncio.to_thread(
-                self.client.embeddings.create, model=self.model, input=batch
+            response = await self.client.embeddings.create(
+                model=self.model, input=batch
             )
-
             return response
 
         embeddings = []

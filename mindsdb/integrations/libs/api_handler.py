@@ -207,12 +207,13 @@ class APIResource(APITable):
 
         result = filter_dataframe(result, filters)
 
-        sort_columns = []
-        for idx, a_sort in enumerate(sort):
-            if not a_sort.applied:
-                sort_columns.append(query.order_by[idx])
+        if sort:
+            sort_columns = []
+            for idx, a_sort in enumerate(sort):
+                if not a_sort.applied:
+                    sort_columns.append(query.order_by[idx])
 
-        result = sort_dataframe(result, sort_columns)
+            result = sort_dataframe(result, sort_columns)
 
         if limit is not None and len(result) > limit:
             result = result[:int(limit)]

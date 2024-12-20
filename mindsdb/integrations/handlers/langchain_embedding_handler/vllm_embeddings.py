@@ -1,6 +1,7 @@
 from typing import Any, List
 from langchain_core.embeddings import Embeddings
-from openai import OpenAI
+from openai import AsyncOpenAI
+import asyncio
 
 
 class VLLMEmbeddings(Embeddings):
@@ -27,13 +28,13 @@ class VLLMEmbeddings(Embeddings):
 
         # Initialize OpenAI client
         openai_kwargs = kwargs.copy()
-        if 'input_columns' in openai_kwargs:
-            del openai_kwargs['input_columns']
+        if "input_columns" in openai_kwargs:
+            del openai_kwargs["input_columns"]
 
-        self.client = OpenAI(
+        self.client = AsyncOpenAI(
             api_key="EMPTY",  # vLLM doesn't need an API key
             base_url=openai_api_base,
-            **openai_kwargs
+            **openai_kwargs,
         )
 
     def _format_text(self, text: str, is_query: bool = False) -> str:
@@ -49,14 +50,40 @@ class VLLMEmbeddings(Embeddings):
 
     def _get_embeddings(self, texts: List[str]) -> List[List[float]]:
         """Get embeddings for a batch of texts."""
+
+        async def await_openai_call(batch):
+            await self.client.embeddings.create(model=self.model, input=batch)
+
         embeddings = []
-        for i in range(0, len(texts), self.batch_size):
-            batch = texts[i:i + self.batch_size]
-            response = self.client.embeddings.create(
-                model=self.model,
-                input=batch
-            )
-            embeddings.extend([data.embedding for data in response.data])
+        embedding_coroutines = []
+        chunk_start_indices = range(0, len(texts), self.batch_size)
+        for i in chunk_start_indices:
+
+            batch = texts[i: i + self.batch_size]
+            embedding_coroutines.append(await_openai_call(batch))
+
+            # if at max-concurrency, then run with gather
+            if len(embedding_coroutines) == 512 or len(embedding_coroutines) == len(
+                chunk_start_indices
+            ):
+
+                openai_responses = []
+
+                async def gather_coroutines():
+                    # define a function to gather and save responses.
+                    global openai_responses
+                    openai_responses = await asyncio.gather(*embedding_coroutines)
+
+                # run asynchronously
+                asyncio.run(gather_coroutines())
+
+                # extract embeddings from responses
+                for response in openai_responses:
+                    embeddings.extend([data.embedding for data in response.data])
+
+                # reset the embedding_coroutines list
+                embedding_coroutines = []
+
         return embeddings
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:

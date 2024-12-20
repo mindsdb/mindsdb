@@ -67,7 +67,7 @@ GCS_HANDLER_DEPS = ["gcsfs"]
 
 HANDLER_RULE_IGNORES = {
     "DEP002": OPTIONAL_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS + BYOM_HANLDER_DEPS + HIVE_HANDLER_DEPS + GCS_HANDLER_DEPS,
-    "DEP001": ["tests"]  # 'tests' is the mindsdb tests folder in the repo root
+    "DEP001": ["tests", "pyarrow"]  # 'tests' is the mindsdb tests folder in the repo root, 'pyarrow' used in snowflake handler
 }
 
 PACKAGE_NAME_MAP = {

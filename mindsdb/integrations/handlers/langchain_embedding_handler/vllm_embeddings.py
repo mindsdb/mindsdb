@@ -52,7 +52,7 @@ class VLLMEmbeddings(Embeddings):
         """Get embeddings for a batch of texts."""
 
         async def await_openai_call(batch):
-            await self.client.embeddings.create(model=self.model, input=batch)
+            return await self.client.embeddings.create(model=self.model, input=batch)
 
         embeddings = []
         embedding_coroutines = []
@@ -69,13 +69,13 @@ class VLLMEmbeddings(Embeddings):
 
                 openai_responses = []
 
-                async def gather_coroutines():
+                async def gather_coroutines(openai_responses):
                     # define a function to gather and save responses.
-                    global openai_responses
-                    openai_responses = await asyncio.gather(*embedding_coroutines)
+                    intermediate = await asyncio.gather(*embedding_coroutines)
+                    openai_responses.extend(intermediate)
 
                 # run asynchronously
-                asyncio.run(gather_coroutines())
+                asyncio.run(gather_coroutines(openai_responses))
 
                 # extract embeddings from responses
                 for response in openai_responses:

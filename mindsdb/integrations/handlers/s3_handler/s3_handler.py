@@ -3,6 +3,7 @@ from contextlib import contextmanager
 
 import boto3
 import duckdb
+from duckdb import HTTPException
 from mindsdb_sql_parser import parse_sql
 import pandas as pd
 from typing import Text, Dict, Optional
@@ -138,7 +139,12 @@ class S3Handler(APIHandler):
         """
         # Connect to S3 via DuckDB.
         duckdb_conn = duckdb.connect(":memory:")
-        duckdb_conn.execute("INSTALL httpfs")
+        try:
+            duckdb_conn.execute("INSTALL httpfs")
+        except HTTPException as http_error:
+            logger.debug(f"Error installing the httpfs extension, {http_error}! Forcing installation.")
+            duckdb_conn.execute("FORCE INSTALL httpfs")
+
         duckdb_conn.execute("LOAD httpfs")
 
         # Configure mandatory credentials.

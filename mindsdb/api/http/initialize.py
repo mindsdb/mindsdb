@@ -290,7 +290,7 @@ def initialize_app(config, no_studio):
 
     @app.before_request
     def before_request():
-        logger.debug(f"HTTP: {request.path}")
+        logger.debug(f"HTTP {request.method}: {request.path}")
         ctx.set_default()
         config = Config()
 

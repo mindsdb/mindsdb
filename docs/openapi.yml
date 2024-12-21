@@ -136,9 +136,9 @@ components:
       properties:
         name:
           type: string
-        database_id:
+        database_name:
           type: string
-          description: Connection to a chat app like Slack or MS Teams
+          description: Name of the connection to a chat app like Slack or MS Teams
         agent_name:
           type: string
           description: Agent object created beforehand. Alternatively, provide a large language model (LLM) using the `model_name` parameter.
@@ -1956,9 +1956,9 @@ paths:
                   properties:
                     name:
                       type: string
-                    database_id:
+                    database_name:
                       type: string
-                      description: Connection to a chat app like Slack or MS Teams
+                      description: Name of the connection to a chat app like Slack or MS Teams
                     agent_name:
                       type: string
                       description: Agent object created beforehand. Alternatively, provide a large language model (LLM) using the `model_name` parameter.

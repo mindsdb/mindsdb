@@ -1,0 +1,69 @@
+# Uses OpenAI to summarise github's auto-generated release notes,
+# Then update the release notes to contain the new summary
+
+name: Update Release Notes
+
+on:
+  release:
+    types:
+      - published
+
+permissions:
+    contents: write
+
+jobs:
+  get-release-notes:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Enhance release notes with LLM
+        id: enhance_notes
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo ${{ toJSON(github.event.release.body) }}
+
+          # Prepare the LLM API payload
+          payload=$(cat <<EOF
+          {
+            "model": "gpt-4",
+            "messages": [
+              {
+                "role": "system",
+                "content": "Follow the instructions to update the GitHub release notes provided below. 1. Write a section titled \"TL;DR\" that describes everything contained in the \"What's Changed\" section. Make this \"TL;DR\" section informative and divide information into sections of related items. Do not mention any change authors in the \"TL;DR\" section. 2. The input comes in the Markdown format as below. Generate the output in the Markdown format as well. 3. Final format should adhere to the following: - start with the \"TL;DR\" section, which is a summary of the \"What's Changed\" section, - follow it with the \"What's Changed\" section, and DO NOT change the provided \"What's Changed\" section, - generate a Markdown format output that concatenates these two sections."
+              },
+              {
+                "role": "user",
+                "content": ${{ toJSON(github.event.release.body) }}
+              }
+            ]
+          }
+          EOF
+          )
+
+          # Call the OpenAI API
+          response=$(curl -s -X POST https://api.openai.com/v1/chat/completions \
+            -H "Authorization: Bearer $OPENAI_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "$payload")
+
+          # Extract enhanced notes from the API response
+          ENHANCED_NOTES=$(echo "$response" | jq -r '.choices[0].message.content')
+
+          if [ -z "$ENHANCED_NOTES" ]; then
+            echo "LLM enhancement failed. Exiting."
+            exit 1
+          fi
+
+          echo "Enhanced release notes:\n$ENHANCED_NOTES"
+
+
+          # Write enhanced notes to a file
+          echo "$ENHANCED_NOTES" > enhanced_notes.md
+
+          # Update the release with the enhanced notes
+          gh release edit ${{ github.event.release.tag_name }} --notes-file enhanced_notes.md

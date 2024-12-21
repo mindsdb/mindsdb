@@ -25,7 +25,7 @@ OTEL_SERVICE_ENVIRONMENT = os.getenv("OTEL_SERVICE_ENVIRONMENT", "local").lower(
 # Define service release
 OTEL_SERVICE_RELEASE = os.getenv("OTEL_SERVICE_RELEASE", "local").lower()
 
-# By default we have Open Telemetry SDK enabled on all envs, except for local which is disabled by default
+# By default, we have Open Telemetry SDK enabled on all envs, except for local which is disabled by default
 #   If you want to enable Open Telemetry on local for some reason please set OTEL_SDK_FORCE_RUN to true
 OTEL_SDK_DISABLED = os.getenv("OTEL_SDK_DISABLED", "false").lower() == "true" or os.getenv("OTEL_SERVICE_ENVIRONMENT", "local").lower() == "local"
 OTEL_SDK_FORCE_RUN = os.getenv("OTEL_SDK_FORCE_RUN", "false").lower() == "true"

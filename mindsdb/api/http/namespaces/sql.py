@@ -15,15 +15,23 @@ from mindsdb.api.executor.data_types.response_type import (
 from mindsdb.api.executor.exceptions import ExecutorException, UnknownError
 from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb.utilities import log
+from mindsdb.utilities import otel_metrics
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
 
 logger = log.getLogger(__name__)
 
-
 @ns_conf.route("/query")
 @ns_conf.param("query", "Execute query")
 class Query(Resource):
+    meter = otel_metrics.metrics.get_meter("query_service_meter")
+
+    query_counter = meter.create_counter(
+        name="query_post_requests",
+        description="Counts the number of times the /query POST method is called",
+        unit="1",
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -116,6 +124,11 @@ class Query(Resource):
             error_text=error_text,
             traceback=error_traceback,
         )
+
+        # Increment the counter and include metadata in attributes
+        metadata = ctx.metadata(query=query)
+
+        Query.query_counter.add(1, metadata)
 
         return query_response, 200
 

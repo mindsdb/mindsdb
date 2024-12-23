@@ -191,6 +191,7 @@ class FileHandler(DatabaseHandler):
         custom_parser=None,
         chunk_size=DEFAULT_CHUNK_SIZE,
         chunk_overlap=DEFAULT_CHUNK_OVERLAP,
+        sheet_name=None,
     ):
         """
         This function takes a file path and returns a pandas dataframe
@@ -211,7 +212,13 @@ class FileHandler(DatabaseHandler):
 
         elif fmt in ["xlsx", "xls"]:
             data.seek(0)
-            df = pd.read_excel(data)
+            with pd.ExcelFile(data) as xls:
+                if sheet_name is None:
+                    # No sheet specified: Load the file.
+                    df = pd.read_excel(xls)
+                else:
+                    # Specific sheet requested: Load the sheet.
+                    df = pd.read_excel(xls, sheet_name=sheet_name)
 
         elif fmt == "json":
             data.seek(0)

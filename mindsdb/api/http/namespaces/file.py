@@ -164,7 +164,7 @@ class File(Resource):
                 return http_error(
                     400, "Wrong content.", "Archive must contain data file in root."
                 )
-        
+
         elif lp.endswith(".xlsx") or lp.endswith(".xls"):
             # Get list of sheets.
             xls = pd.ExcelFile(file_path)
@@ -186,7 +186,7 @@ class File(Resource):
                 ca.file_controller.save_excel_file_with_sheets(
                     mindsdb_file_name, file_path, sheet_names, file_name=original_file_name
                 )
-            
+
             # Otherwise, save the file as is.
             else:
                 ca.file_controller.save_file(

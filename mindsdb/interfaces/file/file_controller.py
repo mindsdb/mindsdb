@@ -61,7 +61,7 @@ class FileController:
             for record in file_records
         ]
         return files_metadata
-    
+
     def save_excel_file_with_sheets(self, name: str, file_path: str, sheet_names: str, file_name: str = None) -> list[int]:
         """
         Saves an uploaded Excel file with multiple sheets to the database, file system, file store, and returns the file record ID.
@@ -84,7 +84,7 @@ class FileController:
 
             if file_name is None:
                 file_name_for_sheet = Path(file_path).name.split(".")[0] + f"_{sheet_name}.xlsx"
-            
+
             file_record_ids = []
             file_record, storage_directory_name, stored_file_path, file_df = self._save_file(
                 name_for_sheet,
@@ -92,7 +92,7 @@ class FileController:
                 file_name=file_name_for_sheet,
                 sheet_name=sheet_name
             )
-            
+
             try:
                 file_df.to_excel(str(stored_file_path), index=False)
 
@@ -134,7 +134,7 @@ class FileController:
             raise
 
         return file_record.id
-    
+
     def _save_file(self, name: str, file_path: str, file_name: str, sheet_name: str = None):
         """
         Records the file in the database and creates a directory for it in the file system.
@@ -168,15 +168,15 @@ class FileController:
             storage_directory_name = f"file_{ctx.company_id}_{file_record.id}"
             file_record.file_path = storage_directory_name
             db.session.commit()
-            
+
             # Create the full path to the storage directory.
             full_storage_directory_path = Path(self.dir).joinpath(storage_directory_name)
             # Create the storage directory if it does not exist.
             full_storage_directory_path.mkdir(parents=True, exist_ok=True)
-            
+
             # Create the full path to the stored file.
             stored_file_path = full_storage_directory_path.joinpath(file_name)
-            
+
             return file_record, storage_directory_name, stored_file_path, file_df
         except Exception as e:
             logger.error(e)

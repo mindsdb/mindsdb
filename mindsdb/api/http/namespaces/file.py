@@ -171,15 +171,17 @@ class File(Resource):
             sheet_names = xls.sheet_names if len(xls.sheet_names) > 1 else None
 
         try:
-            # If there are multiple sheets, save each sheet separately.
+            # If the file is an Excel file with multiple sheets, save each sheet separately.
             if sheet_names:
                 ca.file_controller.save_excel_file_with_sheets(
                     mindsdb_file_name, file_path, sheet_names, file_name=original_file_name
                 )
-
-            ca.file_controller.save_file(
-                mindsdb_file_name, file_path, file_name=original_file_name
-            )
+            
+            # Otherwise, save the file as is.
+            else:
+                ca.file_controller.save_file(
+                    mindsdb_file_name, file_path, file_name=original_file_name
+                )
         except Exception as e:
             return http_error(500, 'Error', str(e))
         finally:

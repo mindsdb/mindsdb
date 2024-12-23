@@ -54,12 +54,20 @@ services:
       LANGFUSE_TIMEOUT: "10"
       LANGFUSE_SAMPLE_RATE: "1.0"
       OTEL_EXPORTER_TYPE: "console" # or "console" # Define the exporter type (console/otlp)
-      OTEL_EXPORTER_PROTOCOL: "grpc" # or "http" # Define the protocol for the otlp exporter.
+      # OTEL_EXPORTER_PROTOCOL: "grpc" # or "http" # Define the protocol for the otlp exporter.
       # OTEL_OTLP_ENDPOINT: "http://otel-collector:4317" # Define the endpoint for the otlp exporter.
+      # OTEL_OTLP_LOGGING_ENDPOINT: "http://otel-collector:4317" # Define if log exporter is different from OTEL_OTLP_ENDPOINT.
+      # OTEL_OTLP_TRACING_ENDPOINT: "http://otel-collector:4317" # Define if tracing exporter is different from OTEL_OTLP_ENDPOINT.
+      # OTEL_OTLP_METRICS_ENDPOINT: "http://otel-collector:4317" # Define if metrics exporter is different from OTEL_OTLP_ENDPOINT.
       OTEL_SERVICE_NAME: "mindsdb" # Define the service name
       OTEL_SERVICE_INSTANCE_ID: "mindsdb-instance" # Define the service instance id
       OTEL_SERVICE_ENVIRONMENT: "local" # Define the service environment
-      OTEL_EXTRA_ATTRIBUTES: "" # Define the base attributes
+      OTEL_SERVICE_RELEASE: "local" # Define the service release
+      OTEL_EXTRA_ATTRIBUTES: "" # Define the extra attributes
+      # OTEL_SDK_DISABLED: "false" # Define if the sdk is disabled
+      # OTEL_LOGGING_DISABLED: "false" # Define if the logging is disabled.
+      # OTEL_TRACING_DISABLED: "false" # Define if the tracing is disabled.
+      # OTEL_METRICS_DISABLED: "false" # Define if the metrics are disabled.
       # OTEL_SDK_FORCE_RUN: "true" # Uncomment me to force-start opentelemetry on local development.
 
     volumes:

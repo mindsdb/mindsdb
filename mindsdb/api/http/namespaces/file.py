@@ -9,6 +9,7 @@ import requests
 from flask import current_app as ca
 from flask import request
 from flask_restx import Resource
+import pandas as pd
 
 from mindsdb.api.http.namespaces.configs.files import ns_conf
 from mindsdb.api.http.utils import http_error
@@ -162,8 +163,20 @@ class File(Resource):
                 return http_error(
                     400, "Wrong content.", "Archive must contain data file in root."
                 )
+        
+        elif lp.endswith("xlsx") or lp.endswith("xls"):
+            # Get list of sheets.
+            xls = pd.ExcelFile(file_path)
+            # If there is only one sheet, there is no need to process each sheet separately.
+            sheet_names = xls.sheet_names if len(xls.sheet_names) > 1 else None
 
         try:
+            # If there are multiple sheets, save each sheet separately.
+            if sheet_names:
+                ca.file_controller.save_excel_file_with_sheets(
+                    mindsdb_file_name, file_path, sheet_names, file_name=original_file_name
+                )
+
             ca.file_controller.save_file(
                 mindsdb_file_name, file_path, file_name=original_file_name
             )

@@ -4,6 +4,7 @@ from opentelemetry._logs import set_logger_provider
 from opentelemetry.exporter.otlp.proto.grpc._log_exporter import (
     OTLPLogExporter,
 )
+from opentelemetry.sdk._logs._internal.export import LogExporter
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.sdk.resources import Resource
@@ -11,7 +12,7 @@ from opentelemetry.sdk.resources import Resource
 from mindsdb.utilities.log import get_mindsdb_log_level
 
 
-def setup_otel_logging(resource: Resource, exporter: OTLPLogExporter) -> None:
+def setup_otel_logging(resource: Resource, exporter: LogExporter) -> None:
     """
     Setup OpenTelemetry logging
     """

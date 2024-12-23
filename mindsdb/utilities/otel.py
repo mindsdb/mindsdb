@@ -2,12 +2,18 @@ import os
 import typing
 
 from opentelemetry import trace  # noqa: F401
-from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
-from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
-from opentelemetry.sdk.metrics._internal.export import ConsoleMetricExporter, MetricExporter
+from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter as OTLPLogExporterGRPC
+from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter as OTLPLogExporterHTTP
+from opentelemetry.sdk._logs._internal.export import LogExporter
+from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter as OTLPMetricExporterGRPC
+from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter as OTLPMetricExporterHTTP
+from opentelemetry.sdk.metrics.export import MetricExporter
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter as OTLPSpanExporterGRPC
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter as OTLPSpanExporterHTTP
+from opentelemetry.sdk.trace.export import SpanExporter as OTLPSpanExporter
+from opentelemetry.sdk.metrics._internal.export import ConsoleMetricExporter
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace.export import ConsoleSpanExporter
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 
 from mindsdb.utilities.otel_logging import setup_otel_logging
 from mindsdb.utilities.otel_metrics import setup_otel_metrics
@@ -19,6 +25,9 @@ logger = log.getLogger(__name__)
 
 # Check OpenTelemetry exporter type
 OTEL_EXPORTER_TYPE = os.getenv("OTEL_EXPORTER_TYPE", "console")  # console or otlp
+
+# Define OpenTelemetry exporter protocol
+OTEL_EXPORTER_PROTOCOL = os.getenv("OTEL_EXPORTER_PROTOCOL", "grpc")  # grpc or http
 
 # Define OTLP endpoint. If not set, the default OTLP endpoint will be used
 OTEL_OTLP_ENDPOINT = os.getenv("OTEL_OTLP_ENDPOINT", "http://localhost:4317")
@@ -33,10 +42,10 @@ OTEL_OTLP_TRACING_ENDPOINT = os.getenv("OTEL_OTLP_TRACING_ENDPOINT", OTEL_OTLP_E
 OTEL_OTLP_METRICS_ENDPOINT = os.getenv("OTEL_OTLP_METRICS_ENDPOINT", OTEL_OTLP_ENDPOINT)
 
 # Define service name
-OTEL_SERVICE_NAME = os.getenv("OTEL_SERVICE_NAME", "mindsdb_new_test")
+OTEL_SERVICE_NAME = os.getenv("OTEL_SERVICE_NAME", "mindsdb")
 
 # DEFINE SERVICE INSTANCE ID
-OTEL_SERVICE_INSTANCE_ID = os.getenv("OTEL_SERVICE_INSTANCE_ID", "mindsdb")
+OTEL_SERVICE_INSTANCE_ID = os.getenv("OTEL_SERVICE_INSTANCE_ID", "mindsdb-instance")
 
 # The name of the environment we"re on, by default local for development, this is set differently per-env in our Helm
 # chart values files
@@ -91,23 +100,28 @@ def get_otel_attributes() -> dict:
     return attributes
 
 
-def get_logging_exporter() -> typing.Optional[OTLPLogExporter]:
+def get_logging_exporter() -> typing.Optional[LogExporter]:
     """
-    Get OpenTelemetry logging exporter
+    Get OpenTelemetry logging exporter.
 
     Returns:
         OTLPLogExporter: OpenTelemetry logging exporter
     """
 
     if OTEL_EXPORTER_TYPE == "otlp":
-        logging_exporter = OTLPLogExporter(
-            endpoint=OTEL_OTLP_LOGGING_ENDPOINT,
-            insecure=True
-        )
-    else:
-        logging_exporter = None
 
-    return logging_exporter
+        if OTEL_EXPORTER_PROTOCOL == "grpc":
+            return OTLPLogExporterGRPC(
+                endpoint=OTEL_OTLP_LOGGING_ENDPOINT,
+                insecure=True
+            )
+
+        elif OTEL_EXPORTER_PROTOCOL == "http":
+            return OTLPLogExporterHTTP(
+                endpoint=OTEL_OTLP_LOGGING_ENDPOINT
+            )
+
+    return None
 
 
 def get_span_exporter() -> OTLPSpanExporter:
@@ -119,15 +133,19 @@ def get_span_exporter() -> OTLPSpanExporter:
     """
 
     if OTEL_EXPORTER_TYPE == "otlp":
-        span_exporter = OTLPSpanExporter(
-            endpoint=OTEL_OTLP_TRACING_ENDPOINT,
-            insecure=True
-        )
 
-    else:
-        span_exporter = ConsoleSpanExporter()
+        if OTEL_EXPORTER_PROTOCOL == "grpc":
+            return OTLPSpanExporterGRPC(
+                endpoint=OTEL_OTLP_TRACING_ENDPOINT,
+                insecure=True
+            )
 
-    return span_exporter
+        elif OTEL_EXPORTER_PROTOCOL == "http":
+            return OTLPSpanExporterHTTP(
+                endpoint=OTEL_OTLP_TRACING_ENDPOINT
+            )
+
+    return ConsoleSpanExporter()
 
 
 def get_metrics_exporter() -> typing.Optional[MetricExporter]:
@@ -139,14 +157,19 @@ def get_metrics_exporter() -> typing.Optional[MetricExporter]:
     """
 
     if OTEL_EXPORTER_TYPE == "otlp":
-        metrics_exporter = OTLPMetricExporter(
-            endpoint=OTEL_OTLP_METRICS_ENDPOINT,
-            insecure=True
-        )
-    else:
-        metrics_exporter = ConsoleMetricExporter()
 
-    return metrics_exporter
+        if OTEL_EXPORTER_PROTOCOL == "grpc":
+            return OTLPMetricExporterGRPC(
+                endpoint=OTEL_OTLP_METRICS_ENDPOINT,
+                insecure=True
+            )
+
+        elif OTEL_EXPORTER_PROTOCOL == "http":
+            return OTLPMetricExporterHTTP(
+                endpoint=OTEL_OTLP_METRICS_ENDPOINT
+            )
+
+    return ConsoleMetricExporter()
 
 
 if not OTEL_SDK_DISABLED or OTEL_SDK_FORCE_RUN:

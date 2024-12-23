@@ -54,6 +54,7 @@ services:
       LANGFUSE_TIMEOUT: "10"
       LANGFUSE_SAMPLE_RATE: "1.0"
       OTEL_EXPORTER_TYPE: "console" # or "console" # Define the exporter type (console/otlp)
+      OTEL_EXPORTER_PROTOCOL: "grpc" # or "http" # Define the protocol for the otlp exporter.
       # OTEL_OTLP_ENDPOINT: "http://otel-collector:4317" # Define the endpoint for the otlp exporter.
       OTEL_SERVICE_NAME: "mindsdb" # Define the service name
       OTEL_SERVICE_INSTANCE_ID: "mindsdb-instance" # Define the service instance id

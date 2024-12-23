@@ -61,6 +61,66 @@ class FileController:
             for record in file_records
         ]
         return files_metadata
+    
+    def save_excel_file_with_sheets(self, name, file_path, sheet_names, file_name=None):
+        """Save the file to our store
+
+        Args:
+            name (str): with that name file will be available in sql api
+            file_name (str): file name
+            file_path (str): path to the file
+            sheet_names (list[str]): list of sheet names
+
+        Returns:
+            int: id of 'file' record in db
+        """
+        files_metadata = self.get_files()
+        for sheet_name in sheet_names:
+            name_for_sheet = f"{name}_{sheet_name}"
+
+            if name_for_sheet in [x["name"] for x in files_metadata]:
+                raise Exception(f"File already exists: {name_for_sheet}")
+
+            if file_name is None:
+                file_name_for_sheet = Path(file_path).name.split(".")[0] + f"_{sheet_name}.xlsx"
+            
+            file_dir = None
+            file_record_ids = []
+            try:
+                df, _ = FileHandler._handle_source(file_path, sheet_name=sheet_name)
+
+                ds_meta = {"row_count": len(df), "column_names": list(df.columns)}
+
+                file_record = db.File(
+                    name=name_for_sheet,
+                    company_id=ctx.company_id,
+                    source_file_path=file_name_for_sheet,
+                    file_path="",
+                    row_count=ds_meta["row_count"],
+                    columns=ds_meta["column_names"],
+                )
+                db.session.add(file_record)
+                db.session.commit()
+                store_file_path = f"file_{ctx.company_id}_{file_record.id}"
+                file_record.file_path = store_file_path
+                db.session.commit()
+
+                file_dir = Path(self.dir).joinpath(store_file_path)
+                file_dir.mkdir(parents=True, exist_ok=True)
+                source = file_dir.joinpath(file_name_for_sheet)
+                
+                df.to_excel(str(source), index=False)
+
+                self.fs_store.put(store_file_path, base_dir=self.dir)
+                file_record_ids.append(file_record.id)
+            except Exception as e:
+                logger.error(e)
+                if file_dir is not None:
+                    shutil.rmtree(file_dir)
+                raise
+
+        os.remove(file_path)
+        return file_record_ids
 
     def save_file(self, name, file_path, file_name=None):
         """Save the file to our store

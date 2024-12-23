@@ -50,9 +50,18 @@ def start(verbose, no_studio, app: Flask = None):
         def post_fork(arbiter, worker):
             db.engine.dispose()
 
+        def before_worker_exit(arbiter, worker):
+            """Latest version of gunicorn (23.0.0) calls 'join' for each child process before exiting. However this does
+            not work for processes created by ProcessPoolExecutor, because they execute forever. We need to explicitly
+            call 'shutdown' for such processes before exiting.
+            """
+            from mindsdb.integrations.libs.process_cache import process_cache
+            process_cache.shutdown(wait=True)
+
         options = {
             'bind': f'{host}:{port}',
             'post_fork': post_fork,
+            'worker_exit': before_worker_exit,
             **server_config
         }
         StandaloneApplication(app, options).run()

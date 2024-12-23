@@ -141,6 +141,7 @@ class File(Resource):
         original_file_name = clear_filename(data.get("original_file_name"))
 
         file_path = os.path.join(temp_dir_path, data["file"])
+        sheet_names = None
         lp = file_path.lower()
         if lp.endswith((".zip", ".tar.gz")):
             if lp.endswith(".zip"):
@@ -164,7 +165,7 @@ class File(Resource):
                     400, "Wrong content.", "Archive must contain data file in root."
                 )
         
-        elif lp.endswith("xlsx") or lp.endswith("xls"):
+        elif lp.endswith(".xlsx") or lp.endswith(".xls"):
             # Get list of sheets.
             xls = pd.ExcelFile(file_path)
             # If there is only one sheet, there is no need to process each sheet separately.

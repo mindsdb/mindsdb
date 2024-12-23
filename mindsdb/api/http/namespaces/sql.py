@@ -21,6 +21,7 @@ from mindsdb.utilities.context import context as ctx
 
 logger = log.getLogger(__name__)
 
+
 @ns_conf.route("/query")
 @ns_conf.param("query", "Execute query")
 class Query(Resource):

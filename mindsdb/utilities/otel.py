@@ -6,7 +6,7 @@ from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
 from opentelemetry.sdk.metrics._internal.export import ConsoleMetricExporter, MetricExporter
 from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+from opentelemetry.sdk.trace.export import ConsoleSpanExporter
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 
 from mindsdb.utilities.otel_logging import setup_otel_logging
@@ -49,17 +49,17 @@ OTEL_SERVICE_RELEASE = os.getenv("OTEL_SERVICE_RELEASE", "local").lower()
 OTEL_EXTRA_ATTRIBUTES = os.getenv("OTEL_EXTRA_ATTRIBUTES", "")
 
 # By default, we have Open Telemetry SDK enabled on all envs, except for local which is disabled by default.
-OTEL_SDK_DISABLED = (os.getenv("OTEL_SDK_DISABLED", "false").lower() == "true" or
-                     os.getenv("OTEL_SERVICE_ENVIRONMENT", "local").lower() == "local")
+OTEL_SDK_DISABLED = (os.getenv("OTEL_SDK_DISABLED", "false").lower() == "true"
+                     or os.getenv("OTEL_SERVICE_ENVIRONMENT", "local").lower() == "local")
 
-OTEL_LOGGING_DISABLED = (os.getenv("OTEL_LOGGING_DISABLED", "false").lower() == "true" or
-                         OTEL_SDK_DISABLED)
+OTEL_LOGGING_DISABLED = (os.getenv("OTEL_LOGGING_DISABLED", "false").lower() == "true"
+                         or OTEL_SDK_DISABLED)
 
-OTEL_TRACING_DISABLED = (os.getenv("OTEL_TRACING_DISABLED", "false").lower() == "true" or
-                         OTEL_SDK_DISABLED)
+OTEL_TRACING_DISABLED = (os.getenv("OTEL_TRACING_DISABLED", "false").lower() == "true"
+                         or OTEL_SDK_DISABLED)
 
-OTEL_METRICS_DISABLED = (os.getenv("OTEL_METRICS_DISABLED", "false").lower() == "true" or
-                         OTEL_SDK_DISABLED)
+OTEL_METRICS_DISABLED = (os.getenv("OTEL_METRICS_DISABLED", "false").lower() == "true"
+                         or OTEL_SDK_DISABLED)
 
 # If you want to enable Open Telemetry on local for some reason please set OTEL_SDK_FORCE_RUN to true
 OTEL_SDK_FORCE_RUN = os.getenv("OTEL_SDK_FORCE_RUN", "false").lower() == "true"

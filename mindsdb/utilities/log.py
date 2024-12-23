@@ -33,15 +33,18 @@ def get_console_handler_config_level() -> int:
     console_handler_config = app_config['logging']['handlers']['console']
     return getattr(logging, console_handler_config["level"])
 
+
 def get_file_handler_config_level() -> int:
     file_handler_config = app_config['logging']['handlers']['file']
     return getattr(logging, file_handler_config["level"])
+
 
 def get_mindsdb_log_level() -> int:
     console_handler_config_level = get_console_handler_config_level()
     file_handler_config_level = get_file_handler_config_level()
 
     return min(console_handler_config_level, file_handler_config_level)
+
 
 def configure_logging():
     handlers_config = {}

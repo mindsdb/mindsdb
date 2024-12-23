@@ -62,17 +62,18 @@ class FileController:
         ]
         return files_metadata
     
-    def save_excel_file_with_sheets(self, name, file_path, sheet_names, file_name=None):
-        """Save the file to our store
+    def save_excel_file_with_sheets(self, name: str, file_path: str, sheet_names: str, file_name: str = None) -> list[int]:
+        """
+        Saves an uploaded Excel file with multiple sheets to the database, file system, file store, and returns the file record ID.
 
         Args:
-            name (str): with that name file will be available in sql api
-            file_name (str): file name
-            file_path (str): path to the file
-            sheet_names (list[str]): list of sheet names
+            name (str): The name given to the file. This will be used to reference the file in the SQL API.
+            file_path (str): The temporary path to the uploaded file.
+            sheet_names (list): The names of the sheets in the Excel file to save.
+            file_name (str): The name of the uploaded file.
 
         Returns:
-            int: id of 'file' record in db
+            list[int]: The IDs of the file records in the database.
         """
         files_metadata = self.get_files()
         for sheet_name in sheet_names:
@@ -84,54 +85,37 @@ class FileController:
             if file_name is None:
                 file_name_for_sheet = Path(file_path).name.split(".")[0] + f"_{sheet_name}.xlsx"
             
-            file_dir = None
             file_record_ids = []
+            file_record, storage_directory_name, stored_file_path, file_df = self._save_file(
+                name_for_sheet,
+                file_path,
+                file_name=file_name_for_sheet,
+                sheet_name=sheet_name
+            )
+            
             try:
-                df, _ = FileHandler._handle_source(file_path, sheet_name=sheet_name)
+                file_df.to_excel(str(stored_file_path), index=False)
 
-                ds_meta = {"row_count": len(df), "column_names": list(df.columns)}
-
-                file_record = db.File(
-                    name=name_for_sheet,
-                    company_id=ctx.company_id,
-                    source_file_path=file_name_for_sheet,
-                    file_path="",
-                    row_count=ds_meta["row_count"],
-                    columns=ds_meta["column_names"],
-                )
-                db.session.add(file_record)
-                db.session.commit()
-                store_file_path = f"file_{ctx.company_id}_{file_record.id}"
-                file_record.file_path = store_file_path
-                db.session.commit()
-
-                file_dir = Path(self.dir).joinpath(store_file_path)
-                file_dir.mkdir(parents=True, exist_ok=True)
-                source = file_dir.joinpath(file_name_for_sheet)
-                
-                df.to_excel(str(source), index=False)
-
-                self.fs_store.put(store_file_path, base_dir=self.dir)
+                self.fs_store.put(storage_directory_name, base_dir=self.dir)
                 file_record_ids.append(file_record.id)
             except Exception as e:
                 logger.error(e)
-                if file_dir is not None:
-                    shutil.rmtree(file_dir)
                 raise
 
         os.remove(file_path)
         return file_record_ids
 
-    def save_file(self, name, file_path, file_name=None):
-        """Save the file to our store
+    def save_file(self, name: str, file_path: str, file_name: str = None) -> int:
+        """
+        Saves an uploaded file to the database, file system, file store, and returns the file record ID.
 
         Args:
-            name (str): with that name file will be available in sql api
-            file_name (str): file name
-            file_path (str): path to the file
+            name (str): The name given to the file. This will be used to reference the file in the SQL API.
+            file_path (str): The temporary path to the uploaded file.
+            file_name (str): The name of the uploaded file.
 
         Returns:
-            int: id of 'file' record in db
+            int: The ID of the file record in the database.
         """
         files_metadata = self.get_files()
         if name in [x["name"] for x in files_metadata]:
@@ -140,11 +124,34 @@ class FileController:
         if file_name is None:
             file_name = Path(file_path).name
 
-        file_dir = None
+        file_record, storage_directory_name, stored_file_path, _ = self._save_file(name, file_path, file_name=file_name)
         try:
-            df, _col_map = FileHandler._handle_source(file_path)
+            # NOTE: There may be a delay between file being saved and record being committed to the database.
+            shutil.move(file_path, str(stored_file_path))
+            self.fs_store.put(storage_directory_name, base_dir=self.dir)
+        except Exception as e:
+            logger.error(e)
+            raise
 
-            ds_meta = {"row_count": len(df), "column_names": list(df.columns)}
+        return file_record.id
+    
+    def _save_file(self, name: str, file_path: str, file_name: str, sheet_name: str = None):
+        """
+        Records the file in the database and creates a directory for it in the file system.
+
+        Args:
+            name (str): The name given to the file. This will be used to reference the file in the SQL API.
+            file_path (str): The temporary path to the uploaded file.
+            file_name (str): The name of the uploaded file.
+            sheet_name (str): The name of the sheet in the Excel file to save. If None, the first sheet will be saved.
+
+        Returns:
+            tuple: The 'file' record in the database, the directory name of the stored file, the full path to the stored file, and the file contents as a DataFrame.
+        """
+        try:
+            file_df, _ = FileHandler._handle_source(file_path, sheet_name=sheet_name)
+
+            ds_meta = {"row_count": len(file_df), "column_names": list(file_df.columns)}
 
             file_record = db.File(
                 name=name,
@@ -156,24 +163,26 @@ class FileController:
             )
             db.session.add(file_record)
             db.session.commit()
-            store_file_path = f"file_{ctx.company_id}_{file_record.id}"
-            file_record.file_path = store_file_path
+
+            # Create a directory path for storing the file, based on company ID and file record ID.
+            storage_directory_name = f"file_{ctx.company_id}_{file_record.id}"
+            file_record.file_path = storage_directory_name
             db.session.commit()
-
-            file_dir = Path(self.dir).joinpath(store_file_path)
-            file_dir.mkdir(parents=True, exist_ok=True)
-            source = file_dir.joinpath(file_name)
-            # NOTE may be delay between db record exists and file is really in folder
-            shutil.move(file_path, str(source))
-
-            self.fs_store.put(store_file_path, base_dir=self.dir)
+            
+            # Create the full path to the storage directory.
+            full_storage_directory_path = Path(self.dir).joinpath(storage_directory_name)
+            # Create the storage directory if it does not exist.
+            full_storage_directory_path.mkdir(parents=True, exist_ok=True)
+            
+            # Create the full path to the stored file.
+            stored_file_path = full_storage_directory_path.joinpath(file_name)
+            
+            return file_record, storage_directory_name, stored_file_path, file_df
         except Exception as e:
             logger.error(e)
-            if file_dir is not None:
-                shutil.rmtree(file_dir)
+            if full_storage_directory_path.exists():
+                shutil.rmtree(full_storage_directory_path)
             raise
-
-        return file_record.id
 
     def delete_file(self, name):
         file_record = (

@@ -322,7 +322,7 @@ class Config:
 
         # region server type
         server_type = os.environ.get('MINDSDB_HTTP_SERVER_TYPE', '').lower()
-        if server_type != '':
+        if server_type == '':
             server_type = os.environ.get('MINDSDB_DEFAULT_SERVER', '').lower()
         if server_type != '':
             if server_type == 'waitress':

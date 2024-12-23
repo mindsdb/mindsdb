@@ -168,8 +168,17 @@ class File(Resource):
         elif lp.endswith(".xlsx") or lp.endswith(".xls"):
             # Get list of sheets.
             xls = pd.ExcelFile(file_path)
+
+            # Check if the sheet names are provided in the request.
+            requested_sheet_names = data.get("sheet_names")
+            if requested_sheet_names:
+                sheet_names = requested_sheet_names.split(",")
+            # If the sheet names are not provided, use the sheet names from the Excel file.
+            else:
+                sheet_names = xls.sheet_names
+
             # If there is only one sheet, there is no need to process each sheet separately.
-            sheet_names = xls.sheet_names if len(xls.sheet_names) > 1 else None
+            sheet_names = sheet_names if len(sheet_names) > 1 else None
 
         try:
             # If the file is an Excel file with multiple sheets, save each sheet separately.

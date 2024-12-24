@@ -486,9 +486,9 @@ class Config:
         if 'log' in self._config:
             logger.warning("The 'log' config option is no longer supported. Use 'logging' instead.")
 
-        if os.environ.get('MINDSDB_HTTP_SERVER_TYPE', '') != '':
+        if os.environ.get('MINDSDB_DEFAULT_SERVER', '') != '':
             logger.warning(
-                "Env variable 'MINDSDB_HTTP_SERVER_TYPE' is going to be deprecated soon. "
+                "Env variable 'MINDSDB_DEFAULT_SERVER' is going to be deprecated soon. "
                 "Use 'MINDSDB_HTTP_SERVER_TYPE' instead."
             )
 

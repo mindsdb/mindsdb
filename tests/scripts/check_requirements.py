@@ -137,6 +137,8 @@ PACKAGE_NAME_MAP = {
     "opentelemetry-exporter-otlp": ["opentelemetry"],
     "opentelemetry-instrumentation-requests": ["opentelemetry"],
     "opentelemetry-instrumentation-flask": ["opentelemetry"],
+    "IfxPyDbi": ["IfxPy"],
+    "ingres_sa_dialect": ["sqlalchemy-ingres"],
 }
 
 # We use this to exit with a non-zero status code if any check fails

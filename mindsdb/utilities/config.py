@@ -492,6 +492,14 @@ class Config:
                 "Use 'MINDSDB_HTTP_SERVER_TYPE' instead."
             )
 
+        for env_name in ('MINDSDB_HTTP_SERVER_TYPE', 'MINDSDB_DEFAULT_SERVER'):
+            env_value = os.environ.get(env_name, '')
+            if env_value.lower() not in ('waitress', 'flask', 'gunicorn'):
+                logger.warning(
+                    f"The value '{env_value}' of the environment variable {env_name} is not valid. "
+                    "It must be one of the following: 'waitress', 'flask', or 'gunicorn'."
+                )
+
     @property
     def cmd_args(self):
         if self._cmd_args is None:

@@ -1,5 +1,6 @@
-from typing import List
 import copy
+from typing import List, Optional
+
 import numpy as np
 import pandas as pd
 
@@ -33,6 +34,15 @@ class Column:
 
     def __repr__(self):
         return f'{self.__class__.__name__}({self.__dict__})'
+
+
+def rename_df_columns(df: pd.DataFrame, names: Optional[List] = None) -> None:
+    """Inplace rename of dataframe columns
+    """
+    if names is None:
+        df.rename({v: i for i, v in enumerate(df.columns)}, axis=1, inplace=True)
+    else:
+        df.rename({v: names[i] for i, v in enumerate(df.columns)}, axis=1, inplace=True)
 
 
 class ResultSet:
@@ -84,8 +94,7 @@ class ResultSet:
             in zip(df.columns, df.dtypes)
         ]
 
-        # rename columns to indexes
-        df.rename({v: i for i, v in enumerate(df.columns)}, axis=1, inplace=True)
+        rename_df_columns(df)
         self._df = df
 
         return self
@@ -106,14 +115,16 @@ class ResultSet:
                 column = Column(col)
             self._columns.append(column)
 
-        df.rename({v: i for i, v in enumerate(df.columns)}, axis=1, inplace=True)
+        rename_df_columns(df)
         self._df = df
 
         return self
 
     def to_df(self):
-        columns = self.get_column_names()
-        return self.get_raw_df().set_axis(columns, axis=1)
+        columns_names = self.get_column_names()
+        df = self.get_raw_df()
+        rename_df_columns(df, columns_names)
+        return df
 
     def to_df_cols(self, prefix=''):
         # returns dataframe and dict of columns
@@ -126,7 +137,9 @@ class ResultSet:
             columns.append(name)
             col_names[name] = col
 
-        return self.get_raw_df().set_axis(columns, axis=1), col_names
+        df = self.get_raw_df()
+        rename_df_columns(df, columns)
+        return df, col_names
 
     # --- tables ---
 

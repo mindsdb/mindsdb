@@ -290,8 +290,6 @@ class ResultSet:
     def get_column_values(self, col_idx):
         # get by column index
         df = self.get_raw_df()
-        # TEMP
-        rename_df_columns(df)
         return list(df[col_idx])
 
     def set_column_values(self, col_name, values):

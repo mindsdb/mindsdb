@@ -4,7 +4,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, SpanExporter
 
 
-def setup_otel_tracing(resource: Resource, exporter: SpanExporter) -> None:
+def setup_tracer(resource: Resource, exporter: SpanExporter) -> None:
     """
     Setup OpenTelemetry tracing
     """

@@ -7,7 +7,7 @@ from opentelemetry.sdk.metrics.export import (
 )
 
 
-def setup_otel_metrics(resource: Resource, exporter: MetricExporter) -> None:
+def setup_meter(resource: Resource, exporter: MetricExporter) -> None:
     """
     Setup OpenTelemetry metrics
     """

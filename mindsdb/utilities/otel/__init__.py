@@ -2,22 +2,21 @@ import os
 import typing
 
 from opentelemetry import trace  # noqa: F401
+from opentelemetry import metrics  # noqa: F401
 from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter as OTLPLogExporterGRPC
 from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter as OTLPLogExporterHTTP
 from opentelemetry.sdk._logs._internal.export import LogExporter
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter as OTLPMetricExporterGRPC
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter as OTLPMetricExporterHTTP
-from opentelemetry.sdk.metrics.export import MetricExporter
+from opentelemetry.sdk.metrics.export import MetricExporter, ConsoleMetricExporter
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter as OTLPSpanExporterGRPC
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter as OTLPSpanExporterHTTP
-from opentelemetry.sdk.trace.export import SpanExporter as OTLPSpanExporter
-from opentelemetry.sdk.metrics._internal.export import ConsoleMetricExporter
+from opentelemetry.sdk.trace.export import SpanExporter, ConsoleSpanExporter
 from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace.export import ConsoleSpanExporter
 
-from mindsdb.utilities.otel_logging import setup_otel_logging
-from mindsdb.utilities.otel_metrics import setup_otel_metrics
-from mindsdb.utilities.otel_tracing import setup_otel_tracing
+from mindsdb.utilities.otel.logger import setup_logger
+from mindsdb.utilities.otel.meter import setup_meter
+from mindsdb.utilities.otel.tracer import setup_tracer
 from mindsdb.utilities.utils import parse_csv_attributes
 from mindsdb.utilities import log
 
@@ -61,14 +60,14 @@ OTEL_EXTRA_ATTRIBUTES = os.getenv("OTEL_EXTRA_ATTRIBUTES", "")
 OTEL_SDK_DISABLED = (os.getenv("OTEL_SDK_DISABLED", "false").lower() == "true"
                      or os.getenv("OTEL_SERVICE_ENVIRONMENT", "local").lower() == "local")
 
-OTEL_LOGGING_DISABLED = (os.getenv("OTEL_LOGGING_DISABLED", "false").lower() == "true"
-                         or OTEL_SDK_DISABLED)
+# Define if OpenTelemetry logging is disabled. By default, it is enabled.
+OTEL_LOGGING_DISABLED = os.getenv("OTEL_LOGGING_DISABLED", "false").lower() == "true"
 
-OTEL_TRACING_DISABLED = (os.getenv("OTEL_TRACING_DISABLED", "false").lower() == "true"
-                         or OTEL_SDK_DISABLED)
+# Define if OpenTelemetry tracing is disabled. By default, it is enabled.
+OTEL_TRACING_DISABLED = os.getenv("OTEL_TRACING_DISABLED", "false").lower() == "true"
 
-OTEL_METRICS_DISABLED = (os.getenv("OTEL_METRICS_DISABLED", "false").lower() == "true"
-                         or OTEL_SDK_DISABLED)
+# Define if OpenTelemetry metrics is disabled. By default, it is enabled.
+OTEL_METRICS_DISABLED = os.getenv("OTEL_METRICS_DISABLED", "false").lower() == "true"
 
 # If you want to enable Open Telemetry on local for some reason please set OTEL_SDK_FORCE_RUN to true
 OTEL_SDK_FORCE_RUN = os.getenv("OTEL_SDK_FORCE_RUN", "false").lower() == "true"
@@ -124,7 +123,7 @@ def get_logging_exporter() -> typing.Optional[LogExporter]:
     return None
 
 
-def get_span_exporter() -> OTLPSpanExporter:
+def get_span_exporter() -> SpanExporter:
     """
     Get OpenTelemetry span exporter
 
@@ -188,12 +187,12 @@ if not OTEL_SDK_DISABLED or OTEL_SDK_FORCE_RUN:
 
     if not OTEL_LOGGING_DISABLED:
         logger.info("OpenTelemetry Logging is enabled")
-        setup_otel_logging(resource, get_logging_exporter())
+        setup_logger(resource, get_logging_exporter())
 
     if not OTEL_TRACING_DISABLED:
         logger.info("OpenTelemetry Tracing is enabled")
-        setup_otel_tracing(resource, get_span_exporter())
+        setup_tracer(resource, get_span_exporter())
 
     if not OTEL_METRICS_DISABLED:
         logger.info("OpenTelemetry Metrics is enabled")
-        setup_otel_metrics(resource, get_metrics_exporter())
+        setup_meter(resource, get_metrics_exporter())

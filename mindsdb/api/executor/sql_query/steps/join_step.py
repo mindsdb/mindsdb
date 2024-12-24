@@ -90,15 +90,15 @@ class JoinStepCall(BaseStepCall):
         table_b, names_b = right_data.to_df_cols(prefix='B')
 
         query = f"""
-                       SELECT * FROM table_a {join_type} table_b
-                       ON {join_condition}
-                   """
+            SELECT * FROM table_a {join_type} table_b
+            ON {join_condition}
+        """
         resp_df, _description = query_df_with_type_infer_fallback(query, {
             'table_a': table_a,
             'table_b': table_b
         })
 
-        resp_df = resp_df.replace({np.nan: None})
+        resp_df.replace({np.nan: None}, inplace=True)
 
         names_a.update(names_b)
         data = ResultSet().from_df_cols(resp_df, col_names=names_a)

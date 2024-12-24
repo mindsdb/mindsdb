@@ -1,5 +1,7 @@
-from typing import List
 import copy
+from enum import Enum
+from typing import List, Optional
+
 import numpy as np
 import pandas as pd
 
@@ -35,6 +37,20 @@ class Column:
         return f'{self.__class__.__name__}({self.__dict__})'
 
 
+def rename_df_columns(df: pd.DataFrame, names: Optional[List] = None) -> None:
+    """Inplace rename of dataframe columns
+    """
+    if names is not None:
+        df.columns = names
+    else:
+        df.columns = list(range(len(df.columns)))
+
+
+class ColumnsMode(Enum):
+    INDEX = 'index'
+    STRING = 'string'
+
+
 class ResultSet:
     def __init__(self, columns=None, values: List[List] = None, df: pd.DataFrame = None):
         '''
@@ -52,6 +68,10 @@ class ResultSet:
         elif df is None:
             df = pd.DataFrame(values)
         self._df = df
+
+        self._df_columnы_mode = ColumnsMode.INDEX
+        if self._df is not None and len(self._df.columns) > 0 and isinstance(self._df.columns[0], str):
+            self._df_columnы_mode = ColumnsMode.STRING
 
         self.is_prediction = False
 
@@ -73,20 +93,19 @@ class ResultSet:
     # --- converters ---
 
     def from_df(self, df, database=None, table_name=None, table_alias=None):
-
-        columns_dtypes = list(df.dtypes)
-
-        for i, col in enumerate(df.columns):
-            self._columns.append(Column(
-                name=col,
+        self._columns = [
+            Column(
+                name=column_name,
                 table_name=table_name,
                 table_alias=table_alias,
                 database=database,
-                type=columns_dtypes[i]
-            ))
+                type=column_dtype
+            ) for column_name, column_dtype
+            in zip(df.columns, df.dtypes)
+        ]
 
-        # rename columns to indexes
-        self._df = df.set_axis(range(len(df.columns)), axis=1)
+        rename_df_columns(df)
+        self._df = df
 
         return self
 
@@ -97,9 +116,6 @@ class ResultSet:
             if col.alias is not None:
                 alias_idx[col.alias] = col
 
-        # resp_dict = df.to_dict(orient='split')
-        # self._records = resp_dict['data']
-
         for col in df.columns:
             if col in col_names or strict:
                 column = col_names[col]
@@ -109,13 +125,16 @@ class ResultSet:
                 column = Column(col)
             self._columns.append(column)
 
-        self._df = df.set_axis(range(len(df.columns)), axis=1)
+        rename_df_columns(df)
+        self._df = df
 
         return self
 
     def to_df(self):
-        columns = self.get_column_names()
-        return self.get_raw_df().set_axis(columns, axis=1)
+        columns_names = self.get_column_names()
+        df = self.get_raw_df()
+        rename_df_columns(df, columns_names)
+        return df
 
     def to_df_cols(self, prefix=''):
         # returns dataframe and dict of columns
@@ -128,7 +147,9 @@ class ResultSet:
             columns.append(name)
             col_names[name] = col
 
-        return self.get_raw_df().set_axis(columns, axis=1), col_names
+        df = self.get_raw_df()
+        rename_df_columns(df, columns)
+        return df, col_names
 
     # --- tables ---
 
@@ -174,7 +195,7 @@ class ResultSet:
         self._columns.pop(idx)
 
         self._df.drop(idx, axis=1, inplace=True)
-        self._df = self._df.set_axis(range(len(self._df.columns)), axis=1)
+        rename_df_columns(self._df)
 
     @property
     def columns(self):
@@ -226,7 +247,7 @@ class ResultSet:
         if len(df.columns) != len(self._columns):
             raise WrongArgumentError(f'Record length mismatch columns length: {len(df.columns)} != {len(self.columns)}')
 
-        df = df.set_axis(range(len(df.columns)), axis=1)
+        rename_df_columns(df)
 
         if self._df is None:
             self._df = df

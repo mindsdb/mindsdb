@@ -461,6 +461,10 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
         self.db.session.commit()
 
         def predict_f(_model_name, df, pred_format="dict", *args, **kargs):
+            # df is mutable and may change after 'predict' call.
+            # This dirty hack is to save original df.
+            df._predict_df = df[:]
+
             explain_arr = []
             data = df.to_dict('records')
 

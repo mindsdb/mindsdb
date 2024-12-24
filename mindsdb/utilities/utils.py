@@ -3,7 +3,7 @@ import re
 import typing
 
 
-def parse_csv_attributes(csv_attributes: str = "") -> typing.Dict[str, str]:
+def parse_csv_attributes(csv_attributes: typing.Optional[str] = "") -> typing.Dict[str, str]:
     """
     Parse the raw_attributes variable, which uses the CSV format:
     key=value,another=something_else

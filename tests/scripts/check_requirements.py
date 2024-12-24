@@ -51,7 +51,8 @@ MAIN_RULE_IGNORES = {
 #   - pysqlite3 in the chromadb handler
 #   - dspy-ai in langchain handler
 OPTIONAL_HANDLER_DEPS = ["torch", "tiktoken", "wikipedia", "openpyxl",
-                         "sentence-transformers", "faiss-cpu", "litellm", "chromadb", "dspy-ai", "sqlalchemy-solr"]
+                         "sentence-transformers", "faiss-cpu", "litellm", "chromadb", "dspy-ai", "sqlalchemy-solr", "informix",
+                         "ingres"]
 
 # List of rules we can ignore for specific packages
 # Here we ignore any packages in the main requirements.txt for "listed but not used" errors, because they will be used for the core code but not necessarily in a given handler

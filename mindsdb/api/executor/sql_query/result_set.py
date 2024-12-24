@@ -73,20 +73,20 @@ class ResultSet:
     # --- converters ---
 
     def from_df(self, df, database=None, table_name=None, table_alias=None):
-
-        columns_dtypes = list(df.dtypes)
-
-        for i, col in enumerate(df.columns):
-            self._columns.append(Column(
-                name=col,
+        self._columns = [
+            Column(
+                name=column_name,
                 table_name=table_name,
                 table_alias=table_alias,
                 database=database,
-                type=columns_dtypes[i]
-            ))
+                type=column_dtype
+            ) for column_name, column_dtype
+            in zip(df.columns, df.dtypes)
+        ]
 
         # rename columns to indexes
-        self._df = df.set_axis(range(len(df.columns)), axis=1)
+        df.rename({v: i for i, v in enumerate(df.columns)}, axis=1, inplace=True)
+        self._df = df
 
         return self
 
@@ -97,9 +97,6 @@ class ResultSet:
             if col.alias is not None:
                 alias_idx[col.alias] = col
 
-        # resp_dict = df.to_dict(orient='split')
-        # self._records = resp_dict['data']
-
         for col in df.columns:
             if col in col_names or strict:
                 column = col_names[col]
@@ -109,7 +106,8 @@ class ResultSet:
                 column = Column(col)
             self._columns.append(column)
 
-        self._df = df.set_axis(range(len(df.columns)), axis=1)
+        df.rename({v: i for i, v in enumerate(df.columns)}, axis=1, inplace=True)
+        self._df = df
 
         return self
 

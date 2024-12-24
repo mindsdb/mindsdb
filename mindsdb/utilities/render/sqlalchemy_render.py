@@ -19,6 +19,11 @@ sa_type_names = [
     and val.__module__ in ('sqlalchemy.sql.sqltypes', 'sqlalchemy.sql.type_api')
 ]
 
+types_map = {}
+for type_name in sa_type_names:
+    types_map[type_name.upper()] = getattr(sa.types, type_name)
+types_map['BOOL'] = types_map['BOOLEAN']
+
 
 class RenderError(Exception):
     ...
@@ -75,11 +80,6 @@ class SqlalchemyRender:
         elif dialect_name == 'mysql':
             # update version for support float cast
             self.dialect.server_version_info = (8, 0, 17)
-
-        self.types_map = {}
-        for type_name in sa_type_names:
-            self.types_map[type_name.upper()] = getattr(sa.types, type_name)
-        self.types_map['BOOL'] = self.types_map['BOOLEAN']
 
     def to_column(self, parts):
         # because sqlalchemy doesn't allow columns consist from parts therefore we do it manually
@@ -391,8 +391,8 @@ class SqlalchemyRender:
             typename = 'BIGINT'
         if re.match(r'^FLOAT[\d]*$', typename):
             typename = 'FLOAT'
-        type = self.types_map[typename]
-        return type
+
+        return types_map[typename]
 
     def prepare_join(self, join):
         # join tree to table list

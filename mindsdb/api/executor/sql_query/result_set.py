@@ -1,4 +1,5 @@
 import copy
+from enum import Enum
 from typing import List, Optional
 
 import numpy as np
@@ -45,6 +46,11 @@ def rename_df_columns(df: pd.DataFrame, names: Optional[List] = None) -> None:
         df.rename({v: names[i] for i, v in enumerate(df.columns)}, axis=1, inplace=True)
 
 
+class ColumnsMode(Enum):
+    INDEX = 'index'
+    STRING = 'string'
+
+
 class ResultSet:
     def __init__(self, columns=None, values: List[List] = None, df: pd.DataFrame = None):
         '''
@@ -62,6 +68,7 @@ class ResultSet:
         elif df is None:
             df = pd.DataFrame(values)
         self._df = df
+        self._df_column_mode = []
 
         self.is_prediction = False
 
@@ -185,7 +192,7 @@ class ResultSet:
         self._columns.pop(idx)
 
         self._df.drop(idx, axis=1, inplace=True)
-        self._df = self._df.set_axis(range(len(self._df.columns)), axis=1)
+        rename_df_columns(self._df)
 
     @property
     def columns(self):
@@ -237,7 +244,7 @@ class ResultSet:
         if len(df.columns) != len(self._columns):
             raise WrongArgumentError(f'Record length mismatch columns length: {len(df.columns)} != {len(self.columns)}')
 
-        df = df.set_axis(range(len(df.columns)), axis=1)
+        rename_df_columns(df)
 
         if self._df is None:
             self._df = df
@@ -280,6 +287,8 @@ class ResultSet:
     def get_column_values(self, col_idx):
         # get by column index
         df = self.get_raw_df()
+        # TEMP
+        rename_df_columns(df)
         return list(df[col_idx])
 
     def set_column_values(self, col_name, values):

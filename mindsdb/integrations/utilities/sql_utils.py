@@ -67,6 +67,7 @@ class SortColumn:
     def __init__(self, column: str, ascending: bool = True):
         self.column = column
         self.ascending = ascending
+        self.applied = False
 
 
 def make_sql_session():

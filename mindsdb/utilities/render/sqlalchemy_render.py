@@ -270,10 +270,38 @@ class SqlalchemyRender:
                         col0 = col0.desc()
                     order_by.append(col0)
 
+            rows, range_ = None, None
+            if t.modifier is not None:
+                words = t.modifier.lower().split()
+                if words[1] == 'between' and words[4] == 'and':
+                    # frame options
+                    # rows/groups BETWEEN <> <> AND <> <>
+                    # https://docs.sqlalchemy.org/en/20/core/sqlelement.html#sqlalchemy.sql.expression.over
+                    items = []
+                    for word1, word2 in (words[2:4], words[5:7]):
+                        if word1 == 'unbounded':
+                            items.append(None)
+                        elif (word1, word2) == ('current', 'row'):
+                            items.append(0)
+                        elif word1.isdigits():
+                            val = int(word1)
+                            if word2 == 'preceding':
+                                val = -val
+                            elif word2 != 'following':
+                                continue
+                            items.append(val)
+                    if len(items) == 2:
+                        if words[0] == 'rows':
+                            rows = tuple(items)
+                        elif words[0] == 'range':
+                            range_ = tuple(items)
+
             col = sa.over(
                 func,
                 partition_by=partition,
-                order_by=order_by
+                order_by=order_by,
+                range_=range_,
+                rows=rows
             )
 
             if t.alias:

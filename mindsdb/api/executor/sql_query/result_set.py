@@ -40,10 +40,10 @@ class Column:
 def rename_df_columns(df: pd.DataFrame, names: Optional[List] = None) -> None:
     """Inplace rename of dataframe columns
     """
-    if names is None:
-        df.rename({v: i for i, v in enumerate(df.columns)}, axis=1, inplace=True)
+    if names is not None:
+        df.columns = names
     else:
-        df.rename({v: names[i] for i, v in enumerate(df.columns)}, axis=1, inplace=True)
+        df.columns = list(range(len(df.columns)))
 
 
 class ColumnsMode(Enum):
@@ -68,7 +68,10 @@ class ResultSet:
         elif df is None:
             df = pd.DataFrame(values)
         self._df = df
-        self._df_column_mode = []
+
+        self._df_columnы_mode = ColumnsMode.INDEX
+        if self._df is not None and len(self._df.columns) > 0 and isinstance(self._df.columns[0], str):
+            self._df_columnы_mode = ColumnsMode.STRING
 
         self.is_prediction = False
 

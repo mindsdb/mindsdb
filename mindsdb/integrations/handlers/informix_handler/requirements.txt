@@ -1,2 +1,2 @@
-IfxPy @ git+https://github.com/OpenInformix/IfxPy#subdirectory=IfxPy
+IfxPy==3.0.5 
 sqlalchemy-informix

@@ -81,8 +81,6 @@ class SqlalchemyRender:
             # update version for support float cast
             self.dialect.server_version_info = (8, 0, 17)
 
-        self.types_map = types_map
-
     def to_column(self, parts):
         # because sqlalchemy doesn't allow columns consist from parts therefore we do it manually
 
@@ -365,8 +363,8 @@ class SqlalchemyRender:
             typename = 'BIGINT'
         if re.match(r'^FLOAT[\d]*$', typename):
             typename = 'FLOAT'
-        type = self.types_map[typename]
-        return type
+
+        return types_map[typename]
 
     def prepare_join(self, join):
         # join tree to table list

@@ -2,6 +2,7 @@ import re
 import datetime as dt
 
 import sqlalchemy as sa
+from sqlalchemy.sql import operators
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import aliased
@@ -18,6 +19,11 @@ sa_type_names = [
     and val.__module__ in ('sqlalchemy.sql.sqltypes', 'sqlalchemy.sql.type_api')
 ]
 
+types_map = {}
+for type_name in sa_type_names:
+    types_map[type_name.upper()] = getattr(sa.types, type_name)
+types_map['BOOL'] = types_map['BOOLEAN']
+
 
 class RenderError(Exception):
     ...
@@ -33,9 +39,15 @@ class INTERVAL(ColumnElement):
 @compiles(INTERVAL)
 def _compile_interval(element, compiler, **kw):
     items = element.info.split(' ', maxsplit=1)
-    # quote first element
-    items[0] = f"'{items[0]}'"
-    return "INTERVAL " + " ".join(items)
+    if compiler.dialect.driver in ['snowflake']:
+        # quote all
+        args = " ".join(map(str, items))
+        args = f"'{args}'"
+    else:
+        # quote first element
+        items[0] = f"'{items[0]}'"
+        args = " ".join(items)
+    return "INTERVAL " + args
 
 
 class SqlalchemyRender:
@@ -59,6 +71,7 @@ class SqlalchemyRender:
         # remove double percent signs
         # https://docs.sqlalchemy.org/en/14/faq/sqlexpressions.html#why-are-percent-signs-being-doubled-up-when-stringifying-sql-statements
         self.dialect = dialect(paramstyle="named")
+        self.dialect.div_is_floordiv = False
 
         if dialect_name == 'mssql':
             # update version to MS_2008_VERSION for supports_multivalues_insert
@@ -67,11 +80,6 @@ class SqlalchemyRender:
         elif dialect_name == 'mysql':
             # update version for support float cast
             self.dialect.server_version_info = (8, 0, 17)
-
-        self.types_map = {}
-        for type_name in sa_type_names:
-            self.types_map[type_name.upper()] = getattr(sa.types, type_name)
-        self.types_map['BOOL'] = self.types_map['BOOLEAN']
 
     def to_column(self, parts):
         # because sqlalchemy doesn't allow columns consist from parts therefore we do it manually
@@ -133,15 +141,16 @@ class SqlalchemyRender:
             # sql functions
             col = None
             if len(t.parts) == 1:
-                name = t.parts[0].upper()
-                if name == 'CURRENT_DATE':
-                    col = sa_fnc.current_date()
-                elif name == 'CURRENT_TIME':
-                    col = sa_fnc.current_time()
-                elif name == 'CURRENT_TIMESTAMP':
-                    col = sa_fnc.current_timestamp()
-                elif name == 'CURRENT_USER':
-                    col = sa_fnc.current_user()
+                if isinstance(t.parts[0], str):
+                    name = t.parts[0].upper()
+                    if name == 'CURRENT_DATE':
+                        col = sa_fnc.current_date()
+                    elif name == 'CURRENT_TIME':
+                        col = sa_fnc.current_time()
+                    elif name == 'CURRENT_TIMESTAMP':
+                        col = sa_fnc.current_timestamp()
+                    elif name == 'CURRENT_USER':
+                        col = sa_fnc.current_user()
             if col is None:
                 col = self.to_column(t.parts)
             if t.alias:
@@ -160,25 +169,26 @@ class SqlalchemyRender:
                 alias = str(t.op)
             col = fnc.label(alias)
         elif isinstance(t, ast.BinaryOperation):
-            methods = {
-                "+": "__add__",
-                "-": "__sub__",
-                "*": "__mul__",
-                "%": "__mod__",
-                "=": "__eq__",
-                "!=": "__ne__",
-                "<>": "__ne__",
-                ">": "__gt__",
-                "<": "__lt__",
-                ">=": "__ge__",
-                "<=": "__le__",
-                "is": "is_",
-                "is not": "is_not",
-                "like": "like",
-                "not like": "notlike",
-                "in": "in_",
-                "not in": "notin_",
-                "||": "concat",
+            ops = {
+                "+": operators.add,
+                "-": operators.sub,
+                "*": operators.mul,
+                "/": operators.truediv,
+                "%": operators.mod,
+                "=": operators.eq,
+                "!=": operators.ne,
+                "<>": operators.ne,
+                ">": operators.gt,
+                "<": operators.lt,
+                ">=": operators.ge,
+                "<=": operators.le,
+                "is": operators.is_,
+                "is not": operators.is_not,
+                "like": operators.like_op,
+                "not like": operators.not_like_op,
+                "in": operators.in_op,
+                "not in": operators.not_in_op,
+                "||": operators.concat_op,
             }
             functions = {
                 "and": sa.and_,
@@ -193,14 +203,18 @@ class SqlalchemyRender:
                 if isinstance(arg1, sa.sql.selectable.ColumnClause):
                     raise NotImplementedError(f'Required list argument for: {op}')
 
-            method = methods.get(op)
-            if op == '/':
-                # sqlalchemy adds cast for __truediv__ and round for __floordiv__
-                col = sa.text(f'{arg0.compile(dialect=self.dialect)} / {arg1.compile(dialect=self.dialect)}')
-            elif method is not None:
-                sa_op = getattr(arg0, method)
+            sa_op = ops.get(op)
 
-                col = sa_op(arg1)
+            if sa_op is not None:
+                if isinstance(arg0, sa.TextClause):
+                    # text doesn't have operate method, reverse operator
+                    col = arg1.reverse_operate(sa_op, arg0)
+                elif isinstance(arg1, sa.TextClause):
+                    # both args are text, return text
+                    col = sa.text(f'{arg0.compile(dialect=self.dialect)} {op} {arg1.compile(dialect=self.dialect)}')
+                else:
+                    col = arg0.operate(sa_op, arg1)
+
             elif t.op.lower() in functions:
                 func = functions[t.op.lower()]
                 col = func(arg0, arg1)
@@ -256,10 +270,38 @@ class SqlalchemyRender:
                         col0 = col0.desc()
                     order_by.append(col0)
 
+            rows, range_ = None, None
+            if t.modifier is not None:
+                words = t.modifier.lower().split()
+                if words[1] == 'between' and words[4] == 'and':
+                    # frame options
+                    # rows/groups BETWEEN <> <> AND <> <>
+                    # https://docs.sqlalchemy.org/en/20/core/sqlelement.html#sqlalchemy.sql.expression.over
+                    items = []
+                    for word1, word2 in (words[2:4], words[5:7]):
+                        if word1 == 'unbounded':
+                            items.append(None)
+                        elif (word1, word2) == ('current', 'row'):
+                            items.append(0)
+                        elif word1.isdigits():
+                            val = int(word1)
+                            if word2 == 'preceding':
+                                val = -val
+                            elif word2 != 'following':
+                                continue
+                            items.append(val)
+                    if len(items) == 2:
+                        if words[0] == 'rows':
+                            rows = tuple(items)
+                        elif words[0] == 'range':
+                            range_ = tuple(items)
+
             col = sa.over(
                 func,
                 partition_by=partition,
-                order_by=order_by
+                order_by=order_by,
+                range_=range_,
+                rows=rows
             )
 
             if t.alias:
@@ -349,8 +391,8 @@ class SqlalchemyRender:
             typename = 'BIGINT'
         if re.match(r'^FLOAT[\d]*$', typename):
             typename = 'FLOAT'
-        type = self.types_map[typename]
-        return type
+
+        return types_map[typename]
 
     def prepare_join(self, join):
         # join tree to table list

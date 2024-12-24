@@ -1,16 +1,10 @@
-import os
-try:
-    import torch.multiprocessing as mp
-except Exception:
-    import multiprocessing as mp
-
 from flask import Flask
 from waitress import serve
 
 from mindsdb.api.http.initialize import initialize_app
 from mindsdb.interfaces.storage import db
 from mindsdb.utilities import log
-from mindsdb.utilities.config import Config
+from mindsdb.utilities.config import config
 from mindsdb.utilities.functions import init_lexer_parsers
 from mindsdb.integrations.libs.ml_exec_base import process_cache
 
@@ -18,9 +12,6 @@ logger = log.getLogger(__name__)
 
 
 def start(verbose, no_studio, app: Flask = None):
-    config = Config()
-
-    server = os.environ.get('MINDSDB_DEFAULT_SERVER', 'waitress')
     db.init()
     init_lexer_parsers()
 
@@ -29,25 +20,25 @@ def start(verbose, no_studio, app: Flask = None):
 
     port = config['api']['http']['port']
     host = config['api']['http']['host']
+    server_type = config['api']['http']['server']['type']
+    server_config = config['api']['http']['server']['config']
 
     process_cache.init()
 
-    if server.lower() == "waitress":
+    if server_type == "waitress":
         logger.debug("Serving HTTP app with waitress..")
         serve(
             app,
             host='*' if host in ('', '0.0.0.0') else host,
             port=port,
-            threads=16,
-            max_request_body_size=1073741824 * 10,
-            inbuf_overflow=1073741824 * 10
+            **server_config
         )
-    elif server.lower() == "flask":
+    elif server_type == "flask":
         logger.debug("Serving HTTP app with flask..")
         # that will 'disable access' log in console
 
-        app.run(debug=False, port=port, host=host)
-    elif server.lower() == 'gunicorn':
+        app.run(debug=False, port=port, host=host, **server_config)
+    elif server_type == 'gunicorn':
         try:
             from mindsdb.api.http.gunicorn_wrapper import StandaloneApplication
         except ImportError:
@@ -59,13 +50,18 @@ def start(verbose, no_studio, app: Flask = None):
         def post_fork(arbiter, worker):
             db.engine.dispose()
 
+        def before_worker_exit(arbiter, worker):
+            """Latest version of gunicorn (23.0.0) calls 'join' for each child process before exiting. However this does
+            not work for processes created by ProcessPoolExecutor, because they execute forever. We need to explicitly
+            call 'shutdown' for such processes before exiting.
+            """
+            from mindsdb.integrations.libs.process_cache import process_cache
+            process_cache.shutdown(wait=True)
+
         options = {
             'bind': f'{host}:{port}',
-            'workers': mp.cpu_count(),
-            'timeout': 600,
-            'reuse_port': True,
-            'preload_app': True,
             'post_fork': post_fork,
-            'threads': 4
+            'worker_exit': before_worker_exit,
+            **server_config
         }
         StandaloneApplication(app, options).run()

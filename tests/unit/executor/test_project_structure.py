@@ -43,13 +43,14 @@ class TestProjectStructure(BaseExecutorDummyML):
 
         # use model
         ret = self.run_sql('''
-             SELECT m.*
+             SELECT m.*, extract(day from t.b) as day
                FROM dummy_data.tasks as t
                JOIN proj.task_model as m
         ''')
 
         assert len(ret) == 3
         assert ret.predicted[0] == 42
+        assert ret.day[0] == 1
 
         # -- retrain predictor with tag --
         ret = self.run_sql(

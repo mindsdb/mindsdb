@@ -16,6 +16,7 @@ from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb_sql_parser import parse_sql, ParsingException
 from mindsdb_sql_parser.ast import CreateTable, DropTables
 from mindsdb.utilities.exception import EntityNotExistsError
+from mindsdb.integrations.libs.response import HandlerStatusResponse
 
 
 @ns_conf.route('/')
@@ -60,9 +61,14 @@ class DatabasesResource(Resource):
                 f'Database with name {name} already exists.'
             )
 
+        storage = None
         if check_connection:
-            handler = session.integration_controller.create_tmp_handler(name, database['engine'], parameters)
-            status = handler.check_connection()
+            try:
+                handler = session.integration_controller.create_tmp_handler(name, database['engine'], parameters)
+                status = handler.check_connection()
+            except ImportError as import_error:
+                status = HandlerStatusResponse(success=False, error_message=str(import_error))
+
             if status.success is not True:
                 if hasattr(status, 'redirect_url') and isinstance(status, str):
                     return {
@@ -75,7 +81,15 @@ class DatabasesResource(Resource):
                     "detail": status.error_message
                 }, HTTPStatus.OK
 
+            if status.copy_storage:
+                storage = handler.handler_storage.export_files()
+
         new_integration_id = session.integration_controller.add(name, database['engine'], parameters)
+
+        if storage:
+            handler = session.integration_controller.get_data_handler(name, connect=False)
+            handler.handler_storage.import_files(storage)
+
         new_integration = session.database_controller.get_integration(new_integration_id)
         return new_integration, HTTPStatus.CREATED
 
@@ -157,10 +171,14 @@ class DatabaseResource(Resource):
         if check_connection:
             existing_integration = session.integration_controller.get(database_name)
             temp_name = f'{database_name}_{time.time()}'.replace('.', '')
-            handler = session.integration_controller.create_tmp_handler(
-                temp_name, existing_integration['engine'], parameters
-            )
-            status = handler.check_connection()
+            try:
+                handler = session.integration_controller.create_tmp_handler(
+                    temp_name, existing_integration['engine'], parameters
+                )
+                status = handler.check_connection()
+            except ImportError as import_error:
+                status = HandlerStatusResponse(success=False, error_message=str(import_error))
+
             if status.success is not True:
                 return http_error(
                     HTTPStatus.BAD_REQUEST, 'Connection error',

@@ -134,7 +134,15 @@ class FileHandler(DatabaseHandler):
             return Response(RESPONSE_TYPE.OK)
 
         elif type(query) is Select:
-            table_name = query.from_table.parts[-1]
+            table_name_parts = query.from_table.parts
+            table_name = table_name_parts[-1]
+
+            # Check if it's a multi-part name (e.g., `files.file_name.sheet_name`)
+            if len(table_name_parts) > 1:
+                table_name = table_name_parts[-2]
+                sheet_name = table_name_parts[-1]  # Get the sheet name
+            else:
+                sheet_name = None
             file_path = self.file_controller.get_file_path(table_name)
             df, _columns = self._handle_source(
                 file_path,
@@ -142,7 +150,9 @@ class FileHandler(DatabaseHandler):
                 self.custom_parser,
                 self.chunk_size,
                 self.chunk_overlap,
+                sheet_name=sheet_name
             )
+            # Process the SELECT query
             result_df = query_df(df, query)
             return Response(RESPONSE_TYPE.TABLE, data_frame=result_df)
 
@@ -189,6 +199,7 @@ class FileHandler(DatabaseHandler):
         custom_parser=None,
         chunk_size=DEFAULT_CHUNK_SIZE,
         chunk_overlap=DEFAULT_CHUNK_OVERLAP,
+        sheet_name=None   # for "xlsx", "xls" files
     ):
         """
         This function takes a file path and returns a pandas dataframe
@@ -209,7 +220,14 @@ class FileHandler(DatabaseHandler):
 
         elif fmt in ["xlsx", "xls"]:
             data.seek(0)
-            df = pd.read_excel(data)
+            with pd.ExcelFile(data) as xls:
+                if sheet_name is None:
+                    # No sheet specified: Return list of sheets
+                    sheet_list = xls.sheet_names
+                    df = pd.DataFrame(sheet_list, columns=["Sheet_Name"])
+                else:
+                    # Specific sheet requested: Load that sheet
+                    df = pd.read_excel(xls, sheet_name=sheet_name)
 
         elif fmt == "json":
             data.seek(0)

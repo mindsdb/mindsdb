@@ -83,7 +83,7 @@ def config(temp_dir):
     """
     with open(TEST_CONFIG, 'rt') as f:
         config_json = json.loads(f.read())
-        config_json['storage_dir'] = f'{TEMP_DIR}'
+        config_json['paths']['root'] = f'{TEMP_DIR}'
         config_json['storage_db'] = f'sqlite:///{TEMP_DIR}/mindsdb.sqlite3.db?check_same_thread=False&timeout=30'
         config_json['integrations'] = {}
 

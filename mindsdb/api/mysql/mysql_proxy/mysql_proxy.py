@@ -83,6 +83,7 @@ from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
 from mindsdb.utilities import log
 from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
+from mindsdb.utilities.otel.metric_handlers import get_query_request_counter
 from mindsdb.utilities.wizards import make_ssl_cert
 
 logger = log.getLogger(__name__)
@@ -562,6 +563,12 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
                 data=executor.data,
                 status=executor.server_status,
             )
+
+        # Increment the counter and include metadata in attributes
+        metadata = ctx.metadata(query=sql)
+        query_request_counter = get_query_request_counter()
+        query_request_counter.add(1, metadata)
+
         return resp
 
     def answer_stmt_prepare(self, sql):

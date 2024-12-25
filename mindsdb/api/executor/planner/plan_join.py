@@ -571,7 +571,8 @@ class PlanJoinTablesQuery:
                 else:
                     model_params[param.lower()] = value
 
-            partition_size = model_params.pop('partition_size', None)
+            # partition_size is handled directly by project_datanode.predict
+            # partition_size = model_params.pop('partition_size', None)
 
         predictor_step = ApplyPredictorStep(
             namespace=item.integration,

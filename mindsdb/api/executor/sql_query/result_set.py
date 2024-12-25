@@ -38,6 +38,10 @@ class Column:
 
 def rename_df_columns(df: pd.DataFrame, names: Optional[List] = None) -> None:
     """Inplace rename of dataframe columns
+
+    Args:
+        df (pd.DataFrame): dataframe
+        names (Optional[List]): columns names to set
     """
     if names is not None:
         df.columns = names

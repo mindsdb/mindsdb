@@ -50,7 +50,7 @@ MAIN_RULE_IGNORES = {
 # Or 2) because they are imported in an unusual way. E.g.:
 #   - pysqlite3 in the chromadb handler
 #   - dspy-ai in langchain handler
-OPTIONAL_HANDLER_DEPS = ["torch", "tiktoken", "wikipedia", "openpyxl", "pyarrow",
+OPTIONAL_HANDLER_DEPS = ["torch", "tiktoken", "wikipedia", "openpyxl",
                          "sentence-transformers", "faiss-cpu", "litellm", "chromadb", "dspy-ai", "sqlalchemy-solr"]
 
 # List of rules we can ignore for specific packages
@@ -67,7 +67,7 @@ GCS_HANDLER_DEPS = ["gcsfs"]
 
 HANDLER_RULE_IGNORES = {
     "DEP002": OPTIONAL_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS + BYOM_HANLDER_DEPS + HIVE_HANDLER_DEPS + GCS_HANDLER_DEPS,
-    "DEP001": ["tests", "pyarrow"]  # 'tests' is the mindsdb tests folder in the repo root, 'pyarrow' used in snowflake handler
+    "DEP001": ["tests", "pyarrow", "IfxPyDbi", "ingres_sa_dialect"]  # 'tests' is the mindsdb tests folder in the repo root, 'pyarrow' used in snowflake handler
 }
 
 PACKAGE_NAME_MAP = {
@@ -137,6 +137,7 @@ PACKAGE_NAME_MAP = {
     "opentelemetry-exporter-otlp": ["opentelemetry"],
     "opentelemetry-instrumentation-requests": ["opentelemetry"],
     "opentelemetry-instrumentation-flask": ["opentelemetry"],
+    "sqlalchemy-ingres": ["ingres_sa_dialect"]
 }
 
 # We use this to exit with a non-zero status code if any check fails

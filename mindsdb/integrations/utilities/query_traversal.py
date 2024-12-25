@@ -105,6 +105,12 @@ def query_traversal(node, callback, is_table=False, is_target=False, parent_quer
             array.append(node_out)
         node.args = array
 
+        if isinstance(node, ast.Function):
+            if node.from_arg is not None:
+                node_out = query_traversal(node.from_arg, callback, parent_query=parent_query)
+                if node_out is not None:
+                    node.from_arg = node_out
+
     elif isinstance(node, ast.WindowFunction):
         query_traversal(node.function, callback, parent_query=parent_query)
         if node.partition is not None:

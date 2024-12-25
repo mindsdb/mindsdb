@@ -434,18 +434,17 @@ if __name__ == '__main__':
             args=(config.cmd_args.verbose,)
         )
     }
-
-    for api_enum in api_arr:
-        trunc_processes_struct[api_enum].need_to_run = True
-
-    if config['jobs']['disable'] is False:
-        trunc_processes_struct[TrunkProcessEnum.JOBS].need_to_run = True
-
-    if config['tasks']['disable'] is False:
-        trunc_processes_struct[TrunkProcessEnum.TASKS].need_to_run = True
-
     if config.cmd_args.ml_task_queue_consumer is True:
         trunc_processes_struct[TrunkProcessEnum.ML_TASK_QUEUE].need_to_run = True
+    else:
+        for api_enum in api_arr:
+            trunc_processes_struct[api_enum].need_to_run = True
+
+        if config['jobs']['disable'] is False:
+            trunc_processes_struct[TrunkProcessEnum.JOBS].need_to_run = True
+
+        if config['tasks']['disable'] is False:
+            trunc_processes_struct[TrunkProcessEnum.TASKS].need_to_run = True
 
     def start_process(trunc_process_data):
         # TODO this 'ctx' is eclipsing 'context' class imported as 'ctx'

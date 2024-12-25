@@ -1,5 +1,4 @@
 import copy
-from enum import Enum
 from typing import List, Optional
 
 import numpy as np
@@ -46,11 +45,6 @@ def rename_df_columns(df: pd.DataFrame, names: Optional[List] = None) -> None:
         df.columns = list(range(len(df.columns)))
 
 
-class ColumnsMode(Enum):
-    INDEX = 'index'
-    STRING = 'string'
-
-
 class ResultSet:
     def __init__(self, columns=None, values: List[List] = None, df: pd.DataFrame = None):
         '''
@@ -68,10 +62,6 @@ class ResultSet:
         elif df is None:
             df = pd.DataFrame(values)
         self._df = df
-
-        self._df_columnы_mode = ColumnsMode.INDEX
-        if self._df is not None and len(self._df.columns) > 0 and isinstance(self._df.columns[0], str):
-            self._df_columnы_mode = ColumnsMode.STRING
 
         self.is_prediction = False
 

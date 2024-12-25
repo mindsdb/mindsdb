@@ -60,7 +60,6 @@ import hashlib
 import typing as t
 
 import pandas as pd
-from pandas.util import hash_pandas_object
 import walrus
 
 from mindsdb.utilities.config import Config
@@ -72,7 +71,13 @@ _CACHE_MAX_SIZE = 500
 
 
 def dataframe_checksum(df: pd.DataFrame):
-    return hashlib.sha256(hash_pandas_object(df, categorize=False, index=False).values).hexdigest()
+    original_columns = df.columns
+    df.columns = list(range(len(df.columns)))
+    result = hashlib.sha256(
+        str(df.values).encode()
+    ).hexdigest()
+    df.columns = original_columns
+    return result
 
 
 def json_checksum(obj: t.Union[dict, list]):

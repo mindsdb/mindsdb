@@ -137,7 +137,10 @@ class HandlerMemory(BaseMemory):
                      Identifier(username_col),
                      Identifier(time_col)],
             from_table=Identifier(t_params['name']),
-            where=where_conditions,
+            where=BinaryOperation(
+                op='and',
+                args=where_conditions
+            ),
             order_by=[OrderBy(Identifier(time_col))],
             limit=Constant(self.MAX_DEPTH),
         )

@@ -1,4 +1,5 @@
 import enum
+import inspect
 from dataclasses import dataclass
 from collections import defaultdict
 from typing import List, Dict, Optional
@@ -123,12 +124,25 @@ class SkillToolController:
             raise ImportError(
                 'To use the text-to-SQL skill, please install langchain with `pip install mindsdb[langchain]`')
 
+        command_executor = self.get_command_executor()
+
         tables_list = []
         for skill in skills:
             database = skill.params['database']
             restriction_on_tables = skill.restriction_on_tables
             if restriction_on_tables is None:
+                handler = command_executor.session.integration_controller.get_data_handler(database)
+                if 'all' in inspect.signature(handler.get_tables).parameters:
+                    response = handler.get_tables(all=True)
+                else:
+                    response = handler.get_tables()
                 # no restrictions
+                if 'table_schema' in response.data_frame.columns:
+                    for _, row in response.data_frame.iterrows():
+                        tables_list.append(f"{database}.{row['table_schema']}.{row['table_name']}")
+                else:
+                    for _, row in response.data_frame.iterrows():
+                        tables_list.append(f"{database}.{row['table_name']}")
                 continue
             for schema_name, tables in restriction_on_tables.items():
                 for table in tables:
@@ -138,7 +152,7 @@ class SkillToolController:
                         tables_list.append(f'{database}.{schema_name}.{table}')
 
         sql_agent = SQLAgent(
-            command_executor=self.get_command_executor(),
+            command_executor=command_executor,
             databases=list(set(s.params['database'] for s in skills)),
             databases_struct={
                 skill.params['database']: skill.restriction_on_tables

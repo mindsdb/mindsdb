@@ -119,19 +119,12 @@ class SQLAgent:
             # by path
             tables_idx[tuple(table.parts)] = table
 
-        # Some LLMs (e.g. gpt-4o) may include backticks or quotes when invoking tools.
-        strip_chars = ' "\'\n\r'
-        # Remove backticks only if the actual table names don't have them.
-        # Querying data sources like MS OneDrive and Amazon S3 requires tables (files) to be wrapped in backticks.
-        if not any('`' in table_name.get_string() for table_name in all_tables):
-            strip_chars = strip_chars + '`'
-
         tables = []
         for table_name in table_names:
             if not table_name.strip():
                 continue
 
-            table_name = table_name.strip(strip_chars)
+            table_name = table_name.strip(' "\'\n\r')
             table = Identifier(table_name)
 
             # resolved table

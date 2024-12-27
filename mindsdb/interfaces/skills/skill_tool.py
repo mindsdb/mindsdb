@@ -164,14 +164,18 @@ class SkillToolController:
         for i, tool in enumerate(sql_database_tools):
             if isinstance(tool, QuerySQLDataBaseTool):
                 # Add our own custom description so our agent knows when to query this table.
-                tool.description = (
-                    f'Use this tool if you need data about {" OR ".join(descriptions)}. '
-                    'Use the conversation context to decide which table to query. '
-                    f'These are the available tables: {",".join(tables_list)}.\n' if len(tables_list) > 0 else '\n'
-                    f'ALWAYS consider these special cases:\n'
-                    f'- For TIMESTAMP type columns, make sure you include the time portion in your query (e.g. WHERE date_column = "2020-01-01 12:00:00")'
-                    f'Here are the rest of the instructions:\n'
-                    f'{tool.description}'
+                original_description = tool.description
+                tool.description = ''
+                if len(descriptions) > 0:
+                    tool.description += f'Use this tool if you need data about {" OR ".join(descriptions)}.\n'
+                tool.description += 'Use the conversation context to decide which table to query.\n'
+                if len(tables_list) > 0:
+                    f'These are the available tables: {",".join(tables_list)}.\n'
+                tool.description += (
+                    'ALWAYS consider these special cases:\n'
+                    ' - For TIMESTAMP type columns, make sure you include the time portion in your query (e.g. WHERE date_column = "2020-01-01 12:00:00")\n'
+                    'Here are the rest of the instructions:\n'
+                    f'{original_description}'
                 )
                 sql_database_tools[i] = tool
         return sql_database_tools

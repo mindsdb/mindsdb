@@ -62,6 +62,7 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
                  SELECT NOW() + INTERVAL 2 MONTH + INTERVAL 3 DAY;
                  SELECT NOW() - INTERVAL 1 YEAR;
             6. Query Best Practices:
+               - Always send only one query at a time.
                - Query only necessary columns, not all.
                - Use only existing column names from correct tables.
                - Use database-specific syntax for date operations.

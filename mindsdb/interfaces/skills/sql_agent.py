@@ -216,12 +216,12 @@ class SQLAgent:
             fields.append(column['name'])
             dtypes.append(column.get('type', ''))
 
-        info = f'Table named `{table_name}`\n'
-        info += f"\n/* Sample with first {self._sample_rows_in_table_info} rows from table {table_str}:\n"
+        info = f'Table named `{table_str}`:\n'
+        info += f"\nSample with first {self._sample_rows_in_table_info} rows from table {table_str}:\n"
         info += "\t".join([field for field in fields])
-        info += self._get_sample_rows(table_str, fields) + "\n*/"
+        info += self._get_sample_rows(table_str, fields) + "\n"
         info += '\nColumn data types: ' + ",\t".join(
-            [f'`{field}` : `{dtype}`' for field, dtype in zip(fields, dtypes)]) + '\n'  # noqa
+            [f'\n`{field}` : `{dtype}`' for field, dtype in zip(fields, dtypes)]) + '\n'  # noqa
         return info
 
     def _get_sample_rows(self, table: str, fields: List[str]) -> str:

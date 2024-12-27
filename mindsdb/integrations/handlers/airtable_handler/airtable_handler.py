@@ -16,6 +16,7 @@ from mindsdb.integrations.libs.response import (
 from mindsdb_sql_parser import ast
 
 from pyairtable.formulas import AND, OR, Field
+from pyairtable.exceptions import PyAirtableError
 
 logger = log.getLogger(__name__)
 
@@ -134,8 +135,13 @@ class AirtableHandler(APIHandler):
                     table_name, AirtableTable(self, table_name=table_name)
                 )
             self.is_connected = True
+
+        except PyAirtableError as e:
+            logger.error(f"Error connecting to Airtable (PyAirtableError): {e}")
+            self.is_connected = False
+            raise e
         except Exception as e:
-            logger.error(f"Error connecting to Airtable: {e}")
+            logger.error(f"Error in Airtable handler: {e}")
             self.is_connected = False
             raise e
         return self.api

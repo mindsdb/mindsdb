@@ -110,22 +110,6 @@ class SkillToolController:
             self.command_executor = ExecuteCommands(sql_session)
         return self.command_executor
 
-    def get_sql_agent(
-            self,
-            database: str,
-            include_tables: Optional[List[str]] = None,
-            ignore_tables: Optional[List[str]] = None,
-            sample_rows_in_table_info: int = 3,
-    ):
-        return SQLAgent(
-            self.get_command_executor(),
-            database,
-            include_tables,
-            ignore_tables,
-            sample_rows_in_table_info,
-            cache=get_cache('agent', max_size=_MAX_CACHE_SIZE)
-        )
-
     def _make_text_to_sql_tools(self, skills: List[db.Skills], llm) -> List:
         '''
            Uses SQLAgent to execute tool
@@ -148,17 +132,25 @@ class SkillToolController:
                 continue
             for schema_name, tables in restriction_on_tables.items():
                 for table in tables:
-                    tables_list.append(f'{database}.{table}')
+                    if schema_name is None:
+                        tables_list.append(f'{database}.{table}')
+                    else:
+                        tables_list.append(f'{database}.{schema_name}.{table}')
 
-        # use list databases
-        database = ','.join(set(s.params['database'] for s in skills))
-        # !TODO! add schemas
-        db = MindsDBSQL(
-            # schema = []
-            engine=self.get_command_executor(),
-            database=database,
-            metadata=self.get_command_executor().session.integration_controller,
-            include_tables=tables_list
+        sql_agent = SQLAgent(
+            command_executor=self.get_command_executor(),
+            databases=list(set(s.params['database'] for s in skills)),
+            databases_struct={
+                skill.params['database']: skill.restriction_on_tables
+                for skill in skills
+            },
+            include_tables=tables_list,
+            ignore_tables=None,
+            sample_rows_in_table_info=3,
+            cache=get_cache('agent', max_size=_MAX_CACHE_SIZE)
+        )
+        db = MindsDBSQL.custom_init(
+            sql_agent=sql_agent
         )
 
         # Users probably don't need to configure this for now.

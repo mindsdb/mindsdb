@@ -4,12 +4,17 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 
 
 connection_args = OrderedDict(
-    base_id={"type": ARG_TYPE.STR, "description": "The Airtable base ID."},
+    base_id={
+        "type": ARG_TYPE.STR,
+        "description": "The Airtable base ID.",
+        "required": True,
+    },
     table_name={"type": ARG_TYPE.STR, "description": "The Airtable table name."},
     access_token={
         "type": ARG_TYPE.STR,
         "description": "The Access Token for the Airtable API.",
         "secret": True,
+        "required": True,
     },
 )
 

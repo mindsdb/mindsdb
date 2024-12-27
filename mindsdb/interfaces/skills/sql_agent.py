@@ -108,7 +108,7 @@ class SQLAgent:
     def _resolve_table_names(self, table_names: List[str], all_tables: List[Identifier]) -> List[Identifier]:
         """
         Tries to find table (which comes directly from an LLM) by its name
-        Handles backticks (`) and tables without databases
+        Handles special characters and tables without databases
         """
 
         # index to lookup table
@@ -123,7 +123,9 @@ class SQLAgent:
         for table_name in table_names:
             if not table_name.strip():
                 continue
-
+            
+            # Some LLMs (e.g. gpt-4o) may include special characters when invoking tools.
+            # Back-ticks are not removed because querying data sources like MS OneDrive and Amazon S3 requires tables (files) to be wrapped in them.
             table_name = table_name.strip(' "\'\n\r')
             table = Identifier(table_name)
 

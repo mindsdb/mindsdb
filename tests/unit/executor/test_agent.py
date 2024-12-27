@@ -137,37 +137,37 @@ class TestAgent(BaseExecutorDummyML):
 
         sd.params = {'tables': ['x', 'y']}
         sd.agent_tables_list = ['x', 'y']
-        assert sd.tables_list == {None: {'x', 'y'}}
+        assert sd.restriction_on_tables == {None: {'x', 'y'}}
 
         sd.params = {'tables': ['x', 'y']}
         sd.agent_tables_list = ['x', 'y', 'z']
-        assert sd.tables_list == {None: {'x', 'y'}}
+        assert sd.restriction_on_tables == {None: {'x', 'y'}}
 
         sd.params = {'tables': ['x', 'y']}
         sd.agent_tables_list = ['x']
-        assert sd.tables_list == {None: {'x'}}
+        assert sd.restriction_on_tables == {None: {'x'}}
 
         sd.params = {'tables': ['x', 'y']}
         sd.agent_tables_list = ['z']
         with pytest.raises(ValueError):
-            print(sd.tables_list)
+            print(sd.restriction_on_tables)
 
         sd.params = {'tables': ['x', {'schema': 'S', 'table': 'y'}]}
         sd.agent_tables_list = ['x']
-        assert sd.tables_list == {None: {'x'}}
+        assert sd.restriction_on_tables == {None: {'x'}}
 
         sd.params = {'tables': ['x', {'schema': 'S', 'table': 'y'}]}
         sd.agent_tables_list = ['x', {'schema': 'S', 'table': 'y'}]
-        assert sd.tables_list == {None: {'x'}, 'S': {'y'}}
+        assert sd.restriction_on_tables == {None: {'x'}, 'S': {'y'}}
 
         sd.params = {'tables': [{'schema': 'S', 'table': 'x'}, {'schema': 'S', 'table': 'y'}, {'schema': 'S', 'table': 'z'}]}
         sd.agent_tables_list = [{'schema': 'S', 'table': 'y'}, {'schema': 'S', 'table': 'z'}, {'schema': 'S', 'table': 'f'}]
-        assert sd.tables_list == {'S': {'y', 'z'}}
+        assert sd.restriction_on_tables == {'S': {'y', 'z'}}
 
         sd.params = {'tables': [{'schema': 'S', 'table': 'x'}, {'schema': 'S', 'table': 'y'}]}
         sd.agent_tables_list = [{'schema': 'S', 'table': 'z'}]
         with pytest.raises(ValueError):
-            print(sd.tables_list)
+            print(sd.restriction_on_tables)
 
         self.run_sql('''
             create skill test_skill

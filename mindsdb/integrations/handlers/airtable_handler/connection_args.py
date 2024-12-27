@@ -9,7 +9,11 @@ connection_args = OrderedDict(
         "description": "The Airtable base ID.",
         "required": True,
     },
-    table_name={"type": ARG_TYPE.STR, "description": "The Airtable table name."},
+    table_name={
+        "type": ARG_TYPE.STR,
+        "description": "The Airtable table name.",
+        "required": False,
+    },
     access_token={
         "type": ARG_TYPE.STR,
         "description": "The Access Token for the Airtable API.",

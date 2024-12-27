@@ -3,8 +3,9 @@ import sys
 import json
 import argparse
 import datetime
-from copy import deepcopy
 from pathlib import Path
+from copy import deepcopy
+import multiprocessing as mp
 
 from appdirs import user_data_dir
 
@@ -170,7 +171,15 @@ class Config:
                     "port": "47334",
                     "restart_on_failure": True,
                     "max_restart_count": 1,
-                    "max_restart_interval_seconds": 60
+                    "max_restart_interval_seconds": 60,
+                    "server": {
+                        "type": "waitress",     # MINDSDB_HTTP_SERVER_TYPE MINDSDB_DEFAULT_SERVER
+                        "config": {
+                            "threads": 16,
+                            "max_request_body_size": (1 << 30) * 10,    # 10GB
+                            "inbuf_overflow": (1 << 30) * 10
+                        }
+                    }
                 },
                 "mysql": {
                     "host": api_host,
@@ -234,6 +243,11 @@ class Config:
                 'handlers': {
                     'console': {},
                     'file': {}
+                }
+            },
+            "api": {
+                "http": {
+                    "server": {}
                 }
             },
             'auth': {},
@@ -304,6 +318,35 @@ class Config:
         if os.environ.get('MINDSDB_FILE_LOG_LEVEL', '') != '':
             self._env_config['logging']['handlers']['file']['level'] = os.environ['MINDSDB_FILE_LOG_LEVEL']
             self._env_config['logging']['handlers']['file']['enabled'] = True
+        # endregion
+
+        # region server type
+        server_type = os.environ.get('MINDSDB_HTTP_SERVER_TYPE', '').lower()
+        if server_type == '':
+            server_type = os.environ.get('MINDSDB_DEFAULT_SERVER', '').lower()
+        if server_type != '':
+            if server_type == 'waitress':
+                self._env_config['api']['http']['server']['type'] = 'waitress'
+                self._default_config['api']['http']['server']['config'] = {}
+                self._env_config['api']['http']['server']['config'] = {
+                    "threads": 16,
+                    "max_request_body_size": (1 << 30) * 10,    # 10GB
+                    "inbuf_overflow": (1 << 30) * 10
+                }
+            elif server_type == 'flask':
+                self._env_config['api']['http']['server']['type'] = 'flask'
+                self._default_config['api']['http']['server']['config'] = {}
+                self._env_config['api']['http']['server']['config'] = {}
+            elif server_type == 'gunicorn':
+                self._env_config['api']['http']['server']['type'] = 'gunicorn'
+                self._default_config['api']['http']['server']['config'] = {}
+                self._env_config['api']['http']['server']['config'] = {
+                    'workers': min(mp.cpu_count(), 4),
+                    'timeout': 600,
+                    'reuse_port': True,
+                    'preload_app': True,
+                    'threads': 4
+                }
         # endregion
 
         if os.environ.get('MINDSDB_DB_CON', '') != '':
@@ -442,6 +485,20 @@ class Config:
 
         if 'log' in self._config:
             logger.warning("The 'log' config option is no longer supported. Use 'logging' instead.")
+
+        if os.environ.get('MINDSDB_DEFAULT_SERVER', '') != '':
+            logger.warning(
+                "Env variable 'MINDSDB_DEFAULT_SERVER' is going to be deprecated soon. "
+                "Use 'MINDSDB_HTTP_SERVER_TYPE' instead."
+            )
+
+        for env_name in ('MINDSDB_HTTP_SERVER_TYPE', 'MINDSDB_DEFAULT_SERVER'):
+            env_value = os.environ.get(env_name, '')
+            if env_value.lower() not in ('waitress', 'flask', 'gunicorn'):
+                logger.warning(
+                    f"The value '{env_value}' of the environment variable {env_name} is not valid. "
+                    "It must be one of the following: 'waitress', 'flask', or 'gunicorn'."
+                )
 
     @property
     def cmd_args(self):

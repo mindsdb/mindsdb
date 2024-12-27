@@ -61,6 +61,7 @@ class DatabasesResource(Resource):
                 f'Database with name {name} already exists.'
             )
 
+        storage = None
         if check_connection:
             try:
                 handler = session.integration_controller.create_tmp_handler(name, database['engine'], parameters)
@@ -80,7 +81,15 @@ class DatabasesResource(Resource):
                     "detail": status.error_message
                 }, HTTPStatus.OK
 
+            if status.copy_storage:
+                storage = handler.handler_storage.export_files()
+
         new_integration_id = session.integration_controller.add(name, database['engine'], parameters)
+
+        if storage:
+            handler = session.integration_controller.get_data_handler(name, connect=False)
+            handler.handler_storage.import_files(storage)
+
         new_integration = session.database_controller.get_integration(new_integration_id)
         return new_integration, HTTPStatus.CREATED
 

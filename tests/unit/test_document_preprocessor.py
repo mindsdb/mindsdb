@@ -1,34 +1,32 @@
 import pytest
-from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor import (
-    DocumentPreprocessor,
-    TextChunkingPreprocessor,
-    ContextualPreprocessor,
-)
+from unittest.mock import Mock, patch
+
 from mindsdb.interfaces.knowledge_base.preprocessing.models import (
     Document,
     TextChunkingConfig,
     ContextualConfig,
-    ProcessedChunk,
 )
-from typing import List
-from unittest.mock import Mock, patch
+
+# Mock all langchain imports to avoid pydantic version conflicts
+with patch.dict('sys.modules', {
+    'mindsdb.interfaces.agents.langchain_agent': Mock(),
+    'mindsdb.interfaces.agents.mindsdb_chat_model': Mock(),
+    'mindsdb.interfaces.agents.constants': Mock(),
+    'langchain_openai': Mock(),
+}):
+    from mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor import (
+        DocumentPreprocessor,
+        TextChunkingPreprocessor,
+        ContextualPreprocessor,
+    )
 
 
 class TestDocumentPreprocessor:
-    @pytest.fixture
-    def preprocessor(self):
-        class TestPreprocessor(DocumentPreprocessor):
-            def process_documents(
-                self, documents: List[Document]
-            ) -> List[ProcessedChunk]:
-                return []  # Dummy implementation for testing base class methods
-
-        return TestPreprocessor()
-
-    def test_deterministic_id_generation(self, preprocessor):
+    def test_deterministic_id_generation(self):
         """Test that ID generation is deterministic for same content"""
         # Same content should generate same ID
         content = "test content"
+        preprocessor = DocumentPreprocessor()
         id1 = preprocessor._generate_deterministic_id(content)
         id2 = preprocessor._generate_deterministic_id(content)
         assert id1 == id2
@@ -46,13 +44,14 @@ class TestDocumentPreprocessor:
         )
         assert id4 == f"{provided_id}_{content_column}"
 
-    def test_chunk_id_generation(self, preprocessor):
+    def test_chunk_id_generation(self):
         """Test chunk ID generation with and without indices"""
         content = "test content"
         content_column = "test_column"
         provided_id = "test_id"
 
         # Test basic ID generation
+        preprocessor = DocumentPreprocessor()
         base_id = preprocessor._generate_chunk_id(content)
         assert base_id == preprocessor._generate_deterministic_id(content)
 
@@ -77,9 +76,10 @@ class TestDocumentPreprocessor:
         assert chunk_id.endswith("_chunk_0")
         assert chunk_id.startswith(preprocessor._generate_deterministic_id(content))
 
-    def test_split_document_without_splitter(self, preprocessor):
+    def test_split_document_without_splitter(self):
         """Test that splitting without a configured splitter raises error"""
         doc = Document(content="test content")
+        preprocessor = DocumentPreprocessor()
         with pytest.raises(ValueError, match="Splitter not configured"):
             preprocessor._split_document(doc)
 
@@ -183,6 +183,92 @@ def test_source_metadata(content, metadata, expected_source):
 
 
 class TestContextualPreprocessor:
+    def test_source_metadata(self, preprocessor_sync):
+        """Test that source metadata is correctly set"""
+        doc = Document(content="Test content")
+        chunks = preprocessor_sync.process_documents([doc])
+        assert chunks[0].metadata["source"] == "ContextualPreprocessor"
+
+    def test_prepare_prompts(self, preprocessor_sync):
+        chunk_contents = [f"Chunk contents {i}" for i in range(10)]
+        full_documents = [f"Full document {i}" for i in range(10)]
+        _ = preprocessor_sync._prepare_prompts(chunk_contents, full_documents)
+
+    def test_process_documents(self, sample_document, preprocessor_sync):
+        docs = [Document(content=sample_document, id=f"{i}") for i in range(3)]
+        _ = preprocessor_sync.process_documents(docs)
+
+    def test_process_documents_async(self, sample_document, preprocessor_async):
+        """Test document processing with async LLM"""
+        docs = [Document(content=sample_document, id=f"{i}") for i in range(3)]
+        chunks = preprocessor_async.process_documents(docs)
+        assert len(chunks) > 0
+        assert all(chunk.content == "Test context" for chunk in chunks)
+
+    def test_process_documents_sync(self, sample_document, preprocessor_sync):
+        """Test document processing with sync LLM"""
+        docs = [Document(content=sample_document, id=f"{i}") for i in range(3)]
+        chunks = preprocessor_sync.process_documents(docs)
+        assert len(chunks) > 0
+        assert all(chunk.content == "Test context" for chunk in chunks)
+
+    @pytest.fixture
+    def preprocessor_async(self):
+        with patch(
+            "mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor.create_chat_model"
+        ) as mock_create_chat_model:
+            # Create a mock async LLM
+            class MockResponse:
+                def __init__(self, content):
+                    self.content = content
+
+            class AsyncMockLLM:
+                async def abatch(self, prompts):
+                    import asyncio
+                    await asyncio.sleep(0)  # Simulate async operation
+                    return [MockResponse("Test context") for _ in prompts]
+
+            mock_llm = AsyncMockLLM()
+            mock_create_chat_model.return_value = mock_llm
+
+            config = ContextualConfig(
+                chunk_size=100,
+                chunk_overlap=20,
+                llm_config={"model_name": "test_model", "provider": "test"},
+                summarize=True,  # Set summarize to True to only return context
+            )
+            return ContextualPreprocessor(config)
+
+    @pytest.fixture
+    def preprocessor_sync(self):
+        with patch(
+            "mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor.create_chat_model"
+        ) as mock_create_chat_model:
+            # Create a mock sync LLM
+            class MockResponse:
+                def __init__(self, content):
+                    self.content = content
+
+            class SyncMockLLM:
+                def batch(self, prompts):
+                    return [MockResponse("Test context") for _ in prompts]
+
+                async def abatch(self, prompts):
+                    import asyncio
+                    await asyncio.sleep(0)  # Simulate async operation
+                    return [MockResponse("Test context") for _ in prompts]
+
+            mock_llm = SyncMockLLM()
+            mock_create_chat_model.return_value = mock_llm
+
+            config = ContextualConfig(
+                chunk_size=100,
+                chunk_overlap=20,
+                llm_config={"model_name": "test_model", "provider": "test"},
+                summarize=True,  # Set summarize to True to only return context
+            )
+            return ContextualPreprocessor(config)
+
     @pytest.fixture
     def sample_document(self):
         return """
@@ -441,43 +527,3 @@ class TestContextualPreprocessor:
 
 
     [[Page 64964]]"""  # noqa
-
-    @pytest.fixture
-    def preprocessor(self):
-        with patch(
-            "mindsdb.interfaces.knowledge_base.preprocessing.document_preprocessor.create_chat_model"
-        ) as mock_create_chat_model:
-            # Create a mock LLM that returns a simple response
-
-            class output:
-                content = "Test context"
-
-            def abatch(prompts):
-                return [output for _ in prompts]
-
-            mock_llm = Mock()
-            mock_llm.return_value.content = "Test context"
-            mock_llm.abatch = abatch
-            mock_create_chat_model.return_value = mock_llm
-
-            config = ContextualConfig(
-                chunk_size=100,
-                chunk_overlap=20,
-                llm_config={"model_name": "test_model", "provider": "test"},
-            )
-            return ContextualPreprocessor(config)
-
-    def test_source_metadata(self, preprocessor):
-        """Test that source metadata is correctly set"""
-        doc = Document(content="Test content")
-        chunks = preprocessor.process_documents([doc])
-        assert chunks[0].metadata["source"] == "ContextualPreprocessor"
-
-    def test_prepare_prompts(self, preprocessor):
-        chunk_contents = [f"Chunk contents {i}" for i in range(10)]
-        full_documents = [f"Full document {i}" for i in range(10)]
-        _ = preprocessor._prepare_prompts(chunk_contents, full_documents)
-
-    def test_process_documents(self, sample_document, preprocessor):
-        docs = [Document(content=sample_document, id=f"{i}") for i in range(3)]
-        _ = preprocessor.process_documents(docs)

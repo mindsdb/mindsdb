@@ -7,9 +7,12 @@ from langchain.retrievers import ContextualCompressionRetriever
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableParallel, RunnablePassthrough, RunnableSerializable
 
+from mindsdb.integrations.handlers.langchain_embedding_handler.langchain_embedding_handler import construct_model_from_args
+from mindsdb.integrations.libs.vectordatabase_handler import DistanceFunction
 from mindsdb.integrations.utilities.rag.chains.map_reduce_summarizer_chain import MapReduceSummarizerChain
 from mindsdb.integrations.utilities.rag.retrievers.auto_retriever import AutoRetriever
 from mindsdb.integrations.utilities.rag.retrievers.multi_vector_retriever import MultiVectorRetriever
+from mindsdb.integrations.utilities.rag.retrievers.sql_retriever import SQLRetriever
 from mindsdb.integrations.utilities.rag.rerankers.reranker_compressor import LLMReranker
 from mindsdb.integrations.utilities.rag.settings import (RAGPipelineModel,
                                                          DEFAULT_AUTO_META_PROMPT_TEMPLATE,
@@ -19,6 +22,7 @@ from mindsdb.integrations.utilities.rag.settings import (RAGPipelineModel,
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RERANKER_FLAG
 
 from mindsdb.integrations.utilities.rag.vector_store import VectorStoreOperator
+from mindsdb.interfaces.agents.langchain_agent import create_chat_model
 
 
 class LangChainRAGPipeline:
@@ -197,6 +201,47 @@ class LangChainRAGPipeline:
     def from_multi_vector_retriever(cls, config: RAGPipelineModel):
         retriever = MultiVectorRetriever(config=config).as_runnable()
         retriever = cls._apply_search_kwargs(retriever, config.search_kwargs, config.search_type)
+        return cls(
+            retriever,
+            config.rag_prompt_template,
+            config.llm,
+            reranker_config=config.reranker_config,
+            reranker=config.reranker,
+            vector_store_config=config.vector_store_config,
+            summarization_config=config.summarization_config
+        )
+
+    @classmethod
+    def from_sql_retriever(cls, config: RAGPipelineModel):
+        retriever_config = config.sql_retriever_config
+        if retriever_config is None:
+            raise ValueError('Must provide "sql_retriever_config" for RAG pipeline config')
+        vector_store_config = config.vector_store_config
+        knowledge_base_table = vector_store_config.kb_table if vector_store_config is not None else None
+        if knowledge_base_table is None:
+            raise ValueError('Must provide valid "vector_store_config" for RAG pipeline config')
+        embedding_args = knowledge_base_table._kb.embedding_model.learn_args.get('using', {})
+        embeddings = construct_model_from_args(embedding_args)
+        sql_llm = create_chat_model({
+            'model_name': retriever_config.llm_config.model_name,
+            'provider': retriever_config.llm_config.provider,
+            **retriever_config.llm_config.params
+        })
+        retriever = SQLRetriever(
+            vector_store_handler=knowledge_base_table.get_vector_db(),
+            metadata_schemas=retriever_config.metadata_schemas,
+            examples=retriever_config.examples,
+            embeddings_model=embeddings,
+            rewrite_prompt_template=retriever_config.rewrite_prompt_template,
+            sql_prompt_template=retriever_config.sql_prompt_template,
+            query_checker_template=retriever_config.query_checker_template,
+            embeddings_table=knowledge_base_table._kb.vector_database_table,
+            source_table=retriever_config.source_table,
+            # Currently only similarity search is supported.
+            distance_function=DistanceFunction.SQUARED_EUCLIDEAN_DISTANCE,
+            search_kwargs=config.search_kwargs,
+            llm=sql_llm
+        )
         return cls(
             retriever,
             config.rag_prompt_template,

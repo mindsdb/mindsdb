@@ -38,7 +38,7 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.to
 # transformers is required for langchain_core and not explicitly imported by mindsdb.
 MAIN_RULE_IGNORES = {
     "DEP003": ["torch"],
-    "DEP001": ["torch", "pgvector"],
+    "DEP001": ["torch", "pgvector", "pyarrow"],
     "DEP002": ["psycopg2-binary", "lark", "transformers", "langchain-experimental", "lxml"]
 }
 
@@ -67,7 +67,7 @@ GCS_HANDLER_DEPS = ["gcsfs"]
 
 HANDLER_RULE_IGNORES = {
     "DEP002": OPTIONAL_HANDLER_DEPS + MAIN_REQUIREMENTS_DEPS + BYOM_HANLDER_DEPS + HIVE_HANDLER_DEPS + GCS_HANDLER_DEPS,
-    "DEP001": ["tests"]  # 'tests' is the mindsdb tests folder in the repo root
+    "DEP001": ["tests", "pyarrow", "IfxPyDbi", "ingres_sa_dialect"]  # 'tests' is the mindsdb tests folder in the repo root, 'pyarrow' used in snowflake handler
 }
 
 PACKAGE_NAME_MAP = {
@@ -137,6 +137,7 @@ PACKAGE_NAME_MAP = {
     "opentelemetry-exporter-otlp": ["opentelemetry"],
     "opentelemetry-instrumentation-requests": ["opentelemetry"],
     "opentelemetry-instrumentation-flask": ["opentelemetry"],
+    "sqlalchemy-ingres": ["ingres_sa_dialect"]
 }
 
 # We use this to exit with a non-zero status code if any check fails

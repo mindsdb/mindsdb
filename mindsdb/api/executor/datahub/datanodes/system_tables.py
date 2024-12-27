@@ -294,25 +294,32 @@ class ColumnsTable(Table):
             databases = ['information_schema', 'mindsdb', 'files']
 
         for db_name in databases:
+            tables = {}
             if db_name == 'information_schema':
-                tables = {
-                    table_name: table.columns
-                    for table_name, table in inf_schema.tables.items()
-                }
+                for table_name, table in inf_schema.tables.items():
+                    tables[table_name] = [
+                        {'name': name} for name in table.columns
+                    ]
             else:
                 dn = inf_schema.get(db_name)
                 if dn is None:
                     continue
-                tables = {}
                 for table_row in dn.get_tables():
-                    tables[table_row.TABLE_NAME] = [
-                        col['name']
-                        for col in dn.get_table_columns(table_row.TABLE_NAME)
-                    ]
+                    tables[table_row.TABLE_NAME] = dn.get_table_columns(table_row.TABLE_NAME)
 
             for table_name, table_columns in tables.items():
-                for i, column_name in enumerate(table_columns):
-                    result_row = row_templates["text"].copy()
+                for i, column in enumerate(table_columns):
+                    column_name = column['name']
+                    column_type = column.get('type', 'text')
+                    if column_type in ('double precision', 'real', 'numeric'):
+                        column_type = 'float'
+                    elif column_type in ('integer', 'smallint', 'int'):
+                        column_type = 'bigint'
+                    elif column_type in ('timestamp without time zone', 'timestamp with time zone', 'date'):
+                        column_type = 'timestamp'
+                    elif column_type not in row_templates:
+                        column_type = 'text'
+                    result_row = row_templates[column_type].copy()
                     result_row[1] = db_name
                     result_row[2] = table_name
                     result_row[3] = column_name

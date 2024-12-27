@@ -16,6 +16,7 @@ _retriever_strategies = {
     RetrieverType.VECTOR_STORE: lambda config: _create_pipeline_from_vector_store(config),
     RetrieverType.AUTO: lambda config: _create_pipeline_from_auto_retriever(config),
     RetrieverType.MULTI: lambda config: _create_pipeline_from_multi_retriever(config),
+    RetrieverType.SQL: lambda config: _create_pipeline_from_sql_retriever(config)
 }
 
 
@@ -42,6 +43,12 @@ def _create_pipeline_from_multi_retriever(config: RAGPipelineModel) -> LangChain
         config.parent_store = InMemoryByteStore()
 
     return LangChainRAGPipeline.from_multi_vector_retriever(
+        config=config
+    )
+
+
+def _create_pipeline_from_sql_retriever(config: RAGPipelineModel) -> LangChainRAGPipeline:
+    return LangChainRAGPipeline.from_sql_retriever(
         config=config
     )
 

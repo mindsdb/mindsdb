@@ -282,7 +282,7 @@ class PostgresHandler(DatabaseHandler):
         """
         return self.native_query(query)
 
-    def get_columns(self, table_name: str, schema_name: Optional[str]) -> Response:
+    def get_columns(self, table_name: str, schema_name: Optional[str] = None) -> Response:
         """
         Retrieves column details for a specified table in the PostgreSQL database.
 

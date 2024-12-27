@@ -11,7 +11,15 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
 
     def get_tools(self, prefix='') -> List[BaseTool]:
         """Get the tools in the toolkit."""
-        list_sql_database_tool = ListSQLDatabaseTool(name=f'sql_db_list_tables{prefix}', db=self.db)
+        list_sql_database_tool = ListSQLDatabaseTool(
+            name=f'sql_db_list_tables{prefix}',
+            db=self.db,
+            description=(
+                "Input is an empty string, output is a comma-separated list of tables in the database. "
+                "Each table name in the list may be in one of two formats: database_name.table_name or "
+                "database_name.schema_name.table_name."
+            )
+        )
 
         info_sql_database_tool_description = (
             "Input: A comma-separated list of tables. Output: Schema and sample rows for those tables. "

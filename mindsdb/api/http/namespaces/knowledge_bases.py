@@ -185,16 +185,16 @@ class KnowledgeBaseResource(Resource):
             )
 
         try:
+            kb_data = request.json['knowledge_base']
+
             # Retrieve the knowledge base table for updates
-            table = session.kb_controller.get_table(knowledge_base_name, project.id)
+            table = session.kb_controller.get_table(knowledge_base_name, project.id, params=kb_data.get('params'))
             if table is None:
                 return http_error(
                     HTTPStatus.NOT_FOUND,
                     'Knowledge Base not found',
                     f'Knowledge Base with name {knowledge_base_name} does not exist'
                 )
-
-            kb_data = request.json['knowledge_base']
 
             # Set up dependencies for DocumentLoader
             file_controller = FileController()

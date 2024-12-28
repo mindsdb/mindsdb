@@ -17,7 +17,7 @@ from mindsdb.api.executor.datahub.classes.tables_row import TablesRow
 from mindsdb.api.executor import SQLQuery
 from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
-from mindsdb.utilities.context_executor import process_dataframe_in_partitions
+from mindsdb.utilities.partitioning import process_dataframe_in_partitions
 
 
 class ProjectDataNode(DataNode):

@@ -14,7 +14,7 @@ from mindsdb.api.executor.planner.steps import (
 
 from mindsdb.api.executor.sql_query.result_set import ResultSet
 from mindsdb.api.executor.exceptions import LogicError
-from mindsdb.utilities.context_executor import process_dataframe_in_partitions
+from mindsdb.utilities.partitioning import process_dataframe_in_partitions
 
 from .base import BaseStepCall
 

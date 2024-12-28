@@ -30,7 +30,7 @@ def process_dataframe_in_partitions(df: pd.DataFrame, callback: Callable, partit
     # workers count
     is_cloud = Config().is_cloud
     if is_cloud:
-        max_threads = int(os.getenv('MAX_QUERY_PARTITIONS', 10))
+        max_threads = int(os.getenv('MINDSDB_MAX_PARTITIONING_THREADS', 10))
     else:
         max_threads = os.cpu_count() - 2
 

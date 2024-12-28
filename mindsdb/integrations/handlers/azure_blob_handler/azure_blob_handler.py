@@ -13,9 +13,9 @@ from contextlib import contextmanager
 from typing import List, Text, Optional, Dict
 from mindsdb.integrations.libs.api_handler import APIResource, APIHandler
 from mindsdb.integrations.utilities.sql_utils import FilterCondition
-from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.parser.ast import Select, Identifier, Insert
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser.ast.base import ASTNode
+from mindsdb_sql_parser.ast import Select, Identifier, Insert
+from mindsdb_sql_parser import parse_sql
 
 logger = log.getLogger(__name__)
 

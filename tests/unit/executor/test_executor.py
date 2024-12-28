@@ -7,7 +7,7 @@ import json
 import pandas as pd
 import numpy as np
 
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
 
 from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.api.mysql.mysql_proxy.utilities.lightwood_dtype import dtype
@@ -548,6 +548,20 @@ class Test(BaseExecutorMockPredictor):
         assert ret_df.shape[0] == 3
         assert ret_df.t.min() == 2024.
 
+        # > latest with CTE
+        ret = self.execute("""
+            WITH trainingdata AS (
+                select a.t, a.* from files.tasks a
+            )
+            select t.t as t0, p.* from trainingdata t
+            join mindsdb.task_model p
+            where t.t > latest and t.g = 'x'
+        """)
+
+        ret_df = self.ret_to_df(ret)
+        assert ret_df.shape[0] == 3
+        assert ret_df.t.min() == 2024.
+
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_drop_database(self, mock_handler):
         from mindsdb.utilities.exception import EntityNotExistsError
@@ -799,7 +813,7 @@ class TestComplexQueries(BaseExecutorMockPredictor):
     #     '''
     #     from mindsdb.api.mysql.mysql_proxy.utilities import ErSqlWrongArguments
     #     with pytest.raises(ErSqlWrongArguments):
-    #         self.command_executor.execute_command(parse_sql(sql, dialect='mindsdb'))
+    #         self.command_executor.execute_command(parse_sql(sql))
 
 
 class TestTableau(BaseExecutorMockPredictor):

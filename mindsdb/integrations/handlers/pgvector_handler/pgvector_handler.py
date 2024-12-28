@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 
 import pandas as pd
 import psycopg
-from mindsdb_sql.parser.ast import Parameter, Identifier, Update, BinaryOperation
+from mindsdb_sql_parser.ast import Parameter, Identifier, Update, BinaryOperation
 from pgvector.psycopg import register_vector
 
 from mindsdb.integrations.handlers.postgres_handler.postgres_handler import (
@@ -36,6 +36,7 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
 
         super().__init__(name=name, **kwargs)
         self._is_shared_db = False
+        self._is_vector_registered = False
         self.connect()
 
     def _make_connection_args(self):
@@ -77,6 +78,8 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         Handles the connection to a PostgreSQL database instance.
         """
         self.connection = super().connect()
+        if self._is_vector_registered:
+            return self.connection
 
         with self.connection.cursor() as cur:
             try:
@@ -93,6 +96,7 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
 
         # register vector type with psycopg2 connection
         register_vector(self.connection)
+        self._is_vector_registered = True
 
         return self.connection
 
@@ -401,6 +405,11 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         )
 
         if TableField.METADATA.value in data.columns:
+            def fnc(v):
+                if isinstance(v, dict):
+                    return json.dumps(v)
+            data[TableField.METADATA.value] = data[TableField.METADATA.value].apply(fnc)
+
             data = data.astype({TableField.METADATA.value: str})
 
         transposed_data = []

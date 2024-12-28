@@ -5,8 +5,8 @@ import dropbox
 from dropbox.exceptions import AuthError, ApiError, BadInputError
 from typing import Dict, Optional, Text
 
-from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.parser.ast import Select, Identifier, Insert
+from mindsdb_sql_parser.ast.base import ASTNode
+from mindsdb_sql_parser.ast import Select, Identifier, Insert
 
 from mindsdb.utilities import log
 from mindsdb.integrations.libs.response import (

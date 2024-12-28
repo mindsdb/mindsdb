@@ -5,9 +5,9 @@ from typing import List
 
 import sqlalchemy as sa
 
-from mindsdb_sql import parse_sql, ParsingException
-from mindsdb_sql.parser.dialects.mindsdb import CreateJob
-from mindsdb_sql.parser.ast import Select, Star, Identifier, BinaryOperation, Constant
+from mindsdb_sql_parser import parse_sql, ParsingException
+from mindsdb_sql_parser.ast.mindsdb import CreateJob
+from mindsdb_sql_parser.ast import Select, Star, Identifier, BinaryOperation, Constant
 
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.exception import EntityNotExistsError, EntityExistsError
@@ -145,7 +145,7 @@ class JobsController:
                 # replace template variables with null
                 sql = re.sub(r'\{\{[\w\d]+}}', "", sql)
 
-                parse_sql(sql, dialect='mindsdb')
+                parse_sql(sql)
             except ParsingException as e:
                 raise ParsingException(f'Unable to parse: {sql}: {e}')
 
@@ -155,7 +155,7 @@ class JobsController:
                     # replace template variables with null
                     sql = re.sub(r'\{\{[\w\d]+}}', "", sql)
 
-                    parse_sql(sql, dialect='mindsdb')
+                    parse_sql(sql)
                 except ParsingException as e:
                     raise ParsingException(f'Unable to parse: {sql}: {e}')
 
@@ -490,7 +490,7 @@ class JobsExecutor:
                     #  fill template variables
                     sql = self.__fill_variables(sql, record, history_record)
 
-                    query = parse_sql(sql, dialect='mindsdb')
+                    query = parse_sql(sql)
                     executed_sql += sql + '; '
 
                     ret = command_executor.execute_command(query)
@@ -517,7 +517,7 @@ class JobsExecutor:
                     #  fill template variables
                     sql = self.__fill_variables(sql, record, history_record)
 
-                    query = parse_sql(sql, dialect='mindsdb')
+                    query = parse_sql(sql)
                     executed_sql += sql + '; '
 
                     ret = command_executor.execute_command(query)

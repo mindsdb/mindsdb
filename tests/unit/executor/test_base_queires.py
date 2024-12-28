@@ -180,6 +180,17 @@ class TestSelect(BaseExecutorDummyML):
         sql = calls[0][0][0].to_string()
         assert sql.strip() == 'SELECT * FROM tbl2 AS t2 WHERE c IN (2, 1)'
 
+        # --- using alias in order
+        ret = self.run_sql('''
+            SELECT t1.a + t2.a col1, min(t1.a) c
+              FROM dummy_data.tbl1 as t1
+              JOIN pg.tbl2 as t2 on t1.c=t2.c
+            group by col1
+            order by c
+        ''')
+        assert ret['c'][0] == 1  # alias is the same as column
+        assert ret['col1'][0] == 7
+
     @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
     def test_implicit_join(self, data_handler):
         df1 = pd.DataFrame([

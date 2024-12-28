@@ -13,8 +13,8 @@ import duckdb
 import numpy as np
 import pandas as pd
 from mindsdb.utilities import log
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb_sql import parse_sql
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb_sql_parser import parse_sql
 
 logger = log.getLogger(__name__)
 
@@ -87,7 +87,8 @@ class BaseUnitTest:
             logger.warning('Unable to clean up temporary database file: %s', str(e))
 
         # remove environ for next tests
-        del os.environ["MINDSDB_DB_CON"]
+        if 'MINDSDB_DB_CON' in os.environ:
+            del os.environ["MINDSDB_DB_CON"]
 
         # remove import of mindsdb for next tests
         unload_module("mindsdb")
@@ -106,10 +107,9 @@ class BaseUnitTest:
         db.Base.metadata.create_all(db.engine)
 
         # fill with data
-        r = db.Integration(name="files", data={}, engine="files")
-        db.session.add(r)
-        r = db.Integration(name="views", data={}, engine="views")
-        db.session.add(r)
+        from mindsdb.interfaces.database.integrations import integration_controller
+        integration_controller.create_permanent_integrations()
+
         r = db.Integration(name="dummy_data", data={'db_path': self._dummy_db_path}, engine="dummy_data")
         db.session.add(r)
 
@@ -155,7 +155,7 @@ class BaseUnitTest:
 
     def run_sql(self, sql):
         """Execute SQL and return a DataFrame, raising an AssertionError if an error occurs"""
-        ret = self.command_executor.execute_command(parse_sql(sql, dialect="mindsdb"))
+        ret = self.command_executor.execute_command(parse_sql(sql))
         assert ret.error_code is None, f"SQL execution failed with error: {ret.error_code}"
         if ret.data is not None:
             return ret.data.to_df()
@@ -398,7 +398,7 @@ class BaseExecutorDummyML(BaseExecutorTest):
     def run_sql(self, sql, throw_error=True, database='mindsdb'):
         self.command_executor.session.database = database
         ret = self.command_executor.execute_command(
-            parse_sql(sql, dialect='mindsdb')
+            parse_sql(sql)
         )
         if throw_error:
             assert ret.error_code is None
@@ -526,7 +526,7 @@ class BaseExecutorMockPredictor(BaseExecutorTest):
 
     def execute(self, sql):
         ret = self.command_executor.execute_command(
-            parse_sql(sql, dialect='mindsdb')
+            parse_sql(sql)
         )
         if ret.error_code is not None:
             raise Exception()

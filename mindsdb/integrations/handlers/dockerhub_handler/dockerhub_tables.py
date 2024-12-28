@@ -3,7 +3,7 @@ from typing import List
 from mindsdb.integrations.libs.api_handler import APITable
 from mindsdb.integrations.utilities.handlers.query_utilities import SELECTQueryParser, SELECTQueryExecutor
 from mindsdb.utilities import log
-from mindsdb_sql.parser import ast
+from mindsdb_sql_parser import ast
 
 logger = log.getLogger(__name__)
 

@@ -155,7 +155,9 @@ The default configuration for MindsDB's Docker image is stored as a JSON code, a
 ```json
 {
     "config_version":"1.4",
-    "storage_dir": "/root/mdb_storage",
+    "paths": {
+        "root": "/root/mdb_storage"
+    },
     "debug": false,
     "integrations": {},
     "api": {

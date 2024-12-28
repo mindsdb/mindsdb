@@ -1,6 +1,6 @@
 from typing import Dict, List, Text
 
-from mindsdb_sql.parser.ast import Select, Star, Identifier
+from mindsdb_sql_parser.ast import Select, Star, Identifier
 import pandas as pd
 
 from mindsdb.integrations.libs.api_handler import APIResource

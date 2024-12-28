@@ -7,9 +7,9 @@ from psycopg.postgres import types
 from psycopg.pq import ExecStatus
 from pandas import DataFrame
 
-from mindsdb_sql import parse_sql
-from mindsdb_sql.render.sqlalchemy_render import SqlalchemyRender
-from mindsdb_sql.parser.ast.base import ASTNode
+from mindsdb_sql_parser import parse_sql
+from mindsdb.utilities.render.sqlalchemy_render import SqlalchemyRender
+from mindsdb_sql_parser.ast.base import ASTNode
 
 from mindsdb.integrations.libs.base import DatabaseHandler
 from mindsdb.utilities import log
@@ -67,6 +67,9 @@ class PostgresHandler(DatabaseHandler):
 
         if self.connection_args.get('sslmode'):
             config['sslmode'] = self.connection_args.get('sslmode')
+
+        if self.connection_args.get('autocommit'):
+            config['autocommit'] = self.connection_args.get('autocommit')
 
         # If schema is not provided set public as default one
         if self.connection_args.get('schema'):

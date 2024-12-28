@@ -3,9 +3,10 @@ from typing import Any
 import pandas as pd
 
 from mindsdb.api.executor.utilities.sql import query_df
-from mindsdb_sql.parser import ast
-from mindsdb_sql.parser.ast.base import ASTNode
-from mindsdb_sql.planner.utils import query_traversal
+from mindsdb_sql_parser import ast
+from mindsdb_sql_parser.ast.base import ASTNode
+
+from mindsdb.integrations.utilities.query_traversal import query_traversal
 
 
 class FilterOperator(Enum):
@@ -66,6 +67,7 @@ class SortColumn:
     def __init__(self, column: str, ascending: bool = True):
         self.column = column
         self.ascending = ascending
+        self.applied = False
 
 
 def make_sql_session():

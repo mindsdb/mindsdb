@@ -2,7 +2,7 @@ from unittest.mock import Mock
 
 import pandas as pd
 import pytest
-from mindsdb_sql import parse_sql
+from mindsdb_sql_parser import parse_sql
 from pandas.testing import assert_frame_equal
 
 from mindsdb.integrations.libs.vectordatabase_handler import (
@@ -36,7 +36,7 @@ def test_vectordatabase_parsing(vector_store_handler):
             FROM chroma_db.test_table
         )
     """
-    query = parse_sql(sql, dialect="mindsdb")
+    query = parse_sql(sql)
     vector_store_handler._dispatch(query)
     vector_store_handler.create_table.assert_called_once()
     vector_store_handler.create_table.assert_called_with(
@@ -47,7 +47,7 @@ def test_vectordatabase_parsing(vector_store_handler):
     sql = """
         DROP TABLE chroma_db.test_table
     """
-    query = parse_sql(sql, dialect="mindsdb")
+    query = parse_sql(sql)
     vector_store_handler._dispatch(query)
     vector_store_handler.drop_table.assert_called_once()
     vector_store_handler.drop_table.assert_called_with("test_table", if_exists=False)
@@ -74,7 +74,7 @@ def test_vectordatabase_parsing(vector_store_handler):
         }
     )
 
-    query = parse_sql(sql, dialect="mindsdb")
+    query = parse_sql(sql)
     vector_store_handler._dispatch(query)
     vector_store_handler.insert.assert_called_once()
     # get the args passed to the insert method
@@ -92,7 +92,7 @@ def test_vectordatabase_parsing(vector_store_handler):
         SELECT *
         FROM chroma_db.test_table
     """
-    query = parse_sql(sql, dialect="mindsdb")
+    query = parse_sql(sql)
     vector_store_handler._dispatch(query)
     vector_store_handler.select.assert_called_once()
     vector_store_handler.select.assert_called_with(
@@ -109,7 +109,7 @@ def test_vectordatabase_parsing(vector_store_handler):
         WHERE search_vector = '[1, 2, 3]'
         LIMIT 10
     """
-    query = parse_sql(sql, dialect="mindsdb")
+    query = parse_sql(sql)
     # reset the mock
     vector_store_handler.select.reset_mock()
     vector_store_handler._dispatch(query)
@@ -133,7 +133,7 @@ def test_vectordatabase_parsing(vector_store_handler):
         LIMIT 10
         OFFSET 5
     """
-    query = parse_sql(sql, dialect="mindsdb")
+    query = parse_sql(sql)
     # reset the mock
     vector_store_handler.select.reset_mock()
     vector_store_handler._dispatch(query)
@@ -151,7 +151,7 @@ def test_vectordatabase_parsing(vector_store_handler):
         SELECT id, content
         FROM chroma_db.test_table
     """
-    query = parse_sql(sql, dialect="mindsdb")
+    query = parse_sql(sql)
     # reset the mock
     vector_store_handler.select.reset_mock()
     vector_store_handler._dispatch(query)
@@ -172,7 +172,7 @@ def test_vectordatabase_parsing(vector_store_handler):
         AND metadata.some_field in ('some_value', 'some_other_value')
         AND search_vector = '[1, 2, 3]'
     """
-    query = parse_sql(sql, dialect="mindsdb")
+    query = parse_sql(sql)
     # reset the mock
     vector_store_handler.select.reset_mock()
     vector_store_handler._dispatch(query)
@@ -204,7 +204,7 @@ def test_vectordatabase_parsing(vector_store_handler):
         DELETE FROM chroma_db.test_table
         WHERE id = 1
     """
-    query = parse_sql(sql, dialect="mindsdb")
+    query = parse_sql(sql)
     vector_store_handler._dispatch(query)
     vector_store_handler.delete.assert_called_once()
     vector_store_handler.delete.assert_called_with(
@@ -219,7 +219,7 @@ def test_unsupported_ops(vector_store_handler):
         SELECT id, some_column_not_supported
         FROM chroma_db.test_table
     """
-    query = parse_sql(sql, dialect="mindsdb")
+    query = parse_sql(sql)
     with pytest.raises(Exception) as e:
         vector_store_handler._dispatch(query)
     assert "not allowed" in str(e.value)
@@ -233,7 +233,7 @@ def test_unsupported_ops(vector_store_handler):
             1, 'test'
         )
     """
-    query = parse_sql(sql, dialect="mindsdb")
+    query = parse_sql(sql)
     with pytest.raises(Exception) as e:
         vector_store_handler._dispatch(query)
     assert "not allowed" in str(e.value)
@@ -245,7 +245,7 @@ def test_unsupported_ops(vector_store_handler):
         WHERE metadata.created_at > '2021-01-01'
         AND unknown_column = 'some_value'
     """
-    query = parse_sql(sql, dialect="mindsdb")
+    query = parse_sql(sql)
     # reset the mock
     vector_store_handler.select.reset_mock()
     vector_store_handler._dispatch(query)
@@ -277,6 +277,6 @@ def test_unimplemented_yet(vector_store_handler):
         SELECT count(*)
         FROM chroma_db.test_table
     """
-    query = parse_sql(sql, dialect="mindsdb")
+    query = parse_sql(sql)
     with pytest.raises(Exception):
         vector_store_handler._dispatch(query)

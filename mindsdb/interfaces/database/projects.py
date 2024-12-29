@@ -34,6 +34,13 @@ class Project:
     def create(self, name: str):
         name = name.lower()
         with create_project_lock:
+            existing_record = db.Integration.query.filter(
+                sa.func.lower(db.Integration.name) == name,
+                db.Integration.company_id == ctx.company_id
+            ).first()
+            if existing_record is not None:
+                raise EntityExistsError('Database exists with this name ', name)
+
             existing_record = db.Project.query.filter(
                 (sa.func.lower(db.Project.name) == name)
                 & (db.Project.company_id == ctx.company_id)
@@ -41,13 +48,6 @@ class Project:
             ).first()
             if existing_record is not None:
                 raise EntityExistsError('Project already exists', name)
-
-            existing_record = db.Integration.query.filter(
-                sa.func.lower(db.Integration.name) == name,
-                db.Integration.company_id == ctx.company_id
-            ).first()
-            if existing_record is not None:
-                raise EntityExistsError('Database exists with this name ', name)
 
             record = db.Project(
                 name=name,

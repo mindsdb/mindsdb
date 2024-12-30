@@ -213,7 +213,7 @@ class ApplyPredictorStepCall(ApplyPredictorBaseCall):
                         columns = list(table_df.columns)
                         for col_idx, name in cols_to_rename.items():
                             columns[col_idx] = name
-                        table_df = table_df.set_axis(columns, axis=1)
+                        table_df.columns = columns
 
                 version = None
                 if len(step.predictor.parts) > 1 and step.predictor.parts[-1].isdigit():

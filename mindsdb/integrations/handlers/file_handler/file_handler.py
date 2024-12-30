@@ -276,7 +276,7 @@ class FileHandler(DatabaseHandler):
 
         header = df.columns.values.tolist()
 
-        df = df.rename(columns={key: key.strip() for key in header})
+        df.columns = [key.strip() for key in header]
         df = df.applymap(clean_cell)
 
         header = [x.strip() for x in header]

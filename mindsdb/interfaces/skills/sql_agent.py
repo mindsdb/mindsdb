@@ -123,7 +123,7 @@ class SQLAgent:
         for table_name in table_names:
             if not table_name.strip():
                 continue
-            
+
             # Some LLMs (e.g. gpt-4o) may include special characters when invoking tools.
             # Back-ticks are not removed because querying data sources like MS OneDrive and Amazon S3 requires tables (files) to be wrapped in them.
             table_name = table_name.strip(' "\'\n\r')

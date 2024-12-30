@@ -132,15 +132,32 @@ class HandlerMemory(BaseMemory):
             )
         )
 
+        # Convert the WHERE conditions to a BinaryOperation objects.
+        # If there are more than two conditions, nest them in a BinaryOperation objects.
+        if len(where_conditions) > 2:
+            where_conditions_binary_operation = BinaryOperation(
+                op='and',
+                args=where_conditions[:2]
+            )
+
+            for condition in where_conditions[2:]:
+                where_conditions_binary_operation = BinaryOperation(
+                    op='and',
+                    args=[where_conditions_binary_operation, condition]
+                )
+        # If there are only two conditions or less, use them as is.
+        else:
+            where_conditions_binary_operation = BinaryOperation(
+                op='and',
+                args=where_conditions
+            )
+
         ast_query = Select(
             targets=[Identifier(text_col),
                      Identifier(username_col),
                      Identifier(time_col)],
             from_table=Identifier(t_params['name']),
-            where=BinaryOperation(
-                op='and',
-                args=where_conditions
-            ),
+            where=where_conditions_binary_operation,
             order_by=[OrderBy(Identifier(time_col))],
             limit=Constant(self.MAX_DEPTH),
         )

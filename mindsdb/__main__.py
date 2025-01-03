@@ -22,13 +22,9 @@ logger.debug("Starting MindsDB...")
 
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.utilities.config import config
-from mindsdb.api.http.start import start as start_http
-from mindsdb.api.mysql.start import start as start_mysql
-from mindsdb.api.mongo.start import start as start_mongo
-from mindsdb.api.postgres.start import start as start_postgres
-from mindsdb.interfaces.tasks.task_monitor import start as start_tasks
-from mindsdb.utilities.ml_task_queue.consumer import start as start_ml_task_queue
-from mindsdb.interfaces.jobs.scheduler import start as start_scheduler
+from mindsdb.utilities.starters import (
+    start_http, start_mysql, start_mongo, start_postgres, start_ml_task_queue, start_scheduler, start_tasks
+)
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 from mindsdb.utilities.functions import get_versions_where_predictors_become_obsolete
 from mindsdb.interfaces.database.integrations import integration_controller

@@ -28,11 +28,6 @@
 
 ----------------------------------------
 
-[MindsDB](https://mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo) is the world’s most widely used platform for building AI that can learn from and answer questions across federated data.
-
-[![Tweet](https://img.shields.io/twitter/url/http/shields.io.svg?style=social)](https://twitter.com/intent/tweet?text=The%20platform%20for%20building%20AI,%20from%20enterprise%20data&url=https://github.com/mindsdb/mindsdb&via=mindsdb&hashtags=ai,opensource)
-
-## 📖 About Us
 
 MindsDB is the world's most effective solution for building AI applications that talk to messy enterprise data sources. Think of it as a librarian Marie Kondo.
 

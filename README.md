@@ -45,7 +45,7 @@ MindsDB is an open-source server that can be deployed anywhere - from your lapto
   * [Using Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop). This is the fastest and recommended way to get started and have it all running.
   * [Using Docker](https://docs.mindsdb.com/setup/self-hosted/docker). This is also simple, but gives you more flexibility on how to further customize your server.
 
-## [Connect Your Data](https://www.mindsdb.com/integrations/data-overview)
+## Connect Your Data
 
 You can connect to hundreds of [data sources (learn more)](https://docs.mindsdb.com/integrations/data-overview). This is just an example of a Postgres database.
 

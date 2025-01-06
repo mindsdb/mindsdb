@@ -1,6 +1,7 @@
 from typing import List, Optional
 
 from pinecone import Pinecone
+from pinecone.core.openapi.shared.exceptions import NotFoundException
 import pandas as pd
 import ast
 
@@ -211,7 +212,12 @@ class PineconeHandler(VectorStoreHandler):
     def drop_table(self, table_name: str, if_exists=True):
         """Delete an index passed in through `table_name` from the pinecone ."""
         connection = self.connect()
-        connection.delete_index(table_name)
+        try:
+            connection.delete_index(table_name)
+        except NotFoundException:
+            if if_exists:
+                return
+            raise Exception(f"Error deleting index '{table_name}', are you sure the name is correct?")
 
     def delete(self, table_name: str, conditions: List[FilterCondition] = None):
         """Delete records in pinecone index `table_name` based on ids or based on metadata conditions."""
@@ -241,6 +247,7 @@ class PineconeHandler(VectorStoreHandler):
         limit: int = None,
     ):
         """Run query on pinecone index named `table_name` and get results."""
+        # TODO: Add support for namespaces.
         index = self._get_index_handle(table_name)
         if index is None:
             raise Exception(f"Error getting index '{table_name}', are you sure the name is correct?")

@@ -191,7 +191,7 @@ class PineconeHandler(VectorStoreHandler):
         connection = self.connect()
         connection.create_index(name=table_name, **self._table_create_params)
 
-    def insert(self, table_name: str, data: pd.DataFrame, columns: List[str] = None):
+    def insert(self, table_name: str, data: pd.DataFrame):
         """Insert data into pinecone index passed in through `table_name` parameter."""
         upsert_batch_size = 99  # API reccomendation
         index = self._get_index_handle(table_name)
@@ -200,9 +200,13 @@ class PineconeHandler(VectorStoreHandler):
 
         data.rename(columns={
             TableField.ID.value: "id",
-            TableField.EMBEDDINGS.value: "values",
-            TableField.METADATA.value: "metadata"},
+            TableField.EMBEDDINGS.value: "values"},
             inplace=True)
+        
+        if TableField.METADATA.value in data.columns:
+            data.rename(columns={TableField.METADATA.value: "metadata"}, inplace=True)
+        else:
+            data["metadata"] = None
         data = data[["id", "values", "metadata"]]
 
         for chunk in (data[pos:pos + upsert_batch_size] for pos in range(0, len(data), upsert_batch_size)):

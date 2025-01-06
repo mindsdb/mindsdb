@@ -41,8 +41,8 @@ class PineconeHandler(VectorStoreHandler):
             "pod_type": 'p1',
         }
         for key in self._table_create_params:
-            if key in self._connection_data:
-                self._table_create_params[key] = self._connection_data[key]
+            if key in self.connection_data:
+                self._table_create_params[key] = self.connection_data[key]
 
     def __del__(self):
         if self.is_connected is True:
@@ -137,9 +137,12 @@ class PineconeHandler(VectorStoreHandler):
         """Connect to a pinecone database."""
         if self.is_connected is True:
             return self.connection
+        
+        if 'api_key' not in self.connection_data:
+            raise ValueError('Required parameter (api_key) must be provided.')
 
         try:
-            self.connection = Pinecone(**self._client_config)            
+            self.connection = Pinecone(api_key=self.connection_data['api_key'])         
             return self.connection
         except Exception as e:
             logger.error(f"Error connecting to Pinecone client, {e}!")

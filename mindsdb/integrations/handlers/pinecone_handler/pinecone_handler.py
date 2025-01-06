@@ -294,6 +294,9 @@ class PineconeHandler(VectorStoreHandler):
 
             query["id"] = id_filters[0]
 
+        if not vector_filters and not id_filters:
+            raise Exception("You must provide either a search_vector or an ID in the query")
+
         # check for limit
         if limit is not None:
             query["top_k"] = limit

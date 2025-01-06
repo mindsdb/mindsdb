@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-import pinecone
+from pinecone import Pinecone
 import pandas as pd
 import ast
 
@@ -24,14 +24,15 @@ class PineconeHandler(VectorStoreHandler):
 
     name = "pinecone"
 
-    def __init__(self, name: str, **kwargs):
+    def __init__(self, name: str,, connection_data: dict, **kwargs):
         super().__init__(name)
+        self.connection_data = connection_data
+        self.kwargs = kwargs
+
+        self.connection = None
+        self.is_connected = False
+
         self.MAX_FETCH_LIMIT = 10000
-        self._connection_data = kwargs.get("connection_data")
-        self._client_config = {
-            "api_key": self._connection_data.get("api_key"),
-            "environment": self._connection_data.get("environment")
-        }
         self._table_create_params = {
             "dimension": 8,
             "metric": "cosine",
@@ -42,8 +43,6 @@ class PineconeHandler(VectorStoreHandler):
         for key in self._table_create_params:
             if key in self._connection_data:
                 self._table_create_params[key] = self._connection_data[key]
-        self.is_connected = False
-        self.connect()
 
     def __del__(self):
         if self.is_connected is True:
@@ -135,10 +134,12 @@ class PineconeHandler(VectorStoreHandler):
 
     def connect(self):
         """Connect to a pinecone database."""
+        if self.is_connected is True:
+            return self.connection
+
         try:
-            pinecone.init(api_key=self._client_config["api_key"], environment=self._client_config["environment"])
-            pinecone.list_indexes()
-            self.is_connected = True
+            self.connection = Pinecone(**self._client_config)            
+            return self.connection
         except Exception as e:
             logger.error(f"Error connecting to Pinecone client, {e}!")
             self.is_connected = False
@@ -152,14 +153,23 @@ class PineconeHandler(VectorStoreHandler):
 
     def check_connection(self):
         """Check the connection to pinecone."""
-        response_code = StatusResponse(False)
+        response = StatusResponse(False)
+        need_to_close = self.is_connected is False
+
         try:
-            pinecone.list_indexes()
-            response_code.success = True
+            connection = self.connect()
+            connection.list_indexes()
+            response.success = True
         except Exception as e:
             logger.error(f"Error connecting to pinecone , {e}!")
-            response_code.error_message = str(e)
-        return response_code
+            response.error_message = str(e)
+
+        if response.success is True and need_to_close:
+            self.disconnect()
+        if response.success is False and self.is_connected is True:
+            self.is_connected = False
+
+        return response
 
     def get_tables(self) -> HandlerResponse:
         """Get the list of indexes in the pinecone database."""

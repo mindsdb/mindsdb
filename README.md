@@ -41,16 +41,15 @@ A federated query engine that tidies up your data-sprawl chaos while meticulousl
 
 MindsDB is an open-source server that can be deployed anywhere - from your laptop to the cloud, and everywhere in between. And yes, you can customize it to your heart's content.
 
-
   * [Using Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop). This is the fastest and recommended way to get started and have it all running.
   * [Using Docker](https://docs.mindsdb.com/setup/self-hosted/docker). This is also simple, but gives you more flexibility on how to further customize your server.
+  * [Using PyPI](https://docs.mindsdb.com/contribute/install). This option enables you to contribute to MindsDB.
 
 ## Connect Your Data
 
 You can connect to hundreds of [data sources (learn more)](https://docs.mindsdb.com/integrations/data-overview). This is just an example of a Postgres database.
 
 ```sql
-
 -- Connect to demo postgres DB
 CREATE DATABASE demo_postgres_db
 WITH ENGINE = "postgres",
@@ -62,10 +61,9 @@ PARAMETERS = {
   "database": "demo",
   "schema": "demo_data"
 };
-
 ```
 
-Once you've connected your data sources, you can [combine](https://docs.mindsdb.com/mindsdb_sql/sql/api/join-on), [slice it, dice it](https://docs.mindsdb.com/mindsdb_sql/sql/api/select), and [transform](https://docs.mindsdb.com/use-cases/data_enrichment/overview) it however your heart desires using good ol' standard SQL [(learn more)](https://docs.mindsdb.com/mindsdb_sql/sql/create/view). 
+Once you've connected your data sources, you can [combine](https://docs.mindsdb.com/mindsdb_sql/sql/api/join-on), [slice it, dice it](https://docs.mindsdb.com/mindsdb_sql/sql/api/select), and [transform](https://docs.mindsdb.com/use-cases/data_enrichment/overview) it however your heart desires using good ol' standard SQL [(learn more)](https://docs.mindsdb.com/mindsdb_sql/overview). 
 
 After you've whipped your data into shape, it's time to build AI that actually learns!
 
@@ -73,24 +71,22 @@ After you've whipped your data into shape, it's time to build AI that actually l
 
 Our Knowledge Bases are state-of-the-art autonomous RAG systems that can digest data from any source MindsDB supports. Whether your data is structured and neater than a Swiss watch factory or unstructured and messy as a teenager's bedroom, our Knowledge Base engine will figure out how to find the relevant information. 
 
-
 **In this example** we will create a knowledge base that knows everything about amazon reviews. 
 
-
 ```sql
-
--- first you create a knowledge base
+-- first create a knowledge base
 CREATE KNOWLEDGE_BASE mindsdb.reviews_kb;
 
-
--- now we can insert everything from the amazon reviews table into it, so it can learn it
+-- now insert everything from the amazon reviews table into it, so it can learn it
 INSERT INTO mindsdb.reviews_kb (
   SELECT review as content FROM demo_pg_db.amazon_reviews
 );
 
--- You can check the status of your loads here
+-- check the status of your loads here
 SELECT * FROM information_schema.knowledge_bases;
 
+-- query the content of the knowledge base
+SELECT * FROM mindsdb.reviews_kb;
 ```
 
 For the tinkerers and optimization enthusiasts out there, you can dive as deep as you want. [(Learn more about knowledge Bases)](https://docs.mindsdb.com/mindsdb_sql/agents/knowledge-bases)
@@ -105,13 +101,12 @@ But if you'd rather spend your time on other things (like finally building that 
 Now that your knowledge base is loaded and ready. Let's hunt for some juicy info!
 
 #### Via SQL
+
 ```sql
 -- Find the reviews that about Iphone in beast of lights
-
 SELECT *  FROM mindsdb.reviews_kb
 WHERE content LIKE 'what are the best kindle reviews'
 LIMIT 10;
-
 ```
 
 #### Via Python SDK

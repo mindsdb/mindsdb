@@ -249,23 +249,28 @@ class PineconeHandler(VectorStoreHandler):
             "include_values": True,
             "include_metadata": True
         }
+
         # check for metadata filter
         metadata_filters = self._translate_metadata_condition(conditions)
-        # check for vector filter
-        vector_filter = (
-            None
-            if conditions is None
-            else [
-                condition.value
-                for condition in conditions
-                if condition.column == TableField.SEARCH_VECTOR.value
-            ]
-        )
-        if vector_filter:
-            if len(vector_filter) > 1:
+        if metadata_filters is not None:
+            query["filter"] = metadata_filters
+
+        # check for vector and id filters
+        vector_filters = []
+        id_filters = []
+
+        if conditions:
+            for condition in conditions:
+                if condition.column == TableField.SEARCH_VECTOR.value:
+                    vector_filters.append(condition.value)
+                elif condition.column == TableField.ID.value:
+                    id_filters.append(condition.value)
+
+        if vector_filters:
+            if len(vector_filters) > 1:
                 raise Exception("You cannot have multiple search_vectors in query")
 
-            query["vector"] = vector_filter[0]
+            query["vector"] = vector_filters[0]
             # For subqueries, the vector filter is a list of list of strings
             if isinstance(query["vector"], list) and isinstance(query["vector"][0], str):
                 if len(query["vector"]) > 1:
@@ -276,26 +281,18 @@ class PineconeHandler(VectorStoreHandler):
                 except Exception as e:
                     raise Exception(f"Cannot parse the search vector '{query['vector']}'into a list: {e}")
 
-        # check for limit
-        if limit is not None:
-            query["top_k"] = limit
-        else:
-            query["top_k"] = self.MAX_FETCH_LIMIT
-        if metadata_filters is not None:
-            query["filter"] = metadata_filters
-        # check for id filter
-        id_filters = None
-        if conditions is not None:
-            id_filters = [
-                condition.value
-                for condition in conditions
-                if condition.column == TableField.ID.value
-            ] or None
         if id_filters:
             if len(id_filters) > 1:
                 raise Exception("You cannot have multiple IDs in query")
 
             query["id"] = id_filters[0]
+
+        # check for limit
+        if limit is not None:
+            query["top_k"] = limit
+        else:
+            query["top_k"] = self.MAX_FETCH_LIMIT
+
         # exec query
         try:
             result = index.query(**query)

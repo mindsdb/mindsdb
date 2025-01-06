@@ -24,7 +24,7 @@ class PineconeHandler(VectorStoreHandler):
 
     name = "pinecone"
 
-    def __init__(self, name: str,, connection_data: dict, **kwargs):
+    def __init__(self, name: str, connection_data: dict, **kwargs):
         super().__init__(name)
         self.connection_data = connection_data
         self.kwargs = kwargs
@@ -50,7 +50,8 @@ class PineconeHandler(VectorStoreHandler):
 
     def _get_index_handle(self, index_name):
         """Returns handler to index specified by `index_name`"""
-        index = pinecone.Index(index_name)
+        connection = self.connect()
+        index = connection.Index(index_name)
         try:
             index.describe_index_stats()
         except Exception:
@@ -148,7 +149,7 @@ class PineconeHandler(VectorStoreHandler):
         """Close the pinecone connection."""
         if self.is_connected is False:
             return
-        pinecone.init(api_key="", environment="")
+        self.connection = None
         self.is_connected = False
 
     def check_connection(self):
@@ -173,7 +174,8 @@ class PineconeHandler(VectorStoreHandler):
 
     def get_tables(self) -> HandlerResponse:
         """Get the list of indexes in the pinecone database."""
-        indexes = pinecone.list_indexes()
+        connection = self.connect()
+        indexes = connection.list_indexes()
         indexes_names = pd.DataFrame(
             columns=["index_name"],
             data=[index for index in indexes],
@@ -182,7 +184,8 @@ class PineconeHandler(VectorStoreHandler):
 
     def create_table(self, table_name: str, if_not_exists=True):
         """Create an index with the given name in the Pinecone database."""
-        pinecone.create_index(name=table_name, **self._table_create_params)
+        connection = self.connect()
+        connection.create_index(name=table_name, **self._table_create_params)
 
     def insert(self, table_name: str, data: pd.DataFrame, columns: List[str] = None):
         """Insert data into pinecone index passed in through `table_name` parameter."""
@@ -204,8 +207,8 @@ class PineconeHandler(VectorStoreHandler):
 
     def drop_table(self, table_name: str, if_exists=True):
         """Delete an index passed in through `table_name` from the pinecone ."""
-
-        pinecone.delete_index(table_name)
+        connection = self.connect()
+        connection.delete_index(table_name)
 
     def delete(self, table_name: str, conditions: List[FilterCondition] = None):
         """Delete records in pinecone index `table_name` based on ids or based on metadata conditions."""

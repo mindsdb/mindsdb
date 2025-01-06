@@ -1,3 +1,4 @@
+import ast
 from typing import List, Optional
 
 from pinecone import Pinecone
@@ -203,11 +204,16 @@ class PineconeHandler(VectorStoreHandler):
             TableField.EMBEDDINGS.value: "values"},
             inplace=True)
         
+        columns = ["id", "values"]
+        
         if TableField.METADATA.value in data.columns:
             data.rename(columns={TableField.METADATA.value: "metadata"}, inplace=True)
-        else:
-            data["metadata"] = None
-        data = data[["id", "values", "metadata"]]
+            columns.append("metadata")
+
+        data = data[columns]
+
+        # convert the embeddings to lists
+        data["values"] = data["values"].apply(lambda x: ast.literal_eval(x))
 
         for chunk in (data[pos:pos + upsert_batch_size] for pos in range(0, len(data), upsert_batch_size)):
             chunk = chunk.to_dict(orient="records")

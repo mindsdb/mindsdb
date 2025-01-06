@@ -135,3 +135,39 @@ wiki_kb = server.knowledge_bases.get('mindsdb.reviews_kb');
 df = my_kb.find('what are the best kindle reviews').fetch()
 
 ```
+
+## 🤝 Contribute
+
+Interested in contributing to MindsDB? Follow our [installation guide for development](https://docs.mindsdb.com/contribute/install?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
+
+You can find our [contribution guide here](https://docs.mindsdb.com/contribute/contribute?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
+
+We welcome suggestions! Feel free to open new issues with your ideas, and we’ll guide you.
+
+This project adheres to a [Contributor Code of Conduct](https://github.com/mindsdb/mindsdb/blob/main/CODE_OF_CONDUCT.md). By participating, you agree to follow its terms.
+
+Also, check out our [community rewards and programs](https://mindsdb.com/community?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
+
+## 🤍 Support
+
+If you find a bug, please submit an [issue on GitHub](https://github.com/mindsdb/mindsdb/issues/new/choose).
+
+Here’s how you can get community support:
+
+* Ask a question in our [Slack Community](https://mindsdb.com/joincommunity?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
+* Join our [GitHub Discussions](https://github.com/mindsdb/mindsdb/discussions).
+* Post on [Stack Overflow](https://stackoverflow.com/questions/tagged/mindsdb) with the MindsDB tag.
+
+For commercial support, please [contact the MindsDB team](https://mindsdb.com/contact?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo).
+
+## 💚 Current Contributors
+
+<a href="https://github.com/mindsdb/mindsdb/graphs/contributors">
+  <img src="https://contributors-img.web.app/image?repo=mindsdb/mindsdb" />
+</a>
+
+Generated with [contributors-img](https://contributors-img.web.app).
+
+## 🔔 Subscribe for Updates
+
+Join our [Slack community](https://mindsdb.com/joincommunity)

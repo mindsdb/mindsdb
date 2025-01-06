@@ -179,11 +179,11 @@ class PineconeHandler(VectorStoreHandler):
         """Get the list of indexes in the pinecone database."""
         connection = self.connect()
         indexes = connection.list_indexes()
-        indexes_names = pd.DataFrame(
-            columns=["index_name"],
-            data=[index for index in indexes],
+        df = pd.DataFrame(
+            columns=["table_name"],
+            data=[index['name'] for index in indexes],
         )
-        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=indexes_names)
+        return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=df)
 
     def create_table(self, table_name: str, if_not_exists=True):
         """Create an index with the given name in the Pinecone database."""

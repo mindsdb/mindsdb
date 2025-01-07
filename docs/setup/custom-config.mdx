@@ -199,6 +199,14 @@ The `type` parameter specifies the type of caching mechanism to use for storing 
 * `redis`: Stores prediction results in a Redis instance. This option requires the `connection` parameter, which specifies the Redis connection string.
 
 ```bash
+    "logging": {
+        "x": "x"
+    },
+```
+
+todo
+
+```bash
     "ml_task_queue": {
         "type": "local",
         "host": "localhost", # required only when type is set to redis
@@ -234,3 +242,9 @@ If this parameter is left empty (`[]`), users can upload files from any URL with
 The `web_crawling_allowed_sites` parameter restricts web crawling operations to a specified list of allowed IPs or web addresses. This ensures that the application only accesses pre-approved and safe URLs (`"web_crawling_allowed_sites": ["https://example.com", "https://api.mysite.com"]`).
 
 If left empty (`[]`), the application allows access to all URLs by default (marked with a wildcard in the open-source version).
+
+## Modifying Config Values
+
+Users can modify config values by directly editing the `config.json` file.
+
+Users can edit the config values through HTTP requests or MindsDB Editor <todo: how to do that>. In this case, the `config.auto.json` file is created to store the updated `config.json` file. The `config.auto.json` file is stored in the location defined in the `paths.root` config parameter.

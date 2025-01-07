@@ -28,6 +28,8 @@ DEFAULT_CREATE_TABLE_PARAMS = {
         "region": "us-east-1"
     }
 }
+MAX_FETCH_LIMIT = 10000
+UPSERT_BATCH_SIZE = 99 # API reccomendation
 
 
 class PineconeHandler(VectorStoreHandler):
@@ -42,8 +44,6 @@ class PineconeHandler(VectorStoreHandler):
 
         self.connection = None
         self.is_connected = False
-
-        self.MAX_FETCH_LIMIT = 10000
 
     def __del__(self):
         if self.is_connected is True:
@@ -190,6 +190,8 @@ class PineconeHandler(VectorStoreHandler):
         """Create an index with the given name in the Pinecone database."""
         connection = self.connect()
 
+        # TODO: Should other parameters be supported? Pod indexes? 
+        # TODO: Should there be a better way to provide these parameters rather than when establishing the connection?
         create_table_params = {}
         for key, val in DEFAULT_CREATE_TABLE_PARAMS.items():
             if key in self.connection_data:
@@ -208,7 +210,6 @@ class PineconeHandler(VectorStoreHandler):
 
     def insert(self, table_name: str, data: pd.DataFrame):
         """Insert data into pinecone index passed in through `table_name` parameter."""
-        upsert_batch_size = 99  # API reccomendation
         index = self._get_index_handle(table_name)
         if index is None:
             raise Exception(f"Error getting index '{table_name}', are you sure the name is correct?")
@@ -229,7 +230,7 @@ class PineconeHandler(VectorStoreHandler):
         # convert the embeddings to lists
         data["values"] = data["values"].apply(lambda x: ast.literal_eval(x))
 
-        for chunk in (data[pos:pos + upsert_batch_size] for pos in range(0, len(data), upsert_batch_size)):
+        for chunk in (data[pos:pos + UPSERT_BATCH_SIZE] for pos in range(0, len(data), upsert_batch_size)):
             chunk = chunk.to_dict(orient="records")
             index.upsert(vectors=chunk)
 
@@ -325,7 +326,7 @@ class PineconeHandler(VectorStoreHandler):
         if limit is not None:
             query["top_k"] = limit
         else:
-            query["top_k"] = self.MAX_FETCH_LIMIT
+            query["top_k"] = MAX_FETCH_LIMIT
 
         # exec query
         try:

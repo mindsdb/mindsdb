@@ -4,7 +4,6 @@ from typing import List, Optional
 from pinecone import Pinecone, ServerlessSpec
 from pinecone.core.openapi.shared.exceptions import NotFoundException, PineconeApiException
 import pandas as pd
-import ast
 
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse
@@ -29,7 +28,7 @@ DEFAULT_CREATE_TABLE_PARAMS = {
     }
 }
 MAX_FETCH_LIMIT = 10000
-UPSERT_BATCH_SIZE = 99 # API reccomendation
+UPSERT_BATCH_SIZE = 99  # API reccomendation
 
 
 class PineconeHandler(VectorStoreHandler):
@@ -138,12 +137,12 @@ class PineconeHandler(VectorStoreHandler):
         """Connect to a pinecone database."""
         if self.is_connected is True:
             return self.connection
-        
+
         if 'api_key' not in self.connection_data:
             raise ValueError('Required parameter (api_key) must be provided.')
 
         try:
-            self.connection = Pinecone(api_key=self.connection_data['api_key'])         
+            self.connection = Pinecone(api_key=self.connection_data['api_key'])
             return self.connection
         except Exception as e:
             logger.error(f"Error connecting to Pinecone client, {e}!")
@@ -190,7 +189,7 @@ class PineconeHandler(VectorStoreHandler):
         """Create an index with the given name in the Pinecone database."""
         connection = self.connect()
 
-        # TODO: Should other parameters be supported? Pod indexes? 
+        # TODO: Should other parameters be supported? Pod indexes?
         # TODO: Should there be a better way to provide these parameters rather than when establishing the connection?
         create_table_params = {}
         for key, val in DEFAULT_CREATE_TABLE_PARAMS.items():
@@ -218,9 +217,9 @@ class PineconeHandler(VectorStoreHandler):
             TableField.ID.value: "id",
             TableField.EMBEDDINGS.value: "values"},
             inplace=True)
-        
+
         columns = ["id", "values"]
-        
+
         if TableField.METADATA.value in data.columns:
             data.rename(columns={TableField.METADATA.value: "metadata"}, inplace=True)
             columns.append("metadata")
@@ -230,7 +229,7 @@ class PineconeHandler(VectorStoreHandler):
         # convert the embeddings to lists
         data["values"] = data["values"].apply(lambda x: ast.literal_eval(x))
 
-        for chunk in (data[pos:pos + UPSERT_BATCH_SIZE] for pos in range(0, len(data), upsert_batch_size)):
+        for chunk in (data[pos:pos + UPSERT_BATCH_SIZE] for pos in range(0, len(data), UPSERT_BATCH_SIZE)):
             chunk = chunk.to_dict(orient="records")
             index.upsert(vectors=chunk)
 

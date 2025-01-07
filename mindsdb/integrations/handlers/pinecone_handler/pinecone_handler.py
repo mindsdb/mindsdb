@@ -1,8 +1,8 @@
 import ast
 from typing import List, Optional
 
-from pinecone import Pinecone
-from pinecone.core.openapi.shared.exceptions import NotFoundException
+from pinecone import Pinecone, ServerlessSpec
+from pinecone.core.openapi.shared.exceptions import NotFoundException, PineconeApiException
 import pandas as pd
 import ast
 
@@ -20,6 +20,15 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
+DEFAULT_CREATE_TABLE_PARAMS = {
+    "dimension": 8,
+    "metric": "cosine",
+    "spec": {
+        "cloud": "aws",
+        "region": "us-east-1"
+    }
+}
+
 
 class PineconeHandler(VectorStoreHandler):
     """This handler handles connection and execution of the Pinecone statements."""
@@ -35,16 +44,6 @@ class PineconeHandler(VectorStoreHandler):
         self.is_connected = False
 
         self.MAX_FETCH_LIMIT = 10000
-        self._table_create_params = {
-            "dimension": 8,
-            "metric": "cosine",
-            "pods": 1,
-            "replicas": 1,
-            "pod_type": 'p1',
-        }
-        for key in self._table_create_params:
-            if key in self.connection_data:
-                self._table_create_params[key] = self.connection_data[key]
 
     def __del__(self):
         if self.is_connected is True:
@@ -190,7 +189,22 @@ class PineconeHandler(VectorStoreHandler):
     def create_table(self, table_name: str, if_not_exists=True):
         """Create an index with the given name in the Pinecone database."""
         connection = self.connect()
-        connection.create_index(name=table_name, **self._table_create_params)
+
+        create_table_params = {}
+        for key, val in DEFAULT_CREATE_TABLE_PARAMS.items():
+            if key in self.connection_data:
+                create_table_params[key] = self.connection_data[key]
+            else:
+                create_table_params[key] = val
+
+        create_table_params["spec"] = ServerlessSpec(**create_table_params["spec"])
+
+        try:
+            connection.create_index(name=table_name, **create_table_params)
+        except PineconeApiException as pinecone_error:
+            if pinecone_error.status_code == 409 and if_not_exists:
+                return
+            raise Exception(f"Error creating index '{table_name}': {pinecone_error}")
 
     def insert(self, table_name: str, data: pd.DataFrame):
         """Insert data into pinecone index passed in through `table_name` parameter."""

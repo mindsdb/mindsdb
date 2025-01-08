@@ -150,6 +150,46 @@ Here is the user input:
 {input}
 '''
 
+DEFAULT_QUERY_RETRY_PROMPT_TEMPLATE = '''
+{query}
+
+The {dialect} query above failed with the error message: {error}.
+
+<< TABLES YOU HAVE ACCESS TO >>
+1. {embeddings_table} - Contains document chunks, vector embeddings, and metadata for documents.
+
+Columns:
+```json
+{{
+    "id": {{
+        "type": "string",
+        "description": "Unique ID for this document chunk"
+    }},
+    "content": {{
+        "type": "string",
+        "description": "A document chunk (subset of the original document)"
+    }},
+    "embeddings": {{
+        "type": "vector",
+        "description": "Vector embeddings for the document chunk."
+    }},
+    "metadata": {{
+        "type": "jsonb",
+        "description": "Metadata for the document chunk."
+    }}
+}}
+
+{schema}
+
+Rewrite the query so it works.
+
+Output the final SQL query only.
+
+SQL Query:
+'''
+
+DEFAULT_NUM_QUERY_RETRIES = 2
+
 
 class LLMConfig(BaseModel):
     model_name: str = Field(default=DEFAULT_LLM_MODEL, description='LLM model to use for generation')
@@ -292,6 +332,14 @@ class SQLRetrieverConfig(BaseModel):
     query_checker_template: str = Field(
         default=DEFAULT_QUERY_CHECKER_PROMPT_TEMPLATE,
         description="Prompt template to use for double checking SQL queries before execution. Has 'query' and 'dialect' input variables."
+    )
+    query_retry_template: str = Field(
+        default=DEFAULT_QUERY_RETRY_PROMPT_TEMPLATE,
+        description="Prompt template to rewrite SQL query that failed. Has 'dialect', 'query', and 'error' input variables."
+    )
+    num_retries: int = Field(
+        default=DEFAULT_NUM_QUERY_RETRIES,
+        description="How many times for an LLM to try rewriting a failed SQL query before using the fallback retriever."
     )
     rewrite_prompt_template: str = Field(
         default=DEFAULT_SEMANTIC_PROMPT_TEMPLATE,

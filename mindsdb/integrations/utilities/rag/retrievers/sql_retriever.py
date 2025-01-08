@@ -12,6 +12,9 @@ from langchain_core.retrievers import BaseRetriever
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.integrations.libs.vectordatabase_handler import DistanceFunction, VectorStoreHandler
 from mindsdb.integrations.utilities.rag.settings import LLMExample, MetadataSchema, SearchKwargs
+from mindsdb.utilities import log
+
+logger = log.getLogger(__name__)
 
 
 class SQLRetriever(BaseRetriever):
@@ -29,12 +32,15 @@ class SQLRetriever(BaseRetriever):
 
     4. Actually execute the query against our vector database to retrieve documents & return them.
     '''
+    fallback_retriever: BaseRetriever
     vector_store_handler: VectorStoreHandler
     metadata_schemas: Optional[List[MetadataSchema]] = None
     examples: Optional[List[LLMExample]] = None
 
     embeddings_model: Embeddings
     rewrite_prompt_template: str
+    retry_prompt_template: str
+    num_retries: int
     sql_prompt_template: str
     query_checker_template: str
     embeddings_table: str
@@ -120,6 +126,25 @@ Output:
             query=sql_query
         )
 
+    def _prepare_retry_query(self, query: str, error: str, run_manager: CallbackManagerForRetrieverRun) -> str:
+        sql_prompt = self._prepare_sql_prompt()
+        # Use provided schema as context for retrying failed queries.
+        schema = sql_prompt.partial_variables.get('schema', '')
+        retry_prompt = PromptTemplate(
+            input_variables=['query', 'dialect', 'error', 'embeddings_table', 'schema'],
+            template=self.retry_prompt_template
+        )
+        retry_chain = LLMChain(llm=self.llm, prompt=retry_prompt)
+        # Generate rewritten query.
+        return retry_chain.predict(
+            query=query,
+            dialect='postgres',
+            error=error,
+            embeddings_table=self.embeddings_table,
+            schema=schema,
+            callbacks=run_manager.get_child() if run_manager else None
+        )
+
     def _get_relevant_documents(
         self, query: str, *, run_manager: CallbackManagerForRetrieverRun
     ) -> List[Document]:
@@ -137,8 +162,22 @@ Output:
         checked_sql_query_with_embeddings = checked_sql_query_with_embeddings.replace('```', '')
         # Actually execute the similarity search with metadata filters.
         document_response = self.vector_store_handler.native_query(checked_sql_query_with_embeddings)
-        if document_response.resp_type == RESPONSE_TYPE.ERROR:
-            raise ValueError(f'Retrieving documents failed with error {document_response.error_message}')
+        num_retries = 0
+        while document_response.resp_type == RESPONSE_TYPE.ERROR:
+            error_msg = document_response.error_message
+            # LLMs won't always generate a working SQL query so we should have a fallback after retrying.
+            logger.info(f'SQL Retriever query {checked_sql_query} failed with error {error_msg}')
+            if num_retries >= self.num_retries:
+                logger.info('Using fallback retriever in SQL retriever.')
+                return self.fallback_retriever._get_relevant_documents(retrieval_query, run_manager)
+            query_to_retry = self._prepare_retry_query(checked_sql_query, error_msg, run_manager)
+            query_to_retry_with_embeddings = query_to_retry.format(embeddings=str(embedded_query))
+            # Handle LLM output that has the ```sql delimiter possibly.
+            query_to_retry_with_embeddings = query_to_retry_with_embeddings.replace('```sql', '')
+            query_to_retry_with_embeddings = query_to_retry_with_embeddings.replace('```', '')
+            document_response = self.vector_store_handler.native_query(query_to_retry_with_embeddings)
+            num_retries += 1
+
         document_df = document_response.data_frame
         retrieved_documents = []
         for _, document_row in document_df.iterrows():

@@ -345,10 +345,10 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         """
         table_name = self._check_table(table_name)
 
-        if not sparse:
-            query = f"CREATE TABLE IF NOT EXISTS {table_name} (id text PRIMARY KEY, content text, embeddings vector, metadata jsonb)"
-        else:
+        query = f"CREATE TABLE IF NOT EXISTS {table_name} (id text PRIMARY KEY, content text, embeddings vector, metadata jsonb)"
+        if sparse:
             query = f"CREATE TABLE IF NOT EXISTS {table_name} (id text PRIMARY KEY, content text, embeddings sparsevec, metadata jsonb)"
+
         self.raw_query(query)
 
     def insert(

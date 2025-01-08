@@ -710,7 +710,7 @@ class KnowledgeBaseController:
         # create table in vectordb
         if model_record.learn_args.get('using', {}).get('sparse') is not None:
             self.session.datahub.get(vector_db_name).integration_handler.create_table(
-                vector_table_name, sparse=model_record.learn_args.get('sparse')
+                vector_table_name, sparse=model_record.learn_args.get('using', {}).get('sparse')
             )
         else:
             self.session.datahub.get(vector_db_name).integration_handler.create_table(

@@ -283,7 +283,7 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         # See https://docs.pgvecto.rs/use-case/hybrid-search.html#advanced-search-merge-the-results-of-full-text-search-and-vector-search.
         #
         # We can break down the below query as follows:
-        # 
+        #
         # Start with a CTE (Common Table Expression) called semantic_search (https://www.postgresql.org/docs/current/queries-with.html).
         # This expression calculates rank by the defined distance function, which measures the distance between the
         # embeddings column and the given embeddings vector. Results are ordered by this rank.
@@ -339,13 +339,16 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         full_search_query = f'{semantic_search_cte}{full_text_search_cte}{hybrid_select}'
         return self.raw_query(full_search_query)
 
-    def create_table(self, table_name: str, if_not_exists=True):
+    def create_table(self, table_name: str, sparse=False, if_not_exists=True):
         """
         Run a create table query on the pgvector database.
         """
         table_name = self._check_table(table_name)
 
         query = f"CREATE TABLE IF NOT EXISTS {table_name} (id text PRIMARY KEY, content text, embeddings vector, metadata jsonb)"
+        if sparse:
+            query = f"CREATE TABLE IF NOT EXISTS {table_name} (id text PRIMARY KEY, content text, embeddings sparsevec, metadata jsonb)"
+
         self.raw_query(query)
 
     def insert(

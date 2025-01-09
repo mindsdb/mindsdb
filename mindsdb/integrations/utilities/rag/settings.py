@@ -189,11 +189,13 @@ class VectorStoreConfig(BaseModel):
         extra = "forbid"
 
 
-class RetrieverType(Enum):
-    VECTOR_STORE = 'vector_store'
-    AUTO = 'auto'
-    MULTI = 'multi'
-    SQL = 'sql'
+class RetrieverType(str, Enum):
+    """Retriever type for RAG pipeline"""
+    VECTOR_STORE = "vector_store"
+    AUTO = "auto"
+    MULTI = "multi"
+    SQL = "sql"
+    MULTI_HOP = "multi_hop"
 
 
 class SearchType(Enum):

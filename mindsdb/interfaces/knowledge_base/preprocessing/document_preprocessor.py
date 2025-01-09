@@ -2,6 +2,8 @@ from typing import List, Dict, Optional, Any
 import pandas as pd
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import hashlib
+import asyncio
+
 
 from mindsdb.integrations.utilities.rag.splitters.file_splitter import (
     FileSplitter,
@@ -9,8 +11,6 @@ from mindsdb.integrations.utilities.rag.splitters.file_splitter import (
 )
 
 from mindsdb.interfaces.agents.langchain_agent import create_chat_model
-
-# def create_chat_model(): pass # for unit testing
 
 from mindsdb.interfaces.knowledge_base.preprocessing.models import (
     PreprocessingConfig,
@@ -180,8 +180,22 @@ Please give a short succinct context to situate this chunk within the overall do
         """Generate contextual description for a chunk using LLM"""
         prompts = self._prepare_prompts(chunk_contents, full_documents)
 
-        response = [resp.content for resp in self.llm.abatch(prompts)]
+        # Check if LLM supports async
+        if hasattr(self.llm, 'abatch'):
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                response = loop.run_until_complete(self._async_generate(prompts))
+            finally:
+                loop.close()
+        else:
+            # Use sync batch for non-async LLMs
+            response = [resp.content for resp in self.llm.batch(prompts)]
         return response
+
+    async def _async_generate(self, prompts: list[str]) -> list[str]:
+        """Helper for async LLM generation"""
+        return [resp.content for resp in await self.llm.abatch(prompts)]
 
     def _split_document(self, doc: Document) -> List[Document]:
         """Split document into chunks while preserving metadata"""

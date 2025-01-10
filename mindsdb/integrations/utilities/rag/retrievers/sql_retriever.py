@@ -169,7 +169,7 @@ Output:
             logger.info(f'SQL Retriever query {checked_sql_query} failed with error {error_msg}')
             if num_retries >= self.num_retries:
                 logger.info('Using fallback retriever in SQL retriever.')
-                return self.fallback_retriever._get_relevant_documents(retrieval_query, run_manager)
+                return self.fallback_retriever._get_relevant_documents(retrieval_query)
             query_to_retry = self._prepare_retry_query(checked_sql_query, error_msg, run_manager)
             query_to_retry_with_embeddings = query_to_retry.format(embeddings=str(embedded_query))
             # Handle LLM output that has the ```sql delimiter possibly.
@@ -185,4 +185,8 @@ Output:
                 document_row.get('content', ''),
                 metadata=document_row.get('metadata', {})
             ))
-        return retrieved_documents
+        if retrieved_documents:
+            return retrieved_documents
+        # If the SQL query constructed did not return any documents, fallback.
+        logger.info('No documents returned from SQL retriever. using fallback retriever.')
+        return self.fallback_retriever._get_relevant_documents(retrieval_query)

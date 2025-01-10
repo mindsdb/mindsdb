@@ -1,6 +1,6 @@
-from typing import Any, List, Optional, Dict
+from typing import Any, List, Union, Optional, Dict
 
-from langchain_community.vectorstores import PGVector
+from langchain_community.vectorstores import PGVector, DistanceStrategy
 from langchain_community.vectorstores.pgvector import Base
 
 from pgvector.sqlalchemy import Vector
@@ -8,6 +8,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSON
 
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 
 _generated_sa_tables = {}
@@ -15,7 +16,7 @@ _generated_sa_tables = {}
 
 class PGVectorMDB(PGVector):
     """
-       langchain_community.vectorstores.PGVector adapted for mindsdb vector store table structure
+    langchain_community.vectorstores.PGVector adapted for mindsdb vector store table structure
     """
 
     def __post_init__(
@@ -32,32 +33,45 @@ class PGVectorMDB(PGVector):
                 __tablename__ = collection_name
 
                 id = sa.Column(sa.Integer, primary_key=True)
-                embedding: Vector = sa.Column('embeddings', Vector())
-                document = sa.Column('content', sa.String, nullable=True)
-                cmetadata = sa.Column('metadata', JSON, nullable=True)
+                embedding: Vector = sa.Column("embeddings", Vector())
+                document = sa.Column("content", sa.String, nullable=True)
+                cmetadata = sa.Column("metadata", JSON, nullable=True)
 
             _generated_sa_tables[collection_name] = EmbeddingStore
 
         self.EmbeddingStore = _generated_sa_tables[collection_name]
 
+        self.distance_strategy_symbol = None
+        if self._distance_strategy == DistanceStrategy.EUCLIDEAN:
+            self.distance_strategy_symbol = "<->"
+        elif (
+            self._distance_strategy == DistanceStrategy.COSINE
+        ):  # LangChain default is cosine
+            self.distance_strategy_symbol = "<=>"
+        else:
+            raise ValueError(
+                f"Got unexpected value for distance: {self._distance_strategy}. "
+                f"Should be one of {', '.join([ds.value for ds in [DistanceStrategy.EUCLIDEAN, DistanceStrategy.COSINE]])}."
+            )
+
     def __query_collection(
         self,
-        embedding: List[float],
+        embedding: List[Union[str, float]],
         k: int = 4,
         filter: Optional[Dict[str, str]] = None,
     ) -> List[Any]:
         """Query the collection."""
+
+        # TODO: Replace below with an engine.execute function call that can handle sparse and dense vectors.
         with Session(self._bind) as session:
 
-            results: List[Any] = (
-                session.query(
-                    self.EmbeddingStore,
-                    self.distance_strategy(embedding).label("distance"),
+            results = []
+            for embed in embedding:
+                raw_query = text(
+                    f"SELECT * FROM {self.EmbeddingStore} ORDER BY embedding {self.distance_strategy_symbol} {embed} LIMIT {k};"
                 )
-                .order_by(sa.asc("distance"))
-                .limit(k)
-                .all()
-            )
+                results.append(session.execute(raw_query))
+
         for rec, _ in results:
             if not bool(rec.cmetadata):
                 rec.cmetadata = {0: 0}
@@ -72,13 +86,13 @@ class PGVectorMDB(PGVector):
         return self.__query_collection(*args, **kwargs)
 
     def create_collection(self):
-        raise RuntimeError('Forbidden')
+        raise RuntimeError("Forbidden")
 
     def delete_collection(self):
-        raise RuntimeError('Forbidden')
+        raise RuntimeError("Forbidden")
 
     def delete(self, *args, **kwargs):
-        raise RuntimeError('Forbidden')
+        raise RuntimeError("Forbidden")
 
     def add_embeddings(self, *args, **kwargs):
-        raise RuntimeError('Forbidden')
+        raise RuntimeError("Forbidden")

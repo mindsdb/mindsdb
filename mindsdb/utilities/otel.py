@@ -4,6 +4,7 @@ from opentelemetry import trace
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider, Span
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+from opentelemetry.sdk.trace.sampling import TraceIdRatioBased
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 
 from mindsdb.utilities import log
@@ -24,6 +25,9 @@ OTEL_SERVICE_ENVIRONMENT = os.getenv("OTEL_SERVICE_ENVIRONMENT", "local").lower(
 
 # Define service release
 OTEL_SERVICE_RELEASE = os.getenv("OTEL_SERVICE_RELEASE", "local").lower()
+
+# How often to capture traces
+OTEL_TRACE_SAMPLE_RATE = float(os.getenv("OTEL_TRACE_SAMPLE_RATE", "1.0"))
 
 # By default we have Open Telemetry SDK enabled on all envs, except for local which is disabled by default
 #   If you want to enable Open Telemetry on local for some reason please set OTEL_SDK_FORCE_RUN to true
@@ -51,8 +55,11 @@ if not OTEL_SDK_DISABLED or OTEL_SDK_FORCE_RUN:
     # Define OpenTelemetry resources (e.g., service name)
     resource = Resource(attributes={"service.name": OTEL_SERVICE_NAME})
 
+    # Set the trace provider
+    sampler = TraceIdRatioBased(OTEL_TRACE_SAMPLE_RATE)
+
     # Set the tracer provider with the custom resource
-    trace.set_tracer_provider(TracerProvider(resource=resource))
+    trace.set_tracer_provider(TracerProvider(resource=resource, sampler=sampler))
 
     # Configure the appropriate exporter based on the environment variable
     if OTEL_EXPORTER_TYPE == "otlp":

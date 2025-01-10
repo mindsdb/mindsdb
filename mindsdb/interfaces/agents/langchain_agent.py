@@ -135,65 +135,6 @@ def get_chat_model_params(args: Dict) -> Dict:
     return config_dict
 
 
-def build_embedding_model(args) -> Embeddings:
-    """Build an embeddings model from the given arguments.
-
-    For VLLM embeddings, this will configure the OpenAI embeddings interface
-    to use the VLLM server's endpoint.
-    """
-    # Set up embeddings model if needed.
-    embeddings_args = args.pop("embedding_model_args", {})
-
-    # Log the current embedding configuration attempt
-    logger.debug(f"Raw embedding configuration: {embeddings_args}")
-
-    # Get the embeddings provider, either from args or default
-    embeddings_provider = embeddings_args.get('class') or get_embedding_model_provider(args)
-    if not embeddings_args:
-        logger.warning(
-            "'embedding_model_args' not found in input params, "
-            f"Using embedding provider: {embeddings_provider}"
-        )
-        embeddings_args["class"] = embeddings_provider
-
-    # For VLLM or OpenAI interface, configure embeddings
-    is_vllm = (embeddings_provider == 'openai' and args.get('provider') == 'vllm') or args.get(
-        'embedding_model_provider') == 'vllm'
-    if is_vllm:
-        # Get model name with clear fallback chain
-        model_name = args.get('embedding_model_name')
-        if not model_name:
-            model_name = args.get('model_name')
-            if model_name:
-                logger.warning(f"No embedding_model_name specified, falling back to model_name: {model_name}")
-            else:
-                model_name = 'text-embedding-ada-002'
-                logger.warning(f"No embedding model specified, using default: {model_name}")
-
-        # Configure all vLLM settings in embeddings_args
-        embeddings_args.update({
-            'model': model_name,
-            'openai_api_base': args.get('openai_api_base', args.get('embedding_base_url')),  # Support both param names
-            'openai_api_key': 'dummy-key',  # OpenAI embeddings require an API key
-        })
-        logger.info(
-            f"Configured VLLM embeddings via OpenAI interface at {embeddings_args['openai_api_base']} using model {model_name}")
-
-    # Include API keys if present.
-    api_keys = {k: v for k, v in args.items() if "api_key" in k}
-    if api_keys:
-        logger.debug(f"Including API keys: {list(api_keys.keys())}")
-    embeddings_args.update(api_keys)
-
-    try:
-        model = construct_model_from_args(embeddings_args)
-        logger.info(f"Successfully initialized embedding model: {type(model).__name__}")
-        return model
-    except Exception as e:
-        logger.error(f"Failed to initialize embedding model: {embeddings_args.get('class')} - {str(e)}")
-        raise
-
-
 def create_chat_model(args: Dict):
     model_kwargs = get_chat_model_params(args)
 
@@ -263,7 +204,7 @@ def process_chunk(chunk):
 
 class LangchainAgent:
 
-    def __init__(self, agent: db.Agents, model):
+    def __init__(self, agent: db.Agents, model: dict = None):
 
         self.agent = agent
         self.model = model
@@ -570,7 +511,7 @@ AI: {response}"""
             if not prompt:
                 return {CONTEXT_COLUMN: [], ASSISTANT_COLUMN: ""}
             try:
-                callbacks, context_callback = prepare_callbacks(self, args)  # ? call callbacks here
+                callbacks, context_callback = prepare_callbacks(self, args)
                 result = agent_executor.invoke(prompt, config={'callbacks': callbacks})
                 captured_context = context_callback.get_contexts()
                 output = result['output'] if isinstance(result, dict) and 'output' in result else str(result)
@@ -636,7 +577,7 @@ AI: {response}"""
 
         prompts, _ = prepare_prompts(df, base_template, input_variables, args.get('user_column', USER_COLUMN))
 
-        callbacks, context_callback = prepare_callbacks(self, args)  # call callbacks here
+        callbacks, context_callback = prepare_callbacks(self, args)
 
         yield {"type": "start", "prompt": prompts[0]}
 
@@ -644,7 +585,7 @@ AI: {response}"""
             raise AttributeError("The agent_executor does not have a 'stream' method")
 
         stream_iterator = agent_executor.stream(prompts[0],
-                                                config={'callbacks': callbacks})  # send callbacks to langchain
+                                                config={'callbacks': callbacks})
 
         if not hasattr(stream_iterator, '__iter__'):
             raise TypeError("The stream method did not return an iterable")

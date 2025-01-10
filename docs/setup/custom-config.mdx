@@ -47,15 +47,15 @@ python -m mindsdb --config=/path-to-the-extended-config-file/config.json
 
 <AccordionGroup>
 
-<Accordion title="Config parameters">
+<Accordion title="Overview of Config Parameters">
 
 Below are all of the custom configuration parameters that should be set according to your requirements and saved into the `config.json` file.
 
 ```bash
 {
     "permanent_storage": {
-        "location": "local",
-        "bucket": "s3_bucket_name" # optional
+        "location": "absent",
+        "bucket": "s3_bucket_name" # optional, used only if "location": "s3"
     },
 ```
 
@@ -190,7 +190,7 @@ Assume the following scenario:
 ```bash
     "cache": {
         "type": "local",
-        "connection": "redis://localhost:6379" # optional
+        "connection": "redis://localhost:6379" # optional, used only if "type": "redis"
     },
 ```
 
@@ -222,7 +222,7 @@ The `connection` parameter is required only if the `type` parameter is set to `r
     },
 ```
 
-The above parameters are implemented based on [Python's Dictionary Schema](https://docs.python.org/3/library/logging.config.html#logging-config-dictschema).
+The above parameters are implemented based on [Python's Logging Dictionary Schema](https://docs.python.org/3/library/logging.config.html#logging-config-dictschema).
 
 The `logging` parameter defines the details of output logging, including the logging levels.
 
@@ -234,11 +234,11 @@ The `handler` parameter provides handlers used for logging into streams and file
 ```bash
     "ml_task_queue": {
         "type": "local",
-        "host": "localhost", # required only when type is set to redis
-        "port": 6379, # required only when type is set to redis
-        "db": 0, # required only when type is set to redis
-        "username": "username", # required only when type is set to redis
-        "password": "password" # required only when type is set to redis
+        "host": "localhost", # optional, used only if "type": "redis"
+        "port": 6379, # optional, used only if "type": "redis"
+        "db": 0, # optional, used only if "type": "redis"
+        "username": "username", # optional, used only if "type": "redis"
+        "password": "password" # optional, used only if "type": "redis"
     },
 ```
 
@@ -270,24 +270,17 @@ If left empty (`[]`), the application allows access to all URLs by default (mark
 
 </Accordion>
 
-<Accordion title="Setup">
+<Accordion title="Example of Extended Config File">
 
 First, create a `config.json` file.
 
 ```bash
 {
     "permanent_storage": {
-        "location": "local",
-        "bucket": "s3_bucket_name"
+        "location": "absent"
     },
     "paths": {
-        "root": "/home/mindsdb/var",
-        "content": "/home/mindsdb/var/content",
-        "storage": "/home/mindsdb/var/storage",
-        "static": "/home/mindsdb/var/static",
-        "tmp": "/home/mindsdb/var/tmp",
-        "cache": "/home/mindsdb/var/cache",
-        "locks": "/home/mindsdb/var/locks"
+        "root": "/path/to/root/location"
     },
     "auth":{
         "http_auth_enabled": true,
@@ -322,8 +315,7 @@ First, create a `config.json` file.
         }
     },
     "cache": {
-        "type": "local",
-        "connection": "redis://localhost:6379"
+        "type": "local"
     },
     "logging": {
         "handlers": {
@@ -341,12 +333,7 @@ First, create a `config.json` file.
         }
     },
     "ml_task_queue": {
-        "type": "local",
-        "host": "localhost",
-        "port": 6379,
-        "db": 0,
-        "username": "username",
-        "password": "password"
+        "type": "local"
     },
     "file_upload_domains": [],
     "web_crawling_allowed_sites": []
@@ -364,21 +351,4 @@ python -m mindsdb --config=/path-to-the-extended-config-file/config.json
 
 ## Modifying Config Values
 
-Users can modify config values by directly editing the `config.json` file.
-
-Users can edit the config values through an HTTP request or MindsDB Editor. In this case, the `config.auto.json` file is created to store the updated `config.json` file. The `config.auto.json` file is stored in the location defined in the `paths.root` config parameter.
-
-<Tip>
-Modifying config values through MindsDB Editor, provided that `"http_auth_enabled": true`, can be done in Settings.
-
-Modifying config values through an HTTP request:
-
-```bash
-curl --request PUT \
-  --url http://127.0.0.1:47334/api/config \
-  --header 'Content-Type: application/json' \
-  --data '{
-    "key": "value"
-  }'
-```
-</Tip>
+Users can modify config values by directly editing the `config.json` file they created.

@@ -13,6 +13,7 @@ from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExport
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter as OTLPSpanExporterHTTP
 from opentelemetry.sdk.trace.export import SpanExporter, ConsoleSpanExporter
 from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace.sampling import TraceIdRatioBased
 
 from mindsdb.utilities.otel.logger import setup_logger
 from mindsdb.utilities.otel.meter import setup_meter
@@ -43,7 +44,7 @@ OTEL_OTLP_METRICS_ENDPOINT = os.getenv("OTEL_OTLP_METRICS_ENDPOINT", OTEL_OTLP_E
 # Define service name
 OTEL_SERVICE_NAME = os.getenv("OTEL_SERVICE_NAME", "mindsdb")
 
-# DEFINE SERVICE INSTANCE ID
+# Define service instace ID
 OTEL_SERVICE_INSTANCE_ID = os.getenv("OTEL_SERVICE_INSTANCE_ID", "mindsdb-instance")
 
 # The name of the environment we"re on, by default local for development, this is set differently per-env in our Helm
@@ -52,6 +53,9 @@ OTEL_SERVICE_ENVIRONMENT = os.getenv("OTEL_SERVICE_ENVIRONMENT", "local").lower(
 
 # Define service release
 OTEL_SERVICE_RELEASE = os.getenv("OTEL_SERVICE_RELEASE", "local").lower()
+
+# Define how often to capture traces
+OTEL_TRACE_SAMPLE_RATE = float(os.getenv("OTEL_TRACE_SAMPLE_RATE", "1.0"))
 
 # Define extra attributes
 OTEL_EXTRA_ATTRIBUTES = os.getenv("OTEL_EXTRA_ATTRIBUTES", "")
@@ -177,10 +181,14 @@ if not OTEL_SDK_DISABLED or OTEL_SDK_FORCE_RUN:
     logger.info(f"OpenTelemetry service name: {OTEL_SERVICE_NAME}")
     logger.info(f"OpenTelemetry service environment: {OTEL_SERVICE_ENVIRONMENT}")
     logger.info(f"OpenTelemetry service release: {OTEL_SERVICE_RELEASE}")
+    logger.info(f"OpenTelemetry trace sample rate: {OTEL_TRACE_SAMPLE_RATE}")
     logger.info(f"OpenTelemetry extra attributes: {OTEL_EXTRA_ATTRIBUTES}")
 
     # Define OpenTelemetry resources (e.g., service name)
     attributes = get_otel_attributes()
+
+    # Define OpenTelemetry sampler
+    sampler = TraceIdRatioBased(OTEL_TRACE_SAMPLE_RATE)
 
     # Define OpenTelemetry resources (e.g., service name)
     resource = Resource(attributes=attributes)
@@ -191,7 +199,7 @@ if not OTEL_SDK_DISABLED or OTEL_SDK_FORCE_RUN:
 
     if not OTEL_TRACING_DISABLED:
         logger.info("OpenTelemetry Tracing is enabled")
-        setup_tracer(resource, get_span_exporter())
+        setup_tracer(resource, sampler, get_span_exporter())
 
     if not OTEL_METRICS_DISABLED:
         logger.info("OpenTelemetry Metrics is enabled")

@@ -35,6 +35,8 @@ class TestMySqlBinApi(TestMySqlApi):
             # multiple queries in one string
             if subquery.strip() == '':
                 continue
+            print("------------------------------------------")
+            print(subquery)
             cursor.execute(subquery)
 
         if cursor.description:

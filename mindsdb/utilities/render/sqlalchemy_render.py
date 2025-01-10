@@ -25,7 +25,9 @@ for type_name in sa_type_names:
 types_map['BOOL'] = types_map['BOOLEAN']
 
 # TODO: Are there any other reserved keywords?
-RESERVED_KEYWORDS = {"COLLATION"}
+RESERVED_KEYWORDS = {
+    "mysql": {"COLLATION"}
+}
 
 
 class RenderError(Exception):
@@ -104,7 +106,7 @@ class SqlalchemyRender:
                     if part.lower() != part_lower:
                         part = i
 
-            if part in RESERVED_KEYWORDS:
+            if part in RESERVED_KEYWORDS.get(self.dialect.name, {}):
                 part = self.dialect.identifier_preparer.quote(part)
 
             parts2.append(part)

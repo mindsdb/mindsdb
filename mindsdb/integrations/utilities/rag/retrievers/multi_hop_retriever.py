@@ -7,7 +7,11 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.retrievers import BaseRetriever
 from pydantic import Field, PrivateAttr
 
-from mindsdb.integrations.utilities.rag.settings import DEFAULT_QUESTION_REFORMULATION_TEMPLATE
+from mindsdb.integrations.utilities.rag.settings import (
+    RAGPipelineModel,
+    DEFAULT_QUESTION_REFORMULATION_TEMPLATE
+)
+from mindsdb.integrations.utilities.rag.retrievers.retriever_factory import create_retriever
 
 
 class MultiHopRetriever(BaseRetriever):
@@ -27,6 +31,22 @@ class MultiHopRetriever(BaseRetriever):
     )
 
     _asked_questions: set = PrivateAttr(default_factory=set)
+
+    @classmethod
+    def from_config(cls, config: RAGPipelineModel) -> "MultiHopRetriever":
+        """Create a MultiHopRetriever from a RAGPipelineModel config."""
+        if config.multi_hop_config is None:
+            raise ValueError("multi_hop_config must be set for MultiHopRetriever")
+
+        # Create base retriever based on type
+        base_retriever = create_retriever(config, config.multi_hop_config.base_retriever_type)
+
+        return cls(
+            base_retriever=base_retriever,
+            llm=config.llm,
+            max_hops=config.multi_hop_config.max_hops,
+            reformulation_template=config.multi_hop_config.reformulation_template
+        )
 
     def _get_relevant_documents(
         self, query: str, *, run_manager: Optional[CallbackManagerForRetrieverRun] = None

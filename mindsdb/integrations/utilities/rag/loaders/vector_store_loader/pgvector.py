@@ -62,15 +62,16 @@ class PGVectorMDB(PGVector):
     ) -> List[Any]:
         """Query the collection."""
 
-        # TODO: Replace below with an engine.execute function call that can handle sparse and dense vectors.
         with Session(self._bind) as session:
 
             results = []
             for embed in embedding:
                 raw_query = text(
-                    f"SELECT * FROM {self.EmbeddingStore} ORDER BY embedding {self.distance_strategy_symbol} {embed} LIMIT {k};"
+                    f"SELECT * FROM {self.EmbeddingStore.__table__} ORDER BY embeddings {self.distance_strategy_symbol} '{embed}' LIMIT {k};"
                 )
                 results.append(session.execute(raw_query))
+
+        return results
 
         for rec, _ in results:
             if not bool(rec.cmetadata):

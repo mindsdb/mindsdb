@@ -24,6 +24,9 @@ for type_name in sa_type_names:
     types_map[type_name.upper()] = getattr(sa.types, type_name)
 types_map['BOOL'] = types_map['BOOLEAN']
 
+# TODO: Are there any other reserved keywords?
+RESERVED_KEYWORDS = {"COLLATION"}
+
 
 class RenderError(Exception):
     ...
@@ -100,6 +103,9 @@ class SqlalchemyRender:
                     part_lower = str(sa.column(i.lower()).compile(dialect=self.dialect))
                     if part.lower() != part_lower:
                         part = i
+
+            if part in RESERVED_KEYWORDS:
+                part = self.dialect.identifier_preparer.quote(part)
 
             parts2.append(part)
 

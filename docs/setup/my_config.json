@@ -58,7 +58,7 @@
                 "enabled": false,
                 "level": "INFO",
                 "filename": "app.log",
-                "maxBytes": 1 << 19,
+                "maxBytes": 524288,
                 "backupCount": 3
             }
         }

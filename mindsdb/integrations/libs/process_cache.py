@@ -1,4 +1,3 @@
-import sys
 import time
 import threading
 from typing import Optional, Callable
@@ -83,16 +82,13 @@ class WarmProcess:
     def __del__(self):
         self.shutdown()
 
-    def shutdown(self):
-        # workaround for https://bugs.python.org/issue39098
-        if sys.version_info[0] == 3 and sys.version_info[1] <= 8:
-            t = threading.Thread(target=self._shutdown)
-            t.run()
-        else:
-            self.pool.shutdown(wait=False)
+    def shutdown(self, wait: bool = False) -> None:
+        """Like ProcessPoolExecutor.shutdown
 
-    def _shutdown(self):
-        self.pool.shutdown(wait=True)
+        Args:
+            wait (bool): If True then shutdown will not return until all running futures have finished executing
+        """
+        self.pool.shutdown(wait=wait)
 
     def _init_done_callback(self, _task):
         """ callback for initial task
@@ -402,6 +398,17 @@ class ProcessCache:
                         processes.append(
                             WarmProcess(init_ml_handler, (self.cache[handler_name]['handler_module'],))
                         )
+
+    def shutdown(self, wait: bool = True) -> None:
+        """Call 'shutdown' for each process cache
+
+        wait (bool): like ProcessPoolExecutor.shutdown wait arg.
+        """
+        with self._lock:
+            for handler_name in self.cache:
+                for process in self.cache[handler_name]['processes']:
+                    process.shutdown(wait=wait)
+                self.cache[handler_name]['processes'] = []
 
     def remove_processes_for_handler(self, handler_name: str) -> None:
         """

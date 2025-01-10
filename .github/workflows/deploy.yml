@@ -23,6 +23,7 @@ jobs:
     if: github.actor != 'mindsdbadmin'
     runs-on: mdb-dev
     strategy:
+      fail-fast: false
       matrix:
         deploy-env: ${{ fromJson(inputs.deploy-envs) }}
     environment:

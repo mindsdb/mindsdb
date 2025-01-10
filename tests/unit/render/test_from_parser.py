@@ -80,7 +80,12 @@ def parse_sql2(sql, dialect='mindsdb'):
         query_traversal(query2, clear_target_aliases)
 
         # and compare with ast before render
-        assert query2.to_tree() == query_.to_tree()
+        repr1, repr2 = query2.to_tree(), query_.to_tree()
+        if 'unbounded preceding' in repr2:
+            # sqlalchemy changes case
+            assert repr1.lower() == repr2.lower()
+        else:
+            assert repr1 == repr2
 
     # step 2: render to different dialects
     dialects = ('postgresql', 'sqlite', 'mssql', 'oracle')

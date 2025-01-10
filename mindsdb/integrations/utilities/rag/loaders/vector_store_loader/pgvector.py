@@ -1,14 +1,13 @@
 from typing import Any, List, Union, Optional, Dict
 
-from langchain_community.vectorstores import PGVector, DistanceStrategy
+from langchain_community.vectorstores import PGVector
 from langchain_community.vectorstores.pgvector import Base
 
-from pgvector.sqlalchemy import Vector
+from pgvector.sqlalchemy import SPARSEVEC
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSON
 
 from sqlalchemy.orm import Session
-from sqlalchemy import text
 
 
 _generated_sa_tables = {}
@@ -33,7 +32,7 @@ class PGVectorMDB(PGVector):
                 __tablename__ = collection_name
 
                 id = sa.Column(sa.Integer, primary_key=True)
-                embedding: Vector = sa.Column("embeddings", Vector())
+                embedding = sa.Column("embeddings", SPARSEVEC(30522))
                 document = sa.Column("content", sa.String, nullable=True)
                 cmetadata = sa.Column("metadata", JSON, nullable=True)
 
@@ -41,38 +40,24 @@ class PGVectorMDB(PGVector):
 
         self.EmbeddingStore = _generated_sa_tables[collection_name]
 
-        self.distance_strategy_symbol = None
-        if self._distance_strategy == DistanceStrategy.EUCLIDEAN:
-            self.distance_strategy_symbol = "<->"
-        elif (
-            self._distance_strategy == DistanceStrategy.COSINE
-        ):  # LangChain default is cosine
-            self.distance_strategy_symbol = "<=>"
-        else:
-            raise ValueError(
-                f"Got unexpected value for distance: {self._distance_strategy}. "
-                f"Should be one of {', '.join([ds.value for ds in [DistanceStrategy.EUCLIDEAN, DistanceStrategy.COSINE]])}."
-            )
-
     def __query_collection(
         self,
-        embedding: List[Union[str, float]],
+        embedding: List[Union[float]],
         k: int = 4,
         filter: Optional[Dict[str, str]] = None,
     ) -> List[Any]:
         """Query the collection."""
-
         with Session(self._bind) as session:
 
-            results = []
-            for embed in embedding:
-                raw_query = text(
-                    f"SELECT * FROM {self.EmbeddingStore.__table__} ORDER BY embeddings {self.distance_strategy_symbol} '{embed}' LIMIT {k};"
+            results: List[Any] = (
+                session.query(
+                    self.EmbeddingStore,
+                    self.distance_strategy(embedding).label("distance"),
                 )
-                results.append(session.execute(raw_query))
-
-        return results
-
+                .order_by(sa.asc("distance"))
+                .limit(k)
+                .all()
+            )
         for rec, _ in results:
             if not bool(rec.cmetadata):
                 rec.cmetadata = {0: 0}

@@ -38,9 +38,9 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         self._is_shared_db = False
         self._is_vector_registered = False
         self._is_sparse = kwargs.get('is_sparse', False)
-        if self._is_sparse and 'vector_size' not in kwargs:
+        self._vector_size = kwargs.get('vector_size', None)  # Default to None
+        if self._is_sparse and not self._vector_size:
             raise ValueError("vector_size is required when is_sparse=True")
-        self._vector_size = kwargs.get('vector_size', "()")
         self.connect()
 
     def _make_connection_args(self):
@@ -365,9 +365,14 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         with self.connection.cursor() as cur:
             # For sparse vectors, use sparsevec type
             vector_column_type = 'sparsevec' if self._is_sparse else 'vector'
-            # size_spec should already include the parentheses
-            if not self._vector_size.startswith('(') or not self._vector_size.endswith(')'):
-                size_spec = f'({self._vector_size})'
+            
+            # Vector size is required for sparse vectors, optional for dense
+            if self._is_sparse and not self._vector_size:
+                raise ValueError("vector_size is required for sparse vectors")
+            
+            # Add vector size specification only if provided
+            size_spec = f"({self._vector_size})" if self._vector_size is not None else "()"
+            
             cur.execute(f"""
                 CREATE TABLE IF NOT EXISTS {table_name} (
                     id SERIAL PRIMARY KEY,

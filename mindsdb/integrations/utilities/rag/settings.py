@@ -290,6 +290,8 @@ class VectorStoreConfig(BaseModel):
     collection_name: str = DEFAULT_COLLECTION_NAME
     connection_string: str = None
     kb_table: Any = None
+    is_sparse: bool = False
+    vector_size: Optional[int] = None
 
     class Config:
         arbitrary_types_allowed = True

@@ -53,17 +53,27 @@ class PGVectorMDB(PGVector):
 
     def __query_collection(
         self,
-        embedding: Union[List[List[float]], List[Dict[int, float]]],
+        embedding: Union[List[float], Dict[int, float], str],
         k: int = 4,
         filter: Optional[Dict[str, str]] = None,
     ) -> List[Any]:
         """Query the collection."""
         with Session(self._bind) as session:
-            # Convert embedding to text format
-            if isinstance(embedding, dict):
-                from pgvector.utils import SparseVector
-                embedding = SparseVector(embedding, self.vector_size)
-            embedding_str = embedding.to_text()
+            if self.is_sparse:
+                # Sparse vectors: expect string in format "{key:value,...}/size" or dictionary
+                if isinstance(embedding, dict):
+                    from pgvector.utils import SparseVector
+                    embedding = SparseVector(embedding, self.vector_size)
+                    embedding_str = embedding.to_text()
+                elif isinstance(embedding, str):
+                    # Use string as is - it should already be in the correct format
+                    embedding_str = embedding
+            else:
+                # Dense vectors: expect string in JSON array format or list of floats
+                if isinstance(embedding, list):
+                    embedding_str = f"[{','.join(str(x) for x in embedding)}]"
+                elif isinstance(embedding, str):
+                    embedding_str = embedding
 
             # Use SQL directly for vector comparison with inner product
             query = sa.text(

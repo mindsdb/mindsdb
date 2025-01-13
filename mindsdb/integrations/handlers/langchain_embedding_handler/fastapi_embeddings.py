@@ -1,4 +1,4 @@
-from typing import Any, List, Union, Dict
+from typing import Any, List
 from langchain_core.embeddings import Embeddings
 import requests
 
@@ -27,8 +27,13 @@ class FastAPIEmbeddings(Embeddings):
 
         # initialize requests here with the api_base
 
-    def _get_embeddings(self, texts: List[str]) -> Union[List[List[float]], List[Dict[int, float]]]:
-        """Get embeddings for a batch of text chunks."""
+    def _get_embeddings(self, texts: List[str]) -> List[str]:
+        """Get embeddings for a batch of text chunks.
+
+        Returns:
+            List of embeddings as strings. For sparse vectors, returns strings in format
+            "{key:value,...}/size" where size is the dimension of the vector space.
+        """
 
         headers = {"accept": "application/json", "Content-Type": "application/json"}
 
@@ -44,65 +49,34 @@ class FastAPIEmbeddings(Embeddings):
         embeddings = []
         for response_dict in response.json()["data"]:
             embedding = response_dict["embedding"]
-            if isinstance(embedding, str):
-                # Check if it's a sparse vector string in format "{key:value,...}/size"
-                if embedding.startswith('{') and '/' in embedding:
-                    # Parse sparse vector format
-                    vector_part = embedding.split('/')[0][1:-1]  # Remove braces and size
-                    embedding_dict = {}
-                    for pair in vector_part.split(','):
-                        key, value = pair.split(':')
-                        embedding_dict[int(key)] = float(value)
-                    embedding = embedding_dict
-                else:
-                    # Try to parse as a list of floats
-                    try:
-                        import json
-                        embedding = json.loads(embedding)
-                    except json.JSONDecodeError:
-                        raise ValueError(f"Unable to parse embedding string: {embedding}")
             embeddings.append(embedding)
-
-        # Validate the output format
-        if embeddings and isinstance(embeddings[0], dict):
-            # Ensure all embeddings are Dict[int, float]
-            for emb in embeddings:
-                if not all(isinstance(k, int) and isinstance(v, float) for k, v in emb.items()):
-                    raise ValueError("Sparse embeddings must be Dict[int, float]")
-        elif embeddings and isinstance(embeddings[0], list):
-            # Ensure all embeddings are List[float]
-            for emb in embeddings:
-                if not all(isinstance(x, float) for x in emb):
-                    raise ValueError("Dense embeddings must be List[float]")
-        else:
-            raise ValueError("Invalid embedding format")
 
         return embeddings
 
-    def embed_documents(self, texts: List[str]) -> Union[List[List[float]], List[Dict[int, float]]]:
+    def embed_documents(self, texts: List[str]) -> List[str]:
         """Embed a list of documents using vLLM.
 
         Args:
             texts: List of documents to embed
 
         Returns:
-            List of embeddings, one for each document.
-            For sparse embeddings, returns a list of dictionaries mapping indices to values.
-            For dense embeddings, returns a list of float lists.
+            List of embeddings as strings, one for each document.
+            For sparse embeddings, returns strings in format "{key:value,...}/size"
+            For dense embeddings, returns JSON strings of float lists
         """
 
         return self._get_embeddings(texts)
 
-    def embed_query(self, text: str) -> Union[List[float], Dict[int, float]]:
+    def embed_query(self, text: str) -> str:
         """Embed a single query text using vLLM.
 
         Args:
             text: Query text to embed
 
         Returns:
-            Query embedding.
-            For sparse embeddings, returns a dictionary mapping indices to values.
-            For dense embeddings, returns a list of floats.
+            Query embedding as a string.
+            For sparse embeddings, returns string in format "{key:value,...}/size"
+            For dense embeddings, returns JSON string of float list
         """
 
         return self._get_embeddings([text])[0]

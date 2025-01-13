@@ -38,9 +38,9 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         self._is_shared_db = False
         self._is_vector_registered = False
         self._is_sparse = kwargs.get('is_sparse', False)
-        if self._is_sparse and 'vector_size' not in kwargs:
+        self._vector_size = kwargs.get('vector_size', None)  # Default to None
+        if self._is_sparse and not self._vector_size:
             raise ValueError("vector_size is required when is_sparse=True")
-        self._vector_size = kwargs.get('vector_size', None)
         self.connect()
 
     def _make_connection_args(self):
@@ -194,13 +194,30 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         if filter_conditions:
 
             if embedding_search:
-                # if search vector, return similar rows, apply other filters after if any
                 search_vector = filter_conditions["embeddings"]["value"][0]
                 filter_conditions.pop("embeddings")
-                return f"SELECT {targets} FROM {table_name} ORDER BY embeddings <=> '{search_vector}' {after_from_clause}"
+
+                if self._is_sparse:
+                    # Convert dict to sparse vector if needed
+                    if isinstance(search_vector, dict):
+                        from pgvector.utils import SparseVector
+                        embedding = SparseVector(search_vector, self._vector_size)
+                        search_vector = embedding.to_text()
+                    # Use inner product for sparse vectors
+                    distance_op = "<#>"
+                else:
+                    # Convert list to vector string if needed
+                    if isinstance(search_vector, list):
+                        search_vector = f"[{','.join(str(x) for x in search_vector)}]"
+                    # Use cosine similarity for dense vectors
+                    distance_op = "<=>"
+
+                return f"SELECT {targets} FROM {table_name} ORDER BY embeddings {distance_op} '{search_vector}' {after_from_clause}"
+
             else:
-                # if filter conditions, return filtered rows
+                # if filter conditions, return rows that satisfy the conditions
                 return f"SELECT {targets} FROM {table_name} {after_from_clause}"
+
         else:
             # if no filter conditions, return all rows
             return f"SELECT {targets} FROM {table_name} {after_from_clause}"
@@ -343,14 +360,19 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         full_search_query = f'{semantic_search_cte}{full_text_search_cte}{hybrid_select}'
         return self.raw_query(full_search_query)
 
-    def create_table(self, table_name: str, vector_type: str, size_spec: str):
+    def create_table(self, table_name: str):
         """Create a table with a vector column."""
         with self.connection.cursor() as cur:
             # For sparse vectors, use sparsevec type
             vector_column_type = 'sparsevec' if self._is_sparse else 'vector'
-            # size_spec should already include the parentheses
-            if not size_spec.startswith('(') or not size_spec.endswith(')'):
-                size_spec = f'({size_spec})'
+            
+            # Vector size is required for sparse vectors, optional for dense
+            if self._is_sparse and not self._vector_size:
+                raise ValueError("vector_size is required for sparse vectors")
+            
+            # Add vector size specification only if provided
+            size_spec = f"({self._vector_size})" if self._vector_size is not None else "()"
+            
             cur.execute(f"""
                 CREATE TABLE IF NOT EXISTS {table_name} (
                     id SERIAL PRIMARY KEY,
@@ -457,4 +479,3 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         """
         table_name = self._check_table(table_name)
         self.raw_query(f"DROP TABLE IF EXISTS {table_name}")
-

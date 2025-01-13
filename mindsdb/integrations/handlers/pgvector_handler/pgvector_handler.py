@@ -287,7 +287,7 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         # See https://docs.pgvecto.rs/use-case/hybrid-search.html#advanced-search-merge-the-results-of-full-text-search-and-vector-search.
         #
         # We can break down the below query as follows:
-        #
+        # 
         # Start with a CTE (Common Table Expression) called semantic_search (https://www.postgresql.org/docs/current/queries-with.html).
         # This expression calculates rank by the defined distance function, which measures the distance between the
         # embeddings column and the given embeddings vector. Results are ordered by this rank.
@@ -457,3 +457,4 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         """
         table_name = self._check_table(table_name)
         self.raw_query(f"DROP TABLE IF EXISTS {table_name}")
+

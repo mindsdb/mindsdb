@@ -55,9 +55,23 @@ class JiraHandler(APIHandler):
             return self.connection
         
         s = requests.Session()
+        if self.connection_data.get("cloud", False):
+            params = {
+                "cloud": True,
+                "username": self.connection_data['jira_username'],
+                "password": self.connection_data['jira_api_token'],
+                "url": self.connection_data['jira_url'],
+            }   
+        else:
+            params = {
+                "cloud": False,
+                "url": self.connection_data['jira_url'],
+                "session": s
+            }
+
         s.headers['Authorization'] =  f"Bearer {self.connection_data['jira_api_token']}"
 
-        self.connection = Jira(url= self.connection_data['jira_url'], session=s)
+        self.connection = Jira(**params)
         self.is_connected = True
 
 

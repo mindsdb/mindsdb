@@ -21,6 +21,7 @@ import mindsdb.utilities.profiler as profiler
 
 create_project_lock = Lock()
 
+
 class Project:
     @staticmethod
     def from_record(db_record: db.Project):

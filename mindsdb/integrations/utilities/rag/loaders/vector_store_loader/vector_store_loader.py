@@ -56,5 +56,7 @@ class VectorStoreFactory:
         return PGVectorMDB(
             connection_string=settings.connection_string,
             collection_name=settings.collection_name,
-            embedding_function=embedding_model
+            embedding_function=embedding_model,
+            is_sparse=settings.is_sparse,
+            vector_size=settings.vector_size
         )

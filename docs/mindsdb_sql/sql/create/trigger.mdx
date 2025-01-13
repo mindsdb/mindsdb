@@ -106,7 +106,9 @@ ON mindsdb_slack.messages
         SELECT 'slack-bot-channel-id' AS channel_id, answer AS text
         FROM chatbot_model m
         JOIN TABLE_DELTA s
-        WHERE  s.user != 'U07J30KPAUF' AND s.channel_id = 'slack-bot-channel-id'
+        WHERE  s.user != 'U07J30KPAUF'
+        AND s.channel_id = 'slack-bot-channel-id'
+        AND s.created_at > LAST
 );
 ```
 

@@ -19,6 +19,7 @@ class PGVectorMDB(PGVector):
     """
 
     def __init__(self, *args, is_sparse: bool = False, vector_size: Optional[int] = None, **kwargs):
+        # todo get is_sparse and vector_size from kb vector table
         self.is_sparse = is_sparse
         if is_sparse and vector_size is None:
             raise ValueError("vector_size is required when is_sparse=True")

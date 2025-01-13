@@ -57,6 +57,7 @@ services:
       # OTEL_OTLP_ENDPOINT: "http://jaeger:4317" # Define the endpoint for the otlp exporter. Uncomment this line if you want to use jaeger.
       OTEL_SERVICE_NAME: "mindsdb" # Define the service name
       OTEL_SERVICE_ENVIRONMENT: "local" # Define the service environment
+      OTEL_TRACE_SAMPLE_RATE: "1.0" # Define the trace sample rate
       # OTEL_SDK_FORCE_RUN: "true" # Uncomment me to force-start opentelemetry on local development.
 
     volumes:

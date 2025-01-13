@@ -10,7 +10,7 @@ from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities import log
 from langchain_core.embeddings import Embeddings
 from mindsdb.integrations.handlers.langchain_embedding_handler.vllm_embeddings import VLLMEmbeddings
-from mindsdb.integrations.handlers.langchain_embedding_handler.FastAPI_embeddings import FastAPIEmbeddings
+from mindsdb.integrations.handlers.langchain_embedding_handler.fastapi_embeddings import FastAPIEmbeddings
 
 logger = log.getLogger(__name__)
 

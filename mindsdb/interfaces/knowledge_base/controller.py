@@ -643,16 +643,24 @@ class KnowledgeBaseController:
             params: dict,
             preprocessing_config: Optional[dict] = None,
             if_not_exists: bool = False,
+            is_sparse: bool = False,
+            vector_size: Optional[int] = None,
     ) -> db.KnowledgeBase:
         """
         Add a new knowledge base to the database
         :param preprocessing_config: Optional preprocessing configuration to validate and store
+        :param is_sparse: Whether to use sparse vectors for embeddings
+        :param vector_size: Optional size specification for vectors, required when is_sparse=True
         """
         # Validate preprocessing config first if provided
         if preprocessing_config is not None:
             PreprocessingConfig(**preprocessing_config)  # Validate before storing
             params = params or {}
             params['preprocessing'] = preprocessing_config
+
+        # Check if vector_size is provided when using sparse vectors
+        if is_sparse and vector_size is None:
+            raise ValueError("vector_size is required when is_sparse=True")
 
         # get project id
         project = self.session.database_controller.get_project(project_name)
@@ -693,7 +701,25 @@ class KnowledgeBaseController:
             cloud_pg_vector = os.environ.get('KB_PGVECTOR_URL')
             if cloud_pg_vector:
                 vector_table_name = name
-                vector_db_name = self._create_persistent_pgvector()
+                # Add sparse vector support for pgvector
+                vector_db_params = {}
+                # Check both explicit parameter and model configuration
+                is_sparse = is_sparse or model_record.learn_args.get('using', {}).get('sparse')
+                if is_sparse:
+                    vector_db_params['is_sparse'] = True
+                    if vector_size is not None:
+                        vector_db_params['vector_size'] = vector_size
+                vector_db_name = self._create_persistent_pgvector(vector_db_params)
+
+                # create table in vectordb before creating KB
+                if is_sparse or model_record.learn_args.get('using', {}).get('sparse') is not None:
+                    self.session.datahub.get(vector_db_name).integration_handler.create_table(
+                        vector_table_name, sparse=True, vector_size=vector_size
+                    )
+                else:
+                    self.session.datahub.get(vector_db_name).integration_handler.create_table(
+                        vector_table_name
+                    )
             else:
                 # create chroma db with same name
                 vector_table_name = "default_collection"
@@ -707,15 +733,14 @@ class KnowledgeBaseController:
 
         vector_database_id = self.session.integration_controller.get(vector_db_name)['id']
 
-        # create table in vectordb
-        if model_record.learn_args.get('using', {}).get('sparse') is not None:
-            self.session.datahub.get(vector_db_name).integration_handler.create_table(
-                vector_table_name, sparse=model_record.learn_args.get('using', {}).get('sparse')
-            )
-        else:
-            self.session.datahub.get(vector_db_name).integration_handler.create_table(
-                vector_table_name
-            )
+        # Store sparse vector settings in params if specified
+        if is_sparse:
+            params = params or {}
+            params['vector_config'] = {
+                'is_sparse': is_sparse
+            }
+            if vector_size is not None:
+                params['vector_config']['vector_size'] = vector_size
 
         kb = db.KnowledgeBase(
             name=name,
@@ -729,16 +754,15 @@ class KnowledgeBaseController:
         db.session.commit()
         return kb
 
-    def _create_persistent_pgvector(self):
+    def _create_persistent_pgvector(self, params=None):
         """Create default vector database for knowledge base, if not specified"""
-
         vector_store_name = "kb_pgvector_store"
 
         # check if exists
         if self.session.integration_controller.get(vector_store_name):
             return vector_store_name
 
-        self.session.integration_controller.add(vector_store_name, 'pgvector', {})
+        self.session.integration_controller.add(vector_store_name, 'pgvector', params or {})
         return vector_store_name
 
     def _create_persistent_chroma(self, kb_name, engine="chromadb"):

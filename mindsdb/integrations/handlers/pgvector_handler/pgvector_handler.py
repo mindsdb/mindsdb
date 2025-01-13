@@ -37,6 +37,10 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         super().__init__(name=name, **kwargs)
         self._is_shared_db = False
         self._is_vector_registered = False
+        self._is_sparse = kwargs.get('is_sparse', False)
+        if self._is_sparse and 'vector_size' not in kwargs:
+            raise ValueError("vector_size is required when is_sparse=True")
+        self._vector_size = kwargs.get('vector_size', None)
         self.connect()
 
     def _make_connection_args(self):
@@ -339,17 +343,23 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         full_search_query = f'{semantic_search_cte}{full_text_search_cte}{hybrid_select}'
         return self.raw_query(full_search_query)
 
-    def create_table(self, table_name: str, sparse=False, if_not_exists=True):
-        """
-        Run a create table query on the pgvector database.
-        """
-        table_name = self._check_table(table_name)
-
-        query = f"CREATE TABLE IF NOT EXISTS {table_name} (id text PRIMARY KEY, content text, embeddings vector, metadata jsonb)"
-        if sparse:
-            query = f"CREATE TABLE IF NOT EXISTS {table_name} (id text PRIMARY KEY, content text, embeddings sparsevec, metadata jsonb)"
-
-        self.raw_query(query)
+    def create_table(self, table_name: str, vector_type: str, size_spec: str):
+        """Create a table with a vector column."""
+        with self.connection.cursor() as cur:
+            # For sparse vectors, use sparsevec type
+            vector_column_type = 'sparsevec' if self._is_sparse else 'vector'
+            # size_spec should already include the parentheses
+            if not size_spec.startswith('(') or not size_spec.endswith(')'):
+                size_spec = f'({size_spec})'
+            cur.execute(f"""
+                CREATE TABLE IF NOT EXISTS {table_name} (
+                    id SERIAL PRIMARY KEY,
+                    embeddings {vector_column_type}{size_spec},
+                    content TEXT,
+                    metadata JSONB
+                )
+            """)
+            self.connection.commit()
 
     def insert(
         self, table_name: str, data: pd.DataFrame
@@ -447,4 +457,3 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         """
         table_name = self._check_table(table_name)
         self.raw_query(f"DROP TABLE IF EXISTS {table_name}")
-

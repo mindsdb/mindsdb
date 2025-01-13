@@ -308,7 +308,7 @@ if __name__ == '__main__':
     if apis is None:  # If "--api" option is not specified, start the default APIs
         api_arr = [TrunkProcessEnum.HTTP, TrunkProcessEnum.MYSQL]
     elif apis == "":  # If "--api=" (blank) is specified, don't start any APIs
-        aapispi_arr = []
+        api_arr = []
     else:  # The user has provided a list of APIs to start
         api_arr = [TrunkProcessEnum(name) for name in apis.split(',')]
 

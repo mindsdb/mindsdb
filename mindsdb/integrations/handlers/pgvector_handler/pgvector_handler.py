@@ -40,7 +40,7 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         self._is_sparse = kwargs.get('is_sparse', False)
         if self._is_sparse and 'vector_size' not in kwargs:
             raise ValueError("vector_size is required when is_sparse=True")
-        self._vector_size = kwargs.get('vector_size', None)
+        self._vector_size = kwargs.get('vector_size', "()")
         self.connect()
 
     def _make_connection_args(self):
@@ -194,13 +194,23 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         if filter_conditions:
 
             if embedding_search:
+                if self._is_sparse:
+                    #we use inner product op for sparse embeddings
+                    search_vector = filter_conditions["embeddings"]["value"][0]
+                    filter_conditions.pop("embeddings")
+                    return f"SELECT {targets} FROM {table_name} ORDER BY embeddings <#> '{search_vector}' {after_from_clause}"
+
+
                 # if search vector, return similar rows, apply other filters after if any
                 search_vector = filter_conditions["embeddings"]["value"][0]
                 filter_conditions.pop("embeddings")
+                #we use cosine search for dense embeddings
                 return f"SELECT {targets} FROM {table_name} ORDER BY embeddings <=> '{search_vector}' {after_from_clause}"
+
             else:
-                # if filter conditions, return filtered rows
+                # if filter conditions, return rows that satisfy the conditions
                 return f"SELECT {targets} FROM {table_name} {after_from_clause}"
+
         else:
             # if no filter conditions, return all rows
             return f"SELECT {targets} FROM {table_name} {after_from_clause}"
@@ -343,14 +353,14 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         full_search_query = f'{semantic_search_cte}{full_text_search_cte}{hybrid_select}'
         return self.raw_query(full_search_query)
 
-    def create_table(self, table_name: str, vector_type: str, size_spec: str):
+    def create_table(self, table_name: str):
         """Create a table with a vector column."""
         with self.connection.cursor() as cur:
             # For sparse vectors, use sparsevec type
             vector_column_type = 'sparsevec' if self._is_sparse else 'vector'
             # size_spec should already include the parentheses
-            if not size_spec.startswith('(') or not size_spec.endswith(')'):
-                size_spec = f'({size_spec})'
+            if not self._vector_size.startswith('(') or not self._vector_size.endswith(')'):
+                size_spec = f'({self._vector_size})'
             cur.execute(f"""
                 CREATE TABLE IF NOT EXISTS {table_name} (
                     id SERIAL PRIMARY KEY,

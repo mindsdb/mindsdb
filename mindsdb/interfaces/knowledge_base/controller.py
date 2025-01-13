@@ -642,9 +642,7 @@ class KnowledgeBaseController:
             storage: Identifier,
             params: dict,
             preprocessing_config: Optional[dict] = None,
-            if_not_exists: bool = False,
-            is_sparse: bool = False,
-            vector_size: Optional[int] = None,
+            if_not_exists: bool = False
     ) -> db.KnowledgeBase:
         """
         Add a new knowledge base to the database
@@ -659,6 +657,8 @@ class KnowledgeBaseController:
             params['preprocessing'] = preprocessing_config
 
         # Check if vector_size is provided when using sparse vectors
+        is_sparse = params.get('is_sparse')
+        vector_size = params.get('vector_size')
         if is_sparse and vector_size is None:
             raise ValueError("vector_size is required when is_sparse=True")
 
@@ -712,14 +712,9 @@ class KnowledgeBaseController:
                 vector_db_name = self._create_persistent_pgvector(vector_db_params)
 
                 # create table in vectordb before creating KB
-                if is_sparse or model_record.learn_args.get('using', {}).get('sparse') is not None:
-                    self.session.datahub.get(vector_db_name).integration_handler.create_table(
-                        vector_table_name, sparse=True, vector_size=vector_size
-                    )
-                else:
-                    self.session.datahub.get(vector_db_name).integration_handler.create_table(
-                        vector_table_name
-                    )
+                self.session.datahub.get(vector_db_name).integration_handler.create_table(
+                    vector_table_name
+                )
             else:
                 # create chroma db with same name
                 vector_table_name = "default_collection"

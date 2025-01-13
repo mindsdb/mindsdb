@@ -276,7 +276,7 @@ class SlackHandler(APIChatHandler):
         """
         if table_name not in ['messages', 'threads']:
             raise RuntimeError(f'Table {table_name} is not supported for subscription.')
-        
+
         # Raise an error if columns are provided.
         # Since Slack subscriptions depend on events and not changes to the virtual tables, columns are not supported.
         if columns:

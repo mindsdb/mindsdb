@@ -194,18 +194,25 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         if filter_conditions:
 
             if embedding_search:
-                if self._is_sparse:
-                    #we use inner product op for sparse embeddings
-                    search_vector = filter_conditions["embeddings"]["value"][0]
-                    filter_conditions.pop("embeddings")
-                    return f"SELECT {targets} FROM {table_name} ORDER BY embeddings <#> '{search_vector}' {after_from_clause}"
-
-
-                # if search vector, return similar rows, apply other filters after if any
                 search_vector = filter_conditions["embeddings"]["value"][0]
                 filter_conditions.pop("embeddings")
-                #we use cosine search for dense embeddings
-                return f"SELECT {targets} FROM {table_name} ORDER BY embeddings <=> '{search_vector}' {after_from_clause}"
+
+                if self._is_sparse:
+                    # Convert dict to sparse vector if needed
+                    if isinstance(search_vector, dict):
+                        from pgvector.utils import SparseVector
+                        embedding = SparseVector(search_vector, self._vector_size)
+                        search_vector = embedding.to_text()
+                    # Use inner product for sparse vectors
+                    distance_op = "<#>"
+                else:
+                    # Convert list to vector string if needed
+                    if isinstance(search_vector, list):
+                        search_vector = f"[{','.join(str(x) for x in search_vector)}]"
+                    # Use cosine similarity for dense vectors
+                    distance_op = "<=>"
+
+                return f"SELECT {targets} FROM {table_name} ORDER BY embeddings {distance_op} '{search_vector}' {after_from_clause}"
 
             else:
                 # if filter conditions, return rows that satisfy the conditions
@@ -467,4 +474,3 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         """
         table_name = self._check_table(table_name)
         self.raw_query(f"DROP TABLE IF EXISTS {table_name}")
-

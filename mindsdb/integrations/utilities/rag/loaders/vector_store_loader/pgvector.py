@@ -68,17 +68,21 @@ class PGVectorMDB(PGVector):
                 elif isinstance(embedding, str):
                     # Use string as is - it should already be in the correct format
                     embedding_str = embedding
+                # Use inner product for sparse vectors
+                distance_op = "<#>"
             else:
                 # Dense vectors: expect string in JSON array format or list of floats
                 if isinstance(embedding, list):
                     embedding_str = f"[{','.join(str(x) for x in embedding)}]"
                 elif isinstance(embedding, str):
                     embedding_str = embedding
+                # Use cosine similarity for dense vectors
+                distance_op = "<=>"
 
-            # Use SQL directly for vector comparison with inner product
+            # Use SQL directly for vector comparison
             query = sa.text(
                 f"""
-            SELECT t.*, t.embeddings <#> '{embedding_str}' as distance
+            SELECT t.*, t.embeddings {distance_op} '{embedding_str}' as distance
             FROM {self.collection_name} t
             ORDER BY distance ASC
             LIMIT {k}

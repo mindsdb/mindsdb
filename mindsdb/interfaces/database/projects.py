@@ -19,8 +19,6 @@ from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 import mindsdb.utilities.profiler as profiler
 
 
-create_project_lock = Lock()
-
 
 class Project:
     @staticmethod
@@ -34,35 +32,35 @@ class Project:
 
     def create(self, name: str):
         name = name.lower()
-        with create_project_lock:
-            existing_record = db.Integration.query.filter(
-                sa.func.lower(db.Integration.name) == name,
-                db.Integration.company_id == ctx.company_id
-            ).first()
-            if existing_record is not None:
-                raise EntityExistsError('Database exists with this name ', name)
 
-            existing_record = db.Project.query.filter(
-                (sa.func.lower(db.Project.name) == name)
-                & (db.Project.company_id == ctx.company_id)
-                & (db.Project.deleted_at == sa.null())
-            ).first()
-            if existing_record is not None:
-                raise EntityExistsError('Project already exists', name)
+        existing_record = db.Integration.query.filter(
+            sa.func.lower(db.Integration.name) == name,
+            db.Integration.company_id == ctx.company_id
+        ).first()
+        if existing_record is not None:
+            raise EntityExistsError('Database exists with this name ', name)
 
-            record = db.Project(
-                name=name,
-                company_id=ctx.company_id
-            )
+        existing_record = db.Project.query.filter(
+            (sa.func.lower(db.Project.name) == name)
+            & (db.Project.company_id == ctx.company_id)
+            & (db.Project.deleted_at == sa.null())
+        ).first()
+        if existing_record is not None:
+            raise EntityExistsError('Project already exists', name)
 
-            self.record = record
-            self.name = name
-            self.company_id = ctx.company_id
+        record = db.Project(
+            name=name,
+            company_id=ctx.company_id
+        )
 
-            db.session.add(record)
-            db.session.commit()
+        self.record = record
+        self.name = name
+        self.company_id = ctx.company_id
 
-            self.id = record.id
+        db.session.add(record)
+        db.session.commit()
+
+        self.id = record.id
 
     def save(self):
         db.session.commit()

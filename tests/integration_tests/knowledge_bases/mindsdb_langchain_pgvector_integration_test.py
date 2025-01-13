@@ -1,6 +1,5 @@
 from mindsdb.integrations.utilities.rag.loaders.vector_store_loader.pgvector import PGVectorMDB
 from mindsdb.integrations.handlers.langchain_embedding_handler.fastapi_embeddings import FastAPIEmbeddings
-from pgvector.utils import SparseVector
 
 
 def setup_pgvector_database():
@@ -37,13 +36,6 @@ def test_vector_queries(vector_db):
 
     # Get embeddings for the test text
     embedding = vector_db.embedding_function.embed_query(test_text)
-
-    # Convert embedding to SparseVector
-    # FastAPI embeddings service returns a dict for sparse embeddings
-    if isinstance(embedding, dict):
-        embedding = SparseVector(embedding, 30522)
-    else:
-        raise ValueError(f"Warning: Expected dict for sparse embedding, got {type(embedding)}")
 
     # Query similar vectors
     results = vector_db._query_collection(

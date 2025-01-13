@@ -34,7 +34,7 @@ class FastAPIEmbeddings(Embeddings):
 
         data = {
             "input": texts,
-            "model": "string"
+            "model": self.model
         }
 
         response = requests.post(self.api_base, headers=headers, json=data)
@@ -43,7 +43,39 @@ class FastAPIEmbeddings(Embeddings):
 
         embeddings = []
         for response_dict in response.json()["data"]:
-            embeddings.append(response_dict["embedding"])
+            embedding = response_dict["embedding"]
+            if isinstance(embedding, str):
+                # Check if it's a sparse vector string in format "{key:value,...}/size"
+                if embedding.startswith('{') and '/' in embedding:
+                    # Parse sparse vector format
+                    vector_part = embedding.split('/')[0][1:-1]  # Remove braces and size
+                    embedding_dict = {}
+                    for pair in vector_part.split(','):
+                        key, value = pair.split(':')
+                        embedding_dict[int(key)] = float(value)
+                    embedding = embedding_dict
+                else:
+                    # Try to parse as a list of floats
+                    try:
+                        import json
+                        embedding = json.loads(embedding)
+                    except json.JSONDecodeError:
+                        raise ValueError(f"Unable to parse embedding string: {embedding}")
+            embeddings.append(embedding)
+
+        # Validate the output format
+        if embeddings and isinstance(embeddings[0], dict):
+            # Ensure all embeddings are Dict[int, float]
+            for emb in embeddings:
+                if not all(isinstance(k, int) and isinstance(v, float) for k, v in emb.items()):
+                    raise ValueError("Sparse embeddings must be Dict[int, float]")
+        elif embeddings and isinstance(embeddings[0], list):
+            # Ensure all embeddings are List[float]
+            for emb in embeddings:
+                if not all(isinstance(x, float) for x in emb):
+                    raise ValueError("Dense embeddings must be List[float]")
+        else:
+            raise ValueError("Invalid embedding format")
 
         return embeddings
 

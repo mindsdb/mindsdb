@@ -1,28 +1,28 @@
 from mindsdb.integrations.utilities.rag.loaders.vector_store_loader.pgvector import PGVectorMDB
-from langchain_core.embeddings import Embeddings
+from mindsdb.integrations.handlers.langchain_embedding_handler.fastapi_embeddings import FastAPIEmbeddings
 from pgvector.utils import SparseVector
-
-
-class DummyEmbeddings(Embeddings):
-    """Dummy embeddings that just return the input vector"""
-    def embed_documents(self, texts):
-        return [SparseVector({1: 0.5, 5: 0.3, 10: 0.8}, 128)] * len(texts)
-
-    def embed_query(self, text):
-        return SparseVector({1: 0.5, 5: 0.3, 10: 0.8}, 128)
 
 
 def setup_pgvector_database():
     """Setup pgvector database"""
-    connection_string = "postgresql://postgres:supersecret@127.0.0.1:5432/test_sparse_vectors"
+    # Using port 15432 to avoid conflicts with local PostgreSQL
+    connection_string = "postgresql://gateway:gateway@localhost:15432/gateway"
+
+    print(f"Connecting to: {connection_string}")
+
+    # Initialize FastAPI embeddings
+    embeddings = FastAPIEmbeddings(
+        api_base="http://localhost:8043/v1/embeddings",
+        model="sparse_model"
+    )
 
     # Initialize PGVectorMDB
     vector_db = PGVectorMDB(
         connection_string=connection_string,
-        collection_name="sparse_test",
-        embedding_function=DummyEmbeddings(),
-        is_sparse=True,
-        vector_size=128
+        collection_name="test_dev_doc_vectors",
+        embedding_function=embeddings,
+        is_sparse=True,  # Using sparse vectors
+        vector_size=30522  # Size for sparse vectors
     )
 
     return vector_db
@@ -32,13 +32,23 @@ def test_vector_queries(vector_db):
     """Test various vector queries"""
     print("\nTesting vector queries...")
 
-    # Create a test vector
-    test_vector = SparseVector({1: 0.5, 5: 0.3, 10: 0.8}, 128)
+    # Test text to be embedded
+    test_text = "For the Bsecondaryl containment"
+
+    # Get embeddings for the test text
+    embedding = vector_db.embedding_function.embed_query(test_text)
+
+    # Convert embedding to SparseVector
+    # FastAPI embeddings service returns a dict for sparse embeddings
+    if isinstance(embedding, dict):
+        embedding = SparseVector(embedding, 30522)
+    else:
+        raise ValueError(f"Warning: Expected dict for sparse embedding, got {type(embedding)}")
 
     # Query similar vectors
     results = vector_db._query_collection(
-        embedding=test_vector,
-        k=2
+        embedding=embedding,
+        k=5
     )
 
     print("\nVector similarity search results:")

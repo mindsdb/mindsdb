@@ -53,7 +53,7 @@ class PGVectorMDB(PGVector):
 
     def __query_collection(
         self,
-        embedding: List[Union[float]],
+        embedding: Union[List[List[float]], List[Dict[int, float]]],
         k: int = 4,
         filter: Optional[Dict[str, str]] = None,
     ) -> List[Any]:

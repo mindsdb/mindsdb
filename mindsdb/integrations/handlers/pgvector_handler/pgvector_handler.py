@@ -37,8 +37,9 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
         super().__init__(name=name, **kwargs)
         self._is_shared_db = False
         self._is_vector_registered = False
-        self._is_sparse = kwargs.get('is_sparse', False)
-        self._vector_size = kwargs.get('vector_size', None)  # Default to None
+        # we get these from the connection args on PostgresHandler parent
+        self._is_sparse = self.connection_args.get('is_sparse', False)
+        self._vector_size = self.connection_args.get('vector_size', None) 
         if self._is_sparse and not self._vector_size:
             raise ValueError("vector_size is required when is_sparse=True")
         self.connect()
@@ -212,7 +213,7 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
                     # Use cosine similarity for dense vectors
                     distance_op = "<=>"
 
-                return f"SELECT {targets} FROM {table_name} ORDER BY embeddings {distance_op} '{search_vector}' {after_from_clause}"
+                return f"SELECT {targets} FROM {table_name} ORDER BY embeddings {distance_op} '{search_vector}' ASC {after_from_clause}"
 
             else:
                 # if filter conditions, return rows that satisfy the conditions

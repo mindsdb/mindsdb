@@ -9,6 +9,7 @@ import requests
 from flask import current_app as ca
 from flask import request
 from flask_restx import Resource
+import pandas as pd
 
 from mindsdb.api.http.namespaces.configs.files import ns_conf
 from mindsdb.api.http.utils import http_error
@@ -140,6 +141,7 @@ class File(Resource):
         original_file_name = clear_filename(data.get("original_file_name"))
 
         file_path = os.path.join(temp_dir_path, data["file"])
+        sheet_names = None
         lp = file_path.lower()
         if lp.endswith((".zip", ".tar.gz")):
             if lp.endswith(".zip"):
@@ -163,10 +165,33 @@ class File(Resource):
                     400, "Wrong content.", "Archive must contain data file in root."
                 )
 
+        elif lp.endswith(".xlsx") or lp.endswith(".xls"):
+            # Get list of sheets.
+            xls = pd.ExcelFile(file_path)
+
+            # Check if the sheet names are provided in the request.
+            requested_sheet_names = data.get("sheet_names")
+            if requested_sheet_names:
+                sheet_names = requested_sheet_names.split(",")
+            # If the sheet names are not provided, use the sheet names from the Excel file.
+            else:
+                sheet_names = xls.sheet_names
+
+            # If there is only one sheet, there is no need to process each sheet separately.
+            sheet_names = sheet_names if len(sheet_names) > 1 else None
+
         try:
-            ca.file_controller.save_file(
-                mindsdb_file_name, file_path, file_name=original_file_name
-            )
+            # If the file is an Excel file with multiple sheets, save each sheet separately.
+            if sheet_names:
+                ca.file_controller.save_excel_file_with_sheets(
+                    mindsdb_file_name, file_path, sheet_names, file_name=original_file_name
+                )
+
+            # Otherwise, save the file as is.
+            else:
+                ca.file_controller.save_file(
+                    mindsdb_file_name, file_path, file_name=original_file_name
+                )
         except Exception as e:
             return http_error(500, 'Error', str(e))
         finally:

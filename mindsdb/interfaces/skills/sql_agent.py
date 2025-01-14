@@ -117,8 +117,8 @@ class SQLAgent:
                     response = handler.get_tables(all=True)
                 else:
                     response = handler.get_tables()
-                response_schama_names = list(response.data_frame.table_schema.unique())
-                schemas_intersection = set(schemas_names) & set(response_schama_names)
+                response_schema_names = list(response.data_frame.table_schema.unique())
+                schemas_intersection = set(schemas_names) & set(response_schema_names)
                 if len(schemas_intersection) == 0:
                     raise Exception('There are no allowed schemas in ds')
 

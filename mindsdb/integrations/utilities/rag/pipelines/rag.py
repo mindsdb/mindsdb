@@ -227,12 +227,23 @@ class LangChainRAGPipeline:
             'provider': retriever_config.llm_config.provider,
             **retriever_config.llm_config.params
         })
+        vector_store_operator = VectorStoreOperator(
+            vector_store=config.vector_store,
+            documents=config.documents,
+            embedding_model=config.embedding_model,
+            vector_store_config=config.vector_store_config
+        )
+        vector_store_retriever = vector_store_operator.vector_store.as_retriever()
+        vector_store_retriever = cls._apply_search_kwargs(vector_store_retriever, config.search_kwargs, config.search_type)
         retriever = SQLRetriever(
+            fallback_retriever=vector_store_retriever,
             vector_store_handler=knowledge_base_table.get_vector_db(),
             metadata_schemas=retriever_config.metadata_schemas,
             examples=retriever_config.examples,
             embeddings_model=embeddings,
             rewrite_prompt_template=retriever_config.rewrite_prompt_template,
+            retry_prompt_template=retriever_config.query_retry_template,
+            num_retries=retriever_config.num_retries,
             sql_prompt_template=retriever_config.sql_prompt_template,
             query_checker_template=retriever_config.query_checker_template,
             embeddings_table=knowledge_base_table._kb.vector_database_table,

@@ -29,6 +29,23 @@ class ColorFormatter(logging.Formatter):
         return log_fmt.format(record)
 
 
+def get_console_handler_config_level() -> int:
+    console_handler_config = app_config['logging']['handlers']['console']
+    return getattr(logging, console_handler_config["level"])
+
+
+def get_file_handler_config_level() -> int:
+    file_handler_config = app_config['logging']['handlers']['file']
+    return getattr(logging, file_handler_config["level"])
+
+
+def get_mindsdb_log_level() -> int:
+    console_handler_config_level = get_console_handler_config_level()
+    file_handler_config_level = get_file_handler_config_level()
+
+    return min(console_handler_config_level, file_handler_config_level)
+
+
 def configure_logging():
     handlers_config = {}
     console_handler_config = app_config['logging']['handlers']['console']
@@ -39,6 +56,7 @@ def configure_logging():
             "formatter": "f",
             "level": console_handler_config_level
         }
+
     file_handler_config = app_config['logging']['handlers']['file']
     file_handler_config_level = getattr(logging, file_handler_config["level"])
     if file_handler_config['enabled'] is True:
@@ -51,7 +69,7 @@ def configure_logging():
             "backupCount": file_handler_config["backupCount"]
         }
 
-    mindsdb_log_level = min(console_handler_config_level, file_handler_config_level)
+    mindsdb_log_level = get_mindsdb_log_level()
 
     logging_config = dict(
         version=1,
@@ -65,7 +83,7 @@ def configure_logging():
         loggers={
             "": {  # root logger
                 "handlers": list(handlers_config.keys()),
-                "level": logging.WARNING,
+                "level": mindsdb_log_level,
             },
             "__main__": {
                 "level": mindsdb_log_level,

@@ -14,7 +14,7 @@ from sqlalchemy.sql import functions as sa_fnc
 from mindsdb_sql_parser import ast
 
 
-reserved_words = {
+RESERVED_WORDS = {
     "COLLATION"
 }
 
@@ -105,7 +105,7 @@ class SqlalchemyRender:
                     if part.lower() != part_lower:
                         part = i
 
-                if part in reserved_words:
+                if part in RESERVED_WORDS:
                     part = self.dialect.identifier_preparer.quote(part)
 
             parts2.append(part)

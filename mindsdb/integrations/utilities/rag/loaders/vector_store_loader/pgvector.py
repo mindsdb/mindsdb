@@ -70,9 +70,9 @@ class PGVectorMDB(PGVector):
                     # Use string as is - it should already be in the correct format
                     embedding_str = embedding
                 # Use inner product for sparse vectors
-                distance_op = "<#>"
+                distance_op = "<=>"
                 # For inner product, larger values are better matches
-                order_direction = "DESC"
+                order_direction = "ASC"
             else:
                 # Dense vectors: expect string in JSON array format or list of floats
                 if isinstance(embedding, list):

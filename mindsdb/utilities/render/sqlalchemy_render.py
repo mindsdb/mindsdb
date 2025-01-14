@@ -15,7 +15,7 @@ from mindsdb_sql_parser import ast
 
 
 RESERVED_WORDS = {
-    "COLLATION"
+    "collation"
 }
 
 sa_type_names = [
@@ -102,11 +102,8 @@ class SqlalchemyRender:
                     #   in that case use origin string
 
                     part_lower = str(sa.column(i.lower()).compile(dialect=self.dialect))
-                    if part.lower() != part_lower:
+                    if part.lower() != part_lower and i.lower() not in RESERVED_WORDS:
                         part = i
-
-                if part in RESERVED_WORDS:
-                    part = self.dialect.identifier_preparer.quote(part)
 
             parts2.append(part)
 

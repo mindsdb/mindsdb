@@ -71,8 +71,6 @@ class PGVectorMDB(PGVector):
                     embedding_str = embedding
                 # Use inner product for sparse vectors
                 distance_op = "<#>"
-                # For inner product, larger values are better matches
-                order_direction = "DESC"
             else:
                 # Dense vectors: expect string in JSON array format or list of floats
                 if isinstance(embedding, list):
@@ -81,15 +79,13 @@ class PGVectorMDB(PGVector):
                     embedding_str = embedding
                 # Use cosine similarity for dense vectors
                 distance_op = "<=>"
-                # For cosine similarity, smaller values are better matches
-                order_direction = "ASC"
 
             # Use SQL directly for vector comparison
             query = sa.text(
                 f"""
             SELECT t.*, t.embeddings {distance_op} '{embedding_str}' as distance
             FROM {self.collection_name} t
-            ORDER BY distance {order_direction}
+            ORDER BY distance ASC
             LIMIT {k}
             """
             )

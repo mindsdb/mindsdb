@@ -213,7 +213,7 @@ class PgVectorHandler(VectorStoreHandler, PostgresHandler):
                     # Use cosine similarity for dense vectors
                     distance_op = "<=>"
 
-                return f"SELECT {targets} FROM {table_name} ORDER BY embeddings {distance_op} '{search_vector}' {after_from_clause}"
+                return f"SELECT {targets} FROM {table_name} ORDER BY embeddings {distance_op} '{search_vector}' ASC {after_from_clause}"
 
             else:
                 # if filter conditions, return rows that satisfy the conditions

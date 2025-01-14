@@ -64,14 +64,14 @@ OTEL_EXTRA_ATTRIBUTES = os.getenv("OTEL_EXTRA_ATTRIBUTES", "")
 OTEL_SDK_DISABLED = (os.getenv("OTEL_SDK_DISABLED", "false").lower() == "true"
                      or os.getenv("OTEL_SERVICE_ENVIRONMENT", "local").lower() == "local")
 
-# Define if OpenTelemetry logging is disabled. By default, it is enabled.
-OTEL_LOGGING_DISABLED = os.getenv("OTEL_LOGGING_DISABLED", "false").lower() == "true"
+# Define if OpenTelemetry logging is disabled. By default, it is disabled.
+OTEL_LOGGING_DISABLED = os.getenv("OTEL_LOGGING_DISABLED", "true").lower() == "true"
 
 # Define if OpenTelemetry tracing is disabled. By default, it is enabled.
 OTEL_TRACING_DISABLED = os.getenv("OTEL_TRACING_DISABLED", "false").lower() == "true"
 
-# Define if OpenTelemetry metrics is disabled. By default, it is enabled.
-OTEL_METRICS_DISABLED = os.getenv("OTEL_METRICS_DISABLED", "false").lower() == "true"
+# Define if OpenTelemetry metrics is disabled. By default, it is disabled.
+OTEL_METRICS_DISABLED = os.getenv("OTEL_METRICS_DISABLED", "true").lower() == "true"
 
 # If you want to enable Open Telemetry on local for some reason please set OTEL_SDK_FORCE_RUN to true
 OTEL_SDK_FORCE_RUN = os.getenv("OTEL_SDK_FORCE_RUN", "false").lower() == "true"

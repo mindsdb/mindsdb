@@ -10,7 +10,7 @@ ARG EXTRAS
 COPY . .
 # Find every FILE that is not a requirements file and delete it
 RUN find ./ -type f -not -name "requirements*.txt" -print | xargs rm -f \
-    # Find every empty directory and delete it
+# Find every empty directory and delete it
     && find ./ -type d -empty -delete
 # Copy setup.py and everything else used by setup.py
 COPY setup.py default_handlers.txt README.md ./
@@ -92,7 +92,7 @@ RUN --mount=target=/var/lib/apt,type=cache,sharing=locked \
 
 # Install dev requirements and install 'mindsdb' as an editable package
 RUN --mount=type=cache,target=/root/.cache uv pip install -r requirements/requirements-dev.txt \
-    && uv pip install --no-deps -e "."
+                                        && uv pip install --no-deps -e "."
 
 COPY docker/mindsdb_config.release.json /root/mindsdb_config.json
 
@@ -142,4 +142,4 @@ EXPOSE 47334/tcp
 EXPOSE 47335/tcp
 EXPOSE 47336/tcp
 
-ENTRYPOINT [ "bash", "-c", "python -Im mindsdb --config=/root/mindsdb_config.json" ]
+ENTRYPOINT [ "bash", "-c", "python -Im mindsdb --config=/root/mindsdb_config.json --api=http" ]

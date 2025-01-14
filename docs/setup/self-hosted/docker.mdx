@@ -43,6 +43,14 @@ Where:
 -   `-p 47334:47334` publishes port 47334 to access MindsDB GUI and HTTP API.
 -   `mindsdb/mindsdb` is a Docker image provided by MindsDB. You can choose a different one from the list above.
 
+<Tip>
+By default, MindsDB starts only the `http` API. You can define which APIs to start by passing the `MINDSDB_APIS` environment variable with a comma-separated list when running the container as shown below. To expose the ports for the APIs, you need to add the respective ports to the command with the `-p` flag.
+
+```bash
+docker run -e MINDSDB_APIS="http,mysql,mongodb,postgres" -p 47334:47334 -p 47335:47335 -p 47336:47336 -p 55432:55432 mindsdb/mindsdb
+```
+</Tip>
+
 Once the container is created, you can use the following commands:
 
 -   `docker stop mindsdb_container` to stop the container. *Note that this may not always be necessary because when turning off the host machine, the container will also be shut down.*

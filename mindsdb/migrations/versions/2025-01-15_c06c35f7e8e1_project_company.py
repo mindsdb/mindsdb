@@ -21,6 +21,7 @@ depends_on = None
 
 logger = log.getLogger(__name__)
 
+
 def upgrade():
 
     """

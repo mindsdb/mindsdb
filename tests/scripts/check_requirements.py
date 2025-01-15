@@ -137,6 +137,7 @@ PACKAGE_NAME_MAP = {
     "opentelemetry-exporter-otlp": ["opentelemetry"],
     "opentelemetry-instrumentation-requests": ["opentelemetry"],
     "opentelemetry-instrumentation-flask": ["opentelemetry"],
+    "opentelemetry-distro": ["opentelemetry"],
     "sqlalchemy-ingres": ["ingres_sa_dialect"]
 }
 

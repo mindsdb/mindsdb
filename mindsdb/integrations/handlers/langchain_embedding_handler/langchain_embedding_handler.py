@@ -10,6 +10,7 @@ from mindsdb.integrations.libs.base import BaseMLEngine
 from mindsdb.utilities import log
 from langchain_core.embeddings import Embeddings
 from mindsdb.integrations.handlers.langchain_embedding_handler.vllm_embeddings import VLLMEmbeddings
+from mindsdb.integrations.handlers.langchain_embedding_handler.fastapi_embeddings import FastAPIEmbeddings
 
 logger = log.getLogger(__name__)
 
@@ -20,7 +21,10 @@ logger = log.getLogger(__name__)
 # This is used for the user to select the embedding model
 EMBEDDING_MODELS = {
     'VLLM': 'VLLMEmbeddings',
-    'vllm': 'VLLMEmbeddings'
+    'vllm': 'VLLMEmbeddings',
+    'FastAPI': 'FastAPIEmbeddings',
+    'fastapi': 'FastAPIEmbeddings'
+
 }
 
 try:
@@ -54,6 +58,9 @@ def get_langchain_class(class_name: str) -> Embeddings:
     # First check if it's our custom VLLMEmbeddings
     if class_name == "VLLMEmbeddings":
         return VLLMEmbeddings
+
+    if class_name == "FastAPIEmbeddings":
+        return FastAPIEmbeddings
 
     # Then try langchain_community.embeddings
     try:

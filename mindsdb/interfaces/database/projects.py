@@ -2,7 +2,6 @@ import datetime
 from copy import deepcopy
 from typing import List, Optional
 from collections import OrderedDict
-from threading import Lock
 
 import sqlalchemy as sa
 import numpy as np

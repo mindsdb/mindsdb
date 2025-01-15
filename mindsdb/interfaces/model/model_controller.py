@@ -7,7 +7,7 @@ from multiprocessing.pool import ThreadPool
 import pandas as pd
 from dateutil.parser import parse as parse_datetime
 
-from sqlalchemy import func, null
+from sqlalchemy import func
 import numpy as np
 
 import mindsdb.interfaces.storage.db as db

@@ -161,7 +161,7 @@ class PostgresHandler(DatabaseHandler):
             'float8': 'float64'
         }
         columns = df.columns
-        df = df.set_axis(range(len(columns)), axis=1)
+        df.columns = list(range(len(columns)))
         for column_index, column_name in enumerate(df.columns):
             col = df[column_name]
             if str(col.dtype) == 'object':
@@ -172,7 +172,7 @@ class PostgresHandler(DatabaseHandler):
                         df[column_name] = col.astype(types_map[pg_type.name])
                     except ValueError as e:
                         logger.error(f'Error casting column {col.name} to {types_map[pg_type.name]}: {e}')
-        return df.set_axis(columns, axis=1)
+        df.columns = columns
 
     @profiler.profile()
     def native_query(self, query: str, params=None) -> Response:
@@ -202,7 +202,7 @@ class PostgresHandler(DatabaseHandler):
                         result,
                         columns=[x.name for x in cur.description]
                     )
-                    df = self._cast_dtypes(df, cur.description)
+                    self._cast_dtypes(df, cur.description)
                     response = Response(
                         RESPONSE_TYPE.TABLE,
                         df

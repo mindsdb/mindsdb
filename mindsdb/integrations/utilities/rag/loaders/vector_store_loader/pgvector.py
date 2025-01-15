@@ -53,10 +53,10 @@ class PGVectorMDB(PGVector):
         self.EmbeddingStore = _generated_sa_tables[collection_name]
 
     def __query_collection(
-        self,
-        embedding: Union[List[float], Dict[int, float], str],
-        k: int = 4,
-        filter: Optional[Dict[str, str]] = None,
+            self,
+            embedding: Union[List[float], Dict[int, float], str],
+            k: int = 4,
+            filter: Optional[Dict[str, str]] = None,
     ) -> List[Any]:
         """Query the collection."""
         with Session(self._bind) as session:
@@ -71,6 +71,8 @@ class PGVectorMDB(PGVector):
                     embedding_str = embedding
                 # Use inner product for sparse vectors
                 distance_op = "<#>"
+                # For inner product, larger values are better matches
+                order_direction = "DESC"
             else:
                 # Dense vectors: expect string in JSON array format or list of floats
                 if isinstance(embedding, list):
@@ -79,25 +81,40 @@ class PGVectorMDB(PGVector):
                     embedding_str = embedding
                 # Use cosine similarity for dense vectors
                 distance_op = "<=>"
+                # For cosine similarity, smaller values are better matches
+                order_direction = "ASC"
 
             # Use SQL directly for vector comparison
             query = sa.text(
                 f"""
             SELECT t.*, t.embeddings {distance_op} '{embedding_str}' as distance
             FROM {self.collection_name} t
-            ORDER BY distance ASC
+            ORDER BY distance {order_direction}
             LIMIT {k}
-            """)
+            """
+            )
             results = session.execute(query).all()
 
-        for rec in results:
-            if not bool(rec.metadata):
-                rec = rec._replace(metadata={0: 0})
+            # Convert results to the expected format
+            formatted_results = []
+            for rec in results:
+                metadata = rec.metadata if bool(rec.metadata) else {0: 0}
+                embedding_store = self.EmbeddingStore()
+                embedding_store.document = rec.content
+                embedding_store.cmetadata = metadata
+                result = type(
+                    'Result', (), {
+                        'EmbeddingStore': embedding_store,
+                        'distance': rec.distance
+                    }
+                )
+                formatted_results.append(result)
 
-        return [(rec, rec.distance) for rec in results]
+            return formatted_results
 
     # aliases for different langchain versions
     def _PGVector__query_collection(self, *args, **kwargs):
+
         return self.__query_collection(*args, **kwargs)
 
     def _query_collection(self, *args, **kwargs):

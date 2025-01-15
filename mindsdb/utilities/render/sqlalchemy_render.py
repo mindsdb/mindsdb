@@ -14,6 +14,10 @@ from sqlalchemy.sql import functions as sa_fnc
 from mindsdb_sql_parser import ast
 
 
+RESERVED_WORDS = {
+    "collation"
+}
+
 sa_type_names = [
     key for key, val in sa.types.__dict__.items() if hasattr(val, '__module__')
     and val.__module__ in ('sqlalchemy.sql.sqltypes', 'sqlalchemy.sql.type_api')
@@ -98,7 +102,7 @@ class SqlalchemyRender:
                     #   in that case use origin string
 
                     part_lower = str(sa.column(i.lower()).compile(dialect=self.dialect))
-                    if part.lower() != part_lower:
+                    if part.lower() != part_lower and i.lower() not in RESERVED_WORDS:
                         part = i
 
             parts2.append(part)

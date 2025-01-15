@@ -506,6 +506,8 @@ class SqlalchemyRender:
                             condition = self.to_expression(item['condition'])
 
                         join_type = item['join_type']
+                        if 'ASOF' in join_type:
+                            raise NotImplementedError(f'Unsupported join type: {join_type}')
                         method = 'join'
                         is_full = False
                         if join_type == 'LEFT JOIN':

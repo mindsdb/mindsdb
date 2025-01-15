@@ -10,6 +10,7 @@ from collections import defaultdict
 from alembic import op
 import sqlalchemy as sa
 import mindsdb.interfaces.storage.db  # noqa
+from mindsdb.utilities import log
 
 # revision identifiers, used by Alembic.
 revision = 'c06c35f7e8e1'
@@ -17,6 +18,8 @@ down_revision = 'f6dc924079fa'
 branch_labels = None
 depends_on = None
 
+
+logger = log.getLogger(__name__)
 
 def upgrade():
 
@@ -59,7 +62,7 @@ def upgrade():
                 .where(table.c.id == id)
                 .values({'name': new_name})
             )
-            print(f'Found duplicated project name: {name}, renamed to: {new_name}')
+            logger.warning(f'Found duplicated project name: {name}, renamed to: {new_name}')
 
     op.execute(
         table

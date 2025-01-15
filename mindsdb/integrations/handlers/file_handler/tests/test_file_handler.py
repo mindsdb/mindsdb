@@ -25,6 +25,11 @@ test_file_content = [
     [3, -3, 0.3, "C"],
 ]
 
+test_excel_sheet_content = [
+    ["Sheet_Name"],
+    ["Sheet1"],
+]
+
 file_records = [("one", 1, test_file_content[0]), ("two", 2, test_file_content[0])]
 
 
@@ -349,7 +354,18 @@ def test_get_file_path_with_url(mock_fetch_url):
     ],
 )
 def test_handle_source(file_path, expected_columns):
-    df, col_map = FileHandler._handle_source(file_path)
+    sheet_name = None
+    # Excel files return a list of sheets when queried without a sheet name
+    if file_path.endswith(".xlsx"):
+        df, _ = FileHandler._handle_source(file_path)
+        assert isinstance(df, pandas.DataFrame)
+
+        assert df.columns.tolist() == test_excel_sheet_content[0]
+        assert len(df) == len(test_excel_sheet_content) - 1
+        assert df.values.tolist() == test_excel_sheet_content[1:]
+        sheet_name = test_excel_sheet_content[1][0]
+
+    df, _ = FileHandler._handle_source(file_path, sheet_name=sheet_name)
     assert isinstance(df, pandas.DataFrame)
     assert df.columns.tolist() == expected_columns
 

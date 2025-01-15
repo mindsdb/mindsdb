@@ -235,6 +235,10 @@ class LangChainRAGPipeline:
         )
         vector_store_retriever = vector_store_operator.vector_store.as_retriever()
         vector_store_retriever = cls._apply_search_kwargs(vector_store_retriever, config.search_kwargs, config.search_type)
+        distance_function = DistanceFunction.SQUARED_EUCLIDEAN_DISTANCE
+        if config.vector_store_config.is_sparse and config.vector_store_config.vector_size is not None:
+            # Use negative dot product for sparse retrieval.
+            distance_function = DistanceFunction.NEGATIVE_DOT_PRODUCT
         retriever = SQLRetriever(
             fallback_retriever=vector_store_retriever,
             vector_store_handler=knowledge_base_table.get_vector_db(),
@@ -248,8 +252,7 @@ class LangChainRAGPipeline:
             query_checker_template=retriever_config.query_checker_template,
             embeddings_table=knowledge_base_table._kb.vector_database_table,
             source_table=retriever_config.source_table,
-            # Currently only similarity search is supported.
-            distance_function=DistanceFunction.SQUARED_EUCLIDEAN_DISTANCE,
+            distance_function=distance_function,
             search_kwargs=config.search_kwargs,
             llm=sql_llm
         )

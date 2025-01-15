@@ -303,12 +303,14 @@ if __name__ == '__main__':
         except Exception as e:
             logger.error(f"Error! Something went wrong during DB migrations: {e}")
 
-    if config.cmd_args.api is None:  # If "--api" option is not specified, start the default APIs
+    apis = os.getenv('MINDSDB_APIS') or config.cmd_args.api
+
+    if apis is None:  # If "--api" option is not specified, start the default APIs
         api_arr = [TrunkProcessEnum.HTTP, TrunkProcessEnum.MYSQL]
-    elif config.cmd_args.api == "":  # If "--api=" (blank) is specified, don't start any APIs
+    elif apis == "":  # If "--api=" (blank) is specified, don't start any APIs
         api_arr = []
     else:  # The user has provided a list of APIs to start
-        api_arr = [TrunkProcessEnum(name) for name in config.cmd_args.api.split(',')]
+        api_arr = [TrunkProcessEnum(name) for name in apis.split(',')]
 
     if config.cmd_args.install_handlers is not None:
         handlers_list = [s.strip() for s in config.cmd_args.install_handlers.split(",")]

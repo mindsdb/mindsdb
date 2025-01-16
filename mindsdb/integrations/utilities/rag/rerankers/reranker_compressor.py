@@ -119,14 +119,16 @@ class LLMReranker(BaseDocumentCompressor):
 
                     ranked_results.append((batch[idx][1], score))
 
-                    # Early stopping if enabled and we have enough high-scoring documents
-                    if (
-                            self.early_stop
-                            and self.num_docs_to_keep
-                            and len([r for r in ranked_results if r[1] >= self.filtering_threshold]) >= self.num_docs_to_keep
-                            and score >= self.early_stop_threshold
-                    ):
+                    # Check if we should stop early
+                    high_scoring_docs = [r for r in ranked_results if r[1] >= self.filtering_threshold]
+                    can_stop_early = (
+                        self.early_stop  # Early stopping is enabled
+                        and self.num_docs_to_keep  # We have a target number of docs
+                        and len(high_scoring_docs) >= self.num_docs_to_keep  # Found enough good docs
+                        and score >= self.early_stop_threshold  # Current doc is good enough
+                    )
 
+                    if can_stop_early:
                         log.info(f"Early stopping after finding {self.num_docs_to_keep} documents with high confidence")
                         return ranked_results
 

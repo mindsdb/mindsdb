@@ -4,6 +4,7 @@ import asyncio
 import logging
 import math
 import os
+import random
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from langchain.retrievers.document_compressors.base import BaseDocumentCompressor
@@ -21,15 +22,18 @@ class LLMReranker(BaseDocumentCompressor):
     model: str = DEFAULT_RERANKING_MODEL  # Model to use for reranking
     temperature: float = 0.0  # Temperature for the model
     openai_api_key: Optional[str] = None
-    remove_irrelevant: bool = True  # New flag to control removal of irrelevant documents,
+    remove_irrelevant: bool = True  # New flag to control removal of irrelevant documents
     base_url: str = DEFAULT_LLM_ENDPOINT
     num_docs_to_keep: Optional[int] = None  # How many of the top documents to keep after reranking & compressing.
     _api_key_var: str = "OPENAI_API_KEY"
     client: Optional[AsyncOpenAI] = None
     _semaphore: Optional[asyncio.Semaphore] = None
-    max_concurrent_requests: int = 5
+    max_concurrent_requests: int = 20
     max_retries: int = 3
     retry_delay: float = 1.0
+    request_timeout: float = 20.0  # Timeout for API requests
+    early_stop: bool = True  # Whether to enable early stopping
+    early_stop_threshold: float = 0.8  # Confidence threshold for early stopping
 
     class Config:
         arbitrary_types_allowed = True
@@ -41,9 +45,13 @@ class LLMReranker(BaseDocumentCompressor):
     async def _init_client(self):
         if self.client is None:
             openai_api_key = self.openai_api_key or os.getenv(self._api_key_var)
+            if not openai_api_key:
+                raise ValueError(f"OpenAI API key not found in environment variable {self._api_key_var}")
             self.client = AsyncOpenAI(
                 api_key=openai_api_key,
-                base_url=self.base_url
+                base_url=self.base_url,
+                timeout=self.request_timeout,
+                max_retries=2  # Client-level retries
             )
 
     async def search_relevancy(self, query: str, document: str) -> Any:
@@ -52,15 +60,14 @@ class LLMReranker(BaseDocumentCompressor):
         async with self._semaphore:
             for attempt in range(self.max_retries):
                 try:
-                    message_history = [
-                        {"role": "system", "content": "Your task is to classify whether the document is relevant to the search query provided below. Answer just 'YES' or 'NO'."},
-                        {"role": "user", "content": f"Document: ```{document}```; Search query: ```{query}```"}
-                    ]
-
                     response = await self.client.chat.completions.create(
                         model=self.model,
-                        messages=message_history,
+                        messages=[
+                            {"role": "system", "content": "Rate the relevance of the document to the query. Respond with 'yes' or 'no'."},
+                            {"role": "user", "content": f"Query: {query}\nDocument: {document}\nIs this document relevant?"}
+                        ],
                         temperature=self.temperature,
+                        n=1,
                         logprobs=True,
                         max_tokens=1
                     )
@@ -75,14 +82,15 @@ class LLMReranker(BaseDocumentCompressor):
                     if attempt == self.max_retries - 1:
                         log.error(f"Failed after {self.max_retries} attempts: {str(e)}")
                         raise
-                    await asyncio.sleep(self.retry_delay * (attempt + 1))
-                    continue
+                    # Exponential backoff with jitter
+                    retry_delay = self.retry_delay * (2 ** attempt) + random.uniform(0, 0.1)
+                    await asyncio.sleep(retry_delay)
 
     async def _rank(self, query_document_pairs: List[Tuple[str, str]]) -> List[Tuple[str, float]]:
         ranked_results = []
 
-        # Process in batches to avoid overwhelming the server
-        batch_size = min(self.max_concurrent_requests, len(query_document_pairs))
+        # Process in larger batches for better throughput
+        batch_size = min(self.max_concurrent_requests * 2, len(query_document_pairs))
         for i in range(0, len(query_document_pairs), batch_size):
             batch = query_document_pairs[i:i + batch_size]
             try:
@@ -94,20 +102,33 @@ class LLMReranker(BaseDocumentCompressor):
                 for idx, result in enumerate(results):
                     if isinstance(result, Exception):
                         log.error(f"Error processing document {i+idx}: {str(result)}")
+                        ranked_results.append((batch[idx][1], 0.0))
                         continue
 
                     answer = result["answer"]
                     logprob = result["logprob"]
                     prob = math.exp(logprob)
 
-                    if answer == "YES" or answer.lower().strip().startswith("y"):
-                        score = prob
-                    elif answer == "NO" or answer.lower().strip().startswith("n"):
-                        score = 1 - prob
+                    # Convert answer to score using the model's confidence
+                    if answer.lower().strip() == "yes":
+                        score = prob  # If yes, use the model's confidence
+                    elif answer.lower().strip() == "no":
+                        score = 1 - prob  # If no, invert the confidence
                     else:
-                        score = 0.0
+                        score = 0.5 * prob  # For unclear answers, reduce confidence
 
                     ranked_results.append((batch[idx][1], score))
+
+                    # Early stopping if enabled and we have enough high-scoring documents
+                    if (
+                            self.early_stop
+                            and self.num_docs_to_keep
+                            and len([r for r in ranked_results if r[1] >= self.filtering_threshold]) >= self.num_docs_to_keep
+                            and score >= self.early_stop_threshold
+                    ):
+
+                        log.info(f"Early stopping after finding {self.num_docs_to_keep} documents with high confidence")
+                        return ranked_results
 
             except Exception as e:
                 log.error(f"Batch processing error: {str(e)}")

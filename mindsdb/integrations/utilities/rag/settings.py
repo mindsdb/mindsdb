@@ -452,9 +452,11 @@ class RerankerConfig(BaseModel):
     base_url: str = DEFAULT_LLM_ENDPOINT
     filtering_threshold: float = 0.5
     num_docs_to_keep: Optional[int] = None
-    max_concurrent_requests: int = 5
+    max_concurrent_requests: int = 20
     max_retries: int = 3
     retry_delay: float = 1.0
+    early_stop: bool = True  # Whether to enable early stopping
+    early_stop_threshold: float = 0.8  # Confidence threshold for early stopping
 
 
 class MultiHopRetrieverConfig(BaseModel):

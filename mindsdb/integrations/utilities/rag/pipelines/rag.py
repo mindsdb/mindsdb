@@ -29,6 +29,23 @@ from mindsdb.interfaces.agents.langchain_agent import create_chat_model
 class LangChainRAGPipeline:
     """
     Builds a RAG pipeline using langchain LCEL components
+
+    Args:
+        retriever_runnable: Base retriever component
+        prompt_template: Template for generating responses
+        llm: Language model for generating responses
+        reranker (bool): Whether to use reranking (default: False)
+        reranker_config (RerankerConfig): Configuration for the reranker, including:
+            - model: Model to use for reranking
+            - filtering_threshold: Minimum score to keep a document
+            - num_docs_to_keep: Maximum number of documents to keep
+            - max_concurrent_requests: Maximum concurrent API requests
+            - max_retries: Number of retry attempts for failed requests
+            - retry_delay: Delay between retries
+            - early_stop (bool): Whether to enable early stopping
+            - early_stop_threshold: Confidence threshold for early stopping
+        vector_store_config (VectorStoreConfig): Vector store configuration
+        summarization_config (SummarizationConfig): Summarization configuration
     """
 
     def __init__(
@@ -41,22 +58,15 @@ class LangChainRAGPipeline:
             vector_store_config: Optional[VectorStoreConfig] = None,
             summarization_config: Optional[SummarizationConfig] = None
     ):
-
         self.retriever_runnable = retriever_runnable
         self.prompt_template = prompt_template
         self.llm = llm
         if reranker:
             if reranker_config is None:
                 reranker_config = RerankerConfig()
-            self.reranker = LLMReranker(
-                model=reranker_config.model,
-                base_url=reranker_config.base_url,
-                filtering_threshold=reranker_config.filtering_threshold,
-                num_docs_to_keep=reranker_config.num_docs_to_keep,
-                max_concurrent_requests=reranker_config.max_concurrent_requests,
-                max_retries=reranker_config.max_retries,
-                retry_delay=reranker_config.retry_delay
-            )
+            # Convert config to dict and initialize reranker
+            reranker_kwargs = reranker_config.model_dump(exclude_none=True)
+            self.reranker = LLMReranker(**reranker_kwargs)
         else:
             self.reranker = None
         self.summarizer = None

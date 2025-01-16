@@ -122,13 +122,21 @@ class LLMReranker(BaseDocumentCompressor):
         callbacks: Optional[Callbacks] = None,
     ) -> Sequence[Document]:
         """Async compress documents using reranking with proper error handling."""
+        if callbacks:
+            await callbacks.on_retriever_start({"query": query}, "Reranking documents")
+
         log.info(f"Async compressing documents. Initial count: {len(documents)}")
         if not documents:
+            if callbacks:
+                await callbacks.on_retriever_end({"documents": []})
             return []
 
         try:
             # Prepare query-document pairs
             query_document_pairs = [(query, doc.page_content) for doc in documents]
+
+            if callbacks:
+                await callbacks.on_text("Starting document reranking...")
 
             # Get ranked results
             ranked_results = await self._rank(query_document_pairs)
@@ -144,14 +152,24 @@ class LLMReranker(BaseDocumentCompressor):
                     matching_doc.metadata = {**(matching_doc.metadata or {}), "relevance_score": score}
                     filtered_docs.append(matching_doc)
 
+                    if callbacks:
+                        await callbacks.on_text(f"Document scored {score:.2f}")
+
                     if self.num_docs_to_keep and len(filtered_docs) >= self.num_docs_to_keep:
                         break
 
             log.info(f"Async compression complete. Final count: {len(filtered_docs)}")
+
+            if callbacks:
+                await callbacks.on_retriever_end({"documents": filtered_docs})
+
             return filtered_docs
 
         except Exception as e:
-            log.error(f"Error during async document compression: {str(e)}")
+            error_msg = f"Error during async document compression: {str(e)}"
+            log.error(error_msg)
+            if callbacks:
+                await callbacks.on_retriever_error(error_msg)
             return documents  # Return original documents on error
 
     def compress_documents(

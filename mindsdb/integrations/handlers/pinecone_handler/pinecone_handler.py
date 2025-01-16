@@ -220,7 +220,7 @@ class PineconeHandler(VectorStoreHandler):
             inplace=True)
 
         columns = ["id", "values"]
-        
+
         if TableField.METADATA.value in data.columns:
             data.rename(columns={TableField.METADATA.value: "metadata"}, inplace=True)
             # fill None and NaN values with empty dict

@@ -79,7 +79,7 @@ jobs:
     name: Deploy
     needs: [build, get-deploy-labels]
     if: needs.get-deploy-labels.outputs.deploy-envs != '[]'
-    uses: mindsdb/mindsdb/.github/workflows/deploy.yml@refs/heads/fix/trigger-and-wait
+    uses: mindsdb/mindsdb/.github/workflows/deploy.yml@6501b29c6f4760436898ad5aae394e58264cecd0
     with:
       deploy-envs: ${{ needs.get-deploy-labels.outputs.deploy-envs }}
       image-tag: ${{ github.event.pull_request.head.sha }}

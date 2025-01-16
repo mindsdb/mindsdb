@@ -203,7 +203,7 @@ class PineconeHandler(VectorStoreHandler):
         try:
             connection.create_index(name=table_name, **create_table_params)
         except PineconeApiException as pinecone_error:
-            if pinecone_error.status_code == 409 and if_not_exists:
+            if pinecone_error.status == 409 and if_not_exists:
                 return
             raise Exception(f"Error creating index '{table_name}': {pinecone_error}")
 

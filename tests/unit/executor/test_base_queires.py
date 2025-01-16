@@ -547,6 +547,13 @@ class TestSelect(BaseExecutorDummyML):
         assert ret.iloc[0, 0] == 1
         assert ret.iloc[0, 1] == 'utf8'
 
+    def test_mysql_queries(self):
+        self.run_sql('SHOW KEYS FROM `mindsdb`.`predictors`')
+
+        self.run_sql('show full columns from `predictors`')
+
+        self.run_sql('SHOW FULL TABLES FROM files')
+
 
 class TestDML(BaseExecutorDummyML):
 

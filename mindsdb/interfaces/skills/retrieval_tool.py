@@ -43,10 +43,17 @@ def build_retrieval_tool(tool: dict, pred_args: dict, skill: db.Skills):
             raise ValueError(f"Knowledge base not found: {kb_name}")
 
         kb_table = executor.session.kb_controller.get_table(kb.name, kb.project_id)
+        vector_store_config = {
+            'kb_table': kb_table
+        }
+        is_sparse = tools_config.pop('is_sparse', None)
+        vector_size = tools_config.pop('vector_size', None)
+        if is_sparse is not None:
+            vector_store_config['is_sparse'] = is_sparse
+        if vector_size is not None:
+            vector_store_config['vector_size'] = vector_size
         kb_params = {
-            'vector_store_config': {
-                'kb_table': kb_table
-            }
+            'vector_store_config': vector_store_config
         }
 
         # Get embedding model from knowledge base table

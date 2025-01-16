@@ -101,6 +101,7 @@ PACKAGE_NAME_MAP = {
     "salesforce-merlion": ["merlion"],
     "newsapi-python": ["newsapi"],
     "pinecone-client": ["pinecone"],
+    "upstash-vector": ["upstash"],
     "plaid-python": ["plaid"],
     "faiss-cpu": ["faiss"],
     "writerai": ["writer"],

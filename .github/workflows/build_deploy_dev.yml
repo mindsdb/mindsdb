@@ -1,7 +1,7 @@
 name: Build and deploy to dev
 
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, reopened, synchronize, labeled]
     branches:
       - 'main'
@@ -11,9 +11,6 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
-
-permissions:
-  actions: read
 
 jobs:
 

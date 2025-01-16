@@ -1,6 +1,7 @@
 import ast
 from typing import List, Optional
 
+import numpy as np
 from pinecone import Pinecone, ServerlessSpec
 from pinecone.core.openapi.shared.exceptions import NotFoundException, PineconeApiException
 import pandas as pd
@@ -219,15 +220,18 @@ class PineconeHandler(VectorStoreHandler):
             inplace=True)
 
         columns = ["id", "values"]
-
+        
         if TableField.METADATA.value in data.columns:
             data.rename(columns={TableField.METADATA.value: "metadata"}, inplace=True)
+            # fill None and NaN values with empty dict
+            if data['metadata'].isnull().any():
+                data['metadata'] = data['metadata'].apply(lambda x: {} if x is None or (isinstance(x, float) and np.isnan(x)) else x)
             columns.append("metadata")
 
         data = data[columns]
 
-        # convert the embeddings to lists
-        data["values"] = data["values"].apply(lambda x: ast.literal_eval(x))
+        # convert the embeddings to lists if they are strings
+        data["values"] = data["values"].apply(lambda x: ast.literal_eval(x) if isinstance(x, str) else x)
 
         for chunk in (data[pos:pos + UPSERT_BATCH_SIZE] for pos in range(0, len(data), UPSERT_BATCH_SIZE)):
             chunk = chunk.to_dict(orient="records")

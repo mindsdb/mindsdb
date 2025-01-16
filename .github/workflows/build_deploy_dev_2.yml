@@ -13,6 +13,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
+permissions:
+  actions: read
+
 jobs:
 
   # Looks for labels like "deploy-to-<env>" attached to a PR so we can deploy to those envs

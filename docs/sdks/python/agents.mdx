@@ -53,10 +53,10 @@ Furthermore, you can list all existing agents, get agents by name, update agents
 
 ```python
 # list all agents
-agents = agents.list()
+agents = server.agents.list()
 
 # get an agent by name
-agent = agents.get('my_agent')
+agent = server.agents.get('my_agent')
 
 # update an agent
 new_model = models.get('new_model')

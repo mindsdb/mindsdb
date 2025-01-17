@@ -4,36 +4,38 @@
 """
 from typing import Any, Iterable, List, Optional
 
-from mindsdb.interfaces.skills.skill_tool import skill_tool
 from mindsdb.utilities import log
 from langchain_community.utilities import SQLDatabase
+from mindsdb.interfaces.skills.sql_agent import SQLAgent
 
 logger = log.getLogger(__name__)
 
 
 class MindsDBSQL(SQLDatabase):
+    @staticmethod
+    def custom_init(
+        sql_agent: 'SQLAgent'
+    ) -> 'MindsDBSQL':
+        instance = MindsDBSQL()
+        instance._sql_agent = sql_agent
+        return instance
+
     """ Can't modify signature, as LangChain does a Pydantic check."""
     def __init__(
         self,
-        engine=None,
-        database: Optional[str] = 'mindsdb',
+        engine: Optional[Any] = None,
+        schema: Optional[str] = None,
         metadata: Optional[Any] = None,
         ignore_tables: Optional[List[str]] = None,
         include_tables: Optional[List[str]] = None,
         sample_rows_in_table_info: int = 3,
-        schema: Optional[str] = None,
         indexes_in_table_info: bool = False,
         custom_table_info: Optional[dict] = None,
-        view_support: Optional[bool] = True,
+        view_support: bool = True,
+        max_string_length: int = 300,
+        lazy_table_reflection: bool = False,
     ):
-        # Some args above are not used in this class, but are kept for compatibility
-
-        self._sql_agent = skill_tool.get_sql_agent(
-            database,
-            include_tables,
-            ignore_tables,
-            sample_rows_in_table_info
-        )
+        pass
 
     @property
     def dialect(self) -> str:

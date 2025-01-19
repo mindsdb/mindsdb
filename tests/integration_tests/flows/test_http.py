@@ -88,7 +88,7 @@ class TestHTTP(HTTPHelperMixin):
         assert response.json()['auth']['http_auth_enabled'] is True
 
         response = session.get(f'{HTTP_API_ROOT}/tree/')
-        assert response.status_code == 403
+        assert response.status_code == 401
 
         response = session.post(f'{HTTP_API_ROOT}/login', json={
             'username': 'mindsdb',
@@ -103,7 +103,7 @@ class TestHTTP(HTTPHelperMixin):
         assert response.status_code == 200
 
         response = session.get(f'{HTTP_API_ROOT}/tree/')
-        assert response.status_code == 403
+        assert response.status_code == 401
 
         response = session.post(f'{HTTP_API_ROOT}/login', json={
             'username': 'mindsdb',

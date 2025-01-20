@@ -24,19 +24,14 @@ class Project:
         p = Project()
         p.record = db_record
         p.name = db_record.name
-        p.company_id = db_record.company_id
+        p.company_id = ctx.company_id
         p.id = db_record.id
         return p
 
     def create(self, name: str):
         name = name.lower()
-        existing_record = db.Project.query.filter(
-            (sa.func.lower(db.Project.name) == name)
-            & (db.Project.company_id == ctx.company_id)
-            & (db.Project.deleted_at == sa.null())
-        ).first()
-        if existing_record is not None:
-            raise EntityExistsError('Project already exists', name)
+
+        company_id = ctx.company_id if ctx.company_id is not None else 0
 
         existing_record = db.Integration.query.filter(
             sa.func.lower(db.Integration.name) == name,
@@ -45,22 +40,27 @@ class Project:
         if existing_record is not None:
             raise EntityExistsError('Database exists with this name ', name)
 
+        existing_record = db.Project.query.filter(
+            (sa.func.lower(db.Project.name) == name)
+            & (db.Project.company_id == company_id)
+            & (db.Project.deleted_at == sa.null())
+        ).first()
+        if existing_record is not None:
+            raise EntityExistsError('Project already exists', name)
+
         record = db.Project(
             name=name,
-            company_id=ctx.company_id
+            company_id=company_id
         )
 
         self.record = record
         self.name = name
-        self.company_id = ctx.company_id
+        self.company_id = company_id
 
         db.session.add(record)
         db.session.commit()
 
         self.id = record.id
-
-    def save(self):
-        db.session.commit()
 
     def delete(self):
         tables = self.get_tables()
@@ -360,8 +360,9 @@ class ProjectController:
         pass
 
     def get_list(self) -> List[Project]:
+        company_id = ctx.company_id if ctx.company_id is not None else 0
         records = db.Project.query.filter(
-            (db.Project.company_id == ctx.company_id)
+            (db.Project.company_id == company_id)
             & (db.Project.deleted_at == sa.null())
         ).order_by(db.Project.name)
 
@@ -371,7 +372,8 @@ class ProjectController:
         if id is not None and name is not None:
             raise ValueError("Both 'id' and 'name' is None")
 
-        q = db.Project.query.filter_by(company_id=ctx.company_id)
+        company_id = ctx.company_id if ctx.company_id is not None else 0
+        q = db.Project.query.filter_by(company_id=company_id)
 
         if id is not None:
             q = q.filter_by(id=id)

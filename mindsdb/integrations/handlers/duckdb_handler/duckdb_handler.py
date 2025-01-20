@@ -44,9 +44,14 @@ class DuckDBHandler(DatabaseHandler):
 
         if self.is_connected is True:
             return self.connection
+        motherduck_token = self.connection_data.get('motherduck_token')
+        if motherduck_token:
+            database = f"md:{self.connection_data.get('database')}?motherduck_token={motherduck_token}&attach_mode=single"
+        else:
+            database = self.connection_data.get('database')
 
         args = {
-            'database': self.connection_data.get('database'),
+            'database': database,
             'read_only': self.connection_data.get('read_only'),
         }
 

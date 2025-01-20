@@ -34,8 +34,6 @@ services:
       - '47334:47334'
       - '47335:47335'
       - '47336:47336'
-    # watchfiles will reload the app when python files are changed
-    entrypoint: bash -c "watchfiles --filter python 'python -m mindsdb' ."
     environment:
       MINDSDB_DB_CON: "postgresql://postgres:postgres@postgres/mindsdb"
       MINDSDB_DOCKER_ENV: "True"

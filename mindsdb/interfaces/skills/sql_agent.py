@@ -1,37 +1,38 @@
-from typing import Iterable, List, Optional
 
 import re
-from mindsdb_sql_parser.ast import Select, Show, Describe, Explain
+import inspect
+from typing import Iterable, List, Optional
 
 import pandas as pd
 from mindsdb_sql_parser import parse_sql
-from mindsdb_sql_parser.ast import Identifier
-from mindsdb.integrations.utilities.query_traversal import query_traversal
+from mindsdb_sql_parser.ast import Select, Show, Describe, Explain, Identifier
 
 from mindsdb.utilities import log
 from mindsdb.utilities.context import context as ctx
+from mindsdb.integrations.utilities.query_traversal import query_traversal
 
 logger = log.getLogger(__name__)
 
 
 class SQLAgent:
-
     def __init__(
             self,
             command_executor,
-            database: str,
+            databases: List[str],
+            databases_struct: dict,
             include_tables: Optional[List[str]] = None,
             ignore_tables: Optional[List[str]] = None,
             sample_rows_in_table_info: int = 3,
             cache: Optional[dict] = None
     ):
         self._command_executor = command_executor
+        self._mindsdb_db_struct = databases_struct
 
         self._sample_rows_in_table_info = int(sample_rows_in_table_info)
 
         self._tables_to_include = include_tables
         self._tables_to_ignore = []
-        self._databases = database.split(',')
+        self._databases = databases
         if not self._tables_to_include:
             # ignore_tables and include_tables should not be used together.
             # include_tables takes priority if it's set.
@@ -40,7 +41,6 @@ class SQLAgent:
 
     def _call_engine(self, query: str, database=None):
         # switch database
-
         ast_query = parse_sql(query.strip('`'))
         self._check_permissions(ast_query)
 
@@ -55,7 +55,6 @@ class SQLAgent:
         return ret
 
     def _check_permissions(self, ast_query):
-
         # check type of query
         if not isinstance(ast_query, (Select, Show, Describe, Explain)):
             raise ValueError(f"Query is not allowed: {ast_query.to_string()}")
@@ -66,14 +65,21 @@ class SQLAgent:
                 if is_table and isinstance(node, Identifier):
                     name1 = node.to_string()
                     name2 = '.'.join(node.parts)
-                    name3 = node.parts[-1]
+                    if len(node.parts) == 3:
+                        name3 = '.'.join(node.parts[1:])
+                    else:
+                        name3 = node.parts[-1]
                     if not {name1, name2, name3}.intersection(self._tables_to_include):
                         raise ValueError(f"Table {name1} not found. Available tables: {', '.join(self._tables_to_include)}")
 
             query_traversal(ast_query, _check_f)
 
     def get_usable_table_names(self) -> Iterable[str]:
+        """Get a list of tables that the agent has access to.
 
+        Returns:
+            Iterable[str]: list with table names
+        """
         cache_key = f'{ctx.company_id}_{",".join(self._databases)}_tables'
 
         # first check cache and return if found
@@ -85,25 +91,52 @@ class SQLAgent:
         if self._tables_to_include:
             return self._tables_to_include
 
-        ret = self._call_engine('show databases;')
-        dbs = [lst[0] for lst in ret.data.to_lists() if lst[0] != 'information_schema']
-        usable_tables = []
-        for db in dbs:
-            if db != 'mindsdb' and db in self._databases:
-                try:
-                    ret = self._call_engine('show tables', database=db)
-                    tables = [lst[0] for lst in ret.data.to_lists() if lst[0] != 'information_schema']
-                    for table in tables:
-                        # By default, include all tables in a database unless expilcitly ignored.
-                        table_name = f'{db}.{table}'
-                        if table_name not in self._tables_to_ignore:
-                            usable_tables.append(table_name)
-                except Exception as e:
-                    logger.warning('Unable to get tables for %s: %s', db, str(e))
-        if self._cache:
-            self._cache.set(cache_key, set(usable_tables))
+        result_tables = []
 
-        return usable_tables
+        for db_name in self._mindsdb_db_struct:
+            handler = self._command_executor.session.integration_controller.get_data_handler(db_name)
+
+            schemas_names = list(self._mindsdb_db_struct[db_name].keys())
+            if len(schemas_names) > 1 and None in schemas_names:
+                raise Exception('default schema and named schemas can not be used in same filter')
+
+            if None in schemas_names:
+                # get tables only from default schema
+                response = handler.get_tables()
+                tables_in_default_schema = list(response.data_frame.table_name)
+                schema_tables_restrictions = self._mindsdb_db_struct[db_name][None]     # None - is default schema
+                if schema_tables_restrictions is None:
+                    for table_name in tables_in_default_schema:
+                        result_tables.append([db_name, table_name])
+                else:
+                    for table_name in schema_tables_restrictions:
+                        if table_name in tables_in_default_schema:
+                            result_tables.append([db_name, table_name])
+            else:
+                if 'all' in inspect.signature(handler.get_tables).parameters:
+                    response = handler.get_tables(all=True)
+                else:
+                    response = handler.get_tables()
+                response_schema_names = list(response.data_frame.table_schema.unique())
+                schemas_intersection = set(schemas_names) & set(response_schema_names)
+                if len(schemas_intersection) == 0:
+                    raise Exception('There are no allowed schemas in ds')
+
+                for schema_name in schemas_intersection:
+                    schema_sub_df = response.data_frame[response.data_frame['table_schema'] == schema_name]
+                    if self._mindsdb_db_struct[db_name][schema_name] is None:
+                        # all tables from schema allowed
+                        for row in schema_sub_df:
+                            result_tables.append([db_name, schema_name, row['table_name']])
+                    else:
+                        for table_name in self._mindsdb_db_struct[db_name][schema_name]:
+                            if table_name in schema_sub_df['table_name'].values:
+                                result_tables.append([db_name, schema_name, table_name])
+
+        result_tables = ['.'.join(x) for x in result_tables]
+        if self._cache:
+            self._cache.set(cache_key, set(result_tables))
+        return result_tables
 
     def _resolve_table_names(self, table_names: List[str], all_tables: List[Identifier]) -> List[Identifier]:
         """
@@ -115,7 +148,10 @@ class SQLAgent:
         tables_idx = {}
         for table in all_tables:
             # by name
-            tables_idx[(table.parts[-1],)] = table
+            if len(table.parts) == 3:
+                tables_idx[tuple(table.parts[1:])] = table
+            else:
+                tables_idx[(table.parts[-1],)] = table
             # by path
             tables_idx[tuple(table.parts)] = table
 
@@ -165,26 +201,31 @@ class SQLAgent:
     def _get_single_table_info(self, table: Identifier) -> str:
         if len(table.parts) < 2:
             raise ValueError(f"Database is required for table: {table}")
-        integration, table_name = table.parts[-2:]
+        if len(table.parts) == 3:
+            integration, schema_name, table_name = table.parts[-3:]
+        else:
+            schema_name = None
+            integration, table_name = table.parts[-2:]
+
         table_str = str(table)
 
         dn = self._command_executor.session.datahub.get(integration)
 
         fields, dtypes = [], []
-        for column in dn.get_table_columns(table_name):
+        for column in dn.get_table_columns(table_name, schema_name):
             fields.append(column['name'])
             dtypes.append(column.get('type', ''))
 
-        info = f'Table named `{table_name}`\n'
-        info += f"\n/* Sample with first {self._sample_rows_in_table_info} rows from table {table_str}:\n"
+        info = f'Table named `{table_str}`:\n'
+        info += f"\nSample with first {self._sample_rows_in_table_info} rows from table {table_str}:\n"
         info += "\t".join([field for field in fields])
-        info += self._get_sample_rows(table_str, fields) + "\n*/"
+        info += self._get_sample_rows(table_str, fields) + "\n"
         info += '\nColumn data types: ' + ",\t".join(
-            [f'`{field}` : `{dtype}`' for field, dtype in zip(fields, dtypes)]) + '\n'  # noqa
+            [f'\n`{field}` : `{dtype}`' for field, dtype in zip(fields, dtypes)]) + '\n'  # noqa
         return info
 
     def _get_sample_rows(self, table: str, fields: List[str]) -> str:
-        command = f"select {','.join(fields)} from {table} limit {self._sample_rows_in_table_info};"
+        command = f"select {', '.join(fields)} from {table} limit {self._sample_rows_in_table_info};"
         try:
             ret = self._call_engine(command)
             sample_rows = ret.data.to_lists()

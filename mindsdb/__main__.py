@@ -22,13 +22,9 @@ logger.debug("Starting MindsDB...")
 
 from mindsdb.__about__ import __version__ as mindsdb_version
 from mindsdb.utilities.config import config
-from mindsdb.api.http.start import start as start_http
-from mindsdb.api.mysql.start import start as start_mysql
-from mindsdb.api.mongo.start import start as start_mongo
-from mindsdb.api.postgres.start import start as start_postgres
-from mindsdb.interfaces.tasks.task_monitor import start as start_tasks
-from mindsdb.utilities.ml_task_queue.consumer import start as start_ml_task_queue
-from mindsdb.interfaces.jobs.scheduler import start as start_scheduler
+from mindsdb.utilities.starters import (
+    start_http, start_mysql, start_mongo, start_postgres, start_ml_task_queue, start_scheduler, start_tasks
+)
 from mindsdb.utilities.ps import is_pid_listen_port, get_child_pids
 from mindsdb.utilities.functions import get_versions_where_predictors_become_obsolete
 from mindsdb.interfaces.database.integrations import integration_controller
@@ -307,12 +303,14 @@ if __name__ == '__main__':
         except Exception as e:
             logger.error(f"Error! Something went wrong during DB migrations: {e}")
 
-    if config.cmd_args.api is None:  # If "--api" option is not specified, start the default APIs
+    apis = os.getenv('MINDSDB_APIS') or config.cmd_args.api
+
+    if apis is None:  # If "--api" option is not specified, start the default APIs
         api_arr = [TrunkProcessEnum.HTTP, TrunkProcessEnum.MYSQL]
-    elif config.cmd_args.api == "":  # If "--api=" (blank) is specified, don't start any APIs
+    elif apis == "":  # If "--api=" (blank) is specified, don't start any APIs
         api_arr = []
     else:  # The user has provided a list of APIs to start
-        api_arr = [TrunkProcessEnum(name) for name in config.cmd_args.api.split(',')]
+        api_arr = [TrunkProcessEnum(name) for name in apis.split(',')]
 
     if config.cmd_args.install_handlers is not None:
         handlers_list = [s.strip() for s in config.cmd_args.install_handlers.split(",")]

@@ -1,6 +1,7 @@
 import os
 import io
 import shutil
+import filecmp
 import tarfile
 import hashlib
 from pathlib import Path
@@ -14,17 +15,15 @@ if os.name == 'posix':
     import fcntl
 
 import psutil
-from checksumdir import dirhash
-try:
-    import boto3
-    from botocore.exceptions import ClientError as S3ClientError
-except Exception:
-    # Only required for remote storage on s3
-    S3ClientError = FileNotFoundError
-    pass
-
 
 from mindsdb.utilities.config import Config
+
+if Config()['permanent_storage']['location'] == 's3':
+    import boto3
+    from botocore.exceptions import ClientError as S3ClientError
+else:
+    S3ClientError = FileNotFoundError
+
 from mindsdb.utilities.context import context as ctx
 import mindsdb.utilities.profiler as profiler
 from mindsdb.utilities import log
@@ -48,10 +47,41 @@ DIR_LAST_MODIFIED_FILE_NAME = 'last_modified.txt'
 SERVICE_FILES_NAMES = (DIR_LOCK_FILE_NAME, DIR_LAST_MODIFIED_FILE_NAME)
 
 
+def compare_recursive(comparison: filecmp.dircmp) -> bool:
+    """Check output of dircmp and return True if the directories do not differ
+
+    Args:
+        comparison (filecmp.dircmp): dirs comparison
+
+    Returns:
+        bool: True if dirs do not differ
+    """
+    if comparison.left_only or comparison.right_only or comparison.diff_files:
+        return False
+    for sub_comparison in comparison.subdirs.values():
+        if compare_recursive(sub_comparison) is False:
+            return False
+    return True
+
+
+def compare_directories(dir1: str, dir2: str) -> bool:
+    """Compare two directories
+
+    Args:
+        dir1 (str): dir to compare
+        dir2 (str): dir to compare
+
+    Returns:
+        bool: True if dirs do not differ
+    """
+    dcmp = filecmp.dircmp(dir1, dir2)
+    return compare_recursive(dcmp)
+
+
 def copy(src, dst):
     if os.path.isdir(src):
         if os.path.exists(dst):
-            if dirhash(src) == dirhash(dst):
+            if compare_directories(src, dst):
                 return
         shutil.rmtree(dst, ignore_errors=True)
         shutil.copytree(src, dst, dirs_exist_ok=True)

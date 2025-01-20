@@ -67,6 +67,7 @@ class SortColumn:
     def __init__(self, column: str, ascending: bool = True):
         self.column = column
         self.ascending = ascending
+        self.applied = False
 
 
 def make_sql_session():
@@ -177,7 +178,7 @@ def project_dataframe(df, targets, table_columns):
 
     # adapt column names to projection
     if len(df_col_rename) > 0:
-        df = df.rename(columns=df_col_rename)
+        df.rename(columns=df_col_rename, inplace=True)
     return df
 
 

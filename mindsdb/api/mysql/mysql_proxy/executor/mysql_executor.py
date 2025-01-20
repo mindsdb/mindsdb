@@ -2,7 +2,8 @@ from mindsdb_sql_parser import parse_sql
 from mindsdb.api.executor.planner import utils as planner_utils
 
 import mindsdb.utilities.profiler as profiler
-from mindsdb.api.executor import Column, SQLQuery
+from mindsdb.api.executor.sql_query.result_set import Column
+from mindsdb.api.executor.sql_query import SQLQuery
 from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.api.mysql.mysql_proxy.utilities import ErSqlSyntaxError
 from mindsdb.utilities import log

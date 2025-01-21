@@ -286,7 +286,7 @@ class ChromaDBHandler(VectorStoreHandler):
         else:
             # general get query
             result = collection.get(
-                ids=id_filters,
+                ids=id_filters or None,
                 where=filters,
                 limit=limit,
                 offset=offset,
@@ -475,7 +475,7 @@ class ChromaDBHandler(VectorStoreHandler):
         collections = self._client.list_collections()
         collections_name = pd.DataFrame(
             columns=["table_name"],
-            data=[collection.name for collection in collections],
+            data=collections,
         )
         return Response(resp_type=RESPONSE_TYPE.TABLE, data_frame=collections_name)
 

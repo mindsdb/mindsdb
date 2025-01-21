@@ -570,6 +570,8 @@ AI: {response}"""
         return pred_df
 
     def add_chunk_metadata(self, chunk: Dict) -> Dict:
+        logger.debug(f'Adding metadata to chunk: {chunk}')
+        logger.debug(f'Trace ID: {self.langfuse_client_wrapper.get_trace_id()}')
         chunk["trace_id"] = self.langfuse_client_wrapper.get_trace_id()
         return chunk
 

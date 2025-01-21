@@ -14,9 +14,10 @@ from mindsdb_sql_parser.ast import (
 from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.api.executor.datahub.datanodes.datanode import DataNode
 from mindsdb.api.executor.datahub.classes.tables_row import TablesRow
-from mindsdb.api.executor import SQLQuery
+from mindsdb.api.executor.sql_query import SQLQuery
 from mindsdb.api.executor.utilities.sql import query_df
 from mindsdb.interfaces.query_context.context_controller import query_context_controller
+from mindsdb.utilities.partitioning import process_dataframe_in_partitions
 
 
 class ProjectDataNode(DataNode):
@@ -65,6 +66,12 @@ class ProjectDataNode(DataNode):
         if model_metadata['update_status'] == 'available':
             raise Exception(f"model '{model_name}' is obsolete and needs to be updated. Run 'RETRAIN {model_name};'")
         ml_handler = self.integration_controller.get_ml_handler(model_metadata['engine_name'])
+        if params is not None and 'partition_size' in params:
+            def callback(chunk):
+                return ml_handler.predict(model_name, chunk, project_name=self.project.name,
+                                          version=version, params=params)
+            return pd.concat(process_dataframe_in_partitions(df, callback, params['partition_size']))
+
         return ml_handler.predict(model_name, df, project_name=self.project.name, version=version, params=params)
 
     def query(self, query=None, native_query=None, session=None):

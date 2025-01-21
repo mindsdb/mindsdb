@@ -71,7 +71,8 @@ from mindsdb_sql_parser.ast.mindsdb import (
 import mindsdb.utilities.profiler as profiler
 
 from mindsdb.integrations.utilities.query_traversal import query_traversal
-from mindsdb.api.executor import Column, SQLQuery, ResultSet
+from mindsdb.api.executor.sql_query.result_set import Column, ResultSet
+from mindsdb.api.executor.sql_query import SQLQuery
 from mindsdb.api.executor.data_types.answer import ExecuteAnswer
 from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import (
     CHARSET_NUMBERS,

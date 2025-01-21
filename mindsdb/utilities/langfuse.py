@@ -154,11 +154,11 @@ class LangfuseClientWrapper:
 
         if self.client is None:
             logger.debug("Langfuse is disabled.")
-            return None
+            return ""
 
         if self.trace is None:
             logger.debug("Langfuse trace is not setup.")
-            return None
+            return ""
 
         return self.trace.id
 

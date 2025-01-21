@@ -23,7 +23,7 @@ logger = log.getLogger(__name__)
 Summary = namedtuple('Summary', ['source_id', 'content'])
 
 
-def create_map_reduce_documents_chain(summarization_config: SummarizationConfig, input: str) -> MapReduceDocumentsChain:
+def create_map_reduce_documents_chain(summarization_config: SummarizationConfig, input: str) -> ReduceDocumentsChain:
     '''Creats a chain that map reduces documents into a single consolidated summary
 
     Args:
@@ -43,7 +43,7 @@ def create_map_reduce_documents_chain(summarization_config: SummarizationConfig,
     if 'input' in map_prompt.input_variables:
         map_prompt = map_prompt.partial(input=input)
     # Handles summarization of individual chunks.
-    map_chain = LLMChain(llm=summarization_llm, prompt=map_prompt)
+    # map_chain = LLMChain(llm=summarization_llm, prompt=map_prompt)
 
     reduce_prompt_template = summarization_config.reduce_prompt_template
     reduce_prompt = PromptTemplate.from_template(reduce_prompt_template)
@@ -60,17 +60,11 @@ def create_map_reduce_documents_chain(summarization_config: SummarizationConfig,
     )
 
     # Combines & iteratively reduces mapped documents.
-    reduce_documents_chain = ReduceDocumentsChain(
+    return ReduceDocumentsChain(
         combine_documents_chain=combine_documents_chain,
         collapse_documents_chain=combine_documents_chain,
         # Max number of tokens to group documents into.
         token_max=summarization_config.max_summarization_tokens
-    )
-    return MapReduceDocumentsChain(
-        llm_chain=map_chain,
-        reduce_documents_chain=reduce_documents_chain,
-        document_variable_name='docs',
-        return_intermediate_steps=False
     )
 
 

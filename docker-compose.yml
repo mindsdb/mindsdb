@@ -47,10 +47,12 @@ services:
       LANGFUSE_HOST: "http://langfuse:3000" # Define the host for langfuse
       LANGFUSE_PUBLIC_KEY: "pk-lf-1234567890" # Define the public key for langfuse
       LANGFUSE_SECRET_KEY: "sk-lf-1234567890" # Define the secret key for langfuse
+      LANGFUSE_ENVIRONMENT: "local"
       LANGFUSE_RELEASE: "local"
       # LANGFUSE_DEBUG: "True"
       LANGFUSE_TIMEOUT: "10"
       LANGFUSE_SAMPLE_RATE: "1.0"
+      # LANGFUSE_FORCE_RUN: "True"
       OTEL_EXPORTER_TYPE: "console" # or "console" # Define the exporter type (console/otlp)
       # OTEL_EXPORTER_PROTOCOL: "grpc" # or "http" # Define the protocol for the otlp exporter.
       # OTEL_OTLP_ENDPOINT: "http://otel-collector:4317" # Define the endpoint for the otlp exporter.

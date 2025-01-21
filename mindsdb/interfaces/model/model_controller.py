@@ -7,14 +7,15 @@ from multiprocessing.pool import ThreadPool
 import pandas as pd
 from dateutil.parser import parse as parse_datetime
 
-from sqlalchemy import func, null
+from sqlalchemy import func
 import numpy as np
 
 import mindsdb.interfaces.storage.db as db
 from mindsdb.utilities.config import Config
 from mindsdb.interfaces.model.functions import (
     get_model_record,
-    get_model_records
+    get_model_records,
+    get_project_record
 )
 from mindsdb.interfaces.storage.json import get_json_storage
 from mindsdb.interfaces.storage.model_fs import ModelStorage
@@ -151,11 +152,7 @@ class ModelController():
     def delete_model(self, model_name: str, project_name: str = 'mindsdb', version=None):
         from mindsdb.interfaces.database.database import DatabaseController
 
-        project_record = db.Project.query.filter(
-            (func.lower(db.Project.name) == func.lower(project_name))
-            & (db.Project.company_id == ctx.company_id)
-            & (db.Project.deleted_at == null())
-        ).first()
+        project_record = get_project_record(func.lower(project_name))
         if project_record is None:
             raise Exception(f"Project '{project_name}' does not exists")
 

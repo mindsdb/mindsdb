@@ -231,6 +231,9 @@ class SlackHandler(APIChatHandler):
             'polling': {
                 'type': 'realtime',
             },
+            'memory': {
+                'type': 'handler',
+            },
             'tables': [
                 {
                     'chat_table': {
@@ -238,7 +241,7 @@ class SlackHandler(APIChatHandler):
                         'chat_id_col': 'channel_id',
                         'username_col': 'user',
                         'text_col': 'text',
-                        'time_col': 'thread_ts',
+                        'time_col': 'created_at',
                     }
                 },
                 {

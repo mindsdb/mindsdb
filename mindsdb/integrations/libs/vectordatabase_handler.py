@@ -337,7 +337,7 @@ class VectorStoreHandler(BaseHandler):
         # dispatch delete
         return self.delete(table_name, conditions=conditions)
 
-    def _dispatch_select(self, query: Select):
+    def dispatch_select(self, query: Select, conditions: List[FilterCondition] = None):
         """
         Dispatch select query to the appropriate method.
         """
@@ -357,7 +357,8 @@ class VectorStoreHandler(BaseHandler):
 
         # check if columns are allowed
         where_statement = query.where
-        conditions = self._extract_conditions(where_statement)
+        if conditions is None:
+            conditions = self._extract_conditions(where_statement)
 
         # get offset and limit
         offset = query.offset.value if query.offset is not None else None
@@ -382,7 +383,7 @@ class VectorStoreHandler(BaseHandler):
             Insert: self._dispatch_insert,
             Update: self._dispatch_update,
             Delete: self._dispatch_delete,
-            Select: self._dispatch_select,
+            Select: self.dispatch_select,
         }
         if type(query) in dispatch_router:
             resp = dispatch_router[type(query)](query)

@@ -49,7 +49,7 @@ from .constants import (
     NVIDIA_NIM_CHAT_MODELS,
     USER_COLUMN,
     ASSISTANT_COLUMN,
-    CONTEXT_COLUMN
+    CONTEXT_COLUMN, TRACE_ID_COLUMN
 )
 from mindsdb.interfaces.skills.skill_tool import skill_tool, SkillData
 from langchain_anthropic import ChatAnthropic
@@ -455,9 +455,7 @@ class LangchainAgent:
 
         # custom tracer
         if self.mdb_langfuse_callback_handler is None:
-            trace_id = None
-            if self.langfuse_client_wrapper.trace is not None:
-                trace_id = args.get("trace_id", self.langfuse_client_wrapper.trace.id)
+            trace_id = self.langfuse_client_wrapper.get_trace_id()
 
             span_id = None
             if self.run_completion_span is not None:
@@ -562,6 +560,7 @@ AI: {response}"""
                 CONTEXT_COLUMN: [
                     json.dumps(ctx) for ctx in contexts
                 ],  # Serialize context to JSON string
+                TRACE_ID_COLUMN: self.langfuse_client_wrapper.get_trace_id()
             }
         )
 
@@ -569,6 +568,10 @@ AI: {response}"""
             pred_df = pred_df.drop(columns=[CONTEXT_COLUMN])
 
         return pred_df
+
+    def add_chunk_metadata(self, chunk: Dict) -> Dict:
+        chunk["trace_id"] = self.langfuse_client_wrapper.get_trace_id()
+        return chunk
 
     def stream_agent(self, df: pd.DataFrame, agent_executor: AgentExecutor, args: Dict) -> Iterable[Dict]:
         base_template = args.get('prompt_template', args['prompt_template'])
@@ -579,7 +582,7 @@ AI: {response}"""
 
         callbacks, context_callback = prepare_callbacks(self, args)
 
-        yield {"type": "start", "prompt": prompts[0]}
+        yield self.add_chunk_metadata({"type": "start", "prompt": prompts[0]})
 
         if not hasattr(agent_executor, 'stream') or not callable(agent_executor.stream):
             raise AttributeError("The agent_executor does not have a 'stream' method")
@@ -591,10 +594,9 @@ AI: {response}"""
             raise TypeError("The stream method did not return an iterable")
 
         for chunk in stream_iterator:
-            logger.info(f'Processing streaming chunk {chunk}')
             processed_chunk = self.process_chunk(chunk)
-            logger.info(f'Processed chunk: {processed_chunk}')
-            yield processed_chunk
+            logger.info(f'\n\nProcessed chunk: {processed_chunk}')
+            yield self.add_chunk_metadata(processed_chunk)
 
         if return_context:
             # Yield context if required
@@ -604,7 +606,7 @@ AI: {response}"""
 
         if self.log_callback_handler.generated_sql:
             # Yield generated SQL if available
-            yield {"type": "sql", "content": self.log_callback_handler.generated_sql}
+            yield self.add_chunk_metadata({"type": "sql", "content": self.log_callback_handler.generated_sql})
 
         # End the run completion span and update the metadata with tool usage
         self.langfuse_client_wrapper.end_span_stream(span=self.run_completion_span)

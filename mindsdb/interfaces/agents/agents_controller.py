@@ -24,7 +24,6 @@ class AgentsController:
 
     assistant_column = ASSISTANT_COLUMN
 
-
     def __init__(
         self,
         project_controller: ProjectController = None,

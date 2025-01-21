@@ -594,8 +594,9 @@ AI: {response}"""
             raise TypeError("The stream method did not return an iterable")
 
         for chunk in stream_iterator:
+            logger.debug(f'Processing streaming chunk {chunk}')
             processed_chunk = self.process_chunk(chunk)
-            logger.info(f'\n\nProcessed chunk: {processed_chunk}')
+            logger.info(f'Processed chunk: {processed_chunk}')
             yield self.add_chunk_metadata(processed_chunk)
 
         if return_context:

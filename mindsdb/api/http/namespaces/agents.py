@@ -475,11 +475,13 @@ class AgentCompletions(Resource):
 
         output_col = agents_controller.assistant_column
         model_output = completion.iloc[-1][output_col]
+        trace_id = completion.iloc[-1]['trace_id']
 
         response = {
             'message': {
                 'content': model_output,
-                'role': 'assistant'
+                'role': 'assistant',
+                'trace_id': trace_id
             }
         }
 

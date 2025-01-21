@@ -165,6 +165,7 @@ PROVIDER_TO_MODELS = MappingProxyType(
 
 ASSISTANT_COLUMN = "answer"
 CONTEXT_COLUMN = "context"
+TRACE_ID_COLUMN = "trace_id"
 DEFAULT_AGENT_TIMEOUT_SECONDS = 300
 # These should require no additional arguments.
 DEFAULT_AGENT_TOOLS = []

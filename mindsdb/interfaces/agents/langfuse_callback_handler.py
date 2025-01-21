@@ -66,6 +66,10 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
     ) -> Any:
         """Run when chain starts running."""
         run_uuid = kwargs.get('run_id', uuid4()).hex
+
+        if serialized is None:
+            serialized = {}
+
         chain_span = self.langfuse.span(
             name=f'{serialized.get("name", "chain")}-{run_uuid}',
             trace_id=self.trace_id,

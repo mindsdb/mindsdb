@@ -3,7 +3,6 @@ from typing import List, Union, Any, Optional, Dict
 
 from langchain_community.vectorstores.chroma import Chroma
 from langchain_community.vectorstores.pgvector import PGVector
-from langchain_community.tools.sql_database.prompt import QUERY_CHECKER as DEFAULT_QUERY_CHECKER_PROMPT_TEMPLATE
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel

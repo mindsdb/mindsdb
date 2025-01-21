@@ -135,6 +135,8 @@ class MapReduceSummarizerChain(Chain):
         document_chunks = []
         for _, row in all_source_chunks.iterrows():
             metadata = row.get(self.metadata_column_name, {})
+            if row.get('chunk_id', None) is not None:
+                metadata['chunk_index'] = row.get('chunk_id', 0)
             document_chunks.append(Document(page_content=row[self.content_column_name], metadata=metadata))
         # Sort by chunk index if present in metadata so the full document is in its original order.
         document_chunks.sort(key=lambda doc: doc.metadata.get('chunk_index', 0) if doc.metadata else 0)

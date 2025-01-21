@@ -52,6 +52,7 @@ class KnowledgeBaseTable:
         self.session = session
         self.document_preprocessor = None
         self.document_loader = None
+        self.model_params = None
 
     def configure_preprocessing(self, config: Optional[dict] = None):
         """Configure preprocessing for the knowledge base table"""
@@ -488,6 +489,7 @@ class KnowledgeBaseTable:
         df_out = project_datanode.predict(
             model_name=model_rec.name,
             df=df,
+            params=self.model_params
         )
 
         target = model_rec.to_predict[0]
@@ -859,16 +861,19 @@ class KnowledgeBaseController:
         )
         return kb
 
-    def get_table(self, name: str, project_id: int) -> KnowledgeBaseTable:
+    def get_table(self, name: str, project_id: int, params: dict = None) -> KnowledgeBaseTable:
         """
         Returns kb table object with properly configured preprocessing
         :param name: table name
         :param project_id: project id
+        :param params: runtime parameters for KB. Keys: 'model' - parameters for embedding model
         :return: kb table object
         """
         kb = self.get(name, project_id)
         if kb is not None:
             table = KnowledgeBaseTable(kb, self.session)
+            if params:
+                table.model_params = params.get('model')
 
             # Always configure preprocessing - either from params or default
             if kb.params and 'preprocessing' in kb.params:

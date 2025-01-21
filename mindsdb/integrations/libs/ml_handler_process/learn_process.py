@@ -8,7 +8,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from mindsdb_sql_parser import parse_sql
 from mindsdb_sql_parser.ast import Identifier, Select, Star, NativeQuery
 
-from mindsdb.api.executor import SQLQuery
+from mindsdb.api.executor.sql_query import SQLQuery
 import mindsdb.utilities.profiler as profiler
 from mindsdb.utilities.functions import mark_process
 from mindsdb.utilities.config import Config

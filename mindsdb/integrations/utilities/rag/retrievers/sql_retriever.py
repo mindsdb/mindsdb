@@ -136,13 +136,23 @@ Output:
         )
         retry_chain = LLMChain(llm=self.llm, prompt=retry_prompt)
         # Generate rewritten query.
-        return retry_chain.predict(
+        sql_query = retry_chain.predict(
             query=query,
             dialect='postgres',
             error=error,
             embeddings_table=self.embeddings_table,
             schema=schema,
             callbacks=run_manager.get_child() if run_manager else None
+        )
+        query_checker_prompt = PromptTemplate(
+            input_variables=['dialect', 'query'],
+            template=self.query_checker_template
+        )
+        query_checker_chain = LLMChain(llm=self.llm, prompt=query_checker_prompt)
+        # Check the query & return the final result to be executed.
+        return query_checker_chain.predict(
+            dialect='postgres',
+            query=sql_query
         )
 
     def _get_relevant_documents(
@@ -163,20 +173,28 @@ Output:
         # Actually execute the similarity search with metadata filters.
         document_response = self.vector_store_handler.native_query(checked_sql_query_with_embeddings)
         num_retries = 0
-        while document_response.resp_type == RESPONSE_TYPE.ERROR:
-            error_msg = document_response.error_message
-            # LLMs won't always generate a working SQL query so we should have a fallback after retrying.
-            logger.info(f'SQL Retriever query {checked_sql_query} failed with error {error_msg}')
+        while num_retries < self.num_retries:
+            if document_response.resp_type == RESPONSE_TYPE.ERROR:
+                error_msg = document_response.error_message
+                # LLMs won't always generate a working SQL query so we should have a fallback after retrying.
+                logger.info(f'SQL Retriever query {checked_sql_query} failed with error {error_msg}')
+                checked_sql_query = self._prepare_retry_query(checked_sql_query, error_msg, run_manager)
+            elif len(document_response.data_frame) == 0:
+                error_msg = "No documents retrieved from query."
+                checked_sql_query = self._prepare_retry_query(checked_sql_query, error_msg, run_manager)
+            else:
+                break
+
+            checked_sql_query_with_embeddings = checked_sql_query.format(embeddings=str(embedded_query))
+            # Handle LLM output that has the ```sql delimiter possibly.
+            checked_sql_query_with_embeddings = checked_sql_query_with_embeddings.replace('```sql', '')
+            checked_sql_query_with_embeddings = checked_sql_query_with_embeddings.replace('```', '')
+            document_response = self.vector_store_handler.native_query(checked_sql_query_with_embeddings)
+
+            num_retries += 1
             if num_retries >= self.num_retries:
                 logger.info('Using fallback retriever in SQL retriever.')
                 return self.fallback_retriever._get_relevant_documents(retrieval_query, run_manager=run_manager)
-            query_to_retry = self._prepare_retry_query(checked_sql_query, error_msg, run_manager)
-            query_to_retry_with_embeddings = query_to_retry.format(embeddings=str(embedded_query))
-            # Handle LLM output that has the ```sql delimiter possibly.
-            query_to_retry_with_embeddings = query_to_retry_with_embeddings.replace('```sql', '')
-            query_to_retry_with_embeddings = query_to_retry_with_embeddings.replace('```', '')
-            document_response = self.vector_store_handler.native_query(query_to_retry_with_embeddings)
-            num_retries += 1
 
         document_df = document_response.data_frame
         retrieved_documents = []

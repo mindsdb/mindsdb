@@ -11,9 +11,17 @@ In this handler. python client of api is used and more information about this py
 This handler was implemented as per the MindsDB API Handler documentation.
 
 
-The required arguments to establish a connection are,
-* `jira_url`: Jira  hosted url instance
-* `jira_api_token`: API key for accessing the Jira url instance
+### Self hosted JIRA
+The required arguments for to establish a connection are,
+* `jira_url`: Jira hosted url instance
+* `jira_api_token`: API key for accessing the Jira url instance (PAT)
+* `project`: Jira project name 
+
+### Cloud JIRA
+
+* `jira_url`: Jira cloud instance "https://example.atlassian.net"
+* `jira_username`: Your Atlassian login email address
+* `jira_api_token`: Your Atlassian ID API Key
 * `project`: Jira project name 
 
 

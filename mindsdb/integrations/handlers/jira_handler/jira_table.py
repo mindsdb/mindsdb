@@ -10,9 +10,26 @@ from mindsdb_sql_parser import ast
 
 logger = log.getLogger(__name__)
 
+
+def flatten_json(nested_json, parent_key="", separator="."):
+    """
+    Recursively flattens a nested JSON object into a dictionary with dot notation keys.
+    """
+    items = []
+    for k, v in nested_json.items():
+        new_key = f"{parent_key}{separator}{k}" if parent_key else k
+        if isinstance(v, dict):
+            items.extend(flatten_json(v, new_key, separator=separator).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
+
+
 class JiraProjectsTable(APITable):
     """Jira Projects Table implementation"""
+
     _MAX_API_RESULTS = 100
+
     def select(self, query: ast.Select) -> pd.DataFrame:
         """Pulls data from the Jira "get_all_project_issues" API endpoint
         Parameters
@@ -42,8 +59,8 @@ class JiraProjectsTable(APITable):
 
             for an_order in query.order_by:
                 if an_order.field.parts[0] != "key":
-                    continue    
-                if an_order.field.parts[1] in ["reporter","assignee","status"]:
+                    continue
+                if an_order.field.parts[1] in ["reporter", "assignee", "status"]:
                     if issues_kwargs != {}:
                         raise ValueError(
                             "Duplicate order conditions found for reporter,status and assignee"
@@ -61,9 +78,9 @@ class JiraProjectsTable(APITable):
                     raise ValueError(
                         f"Order by unknown column {an_order.field.parts[1]}"
                     )
-        project = self.handler.connection_data['project']
+        project = self.handler.connection_data["project"]
         jira_project_df = self.call_jira_api(project)
-        
+
         selected_columns = []
         for target in query.targets:
             if isinstance(target, ast.Star):
@@ -73,7 +90,6 @@ class JiraProjectsTable(APITable):
                 selected_columns.append(target.parts[-1])
             else:
                 raise ValueError(f"Unknown query target {type(target)}")
-
 
         if len(jira_project_df) == 0:
             jira_project_df = pd.DataFrame([], columns=selected_columns)
@@ -88,7 +104,7 @@ class JiraProjectsTable(APITable):
                 by=order_by_conditions["columns"],
                 ascending=order_by_conditions["ascending"],
             )
-        
+
         if query.limit:
             jira_project_df = jira_project_df.head(total_results)
 
@@ -102,12 +118,12 @@ class JiraProjectsTable(APITable):
             List of columns
         """
         return [
-        'key',
-        'summary',
-        'status',
-        'reporter',
-        'assignee',
-        'priority',
+            "key",
+            "summary",
+            "status",
+            "reporter",
+            "assignee",
+            "priority",
         ]
 
     def call_jira_api(self, project):
@@ -116,36 +132,41 @@ class JiraProjectsTable(APITable):
         max_records = jira.get_project_issues_count(project)
         max_records = 100
         jql_query = self.handler.construct_jql()
-        max_results = self._MAX_API_RESULTS 
+        max_results = self._MAX_API_RESULTS
         start_index = 0
         total = 1
         fields = [
-        'key',
-        'fields.summary',
-        'fields.status.name',
-        'fields.reporter.name',
-        'fields.assignee.name',
-        'fields.priority.name',
+            "key",
+            "fields.summary",
+            "fields.status.name",
+            "fields.reporter.displayName",
+            "fields.assignee.displayName",
+            "fields.priority.name",
         ]
 
         all_jira_issues_df = pd.DataFrame(columns=fields)
 
         while start_index <= total:
-            results = self.handler.connect().jql(jql_query,start=start_index, limit=max_results)
-            df = pd.json_normalize(results['issues'])
+            results = self.handler.connect().jql(
+                jql_query, start=start_index, limit=max_results
+            )
+            flattened_data = [flatten_json(item) for item in results["issues"]]
+            df = pd.DataFrame(flattened_data)
             df = df[fields]
             start_index += max_results
-            total = max_records
+            total = results["total"]
             all_jira_issues_df = pd.concat([all_jira_issues_df, df], axis=0)
 
+        all_jira_issues_df = all_jira_issues_df.rename(
+            columns={
+                "key": "key",
+                "fields.summary": "summary",
+                "fields.reporter.displayName": "reporter",
+                "fields.assignee.displayName": "assignee",
+                "fields.priority.name": "priority",
+                "fields.status.name": "status",
+            },
+            errors="ignore",
+        )
 
-        all_jira_issues_df = all_jira_issues_df.rename(columns={
-                                                                'key': 'key', 
-                                                                'fields.summary': 'summary',
-                                                                'fields.reporter.name':'reporter',
-                                                                'fields.assignee.name':'assignee',
-                                                                'fields.priority.name':'priority',
-                                                                'fields.status.name':'status'})
-        
         return all_jira_issues_df
-

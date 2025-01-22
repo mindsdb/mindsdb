@@ -77,11 +77,16 @@ class IntegrationDataNode(DataNode):
 
             names = df[df.columns[col_name]]
 
-            # type
-            if 'type' in columns:
-                types = df[df.columns[columns.index('type')]]
-            else:
-                types = [None] * len(columns)
+            # Look for the type column.
+            types = None
+            for col in ('type', 'data_type'):
+                if col in columns:
+                    types = df[df.columns[columns.index(col)]]
+                    break
+
+            # If not found, return None for all types.
+            if types is None:
+                types = [None] * len(names)
 
             ret = []
             for i, name in enumerate(names):

@@ -1,77 +1,64 @@
+---
+title: Linkup
+sidebarTitle: Linkup
+---
 
-# Linkup Handler for MindsDB
+## Linkup Handler
 
-The **Linkup Handler** integrates the Linkup API with MindsDB to provide contextual information retrieval capabilities. This handler allows you to perform searches using the Linkup API and retrieve structured results.
+This documentation describes the integration of MindsDB with [Linkup](https://docs.linkup.so/pages/documentation/get-started/introduction), a framework for building context-augmented generative AI applications with LLMs. 
 
-## Features
-- **Search Capabilities**: Perform API calls to Linkup to retrieve contextual data.
-- **Customizable Output**: Specify search depth and output types.
 
-## Installation
+## Prerequisites
 
-Install the dependence using:
+Before proceeding, ensure the following prerequisites are met:
 
-```bash
-pip install linkup-sdk
+1. Install MindsDB locally via [Docker](https://docs.mindsdb.com/setup/self-hosted/docker) or [Docker Desktop](https://docs.mindsdb.com/setup/self-hosted/docker-desktop).
+2. To use Linkup within MindsDB, install the required dependencies following [this instruction](https://docs.mindsdb.com/setup/self-hosted/docker#install-dependencies).
+3. Obtain the Linkup API key. Go to [Linkup](https://www.linkup.so).
 
+## Setup
+
+Create an AI engine from the [Linkup handler](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/linkup_handler).
+
+```sql
+CREATE ML_ENGINE linkup
+FROM linkup;
 ```
 
 ## Usage
 
-### Initialization
-The handler is initialized with your Linkup API key:
+Here is how to create a model that answers questions by reading a page from the web:
 
-```python
-from linkup_handler.linkup_handler import LinkupSearchTool
-
-# Replace 'your_api_key' your real API key that you can have from linkup.io.
-linkup_tool = LinkupSearchTool(api_key="your_api_key")
+```sql
+CREATE MODEL linkup_model
+PREDICT answer
+USING 
+  engine = 'linkup', 
+  api_key = 'your_linkup_api_key',
+  depth = 'deep',                   -- or standard
+  output_type = 'sourcedAnswer',    -- or searchResults
+  input_column = 'question';
 ```
 
-### Perform a Search
-Use the `run_search` method to execute a search query:
+Query the model to get answer:
 
-```python
-results = linkup_tool.run_search(
-    query="Women with nobel price",
-    depth="standard",
-    output_type="searchResults"
-)
-
-if results["success"]:
-    print("Search Results:", results["results"])
-else:
-    print("Error:", results["error"])
+```sql
+SELECT question, answer
+FROM mindsdb.linkup_model
+WHERE question = "What is MindsDB's story?"
 ```
 
-### Parameters
-- **query** *(str)*: The search query (e.g., `"Women with nobel price?"`).
-- **depth** *(str, optional)*: The search depth (default: `"standard"`).
-- **output_type** *(str, optional)*: The type of output desired (default: `"searchResults"`).
+Here is the output:
 
-### Example Output
-```json
-{
-    "success": true,
-    "results": [
-        {
-            "name": "MindsDB Overview",
-            "url": "https://example.com/mindsdb-overview",
-            "content": "MindsDB is a machine learning platform..."
-        },
-        {
-            "name": "Linkup Integration",
-            "url": "https://example.com/linkup-integration",
-            "content": "Integrate Linkup with MindsDB to enhance search..."
-        }
-    ]
-}
+```sql
++---------------------------+-------------------------------+
+|question                   |answer                         |
++---------------------------+-------------------------------+
+|What is MindsDB's story?    |MindsDB was founded in December
+                                2017 by Jorge Torres and Adam Carrigan,
+                                initially as an open-source project...|
++---------------------------+-------------------------------+
+
 ```
 
-## Test
 
-To run test
-
-```bash
-    python -m pytest linkup_handler/tests/
-```

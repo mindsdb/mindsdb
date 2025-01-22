@@ -1,44 +1,44 @@
 from linkup import LinkupClient
-from pydantic import PrivateAttr
+from mindsdb.integrations.libs.base import BaseMLEngine
+from typing import Dict, Optional
+import pandas as pd
 
-class LinkupSearchTool:
+
+class LinkupHandler(BaseMLEngine):
+
     name: str = "Linkup Search Tool"
-    description: str = "Performs an API call to Linkup to retrieve contextual information."
-    _client: LinkupClient = PrivateAttr()
 
-    def __init__(self, api_key: str):
-        """
-        Initialize the tool with an API key.
-        """
-        self._client = LinkupClient(api_key=api_key)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-    def _run(self, query: str, depth: str, output_type: str, structured_output_schema: dict = None) -> dict:
-        """
-        Executes a search using the Linkup API.
+    def create(self, target: str, df: Optional[pd.DataFrame] = None, args: Optional[Dict] = None) -> None:
+        if args is None:
+            raise ValueError("Configurations arguments have to be specified")
+        self.model_storage.json_set('args', args)
 
-        :param query: The query to search for.
-        :param depth: Search depth (default is "standard").
-        :param output_type: Desired result type (default is "searchResults").
-        :param structured_output_schema: JSON schema for structured output (only used if output_type is "structured").
-        :return: A dictionary containing the results or an error message.
-        """
-        try:
-            if output_type == "structured" and structured_output_schema:
-                response = self._client.search(
+    def predict(self, df: pd.DataFrame, args: Optional[Dict] = None) -> pd.DataFrame:
+        stored_args = self.model_storage.json_get('args')
+        if stored_args is None:
+            raise ValueError("No stored arguments found. Ensure 'create' method is called before 'predict'.")
+        
+        api_key = stored_args['using']['api_key']
+
+        self.client = LinkupClient(api_key=api_key)
+
+        results = []
+        for query in df['question']:
+            try:
+                response = self.client.search(
                     query=query,
-                    depth=depth,
-                    output_type=output_type,
-                    structured_output_schema=structured_output_schema
+                    depth=stored_args['using']['depth'],
+                    output_type=stored_args['using']['output_type']
                 )
-            else:
-                response = self._client.search(
-                    query=query,
-                    depth=depth,
-                    output_type=output_type
-                )
-            if output_type == "structured" :
-                return response
-            else:
-                return {"success": True, **vars(response)}
-        except Exception as e:
-            return {"success": False, "error": str(e)}
+                results.append({'question': query, 'answer': response})
+            except Exception as e:
+                results.append({
+                    'question': query,
+                    'answer': None,
+                    'error': str(e),
+                    'error_explain': f"{str(e)}"
+                })
+        return pd.DataFrame(results)

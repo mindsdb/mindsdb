@@ -38,3 +38,9 @@ print(data)
 2. Test the handler thoroughly with real or mocked ServiceNow data.
 3. Document your implementation for future maintainability.
 4. Submit a pull request to the MindsDB repository for review.
+
+### Testing
+
+1. Unit Testing: Write and execute unit tests to validate each method of the handler.
+2. Integration Testing: Test the handler with a live ServiceNow instance to ensure real-world functionality.
+3. Mock Data Testing: Use mocked responses to test scenarios without affecting actual ServiceNow data.

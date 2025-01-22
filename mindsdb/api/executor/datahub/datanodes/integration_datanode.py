@@ -81,7 +81,7 @@ class IntegrationDataNode(DataNode):
             if 'type' in columns:
                 types = df[df.columns[columns.index('type')]]
             else:
-                types = [None] * len(columns)
+                types = [None] * len(names)
 
             ret = []
             for i, name in enumerate(names):

@@ -371,9 +371,9 @@ class LangchainAgent:
         for row in df[:-1].to_dict("records"):
             question = row[user_column]
             answer = row[assistant_column]
-            if question:
+            if isinstance(question, str) and len(question) > 0:
                 memory.chat_memory.add_user_message(question)
-            if answer:
+            if isinstance(answer, str) and len(answer) > 0:
                 memory.chat_memory.add_ai_message(answer)
 
         agent_type = args.get("agent_type", DEFAULT_AGENT_TYPE)

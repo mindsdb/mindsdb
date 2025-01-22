@@ -1,4 +1,4 @@
-from pysnc import ServiceNowClient as SNC
+from pysnc import ServiceNowClient as SNC # type: ignore
 
 class ServiceNowClient:
     def __init__(self, config):

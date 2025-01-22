@@ -42,9 +42,9 @@ class RayServeHandler(BaseMLEngine):
             raise Exception("Error: Training failed: " + resp['status'])
 
     def predict(self, df, args=None):
-        args = {**(self.model_storage.json_get('args')), **args }  # merge incoming args
+        args = {**(self.model_storage.json_get('args')), **args}  # merge incoming args
         pred_args = args.get('predict_params', {})
-        args = {**args, **pred_args }  # merge pred_args
+        args = {**args, **pred_args}  # merge pred_args
         resp = requests.post(args['predict_url'],
                              json={'df': df.to_json(orient='records'), 'pred_args': pred_args},
                              headers={'content-type': 'application/json; format=pandas-records'})

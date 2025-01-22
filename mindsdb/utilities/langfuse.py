@@ -147,6 +147,21 @@ class LangfuseClientWrapper:
 
         logger.info(f"Langfuse trace configured with ID: {self.trace.id}")
 
+    def get_trace_id(self) -> typing.Optional[str]:
+        """
+        Get trace ID. If Langfuse is disabled, returns None.
+        """
+
+        if self.client is None:
+            logger.debug("Langfuse is disabled.")
+            return ""
+
+        if self.trace is None:
+            logger.debug("Langfuse trace is not setup.")
+            return ""
+
+        return self.trace.id
+
     def start_span(self,
                    name: str,
                    input: typing.Optional[typing.Any] = None) -> typing.Optional[StatefulSpanClient]:

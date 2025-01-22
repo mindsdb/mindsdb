@@ -52,7 +52,7 @@ class ProjectDataNode(DataNode):
         tables = self.project.get_tables()
         return table_name in tables
 
-    def get_table_columns(self, table_name):
+    def get_table_columns(self, table_name, schema_name=None):
         return [
             {'name': name}
             for name in self.project.get_columns(table_name)

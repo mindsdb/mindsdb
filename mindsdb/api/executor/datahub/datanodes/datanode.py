@@ -13,7 +13,7 @@ class DataNode:
     def has_table(self, tableName):
         pass
 
-    def get_table_columns(self, tableName):
+    def get_table_columns(self, tableName, schema_name=None):
         pass
 
     def query(self, query=None, native_query=None, session=None):

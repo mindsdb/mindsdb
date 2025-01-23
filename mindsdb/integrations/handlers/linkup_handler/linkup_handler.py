@@ -20,7 +20,7 @@ class LinkupHandler(BaseMLEngine):
         stored_args = self.model_storage.json_get('args')
         if stored_args is None:
             raise ValueError("No stored arguments found. Ensure 'create' method is called before 'predict'.")
-        
+
         api_key = stored_args['using']['api_key']
 
         self.client = LinkupClient(api_key=api_key)

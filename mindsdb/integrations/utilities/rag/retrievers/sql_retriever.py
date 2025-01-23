@@ -102,7 +102,7 @@ Output:
 {example.output}
 
 '''
-            examples_prompt_str += example_str
+                examples_prompt_str += example_str
         return base_prompt_template.partial(
             schema=schema_prompt_str,
             examples=examples_prompt_str

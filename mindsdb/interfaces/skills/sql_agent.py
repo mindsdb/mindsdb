@@ -39,7 +39,6 @@ def split_table_name(table_name: str) -> List[str]:
         table_name = table_name[1:-1]
         table_name = table_name.strip(' "\'\n\r')
 
-    # Тогда делим строку на элементы, учитывая кавычки внутри
     result = []
     part = []
     inside_quotes = False

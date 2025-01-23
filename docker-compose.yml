@@ -15,27 +15,25 @@ services:
   mindsdb:
     <<: *autoRestartOnFailure
     image: mindsdb/mindsdb:devel
-   
+
     depends_on:
       postgres:
         condition: service_healthy
-    # Uncomment the following lines if you want to use the local version of jaeger and langfuse
-    #   jaeger:
-    #     condition: service_started
-    #   langfuse:
-    #     condition: service_started
+#     Uncomment the following lines if you want to use the local version of otel-collector and langfuse
+#      otel-collector:
+#        condition: service_started
+#      langfuse:
+#         condition: service_started
     # If you want to build the image instead:
-    # build:
-    #   context: .
-    #   dockerfile: docker/mindsdb.Dockerfile
-    #   target: dev  # Makes sure dev dependencies are installed
+#    build:
+#      context: .
+#      dockerfile: docker/mindsdb.Dockerfile
+#      target: dev  # Makes sure dev dependencies are installed
     restart: always
     ports:
       - '47334:47334'
       - '47335:47335'
       - '47336:47336'
-    # watchfiles will reload the app when python files are changed
-    entrypoint: bash -c "watchfiles --filter python 'python -m mindsdb' ."
     environment:
       MINDSDB_DB_CON: "postgresql://postgres:postgres@postgres/mindsdb"
       MINDSDB_DOCKER_ENV: "True"
@@ -49,14 +47,28 @@ services:
       LANGFUSE_HOST: "http://langfuse:3000" # Define the host for langfuse
       LANGFUSE_PUBLIC_KEY: "pk-lf-1234567890" # Define the public key for langfuse
       LANGFUSE_SECRET_KEY: "sk-lf-1234567890" # Define the secret key for langfuse
+      LANGFUSE_ENVIRONMENT: "local"
       LANGFUSE_RELEASE: "local"
       # LANGFUSE_DEBUG: "True"
       LANGFUSE_TIMEOUT: "10"
       LANGFUSE_SAMPLE_RATE: "1.0"
+      # LANGFUSE_FORCE_RUN: "True"
       OTEL_EXPORTER_TYPE: "console" # or "console" # Define the exporter type (console/otlp)
-      # OTEL_OTLP_ENDPOINT: "http://jaeger:4317" # Define the endpoint for the otlp exporter. Uncomment this line if you want to use jaeger.
+      # OTEL_EXPORTER_PROTOCOL: "grpc" # or "http" # Define the protocol for the otlp exporter.
+      # OTEL_OTLP_ENDPOINT: "http://otel-collector:4317" # Define the endpoint for the otlp exporter.
+      # OTEL_OTLP_LOGGING_ENDPOINT: "http://otel-collector:4317" # Define if log exporter is different from OTEL_OTLP_ENDPOINT.
+      # OTEL_OTLP_TRACING_ENDPOINT: "http://otel-collector:4317" # Define if tracing exporter is different from OTEL_OTLP_ENDPOINT.
+      # OTEL_OTLP_METRICS_ENDPOINT: "http://otel-collector:4317" # Define if metrics exporter is different from OTEL_OTLP_ENDPOINT.
       OTEL_SERVICE_NAME: "mindsdb" # Define the service name
+      OTEL_SERVICE_INSTANCE_ID: "mindsdb-instance" # Define the service instance id
       OTEL_SERVICE_ENVIRONMENT: "local" # Define the service environment
+      OTEL_SERVICE_RELEASE: "local" # Define the service release
+      OTEL_TRACE_SAMPLE_RATE: "1.0" # Define the trace sample rate
+      OTEL_EXTRA_ATTRIBUTES: "" # Define the extra attributes
+      # OTEL_SDK_DISABLED: "false" # Define if the sdk is disabled
+      # OTEL_LOGGING_DISABLED: "false" # Define if the logging is disabled.
+      # OTEL_TRACING_DISABLED: "false" # Define if the tracing is disabled.
+      # OTEL_METRICS_DISABLED: "false" # Define if the metrics are disabled.
       # OTEL_SDK_FORCE_RUN: "true" # Uncomment me to force-start opentelemetry on local development.
 
     volumes:
@@ -69,21 +81,20 @@ services:
       timeout: 4s
       retries: 100
 
-  jaeger:
-    <<: *autoRestartOnFailure
-    image: jaegertracing/all-in-one:1.62.0
-    ports:
-      - "16686:16686"
-      - "4317:4317"
-      - "4318:4318"
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.116.1
     environment:
-      COLLECTOR_ZIPKIN_HOST_PORT: ":9411"
-    healthcheck:
-      test: ["CMD-SHELL", "/go/bin/all-in-one-linux status"]
-      interval: 3s
-      timeout: 3s
-      retries: 10
-      
+      OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED: "true"
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
+    ports:
+      - 1888:1888 # pprof extension
+      - 8888:8888 # Prometheus metrics exposed by the Collector
+      - 8889:8889 # Prometheus exporter metrics
+      - 13133:13133 # health_check extension
+      - 4317:4317 # OTLP gRPC receiver
+      - 4318:4318 # OTLP http receiver
+      - 55679:55679 # zpages extension
 
   langfuse:
     <<: *autoRestartOnFailure
@@ -137,4 +148,3 @@ services:
 volumes:
   db_data:
     driver: local
-

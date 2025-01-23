@@ -68,6 +68,77 @@ Here is the output:
 +-----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------+
 ```
 
+## Usage
+
+The following usage examples utilize `portkey_engine` and `gpt-3.5-turbo` to create a model with the `CREATE MODEL` statement.
+
+### Creating a Summarization Model
+
+This example demonstrates how to create a model to summarize text using Portkey:
+
+```sql
+CREATE MODEL summarization_model
+PREDICT summary
+USING
+    engine = 'portkey_engine',
+    model = 'gpt-3.5-turbo',
+    temperature = 0.5,
+    max_tokens = 100;
+
+SELECT document, summary
+FROM summarization_model
+WHERE document = 'MindsDB is a predictive platform that connects machine learning models with databases.';
+
+```
+
+### Generating Sentiment Analysis
+
+```sql
+CREATE MODEL sentiment_model
+PREDICT sentiment
+USING
+    engine = 'portkey_engine',
+    model = 'gpt-3.5-turbo',
+    temperature = 0.3;
+
+SELECT review, sentiment
+FROM sentiment_model
+WHERE review = 'The product was excellent and exceeded expectations!';
+
+```
+
+### Translating Text
+
+```sql
+CREATE MODEL translation_model
+PREDICT translation
+USING
+    engine = 'portkey_engine',
+    model = 'gpt-3.5-turbo',
+    temperature = 0.4;
+
+SELECT original_text, translation
+FROM translation_model
+WHERE original_text = 'Hello, how are you?' AND target_language = 'es';
+
+```
+
+### Extracting Key Information
+
+```sql
+CREATE MODEL extraction_model
+PREDICT extracted_data
+USING
+    engine = 'portkey_engine',
+    model = 'gpt-3.5-turbo',
+    temperature = 0.6;
+
+SELECT text, extracted_data
+FROM extraction_model
+WHERE text = 'Minds , 35, lives in New York and works as a software engineer.';
+
+```
+
 <Tip>
 
 **Next Steps**

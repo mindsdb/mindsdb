@@ -212,7 +212,7 @@ class Project(Base):
     )
     deleted_at = Column(DateTime)
     name = Column(String, nullable=False)
-    company_id = Column(Integer)
+    company_id = Column(Integer, default=0)
     __table_args__ = (
         UniqueConstraint("name", "company_id", name="unique_project_name_company_id"),
     )

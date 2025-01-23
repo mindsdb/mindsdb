@@ -7,6 +7,7 @@ import sqlalchemy as sa
 import numpy as np
 
 from mindsdb_sql_parser.ast.base import ASTNode
+from mindsdb_sql_parser.ast import Select, Star, Constant, Identifier
 from mindsdb_sql_parser import parse_sql
 
 from mindsdb.interfaces.storage import db
@@ -16,6 +17,9 @@ from mindsdb.interfaces.database.views import ViewController
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 import mindsdb.utilities.profiler as profiler
+from mindsdb.api.executor.sql_query import SQLQuery
+from mindsdb.api.executor.utilities.sql import query_df
+from mindsdb.interfaces.query_context.context_controller import query_context_controller
 
 
 class Project:
@@ -24,19 +28,14 @@ class Project:
         p = Project()
         p.record = db_record
         p.name = db_record.name
-        p.company_id = db_record.company_id
+        p.company_id = ctx.company_id
         p.id = db_record.id
         return p
 
     def create(self, name: str):
         name = name.lower()
-        existing_record = db.Project.query.filter(
-            (sa.func.lower(db.Project.name) == name)
-            & (db.Project.company_id == ctx.company_id)
-            & (db.Project.deleted_at == sa.null())
-        ).first()
-        if existing_record is not None:
-            raise EntityExistsError('Project already exists', name)
+
+        company_id = ctx.company_id if ctx.company_id is not None else 0
 
         existing_record = db.Integration.query.filter(
             sa.func.lower(db.Integration.name) == name,
@@ -45,22 +44,27 @@ class Project:
         if existing_record is not None:
             raise EntityExistsError('Database exists with this name ', name)
 
+        existing_record = db.Project.query.filter(
+            (sa.func.lower(db.Project.name) == name)
+            & (db.Project.company_id == company_id)
+            & (db.Project.deleted_at == sa.null())
+        ).first()
+        if existing_record is not None:
+            raise EntityExistsError('Project already exists', name)
+
         record = db.Project(
             name=name,
-            company_id=ctx.company_id
+            company_id=company_id
         )
 
         self.record = record
         self.name = name
-        self.company_id = ctx.company_id
+        self.company_id = company_id
 
         db.session.add(record)
         db.session.commit()
 
         self.id = record.id
-
-    def save(self):
-        db.session.commit()
 
     def delete(self):
         tables = self.get_tables()
@@ -111,7 +115,7 @@ class Project:
             project_name=self.name
         )
 
-    def query_view(self, query: ASTNode) -> ASTNode:
+    def get_view_meta(self, query: ASTNode) -> ASTNode:
         view_name = query.from_table.parts[-1]
         view_meta = ViewController().get(
             name=view_name,
@@ -119,6 +123,30 @@ class Project:
         )
         view_meta['query_ast'] = parse_sql(view_meta['query'])
         return view_meta
+
+    def query_view(self, query, session):
+
+        view_meta = self.get_view_meta(query)
+
+        query_context_controller.set_context('view', view_meta['id'])
+
+        try:
+            sqlquery = SQLQuery(
+                view_meta['query_ast'],
+                session=session
+            )
+            result = sqlquery.fetch(view='dataframe')
+
+        finally:
+            query_context_controller.release_context('view', view_meta['id'])
+
+        if result['success'] is False:
+            raise Exception(f"Cant execute view query: {view_meta['query_ast']}")
+        df = result['result']
+        # remove duplicated columns
+        df = df.loc[:, ~df.columns.duplicated()]
+
+        return query_df(df, query, session=session)
 
     @staticmethod
     def _get_model_data(predictor_record, integraion_record, with_secrets: bool = True):
@@ -341,6 +369,15 @@ class Project:
                 columns = predictor_record.to_predict
                 if not isinstance(columns, list):
                     columns = [columns]
+            return columns
+        if self.get_view(table_name):
+            query = Select(targets=[Star()], from_table=Identifier(table_name), limit=Constant(1))
+
+            from mindsdb.api.executor.controllers.session_controller import SessionController
+            session = SessionController()
+            session.database = self.name
+            df = self.query_view(query, session)
+            return df.columns
         else:
             # is it agent?
             agent = db.Agents.query.filter_by(
@@ -360,8 +397,9 @@ class ProjectController:
         pass
 
     def get_list(self) -> List[Project]:
+        company_id = ctx.company_id if ctx.company_id is not None else 0
         records = db.Project.query.filter(
-            (db.Project.company_id == ctx.company_id)
+            (db.Project.company_id == company_id)
             & (db.Project.deleted_at == sa.null())
         ).order_by(db.Project.name)
 
@@ -371,7 +409,8 @@ class ProjectController:
         if id is not None and name is not None:
             raise ValueError("Both 'id' and 'name' is None")
 
-        q = db.Project.query.filter_by(company_id=ctx.company_id)
+        company_id = ctx.company_id if ctx.company_id is not None else 0
+        q = db.Project.query.filter_by(company_id=company_id)
 
         if id is not None:
             q = q.filter_by(id=id)

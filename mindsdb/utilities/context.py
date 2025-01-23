@@ -24,7 +24,8 @@ class Context:
                 'enabled': False,
                 'pointer': None,
                 'tree': None
-            }
+            },
+            'email_confirmed': 0,
         })
 
     def __getattr__(self, name: str) -> Any:
@@ -51,6 +52,15 @@ class Context:
 
     def load(self, storage: dict) -> None:
         self._storage.set(storage)
+
+    def metadata(self, **kwargs) -> dict:
+        return {
+            'user_id': self.user_id or "",
+            'company_id': self.company_id or "",
+            'session_id': self.session_id,
+            'user_class': self.user_class,
+            **kwargs
+        }
 
 
 _context_var = ContextVar('mindsdb.context')

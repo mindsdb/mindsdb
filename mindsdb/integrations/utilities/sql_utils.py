@@ -178,7 +178,7 @@ def project_dataframe(df, targets, table_columns):
 
     # adapt column names to projection
     if len(df_col_rename) > 0:
-        df = df.rename(columns=df_col_rename)
+        df.rename(columns=df_col_rename, inplace=True)
     return df
 
 

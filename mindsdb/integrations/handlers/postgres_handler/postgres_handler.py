@@ -1,5 +1,6 @@
 import time
 import json
+from typing import Optional
 
 import pandas as pd
 import psycopg
@@ -161,7 +162,7 @@ class PostgresHandler(DatabaseHandler):
             'float8': 'float64'
         }
         columns = df.columns
-        df = df.set_axis(range(len(columns)), axis=1)
+        df.columns = list(range(len(columns)))
         for column_index, column_name in enumerate(df.columns):
             col = df[column_name]
             if str(col.dtype) == 'object':
@@ -172,7 +173,7 @@ class PostgresHandler(DatabaseHandler):
                         df[column_name] = col.astype(types_map[pg_type.name])
                     except ValueError as e:
                         logger.error(f'Error casting column {col.name} to {types_map[pg_type.name]}: {e}')
-        return df.set_axis(columns, axis=1)
+        df.columns = columns
 
     @profiler.profile()
     def native_query(self, query: str, params=None) -> Response:
@@ -202,7 +203,7 @@ class PostgresHandler(DatabaseHandler):
                         result,
                         columns=[x.name for x in cur.description]
                     )
-                    df = self._cast_dtypes(df, cur.description)
+                    self._cast_dtypes(df, cur.description)
                     response = Response(
                         RESPONSE_TYPE.TABLE,
                         df
@@ -281,21 +282,27 @@ class PostgresHandler(DatabaseHandler):
         """
         return self.native_query(query)
 
-    def get_columns(self, table_name: str) -> Response:
+    def get_columns(self, table_name: str, schema_name: Optional[str] = None) -> Response:
         """
         Retrieves column details for a specified table in the PostgreSQL database.
 
         Args:
             table_name (str): The name of the table for which to retrieve column information.
+            schema_name (str): The name of the schema in which the table is located.
 
         Returns:
             Response: A response object containing the column details, formatted as per the `Response` class.
+
         Raises:
             ValueError: If the 'table_name' is not a valid string.
         """
 
         if not table_name or not isinstance(table_name, str):
             raise ValueError("Invalid table name provided.")
+        if isinstance(schema_name, str):
+            schema_name = f"'{schema_name}'"
+        else:
+            schema_name = 'current_schema()'
         query = f"""
             SELECT
                 column_name as "Field",
@@ -305,12 +312,11 @@ class PostgresHandler(DatabaseHandler):
             WHERE
                 table_name = '{table_name}'
             AND
-                table_schema = current_schema()
+                table_schema = {schema_name}
         """
         return self.native_query(query)
 
     def subscribe(self, stop_event, callback, table_name, columns=None, **kwargs):
-
         config = self._make_connection_args()
         config['autocommit'] = True
 

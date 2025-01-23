@@ -120,7 +120,7 @@ class InformationSchemaDataNode(DataNode):
             return True
         return False
 
-    def get_table_columns(self, tableName):
+    def get_table_columns(self, tableName, schema_name=None):
         tn = tableName.upper()
         if tn in self.tables:
             return [

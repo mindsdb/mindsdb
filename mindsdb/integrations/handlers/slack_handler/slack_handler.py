@@ -231,6 +231,9 @@ class SlackHandler(APIChatHandler):
             'polling': {
                 'type': 'realtime',
             },
+            'memory': {
+                'type': 'handler',
+            },
             'tables': [
                 {
                     'chat_table': {
@@ -238,7 +241,7 @@ class SlackHandler(APIChatHandler):
                         'chat_id_col': 'channel_id',
                         'username_col': 'user',
                         'text_col': 'text',
-                        'time_col': 'thread_ts',
+                        'time_col': 'created_at',
                     }
                 },
                 {
@@ -264,7 +267,7 @@ class SlackHandler(APIChatHandler):
         user_info = web_connection.auth_test().data
         return user_info['bot_id']
 
-    def subscribe(self, stop_event: threading.Event, callback: Callable, **kwargs: Any) -> None:
+    def subscribe(self, stop_event: threading.Event, callback: Callable, table_name: Text, columns: List = None, **kwargs: Any) -> None:
         """
         Subscribes to the Slack API using the Socket Mode for real-time responses to messages.
 
@@ -274,6 +277,14 @@ class SlackHandler(APIChatHandler):
             table_name (Text): The name of the table to subscribe to.
             kwargs: Arbitrary keyword arguments.
         """
+        if table_name not in ['messages', 'threads']:
+            raise RuntimeError(f'Table {table_name} is not supported for subscription.')
+
+        # Raise an error if columns are provided.
+        # Since Slack subscriptions depend on events and not changes to the virtual tables, columns are not supported.
+        if columns:
+            raise RuntimeError('Columns are not supported for Slack subscriptions.')
+
         self._socket_connection = SocketModeClient(
             # This app-level token will be used only for establishing a connection.
             app_token=self.connection_data['app_token'],  # xapp-A111-222-xyz

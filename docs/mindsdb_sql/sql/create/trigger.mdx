@@ -106,7 +106,8 @@ ON mindsdb_slack.messages
         SELECT 'slack-bot-channel-id' AS channel_id, answer AS text
         FROM chatbot_model m
         JOIN TABLE_DELTA s
-        WHERE  s.user != 'U07J30KPAUF'
+        WHERE s.user != 'slack-bot-id' # this is to prevent the bot from replying to its own messages
+        AND s.channel_id = 'slack-bot-channel-id'
 );
 ```
 

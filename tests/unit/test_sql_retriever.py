@@ -12,7 +12,7 @@ from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse
 from mindsdb.integrations.libs.vectordatabase_handler import DistanceFunction, VectorStoreHandler
 from mindsdb.integrations.utilities.rag.retrievers.sql_retriever import SQLRetriever
-from mindsdb.integrations.utilities.rag.settings import DEFAULT_QUERY_CHECKER_PROMPT_TEMPLATE, DEFAULT_QUERY_RETRY_PROMPT_TEMPLATE, DEFAULT_SEMANTIC_PROMPT_TEMPLATE, DEFAULT_SQL_PROMPT_TEMPLATE, LLMExample, ColumnSchema, MetadataSchema, SearchKwargs
+from mindsdb.integrations.utilities.rag.settings import DEFAULT_METADATA_FILTERS_PROMPT_TEMPLATE, DEFAULT_SEMANTIC_PROMPT_TEMPLATE, ColumnSchema, MetadataSchema, SearchKwargs
 
 
 class TestSQLRetriever:
@@ -22,14 +22,17 @@ class TestSQLRetriever:
         llm_result.generations = [
             [
                 Generation(
-                    text='''SELECT sd.*, v.*
-FROM test_source_table sd
-JOIN document_unit du ON sd."Id" = du."DocumentId"
-JOIN unit u ON du."UnitKey" = u."UnitKey"
-JOIN plant p ON u."PlantKey" = p."PlantKey"
-JOIN test_embeddings_table v ON (v."metadata"->>'original_row_id')::int = sd."Id"
-WHERE p."PlantName" = 'Beaver Valley'
-ORDER BY v.embeddings <->'''
+                    text='''```json
+{
+    "filters": [
+        {
+            "attribute": "ContributorName",
+            "comparator": "=",
+            "value": "Alfred"
+        }
+    ]
+}
+```'''
                 )
             ]
         ]
@@ -80,31 +83,15 @@ ORDER BY v.embeddings <->'''
             ]
         )
         all_schemas = [source_schema, unit_schema, plant_schema, document_unit_schema]
-        example = LLMExample(
-            input='Get me all documents related to the Beaver Valley plant',
-            output='''
-SELECT sd.*, v.*
-FROM test_source_table sd
-JOIN document_unit du ON sd."Id" = du."DocumentId"
-JOIN unit u ON du."UnitKey" = u."UnitKey"
-JOIN plant p ON u."PlantKey" = p."PlantKey"
-JOIN test_embeddings_table v ON (v."metadata"->>'original_row_id')::int = sd."Id"
-WHERE p."PlantName" = 'Beaver Valley'
-ORDER BY v.embeddings <-> '{embeddings}' LIMIT 5;
-'''
-        )
         fallback_retriever = MagicMock(spec=BaseRetriever, wraps=BaseRetriever)
         sql_retriever = SQLRetriever(
             fallback_retriever=fallback_retriever,
             vector_store_handler=vector_db_mock,
             metadata_schemas=all_schemas,
-            examples=[example],
             embeddings_model=embeddings_mock,
+            metadata_filters_prompt_template=DEFAULT_METADATA_FILTERS_PROMPT_TEMPLATE,
             rewrite_prompt_template=DEFAULT_SEMANTIC_PROMPT_TEMPLATE,
-            retry_prompt_template=DEFAULT_QUERY_RETRY_PROMPT_TEMPLATE,
             num_retries=2,
-            sql_prompt_template=DEFAULT_SQL_PROMPT_TEMPLATE,
-            query_checker_template=DEFAULT_QUERY_CHECKER_PROMPT_TEMPLATE,
             embeddings_table='test_embeddings_table',
             source_table='test_source_table',
             distance_function=DistanceFunction.SQUARED_EUCLIDEAN_DISTANCE,
@@ -124,14 +111,17 @@ ORDER BY v.embeddings <-> '{embeddings}' LIMIT 5;
         llm_result.generations = [
             [
                 Generation(
-                    text='''SELECT sd.*, v.*
-FROM test_source_table sd
-JOIN document_unit du ON sd."Id" = du."DocumentId"
-JOIN unit u ON du."UnitKey" = u."UnitKey"
-JOIN plant p ON u."PlantKey" = p."PlantKey"
-JOIN test_embeddings_table v ON (v."metadata"->>'original_row_id')::int = sd."Id"
-WHERE p."PlantName" = 'Beaver Valley'
-ORDER BY v.embeddings <->'''
+                    text='''```json
+{
+    "filters": [
+        {
+            "attribute": "ContributorName",
+            "comparator": "=",
+            "value": "Alfred"
+        }
+    ]
+}
+```'''
                 )
             ]
         ]
@@ -192,31 +182,15 @@ ORDER BY v.embeddings <->'''
             ]
         )
         all_schemas = [source_schema, unit_schema, plant_schema, document_unit_schema]
-        example = LLMExample(
-            input='Get me all documents related to the Beaver Valley plant',
-            output='''
-SELECT sd.*, v.*
-FROM test_source_table sd
-JOIN document_unit du ON sd."Id" = du."DocumentId"
-JOIN unit u ON du."UnitKey" = u."UnitKey"
-JOIN plant p ON u."PlantKey" = p."PlantKey"
-JOIN test_embeddings_table v ON (v."metadata"->>'original_row_id')::int = sd."Id"
-WHERE p."PlantName" = 'Beaver Valley'
-ORDER BY v.embeddings <-> '{embeddings}' LIMIT 5;
-'''
-        )
         fallback_retriever = MagicMock(spec=BaseRetriever, wraps=BaseRetriever)
         sql_retriever = SQLRetriever(
             fallback_retriever=fallback_retriever,
             vector_store_handler=vector_db_mock,
             metadata_schemas=all_schemas,
-            examples=[example],
             embeddings_model=embeddings_mock,
+            metadata_filters_prompt_template=DEFAULT_METADATA_FILTERS_PROMPT_TEMPLATE,
             rewrite_prompt_template=DEFAULT_SEMANTIC_PROMPT_TEMPLATE,
-            retry_prompt_template=DEFAULT_QUERY_RETRY_PROMPT_TEMPLATE,
             num_retries=3,
-            sql_prompt_template=DEFAULT_SQL_PROMPT_TEMPLATE,
-            query_checker_template=DEFAULT_QUERY_CHECKER_PROMPT_TEMPLATE,
             embeddings_table='test_embeddings_table',
             source_table='test_source_table',
             distance_function=DistanceFunction.SQUARED_EUCLIDEAN_DISTANCE,
@@ -238,14 +212,17 @@ ORDER BY v.embeddings <-> '{embeddings}' LIMIT 5;
         llm_result.generations = [
             [
                 Generation(
-                    text='''SELECT sd.*, v.*
-FROM test_source_table sd
-JOIN document_unit du ON sd."Id" = du."DocumentId"
-JOIN unit u ON du."UnitKey" = u."UnitKey"
-JOIN plant p ON u."PlantKey" = p."PlantKey"
-JOIN test_embeddings_table v ON (v."metadata"->>'original_row_id')::int = sd."Id"
-WHERE p."PlantName" = 'Beaver Valley'
-ORDER BY v.embeddings <->'''
+                    text='''```json
+{
+    "filters": [
+        {
+            "attribute": "ContributorName",
+            "comparator": "=",
+            "value": "Alfred"
+        }
+    ]
+}
+```'''
                 )
             ]
         ]
@@ -301,19 +278,6 @@ ORDER BY v.embeddings <->'''
             ]
         )
         all_schemas = [source_schema, unit_schema, plant_schema, document_unit_schema]
-        example = LLMExample(
-            input='Get me all documents related to the Beaver Valley plant',
-            output='''
-SELECT sd.*, v.*
-FROM test_source_table sd
-JOIN document_unit du ON sd."Id" = du."DocumentId"
-JOIN unit u ON du."UnitKey" = u."UnitKey"
-JOIN plant p ON u."PlantKey" = p."PlantKey"
-JOIN test_embeddings_table v ON (v."metadata"->>'original_row_id')::int = sd."Id"
-WHERE p."PlantName" = 'Beaver Valley'
-ORDER BY v.embeddings <-> '{embeddings}' LIMIT 5;
-'''
-        )
         fallback_retriever = MagicMock(spec=BaseRetriever, wraps=BaseRetriever)
         fallback_retriever._get_relevant_documents.return_value = [
             Document(
@@ -327,13 +291,10 @@ ORDER BY v.embeddings <-> '{embeddings}' LIMIT 5;
             fallback_retriever=fallback_retriever,
             vector_store_handler=vector_db_mock,
             metadata_schemas=all_schemas,
-            examples=[example],
             embeddings_model=embeddings_mock,
+            metadata_filters_prompt_template=DEFAULT_METADATA_FILTERS_PROMPT_TEMPLATE,
             rewrite_prompt_template=DEFAULT_SEMANTIC_PROMPT_TEMPLATE,
-            retry_prompt_template=DEFAULT_QUERY_RETRY_PROMPT_TEMPLATE,
             num_retries=2,
-            sql_prompt_template=DEFAULT_SQL_PROMPT_TEMPLATE,
-            query_checker_template=DEFAULT_QUERY_CHECKER_PROMPT_TEMPLATE,
             embeddings_table='test_embeddings_table',
             source_table='test_source_table',
             distance_function=DistanceFunction.SQUARED_EUCLIDEAN_DISTANCE,

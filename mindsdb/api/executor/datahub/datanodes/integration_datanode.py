@@ -1,4 +1,6 @@
 import time
+import inspect
+from typing import Optional
 
 import numpy as np
 from numpy import dtype as np_dtype
@@ -53,8 +55,11 @@ class IntegrationDataNode(DataNode):
     def has_table(self, tableName):
         return True
 
-    def get_table_columns(self, tableName):
-        response = self.integration_handler.get_columns(tableName)
+    def get_table_columns(self, table_name: str, schema_name: Optional[str] = None):
+        if 'schema_name' in inspect.signature(self.integration_handler.get_columns).parameters:
+            response = self.integration_handler.get_columns(table_name, schema_name)
+        else:
+            response = self.integration_handler.get_columns(table_name)
         if response.type == RESPONSE_TYPE.TABLE:
             df = response.data_frame
             # case independent

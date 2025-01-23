@@ -7,6 +7,7 @@ import sqlalchemy as sa
 import numpy as np
 
 from mindsdb_sql_parser.ast.base import ASTNode
+from mindsdb_sql_parser.ast import Select, Star, Constant, Identifier
 from mindsdb_sql_parser import parse_sql
 
 from mindsdb.interfaces.storage import db
@@ -16,6 +17,9 @@ from mindsdb.interfaces.database.views import ViewController
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 import mindsdb.utilities.profiler as profiler
+from mindsdb.api.executor.sql_query import SQLQuery
+from mindsdb.api.executor.utilities.sql import query_df
+from mindsdb.interfaces.query_context.context_controller import query_context_controller
 
 
 class Project:
@@ -111,7 +115,7 @@ class Project:
             project_name=self.name
         )
 
-    def query_view(self, query: ASTNode) -> ASTNode:
+    def get_view_meta(self, query: ASTNode) -> ASTNode:
         view_name = query.from_table.parts[-1]
         view_meta = ViewController().get(
             name=view_name,
@@ -119,6 +123,30 @@ class Project:
         )
         view_meta['query_ast'] = parse_sql(view_meta['query'])
         return view_meta
+
+    def query_view(self, query, session):
+
+        view_meta = self.get_view_meta(query)
+
+        query_context_controller.set_context('view', view_meta['id'])
+
+        try:
+            sqlquery = SQLQuery(
+                view_meta['query_ast'],
+                session=session
+            )
+            result = sqlquery.fetch(view='dataframe')
+
+        finally:
+            query_context_controller.release_context('view', view_meta['id'])
+
+        if result['success'] is False:
+            raise Exception(f"Cant execute view query: {view_meta['query_ast']}")
+        df = result['result']
+        # remove duplicated columns
+        df = df.loc[:, ~df.columns.duplicated()]
+
+        return query_df(df, query, session=session)
 
     @staticmethod
     def _get_model_data(predictor_record, integraion_record, with_secrets: bool = True):
@@ -341,6 +369,15 @@ class Project:
                 columns = predictor_record.to_predict
                 if not isinstance(columns, list):
                     columns = [columns]
+            return columns
+        if self.get_view(table_name):
+            query = Select(targets=[Star()], from_table=Identifier(table_name), limit=Constant(1))
+
+            from mindsdb.api.executor.controllers.session_controller import SessionController
+            session = SessionController()
+            session.database = self.name
+            df = self.query_view(query, session)
+            return df.columns
         else:
             # is it agent?
             agent = db.Agents.query.filter_by(

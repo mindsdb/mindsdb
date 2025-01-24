@@ -1,15 +1,13 @@
 import os
 from typing import List, Iterator
 from langchain_core.documents import Document as LangchainDocument
-from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
+from langchain_text_splitters import MarkdownHeaderTextSplitter
 import pandas as pd
 
 from mindsdb.interfaces.file.file_controller import FileController
 from mindsdb.integrations.utilities.rag.loaders.file_loader import FileLoader
 from mindsdb.integrations.utilities.rag.splitters.file_splitter import (
     FileSplitter,
-    DEFAULT_CHUNK_SIZE,
-    DEFAULT_CHUNK_OVERLAP
 )
 from mindsdb.integrations.handlers.web_handler.urlcrawl_helpers import get_all_websites
 from mindsdb.interfaces.knowledge_base.preprocessing.models import Document
@@ -44,12 +42,6 @@ class DocumentLoader:
         self.markdown_splitter = markdown_splitter
         self.file_loader_class = file_loader_class
         self.mysql_proxy = mysql_proxy
-
-        # Initialize text splitter for query results with default settings
-        self.query_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=DEFAULT_CHUNK_SIZE,
-            chunk_overlap=DEFAULT_CHUNK_OVERLAP
-        )
 
     def load_files(self, file_names: List[str]) -> Iterator[Document]:
         """Load and split documents from files"""

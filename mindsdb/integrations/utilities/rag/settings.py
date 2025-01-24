@@ -3,7 +3,6 @@ from typing import List, Union, Any, Optional, Dict
 
 from langchain_community.vectorstores.chroma import Chroma
 from langchain_community.vectorstores.pgvector import PGVector
-from langchain_community.tools.sql_database.prompt import QUERY_CHECKER as DEFAULT_QUERY_CHECKER_PROMPT_TEMPLATE
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
@@ -94,6 +93,25 @@ Output only a single better search query and nothing else like in the example.
 Here is the user input: {input}
 '''
 
+DEFAULT_METADATA_FILTERS_PROMPT_TEMPLATE = '''Construct a list of PostgreSQL metadata filters to filter documents in the database based on the user input.
+
+<< INSTRUCTIONS >>
+{format_instructions}
+
+RETURN ONLY THE FINAL JSON. DO NOT EXPLAIN, JUST RETURN THE FINAL JSON.
+
+<< TABLES YOU HAVE ACCESS TO >>
+
+{schema}
+
+<< EXAMPLES >>
+
+{examples}
+
+Here is the user input:
+{input}
+'''
+
 DEFAULT_SQL_PROMPT_TEMPLATE = '''
 Construct a valid {dialect} SQL query to select documents relevant to the user input.
 Source documents are found in the {source_table} table. You may need to join with other tables to get additional document metadata.
@@ -136,7 +154,6 @@ Columns:
         "description": "Metadata for the document chunk. Always select metadata and always join with the {source_table} table on the string metadata field 'original_row_id'"
     }}
 }}
-```
 
 {schema}
 
@@ -378,6 +395,13 @@ class MetadataSchema(BaseModel):
     columns: List[ColumnSchema] = Field(
         description="List of column schemas describing the metadata columns available for the table"
     )
+    join: str = Field(
+        description="SQL join string to join this table with source documents table",
+        default=''
+    )
+
+    class Config:
+        frozen = True
 
 
 class LLMExample(BaseModel):
@@ -394,19 +418,9 @@ class SQLRetrieverConfig(BaseModel):
         default_factory=LLMConfig,
         description="LLM configuration to use for generating the final SQL query for retrieval"
     )
-    sql_prompt_template: str = Field(
-        default=DEFAULT_SQL_PROMPT_TEMPLATE,
-        description="""Prompt template to generate the SQL query to execute against the vector database. Currently only pgvector is supported.
-        Has 'dialect', 'input', 'embeddings_table', 'source_table', 'embeddings', 'distance_function', 'schema', and 'examples' input variables.
-        """
-    )
-    query_checker_template: str = Field(
-        default=DEFAULT_QUERY_CHECKER_PROMPT_TEMPLATE,
-        description="Prompt template to use for double checking SQL queries before execution. Has 'query' and 'dialect' input variables."
-    )
-    query_retry_template: str = Field(
-        default=DEFAULT_QUERY_RETRY_PROMPT_TEMPLATE,
-        description="Prompt template to rewrite SQL query that failed. Has 'dialect', 'query', and 'error' input variables."
+    metadata_filters_prompt_template: str = Field(
+        default=DEFAULT_METADATA_FILTERS_PROMPT_TEMPLATE,
+        description="Prompt template to generate PostgreSQL metadata filters. Has 'format_instructions', 'schema', 'examples', and 'input' input variables"
     )
     num_retries: int = Field(
         default=DEFAULT_NUM_QUERY_RETRIES,
@@ -451,8 +465,13 @@ class SummarizationConfig(BaseModel):
 class RerankerConfig(BaseModel):
     model: str = DEFAULT_RERANKING_MODEL
     base_url: str = DEFAULT_LLM_ENDPOINT
-    filtering_threshold: float = 0.99
+    filtering_threshold: float = 0.5
     num_docs_to_keep: Optional[int] = None
+    max_concurrent_requests: int = 20
+    max_retries: int = 3
+    retry_delay: float = 1.0
+    early_stop: bool = True  # Whether to enable early stopping
+    early_stop_threshold: float = 0.8  # Confidence threshold for early stopping
 
 
 class MultiHopRetrieverConfig(BaseModel):

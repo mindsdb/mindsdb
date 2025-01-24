@@ -1,5 +1,5 @@
 from typing import List
-from mindsdb.api.executor import ResultSet
+from mindsdb.api.executor.sql_query.result_set import ResultSet
 
 
 class ExecuteAnswer:

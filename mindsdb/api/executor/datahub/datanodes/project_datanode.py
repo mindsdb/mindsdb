@@ -14,9 +14,6 @@ from mindsdb_sql_parser.ast import (
 from mindsdb.utilities.exception import EntityNotExistsError
 from mindsdb.api.executor.datahub.datanodes.datanode import DataNode
 from mindsdb.api.executor.datahub.classes.tables_row import TablesRow
-from mindsdb.api.executor.sql_query import SQLQuery
-from mindsdb.api.executor.utilities.sql import query_df
-from mindsdb.interfaces.query_context.context_controller import query_context_controller
 from mindsdb.utilities.partitioning import process_dataframe_in_partitions
 
 
@@ -52,7 +49,7 @@ class ProjectDataNode(DataNode):
         tables = self.project.get_tables()
         return table_name in tables
 
-    def get_table_columns(self, table_name):
+    def get_table_columns(self, table_name, schema_name=None):
         return [
             {'name': name}
             for name in self.project.get_columns(table_name)
@@ -122,28 +119,7 @@ class ProjectDataNode(DataNode):
 
             if self.project.get_view(query_table):
                 # this is the view
-
-                view_meta = self.project.query_view(query)
-
-                query_context_controller.set_context('view', view_meta['id'])
-
-                try:
-                    sqlquery = SQLQuery(
-                        view_meta['query_ast'],
-                        session=session
-                    )
-                    result = sqlquery.fetch(view='dataframe')
-
-                finally:
-                    query_context_controller.release_context('view', view_meta['id'])
-
-                if result['success'] is False:
-                    raise Exception(f"Cant execute view query: {view_meta['query_ast']}")
-                df = result['result']
-                # remove duplicated columns
-                df = df.loc[:, ~df.columns.duplicated()]
-
-                df = query_df(df, query, session=session)
+                df = self.project.query_view(query, session)
 
                 columns_info = [
                     {

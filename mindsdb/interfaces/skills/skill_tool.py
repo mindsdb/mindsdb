@@ -219,7 +219,6 @@ class SkillToolController:
         return build_retrieval_tool(tool, pred_args, skill)
 
     def _get_rag_query_function(self, skill: db.Skills):
-
         session_controller = self.get_command_executor().session
 
         def _answer_question(question: str) -> str:

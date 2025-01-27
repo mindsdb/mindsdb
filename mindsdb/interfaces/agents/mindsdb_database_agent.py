@@ -50,6 +50,12 @@ class MindsDBSQL(SQLDatabase):
         return self._sql_agent.get_usable_table_names()
 
     def get_table_info_no_throw(self, table_names: Optional[List[str]] = None) -> str:
+        for i in range(len(table_names)):
+            if '$START$' in table_names[i]:
+                table_names[i] = table_names[i].partition('$START$')[-1]
+            if '$END$' in table_names[i]:
+                table_names[i] = table_names[i].partition('$END$')[0]
+            table_names[i] = table_names[i].strip(' ')
         return self._sql_agent.get_table_info_safe(table_names)
 
     def run_no_throw(self, command: str, fetch: str = "all") -> str:

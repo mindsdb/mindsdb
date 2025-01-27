@@ -43,9 +43,14 @@ class MSGraphAPIDelegatedPermissionsManager:
         # Set the redirect URI based on the request origin.
         # If the request origin is 127.0.0.1 (localhost), replace it with localhost.
         # This is done because the only HTTP origin allowed in Microsoft Entra ID app registration is localhost.
-        request_origin = request.headers.get('ORIGIN') or (request.scheme + '://' + request.host)
-        if not request_origin:
-            raise AuthException('Request origin could not be determined!')
+        try:
+            request_origin = request.headers.get('ORIGIN') or (request.scheme + '://' + request.host)
+            if not request_origin:
+                raise AuthException('Request origin could not be determined!')
+        except RuntimeError:
+            # if it is outside of request context (streaming in agent)
+            request_origin = ''
+
         request_origin = request_origin.replace('127.0.0.1', 'localhost') if 'http://127.0.0.1' in request_origin else request_origin
         self.redirect_uri = request_origin + '/verify-auth'
 

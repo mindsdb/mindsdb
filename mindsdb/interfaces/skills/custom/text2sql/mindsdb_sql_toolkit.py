@@ -19,15 +19,16 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
                 "Input is an empty string, output is a comma-separated list of tables in the database. "
                 "Each table name in the list may be in one of two formats: database_name.table_name or "
                 "database_name.schema_name.table_name."
+                "If the table name is enclosed in backticks marks, then always use the table name with backticks marks in subsequent queries."
             )
         )
 
         info_sql_database_tool_description = (
-            "Input: A comma-separated list of tables. Output: Schema and sample rows for those tables. "
+            "Input: A comma-separated list of tables enclosed between the symbols $START$ and $END$. Output: Schema and sample rows for those tables. "
             f"Ensure tables exist by calling {list_sql_database_tool.name} first. "
             "Use this tool to investigate table schemas for needed columns. "
             "Get sample data with 'SELECT * FROM table LIMIT 3' before answering questions. "
-            "Example Input: table1, table2, table3"
+            "Example Input: $START$ table1, table2, table3 $END$"
         )
         info_sql_database_tool = InfoSQLDatabaseTool(
             name=f'sql_db_schema{prefix}',
@@ -63,6 +64,7 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
                  SELECT NOW() - INTERVAL 1 YEAR;
             6. Query Best Practices:
                - Always send only one query at a time.
+               - The input SQL query must end with a semicolon.
                - Query only necessary columns, not all.
                - Use only existing column names from correct tables.
                - Use database-specific syntax for date operations.

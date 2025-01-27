@@ -37,7 +37,7 @@ from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 from mindsdb.api.executor.command_executor import ExecuteCommands
 from mindsdb.utilities import log
 
-DEFAULT_BATCH_SIZE = 100  # Default batch size for vector store operations
+_DEFAULT_BATCH_SIZE = 100  # Default batch size for vector store operations
 
 logger = log.getLogger(__name__)
 
@@ -173,91 +173,6 @@ class KnowledgeBaseTable:
 
         self.insert(df)
 
-    def insert(self, df: pd.DataFrame):
-        """Insert dataframe to KB table."""
-        if df.empty:
-            return
-
-        # First adapt column names to identify content and metadata columns
-        adapted_df = self._adapt_column_names(df)
-        content_columns = self._kb.params.get('content_columns', [TableField.CONTENT.value])
-
-        # Convert DataFrame rows to documents, creating separate documents for each content column
-        raw_documents = []
-        for idx, row in adapted_df.iterrows():
-            base_metadata = self._parse_metadata(row.get(TableField.METADATA.value, {}))
-            provided_id = row.get(TableField.ID.value)
-
-            for col in content_columns:
-                content = row.get(col)
-                if content and str(content).strip():
-                    content_str = str(content)
-
-                    # Use provided_id directly if it exists, otherwise generate one
-                    doc_id = self._generate_document_id(content_str, col, provided_id)
-
-                    # Need provided ID to link chunks back to original source (e.g. database row).
-                    row_id = provided_id if provided_id else idx
-
-                    metadata = {
-                        **base_metadata,
-                        'original_row_id': str(row_id),
-                        'content_column': col,
-                        'content_type': col.split('_')[-1] if '_' in col else 'text'
-                    }
-
-                    raw_documents.append(Document(
-                        content=content_str,
-                        id=doc_id,
-                        metadata=metadata
-                    ))
-
-        # Apply preprocessing to all documents if preprocessor exists
-        if self.document_preprocessor:
-            processed_chunks = self.document_preprocessor.process_documents(raw_documents)
-        else:
-            processed_chunks = raw_documents  # Use raw documents if no preprocessing
-
-        if not processed_chunks:
-            logger.warning("No valid content found in any content columns")
-            return
-
-        # Get batch size from params or use default
-        batch_size = self._kb.params.get('batch_size', DEFAULT_BATCH_SIZE)
-
-        # Process chunks in batches
-        total_chunks = len(processed_chunks)
-        successful_chunks = 0
-        db_handler = self.get_vector_db()
-
-        for start_idx in range(0, total_chunks, batch_size):
-            end_idx = min(start_idx + batch_size, total_chunks)
-            batch_chunks = processed_chunks[start_idx:end_idx]
-
-            try:
-                # Convert batch of chunks to DataFrame
-                batch_df = pd.DataFrame([{
-                    TableField.CONTENT.value: chunk.content,
-                    TableField.ID.value: chunk.id,
-                    TableField.METADATA.value: chunk.metadata
-                } for chunk in batch_chunks])
-
-                # Calculate embeddings for this batch
-                batch_emb = self._df_to_embeddings(batch_df)
-                batch_df = pd.concat([batch_df, batch_emb], axis=1)
-
-                # Insert this batch
-                db_handler.do_upsert(self._kb.vector_database_table, batch_df)
-                successful_chunks += len(batch_chunks)
-                logger.debug(f"Successfully processed and inserted batch {start_idx}-{end_idx} out of {total_chunks} chunks")
-            except Exception as e:
-                logger.error(f"Error processing batch {start_idx}-{end_idx}: {str(e)}")
-                # Continue with next batch instead of failing completely
-                continue
-
-        if successful_chunks < total_chunks:
-            logger.warning(f"Only {successful_chunks} out of {total_chunks} chunks were successfully processed and inserted")
-
     def update_query(self, query: Update):
         # add embeddings to content in updated collumns
         query = copy.deepcopy(query)
@@ -334,6 +249,208 @@ class KnowledgeBaseTable:
         """
         db_handler = self.get_vector_db()
         db_handler.delete(self._kb.vector_database_table)
+
+    def insert(self, df: pd.DataFrame):
+        """Insert dataframe to KB table."""
+        if df.empty:
+            return
+
+        # First adapt column names to identify content and metadata columns
+        adapted_df = self._adapt_column_names(df)
+        content_columns = self._kb.params.get('content_columns', [TableField.CONTENT.value])
+
+        # Convert DataFrame rows to documents, creating separate documents for each content column
+        raw_documents = []
+        for idx, row in adapted_df.iterrows():
+            base_metadata = self._parse_metadata(row.get(TableField.METADATA.value, {}))
+            provided_id = row.get(TableField.ID.value)
+
+            for col in content_columns:
+                content = row.get(col)
+                if content and str(content).strip():
+                    content_str = str(content)
+
+                    # Use provided_id directly if it exists, otherwise generate one
+                    doc_id = self._generate_document_id(content_str, col, provided_id)
+
+                    # Need provided ID to link chunks back to original source (e.g. database row).
+                    row_id = provided_id if provided_id else idx
+
+                    metadata = {
+                        **base_metadata,
+                        'original_row_id': str(row_id),
+                        'content_column': col,
+                        'content_type': col.split('_')[-1] if '_' in col else 'text'
+                    }
+
+                    raw_documents.append(Document(
+                        content=content_str,
+                        id=doc_id,
+                        metadata=metadata
+                    ))
+
+        # Apply preprocessing to all documents if preprocessor exists
+        if self.document_preprocessor:
+            processed_chunks = self.document_preprocessor.process_documents(raw_documents)
+        else:
+            processed_chunks = raw_documents  # Use raw documents if no preprocessing
+
+        if not processed_chunks:
+            logger.warning("No valid content found in any content columns")
+            return
+
+        # Get batch size from params or use default
+        batch_size = self._kb.params.get('batch_size', _DEFAULT_BATCH_SIZE)
+
+        # Process chunks in batches
+        total_chunks = len(processed_chunks)
+        successful_chunks = 0
+        db_handler = self.get_vector_db()
+
+        for start_idx in range(0, total_chunks, batch_size):
+            end_idx = min(start_idx + batch_size, total_chunks)
+            batch_chunks = processed_chunks[start_idx:end_idx]
+
+            try:
+                # Convert batch of chunks to DataFrame
+                batch_df = pd.DataFrame([{
+                    TableField.CONTENT.value: chunk.content,
+                    TableField.ID.value: chunk.id,
+                    TableField.METADATA.value: chunk.metadata
+                } for chunk in batch_chunks])
+
+                # Calculate embeddings for this batch
+                batch_emb = self._df_to_embeddings(batch_df)
+                batch_df = pd.concat([batch_df, batch_emb], axis=1)
+
+                # Insert this batch
+                db_handler.do_upsert(self._kb.vector_database_table, batch_df)
+                successful_chunks += len(batch_chunks)
+                logger.debug(f"Successfully processed and inserted batch {start_idx}-{end_idx} out of {total_chunks} chunks")
+            except Exception as e:
+                logger.error(f"Error processing batch {start_idx}-{end_idx}: {str(e)}")
+                # Continue with next batch instead of failing completely
+                continue
+
+        if successful_chunks < total_chunks:
+            logger.warning(f"Only {successful_chunks} out of {total_chunks} chunks were successfully processed and inserted")
+
+    def _adapt_column_names(self, df: pd.DataFrame) -> pd.DataFrame:
+        '''
+        Convert input columns for vector db input
+        - id, content and metadata
+        '''
+        # Debug incoming data
+        logger.debug(f"Input DataFrame columns: {df.columns}")
+        logger.debug(f"Input DataFrame first row: {df.iloc[0].to_dict()}")
+
+        params = self._kb.params
+        columns = list(df.columns)
+
+        # -- prepare id --
+        id_column = params.get('id_column')
+        if id_column is not None and id_column not in columns:
+            id_column = None
+
+        if id_column is None and TableField.ID.value in columns:
+            id_column = TableField.ID.value
+
+        # Also check for case-insensitive 'id' column
+        if id_column is None:
+            column_map = {col.lower(): col for col in columns}
+            if 'id' in column_map:
+                id_column = column_map['id']
+
+        if id_column is not None:
+            columns.remove(id_column)
+            logger.debug(f"Using ID column: {id_column}")
+
+        # Create output dataframe
+        df_out = pd.DataFrame()
+
+        # Add ID if present
+        if id_column is not None:
+            df_out[TableField.ID.value] = df[id_column]
+            logger.debug(f"Added IDs: {df_out[TableField.ID.value].tolist()}")
+
+        # -- prepare content and metadata --
+        content_columns = params.get('content_columns')
+        metadata_columns = params.get('metadata_columns')
+
+        logger.debug(f"Processing with: content_columns={content_columns}, metadata_columns={metadata_columns}")
+
+        # Handle SQL query result columns
+        if content_columns:
+            # Ensure content columns are case-insensitive
+            column_map = {col.lower(): col for col in columns}
+            content_columns = [
+                column_map.get(col.lower(), col)
+                for col in content_columns
+            ]
+            logger.debug(f"Mapped content columns: {content_columns}")
+
+        if metadata_columns:
+            # Ensure metadata columns are case-insensitive
+            column_map = {col.lower(): col for col in columns}
+            metadata_columns = [
+                column_map.get(col.lower(), col)
+                for col in metadata_columns
+            ]
+            logger.debug(f"Mapped metadata columns: {metadata_columns}")
+
+        if content_columns is not None:
+            content_columns = list(set(content_columns).intersection(columns))
+            if len(content_columns) == 0:
+                raise ValueError(f'Content columns {params.get("content_columns")} not found in dataset: {columns}')
+
+            if metadata_columns is not None:
+                metadata_columns = list(set(metadata_columns).intersection(columns))
+            else:
+                # all the rest columns
+                metadata_columns = list(set(columns).difference(content_columns))
+
+        elif metadata_columns is not None:
+            metadata_columns = list(set(metadata_columns).intersection(columns))
+            # use all unused columns is content
+            content_columns = list(set(columns).difference(metadata_columns))
+        elif TableField.METADATA.value in columns:
+            metadata_columns = [TableField.METADATA.value]
+            content_columns = list(set(columns).difference(metadata_columns))
+        else:
+            # all columns go to content
+            content_columns = columns
+
+        # Add content columns directly (don't combine them)
+        for col in content_columns:
+            df_out[col] = df[col]
+
+        # Add metadata
+        if metadata_columns and len(metadata_columns) > 0:
+            def convert_row_to_metadata(row):
+                metadata = {}
+                for col in metadata_columns:
+                    value = row[col]
+                    # Convert numpy/pandas types to Python native types
+                    if pd.api.types.is_datetime64_any_dtype(value) or isinstance(value, pd.Timestamp):
+                        value = str(value)
+                    elif pd.api.types.is_integer_dtype(value):
+                        value = int(value)
+                    elif pd.api.types.is_float_dtype(value):
+                        value = float(value)
+                    elif pd.api.types.is_bool_dtype(value):
+                        value = bool(value)
+                    else:
+                        value = str(value)
+                    metadata[col] = value
+                return metadata
+
+            metadata_dict = df[metadata_columns].apply(convert_row_to_metadata, axis=1)
+            df_out[TableField.METADATA.value] = metadata_dict
+
+        logger.debug(f"Output DataFrame columns: {df_out.columns}")
+        logger.debug(f"Output DataFrame first row: {df_out.iloc[0].to_dict() if not df_out.empty else 'Empty'}")
+
+        return df_out
 
     def _replace_query_content(self, node, **kwargs):
         if isinstance(node, BinaryOperation):
@@ -533,123 +650,6 @@ class KnowledgeBaseTable:
 
         # Convert everything else to string
         return str(value)
-
-    def _adapt_column_names(self, df: pd.DataFrame) -> pd.DataFrame:
-        '''
-        Convert input columns for vector db input
-        - id, content and metadata
-        '''
-        # Debug incoming data
-        logger.debug(f"Input DataFrame columns: {df.columns}")
-        logger.debug(f"Input DataFrame first row: {df.iloc[0].to_dict()}")
-
-        params = self._kb.params
-        columns = list(df.columns)
-
-        # -- prepare id --
-        id_column = params.get('id_column')
-        if id_column is not None and id_column not in columns:
-            id_column = None
-
-        if id_column is None and TableField.ID.value in columns:
-            id_column = TableField.ID.value
-
-        # Also check for case-insensitive 'id' column
-        if id_column is None:
-            column_map = {col.lower(): col for col in columns}
-            if 'id' in column_map:
-                id_column = column_map['id']
-
-        if id_column is not None:
-            columns.remove(id_column)
-            logger.debug(f"Using ID column: {id_column}")
-
-        # Create output dataframe
-        df_out = pd.DataFrame()
-
-        # Add ID if present
-        if id_column is not None:
-            df_out[TableField.ID.value] = df[id_column]
-            logger.debug(f"Added IDs: {df_out[TableField.ID.value].tolist()}")
-
-        # -- prepare content and metadata --
-        content_columns = params.get('content_columns')
-        metadata_columns = params.get('metadata_columns')
-
-        logger.debug(f"Processing with: content_columns={content_columns}, metadata_columns={metadata_columns}")
-
-        # Handle SQL query result columns
-        if content_columns:
-            # Ensure content columns are case-insensitive
-            column_map = {col.lower(): col for col in columns}
-            content_columns = [
-                column_map.get(col.lower(), col)
-                for col in content_columns
-            ]
-            logger.debug(f"Mapped content columns: {content_columns}")
-
-        if metadata_columns:
-            # Ensure metadata columns are case-insensitive
-            column_map = {col.lower(): col for col in columns}
-            metadata_columns = [
-                column_map.get(col.lower(), col)
-                for col in metadata_columns
-            ]
-            logger.debug(f"Mapped metadata columns: {metadata_columns}")
-
-        if content_columns is not None:
-            content_columns = list(set(content_columns).intersection(columns))
-            if len(content_columns) == 0:
-                raise ValueError(f'Content columns {params.get("content_columns")} not found in dataset: {columns}')
-
-            if metadata_columns is not None:
-                metadata_columns = list(set(metadata_columns).intersection(columns))
-            else:
-                # all the rest columns
-                metadata_columns = list(set(columns).difference(content_columns))
-
-        elif metadata_columns is not None:
-            metadata_columns = list(set(metadata_columns).intersection(columns))
-            # use all unused columns is content
-            content_columns = list(set(columns).difference(metadata_columns))
-        elif TableField.METADATA.value in columns:
-            metadata_columns = [TableField.METADATA.value]
-            content_columns = list(set(columns).difference(metadata_columns))
-        else:
-            # all columns go to content
-            content_columns = columns
-
-        # Add content columns directly (don't combine them)
-        for col in content_columns:
-            df_out[col] = df[col]
-
-        # Add metadata
-        if metadata_columns and len(metadata_columns) > 0:
-            def convert_row_to_metadata(row):
-                metadata = {}
-                for col in metadata_columns:
-                    value = row[col]
-                    # Convert numpy/pandas types to Python native types
-                    if pd.api.types.is_datetime64_any_dtype(value) or isinstance(value, pd.Timestamp):
-                        value = str(value)
-                    elif pd.api.types.is_integer_dtype(value):
-                        value = int(value)
-                    elif pd.api.types.is_float_dtype(value):
-                        value = float(value)
-                    elif pd.api.types.is_bool_dtype(value):
-                        value = bool(value)
-                    else:
-                        value = str(value)
-                    metadata[col] = value
-                return metadata
-
-            metadata_dict = df[metadata_columns].apply(convert_row_to_metadata, axis=1)
-            df_out[TableField.METADATA.value] = metadata_dict
-
-        logger.debug(f"Output DataFrame columns: {df_out.columns}")
-        logger.debug(f"Output DataFrame first row: {df_out.iloc[0].to_dict() if not df_out.empty else 'Empty'}")
-
-        return df_out
 
 
 class KnowledgeBaseController:

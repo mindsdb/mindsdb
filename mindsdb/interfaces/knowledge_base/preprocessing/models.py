@@ -1,6 +1,6 @@
 from enum import Enum
 
-from typing import List, Dict, Any, Optional, Union, Callable
+from typing import List, Dict, Any, Optional, Union
 
 
 from pydantic import BaseModel, Field, model_validator
@@ -41,17 +41,17 @@ class TextChunkingConfig(BaseModel):
     """Configuration for text chunking preprocessor using Pydantic"""
     chunk_size: int = Field(
         default=1000,
-        description="The target size of each text chunk",
+        description="The target size of each text chunk in tokens",
         gt=0
     )
     chunk_overlap: int = Field(
         default=200,
-        description="The number of characters to overlap between chunks",
+        description="The number of tokens to overlap between chunks",
         ge=0
     )
-    length_function: Callable = Field(
-        default=len,
-        description="Function to measure text length"
+    encoding_name: str = Field(
+        default="cl100k_base",
+        description="The tiktoken encoding to use for token counting. Use either encoding_name (e.g. cl100k_base) or model_name (e.g. gpt-4)"
     )
     separators: List[str] = Field(
         default=["\n\n", "\n", " ", ""],

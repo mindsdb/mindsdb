@@ -4,11 +4,11 @@ from mindsdb.integrations.libs.const import HANDLER_CONNECTION_ARG_TYPE as ARG_T
 
 
 creation_args = OrderedDict(
-    openai_api_key={
-        'type': ARG_TYPE.STR,
-        'description': 'Key for TogetherAI API.',
-        'required': False,
-        'label': 'TogetherAI API key',
-        'secret': True
+    togetherai_api_key={
+        "type": ARG_TYPE.STR,
+        "description": "Key for TogetherAI API.",
+        "required": False,
+        "label": "TogetherAI API key",
+        "secret": True,
     }
 )

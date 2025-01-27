@@ -47,15 +47,7 @@ class TogetherAIHandler(OpenAIHandler):
         """
 
         try:
-            list_model_endpoint = f"{client.base_url}/models"
-            headers = {
-                "accept": "application/json",
-                "authorization": f"Bearer {client.api_key}",
-            }
-            response = requests.get(url=list_model_endpoint, headers=headers)
-
-            if response.status_code == 401:
-                raise AuthenticationError(message="Invalid API key")
+            TogetherAIHandler._get_supported_models(client.api_key, client.base_url)
 
         except Exception as e:
             raise Exception(f"Something went wrong: {e}")
@@ -78,7 +70,7 @@ class TogetherAIHandler(OpenAIHandler):
         api_key = connection_args.get("togetherai_api_key")
         if api_key is not None:
             api_base = connection_args.get("api_base") or os.environ.get(
-                "togetherai_BASE", togetherai_handler_config.BASE_URL
+                "TOGETHERAI_API_BASE", togetherai_handler_config.BASE_URL
             )
             client = self._get_client(api_key=api_key, base_url=api_base)
             TogetherAIHandler._check_client_connection(client)
@@ -138,9 +130,9 @@ class TogetherAIHandler(OpenAIHandler):
         connection_args = engine_storage.get_connection_args()
         api_key = get_api_key("togetherai", args, engine_storage=engine_storage)
         api_base = connection_args.get("api_base") or os.environ.get(
-            "togetherai_BASE", togetherai_handler_config.BASE_URL
+            "TOGETHERAI_API_BASE", togetherai_handler_config.BASE_URL
         )
-        client = OpenAIHandler._get_client(api_key=api_key, base_url=api_base)
+        client = TogetherAIHandler._get_client(api_key=api_key, base_url=api_base)
         TogetherAIHandler._check_client_connection(client)
 
     def create(self, target, args: Dict = None, **kwargs: Any) -> None:
@@ -231,6 +223,8 @@ class TogetherAIHandler(OpenAIHandler):
             model_list = response.json()
             chat_completion_models = list(map(lambda model: model["id"], model_list))
             return chat_completion_models
+        elif response.status_code == 401:
+            raise AuthenticationError(message="Invalid API key")
         else:
             raise Exception(f"Failed to get supported models: {response.text}")
 

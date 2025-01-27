@@ -21,7 +21,7 @@ Create an AI engine from the [TogetherAI handler](https://github.com/mindsdb/min
 
 ```sql
 CREATE ML_ENGINE togetherai_engine
-FROM openai
+FROM togetherai
 USING
       togetherai_api_key = 'api-key-value';
 ```
@@ -29,12 +29,12 @@ USING
 Create a model using `togetherai_engine` as an engine.
 
 ```sql
-CREATE MODEL openai_model
+CREATE MODEL togetherai_model
 PREDICT target_column
 USING
       engine = 'togetherai_engine',  -- engine name as created via CREATE ML_ENGINE
       mode = 'mode_name', -- optional, mode to run the model in
-      model_name = 'openai_model_name',  -- optional with default value of meta-llama/Llama-3.2-3B-Instruct-Turbo
+      model_name = 'meta-llama/Llama-3.2-3B-Instruct-Turbo',  -- optional with default value of meta-llama/Llama-3.2-3B-Instruct-Turbo
       question_column = 'question',  -- optional, column name that stores user input
       context_column = 'context',  -- optional, column that stores context of the user input
       prompt_template = 'input your query here', -- optional, user provides instructions to the model here
@@ -73,9 +73,9 @@ Check available models: [TogetherAI Models](https://www.together.ai/models)
 <Warning>
 `Authentication Error`
 
-* **Symptoms**: Failure to authenticate to the OpenAI API.
+* **Symptoms**: Failure to authenticate to the TogetherAI API.
 * **Checklist**:
-    1. Make sure that your OpenAI account is active.
+    1. Make sure that your TogetherAI account is active.
     2. Confirm that your API key is correct.
     3. Ensure that your API key has not been revoked.
     4. Ensure that you have not exceeded the API usage or rate limit.
@@ -92,18 +92,18 @@ Check available models: [TogetherAI Models](https://www.together.ai/models)
             ```sql
             SELECT input.text, output.sentiment
             FROM integration.travel data AS input
-            JOIN openai_engine AS output
+            JOIN togetherai_model AS output
             ```
         * Incorrect: 
             ```sql
             SELECT input.text, output.sentiment
             FROM integration.'travel data' AS input
-            JOIN openai_engine AS output
+            JOIN togetherai_model AS output
             ```
         * Correct:  
             ```sql 
             SELECT input.text, output.sentiment
             FROM integration.`travel data` AS input
-            JOIN openai_engine AS output
+            JOIN togetherai_model AS output
             ```
 </Warning>

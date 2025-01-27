@@ -7,7 +7,7 @@ class TogetherAIConfig(BaseSettings):
 
     Attributes
     ----------
-    
+
     BASE_URL : str
         Base URL for the TogetherAI API.
     DEFAULT_MODEL : str
@@ -23,10 +23,10 @@ class TogetherAIConfig(BaseSettings):
     DEFAULT_EMBEDDING_MODEL: str = "togethercomputer/m2-bert-80M-32k-retrieval"
     DEFAULT_MODE: str = "default"
     SUPPORTED_MODES: list[str] = [
-        'default',
-        'conversational',
-        'conversational-full',
-        'embedding',
+        "default",
+        "conversational",
+        "conversational-full",
+        "embedding",
     ]
 
 

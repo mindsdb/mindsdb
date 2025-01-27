@@ -168,24 +168,57 @@ class LangchainEmbeddingHandler(BaseMLEngine):
         # unquote the column names -- removing surrounding `
         cols_dfs = [col.strip("`") for col in df.columns.tolist()]
         df.columns = cols_dfs
+
         # if input_columns is an empty list, use all the columns
         input_columns = user_args.get("input_columns") or df.columns.tolist()
+
         # check all the input columns are in the df
-        if not all(
-            # ignore surrounding ` in the column names when checking
-            [col in cols_dfs for col in input_columns]
-        ):
+        if not all([col in cols_dfs for col in input_columns]):
             raise Exception(
                 f"Input columns {input_columns} not found in the input dataframe. Available columns are {df.columns}"
             )
 
-        # convert each row into a document
-        df_texts = df[input_columns].apply(self.row_to_document, axis=1)
-        embeddings = model.embed_documents(df_texts.tolist())
+        # Get batch size from model or use default
+        batch_size = getattr(model, 'batch_size', 32)
+
+        # Process in batches to avoid memory issues
+        all_embeddings = []
+        total_rows = len(df)
+
+        for start_idx in range(0, total_rows, batch_size):
+            end_idx = min(start_idx + batch_size, total_rows)
+            batch_df = df.iloc[start_idx:end_idx]
+
+            # convert batch rows into documents
+            batch_texts = batch_df[input_columns].apply(self.row_to_document, axis=1)
+
+            try:
+                # get embeddings for this batch
+                batch_embeddings = model.embed_documents(batch_texts.tolist())
+                all_embeddings.extend(batch_embeddings)
+            except Exception:
+                # If batch fails, try one by one
+                batch_embeddings = []
+                for text in batch_texts:
+                    try:
+                        embedding = model.embed_documents([text])[0]
+                        batch_embeddings.append(embedding)
+                    except Exception as inner_e:
+                        # If single document fails, log error and use empty embedding
+                        import logging
+                        logging.error(f"Error embedding document at index {start_idx + len(batch_embeddings)}: {str(inner_e)}")
+                        # Use empty embedding of correct size
+                        if batch_embeddings:
+                            # Use same size as successful embeddings
+                            empty_embedding = [0.0] * len(batch_embeddings[0])
+                        else:
+                            # Use default size for sparse embeddings
+                            empty_embedding = "{}/30522"
+                        batch_embeddings.append(empty_embedding)
+                all_embeddings.extend(batch_embeddings)
 
         # create a new dataframe with the embeddings
-        df_embeddings = df.copy().assign(**{target: embeddings})
-
+        df_embeddings = df.copy().assign(**{target: all_embeddings})
         return df_embeddings
 
     def row_to_document(self, row: pd.Series) -> str:

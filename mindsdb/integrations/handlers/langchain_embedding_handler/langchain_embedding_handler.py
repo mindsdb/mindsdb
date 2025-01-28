@@ -173,7 +173,6 @@ class LangchainEmbeddingHandler(BaseMLEngine):
         input_columns = user_args.get("input_columns") or df.columns.tolist()
 
         # check all the input columns are in the df
-       
         # ignore surrounding ` in the column names when checking
         if not all([col in cols_dfs for col in input_columns]):
             raise Exception(
@@ -206,17 +205,11 @@ class LangchainEmbeddingHandler(BaseMLEngine):
                         embedding = model.embed_documents([text])[0]
                         batch_embeddings.append(embedding)
                     except Exception as inner_e:
-                        # If single document fails, log error and use empty embedding
+                        # If single document fails, log error
                         import logging
                         logging.error(f"Error embedding document at index {start_idx + len(batch_embeddings)}: {str(inner_e)}")
-                        # Use empty embedding of correct size
-                        if batch_embeddings:
-                            # Use same size as successful embeddings
-                            empty_embedding = [0.0] * len(batch_embeddings[0])
-                        else:
-                            # Use default size for sparse embeddings
-                            empty_embedding = "{}/30522"
-                        batch_embeddings.append(empty_embedding)
+                        # Raise the error since we can't determine the correct embedding format/size
+                        raise Exception(f"Failed to generate embedding for document. Original error: {str(inner_e)}")
                 all_embeddings.extend(batch_embeddings)
 
         # create a new dataframe with the embeddings

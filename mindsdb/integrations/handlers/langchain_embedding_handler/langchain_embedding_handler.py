@@ -181,14 +181,17 @@ class LangchainEmbeddingHandler(BaseMLEngine):
 
         # Get batch size from model or use default
         batch_size = getattr(model, 'batch_size', 32)
+        logger.info(f"Processing embeddings with batch size: {batch_size}")
 
         # Process in batches to avoid memory issues
         all_embeddings = []
         total_rows = len(df)
+        logger.info(f"Starting batch processing for {total_rows} documents")
 
         for start_idx in range(0, total_rows, batch_size):
             end_idx = min(start_idx + batch_size, total_rows)
             batch_df = df.iloc[start_idx:end_idx]
+            logger.debug(f"Processing batch {start_idx//batch_size + 1}/{(total_rows + batch_size - 1)//batch_size}: rows {start_idx} to {end_idx}")
 
             # convert batch rows into documents
             batch_texts = batch_df[input_columns].apply(self.row_to_document, axis=1)
@@ -197,20 +200,24 @@ class LangchainEmbeddingHandler(BaseMLEngine):
                 # get embeddings for this batch
                 batch_embeddings = model.embed_documents(batch_texts.tolist())
                 all_embeddings.extend(batch_embeddings)
-            except Exception:
+                logger.debug(f"Successfully processed batch of {len(batch_embeddings)} embeddings")
+            except Exception as e:
+                logger.warning(f"Batch processing failed, falling back to individual processing. Error: {str(e)}")
                 # If batch fails, try one by one
                 batch_embeddings = []
-                for text in batch_texts:
+                for i, text in enumerate(batch_texts):
                     try:
                         embedding = model.embed_documents([text])[0]
                         batch_embeddings.append(embedding)
+                        logger.debug(f"Successfully processed individual document {start_idx + i}")
                     except Exception as inner_e:
                         # If single document fails, log error
-                        import logging
-                        logging.error(f"Error embedding document at index {start_idx + len(batch_embeddings)}: {str(inner_e)}")
+                        logger.error(f"Error embedding document at index {start_idx + len(batch_embeddings)}: {str(inner_e)}")
                         # Raise the error since we can't determine the correct embedding format/size
                         raise Exception(f"Failed to generate embedding for document. Original error: {str(inner_e)}")
                 all_embeddings.extend(batch_embeddings)
+
+        logger.info(f"Completed processing {len(all_embeddings)} embeddings")
 
         # create a new dataframe with the embeddings
         df_embeddings = df.copy().assign(**{target: all_embeddings})

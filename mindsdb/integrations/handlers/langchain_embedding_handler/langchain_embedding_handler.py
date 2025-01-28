@@ -173,6 +173,8 @@ class LangchainEmbeddingHandler(BaseMLEngine):
         input_columns = user_args.get("input_columns") or df.columns.tolist()
 
         # check all the input columns are in the df
+       
+        # ignore surrounding ` in the column names when checking
         if not all([col in cols_dfs for col in input_columns]):
             raise Exception(
                 f"Input columns {input_columns} not found in the input dataframe. Available columns are {df.columns}"

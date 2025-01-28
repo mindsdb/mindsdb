@@ -319,44 +319,55 @@ class TextChunkingPreprocessor(DocumentPreprocessor):
 
     def process_documents(self, documents: List[Document]) -> List[ProcessedChunk]:
         """Process documents into chunks with metadata"""
+        logger.info(f"Starting document preprocessing for {len(documents)} documents")
         processed_chunks = []
-        for doc in documents:
+        total_chars = sum(len(doc.content) for doc in documents)
+        logger.info(f"Total content size: {total_chars} characters")
+
+        failed_docs = 0
+        for i, doc in enumerate(documents):
             try:
                 # Split document into chunks
                 chunks = self._split_document(doc)
+                logger.debug(f"Document {i+1}/{len(documents)} split into {len(chunks)} chunks")
 
-                # Process each chunk
-                for i, chunk in enumerate(chunks):
+                for chunk_idx, chunk in enumerate(chunks):
+                    # Generate chunk ID
                     chunk_id = self._generate_chunk_id(
                         chunk.content,
-                        chunk_index=i,
+                        chunk_idx,
                         provided_id=doc.id
                     )
 
-                    # Create metadata for the chunk
-                    chunk_metadata = chunk.metadata or {}
-                    chunk_metadata.update({
-                        'source': self._get_source(),
-                        'metadata': {
-                            'original_doc_id': doc.id,
-                            'chunk_index': i,
-                            'total_chunks': len(chunks)
-                        }
+                    # Prepare metadata
+                    metadata = chunk.metadata or {}
+                    metadata.update({
+                        "original_doc_id": doc.id,
+                        "chunk_index": chunk_idx,
+                        "total_chunks": len(chunks)
                     })
 
-                    # Create processed chunk
-                    processed_chunk = ProcessedChunk(
-                        id=chunk_id,
-                        content=chunk.content,
-                        metadata=chunk_metadata,
-                        embeddings=None  # Embeddings will be added later
+                    processed_chunks.append(
+                        ProcessedChunk(
+                            id=chunk_id,
+                            content=chunk.content,
+                            metadata=metadata
+                        )
                     )
-                    processed_chunks.append(processed_chunk)
-
             except Exception as e:
-                logger.error(f"Error processing document {doc.id}: {str(e)}")
+                failed_docs += 1
+                doc_id = doc.id if doc.id else f"document_{i+1}"
+                logger.error(f"Error processing document {doc_id}: {str(e)}")
                 continue
 
+        if failed_docs > 0:
+            logger.warning(f"Failed to process {failed_docs} out of {len(documents)} documents")
+
+        if not processed_chunks:
+            raise Exception(f"No chunks were created from {len(documents)} documents. Check document content and chunking configuration.")
+
+        logger.info(f"Preprocessing complete. Created {len(processed_chunks)} chunks from {len(documents)-failed_docs} documents")
+        logger.info(f"Average chunks per document: {len(processed_chunks)/(len(documents)-failed_docs):.2f}")
         return processed_chunks
 
 

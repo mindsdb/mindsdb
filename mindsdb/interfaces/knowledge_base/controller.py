@@ -308,10 +308,11 @@ class KnowledgeBaseTable:
         db_handler = self.get_vector_db()
 
         logger.info(f"Starting batch processing for {len(df)} rows with batch size {batch_size}")
+        logger.info(f"Document preprocessing complete. Total chunks to process: {total_chunks}")
         for start_idx in range(0, total_chunks, batch_size):
             end_idx = min(start_idx + batch_size, total_chunks)
             batch_chunks = processed_chunks[start_idx:end_idx]
-            logger.debug(f"Processing batch {start_idx//batch_size + 1}/{(len(df) + batch_size - 1)//batch_size}: rows {start_idx} to {end_idx}")
+            logger.debug(f"Processing chunk batch {start_idx//batch_size + 1}/{(total_chunks + batch_size - 1)//batch_size}: chunks {start_idx} to {end_idx}")
 
             try:
                 # Convert batch of chunks to DataFrame
@@ -324,21 +325,22 @@ class KnowledgeBaseTable:
                 # Calculate embeddings for this batch
                 batch_emb = self._df_to_embeddings(batch_df)
                 batch_df = pd.concat([batch_df, batch_emb], axis=1)
-                logger.debug(f"Successfully generated embeddings for batch of {len(batch_emb)} documents")
+                logger.debug(f"Generated embeddings for batch of {len(batch_df)} chunks")
 
                 # Insert this batch
                 db_handler.do_upsert(self._kb.vector_database_table, batch_df)
                 logger.debug("Successfully inserted batch into vector store")
                 successful_chunks += len(batch_chunks)
-                logger.debug(f"Successfully processed and inserted batch {start_idx}-{end_idx} out of {total_chunks} chunks")
+                logger.info(f"Progress: {successful_chunks}/{total_chunks} chunks processed ({(successful_chunks/total_chunks)*100:.1f}%)")
             except Exception as e:
-                logger.error(f"Error processing batch {start_idx}-{end_idx}: {str(e)}")
+                logger.error(f"Failed to process batch {start_idx}-{end_idx}: {str(e)}")
                 # Continue with next batch instead of failing completely
                 continue
 
         if successful_chunks < total_chunks:
             logger.warning(f"Only {successful_chunks} out of {total_chunks} chunks were successfully processed and inserted")
-        logger.info(f"Successfully completed batch processing for {len(df)} rows")
+        else:
+            logger.info(f"Successfully completed processing all {total_chunks} chunks")
 
     def _adapt_column_names(self, df: pd.DataFrame) -> pd.DataFrame:
         '''

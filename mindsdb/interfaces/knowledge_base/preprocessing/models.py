@@ -1,6 +1,6 @@
 from enum import Enum
 
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional, Union, Callable
 
 
 from pydantic import BaseModel, Field, model_validator
@@ -48,6 +48,11 @@ class TextChunkingConfig(BaseModel):
         default=200,
         description="The number of tokens to overlap between chunks",
         ge=0
+    )
+    # todo leaving in for now, removing it causing errors in sdk
+    length_function: Callable = Field(
+        default=len,
+        description="Function to measure text length"
     )
     encoding_name: str = Field(
         default="cl100k_base",

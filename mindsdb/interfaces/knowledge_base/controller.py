@@ -316,7 +316,7 @@ class KnowledgeBaseTable:
                 batch_df = pd.DataFrame([{
                     TableField.CONTENT.value: chunk.content,
                     TableField.ID.value: chunk.id,
-                    TableField.METADATA.value: chunk.metadata
+                    TableField.METADATA.value: self._flatten_metadata(chunk.metadata)
                 } for chunk in batch_chunks])
 
                 # Calculate embeddings for this batch
@@ -620,6 +620,22 @@ class KnowledgeBaseTable:
 
         id_string = f"content={content}_column={content_column}"
         return hashlib.sha256(id_string.encode()).hexdigest()
+
+    def _flatten_metadata(self, metadata: dict) -> dict:
+        """Flatten nested metadata dictionaries and convert values to primitive types for ChromaDB compatibility."""
+        flattened = {}
+        for key, value in metadata.items():
+            if isinstance(value, dict):
+                # Flatten nested dict with dot notation
+                for k, v in value.items():
+                    flattened[f"{key}.{k}"] = str(v)
+            else:
+                # Convert to primitive type
+                if isinstance(value, (int, float, bool)):
+                    flattened[key] = value
+                else:
+                    flattened[key] = str(value)
+        return flattened
 
     def _convert_metadata_value(self, value):
         """

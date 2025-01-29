@@ -57,3 +57,9 @@ opentelemetry-exporter-otlp==1.27.0
 opentelemetry-instrumentation-requests==0.48b0
 opentelemetry-instrumentation-flask==0.48b0
 opentelemetry-distro==0.48b0
+
+# files reading
+pymupdf
+filetype
+charset-normalizer
+openpyxl # used by pandas to read txt files

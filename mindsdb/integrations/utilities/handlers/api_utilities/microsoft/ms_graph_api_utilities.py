@@ -131,7 +131,8 @@ class MSGraphAPIBaseClient:
         response = self._make_request(api_url, params)
 
         # If the response content is a binary file or a TSV file, return the raw content.
-        if response.headers["Content-Type"] in ("application/octet-stream", "text/tab-separated-values"):
+        if response.headers["Content-Type"] in ("application/octet-stream", "text/plain",
+                                                "text/tab-separated-values", "application/pdf"):
             return response.content
         # Otherwise, return the JSON content.
         else:

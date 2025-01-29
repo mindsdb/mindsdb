@@ -274,8 +274,13 @@ class SQLAgent:
         try:
             ret = self._call_engine(command)
             sample_rows = ret.data.to_lists()
+
+            def truncate_value(val):
+                str_val = str(val)
+                return str_val if len(str_val) < 100 else (str_val[:100] + '...')
+
             sample_rows = list(
-                map(lambda ls: [str(i) if len(str(i)) < 100 else str[:100] + '...' for i in ls], sample_rows))
+                map(lambda row: [truncate_value(value) for value in row], sample_rows))
             sample_rows_str = "\n" + "\n".join(["\t".join(row) for row in sample_rows])
         except Exception as e:
             logger.warning(e)

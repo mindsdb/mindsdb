@@ -713,10 +713,6 @@ class KnowledgeBaseController:
                         vector_db_params['vector_size'] = vector_size
                 vector_db_name = self._create_persistent_pgvector(vector_db_params)
 
-                # create table in vectordb before creating KB
-                self.session.datahub.get(vector_db_name).integration_handler.create_table(
-                    vector_table_name
-                )
             else:
                 # create chroma db with same name
                 vector_table_name = "default_collection"
@@ -728,6 +724,10 @@ class KnowledgeBaseController:
         else:
             vector_db_name, vector_table_name = storage.parts
 
+        # create table in vectordb before creating KB
+        self.session.datahub.get(vector_db_name).integration_handler.create_table(
+            vector_table_name
+        )
         vector_database_id = self.session.integration_controller.get(vector_db_name)['id']
 
         # Store sparse vector settings in params if specified

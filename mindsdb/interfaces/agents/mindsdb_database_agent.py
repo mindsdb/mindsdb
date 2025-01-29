@@ -66,4 +66,5 @@ class MindsDBSQL(SQLDatabase):
         return self._sql_agent.get_table_info_safe(table_names)
 
     def run_no_throw(self, command: str, fetch: str = "all") -> str:
+        command = extract_essential(command)
         return self._sql_agent.query_safe(command)

@@ -24,40 +24,36 @@ def split_table_name(table_name: str) -> List[str]:
         List[str]: parts of table identifier like ['database', 'schema', 'table']
 
     Example:
-        Input: 'aaa.bbb', Output: ['aaa', 'bbb']
-        Input: '`aaa.bbb`', Output: ['aaa', 'bbb']
-        Input: '`aaa.`bbb``', Output: ['aaa', 'bbb']
-        Input: 'aaa.bbb.ccc', Output: ['aaa', 'bbb', 'ccc']
-        Input: '`aaa.bbb.ccc`', Output: ['aaa', 'bbb', 'ccc']
-        Input: '`aaa.`bbb.ccc``', Output: ['aaa', 'bbb.ccc']
-        Input: 'aaa.`bbb.ccc`', Output: ['aaa', 'bbb.ccc']
-        Input: 'aaa.`bbb.ccc`', Output: ['aaa', 'bbb.ccc']
-        Input: '`` aaa.`bbb.ccc``  \n`', Output: ['aaa', 'bbb.ccc']
+        'input': '`aaa`.`bbb.ccc`', 'output': ['aaa', 'bbb.ccc']
+        'input': '`aaa`.`bbb`.`ccc`', 'output': ['aaa', 'bbb', 'ccc']
+        'input': 'aaa.bbb', 'output': ['aaa', 'bbb']
+        'input': '`aaa.bbb`', 'output': ['aaa.bbb']
+        'input': '`aaa.bbb.ccc`', 'output': ['aaa.bbb.ccc']
+        'input': 'aaa.`bbb`', 'output': ['aaa', 'bbb']
+        'input': 'aaa.bbb.ccc', 'output': ['aaa', 'bbb', 'ccc']
+        'input': 'aaa.`bbb.ccc`', 'output': ['aaa', 'bbb.ccc']
+        'input': '`aaa`.`bbb.ccc`', 'output': ['aaa', 'bbb.ccc']
     """
-    table_name = table_name.strip(' "\'\n\r')
-    while table_name.startswith('`') and table_name.endswith('`'):
-        table_name = table_name[1:-1]
-        table_name = table_name.strip(' "\'\n\r')
-
     result = []
-    part = []
-    inside_quotes = False
+    current = ''
+    in_backticks = False
 
-    for char in table_name:
-        if char == '`':
-            inside_quotes = not inside_quotes
-            continue
-
-        if char == '.' and not inside_quotes:
-            result.append(''.join(part))
-            part = []
+    i = 0
+    while i < len(table_name):
+        if table_name[i] == '`':
+            in_backticks = not in_backticks
+        elif table_name[i] == '.' and not in_backticks:
+            if current:
+                result.append(current.strip('`'))
+                current = ''
         else:
-            part.append(char)
+            current += table_name[i]
+        i += 1
 
-    if part:
-        result.append(''.join(part))
+    if current:
+        result.append(current.strip('`'))
 
-    return [x for x in result if len(x) > 0]
+    return result
 
 
 class SQLAgent:
@@ -208,12 +204,15 @@ class SQLAgent:
 
             # Some LLMs (e.g. gpt-4o) may include backticks or quotes when invoking tools.
             table_parts = split_table_name(table_name)
+            if len(table_parts) == 1:
+                # most likely LLM enclosed all table name in backticks `database.table`
+                table_parts = split_table_name(table_name)
 
             # resolved table
             table_identifier = tables_idx.get(tuple(table_parts))
 
             if table_identifier is None:
-                raise ValueError(f"Table {table} not found in database")
+                raise ValueError(f"Table {table} not found in the database")
             tables.append(table_identifier)
 
         return tables

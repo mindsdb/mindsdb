@@ -2,7 +2,9 @@ import json
 from concurrent.futures import as_completed, TimeoutError
 from typing import Dict, Iterable, List, Optional
 from uuid import uuid4
+import queue
 import re
+import threading
 import numpy as np
 import pandas as pd
 
@@ -14,6 +16,7 @@ from langchain_community.chat_models import (
     ChatLiteLLM,
     ChatOllama)
 from langchain_core.agents import AgentAction, AgentStep
+from langchain_core.callbacks.base import BaseCallbackHandler
 
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langchain_core.messages.base import BaseMessage
@@ -26,6 +29,8 @@ from mindsdb.integrations.handlers.openai_handler.constants import (
 from mindsdb.integrations.libs.llm.utils import get_llm_config
 from mindsdb.integrations.utilities.handler_utils import get_api_key
 from mindsdb.integrations.utilities.rag.settings import DEFAULT_RAG_PROMPT_TEMPLATE
+from mindsdb.interfaces.agents.event_dispatch_callback_handler import EventDispatchCallbackHandler
+from mindsdb.interfaces.agents.constants import AGENT_CHUNK_POLLING_INTERVAL_SECONDS
 from mindsdb.utilities import log
 from mindsdb.utilities.context_executor import ContextThreadPoolExecutor
 from mindsdb.interfaces.storage import db
@@ -575,6 +580,38 @@ AI: {response}"""
         chunk["trace_id"] = self.langfuse_client_wrapper.get_trace_id()
         return chunk
 
+    def _stream_agent_executor(self, agent_executor: AgentExecutor, prompt: str, callbacks: List[BaseCallbackHandler]):
+        chunk_queue = queue.Queue()
+        # Add event dispatch callback handler only to streaming completions.
+        event_dispatch_callback_handler = EventDispatchCallbackHandler(chunk_queue)
+        callbacks.append(event_dispatch_callback_handler)
+        stream_iterator = agent_executor.stream(prompt, config={'callbacks': callbacks})
+
+        agent_executor_finished_event = threading.Event()
+
+        def stream_worker():
+            try:
+                for chunk in stream_iterator:
+                    chunk_queue.put(chunk)
+            finally:
+                # Wrap in try/finally to always set the thread event even if there's an exception.
+                agent_executor_finished_event.set()
+
+        # Enqueue Langchain agent streaming chunks in a separate thread to not block event chunks.
+        executor_stream_thread = threading.Thread(target=stream_worker, daemon=True)
+        executor_stream_thread.start()
+
+        while not agent_executor_finished_event.is_set():
+            try:
+                chunk = chunk_queue.get(block=True, timeout=AGENT_CHUNK_POLLING_INTERVAL_SECONDS)
+            except queue.Empty:
+                continue
+            logger.debug(f'Processing streaming chunk {chunk}')
+            processed_chunk = self.process_chunk(chunk)
+            logger.info(f'Processed chunk: {processed_chunk}')
+            yield self.add_chunk_metadata(processed_chunk)
+            chunk_queue.task_done()
+
     def stream_agent(self, df: pd.DataFrame, agent_executor: AgentExecutor, args: Dict) -> Iterable[Dict]:
         base_template = args.get('prompt_template', args['prompt_template'])
         input_variables = re.findall(r"{{(.*?)}}", base_template)
@@ -589,17 +626,9 @@ AI: {response}"""
         if not hasattr(agent_executor, 'stream') or not callable(agent_executor.stream):
             raise AttributeError("The agent_executor does not have a 'stream' method")
 
-        stream_iterator = agent_executor.stream(prompts[0],
-                                                config={'callbacks': callbacks})
-
-        if not hasattr(stream_iterator, '__iter__'):
-            raise TypeError("The stream method did not return an iterable")
-
+        stream_iterator = self._stream_agent_executor(agent_executor, prompts[0], callbacks)
         for chunk in stream_iterator:
-            logger.debug(f'Processing streaming chunk {chunk}')
-            processed_chunk = self.process_chunk(chunk)
-            logger.info(f'Processed chunk: {processed_chunk}')
-            yield self.add_chunk_metadata(processed_chunk)
+            yield chunk
 
         if return_context:
             # Yield context if required

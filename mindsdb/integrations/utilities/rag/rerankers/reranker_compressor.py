@@ -8,7 +8,7 @@ import random
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from langchain.retrievers.document_compressors.base import BaseDocumentCompressor
-from langchain_core.callbacks import Callbacks
+from langchain_core.callbacks import Callbacks, dispatch_custom_event
 from langchain_core.documents import Document
 from openai import AsyncOpenAI
 
@@ -75,8 +75,15 @@ class LLMReranker(BaseDocumentCompressor):
                     # Extract response and logprobs
                     answer = response.choices[0].message.content
                     logprob = response.choices[0].logprobs.content[0].logprob
+                    rerank_data = {
+                        "document": document,
+                        "answer": answer,
+                        "logprob": logprob
+                    }
 
-                    return {"answer": answer, "logprob": logprob}
+                    # Stream reranking update.
+                    dispatch_custom_event("rerank", rerank_data)
+                    return rerank_data
 
                 except Exception as e:
                     if attempt == self.max_retries - 1:
@@ -153,6 +160,9 @@ class LLMReranker(BaseDocumentCompressor):
             if callbacks:
                 await callbacks.on_retriever_end({"documents": []})
             return []
+
+        # Stream reranking update.
+        dispatch_custom_event('rerank_begin', {'num_documents': len(documents)})
 
         try:
             # Prepare query-document pairs

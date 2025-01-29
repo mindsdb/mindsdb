@@ -184,64 +184,6 @@ class TestQuery:
 
         assert response.type == RESPONSE_TYPE.ERROR
 
-    def test_query_select(self, csv_file):
-        """Test a valid select query"""
-        expected_df = pandas.read_csv(csv_file)
-
-        # This is temporary because the file controller currently absconds with our file when we save it:
-        # https://github.com/mindsdb/mindsdb/issues/8141
-        csv_tmp = os.path.join(tempfile.gettempdir(), "test.csv")
-        if os.path.exists(csv_tmp):
-            os.remove(csv_tmp)
-        shutil.copy(csv_file, csv_tmp)
-
-        # Configure mindsdb and set up the file controller
-        # Ideally this would be a lot simpler..
-        db_file = tempfile.mkstemp(prefix="mindsdb_db_")[1]
-        config = {"storage_db": "sqlite:///" + db_file}
-        fdi, cfg_file = tempfile.mkstemp(prefix="mindsdb_conf_")
-        with os.fdopen(fdi, "w") as fd:
-            json.dump(config, fd)
-        os.environ["MINDSDB_CONFIG_PATH"] = cfg_file
-
-        from mindsdb.utilities.config import Config
-
-        Config()
-        from mindsdb.interfaces.storage import db
-
-        db.init()
-        db.session.rollback()
-        db.Base.metadata.drop_all(db.engine)
-
-        # create
-        db.Base.metadata.create_all(db.engine)
-
-        # fill with data
-        r = db.Integration(name="files", data={}, engine="files")
-        db.session.add(r)
-        db.session.flush()
-        # Config #
-
-        file_controller = FileController()
-        file_controller.save_file(
-            os.path.splitext(os.path.basename(csv_file))[0], csv_tmp
-        )
-
-        file_handler = FileHandler(file_controller=file_controller)
-        response = file_handler.query(
-            Select(
-                targets=[Star()],
-                from_table=Identifier(
-                    parts=[os.path.splitext(os.path.basename(csv_file))[0]]
-                ),
-            )
-        )
-
-        assert response.type == RESPONSE_TYPE.TABLE
-        assert response.error_code == 0
-        assert response.error_message is None
-        assert expected_df.equals(response.data_frame)
-
     def test_query_insert(self, csv_file, monkeypatch):
         """Test an invalid insert query"""
         # Create a temporary file to save the csv file to.

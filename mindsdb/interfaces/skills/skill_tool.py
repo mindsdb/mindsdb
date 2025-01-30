@@ -137,12 +137,15 @@ class SkillToolController:
                 else:
                     response = handler.get_tables()
                 # no restrictions
+                columns = [c.lower() for c in response.data_frame.columns]
+                name_idx = columns.index('table_name') if 'table_name' in columns else 0
+
                 if 'table_schema' in response.data_frame.columns:
                     for _, row in response.data_frame.iterrows():
-                        tables_list.append(f"{database}.{row['table_schema']}.{row['table_name']}")
+                        tables_list.append(f"{database}.{row['table_schema']}.{row[name_idx]}")
                 else:
-                    for _, row in response.data_frame.iterrows():
-                        tables_list.append(f"{database}.{row['table_name']}")
+                    for table_name in response.data_frame.iloc[:, name_idx]:
+                        tables_list.append(f"{database}.{table_name}")
                 continue
             for schema_name, tables in restriction_on_tables.items():
                 for table in tables:

@@ -1,3 +1,4 @@
+import json
 import requests
 from typing import Dict, Optional
 
@@ -38,8 +39,11 @@ class RayServeHandler(BaseMLEngine):
             raise Exception("Error: The URL provided for the training endpoint is invalid.")
 
         resp = resp.json()
-        if resp['status'] != 'ok':
-            raise Exception("Error: Training failed: " + resp['status'])
+        if not isinstance(resp.get('response'), list):
+            raise Exception(f"Unexpected response structure: {response}")
+        response_content = json.loads(resp['response'][0])  # Parse the string inside the list
+        if response_content['status'] != 'ok':
+            raise Exception("Error: Training failed: " + response_content['detail'])
 
     def predict(self, df, args=None):
         args = {**(self.model_storage.json_get('args')), **args}  # merge incoming args
@@ -49,13 +53,18 @@ class RayServeHandler(BaseMLEngine):
                              json={'df': df.to_json(orient='records'), 'pred_args': pred_args},
                              headers={'content-type': 'application/json; format=pandas-records'})
         response = resp.json()
-
+        if not isinstance(response.get('response'), list):
+            raise Exception(f"Unexpected response structure: {response}")
+        response_content = json.loads(response['response'][0])  # Parse the string inside the list
+        if response_content['status'] != 'ok':
+            raise Exception("Error: Prediction failed: " + response_content['detail'])
+        response_content.pop('status')
         target = args['target']
         if target != 'prediction':
             # rename prediction to target
-            response[target] = response.pop('prediction')
+            response_content[target] = response_content.pop('prediction')
 
-        predictions = pd.DataFrame(response)
+        predictions = pd.DataFrame(response_content)
         return predictions
 
     def describe(self, key: Optional[str] = None) -> pd.DataFrame:

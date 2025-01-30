@@ -677,7 +677,7 @@ class KnowledgeBaseController:
                 return kb
             raise EntityExistsError("Knowledge base already exists", name)
 
-        if embedding_model is None or embedding_model.alias is None:
+        if embedding_model is None:
             # create default embedding model
             model_name = self._get_default_embedding_model(project.name, params=params)
             params['default_embedding_model'] = model_name

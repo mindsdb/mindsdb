@@ -23,7 +23,7 @@ logger = log.getLogger(__name__)
 Summary = namedtuple('Summary', ['source_id', 'content'])
 
 
-def create_map_reduce_documents_chain(summarization_config: SummarizationConfig, input: str) -> MapReduceDocumentsChain:
+def create_map_reduce_documents_chain(summarization_config: SummarizationConfig, input: str) -> ReduceDocumentsChain:
     '''Creats a chain that map reduces documents into a single consolidated summary
 
     Args:
@@ -43,7 +43,7 @@ def create_map_reduce_documents_chain(summarization_config: SummarizationConfig,
     if 'input' in map_prompt.input_variables:
         map_prompt = map_prompt.partial(input=input)
     # Handles summarization of individual chunks.
-    map_chain = LLMChain(llm=summarization_llm, prompt=map_prompt)
+    # map_chain = LLMChain(llm=summarization_llm, prompt=map_prompt)
 
     reduce_prompt_template = summarization_config.reduce_prompt_template
     reduce_prompt = PromptTemplate.from_template(reduce_prompt_template)
@@ -60,17 +60,11 @@ def create_map_reduce_documents_chain(summarization_config: SummarizationConfig,
     )
 
     # Combines & iteratively reduces mapped documents.
-    reduce_documents_chain = ReduceDocumentsChain(
+    return ReduceDocumentsChain(
         combine_documents_chain=combine_documents_chain,
         collapse_documents_chain=combine_documents_chain,
         # Max number of tokens to group documents into.
         token_max=summarization_config.max_summarization_tokens
-    )
-    return MapReduceDocumentsChain(
-        llm_chain=map_chain,
-        reduce_documents_chain=reduce_documents_chain,
-        document_variable_name='docs',
-        return_intermediate_steps=False
     )
 
 
@@ -135,6 +129,8 @@ class MapReduceSummarizerChain(Chain):
         document_chunks = []
         for _, row in all_source_chunks.iterrows():
             metadata = row.get(self.metadata_column_name, {})
+            if row.get('chunk_id', None) is not None:
+                metadata['chunk_index'] = row.get('chunk_id', 0)
             document_chunks.append(Document(page_content=row[self.content_column_name], metadata=metadata))
         # Sort by chunk index if present in metadata so the full document is in its original order.
         document_chunks.sort(key=lambda doc: doc.metadata.get('chunk_index', 0) if doc.metadata else 0)

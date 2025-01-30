@@ -289,3 +289,60 @@ class TestAgent(BaseExecutorDummyML):
             # check kb input
             args, _ = kb_select.call_args
             assert user_question in args[0].where.args[1].value
+
+    def test_kb(self):
+
+        self.run_sql(
+            '''
+                CREATE model emb_model
+                PREDICT predicted
+                using
+                  column='content',
+                  engine='dummy_ml',
+                  join_learn_process=true
+            '''
+        )
+
+        self.run_sql('create knowledge base kb_review using model=emb_model')
+
+        self.run_sql("insert into kb_review (content) values ('review')")
+
+        # selectable
+        ret = self.run_sql("select * from kb_review")
+        assert len(ret) == 1
+
+        # show tables in default chromadb
+        ret = self.run_sql("show knowledge bases")
+
+        db_name = ret.STORAGE[0].split('.')[0]
+        ret = self.run_sql(f"show tables from {db_name}")
+        # only one default collection there
+        assert len(ret) == 1
+
+    def test_drop_demo_agent(self):
+        """should not be possible to drop demo agent
+        """
+        from mindsdb.api.executor.exceptions import ExecutorException
+        self.run_sql('''
+            CREATE AGENT my_demo_agent
+            USING
+                provider='openai',
+                model = "gpt-3.5-turbo",
+                openai_api_key='--',
+                prompt_template="--",
+                is_demo=true;
+         ''')
+        with pytest.raises(ExecutorException):
+            self.run_sql('drop agent my_agent')
+
+        self.run_sql('''
+            create skill my_demo_skill
+            using
+            type = 'text2sql',
+            database = 'example_db',
+            description = "",
+            is_demo=true;
+        ''')
+
+        with pytest.raises(ExecutorException):
+            self.run_sql('drop skill my_demo_skill')

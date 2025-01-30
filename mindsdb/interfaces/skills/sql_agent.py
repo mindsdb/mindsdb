@@ -14,6 +14,52 @@ from mindsdb.integrations.utilities.query_traversal import query_traversal
 logger = log.getLogger(__name__)
 
 
+def split_table_name(table_name: str) -> List[str]:
+    """Split table name from llm to parst
+
+    Args:
+        table_name (str): input table name
+
+    Returns:
+        List[str]: parts of table identifier like ['database', 'schema', 'table']
+
+    Example:
+        Input: 'aaa.bbb', Output: ['aaa', 'bbb']
+        Input: '`aaa.bbb`', Output: ['aaa', 'bbb']
+        Input: '`aaa.`bbb``', Output: ['aaa', 'bbb']
+        Input: 'aaa.bbb.ccc', Output: ['aaa', 'bbb', 'ccc']
+        Input: '`aaa.bbb.ccc`', Output: ['aaa', 'bbb', 'ccc']
+        Input: '`aaa.`bbb.ccc``', Output: ['aaa', 'bbb.ccc']
+        Input: 'aaa.`bbb.ccc`', Output: ['aaa', 'bbb.ccc']
+        Input: 'aaa.`bbb.ccc`', Output: ['aaa', 'bbb.ccc']
+        Input: '`` aaa.`bbb.ccc``  \n`', Output: ['aaa', 'bbb.ccc']
+    """
+    table_name = table_name.strip(' "\'\n\r')
+    while table_name.startswith('`') and table_name.endswith('`'):
+        table_name = table_name[1:-1]
+        table_name = table_name.strip(' "\'\n\r')
+
+    result = []
+    part = []
+    inside_quotes = False
+
+    for char in table_name:
+        if char == '`':
+            inside_quotes = not inside_quotes
+            continue
+
+        if char == '.' and not inside_quotes:
+            result.append(''.join(part))
+            part = []
+        else:
+            part.append(char)
+
+    if part:
+        result.append(''.join(part))
+
+    return [x for x in result if len(x) > 0]
+
+
 class SQLAgent:
     def __init__(
             self,
@@ -161,15 +207,14 @@ class SQLAgent:
                 continue
 
             # Some LLMs (e.g. gpt-4o) may include backticks or quotes when invoking tools.
-            table_name = table_name.strip(' `"\'\n\r')
-            table = Identifier(table_name)
+            table_parts = split_table_name(table_name)
 
             # resolved table
-            table2 = tables_idx.get(tuple(table.parts))
+            table_identifier = tables_idx.get(tuple(table_parts))
 
-            if table2 is None:
+            if table_identifier is None:
                 raise ValueError(f"Table {table} not found in database")
-            tables.append(table2)
+            tables.append(table_identifier)
 
         return tables
 

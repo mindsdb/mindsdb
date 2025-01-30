@@ -39,7 +39,7 @@ MAIN_EXCLUDE_PATHS = ["mindsdb/integrations/handlers/.*_handler", "pryproject.to
 MAIN_RULE_IGNORES = {
     "DEP003": ["torch"],
     "DEP001": ["torch", "pgvector", "pyarrow", "openai"],
-    "DEP002": ["psycopg2-binary", "lark", "transformers", "langchain-experimental", "lxml"]
+    "DEP002": ["psycopg2-binary", "lark", "transformers", "langchain-experimental", "lxml", "openpyxl"]
 }
 
 
@@ -50,7 +50,7 @@ MAIN_RULE_IGNORES = {
 # Or 2) because they are imported in an unusual way. E.g.:
 #   - pysqlite3 in the chromadb handler
 #   - dspy-ai in langchain handler
-OPTIONAL_HANDLER_DEPS = ["torch", "tiktoken", "wikipedia", "openpyxl",
+OPTIONAL_HANDLER_DEPS = ["torch", "tiktoken", "wikipedia",
                          "sentence-transformers", "faiss-cpu", "litellm", "chromadb", "dspy-ai", "sqlalchemy-solr"]
 
 # List of rules we can ignore for specific packages

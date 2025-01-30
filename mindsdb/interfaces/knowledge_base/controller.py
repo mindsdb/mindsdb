@@ -55,6 +55,7 @@ class KnowledgeBaseTable:
         self.session = session
         self.document_preprocessor = None
         self.document_loader = None
+        self.model_params = None
 
     def configure_preprocessing(self, config: Optional[dict] = None):
         """Configure preprocessing for the knowledge base table"""
@@ -503,6 +504,7 @@ class KnowledgeBaseTable:
         df_out = project_datanode.predict(
             model_name=model_rec.name,
             df=df,
+            params=self.model_params
         )
 
         target = model_rec.to_predict[0]
@@ -726,10 +728,6 @@ class KnowledgeBaseController:
                         vector_db_params['vector_size'] = vector_size
                 vector_db_name = self._create_persistent_pgvector(vector_db_params)
 
-                # create table in vectordb before creating KB
-                self.session.datahub.get(vector_db_name).integration_handler.create_table(
-                    vector_table_name
-                )
             else:
                 # create chroma db with same name
                 vector_table_name = "default_collection"
@@ -741,6 +739,10 @@ class KnowledgeBaseController:
         else:
             vector_db_name, vector_table_name = storage.parts
 
+        # create table in vectordb before creating KB
+        self.session.datahub.get(vector_db_name).integration_handler.create_table(
+            vector_table_name
+        )
         vector_database_id = self.session.integration_controller.get(vector_db_name)['id']
 
         # Store sparse vector settings in params if specified
@@ -874,16 +876,19 @@ class KnowledgeBaseController:
         )
         return kb
 
-    def get_table(self, name: str, project_id: int) -> KnowledgeBaseTable:
+    def get_table(self, name: str, project_id: int, params: dict = None) -> KnowledgeBaseTable:
         """
         Returns kb table object with properly configured preprocessing
         :param name: table name
         :param project_id: project id
+        :param params: runtime parameters for KB. Keys: 'model' - parameters for embedding model
         :return: kb table object
         """
         kb = self.get(name, project_id)
         if kb is not None:
             table = KnowledgeBaseTable(kb, self.session)
+            if params:
+                table.model_params = params.get('model')
 
             # Always configure preprocessing - either from params or default
             if kb.params and 'preprocessing' in kb.params:

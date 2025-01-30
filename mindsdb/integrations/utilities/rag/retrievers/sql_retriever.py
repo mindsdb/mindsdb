@@ -1,20 +1,37 @@
 import json
-from typing import List, Optional
+import re
+from pydantic import BaseModel, Field
+from typing import Any, List, Optional
 
 from langchain.chains.llm import LLMChain
 from langchain_core.callbacks.manager import CallbackManagerForRetrieverRun
 from langchain_core.documents.base import Document
 from langchain_core.embeddings import Embeddings
+from langchain_core.exceptions import OutputParserException
 from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_core.retrievers import BaseRetriever
 
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
+from mindsdb.integrations.libs.response import HandlerResponse
 from mindsdb.integrations.libs.vectordatabase_handler import DistanceFunction, VectorStoreHandler
 from mindsdb.integrations.utilities.rag.settings import LLMExample, MetadataSchema, SearchKwargs
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
+
+
+class MetadataFilter(BaseModel):
+    '''Represents an LLM generated metadata filter to apply to a PostgreSQL query.'''
+    attribute: str = Field(description="Database column to apply filter to")
+    comparator: str = Field(description="PostgreSQL comparator to use to filter database column")
+    value: Any = Field(description="Value to use to filter database column")
+
+
+class MetadataFilters(BaseModel):
+    '''List of LLM generated metadata filters to apply to a PostgreSQL query.'''
+    filters: List[MetadataFilter] = Field(description="List of PostgreSQL metadata filters to apply for user query")
 
 
 class SQLRetriever(BaseRetriever):
@@ -25,10 +42,10 @@ class SQLRetriever(BaseRetriever):
     1. Use a LLM to rewrite the user input to something more suitable for retrieval. For example:
     "Show me documents containing how to finetune a LLM please" --> "how to finetune a LLM"
 
-    2. Use a LLM to generate a pgvector query with metadata filters based on the user input. Provided
-    metadata schemas & examples are used as additional context to generate the query.
+    2. Use a LLM to generate structured metadata filters based on the user input. Provided
+    metadata schemas & examples are used as additional context.
 
-    3. Use a LLM to double check the generated pgvector query is correct.
+    3. Generate a prepared PostgreSQL query from the structured metadata filters.
 
     4. Actually execute the query against our vector database to retrieve documents & return them.
     '''
@@ -37,23 +54,22 @@ class SQLRetriever(BaseRetriever):
     metadata_schemas: Optional[List[MetadataSchema]] = None
     examples: Optional[List[LLMExample]] = None
 
-    embeddings_model: Embeddings
     rewrite_prompt_template: str
-    retry_prompt_template: str
+    metadata_filters_prompt_template: str
+    embeddings_model: Embeddings
     num_retries: int
-    sql_prompt_template: str
-    query_checker_template: str
     embeddings_table: str
     source_table: str
+    source_id_column: str = 'Id'
     distance_function: DistanceFunction
     search_kwargs: SearchKwargs
 
     llm: BaseChatModel
 
-    def _prepare_sql_prompt(self) -> PromptTemplate:
+    def _prepare_metadata_prompt(self) -> PromptTemplate:
         base_prompt_template = PromptTemplate(
-            input_variables=['dialect', 'input', 'embeddings_table', 'source_table', 'embeddings', 'distance_function', 'schema', 'examples'],
-            template=self.sql_prompt_template
+            input_variables=['format_instructions', 'schema', 'examples', 'input', 'embeddings'],
+            template=self.metadata_filters_prompt_template
         )
         schema_prompt_str = ''
         if self.metadata_schemas is not None:
@@ -67,7 +83,7 @@ class SQLRetriever(BaseRetriever):
                     if column.values is not None:
                         column_mapping[column.name]['values'] = column.values
                 column_mapping_json_str = json.dumps(column_mapping, indent=4)
-                schema_str = f'''{i+2}. {schema.table} - {schema.description}
+                schema_str = f'''{i+1}. {schema.table} - {schema.description}
 
 Columns:
 ```json
@@ -86,7 +102,7 @@ Output:
 {example.output}
 
 '''
-            examples_prompt_str += example_str
+                examples_prompt_str += example_str
         return base_prompt_template.partial(
             schema=schema_prompt_str,
             examples=examples_prompt_str
@@ -100,97 +116,89 @@ Output:
         rewrite_chain = LLMChain(llm=self.llm, prompt=rewrite_prompt)
         return rewrite_chain.predict(input=query)
 
-    def _prepare_pgvector_query(self, query: str, run_manager: CallbackManagerForRetrieverRun) -> str:
-        # Incorporate metadata schemas & examples into prompt.
-        sql_prompt = self._prepare_sql_prompt()
-        sql_chain = LLMChain(llm=self.llm, prompt=sql_prompt)
-        # Generate the initial pgvector query.
-        sql_query = sql_chain.predict(
-            # Only pgvector & similarity search is supported.
-            dialect='postgres',
-            input=query,
-            embeddings_table=self.embeddings_table,
-            source_table=self.source_table,
-            distance_function=self.distance_function.value[0],
-            k=self.search_kwargs.k,
-            callbacks=run_manager.get_child() if run_manager else None
-        )
-        query_checker_prompt = PromptTemplate(
-            input_variables=['dialect', 'query'],
-            template=self.query_checker_template
-        )
-        query_checker_chain = LLMChain(llm=self.llm, prompt=query_checker_prompt)
-        # Check the query & return the final result to be executed.
-        return query_checker_chain.predict(
-            dialect='postgres',
-            query=sql_query
-        )
+    def _prepare_pgvector_query(self, metadata_filters: List[MetadataFilter]) -> str:
+        # Base select JOINed with document source table.
+        base_query = f'''SELECT * FROM {self.embeddings_table} AS e INNER JOIN {self.source_table} AS s ON (e.metadata->>'original_row_id')::int = s."{self.source_id_column}" '''
+        col_to_schema = {}
+        if not self.metadata_schemas:
+            return ''
+        for schema in self.metadata_schemas:
+            for col in schema.columns:
+                col_to_schema[col.name] = schema
+        joined_schemas = set()
+        for filter in metadata_filters:
+            # Join schemas before filtering.
+            schema = col_to_schema.get(filter.attribute)
+            if schema is None or schema.table in joined_schemas or schema.table == self.source_table:
+                continue
+            joined_schemas.add(schema.table)
+            base_query += schema.join + ' '
+        # Actually construct WHERE conditions from metadata filters.
+        if metadata_filters:
+            base_query += 'WHERE '
+        for i, filter in enumerate(metadata_filters):
+            value = filter.value
+            if isinstance(value, str):
+                value = f"'{value}'"
+            base_query += f'"{filter.attribute}" {filter.comparator} {value}'
+            if i < len(metadata_filters) - 1:
+                base_query += ' AND '
+        base_query += f" ORDER BY e.embeddings {self.distance_function.value[0]} '{{embeddings}}' LIMIT {self.search_kwargs.k};"
+        return base_query
 
-    def _prepare_retry_query(self, query: str, error: str, run_manager: CallbackManagerForRetrieverRun) -> str:
-        sql_prompt = self._prepare_sql_prompt()
-        # Use provided schema as context for retrying failed queries.
-        schema = sql_prompt.partial_variables.get('schema', '')
-        retry_prompt = PromptTemplate(
-            input_variables=['query', 'dialect', 'error', 'embeddings_table', 'schema'],
-            template=self.retry_prompt_template
+    def _generate_metadata_filters(self, query: str) -> List[MetadataFilter]:
+        parser = PydanticOutputParser(pydantic_object=MetadataFilters)
+        metadata_prompt = self._prepare_metadata_prompt()
+        metadata_filters_chain = LLMChain(llm=self.llm, prompt=metadata_prompt)
+        metadata_filters_output = metadata_filters_chain.predict(
+            format_instructions=parser.get_format_instructions(),
+            input=query
         )
-        retry_chain = LLMChain(llm=self.llm, prompt=retry_prompt)
-        # Generate rewritten query.
-        sql_query = retry_chain.predict(
-            query=query,
-            dialect='postgres',
-            error=error,
-            embeddings_table=self.embeddings_table,
-            schema=schema,
-            callbacks=run_manager.get_child() if run_manager else None
-        )
-        query_checker_prompt = PromptTemplate(
-            input_variables=['dialect', 'query'],
-            template=self.query_checker_template
-        )
-        query_checker_chain = LLMChain(llm=self.llm, prompt=query_checker_prompt)
-        # Check the query & return the final result to be executed.
-        return query_checker_chain.predict(
-            dialect='postgres',
-            query=sql_query
-        )
+        # If the LLM outputs raw JSON, use it as-is.
+        # If the LLM outputs anything including a json markdown section, use the last one.
+        json_markdown_output = re.findall(r'```json.*```', metadata_filters_output, re.DOTALL)
+        if json_markdown_output:
+            metadata_filters_output = json_markdown_output[-1]
+            # Clean the json tags.
+            metadata_filters_output = metadata_filters_output[7:]
+            metadata_filters_output = metadata_filters_output[:-3]
+        metadata_filters = parser.invoke(metadata_filters_output)
+        return metadata_filters.filters
+
+    def _prepare_and_execute_query(self, query: str, embeddings_str: str) -> HandlerResponse:
+        try:
+            metadata_filters = self._generate_metadata_filters(query)
+            checked_sql_query = self._prepare_pgvector_query(metadata_filters)
+            checked_sql_query_with_embeddings = checked_sql_query.format(embeddings=embeddings_str)
+            return self.vector_store_handler.native_query(checked_sql_query_with_embeddings)
+        except OutputParserException as e:
+            logger.warning(f'LLM failed to generate structured metadata filters: {str(e)}')
+            return HandlerResponse(RESPONSE_TYPE.ERROR, error_message=str(e))
+        except Exception as e:
+            logger.warning(f'Failed to prepare and execute SQL query from structured metadata: {str(e)}')
+            return HandlerResponse(RESPONSE_TYPE.ERROR, error_message=str(e))
 
     def _get_relevant_documents(
         self, query: str, *, run_manager: CallbackManagerForRetrieverRun
     ) -> List[Document]:
         # Rewrite query to be suitable for retrieval.
         retrieval_query = self._prepare_retrieval_query(query)
-
-        # Generate & check the query to be executed
-        checked_sql_query = self._prepare_pgvector_query(query, run_manager)
-
         # Embed the rewritten retrieval query & include it in the similarity search pgvector query.
         embedded_query = self.embeddings_model.embed_query(retrieval_query)
-        checked_sql_query_with_embeddings = checked_sql_query.format(embeddings=str(embedded_query))
-        # Handle LLM output that has the ```sql delimiter possibly.
-        checked_sql_query_with_embeddings = checked_sql_query_with_embeddings.replace('```sql', '')
-        checked_sql_query_with_embeddings = checked_sql_query_with_embeddings.replace('```', '')
         # Actually execute the similarity search with metadata filters.
-        document_response = self.vector_store_handler.native_query(checked_sql_query_with_embeddings)
+        document_response = self._prepare_and_execute_query(retrieval_query, str(embedded_query))
         num_retries = 0
         while num_retries < self.num_retries:
-            if document_response.resp_type == RESPONSE_TYPE.ERROR:
-                error_msg = document_response.error_message
-                # LLMs won't always generate a working SQL query so we should have a fallback after retrying.
-                logger.info(f'SQL Retriever query {checked_sql_query} failed with error {error_msg}')
-                checked_sql_query = self._prepare_retry_query(checked_sql_query, error_msg, run_manager)
-            elif len(document_response.data_frame) == 0:
-                error_msg = "No documents retrieved from query."
-                checked_sql_query = self._prepare_retry_query(checked_sql_query, error_msg, run_manager)
-            else:
+            if document_response.resp_type != RESPONSE_TYPE.ERROR and len(document_response.data_frame) > 0:
+                # Successfully retrieved documents.
                 break
+            if document_response.resp_type == RESPONSE_TYPE.ERROR:
+                # LLMs won't always generate structured metadata so we should have a fallback after retrying.
+                logger.info(f'SQL Retriever query failed with error {document_response.error_message}')
+            elif len(document_response.data_frame) == 0:
+                logger.info('No documents retrieved from SQL Retriever query')
 
-            checked_sql_query_with_embeddings = checked_sql_query.format(embeddings=str(embedded_query))
-            # Handle LLM output that has the ```sql delimiter possibly.
-            checked_sql_query_with_embeddings = checked_sql_query_with_embeddings.replace('```sql', '')
-            checked_sql_query_with_embeddings = checked_sql_query_with_embeddings.replace('```', '')
-            document_response = self.vector_store_handler.native_query(checked_sql_query_with_embeddings)
-
+            document_response = self._prepare_and_execute_query(retrieval_query, str(embedded_query))
             num_retries += 1
             if num_retries >= self.num_retries:
                 logger.info('Using fallback retriever in SQL retriever.')

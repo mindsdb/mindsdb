@@ -3,6 +3,6 @@ wikipedia==1.4.0
 tiktoken
 anthropic>=0.26.1
 litellm==1.44.8
-chromadb # Knowledge bases.
+chromadb~=0.6.3 # Knowledge bases.
 -r mindsdb/integrations/handlers/openai_handler/requirements.txt
 -r mindsdb/integrations/handlers/langchain_embedding_handler/requirements.txt

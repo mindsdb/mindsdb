@@ -1,4 +1,3 @@
-import json
 import os
 import shutil
 import tempfile
@@ -8,12 +7,11 @@ from pathlib import Path
 import pandas
 import pytest
 from mindsdb_sql_parser.exceptions import ParsingException
-from mindsdb_sql_parser.ast import CreateTable, DropTables, Identifier, Insert, Select, Star, TableColumn, Update
+from mindsdb_sql_parser.ast import CreateTable, DropTables, Identifier, Insert, TableColumn, Update
 from pytest_lazyfixture import lazy_fixture
 
 from mindsdb.integrations.handlers.file_handler.file_handler import FileHandler
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
-from mindsdb.interfaces.file.file_controller import FileController
 
 from mindsdb.integrations.utilities.files.file_reader import FileReader
 

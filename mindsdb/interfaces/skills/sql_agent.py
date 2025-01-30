@@ -121,16 +121,17 @@ class SQLAgent:
 
         # Check tables
         if self._tables_to_include:
+            tables_parts = [split_table_name(x) for x in self._tables_to_include]
+            no_schema_parts = []
+            for t in tables_parts:
+                if len(t) == 3:
+                    no_schema_parts.append([t[0], t[2]])
+            tables_parts += no_schema_parts
+
             def _check_f(node, is_table=None, **kwargs):
                 if is_table and isinstance(node, Identifier):
-                    name1 = node.to_string()
-                    name2 = '.'.join(node.parts)
-                    if len(node.parts) == 3:
-                        name3 = '.'.join(node.parts[1:])
-                    else:
-                        name3 = node.parts[-1]
-                    if not {name1, name2, name3}.intersection(self._tables_to_include):
-                        raise ValueError(f"Table {name1} not found. Available tables: {', '.join(self._tables_to_include)}")
+                    if node.parts not in tables_parts:
+                        raise ValueError(f"Table {'.'.join(node.parts)} not found. Available tables: {', '.join(self._tables_to_include)}")
 
             query_traversal(ast_query, _check_f)
 

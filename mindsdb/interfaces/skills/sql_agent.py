@@ -279,7 +279,7 @@ class SQLAgent:
             dtypes.append(column.get('type', ''))
 
         info = f'Table named `{table_str}`:\n'
-        info += f"\nSample with first {self._sample_rows_in_table_info} rows from table {table_str} in CSV format (dialect is 'excel'). Table contains 99 rows. Only 3 rows are shown from the entire table.:\n"
+        info += f"\nSample with first {self._sample_rows_in_table_info} rows from table {table_str} in CSV format (dialect is 'excel'):\n"
         info += self._get_sample_rows(table_str, fields) + "\n"
         info += '\nColumn data types: ' + ",\t".join(
             [f'\n`{field}` : `{dtype}`' for field, dtype in zip(fields, dtypes)]) + '\n'  # noqa

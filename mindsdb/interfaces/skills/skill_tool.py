@@ -126,6 +126,10 @@ class SkillToolController:
 
         command_executor = self.get_command_executor()
 
+        def escape_table_name(name: str) -> str:
+            name = name.strip(' `')
+            return f'`{name}`'
+
         tables_list = []
         for skill in skills:
             database = skill.params['database']
@@ -142,17 +146,17 @@ class SkillToolController:
 
                 if 'table_schema' in response.data_frame.columns:
                     for _, row in response.data_frame.iterrows():
-                        tables_list.append(f"{database}.{row['table_schema']}.{row[name_idx]}")
+                        tables_list.append(f"{database}.{row['table_schema']}.{escape_table_name(row[name_idx])}")
                 else:
                     for table_name in response.data_frame.iloc[:, name_idx]:
-                        tables_list.append(f"{database}.{table_name}")
+                        tables_list.append(f"{database}.{escape_table_name(table_name)}")
                 continue
             for schema_name, tables in restriction_on_tables.items():
                 for table in tables:
                     if schema_name is None:
-                        tables_list.append(f'{database}.{table}')
+                        tables_list.append(f'{database}.{escape_table_name(table)}')
                     else:
-                        tables_list.append(f'{database}.{schema_name}.{table}')
+                        tables_list.append(f'{database}.{schema_name}.{escape_table_name(table)}')
 
         sql_agent = SQLAgent(
             command_executor=command_executor,

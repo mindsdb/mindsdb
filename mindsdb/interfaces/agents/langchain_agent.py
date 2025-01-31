@@ -589,8 +589,9 @@ AI: {response}"""
 
         agent_executor_finished_event = threading.Event()
 
-        def stream_worker():
+        def stream_worker(context: dict):
             try:
+                ctx.load(context)
                 for chunk in stream_iterator:
                     chunk_queue.put(chunk)
             finally:
@@ -598,7 +599,7 @@ AI: {response}"""
                 agent_executor_finished_event.set()
 
         # Enqueue Langchain agent streaming chunks in a separate thread to not block event chunks.
-        executor_stream_thread = threading.Thread(target=stream_worker, daemon=True)
+        executor_stream_thread = threading.Thread(target=stream_worker, daemon=True, args=(ctx.dump(),))
         executor_stream_thread.start()
 
         while not agent_executor_finished_event.is_set():

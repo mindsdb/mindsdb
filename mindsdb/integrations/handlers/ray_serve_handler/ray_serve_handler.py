@@ -1,9 +1,15 @@
+import json
+
 import requests
 from typing import Dict, Optional
 
 import pandas as pd
 
 from mindsdb.integrations.libs.base import BaseMLEngine
+
+
+class RayServeException(Exception):
+    pass
 
 
 class RayServeHandler(BaseMLEngine):
@@ -37,9 +43,17 @@ class RayServeHandler(BaseMLEngine):
         except requests.exceptions.InvalidSchema:
             raise Exception("Error: The URL provided for the training endpoint is invalid.")
 
-        resp = resp.json()
-        if resp['status'] != 'ok':
-            raise Exception("Error: Training failed: " + resp['status'])
+        error = None
+        try:
+            resp = resp.json()
+        except json.JSONDecodeError:
+            error = resp.text
+        else:
+            if resp.get('status') != 'ok':
+                error = resp['status']
+
+        if error:
+            raise RayServeException(f"Error: {error}")
 
     def predict(self, df, args=None):
         args = {**(self.model_storage.json_get('args')), **args}  # merge incoming args
@@ -48,15 +62,23 @@ class RayServeHandler(BaseMLEngine):
         resp = requests.post(args['predict_url'],
                              json={'df': df.to_json(orient='records'), 'pred_args': pred_args},
                              headers={'content-type': 'application/json; format=pandas-records'})
-        response = resp.json()
 
-        target = args['target']
-        if target != 'prediction':
-            # rename prediction to target
-            response[target] = response.pop('prediction')
+        try:
+            response = resp.json()
+        except json.JSONDecodeError:
+            error = resp.text
+        else:
+            if 'prediction' in response:
+                target = args['target']
+                if target != 'prediction':
+                    # rename prediction to target
+                    response[target] = response.pop('prediction')
+                return pd.DataFrame(response)
+            else:
+                # something wrong
+                error = response
 
-        predictions = pd.DataFrame(response)
-        return predictions
+        raise RayServeException(f"Error: {error}")
 
     def describe(self, key: Optional[str] = None) -> pd.DataFrame:
         args = self.model_storage.json_get('args')

@@ -9,6 +9,8 @@ from mindsdb.integrations.utilities.sql_utils import (
     SortColumn
 )
 
+from mindsdb.integrations.utilities.files.file_reader import FileReader
+
 
 class ListFilesTable(APIResource):
     """
@@ -96,5 +98,11 @@ class FileTable(APIResource):
 
         elif file_extension == "parquet":
             df = pd.read_parquet(BytesIO(file_content))
+
+        elif file_extension == "pdf":
+            df = FileReader().read_pdf(BytesIO(file_content))
+
+        elif file_extension == "txt":
+            df = FileReader().read_txt(BytesIO(file_content))
 
         return df

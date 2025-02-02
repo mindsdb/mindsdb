@@ -123,4 +123,4 @@ class TestRender:
         rendered = SqlalchemyRender('postgres').get_string(query, with_failback=False)
 
         # check queries are the same after render
-        assert rendered.replace('\n', '') == 'SELECT "A".*, A."B" ROM tbl."T" AS t'
+        assert rendered.replace('\n', '') == 'SELECT "A".*, A."B" FROM tbl."T" AS t'

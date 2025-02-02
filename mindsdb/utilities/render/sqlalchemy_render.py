@@ -90,7 +90,9 @@ class SqlalchemyRender:
 
         parts2 = []
 
-        quoted = getattr(identifier, 'is_quoted', [False] * len(identifier.parts))
+        quoted = getattr(identifier, 'is_quoted', [])
+        # len can be different
+        quoted = quoted + [None] * (len(identifier.parts) - len(quoted))
 
         for i, is_quoted in zip(identifier.parts, quoted):
             if isinstance(i, ast.Star):

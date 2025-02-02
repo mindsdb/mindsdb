@@ -15,19 +15,25 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
         list_sql_database_tool = ListSQLDatabaseTool(
             name=f'sql_db_list_tables{prefix}',
             db=self.db,
-            description=(
-                "Input is an empty string, output is a comma-separated list of tables in the database. "
-                "Each table name in the list may be in one of two formats: database_name.table_name or "
-                "database_name.schema_name.table_name."
-            )
+            description=dedent("""\n
+                Input is an empty string, output is a comma-separated list of tables in the database. Each table name is escaped using backticks.
+                Each table name in the list may be in one of two formats: database_name.`table_name` or database_name.schema_name.`table_name`.
+                Table names in response to the user must be escaped using backticks.
+            """)
         )
 
         info_sql_database_tool_description = (
-            "Input: A comma-separated list of tables. Output: Schema and sample rows for those tables. "
-            f"Ensure tables exist by calling {list_sql_database_tool.name} first. "
+            "Input: A comma-separated list of tables enclosed between the symbols $START$ and $STOP$. The tables names itself must be escaped using backticks.\n"
+            "Output: Schema and sample rows for those tables. \n"
             "Use this tool to investigate table schemas for needed columns. "
-            "Get sample data with 'SELECT * FROM table LIMIT 3' before answering questions. "
-            "Example Input: table1, table2, table3"
+            f"Ensure tables exist by calling {list_sql_database_tool.name} first. "
+            # "The names of tables, schemas, and databases must be escaped using backticks. "
+            # "Always enclose the names of tables, schemas, and databases in backticks. "
+            "Get sample data with 'SELECT * FROM `database`.`table` LIMIT 3' before answering questions. \n"
+            "Example of correct Input:\n    $START$ `database`.`table1`, `database`.`table2`, `database`.`table3` $STOP$\n"
+            "    $START$ `table1` `table2` `table3` $STOP$\n"
+            "Example of wrong Input:\n    $START$ `database.table1`, `database.table2`, `database.table3` $STOP$\n"
+            "    $START$ table1 table2 table3 $STOP$\n"
         )
         info_sql_database_tool = InfoSQLDatabaseTool(
             name=f'sql_db_schema{prefix}',
@@ -35,7 +41,7 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
         )
 
         query_sql_database_tool_description = dedent(f"""\
-            Input: A detailed SQL query.
+            Input: A detailed and well-structured SQL query. The query must be enclosed between the symbols $START$ and $STOP$.
             Output: Database result or error message. For errors, rewrite and retry the query. For 'Unknown column' errors, use '{info_sql_database_tool.name}' to check table fields.
             This system is a highly intelligent and reliable PostgreSQL SQL skill designed to work with databases.
             Follow these instructions with utmost precision:
@@ -63,6 +69,8 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
                  SELECT NOW() - INTERVAL 1 YEAR;
             6. Query Best Practices:
                - Always send only one query at a time.
+               - Always enclose the names of tables, schemas, and databases in backticks.
+               - The input SQL query must end with a semicolon.
                - Query only necessary columns, not all.
                - Use only existing column names from correct tables.
                - Use database-specific syntax for date operations.

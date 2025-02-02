@@ -1,7 +1,9 @@
 
 import re
+import csv
 import inspect
-from typing import Iterable, List, Optional
+from io import StringIO
+from typing import Iterable, List, Optional, Any
 
 import pandas as pd
 from mindsdb_sql_parser import parse_sql
@@ -12,6 +14,64 @@ from mindsdb.utilities.context import context as ctx
 from mindsdb.integrations.utilities.query_traversal import query_traversal
 
 logger = log.getLogger(__name__)
+
+
+def list_to_csv_str(array: List[List[Any]]) -> str:
+    """Convert a 2D array into a CSV string.
+
+    Args:
+        array (List[List[Any]]): A 2D array/list of values to convert to CSV format
+
+    Returns:
+        str: The array formatted as a CSV string using Excel dialect
+    """
+    output = StringIO()
+    writer = csv.writer(output, dialect='excel')
+    str_array = [[str(item) for item in row] for row in array]
+    writer.writerows(str_array)
+    return output.getvalue()
+
+
+def split_table_name(table_name: str) -> List[str]:
+    """Split table name from llm to parst
+
+    Args:
+        table_name (str): input table name
+
+    Returns:
+        List[str]: parts of table identifier like ['database', 'schema', 'table']
+
+    Example:
+        'input': '`aaa`.`bbb.ccc`', 'output': ['aaa', 'bbb.ccc']
+        'input': '`aaa`.`bbb`.`ccc`', 'output': ['aaa', 'bbb', 'ccc']
+        'input': 'aaa.bbb', 'output': ['aaa', 'bbb']
+        'input': '`aaa.bbb`', 'output': ['aaa.bbb']
+        'input': '`aaa.bbb.ccc`', 'output': ['aaa.bbb.ccc']
+        'input': 'aaa.`bbb`', 'output': ['aaa', 'bbb']
+        'input': 'aaa.bbb.ccc', 'output': ['aaa', 'bbb', 'ccc']
+        'input': 'aaa.`bbb.ccc`', 'output': ['aaa', 'bbb.ccc']
+        'input': '`aaa`.`bbb.ccc`', 'output': ['aaa', 'bbb.ccc']
+    """
+    result = []
+    current = ''
+    in_backticks = False
+
+    i = 0
+    while i < len(table_name):
+        if table_name[i] == '`':
+            in_backticks = not in_backticks
+        elif table_name[i] == '.' and not in_backticks:
+            if current:
+                result.append(current.strip('`'))
+                current = ''
+        else:
+            current += table_name[i]
+        i += 1
+
+    if current:
+        result.append(current.strip('`'))
+
+    return result
 
 
 class SQLAgent:
@@ -61,16 +121,17 @@ class SQLAgent:
 
         # Check tables
         if self._tables_to_include:
+            tables_parts = [split_table_name(x) for x in self._tables_to_include]
+            no_schema_parts = []
+            for t in tables_parts:
+                if len(t) == 3:
+                    no_schema_parts.append([t[0], t[2]])
+            tables_parts += no_schema_parts
+
             def _check_f(node, is_table=None, **kwargs):
                 if is_table and isinstance(node, Identifier):
-                    name1 = node.to_string()
-                    name2 = '.'.join(node.parts)
-                    if len(node.parts) == 3:
-                        name3 = '.'.join(node.parts[1:])
-                    else:
-                        name3 = node.parts[-1]
-                    if not {name1, name2, name3}.intersection(self._tables_to_include):
-                        raise ValueError(f"Table {name1} not found. Available tables: {', '.join(self._tables_to_include)}")
+                    if node.parts not in tables_parts:
+                        raise ValueError(f"Table {'.'.join(node.parts)} not found. Available tables: {', '.join(self._tables_to_include)}")
 
             query_traversal(ast_query, _check_f)
 
@@ -161,15 +222,17 @@ class SQLAgent:
                 continue
 
             # Some LLMs (e.g. gpt-4o) may include backticks or quotes when invoking tools.
-            table_name = table_name.strip(' `"\'\n\r')
-            table = Identifier(table_name)
+            table_parts = split_table_name(table_name)
+            if len(table_parts) == 1:
+                # most likely LLM enclosed all table name in backticks `database.table`
+                table_parts = split_table_name(table_name)
 
             # resolved table
-            table2 = tables_idx.get(tuple(table.parts))
+            table_identifier = tables_idx.get(tuple(table_parts))
 
-            if table2 is None:
-                raise ValueError(f"Table {table} not found in database")
-            tables.append(table2)
+            if table_identifier is None:
+                raise ValueError(f"Table {table} not found in the database")
+            tables.append(table_identifier)
 
         return tables
 
@@ -217,8 +280,7 @@ class SQLAgent:
             dtypes.append(column.get('type', ''))
 
         info = f'Table named `{table_str}`:\n'
-        info += f"\nSample with first {self._sample_rows_in_table_info} rows from table {table_str}:\n"
-        info += "\t".join([field for field in fields])
+        info += f"\nSample with first {self._sample_rows_in_table_info} rows from table {table_str} in CSV format (dialect is 'excel'):\n"
         info += self._get_sample_rows(table_str, fields) + "\n"
         info += '\nColumn data types: ' + ",\t".join(
             [f'\n`{field}` : `{dtype}`' for field, dtype in zip(fields, dtypes)]) + '\n'  # noqa
@@ -229,9 +291,14 @@ class SQLAgent:
         try:
             ret = self._call_engine(command)
             sample_rows = ret.data.to_lists()
+
+            def truncate_value(val):
+                str_val = str(val)
+                return str_val if len(str_val) < 100 else (str_val[:100] + '...')
+
             sample_rows = list(
-                map(lambda ls: [str(i) if len(str(i)) < 100 else str[:100] + '...' for i in ls], sample_rows))
-            sample_rows_str = "\n" + "\n".join(["\t".join(row) for row in sample_rows])
+                map(lambda row: [truncate_value(value) for value in row], sample_rows))
+            sample_rows_str = "\n" + list_to_csv_str([fields] + sample_rows)
         except Exception as e:
             logger.warning(e)
             sample_rows_str = "\n" + "\t [error] Couldn't retrieve sample rows!"
@@ -249,9 +316,6 @@ class SQLAgent:
         If the statement returns no rows, an empty string is returned.
         """
 
-        def _tidy(result: List) -> str:
-            return '\n'.join(['\t'.join([str(value) for value in row]) for row in result])
-
         def _repr_result(ret):
             limit_rows = 30
 
@@ -267,16 +331,16 @@ class SQLAgent:
                 res += f'First {limit_rows} rows:\n'
 
             else:
-                res += 'Result:\n'
-
-            res += _tidy(data[:limit_rows])
+                res += "Result in CSV format (dialect is 'excel'):\n"
+            res += list_to_csv_str([[col.name for col in ret.columns]] + data[:limit_rows])
             return res
 
         ret = self._call_engine(self._clean_query(command))
         if fetch == "all":
             result = _repr_result(ret.data)
         elif fetch == "one":
-            result = _tidy(ret.data.to_lists()[0])
+            result = "Result in CSV format (dialect is 'excel'):\n"
+            result += list_to_csv_str([[col.name for col in ret.data.columns]] + [ret.data.to_lists()[0]])
         else:
             raise ValueError("Fetch parameter must be either 'one' or 'all'")
         return str(result)

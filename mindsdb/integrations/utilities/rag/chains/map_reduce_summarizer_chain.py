@@ -7,6 +7,7 @@ from langchain.chains.base import Chain
 from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 from langchain.chains.llm import LLMChain
 from langchain.chains.combine_documents.map_reduce import MapReduceDocumentsChain, ReduceDocumentsChain
+from langchain_core.callbacks import dispatch_custom_event
 from langchain_core.callbacks.manager import CallbackManagerForChainRun
 from langchain_core.documents import Document
 from langchain_core.prompts import PromptTemplate
@@ -153,6 +154,10 @@ class MapReduceSummarizerChain(Chain):
         summary = await map_reduce_documents_chain.ainvoke(source_chunks)
         content = summary.get('output_text', '')
         logger.debug(f"Generated summary for source ID {source_id}: {content[:100]}...")
+
+        # Stream summarization update.
+        dispatch_custom_event('summary', {'source_id': source_id, 'content': content})
+
         return Summary(source_id=source_id, content=content)
 
     async def _get_source_summaries(self, source_ids: List[str], map_reduce_documents_chain: MapReduceDocumentsChain) -> List[Summary]:
@@ -181,6 +186,7 @@ class MapReduceSummarizerChain(Chain):
             map_reduce_documents_chain = create_map_reduce_documents_chain(self.summarization_config, question)
         # For each document ID associated with one or more chunks, build the full document by
         # getting ALL chunks associated with that ID. Then, map reduce summarize the complete document.
+        dispatch_custom_event('summary_begin', {'num_documents': len(unique_document_ids)})
         try:
             logger.debug("Starting async summary generation")
             summaries = asyncio.get_event_loop().run_until_complete(self._get_source_summaries(unique_document_ids, map_reduce_documents_chain))
@@ -210,5 +216,8 @@ class MapReduceSummarizerChain(Chain):
             else:
                 logger.warning(f"No summary found for doc_id: {doc_id}")
                 chunk.metadata['summary'] = ''
+
+        # Stream summarization update.
+        dispatch_custom_event('summary_end', {'num_documents': len(source_id_to_summary)})
 
         return inputs

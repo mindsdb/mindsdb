@@ -105,7 +105,10 @@ class KnowledgeBasesResource(Resource):
                 f'Knowledge Base with name {kb_name} already exists'
             )
 
-        embedding_model_identifier = Identifier(parts=[knowledge_base['model']])
+        embedding_model_identifier = None
+        if knowledge_base.get('model'):
+            embedding_model_identifier = Identifier(parts=[knowledge_base['model']])
+
         storage = knowledge_base.get('storage')
         embedding_table_identifier = None
         if storage is not None:

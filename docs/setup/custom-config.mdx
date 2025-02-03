@@ -133,7 +133,30 @@ The `autoupdate` parameter defines whether MindsDB automatically checks for and 
             "port": "47334",
             "restart_on_failure": true,
             "max_restart_count": 1,
-            "max_restart_interval_seconds": 60
+            "max_restart_interval_seconds": 60,
+            "server": {
+                "type": "server_type",
+                "config": {
+                    //  waitres 
+                    {
+                        "threads": 16,
+                        "max_request_body_size": (1 << 30) * 10,    # 10GB
+                        "inbuf_overflow": (1 << 30) * 10
+                    }
+
+                    // flask
+                    {}
+
+                    // gunicorn
+                    {
+                        'workers': min(multiprocessing.cpu_count(), 4),
+                        'timeout': 600,
+                        'reuse_port': True,
+                        'preload_app': True,
+                        'threads': 4
+                    }
+                }
+            }
         },
         "mysql": {
             "host": "127.0.0.1",
@@ -172,6 +195,8 @@ Additional setup for the HTTP API and the MySQL API:
 * `restart_on_failure`: If it is set to `true` (and `max_restart_count` is not reached), the restart of MindsDB will be attempted after the MindsDB process was killed - with code 9 on Linux and MacOS, or for any reason on Windows.
 * `max_restart_count`: This defines how many times the restart attempts can be made. Note that 0 stands for no limit.
 * `max_restart_interval_seconds`: This defines the time limit during which there can be no more than `max_restart_count` restart attempts. Note that 0 stands for no time limit, which means there would be a maximum of `max_restart_count` restart attempts allowed.
+* `type` within `server`: This specifies the server type used by MindsDB. It is `waitress` by default. Other values include `flask` and `gunicorn`. Alternatively, you can set the `MINDSDB_DEFAULT_SERVER` environment variable to define the server.
+* `config` within `server`: This stores the selected server configuration. Any options that are supported by the selected server (taht is, waitress, flask, or gunicorn) can be set there, except for `host` and `port` that are defined under `config['api']['http']`.
 
 <Note>
 Here is a usage example of the restart features:

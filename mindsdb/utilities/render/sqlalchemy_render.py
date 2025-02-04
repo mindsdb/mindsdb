@@ -85,19 +85,25 @@ class SqlalchemyRender:
             # update version for support float cast
             self.dialect.server_version_info = (8, 0, 17)
 
-    def to_column(self, parts):
+    def to_column(self, identifier: ast.Identifier) -> sa.Column:
         # because sqlalchemy doesn't allow columns consist from parts therefore we do it manually
 
         parts2 = []
 
-        for i in parts:
+        quoted = getattr(identifier, 'is_quoted', [])
+        # len can be different
+        quoted = quoted + [None] * (len(identifier.parts) - len(quoted))
+
+        for i, is_quoted in zip(identifier.parts, quoted):
             if isinstance(i, ast.Star):
                 part = '*'
+            elif is_quoted:
+                part = self.dialect.identifier_preparer.quote(i)
             else:
                 part = str(sa.column(i).compile(dialect=self.dialect))
 
                 if not i.islower():
-                    # if lower value is not be quoted
+                    # if lower value is not quoted
                     #   then it is quoted only because of mixed case
                     #   in that case use origin string
 
@@ -130,7 +136,7 @@ class SqlalchemyRender:
         if isinstance(t, ast.Star):
             col = sa.text('*')
         elif isinstance(t, ast.Last):
-            col = self.to_column(['last'])
+            col = self.to_column(ast.Identifier(parts=['last']))
         elif isinstance(t, ast.Constant):
             col = sa.literal(t.value)
             if t.alias:
@@ -156,7 +162,7 @@ class SqlalchemyRender:
                     elif name == 'CURRENT_USER':
                         col = sa_fnc.current_user()
             if col is None:
-                col = self.to_column(t.parts)
+                col = self.to_column(t)
             if t.alias:
                 col = col.label(self.get_alias(t.alias))
         elif isinstance(t, ast.Select):

@@ -115,3 +115,12 @@ class TestRender:
         sql = SqlalchemyRender('postgres').get_string(query, with_failback=False)
 
         assert sql.lower() == sql0
+
+    def test_quoted_identifier(self):
+        sql = "SELECT `A`.*, A.`B` FROM tbl.`T` AS t"
+
+        query = parse_sql(sql)
+        rendered = SqlalchemyRender('postgres').get_string(query, with_failback=False)
+
+        # check queries are the same after render
+        assert rendered.replace('\n', '') == 'SELECT "A".*, A."B" FROM tbl."T" AS t'

@@ -116,6 +116,9 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
             self, serialized: Dict[str, Any], inputs: Dict[str, Any], **kwargs: Any
     ) -> Any:
         """Run when chain starts running."""
+        if self.langfuse is None:
+            return
+
         run_uuid = kwargs.get('run_id', uuid4()).hex
 
         if serialized is None:
@@ -136,24 +139,30 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
         self.chain_metrics[chain_name]['count'] += 1
         self.current_chain = chain_name
 
-        chain_span = self.langfuse.span(
-            name=f'{chain_name}-{run_uuid}',
-            trace_id=self.trace_id,
-            parent_observation_id=self.observation_id,
-            input=str(inputs)
-        )
+        try:
+            chain_span = self.langfuse.span(
+                name=f'{chain_name}-{run_uuid}',
+                trace_id=self.trace_id,
+                parent_observation_id=self.observation_id,
+                input=str(inputs)
+            )
 
-        metadata = {
-            'chain_name': chain_name,
-            'started': start_time.isoformat(),
-            'start_timestamp': start_time.timestamp(),
-            'input_size': len(str(inputs))
-        }
-        chain_span.update(metadata=metadata)
-        self.chain_uuid_to_span[run_uuid] = chain_span
+            metadata = {
+                'chain_name': chain_name,
+                'started': start_time.isoformat(),
+                'start_timestamp': start_time.timestamp(),
+                'input_size': len(str(inputs))
+            }
+            chain_span.update(metadata=metadata)
+            self.chain_uuid_to_span[run_uuid] = chain_span
+        except Exception as e:
+            logger.warning(f"Error creating Langfuse span: {str(e)}")
 
     def on_chain_end(self, outputs: Dict[str, Any], **kwargs: Any) -> Any:
         """Run when chain ends running."""
+        if self.langfuse is None:
+            return
+
         chain_uuid = kwargs.get('run_id', uuid4()).hex
         if chain_uuid not in self.chain_uuid_to_span:
             return
@@ -161,21 +170,24 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
         if chain_span is None:
             return
 
-        end_time = datetime.datetime.now()
-        chain_name = chain_span.metadata.get('chain_name', 'unknown')
-        start_timestamp = chain_span.metadata.get('start_timestamp')
+        try:
+            end_time = datetime.datetime.now()
+            chain_name = chain_span.metadata.get('chain_name', 'unknown')
+            start_timestamp = chain_span.metadata.get('start_timestamp')
 
-        if start_timestamp and chain_name in self.chain_metrics:
-            duration = end_time.timestamp() - start_timestamp
-            self.chain_metrics[chain_name]['total_time'] += duration
+            if start_timestamp and chain_name in self.chain_metrics:
+                duration = end_time.timestamp() - start_timestamp
+                self.chain_metrics[chain_name]['total_time'] += duration
 
-        metadata = {
-            'finished': end_time.isoformat(),
-            'duration_seconds': duration if start_timestamp else None,
-            'output_size': len(str(outputs))
-        }
-        chain_span.update(output=str(outputs), metadata=metadata)
-        chain_span.end()
+            metadata = {
+                'finished': end_time.isoformat(),
+                'duration_seconds': duration if start_timestamp else None,
+                'output_size': len(str(outputs))
+            }
+            chain_span.update(output=str(outputs), metadata=metadata)
+            chain_span.end()
+        except Exception as e:
+            logger.warning(f"Error updating Langfuse span: {str(e)}")
 
     def on_chain_error(self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any) -> Any:
         """Run when chain errors."""
@@ -205,28 +217,39 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
 
     def on_agent_action(self, action, **kwargs: Any) -> Any:
         """Run on agent action."""
-        # Do nothing for now.
+        if self.langfuse is None:
+            return
+
         run_uuid = kwargs.get('run_id', uuid4()).hex
-        action_span = self.langfuse.span(
-            name=f'{getattr(action, "type", "action")}-{getattr(action, "tool", "")}-{run_uuid}',
-            trace_id=self.trace_id,
-            parent_observation_id=self.observation_id,
-            input=str(action)
-        )
-        self.action_uuid_to_span[run_uuid] = action_span
+        try:
+            action_span = self.langfuse.span(
+                name=f'{getattr(action, "type", "action")}-{getattr(action, "tool", "")}-{run_uuid}',
+                trace_id=self.trace_id,
+                parent_observation_id=self.observation_id,
+                input=str(action)
+            )
+            self.action_uuid_to_span[run_uuid] = action_span
+        except Exception as e:
+            logger.warning(f"Error creating Langfuse span for agent action: {str(e)}")
 
     def on_agent_finish(self, finish, **kwargs: Any) -> Any:
         """Run on agent end."""
-        # Do nothing for now.
+        if self.langfuse is None:
+            return
+
         run_uuid = kwargs.get('run_id', uuid4()).hex
         if run_uuid not in self.action_uuid_to_span:
             return
         action_span = self.action_uuid_to_span.pop(run_uuid)
         if action_span is None:
             return
-        if finish is not None:
-            action_span.update(output=finish)  # supersedes tool output
-        action_span.end()
+
+        try:
+            if finish is not None:
+                action_span.update(output=finish)  # supersedes tool output
+            action_span.end()
+        except Exception as e:
+            logger.warning(f"Error updating Langfuse span: {str(e)}")
 
     def auth_check(self):
         if self.langfuse is not None:

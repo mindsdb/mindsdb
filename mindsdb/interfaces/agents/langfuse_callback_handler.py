@@ -21,6 +21,10 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
         # if these are not available, we generate some UUIDs
         self.trace_id = trace_id or uuid4().hex
         self.observation_id = observation_id or uuid4().hex
+        # Track metrics about tools and chains
+        self.tool_metrics = {}
+        self.chain_metrics = {}
+        self.current_chain = None
 
     def on_tool_start(
             self, serialized: Dict[str, Any], input_str: str, **kwargs: Any
@@ -30,9 +34,28 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
         action_span = self.action_uuid_to_span.get(parent_run_uuid)
         if action_span is None:
             return
+
+        tool_name = serialized.get("name", "tool")
+        start_time = datetime.datetime.now()
+
+        # Initialize or update tool metrics
+        if tool_name not in self.tool_metrics:
+            self.tool_metrics[tool_name] = {
+                'count': 0,
+                'total_time': 0,
+                'errors': 0,
+                'last_error': None,
+                'inputs': []
+            }
+
+        self.tool_metrics[tool_name]['count'] += 1
+        self.tool_metrics[tool_name]['inputs'].append(input_str)
+
         metadata = {
-            'tool_name': serialized.get("name", "tool"),
-            'started': datetime.datetime.now().isoformat()
+            'tool_name': tool_name,
+            'started': start_time.isoformat(),
+            'start_timestamp': start_time.timestamp(),
+            'input_length': len(input_str) if input_str else 0
         }
         action_span.update(metadata=metadata)
 
@@ -42,9 +65,25 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
         action_span = self.action_uuid_to_span.get(parent_run_uuid)
         if action_span is None:
             return
+
+        end_time = datetime.datetime.now()
+        tool_name = action_span.metadata.get('tool_name', 'unknown')
+        start_timestamp = action_span.metadata.get('start_timestamp')
+
+        if start_timestamp:
+            duration = end_time.timestamp() - start_timestamp
+            if tool_name in self.tool_metrics:
+                self.tool_metrics[tool_name]['total_time'] += duration
+
+        metadata = {
+            'finished': end_time.isoformat(),
+            'duration_seconds': duration if start_timestamp else None,
+            'output_length': len(output) if output else 0
+        }
+
         action_span.update(
             output=output,  # tool output is action output (unless superseded by a global action output)
-            metadata={'finished': datetime.datetime.now().isoformat()}
+            metadata=metadata
         )
 
     def on_tool_error(
@@ -55,11 +94,23 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
         action_span = self.action_uuid_to_span.get(parent_run_uuid)
         if action_span is None:
             return
+
         try:
             error_str = str(error)
         except Exception:
             error_str = "Couldn't get error string."
-        action_span.update(metadata={'error_description': error_str})
+
+        tool_name = action_span.metadata.get('tool_name', 'unknown')
+        if tool_name in self.tool_metrics:
+            self.tool_metrics[tool_name]['errors'] += 1
+            self.tool_metrics[tool_name]['last_error'] = error_str
+
+        metadata = {
+            'error_description': error_str,
+            'error_type': error.__class__.__name__,
+            'error_time': datetime.datetime.now().isoformat()
+        }
+        action_span.update(metadata=metadata)
 
     def on_chain_start(
             self, serialized: Dict[str, Any], inputs: Dict[str, Any], **kwargs: Any
@@ -70,12 +121,35 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
         if serialized is None:
             serialized = {}
 
+        chain_name = serialized.get("name", "chain")
+        start_time = datetime.datetime.now()
+
+        # Initialize or update chain metrics
+        if chain_name not in self.chain_metrics:
+            self.chain_metrics[chain_name] = {
+                'count': 0,
+                'total_time': 0,
+                'errors': 0,
+                'last_error': None
+            }
+
+        self.chain_metrics[chain_name]['count'] += 1
+        self.current_chain = chain_name
+
         chain_span = self.langfuse.span(
-            name=f'{serialized.get("name", "chain")}-{run_uuid}',
+            name=f'{chain_name}-{run_uuid}',
             trace_id=self.trace_id,
             parent_observation_id=self.observation_id,
             input=str(inputs)
         )
+
+        metadata = {
+            'chain_name': chain_name,
+            'started': start_time.isoformat(),
+            'start_timestamp': start_time.timestamp(),
+            'input_size': len(str(inputs))
+        }
+        chain_span.update(metadata=metadata)
         self.chain_uuid_to_span[run_uuid] = chain_span
 
     def on_chain_end(self, outputs: Dict[str, Any], **kwargs: Any) -> Any:
@@ -86,13 +160,48 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
         chain_span = self.chain_uuid_to_span.pop(chain_uuid)
         if chain_span is None:
             return
-        chain_span.update(output=str(outputs))
+
+        end_time = datetime.datetime.now()
+        chain_name = chain_span.metadata.get('chain_name', 'unknown')
+        start_timestamp = chain_span.metadata.get('start_timestamp')
+
+        if start_timestamp and chain_name in self.chain_metrics:
+            duration = end_time.timestamp() - start_timestamp
+            self.chain_metrics[chain_name]['total_time'] += duration
+
+        metadata = {
+            'finished': end_time.isoformat(),
+            'duration_seconds': duration if start_timestamp else None,
+            'output_size': len(str(outputs))
+        }
+        chain_span.update(output=str(outputs), metadata=metadata)
         chain_span.end()
 
     def on_chain_error(self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any) -> Any:
         """Run when chain errors."""
-        # Do nothing for now.
-        pass
+        chain_uuid = kwargs.get('run_id', uuid4()).hex
+        if chain_uuid not in self.chain_uuid_to_span:
+            return
+        chain_span = self.chain_uuid_to_span.get(chain_uuid)
+        if chain_span is None:
+            return
+
+        try:
+            error_str = str(error)
+        except Exception:
+            error_str = "Couldn't get error string."
+
+        chain_name = chain_span.metadata.get('chain_name', 'unknown')
+        if chain_name in self.chain_metrics:
+            self.chain_metrics[chain_name]['errors'] += 1
+            self.chain_metrics[chain_name]['last_error'] = error_str
+
+        metadata = {
+            'error_description': error_str,
+            'error_type': error.__class__.__name__,
+            'error_time': datetime.datetime.now().isoformat()
+        }
+        chain_span.update(metadata=metadata)
 
     def on_agent_action(self, action, **kwargs: Any) -> Any:
         """Run on agent action."""
@@ -123,6 +232,49 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
         if self.langfuse is not None:
             return self.langfuse.auth_check()
         return False
+
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get collected metrics about tools and chains.
+
+        Returns:
+            Dict containing:
+            - tool_metrics: Statistics about tool usage, errors, and timing
+            - chain_metrics: Statistics about chain execution, errors, and timing
+            For each tool/chain, includes:
+                - count: Number of times used
+                - total_time: Total execution time
+                - errors: Number of errors
+                - last_error: Most recent error message
+                - avg_duration: Average execution time
+        """
+        metrics = {
+            'tool_metrics': {},
+            'chain_metrics': {}
+        }
+
+        # Process tool metrics
+        for tool_name, data in self.tool_metrics.items():
+            metrics['tool_metrics'][tool_name] = {
+                'count': data['count'],
+                'total_time': data['total_time'],
+                'avg_duration': data['total_time'] / data['count'] if data['count'] > 0 else 0,
+                'errors': data['errors'],
+                'last_error': data['last_error'],
+                'error_rate': data['errors'] / data['count'] if data['count'] > 0 else 0
+            }
+
+        # Process chain metrics
+        for chain_name, data in self.chain_metrics.items():
+            metrics['chain_metrics'][chain_name] = {
+                'count': data['count'],
+                'total_time': data['total_time'],
+                'avg_duration': data['total_time'] / data['count'] if data['count'] > 0 else 0,
+                'errors': data['errors'],
+                'last_error': data['last_error'],
+                'error_rate': data['errors'] / data['count'] if data['count'] > 0 else 0
+            }
+
+        return metrics
 
 
 def get_skills(agent: db.Agents) -> List:

@@ -9,6 +9,7 @@ from mindsdb.api.executor.datahub.classes.tables_row import (
     TablesRow,
 )
 from mindsdb.utilities import log
+from mindsdb.utilities.config import config
 
 logger = log.getLogger(__name__)
 
@@ -291,7 +292,11 @@ class ColumnsTable(Table):
                     databases = arg2
 
         if databases is None:
-            databases = ['information_schema', 'mindsdb', 'files']
+            databases = [
+                'information_schema',
+                config.get('default_project', 'mindsdb'),
+                'files'
+            ]
 
         for db_name in databases:
             tables = {}

@@ -134,7 +134,7 @@ class SqlalchemyRender:
         for i, is_quoted in zip(identifier.parts, quoted):
             if isinstance(i, ast.Star):
                 part = '*'
-            elif is_quoted:
+            elif is_quoted or i.lower() in RESERVED_WORDS:
                 # quote anyway
                 part = self.dialect.identifier_preparer.quote_identifier(i)
             else:

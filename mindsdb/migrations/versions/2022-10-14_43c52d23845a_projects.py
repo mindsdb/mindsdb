@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.sql import text
 
 import mindsdb.interfaces.storage.db as db
-from mindsdb.utilities.config import Config
+from mindsdb.utilities.config import config
 
 
 # revision identifiers, used by Alembic.
@@ -36,7 +36,6 @@ def upgrade():
     conn = op.get_bind()
     session = sa.orm.Session(bind=conn)
 
-    config = Config()
     project_record = db.Project(name=config.get('default_project'))
     session.add(project_record)
     session.commit()

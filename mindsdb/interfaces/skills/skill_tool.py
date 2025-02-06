@@ -1,17 +1,18 @@
 import enum
-from collections import defaultdict
-from typing import List, Optional
+import inspect
 from dataclasses import dataclass
+from collections import defaultdict
+from typing import List, Dict, Optional
 
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
 from mindsdb_sql_parser.ast import Select, BinaryOperation, Identifier, Constant, Star
 
-from mindsdb.integrations.libs.vectordatabase_handler import TableField
-from mindsdb.interfaces.skills.sql_agent import SQLAgent
-from mindsdb.interfaces.storage import db
 from mindsdb.utilities import log
 from mindsdb.utilities.cache import get_cache
+from mindsdb.interfaces.storage import db
+from mindsdb.interfaces.skills.sql_agent import SQLAgent
+from mindsdb.integrations.libs.vectordatabase_handler import TableField
 
 
 _DEFAULT_TOP_K_SIMILARITY_SEARCH = 5
@@ -45,27 +46,54 @@ class SkillData:
     agent_tables_list: Optional[List[str]]
 
     @property
-    def tables_list(self) -> List[str]:
-        """List of tables which may use this skill. If the list is empty, there are no restrictions.
-        The result list is a combination of skill's and agent's tables lists.
+    def restriction_on_tables(self) -> Optional[Dict[str, set]]:
+        """Schemas and tables which agent+skill may use. The result is intersections of skill's and agent's tables lists.
 
         Returns:
-            List[str]: List of tables.
+            Optional[Dict[str, set]]: allowed schemas and tables. Schemas - are keys in dict, tables - are values.
+                if result is None, then there are no restrictions
 
         Raises:
             ValueError: if there is no intersection between skill's and agent's list.
                 This means that all tables restricted for use.
         """
-        agent_tables_list = self.agent_tables_list or []
-        skill_tables_list = self.params.get('tables', [])
-        if len(skill_tables_list) > 0 and len(agent_tables_list) > 0:
-            diff = set(skill_tables_list) & set(agent_tables_list)
-            if len(diff) == 0:
-                raise ValueError("There are no tables allowed for use.")
-            return list(diff)
-        if len(skill_tables_list) > 0:
-            return skill_tables_list
-        return agent_tables_list
+        def list_to_map(input: List) -> Dict:
+            agent_tables_map = defaultdict(set)
+            for x in input:
+                if isinstance(x, str):
+                    table_name = x
+                    schema_name = None
+                elif isinstance(x, dict):
+                    table_name = x['table']
+                    schema_name = x.get('schema')
+                else:
+                    raise ValueError(f'Unexpected value in tables list: {x}')
+                agent_tables_map[schema_name].add(table_name)
+            return agent_tables_map
+
+        agent_tables_map = list_to_map(self.agent_tables_list or [])
+        skill_tables_map = list_to_map(self.params.get('tables', []))
+
+        if len(agent_tables_map) > 0 and len(skill_tables_map) > 0:
+            if len(set(agent_tables_map) & set(skill_tables_map)) == 0:
+                raise ValueError("Skill's and agent's allowed tables list have no shared schemas.")
+
+            intersection_tables_map = defaultdict(set)
+            has_intersection = False
+            for schema_name in agent_tables_map:
+                if schema_name not in skill_tables_map:
+                    continue
+                intersection_tables_map[schema_name] = agent_tables_map[schema_name] & skill_tables_map[schema_name]
+                if len(intersection_tables_map[schema_name]) > 0:
+                    has_intersection = True
+            if has_intersection is False:
+                raise ValueError("Skill's and agent's allowed tables list have no shared tables.")
+            return intersection_tables_map
+        if len(skill_tables_map) > 0:
+            return skill_tables_map
+        if len(agent_tables_map) > 0:
+            return agent_tables_map
+        return None
 
 
 class SkillToolController:
@@ -83,22 +111,6 @@ class SkillToolController:
             self.command_executor = ExecuteCommands(sql_session)
         return self.command_executor
 
-    def get_sql_agent(
-            self,
-            database: str,
-            include_tables: Optional[List[str]] = None,
-            ignore_tables: Optional[List[str]] = None,
-            sample_rows_in_table_info: int = 3,
-    ):
-        return SQLAgent(
-            self.get_command_executor(),
-            database,
-            include_tables,
-            ignore_tables,
-            sample_rows_in_table_info,
-            cache=get_cache('agent', max_size=_MAX_CACHE_SIZE)
-        )
-
     def _make_text_to_sql_tools(self, skills: List[db.Skills], llm) -> List:
         '''
            Uses SQLAgent to execute tool
@@ -112,19 +124,54 @@ class SkillToolController:
             raise ImportError(
                 'To use the text-to-SQL skill, please install langchain with `pip install mindsdb[langchain]`')
 
+        command_executor = self.get_command_executor()
+
+        def escape_table_name(name: str) -> str:
+            name = name.strip(' `')
+            return f'`{name}`'
+
         tables_list = []
         for skill in skills:
             database = skill.params['database']
-            for table in skill.tables_list:
-                tables_list.append(f'{database}.{table}')
+            restriction_on_tables = skill.restriction_on_tables
+            if restriction_on_tables is None:
+                handler = command_executor.session.integration_controller.get_data_handler(database)
+                if 'all' in inspect.signature(handler.get_tables).parameters:
+                    response = handler.get_tables(all=True)
+                else:
+                    response = handler.get_tables()
+                # no restrictions
+                columns = [c.lower() for c in response.data_frame.columns]
+                name_idx = columns.index('table_name') if 'table_name' in columns else 0
 
-        # use list databases
-        database = ','.join(set(s.params['database'] for s in skills))
-        db = MindsDBSQL(
-            engine=self.get_command_executor(),
-            database=database,
-            metadata=self.get_command_executor().session.integration_controller,
-            include_tables=tables_list
+                if 'table_schema' in response.data_frame.columns:
+                    for _, row in response.data_frame.iterrows():
+                        tables_list.append(f"{database}.{row['table_schema']}.{escape_table_name(row[name_idx])}")
+                else:
+                    for table_name in response.data_frame.iloc[:, name_idx]:
+                        tables_list.append(f"{database}.{escape_table_name(table_name)}")
+                continue
+            for schema_name, tables in restriction_on_tables.items():
+                for table in tables:
+                    if schema_name is None:
+                        tables_list.append(f'{database}.{escape_table_name(table)}')
+                    else:
+                        tables_list.append(f'{database}.{schema_name}.{escape_table_name(table)}')
+
+        sql_agent = SQLAgent(
+            command_executor=command_executor,
+            databases=list(set(s.params['database'] for s in skills)),
+            databases_struct={
+                skill.params['database']: skill.restriction_on_tables
+                for skill in skills
+            },
+            include_tables=tables_list,
+            ignore_tables=None,
+            sample_rows_in_table_info=3,
+            cache=get_cache('agent', max_size=_MAX_CACHE_SIZE)
+        )
+        db = MindsDBSQL.custom_init(
+            sql_agent=sql_agent
         )
 
         # Users probably don't need to configure this for now.
@@ -138,14 +185,18 @@ class SkillToolController:
         for i, tool in enumerate(sql_database_tools):
             if isinstance(tool, QuerySQLDataBaseTool):
                 # Add our own custom description so our agent knows when to query this table.
-                tool.description = (
-                    f'Use this tool if you need data about {" OR ".join(descriptions)}. '
-                    'Use the conversation context to decide which table to query. '
-                    f'These are the available tables: {",".join(tables_list)}.\n' if len(tables_list) > 0 else '\n'
-                    f'ALWAYS consider these special cases:\n'
-                    f'- For TIMESTAMP type columns, make sure you include the time portion in your query (e.g. WHERE date_column = "2020-01-01 12:00:00")'
-                    f'Here are the rest of the instructions:\n'
-                    f'{tool.description}'
+                original_description = tool.description
+                tool.description = ''
+                if len(descriptions) > 0:
+                    tool.description += f'Use this tool if you need data about {" OR ".join(descriptions)}.\n'
+                tool.description += 'Use the conversation context to decide which table to query.\n'
+                if len(tables_list) > 0:
+                    f'These are the available tables: {",".join(tables_list)}.\n'
+                tool.description += (
+                    'ALWAYS consider these special cases:\n'
+                    ' - For TIMESTAMP type columns, make sure you include the time portion in your query (e.g. WHERE date_column = "2020-01-01 12:00:00")\n'
+                    'Here are the rest of the instructions:\n'
+                    f'{original_description}'
                 )
                 sql_database_tools[i] = tool
         return sql_database_tools
@@ -175,7 +226,6 @@ class SkillToolController:
         return build_retrieval_tool(tool, pred_args, skill)
 
     def _get_rag_query_function(self, skill: db.Skills):
-
         session_controller = self.get_command_executor().session
 
         def _answer_question(question: str) -> str:

@@ -45,13 +45,17 @@ Start MindsDB locally with your custom configuration by providing a path to the 
 python -m mindsdb --config=/path-to-the-extended-config-file/config.json
 ```
 
+<AccordionGroup>
+
+<Accordion title="Overview of Config Parameters">
+
 Below are all of the custom configuration parameters that should be set according to your requirements and saved into the `config.json` file.
 
 ```bash
 {
     "permanent_storage": {
-        "location": "local"
-        "bucket": "s3_bucket_name" # optional
+        "location": "absent",
+        "bucket": "s3_bucket_name" # optional, used only if "location": "s3"
     },
 ```
 
@@ -120,23 +124,46 @@ In local instances of MindsDB, users can enable simple HTTP authentication based
 
 The `gui` parameter controls the behavior of the MindsDB graphical user interface (GUI) updates.
 
-The `autoupdate` parameter defines whether MindsDB automatically checks for and updates the GUI to the latest version when the application starts. If set to `True`, MindsDB will attempt to fetch the latest available version of the GUI. If set to `False`, MindsDB will not try to update the GUI on startup.
+The `autoupdate` parameter defines whether MindsDB automatically checks for and updates the GUI to the latest version when the application starts. If set to `true`, MindsDB will attempt to fetch the latest available version of the GUI. If set to `False`, MindsDB will not try to update the GUI on startup.
 
 ```bash
     "api": {
         "http": {
             "host": "127.0.0.1",
             "port": "47334",
-            "restart_on_failure": True,
+            "restart_on_failure": true,
             "max_restart_count": 1,
-            "max_restart_interval_seconds": 60
+            "max_restart_interval_seconds": 60,
+            "server": {
+                "type": "server_type",
+                "config": {
+                    //  waitres 
+                    {
+                        "threads": 16,
+                        "max_request_body_size": (1 << 30) * 10,    # 10GB
+                        "inbuf_overflow": (1 << 30) * 10
+                    }
+
+                    // flask
+                    {}
+
+                    // gunicorn
+                    {
+                        'workers': min(multiprocessing.cpu_count(), 4),
+                        'timeout': 600,
+                        'reuse_port': True,
+                        'preload_app': True,
+                        'threads': 4
+                    }
+                }
+            }
         },
         "mysql": {
             "host": "127.0.0.1",
             "port": "47335",
             "database": "mindsdb",
             "ssl": true,
-            "restart_on_failure": True,
+            "restart_on_failure": true,
             "max_restart_count": 1,
             "max_restart_interval_seconds": 60
         },
@@ -165,28 +192,30 @@ Connection parameters within each block include:
 
 Additional setup for the HTTP API and the MySQL API:
 
-* `restart_on_failure`: If it is set to `True` (and `max_restart_count` is not reached), the restart of MindsDB will be attempted after the MindsDB process was killed - with code 9 on Linux and MacOS, or for any reason on Windows.
+* `restart_on_failure`: If it is set to `true` (and `max_restart_count` is not reached), the restart of MindsDB will be attempted after the MindsDB process was killed - with code 9 on Linux and MacOS, or for any reason on Windows.
 * `max_restart_count`: This defines how many times the restart attempts can be made. Note that 0 stands for no limit.
 * `max_restart_interval_seconds`: This defines the time limit during which there can be no more than `max_restart_count` restart attempts. Note that 0 stands for no time limit, which means there would be a maximum of `max_restart_count` restart attempts allowed.
+* `type` within `server`: This specifies the server type used by MindsDB. It is `waitress` by default. Other values include `flask` and `gunicorn`. Alternatively, you can set the `MINDSDB_DEFAULT_SERVER` environment variable to define the server.
+* `config` within `server`: This stores the selected server configuration. Any options that are supported by the selected server (taht is, waitress, flask, or gunicorn) can be set there, except for `host` and `port` that are defined under `config['api']['http']`.
 
 <Note>
 Here is a usage example of the restart features:
 
 Assume the following values:
-    max_restart_count = 2
-    max_restart_interval_seconds = 30 seconds
+- max_restart_count = 2
+- max_restart_interval_seconds = 30 seconds
 
 Assume the following scenario:
-    MindsDB fails at 1000s of its work - the restart attempt succeeds as there were no restarts in the past 30 seconds.
-    MindsDB fails at 1010s of its work - the restart attempt succeeds as there was only 1 restart (at 1000s) in the past 30 seconds.
-    MindsDB fails at 1020s of its work - the restart attempt fails as there were already max_restart_count=2 restarts (at 1000s and 1010s) in the past 30 seconds.
-    MindsDB fails at 1031s of its work - the restart attempt succeeds as there was only 1 restart (at 1010s) in the past 30 seconds.
+- MindsDB fails at 1000s of its work - the restart attempt succeeds as there were no restarts in the past 30 seconds.
+- MindsDB fails at 1010s of its work - the restart attempt succeeds as there was only 1 restart (at 1000s) in the past 30 seconds.
+- MindsDB fails at 1020s of its work - the restart attempt fails as there were already max_restart_count=2 restarts (at 1000s and 1010s) in the past 30 seconds.
+- MindsDB fails at 1031s of its work - the restart attempt succeeds as there was only 1 restart (at 1010s) in the past 30 seconds.
 </Note>
 
 ```bash
     "cache": {
         "type": "local",
-        "connection": "redis://localhost:6379" # optional
+        "connection": "redis://localhost:6379" # optional, used only if "type": "redis"
     },
 ```
 
@@ -198,14 +227,43 @@ The `type` parameter specifies the type of caching mechanism to use for storing 
 * `local` (default): Stores prediction results in the `cache` folder (as defined in the `paths` configuration). This is useful for repeated queries where the result doesn't change.
 * `redis`: Stores prediction results in a Redis instance. This option requires the `connection` parameter, which specifies the Redis connection string.
 
+The `connection` parameter is required only if the `type` parameter is set to `redis`. It stores the Redis connection string.
+
+```bash
+    "logging": {
+        "handlers": {
+            "console": {
+                "enabled": true,
+                "level": "INFO" # optional (alternatively, it can be defined in the MINDSDB_CONSOLE_LOG_LEVEL environment variable)
+            },
+            "file": {
+                "enabled": False,
+                "level": "INFO", # optional (alternatively, it can be defined in the MINDSDB_FILE_LOG_LEVEL environment variable)
+                "filename": "app.log",
+                "maxBytes": 524288, # 0.5 Mb
+                "backupCount": 3
+            }
+        }
+    },
+```
+
+The above parameters are implemented based on [Python's Logging Dictionary Schema](https://docs.python.org/3/library/logging.config.html#logging-config-dictschema).
+
+The `logging` parameter defines the details of output logging, including the logging levels.
+
+The `handler` parameter provides handlers used for logging into streams and files.
+
+* `console`: If the `enabled` parameter is set to `true`, then the logging output is saved into a stream. Users can define the logging level in the `level` parameter or in the `MINDSDB_CONSOLE_LOG_LEVEL` environment variable - one of `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`.
+* `file`: If the `enabled` parameter is set to `true`, then the logging output is saved into a file. Users can define the logging level in the `level` parameter or in the `MINDSDB_FILE_LOG_LEVEL` environment variable - one of `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. Additionally, the `filename` parameter stores the name of the file that contains logs, and the `maxBytes` and `backupCount` parameters determine the rollover process of the file - that is, if the file reached the size of `maxBytes`, then the file is closed and a new file is opened, where the number of files is defined by the `backupCount` parameter.
+
 ```bash
     "ml_task_queue": {
         "type": "local",
-        "host": "localhost", # required only when type is set to redis
-        "port": 6379, # required only when type is set to redis
-        "db": 0, # required only when type is set to redis
-        "username": "username", # required only when type is set to redis
-        "password": "password" # required only when type is set to redis
+        "host": "localhost", # optional, used only if "type": "redis"
+        "port": 6379, # optional, used only if "type": "redis"
+        "db": 0, # optional, used only if "type": "redis"
+        "username": "username", # optional, used only if "type": "redis"
+        "password": "password" # optional, used only if "type": "redis"
     },
 ```
 
@@ -234,3 +292,88 @@ If this parameter is left empty (`[]`), users can upload files from any URL with
 The `web_crawling_allowed_sites` parameter restricts web crawling operations to a specified list of allowed IPs or web addresses. This ensures that the application only accesses pre-approved and safe URLs (`"web_crawling_allowed_sites": ["https://example.com", "https://api.mysite.com"]`).
 
 If left empty (`[]`), the application allows access to all URLs by default (marked with a wildcard in the open-source version).
+
+</Accordion>
+
+<Accordion title="Example of Extended Config File">
+
+First, create a `config.json` file.
+
+```bash
+{
+    "permanent_storage": {
+        "location": "absent"
+    },
+    "paths": {
+        "root": "/path/to/root/location"
+    },
+    "auth":{
+        "http_auth_enabled": true,
+        "http_permanent_session_lifetime": 86400,
+        "username": "username",
+        "password": "password"
+    },
+    "gui": {
+        "autoupdate": true
+    },
+    "api": {
+        "http": {
+            "host": "127.0.0.1",
+            "port": "47334",
+            "restart_on_failure": true,
+            "max_restart_count": 1,
+            "max_restart_interval_seconds": 60
+        },
+        "mysql": {
+            "host": "127.0.0.1",
+            "port": "47335",
+            "database": "mindsdb",
+            "ssl": true,
+            "restart_on_failure": true,
+            "max_restart_count": 1,
+            "max_restart_interval_seconds": 60
+        },
+        "mongodb": {
+            "host": "127.0.0.1",
+            "port": "47336",
+            "database": "mindsdb"
+        }
+    },
+    "cache": {
+        "type": "local"
+    },
+    "logging": {
+        "handlers": {
+            "console": {
+                "enabled": true,
+                "level": "INFO"
+            },
+            "file": {
+                "enabled": false,
+                "level": "INFO",
+                "filename": "app.log",
+                "maxBytes": 524288,
+                "backupCount": 3
+            }
+        }
+    },
+    "ml_task_queue": {
+        "type": "local"
+    },
+    "file_upload_domains": [],
+    "web_crawling_allowed_sites": []
+}
+```
+
+Next, start MindsDB providing this `config.json` file.
+
+```bash
+python -m mindsdb --config=/path-to-the-extended-config-file/config.json
+```
+</Accordion>
+
+</AccordionGroup>
+
+## Modifying Config Values
+
+Users can modify config values by directly editing the `config.json` file they created.

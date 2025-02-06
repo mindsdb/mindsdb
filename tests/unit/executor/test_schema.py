@@ -45,6 +45,10 @@ class TestSchema(BaseExecutorDummyML):
         df = self.run_sql('describe view v1')
         assert df.NAME[0] == 'v1' and df.QUERY[0] == 'select * from models'
 
+        # columns of view
+        ret = self.run_sql('show columns from v1')
+        assert 'NAME' in list(ret.Field)
+
         # model
         self.run_sql('''
                 CREATE model pred1

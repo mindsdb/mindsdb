@@ -14,6 +14,10 @@ from sqlalchemy.sql import functions as sa_fnc
 from mindsdb_sql_parser import ast
 
 
+RESERVED_WORDS = {
+    "collation"
+}
+
 sa_type_names = [
     key for key, val in sa.types.__dict__.items() if hasattr(val, '__module__')
     and val.__module__ in ('sqlalchemy.sql.sqltypes', 'sqlalchemy.sql.type_api')
@@ -81,24 +85,30 @@ class SqlalchemyRender:
             # update version for support float cast
             self.dialect.server_version_info = (8, 0, 17)
 
-    def to_column(self, parts):
+    def to_column(self, identifier: ast.Identifier) -> sa.Column:
         # because sqlalchemy doesn't allow columns consist from parts therefore we do it manually
 
         parts2 = []
 
-        for i in parts:
+        quoted = getattr(identifier, 'is_quoted', [])
+        # len can be different
+        quoted = quoted + [None] * (len(identifier.parts) - len(quoted))
+
+        for i, is_quoted in zip(identifier.parts, quoted):
             if isinstance(i, ast.Star):
                 part = '*'
+            elif is_quoted:
+                part = self.dialect.identifier_preparer.quote(i)
             else:
                 part = str(sa.column(i).compile(dialect=self.dialect))
 
                 if not i.islower():
-                    # if lower value is not be quoted
+                    # if lower value is not quoted
                     #   then it is quoted only because of mixed case
                     #   in that case use origin string
 
                     part_lower = str(sa.column(i.lower()).compile(dialect=self.dialect))
-                    if part.lower() != part_lower:
+                    if part.lower() != part_lower and i.lower() not in RESERVED_WORDS:
                         part = i
 
             parts2.append(part)
@@ -126,7 +136,7 @@ class SqlalchemyRender:
         if isinstance(t, ast.Star):
             col = sa.text('*')
         elif isinstance(t, ast.Last):
-            col = self.to_column(['last'])
+            col = self.to_column(ast.Identifier(parts=['last']))
         elif isinstance(t, ast.Constant):
             col = sa.literal(t.value)
             if t.alias:
@@ -152,7 +162,7 @@ class SqlalchemyRender:
                     elif name == 'CURRENT_USER':
                         col = sa_fnc.current_user()
             if col is None:
-                col = self.to_column(t.parts)
+                col = self.to_column(t)
             if t.alias:
                 col = col.label(self.get_alias(t.alias))
         elif isinstance(t, ast.Select):
@@ -506,6 +516,8 @@ class SqlalchemyRender:
                             condition = self.to_expression(item['condition'])
 
                         join_type = item['join_type']
+                        if 'ASOF' in join_type:
+                            raise NotImplementedError(f'Unsupported join type: {join_type}')
                         method = 'join'
                         is_full = False
                         if join_type == 'LEFT JOIN':

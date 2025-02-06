@@ -215,6 +215,8 @@ class IntegrationController:
     def modify(self, name, data):
         self.handlers_cache.delete(name)
         integration_record = self._get_integration_record(name)
+        if isinstance(integration_record.data, dict) and integration_record.data.get('is_demo') is True:
+            raise ValueError("It is forbidden to change properties of the demo object")
         old_data = deepcopy(integration_record.data)
         for k in old_data:
             if k not in data:
@@ -234,9 +236,11 @@ class IntegrationController:
             handler = self.handler_modules[name]
 
             if getattr(handler, 'permanent', False) is True:
-                raise Exception('Unable to drop: is permanent integration')
+                raise Exception('Unable to drop permanent integration')
 
         integration_record = self._get_integration_record(name)
+        if isinstance(integration_record.data, dict) and integration_record.data.get('is_demo') is True:
+            raise Exception('Unable to drop demo object')
 
         # if this is ml engine
         engine_models = get_model_records(ml_handler_name=name, deleted_at=None)

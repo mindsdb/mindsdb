@@ -1,152 +1,108 @@
 ---
-title: MindsDB - Platform for Building AI
+title: Minds[DB] - AGI's Query Engine
 sidebarTitle: Introduction
 icon: "house"
 ---
 
-MindsDB is the platform for building AI from enterprise data, enabling smarter organizations.
+
+MindsDB is the world's most effective solution for building AI applications that talk to messy enterprise data sources. Think of it as a librarian Marie Kondo.
 
 <p align="center">
-  <img src="/assets/mindsdb_homepage_diagram.png"/>
+  <img src="/assets/cloud/main_mdb.png"/>
 </p>
 
-We believe AI will help every company thrive. But off-the-shelf, generic AI doesn’t completely meet anyone’s needs.
+A federated query engine that tidies up your data-sprawl chaos while meticulously answering every single question you throw at it. From structured to unstructured data, whether it's scattered across SaaS applications, databases, or... hibernating in data warehouses like that $100 bill in your tuxedo pocket from prom night, lost, waiting to be discovered.
 
-With MindsDB and its nearly 200 integrations to [data sources](/integrations/data-overview) and [AI/ML frameworks](/integrations/ai-overview), any developer can use their enterprise data to customize AI for their purpose, faster and more securely.
+## Install MindsDB Server 
 
-## Features
+MindsDB is an open-source server that can be deployed anywhere - from your laptop to the cloud, and everywhere in between. And yes, you can customize it to your heart's content.
 
-MindsDB integrates with numerous [data sources](/integrations/data-overview), including databases, vector stores, and applications, and popular [AI/ML frameworks](/integrations/ai-overview), including AutoML and LLMs. Doing so, MindsDB brings data and AI together, enabling intuitive implementation and automation of AI systems.
+  * [Using Docker Desktop](/setup/self-hosted/docker-desktop). This is the fastest and recommended way to get started and have it all running.
+  * [Using Docker](/setup/self-hosted/docker). This is also simple, but gives you more flexibility on how to further customize your server.
+  * [Using PyPI](/contribute/install). This option enables you to contribute to MindsDB.
 
-Common concepts and features brought by MindsDB include the following:
+## [Connect Your Data](/integrations/data-overview)
 
-<Card title="Model Management" icon="link" href="/model-management">
-Manage every aspect of AI models - [CREATE MODEL](/mindsdb_sql/sql/create/model), [FINETUNE](/mindsdb_sql/sql/api/finetune), [RETRAIN](/mindsdb_sql/sql/api/retrain), and more.
-</Card>
+You can connect to hundreds of [data sources (learn more)](/integrations/data-overview). This is just an example of a Postgres database.
 
-<Card title="AI Integrations" icon="link" href="/integrations/ai-overview">
-MindsDB gives you access to a wide range of AI/ML frameworks within your enterprise data environment.
-</Card>
+```sql
+-- Connect to demo postgres DB
+CREATE DATABASE demo_postgres_db
+WITH ENGINE = "postgres",
+PARAMETERS = {
+  "user": "demo_user",
+  "password": "demo_password",
+  "host": "samples.mindsdb.com",
+  "port": "5432",
+  "database": "demo",
+  "schema": "demo_data"
+};
+```
 
-<Card title="Data Integrations" icon="link" href="/integrations/data-overview">
-Connect any data source to MindsDB, including databases, vector stores, and applications.
-</Card>
+Once you've connected your data sources, you can [combine](/mindsdb_sql/sql/api/join-on), [slice it, dice it](/mindsdb_sql/sql/api/select), and [transform](/use-cases/data_enrichment/overview) it however your heart desires using good ol' standard SQL [(learn more)](/mindsdb_sql/overview). 
 
-<Card title="Automation" icon="link" href="/automation">
-Automate tasks with [JOBS](/sql/create/jobs) by scheduling execution at defined frequency, or with [TRIGGERS](/sql/create/trigger) by defining a triggering event.
-</Card>
+After you've whipped your data into shape, it's time to build AI that actually learns!
 
-<br></br>
+## Build AI Knowledge
 
-<Note>
-An innovation introduced by MindsDB is the ability to abstract AI models as [virtual tables](/generative-ai-tables) that you can [SELECT FROM](/sql/get-single-prediction), [JOIN](/sql/get-batch-predictions) with data, and [FINE-TUNE](/sql/api/finetune) from any [data source](/integrations/data-overview) using any [AI engine](/integrations/ai-overview).
-</Note>
+Our Knowledge Bases are state-of-the-art autonomous RAG systems that can digest data from any source MindsDB supports. Whether your data is structured and neater than a Swiss watch factory or unstructured and messy as a teenager's bedroom, our Knowledge Base engine will figure out how to find the relevant information. 
 
-## Use Cases
+**In this example** we will create a knowledge base that knows everything about amazon reviews. 
 
-Common applications of MindsDB include AI and LLM use cases, machine learning use cases, and more. See a complete list with links below.
+```sql
+-- first create a knowledge base
+CREATE KNOWLEDGE_BASE mindsdb.reviews_kb;
 
-<AccordionGroup>
+-- now insert everything from the amazon reviews table into it, so it can learn it
+INSERT INTO mindsdb.reviews_kb (
+  SELECT review as content FROM demo_pg_db.amazon_reviews
+);
 
-  <Accordion title="Automated Fine-Tuning">
-    This section covers use cases that employ the [FINETUNE](/mindsdb_sql/sql/api/finetune) command:
-    
-    - [Fine-tuning of Mistral models](/use-cases/automated_finetuning/anyscale)
-    - [Fine-tuning of OpenAI models](/use-cases/automated_finetuning/openai)
-    - [Fine-tuning of classification models](/use-cases/automated_finetuning/classification)
-    - [Fine-tuning of regression models](/use-cases/automated_finetuning/regression)
+-- check the status of your loads here
+SELECT * FROM information_schema.knowledge_bases;
 
-    Learn more about [use cases here](/use-cases/automated_finetuning).
-  </Accordion>
+-- query the content of the knowledge base
+SELECT * FROM mindsdb.reviews_kb;
+```
 
-  <Accordion title="AI Agents">
-    This section explains how to create and deploy AI agents:
-    
-    - [Agents](/mindsdb_sql/agents/agent)
-    - [Skills](/mindsdb_sql/agents/agent#create-skills)
-    - [Knowledge bases](/mindsdb_sql/agents/knowledge-bases)
-    - [Chatbots](/mindsdb_sql/agents/chatbot)
+For the tinkerers and optimization enthusiasts out there, you can dive as deep as you want. [(Learn more about knowledge Bases)](/mindsdb_sql/agents/knowledge-bases)
 
-    Learn more about [use cases here](/use-cases/ai_agents).
-  </Accordion>
++ Want to [hand-pick your embedding model? Go for it](mindsdb_sql/agents/knowledge-bases#knowledge-base-with-openai-embedding-model)! 
++ Have strong [opinions about vector databases? We're here for it!](/mindsdb_sql/agents/knowledge-bases#knowledge-base-with-custom-vector-store). 
 
-  <Accordion title="AI-Powered Data Retrieval">
-    This section covers the following use cases:
-    
-    - [Semantic search](/use-cases/ai-powered_data_retrieval/semantic_search)
-    - [Embeddings models](/integrations/ai-engines/openai#model-modes)
-    - [Recommenders](/use-cases/ai-powered_data_retrieval/recommenders)
+But if you'd rather spend your time on other things (like finally building that billion-dollar AI App), that's perfectly fine too. By default, it's all handled automatically - you don't need to worry about the nitty-gritty details like data embedding, chunking, vector optimization, etc.
 
-    Learn more about [use cases here](/use-cases/ai-powered_data_retrieval).
-  </Accordion>
+## Search 
 
-  <Accordion title="Data Enrichment">
-    This section covers Natural Language Processing (NLP), content generation, QA-driven data enrichment, sentiment analysis, and text summarization.
+Now that your knowledge base is loaded and ready. Let's hunt for some juicy info!
 
-    - [Image Generator](/use-cases/data_enrichment/image-generator)
-    - [Extract JSON](/use-cases/data_enrichment/json-from-text)
-    - [Text Summarization using SQL](/use-cases/data_enrichment/text-summarization-inside-mysql-with-openai)
-    - [Text Summarization using MQL](/use-cases/data_enrichment/text-summarization-inside-mongodb-with-openai)
-    - [Sentiment Analysis using SQL](/use-cases/data_enrichment/sentiment-analysis-inside-mysql-with-openai)
-    - [Sentiment Analysis using MQL](/use-cases/data_enrichment/sentiment-analysis-inside-mongodb-with-openai)
-    - [Question Answering using SQL](/use-cases/data_enrichment/question-answering-inside-mysql-with-openai)
-    - [Question Answering using MQL](/use-cases/data_enrichment/question-answering-inside-mongodb-with-openai)
+#### Via SQL
 
-    Learn more about [use cases here](/use-cases/data_enrichment).
-  </Accordion>
+```sql
+-- Find the reviews that about Iphone in beast of lights
+SELECT *  FROM mindsdb.reviews_kb
+WHERE content LIKE 'what are the best kindle reviews'
+LIMIT 10;
+```
 
-  <Accordion title="Predictive Analytics">
-    This section covers time-series forecasting and anomaly detection use cases.
+#### Via Python SDK
 
-    - [Forecast of Quarterly House Sales](/use-cases/predictive_analytics/house-sales-forecasting)
-    - [Forecast of Monthly Expenditures](/use-cases/predictive_analytics/expenditures-statsforecast)
-    - [Forecast of Brain Activity](/use-cases/predictive_analytics/eeg-forecasting)
-    - [Anomaly Detection](/integrations/ai-engines/anomaly)
+Install MindsDB SDK
 
-    Learn more about [use cases here](/use-cases/predictive_analytics).
-  </Accordion>
+```shell
+pip install mindsdb_sdk
+```
 
-  <Accordion title="In-Database Machine Learning">
-    This section covers automated classification and regression models and BYOM (Bring Your Own Models) use cases.
-    
-    - [Classification of Customer Churn](/use-cases/in-database_ml/customer-churn)
-    - [Regression of Home Rental Prices](/use-cases/in-database_ml/home-rentals)
-    - [BYOM](/integrations/ai-engines/byom)
+You can call this AI knowledge base from your app with the following code:
 
-    Learn more about [use cases here](/use-cases/in-database_ml).
-  </Accordion>
+```python
+import mindsdb_sdk
 
-  <Accordion title="AI Workflow Automation">
-    This section covers chatbot automation with jobs and automated alert systems.
 
-    - [Slack Chatbot](/use-cases/ai_workflow_automation/slack-chatbot)
-    - [Twitter Chatbot](/use-cases/ai_workflow_automation/twitter-chatbot)
-    - [Twilio Chatbot](/use-cases/ai_workflow_automation/twilio-chatbot)
-    - [Customer Reviews Notifications](/use-cases/ai_workflow_automation/customer-reviews-notifications)
-    - [Real-time Trading Forecasts and Notifications](/use-cases/ai_workflow_automation/real-time-trading-forecasts)
+# connects to the specified host and port
+server = mindsdb_sdk.connect('http://127.0.0.1:47334')
 
-    Learn more about [use cases here](/use-cases/ai_workflow_automation).
-  </Accordion>
-</AccordionGroup>
+wiki_kb = server.knowledge_bases.get('mindsdb.reviews_kb');
+df = my_kb.find('what are the best kindle reviews').fetch()
 
-<Tip>
-Check out the [Use Cases](/use-cases/overview) section for examples and tutorials.
-</Tip>
-
-## Development
-
-Interact with MindsDB from different development environments.
-
-<CardGroup cols={4}>
-    <Card title="SQL API" icon="database" href="/mindsdb_sql/overview"></Card>
-    <Card title="SDKs" icon="rectangle-code" href="/sdks/overview"></Card>
-    <Card title="REST API" icon="webhook" href="/rest/overview"></Card>
-</CardGroup>
-
-## Contribute
-
-Find out how to contribute to MindsDB following [instructions here](/contribute/contribute).
-
-## FAQs
-
-Learn about [benefits of MindsDB](/faqs/benefits) and more in the FAQs section.
+```

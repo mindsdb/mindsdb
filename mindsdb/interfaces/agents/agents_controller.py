@@ -1,5 +1,5 @@
 import datetime
-from typing import Dict, Iterator, List, Union, Tuple
+from typing import Dict, Iterator, List, Union, Tuple, Optional
 
 from langchain_core.tools import BaseTool
 from sqlalchemy.orm.attributes import flag_modified
@@ -74,7 +74,7 @@ class AgentsController:
 
         return model, provider
 
-    def get_agent(self, agent_name: str, project_name: str = default_project) -> db.Agents:
+    def get_agent(self, agent_name: str, project_name: str = default_project) -> Optional[db.Agents]:
         '''
         Gets an agent by name.
 
@@ -83,7 +83,7 @@ class AgentsController:
             project_name (str): The name of the containing project - must exist
 
         Returns:
-            agent (db.Agents): The database agent object
+            agent (Optional[db.Agents]): The database agent object
         '''
 
         project = self.project_controller.get(name=project_name)
@@ -256,6 +256,16 @@ class AgentsController:
         existing_agent = self.get_agent(agent_name, project_name=project_name)
         if existing_agent is None:
             raise EntityNotExistsError(f'Agent with name not found: {agent_name}')
+        is_demo = (existing_agent.params or {}).get('is_demo', False)
+        if (
+            is_demo and (
+                (name is not None and name != agent_name)
+                or (model_name or provider)
+                or (len(skills_to_add) > 0 or len(skills_to_remove) > 0 or len(skills_to_rewrite) > 0)
+                or (isinstance(params, dict) and len(params) > 1 and 'prompt_template' not in params)
+            )
+        ):
+            raise ValueError("It is forbidden to change properties of the demo object")
 
         if name is not None and name != agent_name:
             # Check to see if updated name already exists
@@ -356,6 +366,8 @@ class AgentsController:
         agent = self.get_agent(agent_name, project_name)
         if agent is None:
             raise ValueError(f'Agent with name does not exist: {agent_name}')
+        if isinstance(agent.params, dict) and agent.params.get('is_demo') is True:
+            raise ValueError('Unable to delete demo object')
         agent.deleted_at = datetime.datetime.now()
         db.session.commit()
 
@@ -366,24 +378,22 @@ class AgentsController:
             project_name: str = default_project,
             tools: List[BaseTool] = None,
             stream: bool = False) -> Union[Iterator[object], pd.DataFrame]:
-        '''
+        """
         Queries an agent to get a completion.
 
         Parameters:
             agent (db.Agents): Existing agent to get completion from
             messages (List[Dict[str, str]]): Chat history to send to the agent
-            trace_id (str): ID of Langfuse trace to use
-            observation_id (str): ID of parent Langfuse observation to use
             project_name (str): Project the agent belongs to (default mindsdb)
             tools (List[BaseTool]): Tools to use while getting the completion
-            stream (bool): Whether or not to stream the response
+            stream (bool): Whether to stream the response
 
         Returns:
             response (Union[Iterator[object], pd.DataFrame]): Completion as a DataFrame or iterator of completion chunks
 
         Raises:
             ValueError: Agent's model does not exist.
-        '''
+        """
         if stream:
             return self._get_completion_stream(
                 agent,

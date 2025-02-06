@@ -28,7 +28,7 @@ class MSOneDriveHandler(APIHandler):
     """
 
     name = 'one_drive'
-    supported_file_formats = ['csv', 'tsv', 'json', 'parquet']
+    supported_file_formats = ['csv', 'tsv', 'json', 'parquet', 'pdf', 'txt']
 
     def __init__(self, name: Text, connection_data: Dict, **kwargs: Any) -> None:
         """

@@ -1,5 +1,5 @@
 import datetime
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from sqlalchemy import null
 from sqlalchemy.orm.attributes import flag_modified
@@ -20,7 +20,7 @@ class SkillsController:
             project_controller = ProjectController()
         self.project_controller = project_controller
 
-    def get_skill(self, skill_name: str, project_name: str = default_project) -> db.Skills:
+    def get_skill(self, skill_name: str, project_name: str = default_project) -> Optional[db.Skills]:
         '''
         Gets a skill by name. Skills are expected to have unique names.
 
@@ -29,7 +29,7 @@ class SkillsController:
             project_name (str): The name of the containing project
 
         Returns:
-            skill (db.Skills): The database skill object
+            skill (Optional[db.Skills]): The database skill object
 
         Raises:
             ValueError: If `project_name` does not exist
@@ -140,6 +140,8 @@ class SkillsController:
         existing_skill = self.get_skill(skill_name, project_name)
         if existing_skill is None:
             raise ValueError(f'Skill with name not found: {skill_name}')
+        if isinstance(existing_skill.params, dict) and existing_skill.params.get('is_demo') is True:
+            raise ValueError("It is forbidden to change properties of the demo object")
 
         if new_name is not None:
             existing_skill.name = new_name
@@ -175,5 +177,7 @@ class SkillsController:
         skill = self.get_skill(skill_name, project_name)
         if skill is None:
             raise ValueError(f"Skill with name doesn't exist: {skill_name}")
+        if isinstance(skill.params, dict) and skill.params.get('is_demo') is True:
+            raise ValueError("Unable to delete demo object")
         skill.deleted_at = datetime.datetime.now()
         db.session.commit()

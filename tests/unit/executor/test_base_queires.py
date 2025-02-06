@@ -387,18 +387,18 @@ class TestSelect(BaseExecutorDummyML):
         sql = '''
             select
                cast(
-                  (select COUNT(*) from pg.branch where `name` = 'asia') as FLOAT
+                  (select COUNT(*) from pg.branch where `name` in ('asia', 'africa')) as FLOAT
                )
                /
                ( select COUNT(*) from  pg.branch )
-               * 100 as asia_percentage
+               * 100 as percentage
         '''
         ret = self.run_sql(sql)
-        assert ret.iloc[0, 0] == 25
+        assert ret.iloc[0, 0] == 50
 
         sql += ' from files.empty '
         ret = self.run_sql(sql)
-        assert ret.iloc[0, 0] == 25
+        assert ret.iloc[0, 0] == 50
 
     def test_last(self):
         df = pd.DataFrame([

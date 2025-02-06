@@ -331,11 +331,10 @@ class SqlalchemyRender:
             if t.alias:
                 raise RenderError()
         elif isinstance(t, ast.Tuple):
-            items = [
+            col = [
                 self.to_expression(i)
                 for i in t.items
             ]
-            col = sa.Tuple(items)
         elif isinstance(t, ast.Variable):
             col = sa.column(t.to_string(), is_literal=True)
         elif isinstance(t, ast.Latest):

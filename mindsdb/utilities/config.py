@@ -142,7 +142,8 @@ class Config:
             },
             'auth': {
                 'http_auth_enabled': False,
-                "http_permanent_session_lifetime": datetime.timedelta(days=31)
+                "http_permanent_session_lifetime": datetime.timedelta(days=31),
+                "username": "mindsdb"
             },
             "logging": {
                 "handlers": {
@@ -183,7 +184,6 @@ class Config:
                 },
                 "mysql": {
                     "host": api_host,
-                    "password": "",
                     "port": "47335",
                     "database": "mindsdb",
                     "ssl": True,

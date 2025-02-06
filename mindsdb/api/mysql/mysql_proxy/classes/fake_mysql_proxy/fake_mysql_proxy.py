@@ -30,7 +30,7 @@ class FakeMysqlProxy(MysqlProxy):
         self.connection_id = None
 
         self.session = SessionController()
-        self.session.database = config.get('default_project', 'mindsdb')
+        self.session.database = config.get('default_project')
 
     def is_cloud_connection(self):
         return {

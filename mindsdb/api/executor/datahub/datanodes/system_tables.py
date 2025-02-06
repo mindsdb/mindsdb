@@ -294,7 +294,7 @@ class ColumnsTable(Table):
         if databases is None:
             databases = [
                 'information_schema',
-                config.get('default_project', 'mindsdb'),
+                config.get('default_project'),
                 'files'
             ]
 

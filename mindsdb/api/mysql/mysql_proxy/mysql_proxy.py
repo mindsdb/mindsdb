@@ -877,6 +877,9 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
     def set_context(self, context):
         if "db" in context:
             self.session.database = context["db"]
+        else:
+            self.session.database = Config().get('default_project', 'mindsdb')
+        
         if "profiling" in context:
             self.session.profiling = context["profiling"]
         if "predictor_cache" in context:

@@ -448,7 +448,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         connection. '0000' selected because in real mysql connection it should be lenght of package,
         and it can not be 0.
         """
-        config = config
         is_cloud = config.get("cloud", False)
 
         if sys.platform != "linux" or is_cloud is False:
@@ -906,7 +905,6 @@ class MysqlProxy(SocketServer.BaseRequestHandler):
         Create a server and wait for incoming connections until Ctrl-C
         """
         global logger
-        config = config
 
         cert_path = config["api"]["mysql"].get("certificate_path")
         if cert_path is None or cert_path == "":

@@ -21,7 +21,7 @@ from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
 
-default_project = config.get('default_project', 'mindsdb')
+default_project = config.get('default_project')
 
 
 def split_sql(sql):

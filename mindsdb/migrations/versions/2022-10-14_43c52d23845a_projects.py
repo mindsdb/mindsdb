@@ -37,7 +37,7 @@ def upgrade():
     session = sa.orm.Session(bind=conn)
 
     config = Config()
-    project_record = db.Project(name=config.get('default_project', 'mindsdb'))
+    project_record = db.Project(name=config.get('default_project'))
     session.add(project_record)
     session.commit()
 

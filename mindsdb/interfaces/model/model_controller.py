@@ -30,7 +30,7 @@ logger = log.getLogger(__name__)
 
 IS_PY36 = sys.version_info[1] <= 6
 
-default_project = config.get('default_project', 'mindsdb')
+default_project = config.get('default_project')
 
 
 def delete_model_storage(model_id, ctx_dump):

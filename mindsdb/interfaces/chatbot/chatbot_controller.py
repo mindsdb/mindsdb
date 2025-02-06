@@ -12,7 +12,7 @@ from mindsdb.api.executor.controllers.session_controller import SessionControlle
 from mindsdb.utilities.config import config
 
 
-default_project = config.get('default_project', 'mindsdb')
+default_project = config.get('default_project')
 
 
 class ChatBotController:

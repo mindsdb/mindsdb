@@ -34,7 +34,7 @@ from mindsdb.interfaces.agents.constants import USER_COLUMN
 from mindsdb.utilities.config import config
 
 logger = logging.getLogger(__name__)
-default_project = config.get('default_project', 'mindsdb')
+default_project = config.get('default_project')
 
 
 def _convert_message_to_dict(message: BaseMessage) -> dict:

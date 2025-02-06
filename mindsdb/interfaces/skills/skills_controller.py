@@ -9,7 +9,7 @@ from mindsdb.interfaces.database.projects import ProjectController
 from mindsdb.utilities.config import config
 
 
-default_project = config.get('default_project', 'mindsdb')
+default_project = config.get('default_project')
 
 
 class SkillsController:

@@ -59,7 +59,7 @@ class DatabaseController:
                 'id': x.id,
                 'engine': None,
                 'visible': True,
-                'deletable': x.name.lower() != config.get('default_project', 'mindsdb')
+                'deletable': x.name.lower() != config.get('default_project')
             })
         for key, value in integrations.items():
             db_type = value.get('type', 'data')

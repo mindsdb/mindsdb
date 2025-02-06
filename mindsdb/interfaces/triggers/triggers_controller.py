@@ -17,7 +17,7 @@ class TriggersController:
         name = name.lower()
 
         if project_name is None:
-            project_name = config.get('default_project', 'mindsdb')
+            project_name = config.get('default_project')
         project_controller = ProjectController()
         project = project_controller.get(name=project_name)
 

@@ -20,7 +20,7 @@ from .constants import ASSISTANT_COLUMN, SUPPORTED_PROVIDERS, PROVIDER_TO_MODELS
 from .langchain_agent import get_llm_provider
 
 
-default_project = config.get('default_project', 'mindsdb')
+default_project = config.get('default_project')
 
 
 class AgentsController:

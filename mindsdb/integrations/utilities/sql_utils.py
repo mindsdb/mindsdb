@@ -75,7 +75,7 @@ def make_sql_session():
     from mindsdb.api.executor.controllers.session_controller import SessionController
 
     sql_session = SessionController()
-    sql_session.database = config.get('default_project', 'mindsdb')
+    sql_session.database = config.get('default_project')
     return sql_session
 
 

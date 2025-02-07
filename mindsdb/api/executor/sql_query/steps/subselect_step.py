@@ -1,12 +1,19 @@
 from collections import defaultdict
 
+import pandas as pd
+
 from mindsdb_sql_parser.ast import (
     Identifier,
     Select,
     Star,
     Constant,
-    Parameter
+    Parameter,
+    Function,
+    Variable
 )
+
+from mindsdb.api.mysql.mysql_proxy.libs.constants.mysql import SERVER_VARIABLES
+
 from mindsdb.api.executor.planner.step_result import Result
 from mindsdb.api.executor.planner.steps import SubSelectStep, QueryStep
 from mindsdb.integrations.utilities.query_traversal import query_traversal
@@ -84,7 +91,10 @@ class QueryStepCall(BaseStepCall):
         query = step.query
 
         if step.from_table is not None:
-            result_set = self.steps_data[step.from_table.step_num]
+            if isinstance(step.from_table, pd.DataFrame):
+                result_set = ResultSet().from_df(step.from_table)
+            else:
+                result_set = self.steps_data[step.from_table.step_num]
         else:
             # only from_table can content result
             prev_step_num = query.from_table.value.step_num
@@ -109,6 +119,28 @@ class QueryStepCall(BaseStepCall):
 
         # analyze condition and change name of columns
         def check_fields(node, is_target=None, **kwargs):
+            if isinstance(node, Function):
+                function_name = node.op.lower()
+
+                functions_results = {
+                    "database": self.session.database,
+                    "current_user": self.session.username,
+                    "user": self.session.username,
+                    "version": "8.0.17",
+                    "current_schema": "public",
+                    "connection_id": self.context.get('connection_id')
+                }
+                if function_name in functions_results:
+                    return Constant(functions_results[function_name], alias=Identifier(parts=[function_name]))
+
+            if isinstance(node, Variable):
+                var_name = node.value
+                column_name = f"@@{var_name}"
+                result = SERVER_VARIABLES.get(column_name)
+                if result is None:
+                    raise ValueError(f"Unknown variable '{var_name}'")
+                else:
+                    return Constant(result[0], alias=Identifier(parts=[column_name]))
 
             if isinstance(node, Identifier):
                 # only column name
@@ -124,6 +156,16 @@ class QueryStepCall(BaseStepCall):
                             Identifier(parts=[col])
                             for col in tbl_idx.get(table_name, [])
                         ]
+
+                if node.parts[-1].lower() == "session_user":
+                    return Constant(self.session.username, alias=node)
+                if node.parts[-1].lower() == '$$':
+                    # NOTE: sinve version 9.0 mysql client sends query 'select $$'.
+                    # Connection can be continued only if answer is parse error.
+                    raise ValueError(
+                        "You have an error in your SQL syntax; check the manual that corresponds to your server "
+                        "version for the right syntax to use near '$$' at line 1"
+                    )
 
                 if len(node.parts) == 1:
                     key = col_name

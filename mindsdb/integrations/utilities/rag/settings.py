@@ -369,8 +369,24 @@ class SearchKwargs(BaseModel):
         return super().model_dump(*args, **kwargs)
 
 
+class ValueSchema(BaseModel):
+    value: Any = Field(
+        description="The schema value as it exists in the table column."
+    )
+    description: str = Field(
+        description="Description of what the value represents."
+    )
+    usage: str = Field(
+        description="How and when to use this value for search."
+    )
+    example_questions: Optional[List[Any]] = Field(
+        default=None,
+        description="Example questions where this value is set."
+    )
+
+
 class ColumnSchema(BaseModel):
-    name: str = Field(
+    column: str = Field(
         description="Name of the column in the database"
     )
     type: str = Field(
@@ -379,25 +395,39 @@ class ColumnSchema(BaseModel):
     description: str = Field(
         description="Description of what the column represents"
     )
-    values: Optional[Dict[Any, Any]] = Field(
+    usage: str = Field(
+        description="How and when to use this Table for search."
+    )
+    values: Optional[Dict[Any, ValueSchema], Dict[Any, Any], List[Any]] = Field(
         default=None,
-        description="Mapping of values the column can be with the description of what the value means"
+        description="Values: either a dict of {value: ValueSchema, ...}, a dict of {value: descriptive value, ...}, or a list of sample values taken from the table."
+    )
+    example_questions: Optional[List[Any]] = Field(
+        default=None,
+        description="Example questions where this table is useful."
     )
 
 
-class MetadataSchema(BaseModel):
+class TableSchema(BaseModel):
     table: str = Field(
         description="Name of table in the database"
     )
     description: str = Field(
         description="Description of what the table represents"
     )
-    columns: List[ColumnSchema] = Field(
-        description="List of column schemas describing the metadata columns available for the table"
+    usage: str = Field(
+        description="How and when to use this Table for search."
+    )
+    columns: Dict[str, ColumnSchema] = Field(
+        description="Dict of {column_name: ColumnSchemas} describing the metadata columns available for the table"
     )
     join: str = Field(
         description="SQL join string to join this table with source documents table",
         default=''
+    )
+    example_questions: Optional[List[Any]] = Field(
+        default=None,
+        description="Example questions where this table is useful."
     )
 
     class Config:
@@ -433,7 +463,7 @@ class SQLRetrieverConfig(BaseModel):
     source_table: str = Field(
         description="Name of the source table containing the original documents that were embedded"
     )
-    metadata_schemas: Optional[List[MetadataSchema]] = Field(
+    metadata_schemas: Optional[List[TableSchema]] = Field(
         default=None,
         description="Optional list of table schemas containing document metadata to potentially join with."
     )

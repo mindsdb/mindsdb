@@ -14,7 +14,11 @@ from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 
+from mindsdb.utilities.config import config
+from mindsdb.utilities.functions import decrypt, encrypt
+
 logger = log.getLogger(__name__)
+secret_key = config.get('secret_key', 'dummy-key')
 
 
 class GoogleUserOAuth2Manager:
@@ -36,7 +40,13 @@ class GoogleUserOAuth2Manager:
             secret_file = os.path.join(curr_dir, 'secret.json')
 
             if os.path.isfile(creds_file):
-                creds = Credentials.from_authorized_user_file(creds_file, self.scopes)
+                with open(creds_file, 'r') as token:
+                    encrypted_data = token.read()
+                    decrypted_data = decrypt(encrypted_data, secret_key)
+                    creds = Credentials.from_authorized_user_info(
+                        json.loads(decrypted_data.decode('utf-8')),
+                        self.scopes
+                    )
 
             if not creds or not creds.valid:
                 logger.debug("Credentials do not exist or are invalid, attempting to authorize again")
@@ -92,9 +102,13 @@ class GoogleUserOAuth2Manager:
             raise AuthException(f'Authorisation required. Please follow the url: {auth_url}', auth_url=auth_url)
 
     def _save_credentials_to_file(self, creds, file_path):
+        data = self._convert_credentials_to_dict(creds)
+        json_data = json.dumps(data).encode('utf-8')
+
+        encrypted_data = encrypt(json_data, secret_key)
+
         with open(file_path, 'w') as token:
-            data = self._convert_credentials_to_dict(creds)
-            token.write(json.dumps(data))
+            token.write(encrypted_data)            
 
     def _convert_credentials_to_dict(self, credentials):
         return {

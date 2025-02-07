@@ -14,6 +14,8 @@ from mindsdb_sql.parser import ast
 from mindsdb.utilities import log
 from mindsdb_sql import parse_sql
 from mindsdb.utilities.config import Config
+from mindsdb.utilities.security import decrypt
+
 
 import os
 import time
@@ -336,7 +338,9 @@ class GmailHandler(APIHandler):
         secret_file = os.path.join(curr_dir, 'secret.json')
 
         if os.path.isfile(creds_file):
-            creds = Credentials.from_authorized_user_file(creds_file, self.scopes)
+            content = open(creds_file).read()
+            data = json.loads(decrypt(content))
+            creds = Credentials.from_authorized_user_info(data, self.scopes)
 
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:

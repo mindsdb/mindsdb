@@ -108,7 +108,7 @@ class GoogleUserOAuth2Manager:
         encrypted_data = encrypt(json_data, secret_key)
 
         with open(file_path, 'w') as token:
-            token.write(encrypted_data)            
+            token.write(encrypted_data)
 
     def _convert_credentials_to_dict(self, credentials):
         return {

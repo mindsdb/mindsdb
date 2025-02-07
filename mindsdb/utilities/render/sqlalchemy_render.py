@@ -54,6 +54,23 @@ def _compile_interval(element, compiler, **kw):
     return "INTERVAL " + args
 
 
+class AttributedStr(str):
+    """
+       Custom str-like object to pass it to `_requires_quotes` method with `is_quoted` flag
+    """
+    def __new__(cls, string, is_quoted: bool):
+        obj = str.__new__(cls, string)
+        obj.is_quoted = is_quoted
+        return obj
+
+
+def get_is_quoted(identifier: ast.Identifier):
+    quoted = getattr(identifier, 'is_quoted', [])
+    # len can be different
+    quoted = quoted + [None] * (len(identifier.parts) - len(quoted))
+    return quoted
+
+
 class SqlalchemyRender:
 
     def __init__(self, dialect_name):
@@ -71,6 +88,29 @@ class SqlalchemyRender:
             dialect = dialects[dialect_name].dialect
         else:
             dialect = dialect_name
+
+        # override dialect's preparer
+        if hasattr(dialect, 'preparer'):
+            class Preparer(dialect.preparer):
+
+                def __init__(self, *args, **kwargs):
+                    super().__init__(*args, **kwargs)
+
+                def _requires_quotes(self, value: str) -> bool:
+                    # check force-quote flag
+                    if isinstance(value, AttributedStr):
+                        if value.is_quoted:
+                            return True
+
+                    lc_value = value.lower()
+                    return (
+                        lc_value in self.reserved_words
+                        or value[0] in self.illegal_initial_characters
+                        or not self.legal_characters.match(str(value))
+                        #  Override sqlalchemy behavior: don't require to quote mixed- or upper-case
+                        # or (lc_value != value)
+                    )
+            dialect.preparer = Preparer
 
         # remove double percent signs
         # https://docs.sqlalchemy.org/en/14/faq/sqlexpressions.html#why-are-percent-signs-being-doubled-up-when-stringifying-sql-statements
@@ -90,26 +130,16 @@ class SqlalchemyRender:
 
         parts2 = []
 
-        quoted = getattr(identifier, 'is_quoted', [])
-        # len can be different
-        quoted = quoted + [None] * (len(identifier.parts) - len(quoted))
-
+        quoted = get_is_quoted(identifier)
         for i, is_quoted in zip(identifier.parts, quoted):
             if isinstance(i, ast.Star):
                 part = '*'
-            elif is_quoted:
-                part = self.dialect.identifier_preparer.quote(i)
+            elif is_quoted or i.lower() in RESERVED_WORDS:
+                # quote anyway
+                part = self.dialect.identifier_preparer.quote_identifier(i)
             else:
-                part = str(sa.column(i).compile(dialect=self.dialect))
-
-                if not i.islower():
-                    # if lower value is not quoted
-                    #   then it is quoted only because of mixed case
-                    #   in that case use origin string
-
-                    part_lower = str(sa.column(i.lower()).compile(dialect=self.dialect))
-                    if part.lower() != part_lower and i.lower() not in RESERVED_WORDS:
-                        part = i
+                # quote if required
+                part = self.dialect.identifier_preparer.quote(i)
 
             parts2.append(part)
 
@@ -120,7 +150,9 @@ class SqlalchemyRender:
             return None
         if len(alias.parts) > 1:
             raise NotImplementedError(f'Multiple alias {alias.parts}')
-        return alias.parts[0]
+
+        is_quoted = get_is_quoted(alias)[0]
+        return AttributedStr(alias.parts[0], is_quoted)
 
     def to_expression(self, t):
 
@@ -435,15 +467,16 @@ class SqlalchemyRender:
         schema = None
         if isinstance(table_name, ast.Identifier):
             parts = table_name.parts
+            quoted = get_is_quoted(table_name)
 
             if len(parts) > 2:
                 # TODO tests is failing
                 raise NotImplementedError(f'Path to long: {table_name.parts}')
 
             if len(parts) == 2:
-                schema = parts[-2]
+                schema = AttributedStr(parts[-2], quoted[-2])
 
-            table_name = parts[-1]
+            table_name = AttributedStr(parts[-1], quoted[-1])
 
         return schema, table_name
 

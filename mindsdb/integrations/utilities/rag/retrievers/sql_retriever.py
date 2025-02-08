@@ -1,4 +1,3 @@
-import json
 import re
 from pydantic import BaseModel, Field
 from typing import List, Any, Optional, Dict
@@ -67,11 +66,19 @@ class SQLRetriever(BaseRetriever):
 
     fallback_retriever: BaseRetriever
     vector_store_handler: VectorStoreHandler
-    metadata_schemas: Optional[List[TableSchema]] = None
+    table_schemas: Optional[List[TableSchema]] = None
     examples: Optional[List[LLMExample]] = None
 
+    # prompt templates
     rewrite_prompt_template: str
-    metadata_filters_prompt_template: str
+    table_prompt_template: str
+    value_prompt_template: str
+    column_prompt_template: str
+
+    # formatting templates
+    boolean_format_template: str
+    generative_format_template: str
+
     embeddings_model: Embeddings
     num_retries: int
     embeddings_table: str
@@ -85,6 +92,7 @@ class SQLRetriever(BaseRetriever):
     def _prepare_value_prompt(self, value_schema: ValueSchema) -> PromptTemplate:
         base_prompt_template = PromptTemplate(
             input_variables=[
+                "format_instructions",
                 "value",
                 "description",
                 "usage",
@@ -95,31 +103,41 @@ class SQLRetriever(BaseRetriever):
         )
 
         example_str = """
-## **Example Question**:
+## **Example Questions**:
 """
         for example in value_schema.examples:
             example_str += f"""- {example}
 """
 
         return base_prompt_template.partial(
+            format_instructions=self.boolean_format_template,
             value=value_schema.value,
             description=value_schema.description,
             usage=value_schema.usage,
             example_questions=example_str,
         )
 
-    def _prepare_column_prompt(self, column_schema: ColumnSchema) -> PromptTemplate:
+    def _prepare_column_prompt(
+        self, column_schema: ColumnSchema, boolean_format_instructions: bool = True
+    ) -> PromptTemplate:
         base_prompt_template = PromptTemplate(
             input_variables=[
+                "format_instructions",
                 "column",
                 "type",
                 "description",
                 "usage",
-                "values," "example_questions",
+                "values,",
+                "example_questions",
                 "input",
             ],
             template=self.column_prompt_template,
         )
+
+        if boolean_format_instructions is True:
+            format_instructions = self.boolean_format_template
+        else:
+            format_instructions = self.generative_format_template
 
         if column_schema.model_fields["values"] == Dict[Any, ValueSchema]:
             value_str = """
@@ -131,6 +149,7 @@ Below are descriptions of each value in this column:
                 value_str += f"""
     **{value_schema.value}:** {value_schema.description}
 """
+
         elif column_schema.model_fields["values"] == Dict[Any, Any]:
             value_str = """
 ## **Enumerated Values**
@@ -139,7 +158,8 @@ These column values are an enumeration of named values. These are listed below w
 """
             for value, value_name in column_schema.values.items():
                 value_str += f"""
-**- {value}:** {value_name}"""
+- **{value}:** {value_name}"""
+
         elif column_schema.model_fields["values"] == List[Any]:
             value_str = f"""
 ## **Sample Values**
@@ -148,13 +168,14 @@ There are too many unique values in the column to list exhaustively. Below is a 
 {column_schema.model_fields['values']}
 """
         example_str = """
-## **Example Question**:
+## **Example Questions**:
 """
         for example in column_schema.examples:
             example_str += f"""- {example}
 """
 
         return base_prompt_template.partial(
+            format_instructions=format_instructions,
             column=column_schema.column,
             type=column_schema.type,
             description=column_schema.description,
@@ -163,63 +184,44 @@ There are too many unique values in the column to list exhaustively. Below is a 
             example_questions=example_str,
         )
 
-    def _prepare_table_prompt(self) -> PromptTemplate:
-        pass
-
-    def _prepare_metadata_prompt(self) -> PromptTemplate:
+    def _prepare_table_prompt(self, table_schema: TableSchema) -> PromptTemplate:
         base_prompt_template = PromptTemplate(
             input_variables=[
                 "format_instructions",
-                "schema",
-                "examples",
+                "table",
+                "description",
+                "usage",
+                "columns",
+                "example_questions",
                 "input",
-                "embeddings",
             ],
-            template=self.metadata_filters_prompt_template,
+            template=self.table_prompt_template,
         )
-        schema_prompt_str = ""
-        if self.metadata_schemas is not None:
-            for i, schema in enumerate(self.metadata_schemas):
-                schema_str = f"""
-                ** {i}. {schema.table} **
-                ** Table Description: **
-                {schema.description}
 
-                **Columns:**"""
+        columns_str = """
+## **Column Descriptions**
 
-                for column in schema.columns:
-                    schema_str += f"""
-
-                    **{column.name} Column**
-                    - **Type:** {column.type}
-                    - **Description:** {column.description}
-                    """
-                    if column.values is not None:
-                        schema_str += """
-                    - **Values:**
-                    """
-                        for value in column.values.values():
-                            schema_str += f"""{value}
-                            """
-                    if column.example_values is not None:
-                        schema_str += f"""
-                    - **Example Values:**
-                        {json.dumps(column.example_values)}
-                        """
-                schema_prompt_str += schema_str
-
-        examples_prompt_str = ""
-        if self.examples is not None:
-            for i, example in enumerate(self.examples):
-                example_str = f"""{i + 1}. User input: "{example.input}"
-
-Output:
-{example.output}
-
+Below are descriptions of each column in this table:
 """
-                examples_prompt_str += example_str
+        for column_schema in table_schema.columns.values():
+            columns_str += f"""
+- **{column_schema.column}:** {column_schema.description}
+"""
+
+        example_str = """
+## **Example Questions**:
+"""
+        for example in table_schema.examples:
+            example_str += f"""- {example}
+"""
+
         return base_prompt_template.partial(
-            schema=schema_prompt_str, examples=examples_prompt_str
+            format_instructions=self.boolean_format_template,
+            table=table_schema.table,
+            description=table_schema.description,
+            usage=table_schema.usage,
+            columns=columns_str,
+            example_questions=example_str,
         )
 
     def _prepare_retrieval_query(self, query: str) -> str:

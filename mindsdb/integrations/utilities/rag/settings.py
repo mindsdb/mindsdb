@@ -400,11 +400,23 @@ class ColumnSchema(BaseModel):
     )
     values: Optional[Dict[Any, ValueSchema], Dict[Any, Any], List[Any]] = Field(
         default=None,
-        description="Values: either a dict of {value: ValueSchema, ...}, a dict of {value: descriptive value, ...}, or a list of sample values taken from the table."
+        description="Either a dict of {value: ValueSchema, ...}, a dict of {value: descriptive value, ...}, or a list of sample values taken from the column."
     )
     example_questions: Optional[List[Any]] = Field(
         default=None,
         description="Example questions where this table is useful."
+    )
+    max_filters: Optional[int] = Field(
+        default=1,
+        description="Maximum number of filters to generate for this column."
+    )
+    filter_threshold: Optional[float] = Field(
+        default=.8,
+        description="Minimum relevance threshold to include metadata filters from this column."
+    )
+    priority: Optional[int] = Field(
+        default=1,
+        description="Priority level for this column, lower numbers will be processed first."
     )
 
 
@@ -421,13 +433,25 @@ class TableSchema(BaseModel):
     columns: Dict[str, ColumnSchema] = Field(
         description="Dict of {column_name: ColumnSchemas} describing the metadata columns available for the table"
     )
+    example_questions: Optional[List[Any]] = Field(
+        default=None,
+        description="Example questions where this table is useful."
+    )
     join: str = Field(
         description="SQL join string to join this table with source documents table",
         default=''
     )
-    example_questions: Optional[List[Any]] = Field(
-        default=None,
-        description="Example questions where this table is useful."
+    max_filters: Optional[int] = Field(
+        default=1,
+        description="Maximum number of filters to generate for this table."
+    )
+    filter_threshold: Optional[float] = Field(
+        default=.8,
+        description="Minimum relevance required to use this table to generate filters."
+    )
+    priority: Optional[int] = Field(
+        default=1,
+        description="Priority level for this table, lower numbers will be processed first."
     )
 
     class Config:

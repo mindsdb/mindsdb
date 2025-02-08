@@ -2,6 +2,7 @@ import re
 from pydantic import BaseModel, Field
 from typing import List, Any, Optional, Dict
 
+
 from langchain.chains.llm import LLMChain
 from langchain_core.callbacks.manager import CallbackManagerForRetrieverRun
 from langchain_core.documents.base import Document
@@ -9,7 +10,7 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.exceptions import OutputParserException
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.output_parsers import PydanticOutputParser
-from langchain_core.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
 from langchain_core.retrievers import BaseRetriever
 
 from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
@@ -71,13 +72,15 @@ class SQLRetriever(BaseRetriever):
 
     # prompt templates
     rewrite_prompt_template: str
+
+    # schema templates
     table_prompt_template: str
     value_prompt_template: str
     column_prompt_template: str
 
     # formatting templates
-    boolean_format_template: str
-    generative_format_template: str
+    boolean_system_prompt: str
+    generative_system_prompt: str
 
     embeddings_model: Embeddings
     num_retries: int
@@ -89,17 +92,17 @@ class SQLRetriever(BaseRetriever):
 
     llm: BaseChatModel
 
-    def _prepare_value_prompt(self, value_schema: ValueSchema) -> PromptTemplate:
-        base_prompt_template = PromptTemplate(
-            input_variables=[
-                "format_instructions",
-                "value",
-                "description",
-                "usage",
-                "example_questions",
-                "input",
-            ],
-            template=self.value_prompt_template,
+    def _prepare_value_prompt(
+        self, value_schema: ValueSchema, boolean_system_prompt: bool = True
+    ) -> ChatPromptTemplate:
+
+        if boolean_system_prompt is True:
+            system_prompt = self.boolean_system_prompt
+        else:
+            system_prompt = self.generative_system_prompt
+
+        base_prompt_template = ChatPromptTemplate.from_messages(
+            [("system", system_prompt), ("user", self.value_prompt_template)]
         )
 
         example_str = """
@@ -110,7 +113,6 @@ class SQLRetriever(BaseRetriever):
 """
 
         return base_prompt_template.partial(
-            format_instructions=self.boolean_format_template,
             value=value_schema.value,
             description=value_schema.description,
             usage=value_schema.usage,
@@ -118,26 +120,17 @@ class SQLRetriever(BaseRetriever):
         )
 
     def _prepare_column_prompt(
-        self, column_schema: ColumnSchema, boolean_format_instructions: bool = True
-    ) -> PromptTemplate:
-        base_prompt_template = PromptTemplate(
-            input_variables=[
-                "format_instructions",
-                "column",
-                "type",
-                "description",
-                "usage",
-                "values,",
-                "example_questions",
-                "input",
-            ],
-            template=self.column_prompt_template,
-        )
+        self, column_schema: ColumnSchema, boolean_system_prompt: bool = True
+    ) -> ChatPromptTemplate:
 
-        if boolean_format_instructions is True:
-            format_instructions = self.boolean_format_template
+        if boolean_system_prompt is True:
+            system_prompt = self.boolean_system_prompt
         else:
-            format_instructions = self.generative_format_template
+            system_prompt = self.generative_system_prompt
+
+        base_prompt_template = ChatPromptTemplate.from_messages(
+            [("system", system_prompt), ("user", self.column_prompt_template)]
+        )
 
         if column_schema.model_fields["values"] == Dict[Any, ValueSchema]:
             value_str = """
@@ -175,7 +168,6 @@ There are too many unique values in the column to list exhaustively. Below is a 
 """
 
         return base_prompt_template.partial(
-            format_instructions=format_instructions,
             column=column_schema.column,
             type=column_schema.type,
             description=column_schema.description,
@@ -184,18 +176,16 @@ There are too many unique values in the column to list exhaustively. Below is a 
             example_questions=example_str,
         )
 
-    def _prepare_table_prompt(self, table_schema: TableSchema) -> PromptTemplate:
-        base_prompt_template = PromptTemplate(
-            input_variables=[
-                "format_instructions",
-                "table",
-                "description",
-                "usage",
-                "columns",
-                "example_questions",
-                "input",
-            ],
-            template=self.table_prompt_template,
+    def _prepare_table_prompt(
+        self, table_schema: TableSchema, boolean_system_prompt: bool = True
+    ) -> ChatPromptTemplate:
+        if boolean_system_prompt is True:
+            system_prompt = self.boolean_system_prompt
+        else:
+            system_prompt = self.generative_system_prompt
+
+        base_prompt_template = ChatPromptTemplate.from_messages(
+            [("system", system_prompt), ("user", self.table_prompt_template)]
         )
 
         columns_str = """
@@ -223,6 +213,41 @@ Below are descriptions of each column in this table:
             columns=columns_str,
             example_questions=example_str,
         )
+
+    def _rank_schema(self, prompt: ChatPromptTemplate, query: str) -> Dict[str, float]:
+        rank_chain = LLMChain(llm=self.llm, prompt=prompt, return_final_only=False)
+        output = rank_chain({"input": query})  # returns metadata
+
+        #  parse through metadata tokens until encountering either yes, or no.
+        score = None  # a None score indicates the model output could not be parsed.
+        for content in output["full_generation"][0].message.response_metadata[
+            "logprobs"
+        ]["content"]:
+            #  Convert answer to score using the model's confidence
+            if content["token"].lower().strip() == "yes":
+                score = content["logprob"]  # If yes, use the model's confidence
+                break
+            elif content["token"].lower().strip() == "no":
+                score = 1 - content["logprob"]  # If no, invert the confidence
+                break
+
+        return score
+
+    def breadth_first_search(self, greedy=True):
+        """Search breadth wise through Tables, then Columns, then Values.Uses a greedy strategy to maximize quota if greedy=True, otherwise a dynamic strategy."""
+        pass
+
+    def breadth_first_ablation(self):
+        """Ablate metadata filters in reverse breadth first search until the required minimum number of documents are returned."""
+        pass
+
+    def depth_first_search(self, greedy=True):
+        """Search depth wise through Tables, then Columns, then Values. Uses a greedy strategy to maximize quota if greedy=True, otherwise a dynamic strategy."""
+        pass
+
+    def depth_first_ablation(self):
+        """Ablate metadata filters in reverse depth first search until the required minimum number of documents are returned."""
+        pass
 
     def _prepare_retrieval_query(self, query: str) -> str:
         rewrite_prompt = PromptTemplate(

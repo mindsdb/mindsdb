@@ -46,17 +46,25 @@ def get_table_alias(table_obj, default_db_name):
 
 
 def get_fill_param_fnc(steps_data):
-    def fill_params(node, parent_query=None, **kwargs):
-        if isinstance(node, BinaryOperation):
-            if isinstance(node.args[1], Parameter):
-                rs = steps_data[node.args[1].value.step_num]
-                items = [Constant(i) for i in rs.get_column_values(col_idx=0)]
-                if node.op == '=' and len(items) == 1:
-                    # extract one value for option 'col=(subselect)'
-                    node.args[1] = items[0]
-                else:
-                    node.args[1] = Tuple(items)
-                return node
+    def fill_params(node, callstack=None, **kwargs):
+        if isinstance(node, Parameter):
+            rs = steps_data[node.value.step_num]
+            items = [Constant(i) for i in rs.get_column_values(col_idx=0)]
+
+            is_single_item = True
+            if callstack:
+                node_prev = callstack[0]
+                if isinstance(node_prev, BinaryOperation):
+                    # Check case: 'something IN Parameter()'
+                    if node_prev.op.lower() == 'in' and node_prev.args[1] is node:
+                        is_single_item = False
+
+            if is_single_item and len(items) == 1:
+                # extract one value for option 'col=(subselect)'
+                node = items[0]
+            else:
+                node = Tuple(items)
+            return node
 
         if isinstance(node, Parameter):
             rs = steps_data[node.value.step_num]

@@ -20,7 +20,6 @@ from mindsdb_sql_parser.ast import (
     DropTables,
     DropView,
     Explain,
-    Function,
     Identifier,
     Insert,
     NativeQuery,
@@ -34,7 +33,6 @@ from mindsdb_sql_parser.ast import (
     Union,
     Update,
     Use,
-    Variable,
     Tuple,
 )
 
@@ -70,7 +68,6 @@ from mindsdb_sql_parser.ast.mindsdb import (
 
 import mindsdb.utilities.profiler as profiler
 
-from mindsdb.integrations.utilities.query_traversal import query_traversal
 from mindsdb.api.executor.sql_query.result_set import Column, ResultSet
 from mindsdb.api.executor.sql_query import SQLQuery
 from mindsdb.api.executor.data_types.answer import ExecuteAnswer
@@ -108,7 +105,6 @@ from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.functions import mark_process, resolve_model_identifier, get_handler_install_message
 from mindsdb.utilities.exception import EntityExistsError, EntityNotExistsError
 from mindsdb.utilities import log
-from mindsdb.api.mysql.mysql_proxy.utilities import ErParseError
 
 logger = log.getLogger(__name__)
 
@@ -599,8 +595,6 @@ class ExecuteCommands:
         ):
             return ExecuteAnswer()
         elif type(statement) is Select:
-            if statement.from_table is None:
-                return self.answer_single_row_select(statement, database_name)
             query = SQLQuery(statement, session=self.session, database=database_name)
             return self.answer_select(query)
         elif type(statement) is Union:
@@ -1597,56 +1591,6 @@ class ExecuteCommands:
 
         query = SQLQuery(new_statement, session=self.session, database=database_name)
         return self.answer_select(query)
-
-    def answer_single_row_select(self, statement, database_name):
-
-        def adapt_query(node, is_table, **kwargs):
-            if is_table:
-                return
-
-            if isinstance(node, Identifier):
-                if node.parts[-1].lower() == "session_user":
-                    return Constant(self.session.username, alias=node)
-                if node.parts[-1].lower() == '$$':
-                    # NOTE: sinve version 9.0 mysql client sends query 'select $$'.
-                    # Connection can be continued only if answer is parse error.
-                    raise ErParseError(
-                        "You have an error in your SQL syntax; check the manual that corresponds to your server "
-                        "version for the right syntax to use near '$$' at line 1"
-                    )
-
-            if isinstance(node, Function):
-                function_name = node.op.lower()
-
-                functions_results = {
-                    "database": database_name,
-                    "current_user": self.session.username,
-                    "user": self.session.username,
-                    "version": "8.0.17",
-                    "current_schema": "public",
-                    "connection_id": self.context.get('connection_id')
-                }
-                if function_name in functions_results:
-                    return Constant(functions_results[function_name], alias=Identifier(parts=[function_name]))
-
-            if isinstance(node, Variable):
-                var_name = node.value
-                column_name = f"@@{var_name}"
-                result = SERVER_VARIABLES.get(column_name)
-                if result is None:
-                    logger.error(f"Unknown variable: {column_name}")
-                    raise Exception(f"Unknown variable '{var_name}'")
-                else:
-                    return Constant(result[0], alias=Identifier(parts=[column_name]))
-
-        query_traversal(statement, adapt_query)
-
-        statement.from_table = Identifier('t')
-        df = query_df(pd.DataFrame([[0]]), statement, session=self.session)
-
-        return ExecuteAnswer(
-            data=ResultSet().from_df(df, table_name="")
-        )
 
     def answer_show_create_table(self, table):
         columns = [

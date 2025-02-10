@@ -1,5 +1,7 @@
 import copy
 
+import pandas as pd
+
 from mindsdb_sql_parser import ast
 from mindsdb_sql_parser.ast import (
     Select, Identifier, Join, Star, BinaryOperation, Constant, Union, CreateTable,
@@ -12,7 +14,7 @@ from mindsdb.api.executor.planner.query_plan import QueryPlan
 from mindsdb.api.executor.planner.steps import (
     FetchDataframeStep, ProjectStep, ApplyPredictorStep,
     ApplyPredictorRowStep, UnionStep, GetPredictorColumns, SaveToTable,
-    InsertToTable, UpdateToTable, SubSelectStep,
+    InsertToTable, UpdateToTable, SubSelectStep, QueryStep,
     DeleteStep, DataStep, CreateTableStep
 )
 from mindsdb.api.executor.planner.utils import (
@@ -746,7 +748,10 @@ class QueryPlanner:
             step = DataStep(from_table.data)
             last_step = self.plan.add_step(step)
             return self.plan_sub_select(query, last_step, add_absent_cols=True)
-
+        elif from_table is None:
+            # one line select
+            step = QueryStep(query, from_table=pd.DataFrame([None]))
+            self.plan.add_step(step)
         else:
             raise PlanningException(f'Unsupported from_table {type(from_table)}')
 

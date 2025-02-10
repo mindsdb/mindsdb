@@ -60,7 +60,7 @@ export MINDSDB_APIS='http,mysql,postgres,mongodb'
 ## MindsDB Server
 
 By default for the HTTP API, MindsDB uses [Waitress](https://pypi.org/project/waitress/) which is a pure-Python WSGI server. There is an option to change that 
-and use [Flask](https://flask.palletsprojects.com/en/2.2.x/) or [Gunircorn](https://gunicorn.org/)
+and use [Flask](https://flask.palletsprojects.com/en/stable/) or [Gunicorn](https://gunicorn.org/)
 
 <Warning>
 
@@ -71,7 +71,11 @@ If you want to use Gunicorn as a default server, make sure you run `pip install 
 #### Example
 
 ```
+export MINDSDB_DEFAULT_SERVER=waitress # this is used by default
+
 export MINDSDB_DEFAULT_SERVER=flask
+
+export MINDSDB_DEFAULT_SERVER=gunicorn
 ```
 
 ## MindsDB Updates

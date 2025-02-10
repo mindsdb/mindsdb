@@ -1,6 +1,7 @@
 from typing import Any, Dict, Union, Optional, List
 from uuid import uuid4
 import datetime
+import json
 
 from langchain_core.callbacks.base import BaseCallbackHandler
 
@@ -144,14 +145,15 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
                 name=f'{chain_name}-{run_uuid}',
                 trace_id=self.trace_id,
                 parent_observation_id=self.observation_id,
-                input=str(inputs)
+                input=json.dumps(inputs, indent=2)
             )
 
             metadata = {
                 'chain_name': chain_name,
                 'started': start_time.isoformat(),
                 'start_timestamp': start_time.timestamp(),
-                'input_size': len(str(inputs))
+                'input_keys': list(inputs.keys()) if isinstance(inputs, dict) else None,
+                'input_size': len(inputs) if isinstance(inputs, dict) else len(str(inputs))
             }
             chain_span.update(metadata=metadata)
             self.chain_uuid_to_span[run_uuid] = chain_span
@@ -182,9 +184,10 @@ class LangfuseCallbackHandler(BaseCallbackHandler):
             metadata = {
                 'finished': end_time.isoformat(),
                 'duration_seconds': duration if start_timestamp else None,
-                'output_size': len(str(outputs))
+                'output_keys': list(outputs.keys()) if isinstance(outputs, dict) else None,
+                'output_size': len(outputs) if isinstance(outputs, dict) else len(str(outputs))
             }
-            chain_span.update(output=str(outputs), metadata=metadata)
+            chain_span.update(output=json.dumps(outputs, indent=2), metadata=metadata)
             chain_span.end()
         except Exception as e:
             logger.warning(f"Error updating Langfuse span: {str(e)}")

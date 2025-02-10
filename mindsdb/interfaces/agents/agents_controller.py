@@ -256,9 +256,9 @@ class AgentsController:
         if (
             is_demo and (
                 (name is not None and name != agent_name)
-                or (model_name or provider)
-                or (len(skills_to_add) > 0 or len(skills_to_remove) > 0 or len(skills_to_rewrite) > 0)
-                or (isinstance(params, dict) and len(params) > 1 and 'prompt_template' not in params)
+                or (model_name is not None and existing_agent.model_name != model_name)
+                or (provider is not None and existing_agent.provider != provider)
+                or (isinstance(params, dict) and len(params) > 0 and 'prompt_template' not in params)
             )
         ):
             raise ValueError("It is forbidden to change properties of the demo object")

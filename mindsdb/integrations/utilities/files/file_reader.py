@@ -244,7 +244,7 @@ class FileReader(FormatDetector):
             func(self.file_obj, **kwargs)
         }
 
-    def get_page_content(self, table_name: str = None, **kwargs) -> pd.DataFrame:
+    def get_page_content(self, page_name: str = None, **kwargs) -> pd.DataFrame:
         """
             Get content of single table
         """
@@ -256,7 +256,7 @@ class FileReader(FormatDetector):
             # only one table
             return func(self.file_obj, name=self.name, **kwargs)
 
-        for _, df in func(self.file_obj, name=self.name, table_name=table_name, **kwargs):
+        for _, df in func(self.file_obj, name=self.name, page_name=page_name, **kwargs):
             return df
 
     @staticmethod

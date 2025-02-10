@@ -33,3 +33,11 @@ class TestFiles(BaseExecutorDummyML):
 
         ret = self.run_sql('select count(*) c from files.myfile')
         assert ret['c'][0] == 4
+
+        self.run_sql('''
+            insert into files.myfile (a)
+            values (9)
+        ''')
+
+        ret = self.run_sql('select count(*) c from files.myfile')
+        assert ret['c'][0] == 5

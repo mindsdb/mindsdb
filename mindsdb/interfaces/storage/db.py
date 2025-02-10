@@ -258,6 +258,7 @@ class File(Base):
     row_count = Column(Integer, nullable=False)
     columns = Column(Json, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.now)
+    metadata_: dict = Column("metadata", JSON, nullable=True)
     updated_at = Column(
         DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
     )

@@ -4,7 +4,6 @@ import tempfile
 from pathlib import Path
 from http import HTTPStatus
 
-from dateutil.parser import parse as parse_datetime
 from flask import request
 from flask_restx import Resource
 from flask import current_app as ca

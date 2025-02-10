@@ -30,11 +30,11 @@ connection_args = OrderedDict(
         'label': 'Client Secret (Consumer Secret)'
     },
     is_sandbox={
-            'type': ARG_TYPE.BOOL,
-            'description': 'Set this to True if you need to connect to a sandbox, False for production environments. '
-                           'If not provided defaults to False.',
-            'required': False,
-            'label': 'Is Sandbox'
+        'type': ARG_TYPE.BOOL,
+        'description': 'Set this to True if you need to connect to a sandbox, False for production environments. '
+                       'If not provided defaults to False.',
+        'required': False,
+        'label': 'Is Sandbox'
     }
 )
 

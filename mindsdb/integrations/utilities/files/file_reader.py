@@ -1,7 +1,7 @@
 import traceback
 import json
 import csv
-from io import BytesIO, StringIO
+from io import BytesIO, StringIO, IOBase
 from pathlib import Path
 import codecs
 
@@ -9,6 +9,7 @@ import filetype
 import pandas as pd
 from charset_normalizer import from_bytes
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+import fitz  # pymupdf
 
 from mindsdb.utilities import log
 
@@ -22,7 +23,8 @@ class FileDetectError(Exception):
     ...
 
 
-def decode(file_obj: BytesIO) -> StringIO:
+def decode(file_obj: IOBase) -> StringIO:
+    file_obj.seek(0)
     byte_str = file_obj.read()
     # Move it to StringIO
     try:
@@ -62,39 +64,87 @@ def decode(file_obj: BytesIO) -> StringIO:
 
 class FormatDetector:
 
-    def get(self, name, file_obj: BytesIO = None):
-        format = self.get_format_by_name(name)
-        if format is None and file_obj is not None:
-            format = self.get_format_by_content(file_obj)
+    supported_formats = ['parquet', 'csv', 'xlsx', 'pdf', 'json', 'txt']
 
+    def __init__(
+        self,
+        path: str = None,
+        name: str = None,
+        file: IOBase = None
+    ):
+        """
+        File format detector
+        One of these arguments has to be passed: `path` or `file`
+
+        :param path: path to the file
+        :param name: name of the file
+        :param file: file descriptor (via open(...), of BytesIO(...))
+        """
+        if path is not None:
+            file = open(path, 'rb')
+
+        elif file is not None:
+            if name is None:
+                if hasattr(file, 'name'):
+                    path = file.name
+                else:
+                    path = 'file'
+        else:
+            raise FileDetectError('Wrong arguments: path or file is required')
+
+        if name is None:
+            name = Path(path).name
+
+        self.name = name
+        self.file_obj = file
+        self.format = None
+
+        self.parameters = {}
+
+    def get_format(self) -> str:
+        if self.format is not None:
+            return self.format
+
+        format = self.get_format_by_name()
         if format is not None:
-            return format
-        raise FileDetectError(f'Unable to detect format: {name}')
+            if format not in self.supported_formats:
+                raise FileDetectError(f'Not supported format: {format}')
 
-    def get_format_by_name(self, filename):
-        extension = Path(filename).suffix.strip(".").lower()
+        if format is None and self.file_obj is not None:
+            format = self.get_format_by_content()
+            self.file_obj.seek(0)
+
+        if format is None:
+            raise FileDetectError(f'Unable to detect format: {self.name}')
+
+        self.format = format
+        return format
+
+    def get_format_by_name(self):
+        extension = Path(self.name).suffix.strip(".").lower()
         if extension == "tsv":
             extension = "csv"
+            self.parameters['delimiter'] = '\t'
+
         return extension or None
 
-    def get_format_by_content(self, file_obj):
-        if self.is_parquet(file_obj):
+    def get_format_by_content(self):
+        if self.is_parquet(self.file_obj):
             return "parquet"
 
-        file_type = filetype.guess(file_obj)
-        if file_type is None:
-            return
+        file_type = filetype.guess(self.file_obj)
+        if file_type is not None:
 
-        if file_type.mime in {
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "application/vnd.ms-excel",
-        }:
-            return 'xlsx'
+            if file_type.mime in {
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "application/vnd.ms-excel",
+            }:
+                return 'xlsx'
 
-        if file_type.mime == 'application/pdf':
-            return "pdf"
+            if file_type.mime == 'application/pdf':
+                return "pdf"
 
-        file_obj = decode(file_obj)
+        file_obj = decode(self.file_obj)
 
         if self.is_json(file_obj):
             return "json"
@@ -102,8 +152,10 @@ class FormatDetector:
         if self.is_csv(file_obj):
             return "csv"
 
-    def is_json(self, data_obj: StringIO) -> bool:
+    @staticmethod
+    def is_json(data_obj: StringIO) -> bool:
         # see if its JSON
+        data_obj.seek(0)
         text = data_obj.read(100).strip()
         data_obj.seek(0)
         if len(text) > 0:
@@ -114,20 +166,25 @@ class FormatDetector:
                     return True
                 except Exception:
                     return False
-                finally:
-                    data_obj.seek(0)
         return False
 
-    def is_csv(self, data_obj: StringIO) -> bool:
-        sample = data_obj.readline()  # trying to get dialect from header
+    @classmethod
+    def is_csv(cls, data_obj: StringIO) -> bool:
         data_obj.seek(0)
+        sample = data_obj.readline()  # trying to get dialect from header
         try:
+            data_obj.seek(0)
             csv.Sniffer().sniff(sample)
 
+            # Avoid a false-positive for json files
+            if cls.is_json(data_obj):
+                return False
+            return True
         except Exception:
             return False
 
-    def is_parquet(self, data: BytesIO) -> bool:
+    @staticmethod
+    def is_parquet(data: IOBase) -> bool:
         # Check first and last 4 bytes equal to PAR1.
         # Refer: https://parquet.apache.org/docs/file-format/
         parquet_sig = b"PAR1"
@@ -141,15 +198,31 @@ class FormatDetector:
         return False
 
 
-class FileReader:
+class FileReader(FormatDetector):
 
-    def _get_csv_dialect(self, buffer) -> csv.Dialect:
+    def to_df(self, **kwargs) -> pd.DataFrame:
+        format = self.get_format()
+
+        func = getattr(self, f'read_{format}', None)
+        if func is None:
+            raise FileDetectError(f'Unsupported format: {format}')
+
+        self.file_obj.seek(0)
+        kwargs.update(self.parameters)
+        return func(self.file_obj, name=self.name, **kwargs)
+
+    @staticmethod
+    def _get_csv_dialect(buffer, delimiter=None) -> csv.Dialect:
         sample = buffer.readline()  # trying to get dialect from header
         buffer.seek(0)
         try:
             if isinstance(sample, bytes):
                 sample = sample.decode()
-            accepted_csv_delimiters = [",", "\t", ";"]
+
+            if delimiter is not None:
+                accepted_csv_delimiters = [delimiter]
+            else:
+                accepted_csv_delimiters = [",", "\t", ";"]
             try:
                 dialect = csv.Sniffer().sniff(
                     sample, delimiters=accepted_csv_delimiters
@@ -168,29 +241,15 @@ class FileReader:
             dialect = None
         return dialect
 
-    def read(self, format, file_obj: BytesIO, **kwargs) -> pd.DataFrame:
-        func = {
-            'parquet': self.read_parquet,
-            'csv': self.read_csv,
-            'xlsx': self.read_excel,
-            'pdf': self.read_pdf,
-            'json': self.read_json,
-            'txt': self.read_txt,
-        }
-
-        if format not in func:
-            raise FileDetectError(f'Unsupported format: {format}')
-        func = func[format]
-
-        return func(file_obj, **kwargs)
-
-    def read_csv(self, file_obj: BytesIO, **kwargs):
+    @classmethod
+    def read_csv(cls, file_obj: BytesIO, delimiter=None, **kwargs):
         file_obj = decode(file_obj)
-        dialect = self._get_csv_dialect(file_obj)
+        dialect = cls._get_csv_dialect(file_obj, delimiter=delimiter)
 
         return pd.read_csv(file_obj, sep=dialect.delimiter, index_col=False)
 
-    def read_txt(self, file_obj: BytesIO, **kwargs):
+    @staticmethod
+    def read_txt(file_obj: BytesIO, name=None, **kwargs):
         file_obj = decode(file_obj)
 
         try:
@@ -202,10 +261,7 @@ class FileReader:
             )
         text = file_obj.read()
 
-        file_name = None
-        if hasattr(file_obj, "name"):
-            file_name = file_obj.name
-        metadata = {"source": file_name}
+        metadata = {"source": name}
         documents = [Document(page_content=text, metadata=metadata)]
 
         text_splitter = RecursiveCharacterTextSplitter(
@@ -220,10 +276,10 @@ class FileReader:
             ]
         )
 
-    def read_pdf(self, file_obj: BytesIO, **kwargs):
-        import fitz  # pymupdf
+    @staticmethod
+    def read_pdf(file_obj: BytesIO, **kwargs):
 
-        with fitz.open(stream=file_obj) as pdf:  # open pdf
+        with fitz.open(stream=file_obj.read()) as pdf:  # open pdf
             text = chr(12).join([page.get_text() for page in pdf])
 
         text_splitter = RecursiveCharacterTextSplitter(
@@ -236,16 +292,19 @@ class FileReader:
             {"content": split_text, "metadata": [{}] * len(split_text)}
         )
 
-    def read_json(self, file_obj: BytesIO, **kwargs):
+    @staticmethod
+    def read_json(file_obj: BytesIO, **kwargs):
         file_obj = decode(file_obj)
         file_obj.seek(0)
         json_doc = json.loads(file_obj.read())
         return pd.json_normalize(json_doc, max_level=0)
 
-    def read_parquet(self, file_obj: BytesIO, **kwargs):
+    @staticmethod
+    def read_parquet(file_obj: BytesIO, **kwargs):
         return pd.read_parquet(file_obj)
 
-    def read_excel(self, file_obj: BytesIO, sheet_name=None, **kwargs) -> pd.DataFrame:
+    @staticmethod
+    def read_xlsx(file_obj: BytesIO, sheet_name=None, **kwargs) -> pd.DataFrame:
 
         file_obj.seek(0)
         with pd.ExcelFile(file_obj) as xls:

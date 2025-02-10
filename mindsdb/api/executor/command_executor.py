@@ -1549,7 +1549,7 @@ class ExecuteCommands:
         elif isinstance(database_name, str) and len(database_name) > 0:
             db = database_name
         else:
-            db = "mindsdb"
+            db = self.session.config.get("default_project")
         table_name = target.parts[-1]
 
         new_where = BinaryOperation(

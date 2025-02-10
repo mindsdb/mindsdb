@@ -352,6 +352,8 @@ class Config:
         if os.environ.get('MINDSDB_DB_CON', '') != '':
             self._env_config['storage_db'] = os.environ['MINDSDB_DB_CON']
 
+        self._env_config['default_project'] = os.environ.get('MINDSDB_DEFAULT_PROJECT', 'mindsdb')
+
     def parse_cmd_args(self) -> None:
         """Collect cmd args to self._cmd_args (accessable as self.cmd_args)
         """

@@ -125,12 +125,25 @@ class TestConnection(Resource):
             )
         
         tmp_handler = ca.integration_controller.create_tmp_handler(
-            "test_connection",  # TODO: Will this work?
+            "test_connection",
             handler_name,
             request.json['connection_data']
         )
 
-        response = tmp_handler.check_connection()
+        try:
+            response = tmp_handler.check_connection()
+        except ImportError as import_error:
+            return http_error(
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+                'Import error',
+                str(import_error)
+            )
+        except Exception as unknown_error:
+            return http_error(
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+                'Unknown error',
+                str(unknown_error)
+            )
 
         if response.success:
             return '', 200

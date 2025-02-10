@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Union, Any, Optional, Dict
+from typing import List, Union, Any, Optional, Dict, OrderedDict
 
 from langchain_community.vectorstores.chroma import Chroma
 from langchain_community.vectorstores.pgvector import PGVector
@@ -11,7 +11,7 @@ from langchain_core.stores import BaseStore
 from pydantic import BaseModel, Field, field_validator
 from langchain_text_splitters import TextSplitter
 
-DEFAULT_COLLECTION_NAME = 'default_collection'
+DEFAULT_COLLECTION_NAME = "default_collection"
 
 # Multi retriever specific
 DEFAULT_ID_KEY = "doc_id"
@@ -38,15 +38,15 @@ Return a JSON list with an entry for each column. Each entry should have
 {{"name": "column name", "description": "column description", "type": "column data type"}}
 \n\n{dataframe}\n\nJSON:\n
 """
-DEFAULT_RAG_PROMPT_TEMPLATE = '''You are an assistant for
+DEFAULT_RAG_PROMPT_TEMPLATE = """You are an assistant for
 question-answering tasks. Use the following pieces of retrieved context
 to answer the question. If you don't know the answer, just say that you
 don't know. Use two sentences maximum and keep the answer concise.
 Question: {question}
 Context: {context}
-Answer:'''
+Answer:"""
 
-DEFAULT_QA_GENERATION_PROMPT_TEMPLATE = '''You are an assistant for
+DEFAULT_QA_GENERATION_PROMPT_TEMPLATE = """You are an assistant for
 generating sample questions and answers from the given document and metadata. Given
 a document and its metadata as context, generate a question and answer from that document and its metadata.
 
@@ -64,25 +64,25 @@ in the specified JSON format no matter what.
 
 Document: {document}
 Metadata: {metadata}
-Answer:'''
+Answer:"""
 
-DEFAULT_MAP_PROMPT_TEMPLATE = '''The following is a set of documents
+DEFAULT_MAP_PROMPT_TEMPLATE = """The following is a set of documents
 {docs}
 Based on this list of docs, please summarize based on the user input.
 
 User input: {input}
 
-Helpful Answer:'''
+Helpful Answer:"""
 
-DEFAULT_REDUCE_PROMPT_TEMPLATE = '''The following is set of summaries:
+DEFAULT_REDUCE_PROMPT_TEMPLATE = """The following is set of summaries:
 {docs}
 Take these and distill it into a final, consolidated summary related to the user input.
 
 User input: {input}
 
-Helpful Answer:'''
+Helpful Answer:"""
 
-DEFAULT_SEMANTIC_PROMPT_TEMPLATE = '''Provide a better search query for web search engine to answer the given question.
+DEFAULT_SEMANTIC_PROMPT_TEMPLATE = """Provide a better search query for web search engine to answer the given question.
 
 << EXAMPLES >>
 1. Input: "Show me documents containing how to finetune a LLM please"
@@ -91,9 +91,9 @@ Output: "how to finetune a LLM"
 Output only a single better search query and nothing else like in the example.
 
 Here is the user input: {input}
-'''
+"""
 
-DEFAULT_METADATA_FILTERS_PROMPT_TEMPLATE = '''Construct a list of PostgreSQL metadata filters to filter documents in the database based on the user input.
+DEFAULT_METADATA_FILTERS_PROMPT_TEMPLATE = """Construct a list of PostgreSQL metadata filters to filter documents in the database based on the user input.
 
 << INSTRUCTIONS >>
 {format_instructions}
@@ -110,9 +110,9 @@ RETURN ONLY THE FINAL JSON. DO NOT EXPLAIN, JUST RETURN THE FINAL JSON.
 
 Here is the user input:
 {input}
-'''
+"""
 
-DEFAULT_SQL_PROMPT_TEMPLATE = '''
+DEFAULT_SQL_PROMPT_TEMPLATE = """
 Construct a valid {dialect} SQL query to select documents relevant to the user input.
 Source documents are found in the {source_table} table. You may need to join with other tables to get additional document metadata.
 
@@ -165,7 +165,7 @@ Output the {dialect} SQL query that is ready to be executed only WITHOUT ANY DEL
 
 Here is the user input:
 {input}
-'''
+"""
 
 DEFAULT_QUESTION_REFORMULATION_TEMPLATE = """Given the original question and the retrieved context,
 analyze what additional information is needed for a complete, accurate answer.
@@ -234,7 +234,7 @@ If no additional information is needed, output an empty array [].
 
 Follow-up Questions:"""
 
-DEFAULT_QUERY_RETRY_PROMPT_TEMPLATE = '''
+DEFAULT_QUERY_RETRY_PROMPT_TEMPLATE = """
 {query}
 
 The {dialect} query above failed with the error message: {error}.
@@ -270,14 +270,19 @@ Rewrite the query so it works.
 Output the final SQL query only.
 
 SQL Query:
-'''
+"""
 
 DEFAULT_NUM_QUERY_RETRIES = 2
 
 
 class LLMConfig(BaseModel):
-    model_name: str = Field(default=DEFAULT_LLM_MODEL, description='LLM model to use for generation')
-    provider: str = Field(default=DEFAULT_LLM_MODEL_PROVIDER, description='LLM model provider to use for generation')
+    model_name: str = Field(
+        default=DEFAULT_LLM_MODEL, description="LLM model to use for generation"
+    )
+    provider: str = Field(
+        default=DEFAULT_LLM_MODEL_PROVIDER,
+        description="LLM model provider to use for generation",
+    )
     params: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -285,20 +290,18 @@ class MultiVectorRetrieverMode(Enum):
     """
     Enum for MultiVectorRetriever types.
     """
+
     SPLIT = "split"
     SUMMARIZE = "summarize"
     BOTH = "both"
 
 
 class VectorStoreType(Enum):
-    CHROMA = 'chromadb'
-    PGVECTOR = 'pgvector'
+    CHROMA = "chromadb"
+    PGVECTOR = "pgvector"
 
 
-vector_store_map = {
-    VectorStoreType.CHROMA: Chroma,
-    VectorStoreType.PGVECTOR: PGVector
-}
+vector_store_map = {VectorStoreType.CHROMA: Chroma, VectorStoreType.PGVECTOR: PGVector}
 
 
 class VectorStoreConfig(BaseModel):
@@ -317,6 +320,7 @@ class VectorStoreConfig(BaseModel):
 
 class RetrieverType(str, Enum):
     """Retriever type for RAG pipeline"""
+
     VECTOR_STORE = "vector_store"
     AUTO = "auto"
     MULTI = "multi"
@@ -328,130 +332,151 @@ class SearchType(Enum):
     """
     Enum for vector store search types.
     """
+
     SIMILARITY = "similarity"
     MMR = "mmr"
     SIMILARITY_SCORE_THRESHOLD = "similarity_score_threshold"
 
 
 class SearchKwargs(BaseModel):
-    k: int = Field(
-        default=DEFAULT_K,
-        description="Amount of documents to return",
-        ge=1
-    )
+    k: int = Field(default=DEFAULT_K, description="Amount of documents to return", ge=1)
     filter: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="Filter by document metadata"
+        default=None, description="Filter by document metadata"
     )
     # For similarity_score_threshold search type
     score_threshold: Optional[float] = Field(
         default=None,
         description="Minimum relevance threshold for similarity_score_threshold search",
         ge=0.0,
-        le=1.0
+        le=1.0,
     )
     # For MMR search type
     fetch_k: Optional[int] = Field(
-        default=None,
-        description="Amount of documents to pass to MMR algorithm",
-        ge=1
+        default=None, description="Amount of documents to pass to MMR algorithm", ge=1
     )
     lambda_mult: Optional[float] = Field(
         default=None,
         description="Diversity of results returned by MMR (1=min diversity, 0=max)",
         ge=0.0,
-        le=1.0
+        le=1.0,
     )
 
     def model_dump(self, *args, **kwargs):
         # Override model_dump to exclude None values by default
-        kwargs['exclude_none'] = True
+        kwargs["exclude_none"] = True
         return super().model_dump(*args, **kwargs)
 
 
 class ValueSchema(BaseModel):
-    value: Any = Field(
-        description="The schema value as it exists in the table column."
-    )
-    description: str = Field(
-        description="Description of what the value represents."
-    )
-    usage: str = Field(
-        description="How and when to use this value for search."
-    )
+    value: Any = Field(description="The schema value as it exists in the table column.")
+    description: str = Field(description="Description of what the value represents.")
+    usage: str = Field(description="How and when to use this value for search.")
     example_questions: Optional[List[Any]] = Field(
+        default=None, description="Example questions where this value is set."
+    )
+    filter_threshold: Optional[float] = Field(
+        default=0.8,
+        description="Minimum relevance threshold to include metadata filters from this column.",
+    )
+    priority: Optional[int] = Field(
+        default=0,
+        description="Priority level for this column, lower numbers will be processed first.",
+    )
+    relevance: Optional[float] = Field(
         default=None,
-        description="Example questions where this value is set."
+        description="Relevance computed during search. Should not be set by the end user.",
     )
 
 
 class ColumnSchema(BaseModel):
-    column: str = Field(
-        description="Name of the column in the database"
-    )
-    type: str = Field(
-        description="Type of the column (e.g. int, string, datetime)"
-    )
-    description: str = Field(
-        description="Description of what the column represents"
-    )
-    usage: str = Field(
-        description="How and when to use this Table for search."
-    )
-    values: Optional[Dict[Any, ValueSchema], Dict[Any, Any], List[Any]] = Field(
-        default=None,
-        description="Either a dict of {value: ValueSchema, ...}, a dict of {value: descriptive value, ...}, or a list of sample values taken from the column."
+    column: str = Field(description="Name of the column in the database")
+    type: str = Field(description="Type of the column (e.g. int, string, datetime)")
+    description: str = Field(description="Description of what the column represents")
+    usage: str = Field(description="How and when to use this Table for search.")
+    values: Union[
+        OrderedDict[Any, ValueSchema], Dict[Any, ValueSchema], Dict[Any, Any], List[Any]
+    ] = Field(
+        description="One of the following. A dict of {schema_value: ValueSchema, ...}, where schema value is the name given for this value description in the schema. A dict of {table_value: descriptive value, ...}, where table_name is the value in the table. A list of sample values taken from the column."
     )
     example_questions: Optional[List[Any]] = Field(
-        default=None,
-        description="Example questions where this table is useful."
+        default=None, description="Example questions where this table is useful."
     )
     max_filters: Optional[int] = Field(
-        default=1,
-        description="Maximum number of filters to generate for this column."
+        default=1, description="Maximum number of filters to generate for this column."
     )
     filter_threshold: Optional[float] = Field(
-        default=.8,
-        description="Minimum relevance threshold to include metadata filters from this column."
+        default=0.8,
+        description="Minimum relevance threshold to include metadata filters from this column.",
     )
     priority: Optional[int] = Field(
         default=1,
-        description="Priority level for this column, lower numbers will be processed first."
+        description="Priority level for this column, lower numbers will be processed first.",
+    )
+    relevance: Optional[float] = Field(
+        default=None,
+        description="Relevance computed during search. Should not be set by the end user.",
     )
 
 
 class TableSchema(BaseModel):
-    table: str = Field(
-        description="Name of table in the database"
-    )
-    description: str = Field(
-        description="Description of what the table represents"
-    )
-    usage: str = Field(
-        description="How and when to use this Table for search."
-    )
-    columns: Dict[str, ColumnSchema] = Field(
+    table: str = Field(description="Name of table in the database")
+    description: str = Field(description="Description of what the table represents")
+    usage: str = Field(description="How and when to use this Table for search.")
+    columns: Union[OrderedDict[str, ColumnSchema], Dict[str, ColumnSchema]] = Field(
         description="Dict of {column_name: ColumnSchemas} describing the metadata columns available for the table"
     )
     example_questions: Optional[List[Any]] = Field(
-        default=None,
-        description="Example questions where this table is useful."
+        default=None, description="Example questions where this table is useful."
     )
     join: str = Field(
         description="SQL join string to join this table with source documents table",
-        default=''
+        default="",
     )
     max_filters: Optional[int] = Field(
-        default=1,
-        description="Maximum number of filters to generate for this table."
+        default=1, description="Maximum number of filters to generate for this table."
     )
     filter_threshold: Optional[float] = Field(
-        default=.8,
-        description="Minimum relevance required to use this table to generate filters."
+        default=0.8,
+        description="Minimum relevance required to use this table to generate filters.",
     )
     priority: Optional[int] = Field(
         default=1,
-        description="Priority level for this table, lower numbers will be processed first."
+        description="Priority level for this table, lower numbers will be processed first.",
+    )
+    relevance: Optional[float] = Field(
+        default=None,
+        description="Relevance computed during search. Should not be set by the end user.",
+    )
+
+    class Config:
+        frozen = True
+
+
+class DatabaseSchema(BaseModel):
+    database: str = Field(description="Name of database in the Database")
+    description: str = Field(description="Description of what the Database represents")
+    usage: str = Field(description="How and when to use this Database for search.")
+    tables: Union[OrderedDict[str, TableSchema], Dict[str, TableSchema]] = Field(
+        description="Dict of {column_name: ColumnSchemas} describing the metadata columns available for the table"
+    )
+    example_questions: Optional[List[Any]] = Field(
+        default=None, description="Example questions where this Database is useful."
+    )
+    max_filters: Optional[int] = Field(
+        default=1,
+        description="Maximum number of filters to generate for this Database.",
+    )
+    filter_threshold: Optional[float] = Field(
+        default=0.8,
+        description="Minimum relevance required to use this Database to generate filters.",
+    )
+    priority: Optional[int] = Field(
+        default=0,
+        description="Priority level for this Database, lower numbers will be processed first.",
+    )
+    relevance: Optional[float] = Field(
+        default=None,
+        description="Relevance computed during search. Should not be set by the end user.",
     )
 
     class Config:
@@ -459,9 +484,7 @@ class TableSchema(BaseModel):
 
 
 class LLMExample(BaseModel):
-    input: str = Field(
-        description="User input for the example"
-    )
+    input: str = Field(description="User input for the example")
     output: str = Field(
         description="What the LLM should generate for this example's input"
     )
@@ -470,49 +493,49 @@ class LLMExample(BaseModel):
 class SQLRetrieverConfig(BaseModel):
     llm_config: LLMConfig = Field(
         default_factory=LLMConfig,
-        description="LLM configuration to use for generating the final SQL query for retrieval"
+        description="LLM configuration to use for generating the final SQL query for retrieval",
     )
     metadata_filters_prompt_template: str = Field(
         default=DEFAULT_METADATA_FILTERS_PROMPT_TEMPLATE,
-        description="Prompt template to generate PostgreSQL metadata filters. Has 'format_instructions', 'schema', 'examples', and 'input' input variables"
+        description="Prompt template to generate PostgreSQL metadata filters. Has 'format_instructions', 'schema', 'examples', and 'input' input variables",
     )
     num_retries: int = Field(
         default=DEFAULT_NUM_QUERY_RETRIES,
-        description="How many times for an LLM to try rewriting a failed SQL query before using the fallback retriever."
+        description="How many times for an LLM to try rewriting a failed SQL query before using the fallback retriever.",
     )
     rewrite_prompt_template: str = Field(
         default=DEFAULT_SEMANTIC_PROMPT_TEMPLATE,
-        description="Prompt template to rewrite user input to be better suited for retrieval. Has 'input' input variable."
+        description="Prompt template to rewrite user input to be better suited for retrieval. Has 'input' input variable.",
     )
     source_table: str = Field(
         description="Name of the source table containing the original documents that were embedded"
     )
     metadata_schemas: Optional[List[TableSchema]] = Field(
         default=None,
-        description="Optional list of table schemas containing document metadata to potentially join with."
+        description="Optional list of table schemas containing document metadata to potentially join with.",
     )
     examples: Optional[List[LLMExample]] = Field(
         default=None,
-        description="Optional examples of final generated pgvector queries based on user input."
+        description="Optional examples of final generated pgvector queries based on user input.",
     )
 
 
 class SummarizationConfig(BaseModel):
     llm_config: LLMConfig = Field(
         default_factory=LLMConfig,
-        description="LLM configuration to use for summarization"
+        description="LLM configuration to use for summarization",
     )
     map_prompt_template: str = Field(
         default=DEFAULT_MAP_PROMPT_TEMPLATE,
-        description="Prompt for an LLM to summarize a single document"
+        description="Prompt for an LLM to summarize a single document",
     )
     reduce_prompt_template: str = Field(
         default=DEFAULT_REDUCE_PROMPT_TEMPLATE,
-        description="Prompt for an LLM to summarize a set of summaries of documents into one"
+        description="Prompt for an LLM to summarize a set of summaries of documents into one",
     )
     max_summarization_tokens: int = Field(
         default=DEFAULT_MAX_SUMMARIZATION_TOKENS,
-        description="Max number of tokens for summarized documents"
+        description="Max number of tokens for summarized documents",
     )
 
 
@@ -530,154 +553,119 @@ class RerankerConfig(BaseModel):
 
 class MultiHopRetrieverConfig(BaseModel):
     """Configuration for multi-hop retrieval"""
+
     base_retriever_type: RetrieverType = Field(
         default=RetrieverType.VECTOR_STORE,
-        description="Type of base retriever to use for multi-hop retrieval"
+        description="Type of base retriever to use for multi-hop retrieval",
     )
     max_hops: int = Field(
-        default=3,
-        description="Maximum number of follow-up questions to generate",
-        ge=1
+        default=3, description="Maximum number of follow-up questions to generate", ge=1
     )
     reformulation_template: str = Field(
         default=DEFAULT_QUESTION_REFORMULATION_TEMPLATE,
-        description="Template for reformulating questions"
+        description="Template for reformulating questions",
     )
     llm_config: LLMConfig = Field(
         default_factory=LLMConfig,
-        description="LLM configuration to use for generating follow-up questions"
+        description="LLM configuration to use for generating follow-up questions",
     )
 
 
 class RAGPipelineModel(BaseModel):
     documents: Optional[List[Document]] = Field(
-        default=None,
-        description="List of documents"
+        default=None, description="List of documents"
     )
 
     vector_store_config: VectorStoreConfig = Field(
-        default_factory=VectorStoreConfig,
-        description="Vector store configuration"
+        default_factory=VectorStoreConfig, description="Vector store configuration"
     )
 
-    llm: Optional[BaseChatModel] = Field(
-        default=None,
-        description="Language model"
-    )
+    llm: Optional[BaseChatModel] = Field(default=None, description="Language model")
     llm_model_name: str = Field(
-        default=DEFAULT_LLM_MODEL,
-        description="Language model name"
+        default=DEFAULT_LLM_MODEL, description="Language model name"
     )
     llm_provider: Optional[str] = Field(
-        default=None,
-        description="Language model provider"
+        default=None, description="Language model provider"
     )
 
     vector_store: VectorStore = Field(
         default_factory=lambda: vector_store_map[VectorStoreConfig().vector_store_type],
-        description="Vector store"
+        description="Vector store",
     )
     db_connection_string: Optional[str] = Field(
-        default=None,
-        description="Database connection string"
+        default=None, description="Database connection string"
     )
-    table_name: str = Field(
-        default=DEFAULT_TEST_TABLE_NAME,
-        description="Table name"
-    )
+    table_name: str = Field(default=DEFAULT_TEST_TABLE_NAME, description="Table name")
     embedding_model: Optional[Embeddings] = Field(
-        default=None,
-        description="Embedding model"
+        default=None, description="Embedding model"
     )
     rag_prompt_template: str = Field(
-        default=DEFAULT_RAG_PROMPT_TEMPLATE,
-        description="RAG prompt template"
+        default=DEFAULT_RAG_PROMPT_TEMPLATE, description="RAG prompt template"
     )
     retriever_prompt_template: Optional[Union[str, dict]] = Field(
-        default=None,
-        description="Retriever prompt template"
+        default=None, description="Retriever prompt template"
     )
     retriever_type: RetrieverType = Field(
-        default=RetrieverType.VECTOR_STORE,
-        description="Retriever type"
+        default=RetrieverType.VECTOR_STORE, description="Retriever type"
     )
     search_type: SearchType = Field(
-        default=SearchType.SIMILARITY,
-        description="Type of search to perform"
+        default=SearchType.SIMILARITY, description="Type of search to perform"
     )
     search_kwargs: SearchKwargs = Field(
         default_factory=SearchKwargs,
-        description="Search configuration for the retriever"
+        description="Search configuration for the retriever",
     )
     summarization_config: Optional[SummarizationConfig] = Field(
         default=None,
-        description="Configuration for summarizing retrieved documents as context"
+        description="Configuration for summarizing retrieved documents as context",
     )
     # SQL retriever specific.
     sql_retriever_config: Optional[SQLRetrieverConfig] = Field(
         default=None,
-        description="Configuration for retrieving documents by generating SQL to filter by metadata & order by distance function"
+        description="Configuration for retrieving documents by generating SQL to filter by metadata & order by distance function",
     )
 
     # Multi retriever specific
     multi_retriever_mode: MultiVectorRetrieverMode = Field(
-        default=MultiVectorRetrieverMode.BOTH,
-        description="Multi retriever mode"
+        default=MultiVectorRetrieverMode.BOTH, description="Multi retriever mode"
     )
     max_concurrency: int = Field(
-        default=DEFAULT_MAX_CONCURRENCY,
-        description="Maximum concurrency"
+        default=DEFAULT_MAX_CONCURRENCY, description="Maximum concurrency"
     )
-    id_key: int = Field(
-        default=DEFAULT_ID_KEY,
-        description="ID key"
-    )
-    parent_store: Optional[BaseStore] = Field(
-        default=None,
-        description="Parent store"
-    )
+    id_key: int = Field(default=DEFAULT_ID_KEY, description="ID key")
+    parent_store: Optional[BaseStore] = Field(default=None, description="Parent store")
     text_splitter: Optional[TextSplitter] = Field(
-        default=None,
-        description="Text splitter"
+        default=None, description="Text splitter"
     )
-    chunk_size: int = Field(
-        default=DEFAULT_CHUNK_SIZE,
-        description="Chunk size"
-    )
+    chunk_size: int = Field(default=DEFAULT_CHUNK_SIZE, description="Chunk size")
     chunk_overlap: int = Field(
-        default=DEFAULT_CHUNK_OVERLAP,
-        description="Chunk overlap"
+        default=DEFAULT_CHUNK_OVERLAP, description="Chunk overlap"
     )
 
     # Auto retriever specific
     auto_retriever_filter_columns: Optional[List[str]] = Field(
-        default=None,
-        description="Filter columns"
+        default=None, description="Filter columns"
     )
     cardinality_threshold: int = Field(
-        default=DEFAULT_CARDINALITY_THRESHOLD,
-        description="Cardinality threshold"
+        default=DEFAULT_CARDINALITY_THRESHOLD, description="Cardinality threshold"
     )
     content_column_name: str = Field(
         default=DEFAULT_CONTENT_COLUMN_NAME,
-        description="Content column name (the column we will get embeddings)"
+        description="Content column name (the column we will get embeddings)",
     )
     dataset_description: str = Field(
-        default=DEFAULT_DATASET_DESCRIPTION,
-        description="Description of the dataset"
+        default=DEFAULT_DATASET_DESCRIPTION, description="Description of the dataset"
     )
     reranker: bool = Field(
-        default=DEFAULT_RERANKER_FLAG,
-        description="Whether to use reranker"
+        default=DEFAULT_RERANKER_FLAG, description="Whether to use reranker"
     )
     reranker_config: RerankerConfig = Field(
-        default_factory=RerankerConfig,
-        description="Reranker configuration"
+        default_factory=RerankerConfig, description="Reranker configuration"
     )
 
     multi_hop_config: Optional[MultiHopRetrieverConfig] = Field(
         default=None,
-        description="Configuration for multi-hop retrieval. Required when retriever_type is MULTI_HOP."
+        description="Configuration for multi-hop retrieval. Required when retriever_type is MULTI_HOP.",
     )
 
     @field_validator("multi_hop_config")
@@ -686,7 +674,9 @@ class RAGPipelineModel(BaseModel):
         """Validate that multi_hop_config is set when using multi-hop retrieval."""
         values = info.data
         if values.get("retriever_type") == RetrieverType.MULTI_HOP and v is None:
-            raise ValueError("multi_hop_config must be set when using multi-hop retrieval")
+            raise ValueError(
+                "multi_hop_config must be set when using multi-hop retrieval"
+            )
         return v
 
     class Config:
@@ -705,10 +695,10 @@ class RAGPipelineModel(BaseModel):
     def get_field_names(cls):
         return list(cls.model_fields.keys())
 
-    @field_validator('search_kwargs')
+    @field_validator("search_kwargs")
     @classmethod
     def validate_search_kwargs(cls, v: SearchKwargs, info) -> SearchKwargs:
-        search_type = info.data.get('search_type', SearchType.SIMILARITY)
+        search_type = info.data.get("search_type", SearchType.SIMILARITY)
 
         # Validate MMR-specific parameters
         if search_type == SearchType.MMR:
@@ -717,9 +707,13 @@ class RAGPipelineModel(BaseModel):
             if v.lambda_mult is not None and (v.lambda_mult < 0 or v.lambda_mult > 1):
                 raise ValueError("lambda_mult must be between 0 and 1")
             if v.fetch_k is None and v.lambda_mult is not None:
-                raise ValueError("fetch_k is required when using lambda_mult with MMR search type")
+                raise ValueError(
+                    "fetch_k is required when using lambda_mult with MMR search type"
+                )
             if v.lambda_mult is None and v.fetch_k is not None:
-                raise ValueError("lambda_mult is required when using fetch_k with MMR search type")
+                raise ValueError(
+                    "lambda_mult is required when using fetch_k with MMR search type"
+                )
         elif search_type != SearchType.MMR:
             if v.fetch_k is not None:
                 raise ValueError("fetch_k is only valid for MMR search type")
@@ -728,11 +722,20 @@ class RAGPipelineModel(BaseModel):
 
         # Validate similarity_score_threshold parameters
         if search_type == SearchType.SIMILARITY_SCORE_THRESHOLD:
-            if v.score_threshold is not None and (v.score_threshold < 0 or v.score_threshold > 1):
+            if v.score_threshold is not None and (
+                v.score_threshold < 0 or v.score_threshold > 1
+            ):
                 raise ValueError("score_threshold must be between 0 and 1")
             if v.score_threshold is None:
-                raise ValueError("score_threshold is required for similarity_score_threshold search type")
-        elif search_type != SearchType.SIMILARITY_SCORE_THRESHOLD and v.score_threshold is not None:
-            raise ValueError("score_threshold is only valid for similarity_score_threshold search type")
+                raise ValueError(
+                    "score_threshold is required for similarity_score_threshold search type"
+                )
+        elif (
+            search_type != SearchType.SIMILARITY_SCORE_THRESHOLD
+            and v.score_threshold is not None
+        ):
+            raise ValueError(
+                "score_threshold is only valid for similarity_score_threshold search type"
+            )
 
         return v

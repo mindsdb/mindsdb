@@ -31,7 +31,6 @@ from mindsdb.interfaces.database.integrations import integration_controller
 import mindsdb.interfaces.storage.db as db
 from mindsdb.integrations.utilities.install import install_dependencies
 from mindsdb.utilities.fs import clean_process_marks, clean_unlinked_process_marks
-from mindsdb.utilities.telemetry import telemetry_file_exists, disable_telemetry
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.auth import register_oauth_client, get_aws_meta_data
 from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
@@ -247,15 +246,6 @@ if __name__ == '__main__':
 
     config.raise_warnings(logger=logger)
     os.environ["MINDSDB_RUNTIME"] = "1"
-
-    if telemetry_file_exists(config.paths['root']):
-        os.environ['CHECK_FOR_UPDATES'] = '0'
-        logger.info('\n x telemetry disabled! \n')
-    elif os.getenv('CHECK_FOR_UPDATES', '1').lower() in ['0', 'false', 'False'] or config.is_cloud:
-        disable_telemetry(config.paths['root'])
-        logger.info('\n x telemetry disabled! \n')
-    else:
-        logger.info("✓ telemetry enabled")
 
     if os.environ.get("FLASK_SECRET_KEY") is None:
         os.environ["FLASK_SECRET_KEY"] = secrets.token_hex(32)

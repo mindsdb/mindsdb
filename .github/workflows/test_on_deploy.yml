@@ -91,7 +91,6 @@ jobs:
       env:
         PROMETHEUS_MULTIPROC_DIR: ./prometheus_metrics
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        CHECK_FOR_UPDATES: False
 
     - name: Run Learning Hub Tests
       run: |
@@ -121,6 +120,5 @@ jobs:
           echo -e "\n===============Predict Text Sentiment Wih OpenAI===============\n"
           pytest -vx tests/integration_tests/flows/test_predict_text_sentiment_openai_tutorial.py
       env:
-        CHECK_FOR_UPDATES: False
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     

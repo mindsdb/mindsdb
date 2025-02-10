@@ -1,7 +1,16 @@
 import re
-from pydantic import BaseModel, Field
-from typing import List, Any, Optional, Dict
 
+from pydantic import BaseModel, Field
+from typing import (
+    List,
+    Any,
+    Optional,
+    Dict,
+    Tuple,
+    Union,
+    Callable
+)
+import collections
 
 from langchain.chains.llm import LLMChain
 from langchain_core.callbacks.manager import CallbackManagerForRetrieverRun
@@ -20,7 +29,7 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
     VectorStoreHandler,
 )
 from mindsdb.integrations.utilities.rag.settings import (
-    LLMExample,
+    DatabaseSchema,
     TableSchema,
     ColumnSchema,
     ValueSchema,
@@ -67,8 +76,7 @@ class SQLRetriever(BaseRetriever):
 
     fallback_retriever: BaseRetriever
     vector_store_handler: VectorStoreHandler
-    table_schemas: Optional[List[TableSchema]] = None
-    examples: Optional[List[LLMExample]] = None
+    database_schema: Optional[DatabaseSchema] = None
 
     # prompt templates
     rewrite_prompt_template: str
@@ -90,7 +98,85 @@ class SQLRetriever(BaseRetriever):
     distance_function: DistanceFunction
     search_kwargs: SearchKwargs
 
+    # search parameters
+    max_filters: int
+    filter_threshold: float
+
     llm: BaseChatModel
+
+    def _sort_schema_by_priority_key(
+        self,
+        schema_dict_item: Tuple[str, Union[TableSchema, ColumnSchema, ValueSchema]],
+    ):
+        return schema_dict_item[1].priority
+
+    def _sort_schema_by_relevance_key(
+        self,
+        schema_dict_item: Tuple[str, Union[TableSchema, ColumnSchema, ValueSchema]],
+    ):
+        if schema_dict_item[1].relevance is not None:
+            return schema_dict_item[1].relevance
+        else:
+            return float("-inf")
+
+    def _sort_schema_by_key(
+        self,
+        schema: Union[DatabaseSchema, TableSchema, ColumnSchema],
+        key: Callable,
+        update: Dict[str, Any] = None,
+    ) -> Union[DatabaseSchema, TableSchema, ColumnSchema]:
+        """Takes a schema and converts its dict into an OrderedDict"""
+        if isinstance(schema, DatabaseSchema):
+            if update is not None:
+                ordered = collections.OrderedDict(sorted(update.items(), key=key))
+            else:
+                ordered = collections.OrderedDict(
+                    sorted(schema.tables.items(), key=key)
+                )
+            schema = schema.model_copy(update={"tables": ordered})
+        elif isinstance(schema, TableSchema):
+            if update is not None:
+                ordered = collections.OrderedDict(sorted(update.items(), key=key))
+            else:
+                ordered = collections.OrderedDict(
+                    sorted(schema.columns.items(), key=key)
+                )
+            schema = schema.model_copy(update={"columns": ordered})
+        elif isinstance(schema, ColumnSchema):
+            if update is not None:
+                ordered = collections.OrderedDict(sorted(update.items(), key=key))
+            else:
+                ordered = collections.OrderedDict(
+                    sorted(schema.values.items(), key=key)
+                )
+            schema = schema.model_copy(update={"values": ordered})
+
+        return schema
+
+    def _sort_database_schema_by_key(
+        self, database_schema: DatabaseSchema, key: Callable
+    ) -> DatabaseSchema:
+        """Re-build schema with OrderedDicts"""
+        tables = {}
+        # build new tables dict
+        for table_key, table_schema in database_schema.tables.items():
+            columns = {}
+            # build new column dict
+            for column_key, column_schema in table_schema.columns.items():
+                # sort values directly and update column schema
+                columns[column_key] = self._sort_schema_by_key(
+                    schema=column_schema, key=key
+                )
+            # update table schema and sort
+            tables[table_key] = self._sort_schema_by_key(
+                schema=table_schema, key=key, update=columns
+            )
+        # update table schema and sort
+        database_schema = self._sort_schema_by_key(
+            schema=database_schema, key=key, update=tables
+        )
+
+        return database_schema
 
     def _prepare_value_prompt(
         self, value_schema: ValueSchema, boolean_system_prompt: bool = True
@@ -193,7 +279,7 @@ There are too many unique values in the column to list exhaustively. Below is a 
 
 Below are descriptions of each column in this table:
 """
-        for column_schema in table_schema.columns.values():
+        for column_schema in table_schema.columns:
             columns_str += f"""
 - **{column_schema.column}:** {column_schema.description}
 """
@@ -214,7 +300,7 @@ Below are descriptions of each column in this table:
             example_questions=example_str,
         )
 
-    def _rank_schema(self, prompt: ChatPromptTemplate, query: str) -> Dict[str, float]:
+    def _rank_schema(self, prompt: ChatPromptTemplate, query: str) -> float:
         rank_chain = LLMChain(llm=self.llm, prompt=prompt, return_final_only=False)
         output = rank_chain({"input": query})  # returns metadata
 
@@ -233,9 +319,112 @@ Below are descriptions of each column in this table:
 
         return score
 
-    def breadth_first_search(self, greedy=True):
+    def breadth_first_search(self, query: str, greedy: bool = True):
         """Search breadth wise through Tables, then Columns, then Values.Uses a greedy strategy to maximize quota if greedy=True, otherwise a dynamic strategy."""
-        pass
+
+        # sort based on priority
+        ordered_database_schema = self._sort_database_schema_by_key(
+            database_schema=self.database_schema, key=self._sort_schema_by_priority_key
+        )
+
+        greedy_count = 0
+        # rank tables by relevance
+        for table_key, table_schema in ordered_database_schema.items():
+            prompt: ChatPromptTemplate = self._prepare_table_prompt(
+                table_schema=table_schema, boolean_system_prompt=True
+            )
+            table_schema.relevance = self._rank_schema(prompt=prompt, query=query)
+
+            if greedy:
+                if table_schema.relevance >= ordered_database_schema.filter_threshold:
+                    greedy_count += 1
+                if greedy_count >= ordered_database_schema.max_filters:
+                    break
+                if greedy_count >= self.max_filters:
+                    break
+
+        #  sort tables
+        ordered_database_schema = self._sort_schema_by_key(
+            schema=ordered_database_schema, key=self._sort_schema_by_relevance_key
+        )
+
+        #  iterate through tables to rank columns
+        for table_key, table_schema in ordered_database_schema.items():
+            tables = {}
+            # only drop into tables above the filter threshold
+            if table_schema.relevance >= ordered_database_schema.filter_threshold:
+                greedy_count = 0
+                # rank columns by relevance
+                for column_key, column_schema in table_schema.columns.items():
+                    prompt: ChatPromptTemplate = self._prepare_column_prompt(
+                        column_schema=column_schema, boolean_system_prompt=True
+                    )
+                    column_schema.relevance = self._rank_schema(
+                        prompt=prompt, query=query
+                    )
+
+                    if greedy:
+                        if column_schema.relevance >= self.filter_threshold:
+                            greedy_count += 1
+                        if greedy_count >= table_schema.max_filters:
+                            break
+                        if greedy_count >= self.max_filters:
+                            break
+
+                # sort tables, drops tables that did not make the cut.
+                tables[table_key] = self._sort_schema_by_key(
+                    table_schema, key=self._sort_schema_by_relevance_key
+                )
+
+        # update top level schema with new tables
+        ordered_database_schema = ordered_database_schema.model_copy(
+            update={"tables": tables}
+        )
+
+        #  iterate through tables to rank values
+        for table_key, table_schema in ordered_database_schema.items():
+            tables = {}
+            # iterate through columns to rank values
+            for column_key, column_schema in table_schema.columns.items():
+                columns = {}
+                greedy_count = 0
+                #  rank values by relevance
+                if column_schema.relevance >= table_schema.filter_threshold:
+                    for value_key, value_schema in column_schema.values.items():
+                        prompt: ChatPromptTemplate = self._prepare_value_prompt(
+                            value_schema=value_schema, boolean_system_prompt=True
+                        )
+                        column_schema.relevance = self._rank_schema(
+                            prompt=prompt, query=query
+                        )
+
+                        if greedy:
+                            if column_schema.relevance >= self.filter_threshold:
+                                greedy_count += 1
+                            if greedy_count >= table_schema.max_filters:
+                                break
+                            if greedy_count >= self.max_filters:
+                                break
+
+                    # sort the values, drop the values that did not make the cut
+                    columns[column_key] = self._sort_schema_by_key(
+                        value_schema, key=self._sort_schema_by_relevance_key
+                    )
+
+            # update table schema with new columns
+            table_schema = table_schema.model_copy(update={"columns": columns})
+
+            # sort tables, drops tables that did not make the cut.
+            tables[table_key] = self._sort_schema_by_key(
+                table_schema, key=self._sort_schema_by_relevance_key
+            )
+
+        # update database schema with new tables
+        ordered_database_schema = ordered_database_schema.model_copy(
+            update={"tables": tables}
+        )
+
+        self.searched_database_schema = ordered_database_schema
 
     def breadth_first_ablation(self):
         """Ablate metadata filters in reverse breadth first search until the required minimum number of documents are returned."""

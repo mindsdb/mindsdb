@@ -84,25 +84,7 @@ class FileTable(APIResource):
         client = self.handler.connect()
 
         file_content = client.get_item_content(table_name)
-        file_extension = table_name.split(".")[-1]
 
-        # Read the file content based and return a DataFrame based on the file extension.
-        if file_extension == "csv":
-            df = pd.read_csv(BytesIO(file_content))
+        reader = FileReader(file=BytesIO(file_content), name=table_name)
 
-        elif file_extension == "tsv":
-            df = pd.read_csv(BytesIO(file_content), sep="\t")
-
-        elif file_extension == "json":
-            df = pd.DataFrame(file_content)
-
-        elif file_extension == "parquet":
-            df = pd.read_parquet(BytesIO(file_content))
-
-        elif file_extension == "pdf":
-            df = FileReader().read_pdf(BytesIO(file_content))
-
-        elif file_extension == "txt":
-            df = FileReader().read_txt(BytesIO(file_content))
-
-        return df
+        return reader.to_df()

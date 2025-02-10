@@ -1,18 +1,9 @@
-import codecs
-import csv
-import json
 import os
 import shutil
 import tempfile
-import traceback
-from io import BytesIO, StringIO
 from pathlib import Path
-from urllib.parse import urlparse
 
-import filetype
 import pandas as pd
-import requests
-from charset_normalizer import from_bytes
 from mindsdb_sql_parser import parse_sql
 from mindsdb_sql_parser.ast import CreateTable, DropTables, Insert, Select
 from mindsdb_sql_parser.ast.base import ASTNode
@@ -23,7 +14,9 @@ from mindsdb.integrations.libs.response import RESPONSE_TYPE
 from mindsdb.integrations.libs.response import HandlerResponse as Response
 from mindsdb.integrations.libs.response import HandlerStatusResponse as StatusResponse
 from mindsdb.utilities import log
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+from mindsdb.integrations.utilities.files.file_reader import FileReader
+
 
 logger = log.getLogger(__name__)
 
@@ -144,14 +137,9 @@ class FileHandler(DatabaseHandler):
             else:
                 sheet_name = None
             file_path = self.file_controller.get_file_path(table_name)
-            df, _columns = self._handle_source(
-                file_path,
-                self.clean_rows,
-                self.custom_parser,
-                self.chunk_size,
-                self.chunk_overlap,
-                sheet_name=sheet_name
-            )
+
+            df = self.handle_source(file_path, sheet_name=sheet_name)
+
             # Process the SELECT query
             result_df = query_df(df, query)
             return Response(RESPONSE_TYPE.TABLE, data_frame=result_df)
@@ -160,14 +148,9 @@ class FileHandler(DatabaseHandler):
             table_name = query.table.parts[-1]
             file_path = self.file_controller.get_file_path(table_name)
 
-            # Load the existing data from the file
-            df, _ = self._handle_source(
-                file_path,
-                self.clean_rows,
-                self.custom_parser,
-                self.chunk_size,
-                self.chunk_overlap,
-            )
+            file_reader = FileReader(path=file_path)
+
+            df = file_reader.to_df()
 
             # Create a new dataframe with the values from the query
             new_df = pd.DataFrame(query.values, columns=[col.name for col in query.columns])
@@ -193,306 +176,16 @@ class FileHandler(DatabaseHandler):
         return self.query(ast)
 
     @staticmethod
-    def _handle_source(
-        file_path,
-        clean_rows=True,
-        custom_parser=None,
-        chunk_size=DEFAULT_CHUNK_SIZE,
-        chunk_overlap=DEFAULT_CHUNK_OVERLAP,
-        sheet_name=None   # for "xlsx", "xls" files
-    ):
-        """
-        This function takes a file path and returns a pandas dataframe
-        """
-        # get file data io, format and dialect
-        data, fmt, dialect = FileHandler._get_data_io(file_path)
-        data.seek(0)  # make sure we are at 0 in file pointer
+    def handle_source(file_path, **kwargs):
+        file_reader = FileReader(path=file_path)
 
-        if custom_parser:
-            header, file_data = custom_parser(data, fmt)
-            df = pd.DataFrame(file_data, columns=header)
-
-        elif fmt == "parquet":
-            df = pd.read_parquet(data)
-
-        elif fmt == "csv":
-            df = pd.read_csv(data, sep=dialect.delimiter, index_col=False)
-
-        elif fmt in ["xlsx", "xls"]:
-            data.seek(0)
-            with pd.ExcelFile(data) as xls:
-                if sheet_name is None:
-                    # No sheet specified: Return list of sheets
-                    sheet_list = xls.sheet_names
-                    df = pd.DataFrame(sheet_list, columns=["Sheet_Name"])
-                else:
-                    # Specific sheet requested: Load that sheet
-                    df = pd.read_excel(xls, sheet_name=sheet_name)
-
-        elif fmt == "json":
-            data.seek(0)
-            json_doc = json.loads(data.read())
-            df = pd.json_normalize(json_doc, max_level=0)
-
-        elif fmt == "txt" or fmt == "pdf":
-            text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=chunk_size, chunk_overlap=chunk_overlap
-            )
-
-            if fmt == "txt":
-                try:
-                    from langchain_community.document_loaders import TextLoader
-                except ImportError:
-                    raise ImportError(
-                        "To import TXT document please install 'langchain-community':\n"
-                        "    pip install langchain-community"
-                    )
-                loader = TextLoader(file_path, encoding="utf8")
-                docs = text_splitter.split_documents(loader.load())
-                df = pd.DataFrame(
-                    [
-                        {"content": doc.page_content, "metadata": doc.metadata}
-                        for doc in docs
-                    ]
-                )
-
-            elif fmt == "pdf":
-
-                import fitz  # pymupdf
-
-                with fitz.open(file_path) as pdf:  # open pdf
-                    text = chr(12).join([page.get_text() for page in pdf])
-
-                split_text = text_splitter.split_text(text)
-
-                df = pd.DataFrame(
-                    {"content": split_text, "metadata": [{}] * len(split_text)}
-                )
-
-        else:
-            raise ValueError(
-                "Could not load file into any format, supported formats are csv, json, xls, xlsx, pdf, txt"
-            )
+        df = file_reader.to_df(**kwargs)
 
         header = df.columns.values.tolist()
 
         df.columns = [key.strip() for key in header]
         df = df.applymap(clean_cell)
-
-        header = [x.strip() for x in header]
-        col_map = dict((col, col) for col in header)
-        return df, col_map
-
-    @staticmethod
-    def is_it_parquet(data: BytesIO) -> bool:
-        # Check first and last 4 bytes equal to PAR1.
-        # Refer: https://parquet.apache.org/docs/file-format/
-        parquet_sig = b"PAR1"
-        data.seek(0, 0)
-        start_meta = data.read(4)
-        data.seek(-4, 2)
-        end_meta = data.read()
-        data.seek(0)
-        if start_meta == parquet_sig and end_meta == parquet_sig:
-            return True
-        return False
-
-    @staticmethod
-    def is_it_xlsx(file_path: str) -> bool:
-        file_type = filetype.guess(file_path)
-        if file_type and file_type.mime in {
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "application/vnd.ms-excel",
-        }:
-            return True
-        return False
-
-    @staticmethod
-    def is_it_json(data_str: StringIO) -> bool:
-        # see if its JSON
-        text = data_str.read(100).strip()
-        data_str.seek(0)
-        if len(text) > 0:
-            # it it looks like a json, then try to parse it
-            if text.startswith("{") or text.startswith("["):
-                try:
-                    json.loads(data_str.read())
-                    return True
-                except Exception:
-                    return False
-                finally:
-                    data_str.seek(0)
-        return False
-
-    @staticmethod
-    def is_it_csv(data_str: StringIO) -> bool:
-        sample = data_str.readline()  # trying to get dialect from header
-        data_str.seek(0)
-        try:
-            csv.Sniffer().sniff(sample)
-            # Avoid a false-positive for json files
-            try:
-                json.loads(data_str.read())
-                data_str.seek(0)
-                return False
-            except json.decoder.JSONDecodeError:
-                data_str.seek(0)
-                return True
-        except Exception:
-            return False
-
-    @staticmethod
-    def _get_data_io(file_path):
-        """
-        @TODO: Use python-magic to simplify the function and detect the file types as the xlsx example
-        This gets a file either url or local file and defines what the format is as well as dialect
-        :param file: file path or url
-        :return: data_io, format, dialect
-        """
-
-        data = BytesIO()
-        data_str = None
-        dialect = None
-
-        try:
-            with open(file_path, "rb") as fp:
-                data = BytesIO(fp.read())
-        except Exception as e:
-            error = "Could not load file, possible exception : {exception}".format(
-                exception=e
-            )
-            logger.error(error)
-            raise ValueError(error)
-
-        suffix = Path(file_path).suffix.strip(".").lower()
-        if suffix not in ("csv", "json", "xlsx", "parquet"):
-            if FileHandler.is_it_parquet(data):
-                suffix = "parquet"
-            elif FileHandler.is_it_xlsx(file_path):
-                suffix = "xlsx"
-
-        if suffix == "parquet":
-            return data, "parquet", dialect
-
-        if suffix == "xlsx":
-            return data, "xlsx", dialect
-
-        if suffix == "txt":
-            return data, "txt", dialect
-
-        if suffix == "pdf":
-            return data, "pdf", dialect
-
-        byte_str = data.read()
-        # Move it to StringIO
-        try:
-            # Handle Microsoft's BOM "special" UTF-8 encoding
-            if byte_str.startswith(codecs.BOM_UTF8):
-                data_str = StringIO(byte_str.decode("utf-8-sig"))
-            else:
-                file_encoding_meta = from_bytes(
-                    byte_str[: 32 * 1024],
-                    steps=32,  # Number of steps/block to extract from my_byte_str
-                    chunk_size=1024,  # Set block size of each extraction)
-                    explain=False,
-                )
-                best_meta = file_encoding_meta.best()
-                errors = "strict"
-                if best_meta is not None:
-                    encoding = file_encoding_meta.best().encoding
-
-                    try:
-                        data_str = StringIO(byte_str.decode(encoding, errors))
-                    except UnicodeDecodeError:
-                        encoding = "utf-8"
-                        errors = "replace"
-
-                        data_str = StringIO(byte_str.decode(encoding, errors))
-                else:
-                    encoding = "utf-8"
-                    errors = "replace"
-
-                    data_str = StringIO(byte_str.decode(encoding, errors))
-        except Exception:
-            logger.error(traceback.format_exc())
-            logger.error("Could not load into string")
-
-        if suffix not in ("csv", "json"):
-            if FileHandler.is_it_json(data_str):
-                suffix = "json"
-            elif FileHandler.is_it_csv(data_str):
-                suffix = "csv"
-
-        if suffix == "json":
-            return data_str, suffix, dialect
-
-        if suffix == "csv":
-            try:
-                dialect = FileHandler._get_csv_dialect(data_str)
-                if dialect:
-                    return data_str, "csv", dialect
-            except Exception:
-                logger.error("Could not detect format for this file")
-                logger.error(traceback.format_exc())
-
-        data_str.seek(0)
-        data.seek(0)
-
-        # No file type identified
-        return data, None, dialect
-
-    @staticmethod
-    def _get_file_path(path) -> str:
-        try:
-            is_url = urlparse(path).scheme in ("http", "https")
-        except Exception:
-            is_url = False
-        if is_url:
-            path = FileHandler._fetch_url(path)
-        return path
-
-    @staticmethod
-    def _get_csv_dialect(buffer) -> csv.Dialect:
-        sample = buffer.readline()  # trying to get dialect from header
-        buffer.seek(0)
-        try:
-            if isinstance(sample, bytes):
-                sample = sample.decode()
-            accepted_csv_delimiters = [",", "\t", ";"]
-            try:
-                dialect = csv.Sniffer().sniff(
-                    sample, delimiters=accepted_csv_delimiters
-                )
-                dialect.doublequote = (
-                    True  # assume that all csvs have " as string escape
-                )
-            except Exception:
-                dialect = csv.reader(sample).dialect
-                if dialect.delimiter not in accepted_csv_delimiters:
-                    raise Exception(
-                        f"CSV delimeter '{dialect.delimiter}' is not supported"
-                    )
-
-        except csv.Error:
-            dialect = None
-        return dialect
-
-    @staticmethod
-    def _fetch_url(url: str) -> str:
-        temp_dir = tempfile.mkdtemp(prefix="mindsdb_file_url_")
-        try:
-            r = requests.get(url, stream=True)
-            if r.status_code == 200:
-                with open(os.path.join(temp_dir, "file"), "wb") as f:
-                    for chunk in r:
-                        f.write(chunk)
-            else:
-                raise Exception(f"Response status code is {r.status_code}")
-        except Exception as e:
-            logger.error(f"Error during getting {url}")
-            logger.error(e)
-            raise
-        return os.path.join(temp_dir, "file")
+        return df
 
     def get_tables(self) -> Response:
         """

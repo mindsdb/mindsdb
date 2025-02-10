@@ -82,7 +82,7 @@ class FileController:
 
         file_dir = None
         try:
-            df, _col_map = FileHandler._handle_source(file_path)
+            df = FileHandler.handle_source(file_path)
 
             ds_meta = {"row_count": len(df), "column_names": list(df.columns)}
 

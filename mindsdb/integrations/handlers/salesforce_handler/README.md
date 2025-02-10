@@ -16,6 +16,7 @@ Before proceeding, ensure the following prerequisites are met:
 ## Connection
 
 Establish a connection to Salesforce from MindsDB by executing the following SQL command and providing its [handler name](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/salesforce_handler) as an engine.
+In the following example we are addressing a connection towards a Salesforce sandbox, use is_sanbox equal to false if you need to connect to a production environment.
 
 ```sql
 CREATE DATABASE salesforce_datasource
@@ -25,7 +26,8 @@ WITH
         "username": "demo@example.com",
         "password": "demo_password",
         "client_id": "3MVG9lKcPoNINVBIPJjdw1J9LLM82HnZz9Yh7ZJnY",
-        "client_secret": "5A52C1A1E21DF9012IODC9ISNXXAADDA9"
+        "client_secret": "5A52C1A1E21DF9012IODC9ISNXXAADDA9",
+        "is_sandbox": true
     };
 ```
 
@@ -35,6 +37,9 @@ Required connection parameters include the following:
 * `password`: The password for the Salesforce account.
 * `client_id`: The client ID (consumer key) from a connected app in Salesforce.
 * `client_secret`: The client secret (consumer secret) from a connected app in Salesforce.
+
+Optional parameter:
+* `is_sandbox`: If true connect to a sandbox (test.salesforce.com), if false or omitted it connects to a production instance (login.salesforce.com).
 
 <Tip>
 To create a connected app in Salesforce and obtain the client ID and client secret, follow the steps given below:

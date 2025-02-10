@@ -112,6 +112,80 @@ Here is the user input:
 {input}
 """
 
+DEFAULT_BOOLEAN_PROMPT_TEMPLATE = """Rate the relevance of the query to the lowest level schema description. For example, if given a schema that contains a table, column, and value, then rate the value. For example, if give a schema with a table and a column, rate the column. Respond with 'yes' or 'no'."""
+
+GENERATIVE_SYSTEM_PROMPT = """You are an expert database analyst that can assist in building SQL queries by providing structured output. Follow these format instructions precisely to generate a metadata filter given the provided schema description.
+
+## Format instructions:
+ {format_instructions}
+ """
+
+DEFAULT_VALUE_PROMPT_TEMPLATE = """
+{column_schema}
+
+# **Value Schema**
+This is a schema that represents a value in a column in a table in a database.
+
+- The value stored in the table column: {value}
+- The type of the value: {type}
+
+## **Value Description**
+{description}
+
+## **Usage**
+{usage}
+
+{examples}
+
+## **Query**
+{query}
+"""
+
+DEFAULT_COLUMN_PROMPT_TEMPLATE = """
+{table_schema}
+
+# **Column Schema**
+This is a schema that represents a column in a table in a database.
+
+- The column name in the database table: {column}
+- The type of the values in this column: {type}
+
+## **Value Description**
+{description}
+
+## **Usage**
+{usage}
+
+{values}
+
+{examples}
+
+## **Query**
+{query}
+"""
+
+DEFAULT_TABLE_PROMPT_TEMPLATE = """# **Table Schema**
+This is a schema that represents a table in the database.
+
+- The name of this table in the database: {table}
+
+## **Value Description**
+{description}
+
+## **Usage**
+{usage}
+
+## **Column Descriptions**
+Below are descriptions of each column in this table:
+
+{columns}
+
+{examples}
+
+## **Query**
+{query}
+"""
+
 DEFAULT_SQL_PROMPT_TEMPLATE = """
 Construct a valid {dialect} SQL query to select documents relevant to the user input.
 Source documents are found in the {source_table} table. You may need to join with other tables to get additional document metadata.
@@ -368,7 +442,8 @@ class SearchKwargs(BaseModel):
 
 
 class ValueSchema(BaseModel):
-    value: Any = Field(description="The schema value as it exists in the table column.")
+    value: Any = Field(description="The value as it exists in the table column.")
+    type: Any = Field(description="The value type as it exists in the table column.")
     description: str = Field(description="Description of what the value represents.")
     usage: str = Field(description="How and when to use this value for search.")
     example_questions: Optional[List[Any]] = Field(

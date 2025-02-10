@@ -1,12 +1,9 @@
-import os
 import copy
 import shutil
-import datetime
 import tempfile
 from pathlib import Path
 from http import HTTPStatus
 
-from dateutil.tz import tzlocal
 from dateutil.parser import parse as parse_datetime
 from flask import request
 from flask_restx import Resource
@@ -258,29 +255,3 @@ class Integration(Resource):
                 f"Error during integration modification: {str(e)}"
             )
         return "", 200
-
-
-@ns_conf.route('/vars')
-class Vars(Resource):
-    @api_endpoint_metrics('GET', '/config/vars')
-    def get(self):
-        if os.getenv('CHECK_FOR_UPDATES', '1').lower() in ['0', 'false']:
-            telemtry = False
-        else:
-            telemtry = True
-
-        if ca.config_obj.get('disable_mongo', False):
-            mongo = False
-        else:
-            mongo = True
-
-        cloud = ca.config_obj.get('cloud', False)
-        local_time = datetime.datetime.now(tzlocal())
-        local_timezone = local_time.tzname()
-
-        return {
-            'mongo': mongo,
-            'telemtry': telemtry,
-            'cloud': cloud,
-            'timezone': local_timezone,
-        }

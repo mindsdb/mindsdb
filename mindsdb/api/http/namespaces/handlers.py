@@ -123,14 +123,13 @@ class TestConnection(Resource):
                 'Missing parameter',
                 '"connection_data" parameter is required'
             )
-        
-        tmp_handler = ca.integration_controller.create_tmp_handler(
-            "test_connection",
-            handler_name,
-            request.json['connection_data']
-        )
 
         try:
+            tmp_handler = ca.integration_controller.create_tmp_handler(
+                "test_connection",
+                handler_name,
+                request.json['connection_data']
+            )
             response = tmp_handler.check_connection()
         except ImportError as import_error:
             return http_error(

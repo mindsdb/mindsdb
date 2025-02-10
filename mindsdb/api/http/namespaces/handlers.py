@@ -112,6 +112,36 @@ class InstallDependencies(Resource):
         )
 
 
+@ns_conf.route('/<handler_name>/test_connection')
+class TestConnection(Resource):
+    @ns_conf.param('handler_name', 'Handler name')
+    @api_endpoint_metrics('POST', '/handlers/handler/test_connection')
+    def post(self, handler_name):
+        if 'connection_data' not in request.json:
+            return http_error(
+                HTTPStatus.BAD_REQUEST,
+                'Missing parameter',
+                '"connection_data" parameter is required'
+            )
+        
+        tmp_handler = ca.integration_controller.create_tmp_handler(
+            "test_connection",  # TODO: Will this work?
+            handler_name,
+            request.json['connection_data']
+        )
+
+        response = tmp_handler.check_connection()
+
+        if response.success:
+            return '', 200
+        else:
+            return http_error(
+                HTTPStatus.BAD_REQUEST,
+                'Connection failed',
+                response.error_message
+            )
+
+
 def prepare_formdata():
     params = {}
     file_names = []

@@ -1,16 +1,9 @@
 import re
 
 from pydantic import BaseModel, Field
-from typing import (
-    List,
-    Any,
-    Optional,
-    Dict,
-    Tuple,
-    Union,
-    Callable
-)
+from typing import List, Any, Optional, Dict, Tuple, Union, Callable
 import collections
+import math
 
 from langchain.chains.llm import LLMChain
 from langchain_core.callbacks.manager import CallbackManagerForRetrieverRun
@@ -36,6 +29,8 @@ from mindsdb.integrations.utilities.rag.settings import (
     SearchKwargs,
 )
 from mindsdb.utilities import log
+
+import numpy as np
 
 logger = log.getLogger(__name__)
 
@@ -127,29 +122,23 @@ class SQLRetriever(BaseRetriever):
     ) -> Union[DatabaseSchema, TableSchema, ColumnSchema]:
         """Takes a schema and converts its dict into an OrderedDict"""
         if isinstance(schema, DatabaseSchema):
-            if update is not None:
-                ordered = collections.OrderedDict(sorted(update.items(), key=key))
-            else:
-                ordered = collections.OrderedDict(
-                    sorted(schema.tables.items(), key=key)
-                )
-            schema = schema.model_copy(update={"tables": ordered})
+            collection_key = "tables"
         elif isinstance(schema, TableSchema):
-            if update is not None:
-                ordered = collections.OrderedDict(sorted(update.items(), key=key))
-            else:
-                ordered = collections.OrderedDict(
-                    sorted(schema.columns.items(), key=key)
-                )
-            schema = schema.model_copy(update={"columns": ordered})
+            collection_key = "columns"
         elif isinstance(schema, ColumnSchema):
-            if update is not None:
-                ordered = collections.OrderedDict(sorted(update.items(), key=key))
-            else:
-                ordered = collections.OrderedDict(
-                    sorted(schema.values.items(), key=key)
-                )
-            schema = schema.model_copy(update={"values": ordered})
+            collection_key = "values"
+        else:
+            raise Exception(
+                "schema must be either a DatabaseSchema, TableSchema, or ColumnSchema."
+            )
+
+        if update is not None:
+            ordered = collections.OrderedDict(sorted(update.items(), key=key))
+        else:
+            ordered = collections.OrderedDict(
+                sorted(getattr(schema, collection_key).items(), key=key)
+            )
+        schema = schema.model_copy(update={collection_key: ordered})
 
         return schema
 
@@ -179,34 +168,57 @@ class SQLRetriever(BaseRetriever):
         return database_schema
 
     def _prepare_value_prompt(
-        self, value_schema: ValueSchema, boolean_system_prompt: bool = True
+        self,
+        value_schema: ValueSchema,
+        column_schema: ColumnSchema,
+        table_schema: TableSchema,
+        boolean_system_prompt: bool = True,
     ) -> ChatPromptTemplate:
 
         if boolean_system_prompt is True:
             system_prompt = self.boolean_system_prompt
         else:
             system_prompt = self.generative_system_prompt
+
+        prepared_column_prompt = self._prepare_column_prompt(
+            column_schema=column_schema, table_schema=table_schema
+        )
+        column_schema_str = (
+            prepared_column_prompt.messages[1]
+            .format(
+                **prepared_column_prompt.partial_variables,
+                query="See query at the lowest level schema.",
+            )
+            .content
+        )
 
         base_prompt_template = ChatPromptTemplate.from_messages(
             [("system", system_prompt), ("user", self.value_prompt_template)]
         )
 
-        example_str = """
-## **Example Questions**:
+        if getattr(value_schema, "examples", None) is not None:
+            example_str = """## **Example Questions**
 """
-        for example in value_schema.examples:
-            example_str += f"""- {example}
+            for example in value_schema.examples:
+                example_str += f"""- {example}
 """
+        else:
+            example_str = ""
 
         return base_prompt_template.partial(
+            column_schema=column_schema_str,
             value=value_schema.value,
+            type=value_schema.type,
             description=value_schema.description,
             usage=value_schema.usage,
-            example_questions=example_str,
+            examples=example_str,
         )
 
     def _prepare_column_prompt(
-        self, column_schema: ColumnSchema, boolean_system_prompt: bool = True
+        self,
+        column_schema: ColumnSchema,
+        table_schema: TableSchema,
+        boolean_system_prompt: bool = True,
     ) -> ChatPromptTemplate:
 
         if boolean_system_prompt is True:
@@ -214,52 +226,73 @@ class SQLRetriever(BaseRetriever):
         else:
             system_prompt = self.generative_system_prompt
 
+        prepared_table_prompt = self._prepare_table_prompt(
+            table_schema=table_schema, boolean_system_prompt=boolean_system_prompt
+        )
+        table_schema_str = (
+            prepared_table_prompt.messages[1]
+            .format(
+                **prepared_table_prompt.partial_variables,
+                query="See query at the lowest level schema",
+            )
+            .content
+        )
+
         base_prompt_template = ChatPromptTemplate.from_messages(
             [("system", system_prompt), ("user", self.column_prompt_template)]
         )
 
-        if column_schema.model_fields["values"] == Dict[Any, ValueSchema]:
-            value_str = """
+        value_str = ""
+        if type(column_schema.model_fields["values"]) is dict:
+            if (
+                type(list(column_schema.model_fields["values"].values)[0])
+                is ValueSchema
+            ):
+                value_str = """
 ## **Value Descriptions**
 
 Below are descriptions of each value in this column:
 """
-            for value_schema in column_schema.values.values():
-                value_str += f"""
-    **{value_schema.value}:** {value_schema.description}
+                for value_schema in column_schema.values.values():
+                    value_str += f"""
+- **{value_schema.value}:** {value_schema.description}
 """
 
-        elif column_schema.model_fields["values"] == Dict[Any, Any]:
-            value_str = """
+            else:
+                value_str = """
 ## **Enumerated Values**
 
 These column values are an enumeration of named values. These are listed below with format **[Column Value]**: [named value].
 """
-            for value, value_name in column_schema.values.items():
-                value_str += f"""
+                for value, value_name in column_schema.values.items():
+                    value_str += f"""
 - **{value}:** {value_name}"""
 
-        elif column_schema.model_fields["values"] == List[Any]:
+        elif type(column_schema.model_fields["values"]) is list:
             value_str = f"""
 ## **Sample Values**
 
 There are too many unique values in the column to list exhaustively. Below is a sampling of values found in the column:
 {column_schema.model_fields['values']}
 """
-        example_str = """
-## **Example Questions**:
+
+        if getattr(column_schema, "examples", None) is not None:
+            example_str = """## **Example Questions**
 """
-        for example in column_schema.examples:
-            example_str += f"""- {example}
+            for example in column_schema.examples:
+                example_str += f"""- {example}
 """
+        else:
+            example_str = ""
 
         return base_prompt_template.partial(
+            table_schema=table_schema_str,
             column=column_schema.column,
             type=column_schema.type,
             description=column_schema.description,
             usage=column_schema.usage,
             values=value_str,
-            example_questions=example_str,
+            examples=example_str,
         )
 
     def _prepare_table_prompt(
@@ -274,35 +307,32 @@ There are too many unique values in the column to list exhaustively. Below is a 
             [("system", system_prompt), ("user", self.table_prompt_template)]
         )
 
-        columns_str = """
-## **Column Descriptions**
-
-Below are descriptions of each column in this table:
-"""
-        for column_schema in table_schema.columns:
+        columns_str = ""
+        for column_key, column_schema in table_schema.columns.items():
             columns_str += f"""
 - **{column_schema.column}:** {column_schema.description}
 """
 
-        example_str = """
-## **Example Questions**:
+        if getattr(table_schema, "examples", None) is not None:
+            example_str = """## **Example Questions**
 """
-        for example in table_schema.examples:
-            example_str += f"""- {example}
+            for example in table_schema.examples:
+                example_str += f"""- {example}
 """
+        else:
+            example_str = ""
 
         return base_prompt_template.partial(
-            format_instructions=self.boolean_format_template,
             table=table_schema.table,
             description=table_schema.description,
             usage=table_schema.usage,
             columns=columns_str,
-            example_questions=example_str,
+            examples=example_str,
         )
 
     def _rank_schema(self, prompt: ChatPromptTemplate, query: str) -> float:
-        rank_chain = LLMChain(llm=self.llm, prompt=prompt, return_final_only=False)
-        output = rank_chain({"input": query})  # returns metadata
+        rank_chain = LLMChain(llm=self.llm.bind(logprobs=True), prompt=prompt, return_final_only=False)
+        output = rank_chain({"query": query})  # returns metadata
 
         #  parse through metadata tokens until encountering either yes, or no.
         score = None  # a None score indicates the model output could not be parsed.
@@ -311,15 +341,19 @@ Below are descriptions of each column in this table:
         ]["content"]:
             #  Convert answer to score using the model's confidence
             if content["token"].lower().strip() == "yes":
-                score = content["logprob"]  # If yes, use the model's confidence
+                score = (
+                    1 + math.exp(content["logprob"])
+                ) / 2  # If yes, use the model's confidence
                 break
             elif content["token"].lower().strip() == "no":
-                score = 1 - content["logprob"]  # If no, invert the confidence
+                score = (
+                    1 - math.exp(content["logprob"])
+                ) / 2  # If no, invert the confidence
                 break
 
         return score
 
-    def breadth_first_search(self, query: str, greedy: bool = True):
+    def _breadth_first_search(self, query: str, greedy: bool = True):
         """Search breadth wise through Tables, then Columns, then Values.Uses a greedy strategy to maximize quota if greedy=True, otherwise a dynamic strategy."""
 
         # sort based on priority
@@ -327,6 +361,7 @@ Below are descriptions of each column in this table:
             database_schema=self.database_schema, key=self._sort_schema_by_priority_key
         )
 
+        #  Rank Tables ########################################################
         greedy_count = 0
         # rank tables by relevance
         for table_key, table_schema in ordered_database_schema.items():
@@ -348,6 +383,7 @@ Below are descriptions of each column in this table:
             schema=ordered_database_schema, key=self._sort_schema_by_relevance_key
         )
 
+        #  Rank Columns #######################################################
         #  iterate through tables to rank columns
         for table_key, table_schema in ordered_database_schema.items():
             tables = {}
@@ -380,6 +416,8 @@ Below are descriptions of each column in this table:
         ordered_database_schema = ordered_database_schema.model_copy(
             update={"tables": tables}
         )
+
+        #  Rank Values ########################################################
 
         #  iterate through tables to rank values
         for table_key, table_schema in ordered_database_schema.items():
@@ -424,7 +462,22 @@ Below are descriptions of each column in this table:
             update={"tables": tables}
         )
 
-        self.searched_database_schema = ordered_database_schema
+        self.ranked_database_schema = ordered_database_schema
+
+        #  Build Ablation #####################################################
+
+        ablation_value_dict = ({},)
+        # assemble a relevance dictionary
+        for table_key, table_schema in ordered_database_schema.items():
+            for column_key, column_schema in table_schema.columns.items():
+                for value_key, value_schema in column_schema.values.items():
+                    ablation_value_dict[value_key] = value_schema.relevance
+
+        self.ablation_value_dict = ablation_value_dict
+
+        self.ablation_quantiles = np.quantile(
+            ablation_value_dict.values, np.linspace(0, 1, self.num_retries + 2)[1:-1]
+        )
 
     def breadth_first_ablation(self):
         """Ablate metadata filters in reverse breadth first search until the required minimum number of documents are returned."""
@@ -445,7 +498,9 @@ Below are descriptions of each column in this table:
         rewrite_chain = LLMChain(llm=self.llm, prompt=rewrite_prompt)
         return rewrite_chain.predict(input=query)
 
-    def _prepare_pgvector_query(self, metadata_filters: List[MetadataFilter]) -> str:
+    def _prepare_pgvector_query(
+        self, metadata_filters: MetadataFilters, retry: int = 0
+    ) -> str:
         # Base select JOINed with document source table.
         base_query = f"""SELECT * FROM {self.embeddings_table} AS e INNER JOIN {self.source_table} AS s ON (e.metadata->>'original_row_id')::int = s."{self.source_id_column}" """
         col_to_schema = {}

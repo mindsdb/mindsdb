@@ -133,7 +133,7 @@ As an expert in constructing database search queries, you are provided with data
 GENERATIVE_SYSTEM_PROMPT = """You are an expert database analyst that can assist in building SQL queries by providing structured output. Follow these format instructions precisely to generate a metadata filter given the provided schema description.
 
 ## Format instructions:
- {format_instructions}
+{format_instructions}
  """
 
 DEFAULT_VALUE_PROMPT_TEMPLATE = """

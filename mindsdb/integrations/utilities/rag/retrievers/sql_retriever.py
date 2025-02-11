@@ -45,6 +45,13 @@ class MetadataFilter(BaseModel):
     value: Any = Field(description="Value to use to filter database column")
 
 
+class AblativeMetadataFilter(MetadataFilter):
+    """Adds additional fields to support ablation."""
+    schema_table: str = Field(description="schema name of the table for this filter")
+    schema_column: str = Field(description="schema name of the column for this filter")
+    schema_value: str = Field(description="schema name of the value for this filter")
+
+
 class MetadataFilters(BaseModel):
     """List of LLM generated metadata filters to apply to a PostgreSQL query."""
 
@@ -102,6 +109,7 @@ class SQLRetriever(BaseRetriever):
     ranked_database_schema: Optional[DatabaseSchema] = None
     ablation_value_dict: Optional[Dict[str, float]] = None
     ablation_quantiles: Optional[List[float]] = None
+    metadata_filters: Optional[list[AblativeMetadataFilter]] = None
 
     def _sort_schema_by_priority_key(
         self,
@@ -550,11 +558,11 @@ Below are descriptions of the values in this column:
         for table_key, table_schema in ordered_database_schema.tables.items():
             for column_key, column_schema in table_schema.columns.items():
                 for value_key, value_schema in column_schema.values.items():
-                    ablation_value_dict[value_key] = (
-                        value_schema.relevance
-                    )
+                    ablation_value_dict[(table_key, column_key, value_key)] = value_schema.relevance
 
-        self.ablation_value_dict = collections.OrderedDict(sorted(ablation_value_dict.items(), key=lambda x: x[1]))
+        self.ablation_value_dict = collections.OrderedDict(
+            sorted(ablation_value_dict.items(), key=lambda x: x[1])
+        )
 
         relevance_scores = list(ablation_value_dict.values())
         if len(relevance_scores) > 0:
@@ -572,39 +580,14 @@ Below are descriptions of the values in this column:
             if value > self.ablation_quantiles[retry]:
                 ablated_dict[key] = value
 
-        #  discard low ranked values ###################################################################################
-        tables = {}
-        for table_key, table_schema in self.ranked_database_schema.tables.items():
-            columns = {}
-            # iterate through columns to rank values
-            for column_key, column_schema in table_schema.columns.items():
-                values = {}
-                #  rank values by relevance
-                for value_key, value_schema in column_schema.values.items():
-                    if value_schema.relevance >= column_schema.filter_threshold:
-                        if value_key in ablated_dict:
-                            values[value_key] = value_schema
+        #  discard low ranked filters ##################################################################################
+        ablated_filters = []
+        for filter in self.metadata_filters:
+            for key in ablated_dict.keys():
+                if filter.schema_table in key and filter.schema_column in key and filter.schema_value in key:
+                    ablated_filters.append(filter)
 
-                # sort values and keep only values that make the cut
-                columns[column_key] = self._sort_schema_by_key(
-                    column_schema,
-                    key=self._sort_schema_by_relevance_key,
-                    update=values,
-                )
-
-            # sort columns and keep only columns that made the cut
-            tables[table_key] = self._sort_schema_by_key(
-                table_schema, key=self._sort_schema_by_relevance_key, update=columns
-            )
-
-        # sort tables and keep only tables that made the cut.
-        ranked_database_schema = self._sort_schema_by_key(
-            self.ranked_database_schema,
-            key=self._sort_schema_by_relevance_key,
-            update=tables,
-        )
-
-        return ranked_database_schema
+        self.metadata_filters = ablated_filters
 
     def depth_first_search(self, greedy=True):
         """Search depth wise through Tables, then Columns, then Values. Uses a greedy strategy to maximize quota if greedy=True, otherwise a dynamic strategy."""
@@ -657,25 +640,68 @@ Below are descriptions of the values in this column:
         base_query += f" ORDER BY e.embeddings {self.distance_function.value[0]} '{{embeddings}}' LIMIT {self.search_kwargs.k};"
         return base_query
 
+    def _generate_filter(
+        self, prompt: ChatPromptTemplate, query: str
+    ) -> MetadataFilter:
+        gen_filter_chain = LLMChain(llm=self.llm, prompt=prompt)
+        output = gen_filter_chain({"query": query})
+        return output
+
     def _generate_metadata_filters(self, query: str) -> List[MetadataFilter]:
-        parser = PydanticOutputParser(pydantic_object=MetadataFilters)
-        metadata_prompt = self._prepare_metadata_prompt()
-        metadata_filters_chain = LLMChain(llm=self.llm, prompt=metadata_prompt)
-        metadata_filters_output = metadata_filters_chain.predict(
-            format_instructions=parser.get_format_instructions(), input=query
-        )
-        # If the LLM outputs raw JSON, use it as-is.
-        # If the LLM outputs anything including a json markdown section, use the last one.
-        json_markdown_output = re.findall(
-            r"```json.*```", metadata_filters_output, re.DOTALL
-        )
-        if json_markdown_output:
-            metadata_filters_output = json_markdown_output[-1]
-            # Clean the json tags.
-            metadata_filters_output = metadata_filters_output[7:]
-            metadata_filters_output = metadata_filters_output[:-3]
-        metadata_filters = parser.invoke(metadata_filters_output)
-        return metadata_filters.filters
+        parser = PydanticOutputParser(pydantic_object=MetadataFilter)
+
+        metadata_filter_list = []
+        #  iterate through tables to rank values
+        for table_key, table_schema in self.ordered_database_schema.tables.items():
+            # iterate through columns to rank values
+            for column_key, column_schema in table_schema.columns.items():
+                if column_schema.relevance >= table_schema.filter_threshold:
+                    #  generate filters
+                    for value_key, value_schema in column_schema.values.items():
+                        # must use generation if field is a dictionary of tuples or a list
+                        if type(value_schema.value) in [list, dict]:
+                            metadata_prompt: ChatPromptTemplate = (
+                                self._prepare_value_prompt(
+                                    format_instructions=parser.get_format_instructions(),
+                                    value_schema=value_schema,
+                                    column_schema=column_schema,
+                                    table_schema=table_schema,
+                                    boolean_system_prompt=False,
+                                )
+                            )
+
+                            metadata_filters_chain = LLMChain(
+                                llm=self.llm, prompt=metadata_prompt
+                            )
+                            metadata_filter_output = metadata_filters_chain.predict(
+                                format_instructions=parser.get_format_instructions(),
+                                input=query,
+                            )
+                            # If the LLM outputs raw JSON, use it as-is.
+                            # If the LLM outputs anything including a json markdown section, use the last one.
+                            json_markdown_output = re.findall(
+                                r"```json.*```", metadata_filter_output, re.DOTALL
+                            )
+                            if json_markdown_output:
+                                metadata_filter_output = json_markdown_output[-1]
+                                # Clean the json tags.
+                                metadata_filter_output = metadata_filter_output[7:]
+                                metadata_filter_output = metadata_filter_output[:-3]
+
+                            metadata_filter = parser.invoke(metadata_filter_output)
+                        else:
+                            metadata_filter = AblativeMetadataFilter(
+                                attribute=column_schema.column,
+                                comparator=column_schema.comparator,
+                                value=value_schema.value,
+                                schema_table=table_key,
+                                schema_column=column_key,
+                                schema_value=value_key
+                            )
+                        metadata_filter_list.append(metadata_filter)
+
+        self.metadata_filters = metadata_filter_list
+        return metadata_filter_list
 
     def _prepare_and_execute_query(
         self, query: str, embeddings_str: str

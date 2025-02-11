@@ -460,7 +460,9 @@ class SearchKwargs(BaseModel):
 
 
 class ValueSchema(BaseModel):
-    value: Union[Any, Dict[Any, Any], List[Any]] = Field(description="One of the following. The value as it exists in the table column. A dict of {table_value: descriptive value, ...}, where table_value is the value in the table. A list of sample values taken from the column.")
+    value: Union[Any, Dict[Any, Any], List[Any]] = Field(
+        description="One of the following. The value as it exists in the table column. A dict of {table_value: descriptive value, ...}, where table_value is the value in the table. A list of sample values taken from the column."
+    )
     type: Any = Field(description="The value type as it exists in the table column.")
     description: str = Field(description="Description of what the value represents.")
     usage: str = Field(description="How and when to use this value for search.")
@@ -486,9 +488,7 @@ class ColumnSchema(BaseModel):
     type: str = Field(description="Type of the column (e.g. int, string, datetime)")
     description: str = Field(description="Description of what the column represents")
     usage: str = Field(description="How and when to use this Table for search.")
-    values: Union[
-        OrderedDict[Any, ValueSchema], Dict[Any, ValueSchema]
-    ] = Field(
+    values: Union[OrderedDict[Any, ValueSchema], Dict[Any, ValueSchema]] = Field(
         description="One of the following. A dict or ordered dict of {schema_value: ValueSchema, ...}, where schema value is the name given for this value description in the schema."
     )
     example_questions: Optional[List[Any]] = Field(
@@ -516,7 +516,7 @@ class TableSchema(BaseModel):
     description: str = Field(description="Description of what the table represents")
     usage: str = Field(description="How and when to use this Table for search.")
     columns: Union[OrderedDict[str, ColumnSchema], Dict[str, ColumnSchema]] = Field(
-        description="Dict of {column_name: ColumnSchemas} describing the metadata columns available for the table"
+        description="Dict or Ordered Dict of {column_name: ColumnSchemas} describing the metadata columns available for the table"
     )
     example_questions: Optional[List[Any]] = Field(
         default=None, description="Example questions where this table is useful."

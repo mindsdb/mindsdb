@@ -112,7 +112,23 @@ Here is the user input:
 {input}
 """
 
-DEFAULT_BOOLEAN_PROMPT_TEMPLATE = """You are an expert at constructing database search queries. You are given a series of database schemas for tables, columns, and values. Decide whether the schema's will be useful in searching the database for information related to the query. Respond with only one word: 'yes' or 'no'. """
+DEFAULT_BOOLEAN_PROMPT_TEMPLATE = """**Task:** Determine Schema Relevance for Database Search Queries
+
+As an expert in constructing database search queries, you are provided with database schemas detailing tables, columns, and values. Your task is to assess whether these elements can be used to effectively search the database in relation to a given user query.
+
+**Instructions:**
+
+- **Evaluate the Schema**:
+  - Analyze the tables, columns, and values described.
+  - Consider their potential usefulness in retrieving information pertinent to the user query.
+
+- **Decision Criteria**:
+  - Determine if any part of the schema could assist in forming a relevant search query for the information requested.
+
+- **Response**:
+  - Reply with a single word: 'yes' if the schema components are useful, otherwise 'no'.
+
+**Note:** Provide your answer based solely on the relevance of the described schema to the user query."""
 
 GENERATIVE_SYSTEM_PROMPT = """You are an expert database analyst that can assist in building SQL queries by providing structured output. Follow these format instructions precisely to generate a metadata filter given the provided schema description.
 
@@ -126,11 +142,12 @@ DEFAULT_VALUE_PROMPT_TEMPLATE = """
 # **Value Schema**
 This is a schema that represents a value in a column in a table in a database.
 
-- The value stored in the table column: {value}
 - The type of the value: {type}
 
 ## **Value Description**
 {description}
+
+{value}
 
 ## **Usage**
 {usage}
@@ -443,7 +460,7 @@ class SearchKwargs(BaseModel):
 
 
 class ValueSchema(BaseModel):
-    value: Any = Field(description="The value as it exists in the table column.")
+    value: Union[Any, Dict[Any, Any], List[Any]] = Field(description="One of the following. The value as it exists in the table column. A dict of {table_value: descriptive value, ...}, where table_value is the value in the table. A list of sample values taken from the column.")
     type: Any = Field(description="The value type as it exists in the table column.")
     description: str = Field(description="Description of what the value represents.")
     usage: str = Field(description="How and when to use this value for search.")
@@ -470,9 +487,9 @@ class ColumnSchema(BaseModel):
     description: str = Field(description="Description of what the column represents")
     usage: str = Field(description="How and when to use this Table for search.")
     values: Union[
-        OrderedDict[Any, ValueSchema], Dict[Any, ValueSchema], Dict[Any, Any], List[Any]
+        OrderedDict[Any, ValueSchema], Dict[Any, ValueSchema]
     ] = Field(
-        description="One of the following. A dict of {schema_value: ValueSchema, ...}, where schema value is the name given for this value description in the schema. A dict of {table_value: descriptive value, ...}, where table_name is the value in the table. A list of sample values taken from the column."
+        description="One of the following. A dict or ordered dict of {schema_value: ValueSchema, ...}, where schema value is the name given for this value description in the schema."
     )
     example_questions: Optional[List[Any]] = Field(
         default=None, description="Example questions where this table is useful."
@@ -481,7 +498,7 @@ class ColumnSchema(BaseModel):
         default=1, description="Maximum number of filters to generate for this column."
     )
     filter_threshold: Optional[float] = Field(
-        default=0.5,
+        default=0.0,
         description="Minimum relevance threshold to include metadata filters from this column.",
     )
     priority: Optional[int] = Field(
@@ -512,7 +529,7 @@ class TableSchema(BaseModel):
         default=1, description="Maximum number of filters to generate for this table."
     )
     filter_threshold: Optional[float] = Field(
-        default=0.5,
+        default=0.0,
         description="Minimum relevance required to use this table to generate filters.",
     )
     priority: Optional[int] = Field(
@@ -540,7 +557,7 @@ class DatabaseSchema(BaseModel):
         description="Maximum number of filters to generate for this Database.",
     )
     filter_threshold: Optional[float] = Field(
-        default=0.5,
+        default=0.0,
         description="Minimum relevance required to use this Database to generate filters.",
     )
     priority: Optional[int] = Field(

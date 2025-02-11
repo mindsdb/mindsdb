@@ -264,6 +264,9 @@ class ChromaDBHandler(VectorStoreHandler):
                 elif condition.op == FilterOperator.IN:
                     id_filters.extend(condition.value)
 
+        if id_filters == []:
+            id_filters = None
+
         if vector_filter is not None:
             # similarity search
             query_payload = {
@@ -312,6 +315,7 @@ class ChromaDBHandler(VectorStoreHandler):
         # always include distance
         if distances is not None:
             payload[TableField.DISTANCE.value] = distances
+
         return pd.DataFrame(payload)
 
     def _dataframe_metadata_to_chroma_metadata(self, metadata: Union[Dict[str, str], str]) -> Optional[Dict[str, str]]:

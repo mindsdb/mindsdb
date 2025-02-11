@@ -112,10 +112,10 @@ class InstallDependencies(Resource):
         )
 
 
-@ns_conf.route('/<handler_name>/test_connection')
+@ns_conf.route('/<handler_name>/status')
 class TestConnection(Resource):
     @ns_conf.param('handler_name', 'Handler name')
-    @api_endpoint_metrics('POST', '/handlers/handler/test_connection')
+    @api_endpoint_metrics('POST', '/handlers/handler/status')
     def post(self, handler_name):
         if 'connection_data' not in request.json:
             return http_error(

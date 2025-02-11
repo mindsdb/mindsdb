@@ -112,7 +112,7 @@ Here is the user input:
 {input}
 """
 
-DEFAULT_BOOLEAN_PROMPT_TEMPLATE = """Rate the relevance of the query to the lowest level schema description. For example, if given a schema that contains a table, column, and value, then rate the value. For example, if give a schema with a table and a column, rate the column. Respond with 'yes' or 'no'."""
+DEFAULT_BOOLEAN_PROMPT_TEMPLATE = """You are an expert at constructing database search queries. You are given a series of database schemas for tables, columns, and values. Decide whether the schema's will be useful in searching the database for information related to the query. Respond with only one word: 'yes' or 'no'. """
 
 GENERATIVE_SYSTEM_PROMPT = """You are an expert database analyst that can assist in building SQL queries by providing structured output. Follow these format instructions precisely to generate a metadata filter given the provided schema description.
 
@@ -139,6 +139,7 @@ This is a schema that represents a value in a column in a table in a database.
 
 ## **Query**
 {query}
+
 """
 
 DEFAULT_COLUMN_PROMPT_TEMPLATE = """
@@ -450,7 +451,7 @@ class ValueSchema(BaseModel):
         default=None, description="Example questions where this value is set."
     )
     filter_threshold: Optional[float] = Field(
-        default=0.8,
+        default=0.0,
         description="Minimum relevance threshold to include metadata filters from this column.",
     )
     priority: Optional[int] = Field(
@@ -480,7 +481,7 @@ class ColumnSchema(BaseModel):
         default=1, description="Maximum number of filters to generate for this column."
     )
     filter_threshold: Optional[float] = Field(
-        default=0.8,
+        default=0.5,
         description="Minimum relevance threshold to include metadata filters from this column.",
     )
     priority: Optional[int] = Field(
@@ -511,7 +512,7 @@ class TableSchema(BaseModel):
         default=1, description="Maximum number of filters to generate for this table."
     )
     filter_threshold: Optional[float] = Field(
-        default=0.8,
+        default=0.5,
         description="Minimum relevance required to use this table to generate filters.",
     )
     priority: Optional[int] = Field(
@@ -522,9 +523,6 @@ class TableSchema(BaseModel):
         default=None,
         description="Relevance computed during search. Should not be set by the end user.",
     )
-
-    class Config:
-        frozen = True
 
 
 class DatabaseSchema(BaseModel):
@@ -542,7 +540,7 @@ class DatabaseSchema(BaseModel):
         description="Maximum number of filters to generate for this Database.",
     )
     filter_threshold: Optional[float] = Field(
-        default=0.8,
+        default=0.5,
         description="Minimum relevance required to use this Database to generate filters.",
     )
     priority: Optional[int] = Field(
@@ -553,9 +551,6 @@ class DatabaseSchema(BaseModel):
         default=None,
         description="Relevance computed during search. Should not be set by the end user.",
     )
-
-    class Config:
-        frozen = True
 
 
 class LLMExample(BaseModel):

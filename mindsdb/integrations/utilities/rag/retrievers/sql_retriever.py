@@ -202,6 +202,32 @@ class SQLRetriever(BaseRetriever):
             [("system", system_prompt), ("user", self.value_prompt_template)]
         )
 
+        value_str = ""
+        if type(value_schema.value) in [str, int, float, bool]:
+            value_str = f"""
+## **Value**
+This database value is {value_schema.value}
+"""
+
+        elif type(value_schema.value) is dict:
+
+            value_str = """
+## **Enumerated Values**
+
+These column values are an enumeration of named values. These are listed below with format **[Column Value]**: [named value].
+"""
+            for value, value_name in value_schema.value.items():
+                value_str += f"""
+- **{value}:** {value_name}"""
+
+        elif type(value_schema.value) is list:
+            value_str = f"""
+## **Sample Values**
+
+There are too many unique values in the column to list exhaustively. Below is a sampling of values found in the column:
+{value_schema.value}
+"""
+
         if getattr(value_schema, "examples", None) is not None:
             example_str = """## **Example Questions**
 """
@@ -213,7 +239,7 @@ class SQLRetriever(BaseRetriever):
 
         return base_prompt_template.partial(
             column_schema=column_schema_str,
-            value=value_schema.value,
+            value=value_str,
             type=value_schema.type,
             description=value_schema.description,
             usage=value_schema.usage,
@@ -248,38 +274,14 @@ class SQLRetriever(BaseRetriever):
             [("system", system_prompt), ("user", self.column_prompt_template)]
         )
 
-        value_str = ""
-        if type(column_schema.model_fields["values"]) is dict:
-            if (
-                type(list(column_schema.model_fields["values"].values)[0])
-                is ValueSchema
-            ):
-                value_str = """
-## **Value Descriptions**
+        value_str = """
+## **Values**
 
-Below are descriptions of each value in this column:
+Below are descriptions of the values in this column:
 """
-                for value_schema in column_schema.values.values():
-                    value_str += f"""
-- **{value_schema.value}:** {value_schema.description}
-"""
-
-            else:
-                value_str = """
-## **Enumerated Values**
-
-These column values are an enumeration of named values. These are listed below with format **[Column Value]**: [named value].
-"""
-                for value, value_name in column_schema.values.items():
-                    value_str += f"""
-- **{value}:** {value_name}"""
-
-        elif type(column_schema.model_fields["values"]) is list:
-            value_str = f"""
-## **Sample Values**
-
-There are too many unique values in the column to list exhaustively. Below is a sampling of values found in the column:
-{column_schema.model_fields['values']}
+        for value_schema in column_schema.values.values():
+            value_str += f"""
+- {value_schema.description}
 """
 
         if getattr(column_schema, "examples", None) is not None:
@@ -364,7 +366,7 @@ There are too many unique values in the column to list exhaustively. Below is a 
 
         return score
 
-    def _breadth_first_search(self, query: str, greedy: bool = True):
+    def _breadth_first_search(self, query: str, greedy: bool = False):
         """Search breadth wise through Tables, then Columns, then Values.Uses a greedy strategy to maximize quota if greedy=True, otherwise a dynamic strategy."""
 
         # sort based on priority
@@ -404,16 +406,11 @@ There are too many unique values in the column to list exhaustively. Below is a 
             key=self._sort_schema_by_relevance_key,
             update=tables,
         )
-        for table_key, table_schema in ordered_database_schema.tables.items():
-            print(table_key, " ", table_schema.relevance)
-            for column_key, column_schema in table_schema.columns.items():
-                print("\t ", column_key, " ", column_schema.relevance)
-                for value_key, value_schema in column_schema.values.items():
-                    print("\t\t ", value_key, " ", value_schema.relevance)
 
         #  Rank Columns #######################################################
         #  iterate through tables to rank columns
         tables = {}
+        table_count = 0  # take only the top n number of tables specified by the databases max filters
         for table_key, table_schema in ordered_database_schema.tables.items():
             # only drop into tables above the filter threshold
             if table_schema.relevance >= ordered_database_schema.filter_threshold:
@@ -443,30 +440,29 @@ There are too many unique values in the column to list exhaustively. Below is a 
                     table_schema, key=self._sort_schema_by_relevance_key, update=columns
                 )
 
+                table_count += 1
+                if table_count >= ordered_database_schema.max_filters:
+                    break
+
         # sort tables and keep only tables that made the cut.
         ordered_database_schema = self._sort_schema_by_key(
             ordered_database_schema,
             key=self._sort_schema_by_relevance_key,
             update=tables,
         )
-        for table_key, table_schema in ordered_database_schema.tables.items():
-            print(table_key, " ", table_schema.relevance)
-            for column_key, column_schema in table_schema.columns.items():
-                print("\t ", column_key, " ", column_schema.relevance)
-                for value_key, value_schema in column_schema.values.items():
-                    print("\t\t ", value_key, " ", value_schema.relevance)
 
         #  Rank Values ########################################################
         #  iterate through tables to rank values
         tables = {}
         for table_key, table_schema in ordered_database_schema.tables.items():
             columns = {}
+            column_count = 0
             # iterate through columns to rank values
             for column_key, column_schema in table_schema.columns.items():
                 if column_schema.relevance >= table_schema.filter_threshold:
                     greedy_count = 0
-                    #  rank values by relevance
                     values = {}
+                    #  rank values by relevance
                     for value_key, value_schema in column_schema.values.items():
                         prompt: ChatPromptTemplate = self._prepare_value_prompt(
                             value_schema=value_schema,
@@ -493,6 +489,10 @@ There are too many unique values in the column to list exhaustively. Below is a 
                         update=values,
                     )
 
+                    column_count += 1
+                    if column_count >= table_schema.max_filters:
+                        break
+
             # sort columns and keep only columns that made the cut
             tables[table_key] = self._sort_schema_by_key(
                 table_schema, key=self._sort_schema_by_relevance_key, update=columns
@@ -504,12 +504,42 @@ There are too many unique values in the column to list exhaustively. Below is a 
             key=self._sort_schema_by_relevance_key,
             update=tables,
         )
+
+        #  discard low ranked values ###################################################################################
+        tables = {}
         for table_key, table_schema in ordered_database_schema.tables.items():
-            print(table_key, " ", table_schema.relevance)
+            columns = {}
+            # iterate through columns to rank values
             for column_key, column_schema in table_schema.columns.items():
-                print("\t ", column_key, " ", column_schema.relevance)
+                value_count = 0
+                values = {}
+                #  rank values by relevance
                 for value_key, value_schema in column_schema.values.items():
-                    print("\t\t ", value_key, " ", value_schema.relevance)
+                    if value_schema.relevance >= column_schema.filter_threshold:
+                        values[value_key] = value_schema
+
+                        value_count += 1
+                        if value_count >= column_schema.max_filters:
+                            break
+
+                # sort values and keep only values that make the cut
+                columns[column_key] = self._sort_schema_by_key(
+                    column_schema,
+                    key=self._sort_schema_by_relevance_key,
+                    update=values,
+                )
+
+            # sort columns and keep only columns that made the cut
+            tables[table_key] = self._sort_schema_by_key(
+                table_schema, key=self._sort_schema_by_relevance_key, update=columns
+            )
+
+        # sort tables and keep only tables that made the cut.
+        ordered_database_schema = self._sort_schema_by_key(
+            ordered_database_schema,
+            key=self._sort_schema_by_relevance_key,
+            update=tables,
+        )
 
         self.ranked_database_schema = ordered_database_schema
 
@@ -520,21 +550,61 @@ There are too many unique values in the column to list exhaustively. Below is a 
         for table_key, table_schema in ordered_database_schema.tables.items():
             for column_key, column_schema in table_schema.columns.items():
                 for value_key, value_schema in column_schema.values.items():
-                    ablation_value_dict[value_key] = value_schema.relevance
+                    ablation_value_dict[value_key] = (
+                        value_schema.relevance
+                    )
 
-        self.ablation_value_dict = ablation_value_dict
+        self.ablation_value_dict = collections.OrderedDict(sorted(ablation_value_dict.items(), key=lambda x: x[1]))
 
         relevance_scores = list(ablation_value_dict.values())
         if len(relevance_scores) > 0:
             self.ablation_quantiles = np.quantile(
-                relevance_scores, np.linspace(0, 1, self.num_retries + 2)[1:-1]
+                relevance_scores, np.linspace(0, 1, self.num_retries + 1)[:-1]
             )
         else:
             self.ablation_quantiles = None
 
-    def breadth_first_ablation(self):
+    def breadth_first_ablation(self, retry: int):
         """Ablate metadata filters in reverse breadth first search until the required minimum number of documents are returned."""
-        pass
+
+        ablated_dict = {}
+        for key, value in self.ablation_value_dict.items():
+            if value > self.ablation_quantiles[retry]:
+                ablated_dict[key] = value
+
+        #  discard low ranked values ###################################################################################
+        tables = {}
+        for table_key, table_schema in self.ranked_database_schema.tables.items():
+            columns = {}
+            # iterate through columns to rank values
+            for column_key, column_schema in table_schema.columns.items():
+                values = {}
+                #  rank values by relevance
+                for value_key, value_schema in column_schema.values.items():
+                    if value_schema.relevance >= column_schema.filter_threshold:
+                        if value_key in ablated_dict:
+                            values[value_key] = value_schema
+
+                # sort values and keep only values that make the cut
+                columns[column_key] = self._sort_schema_by_key(
+                    column_schema,
+                    key=self._sort_schema_by_relevance_key,
+                    update=values,
+                )
+
+            # sort columns and keep only columns that made the cut
+            tables[table_key] = self._sort_schema_by_key(
+                table_schema, key=self._sort_schema_by_relevance_key, update=columns
+            )
+
+        # sort tables and keep only tables that made the cut.
+        ranked_database_schema = self._sort_schema_by_key(
+            self.ranked_database_schema,
+            key=self._sort_schema_by_relevance_key,
+            update=tables,
+        )
+
+        return ranked_database_schema
 
     def depth_first_search(self, greedy=True):
         """Search depth wise through Tables, then Columns, then Values. Uses a greedy strategy to maximize quota if greedy=True, otherwise a dynamic strategy."""

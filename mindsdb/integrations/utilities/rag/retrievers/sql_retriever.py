@@ -99,6 +99,10 @@ class SQLRetriever(BaseRetriever):
 
     llm: BaseChatModel
 
+    ranked_database_schema: Optional[DatabaseSchema] = None
+    ablation_value_dict: Optional[Dict[str, float]] = None
+    ablation_quantiles: Optional[List[float]] = None
+
     def _sort_schema_by_priority_key(
         self,
         schema_dict_item: Tuple[str, Union[TableSchema, ColumnSchema, ValueSchema]],
@@ -112,7 +116,7 @@ class SQLRetriever(BaseRetriever):
         if schema_dict_item[1].relevance is not None:
             return schema_dict_item[1].relevance
         else:
-            return float("-inf")
+            return 0
 
     def _sort_schema_by_key(
         self,
@@ -133,10 +137,12 @@ class SQLRetriever(BaseRetriever):
             )
 
         if update is not None:
-            ordered = collections.OrderedDict(sorted(update.items(), key=key))
+            ordered = collections.OrderedDict(
+                sorted(update.items(), key=key, reverse=True)
+            )
         else:
             ordered = collections.OrderedDict(
-                sorted(getattr(schema, collection_key).items(), key=key)
+                sorted(getattr(schema, collection_key).items(), key=key, reverse=True)
             )
         schema = schema.model_copy(update={collection_key: ordered})
 
@@ -331,7 +337,9 @@ There are too many unique values in the column to list exhaustively. Below is a 
         )
 
     def _rank_schema(self, prompt: ChatPromptTemplate, query: str) -> float:
-        rank_chain = LLMChain(llm=self.llm.bind(logprobs=True), prompt=prompt, return_final_only=False)
+        rank_chain = LLMChain(
+            llm=self.llm.bind(logprobs=True), prompt=prompt, return_final_only=False
+        )
         output = rank_chain({"query": query})  # returns metadata
 
         #  parse through metadata tokens until encountering either yes, or no.
@@ -351,6 +359,9 @@ There are too many unique values in the column to list exhaustively. Below is a 
                 ) / 2  # If no, invert the confidence
                 break
 
+        if score is None:
+            score = 0.0
+
         return score
 
     def _breadth_first_search(self, query: str, greedy: bool = True):
@@ -361,123 +372,165 @@ There are too many unique values in the column to list exhaustively. Below is a 
             database_schema=self.database_schema, key=self._sort_schema_by_priority_key
         )
 
+        for table_key, table_schema in ordered_database_schema.tables.items():
+            print(table_key, " ", table_schema.relevance)
+            for column_key, column_schema in table_schema.columns.items():
+                print("\t ", column_key, " ", column_schema.relevance)
+                for value_key, value_schema in column_schema.values.items():
+                    print("\t\t ", value_key, " ", value_schema.relevance)
+
         #  Rank Tables ########################################################
         greedy_count = 0
+        tables = {}
         # rank tables by relevance
-        for table_key, table_schema in ordered_database_schema.items():
+        for table_key, table_schema in ordered_database_schema.tables.items():
             prompt: ChatPromptTemplate = self._prepare_table_prompt(
                 table_schema=table_schema, boolean_system_prompt=True
             )
             table_schema.relevance = self._rank_schema(prompt=prompt, query=query)
+
+            # only keep greedy tables
+            tables[table_key] = table_schema
 
             if greedy:
                 if table_schema.relevance >= ordered_database_schema.filter_threshold:
                     greedy_count += 1
                 if greedy_count >= ordered_database_schema.max_filters:
                     break
-                if greedy_count >= self.max_filters:
-                    break
 
         #  sort tables
         ordered_database_schema = self._sort_schema_by_key(
-            schema=ordered_database_schema, key=self._sort_schema_by_relevance_key
+            schema=ordered_database_schema,
+            key=self._sort_schema_by_relevance_key,
+            update=tables,
         )
+        for table_key, table_schema in ordered_database_schema.tables.items():
+            print(table_key, " ", table_schema.relevance)
+            for column_key, column_schema in table_schema.columns.items():
+                print("\t ", column_key, " ", column_schema.relevance)
+                for value_key, value_schema in column_schema.values.items():
+                    print("\t\t ", value_key, " ", value_schema.relevance)
 
         #  Rank Columns #######################################################
         #  iterate through tables to rank columns
-        for table_key, table_schema in ordered_database_schema.items():
-            tables = {}
+        tables = {}
+        for table_key, table_schema in ordered_database_schema.tables.items():
             # only drop into tables above the filter threshold
             if table_schema.relevance >= ordered_database_schema.filter_threshold:
                 greedy_count = 0
                 # rank columns by relevance
+                columns = {}
                 for column_key, column_schema in table_schema.columns.items():
                     prompt: ChatPromptTemplate = self._prepare_column_prompt(
-                        column_schema=column_schema, boolean_system_prompt=True
+                        column_schema=column_schema,
+                        table_schema=table_schema,
+                        boolean_system_prompt=True,
                     )
                     column_schema.relevance = self._rank_schema(
                         prompt=prompt, query=query
                     )
 
+                    columns[column_key] = column_schema
+
                     if greedy:
-                        if column_schema.relevance >= self.filter_threshold:
+                        if column_schema.relevance >= table_schema.filter_threshold:
                             greedy_count += 1
                         if greedy_count >= table_schema.max_filters:
                             break
-                        if greedy_count >= self.max_filters:
-                            break
 
-                # sort tables, drops tables that did not make the cut.
+                # sort columns and keep only columns that made the cut.
                 tables[table_key] = self._sort_schema_by_key(
-                    table_schema, key=self._sort_schema_by_relevance_key
+                    table_schema, key=self._sort_schema_by_relevance_key, update=columns
                 )
 
-        # update top level schema with new tables
-        ordered_database_schema = ordered_database_schema.model_copy(
-            update={"tables": tables}
+        # sort tables and keep only tables that made the cut.
+        ordered_database_schema = self._sort_schema_by_key(
+            ordered_database_schema,
+            key=self._sort_schema_by_relevance_key,
+            update=tables,
         )
+        for table_key, table_schema in ordered_database_schema.tables.items():
+            print(table_key, " ", table_schema.relevance)
+            for column_key, column_schema in table_schema.columns.items():
+                print("\t ", column_key, " ", column_schema.relevance)
+                for value_key, value_schema in column_schema.values.items():
+                    print("\t\t ", value_key, " ", value_schema.relevance)
 
         #  Rank Values ########################################################
-
         #  iterate through tables to rank values
-        for table_key, table_schema in ordered_database_schema.items():
-            tables = {}
+        tables = {}
+        for table_key, table_schema in ordered_database_schema.tables.items():
+            columns = {}
             # iterate through columns to rank values
             for column_key, column_schema in table_schema.columns.items():
-                columns = {}
-                greedy_count = 0
-                #  rank values by relevance
                 if column_schema.relevance >= table_schema.filter_threshold:
+                    greedy_count = 0
+                    #  rank values by relevance
+                    values = {}
                     for value_key, value_schema in column_schema.values.items():
                         prompt: ChatPromptTemplate = self._prepare_value_prompt(
-                            value_schema=value_schema, boolean_system_prompt=True
+                            value_schema=value_schema,
+                            column_schema=column_schema,
+                            table_schema=table_schema,
+                            boolean_system_prompt=True,
                         )
-                        column_schema.relevance = self._rank_schema(
+                        value_schema.relevance = self._rank_schema(
                             prompt=prompt, query=query
                         )
 
+                        values[value_key] = value_schema
+
                         if greedy:
-                            if column_schema.relevance >= self.filter_threshold:
+                            if value_schema.relevance >= column_schema.filter_threshold:
                                 greedy_count += 1
-                            if greedy_count >= table_schema.max_filters:
-                                break
-                            if greedy_count >= self.max_filters:
+                            if greedy_count >= column_schema.max_filters:
                                 break
 
-                    # sort the values, drop the values that did not make the cut
+                    # sort values and keep only values that make the cut
                     columns[column_key] = self._sort_schema_by_key(
-                        value_schema, key=self._sort_schema_by_relevance_key
+                        column_schema,
+                        key=self._sort_schema_by_relevance_key,
+                        update=values,
                     )
 
-            # update table schema with new columns
-            table_schema = table_schema.model_copy(update={"columns": columns})
-
-            # sort tables, drops tables that did not make the cut.
+            # sort columns and keep only columns that made the cut
             tables[table_key] = self._sort_schema_by_key(
-                table_schema, key=self._sort_schema_by_relevance_key
+                table_schema, key=self._sort_schema_by_relevance_key, update=columns
             )
 
-        # update database schema with new tables
-        ordered_database_schema = ordered_database_schema.model_copy(
-            update={"tables": tables}
+        # sort tables and keep only tables that made the cut.
+        ordered_database_schema = self._sort_schema_by_key(
+            ordered_database_schema,
+            key=self._sort_schema_by_relevance_key,
+            update=tables,
         )
+        for table_key, table_schema in ordered_database_schema.tables.items():
+            print(table_key, " ", table_schema.relevance)
+            for column_key, column_schema in table_schema.columns.items():
+                print("\t ", column_key, " ", column_schema.relevance)
+                for value_key, value_schema in column_schema.values.items():
+                    print("\t\t ", value_key, " ", value_schema.relevance)
 
         self.ranked_database_schema = ordered_database_schema
 
         #  Build Ablation #####################################################
 
-        ablation_value_dict = ({},)
+        ablation_value_dict = {}
         # assemble a relevance dictionary
-        for table_key, table_schema in ordered_database_schema.items():
+        for table_key, table_schema in ordered_database_schema.tables.items():
             for column_key, column_schema in table_schema.columns.items():
                 for value_key, value_schema in column_schema.values.items():
                     ablation_value_dict[value_key] = value_schema.relevance
 
         self.ablation_value_dict = ablation_value_dict
 
-        self.ablation_quantiles = np.quantile(
-            ablation_value_dict.values, np.linspace(0, 1, self.num_retries + 2)[1:-1]
-        )
+        relevance_scores = list(ablation_value_dict.values())
+        if len(relevance_scores) > 0:
+            self.ablation_quantiles = np.quantile(
+                relevance_scores, np.linspace(0, 1, self.num_retries + 2)[1:-1]
+            )
+        else:
+            self.ablation_quantiles = None
 
     def breadth_first_ablation(self):
         """Ablate metadata filters in reverse breadth first search until the required minimum number of documents are returned."""

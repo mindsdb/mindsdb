@@ -47,6 +47,7 @@ class MetadataFilter(BaseModel):
 
 class AblativeMetadataFilter(MetadataFilter):
     """Adds additional fields to support ablation."""
+
     schema_table: str = Field(description="schema name of the table for this filter")
     schema_column: str = Field(description="schema name of the column for this filter")
     schema_value: str = Field(description="schema name of the value for this filter")
@@ -78,6 +79,7 @@ class SQLRetriever(BaseRetriever):
 
     fallback_retriever: BaseRetriever
     vector_store_handler: VectorStoreHandler
+    min_k: int
     database_schema: Optional[DatabaseSchema] = None
 
     # prompt templates
@@ -109,7 +111,7 @@ class SQLRetriever(BaseRetriever):
     ranked_database_schema: Optional[DatabaseSchema] = None
     ablation_value_dict: Optional[Dict[str, float]] = None
     ablation_quantiles: Optional[List[float]] = None
-    metadata_filters: Optional[list[AblativeMetadataFilter]] = None
+    # metadata_filters: Optional[list[AblativeMetadataFilter]] = None
 
     def _sort_schema_by_priority_key(
         self,
@@ -558,7 +560,9 @@ Below are descriptions of the values in this column:
         for table_key, table_schema in ordered_database_schema.tables.items():
             for column_key, column_schema in table_schema.columns.items():
                 for value_key, value_schema in column_schema.values.items():
-                    ablation_value_dict[(table_key, column_key, value_key)] = value_schema.relevance
+                    ablation_value_dict[(table_key, column_key, value_key)] = (
+                        value_schema.relevance
+                    )
 
         self.ablation_value_dict = collections.OrderedDict(
             sorted(ablation_value_dict.items(), key=lambda x: x[1])
@@ -567,27 +571,33 @@ Below are descriptions of the values in this column:
         relevance_scores = list(ablation_value_dict.values())
         if len(relevance_scores) > 0:
             self.ablation_quantiles = np.quantile(
-                relevance_scores, np.linspace(0, 1, self.num_retries + 1)[:-1]
+                relevance_scores, np.linspace(0, 1, self.num_retries + 2)[1:-1]
             )
         else:
             self.ablation_quantiles = None
 
-    def breadth_first_ablation(self, retry: int):
-        """Ablate metadata filters in reverse breadth first search until the required minimum number of documents are returned."""
+    def dynamic_ablation(
+        self, metadata_filters: List[AblativeMetadataFilter], retry: int
+    ):
+        """Ablate metadata filters in aggregate by quantiles until the required minimum number of documents are returned."""
 
         ablated_dict = {}
         for key, value in self.ablation_value_dict.items():
-            if value > self.ablation_quantiles[retry]:
+            if value >= self.ablation_quantiles[retry]:
                 ablated_dict[key] = value
 
         #  discard low ranked filters ##################################################################################
         ablated_filters = []
-        for filter in self.metadata_filters:
+        for filter in metadata_filters:
             for key in ablated_dict.keys():
-                if filter.schema_table in key and filter.schema_column in key and filter.schema_value in key:
+                if (
+                    filter.schema_table in key
+                    and filter.schema_column in key
+                    and filter.schema_value in key
+                ):
                     ablated_filters.append(filter)
 
-        self.metadata_filters = ablated_filters
+        return ablated_filters
 
     def depth_first_search(self, greedy=True):
         """Search depth wise through Tables, then Columns, then Values. Uses a greedy strategy to maximize quota if greedy=True, otherwise a dynamic strategy."""
@@ -605,29 +615,28 @@ Below are descriptions of the values in this column:
         return rewrite_chain.predict(input=query)
 
     def _prepare_pgvector_query(
-        self, metadata_filters: MetadataFilters, retry: int = 0
+        self, metadata_filters: List[AblativeMetadataFilter], retry: int = 0
     ) -> str:
         # Base select JOINed with document source table.
         base_query = f"""SELECT * FROM {self.embeddings_table} AS e INNER JOIN {self.source_table} AS s ON (e.metadata->>'original_row_id')::int = s."{self.source_id_column}" """
-        col_to_schema = {}
-        if not self.metadata_schemas:
+
+        # return an empty string if schema has not been ranked
+        if not self.ranked_database_schema:
             return ""
-        for schema in self.metadata_schemas:
-            for col in schema.columns:
-                col_to_schema[col.name] = schema
-        joined_schemas = set()
-        for filter in metadata_filters:
-            # Join schemas before filtering.
-            schema = col_to_schema.get(filter.attribute)
-            if (
-                schema is None
-                or schema.table in joined_schemas
-                or schema.table == self.source_table
-            ):
+
+        # Add Table JOIN statements
+        join_clauses = set()
+        for metadata_filter in metadata_filters:
+            join_clause = self.ranked_database_schema.tables[
+                metadata_filter.schema_table
+            ].join
+            if join_clause in join_clauses:
                 continue
-            joined_schemas.add(schema.table)
-            base_query += schema.join + " "
-        # Actually construct WHERE conditions from metadata filters.
+            else:
+                join_clauses.add(join_clause)
+                base_query += join_clause + " "
+
+        # Add WHERE conditions from metadata filters
         if metadata_filters:
             base_query += "WHERE "
         for i, filter in enumerate(metadata_filters):
@@ -637,6 +646,7 @@ Below are descriptions of the values in this column:
             base_query += f'"{filter.attribute}" {filter.comparator} {value}'
             if i < len(metadata_filters) - 1:
                 base_query += " AND "
+
         base_query += f" ORDER BY e.embeddings {self.distance_function.value[0]} '{{embeddings}}' LIMIT {self.search_kwargs.k};"
         return base_query
 
@@ -660,35 +670,50 @@ Below are descriptions of the values in this column:
                     for value_key, value_schema in column_schema.values.items():
                         # must use generation if field is a dictionary of tuples or a list
                         if type(value_schema.value) in [list, dict]:
-                            metadata_prompt: ChatPromptTemplate = (
-                                self._prepare_value_prompt(
-                                    format_instructions=parser.get_format_instructions(),
-                                    value_schema=value_schema,
-                                    column_schema=column_schema,
-                                    table_schema=table_schema,
-                                    boolean_system_prompt=False,
+                            try:
+                                metadata_prompt: ChatPromptTemplate = (
+                                    self._prepare_value_prompt(
+                                        format_instructions=parser.get_format_instructions(),
+                                        value_schema=value_schema,
+                                        column_schema=column_schema,
+                                        table_schema=table_schema,
+                                        boolean_system_prompt=False,
+                                    )
                                 )
-                            )
 
-                            metadata_filters_chain = LLMChain(
-                                llm=self.llm, prompt=metadata_prompt
-                            )
-                            metadata_filter_output = metadata_filters_chain.predict(
-                                format_instructions=parser.get_format_instructions(),
-                                input=query,
-                            )
-                            # If the LLM outputs raw JSON, use it as-is.
-                            # If the LLM outputs anything including a json markdown section, use the last one.
-                            json_markdown_output = re.findall(
-                                r"```json.*```", metadata_filter_output, re.DOTALL
-                            )
-                            if json_markdown_output:
-                                metadata_filter_output = json_markdown_output[-1]
-                                # Clean the json tags.
-                                metadata_filter_output = metadata_filter_output[7:]
-                                metadata_filter_output = metadata_filter_output[:-3]
+                                metadata_filters_chain = LLMChain(
+                                    llm=self.llm, prompt=metadata_prompt
+                                )
+                                metadata_filter_output = metadata_filters_chain.predict(
+                                    format_instructions=parser.get_format_instructions(),
+                                    input=query,
+                                )
+                                # If the LLM outputs raw JSON, use it as-is.
+                                # If the LLM outputs anything including a json markdown section, use the last one.
+                                json_markdown_output = re.findall(
+                                    r"```json.*```", metadata_filter_output, re.DOTALL
+                                )
+                                if json_markdown_output:
+                                    metadata_filter_output = json_markdown_output[-1]
+                                    # Clean the json tags.
+                                    metadata_filter_output = metadata_filter_output[7:]
+                                    metadata_filter_output = metadata_filter_output[:-3]
 
-                            metadata_filter = parser.invoke(metadata_filter_output)
+                                metadata_filter = parser.invoke(metadata_filter_output)
+                                metadata_filter = AblativeMetadataFilter(
+                                    **metadata_filter.model_dump().update(
+                                        {
+                                            "schema_table": table_key,
+                                            "schema_column": column_key,
+                                            "schema_value": value_key,
+                                        }
+                                    )
+                                )
+                            except OutputParserException as e:
+                                logger.warning(
+                                    f"LLM failed to generate structured metadata filters: {str(e)}"
+                                )
+                                return HandlerResponse(RESPONSE_TYPE.ERROR, error_message=str(e))
                         else:
                             metadata_filter = AblativeMetadataFilter(
                                 attribute=column_schema.column,
@@ -696,18 +721,16 @@ Below are descriptions of the values in this column:
                                 value=value_schema.value,
                                 schema_table=table_key,
                                 schema_column=column_key,
-                                schema_value=value_key
+                                schema_value=value_key,
                             )
                         metadata_filter_list.append(metadata_filter)
 
-        self.metadata_filters = metadata_filter_list
         return metadata_filter_list
 
     def _prepare_and_execute_query(
-        self, query: str, embeddings_str: str
+        self, metadata_filters: List[AblativeMetadataFilter], embeddings_str: str
     ) -> HandlerResponse:
         try:
-            metadata_filters = self._generate_metadata_filters(query)
             checked_sql_query = self._prepare_pgvector_query(metadata_filters)
             checked_sql_query_with_embeddings = checked_sql_query.format(
                 embeddings=embeddings_str
@@ -715,11 +738,6 @@ Below are descriptions of the values in this column:
             return self.vector_store_handler.native_query(
                 checked_sql_query_with_embeddings
             )
-        except OutputParserException as e:
-            logger.warning(
-                f"LLM failed to generate structured metadata filters: {str(e)}"
-            )
-            return HandlerResponse(RESPONSE_TYPE.ERROR, error_message=str(e))
         except Exception as e:
             logger.warning(
                 f"Failed to prepare and execute SQL query from structured metadata: {str(e)}"
@@ -731,37 +749,44 @@ Below are descriptions of the values in this column:
     ) -> List[Document]:
         # Rewrite query to be suitable for retrieval.
         retrieval_query = self._prepare_retrieval_query(query)
+
         # Embed the rewritten retrieval query & include it in the similarity search pgvector query.
         embedded_query = self.embeddings_model.embed_query(retrieval_query)
-        # Actually execute the similarity search with metadata filters.
+
+        # Generate metadata filters
+        metadata_filters = self._generate_metadata_filters(query)
+
+        # Initial Execution of the similarity search with metadata filters.
         document_response = self._prepare_and_execute_query(
-            retrieval_query, str(embedded_query)
+            metadata_filters, str(embedded_query)
         )
         num_retries = 0
         while num_retries < self.num_retries:
             if (
                 document_response.resp_type != RESPONSE_TYPE.ERROR
-                and len(document_response.data_frame) > 0
+                and len(document_response.data_frame) >= self.min_k
             ):
-                # Successfully retrieved documents.
+                # Successfully retrieved k documents to send to re-ranker.
                 break
-            if document_response.resp_type == RESPONSE_TYPE.ERROR:
+            elif document_response.resp_type == RESPONSE_TYPE.ERROR:
                 # LLMs won't always generate structured metadata so we should have a fallback after retrying.
                 logger.info(
                     f"SQL Retriever query failed with error {document_response.error_message}"
                 )
-            elif len(document_response.data_frame) == 0:
-                logger.info("No documents retrieved from SQL Retriever query")
+            else:
+                logger.info(
+                    f"SQL Retriever did not retrieve {self.min_k} documents: {len(document_response.data_frame)} documents retrieved."
+                )
+
+            ablated_metadata_filters = self.dynamic_ablation(
+                metadata_filters=metadata_filters, retry=num_retries
+            )
 
             document_response = self._prepare_and_execute_query(
-                retrieval_query, str(embedded_query)
+                ablated_metadata_filters, str(embedded_query)
             )
+
             num_retries += 1
-            if num_retries >= self.num_retries:
-                logger.info("Using fallback retriever in SQL retriever.")
-                return self.fallback_retriever._get_relevant_documents(
-                    retrieval_query, run_manager=run_manager
-                )
 
         document_df = document_response.data_frame
         retrieved_documents = []

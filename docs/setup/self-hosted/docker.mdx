@@ -91,6 +91,14 @@ docker run -e MKL_SERVICE_FORCE_INTEL=1 -p 47334:47334 mindsdb/mindsdb
 ```
 </Warning>
 
+<Tip>
+If you want to enable authentication for MindsDB, you do so by passing the `MINDSDB_USERNAME` and `MINDSDB_PASSWORD` environment variables when running the container.
+
+```bash
+docker run -e MINDSDB_USERNAME='admin' -e MINDSDB_PASSWORD='password' -p 47334:47334 mindsdb/mindsdb
+```
+</Tip>
+
 ### Install dependencies
 
 MindsDB integrates with numerous data sources and AI frameworks. To use any of the integrations, you should enure that the required dependencies are installed in the Docker container.

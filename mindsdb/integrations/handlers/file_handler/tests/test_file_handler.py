@@ -1,20 +1,20 @@
-import json
 import os
 import shutil
 import tempfile
 from io import BytesIO, StringIO
-from unittest.mock import patch
+from pathlib import Path
 
 import pandas
 import pytest
-import responses
 from mindsdb_sql_parser.exceptions import ParsingException
-from mindsdb_sql_parser.ast import CreateTable, DropTables, Identifier, Insert, Select, Star, TableColumn, Update
+from mindsdb_sql_parser.ast import CreateTable, DropTables, Identifier, Insert, TableColumn, Update
 from pytest_lazyfixture import lazy_fixture
 
 from mindsdb.integrations.handlers.file_handler.file_handler import FileHandler
 from mindsdb.integrations.libs.response import RESPONSE_TYPE
-from mindsdb.interfaces.file.file_controller import FileController
+
+from mindsdb.integrations.utilities.files.file_reader import FileReader
+
 
 # Define a table to use as content for all of the file types
 # This data needs to match that saved in the files in the ./data/ dir (except pdf and txt files)
@@ -110,21 +110,21 @@ class TestIsItX:
     )
     def test_is_it_csv(self, file_path, result):
         with open(file_path, "r") as fh:
-            assert FileHandler.is_it_csv(StringIO(fh.read())) is result
+            assert FileReader.is_csv(StringIO(fh.read())) is result
 
     @pytest.mark.parametrize(
         "file_path,result",
         [
-            (lazy_fixture("csv_file"), False),
-            (lazy_fixture("xlsx_file"), True),
-            (lazy_fixture("json_file"), False),
-            (lazy_fixture("parquet_file"), False),
-            (lazy_fixture("txt_file"), False),
-            (lazy_fixture("pdf_file"), False),
+            (lazy_fixture("csv_file"), 'csv'),
+            (lazy_fixture("xlsx_file"), 'xlsx'),
+            (lazy_fixture("json_file"), 'json'),
+            (lazy_fixture("parquet_file"), 'parquet'),
+            (lazy_fixture("txt_file"), 'txt'),
+            (lazy_fixture("pdf_file"), 'pdf'),
         ],
     )
-    def test_is_it_xlsx(self, file_path, result):
-        assert FileHandler.is_it_xlsx(file_path) is result
+    def test_format(self, file_path, result):
+        assert FileReader(path=file_path).get_format() == result
 
     # We can't test xlsx or parquet here because they're binary files
     @pytest.mark.parametrize(
@@ -137,7 +137,7 @@ class TestIsItX:
     )
     def test_is_it_json(self, file_path, result):
         with open(file_path, "r") as fh:
-            assert FileHandler.is_it_json(StringIO(fh.read())) is result
+            assert FileReader.is_json(StringIO(fh.read())) is result
 
     @pytest.mark.parametrize(
         "file_path,result",
@@ -152,7 +152,7 @@ class TestIsItX:
     )
     def test_is_it_parquet(self, file_path, result):
         with open(file_path, "rb") as fh:
-            assert FileHandler.is_it_parquet(BytesIO(fh.read())) is result
+            assert FileReader.is_parquet(BytesIO(fh.read())) is result
 
 
 class TestQuery:
@@ -181,64 +181,6 @@ class TestQuery:
         response = file_handler.query(DropTables([Identifier(parts=["one"])]))
 
         assert response.type == RESPONSE_TYPE.ERROR
-
-    def test_query_select(self, csv_file):
-        """Test a valid select query"""
-        expected_df = pandas.read_csv(csv_file)
-
-        # This is temporary because the file controller currently absconds with our file when we save it:
-        # https://github.com/mindsdb/mindsdb/issues/8141
-        csv_tmp = os.path.join(tempfile.gettempdir(), "test.csv")
-        if os.path.exists(csv_tmp):
-            os.remove(csv_tmp)
-        shutil.copy(csv_file, csv_tmp)
-
-        # Configure mindsdb and set up the file controller
-        # Ideally this would be a lot simpler..
-        db_file = tempfile.mkstemp(prefix="mindsdb_db_")[1]
-        config = {"storage_db": "sqlite:///" + db_file}
-        fdi, cfg_file = tempfile.mkstemp(prefix="mindsdb_conf_")
-        with os.fdopen(fdi, "w") as fd:
-            json.dump(config, fd)
-        os.environ["MINDSDB_CONFIG_PATH"] = cfg_file
-
-        from mindsdb.utilities.config import Config
-
-        Config()
-        from mindsdb.interfaces.storage import db
-
-        db.init()
-        db.session.rollback()
-        db.Base.metadata.drop_all(db.engine)
-
-        # create
-        db.Base.metadata.create_all(db.engine)
-
-        # fill with data
-        r = db.Integration(name="files", data={}, engine="files")
-        db.session.add(r)
-        db.session.flush()
-        # Config #
-
-        file_controller = FileController()
-        file_controller.save_file(
-            os.path.splitext(os.path.basename(csv_file))[0], csv_tmp
-        )
-
-        file_handler = FileHandler(file_controller=file_controller)
-        response = file_handler.query(
-            Select(
-                targets=[Star()],
-                from_table=Identifier(
-                    parts=[os.path.splitext(os.path.basename(csv_file))[0]]
-                ),
-            )
-        )
-
-        assert response.type == RESPONSE_TYPE.TABLE
-        assert response.error_code == 0
-        assert response.error_message is None
-        assert expected_df.equals(response.data_frame)
 
     def test_query_insert(self, csv_file, monkeypatch):
         """Test an invalid insert query"""
@@ -322,26 +264,6 @@ class TestQuery:
             file_handler.native_query("INVALID QUERY")
 
 
-def test_get_file_path_with_file_path():
-    """Test an valid native table query"""
-    file_path = "example.txt"
-    result = FileHandler._get_file_path(file_path)
-    assert result == file_path
-
-
-@patch("mindsdb.integrations.handlers.file_handler.file_handler.FileHandler._fetch_url")
-def test_get_file_path_with_url(mock_fetch_url):
-    url = "http://example.com/file.txt"
-    expected_result = "some_file_path"
-    # we test _fetch_url separately below. Mock it for this test
-    mock_fetch_url.return_value = expected_result
-
-    result = FileHandler._get_file_path(url)
-
-    assert result == expected_result
-    mock_fetch_url.assert_called_with(url)
-
-
 @pytest.mark.parametrize(
     "file_path,expected_columns",
     [
@@ -354,48 +276,44 @@ def test_get_file_path_with_url(mock_fetch_url):
     ],
 )
 def test_handle_source(file_path, expected_columns):
-    sheet_name = None
-    # Excel files return a list of sheets when queried without a sheet name
-    if file_path.endswith(".xlsx"):
-        df, _ = FileHandler._handle_source(file_path)
+
+    def get_reader(file_path):
+        # using path
+        reader = FileReader(path=file_path)
+        yield reader
+
+        # using file descriptor
+        with open(file_path, 'rb') as fd:
+            reader = FileReader(file=fd)
+            yield reader
+            fd.seek(0)
+            content = fd.read()
+
+        # using bytesio
+        fd = BytesIO(content)
+        reader = FileReader(file=fd, name=Path(file_path).name)
+        yield reader
+
+    # using different methods to create reader
+    for reader in get_reader(file_path):
+        df = reader.to_df()
         assert isinstance(df, pandas.DataFrame)
 
-        assert df.columns.tolist() == test_excel_sheet_content[0]
-        assert len(df) == len(test_excel_sheet_content) - 1
-        assert df.values.tolist() == test_excel_sheet_content[1:]
-        sheet_name = test_excel_sheet_content[1][0]
+        if reader.get_format() == 'xlsx':
 
-    df, _ = FileHandler._handle_source(file_path, sheet_name=sheet_name)
-    assert isinstance(df, pandas.DataFrame)
-    assert df.columns.tolist() == expected_columns
+            assert df.columns.tolist() == test_excel_sheet_content[0]
+            assert len(df) == len(test_excel_sheet_content) - 1
+            assert df.values.tolist() == test_excel_sheet_content[1:]
+            sheet_name = test_excel_sheet_content[1][0]
 
-    # The pdf and txt files have some different content
-    if not file_path.endswith(".pdf") and not file_path.endswith(".txt"):
-        assert len(df) == len(test_file_content) - 1
-        assert df.values.tolist() == test_file_content[1:]
+            df = reader.to_df(sheet_name=sheet_name)
 
+        assert df.columns.tolist() == expected_columns
 
-@pytest.mark.parametrize(
-    "file_path,expected_file_type,expected_delimiter,expected_data_type",
-    [
-        (lazy_fixture("csv_file"), "csv", ",", StringIO),
-        (lazy_fixture("xlsx_file"), "xlsx", None, BytesIO),
-        (lazy_fixture("json_file"), "json", None, StringIO),
-        (lazy_fixture("parquet_file"), "parquet", None, BytesIO),
-        (lazy_fixture("pdf_file"), "pdf", None, BytesIO),
-        (lazy_fixture("txt_file"), "txt", None, BytesIO),
-    ],
-)
-def test_get_data_io(
-    file_path, expected_file_type, expected_delimiter, expected_data_type
-):
-    data_io, file_type, file_dialect = FileHandler._get_data_io(file_path)
-    assert file_type == expected_file_type
-    assert type(data_io) == expected_data_type
-    if expected_delimiter is None:
-        assert file_dialect is None
-    else:
-        assert file_dialect.delimiter == expected_delimiter
+        # The pdf and txt files have some different content
+        if reader.get_format() not in ("pdf", "txt"):
+            assert len(df) == len(test_file_content) - 1
+            assert df.values.tolist() == test_file_content[1:]
 
 
 @pytest.mark.parametrize(
@@ -407,8 +325,19 @@ def test_get_data_io(
     ],
 )
 def test_check_valid_dialects(csv_string, delimiter):
-    dialect = FileHandler._get_csv_dialect(csv_string)
+    dialect = FileReader._get_csv_dialect(csv_string)
     assert dialect.delimiter == delimiter
+
+
+def test_tsv():
+    file = BytesIO(b"example;csv;file\tname")
+
+    reader = FileReader(file=file, name='test.tsv')
+    assert reader.get_format() == 'csv'
+    assert reader.parameters['delimiter'] == '\t'
+
+    df = reader.to_df()
+    assert len(df.columns) == 2
 
 
 def test_check_invalid_dialects():
@@ -418,31 +347,6 @@ def test_check_invalid_dialects():
         FileHandler._get_csv_dialect("example\ncsv\nfile")
     with pytest.raises(Exception):
         FileHandler._get_csv_dialect("example|csv|file")
-
-
-@responses.activate
-def test_fetch_url():
-    file_content = "Fake File Content 1234567890"
-    file_url = "https://test.fake/robots.txt"
-    responses.add(
-        responses.GET, file_url, body=file_content, status=200
-    )  # mock the response
-
-    file_path = FileHandler._fetch_url(file_url)
-    with open(file_path, "r") as fh:
-        saved_file_content = fh.read()
-
-    assert saved_file_content == file_content
-
-
-@responses.activate
-def test_fetch_url_raises():
-    responses.add(responses.GET, "https://google.com", status=404)
-
-    with pytest.raises(Exception):
-        FileHandler._fetch_url("obvious_broken_url")
-    with pytest.raises(Exception):
-        FileHandler._fetch_url("https://google.com")  # will get 404 response
 
 
 def test_get_tables():

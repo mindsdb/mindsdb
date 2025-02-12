@@ -189,6 +189,7 @@ class SQLRetriever(BaseRetriever):
         column_schema: ColumnSchema,
         table_schema: TableSchema,
         boolean_system_prompt: bool = True,
+        format_instructions: Optional[str] = None,
     ) -> ChatPromptTemplate:
 
         if boolean_system_prompt is True:
@@ -231,12 +232,31 @@ These column values are an enumeration of named values. These are listed below w
 - **{value}:** {value_name}"""
 
         elif type(value_schema.value) is list:
-            value_str = f"""
+            value_str = """
 ## **Sample Values**
 
 There are too many unique values in the column to list exhaustively. Below is a sampling of values found in the column:
-{value_schema.value}
 """
+            for value in value_schema.value:
+                value_str += f"""
+- {value}"""
+
+        if getattr(value_schema, "comparator", None) is not None:
+            comparator_str = """
+
+## **Comparators**
+
+Below is a list of comparison operators for constructing filters for this value schema:
+"""
+            if type(value_schema.comparator) is str:
+                comparator_str += f"""- {value_schema.comparator}
+"""
+            else:
+                for comp in value_schema.comparator:
+                    comparator_str += f"""- {comp}
+"""
+        else:
+            comparator_str = ""
 
         if getattr(value_schema, "examples", None) is not None:
             example_str = """## **Example Questions**
@@ -248,8 +268,10 @@ There are too many unique values in the column to list exhaustively. Below is a 
             example_str = ""
 
         return base_prompt_template.partial(
+            format_instructions=format_instructions,
             column_schema=column_schema_str,
             value=value_str,
+            comparator=comparator_str,
             type=value_schema.type,
             description=value_schema.description,
             usage=value_schema.usage,
@@ -292,6 +314,9 @@ Below are descriptions of the values in this column:
         for value_schema in column_schema.values.values():
             value_str += f"""
 - {value_schema.description}
+"""
+        value_str = """
+**Important:** The above descriptions are not the actual values stored in this column. See the Value schemas for actual values.
 """
 
         if getattr(column_schema, "examples", None) is not None:
@@ -576,7 +601,7 @@ Below are descriptions of the values in this column:
         else:
             self.ablation_quantiles = None
 
-    def dynamic_ablation(
+    def _dynamic_ablation(
         self, metadata_filters: List[AblativeMetadataFilter], retry: int
     ):
         """Ablate metadata filters in aggregate by quantiles until the required minimum number of documents are returned."""
@@ -647,7 +672,7 @@ Below are descriptions of the values in this column:
             if i < len(metadata_filters) - 1:
                 base_query += " AND "
 
-        base_query += f" ORDER BY e.embeddings {self.distance_function.value[0]} '{{embeddings}}' LIMIT {self.search_kwargs.k};"
+        base_query += f" ORDER BY e.embeddings {self.distance_function.value} '{{embeddings}}' LIMIT {self.search_kwargs.k};"
         return base_query
 
     def _generate_filter(
@@ -657,12 +682,14 @@ Below are descriptions of the values in this column:
         output = gen_filter_chain({"query": query})
         return output
 
-    def _generate_metadata_filters(self, query: str) -> List[MetadataFilter]:
+    def _generate_metadata_filters(
+        self, query: str
+    ) -> Union[List[MetadataFilter], HandlerResponse]:
         parser = PydanticOutputParser(pydantic_object=MetadataFilter)
 
         metadata_filter_list = []
         #  iterate through tables to rank values
-        for table_key, table_schema in self.ordered_database_schema.tables.items():
+        for table_key, table_schema in self.ranked_database_schema.tables.items():
             # iterate through columns to rank values
             for column_key, column_schema in table_schema.columns.items():
                 if column_schema.relevance >= table_schema.filter_threshold:
@@ -686,7 +713,7 @@ Below are descriptions of the values in this column:
                                 )
                                 metadata_filter_output = metadata_filters_chain.predict(
                                     format_instructions=parser.get_format_instructions(),
-                                    input=query,
+                                    query=query,
                                 )
                                 # If the LLM outputs raw JSON, use it as-is.
                                 # If the LLM outputs anything including a json markdown section, use the last one.
@@ -700,24 +727,26 @@ Below are descriptions of the values in this column:
                                     metadata_filter_output = metadata_filter_output[:-3]
 
                                 metadata_filter = parser.invoke(metadata_filter_output)
-                                metadata_filter = AblativeMetadataFilter(
-                                    **metadata_filter.model_dump().update(
-                                        {
-                                            "schema_table": table_key,
-                                            "schema_column": column_key,
-                                            "schema_value": value_key,
-                                        }
-                                    )
+                                model_dump = metadata_filter.model_dump()
+                                model_dump.update(
+                                    {
+                                        "schema_table": table_key,
+                                        "schema_column": column_key,
+                                        "schema_value": value_key,
+                                    }
                                 )
+                                metadata_filter = AblativeMetadataFilter(**model_dump)
                             except OutputParserException as e:
                                 logger.warning(
                                     f"LLM failed to generate structured metadata filters: {str(e)}"
                                 )
-                                return HandlerResponse(RESPONSE_TYPE.ERROR, error_message=str(e))
+                                return HandlerResponse(
+                                    RESPONSE_TYPE.ERROR, error_message=str(e)
+                                )
                         else:
                             metadata_filter = AblativeMetadataFilter(
                                 attribute=column_schema.column,
-                                comparator=column_schema.comparator,
+                                comparator=value_schema.comparator,
                                 value=value_schema.value,
                                 schema_table=table_key,
                                 schema_column=column_key,
@@ -778,7 +807,7 @@ Below are descriptions of the values in this column:
                     f"SQL Retriever did not retrieve {self.min_k} documents: {len(document_response.data_frame)} documents retrieved."
                 )
 
-            ablated_metadata_filters = self.dynamic_ablation(
+            ablated_metadata_filters = self._dynamic_ablation(
                 metadata_filters=metadata_filters, retry=num_retries
             )
 

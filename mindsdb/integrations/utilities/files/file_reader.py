@@ -228,7 +228,7 @@ class FileReader(FormatDetector):
 
     def get_contents(self, **kwargs):
         """
-            Get all infor from file as dict: {tablename, content}
+            Get all info(pages with content) from file as dict: {tablename, content}
         """
         func = self._get_fnc()
         self.file_obj.seek(0)
@@ -246,7 +246,7 @@ class FileReader(FormatDetector):
 
     def get_page_content(self, page_name: str = None, **kwargs) -> pd.DataFrame:
         """
-            Get content of single table
+            Get content of a single table
         """
         func = self._get_fnc()
         self.file_obj.seek(0)

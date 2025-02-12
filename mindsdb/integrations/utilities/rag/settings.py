@@ -130,7 +130,7 @@ As an expert in constructing database search queries, you are provided with data
 
 **Note:** Provide your answer based solely on the relevance of the described schema to the user query."""
 
-GENERATIVE_SYSTEM_PROMPT = """You are an expert database analyst that can assist in building SQL queries by providing structured output. Follow these format instructions precisely to generate a metadata filter given the provided schema description.
+DEFAULT_GENERATIVE_SYSTEM_PROMPT = """You are an expert database analyst that can assist in building SQL queries by providing structured output. Follow these format instructions precisely to generate a metadata filter given the provided schema description.
 
 ## Format instructions:
 {format_instructions}
@@ -463,7 +463,7 @@ class ValueSchema(BaseModel):
     value: Union[Any, Dict[Any, Any], List[Any]] = Field(
         description="One of the following. The value as it exists in the table column. A dict of {table_value: descriptive value, ...}, where table_value is the value in the table. A list of sample values taken from the column."
     )
-    comparator: Optional[Union[str, List[str]]] = None,
+    comparator: Optional[Union[str, List[str]]] = (None,)
     type: Any = Field(description="The value type as it exists in the table column.")
     description: str = Field(description="Description of what the value represents.")
     usage: str = Field(description="How and when to use this value for search.")
@@ -595,10 +595,44 @@ class SQLRetrieverConfig(BaseModel):
         default=DEFAULT_SEMANTIC_PROMPT_TEMPLATE,
         description="Prompt template to rewrite user input to be better suited for retrieval. Has 'input' input variable.",
     )
+    table_prompt_template: str = Field(
+        default=DEFAULT_TABLE_PROMPT_TEMPLATE,
+        description="Prompt template to rewrite user input to be better suited for retrieval. Has 'input' input variable.",
+    )
+    column_prompt_template: str = Field(
+        default=DEFAULT_COLUMN_PROMPT_TEMPLATE,
+        description="Prompt template to rewrite user input to be better suited for retrieval. Has 'input' input variable.",
+    )
+    value_prompt_template: str = Field(
+        default=DEFAULT_VALUE_PROMPT_TEMPLATE,
+        description="Prompt template to rewrite user input to be better suited for retrieval. Has 'input' input variable.",
+    )
+    boolean_system_prompt: str = Field(
+        default=DEFAULT_BOOLEAN_PROMPT_TEMPLATE,
+        description="Prompt template to rewrite user input to be better suited for retrieval. Has 'input' input variable.",
+    )
+    generative_system_prompt: str = Field(
+        default=DEFAULT_GENERATIVE_SYSTEM_PROMPT,
+        description="Prompt template to rewrite user input to be better suited for retrieval. Has 'input' input variable.",
+    )
     source_table: str = Field(
         description="Name of the source table containing the original documents that were embedded"
     )
-    metadata_schemas: Optional[List[TableSchema]] = Field(
+    source_id_column: str = Field(
+        description="Name of the column containing the UUID.", default="Id"
+    )
+    max_filters: Optional[int] = Field(
+        description="Maximum number of filters to generate for sql queries.", default=10
+    )
+    filter_threshold: Optional[float] = Field(
+        description="Minimum relevance required to use this Database to generate filters.",
+        default=0.0,
+    )
+    min_k: Optional[int] = Field(
+        description="Minimum number of documents accepted from a generated sql query.",
+        default=10,
+    )
+    database_schema: Optional[DatabaseSchema] = Field(
         default=None,
         description="Optional list of table schemas containing document metadata to potentially join with.",
     )

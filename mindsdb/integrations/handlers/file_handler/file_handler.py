@@ -63,7 +63,7 @@ class FileHandler(DatabaseHandler):
     def _get_table_page_names(self, table: Identifier):
         table_name_parts = table.parts
 
-        # Check if it's a multi-part name (e.g., `files.file_name.sheet_name`)
+        # Check if it's a multi-part name (e.g., `file_name.sheet_name`)
         if len(table_name_parts) > 1:
             table_name = table_name_parts[-2]
             page_name = table_name_parts[-1]  # Get the sheet name

@@ -79,35 +79,41 @@ class SQLRetriever(BaseRetriever):
 
     fallback_retriever: BaseRetriever
     vector_store_handler: VectorStoreHandler
+    # search parameters
+    max_filters: int
+    filter_threshold: float
     min_k: int
+
+    # Schema description
     database_schema: Optional[DatabaseSchema] = None
+
+    # Embeddings
+    embeddings_model: Embeddings
+    search_kwargs: SearchKwargs
 
     # prompt templates
     rewrite_prompt_template: str
 
     # schema templates
     table_prompt_template: str
-    value_prompt_template: str
     column_prompt_template: str
+    value_prompt_template: str
 
     # formatting templates
     boolean_system_prompt: str
     generative_system_prompt: str
 
-    embeddings_model: Embeddings
+    # SQL search config
     num_retries: int
     embeddings_table: str
     source_table: str
-    source_id_column: str = "Id"
+    source_id_column: str
     distance_function: DistanceFunction
-    search_kwargs: SearchKwargs
 
-    # search parameters
-    max_filters: int
-    filter_threshold: float
-
+    # Re-rank and metadata generation model.
     llm: BaseChatModel
 
+    # internal values
     ranked_database_schema: Optional[DatabaseSchema] = None
     ablation_value_dict: Optional[Dict[str, float]] = None
     ablation_quantiles: Optional[List[float]] = None

@@ -147,7 +147,7 @@ This is a schema that represents a value in a column in a table in a database.
 ## **Value Description**
 {description}
 
-{value}
+{value}{comparator}
 
 ## **Usage**
 {usage}
@@ -463,6 +463,7 @@ class ValueSchema(BaseModel):
     value: Union[Any, Dict[Any, Any], List[Any]] = Field(
         description="One of the following. The value as it exists in the table column. A dict of {table_value: descriptive value, ...}, where table_value is the value in the table. A list of sample values taken from the column."
     )
+    comparator: Optional[Union[str, List[str]]] = None,
     type: Any = Field(description="The value type as it exists in the table column.")
     description: str = Field(description="Description of what the value represents.")
     usage: str = Field(description="How and when to use this value for search.")

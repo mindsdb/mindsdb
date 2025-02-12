@@ -415,13 +415,6 @@ Below are descriptions of the values in this column:
             database_schema=self.database_schema, key=self._sort_schema_by_priority_key
         )
 
-        for table_key, table_schema in ordered_database_schema.tables.items():
-            print(table_key, " ", table_schema.relevance)
-            for column_key, column_schema in table_schema.columns.items():
-                print("\t ", column_key, " ", column_schema.relevance)
-                for value_key, value_schema in column_schema.values.items():
-                    print("\t\t ", value_key, " ", value_schema.relevance)
-
         #  Rank Tables ########################################################
         greedy_count = 0
         tables = {}

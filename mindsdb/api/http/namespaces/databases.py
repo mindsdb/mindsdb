@@ -94,6 +94,57 @@ class DatabasesResource(Resource):
         return new_integration, HTTPStatus.CREATED
 
 
+@ns_conf.route('/status')
+class DatabasesStatusResource(Resource):
+    @ns_conf.doc('check_database_connection_status')
+    @api_endpoint_metrics('POST', '/databases/status')
+    def post(self):
+        '''Check database connection status'''
+        if 'database' not in request.json:
+            return http_error(
+                HTTPStatus.BAD_REQUEST, 'Wrong argument',
+                'Must provide "database" parameter in POST body'
+            )
+
+        database = request.json['database']
+        if 'engine' not in database:
+            return http_error(
+                HTTPStatus.BAD_REQUEST, 'Wrong argument',
+                'Missing "engine" field for database'
+            )
+        if 'parameters' not in database:
+            return http_error(
+                HTTPStatus.BAD_REQUEST, 'Wrong argument',
+                'Missing "parameters" field for database'
+            )
+        engine = database['engine']
+        parameters = database['parameters']
+
+        session = SessionController()
+
+        try:
+            handler = session.integration_controller.create_tmp_handler("test_connection", engine, parameters)
+            status = handler.check_connection()
+        except ImportError as import_error:
+            status = HandlerStatusResponse(success=False, error_message=str(import_error))
+
+        if status.success is not True:
+            if hasattr(status, 'redirect_url') and isinstance(status, str):
+                return {
+                    "status": "redirect_required",
+                    "redirect_url": status.redirect_url,
+                    "detail": status.error_message
+                }, HTTPStatus.OK
+            return {
+                "status": "connection_error",
+                "detail": status.error_message
+            }, HTTPStatus.OK
+
+        return {
+            "status": "connected"
+        }, HTTPStatus.OK
+
+
 @ns_conf.route('/<database_name>')
 class DatabaseResource(Resource):
     @ns_conf.doc('get_database')

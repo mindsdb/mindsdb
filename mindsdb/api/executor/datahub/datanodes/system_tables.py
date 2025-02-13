@@ -304,7 +304,7 @@ class ColumnsTable(Table):
                     continue
 
                 if tables_names is None:
-                    tables = [t.TABLE_NAME for t in dn.get_tables()]
+                    tables_names = [t.TABLE_NAME for t in dn.get_tables()]
                 for table_name in tables_names:
                     tables[table_name] = dn.get_table_columns(table_name)
 

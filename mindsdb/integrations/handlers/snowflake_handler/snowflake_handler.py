@@ -1,3 +1,4 @@
+from mindsdb_sql_parser import ast
 import psutil
 import pandas
 from pandas import DataFrame
@@ -234,7 +235,25 @@ class SnowflakeHandler(DatabaseHandler):
 
         query_str = self.renderer.get_string(query, with_failback=True)
         logger.debug(f"Executing SQL query: {query_str}")
-        return self.native_query(query_str)
+        response = self.native_query(query_str)
+
+        # Replace the column names in the result with the aliases from the query.
+        if response.type == RESPONSE_TYPE.TABLE:
+            columns = None
+            aliases = []
+            for column in query.targets:
+                if isinstance(column, ast.Star):
+                    if not columns:
+                        columns = self.get_columns(query.from_table.get_string()).data_frame['Field'].tolist()
+                    aliases.extend(columns)
+                else:
+                    aliases.append(column.alias.get_string())
+
+            if aliases:
+                response.data_frame.columns = aliases
+
+        return response
+
 
     def get_tables(self) -> Response:
         """

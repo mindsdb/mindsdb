@@ -45,7 +45,7 @@ def learn_process(data_integration_ref: dict, problem_definition: dict, fetch_da
             flag_modified(predictor_record, 'training_metadata')
             db.session.commit()
 
-            target = problem_definition.get('target', None)
+            target = problem_definition.get('target', None).lower()
             training_data_df = None
             if data_integration_ref is not None:
                 database_controller = DatabaseController()
@@ -80,6 +80,10 @@ def learn_process(data_integration_ref: dict, problem_definition: dict, fetch_da
 
                 result = sqlquery.fetch(view='dataframe')
                 training_data_df = result['result']
+
+                # Convert all columns to lowercase.
+                # This is done as databases like Snowflake return column names in uppercase.
+                training_data_df.columns = [x.lower() for x in training_data_df.columns]
 
             training_data_columns_count, training_data_rows_count = 0, 0
             if training_data_df is not None:

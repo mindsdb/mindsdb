@@ -22,6 +22,8 @@
     ·
     <a href="https://docs.mindsdb.com?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Docs</a>
     ·
+    <a href="https://mdb.ai/register">Demo</a>
+    ·
     <a href="https://mindsdb.com/joincommunity?utm_medium=community&utm_source=github&utm_campaign=mindsdb%20repo">Community Slack</a>
   </p>
 </div>
@@ -35,8 +37,11 @@ MindsDB is the world's most effective solution for building AI applications that
   <img src="/docs/assets/cloud/main_mdb.png"/>
 </p>
 
-A federated query engine that tidies up your data-sprawl chaos while meticulously answering every single question you throw at it. From structured to unstructured data, whether it's scattered across SaaS applications, databases, or... hibernating in data warehouses like that $100 bill in your tuxedo pocket from prom night, lost, waiting to be discovered.
+A federated query engine that tidies up your data-sprawl chaos while meticulously answering every single question you throw at it. 
 
+## Minds [Demo](https://mdb.ai/register)
+Play with [Minds demo](https://mdb.ai/register), and see the power MindsDB at answering questions from structured to unstructured data, whether it's scattered across SaaS applications, databases, or... hibernating in data warehouses like that $100 bill in your tuxedo pocket from prom night, lost, waiting to be discovered.
+ 
 ## Install MindsDB Server 
 
 MindsDB is an open-source server that can be deployed anywhere - from your laptop to the cloud, and everywhere in between. And yes, you can customize it to your heart's content.

@@ -64,11 +64,12 @@ class SnowflakeHandler(DatabaseHandler):
             'account': self.connection_data.get('account'),
             'user': self.connection_data.get('user'),
             'password': self.connection_data.get('password'),
-            'database': self.connection_data.get('database')
+            'database': self.connection_data.get('database'),
+            'schema': self.connection_data.get('schema', 'PUBLIC')
         }
 
         # Optional connection parameters
-        optional_params = ['schema', 'warehouse', 'role']
+        optional_params = ['warehouse', 'role']
         for param in optional_params:
             if param in self.connection_data:
                 config[param] = self.connection_data[param]
@@ -287,13 +288,23 @@ class SnowflakeHandler(DatabaseHandler):
         if not table_name or not isinstance(table_name, str):
             raise ValueError("Invalid table name provided.")
 
-        query = f"""
-            SELECT COLUMN_NAME AS FIELD, DATA_TYPE AS TYPE
-            FROM INFORMATION_SCHEMA.COLUMNS
-            WHERE TABLE_NAME = '{table_name}'
-              AND TABLE_SCHEMA = current_schema()
-        """
+        def _generate_query(table_name):
+            return f"""
+                SELECT COLUMN_NAME AS FIELD, DATA_TYPE AS TYPE
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_NAME = '{table_name}'
+                  AND TABLE_SCHEMA = current_schema()
+            """
+
+        query = _generate_query(table_name)
         result = self.native_query(query)
+
+        # In most cases, the table names used in Snowflake are in uppercase.
+        # Unless the name is quoted when creating the table.
+        if result.type == RESPONSE_TYPE.TABLE and result.data_frame.empty:
+            query = _generate_query(table_name.upper())
+            result = self.native_query(query)
+
         result.data_frame = result.data_frame.rename(columns={'FIELD': 'Field', 'TYPE': 'Type'})
 
         return result

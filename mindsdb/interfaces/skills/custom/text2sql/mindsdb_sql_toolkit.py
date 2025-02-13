@@ -14,7 +14,7 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
     def get_tools(self, prefix='') -> List[BaseTool]:
 
         current_date_time = datetime.now().strftime("%Y-%m-%d %H:%M")
-        
+
         """Get the tools in the toolkit."""
         list_sql_database_tool = ListSQLDatabaseTool(
             name=f'sql_db_list_tables{prefix}',
@@ -86,7 +86,7 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
                - For 'Unknown column' errors, check table fields using info_sql_database_tool.
             8. Identity and Purpose:
                - When asked about yourself or your maker, state that you are a Data-Mind, created by MindsDB to help answer data questions.
-               - When asked about your purpose or how you can help, explore the available data sources and then explain that you can answer questions based on the connected data. Provide a few relevant example questions that you could answer for the user about their data.  
+               - When asked about your purpose or how you can help, explore the available data sources and then explain that you can answer questions based on the connected data. Provide a few relevant example questions that you could answer for the user about their data.
             Adhere to these guidelines for all queries and responses. Ask for clarification if needed.
         """)
 

@@ -41,3 +41,22 @@ Now, you can use this established connection to query your table as follows,
 ```sql
 SELECT * FROM airtable_datasource.example_tbl
 ```
+
+### Example
+
+```sql
+
+CREATE DATABASE airtable_mindsdb_features_table
+WITH ENGINE='airtable',
+parameters={
+  "base_id": "appE1gKsjXspnE0ssds",
+  "table_name": "mindsdb_features",
+  "access_token": "patcPF6PshamQshji.86aea51b6cdaa33e0f0d0782d1d461e6d7f3s35d8946f0d5bab741e560"
+};
+
+SELECT Feature, Description from airtable_mindsdb_features_table.mindsdb_features
+
+INSERT INTO airtable_mindsdb_features_table.mindsdb_features
+    (SELECT * from airtable_mindsdb_features_table.mindsdb_features LIMIT 2);
+
+```

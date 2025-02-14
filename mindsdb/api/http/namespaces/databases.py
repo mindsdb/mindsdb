@@ -18,8 +18,13 @@ from mindsdb.api.executor.data_types.response_type import RESPONSE_TYPE
 from mindsdb.metrics.metrics import api_endpoint_metrics
 from mindsdb_sql_parser import parse_sql, ParsingException
 from mindsdb_sql_parser.ast import CreateTable, DropTables
+from mindsdb.utilities.config import config
 from mindsdb.utilities.exception import EntityNotExistsError
+from mindsdb.utilities.functions import decrypt, encrypt
 from mindsdb.integrations.libs.response import HandlerStatusResponse
+
+
+secret_key = config.get('secret_key', 'dummy-key')
 
 
 @ns_conf.route('/')
@@ -73,8 +78,6 @@ class DatabasesResource(Resource):
         engine = database['engine']
         parameters = database['parameters']
 
-        check_connection = request.json.get('check_connection', False)
-
         files = request.files
         temp_dir = None
         if files is not None and len(files) > 0:
@@ -95,38 +98,13 @@ class DatabasesResource(Resource):
                 HTTPStatus.CONFLICT, 'Name conflict',
                 f'Database with name {name} already exists.'
             )
-
-        storage = None
-        if check_connection:
-            try:
-                handler = session.integration_controller.create_tmp_handler(name, engine, parameters)
-                status = handler.check_connection()
-            except ImportError as import_error:
-                status = HandlerStatusResponse(success=False, error_message=str(import_error))
-            finally:
-                if temp_dir is not None:
-                    shutil.rmtree(temp_dir)
-
-            if status.success is not True:
-                if hasattr(status, 'redirect_url') and isinstance(status, str):
-                    return {
-                        "status": "redirect_required",
-                        "redirect_url": status.redirect_url,
-                        "detail": status.error_message
-                    }, HTTPStatus.OK
-                return {
-                    "status": "connection_error",
-                    "detail": status.error_message
-                }, HTTPStatus.OK
-
-            if status.copy_storage:
-                storage = handler.handler_storage.export_files()
-
+        
         new_integration_id = session.integration_controller.add(name, engine, parameters)
 
-        if storage:
+        if 'storage' in database:
             handler = session.integration_controller.get_data_handler(name, connect=False)
-            handler.handler_storage.import_files(storage)
+            export = decrypt(database['storage'].encode(), secret_key)
+            handler.handler_storage.import_files(export)
 
         new_integration = session.database_controller.get_integration(new_integration_id)
         return new_integration, HTTPStatus.CREATED
@@ -181,10 +159,10 @@ class DatabasesStatusResource(Resource):
         if 'name' in database:
             name = database['name']
             if session.database_controller.exists(name):
-                return http_error(
-                    HTTPStatus.CONFLICT, 'Name conflict',
-                    f'Database with name {name} already exists.'
-                )
+                return {
+                    "status": "conflict",
+                    "detail": f'Database with name {name} already exists.'
+                }, HTTPStatus.OK
 
         try:
             handler = session.integration_controller.create_tmp_handler("test_connection", engine, parameters)
@@ -195,7 +173,7 @@ class DatabasesStatusResource(Resource):
             if temp_dir is not None:
                 shutil.rmtree(temp_dir)
 
-        if status.success is not True:
+        if not status.success:
             if hasattr(status, 'redirect_url') and isinstance(status, str):
                 return {
                     "status": "redirect_required",
@@ -207,9 +185,18 @@ class DatabasesStatusResource(Resource):
                 "detail": status.error_message
             }, HTTPStatus.OK
 
-        return {
-            "status": "connected"
-        }, HTTPStatus.OK
+        else:
+            response = {
+                "status": "connected"
+            }
+            if 'code' in parameters:
+                if hasattr(handler, 'handler_storage'):
+                    export = handler.handler_storage.export_files()
+                    if export:
+                        encrypted = encrypt(export, secret_key)
+                        response['storage'] = encrypted.decode()
+
+            return response, HTTPStatus.OK
 
 
 @ns_conf.route('/<database_name>')

@@ -1,4 +1,7 @@
 import time
+import tempfile
+import shutil
+from pathlib import Path
 from typing import Dict
 from http import HTTPStatus
 from sqlalchemy.exc import NoResultFound
@@ -32,14 +35,24 @@ class DatabasesResource(Resource):
     @api_endpoint_metrics('POST', '/databases')
     def post(self):
         '''Create a database'''
-        if 'database' not in request.json:
+        data = {}
+        if request.content_type == 'application/json':
+            data.update(request.json or {})
+        elif request.content_type.startswith('multipart/form-data'):
+            data.update(request.form or {})
+        else:
+            return http_error(
+                HTTPStatus.UNSUPPORTED_MEDIA_TYPE, 'Unsupported Media Type',
+                'Content type must be application/json or multipart/form-data'
+            )
+
+        if 'database' not in data or len(data['database']) == 0:
             return http_error(
                 HTTPStatus.BAD_REQUEST, 'Wrong argument',
-                'Must provide "database" parameter in POST body'
+                'Must provide "database" parameter in POST body as a dict'
             )
-        check_connection = request.json.get('check_connection', False)
-        session = SessionController()
-        database = request.json['database']
+
+        database = data['database']
         parameters = {}
         if 'name' not in database:
             return http_error(
@@ -51,9 +64,31 @@ class DatabasesResource(Resource):
                 HTTPStatus.BAD_REQUEST, 'Wrong argument',
                 'Missing "engine" field for database. If you want to create a project instead, use the /api/projects endpoint.'
             )
-        if 'parameters' in database:
-            parameters = database['parameters']
+        if 'parameters' not in database:
+            return http_error(
+                HTTPStatus.BAD_REQUEST, 'Wrong argument',
+                'Missing "parameters" field for database'
+            )
         name = database['name']
+        engine = database['engine']
+        parameters = database['parameters']
+
+        check_connection = request.json.get('check_connection', False)
+
+        files = request.files
+        temp_dir = None
+        if files is not None and len(files) > 0:
+            temp_dir = tempfile.mkdtemp(prefix='integration_files_')
+            for key, file in files.items():
+                temp_dir_path = Path(temp_dir)
+                file_name = Path(file.filename)
+                file_path = temp_dir_path.joinpath(file_name).resolve()
+                if temp_dir_path not in file_path.parents:
+                    raise Exception(f'Can not save file at path: {file_path}')
+                file.save(file_path)
+                parameters[key] = str(file_path)
+
+        session = SessionController()
 
         if session.database_controller.exists(name):
             return http_error(
@@ -64,10 +99,13 @@ class DatabasesResource(Resource):
         storage = None
         if check_connection:
             try:
-                handler = session.integration_controller.create_tmp_handler(name, database['engine'], parameters)
+                handler = session.integration_controller.create_tmp_handler(name, engine, parameters)
                 status = handler.check_connection()
             except ImportError as import_error:
                 status = HandlerStatusResponse(success=False, error_message=str(import_error))
+            finally:
+                if temp_dir is not None:
+                    shutil.rmtree(temp_dir)
 
             if status.success is not True:
                 if hasattr(status, 'redirect_url') and isinstance(status, str):
@@ -84,7 +122,7 @@ class DatabasesResource(Resource):
             if status.copy_storage:
                 storage = handler.handler_storage.export_files()
 
-        new_integration_id = session.integration_controller.add(name, database['engine'], parameters)
+        new_integration_id = session.integration_controller.add(name, engine, parameters)
 
         if storage:
             handler = session.integration_controller.get_data_handler(name, connect=False)
@@ -100,13 +138,18 @@ class DatabasesStatusResource(Resource):
     @api_endpoint_metrics('POST', '/databases/status')
     def post(self):
         '''Check database connection status'''
-        if 'database' not in request.json:
+        data = {}
+        if request.content_type == 'application/json':
+            data.update(request.json or {})
+        elif request.content_type.startswith('multipart/form-data'):
+            data.update(request.form or {})
+        else:
             return http_error(
-                HTTPStatus.BAD_REQUEST, 'Wrong argument',
-                'Must provide "database" parameter in POST body'
+                HTTPStatus.UNSUPPORTED_MEDIA_TYPE, 'Unsupported Media Type',
+                'Content type must be application/json or multipart/form-data'
             )
 
-        database = request.json['database']
+        database = data['database']
         if 'engine' not in database:
             return http_error(
                 HTTPStatus.BAD_REQUEST, 'Wrong argument',
@@ -120,6 +163,19 @@ class DatabasesStatusResource(Resource):
         engine = database['engine']
         parameters = database['parameters']
 
+        files = request.files
+        temp_dir = None
+        if files is not None and len(files) > 0:
+            temp_dir = tempfile.mkdtemp(prefix='integration_files_')
+            for key, file in files.items():
+                temp_dir_path = Path(temp_dir)
+                file_name = Path(file.filename)
+                file_path = temp_dir_path.joinpath(file_name).resolve()
+                if temp_dir_path not in file_path.parents:
+                    raise Exception(f'Can not save file at path: {file_path}')
+                file.save(file_path)
+                parameters[key] = str(file_path)
+
         session = SessionController()
 
         try:
@@ -127,6 +183,9 @@ class DatabasesStatusResource(Resource):
             status = handler.check_connection()
         except ImportError as import_error:
             status = HandlerStatusResponse(success=False, error_message=str(import_error))
+        finally:
+            if temp_dir is not None:
+                shutil.rmtree(temp_dir)
 
         if status.success is not True:
             if hasattr(status, 'redirect_url') and isinstance(status, str):

@@ -114,7 +114,7 @@ class DatabasesStatusResource(Resource):
                 HTTPStatus.BAD_REQUEST, 'Wrong argument',
                 'Missing "engine" field for database'
             )
-        
+
         engine = data['engine']
         parameters = data
         del parameters['engine']
@@ -156,7 +156,7 @@ class DatabasesStatusResource(Resource):
                 "status": "connection_error",
                 "detail": status.error_message
             }, HTTPStatus.OK
-        
+
         return {
             "status": "success",
         }, HTTPStatus.OK

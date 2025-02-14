@@ -178,6 +178,14 @@ class DatabasesStatusResource(Resource):
 
         session = SessionController()
 
+        if 'name' in database:
+            name = database['name']
+            if session.database_controller.exists(name):
+                return http_error(
+                    HTTPStatus.CONFLICT, 'Name conflict',
+                    f'Database with name {name} already exists.'
+                )
+
         try:
             handler = session.integration_controller.create_tmp_handler("test_connection", engine, parameters)
             status = handler.check_connection()

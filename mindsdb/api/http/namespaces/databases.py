@@ -45,6 +45,32 @@ def add_file_parameters(request: Request, parameters: Dict) -> Dict:
     return temp_dir, parameters
 
 
+def get_create_database_request_data(request: Request) -> Dict:
+    data = {}
+    if request.content_type == 'application/json':
+        data.update(request.json or {})
+    elif request.content_type.startswith('multipart/form-data'):
+        data.update(request.form or {})
+    else:
+        raise ValueError('Unsupported Media Type')
+    return data
+
+
+def validate_create_database_request_data(data: Dict) -> tuple:
+    if 'database' not in data or len(data['database']) == 0:
+        raise ValueError('Must provide "database" parameter in POST body as a dict')
+
+    database = data['database']
+    if 'name' not in database:
+        raise ValueError('Missing "name" field for database')
+    if 'engine' not in database:
+        raise ValueError('Missing "engine" field for database')
+    if 'parameters' not in database:
+        raise ValueError('Missing "parameters" field for database')
+
+    return database['name'], database['engine'], database['parameters'], database.get('storage')
+
+
 @ns_conf.route('/')
 class DatabasesResource(Resource):
     @ns_conf.doc('list_databases')
@@ -58,43 +84,15 @@ class DatabasesResource(Resource):
     @api_endpoint_metrics('POST', '/databases')
     def post(self):
         '''Create a database'''
-        data = {}
-        if request.content_type == 'application/json':
-            data.update(request.json or {})
-        elif request.content_type.startswith('multipart/form-data'):
-            data.update(request.form or {})
-        else:
-            return http_error(
-                HTTPStatus.UNSUPPORTED_MEDIA_TYPE, 'Unsupported Media Type',
-                'Content type must be application/json or multipart/form-data'
-            )
+        data = get_create_database_request_data(request)
 
-        if 'database' not in data or len(data['database']) == 0:
+        try:
+            name, engine, parameters, storage = validate_create_database_request_data(data)
+        except ValueError as validation_error:
             return http_error(
                 HTTPStatus.BAD_REQUEST, 'Wrong argument',
-                'Must provide "database" parameter in POST body as a dict'
+                str(validation_error)
             )
-
-        database = data['database']
-        parameters = {}
-        if 'name' not in database:
-            return http_error(
-                HTTPStatus.BAD_REQUEST, 'Wrong argument',
-                'Missing "name" field for database'
-            )
-        if 'engine' not in database:
-            return http_error(
-                HTTPStatus.BAD_REQUEST, 'Wrong argument',
-                'Missing "engine" field for database. If you want to create a project instead, use the /api/projects endpoint.'
-            )
-        if 'parameters' not in database:
-            return http_error(
-                HTTPStatus.BAD_REQUEST, 'Wrong argument',
-                'Missing "parameters" field for database'
-            )
-        name = database['name']
-        engine = database['engine']
-        parameters = database['parameters']
 
         temp_dir, parameters = add_file_parameters(request, parameters)
 
@@ -109,9 +107,9 @@ class DatabasesResource(Resource):
         try:
             new_database_id = session.integration_controller.add(name, engine, parameters)
 
-            if 'storage' in database:
+            if storage:
                 handler = session.integration_controller.get_data_handler(name, connect=False)
-                export = decrypt(database['storage'].encode(), secret_key)
+                export = decrypt(storage.encode(), secret_key)
                 handler.handler_storage.import_files(export)
         except Exception as unknown_error:
             return http_error(
@@ -132,43 +130,25 @@ class DatabasesStatusResource(Resource):
     @api_endpoint_metrics('POST', '/databases/status')
     def post(self):
         '''Check database connection status'''
-        data = {}
-        if request.content_type == 'application/json':
-            data.update(request.json or {})
-        elif request.content_type.startswith('multipart/form-data'):
-            data.update(request.form or {})
-        else:
-            return http_error(
-                HTTPStatus.UNSUPPORTED_MEDIA_TYPE, 'Unsupported Media Type',
-                'Content type must be application/json or multipart/form-data'
-            )
+        data = get_create_database_request_data(request)
 
-        database = data['database']
-        if 'engine' not in database:
+        try:
+            name, engine, parameters, _ = validate_create_database_request_data(data)
+        except ValueError as validation_error:
             return http_error(
                 HTTPStatus.BAD_REQUEST, 'Wrong argument',
-                'Missing "engine" field for database'
+                str(validation_error)
             )
-        if 'parameters' not in database:
-            return http_error(
-                HTTPStatus.BAD_REQUEST, 'Wrong argument',
-                'Missing "parameters" field for database'
-            )
-        engine = database['engine']
-        parameters = database['parameters']
 
         temp_dir, parameters = add_file_parameters(request, parameters)
 
         session = SessionController()
 
-        name = None
-        if 'name' in database:
-            name = database['name']
-            if session.database_controller.exists(name):
-                return {
-                    "status": "conflict",
-                    "detail": f'Database with name {name} already exists.'
-                }, HTTPStatus.OK
+        if session.database_controller.exists(name):
+            return http_error(
+                HTTPStatus.CONFLICT, 'Name conflict',
+                f'Database with name {name} already exists.'
+            )
 
         try:
             handler = session.integration_controller.create_tmp_handler(name or "test_connection", engine, parameters)

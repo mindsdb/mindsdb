@@ -203,6 +203,6 @@ def encrypt_json(data: dict, key: str) -> bytes:
     return encrypt(json_str.encode(), key)
 
 
-def decrypt_json(encrypted_data: dict, key: str) -> dict:
-    decrypted_str = decrypt(encrypted_data, key).decode()
-    return json.loads(decrypted_str)
+def decrypt_json(encrypted_data: bytes, key: str) -> dict:
+    decrypted = decrypt(encrypted_data, key)
+    return json.loads(decrypted)

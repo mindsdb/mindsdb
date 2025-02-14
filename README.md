@@ -124,8 +124,6 @@ pip install mindsdb_sdk
 
 You can call this AI knowledge base from your app with the following code:
 
-# test
-
 ```python
 import mindsdb_sdk
 

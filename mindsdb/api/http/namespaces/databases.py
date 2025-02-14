@@ -6,7 +6,7 @@ from typing import Dict
 from http import HTTPStatus
 from sqlalchemy.exc import NoResultFound
 
-from flask import request
+from flask import request, Request
 from flask_restx import Resource
 
 from mindsdb.api.http.utils import http_error
@@ -25,6 +25,24 @@ from mindsdb.integrations.libs.response import HandlerStatusResponse
 
 
 secret_key = config.get('secret_key', 'dummy-key')
+
+
+def add_file_parameters(request: Request, parameters: Dict) -> Dict:
+    files = request.files
+    temp_dir = None
+
+    if files is not None and len(files) > 0:
+        temp_dir = tempfile.mkdtemp(prefix='integration_files_')
+        for key, file in files.items():
+            temp_dir_path = Path(temp_dir)
+            file_name = Path(file.filename)
+            file_path = temp_dir_path.joinpath(file_name).resolve()
+            if temp_dir_path not in file_path.parents:
+                raise Exception(f'Can not save file at path: {file_path}')
+            file.save(file_path)
+            parameters[key] = str(file_path)
+
+    return temp_dir, parameters
 
 
 @ns_conf.route('/')
@@ -78,18 +96,7 @@ class DatabasesResource(Resource):
         engine = database['engine']
         parameters = database['parameters']
 
-        files = request.files
-        temp_dir = None
-        if files is not None and len(files) > 0:
-            temp_dir = tempfile.mkdtemp(prefix='integration_files_')
-            for key, file in files.items():
-                temp_dir_path = Path(temp_dir)
-                file_name = Path(file.filename)
-                file_path = temp_dir_path.joinpath(file_name).resolve()
-                if temp_dir_path not in file_path.parents:
-                    raise Exception(f'Can not save file at path: {file_path}')
-                file.save(file_path)
-                parameters[key] = str(file_path)
+        temp_dir, parameters = add_file_parameters(request, parameters)
 
         session = SessionController()
 
@@ -98,16 +105,25 @@ class DatabasesResource(Resource):
                 HTTPStatus.CONFLICT, 'Name conflict',
                 f'Database with name {name} already exists.'
             )
-        
-        new_integration_id = session.integration_controller.add(name, engine, parameters)
 
-        if 'storage' in database:
-            handler = session.integration_controller.get_data_handler(name, connect=False)
-            export = decrypt(database['storage'].encode(), secret_key)
-            handler.handler_storage.import_files(export)
+        try:
+            new_database_id = session.integration_controller.add(name, engine, parameters)
 
-        new_integration = session.database_controller.get_integration(new_integration_id)
-        return new_integration, HTTPStatus.CREATED
+            if 'storage' in database:
+                handler = session.integration_controller.get_data_handler(name, connect=False)
+                export = decrypt(database['storage'].encode(), secret_key)
+                handler.handler_storage.import_files(export)
+        except Exception as unknown_error:
+            return http_error(
+                HTTPStatus.INTERNAL_SERVER_ERROR, 'Error',
+                f'Error during database creation: {str(unknown_error)}'
+            )
+        finally:
+            if temp_dir is not None:
+                shutil.rmtree(temp_dir)
+
+        new_database = session.database_controller.get_integration(new_database_id)
+        return new_database, HTTPStatus.CREATED
 
 
 @ns_conf.route('/status')
@@ -141,21 +157,11 @@ class DatabasesStatusResource(Resource):
         engine = database['engine']
         parameters = database['parameters']
 
-        files = request.files
-        temp_dir = None
-        if files is not None and len(files) > 0:
-            temp_dir = tempfile.mkdtemp(prefix='integration_files_')
-            for key, file in files.items():
-                temp_dir_path = Path(temp_dir)
-                file_name = Path(file.filename)
-                file_path = temp_dir_path.joinpath(file_name).resolve()
-                if temp_dir_path not in file_path.parents:
-                    raise Exception(f'Can not save file at path: {file_path}')
-                file.save(file_path)
-                parameters[key] = str(file_path)
+        temp_dir, parameters = add_file_parameters(request, parameters)
 
         session = SessionController()
 
+        name = None
         if 'name' in database:
             name = database['name']
             if session.database_controller.exists(name):
@@ -165,7 +171,7 @@ class DatabasesStatusResource(Resource):
                 }, HTTPStatus.OK
 
         try:
-            handler = session.integration_controller.create_tmp_handler("test_connection", engine, parameters)
+            handler = session.integration_controller.create_tmp_handler(name or "test_connection", engine, parameters)
             status = handler.check_connection()
         except ImportError as import_error:
             status = HandlerStatusResponse(success=False, error_message=str(import_error))

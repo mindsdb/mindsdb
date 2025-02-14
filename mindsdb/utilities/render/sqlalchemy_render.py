@@ -564,7 +564,7 @@ class SqlalchemyRender:
                             condition,
                             full=is_full
                         )
-            elif isinstance(from_table, ast.Union):
+            elif isinstance(from_table, (ast.Union, ast.Intersect, ast.Except)):
                 alias = None
                 if from_table.alias:
                     alias = self.get_alias(from_table.alias)

@@ -59,7 +59,7 @@ opentelemetry-instrumentation-flask==0.48b0
 opentelemetry-distro==0.48b0
 
 # files reading
-pymupdf
+pymupdf==1.25.2
 filetype
 charset-normalizer
 openpyxl # used by pandas to read txt files

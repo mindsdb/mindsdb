@@ -10,6 +10,7 @@ from sqlalchemy import (
     DateTime,
     Index,
     Integer,
+    LargeBinary,
     Numeric,
     String,
     UniqueConstraint,
@@ -287,6 +288,7 @@ class JsonStorage(Base):
     resource_id = Column(Integer)
     name = Column(String)
     content = Column(JSON)
+    encrypted_content = Column(LargeBinary, nullable=True)
     company_id = Column(Integer)
 
 

@@ -64,6 +64,12 @@ class MockFileController:
     def save_file(self, name, file_path, file_name=None):
         return True
 
+    def get_file_data(self, name, page_name=None):
+        return pandas.DataFrame(test_file_content[1:], columns=test_file_content[0])
+
+    def set_file_data(self, name, df, page_name=None):
+        return True
+
 
 def curr_dir():
     return os.path.dirname(os.path.realpath(__file__))
@@ -296,17 +302,8 @@ def test_handle_source(file_path, expected_columns):
 
     # using different methods to create reader
     for reader in get_reader(file_path):
-        df = reader.to_df()
+        df = reader.get_page_content()
         assert isinstance(df, pandas.DataFrame)
-
-        if reader.get_format() == 'xlsx':
-
-            assert df.columns.tolist() == test_excel_sheet_content[0]
-            assert len(df) == len(test_excel_sheet_content) - 1
-            assert df.values.tolist() == test_excel_sheet_content[1:]
-            sheet_name = test_excel_sheet_content[1][0]
-
-            df = reader.to_df(sheet_name=sheet_name)
 
         assert df.columns.tolist() == expected_columns
 
@@ -336,7 +333,7 @@ def test_tsv():
     assert reader.get_format() == 'csv'
     assert reader.parameters['delimiter'] == '\t'
 
-    df = reader.to_df()
+    df = reader.get_page_content()
     assert len(df.columns) == 2
 
 

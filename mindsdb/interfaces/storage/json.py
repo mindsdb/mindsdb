@@ -1,4 +1,4 @@
-from mindsdb.utilities.functions import decrypt, encrypt
+from mindsdb.utilities.functions import decrypt_json, encrypt_json
 from mindsdb.utilities.config import config
 from mindsdb.interfaces.storage import db
 from mindsdb.interfaces.storage.fs import RESOURCE_GROUP
@@ -101,7 +101,7 @@ class EncryptedJsonStorage(JsonStorage):
         if isinstance(value, dict) is False:
             raise TypeError(f"got {type(value)} instead of dict")
         
-        encrypted_value = encrypt(value, self.secret_key)
+        encrypted_value = encrypt_json(value, self.secret_key)
         
         existing_record = self.get_record(key)
         if existing_record is None:
@@ -121,7 +121,7 @@ class EncryptedJsonStorage(JsonStorage):
         record = self.get_record(key)
         if record is None:
             return None
-        return decrypt(record.encrypted_content, self.secret_key)
+        return decrypt_json(record.encrypted_content, self.secret_key)
 
 
 def get_json_storage(resource_id: int, resource_group: str = RESOURCE_GROUP.PREDICTOR):

@@ -117,21 +117,22 @@ class EncryptedJsonStorage(JsonStorage):
             existing_record.encrypted_content = encrypted_value
         db.session.commit()
 
-    def set(self, key, value):
-        self[key] = value
-
     def __getitem__(self, key):
         record = self.get_record(key)
         if record is None:
             return None
         return decrypt(record.encrypted_content, self.secret_key)
 
-    def get(self, key):
-        return self[key]
-
 
 def get_json_storage(resource_id: int, resource_group: str = RESOURCE_GROUP.PREDICTOR):
     return JsonStorage(
+        resource_group=resource_group,
+        resource_id=resource_id,
+    )
+
+
+def get_encrypted_json_storage(resource_id: int, resource_group: str = RESOURCE_GROUP.PREDICTOR):
+    return EncryptedJsonStorage(
         resource_group=resource_group,
         resource_id=resource_id,
     )

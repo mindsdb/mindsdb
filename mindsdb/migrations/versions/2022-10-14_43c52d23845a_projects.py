@@ -36,7 +36,12 @@ def upgrade():
     conn = op.get_bind()
     session = sa.orm.Session(bind=conn)
 
-    project_record = db.Project(name=config.get('default_project'))
+    project_record = db.Project(
+        name=config.get('default_project'),
+        metadata={
+            "is_default": True
+        }
+    )
     session.add(project_record)
     session.commit()
 

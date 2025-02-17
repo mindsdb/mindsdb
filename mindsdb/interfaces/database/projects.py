@@ -438,11 +438,11 @@ class ProjectController:
         project = Project()
         project.create(name=name)
         return project
-    
+
     def update(self, id: Optional[int] = None, name: Optional[str] = None, new_name: str = None, new_metadata: dict = None) -> Project:
         if id is not None and name is not None:
             raise ValueError("Both 'id' and 'name' can't be provided at the same time")
-        
+
         if id is not None:
             project = self.get(id=id)
         else:
@@ -451,7 +451,7 @@ class ProjectController:
         if new_name is not None:
             project.name = new_name
             project.record.name = new_name
-        
+
         if new_metadata is not None:
             project.metadata = new_metadata
             project.record.metadata = new_metadata

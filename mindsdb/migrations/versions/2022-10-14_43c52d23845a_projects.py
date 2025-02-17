@@ -29,6 +29,7 @@ def upgrade():
         sa.Column('deleted_at', sa.DateTime(), nullable=True),
         sa.Column('name', sa.String(), nullable=False),
         sa.Column('company_id', sa.Integer(), nullable=True),
+        sa.Column('metadata', sa.JSON(), nullable=True),
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('name', 'company_id', name='unique_project_name_company_id')
     )
@@ -38,7 +39,7 @@ def upgrade():
 
     project_record = db.Project(
         name=config.get('default_project'),
-        metadata={
+        metadata_={
             "is_default": True
         }
     )

@@ -2,6 +2,7 @@ import os
 import importlib
 import traceback
 import datetime as dt
+import requests
 
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -24,6 +25,25 @@ from mindsdb.integrations.libs.ml_handler_process.handlers_cacher import handler
 
 logger = log.getLogger(__name__)
 
+def clean_api_key(api_key):
+    if isinstance(api_key, str):
+        return api_key.strip()
+    return None
+
+def is_valid_timegpt_token(api_key):
+    if not api_key:
+        logger.error("No API key provided for TimeGPT validation.")
+        return False
+    try:
+        response = requests.get(
+            "https://api.nixtla.io/timegpt/validate",
+            headers={"Authorization": f"Bearer {api_key}"}
+        )
+        logger.info(f"API Validation Response: {response.status_code}, {response.text}")
+        return response.status_code == 200
+    except requests.exceptions.RequestException as e:
+        logger.error(f"API request failed: {e}")
+        return False
 
 @mark_process(name='learn')
 def learn_process(data_integration_ref: dict, problem_definition: dict, fetch_data_query: str,
@@ -36,6 +56,7 @@ def learn_process(data_integration_ref: dict, problem_definition: dict, fetch_da
         'tree': None
     }
     profiler.set_meta(query='learn_process', api='http', environment=Config().get('environment'))
+    
     with profiler.Context('learn_process'):
         from mindsdb.interfaces.database.database import DatabaseController
 
@@ -60,7 +81,7 @@ def learn_process(data_integration_ref: dict, problem_definition: dict, fetch_da
                         )
                     )
                     sqlquery = SQLQuery(query, session=sql_session)
-                if data_integration_ref['type'] == 'system':
+                elif data_integration_ref['type'] == 'system':
                     query = Select(
                         targets=[Star()],
                         from_table=NativeQuery(
@@ -92,18 +113,25 @@ def learn_process(data_integration_ref: dict, problem_definition: dict, fetch_da
 
             module = importlib.import_module(module_path)
 
-            # check if module is imported successfully and raise exception if not
             if module.import_error is not None:
                 raise module.import_error
 
             handlerStorage = HandlerStorage(integration_id)
             modelStorage = ModelStorage(model_id)
-            modelStorage.fileStorage.push()     # FIXME
+            modelStorage.fileStorage.push()
 
             kwargs = {}
             if base_model_id is not None:
                 kwargs['base_model_storage'] = ModelStorage(base_model_id)
                 kwargs['base_model_storage'].fileStorage.pull()
+            
+            if 'timegpt_api_key' in problem_definition:
+                problem_definition['timegpt_api_key'] = clean_api_key(problem_definition['timegpt_api_key'])
+                logger.info(f"Using TimeGPT API Key: {problem_definition['timegpt_api_key']}")
+
+                if not is_valid_timegpt_token(problem_definition['timegpt_api_key']):
+                    raise ValueError(f"Invalid TimeGPT token: {problem_definition['timegpt_api_key']}. Please verify it.")
+
             ml_handler = module.Handler(
                 engine_storage=handlerStorage,
                 model_storage=modelStorage,
@@ -116,14 +144,10 @@ def learn_process(data_integration_ref: dict, problem_definition: dict, fetch_da
                     raise Exception(
                         f'Prediction target "{target}" not found in training dataframe: {list(training_data_df.columns)}')
 
-            # create new model
             if base_model_id is None:
                 with profiler.Context('create'):
                     ml_handler.create(target, df=training_data_df, args=problem_definition)
-
-            # fine-tune (partially train) existing model
             else:
-                # load model from previous version, use it as starting point
                 with profiler.Context('finetune'):
                     problem_definition['base_model_id'] = base_model_id
                     ml_handler.finetune(df=training_data_df, args=problem_definition)
@@ -131,7 +155,7 @@ def learn_process(data_integration_ref: dict, problem_definition: dict, fetch_da
             predictor_record.status = PREDICTOR_STATUS.COMPLETE
             predictor_record.active = set_active
             db.session.commit()
-            # if retrain and set_active after success creation
+
             if set_active is True:
                 models = get_model_records(
                     name=predictor_record.name,

@@ -7,7 +7,7 @@ from typing import Union
 import mindsdb.interfaces.storage.db as db
 
 from .fs import RESOURCE_GROUP, FileStorageFactory, SERVICE_FILES_NAMES
-from .json import get_json_storage
+from .json import get_json_storage, get_encrypted_json_storage
 
 
 class ModelStorage:
@@ -118,9 +118,23 @@ class ModelStorage:
             resource_group=RESOURCE_GROUP.PREDICTOR
         )
         return json_storage.set(name, data)
+    
+    def encrypted_json_set(self, name, data):
+        json_storage = get_encrypted_json_storage(
+            resource_id=self.predictor_id,
+            resource_group=RESOURCE_GROUP.PREDICTOR
+        )
+        return json_storage.set(name, data)
 
     def json_get(self, name):
         json_storage = get_json_storage(
+            resource_id=self.predictor_id,
+            resource_group=RESOURCE_GROUP.PREDICTOR
+        )
+        return json_storage.get(name)
+    
+    def encrypted_json_get(self, name):
+        json_storage = get_encrypted_json_storage(
             resource_id=self.predictor_id,
             resource_group=RESOURCE_GROUP.PREDICTOR
         )
@@ -236,9 +250,23 @@ class HandlerStorage:
             resource_group=RESOURCE_GROUP.INTEGRATION
         )
         return json_storage.set(name, content)
+    
+    def encrypted_json_set(self, name, content):
+        json_storage = get_encrypted_json_storage(
+            resource_id=self.integration_id,
+            resource_group=RESOURCE_GROUP.INTEGRATION
+        )
+        return json_storage.set(name, content)
 
     def json_get(self, name):
         json_storage = get_json_storage(
+            resource_id=self.integration_id,
+            resource_group=RESOURCE_GROUP.INTEGRATION
+        )
+        return json_storage.get(name)
+
+    def encrypted_json_get(self, name):
+        json_storage = get_encrypted_json_storage(
             resource_id=self.integration_id,
             resource_group=RESOURCE_GROUP.INTEGRATION
         )

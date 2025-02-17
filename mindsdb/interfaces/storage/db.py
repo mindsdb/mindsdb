@@ -291,6 +291,17 @@ class JsonStorage(Base):
     encrypted_content = Column(LargeBinary, nullable=True)
     company_id = Column(Integer)
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "resource_group": self.resource_group,
+            "resource_id": self.resource_id,
+            "name": self.name,
+            "content": self.content,
+            "encrypted_content": self.encrypted_content,
+            "company_id": self.company_id,
+        }
+
 
 class Jobs(Base):
     __tablename__ = "jobs"

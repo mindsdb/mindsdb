@@ -242,6 +242,8 @@ class SqlalchemyRender:
 
             op = t.op.lower()
             if op in ('in', 'not in'):
+                if t.args[1].parentheses:
+                    arg1 = [arg1]
                 if isinstance(arg1, sa.sql.selectable.ColumnClause):
                     raise NotImplementedError(f'Required list argument for: {op}')
 

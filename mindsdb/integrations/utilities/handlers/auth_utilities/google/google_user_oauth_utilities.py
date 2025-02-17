@@ -72,7 +72,7 @@ class GoogleUserOAuth2Manager:
         raise ValueError('OAuth2 credentials could not be found')
 
     def _execute_google_auth_flow(self, oauth_user_info: dict):
-        flow = Flow.from_client_secrets_config(
+        flow = Flow.from_client_config(
             oauth_user_info,
             scopes=self.scopes
         )

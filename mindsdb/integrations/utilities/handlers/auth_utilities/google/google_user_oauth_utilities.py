@@ -1,4 +1,5 @@
-import os
+import json
+from pathlib import Path
 import requests
 import datetime as dt
 from flask import request
@@ -55,14 +56,18 @@ class GoogleUserOAuth2Manager:
         if self.credentials_url:
             response = requests.get(self.credentials_url)
             if response.status_code == 200:
-                return response.content
+                return response.json()
             else:
                 logger.error("Failed to get credentials from URL", response.status_code)
 
         # if credentials_file is set, attempt to read the contents of the file
-        if self.credentials_file and os.path.isfile(self.credentials_file):
-            with open(self.credentials_file, 'r') as f:
-                return f.read()
+        if self.credentials_file:
+            path = Path(self.credentials_file).expanduser()
+            if path.exists():
+                with open(path, 'r') as f:
+                    return json.load(f)
+            else:
+                logger.error("Credentials file does not exist")
         
         raise ValueError('OAuth2 credentials could not be found')
 

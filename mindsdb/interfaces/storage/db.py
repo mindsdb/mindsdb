@@ -213,7 +213,7 @@ class Project(Base):
     deleted_at = Column(DateTime)
     name = Column(String, nullable=False)
     company_id = Column(Integer, default=0)
-    metadata: dict = Column("metadata", JSON, nullable=True)
+    metadata_: dict = Column("metadata", JSON, nullable=True)
     __table_args__ = (
         UniqueConstraint("name", "company_id", name="unique_project_name_company_id"),
     )

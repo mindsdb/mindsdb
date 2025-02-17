@@ -308,14 +308,28 @@ if __name__ == '__main__':
         logger.debug(f"Checking if default project {config.get('default_project')} exists")
         project_controller = ProjectController()
 
+        default_project = None
         try:
-            project_controller.get(name=config.get('default_project'))
+            default_project = project_controller.get(name=config.get('default_project'))
             logger.debug(f"Default project {config.get('default_project')} exists")
+
+            if default_project and not (default_project.record.metadata_ and default_project.record.metadata_.get("is_default")):
+                # Rename the existing default project to the new default project name.
+                logger.debug(f"Project {config.get('default_project')} exists but is not default")
+                logger.debug(f"Setting default project {config.get('default_project')}")
+                project_controller.update(default_project.record.id, new_metadata={'is_default': True})
+
+                # Update the metadata of the existing default project to reflect that it is not the default project.
+                existing_default_project = project_controller.get(metadata={'is_default': True})
+                project_controller.update(existing_default_project.record.id, new_metadata={'is_default': False})
         except EntityNotExistsError:
-            logger.debug(f"Default project {config.get('default_project')} does not exist, creating it now...")
-            project_controller.add(config.get('default_project'))
-            # TODO: Set the default project as the current context
-            
+            logger.debug(f"Project {config.get('default_project')} does not exist")
+            logger.debug(f"The existing default project will be renamed to {config.get('default_project')}")
+            existing_default_project = project_controller.get(metadata={'is_default': True})
+            project_controller.update(
+                existing_default_project.record.id,
+                new_name=config.get('default_project')
+            )
 
     apis = os.getenv('MINDSDB_APIS') or config.cmd_args.api
 

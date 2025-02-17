@@ -81,8 +81,8 @@ WHERE symbol = 'BTCUSDT'
 Next, we query for forecasts by joining the model with the Binance input data table.
 
 ```sql
-SELECT m.open_time ,
-       m.open_price
+SELECT to_timestamp(cast(m.open_time as bigint)) AS open_time,
+m.open_price, m.open_price_explain
 FROM btcusdt_recent AS d
 JOIN cryptocurrency_forecast_model AS m
 WHERE d.open_time > LATEST;
@@ -138,7 +138,7 @@ join_learn_process = true;
 INSERT INTO btcusdt_slack_app.messages (channel_id, text)
 VALUES("slack-channel-id", "Here are the BTCUSDT forecasts for the next 10 minutes:");
 INSERT INTO btcusdt_slack_app.messages (channel_id, text)
-SELECT "slack-channel-id" AS channel_id, concat('timestamp: ', m.open_time, ' -> open price: ', m.open_price) AS text
+SELECT "slack-channel-id" AS channel_id, concat('timestamp: ', cast(to_timestamp(cast(m.open_time as bigint)) as string), ' -> open price: ', m.open_price) AS text
 FROM btcusdt_recent AS d
 JOIN cryptocurrency_forecast_model AS m
 WHERE d.open_time > LATEST;

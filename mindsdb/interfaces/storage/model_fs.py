@@ -308,3 +308,26 @@ class HandlerStorage:
             zip_ref.extractall(folder_path)
 
         self.folder_sync('')
+
+    def export_json_storage(self) -> list[dict]:
+        json_storage = get_json_storage(
+            resource_id=self.integration_id,
+            resource_group=RESOURCE_GROUP.INTEGRATION
+        )
+        return [record.to_dict() for record in json_storage.get_all_records()]
+
+    def import_json_storage(self, records: list[dict]):
+        json_storage = get_json_storage(
+            resource_id=self.integration_id,
+            resource_group=RESOURCE_GROUP.INTEGRATION
+        )
+
+        encrypted_json_storage = get_encrypted_json_storage(
+            resource_id=self.integration_id,
+            resource_group=RESOURCE_GROUP.INTEGRATION
+        )
+        for record in records:
+            if record['encrypted_content']:
+                encrypted_json_storage.set_bytes(record['name'], record['encrypted_content'])
+            else:
+                json_storage.set(record['name'], record['content'])

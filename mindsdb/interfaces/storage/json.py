@@ -117,6 +117,21 @@ class EncryptedJsonStorage(JsonStorage):
             existing_record.encrypted_content = encrypted_value
         db.session.commit()
 
+    def set_bytes(self, key: str, encrypted_value: bytes):      
+        existing_record = self.get_record(key)
+        if existing_record is None:
+            record = db.JsonStorage(
+                name=key,
+                resource_group=self.resource_group,
+                resource_id=self.resource_id,
+                company_id=ctx.company_id,
+                encrypted_content=encrypted_value
+            )
+            db.session.add(record)
+        else:
+            existing_record.encrypted_content = encrypted_value
+        db.session.commit()
+
     def __getitem__(self, key):
         record = self.get_record(key)
         if record is None:

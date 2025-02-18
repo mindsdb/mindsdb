@@ -46,7 +46,7 @@ class GoogleUserOAuth2Manager:
                     logger.debug("New credentials obtained")
 
                 self.handler_storage.encrypted_json_set('oauth_user_info', self._convert_credentials_to_dict(creds))
-                logger.debug(f"Saving credentials to storage")
+                logger.debug("Saving credentials to storage")
 
         return creds
 
@@ -68,7 +68,7 @@ class GoogleUserOAuth2Manager:
                     return json.load(f)
             else:
                 logger.error("Credentials file does not exist")
-        
+
         raise ValueError('OAuth2 credentials could not be found')
 
     def _execute_google_auth_flow(self, oauth_user_info: dict):

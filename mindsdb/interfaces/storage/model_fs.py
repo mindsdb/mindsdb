@@ -118,8 +118,8 @@ class ModelStorage:
             resource_group=RESOURCE_GROUP.PREDICTOR
         )
         return json_storage.set(name, data)
-    
-    def encrypted_json_set(self, name, data):
+
+    def encrypted_json_set(self, name: str, data: dict) -> None:
         json_storage = get_encrypted_json_storage(
             resource_id=self.predictor_id,
             resource_group=RESOURCE_GROUP.PREDICTOR
@@ -132,8 +132,8 @@ class ModelStorage:
             resource_group=RESOURCE_GROUP.PREDICTOR
         )
         return json_storage.get(name)
-    
-    def encrypted_json_get(self, name):
+
+    def encrypted_json_get(self, name: str) -> dict:
         json_storage = get_encrypted_json_storage(
             resource_id=self.predictor_id,
             resource_group=RESOURCE_GROUP.PREDICTOR
@@ -251,7 +251,7 @@ class HandlerStorage:
         )
         return json_storage.set(name, content)
     
-    def encrypted_json_set(self, name, content):
+    def encrypted_json_set(self, name: str, content: dict) -> None:
         json_storage = get_encrypted_json_storage(
             resource_id=self.integration_id,
             resource_group=RESOURCE_GROUP.INTEGRATION
@@ -265,7 +265,7 @@ class HandlerStorage:
         )
         return json_storage.get(name)
 
-    def encrypted_json_get(self, name):
+    def encrypted_json_get(self, name: str) -> dict:
         json_storage = get_encrypted_json_storage(
             resource_id=self.integration_id,
             resource_group=RESOURCE_GROUP.INTEGRATION
@@ -316,7 +316,7 @@ class HandlerStorage:
         )
         return [record.to_dict() for record in json_storage.get_all_records()]
 
-    def import_json_storage(self, records: list[dict]):
+    def import_json_storage(self, records: list[dict]) -> None:
         json_storage = get_json_storage(
             resource_id=self.integration_id,
             resource_group=RESOURCE_GROUP.INTEGRATION

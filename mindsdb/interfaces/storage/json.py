@@ -97,12 +97,12 @@ class EncryptedJsonStorage(JsonStorage):
         super().__init__(resource_group, resource_id)
         self.secret_key = config.get('secret_key', 'dummy-key')
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: dict) -> None:
         if isinstance(value, dict) is False:
             raise TypeError(f"got {type(value)} instead of dict")
-        
+
         encrypted_value = encrypt_json(value, self.secret_key)
-        
+
         existing_record = self.get_record(key)
         if existing_record is None:
             record = db.JsonStorage(
@@ -117,7 +117,7 @@ class EncryptedJsonStorage(JsonStorage):
             existing_record.encrypted_content = encrypted_value
         db.session.commit()
 
-    def set_bytes(self, key: str, encrypted_value: bytes):      
+    def set_bytes(self, key: str, encrypted_value: bytes):
         existing_record = self.get_record(key)
         if existing_record is None:
             record = db.JsonStorage(
@@ -132,7 +132,7 @@ class EncryptedJsonStorage(JsonStorage):
             existing_record.encrypted_content = encrypted_value
         db.session.commit()
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> dict:
         record = self.get_record(key)
         if record is None:
             return None

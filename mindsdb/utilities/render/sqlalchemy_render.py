@@ -93,9 +93,6 @@ class SqlalchemyRender:
         if hasattr(dialect, 'preparer'):
             class Preparer(dialect.preparer):
 
-                def __init__(self, *args, **kwargs):
-                    super().__init__(*args, **kwargs)
-
                 def _requires_quotes(self, value: str) -> bool:
                     # check force-quote flag
                     if isinstance(value, AttributedStr):

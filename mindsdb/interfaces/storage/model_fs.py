@@ -250,7 +250,7 @@ class HandlerStorage:
             resource_group=RESOURCE_GROUP.INTEGRATION
         )
         return json_storage.set(name, content)
-    
+
     def encrypted_json_set(self, name: str, content: dict) -> None:
         json_storage = get_encrypted_json_storage(
             resource_id=self.integration_id,

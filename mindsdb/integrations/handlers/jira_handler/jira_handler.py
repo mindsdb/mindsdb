@@ -8,9 +8,9 @@ from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
     HandlerStatusResponse as StatusResponse,
+    RESPONSE_TYPE,
 )
 from mindsdb.utilities import log
-from mindsdb_sql_parser import parse_sql
 
 
 logger = log.getLogger(__name__)
@@ -38,7 +38,7 @@ class JiraHandler(APIHandler):
         self.is_connected = False
 
         jira_projects_data = JiraProjectsTable(self)
-        self._register_table("project", jira_projects_data)
+        self._register_table("projects", jira_projects_data)
 
     def connect(self) -> Jira:
         """
@@ -112,23 +112,41 @@ class JiraHandler(APIHandler):
         return response
 
     def native_query(self, query: str) -> Response:
-        """Receive and process a raw query.
-        Parameters
-        ----------
-        query : str
-            query in a native format
-        Returns
-        -------
-        StatusResponse
-            Request status
         """
-        ast = parse_sql(query)
-        return self.query(ast)
+        Executes a native JQL query on Jira and returns the result.
+
+        Args:
+            query (Text): The JQL query to be executed.
+
+        Returns:
+            Response: A response object containing the result of the query or an error message.
+        """
+        connection = self.connect()
+
+        try:
+            results = connection.jql(query)
+            # TODO: Parse results to a DataFrame.
+        except HTTPError as http_error:
+            logger.error(f'Error running query: {query} on Jira, {http_error}!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_code=0,
+                error_message=str(http_error)
+            )
+        except Exception as unknown_error:
+            logger.error(f'Error running query: {query} on Jira, {unknown_error}!')
+            response = Response(
+                RESPONSE_TYPE.ERROR,
+                error_code=0,
+                error_message=str(unknown_error)
+            )
+
+        return response
    
-    def construct_jql(self):
-        """construct jql & returns it to JiraProjectsTable class
-        Returns
-        -------
-        Str
-        """
-        return 'project = ' + str(self.connection_data['project'])
+    # def construct_jql(self):
+    #     """construct jql & returns it to JiraProjectsTable class
+    #     Returns
+    #     -------
+    #     Str
+    #     """
+    #     return 'project = ' + str(self.connection_data['project'])

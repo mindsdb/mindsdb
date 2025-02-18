@@ -266,6 +266,47 @@ paths:
                 type: object
                 items:
                   type: string
+  '/api/databases/status':
+    post:
+      summary: Checks the status of a database connection.
+      description: Checks the status of a database connection by validating the connection parameters.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                engine:
+                  type: string
+              required: [engine]
+              additionalProperties: true
+      responses:
+        '200':
+          description: Response always returns HTTP 200, but status is inside the body
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: ["success", "connection_error", "redirect_required"]
+                  detail: 
+                    type: string
+                    description: Additional information about any errors
+                  redirect_url: 
+                    type: string
+                    description: URL to redirect to if status is "redirect_required"
+                  required: [status]
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: string
   '/api/databases/{databaseName}':
     get:
       summary: Gets info about existing database.

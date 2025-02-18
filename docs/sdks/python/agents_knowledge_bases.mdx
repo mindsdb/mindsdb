@@ -28,20 +28,49 @@ my_kb = server.knowledge_bases.create('my_kb')
 
 Here is how to insert data into a knowledge base:
 
+* Inserting data from files:
+
+*Note that the file should be uploaded to MindsDB before inserting it into the knowledge base.*
+
 ```python
-# insert data into a knowledge base from a file
-my_kb.insert(pd.read_csv('file_name.csv'))
+my_kb.insert_files(["file_name_uploaded_to_mindsdb", ...])
+```
 
-# insert data into a knowledge base from a database
+* Inserting data from the web:
+
+```python
+my_kb.insert_webpages(["https://docs.mindsdb.com/"], 1):
+```
+
+Optionally, you can specify the crawl depth as the second argument. For example, the crawl depth of 1 indicates that all links present on `https://docs.mindsdb.com/` will be crawled, and the crawl depth of 2 indicates that all links present on those pages will be crawled, and so on.
+
+* Inserting data from data sources connected to MindsDB:
+
+```python
 my_kb.insert(server.databases.db_name.tables.table_name.filter(column_name='value'))
+```
 
-# insert data into a knowledge base
+* Inserting raw data:
+
+```python
 my_kb.insert({'column_name': 'value', 'column_name': 'value', ...})
 ```
+
+<Tip>
+When inserting data to a knowledge base, you can specify the `partition_size` parameter to split data into partitions and run prediction on different workers. Note that the [ML task queue](/setup/custom-config#overview-of-config-parameters) needs to be enabled to use this parameter.
+
+To use the `partition_size` parameter, provide the below argument to the `insert` function, specifying the partition size, like this:
+
+```
+my_kb.insert(df, params={'model': {'partition_size': 100}})
+```
+</Tip>
 
 Here is how to query data from a knowledge base using specified keywords:
 
 ```python
+df = my_kb.fetch()
+-- or
 df = my_kb.find('keyword').fetch()
 ```
 

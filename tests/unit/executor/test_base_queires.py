@@ -178,7 +178,11 @@ class TestSelect(BaseExecutorDummyML):
         # second table is called with filter
         calls = data_handler().query.call_args_list
         sql = calls[0][0][0].to_string()
-        assert sql.strip() == 'SELECT * FROM tbl2 AS t2 WHERE c IN (2, 1)'
+        assert sql.strip() in (
+            # duckdb's `distinct` can return in different order
+            'SELECT * FROM tbl2 AS t2 WHERE c IN (1, 2)'
+            'SELECT * FROM tbl2 AS t2 WHERE c IN (2, 1)'
+        )
 
         # --- using alias in order
         ret = self.run_sql('''

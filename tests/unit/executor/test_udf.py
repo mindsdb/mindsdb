@@ -66,10 +66,10 @@ class TestBYOM(BaseExecutorDummyML):
 
         self._create_engine(name='myml', code=code,
                             type=byom_type, mode='custom_function')
-
+        # convert to explicit types, because duckdb doesn't convert it and fails
         ret = self.run_sql('''
             select myml.fibo(b) x,
-                   myml.add1(a,b) y,
+                   myml.add1(a::char,b::char) y,
                    myml.add2(a,b) z
             from pg.sample
         ''')

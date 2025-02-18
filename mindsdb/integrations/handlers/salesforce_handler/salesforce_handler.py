@@ -88,7 +88,8 @@ class SalesforceHandler(APIHandler):
                 username=self.connection_data['username'],
                 password=self.connection_data['password'],
                 client_id=self.connection_data['client_id'],
-                client_secret=self.connection_data['client_secret']
+                client_secret=self.connection_data['client_secret'],
+                is_sandbox=self.connection_data.get('is_sandbox', False)
             )
             self.is_connected = True
             return self.connection

@@ -76,15 +76,15 @@ class MSGraphAPIOneDriveClient(MSGraphAPIBaseClient):
         child_items = []
         for items in self.fetch_paginated_data(f"me/drive/items/{item_id}/children"):
             for item in items:
-                path = f"{path}/{item['name']}"
+                child_path = f"{path}/{item['name']}"
                 # If the item is a folder, get its child items.
                 if "folder" in item:
                     # Recursively get the child items of the folder.
-                    child_items.extend(self.get_child_items(item["id"], path))
+                    child_items.extend(self.get_child_items(item["id"], child_path))
 
                 else:
                     # Add the path to the item.
-                    item["path"] = path
+                    item["path"] = child_path
                     child_items.append(item)
 
         return child_items

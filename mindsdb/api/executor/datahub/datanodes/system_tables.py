@@ -1,6 +1,5 @@
 
 import pandas as pd
-from mindsdb_sql_parser.ast import BinaryOperation, Constant, Identifier, Select
 from mindsdb_sql_parser.ast.base import ASTNode
 from mindsdb.integrations.utilities.sql_utils import extract_comparison_conditions
 
@@ -11,6 +10,26 @@ from mindsdb.api.executor.datahub.classes.tables_row import (
 from mindsdb.utilities import log
 
 logger = log.getLogger(__name__)
+
+
+def _get_scope(query):
+    databases, tables = None, None
+    conditions = extract_comparison_conditions(query.where)
+    for op, arg1, arg2 in conditions:
+        if op == '=':
+            scope = [arg2]
+        elif op == 'in':
+            if not isinstance(arg2, list):
+                arg2 = [arg2]
+            scope = arg2
+        else:
+            continue
+
+        if arg1.lower() == 'table_schema':
+            databases = scope
+        elif arg1.lower() == 'table_name':
+            tables = scope
+    return databases, tables
 
 
 class Table:
@@ -73,33 +92,19 @@ class TablesTable(Table):
     @classmethod
     def get_data(cls, query: ASTNode = None, inf_schema=None, **kwargs):
 
-        target_table = None
-        if (
-            type(query) is Select
-            and type(query.where) is BinaryOperation
-            and query.where.op == "and"
-        ):
-            for arg in query.where.args:
-                if (
-                    type(arg) is BinaryOperation
-                    and arg.op == "="
-                    and type(arg.args[0]) is Identifier
-                    and arg.args[0].parts[-1].upper() == "TABLE_SCHEMA"
-                    and type(arg.args[1]) is Constant
-                ):
-                    target_table = arg.args[1].value
-                    break
+        databases, _ = _get_scope(query)
 
         data = []
         for name in inf_schema.tables.keys():
-            if target_table is not None and target_table != name:
+            if databases is not None and name not in databases:
                 continue
             row = TablesRow(TABLE_TYPE=TABLES_ROW_TYPE.SYSTEM_VIEW, TABLE_NAME=name)
             data.append(row.to_list())
 
         for ds_name, ds in inf_schema.persis_datanodes.items():
-            if target_table is not None and target_table != ds_name:
+            if databases is not None and ds_name not in databases:
                 continue
+
             if hasattr(ds, 'get_tables_rows'):
                 ds_tables = ds.get_tables_rows()
             else:
@@ -127,8 +132,9 @@ class TablesTable(Table):
                 data.append(row.to_list())
 
         for ds_name in inf_schema.get_integrations_names():
-            if target_table is not None and target_table != ds_name:
+            if databases is not None and ds_name not in databases:
                 continue
+
             try:
                 ds = inf_schema.get(ds_name)
                 ds_tables = ds.get_tables()
@@ -139,8 +145,9 @@ class TablesTable(Table):
                 logger.error(f"Can't get tables from '{ds_name}'")
 
         for project_name in inf_schema.get_projects_names():
-            if target_table is not None and target_table != project_name:
+            if databases is not None and project_name not in databases:
                 continue
+
             project_dn = inf_schema.get(project_name)
             project_tables = project_dn.get_tables()
             for row in project_tables:
@@ -279,16 +286,7 @@ class ColumnsTable(Table):
 
         result = []
 
-        databases = None
-        conditions = extract_comparison_conditions(query.where)
-        for op, arg1, arg2 in conditions:
-            if arg1.lower() == 'table_schema':
-                if op == '=':
-                    databases = [arg2]
-                elif op == 'in':
-                    if not isinstance(arg2, list):
-                        arg2 = [arg2]
-                    databases = arg2
+        databases, tables_names = _get_scope(query)
 
         if databases is None:
             databases = ['information_schema', 'mindsdb', 'files']
@@ -304,8 +302,11 @@ class ColumnsTable(Table):
                 dn = inf_schema.get(db_name)
                 if dn is None:
                     continue
-                for table_row in dn.get_tables():
-                    tables[table_row.TABLE_NAME] = dn.get_table_columns(table_row.TABLE_NAME)
+
+                if tables_names is None:
+                    tables_names = [t.TABLE_NAME for t in dn.get_tables()]
+                for table_name in tables_names:
+                    tables[table_name] = dn.get_table_columns(table_name)
 
             for table_name, table_columns in tables.items():
                 for i, column in enumerate(table_columns):

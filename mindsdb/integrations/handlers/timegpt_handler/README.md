@@ -1,68 +1,120 @@
-# Briefly describe what ML framework does this handler integrate to MindsDB, and how?
-TimeGPT is a zero-shot forecasting model developed by Nixtla, offered through their `nixtla` Python package.
+---
+title: Nixtla's TimeGPT Integration with MindsDB
+sidebarTitle: TimeGPT
+---
 
-This handler provides a simple wrapper around TimeGPT, and provides easy ingestion of time series data from other MindsDB data sources into the TimeGPT API. User requires a Nixtla API key to use this handler.
+TimeGPT by Nixtla is a generative pre-trained model specifically designed for predicting time series data. TimeGPT takes time series data as input and produces forecasted outputs. TimeGPT can be effectively employed in various applications, including demand forecasting, anomaly detection, financial prediction, and more.
 
-Call this handler by `USING ENGINE="timegpt"`.
+You can learn more about its features [here](https://nixtla.github.io/nixtla/).
 
-# Why is this integration useful? What does the ideal predictive use case for this integration look like? When would you definitely not use this integration?
-Zero-shot forecasting models can produce forecasts for novel data without a previous training phase a pre-requisite. However, these models can be finetuned for improved accuracy on any specific domain.
+## How to bring TimeGPT Models to MindsDB
 
-# Are models created with this integration fast and scalable, in general?
-Yes.
+Before creating a model, you will need to create an ML engine for TimeGPT using the `CREATE ML_ENGINE` statement and providing the TimeGPT API key:
 
-# What are the recommended system specifications for models created with this framework?
-N/A - no model training or inference is done on premise.
+```sql
+CREATE ML_ENGINE timegpt
+FROM timegpt
+USING
+    timegpt_api_key = 'timegpt_api_key';
+```
 
-# To what degree can users control the underlying framework by passing parameters via the USING syntax?
-Usual time series related arguments can be passed (forecast "horizon" and what columns to order and group by).
+Once the ML engine is created, we use the `CREATE MODEL` statement to create the TimeGPT model in MindsDB.
 
-Frequency of the series can be manually set, although by default it is automatically inferred from the data.
+```sql
+CREATE MODEL model_name
+FROM data_source
+  (SELECT * FROM table_name)
+PREDICT column_to_be_predicted
+GROUP BY column_name, column_name, ...
+ORDER BY date_column
+HORIZON 3 -- model forecasts the next 3 rows
+USING ENGINE = 'timegpt';
+```
 
-The data frequency can be specified with the "frequency" arg. If no frequency is specified, MindsDB tries to infer this automatically from the dataframe.
+To ensure that the model is created based on the TimeGPT engine, include the `USING` clause at the end, which defines the `engine` and lists all parameters used with time-series models, including `GROUP BY`, `ORDER BY`, `HORIZON`.
 
-The confidence level for the prediction intervals can be specified with the "level" argument. The default value is `90`.
+What's different about the TimeGPT engine is that it does not expose the `WINDOW` parameter in its API, so as a user you need to send a payload with at least N rows, where N depends on the model and the frequency of the series. This is automatically handled by MindsDB in the [TimeGPT handler code](https://github.com/mindsdb/mindsdb/tree/main/mindsdb/integrations/handlers/timegpt_handler).
 
-# Does this integration offer model explainability or insights via the DESCRIBE syntax?
-Minimal, but yes.
+## Example
 
-# Does this integration support fine-tuning pre-existing models (i.e. is the update() method implemented)? Are there any caveats?
-Not yet. This is a planned feature.
+Nixtla's TimeGPT model can be used to obtain real-time forecasts of the trading data from Binance.
 
-# Are there any other noteworthy aspects to this handler?
-No.
+<Tip>
+Follow [this link](https://www.youtube.com/watch?v=8LfpFocdyEo&list=PLq3sJIV6w5BoHJ9gFSedwtb_pqk--4K89&index=3) to watch a video on integrating TimeGPT model with Binance data.
+</Tip>
 
-# Any directions for future work in subsequent versions of the handler?
-Mostly achieving full coverage of all options provided by the TimeGPT API.
+First, connect to Binance from MindsDB executing this command:
 
-# Please provide a minimal SQL example that uses this ML engine (pointers to integration tests in the PR also valid)
 ```sql
 CREATE DATABASE my_binance
-WITH
-  ENGINE = 'binance'
-  PARAMETERS = {};
+WITH ENGINE = 'binance';
+```
 
-CREATE VIEW binance_view (
-  SELECT symbol, open_time, open_price
+Please note that before using the TimeGPT engine, you should create it from the MindsDB editor, or other clients through which you interact with MindsDB, with the below command:
+
+```sql
+CREATE ML_ENGINE timegpt
+FROM timegpt
+USING
+    timegpt_api_key = 'timegpt_api_key';
+```
+
+You can check the available engines with this command:
+
+```sql
+SHOW ML_ENGINES;
+```
+
+If you see the TimeGPT engine on the list, you are ready to follow the tutorials.
+
+Now let's create a TimeGPT model and train it with data from Binance.
+
+```sql
+CREATE MODEL cryptocurrency_forecast_model
+FROM my_binance
+  (
+    SELECT *
+    FROM aggregated_trade_data
+    WHERE symbol = 'BTCUSDT'
+  )
+PREDICT open_price
+ORDER BY open_time
+HORIZON 10
+USING ENGINE = 'timegpt';
+```
+
+Use the `CREATE MODEL` statement to create, train, and deploy a model. The `FROM` clause defines the training data used to train the model - here, the latest Binance data is used. The `PREDICT` clause specifies the column to be predicted - here, the open price of the BTC/USDT trading pair is to be forecasted.
+
+As it is a time-series model, you should order the data by a date column - here, it is the open time when the open price takes effect. Finally, the `HORIZON` clause defines how many rows into the future the model will forecast - here, it forecasts the next 10 rows (the next 10 minutes, as the interval between Binance data rows is one minute).
+
+<Warning>
+Please note that the TimeGPT engine is sensitive to inconsistent intervals between data rows. Please check your data for missing, duplicated or irregular timestamps to mitigate errors that may arise if the intervals between data rows are inconsistent.
+
+In this example, the intervals between Binance data rows are consistently equal to one minute.
+</Warning>
+
+Before proceeding, make sure that the model status reads `complete`.
+
+```sql
+DESCRIBE cryptocurrency_forecast_model;
+```
+
+To make forecasts, you must save the Binance data into a view:
+
+```sql
+CREATE VIEW btcusdt_recent AS (
+  SELECT *
   FROM my_binance.aggregated_trade_data
   WHERE symbol = 'BTCUSDT'
 );
+```
 
-CREATE ML_ENGINE timegpt FROM timegpt;
+This view is going to be joined with the model to get forecasts:
 
-CREATE MODEL mindsdb.timegpt_binance
-FROM mindsdb
-  (SELECT symbol, open_time, open_price FROM binance_view)
-PREDICT open_price
-ORDER BY open_time
-GROUP BY symbol
-HORIZON 15
-USING engine = 'timegpt';
-
-SELECT m.symbol, m.open_time, m.open_price, m.confidence, m.lower, m.upper
-FROM binance_view as t
-JOIN
-timegpt_binance as m
-WHERE
-t.open_time > LATEST;
+```sql
+SELECT m.open_time ,
+       m.open_price
+FROM btcusdt_recent AS d
+JOIN cryptocurrency_forecast_model AS m
+WHERE d.open_time > LATEST;
 ```

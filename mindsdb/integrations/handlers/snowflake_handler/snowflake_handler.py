@@ -17,7 +17,7 @@ from mindsdb.integrations.libs.response import (
 
 try:
     import pyarrow as pa
-    memory_pool = pa.memory_pool()
+    memory_pool = pa.default_memory_pool()
 except Exception:
     memory_pool = None
 

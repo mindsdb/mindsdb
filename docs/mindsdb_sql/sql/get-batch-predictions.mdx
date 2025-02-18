@@ -34,6 +34,17 @@ Where:
 Note that you can provide input to the models from the data tables and also in the `WHERE` clause.
 
 <Tip>
+When querying for predictions, you can specify the `partition_size` parameter to split data into partitions and run prediction on different workers. Note that the [ML task queue](/setup/custom-config#overview-of-config-parameters) needs to be enabled to use this parameter.
+
+To use the `partition_size` parameter, provide it in the `USING` clause, specifying the partition size, like this:
+
+```
+...
+USING partition_size=100
+```
+</Tip>
+
+<Tip>
 Follow [this doc page](/generative-ai-tables) to learn more about AI Tables.
 </Tip>
 

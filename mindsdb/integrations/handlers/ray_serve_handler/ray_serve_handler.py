@@ -39,15 +39,15 @@ class RayServeHandler(BaseMLEngine):
         args['target'] = target
         self.model_storage.json_set('args', args)
         try:
-            print(pd.__version__)
-            if args.get('parquet', False):
+            if args.get('is_parquet', False):
                 buffer = io.BytesIO()
                 df.attrs['target'] = target
                 df.to_parquet(buffer)
                 buffer.seek(0)
-                parquet_data = buffer.read()
-                headers = {'Content-Type': 'application/octet-stream'}
-                resp = requests.post(args['train_url'], data=parquet_data, headers=headers)
+                resp = requests.post(args['train_url'],
+                                     files={"df": ("df", buffer.getvalue(), "application/octet-stream")},
+                                     data={"args": json.dumps(args), "target": target},
+                                     )
             else:
                 resp = requests.post(args['train_url'],
                                      json={'df': df.to_json(orient='records'), 'target': target},
@@ -71,20 +71,21 @@ class RayServeHandler(BaseMLEngine):
         args = {**(self.model_storage.json_get('args')), **args}  # merge incoming args
         pred_args = args.get('predict_params', {})
         args = {**args, **pred_args}  # merge pred_args
-        if args.get('parquet', False):
+        if args.get('is_parquet', False):
             buffer = io.BytesIO()
             df.attrs['pred_args'] = pred_args
             df.to_parquet(buffer)
             buffer.seek(0)
-            parquet_data = buffer.read()
-            headers = {'Content-Type': 'application/octet-stream'}
-            resp = requests.post(args['predict_url'], data=parquet_data, headers=headers)
+            resp = requests.post(args['predict_url'],
+                                 files={"df": ("df", buffer.getvalue(), "application/octet-stream")},
+                                 data={"pred_args": json.dumps(pred_args)},
+                                 )
         else:
             resp = requests.post(args['predict_url'],
                                  json={'df': df.to_json(orient='records'), 'pred_args': pred_args},
                                  headers={'content-type': 'application/json; format=pandas-records'})
         try:
-            if args.get('parquet', False):
+            if args.get('is_parquet', False):
                 buffer = io.BytesIO(resp.content)
                 table = pq.read_table(buffer)
                 response = table.to_pandas()

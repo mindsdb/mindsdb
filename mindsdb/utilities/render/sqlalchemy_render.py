@@ -538,12 +538,19 @@ class SqlalchemyRender:
                 query = query.select_from(table)
 
                 # other tables
+                has_explicit_join = False
                 for item in join_list[1:]:
                     table = self.to_table(item['table'])
                     if item['is_implicit']:
                         # add to from clause
-                        query = query.select_from(table)
+                        if has_explicit_join:
+                            # sqlalchemy doesn't support implicit join after explicit
+                            # convert it to explicit
+                            query = query.join(table, sa.text('1=1'))
+                        else:
+                            query = query.select_from(table)
                     else:
+                        has_explicit_join = True
                         if item['condition'] is None:
                             # otherwise, sqlalchemy raises "Don't know how to join to ..."
                             condition = sa.text('1=1')

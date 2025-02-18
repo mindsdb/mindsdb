@@ -291,7 +291,7 @@ class JsonStorage(Base):
     encrypted_content = Column(LargeBinary, nullable=True)
     company_id = Column(Integer)
 
-    def to_dict(self):
+    def to_dict(self) -> Dict:
         return {
             "id": self.id,
             "resource_group": self.resource_group,

@@ -456,7 +456,7 @@ class ExecuteCommands:
                     raise TableNotExistError(err_str)
                 return self.answer_show_table_status(table_name)
             elif sql_category == "columns":
-                is_full = statement.modes is not None and "full" in statement.modes
+                is_full = statement.modes is not None and "FULL" in statement.modes
                 return self.answer_show_columns(
                     statement.from_table,
                     statement.where,

@@ -28,7 +28,7 @@ class DenodoHandler(DatabaseHandler):
     def __init__(self, name: str, **kwargs) -> None:
         super().__init__(name)
         self.parser = parse_sql
-        self.dialect = 'denodo'
+        self.dialect = 'mysql'
         self.connection_data = kwargs.get('connection_data', {})
         self.database = self.connection_data.get('database')
 
@@ -131,7 +131,7 @@ class DenodoHandler(DatabaseHandler):
         """
         Execute a SQL query and return results.
         """
-        renderer = SqlalchemyRender('mysql')
+        renderer = SqlalchemyRender(self.dialect)
         query_str = renderer.get_string(query, with_failback=True)
         return self.native_query(query_str)
 

@@ -33,7 +33,8 @@ Follow the steps to set up MindsDB in a Docker container.
 Run this command to create a Docker container with MindsDB:
 
 ```bash
-docker run --name mindsdb_container -p 47334:47334 -p 47335:47335 mindsdb/mindsdb
+docker run --name mindsdb_container \
+-p 47334:47334 -p 47335:47335 mindsdb/mindsdb
 ```
 
 Where:
@@ -41,13 +42,15 @@ Where:
 -   `docker run` is a native Docker command used to spin up a container.
 -   `--name mindsdb_container` defines a name for the container.
 -   `-p 47334:47334` publishes port 47334 to access MindsDB GUI and HTTP API.
+-   `-p 47335:47335` publishes port 47335 to access MindsDB MySQL API. This is optional and can be omitted if you don't need to use the MySQL API.
 -   `mindsdb/mindsdb` is a Docker image provided by MindsDB. You can choose a different one from the list above.
 
 <Tip>
 By default, MindsDB starts only the HTTP API. You can define which APIs to start by passing the `MINDSDB_APIS` environment variable with a comma-separated list when running the container as shown below. To expose the ports for the APIs, you need to add the respective ports to the command with the `-p` flag.
 
 ```bash
-docker run -e MINDSDB_APIS="http,mysql,mongodb,postgres" -p 47334:47334 -p 47335:47335 -p 47336:47336 -p 55432:55432 mindsdb/mindsdb
+docker run -e MINDSDB_APIS="http,mysql,mongodb,postgres" \
+-p 47334:47334 -p 47335:47335 -p 47336:47336 -p 55432:55432 mindsdb/mindsdb
 ```
 
 You can find more information on the environment variables supported by MindsDB [here](/setup/environment-vars)
@@ -62,7 +65,8 @@ Once the container is created, you can use the following commands:
 If you don't want to follow the logs and get the prompt back, add the `-d` flag that stands for *detach*.
 
 ```bash
-docker run --name mindsdb_container -d -p 47334:47334 mindsdb/mindsdb
+docker run --name mindsdb_container \
+-d -p 47334:47334 mindsdb/mindsdb
 ```
 </Tip>
 
@@ -71,7 +75,8 @@ If you want to persist your models and configurations in the host machine, run t
 
 ```bash
 mkdir mdb_data
-docker run --name mindsdb_container -p 47334:47334 -v $(pwd)/mdb_data:/root/mdb_storage mindsdb/mindsdb
+docker run --name mindsdb_container \
+-p 47334:47334 -v $(pwd)/mdb_data:/root/mdb_storage mindsdb/mindsdb
 ```
 
 Where `-v $(pwd)/mdb_data:/root/mdb_storage` maps the newly created folder `mdb_data` on the host machine to the `/root/mdb_storage` inside the container.
@@ -87,9 +92,20 @@ Now you can access the MindsDB editor by going to `127.0.0.1:47334` in your brow
 If you experience any issues related to MKL or your training process does not complete, please add the `MKL_SERVICE_FORCE_INTEL` environment variable, as below.
 
 ```bash
-docker run -e MKL_SERVICE_FORCE_INTEL=1 -p 47334:47334 mindsdb/mindsdb
+docker run --name mindsdb_container -e MKL_SERVICE_FORCE_INTEL=1 \
+-p 47334:47334 mindsdb/mindsdb
 ```
 </Warning>
+
+<Tip>
+If you want to enable authentication for MindsDB, you do so by passing the `MINDSDB_USERNAME` and `MINDSDB_PASSWORD` environment variables when running the container.
+
+```bash
+docker run --name mindsdb_container \
+-e MINDSDB_USERNAME='admin' -e MINDSDB_PASSWORD='password' \
+-p 47334:47334 mindsdb/mindsdb
+```
+</Tip>
 
 ### Install dependencies
 
@@ -119,7 +135,8 @@ If you haven't specified a container name when spinning up a container with `doc
 If you haven't yet created a container, use this command:
 
 ```bash
-docker run --name mindsdb_container -d -p 47334:47334 mindsdb/mindsdb
+docker run --name mindsdb_container \
+-d -p 47334:47334 mindsdb/mindsdb
 ```
 </Tip>
 
@@ -196,7 +213,8 @@ The default configuration for MindsDB's Docker image is stored as a JSON code, a
 To override the default configuration, you can mount a config file over `/root/mindsdb_config.json`, as below.
 
 ```bash
-docker run --name mindsdb_container -d -p 47334:47334 -v mdb_config.json:/root/mindsdb_config.json mindsdb/mindsdb
+docker run --name mindsdb_container -d -p 47334:47334 \
+-v mdb_config.json:/root/mindsdb_config.json mindsdb/mindsdb
 ```
 
 <Tip>

@@ -1,3 +1,4 @@
+import json
 import logging
 from logging.config import dictConfig
 
@@ -5,6 +6,17 @@ from mindsdb.utilities.config import config as app_config
 
 
 logging_initialized = False
+
+
+class JsonFormatter(logging.Formatter):
+    def format(self, record):
+        record_message = super().format(record)
+        log_record = {
+            'message': record_message,
+            'level': record.levelname,
+            'time': record.created,
+        }
+        return json.dumps(log_record)
 
 
 class ColorFormatter(logging.Formatter):
@@ -53,7 +65,7 @@ def configure_logging():
     if console_handler_config['enabled'] is True:
         handlers_config['console'] = {
             "class": "logging.StreamHandler",
-            "formatter": "f",
+            "formatter": "j",
             "level": console_handler_config_level
         }
 
@@ -75,6 +87,7 @@ def configure_logging():
         version=1,
         formatters={
             "f": {"()": ColorFormatter},
+            "j": {"()": JsonFormatter},
             "file": {
                 "format": "%(asctime)s %(processName)15s %(levelname)-8s %(name)s: %(message)s"
             }

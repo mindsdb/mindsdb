@@ -96,7 +96,6 @@ exclude =
   mindsdb/integrations/handlers/autosklearn_handler/*
   mindsdb/integrations/handlers/twitter_handler/*
   mindsdb/integrations/handlers/statsforecast_handler/*
-  mindsdb/integrations/handlers/jira_handler/*
   mindsdb/integrations/handlers/stripe_handler/*
   mindsdb/integrations/handlers/writer_handler/*
   mindsdb/integrations/handlers/llama_index_handler/*

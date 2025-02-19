@@ -3,7 +3,7 @@ from typing import Any, Dict
 from atlassian import Jira
 from requests.exceptions import HTTPError
 
-from mindsdb.integrations.handlers.jira_handler.jira_table import JiraProjectsTable, JiraIssuesTable
+from mindsdb.integrations.handlers.jira_handler.jira_tables import JiraProjectsTable, JiraIssuesTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
@@ -142,11 +142,4 @@ class JiraHandler(APIHandler):
             )
 
         return response
-   
-    # def construct_jql(self):
-    #     """construct jql & returns it to JiraProjectsTable class
-    #     Returns
-    #     -------
-    #     Str
-    #     """
-    #     return 'project = ' + str(self.connection_data['project'])
+

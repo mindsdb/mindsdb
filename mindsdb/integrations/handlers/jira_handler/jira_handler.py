@@ -125,7 +125,11 @@ class JiraHandler(APIHandler):
 
         try:
             results = connection.jql(query)
-            # TODO: Parse results to a DataFrame.
+            df = JiraIssuesTable(self).normalize(results['issues'])
+            response = Response(
+                RESPONSE_TYPE.TABLE,
+                df
+            )
         except HTTPError as http_error:
             logger.error(f'Error running query: {query} on Jira, {http_error}!')
             response = Response(

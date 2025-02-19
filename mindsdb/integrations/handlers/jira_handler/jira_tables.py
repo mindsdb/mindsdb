@@ -99,8 +99,16 @@ class JiraIssuesTable(APIResource):
             raise ValueError("Either the issue 'id', 'key' or one of 'project_id', 'project_key', 'project_name' must be provided.")
 
         if issues:
-            issues_df = pd.json_normalize(issues)
-            issues_df.rename(columns={
+            issues_df = self.normalize(issues)
+        else:
+            issues_df = pd.DataFrame([], columns=self.get_columns())
+
+        return issues_df
+    
+    def normalize(self, issues: dict) -> pd.DataFrame:
+        issues_df = pd.json_normalize(issues)
+        issues_df.rename(
+            columns={
                 "fields.project.id": "project_id",
                 "fields.project.key": "project_key",
                 "fields.project.name": "project_name",
@@ -109,10 +117,10 @@ class JiraIssuesTable(APIResource):
                 "fields.creator.displayName": "creator",
                 "fields.assignee.displayName": "assignee",
                 "fields.status.name": "status",
-            }, inplace=True)
-            issues_df = issues_df[self.get_columns()]
-        else:
-            issues_df = pd.DataFrame([], columns=self.get_columns())
+            },
+            inplace=True
+        )
+        issues_df = issues_df[self.get_columns()]
 
         return issues_df
 
@@ -129,4 +137,5 @@ class JiraIssuesTable(APIResource):
             "assignee",
             "status",
         ]
+
 

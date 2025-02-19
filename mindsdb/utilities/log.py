@@ -65,7 +65,7 @@ def configure_logging():
     if console_handler_config['enabled'] is True:
         handlers_config['console'] = {
             "class": "logging.StreamHandler",
-            "formatter": "j",
+            "formatter": "f",
             "level": console_handler_config_level
         }
 

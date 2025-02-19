@@ -400,7 +400,7 @@ class LangchainAgent:
                 "max_iterations", args.get("max_iterations", DEFAULT_MAX_ITERATIONS)
             ),
             memory=memory,
-            verbose=args.get("verbose", args.get("verbose", True)),
+            verbose=args.get("verbose", args.get("verbose", False))
         )
         return agent_executor
 

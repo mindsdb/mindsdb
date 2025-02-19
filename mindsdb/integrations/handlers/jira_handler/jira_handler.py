@@ -3,7 +3,7 @@ from typing import Any, Dict
 from atlassian import Jira
 from requests.exceptions import HTTPError
 
-from mindsdb.integrations.handlers.jira_handler.jira_table import JiraProjectsTable
+from mindsdb.integrations.handlers.jira_handler.jira_table import JiraProjectsTable, JiraIssuesTable
 from mindsdb.integrations.libs.api_handler import APIHandler
 from mindsdb.integrations.libs.response import (
     HandlerResponse as Response,
@@ -37,8 +37,8 @@ class JiraHandler(APIHandler):
         self.connection = None
         self.is_connected = False
 
-        jira_projects_data = JiraProjectsTable(self)
-        self._register_table("projects", jira_projects_data)
+        self._register_table("projects", JiraProjectsTable(self))
+        self._register_table("issues", JiraIssuesTable(self))
 
     def connect(self) -> Jira:
         """

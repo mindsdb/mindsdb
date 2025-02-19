@@ -239,7 +239,7 @@ def get_all_website_links_recursively(url, reviewed_urls, limit=None, crawl_dept
                 "error": str(error_message),
             }
 
-    if crawl_depth == current_depth:
+    if crawl_depth is not None and crawl_depth == current_depth:
         return reviewed_urls
 
     to_rev_url_list = []

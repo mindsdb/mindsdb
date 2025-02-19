@@ -575,7 +575,7 @@ class ModelWrapperSafe:
             modules.append('numpy<2.0.0')
 
         # for dataframe serialization
-        modules.append('pyarrow==14.0.1')
+        modules.append('pyarrow==19.0.0')
         return modules
 
     def install_modules(self, modules, pip_cmd):

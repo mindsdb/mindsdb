@@ -66,7 +66,7 @@ class LogCallbackHandler(BaseCallbackHandler):
         self.logger = logger
         self._num_running_chains = 0
         self.generated_sql = None
-        self.verbose_log_hendler = VerboseLogCallbackHandler(logger, verbose)
+        self.verbose_log_handler = VerboseLogCallbackHandler(logger, verbose)
 
     def on_llm_start(
         self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any
@@ -75,7 +75,7 @@ class LogCallbackHandler(BaseCallbackHandler):
         self.logger.debug('LLM started with prompts:')
         for prompt in prompts:
             self.logger.debug(prompt[:50])
-        self.verbose_log_hendler.on_llm_start(serialized, prompts, **kwargs)
+        self.verbose_log_handler.on_llm_start(serialized, prompts, **kwargs)
 
     def on_chat_model_start(
             self,
@@ -112,7 +112,7 @@ class LogCallbackHandler(BaseCallbackHandler):
             self._num_running_chains))
         self.logger.debug('Inputs: {}'.format(inputs))
 
-        self.verbose_log_hendler.on_chain_start(serialized=serialized, inputs=inputs, **kwargs)
+        self.verbose_log_handler.on_chain_start(serialized=serialized, inputs=inputs, **kwargs)
 
     def on_chain_end(self, outputs: Dict[str, Any], **kwargs: Any) -> Any:
         '''Run when chain ends running.'''
@@ -121,7 +121,7 @@ class LogCallbackHandler(BaseCallbackHandler):
             self._num_running_chains))
         self.logger.debug('Outputs: {}'.format(outputs))
 
-        self.verbose_log_hendler.on_chain_end(outputs=outputs, **kwargs)
+        self.verbose_log_handler.on_chain_end(outputs=outputs, **kwargs)
 
     def on_chain_error(
         self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
@@ -140,7 +140,7 @@ class LogCallbackHandler(BaseCallbackHandler):
 
     def on_tool_end(self, output: str, **kwargs: Any) -> Any:
         '''Run when tool ends running.'''
-        self.verbose_log_hendler.on_tool_end(output=output, **kwargs)
+        self.verbose_log_handler.on_tool_end(output=output, **kwargs)
 
     def on_tool_error(
         self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
@@ -150,7 +150,7 @@ class LogCallbackHandler(BaseCallbackHandler):
 
     def on_text(self, text: str, **kwargs: Any) -> Any:
         '''Run on arbitrary text.'''
-        self.verbose_log_hendler.on_text(text=text, **kwargs)
+        self.verbose_log_handler.on_text(text=text, **kwargs)
 
     def on_agent_action(self, action: AgentAction, **kwargs: Any) -> Any:
         '''Run on agent action.'''
@@ -168,10 +168,10 @@ class LogCallbackHandler(BaseCallbackHandler):
         # fix for mistral
         action.tool = action.tool.replace('\\', '')
 
-        self.verbose_log_hendler.on_agent_action(action=action, **kwargs)
+        self.verbose_log_handler.on_agent_action(action=action, **kwargs)
 
     def on_agent_finish(self, finish: AgentFinish, **kwargs: Any) -> Any:
         '''Run on agent end.'''
         self.logger.debug('Agent finished with return values:')
         self.logger.debug(str(finish.return_values))
-        self.verbose_log_hendler.on_agent_finish(finish=finish, **kwargs)
+        self.verbose_log_handler.on_agent_finish(finish=finish, **kwargs)

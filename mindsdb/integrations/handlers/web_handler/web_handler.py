@@ -29,7 +29,7 @@ class CrawlerTable(APIResource):
         """
         urls = []
         crawl_depth = None
-        per_page_limit = None
+        per_url_limit = None
         for condition in conditions:
             if condition.column == 'url':
                 if condition.op == FilterOperator.IN:
@@ -40,8 +40,8 @@ class CrawlerTable(APIResource):
             if condition.column == 'crawl_depth' and condition.op == FilterOperator.EQUAL:
                 crawl_depth = condition.value
                 condition.applied = True
-            if condition.column == 'page_per_url_limit' and condition.op == FilterOperator.EQUAL:
-                per_page_limit = condition.value
+            if condition.column == 'per_url_limit' and condition.op == FilterOperator.EQUAL:
+                per_url_limit = condition.value
                 condition.applied = True
 
         if len(urls) == 0:
@@ -53,12 +53,12 @@ class CrawlerTable(APIResource):
             raise ValueError(f"The provided URL is not allowed for web crawling. Please use any of {', '.join(allowed_urls)}.")
 
         if limit is None:
-            per_page_limit = 1
-        if per_page_limit is not None:
+            per_url_limit = 1
+        if per_url_limit is not None:
             # crawl every url separately
             results = []
             for url in urls:
-                results.append(get_all_websites([url], per_page_limit, crawl_depth=crawl_depth))
+                results.append(get_all_websites([url], per_url_limit, crawl_depth=crawl_depth))
             result = pd.concat(results)
         else:
             result = get_all_websites(urls, limit, crawl_depth=crawl_depth)

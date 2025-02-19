@@ -115,6 +115,11 @@ def get_llm_config(provider: str, args: Dict) -> BaseLLMConfig:
     """
     temperature = min(1.0, max(0.0, args.get("temperature", 0.0)))
     if provider == "openai":
+
+        if any(x in args.get("model_name", "") for x in ['o1', 'o3']):
+            # for o1 and 03, 'temperature' does not support 0.0 with this model. Only the default (1) value is supported
+            temperature = 1
+
         return OpenAIConfig(
             model_name=args.get("model_name", DEFAULT_OPENAI_MODEL),
             temperature=temperature,

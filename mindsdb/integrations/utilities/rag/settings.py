@@ -459,28 +459,44 @@ class SearchKwargs(BaseModel):
         return super().model_dump(*args, **kwargs)
 
 
+class LLMExample(BaseModel):
+    input: str = Field(description="User input for the example")
+    output: str = Field(
+        description="What the LLM should generate for this example's input"
+    )
+
+
 class ValueSchema(BaseModel):
-    value: Union[Any, Dict[Any, Any], List[Any]] = Field(
+    value: Union[
+        Union[str, int, float],
+        Dict[Union[str, int, float], str],
+        List[Union[str, int, float]],
+    ] = Field(
         description="One of the following. The value as it exists in the table column. A dict of {table_value: descriptive value, ...}, where table_value is the value in the table. A list of sample values taken from the column."
     )
-    comparator: Optional[Union[str, List[str]]] = (None,)
-    type: Any = Field(description="The value type as it exists in the table column.")
+    comparator: Optional[Union[str, List[str]]] = Field(
+        description="The posgtres sql operators used to compare two values.",
+        default="=",
+    )
+    type: str = Field(description="A valid postgres value type for this value in the column.")
     description: str = Field(description="Description of what the value represents.")
     usage: str = Field(description="How and when to use this value for search.")
-    example_questions: Optional[List[Any]] = Field(
+    example_questions: Optional[List[LLMExample]] = Field(
         default=None, description="Example questions where this value is set."
     )
     filter_threshold: Optional[float] = Field(
         default=0.0,
         description="Minimum relevance threshold to include metadata filters from this column.",
+        exclude=True
     )
     priority: Optional[int] = Field(
         default=0,
-        description="Priority level for this column, lower numbers will be processed first.",
+        description="Priority level for this column, lower numbers will be processed first."
     )
     relevance: Optional[float] = Field(
         default=None,
         description="Relevance computed during search. Should not be set by the end user.",
+        exclude=True
     )
 
 
@@ -489,10 +505,13 @@ class ColumnSchema(BaseModel):
     type: str = Field(description="Type of the column (e.g. int, string, datetime)")
     description: str = Field(description="Description of what the column represents")
     usage: str = Field(description="How and when to use this Table for search.")
-    values: Union[OrderedDict[Any, ValueSchema], Dict[Any, ValueSchema]] = Field(
+    values: Union[
+        OrderedDict[Union[str, int, float], ValueSchema],
+        Dict[Union[str, int, float], ValueSchema],
+    ] = Field(
         description="One of the following. A dict or ordered dict of {schema_value: ValueSchema, ...}, where schema value is the name given for this value description in the schema."
     )
-    example_questions: Optional[List[Any]] = Field(
+    example_questions: Optional[List[LLMExample]] = Field(
         default=None, description="Example questions where this table is useful."
     )
     max_filters: Optional[int] = Field(
@@ -519,7 +538,7 @@ class TableSchema(BaseModel):
     columns: Union[OrderedDict[str, ColumnSchema], Dict[str, ColumnSchema]] = Field(
         description="Dict or Ordered Dict of {column_name: ColumnSchemas} describing the metadata columns available for the table"
     )
-    example_questions: Optional[List[Any]] = Field(
+    example_questions: Optional[List[LLMExample]] = Field(
         default=None, description="Example questions where this table is useful."
     )
     join: str = Field(
@@ -550,7 +569,7 @@ class DatabaseSchema(BaseModel):
     tables: Union[OrderedDict[str, TableSchema], Dict[str, TableSchema]] = Field(
         description="Dict of {column_name: ColumnSchemas} describing the metadata columns available for the table"
     )
-    example_questions: Optional[List[Any]] = Field(
+    example_questions: Optional[List[LLMExample]] = Field(
         default=None, description="Example questions where this Database is useful."
     )
     max_filters: Optional[int] = Field(
@@ -568,13 +587,6 @@ class DatabaseSchema(BaseModel):
     relevance: Optional[float] = Field(
         default=None,
         description="Relevance computed during search. Should not be set by the end user.",
-    )
-
-
-class LLMExample(BaseModel):
-    input: str = Field(description="User input for the example")
-    output: str = Field(
-        description="What the LLM should generate for this example's input"
     )
 
 

@@ -264,11 +264,11 @@ Below is a list of comparison operators for constructing filters for this value 
         else:
             comparator_str = ""
 
-        if getattr(value_schema, "examples", None) is not None:
+        if getattr(value_schema, "example_questions", None) is not None:
             example_str = """## **Example Questions**
 """
-            for example in value_schema.examples:
-                example_str += f"""- {example}
+            for i, example in enumerate(value_schema.example_questions):
+                example_str += f"""{i}. **Query:** {example.input} **Answer:** {example.output}
 """
         else:
             example_str = ""
@@ -780,6 +780,9 @@ Below are descriptions of the values in this column:
 
         # Embed the rewritten retrieval query & include it in the similarity search pgvector query.
         embedded_query = self.embeddings_model.embed_query(retrieval_query)
+
+        # Search for relevant filters
+        self._breadth_first_search(query=query)
 
         # Generate metadata filters
         metadata_filters = self._generate_metadata_filters(query)

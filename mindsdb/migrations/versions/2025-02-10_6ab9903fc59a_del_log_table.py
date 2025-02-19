@@ -1,7 +1,7 @@
 """del_log_table
 
 Revision ID: 6ab9903fc59a
-Revises: c06c35f7e8e1
+Revises: 4943359e354a
 Create Date: 2025-02-10 16:50:27.186697
 
 """
@@ -11,7 +11,7 @@ import mindsdb.interfaces.storage.db  # noqa
 
 # revision identifiers, used by Alembic.
 revision = '6ab9903fc59a'
-down_revision = 'c06c35f7e8e1'
+down_revision = '4943359e354a'
 branch_labels = None
 depends_on = None
 

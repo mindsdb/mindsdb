@@ -4,6 +4,7 @@ from typing import List, Optional
 from collections import OrderedDict
 
 import sqlalchemy as sa
+from sqlalchemy.orm.attributes import flag_modified
 import numpy as np
 
 from mindsdb_sql_parser.ast.base import ASTNode
@@ -455,6 +456,7 @@ class ProjectController:
         if new_metadata is not None:
             project.metadata = new_metadata
             project.record.metadata = new_metadata
+            flag_modified(project.record, 'metadata_')
 
         db.session.commit()
         return project

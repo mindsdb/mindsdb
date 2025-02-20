@@ -10,7 +10,6 @@ import sqlalchemy as sa
 from sqlalchemy.sql import text
 
 import mindsdb.interfaces.storage.db as db
-from mindsdb.utilities.config import config
 
 
 # revision identifiers, used by Alembic.
@@ -29,7 +28,6 @@ def upgrade():
         sa.Column('deleted_at', sa.DateTime(), nullable=True),
         sa.Column('name', sa.String(), nullable=False),
         sa.Column('company_id', sa.Integer(), nullable=True),
-        sa.Column('metadata', sa.JSON(), nullable=True),
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('name', 'company_id', name='unique_project_name_company_id')
     )
@@ -37,12 +35,7 @@ def upgrade():
     conn = op.get_bind()
     session = sa.orm.Session(bind=conn)
 
-    project_record = db.Project(
-        name=config.get('default_project'),
-        metadata_={
-            "is_default": True
-        }
-    )
+    project_record = db.Project(name='mindsdb')
     session.add(project_record)
     session.commit()
 

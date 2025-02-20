@@ -113,12 +113,6 @@ class SQLRetriever(BaseRetriever):
     # Re-rank and metadata generation model.
     llm: BaseChatModel
 
-    # internal values
-    ranked_database_schema: Optional[DatabaseSchema] = None
-    ablation_value_dict: Optional[Dict[str, float]] = None
-    ablation_quantiles: Optional[List[float]] = None
-    # metadata_filters: Optional[list[AblativeMetadataFilter]] = None
-
     def _sort_schema_by_priority_key(
         self,
         schema_dict_item: Tuple[str, Union[TableSchema, ColumnSchema, ValueSchema]],
@@ -407,7 +401,7 @@ Below are descriptions of the values in this column:
 
         return score
 
-    def _breadth_first_search(self, query: str, greedy: bool = False):
+    def _breadth_first_search(self, query: str, greedy: bool = False) -> Tuple:
         """Search breadth wise through Tables, then Columns, then Values.Uses a greedy strategy to maximize quota if greedy=True, otherwise a dynamic strategy."""
 
         # sort based on priority
@@ -575,7 +569,7 @@ Below are descriptions of the values in this column:
             update=tables,
         )
 
-        self.ranked_database_schema = ordered_database_schema
+        ranked_database_schema = ordered_database_schema
 
         #  Build Ablation #####################################################
 
@@ -588,26 +582,32 @@ Below are descriptions of the values in this column:
                         value_schema.relevance
                     )
 
-        self.ablation_value_dict = collections.OrderedDict(
+        ablation_value_dict = collections.OrderedDict(
             sorted(ablation_value_dict.items(), key=lambda x: x[1])
         )
 
         relevance_scores = list(ablation_value_dict.values())
         if len(relevance_scores) > 0:
-            self.ablation_quantiles = np.quantile(
+            ablation_quantiles = np.quantile(
                 relevance_scores, np.linspace(0, 1, self.num_retries + 2)[1:-1]
             )
         else:
-            self.ablation_quantiles = None
+            ablation_quantiles = None
+
+        return ranked_database_schema, ablation_value_dict, ablation_quantiles
 
     def _dynamic_ablation(
-        self, metadata_filters: List[AblativeMetadataFilter], retry: int
+        self,
+        metadata_filters: List[AblativeMetadataFilter],
+        ablation_value_dict,
+        ablation_quantiles,
+        retry: int,
     ):
         """Ablate metadata filters in aggregate by quantiles until the required minimum number of documents are returned."""
 
         ablated_dict = {}
-        for key, value in self.ablation_value_dict.items():
-            if value >= self.ablation_quantiles[retry]:
+        for key, value in ablation_value_dict.items():
+            if value >= ablation_quantiles[retry]:
                 ablated_dict[key] = value
 
         #  discard low ranked filters ##################################################################################
@@ -639,19 +639,22 @@ Below are descriptions of the values in this column:
         return rewrite_chain.predict(input=query)
 
     def _prepare_pgvector_query(
-        self, metadata_filters: List[AblativeMetadataFilter], retry: int = 0
+        self,
+        ranked_database_schema,
+        metadata_filters: List[AblativeMetadataFilter],
+        retry: int = 0,
     ) -> str:
         # Base select JOINed with document source table.
         base_query = f"""SELECT * FROM {self.embeddings_table} AS e INNER JOIN {self.source_table} AS s ON (e.metadata->>'original_row_id')::int = s."{self.source_id_column}" """
 
         # return an empty string if schema has not been ranked
-        if not self.ranked_database_schema:
+        if not ranked_database_schema:
             return ""
 
         # Add Table JOIN statements
         join_clauses = set()
         for metadata_filter in metadata_filters:
-            join_clause = self.ranked_database_schema.tables[
+            join_clause = ranked_database_schema.tables[
                 metadata_filter.schema_table
             ].join
             if join_clause in join_clauses:
@@ -682,13 +685,13 @@ Below are descriptions of the values in this column:
         return output
 
     def _generate_metadata_filters(
-        self, query: str
-    ) -> Union[List[MetadataFilter], HandlerResponse]:
+        self, query: str, ranked_database_schema
+    ) -> Union[List[AblativeMetadataFilter], HandlerResponse]:
         parser = PydanticOutputParser(pydantic_object=MetadataFilter)
 
         metadata_filter_list = []
         #  iterate through tables to rank values
-        for table_key, table_schema in self.ranked_database_schema.tables.items():
+        for table_key, table_schema in ranked_database_schema.tables.items():
             # iterate through columns to rank values
             for column_key, column_schema in table_schema.columns.items():
                 if column_schema.relevance >= table_schema.filter_threshold:
@@ -782,58 +785,74 @@ Below are descriptions of the values in this column:
         embedded_query = self.embeddings_model.embed_query(retrieval_query)
 
         # Search for relevant filters
-        self._breadth_first_search(query=query)
+        ranked_database_schema, ablation_value_dict, ablation_quantiles = (
+            self._breadth_first_search(query=query)
+        )
 
         # Generate metadata filters
-        metadata_filters = self._generate_metadata_filters(query)
-
-        # Initial Execution of the similarity search with metadata filters.
-        document_response = self._prepare_and_execute_query(
-            metadata_filters, str(embedded_query)
+        metadata_filters = self._generate_metadata_filters(
+            query=query, ranked_database_schema=ranked_database_schema
         )
-        num_retries = 0
-        while num_retries < self.num_retries:
-            if (
-                document_response.resp_type != RESPONSE_TYPE.ERROR
-                and len(document_response.data_frame) >= self.min_k
-            ):
-                # Successfully retrieved k documents to send to re-ranker.
-                break
-            elif document_response.resp_type == RESPONSE_TYPE.ERROR:
-                # LLMs won't always generate structured metadata so we should have a fallback after retrying.
-                logger.info(
-                    f"SQL Retriever query failed with error {document_response.error_message}"
-                )
-            else:
-                logger.info(
-                    f"SQL Retriever did not retrieve {self.min_k} documents: {len(document_response.data_frame)} documents retrieved."
-                )
 
-            ablated_metadata_filters = self._dynamic_ablation(
-                metadata_filters=metadata_filters, retry=num_retries
-            )
-
+        if type(metadata_filters) is list:
+            # Initial Execution of the similarity search with metadata filters.
             document_response = self._prepare_and_execute_query(
-                ablated_metadata_filters, str(embedded_query)
+                metadata_filters=metadata_filters, embeddings_str=str(embedded_query)
             )
+            num_retries = 0
+            while num_retries < self.num_retries:
+                if (
+                    document_response.resp_type != RESPONSE_TYPE.ERROR
+                    and len(document_response.data_frame) >= self.min_k
+                ):
+                    # Successfully retrieved k documents to send to re-ranker.
+                    break
+                elif document_response.resp_type == RESPONSE_TYPE.ERROR:
+                    # LLMs won't always generate structured metadata so we should have a fallback after retrying.
+                    logger.info(
+                        f"SQL Retriever query failed with error {document_response.error_message}"
+                    )
+                else:
+                    logger.info(
+                        f"SQL Retriever did not retrieve {self.min_k} documents: {len(document_response.data_frame)} documents retrieved."
+                    )
 
-            num_retries += 1
-
-        document_df = document_response.data_frame
-        retrieved_documents = []
-        for _, document_row in document_df.iterrows():
-            retrieved_documents.append(
-                Document(
-                    document_row.get("content", ""),
-                    metadata=document_row.get("metadata", {}),
+                ablated_metadata_filters = self._dynamic_ablation(
+                    metadata_filters=metadata_filters,
+                    ablation_value_dict=ablation_value_dict,
+                    ablation_quantiles=ablation_quantiles,
+                    retry=num_retries,
                 )
+
+                document_response = self._prepare_and_execute_query(
+                    ablated_metadata_filters, str(embedded_query)
+                )
+
+                num_retries += 1
+
+            document_df = document_response.data_frame
+            retrieved_documents = []
+            for _, document_row in document_df.iterrows():
+                retrieved_documents.append(
+                    Document(
+                        document_row.get("content", ""),
+                        metadata=document_row.get("metadata", {}),
+                    )
+                )
+            if retrieved_documents:
+                return retrieved_documents
+            # If the SQL query constructed did not return any documents, fallback.
+            logger.info(
+                "No documents returned from SQL retriever, using fallback retriever."
             )
-        if retrieved_documents:
-            return retrieved_documents
-        # If the SQL query constructed did not return any documents, fallback.
-        logger.info(
-            "No documents returned from SQL retriever. using fallback retriever."
-        )
-        return self.fallback_retriever._get_relevant_documents(
-            retrieval_query, run_manager=run_manager
-        )
+            return self.fallback_retriever._get_relevant_documents(
+                retrieval_query, run_manager=run_manager
+            )
+        else:
+            # If no metadata fields could be generated fallback.
+            logger.info(
+                "No metadata fields were successfully generated, using fallback retriever."
+            )
+            return self.fallback_retriever._get_relevant_documents(
+                retrieval_query, run_manager=run_manager
+            )

@@ -140,11 +140,11 @@ DEFAULT_VALUE_PROMPT_TEMPLATE = """
 {column_schema}
 
 # **Value Schema**
-This is a schema that represents a value in a column in a table in a database.
+{header}
 
 - The type of the value: {type}
 
-## **Value Description**
+## **Description**
 {description}
 
 {value}{comparator}
@@ -163,18 +163,16 @@ DEFAULT_COLUMN_PROMPT_TEMPLATE = """
 {table_schema}
 
 # **Column Schema**
-This is a schema that represents a column in a table in a database.
+{header}
 
 - The column name in the database table: {column}
 - The type of the values in this column: {type}
 
-## **Value Description**
+## **Description**
 {description}
 
 ## **Usage**
 {usage}
-
-{values}
 
 {examples}
 
@@ -183,11 +181,11 @@ This is a schema that represents a column in a table in a database.
 """
 
 DEFAULT_TABLE_PROMPT_TEMPLATE = """# **Table Schema**
-This is a schema that represents a table in the database.
+{header}
 
 - The name of this table in the database: {table}
 
-## **Value Description**
+## **Description**
 {description}
 
 ## **Usage**

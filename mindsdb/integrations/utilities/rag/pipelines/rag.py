@@ -297,7 +297,7 @@ class LangChainRAGPipeline:
             min_k=retriever_config.min_k,
             max_filters=retriever_config.max_filters,
             filter_threshold=retriever_config.filter_threshold,
-            database_schema=retriever_config.metadata_schemas,
+            database_schema=retriever_config.database_schema,
             embeddings_model=embeddings,
             search_kwargs=config.search_kwargs,
             rewrite_prompt_template=retriever_config.rewrite_prompt_template,

@@ -285,93 +285,89 @@ Please give a short succinct context to situate this chunk within the overall do
 
 
 class TextChunkingPreprocessor(DocumentPreprocessor):
-    """Default text chunking preprocessor using RecursiveCharacterTextSplitter"""
+    """Default text chunking preprocessor using RecursiveCharacterTextSplitter with token-based chunking"""
 
     def __init__(self, config: Optional[TextChunkingConfig] = None):
         """Initialize with text chunking configuration"""
         super().__init__()
         self.config = config or TextChunkingConfig()
-        self.splitter = RecursiveCharacterTextSplitter(
+
+        # Use TokenTextSplitter with tiktoken encoder
+        self.splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
+            encoding_name=self.config.encoding_name,
             chunk_size=self.config.chunk_size,
             chunk_overlap=self.config.chunk_overlap,
-            length_function=self.config.length_function,
-            separators=self.config.separators,
+            disallowed_special=(),  # Allow all special tokens
+            separators=self.config.separators
         )
 
     def _split_document(self, doc: Document) -> List[Document]:
         """Split document into chunks while preserving metadata"""
-        # Use base class implementation
-        return super()._split_document(doc)
+        if self.splitter is None:
+            raise ValueError("Splitter not configured")
+
+        # Convert to langchain Document for splitting
+        langchain_doc = LangchainDocument(
+            page_content=doc.content, metadata=doc.metadata or {}
+        )
+        # Split and convert back to our Document type
+        split_docs = self.splitter.split_documents([langchain_doc])
+        return [
+            Document(content=split_doc.page_content, metadata=split_doc.metadata)
+            for split_doc in split_docs
+        ]
 
     def process_documents(self, documents: List[Document]) -> List[ProcessedChunk]:
+        """Process documents into chunks with metadata"""
+        logger.info(f"Starting document preprocessing for {len(documents)} documents")
         processed_chunks = []
+        total_chars = sum(len(doc.content) for doc in documents)
+        logger.info(f"Total content size: {total_chars} characters")
 
-        for doc in documents:
-            # Get content_column from metadata if available
-            content_column = (
-                doc.metadata.get("content_column") if doc.metadata else None
-            )
+        failed_docs = 0
+        for i, doc in enumerate(documents):
+            try:
+                # Split document into chunks
+                chunks = self._split_document(doc)
+                logger.debug(f"Document {i+1}/{len(documents)} split into {len(chunks)} chunks")
 
-            # Ensure document has an ID
-            if doc.id is None:
-                doc.id = self._generate_deterministic_id(doc.content, content_column)
-
-            # Skip empty or whitespace-only content
-            if not doc.content or not doc.content.strip():
-                continue
-
-            chunk_docs = self._split_document(doc)
-
-            # Single chunk case
-            if len(chunk_docs) == 1:
-                chunk_doc = chunk_docs[0]
-                if not chunk_doc.content or not chunk_doc.content.strip():
-                    continue
-
-                # Initialize metadata
-                metadata = {}
-                if doc.metadata:
-                    metadata.update(doc.metadata)
-
-                # Pass through doc.id and content_column
-                id = self._generate_chunk_id(
-                    chunk_doc.content, content_column=content_column, provided_id=doc.id
-                )
-                processed_chunks.append(
-                    ProcessedChunk(
-                        id=id,
-                        content=chunk_doc.content,
-                        embeddings=doc.embeddings,
-                        metadata=self._prepare_chunk_metadata(doc.id, None, metadata),
-                    )
-                )
-            else:
-                # Multiple chunks case
-                for i, chunk_doc in enumerate(chunk_docs):
-                    if not chunk_doc.content or not chunk_doc.content.strip():
-                        continue
-
-                    # Initialize metadata
-                    metadata = {}
-                    if doc.metadata:
-                        metadata.update(doc.metadata)
-
-                    # Pass through doc.id and content_column
+                for chunk_idx, chunk in enumerate(chunks):
+                    # Generate chunk ID
                     chunk_id = self._generate_chunk_id(
-                        chunk_doc.content,
-                        i,
-                        content_column=content_column,
-                        provided_id=doc.id,
+                        chunk.content,
+                        chunk_idx,
+                        provided_id=doc.id
                     )
+
+                    # Prepare metadata
+                    metadata = chunk.metadata or {}
+                    metadata.update({
+                        "original_doc_id": doc.id,
+                        "chunk_index": chunk_idx,
+                        "total_chunks": len(chunks)
+                    })
+
                     processed_chunks.append(
                         ProcessedChunk(
                             id=chunk_id,
-                            content=chunk_doc.content,
-                            embeddings=doc.embeddings,
-                            metadata=self._prepare_chunk_metadata(doc.id, i, metadata),
+                            content=chunk.content,
+                            metadata=metadata
                         )
                     )
+            except Exception as e:
+                failed_docs += 1
+                doc_id = doc.id if doc.id else f"document_{i+1}"
+                logger.error(f"Error processing document {doc_id}: {str(e)}")
+                continue
 
+        if failed_docs > 0:
+            logger.warning(f"Failed to process {failed_docs} out of {len(documents)} documents")
+
+        if not processed_chunks:
+            raise Exception(f"No chunks were created from {len(documents)} documents. Check document content and chunking configuration.")
+
+        logger.info(f"Preprocessing complete. Created {len(processed_chunks)} chunks from {len(documents)-failed_docs} documents")
+        logger.info(f"Average chunks per document: {len(processed_chunks)/(len(documents)-failed_docs):.2f}")
         return processed_chunks
 
 

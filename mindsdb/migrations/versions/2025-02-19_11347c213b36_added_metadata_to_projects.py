@@ -31,7 +31,7 @@ def upgrade():
         flag_modified(project, 'metadata_')
         db.session.commit()
 
+
 def downgrade():
     with op.batch_alter_table('project', schema=None) as batch_op:
         batch_op.drop_column('metadata')
-

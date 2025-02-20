@@ -87,4 +87,4 @@ class FileTable(APIResource):
 
         reader = FileReader(file=BytesIO(file_content), name=table_name)
 
-        return reader.to_df()
+        return reader.get_page_content()

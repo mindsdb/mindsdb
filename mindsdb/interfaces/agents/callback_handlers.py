@@ -1,9 +1,13 @@
-from typing import Any, Dict, List, Union
+import io
 import logging
+import contextlib
+from typing import Any, Dict, List, Union, Callable
+
 from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.messages.base import BaseMessage
 from langchain_core.outputs import LLMResult
+from langchain_core.callbacks import StdOutCallbackHandler
 
 
 class ContextCaptureCallback(BaseCallbackHandler):
@@ -20,14 +24,49 @@ class ContextCaptureCallback(BaseCallbackHandler):
         return self.context
 
 
+class VerboseLogCallbackHandler(StdOutCallbackHandler):
+    def __init__(self, logger: logging.Logger, verbose: bool):
+        self.logger = logger
+        self.verbose = verbose
+        super().__init__()
+
+    def __call(self, method: Callable, *args: List[Any], **kwargs: Any) -> Any:
+        if self.verbose is False:
+            return
+        f = io.StringIO()
+        with contextlib.redirect_stdout(f):
+            method(*args, **kwargs)
+        output = f.getvalue()
+        self.logger.info(output)
+
+    def on_chain_start(self, *args: List[Any], **kwargs: Any) -> None:
+        self.__call(super().on_chain_start, *args, **kwargs)
+
+    def on_chain_end(self, *args: List[Any], **kwargs: Any) -> None:
+        self.__call(super().on_chain_end, *args, **kwargs)
+
+    def on_agent_action(self, *args: List[Any], **kwargs: Any) -> None:
+        self.__call(super().on_agent_action, *args, **kwargs)
+
+    def on_tool_end(self, *args: List[Any], **kwargs: Any) -> None:
+        self.__call(super().on_tool_end, *args, **kwargs)
+
+    def on_text(self, *args: List[Any], **kwargs: Any) -> None:
+        self.__call(super().on_text, *args, **kwargs)
+
+    def on_agent_finish(self, *args: List[Any], **kwargs: Any) -> None:
+        self.__call(super().on_agent_finish, *args, **kwargs)
+
+
 class LogCallbackHandler(BaseCallbackHandler):
     '''Langchain callback handler that logs agent and chain executions.'''
 
-    def __init__(self, logger: logging.Logger):
+    def __init__(self, logger: logging.Logger, verbose: bool = True):
         logger.setLevel('DEBUG')
         self.logger = logger
         self._num_running_chains = 0
         self.generated_sql = None
+        self.verbose_log_handler = VerboseLogCallbackHandler(logger, verbose)
 
     def on_llm_start(
         self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any
@@ -36,6 +75,7 @@ class LogCallbackHandler(BaseCallbackHandler):
         self.logger.debug('LLM started with prompts:')
         for prompt in prompts:
             self.logger.debug(prompt[:50])
+        self.verbose_log_handler.on_llm_start(serialized, prompts, **kwargs)
 
     def on_chat_model_start(
             self,
@@ -46,7 +86,7 @@ class LogCallbackHandler(BaseCallbackHandler):
         self.logger.debug('Chat model started with messages:')
         for message_list in messages:
             for message in message_list:
-                self.logger.debug(message.pretty_print())
+                self.logger.debug(message.pretty_repr())
 
     def on_llm_new_token(self, token: str, **kwargs: Any) -> Any:
         '''Run on new LLM token. Only available when streaming is enabled.'''
@@ -72,12 +112,16 @@ class LogCallbackHandler(BaseCallbackHandler):
             self._num_running_chains))
         self.logger.debug('Inputs: {}'.format(inputs))
 
+        self.verbose_log_handler.on_chain_start(serialized=serialized, inputs=inputs, **kwargs)
+
     def on_chain_end(self, outputs: Dict[str, Any], **kwargs: Any) -> Any:
         '''Run when chain ends running.'''
         self._num_running_chains -= 1
         self.logger.info('Ended LLM chain ({} total)'.format(
             self._num_running_chains))
         self.logger.debug('Outputs: {}'.format(outputs))
+
+        self.verbose_log_handler.on_chain_end(outputs=outputs, **kwargs)
 
     def on_chain_error(
         self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
@@ -96,7 +140,7 @@ class LogCallbackHandler(BaseCallbackHandler):
 
     def on_tool_end(self, output: str, **kwargs: Any) -> Any:
         '''Run when tool ends running.'''
-        pass
+        self.verbose_log_handler.on_tool_end(output=output, **kwargs)
 
     def on_tool_error(
         self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
@@ -106,7 +150,7 @@ class LogCallbackHandler(BaseCallbackHandler):
 
     def on_text(self, text: str, **kwargs: Any) -> Any:
         '''Run on arbitrary text.'''
-        pass
+        self.verbose_log_handler.on_text(text=text, **kwargs)
 
     def on_agent_action(self, action: AgentAction, **kwargs: Any) -> Any:
         '''Run on agent action.'''
@@ -124,7 +168,10 @@ class LogCallbackHandler(BaseCallbackHandler):
         # fix for mistral
         action.tool = action.tool.replace('\\', '')
 
+        self.verbose_log_handler.on_agent_action(action=action, **kwargs)
+
     def on_agent_finish(self, finish: AgentFinish, **kwargs: Any) -> Any:
         '''Run on agent end.'''
         self.logger.debug('Agent finished with return values:')
         self.logger.debug(str(finish.return_values))
+        self.verbose_log_handler.on_agent_finish(finish=finish, **kwargs)

@@ -215,27 +215,32 @@ class SQLRetriever(BaseRetriever):
 
         value_str = ""
         if type(value_schema.value) in [str, int, float, bool]:
+            header_str = f"This schema describes a single value in the {column_schema.column} column."
+
             value_str = f"""
 ## **Value**
-This database value is {value_schema.value}
+The database value in the column is {value_schema.value}
 """
 
         elif type(value_schema.value) is dict:
+            header_str = f"This schema describes enumerated values in the {column_schema.column} column."
 
             value_str = """
 ## **Enumerated Values**
 
-These column values are an enumeration of named values. These are listed below with format **[Column Value]**: [named value].
+The values in the column are an enumeration of named values. These are listed below with format **[Column Value]**: [named value].
 """
             for value, value_name in value_schema.value.items():
                 value_str += f"""
 - **{value}:** {value_name}"""
 
         elif type(value_schema.value) is list:
+            header_str = f"This schema describes some of the values in the {column_schema.column} column."
+
             value_str = """
 ## **Sample Values**
 
-There are too many unique values in the column to list exhaustively. Below is a sampling of values found in the column:
+There are too many values in this column to list exhaustively. Below is a sampling of values found in the column:
 """
             for value in value_schema.value:
                 value_str += f"""
@@ -269,6 +274,7 @@ Below is a list of comparison operators for constructing filters for this value 
 
         return base_prompt_template.partial(
             format_instructions=format_instructions,
+            header=header_str,
             column_schema=column_schema_str,
             value=value_str,
             comparator=comparator_str,
@@ -306,17 +312,21 @@ Below is a list of comparison operators for constructing filters for this value 
             [("system", system_prompt), ("user", self.column_prompt_template)]
         )
 
-        value_str = """
-## **Values**
+        header_str = (
+            f"This schema describes a column in the {table_schema.table} table."
+        )
 
-Below are descriptions of the values in this column:
+        value_str = """
+## **Content**
+
+Below is a description of the contents in this column in list format:
 """
         for value_schema in column_schema.values.values():
             value_str += f"""
 - {value_schema.description}
 """
-        value_str = """
-**Important:** The above descriptions are not the actual values stored in this column. See the Value schemas for actual values.
+        value_str += """
+**Important:** The above descriptions are not the actual values stored in this column. See the Value schema for actual values.
 """
 
         if getattr(column_schema, "examples", None) is not None:
@@ -330,6 +340,7 @@ Below are descriptions of the values in this column:
 
         return base_prompt_template.partial(
             table_schema=table_schema_str,
+            header=header_str,
             column=column_schema.column,
             type=column_schema.type,
             description=column_schema.description,
@@ -350,6 +361,8 @@ Below are descriptions of the values in this column:
             [("system", system_prompt), ("user", self.table_prompt_template)]
         )
 
+        header_str = "This schema describes a table in the database."
+
         columns_str = ""
         for column_key, column_schema in table_schema.columns.items():
             columns_str += f"""
@@ -366,6 +379,7 @@ Below are descriptions of the values in this column:
             example_str = ""
 
         return base_prompt_template.partial(
+            header=header_str,
             table=table_schema.table,
             description=table_schema.description,
             usage=table_schema.usage,
@@ -714,9 +728,9 @@ Below are descriptions of the values in this column:
                                     llm=self.llm, prompt=metadata_prompt
                                 )
                                 metadata_filter_output = metadata_filters_chain.predict(
-                                    format_instructions=parser.get_format_instructions(),
                                     query=query,
                                 )
+
                                 # If the LLM outputs raw JSON, use it as-is.
                                 # If the LLM outputs anything including a json markdown section, use the last one.
                                 json_markdown_output = re.findall(

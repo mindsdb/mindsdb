@@ -63,22 +63,30 @@ class APIResourceGenerator:
                 This method will only handle conditions (if possible).
                 Sorting, limiting, and selecting columns will be handled by the parent.
                 """
-                endpoint = f"/{resource}"
-
+                results = None
                 if conditions:
                     supported_endpoints = [endpoint for group in resource_group for endpoint in group]
                     for condition in conditions:
+                        path = f"/{resource}/{{{condition.column}}}"
                         if condition.op == FilterOperator.EQUAL:
-                            path = f"/{resource}/{{{condition.column}}}"
                             if path in supported_endpoints:
                                 endpoint = f"/{resource}/{condition.value}"
+                                results = self._get(endpoint, **kwargs)
                                 break
                         elif condition.op == FilterOperator.IN:
-                            pass
+                            if path in supported_endpoints:
+                                endpoint = [f"/{resource}/{value}" for value in condition.value]
+                                results = [self._get(endpoint, **kwargs) for endpoint in endpoint]
+                                break
 
                         condition.applied = True
 
-                results = self._get(endpoint, **kwargs)
+                else:
+                    endpoint = f"/{resource}"
+                    results = self._get(endpoint, **kwargs)
+                
+                if not results:
+                    return pd.DataFrame([], columns=self.get_columns())
                 # TODO: How can we handle nested data here?
                 return pd.DataFrame(results if isinstance(results, list) else [results])
 

@@ -149,6 +149,7 @@ class Config:
                 "handlers": {
                     "console": {
                         "enabled": True,
+                        "formatter": "default",
                         "level": "INFO"     # MINDSDB_CONSOLE_LOG_LEVEL or MINDSDB_LOG_LEVEL (obsolete)
                     },
                     "file": {

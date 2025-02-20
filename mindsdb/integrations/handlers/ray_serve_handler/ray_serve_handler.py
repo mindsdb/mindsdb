@@ -41,9 +41,7 @@ class RayServeHandler(BaseMLEngine):
         try:
             if args.get('is_parquet', False):
                 buffer = io.BytesIO()
-                df.attrs['target'] = target
                 df.to_parquet(buffer)
-                buffer.seek(0)
                 resp = requests.post(args['train_url'],
                                      files={"df": ("df", buffer.getvalue(), "application/octet-stream")},
                                      data={"args": json.dumps(args), "target": target},
@@ -75,7 +73,6 @@ class RayServeHandler(BaseMLEngine):
             buffer = io.BytesIO()
             df.attrs['pred_args'] = pred_args
             df.to_parquet(buffer)
-            buffer.seek(0)
             resp = requests.post(args['predict_url'],
                                  files={"df": ("df", buffer.getvalue(), "application/octet-stream")},
                                  data={"pred_args": json.dumps(pred_args)},

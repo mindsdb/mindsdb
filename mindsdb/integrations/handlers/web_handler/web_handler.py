@@ -52,7 +52,7 @@ class CrawlerTable(APIResource):
         if allowed_urls and not validate_urls(urls, allowed_urls):
             raise ValueError(f"The provided URL is not allowed for web crawling. Please use any of {', '.join(allowed_urls)}.")
 
-        if limit is None and per_url_limit is None:
+        if limit is None and per_url_limit is None and crawl_depth is None:
             per_url_limit = 1
         if per_url_limit is not None:
             # crawl every url separately

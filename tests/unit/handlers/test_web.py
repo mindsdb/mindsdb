@@ -158,20 +158,16 @@ class TestWebHandler(unittest.TestCase):
 
         # ---- depth -----
 
-        # returns 1 page because default crawl limit is 1
-        df = crawler_table.list(conditions=[single_url, depth_1])
-        assert len(df) == 1
-
         # only main url
-        df = crawler_table.list(conditions=[single_url, depth_0], limit=1000)
+        df = crawler_table.list(conditions=[single_url, depth_0])
         assert len(df) == 1
 
         # main url and all links from it
-        df = crawler_table.list(conditions=[single_url, depth_1], limit=1000)
+        df = crawler_table.list(conditions=[single_url, depth_1])
         assert len(df) == 11
 
         # main url, +10 from it, +10*10 from every nested
-        df = crawler_table.list(conditions=[single_url, depth_2], limit=1000)
+        df = crawler_table.list(conditions=[single_url, depth_2])
         assert len(df) == 111
 
         # depth + limit

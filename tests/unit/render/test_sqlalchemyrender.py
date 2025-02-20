@@ -1,4 +1,5 @@
 import datetime as dt
+from textwrap import dedent
 
 from mindsdb_sql_parser.ast import (
     Identifier, Select, Star, Constant, Tuple, BinaryOperation, CreateTable, TableColumn, Insert
@@ -88,11 +89,11 @@ class TestRender:
         # check queries are the same after render
         assert str(query) == str(parse_sql(rendered))
 
-    def test_quoted_case(self):
+    def test_quoted_mixed_case(self):
 
-        query = Select(targets=[Identifier('Test')])
+        query = Select(targets=[Identifier('Test', alias=Identifier('Test2'))])
         rendered = SqlalchemyRender('postgres').get_string(query, with_failback=False)
-        assert rendered == 'SELECT Test'
+        assert rendered == 'SELECT Test AS Test2'
 
         query = Select(targets=[Identifier('table')])
         rendered = SqlalchemyRender('postgres').get_string(query, with_failback=False)
@@ -115,3 +116,48 @@ class TestRender:
         sql = SqlalchemyRender('postgres').get_string(query, with_failback=False)
 
         assert sql.lower() == sql0
+
+    def test_quoted_identifier(self):
+        sql = "SELECT `A`.*, A.`B` FROM Tbl.`Tab` AS t"
+
+        query = parse_sql(sql)
+        rendered = SqlalchemyRender('postgres').get_string(query, with_failback=False)
+
+        # check queries are the same after render
+        assert rendered.replace('\n', '') == 'SELECT "A".*, A."B" FROM Tbl."Tab" AS t'
+
+    def test_intersect_except(self):
+        for op in ('EXCEPT', 'INTERSECT'):
+            sql = dedent(f"""
+            SELECT * FROM tbl1
+            {op} SELECT * FROM tbl2
+            """).strip()
+
+            query = parse_sql(sql)
+            rendered = SqlalchemyRender('postgres').get_string(query, with_failback=False)
+
+            assert rendered.replace('\n', '') == sql.replace('\n', ' ')
+
+    def test_in_with_single_value(self):
+        sql = "SELECT * FROM tbl1 WHERE x IN (1)"
+        query = parse_sql(sql)
+        rendered = SqlalchemyRender('postgres').get_string(query, with_failback=False)
+
+        assert rendered.replace('\n', '') == sql
+
+    def test_mixed_join(self):
+        sql = """
+            SELECT * FROM tbl1
+            join tbl2 on tbl1.x = tbl2.x,
+            tbl3
+        """
+        query = parse_sql(sql)
+        rendered = SqlalchemyRender('postgres').get_string(query, with_failback=False)
+
+        expected = dedent("""
+            SELECT * FROM tbl1
+            JOIN tbl2 ON tbl1.x = tbl2.x
+            JOIN tbl3 ON 1=1
+        """).strip()
+
+        assert rendered.replace('\n', '') == expected.replace('\n', ' ')

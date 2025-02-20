@@ -400,7 +400,7 @@ class LangchainAgent:
                 "max_iterations", args.get("max_iterations", DEFAULT_MAX_ITERATIONS)
             ),
             memory=memory,
-            verbose=args.get("verbose", args.get("verbose", True)),
+            verbose=args.get("verbose", args.get("verbose", False))
         )
         return agent_executor
 
@@ -435,7 +435,7 @@ class LangchainAgent:
         all_callbacks = []
 
         if self.log_callback_handler is None:
-            self.log_callback_handler = LogCallbackHandler(logger)
+            self.log_callback_handler = LogCallbackHandler(logger, verbose=args.get("verbose", True))
 
         all_callbacks.append(self.log_callback_handler)
 

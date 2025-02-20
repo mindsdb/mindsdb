@@ -178,7 +178,11 @@ class TestSelect(BaseExecutorDummyML):
         # second table is called with filter
         calls = data_handler().query.call_args_list
         sql = calls[0][0][0].to_string()
-        assert sql.strip() == 'SELECT * FROM tbl2 AS t2 WHERE c IN (2, 1)'
+        assert sql.strip() in (
+            # duckdb's `distinct` can return in different order
+            'SELECT * FROM tbl2 AS t2 WHERE c IN (1, 2)'
+            'SELECT * FROM tbl2 AS t2 WHERE c IN (2, 1)'
+        )
 
         # --- using alias in order
         ret = self.run_sql('''
@@ -361,6 +365,44 @@ class TestSelect(BaseExecutorDummyML):
         # -- unions functions --
 
         # TODO Correlated subqueries (not implemented)
+
+    @patch('mindsdb.integrations.handlers.postgres_handler.Handler')
+    def test_replace_suqueries(self, data_handler):
+
+        df = pd.DataFrame(
+            columns=['id', 'name'],
+            data=[
+                [1, 'asia'],
+                [2, 'europe'],
+                [3, 'africa'],
+                [3, 'australia'],
+            ]
+        )
+        self.set_handler(data_handler, name='pg', tables={'branch': df})
+
+        empty = pd.DataFrame(
+            columns=['name'],
+            data=[
+                [None],
+            ]
+        )
+        self.save_file('empty', empty)
+
+        sql = '''
+            select
+               cast(
+                  (select COUNT(*) from pg.branch where `name` in ('asia', 'africa')) as FLOAT
+               )
+               /
+               ( select COUNT(*) from  pg.branch )
+               * 100 as percentage
+        '''
+        ret = self.run_sql(sql)
+        assert ret.iloc[0, 0] == 50
+
+        sql += ' from files.empty '
+        ret = self.run_sql(sql)
+        assert ret.iloc[0, 0] == 50
 
     def test_last(self):
         df = pd.DataFrame([
@@ -553,6 +595,23 @@ class TestSelect(BaseExecutorDummyML):
         self.run_sql('show full columns from `predictors`')
 
         self.run_sql('SHOW FULL TABLES FROM files')
+
+    def test_select_without_table(self):
+        test_data = (
+            ('session_user', None),
+            ('version()', '8.0.17'),
+            ('@@version_comment', '(MindsDB)'),
+            ('1', 1)
+        )
+
+        for target, response in test_data:
+            ret = self.run_sql(f'select {target}')
+            assert len(ret) == 1
+            assert ret.iloc[0, 0] == response
+
+        with pytest.raises(Exception) as exc_info:
+            self.run_sql('select $$')
+        assert 'check the manual that corresponds to your server version for the right syntax' in str(exc_info.value)
 
 
 class TestDML(BaseExecutorDummyML):

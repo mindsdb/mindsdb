@@ -17,10 +17,10 @@ redis >=5.0.0, < 6.0.0
 walrus==0.9.3
 flask-compress >= 1.0.0
 appdirs >= 1.0.0
-mindsdb-sql-parser ~= 0.2.0
+mindsdb-sql-parser ~= 0.3.0
 pydantic ~= 2.7.0
 mindsdb-evaluator >= 0.0.7, < 0.1.0
-duckdb == 0.9.1
+duckdb == 1.2.0
 requests == 2.32.3
 pydateinfer==0.3.0
 dataprep_ml==24.5.1.2
@@ -59,7 +59,7 @@ opentelemetry-instrumentation-flask==0.48b0
 opentelemetry-distro==0.48b0
 
 # files reading
-pymupdf
+pymupdf==1.25.2
 filetype
 charset-normalizer
 openpyxl # used by pandas to read txt files

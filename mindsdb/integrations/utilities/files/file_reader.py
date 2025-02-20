@@ -4,6 +4,7 @@ import csv
 from io import BytesIO, StringIO, IOBase
 from pathlib import Path
 import codecs
+from typing import List
 
 import filetype
 import pandas as pd
@@ -65,6 +66,7 @@ def decode(file_obj: IOBase) -> StringIO:
 class FormatDetector:
 
     supported_formats = ['parquet', 'csv', 'xlsx', 'pdf', 'json', 'txt']
+    multipage_formats = ['xlsx']
 
     def __init__(
         self,
@@ -200,16 +202,62 @@ class FormatDetector:
 
 class FileReader(FormatDetector):
 
-    def to_df(self, **kwargs) -> pd.DataFrame:
+    def _get_fnc(self):
         format = self.get_format()
-
         func = getattr(self, f'read_{format}', None)
         if func is None:
             raise FileDetectError(f'Unsupported format: {format}')
+        return func
 
+    def get_pages(self, **kwargs) -> List[str]:
+        """
+            Get list of tables in file
+        """
+        format = self.get_format()
+        if format not in self.multipage_formats:
+            # only one table
+            return ['main']
+
+        func = self._get_fnc()
         self.file_obj.seek(0)
-        kwargs.update(self.parameters)
-        return func(self.file_obj, name=self.name, **kwargs)
+
+        return [
+            name for name, _ in
+            func(self.file_obj, only_names=True, **kwargs)
+        ]
+
+    def get_contents(self, **kwargs):
+        """
+            Get all info(pages with content) from file as dict: {tablename, content}
+        """
+        func = self._get_fnc()
+        self.file_obj.seek(0)
+
+        format = self.get_format()
+        if format not in self.multipage_formats:
+            # only one table
+            return {'main': func(self.file_obj, name=self.name, **kwargs)}
+
+        return {
+            name: df
+            for name, df in
+            func(self.file_obj, **kwargs)
+        }
+
+    def get_page_content(self, page_name: str = None, **kwargs) -> pd.DataFrame:
+        """
+            Get content of a single table
+        """
+        func = self._get_fnc()
+        self.file_obj.seek(0)
+
+        format = self.get_format()
+        if format not in self.multipage_formats:
+            # only one table
+            return func(self.file_obj, name=self.name, **kwargs)
+
+        for _, df in func(self.file_obj, name=self.name, page_name=page_name, **kwargs):
+            return df
 
     @staticmethod
     def _get_csv_dialect(buffer, delimiter=None) -> csv.Dialect:
@@ -304,14 +352,18 @@ class FileReader(FormatDetector):
         return pd.read_parquet(file_obj)
 
     @staticmethod
-    def read_xlsx(file_obj: BytesIO, sheet_name=None, **kwargs) -> pd.DataFrame:
-
-        file_obj.seek(0)
+    def read_xlsx(file_obj: BytesIO, page_name=None, only_names=False, **kwargs):
         with pd.ExcelFile(file_obj) as xls:
-            if sheet_name is None:
-                # No sheet specified: Return list of sheets
-                sheet_list = xls.sheet_names
-                return pd.DataFrame(sheet_list, columns=["Sheet_Name"])
-            else:
-                # Specific sheet requested: Load that sheet
-                return pd.read_excel(xls, sheet_name=sheet_name)
+
+            if page_name is not None:
+                # return specific page
+                yield page_name, pd.read_excel(xls, sheet_name=page_name)
+
+            for page_name in xls.sheet_names:
+
+                if only_names:
+                    # extract only pages names
+                    df = None
+                else:
+                    df = pd.read_excel(xls, sheet_name=page_name)
+                yield page_name, df

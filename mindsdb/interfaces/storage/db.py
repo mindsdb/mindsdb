@@ -218,18 +218,6 @@ class Project(Base):
     )
 
 
-class Log(Base):
-    __tablename__ = "log"
-
-    id = Column(Integer, primary_key=True)
-    created_at = Column(DateTime, default=datetime.datetime.now)
-    log_type = Column(String)  # log, info, warning, traceback etc
-    source = Column(String)  # file + line
-    company_id = Column(Integer)
-    payload = Column(String)
-    created_at_index = Index("some_index", "created_at_index")
-
-
 class Integration(Base):
     __tablename__ = "integration"
     id = Column(Integer, primary_key=True)
@@ -258,6 +246,7 @@ class File(Base):
     row_count = Column(Integer, nullable=False)
     columns = Column(Json, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.now)
+    metadata_: dict = Column("metadata", JSON, nullable=True)
     updated_at = Column(
         DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
     )

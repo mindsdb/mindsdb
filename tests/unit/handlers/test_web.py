@@ -103,7 +103,7 @@ class TestWebHelpers(unittest.TestCase):
 
 
 def html_get(url, **kwargs):
-    # gen content for url
+    # generate html page with 10 sub-links in the same domain
     if not url.endswith('/'):
         url = url + '/'
     links = [

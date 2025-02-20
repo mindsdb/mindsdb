@@ -148,6 +148,7 @@ class TestWebHandler(unittest.TestCase):
         per_url_2 = FilterCondition('per_url_limit', FilterOperator.EQUAL, 2)
 
         # ---- single url -----
+
         # default limit 1
         df = crawler_table.list(conditions=[single_url])
         assert len(df) == 1
@@ -175,6 +176,7 @@ class TestWebHandler(unittest.TestCase):
         assert len(df) == 5
 
         # ---- multiple url -----
+
         # without limit: every url
         df = crawler_table.list(conditions=[two_urls])
         assert len(df) == 2
@@ -189,4 +191,40 @@ class TestWebHandler(unittest.TestCase):
 
         # every url twice, limited
         df = crawler_table.list(conditions=[two_urls, per_url_2], limit=3)
+        assert len(df) == 3
+
+        # ---- multiple + depth -----
+
+        # one result per url
+        df = crawler_table.list(conditions=[two_urls, depth_0])
+        assert len(df) == 2
+
+        # crawl 2 levels both urls
+        df = crawler_table.list(conditions=[two_urls, depth_2])
+        assert len(df) == 2 * 111
+
+        # ---- multiple + depth + limit -----
+
+        # 2 levels, limited
+        df = crawler_table.list(conditions=[two_urls, depth_2], limit=100)
+        assert len(df) == 100
+
+        # ---- multiple + depth + per_url -----
+
+        # one result per url
+        df = crawler_table.list(conditions=[two_urls, depth_0, per_url_2])
+        assert len(df) == 2
+
+        # two pages per url
+        df = crawler_table.list(conditions=[two_urls, depth_2, per_url_2])
+        assert len(df) == 4
+
+        # ---- multiple + depth + per_url + limit
+
+        # one result per url
+        df = crawler_table.list(conditions=[two_urls, depth_0, per_url_2], limit=3)
+        assert len(df) == 2
+
+        # 4 results but limited
+        df = crawler_table.list(conditions=[two_urls, depth_2, per_url_2], limit=3)
         assert len(df) == 3

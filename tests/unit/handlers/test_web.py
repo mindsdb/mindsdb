@@ -131,7 +131,7 @@ def html_get(url, **kwargs):
 class TestWebHandler(unittest.TestCase):
 
     @patch('requests.Session.get')
-    def test_select_with_or_operator_raise_error(self, mock_get):
+    def test_web_cases(self, mock_get):
 
         mock_get.side_effect = html_get
 

@@ -476,7 +476,9 @@ class ValueSchema(BaseModel):
         description="The posgtres sql operators used to compare two values.",
         default="=",
     )
-    type: str = Field(description="A valid postgres value type for this value in the column.")
+    type: str = Field(
+        description="A valid postgres value type for this value in the column."
+    )
     description: str = Field(description="Description of what the value represents.")
     usage: str = Field(description="How and when to use this value for search.")
     example_questions: Optional[List[LLMExample]] = Field(
@@ -485,16 +487,16 @@ class ValueSchema(BaseModel):
     filter_threshold: Optional[float] = Field(
         default=0.0,
         description="Minimum relevance threshold to include metadata filters from this column.",
-        exclude=True
+        exclude=True,
     )
     priority: Optional[int] = Field(
         default=0,
-        description="Priority level for this column, lower numbers will be processed first."
+        description="Priority level for this column, lower numbers will be processed first.",
     )
     relevance: Optional[float] = Field(
         default=None,
         description="Relevance computed during search. Should not be set by the end user.",
-        exclude=True
+        exclude=True,
     )
 
 
@@ -644,7 +646,7 @@ class SQLRetrieverConfig(BaseModel):
     )
     database_schema: Optional[DatabaseSchema] = Field(
         default=None,
-        description="Optional list of table schemas containing document metadata to potentially join with.",
+        description="DatabaseSchema describing the database.",
     )
     examples: Optional[List[LLMExample]] = Field(
         default=None,

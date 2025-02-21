@@ -654,7 +654,7 @@ Below is a description of the contents in this column in list format:
 
     def _prepare_pgvector_query(
         self,
-        ranked_database_schema,
+        ranked_database_schema: DatabaseSchema,
         metadata_filters: List[AblativeMetadataFilter],
         retry: int = 0,
     ) -> str:
@@ -688,7 +688,7 @@ Below is a description of the contents in this column in list format:
             if i < len(metadata_filters) - 1:
                 base_query += " AND "
 
-        base_query += f" ORDER BY e.embeddings {self.distance_function.value} '{{embeddings}}' LIMIT {self.search_kwargs.k};"
+        base_query += f" ORDER BY e.embeddings {self.distance_function.value[0]} '{{embeddings}}' LIMIT {self.search_kwargs.k};"
         return base_query
 
     def _generate_filter(
@@ -773,10 +773,15 @@ Below is a description of the contents in this column in list format:
         return metadata_filter_list
 
     def _prepare_and_execute_query(
-        self, metadata_filters: List[AblativeMetadataFilter], embeddings_str: str
+        self,
+        ranked_database_schema: DatabaseSchema,
+        metadata_filters: List[AblativeMetadataFilter],
+        embeddings_str: str,
     ) -> HandlerResponse:
         try:
-            checked_sql_query = self._prepare_pgvector_query(metadata_filters)
+            checked_sql_query = self._prepare_pgvector_query(
+                ranked_database_schema, metadata_filters
+            )
             checked_sql_query_with_embeddings = checked_sql_query.format(
                 embeddings=embeddings_str
             )
@@ -811,7 +816,9 @@ Below is a description of the contents in this column in list format:
         if type(metadata_filters) is list:
             # Initial Execution of the similarity search with metadata filters.
             document_response = self._prepare_and_execute_query(
-                metadata_filters=metadata_filters, embeddings_str=str(embedded_query)
+                ranked_database_schema=ranked_database_schema,
+                metadata_filters=metadata_filters,
+                embeddings_str=str(embedded_query),
             )
             num_retries = 0
             while num_retries < self.num_retries:
@@ -839,22 +846,26 @@ Below is a description of the contents in this column in list format:
                 )
 
                 document_response = self._prepare_and_execute_query(
-                    ablated_metadata_filters, str(embedded_query)
+                    ranked_database_schema=ranked_database_schema,
+                    metadata_filters=ablated_metadata_filters,
+                    embeddings_str=str(embedded_query),
                 )
 
                 num_retries += 1
 
-            document_df = document_response.data_frame
             retrieved_documents = []
-            for _, document_row in document_df.iterrows():
-                retrieved_documents.append(
-                    Document(
-                        document_row.get("content", ""),
-                        metadata=document_row.get("metadata", {}),
+            if document_response.resp_type != RESPONSE_TYPE.ERROR:
+                document_df = document_response.data_frame
+                for _, document_row in document_df.iterrows():
+                    retrieved_documents.append(
+                        Document(
+                            document_row.get("content", ""),
+                            metadata=document_row.get("metadata", {}),
+                        )
                     )
-                )
             if retrieved_documents:
                 return retrieved_documents
+
             # If the SQL query constructed did not return any documents, fallback.
             logger.info(
                 "No documents returned from SQL retriever, using fallback retriever."

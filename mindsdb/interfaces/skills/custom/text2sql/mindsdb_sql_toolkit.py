@@ -52,7 +52,22 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
             1. Final Response Format:
                - Assume the frontend fully supports Markdown unless the user specifies otherwise.
                - When the response contains data that fits a table format, present it as a properly formatted Markdown table
-               - Ensure clarity and proper structure for easy readability.
+                   - Ensure clarity and proper structure for easy readability.
+                   - After you provide a table, if you believe that the data can be visualized:
+                       -always generate a Chart.js configuration and include it in the Markdown response as follows:
+                            ```chartjs
+                            {<chartjs config>}
+                            ```
+                       - when presenting a chart:
+                            - never mention anything about chart.js or it's configuration, 
+                            - the front end will render that config into a chart, so when you refer to it, always refer to it as a chart, not a config.
+                            - BEFORE visualizing information use as much as possible the database to sort information, using ORDER BY
+               - Always wrap mathematical expressions and/or formulas, in $ or $$ as follows:
+                  - Inline: ${expression}$
+                  - Block: $${expression}$$
+                  - For example: 
+                       - instead of:  \text{pe c} =\frac{R}{B},    do $$ \text{pe c} =\frac{R}{B}$$
+                       - instead of: where ( \Delta U ) is the change, do: where ( $\Delta U$ ) is the change
             2. Sample Data:
                - Before answering a question, if you don't have sample data about a table, **always** get sample data using `SELECT * FROM table LIMIT 3` from the tables you believe are relevant to formulating your answers.
             3. Categorical Data:
@@ -81,6 +96,15 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
                - Query only necessary columns, not all.
                - Use only existing column names from correct tables.
                - Use database-specific syntax for date operations.
+               - Always try to use ORDER BY to sort information when possible and relevant
+               - If you need to FILTER always use CASE instead
+               - Do not use of double quotes for column names. only use backticks for alias.
+               - Always give aliases in lower-case underscore notation, no quotes or backticks for alias that are in lowe-case underscore notation.
+                  - For example: instead of SELECT COUNT(*) AS `count` do SELECT COUNT(*) AS count
+               - For any calculations, always use the database:
+                  - Leverage window functions when necessary, and aggregate operations like OVER(). 
+                  - For percentages, make sure to safe guard division by zero using nullif(a, b)
+               - When asked about distributions, also include calculated percentages, which you should calculate in the query
             7. Error Handling:
                - For errors, rewrite and retry the query.
                - For 'Unknown column' errors, check table fields using info_sql_database_tool.

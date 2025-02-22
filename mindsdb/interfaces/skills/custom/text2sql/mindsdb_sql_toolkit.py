@@ -98,7 +98,7 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
                - Use database-specific syntax for date operations.
                - Always try to use ORDER BY to sort information when possible and relevant
                - If you need to FILTER always use CASE instead
-               - Do not use of double quotes for column names. only use backticks for alias.
+               - Never use of double quotes for column names use backticks instead.
                - Always give aliases in lower-case underscore notation, no quotes or backticks for alias that are in lowe-case underscore notation.
                   - For example: instead of SELECT COUNT(*) AS `count` do SELECT COUNT(*) AS count
                - For any calculations, always use the database:

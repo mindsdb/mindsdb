@@ -24,7 +24,7 @@ def upgrade():
     with op.batch_alter_table('project', schema=None) as batch_op:
         batch_op.add_column(sa.Column('metadata', sa.JSON(), nullable=True))
 
-    project = db.session.query(db.Project).filter_by(name='mindsb').first()
+    project = db.session.query(db.Project).filter_by(name='mindsdb').first()
     if project:
         project.name = config.get('default_project')
         project.metadata_ = {"is_default": True}

@@ -1,4 +1,4 @@
 -r mindsdb/integrations/handlers/rag_handler/requirements.txt
-nltk>=3.8.1
+nltk>=3.9
 rouge-score>=0.1.2
 scipy

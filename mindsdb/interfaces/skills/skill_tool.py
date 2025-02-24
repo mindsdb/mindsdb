@@ -126,6 +126,10 @@ class SkillToolController:
 
         command_executor = self.get_command_executor()
 
+        def escape_table_name(name: str) -> str:
+            name = name.strip(' `')
+            return f'`{name}`'
+
         tables_list = []
         for skill in skills:
             database = skill.params['database']
@@ -137,19 +141,22 @@ class SkillToolController:
                 else:
                     response = handler.get_tables()
                 # no restrictions
+                columns = [c.lower() for c in response.data_frame.columns]
+                name_idx = columns.index('table_name') if 'table_name' in columns else 0
+
                 if 'table_schema' in response.data_frame.columns:
                     for _, row in response.data_frame.iterrows():
-                        tables_list.append(f"{database}.{row['table_schema']}.{row['table_name']}")
+                        tables_list.append(f"{database}.{row['table_schema']}.{escape_table_name(row[name_idx])}")
                 else:
-                    for _, row in response.data_frame.iterrows():
-                        tables_list.append(f"{database}.{row['table_name']}")
+                    for table_name in response.data_frame.iloc[:, name_idx]:
+                        tables_list.append(f"{database}.{escape_table_name(table_name)}")
                 continue
             for schema_name, tables in restriction_on_tables.items():
                 for table in tables:
                     if schema_name is None:
-                        tables_list.append(f'{database}.{table}')
+                        tables_list.append(f'{database}.{escape_table_name(table)}')
                     else:
-                        tables_list.append(f'{database}.{schema_name}.{table}')
+                        tables_list.append(f'{database}.{schema_name}.{escape_table_name(table)}')
 
         sql_agent = SQLAgent(
             command_executor=command_executor,
@@ -219,7 +226,6 @@ class SkillToolController:
         return build_retrieval_tool(tool, pred_args, skill)
 
     def _get_rag_query_function(self, skill: db.Skills):
-
         session_controller = self.get_command_executor().session
 
         def _answer_question(question: str) -> str:

@@ -1,4 +1,5 @@
 import json
+import re
 from pydantic import BaseModel, Field
 from typing import Any, List, Optional
 
@@ -101,7 +102,7 @@ Output:
 {example.output}
 
 '''
-            examples_prompt_str += example_str
+                examples_prompt_str += example_str
         return base_prompt_template.partial(
             schema=schema_prompt_str,
             examples=examples_prompt_str
@@ -153,6 +154,14 @@ Output:
             format_instructions=parser.get_format_instructions(),
             input=query
         )
+        # If the LLM outputs raw JSON, use it as-is.
+        # If the LLM outputs anything including a json markdown section, use the last one.
+        json_markdown_output = re.findall(r'```json.*```', metadata_filters_output, re.DOTALL)
+        if json_markdown_output:
+            metadata_filters_output = json_markdown_output[-1]
+            # Clean the json tags.
+            metadata_filters_output = metadata_filters_output[7:]
+            metadata_filters_output = metadata_filters_output[:-3]
         metadata_filters = parser.invoke(metadata_filters_output)
         return metadata_filters.filters
 

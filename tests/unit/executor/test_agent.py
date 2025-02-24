@@ -318,3 +318,31 @@ class TestAgent(BaseExecutorDummyML):
         ret = self.run_sql(f"show tables from {db_name}")
         # only one default collection there
         assert len(ret) == 1
+
+    def test_drop_demo_agent(self):
+        """should not be possible to drop demo agent
+        """
+        from mindsdb.api.executor.exceptions import ExecutorException
+        self.run_sql('''
+            CREATE AGENT my_demo_agent
+            USING
+                provider='openai',
+                model = "gpt-3.5-turbo",
+                openai_api_key='--',
+                prompt_template="--",
+                is_demo=true;
+         ''')
+        with pytest.raises(ExecutorException):
+            self.run_sql('drop agent my_agent')
+
+        self.run_sql('''
+            create skill my_demo_skill
+            using
+            type = 'text2sql',
+            database = 'example_db',
+            description = "",
+            is_demo=true;
+        ''')
+
+        with pytest.raises(ExecutorException):
+            self.run_sql('drop skill my_demo_skill')

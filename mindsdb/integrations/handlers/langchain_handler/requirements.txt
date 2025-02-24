@@ -1,4 +1,3 @@
-openai==1.55.3
 wikipedia==1.4.0
 tiktoken
 anthropic>=0.26.1

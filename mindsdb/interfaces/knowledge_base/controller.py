@@ -26,6 +26,9 @@ from mindsdb.integrations.libs.vectordatabase_handler import (
 )
 from mindsdb.integrations.utilities.rag.rag_pipeline_builder import RAG
 from mindsdb.integrations.utilities.rag.config_loader import load_rag_config
+from mindsdb.integrations.utilities.sql_utils import (
+    extract_comparison_conditions, filter_dataframe, FilterCondition, FilterOperator
+)
 from mindsdb.interfaces.agents.constants import DEFAULT_EMBEDDINGS_MODEL_CLASS
 from mindsdb.interfaces.agents.langchain_agent import create_chat_model, get_llm_provider
 from mindsdb.interfaces.database.projects import ProjectController
@@ -101,18 +104,30 @@ class KnowledgeBaseTable:
         # Get response from vector db
         db_handler = self.get_vector_db()
         logger.debug(f"Using vector db handler: {type(db_handler)}")
-        resp = db_handler.query(query)
 
-        if resp.data_frame is not None:
-            logger.debug(f"Query returned {len(resp.data_frame)} rows")
-            logger.debug(f"Columns in response: {resp.data_frame.columns.tolist()}")
+        vector_filters, outer_filters = [], []
+        # update vector handlers, mark conditions as applied inside
+        for op, arg1, arg2 in extract_comparison_conditions(query.where):
+            condition = FilterCondition(arg1, FilterOperator(op.upper()), arg2)
+            if arg1 in (TableField.ID.value, TableField.CONTENT.value, TableField.EMBEDDINGS.value):
+                vector_filters.append(condition)
+            else:
+                outer_filters.append([op, arg1, arg2])
+
+        df = db_handler.dispatch_select(query, conditions=vector_filters)
+
+        if df is not None:
+            df = filter_dataframe(df, outer_filters)
+
+            logger.debug(f"Query returned {len(df)} rows")
+            logger.debug(f"Columns in response: {df.columns.tolist()}")
             # Log a sample of IDs to help diagnose issues
-            if not resp.data_frame.empty:
-                logger.debug(f"Sample of IDs in response: {resp.data_frame['id'].head().tolist()}")
+            if not df.empty:
+                logger.debug(f"Sample of IDs in response: {df['id'].head().tolist()}")
         else:
             logger.warning("Query returned no data")
 
-        return resp.data_frame
+        return df
 
     def insert_files(self, file_names: List[str]):
         """Process and insert files"""
@@ -713,10 +728,6 @@ class KnowledgeBaseController:
                         vector_db_params['vector_size'] = vector_size
                 vector_db_name = self._create_persistent_pgvector(vector_db_params)
 
-                # create table in vectordb before creating KB
-                self.session.datahub.get(vector_db_name).integration_handler.create_table(
-                    vector_table_name
-                )
             else:
                 # create chroma db with same name
                 vector_table_name = "default_collection"
@@ -728,6 +739,10 @@ class KnowledgeBaseController:
         else:
             vector_db_name, vector_table_name = storage.parts
 
+        # create table in vectordb before creating KB
+        self.session.datahub.get(vector_db_name).integration_handler.create_table(
+            vector_table_name
+        )
         vector_database_id = self.session.integration_controller.get(vector_db_name)['id']
 
         # Store sparse vector settings in params if specified

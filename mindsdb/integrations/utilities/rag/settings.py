@@ -505,9 +505,11 @@ class ColumnSchema(BaseModel):
     type: str = Field(description="Type of the column (e.g. int, string, datetime)")
     description: str = Field(description="Description of what the column represents")
     usage: str = Field(description="How and when to use this Table for search.")
-    values: Union[
-        OrderedDict[Union[str, int, float], ValueSchema],
-        Dict[Union[str, int, float], ValueSchema],
+    values: Optional[
+        Union[
+            OrderedDict[Union[str, int, float], ValueSchema],
+            Dict[Union[str, int, float], ValueSchema],
+        ]
     ] = Field(
         description="One of the following. A dict or ordered dict of {schema_value: ValueSchema, ...}, where schema value is the name given for this value description in the schema."
     )
@@ -535,7 +537,9 @@ class TableSchema(BaseModel):
     table: str = Field(description="Name of table in the database")
     description: str = Field(description="Description of what the table represents")
     usage: str = Field(description="How and when to use this Table for search.")
-    columns: Union[OrderedDict[str, ColumnSchema], Dict[str, ColumnSchema]] = Field(
+    columns: Optional[
+        Union[OrderedDict[str, ColumnSchema], Dict[str, ColumnSchema]]
+    ] = Field(
         description="Dict or Ordered Dict of {column_name: ColumnSchemas} describing the metadata columns available for the table"
     )
     example_questions: Optional[List[LLMExample]] = Field(

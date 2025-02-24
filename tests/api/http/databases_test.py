@@ -19,7 +19,7 @@ def app():
         os.environ['MINDSDB_DB_CON'] = db_path
         db.init()
         migrate.migrate_to_head()
-        app = initialize_app(Config(), True, False)
+        app = initialize_app(Config(), True)
 
         yield app
     os.environ['MINDSDB_DB_CON'] = old_minds_db_con
@@ -50,6 +50,11 @@ def test_get_database(client):
         'id': mindsdb_database['id']
     }
 
+    assert mindsdb_database == expected_db
+
+    response = client.get('/api/databases/MindsDB', follow_redirects=True)
+    mindsdb_database = response.get_json()
+    mindsdb_database['name'] = mindsdb_database['name'].lower()
     assert mindsdb_database == expected_db
 
     # Get a newly created integration.

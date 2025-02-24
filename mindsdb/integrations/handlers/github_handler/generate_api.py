@@ -50,7 +50,19 @@ def parse_annotations(annotations):
     return Type(type_name, sub_type)
 
 
-def get_gh_types():
+def get_properties(cls):
+    properties = {}
+    for prop_name, prop in inspect.getmembers(cls):
+        if prop_name.startswith('_'):
+            continue
+        if not isinstance(prop, property):
+            continue
+        sig2 = inspect.signature(prop.fget)
+
+        properties[prop_name] = parse_annotations(sig2.return_annotation)
+    return properties
+
+def get_github_types():
     # get github types
     types = {}
 
@@ -60,14 +72,16 @@ def get_gh_types():
         if cls is None:
             continue
         if issubclass(cls, GithubObject):
+
+            # remove inherited props
+            parent_props = []
+            for cls2 in cls.__bases__:
+                parent_props += get_properties(cls2).keys()
+
             properties = {}
-            for prop_name, prop in inspect.getmembers(cls):
-                if prop_name.startswith('_'):
-                    continue
-                if not isinstance(prop, property):
-                    continue
-                sig2 = inspect.signature(prop.fget)
-                properties[prop_name] = parse_annotations(sig2.return_annotation)
+            for k, v in get_properties(cls).items():
+                if k not in parent_props:
+                    properties[k] = v
 
             types[module_name] = properties
     return types
@@ -100,13 +114,13 @@ def get_github_methods(cls):
 
 
 class GHTable(APIResource):
-    def __init__(self, *args, method: GHMethod = None, gh_types=None, **kwargs):
+    def __init__(self, *args, method: GHMethod = None, github_types=None, **kwargs):
         self.method = method
-        self.gh_types = gh_types
+        self.github_types = github_types
 
         self.output_columns = {}
-        if method.output.sub_type in self.gh_types:
-            self.output_columns = self.gh_types[method.output.sub_type]
+        if method.output.sub_type in self.github_types:
+            self.output_columns = self.github_types[method.output.sub_type]
 
         # check params:
         self.params, self.list_params = [], []
@@ -122,10 +136,10 @@ class GHTable(APIResource):
     def repr_value(self, value, type_name):
         if value is None or type in ('bool', 'int', 'float'):
             return value
-        if type_name in self.gh_types:
-            properties = self.gh_types[type_name]
-            if 'name' in properties:
-                value = getattr(value, 'name')
+        if type_name in self.github_types:
+            properties = self.github_types[type_name]
+            if 'login' in properties:
+                value = getattr(value, 'login')
             elif 'url' in properties:
                 value = getattr(value, 'url')
         return str(value)
@@ -135,12 +149,15 @@ class GHTable(APIResource):
 
     def list(
         self,
-         conditions: List[FilterCondition] = None,
-         limit: int = None,
-         sort: List[SortColumn] = None, **kwargs) -> pd.DataFrame:
+        conditions: List[FilterCondition] = None,
+        limit: int = None,
+        sort: List[SortColumn] = None,
+        targets: List[str] = None,
+        **kwargs
+    ) -> pd.DataFrame:
 
         if limit is None:
-            limit = 3
+            limit = 20
 
         method_kwargs = {}
         if sort is not None and self._allow_sort:
@@ -166,18 +183,24 @@ class GHTable(APIResource):
                     method_kwargs[condition.column] = condition.value
                     condition.applied = True
 
-        connection = self.handler.connect()
-        method = getattr(connection.get_repo(self.handler.repository), self.method.name)
+        # connection = self.handler.connect()
+        # method = getattr(connection.get_repo(self.handler.repository), self.method.name)
 
-        # con = github.Github()
-        # method = getattr(con.get_repo('mindsdb/mindsdb'), self.method.name)
+        con = github.Github()
+        method = getattr(con.get_repo('mindsdb/mindsdb'), self.method.name)
 
         data = []
         count = 0
         for record in method(**method_kwargs):
             item = {}
             for name, type in self.output_columns.items():
-                value = getattr(record, name)
+
+                # workaround to prevent making addition request per property.
+                if name in targets:
+                    # request only if is required
+                    value = getattr(record, name)
+                else:
+                    value = getattr(record, '_' + name).value
                 if value is not None:
                     if type.name == 'list':
                         value = ",".join([

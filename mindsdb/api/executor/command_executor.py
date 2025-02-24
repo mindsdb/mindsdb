@@ -1030,8 +1030,7 @@ class ExecuteCommands:
             connection_args = {}
         status = HandlerStatusResponse(success=False)
 
-        file_storage = None
-        json_storage = None
+        storage = None
         try:
             handler_meta = self.session.integration_controller.get_handler_meta(engine)
             if handler_meta is None:
@@ -1078,8 +1077,7 @@ class ExecuteCommands:
             )
             status = handler.check_connection()
             if status.copy_storage:
-                file_storage = handler.handler_storage.export_files()
-                json_storage = handler.handler_storage.export_json_storage()
+                storage = handler.handler_storage.export_files()
         except Exception as e:
             status.error_message = str(e)
 
@@ -1098,11 +1096,8 @@ class ExecuteCommands:
 
         self.session.integration_controller.add(name, engine, connection_args)
         handler = self.session.integration_controller.get_data_handler(name, connect=False)
-        if file_storage:
-            handler.handler_storage.import_files(file_storage)
-
-        if json_storage:
-            handler.handler_storage.import_json_storage(json_storage)
+        if storage:
+            handler.handler_storage.import_files(storage)
 
     def answer_create_ml_engine(self, name: str, handler: str, params: dict = None, if_not_exists=False):
 

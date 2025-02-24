@@ -314,7 +314,7 @@ if __name__ == '__main__':
                 new_default_project = project_controller.get(name=config.get('default_project'))
                 log.critical(f"A project with the name '{config.get('default_project')}' already exists")
                 sys.exit(1)
-            except  EntityNotExistsError:
+            except EntityNotExistsError:
                 pass
             project_controller.update(current_default_project.record.id, new_name=config.get('default_project'))
 

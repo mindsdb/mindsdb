@@ -407,7 +407,7 @@ class ProjectController:
 
         return [Project.from_record(x) for x in records]
 
-    def get(self, id: Optional[int] = None, name: Optional[str] = None, deleted: bool = False, metadata: dict = None) -> Project:
+    def get(self, id: Optional[int] = None, name: Optional[str] = None, deleted: bool = False, is_default: bool = False) -> Project:
         if id is not None and name is not None:
             raise ValueError("Both 'id' and 'name' can't be provided at the same time")
 
@@ -426,8 +426,8 @@ class ProjectController:
         else:
             q = q.filter_by(deleted_at=sa.null())
 
-        if metadata is not None:
-            q = q.filter(db.Project.metadata_ == metadata)
+        if is_default:
+            q = q.filter(db.Project.metadata_['is_default'].as_boolean() == is_default)
 
         record = q.first()
 

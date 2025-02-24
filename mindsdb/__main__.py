@@ -308,7 +308,7 @@ if __name__ == '__main__':
         logger.debug(f"Checking if default project {config.get('default_project')} exists")
         project_controller = ProjectController()
 
-        current_default_project = project_controller.get(metadata={'is_default': True})
+        current_default_project = project_controller.get(is_default=True)
         if current_default_project.record.name != config.get('default_project'):
             try:
                 new_default_project = project_controller.get(name=config.get('default_project'))

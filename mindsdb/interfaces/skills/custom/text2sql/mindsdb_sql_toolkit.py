@@ -56,7 +56,7 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
                    - After you pesent a table, if you believe that the data can be visualized:
                        -always generate a Chart.js configuration and include it in the Markdown response as follows:
                             ```chartjs
-                            {{<chartjs config>}}
+                            {{<chartjs JSON config>}}
                             ```
                        - when presenting a chart:
                             - never mention anything about chart.js or it's configuration, 

@@ -1095,8 +1095,8 @@ class ExecuteCommands:
             raise EntityExistsError('Project exists with this name', name)
 
         self.session.integration_controller.add(name, engine, connection_args)
-        handler = self.session.integration_controller.get_data_handler(name, connect=False)
         if storage:
+            handler = self.session.integration_controller.get_data_handler(name, connect=False)
             handler.handler_storage.import_files(storage)
 
     def answer_create_ml_engine(self, name: str, handler: str, params: dict = None, if_not_exists=False):

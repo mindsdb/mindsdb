@@ -153,25 +153,35 @@ def example_generator(pydantic_json_schema):
     return example_dict
 
 
-def search_and_replace_refs(schema, defs, n=0):
+def search_and_replace_refs(schema, defs, ref_skip={}, n=0):
     """Dynamically substitute subclass references in a Pydantic object schema."""
     for key, value in schema.items():
-        print("\t" * n, key)
+        if key in ref_skip:
+            continue
+        # print('\t'*n, key)
         if type(value) is dict:
             if "$ref" in value:
                 definition_key = value["$ref"].split("/")[-1]
-                print("\t" * (n + 1), definition_key)
-                schema[key] = {definition_key: defs[definition_key]["properties"]}
+                if definition_key in ref_skip:
+                    schema[key] = {"type": "null"}
+                else:
+                    # print('\t'*(n + 1), definition_key)
+                    schema[key] = {definition_key: defs[definition_key]["properties"]}
             else:
-                search_and_replace_refs(value, defs, n + 1)
+                search_and_replace_refs(value, defs, ref_skip, n + 1)
         elif type(value) is list:
             for val in value:
-                search_and_replace_refs(val, defs, n + 1)
+                search_and_replace_refs(val, defs, ref_skip, n + 1)
 
 
-def remove_extraneous_fields(schema):
+def remove_extraneous_fields(schema, ref_skip):
     """Remove extraneous fields from object descriptions."""
     reduced_schema = schema["properties"]
+
+    for ref in ref_skip.keys():
+        if ref in reduced_schema:
+            del reduced_schema[ref]
+
     for key, value in reduced_schema.items():
         if "title" in value:
             del value["title"]
@@ -183,16 +193,18 @@ def remove_extraneous_fields(schema):
     return reduced_schema
 
 
-def format_for_prompt(pydantic_object):
+def format_for_prompt(pydantic_object, ref_skip={}):
     """Format a Pydantic object description for prompting an LLM."""
     schema = {k: v for k, v in pydantic_object.schema().items()}
 
-    search_and_replace_refs(schema["properties"], schema["$defs"])
+    search_and_replace_refs(
+        schema=schema["properties"], defs=schema["$defs"], ref_skip=ref_skip, n=0
+    )
 
-    reduced_schema = remove_extraneous_fields(schema)
+    reduced_schema = remove_extraneous_fields(schema, ref_skip)
 
     reduced_schema = {schema["title"]: reduced_schema}
 
     out = pprint.pformat(reduced_schema)
 
-    return out
+    return out, reduced_schema

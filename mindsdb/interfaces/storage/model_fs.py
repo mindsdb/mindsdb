@@ -323,7 +323,7 @@ class HandlerStorage:
                 if name == JSON_STORAGE_FILE:
                     json_storage = zip_ref.read(JSON_STORAGE_FILE)
                     self.import_json_storage(json_storage)
-    
+
                 else:
                     zip_ref.extract(name, folder_path)
 

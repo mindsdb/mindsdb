@@ -11,6 +11,9 @@ from .fs import RESOURCE_GROUP, FileStorageFactory, SERVICE_FILES_NAMES
 from .json import get_json_storage, get_encrypted_json_storage
 
 
+JSON_STORAGE_FILE = 'json_storage.json'
+
+
 class ModelStorage:
     """
     This class deals with all model-related storage requirements, from setting status to storing artifacts.
@@ -281,17 +284,14 @@ class HandlerStorage:
 
     def export_files(self) -> bytes:
         json_storage = self.export_json_storage()
-        if json_storage:
-            json_str = json.dumps(json_storage)
-            self.file_set('json_storage.json', json_str.encode())
 
-        if self.is_empty():
+        if self.is_empty() and not json_storage:
             return None
+
         folder_path = self.folder_get('')
 
         zip_fd = io.BytesIO()
 
-        json_storage = None
         with zipfile.ZipFile(zip_fd, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for root, dirs, files in os.walk(folder_path):
                 for file_name in files:
@@ -299,6 +299,11 @@ class HandlerStorage:
                         continue
                     abs_path = os.path.join(root, file_name)
                     zipf.write(abs_path, os.path.relpath(abs_path, folder_path))
+
+            # If JSON storage is not empty, add it to the zip file.
+            if json_storage:
+                json_str = json.dumps(json_storage)
+                zipf.writestr(JSON_STORAGE_FILE, json_str)
 
         zip_fd.seek(0)
         return zip_fd.read()
@@ -312,15 +317,15 @@ class HandlerStorage:
         zip_fd.seek(0)
 
         with zipfile.ZipFile(zip_fd, 'r') as zip_ref:
-            zip_ref.extractall(folder_path)
-
-            # If json_storage.json is in the zip file, import it.
-            if 'json_storage.json' in zip_ref.namelist():
-                json_storage = zip_ref.read('json_storage.json')
-                self.import_json_storage(json_storage)
-
-            # Remove this file from the folder.
-            os.remove(os.path.join(folder_path, 'json_storage.json'))
+            for name in zip_ref.namelist():
+                # If JSON storage file is in the zip file, import the content to the JSON storage.
+                # Thereafter, remove the file from the folder.
+                if name == JSON_STORAGE_FILE:
+                    json_storage = zip_ref.read(JSON_STORAGE_FILE)
+                    self.import_json_storage(json_storage)
+    
+                else:
+                    zip_ref.extract(name, folder_path)
 
         self.folder_sync('')
 

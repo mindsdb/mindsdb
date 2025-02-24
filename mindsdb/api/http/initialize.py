@@ -48,7 +48,6 @@ from mindsdb.utilities.config import Config
 from mindsdb.utilities.context import context as ctx
 from mindsdb.utilities.json_encoder import CustomJSONProvider
 from mindsdb.utilities.ps import is_pid_listen_port, wait_func_is_true
-from mindsdb.utilities.telemetry import inject_telemetry_to_static
 from mindsdb.utilities.sentry import sentry_sdk  # noqa: F401
 from mindsdb.utilities.otel import trace  # noqa: F401
 from opentelemetry.instrumentation.flask import FlaskInstrumentor  # noqa: F401
@@ -441,7 +440,6 @@ def _open_webbrowser(url: str, pid: int, port: int, init_static_thread, static_f
     """
     if init_static_thread is not None:
         init_static_thread.join()
-    inject_telemetry_to_static(static_folder)
     try:
         is_http_active = wait_func_is_true(
             func=is_pid_listen_port, timeout=15, pid=pid, port=port

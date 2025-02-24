@@ -233,7 +233,7 @@ class KnowledgeBaseResource(Resource):
             if kb_data.get('urls'):
                 table.insert_web_pages(
                     urls=kb_data['urls'],
-                    limit=kb_data.get('limit', DEFAULT_WEB_CRAWL_LIMIT),
+                    limit=kb_data.get('limit') or DEFAULT_WEB_CRAWL_LIMIT,
                     crawl_depth=kb_data.get('crawl_depth', DEFAULT_CRAWL_DEPTH),
                     filters=kb_data.get('filters', DEFAULT_WEB_FILTERS)
                 )

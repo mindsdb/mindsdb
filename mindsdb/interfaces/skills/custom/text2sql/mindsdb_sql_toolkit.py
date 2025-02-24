@@ -53,10 +53,10 @@ class MindsDBSQLToolkit(SQLDatabaseToolkit):
                - Assume the frontend fully supports Markdown unless the user specifies otherwise.
                - When the response contains data that fits a table format, present it as a properly formatted Markdown table
                    - Ensure clarity and proper structure for easy readability.
-                   - After you pesent a table, if the user wants auto-visualizations and you believe that the data can be visualized:
+                   - After you pesent a table, if you believe that the data can be visualized:
                        -always generate a Chart.js configuration and include it in the Markdown response as follows:
                             ```chartjs
-                            {<chartjs config>}
+                            {{<chartjs config>}}
                             ```
                        - when presenting a chart:
                             - never mention anything about chart.js or it's configuration, 
